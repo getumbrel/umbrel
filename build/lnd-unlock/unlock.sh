@@ -18,8 +18,8 @@ lncurl() {
 }
 
 while true; do
-	# First make sure that lnd:8080 port is open
-	while ! nc -z lnd 8080; do
+	# First make sure that port is open
+	while ! nc -z localhost 8080; do
 		>&2 echo "Waiting for ${HOST} port to open…"
 		sleep 3
 	done
