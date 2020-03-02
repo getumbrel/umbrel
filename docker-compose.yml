@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+        web:
+                image: nginx:1.17.8
+                volumes:
+                        - ${HOME}/nginx:/etc/nginx
+                restart: on-failure
+                network_mode: host
+        bitcoin:
+                image: lncm/bitcoind:v0.19.0.1
+                volumes:
+                        - ${HOME}/bitcoin:/root/.bitcoin
+                restart: on-failure
+                network_mode: host
+        lnd:
+                image: lncm/lnd:v0.8.0-experimental
+                volumes:
+                        - ${HOME}/lnd:/root/.lnd
+                        - /var/lib/tor:/var/lib/tor
+                        - /run/tor:/run/tor
+                restart: on-failure
+                depends_on: [ bitcoin, web ]
+                network_mode: host
