@@ -1,6 +1,6 @@
 #!/bin/sh
 
-HOST=lnd:8080
+HOST=localhost:8080
 TLS_CERT=/lnd/tls.cert
 MACAROON="$(xxd -p /run/secrets/lnd-admin | tr -d '\n')"
 PASS="$(cat /run/secrets/lnd-password | tr -d '\n' | base64 | tr -d '\n')"
