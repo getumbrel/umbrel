@@ -43,6 +43,7 @@ services:
                     - lnd-admin
                 volumes:
                     - "${HOME}/lnd/tls.cert:/lnd/tls.cert:ro"
+                network_mode: host
 secrets:
     lnd-password:
         file: ${HOME}/secrets/lnd-password.txt
