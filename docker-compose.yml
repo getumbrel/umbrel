@@ -1,19 +1,32 @@
 version: '3.7'
+x-logging: &default-logging
+    driver: journald
+    options:
+        tag: "{{.Name}}"
+
+x-utility: &default-utility
+    image: "alpine:3.11"
+    logging: *default-logging
+    network_mode: host
+
 services:
         web:
                 image: nginx:1.17.8
+                logging: *default-logging
                 volumes:
                         - ${HOME}/nginx:/etc/nginx
                 restart: on-failure
                 network_mode: host
         bitcoin:
                 image: lncm/bitcoind:v0.19.0.1
+                logging: *default-logging
                 volumes:
                         - ${HOME}/bitcoin:/root/.bitcoin
                 restart: on-failure
                 network_mode: host
         lnd:
                 image: lncm/lnd:v0.8.0-experimental
+                logging: *default-logging
                 volumes:
                         - ${HOME}/lnd:/root/.lnd
                         - /var/lib/tor:/var/lib/tor
@@ -21,3 +34,9 @@ services:
                 restart: on-failure
                 depends_on: [ bitcoin, web ]
                 network_mode: host
+
+secrets:
+    lnd-password:
+        file: ${HOME}/secrets/lnd-password.txt
+    lnd-admin:
+        file: ${HOME}/lnd/data/chain/bitcoin/mainnet/admin.macaroon
