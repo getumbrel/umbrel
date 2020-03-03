@@ -1,0 +1,16 @@
+# Ignore all the bash stuff
+
+.bash_history
+.bash_logout
+.bashrc
+.profile
+.ssh
+.viminfo
+
+# Files created by containers that we shouldn't accidently commit
+*.dat
+*.log
+*.lock
+*.cookie
+*.pid
+
