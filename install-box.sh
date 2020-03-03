@@ -11,9 +11,19 @@
 # Install the docker-compose box to the current working directory
 # Pre-requisites: git
 
+echo "Cloning to current working directory from github..."
 git init
 git remote add origin https://github.com/lncm/thebox-compose-system.git
 git fetch
 git reset origin/master
 git checkout -t origin/master
 git reset --hard
+
+echo "Removing stuff we don't need"
+rm -fr .git
+rm -fr README.md
+rm -fr LICENSE
+rm -fr install-box.sh
+
+echo "Installing complete"
+
