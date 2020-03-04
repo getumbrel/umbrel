@@ -38,14 +38,7 @@ services:
                 build: ${HOME}/build/lnd-unlock/
                 depends_on: [ lnd ]
                 logging: *default-logging
-                secrets:
-                    - lnd-password
-                    - lnd-admin
                 volumes:
-                    - "${HOME}/lnd/tls.cert:/lnd/tls.cert:ro"
+                    - "${HOME}/lnd:/lnd"
+                    - "${HOME}/secrets"
                 network_mode: host
-secrets:
-    lnd-password:
-        file: ${HOME}/secrets/lnd-password.txt
-    lnd-admin:
-        file: ${HOME}/lnd/data/chain/bitcoin/mainnet/admin.macaroon
