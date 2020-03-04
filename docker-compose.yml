@@ -40,5 +40,5 @@ services:
                 logging: *default-logging
                 volumes:
                     - "${HOME}/lnd:/lnd"
-                    - "${HOME}/secrets"
+                    - "${HOME}/secrets:/secrets"
                 network_mode: host
