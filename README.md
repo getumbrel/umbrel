@@ -22,5 +22,12 @@ Run this from your home directory. This clones this repo into your home director
 curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
 ```
 
+### Running
+
+```bash
+# Build containers in build/ always
+docker-compose up -d --build
+```
+
 
 
