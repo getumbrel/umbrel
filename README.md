@@ -19,6 +19,9 @@ Ensure that your account is permissioned for docker.
 Run this from your home directory. This clones this repo into your home directory, as well as preserving the existing structure.
 
 ```bash
+# Ideally you should run this in $HOME as the docker-compose presets are in home
+# This will not overwrite any other files but you should segment this in its 
+# own account
 curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
 ```
 
@@ -27,7 +30,13 @@ curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/instal
 ```bash
 # Build containers in build/ always
 docker-compose up -d --build
+# verify the containers
+docker ps -a
+
+# Additional node: You should have a way of creating a wallet. Currently this container does not have a create wallet container.
+# For the unlock script to work, put the unlock password in secrets/lnd-password.txt
 ```
+
 
 
 
