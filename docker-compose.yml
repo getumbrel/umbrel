@@ -43,8 +43,9 @@ services:
                 logging: *default-logging
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
-                        - /var/lib/tor:/var/lib/tor
-                        - /run/tor:/run/tor
+                        - ${HOME}/lnd:/root/.lnd
+                        - ${HOME}/tor/data:/var/lib/tor
+                        - ${HOME}/tor/run:/run/tor/
                 restart: on-failure
                 depends_on: [ tor, bitcoin, web ]
                 network_mode: host
