@@ -17,6 +17,14 @@ services:
                         - ${HOME}/nginx:/etc/nginx
                 restart: on-failure
                 network_mode: host
+        tor:
+                image: ${HOME}/build/tor/
+                logging: *default-logging
+                restart: on-failure
+                volumes:
+                        - ${HOME}/tor/torrc:/etc/tor/torrc
+                        - ${HOME}/tor/data/:/var/lib/tor/
+                network_mode: host
         bitcoin:
                 image: lncm/bitcoind:v0.19.0.1
                 logging: *default-logging
