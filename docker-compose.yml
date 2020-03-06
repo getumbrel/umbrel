@@ -28,6 +28,7 @@ services:
                 image: lncm/lnd:v0.9.1-experimental
                 logging: *default-logging
                 volumes:
+                        - ${HOME}/lnd:/data/.lnd
                         - ${HOME}/lnd:/root/.lnd
                         - /var/lib/tor:/var/lib/tor
                         - /run/tor:/run/tor
