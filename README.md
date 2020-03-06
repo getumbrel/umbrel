@@ -23,6 +23,8 @@ Run this from your home directory. This clones this repo into your home director
 # This will not overwrite any other files but you should segment this in its 
 # own account
 curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
+# OR wget (if this works better)
+wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
 ```
 
 ### Running
