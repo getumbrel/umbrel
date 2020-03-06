@@ -47,6 +47,7 @@ services:
                 build: ${HOME}/build/lnd-unlock/
                 depends_on: [ lnd ]
                 logging: *default-logging
+                restart: always
                 volumes:
                     - "${HOME}/lnd:/lnd"
                     - "${HOME}/secrets:/secrets"
