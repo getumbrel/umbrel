@@ -4,7 +4,4 @@ ControlPort 29051
 # Cookie Authentication
 CookieAuthentication 1
 
-# SSH TOR
-HiddenServiceDir /var/lib/tor/sshd
-HiddenServicePort 22 127.0.0.1:22
 

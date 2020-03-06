@@ -17,22 +17,12 @@ services:
                         - ${HOME}/nginx:/etc/nginx
                 restart: on-failure
                 network_mode: host
-        tor:
-                build: ${HOME}/build/tor/
-                logging: *default-logging
-                restart: on-failure
-                volumes:
-                        - ${HOME}/tor/torrc:/etc/tor/torrc
-                        - ${HOME}/tor/data/:/var/lib/tor/
-                        - ${HOME}/tor/run/:/run/tor/
-                network_mode: host
         bitcoin:
                 build:
                     context: ${HOME}/build/volume-permissions/
                     args:
                         IMG: lncm/bitcoind
                         VER: v0.19.0.1
-                depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
                         - ${HOME}/bitcoin:/root/.bitcoin
@@ -44,10 +34,10 @@ services:
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
                         - ${HOME}/lnd:/root/.lnd
-                        - ${HOME}/tor/data:/var/lib/tor
-                        - ${HOME}/tor/run:/run/tor/
+                        - /var/lib/tor:/var/lib/tor
+                        - /run/tor:/run/tor/
                 restart: on-failure
-                depends_on: [ tor, bitcoin, web ]
+                depends_on: [ bitcoin, web ]
                 network_mode: host
         invoicer:
                 image: "lncm/invoicer:v0.8.0"
