@@ -1,6 +1,8 @@
 SocksPort   29050
 ControlPort 29051
 
+CookieAuthentication 1
+
 HiddenServiceDir /var/lib/tor/sshd
 HiddenServicePort 22 127.0.0.1:22
 
