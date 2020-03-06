@@ -10,6 +10,8 @@ This is a basic framework for orchestration of the box services for running a fu
 
 Ensure you have the [latest docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/) installed, python3, and docker-compose (installed from python3 pip).
 
+Ensure that you have the latest tor (currently working with 0.3.5.8), and you are using system default paths.
+
 ### Step 2
 
 Ensure that your account is permissioned for docker.
