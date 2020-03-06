@@ -29,12 +29,20 @@ services:
                 logging: *default-logging
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
-                        - ${HOME}/lnd:/root/.lnd
                         - /var/lib/tor:/var/lib/tor
                         - /run/tor:/run/tor
                 restart: on-failure
                 depends_on: [ bitcoin, web ]
                 network_mode: host
+        invoicer:
+                image: "lncm/invoicer:v0.8.0"
+                depends_on: [ bitcoin, lnd ]
+                restart: on-failure
+                network_mode: host
+                volumes:
+                        - "${HOME}/invoicer/invoicer.conf:/data/invoicer.conf:ro"
+                        - "${HOME}/invoicer:/lncm"
+                        - "${HOME}/lnd:/lnd:ro"
         lnd-unlock:
                 build: ${HOME}/build/lnd-unlock/
                 depends_on: [ lnd ]
