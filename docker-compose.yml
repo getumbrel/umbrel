@@ -18,7 +18,7 @@ services:
                 restart: on-failure
                 network_mode: host
         tor:
-                image: ${HOME}/build/tor/
+                build: ${HOME}/build/tor/
                 logging: *default-logging
                 restart: on-failure
                 volumes:
