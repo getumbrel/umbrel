@@ -40,7 +40,7 @@ services:
                 depends_on: [ bitcoin, web ]
                 network_mode: host
         invoicer:
-                image: "lncm/invoicer:v0.8.0"
+                image: "lncm/invoicer:v0.7.2"
                 depends_on: [ bitcoin, lnd ]
                 restart: on-failure
                 network_mode: host
