@@ -46,6 +46,7 @@ services:
                 network_mode: host
                 volumes:
                         - "${HOME}/invoicer:/root/.lncm"
+                        - "${HOME}/invoicer:/lncm"
                         - "${HOME}/lnd:/lnd"
         lnd-unlock:
                 build: ${HOME}/build/lnd-unlock/
