@@ -14,11 +14,11 @@
 echo "Start box configuration"
 echo "Installing RPCAuth.py and configuring secrets"
 cd bin/
-wget -qO- "https://raw.githubusercontent.com/bitcoin/bitcoin/master/share/rpcauth/rpcauth.py" 2>/dev/null
+wget -q "https://raw.githubusercontent.com/bitcoin/bitcoin/master/share/rpcauth/rpcauth.py" 2>/dev/null
 chmod 755 rpcauth.py
 ./rpcauth.py lncm | tee ../secrets/generated.txt | head -2 | tail -1 > ../secrets/rpcauth.txt
-tail -1 ../secrets/rpcauth.txt > ../secrets/rpcpass.txt
-rm rpcauth.py../secrets/generated.txt
+tail -1 ../secrets/generated.txt > ../secrets/rpcpass.txt
+rm rpcauth.py ../secrets/generated.txt
 cd ..
 echo "Installing RPCAuth into bitcoin.conf"
 cat secrets/rpcauth.txt >> bitcoin/bitcoin.conf
@@ -27,6 +27,6 @@ echo "Configuring invoicer rpc info"
 sed -i ":s/RPCPASS/${RPCPASS}/g; " invoicer/invoicer.conf
 echo "Configuring LND rpc info"
 sed -i ":s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
-
+rm configure-box.sh
 echo "Box Configuration complete"
 
