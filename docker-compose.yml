@@ -18,14 +18,12 @@ services:
                 restart: on-failure
                 network_mode: host
         bitcoin:
-                build:
-                    context: ${HOME}/build/volume-permissions/
-                    args:
-                        IMG: lncm/bitcoind
-                        VER: v0.19.0.1
+                image: lncm/bitcoind:v0.19.0.1
                 logging: *default-logging
                 volumes:
                         - ${HOME}/bitcoin:/root/.bitcoin
+                        - ${HOME}/bitcoin:/data/.bitcoin
+                        - ${HOME}/bitcoin:/data/bitcoin
                 restart: on-failure
                 network_mode: host
         lnd:
