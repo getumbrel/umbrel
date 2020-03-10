@@ -34,6 +34,8 @@ wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/i
 ```bash
 # Run this in the $HOME directory
 wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/configure-box.sh" | sh
+# or (should be in the $HOME directory after install)
+./configure-box.sh
 ```
 
 ### Running
