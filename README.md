@@ -29,6 +29,13 @@ curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/instal
 wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
 ```
 
+### Configuring
+
+```bash
+# Run this in the $HOME directory
+wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/configure-box.sh" | sh
+```
+
 ### Running
 
 ```bash
