@@ -24,9 +24,9 @@ echo "Installing RPCAuth into bitcoin.conf"
 cat secrets/rpcauth.txt >> bitcoin/bitcoin.conf
 RPCPASS=`cat secrets/rpcpass.txt`
 echo "Configuring invoicer rpc info"
-sed -i ":s/RPCPASS/${RPCPASS}/g; " invoicer/invoicer.conf
+sed -i "s/RPCPASS/${RPCPASS}/g; " invoicer/invoicer.conf
 echo "Configuring LND rpc info"
-sed -i ":s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
+sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
 rm configure-box.sh
 echo "Box Configuration complete"
 
