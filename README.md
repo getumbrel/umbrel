@@ -7,6 +7,7 @@ This is a basic framework for orchestration of the box services for running a fu
 ## How to use
 
 Ideally, you should create a user for this and then run it within the root of that user. There are some root privilege needed stuff, however LND doesn't support tor passwords yet so we will need to wait.
+
 ### Step 1
 
 Ensure you have the [latest docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/) installed, python3, and docker-compose (installed from python3 pip).
@@ -33,6 +34,9 @@ wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/i
 ### Configuring
 
 ```bash
+# If you want to use testnet, otherwise we will use mainnet by default and be #reckless
+export TESTNET=true
+
 # Run this in the $HOME directory
 wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/configure-box.sh" | sh
 # or (should be in the $HOME directory after install)
