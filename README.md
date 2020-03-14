@@ -10,9 +10,15 @@ Ideally, you should create a user for this and then run it within the root of th
 
 ### Step 1
 
-Ensure you have the [latest docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/) installed, python3, and docker-compose (installed from python3 pip).
+Ensure you have the [latest docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/) installed, python3 (for docker-compose), and docker-compose (installed from python3 pip).
 
 Ensure that you have the latest tor (currently working with 0.3.5.8), and you are using system default paths.
+
+For the install script, you should also have git installed.
+
+For the configuration script you should also have wget.
+
+These scripts all are able to run as non-interactive sessions.
 
 ### Step 2
 
