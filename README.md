@@ -42,6 +42,7 @@ wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/i
 ```bash
 # If you want to use testnet, otherwise we will use mainnet by default and be #reckless
 export TESTNET=true
+# testnet mode not supported as config is completely different
 
 # Run this in the $HOME directory
 wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/configure-box.sh" | sh
