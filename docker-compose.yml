@@ -27,7 +27,7 @@ services:
                 restart: on-failure
                 network_mode: host
         lnd:
-                image: lncm/lnd:v0.9.1-root-experimental
+                image: lncm/lnd:v0.9.2-root-experimental
                 logging: *default-logging
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
