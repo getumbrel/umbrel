@@ -18,7 +18,7 @@ services:
                 restart: on-failure
                 network_mode: host
         bitcoin:
-                image: lncm/bitcoind:v0.19.0.1
+                image: lncm/bitcoind:v0.19.1
                 logging: *default-logging
                 volumes:
                         - ${HOME}/bitcoin:/root/.bitcoin
