@@ -17,6 +17,7 @@ services:
                         - ${HOME}/nginx:/etc/nginx
                 restart: on-failure
                 network_mode: host
+                stop_grace_period: 30s
         bitcoin:
                 image: lncm/bitcoind:v0.19.1
                 logging: *default-logging
