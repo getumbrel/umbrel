@@ -23,8 +23,6 @@ cd ..
 echo "Installing RPCAuth into bitcoin.conf"
 cat secrets/rpcauth.txt >> bitcoin/bitcoin.conf
 RPCPASS=`cat secrets/rpcpass.txt`
-echo "Configuring invoicer rpc info"
-sed -i "s/RPCPASS/${RPCPASS}/g; " invoicer/invoicer.conf
 echo "Configuring LND rpc info"
 sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
 if [ ! -z $TESTNET ]; then

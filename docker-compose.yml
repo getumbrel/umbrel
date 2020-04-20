@@ -40,15 +40,21 @@ services:
                 depends_on: [ bitcoin, web ]
                 network_mode: host
                 stop_grace_period: 1m30s
-        invoicer:
-                image: "lncm/invoicer:v0.6.6"
+        middleware:
+                image: getumbrel/middleware:v0.0.2
                 depends_on: [ bitcoin, lnd ]
+                logging: *default-logging
                 restart: on-failure
                 network_mode: host
                 volumes:
-                        - "${HOME}/invoicer:/root/.lncm"
-                        - "${HOME}/invoicer:/lncm"
-                        - "${HOME}/lnd:/lnd"
+                    - "${HOME}/lnd:/lnd"
+                environment:
+                    BITCOIN_NETWORK: "mainnet"
+                    BITCOIN_HOST: "0.0.0.0"
+                    RPC_USER: ""
+                    RPC_PASSWORD: ""
+                    LND_NETWORK: "mainnet"
+                    LND_HOST: "127.0.0.1"
         lnd-unlock:
                 build: ${HOME}/build/lnd-unlock/
                 depends_on: [ lnd ]
