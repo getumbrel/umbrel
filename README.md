@@ -32,9 +32,9 @@ Run this from your home directory. This clones this repo into your home director
 # Ideally you should run this in $HOME as the docker-compose presets are in home
 # This will not overwrite any other files but you should segment this in its 
 # own account
-curl "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
+curl "https://raw.githubusercontent.com/getumbrel/thebox-compose-system/master/install-box.sh" | sh
 # OR wget (if this works better)
-wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/install-box.sh" | sh
+wget -qO- "https://raw.githubusercontent.com/getumbrel/thebox-compose-system/master/install-box.sh" | sh
 ```
 
 ### Configuring
@@ -45,7 +45,7 @@ export TESTNET=true
 # testnet mode not supported as config is completely different
 
 # Run this in the $HOME directory
-wget -qO- "https://raw.githubusercontent.com/lncm/thebox-compose-system/master/configure-box.sh" | sh
+wget -qO- "https://raw.githubusercontent.com/getumbrel/thebox-compose-system/master/configure-box.sh" | sh
 # or (should be in the $HOME directory after install)
 ./configure-box.sh
 ```
