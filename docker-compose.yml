@@ -41,7 +41,7 @@ services:
                 network_mode: host
                 stop_grace_period: 1m30s
         middleware:
-                image: getumbrel/middleware:v0.0.2
+                image: getumbrel/middleware:v0.0.4
                 depends_on: [ bitcoin, lnd ]
                 logging: *default-logging
                 restart: on-failure
