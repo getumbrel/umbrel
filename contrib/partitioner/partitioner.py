@@ -9,6 +9,11 @@ OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 '''
+
+'''
+Libraries should be system standard libraries if possible
+'''
+
 import os
 import sys
 import glob
@@ -73,55 +78,106 @@ def usb_partition_table():
         table[partition] = int(usb_part_size(partition))
     return table
 
-def main():
-    print('USB Configuration')
-    if len(usb_devs()) == 1:
-        first_part = dev_size('sda') / (1000*1000)
-        print('Size: ' + str(first_part))
-        prune_setting = int(first_part / 2)
-        partitions = usb_partitions()
-        if first_part < 512000:
-            print("Pruning the config")
-            os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" bitcoin/bitcoin.conf')
-        else:
-            print("Switching off pruning")
-            os.system('/bin/sed -i "s/prune=550/#prune=550/g;" bitcoin/bitcoin.conf')
-            os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" bitcoin/bitcoin.conf')
+'''
+Main Entrypoint
+'''
 
+def main():
+    print('USB Configuration script')
+    homedirpath = os.path.expanduser("~umbrel")
+    '''
+        If /mnt/data doesn't exist
+    '''
+    if not os.path.exists('/mnt/data'):
         print('Creating data mount')
-        os.system('mkdir -p /mnt/data')
-        print('Initializing filesystem')
-        os.system('/sbin/mkfs.ext4 -F /dev/sda1')
-        first_partition_uuid = get_uuid('sda1')
-        os.system('/bin/mount -t ext4 /dev/sda1 /mnt/data')
-        print('Setup secrets, bitcoin, nginx, and lnd directory')
-        os.system('/bin/cp -fr /home/umbrel/secrets /mnt/data')
-        os.system('/bin/cp -fr /home/umbrel/bitcoin /mnt/data')
-        os.system('/bin/cp -fr /home/umbrel/lnd /mnt/data')
-        os.system('/bin/cp -fr /home/umbrel/nginx /mnt/data')
-        print('Setup filesystem permissions')
+        os.mkdir('/mnt/data')
+    else:
+        print('Data mount exists')
+
+
+    if len(usb_devs()) == 1:
+        if len(usb_partitions()) == 1:
+            try:
+                os.system('/bin/mount -t ext4 /dev/' + usb_partitions()[0] + ' /mnt/data')
+                # if .rekt exists or bitcoin directory doesnt exist
+                if os.path.exists('/mnt/data/.rekt') or not os.path.exists('/mnt/data/bitcoin'):
+                    print('REKT file exists so lets format it')
+                    print('Initializing filesystem')
+                    os.system('/sbin/mkfs.ext4 -F /dev/' + usb_partitions()[0])
+                    '''
+                    Get Size of SDA and partition info
+                    '''
+                    first_part = dev_size('sda') / (1000*1000)
+                    prune_setting = int(first_part / 2)
+
+                    if first_part < 512000:
+                        print("Pruning the config")
+                        os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" bitcoin/bitcoin.conf')
+                    else:
+                        print("Switching off pruning")
+                        os.system('/bin/sed -i "s/prune=550/#prune=550/g;" bitcoin/bitcoin.conf')
+                        os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" bitcoin/bitcoin.conf')
+
+                    '''
+                    Setup secrets, bitcoin, nginx, and lnd directory.. as a new install
+                    '''
+                    print('Setup secrets, bitcoin, nginx, and lnd directory.. as a new install')
+                    os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+                    os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
+                    os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
+                    os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+                else:
+                    '''
+                    No need to do anything
+                    '''
+                    print('REKT file does not exist so we will preserve it')
+
+                print('Unmounting partition')
+                os.system('/bin/umount /mnt/data')
+            except:
+                print("Error mounting the directory")
+
+
+        # If volume not mounted
+        if not os.path.exists(' /mnt/data/lost+found'):
+            os.system('/bin/mount -t ext4 /dev/sda1 /mnt/data')
+
+        # Get UUID of the partition we just created
+        partitions = usb_partitions()
+        first_partition_uuid = get_uuid(partitions[0])
+
+        print('Setup filesystem permissions (UID=1000 GID=1000)')
         os.system('/bin/chown -R 1000.1000 /mnt/data')
+
         print('Unmounting partition')
         os.system('/bin/umount /mnt/data')
+
         print('Update /etc/fstab')
         os.system('echo "UUID=' + first_partition_uuid + ' /mnt/data ext4 defaults,noatime 0 0" >> /etc/fstab')
+
         print('Remounting through /bin/mount')
         os.system('/bin/mount -a');
-        print('Remove old folders')
-        os.system('/bin/rm -fr /home/umbrel/secrets')
-        os.system('/bin/rm -fr /home/umbrel/bitcoin')
-        os.system('/bin/rm -fr /home/umbrel/lnd')
-        os.system('/bin/rm -fr /home/umbrel/nginx')
+
+        print('Remove old folders (after copying)')
+        os.system('/bin/rm -fr ' + homedirpath + '/secrets')
+        os.system('/bin/rm -fr ' + homedirpath + '/bitcoin')
+        os.system('/bin/rm -fr ' + homedirpath + '/lnd')
+        os.system('/bin/rm -fr ' + homedirpath + '/nginx')
         print('Set up symlinks')
-        os.system('/bin/ln -s /mnt/data/secrets /home/umbrel/secrets')
-        os.system('/bin/ln -s /mnt/data/bitcoin /home/umbrel/bitcoin')
-        os.system('/bin/ln -s /mnt/data/lnd /home/umbrel/lnd')
-        os.system('/bin/ln -s /mnt/data/lnd /home/umbrel/nginx')
+        os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
+        os.system('/bin/ln -s /mnt/data/bitcoin ' + homedirpath + '/bitcoin')
+        os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
+        os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
     else:
         print('No drives or unexpected number of drives detected!')
+
+'''
+Actual entrypoint
+'''
+
 if __name__ == '__main__':
+    # Check if root
     if os.geteuid() == 0:
         main()
     else:
-        print("Must run as root")
-
+        print("Must run as root (UID 0)")
