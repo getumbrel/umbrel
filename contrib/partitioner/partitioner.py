@@ -98,8 +98,9 @@ def main():
     if len(usb_devs()) == 1:
         if len(usb_partitions()) == 1:
             try:
-                os.system('/bin/mount -t ext4 /dev/' + usb_partitions()[0] + ' /mnt/data')
-                # if .rekt exists or bitcoin directory doesnt exist
+                os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
+                # if .rekt exists or bitcoin directory doesnt exist (because the drive is a factory default)
+                # then wipe the drive and format it with EXT4
                 if os.path.exists('/mnt/data/.rekt') or not os.path.exists('/mnt/data/bitcoin'):
                     print('REKT file exists OR bitcoin folder not found... So lets format it')
                     # unmount before format
