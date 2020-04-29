@@ -121,8 +121,6 @@ def main():
                         print("Switching off pruning")
                         os.system('/bin/sed -i "s/prune=550/#prune=550/g;" bitcoin/bitcoin.conf')
                         os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" bitcoin/bitcoin.conf')
-                        print("Switch of pruning on LND side")
-                        os.system('/bin/sed -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" lnd/lnd.conf')
 
                     '''
                     Setup secrets, bitcoin, nginx, and lnd directory.. as a new install
