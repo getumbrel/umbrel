@@ -135,7 +135,29 @@ def main():
                     '''
                     No need to do anything
                     '''
-                    print('REKT file does not exist so we will preserve it')
+                    print('REKT file does not exist OR bitcoin folder exists so we will preserve it. But lets check for all the other folders')
+
+                    '''
+                    Check other folders in partition3
+                    - secrets
+                    - lnd
+                    - nginx
+                    '''
+                    # Secrets folder
+                    if not os.path.exists('/mnt/data/secrets'):
+                        print('secrets folder does\'nt exist!')
+                        os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+
+                    # Check LND folder
+                    if not os.path.exists('/mnt/data/lnd'):
+                        print('lnd folder does\'nt exist!')
+                        os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
+
+                    # Check nginx folder
+                    if not os.path.exists('/mnt/data/nginx'):
+                        print('nginx folder does\'nt exist!')
+                        os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+
 
                 print('Unmounting partition')
                 os.system('/bin/umount /mnt/data')
