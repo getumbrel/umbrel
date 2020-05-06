@@ -41,7 +41,7 @@ services:
                 network_mode: host
                 stop_grace_period: 1m30s
         middleware:
-                image: getumbrel/middleware:v0.0.4
+                image: getumbrel/middleware:v0.0.5
                 depends_on: [ bitcoin, lnd ]
                 logging: *default-logging
                 restart: on-failure
@@ -49,8 +49,8 @@ services:
                 volumes:
                     - "${HOME}/lnd:/lnd"
                 environment:
-                    BITCOIN_NETWORK: "mainnet"
                     BITCOIN_HOST: "0.0.0.0"
+                    RPC_PORT: "8332"
                     RPC_USER: ""
                     RPC_PASSWORD: ""
                     LND_NETWORK: "mainnet"
