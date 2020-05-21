@@ -55,12 +55,3 @@ services:
                     RPC_PASSWORD: ""
                     LND_NETWORK: "mainnet"
                     LND_HOST: "127.0.0.1"
-        lnd-unlock:
-                build: ${HOME}/build/lnd-unlock/
-                depends_on: [ lnd ]
-                logging: *default-logging
-                restart: always
-                volumes:
-                    - "${HOME}/lnd:/lnd"
-                    - "${HOME}/secrets:/secrets"
-                network_mode: host
