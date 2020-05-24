@@ -58,7 +58,8 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
         middleware:
-                image: getumbrel/middleware:v0.1.0.4
+                image: getumbrel/middleware:v0.1.0.5
+                command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
                 network_mode: host
