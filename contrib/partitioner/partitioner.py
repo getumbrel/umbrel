@@ -116,18 +116,19 @@ def main():
                     prune_setting = int(first_part / 2)
 
                     if first_part < 512000:
-                        print("Pruning the config")
+                        print("Pruning the config, because drive is less than 512 GB")
                         os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" bitcoin/bitcoin.conf')
                     else:
-                        print("Switching off pruning")
+                        print("Switching off pruning, and turn on txindex")
                         os.system('/bin/sed -i "s/prune=550/#prune=550/g;" bitcoin/bitcoin.conf')
                         os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" bitcoin/bitcoin.conf')
 
                     '''
-                    Setup secrets, bitcoin, nginx, and lnd directory.. as a new install
+                    Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
                     '''
-                    print('Setup secrets, bitcoin, nginx, and lnd directory.. as a new install')
+                    print('Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install')
                     os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+                    os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
@@ -140,6 +141,7 @@ def main():
                     '''
                     Check other folders in partition3
                     - secrets
+                    - db
                     - lnd
                     - nginx
                     '''
@@ -147,6 +149,11 @@ def main():
                     if not os.path.exists('/mnt/data/secrets'):
                         print('secrets folder does\'nt exist!')
                         os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+
+                    # db folder
+                    if not os.path.exists('/mnt/data/db'):
+                        print('db folder does\'nt exist!')
+                        os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
 
                     # Check LND folder
                     if not os.path.exists('/mnt/data/lnd'):
@@ -187,11 +194,13 @@ def main():
 
         print('Remove old folders (after copying)')
         os.system('/bin/rm -fr ' + homedirpath + '/secrets')
+        os.system('/bin/rm -fr ' + homedirpath + '/db')
         os.system('/bin/rm -fr ' + homedirpath + '/bitcoin')
         os.system('/bin/rm -fr ' + homedirpath + '/lnd')
         os.system('/bin/rm -fr ' + homedirpath + '/nginx')
         print('Set up symlinks')
         os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
+        os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')        
         os.system('/bin/ln -s /mnt/data/bitcoin ' + homedirpath + '/bitcoin')
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
