@@ -40,12 +40,12 @@ services:
                 network_mode: host
                 stop_grace_period: 1m30s
         dashboard:
-                image: getumbrel/dashboard:v0.2.0.3
+                image: getumbrel/dashboard:v0.2.0
                 logging: *default-logging
                 restart: always
                 network_mode: host
         manager:
-                image: getumbrel/manager:v0.1.0.3
+                image: getumbrel/manager:v0.1.0
                 logging: *default-logging
                 restart: unless-stopped
                 network_mode: host
@@ -58,7 +58,7 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
         middleware:
-                image: getumbrel/middleware:v0.1.0.5
+                image: getumbrel/middleware:v0.1.0
                 command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
