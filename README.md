@@ -2,7 +2,7 @@
 
 ## Abstract
 
-This is a basic framework for orchestration of the box services for running a full lightning and bitcoin node.
+This is a basic framework for orchestration of the services required to run an Umbrel bitcoin and lightning node.
 
 ## How to use
 
@@ -57,9 +57,6 @@ wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel-compose/master/con
 docker-compose up -d --build
 # verify the containers
 docker ps -a
-
-# Additional node: You should have a way of creating a wallet. Currently this container does not have a create wallet container.
-# For the unlock script to work, put the unlock password in secrets/lnd-password.txt
 ```
 
 
