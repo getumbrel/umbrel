@@ -1,4 +1,4 @@
-[![Umbrel Compose](https://i.imgur.com/4it3IiB.png)](https://github.com/getumbrel/umbrel-compose)
+[![Umbrel Compose](https://static.getumbrel.com/github/github-banner-umbrel-compose.svg)](https://github.com/getumbrel/umbrel-compose)
 
 [![Version](https://img.shields.io/github/v/release/getumbrel/umbrel-compose?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel-compose/releases)
 [![Chat](https://img.shields.io/badge/chat%20on-telegram-%235351FB)](https://t.me/getumbrel)
