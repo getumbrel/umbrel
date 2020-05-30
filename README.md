@@ -28,6 +28,35 @@ If you are looking to run Umbrel on your hardware, you do not need to use this f
 - [`umbrel-manager`](https://github.com/getumbrel/umbrel-manager)
 - [`umbrel-middleware`](https://github.com/getumbrel/umbrel-middleware)
 
+**Architecture**
+
+```
+                          + -------------------- +
+                          |   umbrel-dashboard   |
+                          + -------------------- +
+                                      |
+                                      |
+                              + ------------- +
+                              |     nginx     |
+                              + ------------- +
+                                      |
+                                      |
+              + - - - - - - - - - - - + - - - - - - - - - - - +
+              |                                               |
+              |                                               |
+   + ------------------ +                         + --------------------- +
+   |   umbrel-manager   | < - - - jwt auth - - -  |   umbrel-middleware   |
+   + ------------------ +                         + --------------------- +
+                                                              |
+                                                              |
+                                            + - - - - - - - - + - - - - - - - - +
+                                            |                                   |
+                                            |                                   |
+                                    + ------------- +                   + ------------- +
+                                    |    bitcoind   | < - - - - - - - - |      lnd      |
+                                    + ------------- +                   + ------------- +
+```
+
 ## 🛠 Using Compose
 
 ### Requirements
