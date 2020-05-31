@@ -34,6 +34,7 @@ services:
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
                         - ${HOME}/lnd:/root/.lnd
+                        - ${HOME}/bitcoin:/root/.bitcoin
                         - /var/lib/tor:/var/lib/tor
                         - /run/tor:/run/tor/
                 restart: on-failure
