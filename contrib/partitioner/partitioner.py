@@ -117,11 +117,11 @@ def main():
 
                     if first_part < 512000:
                         print("Pruning the config, because drive is less than 512 GB")
-                        os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" bitcoin/bitcoin.conf')
+                        os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
                     else:
                         print("Switching off pruning, and turn on txindex")
-                        os.system('/bin/sed -i "s/prune=550/#prune=550/g;" bitcoin/bitcoin.conf')
-                        os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" bitcoin/bitcoin.conf')
+                        os.system('/bin/sed -i "s/prune=550/#prune=550/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
+                        os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
 
                     '''
                     Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
@@ -200,7 +200,7 @@ def main():
         os.system('/bin/rm -fr ' + homedirpath + '/nginx')
         print('Set up symlinks')
         os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
-        os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')        
+        os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')
         os.system('/bin/ln -s /mnt/data/bitcoin ' + homedirpath + '/bitcoin')
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
