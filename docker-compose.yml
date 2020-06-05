@@ -19,7 +19,7 @@ services:
                 network_mode: host
                 stop_grace_period: 30s
         bitcoin:
-                image: lncm/bitcoind:v0.19.1
+                image: lncm/bitcoind:v0.20.0
                 logging: *default-logging
                 volumes:
                         - ${HOME}/bitcoin:/root/.bitcoin
