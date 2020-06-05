@@ -10,7 +10,7 @@ x-utility: &default-utility
     network_mode: host
 
 services:
-        web:
+        nginx:
                 image: nginx:1.17.8
                 logging: *default-logging
                 volumes:
@@ -34,33 +34,46 @@ services:
                 volumes:
                         - ${HOME}/lnd:/data/.lnd
                         - ${HOME}/lnd:/root/.lnd
+                        - ${HOME}/bitcoin:/root/.bitcoin
                         - /var/lib/tor:/var/lib/tor
                         - /run/tor:/run/tor/
                 restart: on-failure
-                depends_on: [ bitcoin, web ]
                 network_mode: host
                 stop_grace_period: 1m30s
-        middleware:
-                image: getumbrel/middleware:v0.0.5
-                depends_on: [ bitcoin, lnd ]
-                logging: *default-logging
-                restart: on-failure
-                network_mode: host
-                volumes:
-                    - "${HOME}/lnd:/lnd"
-                environment:
-                    BITCOIN_HOST: "0.0.0.0"
-                    RPC_PORT: "8332"
-                    RPC_USER: ""
-                    RPC_PASSWORD: ""
-                    LND_NETWORK: "mainnet"
-                    LND_HOST: "127.0.0.1"
-        lnd-unlock:
-                build: ${HOME}/build/lnd-unlock/
-                depends_on: [ lnd ]
+        dashboard:
+                image: getumbrel/dashboard:v0.2.0
                 logging: *default-logging
                 restart: always
-                volumes:
-                    - "${HOME}/lnd:/lnd"
-                    - "${HOME}/secrets:/secrets"
                 network_mode: host
+        manager:
+                image: getumbrel/manager:v0.1.0
+                logging: *default-logging
+                restart: unless-stopped
+                network_mode: host
+                volumes:
+                        - "${HOME}/db:/db"
+                environment:
+                    PORT: "3006"
+                    USER_PASSWORD_FILE: "/db/user.json"
+                    JWT_PUBLIC_KEY_FILE: "/db/jwt-public-key/jwt.pem"
+                    JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
+                    JWT_EXPIRATION: "3600"
+        middleware:
+                image: getumbrel/middleware:v0.1.0
+                command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
+                logging: *default-logging
+                restart: unless-stopped
+                network_mode: host
+                depends_on: [ manager ]
+                volumes:
+                        - "${HOME}/lnd:/lnd"
+                        - "${HOME}/db/jwt-public-key:/jwt-public-key"
+                environment:
+                    PORT: "3005"
+                    BITCOIN_HOST: "0.0.0.0"
+                    RPC_PORT: "8332"
+                    RPC_USER: "lncm"
+                    RPC_PASSWORD: "RPCPASS"
+                    LND_NETWORK: "mainnet"
+                    LND_HOST: "127.0.0.1"
+                    JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
