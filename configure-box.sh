@@ -25,10 +25,11 @@ cat secrets/rpcauth.txt >> bitcoin/bitcoin.conf
 RPCPASS=`cat secrets/rpcpass.txt`
 echo "Configuring LND rpc info"
 sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
+echo "Configuring docker-compose file"
+sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
 if [ ! -z $TESTNET ]; then
     echo "Enabling testnet if TESTNET variable is set"
     echo "testnet=1" >> bitcoin/bitcoin.conf
 fi
 rm configure-box.sh
 echo "Box Configuration complete"
-
