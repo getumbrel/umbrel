@@ -132,6 +132,15 @@ def main():
                     os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+
+                    if not os.path.exists('/mnt/data/swap'):
+                        print('Add swap to partition')
+                        os.system('sed -i "/CONF_SWAPFILE/s/^#//g; " /etc/dphys-swapfile')
+                        os.system('sed -i "s/\/var\/swap/\/mnt\/data\/swap/g; " /etc/dphys-swapfile')
+                        os.system('sed -i "s/CONF_SWAPSIZE=100/CONF_SWAPSIZE=2000/g; " /etc/dphys-swapfile')
+                        print('Restarting dphys swapfile')
+                        os.system('/etc/init.d/dphys-swapfile restart')
+
                 else:
                     '''
                     No need to do anything
