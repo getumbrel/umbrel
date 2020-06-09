@@ -41,12 +41,12 @@ services:
                 network_mode: host
                 stop_grace_period: 1m30s
         dashboard:
-                image: getumbrel/dashboard:master
+                image: getumbrel/dashboard:v0.2.1
                 logging: *default-logging
                 restart: always
                 network_mode: host
         manager:
-                image: getumbrel/manager:master
+                image: getumbrel/manager:v0.1.1
                 logging: *default-logging
                 restart: unless-stopped
                 network_mode: host
@@ -63,7 +63,7 @@ services:
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $HOME
         middleware:
-                image: getumbrel/middleware:master
+                image: getumbrel/middleware:v0.1.1
                 command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
