@@ -27,7 +27,7 @@ services:
                         - ${HOME}/bitcoin:/data/bitcoin
                 restart: on-failure
                 network_mode: host
-                stop_grace_period: 2m30s
+                stop_grace_period: 15m30s
         lnd:
                 image: lncm/lnd:v0.9.2-root-experimental
                 logging: *default-logging
@@ -39,17 +39,19 @@ services:
                         - /run/tor:/run/tor/
                 restart: on-failure
                 network_mode: host
-                stop_grace_period: 1m30s
+                stop_grace_period: 5m30s
         dashboard:
                 image: getumbrel/dashboard:v0.2.1
                 logging: *default-logging
                 restart: always
                 network_mode: host
+                stop_grace_period: 1m30s
         manager:
                 image: getumbrel/manager:v0.1.1
                 logging: *default-logging
                 restart: unless-stopped
                 network_mode: host
+                stop_grace_period: 5m30s
                 volumes:
                         - ${HOME}/db:/db
                         - /var/run/docker.sock:/var/run/docker.sock
