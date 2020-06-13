@@ -64,7 +64,7 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $HOME
-                    DEVICE_HOST: "umbrel.local"
+                    DEVICE_HOST: "http://umbrel.local"
         middleware:
                 image: getumbrel/middleware:v0.1.1
                 command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
@@ -84,4 +84,4 @@ services:
                     LND_NETWORK: "mainnet"
                     LND_HOST: "127.0.0.1"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    DEVICE_HOST: "umbrel.local"
+                    DEVICE_HOST: "http://umbrel.local"
