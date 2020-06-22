@@ -22,21 +22,19 @@ services:
                 image: lncm/bitcoind:v0.20.0
                 logging: *default-logging
                 volumes:
-                        - ${HOME}/bitcoin:/root/.bitcoin
-                        - ${HOME}/bitcoin:/data/.bitcoin
-                        - ${HOME}/bitcoin:/data/bitcoin
+                        - ${PWD}/bitcoin:/root/.bitcoin
+                        - ${PWD}/bitcoin:/data/.bitcoin
+                        - ${PWD}/bitcoin:/data/bitcoin
                 restart: on-failure
                 network_mode: host
                 stop_grace_period: 15m30s
         lnd:
-                image: lncm/lnd:v0.9.2-root-experimental
+                image: lncm/lnd:v0.10.0-experimental
                 logging: *default-logging
                 volumes:
-                        - ${HOME}/lnd:/data/.lnd
-                        - ${HOME}/lnd:/root/.lnd
-                        - ${HOME}/bitcoin:/root/.bitcoin
-                        - /var/lib/tor:/var/lib/tor
-                        - /run/tor:/run/tor/
+                        - ${PWD}/lnd:/data/.lnd
+                        - ${PWD}/lnd:/root/.lnd
+                        - ${PWD}/bitcoin:/root/.bitcoin
                 restart: on-failure
                 network_mode: host
                 stop_grace_period: 5m30s
@@ -53,17 +51,17 @@ services:
                 network_mode: host
                 stop_grace_period: 5m30s
                 volumes:
-                        - ${HOME}/db:/db
+                        - ${PWD}/db:/db
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
-                        - ${HOME}:${HOME}
+                        - ${PWD}:${PWD}
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
                     JWT_PUBLIC_KEY_FILE: "/db/jwt-public-key/jwt.pem"
                     JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
-                    DOCKER_COMPOSE_DIRECTORY: $HOME
+                    DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
         middleware:
                 image: getumbrel/middleware:v0.1.1
@@ -73,8 +71,8 @@ services:
                 network_mode: host
                 depends_on: [ manager ]
                 volumes:
-                        - ${HOME}/lnd:/lnd
-                        - ${HOME}/db/jwt-public-key:/jwt-public-key
+                        - ${PWD}/lnd:/lnd
+                        - ${PWD}/db/jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "0.0.0.0"
