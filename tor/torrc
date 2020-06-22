@@ -1,7 +1,5 @@
 SocksPort   29050
 ControlPort 29051
 
-# Cookie Authentication
-CookieAuthentication 1
-
-
+# Tor Passwords
+HashedControlPassword 16:50A873DF18C00F4A6048BF1CEF7E7AA66478F0B5134DA4369D80657F26
