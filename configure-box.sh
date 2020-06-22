@@ -35,5 +35,13 @@ if [ ! -z $TESTNET ]; then
     # Update docker-compose
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
 fi
+echo "Adding tor password"
+SAVE_PASSWORD=`tor --hash-password "${RPCPASS}"`
+echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
+echo "Configuring bitcoind"
+sed -i "s/#torpassword=umbrelftw/#torpassword=${RPCPASS}/g;" bitcoin/bitcoin.conf
+echo "Configuring LND"
+sed -i "s/; tor.password=umbrelftw/; tor.password=${RPCPASS}/g; " lnd/lnd.conf
+
 rm configure-box.sh
 echo "Box Configuration complete"
