@@ -26,7 +26,7 @@ services:
                 depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
-                        - ${HOME}/nginx:/etc/nginx
+                        - ${PWD}/nginx:/etc/nginx
                 restart: on-failure
                 stop_grace_period: 30s
                 ports:
