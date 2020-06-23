@@ -96,7 +96,7 @@ services:
         middleware:
                 image: getumbrel/middleware:v0.1.1
                 depends_on: [ bitcoin, lnd, nginx ]
-                command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
+                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
                 depends_on: [ manager ]
