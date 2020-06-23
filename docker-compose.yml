@@ -63,6 +63,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 image: getumbrel/dashboard:v0.2.1
+                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: always
                 stop_grace_period: 1m30s
@@ -71,6 +72,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 image: getumbrel/manager:v0.1.1
+                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 5m30s
@@ -92,6 +94,7 @@ services:
                         ipv4_address: 10.11.2.1
         middleware:
                 image: getumbrel/middleware:v0.1.1
+                depends_on: [ bitcoin, lnd, nginx ]
                 command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
