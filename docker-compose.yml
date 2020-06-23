@@ -20,7 +20,7 @@ services:
                     - "${PWD}/tor/run:/var/run/tor/"
                 networks:
                     net:
-                        ipv4_address: 10.11.0.1
+                        ipv4_address: 10.11.5.1
         nginx:
                 image: nginx:1.17.8
                 logging: *default-logging
