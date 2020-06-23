@@ -11,7 +11,7 @@ x-utility: &default-utility
 
 services:
         tor:
-                build: $HOME/build/tor/ 
+                build: ${PWD}/build/tor/ 
                 restart: on-failure
                 logging: *default-logging
                 volumes:
