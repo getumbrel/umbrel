@@ -10,14 +10,27 @@ x-utility: &default-utility
     network_mode: host
 
 services:
+        tor:
+                build: $HOME/build/tor/ 
+                restart: on-failure
+                logging: *default-logging
+                volumes:
+                    - "${PWD}/tor/torrc:/etc/tor/torrc"
+                    - "${PWD}/tor/data:/var/lib/tor/"
+                    - "${PWD}/tor/run:/var/run/tor/"
+                networks:
+                    net:
+                        ipv4_address: 10.11.0.1
         nginx:
                 image: nginx:1.17.8
                 logging: *default-logging
                 volumes:
                         - ${HOME}/nginx:/etc/nginx
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.0.2
         bitcoin:
                 image: lncm/bitcoind:v0.20.0
                 logging: *default-logging
@@ -26,8 +39,10 @@ services:
                         - ${PWD}/bitcoin:/data/.bitcoin
                         - ${PWD}/bitcoin:/data/bitcoin
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 15m30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.1.1
         lnd:
                 image: lncm/lnd:v0.10.0-experimental
                 logging: *default-logging
@@ -36,19 +51,22 @@ services:
                         - ${PWD}/lnd:/root/.lnd
                         - ${PWD}/bitcoin:/root/.bitcoin
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 5m30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.1.2
         dashboard:
                 image: getumbrel/dashboard:v0.2.1
                 logging: *default-logging
                 restart: always
-                network_mode: host
                 stop_grace_period: 1m30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.0.3
         manager:
                 image: getumbrel/manager:v0.1.1
                 logging: *default-logging
                 restart: unless-stopped
-                network_mode: host
                 stop_grace_period: 5m30s
                 volumes:
                         - ${PWD}/db:/db
@@ -63,12 +81,14 @@ services:
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
+                networks:
+                    net:
+                        ipv4_address: 10.11.2.1
         middleware:
                 image: getumbrel/middleware:v0.1.1
                 command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
-                network_mode: host
                 depends_on: [ manager ]
                 volumes:
                         - ${PWD}/lnd:/lnd
@@ -83,3 +103,12 @@ services:
                     LND_HOST: "127.0.0.1"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOST: "http://umbrel.local"
+                networks:
+                    net:
+                        ipv4_address: 10.11.2.2
+networks:
+    net:
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.11.0.0/16
