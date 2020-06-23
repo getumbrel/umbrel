@@ -23,6 +23,7 @@ services:
                         ipv4_address: 10.11.5.1
         nginx:
                 image: nginx:1.17.8
+                depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
                         - ${HOME}/nginx:/etc/nginx
