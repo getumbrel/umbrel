@@ -38,6 +38,7 @@ services:
                 image: lncm/bitcoind:v0.20.0
                 depends_on: [ tor ]
                 logging: *default-logging
+                command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
                         - ${PWD}/bitcoin:/root/.bitcoin
                         - ${PWD}/bitcoin:/data/.bitcoin
