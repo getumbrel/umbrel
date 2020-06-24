@@ -27,7 +27,8 @@ echo "Configuring LND rpc info"
 sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
 echo "Configuring docker-compose file"
 sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
-if [ ! -z $TESTNET ]; then
+# TESTNET set and REGTEST not
+if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     echo "Enabling testnet mode if TESTNET variable is set"
     # Update bitcoin.conf
     sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
@@ -36,6 +37,14 @@ if [ ! -z $TESTNET ]; then
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
     # TODO: lnd.conf
 fi
+# REGTEST set and TESTNET not
+if [-z $TESTNET ] && [ ! -z $REGTEST ]; then
+    echo "Enabling regtest mode if REGTEST variable is set"
+    sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
+    sed -i 's/mainnet/regtest/g; ' docker-compose.yml
+fi
+
 echo "Adding tor password"
 SAVE_PASSWORD=`tor --hash-password "${RPCPASS}"`
 echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
