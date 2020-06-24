@@ -35,7 +35,15 @@ if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
     # Update docker-compose
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
-    # TODO: lnd.conf
+    # lnd.conf
+    echo "Changing LND to testnet mode"
+    sed -i 's/bitcoin.mainnet=1/bitcoin.testnet=1/g; ' lnd/lnd.conf
+    echo "Updating LND neutrino peers"
+    sed -i 's/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g; ' lnd/lnd.conf
+    sed -i 's/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g; ' lnd/lnd.conf
+    sed -i 's/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;' lnd/lnd.conf
+    sed -i 's/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;' lnd/lnd.conf
+    sed -i 's/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g; ' lnd/lnd.conf
 fi
 # REGTEST set and TESTNET not
 if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
@@ -43,6 +51,11 @@ if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
     sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
     sed -i 's/mainnet/regtest/g; ' docker-compose.yml
+    # Update LND
+    echo "Changing LND to regtest mode"
+    sed -i 's/bitcoin.mainnet=1/bitcoin.regtest=1/g; ' lnd/lnd.conf
+    echo "Updating LND if regtest is set"
+    sed -i 's/bitcoin.node=neutrino/bitcoin.node=bitcoind/g; ' lnd/lnd.conf
 fi
 
 echo "Adding tor password"
