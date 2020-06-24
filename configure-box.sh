@@ -30,8 +30,8 @@ sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
 if [ ! -z $TESTNET ]; then
     echo "Enabling testnet mode if TESTNET variable is set"
     # Update bitcoin.conf
-    sed -i 's/#[test]/[test]/g;' bitcoin/bitcoin.conf 
-    sed -i 's/#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
+    sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
     # Update docker-compose
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
     # TODO: lnd.conf
