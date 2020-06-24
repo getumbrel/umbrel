@@ -108,7 +108,7 @@ services:
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "10.11.1.1"
-                    RPC_PORT: "8332"
+                    RPC_PORT: "RPCPORT"
                     RPC_USER: "lncm"
                     RPC_PASSWORD: "RPCPASS"
                     LND_NETWORK: "mainnet"

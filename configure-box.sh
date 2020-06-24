@@ -33,6 +33,8 @@ if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     # Update bitcoin.conf
     sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
+    echo "Setting testnet port"
+    sed -i 's/RPCPORT/18332/g; ' docker-compose.yml
     # Update docker-compose
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
     # lnd.conf
@@ -51,13 +53,19 @@ if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
     sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
     sed -i 's/mainnet/regtest/g; ' docker-compose.yml
+    echo "Setting regtest port"
+    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
     # Update LND
     echo "Changing LND to regtest mode"
     sed -i 's/bitcoin.mainnet=1/bitcoin.regtest=1/g; ' lnd/lnd.conf
     echo "Updating LND if regtest is set"
     sed -i 's/bitcoin.node=neutrino/bitcoin.node=bitcoind/g; ' lnd/lnd.conf
 fi
-
+# if neither set
+if [ -z $TESTNET ] && [ -z $REGTEST ]; then
+    echo "Setting mainnet RPC port in docker-compose"
+    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
+fi
 echo "Adding tor password"
 SAVE_PASSWORD=`tor --hash-password "${RPCPASS}"`
 echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
