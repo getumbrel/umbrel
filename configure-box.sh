@@ -34,6 +34,7 @@ if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
     sed -i 's/rpcport=8332/rpcport=18332/g; ' bitcoin/bitcoin.conf
+    sed -i 's/port=8332/port=18333/g; ' bitcoin/bitcoin.conf
     echo "Setting testnet port"
     sed -i 's/RPCPORT/18332/g; ' docker-compose.yml
     # Update docker-compose
