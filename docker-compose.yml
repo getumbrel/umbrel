@@ -90,6 +90,7 @@ services:
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
+                    MIDDLEWARE_API_URL: "http://10.11.2.2"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
