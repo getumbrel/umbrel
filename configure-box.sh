@@ -38,7 +38,7 @@ if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     # TODO: lnd.conf
 fi
 # REGTEST set and TESTNET not
-if [-z $TESTNET ] && [ ! -z $REGTEST ]; then
+if [[-z $TESTNET ]] && [[ ! -z $REGTEST ]]; then
     echo "Enabling regtest mode if REGTEST variable is set"
     sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
