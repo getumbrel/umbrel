@@ -1,10 +1,10 @@
 # Docker network setup
 
-This is the current network setup for docker-compose. You can also refer to them by name as well within the containers (eventually this will happen)
+This is the current network setup for docker-compose. You can also refer to them by name as well within the containers (eventually this will happen). An alternate mirror can be found [here](https://github.com/getumbrel/umbrel-compose/wiki/Docker-Compose-networking).
 
 ## Default configuration
 
-**Subnet mask:** 10.11.0.0/16
+**Subnet mask:** 10.11.0.0/16 (10.11.* range for those who don't speak CIDR)
 
 Box        | IP Address |
 -----------| -----------|
