@@ -33,6 +33,7 @@ if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     # Update bitcoin.conf
     sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
+    sed -i 's/rpcport=8332/rpcport=18332/g; ' bitcoin/bitcoin.conf
     echo "Setting testnet port"
     sed -i 's/RPCPORT/18332/g; ' docker-compose.yml
     # Update docker-compose
@@ -52,6 +53,7 @@ if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
     echo "Enabling regtest mode if REGTEST variable is set"
     sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
     sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
+    sed -i 's/rpcport=8332/rpcport=18443/g; ' bitcoin/bitcoin.conf
     sed -i 's/mainnet/regtest/g; ' docker-compose.yml
     echo "Setting regtest port"
     sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
