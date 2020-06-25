@@ -51,7 +51,7 @@ services:
                     net:
                         ipv4_address: 10.11.1.1
         lnd:
-                image: lncm/lnd:v0.10.0-experimental
+                image: nolim1t/lnd:v0.10.1-experimental
                 depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
