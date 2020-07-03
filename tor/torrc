@@ -1,3 +1,6 @@
 # Bind only to "10.11.5.1" which is the tor IP within the container
 SocksPort   10.11.5.1:29050
 ControlPort 10.11.5.1:29051
+
+# Tor Passwords
+HashedControlPassword 16:50A873DF18C00F4A6048BF1CEF7E7AA66478F0B5134DA4369D80657F26
