@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -70,12 +70,17 @@ if [ -z $TESTNET ] && [ -z $REGTEST ]; then
     echo "Setting mainnet RPC port in docker-compose"
     sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
 fi
+
+echo "Pulling Docker images"
+docker-compose pull
+
 echo "Adding tor password"
-SAVE_PASSWORD=`tor --hash-password "${RPCPASS}"`
+SAVE_PASSWORD=`docker run -it getumbrel/tor:v0.4.1.9 --quiet --hash-password "${RPCPASS}"`
 echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
-echo "Configuring bitcoind"
+
+echo "Adding Tor password to bitcoind"
 sed -i "s/torpassword=umbrelftw/torpassword=${RPCPASS}/g;" bitcoin/bitcoin.conf
-echo "Configuring LND"
+echo "Adding Tor password to LND"
 sed -i "s/tor.password=umbrelftw/tor.password=${RPCPASS}/g; " lnd/lnd.conf
 
 rm configure-box.sh

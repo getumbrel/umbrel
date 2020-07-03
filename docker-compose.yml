@@ -11,7 +11,7 @@ x-utility: &default-utility
 
 services:
         tor:
-                build: ${PWD}/build/tor/ 
+                image: getumbrel/tor:v0.4.1.9
                 restart: on-failure
                 logging: *default-logging
                 volumes:
