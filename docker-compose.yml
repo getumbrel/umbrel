@@ -38,8 +38,8 @@ services:
         bitcoin:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.20.0
-                depends_on: [ tor ]
                 logging: *default-logging
+                depends_on: [ tor ]
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
                         - ${PWD}/bitcoin:/root/.bitcoin
@@ -55,8 +55,8 @@ services:
         lnd:
                 container_name: lnd
                 image: lncm/lnd:v0.10.1-experimental
-                depends_on: [ tor ]
                 logging: *default-logging
+                depends_on: [ tor ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
                         - ${PWD}/lnd:/root/.lnd
@@ -79,6 +79,7 @@ services:
                 container_name: manager
                 image: getumbrel/manager:v0.1.1
                 logging: *default-logging
+                depends_on: [ tor ]
                 restart: unless-stopped
                 stop_grace_period: 5m30s
                 volumes:
@@ -101,9 +102,9 @@ services:
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.1
-                depends_on: [ bitcoin, lnd ]
-                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 logging: *default-logging
+                depends_on: [ manager, bitcoin, lnd ]
+                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 restart: unless-stopped
                 depends_on: [ manager ]
                 volumes:
