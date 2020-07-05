@@ -10,78 +10,117 @@ x-utility: &default-utility
     network_mode: host
 
 services:
+        tor:
+                image: getumbrel/tor:v0.4.1.9
+                restart: on-failure
+                logging: *default-logging
+                volumes:
+                    - "${PWD}/tor/torrc:/etc/tor/torrc"
+                    - "${PWD}/tor/data:/var/lib/tor/"
+                    - "${PWD}/tor/run:/var/run/tor/"
+                networks:
+                    net:
+                        ipv4_address: 10.11.5.1
         nginx:
                 image: nginx:1.17.8
+                depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
-                        - ${HOME}/nginx:/etc/nginx
+                        - ${PWD}/nginx:/etc/nginx
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 30s
+                ports:
+                    - "80:80"
+                networks:
+                    net:
+                        ipv4_address: 10.11.0.2
         bitcoin:
                 image: lncm/bitcoind:v0.20.0
+                depends_on: [ tor ]
                 logging: *default-logging
+                command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
-                        - ${HOME}/bitcoin:/root/.bitcoin
-                        - ${HOME}/bitcoin:/data/.bitcoin
-                        - ${HOME}/bitcoin:/data/bitcoin
+                        - ${PWD}/bitcoin:/root/.bitcoin
+                        - ${PWD}/bitcoin:/data/.bitcoin
+                        - ${PWD}/bitcoin:/data/bitcoin
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 15m30s
+                ports:
+                    - "127.0.0.1:8333:8333"
+                networks:
+                    net:
+                        ipv4_address: 10.11.1.1
         lnd:
-                image: lncm/lnd:v0.9.2-root-experimental
+                image: lncm/lnd:v0.10.1-experimental
+                depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
-                        - ${HOME}/lnd:/data/.lnd
-                        - ${HOME}/lnd:/root/.lnd
-                        - ${HOME}/bitcoin:/root/.bitcoin
-                        - /var/lib/tor:/var/lib/tor
-                        - /run/tor:/run/tor/
+                        - ${PWD}/lnd:/data/.lnd
+                        - ${PWD}/lnd:/root/.lnd
+                        - ${PWD}/bitcoin:/root/.bitcoin
                 restart: on-failure
-                network_mode: host
                 stop_grace_period: 5m30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.1.2
         dashboard:
                 image: getumbrel/dashboard:v0.2.1
+                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: always
-                network_mode: host
                 stop_grace_period: 1m30s
+                networks:
+                    net:
+                        ipv4_address: 10.11.0.3
         manager:
                 image: getumbrel/manager:v0.1.1
+                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: unless-stopped
-                network_mode: host
                 stop_grace_period: 5m30s
                 volumes:
-                        - ${HOME}/db:/db
+                        - ${PWD}/db:/db
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
-                        - ${HOME}:${HOME}
+                        - ${PWD}:${PWD}
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
                     JWT_PUBLIC_KEY_FILE: "/db/jwt-public-key/jwt.pem"
                     JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
-                    DOCKER_COMPOSE_DIRECTORY: $HOME
+                    DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
+                    MIDDLEWARE_API_URL: "http://10.11.2.2"
+                networks:
+                    net:
+                        ipv4_address: 10.11.2.1
         middleware:
                 image: getumbrel/middleware:v0.1.1
-                command: ["./wait-for-node-manager.sh", "localhost", "npm", "start"]
+                depends_on: [ bitcoin, lnd, nginx ]
+                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
-                network_mode: host
                 depends_on: [ manager ]
                 volumes:
-                        - ${HOME}/lnd:/lnd
-                        - ${HOME}/db/jwt-public-key:/jwt-public-key
+                        - ${PWD}/lnd:/lnd
+                        - ${PWD}/db/jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
-                    BITCOIN_HOST: "0.0.0.0"
-                    RPC_PORT: "8332"
+                    BITCOIN_HOST: "10.11.1.1"
+                    RPC_PORT: "RPCPORT"
                     RPC_USER: "lncm"
                     RPC_PASSWORD: "RPCPASS"
                     LND_NETWORK: "mainnet"
-                    LND_HOST: "127.0.0.1"
+                    LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOST: "http://umbrel.local"
+                networks:
+                    net:
+                        ipv4_address: 10.11.2.2
+networks:
+    net:
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.11.0.0/16

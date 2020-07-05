@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -27,13 +27,61 @@ echo "Configuring LND rpc info"
 sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
 echo "Configuring docker-compose file"
 sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
-if [ ! -z $TESTNET ]; then
+# TESTNET set and REGTEST not
+if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     echo "Enabling testnet mode if TESTNET variable is set"
     # Update bitcoin.conf
-    sed -i '/[test]/s/^#//g' bitcoin/bitcoin.conf 
-    sed -i '/testnet=1/s/^#//g' bitcoin/bitcoin.conf
+    sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
+    sed -i 's/rpcport=8332/rpcport=18332/g; ' bitcoin/bitcoin.conf
+    sed -i 's/port=8332/port=18333/g; ' bitcoin/bitcoin.conf
+    echo "Setting testnet port"
+    sed -i 's/RPCPORT/18332/g; ' docker-compose.yml
     # Update docker-compose
     sed -i 's/mainnet/testnet/g; ' docker-compose.yml
+    # lnd.conf
+    echo "Changing LND to testnet mode"
+    sed -i 's/bitcoin.mainnet=1/bitcoin.testnet=1/g; ' lnd/lnd.conf
+    echo "Updating LND neutrino peers"
+    sed -i 's/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g; ' lnd/lnd.conf
+    sed -i 's/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g; ' lnd/lnd.conf
+    sed -i 's/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;' lnd/lnd.conf
+    sed -i 's/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;' lnd/lnd.conf
+    sed -i 's/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g; ' lnd/lnd.conf
 fi
+# REGTEST set and TESTNET not
+if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
+    echo "Enabling regtest mode if REGTEST variable is set"
+    sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
+    sed -i 's/rpcport=8332/rpcport=18443/g; ' bitcoin/bitcoin.conf
+    sed -i 's/port=8333/port=18444/; ' bitcoin/bitcoin.conf
+    sed -i 's/mainnet/regtest/g; ' docker-compose.yml
+    echo "Setting regtest port"
+    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
+    # Update LND
+    echo "Changing LND to regtest mode"
+    sed -i 's/bitcoin.mainnet=1/bitcoin.regtest=1/g; ' lnd/lnd.conf
+    echo "Updating LND if regtest is set"
+    sed -i 's/bitcoin.node=neutrino/bitcoin.node=bitcoind/g; ' lnd/lnd.conf
+fi
+# if neither set
+if [ -z $TESTNET ] && [ -z $REGTEST ]; then
+    echo "Setting mainnet RPC port in docker-compose"
+    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
+fi
+
+echo "Pulling Docker images"
+docker-compose pull
+
+echo "Adding tor password"
+SAVE_PASSWORD=`docker run -it getumbrel/tor:v0.4.1.9 --quiet --hash-password "${RPCPASS}"`
+echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
+
+echo "Adding Tor password to bitcoind"
+sed -i "s/torpassword=umbrelftw/torpassword=${RPCPASS}/g;" bitcoin/bitcoin.conf
+echo "Adding Tor password to LND"
+sed -i "s/tor.password=umbrelftw/tor.password=${RPCPASS}/g; " lnd/lnd.conf
+
 rm configure-box.sh
 echo "Box Configuration complete"
