@@ -87,11 +87,13 @@ services:
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
                         - ${PWD}:${PWD}
+                        - jwt-public-key:/jwt-public-key
+                        - jwt-private-key:/jwt-private-key
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
-                    JWT_PUBLIC_KEY_FILE: "/db/jwt-public-key/jwt.pem"
-                    JWT_PRIVATE_KEY_FILE: "/db/jwt-private-key/jwt.key"
+                    JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
+                    JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
@@ -109,7 +111,7 @@ services:
                 depends_on: [ manager ]
                 volumes:
                         - ${PWD}/lnd:/lnd
-                        - ${PWD}/db/jwt-public-key:/jwt-public-key
+                        - jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "10.11.1.1"
@@ -129,3 +131,7 @@ networks:
             driver: default
             config:
                 - subnet: 10.11.0.0/16
+
+volumes:
+    jwt-public-key:
+    jwt-private-key:
