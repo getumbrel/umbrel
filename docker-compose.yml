@@ -5,12 +5,13 @@ x-logging: &default-logging
         tag: "{{.Name}}"
 
 x-utility: &default-utility
-    image: "alpine:3.11"
+    image: alpine:3.11
     logging: *default-logging
     network_mode: host
 
 services:
         tor:
+                container_name: tor
                 image: getumbrel/tor:v0.4.1.9
                 restart: on-failure
                 logging: *default-logging
@@ -22,8 +23,8 @@ services:
                     net:
                         ipv4_address: 10.11.5.1
         nginx:
+                container_name: nginx
                 image: nginx:1.17.8
-                depends_on: [ tor ]
                 logging: *default-logging
                 volumes:
                         - ${PWD}/nginx:/etc/nginx
@@ -35,6 +36,7 @@ services:
                     net:
                         ipv4_address: 10.11.0.2
         bitcoin:
+                container_name: bitcoin
                 image: lncm/bitcoind:v0.20.0
                 depends_on: [ tor ]
                 logging: *default-logging
@@ -51,6 +53,7 @@ services:
                     net:
                         ipv4_address: 10.11.1.1
         lnd:
+                container_name: lnd
                 image: lncm/lnd:v0.10.1-experimental
                 depends_on: [ tor ]
                 logging: *default-logging
@@ -64,8 +67,8 @@ services:
                     net:
                         ipv4_address: 10.11.1.2
         dashboard:
+                container_name: dashboard
                 image: getumbrel/dashboard:v0.2.1
-                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: always
                 stop_grace_period: 1m30s
@@ -73,8 +76,8 @@ services:
                     net:
                         ipv4_address: 10.11.0.3
         manager:
+                container_name: manager
                 image: getumbrel/manager:v0.1.1
-                depends_on: [ bitcoin, lnd, nginx ]
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 5m30s
@@ -96,8 +99,9 @@ services:
                     net:
                         ipv4_address: 10.11.2.1
         middleware:
+                container_name: middleware
                 image: getumbrel/middleware:v0.1.1
-                depends_on: [ bitcoin, lnd, nginx ]
+                depends_on: [ bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 logging: *default-logging
                 restart: unless-stopped
