@@ -126,11 +126,12 @@ def main():
                     '''
                     Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
                     '''
-                    print('Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install')
+                    print('Setup secrets, db, bitcoin, nginx, tor and lnd directory.. as a new install')
                     os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
+                    os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')
                     os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
 
                     if not os.path.exists('/mnt/data/swap'):
@@ -153,11 +154,17 @@ def main():
                     - db
                     - lnd
                     - nginx
+                    - tor
                     '''
                     # Secrets folder
                     if not os.path.exists('/mnt/data/secrets'):
                         print('secrets folder does\'nt exist!')
                         os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+                        
+                    # tor folder
+                    if not os.path.exists('/mnt/data/tor'):
+                        print('secrets folder does\'nt exist!')
+                        os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')                        
 
                     # db folder
                     if not os.path.exists('/mnt/data/db'):
@@ -206,12 +213,14 @@ def main():
         os.system('/bin/rm -fr ' + homedirpath + '/db')
         os.system('/bin/rm -fr ' + homedirpath + '/bitcoin')
         os.system('/bin/rm -fr ' + homedirpath + '/lnd')
+        os.system('/bin/rm -fr ' + homedirpath + '/tor')
         os.system('/bin/rm -fr ' + homedirpath + '/nginx')
         print('Set up symlinks')
         os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
         os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')
         os.system('/bin/ln -s /mnt/data/bitcoin ' + homedirpath + '/bitcoin')
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
+        os.system('/bin/ln -s /mnt/data/tor ' + homedirpath + '/tor')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
     else:
         print('No drives or unexpected number of drives detected!')
