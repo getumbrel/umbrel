@@ -1,6 +1,6 @@
 # Docker network setup
 
-This is the current network setup for docker-compose. You can also refer to them by name as well within the containers (eventually this will happen). An alternate mirror can be found [here](https://github.com/getumbrel/umbrel-compose/wiki/Docker-Compose-networking).
+This is the current network setup for docker-compose. You can also refer to them by name as well within the containers (eventually this will happen). An alternate mirror can be found [here](https://github.com/getumbrel/umbrel/wiki/Docker-Compose-networking).
 
 ## Default configuration
 

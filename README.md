@@ -1,32 +1,34 @@
-[![Umbrel Compose](https://static.getumbrel.com/github/github-banner-umbrel-compose.svg)](https://github.com/getumbrel/umbrel-compose)
+[![Umbrel](https://static.getumbrel.com/github/github-banner-umbrel.svg)](https://github.com/getumbrel/umbrel)
 
-[![Version](https://img.shields.io/github/v/release/getumbrel/umbrel-compose?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel-compose/releases)
+[![Version](https://img.shields.io/github/v/release/getumbrel/umbrel?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel/releases)
 [![Chat](https://img.shields.io/badge/chat%20on-telegram-%235351FB)](https://t.me/getumbrel)
 
 [![Twitter](https://img.shields.io/twitter/follow/getumbrel?style=social)](https://twitter.com/getumbrel)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/getumbrel?label=Subscribe%20%2Fr%2Fgetumbrel&style=social)](https://reddit.com/r/getumbrel)
 
 
-# ☂️ compose
+# ☂️ Umbrel
 
-Compose is a framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
+This is the master respository of Umbrel and contains the framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
 
-It is platform and architecture-agnostic, thus can be used to directly spin up instances of Umbrel without installing the [Umbrel OS](https://github.com/getumbrel/umbrel-os) since all orchestrated services use multi-architecture images.
+It is platform and architecture-agnostic, thus can be used to directly spin up instances of Umbrel without installing the [Umbrel OS](https://github.com/getumbrel/umbrel-os) since all orchestrated services use multi-architecture Docker images.
 
 We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/getumbrel/umbrel-os), Ubuntu (x64) for [testnet.getumbrel.com](https://testnet.getumbrel.com) and macOS (x64) for local development.
 
 ## 🚀 Getting started
 
-If you are looking to run Umbrel on your hardware, you do not need to use this framework on it's own. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os/releases) and you're good to go.
+If you are looking to run Umbrel on your hardware, you do not need to use this repository on it's own. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os/releases) and you're good to go.
 
-## 🎹 Services orchestrated by Compose
+## 🎹 Services orchestrated
 
-- [`bitcoind`](https://github.com/getumbrel/docker-bitcoind)
-- [`lnd`](https://github.com/getumbrel/docker-lnd)
-- [`nginx`](https://github.com/nginx/nginx)
-- [`umbrel-dashboard`](https://github.com/getumbrel/umbrel-dashboard)
-- [`umbrel-manager`](https://github.com/getumbrel/umbrel-manager)
-- [`umbrel-middleware`](https://github.com/getumbrel/umbrel-middleware)
+- [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
+- [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
+- [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
+- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
+- [`LND`](https://github.com/getumbrel/docker-lnd)
+- [`Tor`](https://github.com/getumbrel/docker-tor)
+- [`Nginx`](https://github.com/nginx/nginx)
+
 
 **Architecture**
 
@@ -57,14 +59,13 @@ If you are looking to run Umbrel on your hardware, you do not need to use this f
                                     + ------------- +                   + ------------- +
 ```
 
-## 🛠 Using Compose
+## 🛠 Using Umbrel
 
 ### Requirements
 
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install/#install-using-pip) (installed via python3 pip)
-- [Tor](https://2019.www.torproject.org/docs/debian.html.en) (using default system paths)
 
 Ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
@@ -76,9 +77,9 @@ Ensure that your account is [correctly permissioned to use docker](https://docs.
 # Ideally you should run this in $HOME as the docker-compose presets are in home
 # This will not overwrite any other files but you should segment this in its 
 # own account
-curl "https://raw.githubusercontent.com/getumbrel/umbrel-compose/master/install-box.sh" | sh
+curl "https://raw.githubusercontent.com/getumbrel/umbrel/master/install-box.sh" | sh
 # OR wget (if this works better)
-wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel-compose/master/install-box.sh" | sh
+wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/master/install-box.sh" | sh
 ```
 
 ### Step 2. Configure
@@ -86,7 +87,8 @@ wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel-compose/master/ins
 ```bash
 # If you want to use testnet, otherwise it will use mainnet by default and be #reckless
 export TESTNET=true
-# (testnet mode not fully supported)
+# Or if you want to use regtest
+export REGTEST=true
 
 # Run this in the $HOME directory
 ./configure-box.sh
@@ -110,12 +112,12 @@ docker ps -a
 
 We welcome and appreciate new contributions.
 
-If you're a developer looking to help but not sure where to begin, check out [these issues](https://github.com/getumbrel/umbrel-dashboard/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) that have specifically been marked as being friendly to new contributors.
+If you're a developer looking to help but not sure where to begin, check out [these issues](https://github.com/getumbrel/umbrel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) that have specifically been marked as being friendly to new contributors.
 
-If you're looking for a bigger challenge, before opening a pull request please [create an issue](https://github.com/getumbrel/umbrel-dashboard/issues/new/choose) or [join our community chat](https://t.me/getumbrel) to get feedback, discuss the best way to tackle the challenge, and to ensure that there's no duplication of work.
+If you're looking for a bigger challenge, before opening a pull request please [create an issue](https://github.com/getumbrel/umbrel/issues/new/choose) or [join our community chat](https://t.me/getumbrel) to get feedback, discuss the best way to tackle the challenge, and to ensure that there's no duplication of work.
 
 ---
 
-[![License](https://img.shields.io/github/license/getumbrel/umbrel-compose?color=%235351FB)](https://github.com/getumbrel/umbrel-compose/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/getumbrel/umbrel?color=%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE)
 
 [getumbrel.com](https://getumbrel.com)

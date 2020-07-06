@@ -13,7 +13,7 @@
 
 echo "Cloning to current working directory from github..."
 git init
-git remote add origin https://github.com/getumbrel/umbrel-compose.git
+git remote add origin https://github.com/getumbrel/umbrel.git
 git fetch
 git reset origin/master
 git checkout -t origin/master
