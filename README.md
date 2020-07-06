@@ -59,7 +59,7 @@ If you are looking to run Umbrel on your hardware, you do not need to use this r
                                     + ------------- +                   + ------------- +
 ```
 
-## 🛠 Using Umbrel
+## 🛠 Installation
 
 ### Requirements
 
