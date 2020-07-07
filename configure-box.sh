@@ -75,7 +75,7 @@ echo "Pulling Docker images"
 docker-compose pull
 
 echo "Adding tor password"
-SAVE_PASSWORD=`docker run -it getumbrel/tor:v0.4.1.9 --quiet --hash-password "${RPCPASS}"`
+SAVE_PASSWORD=`docker run getumbrel/tor:v0.4.1.9 --quiet --hash-password "${RPCPASS}"`
 # Add a new line first
 echo >> tor/torrc
 echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
