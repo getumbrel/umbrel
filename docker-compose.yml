@@ -13,7 +13,7 @@ services:
         tor:
                 container_name: tor
                 image: getumbrel/tor:v0.4.1.9
-                restart: on-failure
+                restart: unless-stopped
                 logging: *default-logging
                 volumes:
                     - "${PWD}/tor/torrc:/etc/tor/torrc"
@@ -29,7 +29,7 @@ services:
                 depends_on: [ dashboard ]
                 volumes:
                         - ${PWD}/nginx:/etc/nginx
-                restart: on-failure
+                restart: unless-stopped
                 stop_grace_period: 30s
                 ports:
                     - "80:80"
@@ -46,7 +46,7 @@ services:
                         - ${PWD}/bitcoin:/root/.bitcoin
                         - ${PWD}/bitcoin:/data/.bitcoin
                         - ${PWD}/bitcoin:/data/bitcoin
-                restart: on-failure
+                restart: unless-stopped
                 stop_grace_period: 15m30s
                 ports:
                     - "127.0.0.1:8333:8333"
@@ -62,7 +62,7 @@ services:
                         - ${PWD}/lnd:/data/.lnd
                         - ${PWD}/lnd:/root/.lnd
                         - ${PWD}/bitcoin:/root/.bitcoin
-                restart: on-failure
+                restart: unless-stopped
                 stop_grace_period: 5m30s
                 networks:
                     net:
@@ -71,7 +71,7 @@ services:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.2.1
                 logging: *default-logging
-                restart: always
+                restart: unless-stopped
                 stop_grace_period: 1m30s
                 networks:
                     net:
