@@ -26,6 +26,7 @@ services:
                 container_name: nginx
                 image: nginx:1.17.8
                 logging: *default-logging
+                depends_on: [ dashboard ]
                 volumes:
                         - ${PWD}/nginx:/etc/nginx
                 restart: on-failure
