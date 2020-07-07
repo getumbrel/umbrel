@@ -16,9 +16,9 @@ services:
                 restart: unless-stopped
                 logging: *default-logging
                 volumes:
-                    - "${PWD}/tor/torrc:/etc/tor/torrc"
-                    - "${PWD}/tor/data:/var/lib/tor/"
-                    - "${PWD}/tor/run:/var/run/tor/"
+                    - ${PWD}/tor/torrc:/etc/tor/torrc
+                    - ${PWD}/tor/data:/var/lib/tor/
+                    - ${PWD}/tor/run:/var/run/tor/
                 networks:
                     net:
                         ipv4_address: 10.11.5.1
@@ -69,7 +69,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.2.1
+                image: getumbrel/dashboard:v0.2.2
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -78,7 +78,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.1.1
+                image: getumbrel/manager:v0.1.2
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
@@ -90,6 +90,7 @@ services:
                         - ${PWD}:${PWD}
                         - jwt-public-key:/jwt-public-key
                         - jwt-private-key:/jwt-private-key
+                        - ${PWD}/tor/data:/var/lib/tor/
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
@@ -99,12 +100,13 @@ services:
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
+                    UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
         middleware:
                 container_name: middleware
-                image: getumbrel/middleware:v0.1.1
+                image: getumbrel/middleware:v0.1.2
                 logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
