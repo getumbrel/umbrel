@@ -90,6 +90,7 @@ services:
                         - ${PWD}:${PWD}
                         - jwt-public-key:/jwt-public-key
                         - jwt-private-key:/jwt-private-key
+                        - ${PWD}/tor/data:/var/lib/tor/
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
@@ -99,6 +100,7 @@ services:
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOST: "http://umbrel.local"
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
+                    UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
@@ -113,7 +115,6 @@ services:
                 volumes:
                         - ${PWD}/lnd:/lnd
                         - jwt-public-key:/jwt-public-key
-                        - ${PWD}/tor/data:/var/lib/tor/
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "10.11.1.1"
@@ -124,7 +125,6 @@ services:
                     LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOST: "http://umbrel.local"
-                    UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
