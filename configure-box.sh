@@ -68,7 +68,7 @@ fi
 # if neither set
 if [ -z $TESTNET ] && [ -z $REGTEST ]; then
     echo "Setting mainnet RPC port in docker-compose"
-    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
+    sed -i 's/RPCPORT/8332/g; ' docker-compose.yml
 fi
 
 echo "Pulling Docker images"
