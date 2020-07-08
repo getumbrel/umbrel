@@ -125,6 +125,20 @@ services:
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
+        neutrino-switcher:
+                image: lncm/neutrino-switcher:1.0.0
+                logging: *default-logging
+                depends_on: [ bitcoin, lnd ]
+                restart: always
+                volumes:
+                    - "${PWD}/lnd:/lnd"
+                    - "${PWD}/secrets:/secrets"
+                    - "${PWD}/statuses:/statuses"
+                environment:
+                    JSONRPCURL: http://10.11.1.1:RPCPORT
+                networks:
+                    net:
+                        ipv4_address: 10.11.5.2
 networks:
     net:
         ipam:
