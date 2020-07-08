@@ -12,16 +12,13 @@
 # Pre-requisites: git
 
 echo "Cloning to current working directory from github..."
-git init
-git remote add origin https://github.com/getumbrel/umbrel.git
-git fetch
-git reset origin/master
-git checkout -t origin/master
-git reset --hard
+git clone -b v0.1.2 https://github.com/getumbrel/umbrel.git .
 
 echo "Removing stuff we don't need"
 rm -fr .git
 rm -fr README.md
+rm -fr NETWORKING.md
+rm -fr CONTRIBUTING.md
 rm -fr LICENSE
 rm -fr install-box.sh
 
