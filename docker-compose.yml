@@ -129,7 +129,7 @@ services:
                     net:
                         ipv4_address: 10.11.2.2
         neutrino-switcher:
-                image: lncm/neutrino-switcher:1.0.0
+                image: lncm/neutrino-switcher:1.0.3
                 logging: *default-logging
                 depends_on: [ bitcoin, lnd ]
                 restart: always
