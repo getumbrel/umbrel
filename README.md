@@ -85,10 +85,10 @@ wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/v0.1.3-beta/instal
 ### Step 2. Configure
 
 ```bash
-# For running Umbrel on mainnet, run:
+# To run Umbrel on mainnet, run:
 ./configure-box.sh
 
-# Or if you want to run on testnet, run:
+# For testnet, run:
 TESTNET=1 ./configure-box.sh
 
 # For regtest, run:
