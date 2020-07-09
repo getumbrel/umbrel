@@ -11,6 +11,11 @@
 # Install the docker-compose box to the current working directory
 # Pre-requisites: wget
 
+if [ ! $(uname -s) == "Linux" ]; then
+  echo "Sorry, only linux systems are supported at this time (you may work around this but you are on your own there)"
+  exit 1
+fi
+
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
@@ -20,7 +25,7 @@ check_dependencies () {
   done
 }
 
-check_dependencies wget docker
+check_dependencies wget docker docker-compose
 
 echo "Start box configuration"
 echo "Installing RPCAuth.py and configuring secrets"
