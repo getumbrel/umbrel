@@ -11,6 +11,11 @@
 # Install the docker-compose box to the current working directory
 # Pre-requisites: wget
 
+if [ ! $(uname -s) == "Linux" ]; then
+  echo "Sorry, only linux systems are supported at this time (you may work around this but you are on your own there)"
+  exit 1
+fi
+
 echo "Start box configuration"
 echo "Installing RPCAuth.py and configuring secrets"
 cd bin/
@@ -31,7 +36,7 @@ sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
 if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
     echo "Enabling testnet mode if TESTNET variable is set"
     # Update bitcoin.conf
-    sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf
     sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
     sed -i 's/rpcport=8332/rpcport=18332/g; ' bitcoin/bitcoin.conf
     sed -i 's/port=8332/port=18333/g; ' bitcoin/bitcoin.conf
@@ -52,7 +57,7 @@ fi
 # REGTEST set and TESTNET not
 if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
     echo "Enabling regtest mode if REGTEST variable is set"
-    sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf 
+    sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf
     sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
     sed -i 's/rpcport=8332/rpcport=18443/g; ' bitcoin/bitcoin.conf
     sed -i 's/port=8333/port=18444/; ' bitcoin/bitcoin.conf
