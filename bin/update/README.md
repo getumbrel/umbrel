@@ -38,7 +38,7 @@ How over-the-air updates work on Umbrel.
 
 14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$HOME/statuses/start-updated`) with content `vX.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
 
-15. `fswatch`, a file monitoring tool that's continuosly monitoring the `$HOME/statuses/start-update` file notices the change, and immeditaly runs [`$HOME/bin/update/start.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/start.sh) as root.
+15. [`fswatch`](https://github.com/emcrisostomo/fswatch), a file monitoring tool that's continuosly monitoring the `$HOME/statuses/start-update` file notices the change, and immeditaly runs [`$HOME/bin/update/start.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/start.sh) as root.
 
 16. `$HOME/bin/update/start.sh` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
 
