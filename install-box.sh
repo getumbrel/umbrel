@@ -11,6 +11,17 @@
 # Install the docker-compose box to the current working directory
 # Pre-requisites: git
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies git
+
 echo "Cloning to current working directory from github..."
 git init
 git remote add origin https://github.com/getumbrel/umbrel.git
