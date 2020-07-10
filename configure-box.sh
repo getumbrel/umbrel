@@ -16,6 +16,17 @@ if [ ! $(uname -s) == "Linux" ]; then
   exit 1
 fi
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies wget docker docker-compose
+
 echo "Start box configuration"
 echo "Installing RPCAuth.py and configuring secrets"
 cd bin/
