@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-UMBREL_PATH=$(dirname $(readlink -f $0))
+# UMBREL_PATH=$(dirname $(readlink -f $0))
+UMBREL_PATH=/home/umbrel
 RELEASE="v$(cat $UMBREL_PATH/statuses/start-update)"
 UMBREL_USER=umbrel
 

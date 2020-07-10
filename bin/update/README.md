@@ -36,7 +36,7 @@ How over-the-air updates work on Umbrel.
 
 11. `umbrel-dashboard` then alerts the user regarding the new update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
 
-14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$HOME/statuses/start-updated`) with content `vX.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
+14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$HOME/statuses/start-updated`) with the version `X.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
 
 15. [`fswatch`](https://github.com/emcrisostomo/fswatch), a file monitoring tool that's continuosly monitoring the `$HOME/statuses/start-update` file notices the change, and immeditaly runs [`$HOME/bin/update/start.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/start.sh) as root.
 
