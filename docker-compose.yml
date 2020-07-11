@@ -133,7 +133,7 @@ services:
                 image: lncm/neutrino-switcher:1.0.2
                 logging: *default-logging
                 depends_on: [ bitcoin, lnd ]
-                restart: always
+                restart: unless-stopped
                 volumes:
                     - "${PWD}/lnd:/lnd"
                     - "${PWD}/secrets:/secrets"
@@ -142,7 +142,7 @@ services:
                 environment:
                     JSONRPCURL: http://10.11.1.1:RPCPORT
                     LND_CONTAINER_NAME: lnd
-                    SLEEPTIME: 86400
+                    SLEEPTIME: 3600
                 networks:
                     net:
                         ipv4_address: 10.11.5.2
