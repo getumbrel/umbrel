@@ -128,6 +128,24 @@ services:
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
+        neutrino-switcher:
+                container_name: neutrino-switcher
+                image: lncm/neutrino-switcher:1.0.2
+                logging: *default-logging
+                depends_on: [ bitcoin, lnd ]
+                restart: unless-stopped
+                volumes:
+                    - "${PWD}/lnd:/lnd"
+                    - "${PWD}/secrets:/secrets"
+                    - "${PWD}/statuses:/statuses"
+                    - "/var/run/docker.sock:/var/run/docker.sock"
+                environment:
+                    JSONRPCURL: http://10.11.1.1:RPCPORT
+                    LND_CONTAINER_NAME: lnd
+                    SLEEPTIME: 3600
+                networks:
+                    net:
+                        ipv4_address: 10.11.5.2
 networks:
     net:
         ipam:
