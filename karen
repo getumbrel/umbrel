@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-root_dir="$(readlink -f $1)"
+# karen watches for signals and executes triggers in the events dir
+# karen gets triggered a lot
+root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/events"
 signal_dir="$root_dir/signals"
 trigger_dir="$root_dir/triggers"
 
+echo "karen is running in $root_dir"
 fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
   signal="${event#"$signal_dir"}"
   signal="${signal#"/"}"
@@ -11,7 +14,7 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
 
   echo "Got signal: $signal"
   if test -x "$trigger"; then
-    echo "Executing trigger"
+    echo "karen is getting triggered!"
     "$trigger"
   else
     echo "No trigger found"
