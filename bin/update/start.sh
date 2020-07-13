@@ -9,6 +9,7 @@ if [ $(whoami) != 'root' ]; then
     UMBREL_USER=$(whoami)
 fi
 
+echo
 echo "======================================="
 echo "============= OTA UPDATE =============="
 echo "======================================="
@@ -43,8 +44,7 @@ EOF
 echo "Downloading Umbrel $RELEASE"
 
 cd /tmp/umbrel-$RELEASE
-wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/install-box.sh"
-./install-box.sh
+wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/install-box.sh" | sh
 
 cd bin/update
 
