@@ -1,14 +1,20 @@
 #!/bin/bash -e
 
 RELEASE=$1
-UMBREL_PATH=$2
+UMBREL_ROOT=$2
 UMBREL_USER=$3
 
-echo "==== OTA UPDATE ===== | STAGE: PRE-UPDATE"
+echo "======================================="
+echo "============= OTA UPDATE =============="
+echo "======================================="
+echo "========= Stage: Pre-update ==========="
+echo "======================================="
+echo
+
 echo "Installing Umbrel $1 at $2"
 
 # Update status file
-cat <<EOF > $UMBREL_PATH/bin/update/status.json
+cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Backing up"}
 EOF
 
@@ -18,16 +24,18 @@ echo "Cleaning up any previous backup"
 
 # Fix permissions
 echo "Fixing permissions"
-chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_PATH/
+chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_ROOT/
 
 # Backup
 echo "Backing up existing directory tree"
-rsync -av $UMBREL_PATH/ \
+rsync -av $UMBREL_ROOT/ \
     --exclude='.*' \
     --exclude='bitcoin' \
-    --exclude='lnd' \
     --exclude='db' \
+    --exclude='lnd' \
     --exclude='secrets' \
+    --exclude='signals' \
+    --exclude='statuses' \
     --exclude='tor' \
     /tmp/umbrel-backup/
 

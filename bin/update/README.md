@@ -49,4 +49,4 @@ How over-the-air updates work on Umbrel.
 - [`/tmp/umbrel-vX.Y.Z/bin/update/02-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
 - [`/tmp/umbrel-vX.Y.Z/bin/update/03-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installeed)
 
-All of the above scripts continuosly update `$UMBREL_ROOT/bin/update/status.json` with the progress of upgrade, which the dashboard periodically fetches every 2s via `umbrel-manager` to notify the user on the progress of update.
+All of the above scripts continuosly update `$UMBREL_ROOT/statuses/update-status.json` with the progress of upgrade, which the dashboard periodically fetches every 2s via `umbrel-manager` to notify the user on the progress of update.
