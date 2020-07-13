@@ -2,12 +2,12 @@
 
 # UMBREL_PATH=$(dirname $(readlink -f $0))
 UMBREL_PATH=/home/umbrel
-RELEASE="v$(cat $UMBREL_PATH/statuses/start-update)"
+RELEASE="v$(cat $UMBREL_PATH/signals/update)"
 UMBREL_USER=umbrel
 
 echo "==== OTA UPDATE ===== | STAGE: DOWNLOAD"
 
-if [ -z $(grep '[^[:space:]]' $UMBREL_PATH/statuses/start-update) ] ;then
+if [ -z $(grep '[^[:space:]]' $UMBREL_PATH/signals/update) ] ;then
     echo "Empty start update signal file. Version not found"
     exit 1
 fi
@@ -49,7 +49,7 @@ echo "Deleting cloned repository"
 [ -d /tmp/umbrel-$RELEASE ] && rm -rf /tmp/umbrel-$RELEASE
 
 echo "Deleting update signal file"
-rm -f $UMBREL_PATH/statuses/start-update
+rm -f $UMBREL_PATH/signals/update
 
 echo "Removing lock"
 rm -f $UMBREL_PATH/statuses/update-in-progress
