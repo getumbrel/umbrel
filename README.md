@@ -28,6 +28,7 @@ If you are looking to run Umbrel on your hardware, you do not need to use this r
 - [`LND`](https://github.com/getumbrel/docker-lnd)
 - [`Tor`](https://github.com/getumbrel/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
+- [`lnd-neutrino-switch`](https://github.com/lncm/docker-lnd-neutrino-switch) - Utility container for seamlessly transitioning from neutrino mode to bitcoind mode
 
 
 **Architecture**
