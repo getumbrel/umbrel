@@ -15,7 +15,7 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
   echo "Got signal: $signal"
   if test -x "$trigger"; then
     echo "karen is getting triggered!"
-    "$trigger"
+    "$trigger" &
   else
     echo "No trigger found"
   fi
