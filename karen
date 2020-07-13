@@ -10,6 +10,11 @@ fi
 signal_dir="$root_dir/signals"
 trigger_dir="$root_dir/triggers"
 
+if [[ ! -d "$root_dir" ]]; then
+  echo "Root dir does not exist '$root_dir'"
+  exit 1
+fi
+
 echo "karen is running in $root_dir"
 fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
   signal="${event#"$signal_dir"}"
