@@ -98,10 +98,17 @@ def main():
     if len(usb_devs()) == 1:
         if len(usb_partitions()) <= 1:
             try:
+                print("Running parted...")
                 os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
+                print('Making first partition');
+                os.system('/sbin/mkfs.ext4 -F /dev/sda1');
             except:
                 print('Error running parted');
                 sys.exit(1);
+        else:
+            print("Already partitioned")
+
+
 
         if len(usb_partitions()) == 1:
             try:
