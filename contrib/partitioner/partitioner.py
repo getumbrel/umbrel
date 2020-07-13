@@ -96,6 +96,13 @@ def main():
 
 
     if len(usb_devs()) == 1:
+        if len(usb_partitions()) <= 1:
+            try:
+                os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
+            except:
+                print('Error running parted');
+                sys.exit(1);
+
         if len(usb_partitions()) == 1:
             try:
                 os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
