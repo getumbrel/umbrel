@@ -12,7 +12,16 @@ check_dependencies () {
   done
 }
 
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
 check_dependencies fswatch readlink dirname
+
+check_root
 
 if [[ -n "$1" ]]; then
   root_dir="$(readlink -f $1)"
