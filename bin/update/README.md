@@ -16,7 +16,7 @@ How over-the-air updates work on Umbrel.
     "version": "X.Y.Z",
     "name": "Umbrel vX.Y.Z",
     "notes": "This release contains a number of bug fixes and new features."
-    "requires": "A.B.C" 
+    "requires": ">=A.B.C" 
 }
 ```
 
@@ -28,9 +28,9 @@ How over-the-air updates work on Umbrel.
 
 7. `umbrel-manager` fetches the latest `info.json` from umbrel's main repo's master branch using `GET https://raw.githubusercontent.com/getumbrel/umbrel/master/info.json`, compares it's `version` with the `version` of the local `$UMBREL_ROOT/info.json` file, and exits if both the versions are same.
 
-8. If fetched `version` > local `version`, `umbrel-manager` checks if local `version` >= `requires` in the fetched `info.json`.
+8. If fetched `version` > local `version`, `umbrel-manager` checks if local `version` satisfies the `requires` condition in the fetched `info.json`.
 
-9. If not, umbrel-manager makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vX.Y.Z/info.json` and repeats step 8 and 9 until local `version` >= `requires`. 
+9. If not, umbrel-manager makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vX.Y.Z/info.json` and repeats step 8 and 9 until local `version` < fetched `version` and local `version` doesn't fulfill the fetched `requires` condition. 
 
 10. `umbrel-manager` then returns the satisfactory `info.json` to `umbrel-dashboard`.
 
