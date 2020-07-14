@@ -85,6 +85,7 @@ services:
                 stop_grace_period: 5m30s
                 volumes:
                         - ${PWD}/db:/db
+                        - ${PWD}/events/signals:/signals
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
                         - ${PWD}:${PWD}
