@@ -38,15 +38,20 @@ How over-the-air updates work on Umbrel.
 
 14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) with the version `X.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
 
-15. [`karen`] is triggered (obviously) when `$UMBREL_ROOT/events/signals/update` is touched/updated file, and immeditaly runs the update trigger [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
+15. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) when `$UMBREL_ROOT/events/signals/update` as soon as touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
 
 16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
 
 17. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `/tmp/umbrel-vX.Y.Z` one-by-one:
 
-- [`/tmp/umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like make a backup)
+- [`/tmp/umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like making a backup)
 - [`/tmp/umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/01-run.sh): Install update script (installs the update)
 - [`/tmp/umbrel-vX.Y.Z/bin/update/02-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
 - [`/tmp/umbrel-vX.Y.Z/bin/update/03-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installeed)
 
-All of the above scripts continuosly update `$UMBREL_ROOT/statuses/update-status.json` with the progress of upgrade, which the dashboard periodically fetches every 2s via `umbrel-manager` to notify the user on the progress of update.
+All of the above scripts continuosly update `$UMBREL_ROOT/statuses/update-status.json` with the progress of update, which the dashboard periodically fetches every 2s via `umbrel-manager` to keep the user updated.
+
+### Limitations
+
+- There's currently no way to catch an error during the update and restore from the backup
+- There also needs to be a way to restore from the backup in case of a power-failure or intenional shutdown during the update process
