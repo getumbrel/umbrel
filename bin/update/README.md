@@ -30,15 +30,15 @@ How over-the-air updates work on Umbrel.
 
 8. If fetched `version` > local `version`, `umbrel-manager` checks if local `version` satisfies the `requires` condition in the fetched `info.json`.
 
-9. If not, umbrel-manager makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vX.Y.Z/info.json` and repeats step 8 and 9 until local `version` < fetched `version` and local `version` doesn't fulfill the fetched `requires` condition. 
+9. If not, `umbrel-manager` computes the minimum satisfactory version, called `L.M.N`, required for update. Eg, for `"requires": ">=1.2.2"` the minimum satisfactory version would be `1.2.2`. `umbrel-manager` then makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vL.M.N/info.json` and repeats step 8 and 9 until local `version` < fetched `version` **AND** local `version` doesn't fulfill the fetched `requires` condition. 
 
-10. `umbrel-manager` then returns the satisfactory `info.json` to `umbrel-dashboard`.
+10. `umbrel-manager` then returns the satisfying `info.json` to `umbrel-dashboard`.
 
-11. `umbrel-dashboard` then alerts the user regarding the new update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
+11. `umbrel-dashboard` then alerts the user regarding the available update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
 
-14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) with the version `X.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
+14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) with the version `X.Y.Z`, and returns `OK` to the `umbrel-dashboard`.
 
-15. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) when `$UMBREL_ROOT/events/signals/update` as soon as touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
+15. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) as soon as `$UMBREL_ROOT/events/signals/update` is touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
 
 16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
 
