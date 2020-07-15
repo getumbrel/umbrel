@@ -30,7 +30,7 @@ How over-the-air updates work on Umbrel.
 
 8. If fetched `version` > local `version`, `umbrel-manager` checks if local `version` satisfies the `requires` condition in the fetched `info.json`.
 
-9. If not, `umbrel-manager` computes the minimum satisfactory version, called `L.M.N`, required for update. Eg, for `"requires": ">=1.2.2"` the minimum satisfactory version would be `1.2.2`. `umbrel-manager` then makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vL.M.N/info.json` and repeats step 8 and 9 until local `version` < fetched `version` **AND** local `version` doesn't fulfill the fetched `requires` condition. 
+9. If not, `umbrel-manager` computes the minimum satisfactory version, called `L.M.N`, required for update. Eg, for `"requires": ">=1.2.2"` the minimum satisfactory version would be `1.2.2`. `umbrel-manager` then makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vL.M.N/info.json` and repeats step 8 and 9 until local `version` < fetched `version` **AND** local `version` fulfills the fetched `requires` condition. 
 
 10. `umbrel-manager` then returns the satisfying `info.json` to `umbrel-dashboard`.
 
