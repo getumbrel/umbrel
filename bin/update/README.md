@@ -36,13 +36,13 @@ How over-the-air updates work on Umbrel.
 
 11. `umbrel-dashboard` then alerts the user regarding the new update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
 
-14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/signals/update`) with the version `X.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
+14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) with the version `X.Y.Z`, and returns `200 OK` to the `umbrel-dashboard`.
 
-15. [`fswatch`](https://github.com/emcrisostomo/fswatch), a file monitoring tool that's continuosly monitoring the `$UMBREL_ROOT/signals/update` file notices the change, and immeditaly runs [`$UMBREL_ROOT/bin/update/start.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/start.sh) as root.
+15. [`karen`] is triggered (obviously) when `$UMBREL_ROOT/events/signals/update` is touched/updated file, and immeditaly runs the update trigger [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
 
-16. `$UMBREL_ROOT/bin/update/start.sh` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
+16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
 
-17. `$UMBREL_ROOT/bin/update/start.sh` then executes all of the following update scripts from the new release `/tmp/umbrel-vX.Y.Z` one-by-one:
+17. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `/tmp/umbrel-vX.Y.Z` one-by-one:
 
 - [`/tmp/umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like make a backup)
 - [`/tmp/umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/01-run.sh): Install update script (installs the update)

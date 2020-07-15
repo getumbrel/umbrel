@@ -1,8 +1,9 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -euo pipefail
 
 UMBREL_ROOT=$(dirname $(readlink -f ../../$0))
 # UMBREL_ROOT=/home/umbrel
-RELEASE="v$(cat $UMBREL_ROOT/signals/update)"
+RELEASE="v$(cat $UMBREL_ROOT/events/signals/update)"
 UMBREL_USER=umbrel
 
 if [ $(whoami) != 'root' ]; then
@@ -17,7 +18,7 @@ echo "========== Stage: Download ============"
 echo "======================================="
 echo
 
-if [ -z $(grep '[^[:space:]]' $UMBREL_ROOT/signals/update) ]; then
+if [ -z $(grep '[^[:space:]]' $UMBREL_ROOT/events/signals/update) ]; then
     echo "Empty update signal file. No release version not found."
     exit 1
 fi
@@ -61,7 +62,7 @@ echo "Deleting cloned repository"
 [ -d /tmp/umbrel-$RELEASE ] && rm -rf /tmp/umbrel-$RELEASE
 
 # echo "Deleting update signal file"
-# rm -f $UMBREL_ROOT/signals/update
+# rm -f $UMBREL_ROOT/events/signals/update
 
 echo "Removing lock"
 rm -f $UMBREL_ROOT/statuses/update-in-progress
