@@ -11,11 +11,11 @@ How over-the-air updates work on Umbrel.
 
 4. To prepare a new release of Umbrel, called `vX.Y.Z`, a PR is opened that updates the [`info.json`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/info.json) file to:
 
-```
+```json
 {
     "version": "X.Y.Z",
     "name": "Umbrel vX.Y.Z",
-    "notes": "This release contains a number of bug fixes and new features."
+    "notes": "This release contains a number of bug fixes and new features.",
     "requires": ">=A.B.C" 
 }
 ```
