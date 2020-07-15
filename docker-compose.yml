@@ -69,7 +69,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.2.2
+                image: getumbrel/dashboard:v0.2.3
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -78,20 +78,20 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.1.2
+                image: getumbrel/manager:v0.1.3
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
                 stop_grace_period: 5m30s
                 volumes:
+                        - ${PWD}:${PWD}
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
+                        - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
-                        - ${PWD}:${PWD}
                         - jwt-public-key:/jwt-public-key
                         - jwt-private-key:/jwt-private-key
-                        - ${PWD}/tor/data:/var/lib/tor/
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
@@ -102,6 +102,8 @@ services:
                     DEVICE_HOST: "http://umbrel.local"
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
+                    SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
+                    REBOOT_SIGNAL_FILE: "/signals/reboot"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
