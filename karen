@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+# karen watches for signals and executes triggers in the events dir
+# karen gets triggered a lot
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "Error: This script must be run as root."
+    echo "Can I speak to a manager please?"
+    exit 1
+  fi
+}
+
+check_dependencies fswatch readlink dirname
+
+check_root
+
+if [[ -n "$1" ]]; then
+  root_dir="$(readlink -f $1)"
+else
+  root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/events"
+fi
+signal_dir="$root_dir/signals"
+trigger_dir="$root_dir/triggers"
+
+if [[ ! -d "$root_dir" ]]; then
+  echo "Root dir does not exist '$root_dir'"
+  exit 1
+fi
+
+echo "karen is running in $root_dir"
+fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
+  signal="${event#"$signal_dir"}"
+  signal="${signal#"/"}"
+  trigger="$trigger_dir/$signal"
+
+  echo "Got signal: $signal"
+  if test -x "$trigger"; then
+    echo "karen is getting triggered!"
+    "$trigger" &
+  else
+    echo "No trigger found"
+  fi
+done
