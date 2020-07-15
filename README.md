@@ -78,9 +78,9 @@ Ensure that your account is [correctly permissioned to use docker](https://docs.
 # Ideally you should run this in $HOME as the docker-compose presets are in home
 # This will not overwrite any other files but you should segment this in its 
 # own account
-curl "https://raw.githubusercontent.com/getumbrel/umbrel/v0.1.3-beta/install-box.sh" | sh
+curl "https://raw.githubusercontent.com/getumbrel/umbrel/v0.1.4-beta/install-box.sh" | sh
 # OR wget (if this works better)
-wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/v0.1.3-beta/install-box.sh" | sh
+wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/v0.1.4-beta/install-box.sh" | sh
 ```
 
 ### Step 2. Configure
