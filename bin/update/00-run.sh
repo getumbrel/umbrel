@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 RELEASE=$1
 UMBREL_ROOT=$2
