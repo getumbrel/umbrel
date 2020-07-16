@@ -31,13 +31,26 @@ rm -rf statuses
 rm -rf tor
 
 # Update RPC Password in docker-compose.yml
+
+# Get gnu sed
+gnused=sed
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v gsed >/dev/null 2>&1; then
+    echo "Error: This script requires gnu-sed!"
+    echo "Install it with:"
+    echo "  brew install gnu-sed"
+    exit 1
+  fi
+  gnused=gsed
+fi
+
 echo "Updating RPC Password in docker-compose.yml"
 RPCPASS=$(cat $UMBREL_ROOT/secrets/rpcpass.txt)
-sed -i "s/RPCPASS/${RPCPASS}/g;" docker-compose.yml
+$gnused -i "s/RPCPASS/${RPCPASS}/g;" docker-compose.yml
 
 echo "Setting regtest"
-sed -i 's/mainnet/regtest/g; ' docker-compose.yml
-sed -i "s/RPCPORT/18443/g;" docker-compose.yml
+$gnused -i 's/mainnet/regtest/g; ' docker-compose.yml
+$gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
 
 # Pull new images
 echo "Pulling new images"
