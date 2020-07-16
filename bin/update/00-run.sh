@@ -13,7 +13,7 @@ echo "========= Stage: Pre-update ==========="
 echo "======================================="
 echo
 
-echo "Installing Umbrel $1 at $2"
+echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
