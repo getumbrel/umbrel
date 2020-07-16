@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 
 RELEASE=$1
 UMBREL_ROOT=$2
