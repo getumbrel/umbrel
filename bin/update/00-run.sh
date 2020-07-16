@@ -13,16 +13,19 @@ echo "========= Stage: Pre-update ==========="
 echo "======================================="
 echo
 
+# Make sure any previous backup doesn't exist 
+if [[ -d /tmp/umbrel-backup ]]; then
+    echo "Cannot install update. A previous backup already exists at /tmp/umbrel-backup"
+    echo "This can only happen if the previous update installation wasn't successful"
+    exit 1
+fi
+
 echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Backing up"}
 EOF
-
-# Cleanup just in case there's temp stuff lying around from previous update
-echo "Cleaning up any previous backup"
-[ -d /tmp/umbrel-backup ] && rm -rf /tmp/umbrel-backup
 
 # Fix permissions
 echo "Fixing permissions"
