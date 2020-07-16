@@ -26,8 +26,13 @@ echo "Cloning to current working directory from github..."
 git init
 git remote add origin https://github.com/mayankchhabra/umbrel.git
 git fetch --all --tags
+<<<<<<< HEAD
 git checkout tags/v0.1.3-beta.2
 git reset --hard tags/v0.1.3-beta.2
+=======
+git checkout tags/v0.1.4-beta
+git reset --hard tags/v0.1.4-beta
+>>>>>>> master
 
 echo "Removing stuff we don't need"
 rm -fr .git

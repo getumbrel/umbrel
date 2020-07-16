@@ -32,7 +32,7 @@ rm -rf tor
 
 # Update RPC Password in docker-compose.yml
 echo "Updating RPC Password in docker-compose.yml"
-RPCPASS=`cat $UMBREL_ROOT/secrets/rpcpass.txt`
+RPCPASS=$(cat $UMBREL_ROOT/secrets/rpcpass.txt)
 sed -i "s/RPCPASS/${RPCPASS}/g;" docker-compose.yml
 
 echo "Setting regtest"
