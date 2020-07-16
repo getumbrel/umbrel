@@ -50,11 +50,12 @@ wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/insta
 cd bin/update
 
 echo "Running update install scripts of the new release"
-for i in {00..99}; do
-    if [ -x ${i}-run.sh ]; then
-        echo "Begin ${i}-run.sh"
-        ./${i}-run.sh $RELEASE $UMBREL_ROOT $UMBREL_USER
-        echo "End ${i}-run.sh"
+UPDATE_INSTALL_SCRIPTS=$(ls *-run.sh)
+for script in $UPDATE_INSTALL_SCRIPTS; do
+    if [ -x $script ]; then
+        echo "Begin $script"
+        ./$script $RELEASE $UMBREL_ROOT $UMBREL_USER
+        echo "End $script"
     fi
 done
 
