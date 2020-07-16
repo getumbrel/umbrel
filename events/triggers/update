@@ -34,7 +34,7 @@ touch $UMBREL_ROOT/statuses/update-in-progress
 
 # Cleanup just in case there's temp stuff lying around from previous update
 echo "Cleaning up any previous mess"
-[[ -d /tmp/umbrel-$RELEASE ]] && rm -rf /tmp/umbrel-$RELEASE
+[[ -d $UMBREL_ROOT/.umbrel-$RELEASE ]] && rm -rf $UMBREL_ROOT/.umbrel-$RELEASE
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
@@ -44,7 +44,7 @@ EOF
 # Clone new release
 echo "Downloading Umbrel $RELEASE"
 
-cd /tmp/umbrel-$RELEASE
+cd $UMBREL_ROOT/.umbrel-$RELEASE
 wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/install-box.sh" | sh
 
 cd bin/update
@@ -53,14 +53,16 @@ echo "Running update install scripts of the new release"
 UPDATE_INSTALL_SCRIPTS=$(ls *-run.sh)
 for script in $UPDATE_INSTALL_SCRIPTS; do
     if [ -x $script ]; then
-        echo "Begin $script"
+        echo
+        echo "== Begin Update Script $script =="
         ./$script $RELEASE $UMBREL_ROOT $UMBREL_USER
-        echo "End $script"
+        echo "== End Update Script $script =="
+        echo
     fi
 done
 
 echo "Deleting cloned repository"
-[[ -d /tmp/umbrel-$RELEASE ]] && rm -rf /tmp/umbrel-$RELEASE
+[[ -d $UMBREL_ROOT/.umbrel-$RELEASE ]] && rm -rf $UMBREL_ROOT/.umbrel-$RELEASE
 
 # echo "Deleting update signal file"
 # rm -f $UMBREL_ROOT/events/signals/update

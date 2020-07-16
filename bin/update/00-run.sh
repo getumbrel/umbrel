@@ -14,8 +14,8 @@ echo "======================================="
 echo
 
 # Make sure any previous backup doesn't exist 
-if [[ -d /tmp/umbrel-backup ]]; then
-    echo "Cannot install update. A previous backup already exists at /tmp/umbrel-backup"
+if [[ -d $UMBREL_ROOT/.umbrel-backup ]]; then
+    echo "Cannot install update. A previous backup already exists at $UMBREL_ROOT/.umbrel-backup"
     echo "This can only happen if the previous update installation wasn't successful"
     exit 1
 fi
@@ -42,6 +42,6 @@ rsync -av $UMBREL_ROOT/ \
     --exclude='signals' \
     --exclude='statuses' \
     --exclude='tor' \
-    /tmp/umbrel-backup/
+    $UMBREL_ROOT/.umbrel-backup/
 
-echo "Successfully backed up to /tmp/umbrel-backup"
+echo "Successfully backed up to $UMBREL_ROOT/.umbrel-backup"

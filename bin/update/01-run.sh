@@ -18,7 +18,7 @@ cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 EOF
 
 # Checkout to the new release
-cd /tmp/umbrel-$RELEASE
+cd $UMBREL_ROOT/.umbrel-$RELEASE
 
 echo "Removing unwanted stuff"
 # Remove unwanted stuff
@@ -57,7 +57,7 @@ echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 40, "description": "Downloading new Docker images"}
 EOF
-docker-compose --file /tmp/umbrel-$RELEASE/docker-compose.yml pull
+docker-compose --file $UMBREL_ROOT/.umbrel-$RELEASE/docker-compose.yml pull
 
 # Stop existing containers
 echo "Stopping existing containers"
@@ -68,7 +68,7 @@ su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose down"
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
-rsync -av /tmp/umbrel-$RELEASE/ \
+rsync -av $UMBREL_ROOT/.umbrel-$RELEASE/ \
     --exclude='.*' \
     $UMBREL_ROOT/
     

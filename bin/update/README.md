@@ -40,14 +40,14 @@ How over-the-air updates work on Umbrel.
 
 15. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) as soon as `$UMBREL_ROOT/events/signals/update` is touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
 
-16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `/tmp/umbrel-vX.Y.Z`.
+16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `$UMBREL_ROOT/.umbrel-vX.Y.Z`.
 
-17. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `/tmp/umbrel-vX.Y.Z` one-by-one:
+17. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `$UMBREL_ROOT/.umbrel-vX.Y.Z` one-by-one:
 
-- [`/tmp/umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like making a backup)
-- [`/tmp/umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/01-run.sh): Install update script (installs the update)
-- [`/tmp/umbrel-vX.Y.Z/bin/update/02-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
-- [`/tmp/umbrel-vX.Y.Z/bin/update/03-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installeed)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like making a backup)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/01-run.sh): Install update script (installs the update)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/02-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/03-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installeed)
 
 All of the above scripts continuosly update `$UMBREL_ROOT/statuses/update-status.json` with the progress of update, which the dashboard periodically fetches every 2s via `umbrel-manager` to keep the user updated.
 
