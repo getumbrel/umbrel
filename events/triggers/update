@@ -6,8 +6,8 @@ UMBREL_ROOT=$(dirname $(readlink -f ../../$0))
 RELEASE="v$(cat $UMBREL_ROOT/events/signals/update)"
 UMBREL_USER=umbrel
 
-if [ $(whoami) != 'root' ]; then
-    UMBREL_USER=$(whoami)
+if [[ $UID != 0 ]]; then
+    UMBREL_USER=$USER
 fi
 
 echo
@@ -34,7 +34,7 @@ touch $UMBREL_ROOT/statuses/update-in-progress
 
 # Cleanup just in case there's temp stuff lying around from previous update
 echo "Cleaning up any previous mess"
-[ -d /tmp/umbrel-$RELEASE ] && rm -rf /tmp/umbrel-$RELEASE
+[[ -d /tmp/umbrel-$RELEASE ]] && rm -rf /tmp/umbrel-$RELEASE
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
@@ -59,7 +59,7 @@ for i in {00..99}; do
 done
 
 echo "Deleting cloned repository"
-[ -d /tmp/umbrel-$RELEASE ] && rm -rf /tmp/umbrel-$RELEASE
+[[ -d /tmp/umbrel-$RELEASE ]] && rm -rf /tmp/umbrel-$RELEASE
 
 # echo "Deleting update signal file"
 # rm -f $UMBREL_ROOT/events/signals/update
