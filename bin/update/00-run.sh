@@ -34,15 +34,8 @@ chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_ROOT/
 # Backup
 echo "Backing up existing directory tree"
 
-IGNORE_LIST=$(cat $UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore)
-excludes=()
-for toignore in $IGNORE_LIST; do
-    excludes+=(--exclude "'$toignore'")
-done
-echo "Excluding from backup: ${excludes[@]}"
-
 rsync -av $UMBREL_ROOT/ \
-    "${excludes[@]}"\
+    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
     $UMBREL_ROOT/.umbrel-backup/
 
 echo "Successfully backed up to $UMBREL_ROOT/.umbrel-backup"

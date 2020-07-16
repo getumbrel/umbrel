@@ -20,15 +20,6 @@ EOF
 # Checkout to the new release
 cd $UMBREL_ROOT/.umbrel-$RELEASE
 
-# Remove unwanted stuff
-echo "Removing unwanted stuff"
-IGNORE_LIST=$(cat bin/update/.updateignore)
-for toignore in $IGNORE_LIST; do
-    echo "Removing $toignore"
-    rm -rf $toignore
-done
-
-
 # Update RPC Password in docker-compose.yml
 # Get gnu sed
 gnused=sed
@@ -67,7 +58,7 @@ su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose down"
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync -av $UMBREL_ROOT/.umbrel-$RELEASE/ \
-    --exclude='.*' \
+    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
     $UMBREL_ROOT/
     
 # Fix permissions
