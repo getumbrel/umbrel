@@ -20,18 +20,16 @@ EOF
 # Checkout to the new release
 cd $UMBREL_ROOT/.umbrel-$RELEASE
 
-echo "Removing unwanted stuff"
 # Remove unwanted stuff
-rm -rf bitcoin
-rm -rf db
-rm -rf lnd
-rm -rf secrets
-rm -rf signals
-rm -rf statuses
-rm -rf tor
+echo "Removing unwanted stuff"
+IGNORE_LIST=$(cat bin/update/.updateignore)
+for toignore in $IGNORE_LIST; do
+    echo "Removing $toignore"
+    rm -rf $toignore
+done
+
 
 # Update RPC Password in docker-compose.yml
-
 # Get gnu sed
 gnused=sed
 if [[ "$(uname)" == "Darwin" ]]; then
