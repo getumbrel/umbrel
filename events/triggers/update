@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-UMBREL_ROOT=$(dirname $(readlink -f ../../$0))
 # UMBREL_ROOT=/home/umbrel
+UMBREL_ROOT=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../..
 RELEASE="v$(cat $UMBREL_ROOT/events/signals/update)"
 UMBREL_USER=umbrel
 
@@ -43,13 +43,13 @@ EOF
 
 # Clone new release
 echo "Downloading Umbrel $RELEASE"
-
+mkdir -p $UMBREL_ROOT/.umbrel-$RELEASE
 cd $UMBREL_ROOT/.umbrel-$RELEASE
 wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/install-box.sh" | sh
 
-cd bin/update
-
+# Run update scripts
 echo "Running update install scripts of the new release"
+cd bin/update
 UPDATE_INSTALL_SCRIPTS=$(ls *-run.sh)
 for script in $UPDATE_INSTALL_SCRIPTS; do
     if [ -x $script ]; then
@@ -61,6 +61,7 @@ for script in $UPDATE_INSTALL_SCRIPTS; do
     fi
 done
 
+# Delete cloned repo
 echo "Deleting cloned repository"
 [[ -d $UMBREL_ROOT/.umbrel-$RELEASE ]] && rm -rf $UMBREL_ROOT/.umbrel-$RELEASE
 
