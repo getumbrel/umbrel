@@ -12,7 +12,7 @@ x-utility: &default-utility
 services:
         tor:
                 container_name: tor
-                image: getumbrel/tor:v0.4.1.9
+                image: mayankchhabra/tor:patch-uid
                 restart: unless-stopped
                 logging: *default-logging
                 volumes:
