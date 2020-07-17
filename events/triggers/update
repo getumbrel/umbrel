@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies jq wget git rsync
+
 # UMBREL_ROOT=/home/umbrel
 UMBREL_ROOT=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../..
-RELEASE="v$(cat $UMBREL_ROOT/events/signals/update)"
+RELEASE=$(cat $UMBREL_ROOT/statuses/update-status.json | jq .updateTo -r)
 UMBREL_USER=umbrel
 
 if [[ $UID != 0 ]]; then
