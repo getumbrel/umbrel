@@ -13,6 +13,7 @@ services:
         tor:
                 container_name: tor
                 image: mayankchhabra/tor:patch-uid
+                user: toruser
                 restart: unless-stopped
                 logging: *default-logging
                 volumes:
