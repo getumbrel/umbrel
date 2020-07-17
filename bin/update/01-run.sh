@@ -46,7 +46,7 @@ echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 40, "description": "Downloading new Docker images", "updateTo": "$RELEASE"}
 EOF
-docker-compose --file $UMBREL_ROOT/.umbrel-$RELEASE/docker-compose.yml pull
+su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose pull"
 
 # Stop existing containers
 echo "Stopping existing containers"
