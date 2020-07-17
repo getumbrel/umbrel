@@ -16,7 +16,7 @@ echo
 # Delete previous (unused) images
 echo "Deleting previous images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 90, "description": "Deleting previous images"}
+{"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
 EOF
 # docker image prune --all --force
 
@@ -29,5 +29,5 @@ EOF
 
 echo "Successfully installed Umbrel $RELEASE"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "success", "progress": 100, "description": "Successfully installed Umbrel $RELEASE"}
+{"state": "success", "progress": 100, "description": "Successfully installed Umbrel $RELEASE", "updateTo": ""}
 EOF

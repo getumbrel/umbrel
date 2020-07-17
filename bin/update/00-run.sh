@@ -24,7 +24,7 @@ echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 20, "description": "Backing up"}
+{"state": "installing", "progress": 20, "description": "Backing up", "updateTo": "$RELEASE"}
 EOF
 
 # Fix permissions

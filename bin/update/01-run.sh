@@ -14,7 +14,7 @@ echo "======================================="
 echo
 
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 33, "description": "Configuring settings"}
+{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
 EOF
 
 # Checkout to the new release
@@ -44,14 +44,14 @@ $gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
 # Pull new images
 echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 40, "description": "Downloading new Docker images"}
+{"state": "installing", "progress": 40, "description": "Downloading new Docker images", "updateTo": "$RELEASE"}
 EOF
 docker-compose --file $UMBREL_ROOT/.umbrel-$RELEASE/docker-compose.yml pull
 
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 70, "description": "Removing old containers"}
+{"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
 su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose down"
 
@@ -68,6 +68,6 @@ chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_ROOT/
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 80, "description": "Starting new containers"}
+{"state": "installing", "progress": 80, "description": "Starting new containers", "updateTo": "$RELEASE"}
 EOF
 su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose up --detach --remove-orphans"

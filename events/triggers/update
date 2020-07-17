@@ -43,7 +43,7 @@ echo "Cleaning up any previous mess"
 
 # Update status file
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
-{"state": "installing", "progress": 10, "description": "Downloading Umbrel $RELEASE"}
+{"state": "installing", "progress": 10, "description": "Downloading Umbrel $RELEASE", "updateTo": "$RELEASE"}
 EOF
 
 # Clone new release
