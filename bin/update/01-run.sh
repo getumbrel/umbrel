@@ -46,14 +46,14 @@ echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 40, "description": "Downloading new Docker images", "updateTo": "$RELEASE"}
 EOF
-su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose pull"
+docker-compose pull
 
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
-su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose down"
+docker-compose down
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
@@ -63,11 +63,11 @@ rsync -av $UMBREL_ROOT/.umbrel-$RELEASE/ \
     
 # Fix permissions
 echo "Fixing permissions"
-chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_ROOT/
+chown -R 1000:1000 $UMBREL_ROOT/
 
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 80, "description": "Starting new containers", "updateTo": "$RELEASE"}
 EOF
-su - $UMBREL_USER -c "cd $UMBREL_ROOT; docker-compose up --detach --remove-orphans"
+docker-compose up --detach --remove-orphans

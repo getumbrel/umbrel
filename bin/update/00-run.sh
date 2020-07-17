@@ -29,7 +29,7 @@ EOF
 
 # Fix permissions
 echo "Fixing permissions"
-chown -R $UMBREL_USER:$UMBREL_USER $UMBREL_ROOT/
+chown -R 1000:1000 $UMBREL_ROOT/
 
 # Backup
 echo "Backing up existing directory tree"
