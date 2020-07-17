@@ -46,6 +46,7 @@ echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 40, "description": "Downloading new Docker images", "updateTo": "$RELEASE"}
 EOF
+cd $UMBREL_ROOT/.umbrel-$RELEASE
 docker-compose pull
 
 # Stop existing containers
@@ -53,6 +54,7 @@ echo "Stopping existing containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
+cd $UMBREL_ROOT 
 docker-compose down
 
 # Overlay home dir structure with new dir tree
@@ -70,4 +72,5 @@ echo "Starting new containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 80, "description": "Starting new containers", "updateTo": "$RELEASE"}
 EOF
+cd $UMBREL_ROOT
 docker-compose up --detach --remove-orphans
