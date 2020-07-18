@@ -29,8 +29,8 @@ git remote add origin https://github.com/mayankchhabra/umbrel.git
 # git checkout origin/ota-updates
 # git checkout reset --hard origin/ota-updates
 git fetch --all --tags
-git checkout tags/v0.1.4-beta.5
-git reset --hard tags/v0.1.4-beta.5
+git checkout tags/v0.1.4-beta.2
+git reset --hard tags/v0.1.4-beta.2
 
 echo "Removing stuff we don't need"
 rm -fr .git
