@@ -1,6 +1,6 @@
 {
-    "version": "v0.1.4-beta.4",
-    "name": "Umbrel v0.1.4 Beta 4",
-    "requires": ">=0.1.4-beta.2",
+    "version": "v0.1.4-beta.5",
+    "name": "Umbrel v0.1.4 Beta 5",
+    "requires": ">=0.1.4-beta.4",
     "notes": "This version introduces a number of bug fixes and features."
 }
