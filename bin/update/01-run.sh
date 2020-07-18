@@ -41,6 +41,12 @@ echo "Setting regtest"
 $gnused -i 's/mainnet/regtest/g; ' docker-compose.yml
 $gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
 
+if [[ "$HOSTNAME" != "umbrel" ]]; then 
+  echo "Changing hostname to http://$HOSTNAME.local"
+  $gnused -i "s/umbrel.local/${HOSTNAME}.local/g;" docker-compose.yml
+fi
+
+
 # Pull new images
 echo "Pulling new images"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
