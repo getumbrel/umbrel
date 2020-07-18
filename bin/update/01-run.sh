@@ -66,6 +66,7 @@ rsync -av $UMBREL_ROOT/.umbrel-$RELEASE/ \
 # Fix permissions
 echo "Fixing permissions"
 chown -R 1000:1000 $UMBREL_ROOT/
+chmod -R 700 $UMBREL_ROOT/tor/data/*
 
 # Start updated containers
 echo "Starting new containers"
