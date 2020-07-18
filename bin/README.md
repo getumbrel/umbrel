@@ -36,13 +36,23 @@ How over-the-air updates work on Umbrel.
 
 11. `umbrel-dashboard` then alerts the user regarding the available update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
 
-14. `umbrel-manager` creates a signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) with the version `X.Y.Z`, and returns `OK` to the `umbrel-dashboard`.
+12. `umbrel-manager` adds the `updateTo` key to `$UMBREL_ROOT/statuses/update-status.json` (a file used to continuosly update the user with the update status and progress) with the update release tag. 
 
-15. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) as soon as `$UMBREL_ROOT/events/signals/update` is touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
+```json
+{
+    ...
+    "updateTo": "vX.Y.Z"
+    ...
+}
+``` 
 
-16. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `$UMBREL_ROOT/.umbrel-vX.Y.Z`.
+13. `umbrel-manager` then creates an update signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) and returns `OK` to the `umbrel-dashboard`.
 
-17. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `$UMBREL_ROOT/.umbrel-vX.Y.Z` one-by-one:
+14. [`karen`](https://github.com/getumbrel/umbrel/blob/master/karen) is triggered (obviously) as soon as `$UMBREL_ROOT/events/signals/update` is touched/updated, and immeditaly runs the `update` trigger script [`$UMBREL_ROOT/events/triggers/update`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/events/triggers/update) as root.
+
+15. `$UMBREL_ROOT/events/triggers/update` clones release `vX.Y.Z` from github in `$UMBREL_ROOT/.umbrel-vX.Y.Z`.
+
+16. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `$UMBREL_ROOT/.umbrel-vX.Y.Z` one-by-one:
 
 - [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/00-run.sh): Pre-update preparation script (does things like making a backup)
 - [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/mayankchhabra/umbrel/blob/ota-updates/bin/update/01-run.sh): Install update script (installs the update)
@@ -51,7 +61,7 @@ How over-the-air updates work on Umbrel.
 
 All of the above scripts continuosly update `$UMBREL_ROOT/statuses/update-status.json` with the progress of update, which the dashboard periodically fetches every 2s via `umbrel-manager` to keep the user updated.
 
-### Limitations
+### Further improvements
 
-- There's currently no way to catch an error during the update and restore from the backup
-- There also needs to be a way to restore from the backup in case of a power-failure or intenional shutdown during the update process
+- Catch any error during the update and restore from the backup
+- Restore from backup on power-failure
