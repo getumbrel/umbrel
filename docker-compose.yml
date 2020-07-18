@@ -12,7 +12,7 @@ x-utility: &default-utility
 services:
         tor:
                 container_name: tor
-                image: mayankchhabra/tor:patch-uid
+                image: getumbrel/tor:v0.4.1.9
                 user: toruser
                 restart: unless-stopped
                 logging: *default-logging
@@ -86,8 +86,10 @@ services:
                 stop_grace_period: 5m30s
                 volumes:
                         - ${PWD}:${PWD}
+                        - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
+                        - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
                         - /usr/bin/docker:/usr/bin/docker
@@ -105,6 +107,11 @@ services:
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
                     REBOOT_SIGNAL_FILE: "/signals/reboot"
+                    GITHUB_REPO: "getumbrel/umbrel"
+                    UPDATE_VERSION_FILE: "/info.json"
+                    UPDATE_STATUS_FILE: "/statuses/update-status.json"
+                    UPDATE_SIGNAL_FILE: "/signals/update"
+                    UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
