@@ -40,7 +40,7 @@ services:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.20.0
                 logging: *default-logging
-                depends_on: [ tor ]
+                depends_on: [ tor, manager ]
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
                         - ${PWD}/bitcoin:/root/.bitcoin
@@ -57,7 +57,7 @@ services:
                 container_name: lnd
                 image: lncm/lnd:v0.10.1-experimental
                 logging: *default-logging
-                depends_on: [ tor ]
+                depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
                         - ${PWD}/lnd:/root/.lnd
