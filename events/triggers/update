@@ -14,11 +14,6 @@ check_dependencies jq wget git rsync
 # UMBREL_ROOT=/home/umbrel
 UMBREL_ROOT=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../..
 RELEASE=$(cat $UMBREL_ROOT/statuses/update-status.json | jq .updateTo -r)
-UMBREL_USER=umbrel
-
-if [[ $UID != 0 ]]; then
-    UMBREL_USER=$USER
-fi
 
 echo
 echo "======================================="
@@ -60,7 +55,7 @@ for script in $UPDATE_INSTALL_SCRIPTS; do
     if [[ -x $script ]]; then
         echo
         echo "== Begin Update Script $script =="
-        ./$script $RELEASE $UMBREL_ROOT $UMBREL_USER
+        ./$script $RELEASE $UMBREL_ROOT
         echo "== End Update Script $script =="
         echo
     fi

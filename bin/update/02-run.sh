@@ -3,7 +3,6 @@ set -euo pipefail
 
 RELEASE=$1
 UMBREL_ROOT=$2
-UMBREL_USER=$3
 
 echo
 echo "======================================="
