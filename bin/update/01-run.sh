@@ -37,9 +37,12 @@ echo "Updating RPC Password in docker-compose.yml"
 RPCPASS=$(cat "$UMBREL_ROOT"/secrets/rpcpass.txt)
 $gnused -i "s/RPCPASS/${RPCPASS}/g;" docker-compose.yml
 
-echo "Setting regtest"
-$gnused -i 's/mainnet/regtest/g; ' docker-compose.yml
-$gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
+# echo "Setting regtest"
+# $gnused -i 's/mainnet/regtest/g; ' docker-compose.yml
+# $gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
+
+echo "Setting mainnet"
+$gnused -i "s/RPCPORT/8332/g;" docker-compose.yml
 
 if [[ "$HOSTNAME" != "umbrel" ]]; then
   echo "Changing hostname to http://$HOSTNAME.local"
