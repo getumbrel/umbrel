@@ -18,7 +18,7 @@ echo "Deleting previous images"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
 EOF
-# docker image prune --all --force
+docker image prune --all --force
 
 # Cleanup
 echo "Removing backup"
