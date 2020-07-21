@@ -50,7 +50,7 @@ EOF
 echo "Downloading Umbrel $RELEASE"
 mkdir -p $UMBREL_ROOT/.umbrel-$RELEASE
 cd $UMBREL_ROOT/.umbrel-$RELEASE
-wget -qO- "https://raw.githubusercontent.com/mayankchhabra/umbrel/$RELEASE/install-box.sh" | sh
+wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/$RELEASE/install-box.sh" | sh
 
 # Run update scripts
 echo "Running update install scripts of the new release"
