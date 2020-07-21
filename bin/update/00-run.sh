@@ -23,19 +23,19 @@ fi
 echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
 # Update status file
-cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Backing up", "updateTo": "$RELEASE"}
 EOF
 
 # Fix permissions
 echo "Fixing permissions"
-chown -R 1000:1000 $UMBREL_ROOT/
+chown -R 1000:1000 "$UMBREL_ROOT"/
 
 # Backup
 echo "Backing up existing directory tree"
 
-rsync -av $UMBREL_ROOT/ \
+rsync -av "$UMBREL_ROOT"/ \
     --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
-    $UMBREL_ROOT/.umbrel-backup/
+    "$UMBREL_ROOT"/.umbrel-backup/
 
 echo "Successfully backed up to $UMBREL_ROOT/.umbrel-backup"
