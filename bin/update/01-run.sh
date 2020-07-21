@@ -41,7 +41,7 @@ echo "Setting regtest"
 $gnused -i 's/mainnet/regtest/g; ' docker-compose.yml
 $gnused -i "s/RPCPORT/18443/g;" docker-compose.yml
 
-if [[ "$HOSTNAME" != "umbrel" ]]; then 
+if [[ "$HOSTNAME" != "umbrel" ]]; then
   echo "Changing hostname to http://$HOSTNAME.local"
   $gnused -i "s/umbrel.local/${HOSTNAME}.local/g;" docker-compose.yml
 fi
@@ -60,7 +60,7 @@ echo "Stopping existing containers"
 cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
-cd $UMBREL_ROOT 
+cd $UMBREL_ROOT
 docker-compose down
 
 # Overlay home dir structure with new dir tree
@@ -68,7 +68,7 @@ echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync -av $UMBREL_ROOT/.umbrel-$RELEASE/ \
     --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
     $UMBREL_ROOT/
-    
+
 # Fix permissions
 echo "Fixing permissions"
 chown -R 1000:1000 $UMBREL_ROOT/
