@@ -2,7 +2,7 @@
 
 check_dependencies () {
   for cmd in "$@"; do
-    if ! command -v $cmd >/dev/null 2>&1; then
+    if ! command -v "$cmd" >/dev/null 2>&1; then
       echo "This script requires \"${cmd}\" to be installed"
       exit 1
     fi
@@ -12,8 +12,8 @@ check_dependencies () {
 check_dependencies jq wget git rsync
 
 # UMBREL_ROOT=/home/umbrel
-UMBREL_ROOT=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../..
-RELEASE=$(cat $UMBREL_ROOT/statuses/update-status.json | jq .updateTo -r)
+UMBREL_ROOT=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../..
+RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
 
 echo
 echo "======================================="
@@ -24,27 +24,27 @@ echo "======================================="
 echo
 
 # Make sure an update is not in progres
-if [[ -f "$UMBREL_ROOT/statuses/update-in-progress" ]]; then 
+if [[ -f "$UMBREL_ROOT/statuses/update-in-progress" ]]; then
     echo "An update is already in progress. Exiting now."
     exit 2
 fi
 
 echo "Creating lock"
-touch $UMBREL_ROOT/statuses/update-in-progress
+touch "$UMBREL_ROOT"/statuses/update-in-progress
 
 # Cleanup just in case there's temp stuff lying around from previous update
 echo "Cleaning up any previous mess"
-[[ -d $UMBREL_ROOT/.umbrel-$RELEASE ]] && rm -rf $UMBREL_ROOT/.umbrel-$RELEASE
+[[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
 # Update status file
-cat <<EOF > $UMBREL_ROOT/statuses/update-status.json
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 10, "description": "Downloading Umbrel $RELEASE", "updateTo": "$RELEASE"}
 EOF
 
 # Clone new release
 echo "Downloading Umbrel $RELEASE"
-mkdir -p $UMBREL_ROOT/.umbrel-$RELEASE
-cd $UMBREL_ROOT/.umbrel-$RELEASE
+mkdir -p "$UMBREL_ROOT"/.umbrel-"$RELEASE"
+cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/$RELEASE/install-box.sh" | sh
 
 # Run update scripts
@@ -55,7 +55,7 @@ for script in $UPDATE_INSTALL_SCRIPTS; do
     if [[ -x $script ]]; then
         echo
         echo "== Begin Update Script $script =="
-        ./$script $RELEASE $UMBREL_ROOT
+        ./"$script" "$RELEASE" "$UMBREL_ROOT"
         echo "== End Update Script $script =="
         echo
     fi
@@ -63,12 +63,12 @@ done
 
 # Delete cloned repo
 echo "Deleting cloned repository"
-[[ -d $UMBREL_ROOT/.umbrel-$RELEASE ]] && rm -rf $UMBREL_ROOT/.umbrel-$RELEASE
+[[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
 # echo "Deleting update signal file"
 # rm -f $UMBREL_ROOT/events/signals/update
 
 echo "Removing lock"
-rm -f $UMBREL_ROOT/statuses/update-in-progress
+rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 
 exit 0
