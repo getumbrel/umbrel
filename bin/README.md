@@ -16,7 +16,7 @@ How over-the-air updates work on Umbrel.
     "version": "X.Y.Z",
     "name": "Umbrel vX.Y.Z",
     "notes": "This release contains a number of bug fixes and new features.",
-    "requires": ">=A.B.C" 
+    "requires": ">=A.B.C"
 }
 ```
 
@@ -30,13 +30,13 @@ How over-the-air updates work on Umbrel.
 
 8. If fetched `version` > local `version`, `umbrel-manager` checks if local `version` satisfies the `requires` condition in the fetched `info.json`.
 
-9. If not, `umbrel-manager` computes the minimum satisfactory version, called `L.M.N`, required for update. Eg, for `"requires": ">=1.2.2"` the minimum satisfactory version would be `1.2.2`. `umbrel-manager` then makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vL.M.N/info.json` and repeats step 8 and 9 until local `version` < fetched `version` **AND** local `version` fulfills the fetched `requires` condition. 
+9. If not, `umbrel-manager` computes the minimum satisfactory version, called `L.M.N`, required for update. Eg, for `"requires": ">=1.2.2"` the minimum satisfactory version would be `1.2.2`. `umbrel-manager` then makes a `GET` request to `https://raw.githubusercontent.com/getumbrel/umbrel/vL.M.N/info.json` and repeats step 8 and 9 until local `version` < fetched `version` **AND** local `version` fulfills the fetched `requires` condition.
 
 10. `umbrel-manager` then returns the satisfying `info.json` to `umbrel-dashboard`.
 
 11. `umbrel-dashboard` then alerts the user regarding the available update, and after the user consents, it makes a `POST` request to `umbrel-manager` to start the update process.
 
-12. `umbrel-manager` adds the `updateTo` key to `$UMBREL_ROOT/statuses/update-status.json` (a file used to continuosly update the user with the update status and progress) with the update release tag. 
+12. `umbrel-manager` adds the `updateTo` key to `$UMBREL_ROOT/statuses/update-status.json` (a file used to continuosly update the user with the update status and progress) with the update release tag.
 
 ```json
 {
@@ -44,7 +44,7 @@ How over-the-air updates work on Umbrel.
     "updateTo": "vX.Y.Z"
     ...
 }
-``` 
+```
 
 13. `umbrel-manager` then creates an update signal file on the mounted host OS volume (`$UMBREL_ROOT/events/signals/update`) and returns `OK` to the `umbrel-dashboard`.
 
