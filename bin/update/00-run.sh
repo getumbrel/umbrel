@@ -14,7 +14,7 @@ echo "======================================="
 echo
 
 # Make sure any previous backup doesn't exist
-if [[ -d $UMBREL_ROOT/.umbrel-backup ]]; then
+if [[ -d "$UMBREL_ROOT"/.umbrel-backup ]]; then
     echo "Cannot install update. A previous backup already exists at $UMBREL_ROOT/.umbrel-backup"
     echo "This can only happen if the previous update installation wasn't successful"
     exit 1
