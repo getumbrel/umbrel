@@ -63,5 +63,6 @@ All of the above scripts continuously update `$UMBREL_ROOT/statuses/update-statu
 
 ### Further improvements
 
+- OTA updates should not trust GitHub, they should verify signed checksums before installing
 - Catch any error during the update and restore from the backup
 - Restore from backup on power-failure
