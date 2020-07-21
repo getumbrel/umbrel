@@ -24,7 +24,7 @@ echo "======================================="
 echo
 
 # Make sure an update is not in progres
-if [[ -f "$UMBREL_ROOT/statuses/update-in-progress" ]]; then 
+if [[ -f "$UMBREL_ROOT/statuses/update-in-progress" ]]; then
     echo "An update is already in progress. Exiting now."
     exit 2
 fi
