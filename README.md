@@ -17,7 +17,10 @@ We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/ge
 
 ## 🚀 Getting started
 
-If you are looking to run Umbrel on your hardware, you do not need to manually install this repository. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os) and you're good to go.
+If you're looking to run Umbrel on:
+
+- A Raspberry Pi 3 or 4 - Download [Umbrel OS](https://github.com/getumbrel/umbrel-os)
+- Anthing else - Manually install Umbrel ([instructions](#-installation))
 
 ## 🎹 Services orchestrated
 
