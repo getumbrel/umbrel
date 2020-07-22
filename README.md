@@ -6,7 +6,6 @@
 [![Twitter](https://img.shields.io/twitter/follow/getumbrel?style=social)](https://twitter.com/getumbrel)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/getumbrel?label=Subscribe%20%2Fr%2Fgetumbrel&style=social)](https://reddit.com/r/getumbrel)
 
-
 # ☂️ Umbrel
 
 This is the master respository of Umbrel and contains the framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
@@ -17,7 +16,10 @@ We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/ge
 
 ## 🚀 Getting started
 
-If you are looking to run Umbrel on your hardware, you do not need to manually install this repository. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os) and you're good to go.
+If you're looking to run Umbrel on:
+
+- A Raspberry Pi 3 or 4 - Download [Umbrel OS](https://github.com/getumbrel/umbrel-os)
+- Anthing else - Manually [install Umbrel](#-installation) on your system
 
 ## 🎹 Services orchestrated
 
