@@ -17,7 +17,7 @@ We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/ge
 
 ## 🚀 Getting started
 
-If you are looking to run Umbrel on your hardware, you do not need to use this repository on it's own. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os/releases) and you're good to go.
+If you are looking to run Umbrel on your hardware, you do not need to manually install this repository. Just download [Umbrel OS](https://github.com/getumbrel/umbrel-os) and you're good to go.
 
 ## 🎹 Services orchestrated
 
