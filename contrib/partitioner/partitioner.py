@@ -105,6 +105,22 @@ def main():
             except:
                 print('Error running parted');
                 sys.exit(1);
+        '''
+        If more than 1 partition, normalize things so the next steps doesn't fail
+        '''
+        elif len(usb_partitions()) > 1:
+            try:
+                print('Removing all the partitions and normalizing install');
+                # TODO: Remove partitions
+                '''
+                Procedure
+                - get list of partitions into array: $(parted -s /dev/sda print|awk '/^ / {print $1}')
+                - remove partition by ID: parted -s /dev/sda rm <partition>
+                - Recreate single partition
+                '''
+            except:
+                print('Error running parted');
+                sys.exit(1);
         else:
             print("Already partitioned")
 
