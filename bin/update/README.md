@@ -9,7 +9,7 @@ How over-the-air updates work on Umbrel.
 
 3. Any new developments to the main repository (i.e. this repo) are made, eg. adding a new directory or a new config file.
 
-4. To prepare a new release of Umbrel, called `vX.Y.Z`, a PR is opened that updates the [`info.json`](https://github.com/getumbrel/umbrel/blob/master/info.json) file to:
+4. To prepare a new release of Umbrel, called `vX.Y.Z`, a PR is opened that updates the version in both [`README.md`](https://github.com/getumbrel/umbrel/blob/master/README.md) and [`install-box.sh`](https://github.com/getumbrel/umbrel/blob/master/install-box.sh), and updates [`info.json`](https://github.com/getumbrel/umbrel/blob/master/info.json) file to:
 
 ```json
 {
