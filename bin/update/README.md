@@ -20,6 +20,8 @@ How over-the-air updates work on Umbrel.
 }
 ```
 
+Both [`README.md`](https://github.com/getumbrel/umbrel/blob/master/README.md) and [`install-box.sh`](https://github.com/getumbrel/umbrel/blob/master/install-box.sh) are also updated with the new release `vX.Y.Z`.
+
 5. Once the PR is merged, the master branch is immediately tagged `vX.Y.Z` and released on GitHub.
 
 6. Thus the new `info.json` will automatically be available at `https://raw.githubusercontent.com/getumbrel/umbrel/master/info.json`. This is what triggers the OTA update.
