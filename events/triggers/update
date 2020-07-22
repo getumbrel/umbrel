@@ -65,9 +65,6 @@ done
 echo "Deleting cloned repository"
 [[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
-# echo "Deleting update signal file"
-# rm -f $UMBREL_ROOT/events/signals/update
-
 echo "Removing lock"
 rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 
