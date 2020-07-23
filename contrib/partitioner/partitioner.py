@@ -103,11 +103,7 @@ def main():
             partitions_new.append(partition.replace('sda',''))
         
         for pn in partitions_new:
-            print('to run on os.system(): parted -s /dev/sda rm ' + pn);
-            
-        print('Actually didnt do anything yet');
-
-        sys.exit(1);
+            os.system('parted -s /dev/sda rm ' + pn);
 
     # Check for number of partitions
     if len(usb_devs()) == 1:
