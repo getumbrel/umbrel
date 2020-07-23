@@ -95,6 +95,7 @@ def main():
         print('Data mount exists')
 
     # Check for more than 1 partition
+    # if so get rid of it all
     if len(usb_partitions()) > 1:
         print('More than one partition found! Lets fix this up');
         partitions = usb_partitions();
@@ -123,6 +124,19 @@ def main():
         if len(usb_partitions()) == 1:
             try:
                 os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
+                
+                # If not EXT4, delete partition and format
+                if not os.path.exists('/mnt/data/lost+found'):
+                    print('Not an EXT filesystem, remove all partitions')
+                    partitions = [];
+                    for p in usb_partitions():
+                        partitions.append(p.replace('sda',''));
+                    for pn in partitions:
+                        os.system('parted -s /dev/sda rm ' + pn);
+                    print('Running parted, and recreating partition as EXT4')
+                    os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
+                    os.system('/sbin/mkfs.ext4 -F /dev/sda1');
+                
                 # if .rekt exists or bitcoin directory doesnt exist (because the drive is a factory default)
                 # then wipe the drive and format it with EXT4
                 if os.path.exists('/mnt/data/.rekt') or not os.path.exists('/mnt/data/bitcoin'):
