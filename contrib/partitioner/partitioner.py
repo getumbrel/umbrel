@@ -94,7 +94,22 @@ def main():
     else:
         print('Data mount exists')
 
+    # Check for more than 1 partition
+    if len(usb_partitions()) > 1:
+        print('More than one partition found! Lets fix this up');
+        print(usb_partitions());
+        print('Actually didnt do anything yet');
+        output_parted = os.system("parted -s /dev/sda print|awk '/^ / {print $1}'");
+        print(output_parted)
+        '''
+        Procedure
+        - get list of partitions into array: $(parted -s /dev/sda print|awk '/^ / {print $1}')
+        - remove partition by ID: parted -s /dev/sda rm <partition>
+        - Recreate single partition        
+        '''
+        sys.exit(1);
 
+    # Check for number of partitions
     if len(usb_devs()) == 1:
         if len(usb_partitions()) < 1:
             try:
@@ -105,26 +120,9 @@ def main():
             except:
                 print('Error running parted');
                 sys.exit(1);
-        '''
-        If more than 1 partition, normalize things so the next steps doesn't fail
-        '''
-        elif len(usb_partitions()) > 1:
-            try:
-                print('Removing all the partitions and normalizing install');
-                # TODO: Remove partitions
-                '''
-                Procedure
-                - get list of partitions into array: $(parted -s /dev/sda print|awk '/^ / {print $1}')
-                - remove partition by ID: parted -s /dev/sda rm <partition>
-                - Recreate single partition
-                '''
-            except:
-                print('Error running parted');
-                sys.exit(1);
         else:
             print("Already partitioned")
-
-
+    
 
         if len(usb_partitions()) == 1:
             try:
