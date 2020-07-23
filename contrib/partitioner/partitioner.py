@@ -94,17 +94,21 @@ def main():
     else:
         print('Data mount exists')
 
-    # Check for more than 1 partition
+    # Check for more than 1 partition (and one drive only)
     # if so get rid of it all
-    if len(usb_partitions()) > 1:
-        print('More than one partition found! Lets fix this up');
-        partitions = usb_partitions();
-        partitions_new = [];
-        for partition in partitions:
-            partitions_new.append(partition.replace('sda',''))
-        
-        for pn in partitions_new:
-            os.system('parted -s /dev/sda rm ' + pn);
+    if len(usb_devs()) == 1:
+        if len(usb_partitions()) > 1:
+            print('More than one partition found! Lets fix this up');
+            partitions = usb_partitions();
+            partitions_new = [];
+            for partition in partitions:
+                partitions_new.append(partition.replace('sda',''))
+
+            for pn in partitions_new:
+                os.system('parted -s /dev/sda rm ' + pn);
+    else:
+        print('More than one drive is not supported');
+        sys.exit(1);
 
     # Check for number of partitions
     if len(usb_devs()) == 1:
