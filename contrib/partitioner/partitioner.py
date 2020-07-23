@@ -98,21 +98,15 @@ def main():
     if len(usb_partitions()) > 1:
         print('More than one partition found! Lets fix this up');
         partitions = usb_partitions();
-        partitions_new = {};
+        partitions_new = [];
         for partition in partitions:
             partitions_new.append(partition.replace('sda',''))
         
-        print(partitions_new);
-        print('to run: parted -s /dev/sda rm <partition>');
+        for pn in partitions_new:
+            print('to run on os.system(): parted -s /dev/sda rm ' + pn);
             
         print('Actually didnt do anything yet');
 
-        '''
-        Procedure
-        - get list of partitions into array: $(parted -s /dev/sda print|awk '/^ / {print $1}')
-        - remove partition by ID: parted -s /dev/sda rm <partition>
-        - Recreate single partition        
-        '''
         sys.exit(1);
 
     # Check for number of partitions
