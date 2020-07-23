@@ -99,13 +99,9 @@ def main():
     if len(usb_devs()) == 1:
         if len(usb_partitions()) > 1:
             print('More than one partition found! Lets fix this up');
-            partitions = usb_partitions();
-            partitions_new = [];
-            for partition in partitions:
-                partitions_new.append(partition.replace('sda',''))
-
-            for pn in partitions_new:
-                os.system('parted -s /dev/sda rm ' + pn);
+            for partition in usb_partitions():
+                pn = partition.replace('sda','')
+                os.system('parted -s /dev/sda rm ' + pn)
     else:
         print('More than one drive is not supported');
         sys.exit(1);
@@ -132,10 +128,8 @@ def main():
                 # If not EXT4, delete partition and format
                 if not os.path.exists('/mnt/data/lost+found'):
                     print('Not an EXT filesystem, remove all partitions')
-                    partitions = [];
                     for p in usb_partitions():
-                        partitions.append(p.replace('sda',''));
-                    for pn in partitions:
+                        pn = p.replace('sda','')
                         os.system('parted -s /dev/sda rm ' + pn);
                     print('Running parted, and recreating partition as EXT4')
                     os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
