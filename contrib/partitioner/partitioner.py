@@ -217,7 +217,7 @@ def main():
         os.system('/bin/umount /mnt/data')
 
         print('Update /etc/fstab')
-        os.system('echo "UUID=' + first_partition_uuid + ' /mnt/data ext4 defaults,noatime 0 0" >> /etc/fstab')
+        os.system('echo "UUID=' + first_partition_uuid + ' /mnt/data ext4 defaults,noatime,nofail 0 0" >> /etc/fstab')
 
         print('Remounting through /bin/mount')
         os.system('/bin/mount -a');
