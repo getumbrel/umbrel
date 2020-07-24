@@ -99,9 +99,10 @@ def main():
     if len(usb_devs()) == 1:
         if len(usb_partitions()) > 1:
             print('More than one partition found! Flattening the curve..');
+            device_name=str(usb_partitions()[0])[:-1]
             for partition in usb_partitions():
-                pn = partition.replace('sda','')
-                os.system('parted -s /dev/sda rm ' + pn)
+                pn = partition.replace(device_name,'')
+                os.system('parted -s /dev/' + device_name + ' rm ' + pn)
     else:
         print('More than one drive is not supported');
         sys.exit(1);
@@ -110,10 +111,11 @@ def main():
     if len(usb_devs()) == 1:
         if len(usb_partitions()) < 1:
             try:
+                device_name=str(usb_partitions()[0])[:-1]
                 print("Running parted...")
-                os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
+                os.system('/sbin/parted -s /dev/' + device_name + ' mkpart p ext4 3 100%');
                 print('Making first partition');
-                os.system('/sbin/mkfs.ext4 -F /dev/sda1');
+                os.system('/sbin/mkfs.ext4 -F /dev/' + device_name + '1');
             except:
                 print('Error running parted');
                 sys.exit(1);
@@ -128,12 +130,13 @@ def main():
                 # If not EXT4, delete partition and format
                 if not os.path.exists('/mnt/data/lost+found'):
                     print('Not an EXT filesystem, remove all partitions')
+                    device_name=str(usb_partitions()[0])[:-1]
                     for p in usb_partitions():
-                        pn = p.replace('sda','')
-                        os.system('parted -s /dev/sda rm ' + pn);
+                        pn = p.replace(device_name,'')
+                        os.system('parted -s /dev/' + device_name + ' rm ' + pn);
                     print('Running parted, and recreating partition as EXT4')
-                    os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
-                    os.system('/sbin/mkfs.ext4 -F /dev/sda1');
+                    os.system('/sbin/parted -s /dev/' + device_name + ' mkpart p ext4 3 100%');
+                    os.system('/sbin/mkfs.ext4 -F /dev/' + device_name + '1');
                 
                 # if .rekt exists or bitcoin directory doesnt exist (because the drive is a factory default)
                 # then wipe the drive and format it with EXT4
@@ -146,9 +149,10 @@ def main():
                     # remount
                     os.system('/bin/mount -t ext4 /dev/' + usb_partitions()[0] + ' /mnt/data')
                     '''
-                    Get Size of SDA and partition info
+                    Get Size of the first partition and partition info
                     '''
-                    first_part = dev_size('sda') / (1000*1000)
+                    device_name=str(usb_partitions()[0])[:-1]
+                    first_part = dev_size(device_name) / (1000*1000)
                     prune_setting = int(first_part / 2)
 
                     if first_part < 512000:
@@ -226,7 +230,7 @@ def main():
 
         # If volume not mounted
         if not os.path.exists(' /mnt/data/lost+found'):
-            os.system('/bin/mount -t ext4 /dev/sda1 /mnt/data')
+            os.system('/bin/mount -t ext4 ' + usb_partitions()[0] + ' /mnt/data')
 
         # Get UUID of the partition we just created
         partitions = usb_partitions()
