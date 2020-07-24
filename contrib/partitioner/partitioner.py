@@ -235,6 +235,7 @@ def main():
                 os.system('/bin/umount /mnt/data')
             except:
                 print("Error mounting the directory")
+                sys.exit(1);
 
 
         # If volume not mounted
