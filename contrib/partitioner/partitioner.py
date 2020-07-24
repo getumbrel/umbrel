@@ -137,7 +137,7 @@ def main():
                 os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
                 
                 # If not EXT4, delete partition and format
-                if get_partition_type(usb_partitions()[0]) == "ext4":
+                if not get_partition_type(usb_partitions()[0]) == "ext4":
                     print('Not an EXT filesystem, remove all partitions')
                     device_name=str(usb_partitions()[0])[:-1]
                     for p in usb_partitions():
