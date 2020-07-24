@@ -18,6 +18,7 @@ import os
 import sys
 import glob
 import re
+import subprocess
 
 usb_dev_pattern = ['sd.*']
 usb_part_pattern = ['sd.[1-9]*']
@@ -78,6 +79,11 @@ def usb_partition_table():
         table[partition] = int(usb_part_size(partition))
     return table
 
+def get_partition_type(partition):
+    command = ['blkid', '-o', 'value', '-s', 'TYPE', f'/dev/{partition}']
+    output = subprocess.run(command, stdout=subprocess.PIPE).stdout
+    return output.decode('utf-8').rstrip()
+
 '''
 Main Entrypoint
 '''
@@ -128,7 +134,7 @@ def main():
                 os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
                 
                 # If not EXT4, delete partition and format
-                if not os.path.exists('/mnt/data/lost+found'):
+                if get_partition_type(usb_partitions()[0]) == "ext4":
                     print('Not an EXT filesystem, remove all partitions')
                     device_name=str(usb_partitions()[0])[:-1]
                     for p in usb_partitions():
