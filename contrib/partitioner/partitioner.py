@@ -98,7 +98,7 @@ def main():
     # if so get rid of it all
     if len(usb_devs()) == 1:
         if len(usb_partitions()) > 1:
-            print('More than one partition found! Lets fix this up');
+            print('More than one partition found! Flattening the curve..');
             for partition in usb_partitions():
                 pn = partition.replace('sda','')
                 os.system('parted -s /dev/sda rm ' + pn)
