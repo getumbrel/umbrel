@@ -113,8 +113,11 @@ def main():
         print('More than one drive is not supported');
         sys.exit(1);
 
-    # Check for number of partitions
-    if len(usb_devs()) == 1:
+    # Check for number of partitions (only 1 partition is supported
+    if len(usb_devs()) != 1:
+        print('No drives or unexpected number of drives detected!')      
+        sys.exit(1);
+    else:
         if len(usb_partitions()) < 1:
             try:
                 device_name=str(usb_partitions()[0])[:-1]
@@ -268,9 +271,7 @@ def main():
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
         os.system('/bin/ln -s /mnt/data/tor ' + homedirpath + '/tor')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
-    else:
-        print('No drives or unexpected number of drives detected!')
-
+        
 '''
 Actual entrypoint
 '''
