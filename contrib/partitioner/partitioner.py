@@ -104,11 +104,11 @@ def main():
     # STEP to check If  no partitions found
     if len(usb_partitions()) < 1:
         try:
-            device_name=str(usb_partitions()[0])[:-1]
+            # hardcoded sda for now.. may try out usb_devs() later and see for a more smoother experience
             print("Running parted...")
-            os.system('/sbin/parted -s /dev/' + device_name + ' mkpart p ext4 3 100%');
+            os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
             print('Making first partition');
-            os.system('/sbin/mkfs.ext4 -F /dev/' + device_name + '1');
+            os.system('/sbin/mkfs.ext4 -F /dev/sda1');
         except:
             print('Error running parted');
             sys.exit(1);
