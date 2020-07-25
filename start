@@ -24,12 +24,12 @@ check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget 
 echo "Starting Umbrel..."
 echo
 echo "Starting karen..."
-
+echo
 ./karen &
 KAREN_PID=$!
 echo $! > ./karen.pid
 
 echo
 echo "Starting Docker services..."
-
+echo
 docker-compose up --detach --build --remove-orphans
