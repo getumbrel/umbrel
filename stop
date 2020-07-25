@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Stop Umbrel
+
+if [[ $UID != 0 ]]; then
+    echo "Umbrel must be stopped as root"
+    echo "Please re-run this script as"
+    echo "  sudo ./stop"
+    exit 1
+fi
+
+echo "Stopping Docker services"
+docker-compose down
+
+if [[ -f "./karen.pid" ]]; then
+    echo "Killing karen"
+    KAREN_PID=$(cat ./karen.pid)
+    echo "PID: $KAREN_PID"
+    kill "$KAREN_PID"
+    rm ./karen.pid
+fi
