@@ -10,6 +10,17 @@ if [[ $UID != 0 ]]; then
     exit 1
 fi
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget git
+
 echo "Starting Umbrel..."
 echo
 echo "Starting karen..."

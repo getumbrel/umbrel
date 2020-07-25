@@ -18,5 +18,5 @@ if [[ -f "./karen.pid" ]]; then
     echo "Killing karen..."
     KAREN_PID=$(cat ./karen.pid)
     kill "$KAREN_PID"
-    rm ./karen.pid
+    rm -f ./karen.pid
 fi
