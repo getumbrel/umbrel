@@ -98,12 +98,10 @@ TESTNET=1 ./configure-box.sh
 REGTEST=1 ./configure-box.sh
 ```
 
-### Step 3. Run the services
+### Step 3. Run Umbrel
 
 ```bash
-docker-compose up -d
-# Verify the services
-docker ps -a
+sudo ./start
 ```
 
 ---
