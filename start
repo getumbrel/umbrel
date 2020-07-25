@@ -12,20 +12,13 @@ fi
 
 echo "Starting Umbrel..."
 echo
-echo
-echo "Starting karen"
+echo "Starting karen..."
+
 ./karen &
 KAREN_PID=$!
 echo $! > ./karen.pid
 
-# echo "Setting environment variables"
-# DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
-# DEVICE_HOSTNAME=$(hostname)
-# DEVICE_HOST="http://${DEVICE_IP:-$DEVICE_HOSTNAME.local}"
-# echo
-# echo "Device host: $DEVICE_HOST"
-# echo
-
 echo
-echo "Starting Docker services"
+echo "Starting Docker services..."
+
 docker-compose up --detach --build --remove-orphans

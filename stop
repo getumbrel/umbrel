@@ -10,13 +10,13 @@ if [[ $UID != 0 ]]; then
     exit 1
 fi
 
-echo "Stopping Docker services"
+echo "Stopping Docker services..."
+
 docker-compose down
 
 if [[ -f "./karen.pid" ]]; then
-    echo "Killing karen"
+    echo "Killing karen..."
     KAREN_PID=$(cat ./karen.pid)
-    echo "PID: $KAREN_PID"
     kill "$KAREN_PID"
     rm ./karen.pid
 fi
