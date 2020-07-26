@@ -18,6 +18,7 @@ import os
 import sys
 import glob
 import re
+import subprocess
 
 usb_dev_pattern = ['sd.*']
 usb_part_pattern = ['sd.[1-9]*']
@@ -78,6 +79,11 @@ def usb_partition_table():
         table[partition] = int(usb_part_size(partition))
     return table
 
+def get_partition_type(partition):
+    command = ['blkid', '-o', 'value', '-s', 'TYPE', f'/dev/{partition}']
+    output = subprocess.run(command, stdout=subprocess.PIPE).stdout
+    return output.decode('utf-8').rstrip()
+
 '''
 Main Entrypoint
 '''
@@ -95,116 +101,148 @@ def main():
         print('Data mount exists')
 
 
-    if len(usb_devs()) == 1:
-        if len(usb_partitions()) < 1:
-            try:
-                print("Running parted...")
-                os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
-                print('Making first partition');
-                os.system('/sbin/mkfs.ext4 -F /dev/sda1');
-            except:
-                print('Error running parted');
-                sys.exit(1);
-        else:
-            print("Already partitioned")
+    # STEP to check If  no partitions found
+    if len(usb_partitions()) < 1:
+        try:
+            # hardcoded sda for now.. may try out usb_devs() later and see for a more smoother experience
+            print("Running parted...")
+            os.system('/sbin/parted -s /dev/sda mkpart p ext4 3 100%');
+            print('Making first partition');
+            os.system('/sbin/mkfs.ext4 -F /dev/sda1');
+        except:
+            print('Error running parted');
+            sys.exit(1);
+    else:
+        print("Already partitioned.. proceed with next step")
+    # END STEP for no partitions found
+    
+    # Check for more than 1 partition (and one drive only)
+    # if so get rid of it all
+    if len(usb_devs()) != 1:
+        print('More than one drive is not supported');
+        sys.exit(1);        
+    else:
+        if len(usb_partitions()) > 1:
+            print('More than one partition found! Flattening the curve..');
+            device_name=str(usb_partitions()[0])[:-1]
+            for partition in usb_partitions():
+                pn = partition.replace(device_name,'')
+                os.system('/sbin/parted -s /dev/' + device_name + ' rm ' + pn)        
 
+    # Check for number of partitions (only 1 partition is supported
+    if len(usb_devs()) != 1:
+        print('No drives or unexpected number of drives detected!')      
+        sys.exit(1);
+    else:
+        # Proceed to mounting the drive (and formatting for good measure :D)
+        try:
+            os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
 
+            # If not EXT4, delete partition and format (format for good measure)
+            if not get_partition_type(usb_partitions()[0]) == "ext4":
+                print('Not an EXT filesystem, remove all partitions')
+                device_name=str(usb_partitions()[0])[:-1]
+                for p in usb_partitions():
+                    pn = p.replace(device_name,'')
+                    os.system('parted -s /dev/' + device_name + ' rm ' + pn);
+                print('Running parted, and recreating partition as EXT4')
+                os.system('/sbin/parted -s /dev/' + device_name + ' mkpart p ext4 3 100%');
+                os.system('/sbin/mkfs.ext4 -F /dev/' + device_name + '1');
 
-        if len(usb_partitions()) == 1:
-            try:
-                os.system('/bin/mount /dev/' + usb_partitions()[0] + ' /mnt/data')
-                # if .rekt exists or bitcoin directory doesnt exist (because the drive is a factory default)
-                # then wipe the drive and format it with EXT4
-                if os.path.exists('/mnt/data/.rekt') or not os.path.exists('/mnt/data/bitcoin'):
-                    print('REKT file exists OR bitcoin folder not found... So lets format it')
-                    # unmount before format
-                    os.system('/bin/umount /mnt/data')
-                    print('Initializing filesystem')
-                    os.system('/sbin/mkfs.ext4 -F /dev/' + usb_partitions()[0])
-                    # remount
-                    os.system('/bin/mount -t ext4 /dev/' + usb_partitions()[0] + ' /mnt/data')
-                    '''
-                    Get Size of SDA and partition info
-                    '''
-                    first_part = dev_size('sda') / (1000*1000)
-                    prune_setting = int(first_part / 2)
+            # if .rekt exists or bitcoin directory doesnt exist (because the drive is a factory default)
+            # then wipe the drive and format it with EXT4
+            if os.path.exists('/mnt/data/.rekt') or not os.path.exists('/mnt/data/bitcoin'):
+                print('REKT file exists OR bitcoin folder not found... So lets format it')
+                # unmount before format
+                os.system('/bin/umount /mnt/data')
+                print('Initializing filesystem')
+                os.system('/sbin/mkfs.ext4 -F /dev/' + usb_partitions()[0])
+                # remount
+                os.system('/bin/mount -t ext4 /dev/' + usb_partitions()[0] + ' /mnt/data')
+                '''
+                Get Size of the first partition and partition info
+                '''
+                device_name=str(usb_partitions()[0])[:-1]
+                first_part = dev_size(device_name) / (1000*1000)
+                prune_setting = int(first_part / 2)
 
-                    if first_part < 512000:
-                        print("Pruning the config, because drive is less than 512 GB")
-                        os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
-                    else:
-                        print("Switching off pruning, and turn on txindex")
-                        os.system('/bin/sed -i "s/prune=550/#prune=550/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
-                        os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
+                if first_part < 512000:
+                    print("Pruning the config, because drive is less than 512 GB")
+                    os.system('/bin/sed -i "s/prune=550/prune=' + str(prune_setting) + '/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
+                else:
+                    print("Switching off pruning, and turn on txindex")
+                    os.system('/bin/sed -i "s/prune=550/#prune=550/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
+                    os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
 
-                    '''
-                    Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
-                    '''
-                    print('Setup secrets, db, bitcoin, nginx, tor and lnd directory.. as a new install')
+                '''
+                Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
+                '''
+                print('Setup secrets, db, bitcoin, nginx, tor and lnd directory.. as a new install')
+                os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+
+                if not os.path.exists('/mnt/data/swap'):
+                    print('Add swap to partition')
+                    os.system('sed -i "/CONF_SWAPFILE/s/^#//g; " /etc/dphys-swapfile')
+                    os.system('sed -i "s/\/var\/swap/\/mnt\/data\/swap/g; " /etc/dphys-swapfile')
+                    os.system('sed -i "s/CONF_SWAPSIZE=100/CONF_SWAPSIZE=2000/g; " /etc/dphys-swapfile')
+                    print('Restarting dphys swapfile')
+                    os.system('/etc/init.d/dphys-swapfile restart')
+
+            else:
+                '''
+                No need to do anything as drive is intact
+                '''
+                print('REKT file does not exist OR bitcoin folder exists so we will preserve it. But lets check for all the other folders')
+
+                '''
+                Check other folders in partition3
+                - secrets
+                - db
+                - lnd
+                - nginx
+                - tor
+                '''
+                # Secrets folder
+                if not os.path.exists('/mnt/data/secrets'):
+                    print('secrets folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+
+                # tor folder
+                if not os.path.exists('/mnt/data/tor'):
+                    print('secrets folder does\'nt exist!')
+                    os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')                        
+
+                # db folder
+                if not os.path.exists('/mnt/data/db'):
+                    print('db folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
-                    os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
+
+                # Check LND folder
+                if not os.path.exists('/mnt/data/lnd'):
+                    print('lnd folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
-                    os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')
+
+                # Check nginx folder
+                if not os.path.exists('/mnt/data/nginx'):
+                    print('nginx folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
 
-                    if not os.path.exists('/mnt/data/swap'):
-                        print('Add swap to partition')
-                        os.system('sed -i "/CONF_SWAPFILE/s/^#//g; " /etc/dphys-swapfile')
-                        os.system('sed -i "s/\/var\/swap/\/mnt\/data\/swap/g; " /etc/dphys-swapfile')
-                        os.system('sed -i "s/CONF_SWAPSIZE=100/CONF_SWAPSIZE=2000/g; " /etc/dphys-swapfile')
-                        print('Restarting dphys swapfile')
-                        os.system('/etc/init.d/dphys-swapfile restart')
 
-                else:
-                    '''
-                    No need to do anything
-                    '''
-                    print('REKT file does not exist OR bitcoin folder exists so we will preserve it. But lets check for all the other folders')
-
-                    '''
-                    Check other folders in partition3
-                    - secrets
-                    - db
-                    - lnd
-                    - nginx
-                    - tor
-                    '''
-                    # Secrets folder
-                    if not os.path.exists('/mnt/data/secrets'):
-                        print('secrets folder does\'nt exist!')
-                        os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
-                        
-                    # tor folder
-                    if not os.path.exists('/mnt/data/tor'):
-                        print('secrets folder does\'nt exist!')
-                        os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')                        
-
-                    # db folder
-                    if not os.path.exists('/mnt/data/db'):
-                        print('db folder does\'nt exist!')
-                        os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
-
-                    # Check LND folder
-                    if not os.path.exists('/mnt/data/lnd'):
-                        print('lnd folder does\'nt exist!')
-                        os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
-
-                    # Check nginx folder
-                    if not os.path.exists('/mnt/data/nginx'):
-                        print('nginx folder does\'nt exist!')
-                        os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
-
-
-                print('Unmounting partition')
-                os.system('/bin/umount /mnt/data')
-            except:
-                print("Error mounting the directory")
-
+            print('Unmounting partition')
+            os.system('/bin/umount /mnt/data')
+        except:
+            print("Error mounting the directory")
+            sys.exit(1);
+        # END: Drive prep
 
         # If volume not mounted
         if not os.path.exists(' /mnt/data/lost+found'):
-            os.system('/bin/mount -t ext4 /dev/sda1 /mnt/data')
+            os.system('/bin/mount -t ext4 ' + usb_partitions()[0] + ' /mnt/data')
 
         # Get UUID of the partition we just created
         partitions = usb_partitions()
@@ -236,9 +274,7 @@ def main():
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
         os.system('/bin/ln -s /mnt/data/tor ' + homedirpath + '/tor')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
-    else:
-        print('No drives or unexpected number of drives detected!')
-
+        
 '''
 Actual entrypoint
 '''
