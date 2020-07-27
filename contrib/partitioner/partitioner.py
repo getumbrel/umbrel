@@ -184,6 +184,7 @@ def main():
                 os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
                 os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')
                 os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+                os.system('/bin/cp -fr ' + homedirpath + '/docker-compose.yml /mnt/data')
 
                 if not os.path.exists('/mnt/data/swap'):
                     print('Add swap to partition')
@@ -231,6 +232,11 @@ def main():
                 if not os.path.exists('/mnt/data/nginx'):
                     print('nginx folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/nginx /mnt/data')
+                
+                # Check for existing docker.compose
+                if not os.path.exists('/mnt/data/docker-compose.yml'):
+                    print('docker-compose.yml doesn\'t exist on the drive, creating from the generated install');
+                    os.system('/bin/cp -fr ' + homedirpath + '/docker-compose.yml /mnt/data')
 
 
             print('Unmounting partition')
@@ -267,6 +273,7 @@ def main():
         os.system('/bin/rm -fr ' + homedirpath + '/lnd')
         os.system('/bin/rm -fr ' + homedirpath + '/tor')
         os.system('/bin/rm -fr ' + homedirpath + '/nginx')
+        os.system('/bin/rm -fr ' + homedirpath + '/docker-compose.yml')
         print('Set up symlinks')
         os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
         os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')
@@ -274,6 +281,7 @@ def main():
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')
         os.system('/bin/ln -s /mnt/data/tor ' + homedirpath + '/tor')
         os.system('/bin/ln -s /mnt/data/nginx ' + homedirpath + '/nginx')
+        os.system('/bin/ln -s /mnt/data/docker-compose.yml ' + homedirpath + '/docker-compose.yml')
         
 '''
 Actual entrypoint
