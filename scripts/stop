@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Stop Umbrel
+
+if [[ $UID != 0 ]]; then
+    echo "Umbrel must be stopped as root"
+    echo "Please re-run this script as"
+    echo "  sudo . scripts/stop"
+    exit 1
+fi
+
+if [[ -n "$1" ]]; then
+  root_dir="$(readlink -f $1)"
+else
+  root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/.."
+fi
+
+if [[ ! -d "$root_dir" ]]; then
+  echo "Root dir does not exist '$root_dir'"
+  exit 1
+fi
+
+cd $root_dir
+
+echo "Stopping Docker services..."
+echo
+docker-compose down

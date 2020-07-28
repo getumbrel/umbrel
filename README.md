@@ -101,7 +101,7 @@ REGTEST=1 ./configure-box.sh
 ### Step 3. Run Umbrel
 
 ```bash
-sudo ./start
+sudo . scripts/start
 ```
 
 ---

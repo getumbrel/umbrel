@@ -6,7 +6,7 @@ set -euo pipefail
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be started as root"
     echo "Please re-run this script as"
-    echo "  sudo ./start"
+    echo "  sudo . scripts/start"
     exit 1
 fi
 
@@ -23,6 +23,20 @@ check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget 
 
 echo "Starting Umbrel..."
 echo
+
+if [[ -n "$1" ]]; then
+  root_dir="$(readlink -f $1)"
+else
+  root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/.."
+fi
+
+if [[ ! -d "$root_dir" ]]; then
+  echo "Root dir does not exist '$root_dir'"
+  exit 1
+fi
+
+cd $root_dir
+
 echo "Starting karen..."
 echo
 ./karen &
