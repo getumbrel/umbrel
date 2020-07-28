@@ -27,7 +27,8 @@ echo "Starting karen..."
 echo
 ./karen &
 KAREN_PID=$!
-echo $! > ./karen.pid
+KAREN_PGID=$(ps opgid= "$KAREN_PID")
+echo $KAREN_PGID > ./karen.pgid
 
 echo
 echo "Starting Docker services..."

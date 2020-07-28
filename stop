@@ -15,8 +15,8 @@ echo
 docker-compose down
 
 if [[ -f "./karen.pid" ]]; then
-    KAREN_PID=$(cat ./karen.pid)
-    echo "Killing karen (pid $KAREN_PID)..."
-    kill -"$KAREN_PID"
-    rm -f ./karen.pid
+    KAREN_PGID=$(cat ./karen.pgid)
+    echo "Killing karen (PGID $KAREN_PGID)..."
+    kill -- -"$KAREN_PGID"
+    rm -f ./karen.pgid
 fi
