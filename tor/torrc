@@ -2,9 +2,20 @@
 SocksPort   10.11.5.1:29050
 ControlPort 10.11.5.1:29051
 
-# Dashboard Hidden Service
+# Dashboard Hidden Service - v3
 HiddenServiceDir /var/lib/tor/web
+HiddenServiceVersion 3
 HiddenServicePort 80 10.11.0.2:80
+
+# Bitcoind Hidden Service P2P - v3
+HiddenServiceDir /var/lib/tor/bitcoin-p2p-v3
+HiddenServiceVersion 3
+HiddenServicePort 8333 10.11.1.1:8333
+
+# Bitcoind Hidden Service P2P - v2
+HiddenServiceDir /var/lib/tor/bitcoin-p2p-v2
+HiddenServiceVersion 2
+HiddenServicePort 8333 10.11.1.1:8333
 
 # Tor Passwords
 HashedControlPassword 16:50A873DF18C00F4A6048BF1CEF7E7AA66478F0B5134DA4369D80657F26
