@@ -6,7 +6,7 @@ set -euo pipefail
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be started as root"
     echo "Please re-run this script as"
-    echo "  sudo ./start"
+    echo "  sudo ./scripts/start"
     exit 1
 fi
 
@@ -23,18 +23,25 @@ check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget 
 
 echo "Starting Umbrel..."
 echo
+
+UMBREL_ROOT="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/.."
+
+if [[ ! -d "$UMBREL_ROOT" ]]; then
+  echo "Root dir does not exist '$UMBREL_ROOT'"
+  exit 1
+fi
+
 echo "Setting environment variables..."
 echo
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME=$(hostname)
 export DEVICE_HOST="http://${DEVICE_IP:-$DEVICE_HOSTNAME.local}"
 
+cd "$UMBREL_ROOT"
+
 echo "Starting karen..."
 echo
 ./karen &
-KAREN_PID=$!
-KAREN_PGID=$(ps opgid= "$KAREN_PID")
-echo $KAREN_PGID > ./karen.pgid
 
 echo
 echo "Starting Docker services..."

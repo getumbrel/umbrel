@@ -63,7 +63,7 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
 cd "$UMBREL_ROOT"
-./stop
+./scripts/stop
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
@@ -82,4 +82,4 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 80, "description": "Starting new containers", "updateTo": "$RELEASE"}
 EOF
 cd "$UMBREL_ROOT"
-./start
+./scripts/start

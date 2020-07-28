@@ -6,17 +6,19 @@ set -euo pipefail
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be stopped as root"
     echo "Please re-run this script as"
-    echo "  sudo ./stop"
+    echo "  sudo ./scripts/stop"
     exit 1
 fi
+
+UMBREL_ROOT="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/.."
+
+if [[ ! -d "$UMBREL_ROOT" ]]; then
+  echo "Root dir does not exist '$UMBREL_ROOT'"
+  exit 1
+fi
+
+cd "$UMBREL_ROOT"
 
 echo "Stopping Docker services..."
 echo
 docker-compose down
-
-if [[ -f "./karen.pgid" ]]; then
-    KAREN_PGID=$(cat ./karen.pgid)
-    echo "Killing karen (PGID $KAREN_PGID)..."
-    kill -- -"$KAREN_PGID"
-    rm -f ./karen.pgid
-fi
