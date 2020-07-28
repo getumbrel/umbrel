@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-./stop
+docker-compose stop
 shutdown -r now
