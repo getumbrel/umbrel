@@ -6,5 +6,4 @@ ControlPort 10.11.5.1:29051
 HiddenServiceDir /var/lib/tor/web
 HiddenServicePort 80 10.11.0.2:80
 
-# Tor Passwords
-HashedControlPassword 16:50A873DF18C00F4A6048BF1CEF7E7AA66478F0B5134DA4369D80657F26
+# Tor password will go here:
