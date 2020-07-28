@@ -6,7 +6,7 @@ set -euo pipefail
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be started as root"
     echo "Please re-run this script as"
-    echo "  sudo . scripts/start"
+    echo "  sudo ./scripts/start"
     exit 1
 fi
 
