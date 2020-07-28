@@ -14,7 +14,7 @@ echo "Stopping Docker services..."
 echo
 docker-compose down
 
-if [[ -f "./karen.pid" ]]; then
+if [[ -f "./karen.pgid" ]]; then
     KAREN_PGID=$(cat ./karen.pgid)
     echo "Killing karen (PGID $KAREN_PGID)..."
     kill -- -"$KAREN_PGID"
