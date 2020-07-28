@@ -31,7 +31,7 @@ if [[ ! -d "$UMBREL_ROOT" ]]; then
   exit 1
 fi
 
-cd $UMBREL_ROOT
+cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
