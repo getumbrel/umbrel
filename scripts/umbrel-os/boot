@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+UMBREL_ROOT="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../.."
+
+# Check for statuses directory
+if [ ! -d "$UMBREL_ROOT"/statuses ]; then
+    mkdir -p "$UMBREL_ROOT"/statuses
+    # Ensure its writable by all
+    chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses
+    chmod 777 "$UMBREL_ROOT"/statuses
+fi
+
+# Check for disk partition status
+if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
+    if [ -f "$UMBREL_ROOT"/contrib/partitioner/partitioner.py ]; then
+      echo "Run partition tool or quit out if unavailable"
+      "$UMBREL_ROOT"/contrib/partitioner/partitioner.py || exit 1
+
+      touch "$UMBREL_ROOT"/statuses/disk-partitioned
+      chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses/disk-partitioned
+    else
+      echo "Could not find partition tool - some steps might be skipped"
+    fi
+fi
+
+if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
+    if [ -f "$UMBREL_ROOT"/configure-box.sh ]; then
+        echo "Running configuration script"
+        cd "$UMBREL_ROOT"
+        ./configure-box.sh || exit 1
+        # Marking this as done so we don't do configuration again
+        touch "$UMBREL_ROOT"/statuses/service-configured
+        chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses/service-configured
+    fi
+
+    # Next stage, check if service-configured
+    echo "Service configured.. Checking for partitioned state"
+    if [ -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
+      if [ ! -f /etc/rc2.d/S01umbrel ]; then
+        echo "Set  up symlinks"
+        ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
+        ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
+        # Do partitioning at first boot
+        echo "Enabling defaults for umbrel"
+        update-rc.d umbrel defaults || exit 1
+        echo "Enabling startup for umbrel box"
+        update-rc.d umbrel enable || exit 1
+        echo "starting up umbrel get it started now)"
+        /etc/init.d/umbrel start
+      fi
+    else
+        echo "Disk not partitioned, will not start umbrel framework (Please do it manually)"
+    fi
+fi
+
+# Display connection details on the TTY
+if [ -x "$(command -v umbrel-details)" ]; then
+  # We run this in the background because it waits for the Tor hidden service
+  # to be created on first boot. rc.local needs to exit so the boot process
+  # can continue.
+  umbrel-details &
+fi
+
+exit 0
