@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Start Umbrel
+
+if [[ $UID != 0 ]]; then
+    echo "Umbrel must be started as root"
+    echo "Please re-run this script as"
+    echo "  sudo ./scripts/start"
+    exit 1
+fi
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Check system's dependencies
+check_dependencies readlink dirname docker docker-compose git
+
+# Check karen's dependencies
+check_dependencies fswatch 
+
+# Check OTA update scripts' dependencies
+check_dependencies rsync jq wget
+
+echo "Starting Umbrel..."
+echo
+
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+
+if [[ ! -d "$UMBREL_ROOT" ]]; then
+  echo "Root dir does not exist '$UMBREL_ROOT'"
+  exit 1
+fi
+
+cd "$UMBREL_ROOT"
+
+echo "Starting karen..."
+echo
+./karen &
+
+echo
+echo "Starting Docker services..."
+echo
+docker-compose up --detach --build --remove-orphans
