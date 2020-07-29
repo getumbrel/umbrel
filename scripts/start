@@ -38,6 +38,12 @@ if [[ ! -d "$UMBREL_ROOT" ]]; then
   exit 1
 fi
 
+echo "Setting environment variables..."
+echo
+DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
+DEVICE_HOSTNAME="$(hostname)"
+export DEVICE_HOST="http://"${DEVICE_IP:-"$DEVICE_HOSTNAME".local}""
+
 cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
@@ -48,3 +54,7 @@ echo
 echo "Starting Docker services..."
 echo
 docker-compose up --detach --build --remove-orphans
+echo
+
+echo "Umbrel is now accessible at"
+echo "  $DEVICE_HOST"
