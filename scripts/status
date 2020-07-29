@@ -3,11 +3,4 @@ set -euo pipefail
 
 # Get Umbrel Status
 
-if [[ $UID != 0 ]]; then
-    echo "Umbrel's status must be fetched as root"
-    echo "Please re-run this script as"
-    echo "  sudo ./scripts/status"
-    exit 1
-fi
-
 docker ps -a
