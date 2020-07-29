@@ -19,7 +19,14 @@ check_dependencies () {
   done
 }
 
-check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget git
+# Check system's dependencies
+check_dependencies readlink dirname docker docker-compose git
+
+# Check karen's dependencies
+check_dependencies fswatch 
+
+# Check OTA update scripts' dependencies
+check_dependencies rsync jq wget
 
 echo "Starting Umbrel..."
 echo
