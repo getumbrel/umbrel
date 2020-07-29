@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-UMBREL_ROOT="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../.."
+
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 
 # Check for statuses directory
 if [ ! -d "$UMBREL_ROOT"/statuses ]; then
