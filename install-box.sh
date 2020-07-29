@@ -25,7 +25,7 @@ check_dependencies git
 echo "Cloning to current working directory from github..."
 git init
 git remote add origin https://github.com/getumbrel/umbrel.git
-git fetch --all  --tags
+git fetch --all --tags
 git checkout tags/v0.1.5-beta
 git reset --hard tags/v0.1.5-beta
 
