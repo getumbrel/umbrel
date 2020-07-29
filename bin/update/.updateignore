@@ -5,3 +5,4 @@ lnd
 secrets
 statuses
 tor
+events/signals
