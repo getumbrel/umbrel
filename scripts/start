@@ -41,7 +41,7 @@ fi
 echo "Setting environment variables..."
 echo
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
-DEVICE_HOSTNAME=$(hostname)
+DEVICE_HOSTNAME="$(hostname)"
 export DEVICE_HOST="http://"${DEVICE_IP:-"$DEVICE_HOSTNAME".local}""
 
 cd "$UMBREL_ROOT"
