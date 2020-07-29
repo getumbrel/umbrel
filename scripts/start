@@ -24,7 +24,7 @@ check_dependencies fswatch readlink dirname docker docker-compose rsync jq wget 
 echo "Starting Umbrel..."
 echo
 
-UMBREL_ROOT="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/.."
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
