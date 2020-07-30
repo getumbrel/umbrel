@@ -34,7 +34,7 @@ chown -R 1000:1000 "$UMBREL_ROOT"/
 echo "Backing up existing directory tree"
 
 rsync -av "$UMBREL_ROOT"/ \
-    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
+    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/scripts/update/.updateignore" \
     "$UMBREL_ROOT"/.umbrel-backup/
 
 echo "Successfully backed up to $UMBREL_ROOT/.umbrel-backup"

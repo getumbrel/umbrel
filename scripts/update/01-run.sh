@@ -68,7 +68,7 @@ cd "$UMBREL_ROOT"
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync -av "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
-    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/bin/update/.updateignore" \
+    --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/scripts/update/.updateignore" \
     "$UMBREL_ROOT"/
 
 # Fix permissions

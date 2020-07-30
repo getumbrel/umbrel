@@ -49,7 +49,7 @@ wget -qO- "https://raw.githubusercontent.com/getumbrel/umbrel/$RELEASE/install-b
 
 # Run update scripts
 echo "Running update install scripts of the new release"
-cd bin/update
+cd scripts/update
 UPDATE_INSTALL_SCRIPTS=$(ls *-run.sh)
 for script in $UPDATE_INSTALL_SCRIPTS; do
     if [[ -x $script ]]; then

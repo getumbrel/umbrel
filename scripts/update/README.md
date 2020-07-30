@@ -54,10 +54,10 @@ How over-the-air updates work on Umbrel.
 
 16. `$UMBREL_ROOT/events/triggers/update` then executes all of the following update scripts from the new release `$UMBREL_ROOT/.umbrel-vX.Y.Z` one-by-one:
 
-- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/00-run.sh`](https://github.com/getumbrel/umbrel/blob/master/bin/update/00-run.sh): Pre-update preparation script (does things like making a backup)
-- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/01-run.sh`](https://github.com/getumbrel/umbrel/blob/master/bin/update/01-run.sh): Install update script (installs the update)
-- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/02-run.sh`](https://github.com/getumbrel/umbrel/blob/master/bin/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
-- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/bin/update/03-run.sh`](https://github.com/getumbrel/umbrel/blob/master/bin/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installed)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/scripts/update/00-run.sh`](https://github.com/getumbrel/umbrel/blob/master/scripts/update/00-run.sh): Pre-update preparation script (does things like making a backup)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/scripts/update/01-run.sh`](https://github.com/getumbrel/umbrel/blob/master/scripts/update/01-run.sh): Install update script (installs the update)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/scripts/update/02-run.sh`](https://github.com/getumbrel/umbrel/blob/master/scripts/update/02-run.sh): Post-update script (used to run unit-tests to make sure the update was successfully installed)
+- [`$UMBREL_ROOT/.umbrel-vX.Y.Z/scripts/update/03-run.sh`](https://github.com/getumbrel/umbrel/blob/master/scripts/update/03-run.sh): Success script (runs after the updated has been successfully downloaded and installed)
 
 All of the above scripts continuously update `$UMBREL_ROOT/statuses/update-status.json` with the progress of update, which the dashboard periodically fetches every 2s via `umbrel-manager` to keep the user updated.
 
