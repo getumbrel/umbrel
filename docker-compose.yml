@@ -157,12 +157,12 @@ services:
                 networks:
                     net:
                         ipv4_address: 10.11.5.2
-        frontrail:
-            container_name: frontrail
-            image: mthenw/frontail
+        frontail:
+            container_name: frontail
+            image: getumbrel/frontail:master
             logging: *default-logging
             restart: unless-stopped
-            command: "/var/log/syslog --url-path /logs --disable-usage-stats --number 50"
+            command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
             volumes:
                 - /var/log/syslog:/var/log/syslog:ro
             networks:
