@@ -157,6 +157,17 @@ services:
                 networks:
                     net:
                         ipv4_address: 10.11.5.2
+        frontail:
+            container_name: frontail
+            image: getumbrel/frontail:v4.9.1
+            logging: *default-logging
+            restart: unless-stopped
+            command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
+            volumes:
+                - /var/log/syslog:/var/log/syslog:ro
+            networks:
+                net:
+                    ipv4_address: 10.11.3.0
 networks:
     net:
         ipam:
