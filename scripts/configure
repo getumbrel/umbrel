@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -26,6 +27,15 @@ check_dependencies () {
 }
 
 check_dependencies wget docker docker-compose
+
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+
+if [[ ! -d "$UMBREL_ROOT" ]]; then
+  echo "Root dir does not exist '$UMBREL_ROOT'"
+  exit 1
+fi
+
+cd "$UMBREL_ROOT"
 
 echo "Start box configuration"
 echo "Installing RPCAuth.py and configuring secrets"
@@ -107,5 +117,5 @@ rm -fr README.md
 rm -fr NETWORKING.md
 rm -fr CONTRIBUTING.md
 rm -fr LICENSE
-rm -fr configure-box.sh
+
 echo "Box Configuration complete"

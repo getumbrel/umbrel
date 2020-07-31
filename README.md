@@ -83,14 +83,14 @@ curl -L https://github.com/getumbrel/umbrel/archive/v0.1.5-beta.tar.gz | tar -xz
 ### Step 2. Configure
 
 ```bash
-# To run Umbrel on mainnet, run:
-./configure-box.sh
+# To configure Umbrel for mainnet, run:
+./scripts/configure
 
 # For testnet, run:
-TESTNET=1 ./configure-box.sh
+TESTNET=1 ./scripts/configure
 
 # For regtest, run:
-REGTEST=1 ./configure-box.sh
+REGTEST=1 ./scripts/configure
 ```
 
 ### Step 3. Run Umbrel
