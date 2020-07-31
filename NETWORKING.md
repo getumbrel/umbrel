@@ -15,3 +15,5 @@ lnd        | 10.11.1.2  |
 dashboard  | 10.11.0.3  |
 manager    | 10.11.2.1  |
 middleware  | 10.11.2.2 |
+neutrino-switcher  | 10.11.5.2 |
+frontail  | 10.11.3.0 |

@@ -115,7 +115,5 @@ echo "Removing stuff we don't need"
 rm -fr .git
 rm -fr README.md
 rm -fr NETWORKING.md
-rm -fr CONTRIBUTING.md
-rm -fr LICENSE
 
 echo "Box Configuration complete"
