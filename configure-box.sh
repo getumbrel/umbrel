@@ -101,5 +101,11 @@ sed -i "s/torpassword=umbrelftw/torpassword=${RPCPASS}/g;" bitcoin/bitcoin.conf
 echo "Adding Tor password to LND"
 sed -i "s/tor.password=umbrelftw/tor.password=${RPCPASS}/g; " lnd/lnd.conf
 
-rm configure-box.sh
+echo "Removing stuff we don't need"
+rm -fr .git
+rm -fr README.md
+rm -fr NETWORKING.md
+rm -fr CONTRIBUTING.md
+rm -fr LICENSE
+rm -fr configure-box.sh
 echo "Box Configuration complete"
