@@ -27,7 +27,7 @@ check_root
 if [[ -n "$1" ]]; then
   root_dir="$(readlink -f $1)"
 else
-  root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/events"
+  root_dir="$(dirname $(readlink -f ${BASH_SOURCE[0]}))/../events"
 fi
 signal_dir="$root_dir/signals"
 trigger_dir="$root_dir/triggers"
