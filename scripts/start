@@ -48,7 +48,7 @@ cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
-./karen &
+./scripts/karen &
 
 echo
 echo "Starting Docker services..."
