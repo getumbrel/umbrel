@@ -71,8 +71,20 @@ main () {
   # At this point we know there is only one block device attached
   block_device=$block_devices
   block_device_model=$(get_block_device_model $block_device)
-  echo "Formatting device \"${block_device_model}\"..."
+  echo "Found device \"${block_device_model}\"!"
+
+  # TODO: Check if the device contains an existing Umbrel install
+
+  echo "Formatting device..."
   format_block_device $block_device
+
+  # TODO: Mount drive
+
+  # TODO: Setup symlinks
+
+  # TODO: Check it's mounted and symlinks are working correctly
+
+  # TODO: Add /etc/fstab entry
 }
 
 main
