@@ -12,9 +12,9 @@ fi
 
 # Check for disk partition status
 if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
-    if [ -f "$UMBREL_ROOT"/contrib/partitioner/partitioner.py ]; then
+    if [ -f "$UMBREL_ROOT"/scripts/umbrel-os/partitioner ]; then
       echo "Run partition tool or quit out if unavailable"
-      "$UMBREL_ROOT"/contrib/partitioner/partitioner.py || exit 1
+      "$UMBREL_ROOT"/scripts/umbrel-os/partitioner || exit 1
 
       touch "$UMBREL_ROOT"/statuses/disk-partitioned
       chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses/disk-partitioned
