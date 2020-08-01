@@ -3,6 +3,22 @@
 # karen watches for signals and executes triggers in the events dir
 # karen gets triggered a lot
 
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "Error: This script must be run as root."
+    echo "Can I speak to a manager please?"
+    exit 1
+  fi
+}
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "karen is already running"
+    exit 1
+  fi
+}
+
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
@@ -12,17 +28,11 @@ check_dependencies () {
   done
 }
 
-check_root () {
-  if [[ $UID != 0 ]]; then
-    echo "Error: This script must be run as root."
-    echo "Can I speak to a manager please?"
-    exit 1
-  fi
-}
+check_root
+
+check_if_not_already_running
 
 check_dependencies fswatch readlink dirname
-
-check_root
 
 if [[ -n "$1" ]]; then
   root_dir="$(readlink -f $1)"
