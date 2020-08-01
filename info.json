@@ -1,6 +1,6 @@
 {
-    "version": "0.1.6-beta",
-    "name": "Umbrel v0.1.6 Beta",
-    "requires": "=0.1.6-beta",
+    "version": "0.1.6-beta.2",
+    "name": "Umbrel v0.1.6 Beta 2",
+    "requires": ">=0.1.6-beta",
     "notes": ""
 }
