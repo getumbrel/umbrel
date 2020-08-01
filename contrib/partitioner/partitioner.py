@@ -90,7 +90,10 @@ Main Entrypoint
 
 def main():
     print('USB Configuration script')
-    homedirpath = os.path.expanduser("~umbrel")
+    '''
+    Homedir path will be the path of where all this files will be.
+    '''
+    homedirpath = os.path.dirname(os.path.realpath(__file__)) + '/../..'
     '''
         If /mnt/data doesn't exist
     '''
