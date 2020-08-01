@@ -35,7 +35,7 @@ get_block_device_model () {
   vendor=$(cat "/sys/block/${device}/device/vendor")
   model=$(cat "/sys/block/${device}/device/model")
 
-  # We echo in a subshell without quotes to strip surrounding newlines
+  # We echo in a subshell without quotes to strip surrounding whitespace
   echo "$(echo $vendor) $(echo $model)"
 }
 
