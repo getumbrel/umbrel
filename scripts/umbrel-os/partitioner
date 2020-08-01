@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Returns a list of block device paths
+list_block_devices () {
+  # We use "2>/dev/null || true" to swallow errors if there are
+  # no block devices. In that case the function just returns nothing
+  # instead of an error which is what we want.
+  #
+  # sed 's!.*/!!' is to return the device path so we get sda
+  # instead of /sys/block/sda
+  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+}
+
+# Returns the vendor and model name of a block device
+get_block_device_model () {
+  device="${1}"
+  vendor=$(cat "/sys/block/${device}/device/vendor")
+  model=$(cat "/sys/block/${device}/device/model")
+
+  # We echo in a subshell without quotes to strip surrounding newlines
+  echo "$(echo $vendor) $(echo $model)"
+}
+
+# Wipes a block device and reformats it with a single EXT4 partition
+format_block_device () {
+  device="${1}"
+  device_path="/dev/${1}"
+  wipefs -a "${device_path}"
+  parted "${device_path}" mklabel gpt
+  parted "${device_path}" mkpart primary ext4 0% 100%
+}
+
+main () {
+  echo "Running partition script..."
+  check_root
+  check_dependencies sed wipefs parted
+
+  block_devices=$(list_block_devices)
+  no_of_block_devices=$(list_block_devices | wc -l)
+
+  if [[ $no_of_block_devices -lt 1 ]]; then
+    echo "No block devices found"
+    echo "Exiting partition script without doing anything"
+    exit
+  fi
+
+  if [[ $no_of_block_devices -gt 1 ]]; then
+    echo "Multiple block devices found, only one drive is supported"
+    echo "Exiting partition script without doing anything"
+    exit 1
+  fi
+
+  # At this point we know there is only one block device attached
+  block_device=$block_devices
+  block_device_model=$(get_block_device_model $block_device)
+  echo "Formatting device \"${block_device_model}\"..."
+  format_block_device $block_device
+}
+
+main
