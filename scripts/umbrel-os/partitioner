@@ -44,11 +44,14 @@ format_block_device () {
   device="${1}"
   device_path="/dev/${1}"
   partition_path="${device_path}1"
-  wipefs -a "${device_path}"
-  parted "${device_path}" mklabel gpt
-  parted "${device_path}" mkpart primary ext4 0% 100%
-  sync
-  mkfs.ext4 -F -L umbrel "${partition_path}"
+  {
+    wipefs -a "${device_path}"
+    parted "${device_path}" mklabel gpt
+    parted "${device_path}" mkpart primary ext4 0% 100%
+    sync
+    mkfs.ext4 -F -L umbrel "${partition_path}"
+  } > /dev/null 2>&1
+  blkid -o value -s UUID "${partition_path}"
 }
 
 main () {
