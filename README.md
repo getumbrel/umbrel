@@ -18,8 +18,8 @@ We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/ge
 
 If you're looking to run Umbrel on:
 
-- A Raspberry Pi 3 or 4 - Download [Umbrel OS](https://github.com/getumbrel/umbrel-os)
-- Anthing else - Manually [install Umbrel](#-installation) on your system
+- A Raspberry Pi 3 or 4 - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os) (recommended)
+- Anthing else - [Install Umbrel](#-installation) (experimental)
 
 ## 🎹 Services orchestrated
 
