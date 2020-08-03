@@ -187,7 +187,7 @@ mv -f "$ENV_FILE" "./.env"
 
 echo "Pulling Umbrel Docker images..."
 echo
-docker-compose pull
+docker-compose pull --quiet
 
 echo "Umbrel has been configured successfully"
 echo "You can now start Umbrel by running:"
