@@ -39,7 +39,7 @@ services:
                         ipv4_address: 10.11.0.2
         bitcoin:
                 container_name: bitcoin
-                image: lncm/bitcoind:v0.20.0
+                image: lncm/bitcoind:v0.20.1
                 logging: *default-logging
                 depends_on: [ tor, manager ]
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
