@@ -146,11 +146,11 @@ services:
                 depends_on: [ bitcoin, lnd ]
                 restart: unless-stopped
                 volumes:
-                    - "${PWD}/lnd:/lnd"
-                    - "${PWD}/statuses:/statuses"
-                    - "/var/run/docker.sock:/var/run/docker.sock"
+                    - ${PWD}/lnd:/lnd
+                    - ${PWD}/statuses:/statuses
+                    - /var/run/docker.sock:/var/run/docker.sock
                 environment:
-                    JSONRPCURL: http://10.11.1.1:$BITCOIN_RPC_PORT
+                    JSONRPCURL: "http://10.11.1.1:${BITCOIN_RPC_PORT}"
                     LND_CONTAINER_NAME: lnd
                     SLEEPTIME: 3600
                 networks:
