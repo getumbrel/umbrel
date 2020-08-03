@@ -46,7 +46,7 @@ if [ "$BITCOIN_CHAIN" != "mainnet" ] && [ "$BITCOIN_CHAIN" != "testnet" ] && [ "
 fi
 
 echo
-echo "Configuring Umbrel for $BITCOIN_CHAIN..."
+echo "Configuring Umbrel for $BITCOIN_CHAIN"
 echo 
 
 
@@ -79,7 +79,7 @@ ENV_FILE="./templates/.env"
 ##########################################################
 
 # Generate RPC credentials
-echo "Generating auth credentials..."
+echo "Generating auth credentials"
 echo
 BITCOIN_RPC_USER="umbrelrpc"
 BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
@@ -89,7 +89,7 @@ BITCOIN_RPC_PORT=8332
 BITCOIN_P2P_PORT=8333
 
 # Pull Tor image and generate Tor password with the RPC Password
-echo "Generating Tor password..."
+echo "Generating Tor password"
 echo
 docker pull --quiet getumbrel/tor:v0.4.1.9
 TOR_PASS="$BITCOIN_RPC_PASS"
@@ -164,13 +164,16 @@ $gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PA
 ############### Performance optimizations ################
 ##########################################################
 
-echo "Making performance optimizations..."
+echo
+echo "Making performance optimizations"
 echo 
 
-echo "Setting dbcache size..."
+echo "Setting dbcache size"
 echo
 DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
 $gnused -i -e "s/dbcache=<dbcache>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
+
+# TODO: Adjust prune size based on available disk space
 
 ##########################################################
 ############## Override main config files ################
@@ -186,10 +189,11 @@ mv -f "$ENV_FILE" "./.env"
 ################ Configuration complete ##################
 ##########################################################
 
-echo "Pulling Umbrel Docker images..."
+echo "Pulling Umbrel Docker images"
 echo
 docker-compose pull --quiet
 
 echo "Configuration successful"
 echo "You can now start Umbrel by running:"
 echo "  sudo ./scripts/start"
+echo
