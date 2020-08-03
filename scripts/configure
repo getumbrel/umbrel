@@ -152,10 +152,9 @@ $gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS="$BITCOIN_RPC_PASS"/g
 $gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN="$BITCOIN_CHAIN"/g;" "$ENV_FILE"
 
 # Add Tor password
+$gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
 $gnused -i "s/torpassword=<password>/torpassword="$TOR_PASS"/g;" "$BITCOIN_CONF_FILE"
 $gnused -i "s/tor.password=<password>/tor.password="$TOR_PASS"/g;" "$LND_CONF_FILE"
-$gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
-$gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
 $gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD="$TOR_PASS"/g;" "$ENV_FILE"
 $gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PASS"/g;" "$ENV_FILE"
 
