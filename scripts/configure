@@ -53,9 +53,9 @@ echo
 ##########################################################
 
 # Store paths to intermediary config files
-BITCOIN_CONF_FILE="./templates/bitcoin/bitcoin.conf"
-LND_CONF_FILE="./templates/lnd/lnd.conf"
-TOR_CONF_FILE="./templates/tor/torcc"
+BITCOIN_CONF_FILE="./templates/bitcoin.conf"
+LND_CONF_FILE="./templates/lnd.conf"
+TOR_CONF_FILE="./templates/torcc"
 CONFIG_FILE="./templates/config"
 
 # Remove intermediary files if they exist from any
@@ -66,9 +66,9 @@ CONFIG_FILE="./templates/config"
 [[ -f "$CONFIG_FILE" ]] && rm -f "$CONFIG_FILE"
 
 # Copy template configs to intermediary configs
-[[ -f "./templates/bitcoin/bitcoin-sample.conf" ]] && cp "./templates/bitcoin/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
-[[ -f "./templates/lnd/lnd-sample.conf" ]] && cp "./templates/lnd/lnd-sample.conf" "$LND_CONF_FILE"
-[[ -f "./templates/tor/torcc-sample" ]] && cp "./templates/tor/torcc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
+[[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
+[[ -f "./templates/torcc-sample" ]] && cp "./templates/torcc-sample" "$TOR_CONF_FILE"
 [[ -f "./templates/config-sample" ]] && cp "./templates/config-sample" "$CONFIG_FILE"
 
 
