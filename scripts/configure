@@ -40,7 +40,7 @@ cd "$UMBREL_ROOT"
 # upon the user-supplied value of $NETWORK
 BITCOIN_CHAIN="${NETWORK:-mainnet}"
 
-if [ "$BITCOIN_CHAIN" != "mainnet" && "$BITCOIN_CHAIN" != "testnet" && "$BITCOIN_CHAIN" != "regtest" ]; then
+if [ "$BITCOIN_CHAIN" != "mainnet" ] && [ "$BITCOIN_CHAIN" != "testnet" ] && [ "$BITCOIN_CHAIN" != "regtest" ]; then
   echo "Error: Umbrel can only be configured for mainnet (default), testnet or regtest"
 fi
 
@@ -106,7 +106,7 @@ if [ "$BITCOIN_CHAIN" == "testnet" ]; then
   # Enable testnet
   $gnused -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to testnet
-  $gnused -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g; " "$LND_CONF_FILE"
+  $gnused -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
   # Comment mainnet neutrino peers
   $gnused -i "s/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g;" "$LND_CONF_FILE"
   $gnused -i "s/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
@@ -126,9 +126,9 @@ if [ "$BITCOIN_CHAIN" == "regtest" ]; then
   # Enable regtest
   $gnused -i "s/\#regtest=1/regtest=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to regtest
-  $gnused -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g; " "$LND_CONF_FILE"
+  $gnused -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
   # Use bitcoind as the node
-  $gnused -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g; " "$LND_CONF_FILE"
+  $gnused -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
 # Update RPC and P2P Ports
@@ -153,6 +153,9 @@ $gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN="$BITCOIN_CHAIN"/g;" "$CONFIG_
 $gnused -i "s/torpassword=<password>/torpassword="$TOR_PASS"/g;" "$BITCOIN_CONF_FILE"
 $gnused -i "s/tor.password=<password>/tor.password="$TOR_PASS"/g;" "$LND_CONF_FILE"
 $gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
+$gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
+$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD="$TOR_PASS"/g;" "$CONFIG_FILE"
+$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PASS"/g;" "$CONFIG_FILE"
 
 
 ##########################################################
