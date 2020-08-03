@@ -19,6 +19,11 @@ fi
 
 cd "$UMBREL_ROOT"
 
+# Increase default Docker and Compose timeouts to 240s
+# As bitcoin can take a long while to respond
+export DOCKER_CLIENT_TIMEOUT=240
+export COMPOSE_HTTP_TIMEOUT=240
+
 echo "Stopping Docker services..."
 echo
 docker-compose down
