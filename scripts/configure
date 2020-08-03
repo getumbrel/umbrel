@@ -141,7 +141,7 @@ $gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT="$BITCOIN_P2P_PORT"/g;" "
 $gnused -i "s/rpcauth=<rpcauth>/"$RPCAUTH"/g;" "$BITCOIN_CONF_FILE"
 # Add RPC credentials to lnd.conf
 $gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser="$BITCOIN_RPC_USER"/g;" "$LND_CONF_FILE"
-$gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS">/g;" "$LND_CONF_FILE"
+$gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS"/g;" "$LND_CONF_FILE"
 # Add RPC credentials to config
 $gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER="$BITCOIN_RPC_USER"/g;" "$CONFIG_FILE"
 $gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS="$BITCOIN_RPC_PASS"/g;" "$CONFIG_FILE"
@@ -173,7 +173,7 @@ echo
 mv "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv "$TOR_CONF_FILE" "./tor/torrc"
-mv "$BITCOIN_CONF_FILE" "./config"
+mv "$CONFIG_FILE" "./config"
 
 
 ##########################################################
