@@ -129,10 +129,10 @@ services:
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "10.11.1.1"
-                    RPC_PORT: "RPCPORT"
-                    RPC_USER: "lncm"
-                    RPC_PASSWORD: "RPCPASS"
-                    LND_NETWORK: "mainnet"
+                    RPC_PORT: $BITCOIN_RPC_PORT
+                    RPC_USER: $BITCOIN_RPC_USER
+                    RPC_PASSWORD: $BITCOIN_RPC_PASS
+                    LND_NETWORK: $BITCOIN_CHAIN
                     LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOST: $DEVICE_HOST
@@ -150,7 +150,7 @@ services:
                     - "${PWD}/statuses:/statuses"
                     - "/var/run/docker.sock:/var/run/docker.sock"
                 environment:
-                    JSONRPCURL: http://10.11.1.1:RPCPORT
+                    JSONRPCURL: http://10.11.1.1:$BITCOIN_RPC_PORT
                     LND_CONTAINER_NAME: lnd
                     SLEEPTIME: 3600
                 networks:
