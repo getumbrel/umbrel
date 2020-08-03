@@ -57,20 +57,20 @@ echo
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
-CONFIG_FILE="./templates/config"
+ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
-[[ -f "$CONFIG_FILE" ]] && rm -f "$CONFIG_FILE"
+[[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
-[[ -f "./templates/config-sample" ]] && cp "./templates/config-sample" "$CONFIG_FILE"
+[[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
 
 ##########################################################
@@ -136,8 +136,8 @@ fi
 # Update RPC and P2P Ports
 $gnused -i "s/rpcport=<port>/rpcport="$BITCOIN_RPC_PORT"/g;" "$BITCOIN_CONF_FILE"
 $gnused -i "s/port=<port>/port="$BITCOIN_P2P_PORT"/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT="$BITCOIN_RPC_PORT"/g;" "$CONFIG_FILE"
-$gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT="$BITCOIN_P2P_PORT"/g;" "$CONFIG_FILE"
+$gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT="$BITCOIN_RPC_PORT"/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT="$BITCOIN_P2P_PORT"/g;" "$ENV_FILE"
 
 # Add rpcauth to bitcoin.conf
 $gnused -i "s/rpcauth=<rpcauth>/"$BITCOIN_RPC_AUTH"/g;" "$BITCOIN_CONF_FILE"
@@ -145,19 +145,19 @@ $gnused -i "s/rpcauth=<rpcauth>/"$BITCOIN_RPC_AUTH"/g;" "$BITCOIN_CONF_FILE"
 $gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser="$BITCOIN_RPC_USER"/g;" "$LND_CONF_FILE"
 $gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS"/g;" "$LND_CONF_FILE"
 # Add RPC credentials to config
-$gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER="$BITCOIN_RPC_USER"/g;" "$CONFIG_FILE"
-$gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS="$BITCOIN_RPC_PASS"/g;" "$CONFIG_FILE"
+$gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER="$BITCOIN_RPC_USER"/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS="$BITCOIN_RPC_PASS"/g;" "$ENV_FILE"
 
 # Add chain to config
-$gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN="$BITCOIN_CHAIN"/g;" "$CONFIG_FILE"
+$gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN="$BITCOIN_CHAIN"/g;" "$ENV_FILE"
 
 # Add Tor password
 $gnused -i "s/torpassword=<password>/torpassword="$TOR_PASS"/g;" "$BITCOIN_CONF_FILE"
 $gnused -i "s/tor.password=<password>/tor.password="$TOR_PASS"/g;" "$LND_CONF_FILE"
 $gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
 $gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
-$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD="$TOR_PASS"/g;" "$CONFIG_FILE"
-$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PASS"/g;" "$CONFIG_FILE"
+$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD="$TOR_PASS"/g;" "$ENV_FILE"
+$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PASS"/g;" "$ENV_FILE"
 
 
 ##########################################################
@@ -175,7 +175,7 @@ echo
 mv "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv "$TOR_CONF_FILE" "./tor/torrc"
-mv "$CONFIG_FILE" "./config"
+mv "$ENV_FILE" "./.env"
 
 
 ##########################################################
