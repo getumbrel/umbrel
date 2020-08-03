@@ -135,7 +135,7 @@ services:
                     LND_NETWORK: $BITCOIN_CHAIN
                     LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    DEVICE_HOST: ${VARIABLE:-default}
+                    DEVICE_HOST: ${DEVICE_HOST:-http://umbrel.local}
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
