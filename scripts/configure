@@ -55,7 +55,7 @@ echo
 # Store paths to intermediary config files
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
-TOR_CONF_FILE="./templates/torcc"
+TOR_CONF_FILE="./templates/torrc"
 CONFIG_FILE="./templates/config"
 
 # Remove intermediary files if they exist from any
@@ -68,7 +68,7 @@ CONFIG_FILE="./templates/config"
 # Copy template configs to intermediary configs
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
-[[ -f "./templates/torcc-sample" ]] && cp "./templates/torcc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
 [[ -f "./templates/config-sample" ]] && cp "./templates/config-sample" "$CONFIG_FILE"
 
 
@@ -172,7 +172,7 @@ echo
 
 mv "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv "$LND_CONF_FILE" "./lnd/lnd.conf"
-mv "$TOR_CONF_FILE" "./tor/torcc"
+mv "$TOR_CONF_FILE" "./tor/torrc"
 mv "$BITCOIN_CONF_FILE" "./config"
 
 
