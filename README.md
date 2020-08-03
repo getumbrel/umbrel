@@ -99,6 +99,12 @@ NETWORK=regtest ./scripts/configure
 sudo ./scripts/start
 ```
 
+To stop Umbrel, run:
+
+```bash
+sudo ./scripts/stop
+```
+
 ---
 
 ### ⚡️ Don't be too reckless
