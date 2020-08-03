@@ -167,6 +167,9 @@ $gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD="$TOR_HASHED_PA
 echo "Making performance optimizations..."
 echo 
 
+echo "Setting dbcache size..."
+DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+$gnused -i -e "s/dbcache=<dbcache>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
 ##########################################################
 ############## Override main config files ################
