@@ -90,7 +90,7 @@ BITCOIN_P2P_PORT=8333
 # Pull Tor image and generate Tor password with the RPC Password
 echo "Generating Tor password"
 echo
-docker-compose pull tor
+docker-compose pull --quiet tor
 TOR_PASS="$BITCOIN_RPC_PASS"
 TOR_HASHED_PASS=$(docker-compose run --rm tor --quiet --hash-password "$TOR_PASS")
 
@@ -175,10 +175,10 @@ $gnused -i -e "s/dbcache=<dbcache>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 ############## Override main config files ################
 ##########################################################
 
-mv "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
-mv "$LND_CONF_FILE" "./lnd/lnd.conf"
-mv "$TOR_CONF_FILE" "./tor/torrc"
-mv "$ENV_FILE" "./.env"
+mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
+mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
+mv -f "$TOR_CONF_FILE" "./tor/torrc"
+mv -f "$ENV_FILE" "./.env"
 
 
 ##########################################################
