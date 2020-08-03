@@ -45,6 +45,7 @@ if [ "$BITCOIN_CHAIN" != "mainnet" ] && [ "$BITCOIN_CHAIN" != "testnet" ] && [ "
   exit 1
 fi
 
+echo
 echo "Configuring Umbrel for $BITCOIN_CHAIN..."
 echo 
 
@@ -88,11 +89,11 @@ BITCOIN_RPC_PORT=8332
 BITCOIN_P2P_PORT=8333
 
 # Pull Tor image and generate Tor password with the RPC Password
-echo "Generating Tor password"
+echo "Generating Tor password..."
 echo
-docker-compose pull --quiet tor
+docker pull --quiet getumbrel/tor:v0.4.1.9
 TOR_PASS="$BITCOIN_RPC_PASS"
-TOR_HASHED_PASS=$(docker-compose run --rm tor --quiet --hash-password "$TOR_PASS")
+TOR_HASHED_PASS=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASS")
 
 
 ##########################################################
@@ -167,6 +168,7 @@ echo "Making performance optimizations..."
 echo 
 
 echo "Setting dbcache size..."
+echo
 DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
 $gnused -i -e "s/dbcache=<dbcache>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
@@ -188,6 +190,6 @@ echo "Pulling Umbrel Docker images..."
 echo
 docker-compose pull --quiet
 
-echo "Umbrel has been configured successfully"
+echo "Configuration successful"
 echo "You can now start Umbrel by running:"
 echo "  sudo ./scripts/start"
