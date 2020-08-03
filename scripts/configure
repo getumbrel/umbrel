@@ -79,7 +79,8 @@ CONFIG_FILE="./templates/config"
 # Generate RPC credentials
 echo "Generating auth credentials..."
 echo
-BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "umbrelrpc")
+BITCOIN_RPC_USER="umbrelrpc"
+BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
 BITCOIN_RPC_AUTH=$(echo "$BITCOIN_RPC_DETAILS" | head -2 | tail -1)
 BITCOIN_RPC_PASS=$(echo "$BITCOIN_RPC_DETAILS" | tail -1)
 BITCOIN_RPC_PORT=8332
@@ -138,7 +139,7 @@ $gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT="$BITCOIN_RPC_PORT"/g;" "
 $gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT="$BITCOIN_P2P_PORT"/g;" "$CONFIG_FILE"
 
 # Add rpcauth to bitcoin.conf
-$gnused -i "s/rpcauth=<rpcauth>/"$RPCAUTH"/g;" "$BITCOIN_CONF_FILE"
+$gnused -i "s/rpcauth=<rpcauth>/"$BITCOIN_RPC_AUTH"/g;" "$BITCOIN_CONF_FILE"
 # Add RPC credentials to lnd.conf
 $gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser="$BITCOIN_RPC_USER"/g;" "$LND_CONF_FILE"
 $gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS"/g;" "$LND_CONF_FILE"
