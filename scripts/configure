@@ -97,6 +97,10 @@ if [ -z $TESTNET ] && [ -z $REGTEST ]; then
     sed -i 's/RPCPORT/8332/g; ' docker-compose.yml
 fi
 
+echo "Setting dbcache size"
+DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+sed -i -e "s/dbcache=1000/dbcache=$DBCACHE_SIZE/g" bitcoin/bitcoin.conf
+
 echo "Pulling Docker images"
 docker-compose pull
 
