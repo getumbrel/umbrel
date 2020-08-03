@@ -88,11 +88,11 @@ BITCOIN_RPC_PORT=8332
 BITCOIN_P2P_PORT=8333
 
 # Pull Tor image and generate Tor password with the RPC Password
-echo "Pulling Tor image to generate Tor password..."
+echo "Generating Tor password"
 echo
-docker pull getumbrel/tor:v0.4.1.9
+docker-compose pull tor
 TOR_PASS="$BITCOIN_RPC_PASS"
-TOR_HASHED_PASS=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASS")
+TOR_HASHED_PASS=$(docker-compose run --rm tor --quiet --hash-password "$TOR_PASS")
 
 
 ##########################################################
