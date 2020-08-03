@@ -18,8 +18,8 @@ We run it on Raspbery Pis (ARMv7) as a part of [Umbrel OS](https://github.com/ge
 
 If you're looking to run Umbrel on:
 
-- A Raspberry Pi 3 or 4 - Download [Umbrel OS](https://github.com/getumbrel/umbrel-os)
-- Anthing else - Manually [install Umbrel](#-installation) on your system
+- A Raspberry Pi 3 or 4 (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
+- Anything else (experimental) - [Install Umbrel](#-installation)
 
 ## 🎹 Services orchestrated
 
@@ -72,9 +72,9 @@ If you're looking to run Umbrel on:
 
 Ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
-### Step 1. Run this from your home directory (if installing on dedicated hardware)
+### Step 1. Download
 
-> It will clone this repo while preserving home directory's existing structure.
+> Run this from the directory where you want to install Umbrel
 
 ```bash
 curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -xz --strip-components=1
@@ -83,17 +83,17 @@ curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -
 ### Step 2. Configure
 
 ```bash
-# To configure Umbrel for mainnet, run:
-./scripts/configure
+# To use Umbrel on mainnet, run:
+NETWORK=mainnet ./scripts/configure
 
 # For testnet, run:
-TESTNET=1 ./scripts/configure
+NETWORK=testnet ./scripts/configure
 
 # For regtest, run:
-REGTEST=1 ./scripts/configure
+NETWORK=regtest ./scripts/configure
 ```
 
-### Step 3. Run Umbrel
+### Step 3. Run
 
 ```bash
 sudo ./scripts/start
