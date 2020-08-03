@@ -77,7 +77,7 @@ Ensure that your account is [correctly permissioned to use docker](https://docs.
 > It will clone this repo while preserving home directory's existing structure.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.2.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Configure
