@@ -147,7 +147,6 @@ services:
                 restart: unless-stopped
                 volumes:
                     - "${PWD}/lnd:/lnd"
-                    - "${PWD}/secrets:/secrets"
                     - "${PWD}/statuses:/statuses"
                     - "/var/run/docker.sock:/var/run/docker.sock"
                 environment:

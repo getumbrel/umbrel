@@ -1,0 +1,5 @@
+BITCOIN_CHAIN=<chain>
+BITCOIN_P2P_PORT=<port>
+BITCOIN_RPC_USER=<username>
+BITCOIN_RPC_PASS=<password>
+BITCOIN_RPC_PORT=<port>

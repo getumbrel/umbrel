@@ -1,0 +1,9 @@
+# Bind only to "10.11.5.1" which is the tor IP within the container
+SocksPort   10.11.5.1:29050
+ControlPort 10.11.5.1:29051
+
+# Dashboard Hidden Service
+HiddenServiceDir /var/lib/tor/web
+HiddenServicePort 80 10.11.0.2:80
+
+HashedControlPassword <password>
