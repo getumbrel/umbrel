@@ -105,7 +105,7 @@ if [ "$BITCOIN_CHAIN" == "testnet" ]; then
   BITCOIN_RPC_PORT=18332
   BITCOIN_P2P_PORT=18333
   # Uncomment "test" block
-  $gnused -i "s/\#\[test\]/\[test\]/g;" $
+  $gnused -i "s/\#\[test\]/\[test\]/g;" "$BITCOIN_CONF_FILE"
   # Enable testnet
   $gnused -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to testnet
