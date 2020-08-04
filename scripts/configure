@@ -153,11 +153,11 @@ $gnused -i "s/rpcauth=<rpcauth>/"$BITCOIN_RPC_AUTH"/g;" "$BITCOIN_CONF_FILE"
 # Add RPC credentials to lnd.conf
 $gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser="$BITCOIN_RPC_USER"/g;" "$LND_CONF_FILE"
 $gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS"/g;" "$LND_CONF_FILE"
-# Add RPC credentials to config
+# Add RPC credentials to env file
 $gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=""$BITCOIN_RPC_USER""/g;" "$ENV_FILE"
 $gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=""$BITCOIN_RPC_PASS""/g;" "$ENV_FILE"
 
-# Add chain to config
+# Add chain to env file
 $gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN=""$BITCOIN_CHAIN""/g;" "$ENV_FILE"
 
 # Add Tor password
