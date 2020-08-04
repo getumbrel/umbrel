@@ -57,12 +57,14 @@ format_block_device () {
   mkfs.ext4 -F -L umbrel "${partition_path}"
 }
 
+# Mounts the device given in the first argument at $MOUNT_POINT
 mount_partition () {
   partition_path="${1}"
   mkdir -p "${MOUNT_POINT}"
   mount "${partition_path}" "${MOUNT_POINT}"
 }
 
+# Unmounts $MOUNT_POINT
 unmount_partition () {
   umount "${MOUNT_POINT}"
 }
