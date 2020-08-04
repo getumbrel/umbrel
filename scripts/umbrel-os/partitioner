@@ -77,7 +77,7 @@ main () {
   # At this point we know there is only one block device attached
   block_device=$block_devices
   block_device_model=$(get_block_device_model $block_device)
-  echo "Found device \"${block_device_model}\"!"
+  echo "Found device \"${block_device_model}\""
 
   # TODO: Check if the device contains an existing Umbrel install
 
