@@ -108,7 +108,11 @@ main () {
   mkdir -p /mnt/data
   mount "${partition_path}" /mnt/data
 
-  # TODO: Setup symlinks
+  echo "Copying Umbrel install to external storage..."
+  cp  --recursive \
+      --archive \
+      --no-target-directory \
+      "${UMBREL_ROOT}" /mnt/data
 
   # TODO: Check it's mounted and symlinks are working correctly
 
