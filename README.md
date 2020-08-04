@@ -84,7 +84,7 @@ curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -
 
 ```bash
 # To use Umbrel on mainnet, run:
-NETWORK=mainnet ./scripts/configure
+./scripts/configure
 
 # For testnet, run:
 NETWORK=testnet ./scripts/configure
