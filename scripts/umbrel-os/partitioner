@@ -51,7 +51,6 @@ format_block_device () {
     sync
     mkfs.ext4 -F -L umbrel "${partition_path}"
   } > /dev/null 2>&1
-  blkid -o value -s UUID "${partition_path}"
 }
 
 main () {
@@ -83,6 +82,7 @@ main () {
 
   echo "Formatting device..."
   format_block_device $block_device
+  partition_uuid=$(blkid -o value -s UUID "${partition_path}")
 
   # TODO: Mount drive
 
