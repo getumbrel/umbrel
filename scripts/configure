@@ -14,7 +14,15 @@ check_dependencies () {
   done
 }
 
-check_dependencies docker docker-compose
+if [ ! $(uname -s) == "Linux" ]; then	
+  echo "Sorry, Umbrel only supports Linux-based systems at this point."	
+  echo
+  echo "You may work around this by modifying the configuration script yourself, but it's highly experimental."
+  echo "If you get it working, we hope you consider making a PR. :)"
+  exit 1	
+fi
+
+check_dependencies docker docker-compose dirname readlink
 
 # Get gnu sed
 gnused=sed
