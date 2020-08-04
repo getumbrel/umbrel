@@ -110,8 +110,8 @@ main () {
 
   # TODO: Check it's mounted and symlinks are working correctly
 
-  echo "Updating filesystem table..."
-  update_filesystem_table "${partition_uuid}"
+  # echo "Updating filesystem table..."
+  # update_filesystem_table "${partition_uuid}"
 
 }
 
