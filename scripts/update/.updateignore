@@ -1,8 +1,8 @@
 .*
-bitcoin
+bitcoin/*
 db
-lnd
+lnd/*
 secrets
 statuses
-tor
+tor/*
 events/signals
