@@ -44,7 +44,7 @@ get_block_device_model () {
 # Wipes a block device and reformats it with a single EXT4 partition
 format_block_device () {
   device="${1}"
-  device_path="/dev/${1}"
+  device_path="/dev/${device}"
   partition_path="${device_path}1"
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
