@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
+UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
 # Check for statuses directory
 if [ ! -d "$UMBREL_ROOT"/statuses ]; then
@@ -12,7 +13,7 @@ fi
 
 # Check for disk partition status
 echo "Run partition tool or quit out if unavailable"
-"$UMBREL_ROOT"/scripts/umbrel-os/partitioner || exit 1
+"${UMBREL_OS_SCRIPTS}/partitioner" || exit 1
 
 if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
     if [ -f "$UMBREL_ROOT"/configure-box.sh ]; then
