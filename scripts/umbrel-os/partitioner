@@ -3,6 +3,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+MOUNT_POINT="/mnt/data"
 
 check_root () {
   if [[ $UID != 0 ]]; then
@@ -60,8 +61,8 @@ update_filesystem_table () {
   sed -ie '/^# umbrel start$/,/^# umbrel end$/d' /etc/fstab
   {
     echo "# umbrel start"
-    echo "UUID=${partition_uuid} /mnt/data ext4 defaults,noatime,nofail 0 0"
-    echo "/mnt/data ${bind_mount} none bind,nofail 0 0"
+    echo "UUID=${partition_uuid} ${MOUNT_POINT} ext4 defaults,noatime,nofail 0 0"
+    echo "${MOUNT_POINT} ${bind_mount} none bind,nofail 0 0"
     echo "# umbrel end"
   } >> /etc/fstab
 }
@@ -105,17 +106,17 @@ main () {
   fi
 
   echo "Mounting partition..."
-  mkdir -p /mnt/data
-  mount "${partition_path}" /mnt/data
+  mkdir -p "${MOUNT_POINT}"
+  mount "${partition_path}" "${MOUNT_POINT}"
 
   echo "Copying Umbrel install to external storage..."
   cp  --recursive \
       --archive \
       --no-target-directory \
-      "${UMBREL_ROOT}" /mnt/data
+      "${UMBREL_ROOT}" "${MOUNT_POINT}"
 
   echo "Bind mounting external storage over local Umbrel installation..."
-  mount --bind /mnt/data "${UMBREL_ROOT}"
+  mount --bind "${MOUNT_POINT}" "${UMBREL_ROOT}"
 
   # TODO: Check it's mounted and symlinks are working correctly
 
