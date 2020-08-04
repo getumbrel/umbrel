@@ -57,6 +57,16 @@ format_block_device () {
   mkfs.ext4 -F -L umbrel "${partition_path}"
 }
 
+mount_partition () {
+  partition_path="${1}"
+  mkdir -p "${MOUNT_POINT}"
+  mount "${partition_path}" "${MOUNT_POINT}"
+}
+
+unmount_partition () {
+  umount "${MOUNT_POINT}"
+}
+
 main () {
   echo "Running partition script..."
   check_root
@@ -79,32 +89,41 @@ main () {
 
   # At this point we know there is only one block device attached
   block_device=$block_devices
+  partition_path="/dev/${block_device}1"
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  # TODO: Check if the device contains an existing Umbrel install
+  echo "Checking if device contains an Umbrel install..."
+  mount_partition "${partition_path}"
+  if [[ -f "${EXTERNAL_UMBREL_ROOT}"/umbrel/docker-compose.yml ]]; then
+    echo "Yes, it does"
+  else
+    echo "No, it doesn't"
 
-  echo "Formatting device..."
-  format_block_device $block_device
-  partition_uuid=$(blkid -o value -s UUID "${partition_path}")
-  # We need to manually check this succeeded because bash doesn't
-  # respect `set -euo pipefail` inside $() and could silently fail 🙄
-  if [ $? -ne 0 ]; then
-    echo "Couldn't get partition UUID"
-    echo "Exiting partition script"
-    exit 1
+    echo "Unmounting partition..."
+    unmount_partition
+
+    echo "Formatting device..."
+    format_block_device $block_device
+    partition_uuid=$(blkid -o value -s UUID "${partition_path}")
+    # We need to manually check this succeeded because bash doesn't
+    # respect `set -euo pipefail` inside $() and could silently fail 🙄
+    if [ $? -ne 0 ]; then
+      echo "Couldn't get partition UUID"
+      echo "Exiting partition script"
+      exit 1
+    fi
+
+    echo "Mounting partition..."
+    mount_partition "${partition_path}"
+
+    echo "Copying Umbrel install to external storage..."
+    mkdir -p "${EXTERNAL_UMBREL_ROOT}"
+    cp  --recursive \
+        --archive \
+        --no-target-directory \
+        "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
   fi
-
-  echo "Mounting partition..."
-  mkdir -p "${MOUNT_POINT}"
-  mount "${partition_path}" "${MOUNT_POINT}"
-
-  echo "Copying Umbrel install to external storage..."
-  mkdir -p "${EXTERNAL_UMBREL_ROOT}"
-  cp  --recursive \
-      --archive \
-      --no-target-directory \
-      "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
 
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
