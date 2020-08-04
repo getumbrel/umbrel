@@ -108,7 +108,7 @@ main () {
 
   echo "Checking if device contains an Umbrel install..."
   mount_partition "${partition_path}"
-  if [[ -f "${EXTERNAL_UMBREL_ROOT}"/umbrel/docker-compose.yml ]]; then
+  if [[ -f "${EXTERNAL_UMBREL_ROOT}"/docker-compose.yml ]]; then
     echo "Yes, it does"
   else
     echo "No, it doesn't"
