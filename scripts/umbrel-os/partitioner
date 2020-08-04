@@ -105,11 +105,6 @@ main () {
   fi
 
   echo "Mounting partition..."
-  partition_type=$(blkid -o value -s TYPE "${partition_path}")
-  if [[ "${partition_type}" != "ext4" ]]; then
-    echo "Expecting EXT4 partition got \"${partition_type}\"."
-    exit 1
-  fi
   mkdir -p /mnt/data
   mount "${partition_path}" /mnt/data
 
