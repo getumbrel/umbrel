@@ -11,7 +11,7 @@ if [ ! -d "$UMBREL_ROOT"/statuses ]; then
 fi
 
 # Check for disk partition status
-if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
+# if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
     if [ -f "$UMBREL_ROOT"/scripts/umbrel-os/partitioner ]; then
       # TODO: Delete this
       # Temporarily always write this file to ensure we don't brick ourselves.
@@ -26,7 +26,7 @@ if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
     else
       echo "Could not find partition tool - some steps might be skipped"
     fi
-fi
+# fi
 
 if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
     if [ -f "$UMBREL_ROOT"/configure-box.sh ]; then

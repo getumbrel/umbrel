@@ -105,14 +105,6 @@ main () {
 
     echo "Formatting device..."
     format_block_device $block_device
-    partition_uuid=$(blkid -o value -s UUID "${partition_path}")
-    # We need to manually check this succeeded because bash doesn't
-    # respect `set -euo pipefail` inside $() and could silently fail 🙄
-    if [ $? -ne 0 ]; then
-      echo "Couldn't get partition UUID"
-      echo "Exiting partition script"
-      exit 1
-    fi
 
     echo "Mounting partition..."
     mount_partition "${partition_path}"
