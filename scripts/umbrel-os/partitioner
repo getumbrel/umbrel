@@ -120,7 +120,12 @@ main () {
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
 
-  # TODO: Check it's mounted and symlinks are working correctly
+  echo "Checking Umbrel root is now on external storage..."
+  sync
+  sleep 1
+  "${UMBREL_ROOT}/scripts/umbrel-os/is-on-external-storage"
+
+  echo "Partition script completed successfully!"
 
   # echo "Updating filesystem table..."
   # update_filesystem_table "${partition_uuid}"
