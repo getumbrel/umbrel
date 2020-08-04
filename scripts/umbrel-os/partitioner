@@ -114,6 +114,9 @@ main () {
       --no-target-directory \
       "${UMBREL_ROOT}" /mnt/data
 
+  echo "Bind mounting external storage over local Umbrel installation..."
+  mount --bind /mnt/data "${UMBREL_ROOT}"
+
   # TODO: Check it's mounted and symlinks are working correctly
 
   # echo "Updating filesystem table..."
