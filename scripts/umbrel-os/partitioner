@@ -55,19 +55,6 @@ format_block_device () {
   mkfs.ext4 -F -L umbrel "${partition_path}"
 }
 
-update_filesystem_table () {
-  partition_uuid="${1}"
-  # Make sure we escape spaces since we can't quote in fstab
-  bind_mount=$(echo $UMBREL_ROOT | sed 's/ /\\ /g')
-  sed -ie '/^# umbrel start$/,/^# umbrel end$/d' /etc/fstab
-  {
-    echo "# umbrel start"
-    echo "UUID=${partition_uuid} ${MOUNT_POINT} ext4 defaults,noatime,nofail 0 0"
-    echo "${MOUNT_POINT} ${bind_mount} none bind,nofail 0 0"
-    echo "# umbrel end"
-  } >> /etc/fstab
-}
-
 main () {
   echo "Running partition script..."
   check_root
@@ -126,10 +113,6 @@ main () {
   "${UMBREL_ROOT}/scripts/umbrel-os/is-on-external-storage"
 
   echo "Partition script completed successfully!"
-
-  # echo "Updating filesystem table..."
-  # update_filesystem_table "${partition_uuid}"
-
 }
 
 main
