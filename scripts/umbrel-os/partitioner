@@ -51,6 +51,8 @@ format_block_device () {
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
   parted --script "${device_path}" mkpart primary ext4 0% 100%
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /dev/*
   sync
   mkfs.ext4 -F -L umbrel "${partition_path}"
 }
