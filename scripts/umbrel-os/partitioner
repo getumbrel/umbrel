@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
 check_root () {
   if [[ $UID != 0 ]]; then
     echo "This script must be run as root"
@@ -51,6 +53,19 @@ format_block_device () {
   mkfs.ext4 -F -L umbrel "${partition_path}"
 }
 
+update_filesystem_table () {
+  partition_uuid="${1}"
+  # Make sure we escape spaces since we can't quote in fstab
+  bind_mount=$(echo $UMBREL_ROOT | sed 's/ /\\ /g')
+  sed -ie '/^# umbrel start$/,/^# umbrel end$/d' /etc/fstab
+  {
+    echo "# umbrel start"
+    echo "UUID=${partition_uuid} /mnt/data ext4 defaults,noatime,nofail 0 0"
+    echo "/mnt/data ${bind_mount} none bind,nofail 0 0"
+    echo "# umbrel end"
+  } >> /etc/fstab
+}
+
 main () {
   echo "Running partition script..."
   check_root
@@ -95,7 +110,9 @@ main () {
 
   # TODO: Check it's mounted and symlinks are working correctly
 
-  # TODO: Add /etc/fstab entry
+  echo "Updating filesystem table..."
+  update_filesystem_table "${partition_uuid}"
+
 }
 
 main
