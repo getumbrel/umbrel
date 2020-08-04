@@ -70,7 +70,7 @@ unmount_partition () {
 main () {
   echo "Running partition script..."
   check_root
-  check_dependencies sed wipefs parted
+  check_dependencies sed wipefs parted mount sync
 
   block_devices=$(list_block_devices)
   no_of_block_devices=$(list_block_devices | wc -l)
