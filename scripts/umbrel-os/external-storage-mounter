@@ -70,7 +70,7 @@ unmount_partition () {
 }
 
 main () {
-  echo "Running partition script..."
+  echo "Running external storage mount script..."
   check_root
   check_dependencies sed wipefs parted mount sync
 
@@ -79,13 +79,13 @@ main () {
 
   if [[ $no_of_block_devices -lt 1 ]]; then
     echo "No block devices found"
-    echo "Exiting partition script without doing anything"
+    echo "Exiting mount script without doing anything"
     exit
   fi
 
   if [[ $no_of_block_devices -gt 1 ]]; then
     echo "Multiple block devices found, only one drive is supported"
-    echo "Exiting partition script without doing anything"
+    echo "Exiting mount script without doing anything"
     exit 1
   fi
 
@@ -127,7 +127,7 @@ main () {
   sleep 1
   "${UMBREL_ROOT}/scripts/umbrel-os/is-on-external-storage"
 
-  echo "Partition script completed successfully!"
+  echo "Mount script completed successfully!"
 }
 
 main

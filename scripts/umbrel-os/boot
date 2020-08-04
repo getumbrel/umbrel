@@ -11,9 +11,8 @@ if [ ! -d "$UMBREL_ROOT"/statuses ]; then
     chmod 777 "$UMBREL_ROOT"/statuses
 fi
 
-# Check for disk partition status
-echo "Run partition tool or quit out if unavailable"
-"${UMBREL_OS_SCRIPTS}/partitioner" || exit 1
+# Mount and/or format external storage
+"${UMBREL_OS_SCRIPTS}/external-storage-mounter" || exit 1
 
 if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
     if [ -f "$UMBREL_ROOT"/configure-box.sh ]; then
