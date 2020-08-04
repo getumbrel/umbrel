@@ -13,6 +13,11 @@ fi
 # Check for disk partition status
 if [ ! -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
     if [ -f "$UMBREL_ROOT"/scripts/umbrel-os/partitioner ]; then
+      # TODO: Delete this
+      # Temporarily always write this file to ensure we don't brick ourselves.
+      # Nuke the status file and reboot to test the script
+      touch "$UMBREL_ROOT"/statuses/disk-partitioned
+
       echo "Run partition tool or quit out if unavailable"
       "$UMBREL_ROOT"/scripts/umbrel-os/partitioner || exit 1
 
