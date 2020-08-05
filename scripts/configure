@@ -14,7 +14,7 @@ check_dependencies () {
   done
 }
 
-if [ ! $(uname -s) == "Linux" ]; then
+if [ ! "$(uname -s)" == "Linux" ]; then
   echo "Sorry, Umbrel only supports Linux-based systems at this point."
   echo
   echo "You may work around this by modifying the configuration script yourself, but it's highly experimental."
