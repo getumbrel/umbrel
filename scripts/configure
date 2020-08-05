@@ -46,15 +46,15 @@ cd "$UMBREL_ROOT"
 
 # Configure for mainnet or testnet or regtest depending
 # upon the user-supplied value of $NETWORK
-BITCOIN_CHAIN="${NETWORK:-mainnet}"
+BITCOIN_NETWORK="${NETWORK:-mainnet}"
 
-if [ "$BITCOIN_CHAIN" != "mainnet" ] && [ "$BITCOIN_CHAIN" != "testnet" ] && [ "$BITCOIN_CHAIN" != "regtest" ]; then
+if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] && [ "$BITCOIN_NETWORK" != "regtest" ]; then
   echo "Error: Umbrel can only be configured for mainnet (default), testnet or regtest"
   exit 1
 fi
 
 echo
-echo "Configuring Umbrel for $BITCOIN_CHAIN"
+echo "Configuring Umbrel for $BITCOIN_NETWORK"
 echo 
 
 
@@ -108,7 +108,7 @@ TOR_HASHED_PASS=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password
 ### Update config files with configuration variables #####
 ##########################################################
 
-if [ "$BITCOIN_CHAIN" == "testnet" ]; then
+if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   # Set testnet ports
   BITCOIN_RPC_PORT=18332
   BITCOIN_P2P_PORT=18333
@@ -128,7 +128,7 @@ if [ "$BITCOIN_CHAIN" == "testnet" ]; then
 
 fi
 
-if [ "$BITCOIN_CHAIN" == "regtest" ]; then
+if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   # Set regtest ports
   BITCOIN_RPC_PORT=18443
   BITCOIN_P2P_PORT=18444
@@ -158,7 +158,7 @@ $gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=""$BITCOIN_RPC_USER""
 $gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=""$BITCOIN_RPC_PASS""/g;" "$ENV_FILE"
 
 # Add chain to env file
-$gnused -i "s/BITCOIN_CHAIN=<chain>/BITCOIN_CHAIN=""$BITCOIN_CHAIN""/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=""$BITCOIN_NETWORK""/g;" "$ENV_FILE"
 
 # Add Tor password
 $gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
@@ -179,7 +179,7 @@ echo
 echo "Setting dbcache size"
 echo
 DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
-$gnused -i -e "s/dbcache=<dbcache>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
+$gnused -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
 # TODO: Adjust prune size based on available disk space
 
