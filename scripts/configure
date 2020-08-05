@@ -24,18 +24,6 @@ fi
 
 check_dependencies docker docker-compose dirname readlink
 
-# Get gnu sed
-gnused=sed
-if [[ "$(uname)" == "Darwin" ]]; then
-  if ! command -v gsed >/dev/null 2>&1; then
-    echo "Error: This script requires gnu-sed!"
-    echo "Install it with:"
-    echo "  brew install gnu-sed"
-    exit 1
-  fi
-  gnused=gsed
-fi
-
 # Switch to Umbrel's root directory
 UMBREL_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")"/..)"
 if [[ ! -d "$UMBREL_ROOT" ]]; then
@@ -113,18 +101,18 @@ if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   BITCOIN_RPC_PORT=18332
   BITCOIN_P2P_PORT=18333
   # Uncomment "test" block
-  $gnused -i "s/\#\[test\]/\[test\]/g;" "$BITCOIN_CONF_FILE"
+  sed -i "s/\#\[test\]/\[test\]/g;" "$BITCOIN_CONF_FILE"
   # Enable testnet
-  $gnused -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
+  sed -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to testnet
-  $gnused -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
+  sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
   # Comment mainnet neutrino peers
-  $gnused -i "s/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g;" "$LND_CONF_FILE"
-  $gnused -i "s/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  $gnused -i "s/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g;" "$LND_CONF_FILE"
+  sed -i "s/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
   # Uncomment testnet neutrino peers
-  $gnused -i "s/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  $gnused -i "s/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
 
 fi
 
@@ -133,39 +121,39 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   BITCOIN_RPC_PORT=18443
   BITCOIN_P2P_PORT=18444
   # Uncomment "regtest" block
-  $gnused -i "s/\#\[regtest\]/\[regtest\]/g;" "$BITCOIN_CONF_FILE"
+  sed -i "s/\#\[regtest\]/\[regtest\]/g;" "$BITCOIN_CONF_FILE"
   # Enable regtest
-  $gnused -i "s/\#regtest=1/regtest=1/g" "$BITCOIN_CONF_FILE"
+  sed -i "s/\#regtest=1/regtest=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to regtest
-  $gnused -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
+  sed -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
   # Use bitcoind as the node
-  $gnused -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
+  sed -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
 # Update RPC and P2P Ports
-$gnused -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
-$gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
+sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
 
 # Add rpcauth to bitcoin.conf
-$gnused -i "s/rpcauth=<rpcauth>/$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/rpcauth=<rpcauth>/$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
 # Add RPC credentials to lnd.conf
-$gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
-$gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
+sed -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
+sed -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
 # Add RPC credentials to env file
-$gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
-$gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
 
 # Add chain to env file
-$gnused -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
 
 # Add Tor password
-$gnused -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASS/g;" "$TOR_CONF_FILE"
-$gnused -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
-$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
-$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
+sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASS/g;" "$TOR_CONF_FILE"
+sed -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
+sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
+sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
 
 
 ##########################################################
@@ -179,7 +167,7 @@ echo
 echo "Setting dbcache size"
 echo
 DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
-$gnused -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
+sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
 # TODO: Adjust prune size based on available disk space
 
