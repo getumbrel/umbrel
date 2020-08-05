@@ -14,12 +14,12 @@ check_dependencies () {
   done
 }
 
-if [ ! $(uname -s) == "Linux" ]; then	
-  echo "Sorry, Umbrel only supports Linux-based systems at this point."	
+if [ ! "$(uname -s)" == "Linux" ]; then
+  echo "Sorry, Umbrel only supports Linux-based systems at this point."
   echo
   echo "You may work around this by modifying the configuration script yourself, but it's highly experimental."
   echo "If you get it working, we hope you consider making a PR. :)"
-  exit 1	
+  exit 1
 fi
 
 check_dependencies docker docker-compose dirname readlink
@@ -37,7 +37,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 # Switch to Umbrel's root directory
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+UMBREL_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")"/..)"
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
   exit 1
@@ -143,29 +143,29 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
 fi
 
 # Update RPC and P2P Ports
-$gnused -i "s/rpcport=<port>/rpcport="$BITCOIN_RPC_PORT"/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/port=<port>/port="$BITCOIN_P2P_PORT"/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=""$BITCOIN_RPC_PORT""/g;" "$ENV_FILE"
-$gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=""$BITCOIN_P2P_PORT""/g;" "$ENV_FILE"
+$gnused -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
+$gnused -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
+$gnused -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
 
 # Add rpcauth to bitcoin.conf
-$gnused -i "s/rpcauth=<rpcauth>/"$BITCOIN_RPC_AUTH"/g;" "$BITCOIN_CONF_FILE"
+$gnused -i "s/rpcauth=<rpcauth>/$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
 # Add RPC credentials to lnd.conf
-$gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser="$BITCOIN_RPC_USER"/g;" "$LND_CONF_FILE"
-$gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass="$BITCOIN_RPC_PASS"/g;" "$LND_CONF_FILE"
+$gnused -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
+$gnused -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
 # Add RPC credentials to env file
-$gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=""$BITCOIN_RPC_USER""/g;" "$ENV_FILE"
-$gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=""$BITCOIN_RPC_PASS""/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
 
 # Add chain to env file
-$gnused -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=""$BITCOIN_NETWORK""/g;" "$ENV_FILE"
+$gnused -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
 
 # Add Tor password
-$gnused -i "s/HashedControlPassword <password>/HashedControlPassword "$TOR_HASHED_PASS"/g;" "$TOR_CONF_FILE"
-$gnused -i "s/torpassword=<password>/torpassword="$TOR_PASS"/g;" "$BITCOIN_CONF_FILE"
-$gnused -i "s/tor.password=<password>/tor.password="$TOR_PASS"/g;" "$LND_CONF_FILE"
-$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=""$TOR_PASS""/g;" "$ENV_FILE"
-$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=""$TOR_HASHED_PASS""/g;" "$ENV_FILE"
+$gnused -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASS/g;" "$TOR_CONF_FILE"
+$gnused -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
+$gnused -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
+$gnused -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
+$gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
 
 
 ##########################################################
@@ -174,7 +174,7 @@ $gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=""$TOR_HASHED_P
 
 echo
 echo "Making performance optimizations"
-echo 
+echo
 
 echo "Setting dbcache size"
 echo
