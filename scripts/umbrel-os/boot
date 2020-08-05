@@ -26,26 +26,22 @@ if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
 
     # Next stage, check if service-configured
     echo "Service configured.. Checking for partitioned state"
-    if [ -f "$UMBREL_ROOT"/statuses/disk-partitioned ]; then
-      if [ ! -f /etc/rc2.d/S01umbrel ]; then
-        echo "Set  up symlinks"
-        ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
-        ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
-        # Do partitioning at first boot
-        echo "Enabling defaults for umbrel"
-        update-rc.d umbrel defaults || exit 1
-        echo "Enabling startup for umbrel box"
-        update-rc.d umbrel enable || exit 1
-        echo "starting up umbrel get it started now)"
-        /etc/init.d/umbrel start
-      fi
-    else
-        echo "Disk not partitioned, will not start umbrel framework (Please do it manually)"
+    if [ ! -f /etc/rc2.d/S01umbrel ]; then
+      echo "Set  up symlinks"
+      ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
+      ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
+      # Do partitioning at first boot
+      echo "Enabling defaults for umbrel"
+      update-rc.d umbrel defaults || exit 1
+      echo "Enabling startup for umbrel box"
+      update-rc.d umbrel enable || exit 1
+      echo "starting up umbrel get it started now)"
+      /etc/init.d/umbrel start
     fi
 fi
 
