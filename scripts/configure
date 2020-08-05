@@ -37,7 +37,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 # Switch to Umbrel's root directory
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
   exit 1
