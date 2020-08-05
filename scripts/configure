@@ -14,12 +14,12 @@ check_dependencies () {
   done
 }
 
-if [ ! $(uname -s) == "Linux" ]; then	
-  echo "Sorry, Umbrel only supports Linux-based systems at this point."	
+if [ ! $(uname -s) == "Linux" ]; then
+  echo "Sorry, Umbrel only supports Linux-based systems at this point."
   echo
   echo "You may work around this by modifying the configuration script yourself, but it's highly experimental."
   echo "If you get it working, we hope you consider making a PR. :)"
-  exit 1	
+  exit 1
 fi
 
 check_dependencies docker docker-compose dirname readlink
@@ -55,7 +55,7 @@ fi
 
 echo
 echo "Configuring Umbrel for $BITCOIN_CHAIN"
-echo 
+echo
 
 
 ##########################################################
@@ -174,7 +174,7 @@ $gnused -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=""$TOR_HASHED_P
 
 echo
 echo "Making performance optimizations"
-echo 
+echo
 
 echo "Setting dbcache size"
 echo
