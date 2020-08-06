@@ -175,10 +175,9 @@ def main():
                     os.system('/bin/sed -i "s/#txindex=1/txindex=1/g;" ' + str(homedirpath) + '/bitcoin/bitcoin.conf')
 
                 '''
-                Setup secrets, db, bitcoin, nginx, and lnd directory.. as a new install
+                Setup db, bitcoin, nginx, and lnd directory.. as a new install
                 '''
-                print('Setup secrets, db, bitcoin, nginx, tor and lnd directory.. as a new install')
-                os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
+                print('Setup db, bitcoin, nginx, tor and lnd directory.. as a new install')
                 os.system('/bin/cp -fr ' + homedirpath + '/db /mnt/data')
                 os.system('/bin/cp -fr ' + homedirpath + '/bitcoin /mnt/data')
                 os.system('/bin/cp -fr ' + homedirpath + '/lnd /mnt/data')
@@ -202,20 +201,15 @@ def main():
 
                 '''
                 Check other folders in partition3
-                - secrets
                 - db
                 - lnd
                 - nginx
                 - tor
                 '''
-                # Secrets folder
-                if not os.path.exists('/mnt/data/secrets'):
-                    print('secrets folder does\'nt exist!')
-                    os.system('/bin/cp -fr ' + homedirpath + '/secrets /mnt/data')
 
                 # tor folder
                 if not os.path.exists('/mnt/data/tor'):
-                    print('secrets folder does\'nt exist!')
+                    print('tor folder does\'nt exist!')
                     os.system('/bin/cp -fr ' + homedirpath + '/tor /mnt/data')                        
 
                 # db folder
@@ -267,7 +261,6 @@ def main():
         os.system('/bin/mount -a');
 
         print('Remove old folders (after copying)')
-        os.system('/bin/rm -fr ' + homedirpath + '/secrets')
         os.system('/bin/rm -fr ' + homedirpath + '/db')
         os.system('/bin/rm -fr ' + homedirpath + '/bitcoin')
         os.system('/bin/rm -fr ' + homedirpath + '/lnd')
@@ -275,7 +268,6 @@ def main():
         os.system('/bin/rm -fr ' + homedirpath + '/nginx')
         os.system('/bin/rm -fr ' + homedirpath + '/docker-compose.yml')
         print('Set up symlinks')
-        os.system('/bin/ln -s /mnt/data/secrets ' + homedirpath + '/secrets')
         os.system('/bin/ln -s /mnt/data/db ' + homedirpath + '/db')
         os.system('/bin/ln -s /mnt/data/bitcoin ' + homedirpath + '/bitcoin')
         os.system('/bin/ln -s /mnt/data/lnd ' + homedirpath + '/lnd')

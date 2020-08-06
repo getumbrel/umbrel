@@ -1,21 +1,9 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-
-# Install the docker-compose box to the current working directory
-# Pre-requisites: wget
-
-if [ ! $(uname -s) == "Linux" ]; then
-  echo "Sorry, only linux systems are supported at this time (you may work around this but you are on your own there)"
-  exit 1
-fi
+##########################################################
+################## Check dependencies ####################
+##########################################################
 
 check_dependencies () {
   for cmd in "$@"; do
@@ -26,98 +14,182 @@ check_dependencies () {
   done
 }
 
-check_dependencies wget docker docker-compose
+if [ ! "$(uname -s)" == "Linux" ]; then
+  echo "Sorry, Umbrel only supports Linux-based systems at this point."
+  echo
+  echo "You may work around this by modifying the configuration script yourself, but it's highly experimental."
+  echo "If you get it working, we hope you consider making a PR. :)"
+  exit 1
+fi
 
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+check_dependencies docker docker-compose dirname readlink
 
+# Switch to Umbrel's root directory
+UMBREL_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")"/..)"
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
   exit 1
 fi
-
 cd "$UMBREL_ROOT"
 
-echo "Start box configuration"
-echo "Installing RPCAuth.py and configuring secrets"
-cd bin/
-wget -q "https://raw.githubusercontent.com/bitcoin/bitcoin/master/share/rpcauth/rpcauth.py" 2>/dev/null
-chmod 755 rpcauth.py
-./rpcauth.py lncm | tee ../secrets/generated.txt | head -2 | tail -1 > ../secrets/rpcauth.txt
-tail -1 ../secrets/generated.txt > ../secrets/rpcpass.txt
-rm rpcauth.py ../secrets/generated.txt
-cd ..
-echo "Installing RPCAuth into bitcoin.conf"
-cat secrets/rpcauth.txt >> bitcoin/bitcoin.conf
-RPCPASS=`cat secrets/rpcpass.txt`
-echo "Configuring LND rpc info"
-sed -i "s/RPCPASS/${RPCPASS}/g; " lnd/lnd.conf
-echo "Configuring docker-compose file"
-sed -i "s/RPCPASS/${RPCPASS}/g; " docker-compose.yml
-# TESTNET set and REGTEST not
-if [ ! -z $TESTNET ] && [ -z $REGTEST ]; then
-    echo "Enabling testnet mode if TESTNET variable is set"
-    # Update bitcoin.conf
-    sed -i 's/\#\[test\]/\[test\]/g;' bitcoin/bitcoin.conf
-    sed -i 's/\#testnet=1/testnet=1/g' bitcoin/bitcoin.conf
-    sed -i 's/rpcport=8332/rpcport=18332/g; ' bitcoin/bitcoin.conf
-    sed -i 's/port=8332/port=18333/g; ' bitcoin/bitcoin.conf
-    echo "Setting testnet port"
-    sed -i 's/RPCPORT/18332/g; ' docker-compose.yml
-    # Update docker-compose
-    sed -i 's/mainnet/testnet/g; ' docker-compose.yml
-    # lnd.conf
-    echo "Changing LND to testnet mode"
-    sed -i 's/bitcoin.mainnet=1/bitcoin.testnet=1/g; ' lnd/lnd.conf
-    echo "Updating LND neutrino peers"
-    sed -i 's/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g; ' lnd/lnd.conf
-    sed -i 's/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g; ' lnd/lnd.conf
-    sed -i 's/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;' lnd/lnd.conf
-    sed -i 's/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;' lnd/lnd.conf
-    sed -i 's/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g; ' lnd/lnd.conf
+# Configure for mainnet or testnet or regtest depending
+# upon the user-supplied value of $NETWORK
+BITCOIN_NETWORK="${NETWORK:-mainnet}"
+
+if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] && [ "$BITCOIN_NETWORK" != "regtest" ]; then
+  echo "Error: Umbrel can only be configured for mainnet (default), testnet or regtest"
+  exit 1
 fi
-# REGTEST set and TESTNET not
-if [ -z $TESTNET ] && [ ! -z $REGTEST ]; then
-    echo "Enabling regtest mode if REGTEST variable is set"
-    sed -i 's/\#\[regtest\]/\[regtest\]/g;' bitcoin/bitcoin.conf
-    sed -i 's/\#regtest=1/regtest=1/g' bitcoin/bitcoin.conf
-    sed -i 's/rpcport=8332/rpcport=18443/g; ' bitcoin/bitcoin.conf
-    sed -i 's/port=8333/port=18444/; ' bitcoin/bitcoin.conf
-    sed -i 's/mainnet/regtest/g; ' docker-compose.yml
-    echo "Setting regtest port"
-    sed -i 's/RPCPORT/18443/g; ' docker-compose.yml
-    # Update LND
-    echo "Changing LND to regtest mode"
-    sed -i 's/bitcoin.mainnet=1/bitcoin.regtest=1/g; ' lnd/lnd.conf
-    echo "Updating LND if regtest is set"
-    sed -i 's/bitcoin.node=neutrino/bitcoin.node=bitcoind/g; ' lnd/lnd.conf
+
+echo
+echo "Configuring Umbrel for $BITCOIN_NETWORK"
+echo 
+
+
+##########################################################
+############### Setup configuration files ###############
+##########################################################
+
+# Store paths to intermediary config files
+BITCOIN_CONF_FILE="./templates/bitcoin.conf"
+LND_CONF_FILE="./templates/lnd.conf"
+TOR_CONF_FILE="./templates/torrc"
+ENV_FILE="./templates/.env"
+
+# Remove intermediary files if they exist from any
+# previous unclean configuration run
+[[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
+[[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
+[[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
+[[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
+
+# Copy template configs to intermediary configs
+[[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
+[[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
+[[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
+
+
+##########################################################
+############ Generate configuration variables ############
+##########################################################
+
+# Generate RPC credentials
+echo "Generating auth credentials"
+echo
+BITCOIN_RPC_USER="umbrelrpc"
+BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
+BITCOIN_RPC_AUTH=$(echo "$BITCOIN_RPC_DETAILS" | head -2 | tail -1)
+BITCOIN_RPC_PASS=$(echo "$BITCOIN_RPC_DETAILS" | tail -1)
+BITCOIN_RPC_PORT=8332
+BITCOIN_P2P_PORT=8333
+
+# Pull Tor image and generate Tor password
+echo "Generating Tor password"
+echo
+docker pull --quiet getumbrel/tor:v0.4.1.9
+TOR_PASS=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
+TOR_HASHED_PASS=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASS")
+
+
+##########################################################
+### Update config files with configuration variables #####
+##########################################################
+
+if [ "$BITCOIN_NETWORK" == "testnet" ]; then
+  # Set testnet ports
+  BITCOIN_RPC_PORT=18332
+  BITCOIN_P2P_PORT=18333
+  # Uncomment "test" block
+  sed -i "s/\#\[test\]/\[test\]/g;" "$BITCOIN_CONF_FILE"
+  # Enable testnet
+  sed -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
+  # Switch LND to testnet
+  sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
+  # Comment mainnet neutrino peers
+  sed -i "s/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g;" "$LND_CONF_FILE"
+  sed -i "s/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  # Uncomment testnet neutrino peers
+  sed -i "s/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+
 fi
-# if neither set
-if [ -z $TESTNET ] && [ -z $REGTEST ]; then
-    echo "Setting mainnet RPC port in docker-compose"
-    sed -i 's/RPCPORT/8332/g; ' docker-compose.yml
+
+if [ "$BITCOIN_NETWORK" == "regtest" ]; then
+  # Set regtest ports
+  BITCOIN_RPC_PORT=18443
+  BITCOIN_P2P_PORT=18444
+  # Uncomment "regtest" block
+  sed -i "s/\#\[regtest\]/\[regtest\]/g;" "$BITCOIN_CONF_FILE"
+  # Enable regtest
+  sed -i "s/\#regtest=1/regtest=1/g" "$BITCOIN_CONF_FILE"
+  # Switch LND to regtest
+  sed -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
+  # Use bitcoind as the node
+  sed -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
+
+# Update RPC and P2P Ports
+sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
+
+# Add rpcauth to bitcoin.conf
+sed -i "s/rpcauth=<rpcauth>/$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
+# Add RPC credentials to lnd.conf
+sed -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
+sed -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
+# Add RPC credentials to env file
+sed -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
+sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
+
+# Add chain to env file
+sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
+
+# Add Tor password
+sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASS/g;" "$TOR_CONF_FILE"
+sed -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
+sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
+sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
+
+
+##########################################################
+############### Performance optimizations ################
+##########################################################
+
+echo
+echo "Making performance optimizations"
+echo
 
 echo "Setting dbcache size"
+echo
 DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
-sed -i -e "s/dbcache=1000/dbcache=$DBCACHE_SIZE/g" bitcoin/bitcoin.conf
+sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
-echo "Pulling Docker images"
-docker-compose pull
+# TODO: Adjust prune size based on available disk space
 
-echo "Adding tor password"
-SAVE_PASSWORD=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "${RPCPASS}")
-# Add a new line first
-echo >> tor/torrc
-echo "HashedControlPassword ${SAVE_PASSWORD}" >> tor/torrc
+##########################################################
+############## Override main config files ################
+##########################################################
 
-echo "Adding Tor password to bitcoind"
-sed -i "s/torpassword=umbrelftw/torpassword=${RPCPASS}/g;" bitcoin/bitcoin.conf
-echo "Adding Tor password to LND"
-sed -i "s/tor.password=umbrelftw/tor.password=${RPCPASS}/g; " lnd/lnd.conf
+mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
+mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
+mv -f "$TOR_CONF_FILE" "./tor/torrc"
+mv -f "$ENV_FILE" "./.env"
 
-echo "Removing stuff we don't need"
-rm -fr .git
-rm -fr README.md
-rm -fr NETWORKING.md
 
-echo "Box Configuration complete"
+##########################################################
+################ Configuration complete ##################
+##########################################################
+
+echo "Pulling Umbrel Docker images"
+echo
+docker-compose pull --quiet
+
+echo "Configuration successful"
+echo "You can now start Umbrel by running:"
+echo "  sudo ./scripts/start"
+echo

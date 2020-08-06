@@ -102,7 +102,7 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
-                    DEVICE_HOST: $DEVICE_HOST
+                    DEVICE_HOST: ${DEVICE_HOST:-http://umbrel.local}
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
@@ -129,13 +129,13 @@ services:
                 environment:
                     PORT: "3005"
                     BITCOIN_HOST: "10.11.1.1"
-                    RPC_PORT: "RPCPORT"
-                    RPC_USER: "lncm"
-                    RPC_PASSWORD: "RPCPASS"
-                    LND_NETWORK: "mainnet"
+                    RPC_PORT: $BITCOIN_RPC_PORT
+                    RPC_USER: $BITCOIN_RPC_USER
+                    RPC_PASSWORD: $BITCOIN_RPC_PASS
+                    LND_NETWORK: $BITCOIN_NETWORK
                     LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    DEVICE_HOST: $DEVICE_HOST
+                    DEVICE_HOST: ${DEVICE_HOST:-http://umbrel.local}
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
@@ -146,12 +146,12 @@ services:
                 depends_on: [ bitcoin, lnd ]
                 restart: unless-stopped
                 volumes:
-                    - "${PWD}/lnd:/lnd"
-                    - "${PWD}/secrets:/secrets"
-                    - "${PWD}/statuses:/statuses"
-                    - "/var/run/docker.sock:/var/run/docker.sock"
+                    - ${PWD}/lnd:/lnd
+                    - ${PWD}/statuses:/statuses
+                    - /var/run/docker.sock:/var/run/docker.sock
                 environment:
-                    JSONRPCURL: http://10.11.1.1:RPCPORT
+                    JSONRPCURL: "http://10.11.1.1:${BITCOIN_RPC_PORT}"
+                    RPCPASS: $BITCOIN_RPC_PASS
                     LND_CONTAINER_NAME: lnd
                     SLEEPTIME: 3600
                 networks:
