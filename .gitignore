@@ -19,10 +19,12 @@
 bitcoin/*
 lnd/*
 tor/*
+db/*
 
 # Commit these empty directories
 
 !lnd/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep
+!db/.gitkeep
 
