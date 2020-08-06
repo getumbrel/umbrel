@@ -2,7 +2,6 @@
 bitcoin/*
 db
 lnd/*
-secrets
 statuses
 tor/*
 events/signals
