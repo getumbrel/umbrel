@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# This script returns a non-zero exit code if $UMBREL_ROOT is NOT
+# mounted on external storage.
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'

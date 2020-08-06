@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# This script will:
+# - Look for external storage devices
+# - Check if they contain an Umbrel install
+# - If yes
+# - - Mount it
+# - If no
+# - - Format it
+# - - Mount it
+# - - Install Umbrel on it
+# - Bind mount the external installation on top of the local installation
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+MOUNT_POINT="/mnt/data"
+EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Returns a list of block device paths
+list_block_devices () {
+  # We use "2>/dev/null || true" to swallow errors if there are
+  # no block devices. In that case the function just returns nothing
+  # instead of an error which is what we want.
+  #
+  # sed 's!.*/!!' is to return the device path so we get sda
+  # instead of /sys/block/sda
+  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+}
+
+# Returns the vendor and model name of a block device
+get_block_device_model () {
+  device="${1}"
+  vendor=$(cat "/sys/block/${device}/device/vendor")
+  model=$(cat "/sys/block/${device}/device/model")
+
+  # We echo in a subshell without quotes to strip surrounding whitespace
+  echo "$(echo $vendor) $(echo $model)"
+}
+
+# Wipes a block device and reformats it with a single EXT4 partition
+format_block_device () {
+  device="${1}"
+  device_path="/dev/${device}"
+  partition_path="${device_path}1"
+  wipefs -a "${device_path}"
+  parted --script "${device_path}" mklabel gpt
+  parted --script "${device_path}" mkpart primary ext4 0% 100%
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /dev/*
+  sync
+  mkfs.ext4 -F -L umbrel "${partition_path}"
+}
+
+# Mounts the device given in the first argument at $MOUNT_POINT
+mount_partition () {
+  partition_path="${1}"
+  mkdir -p "${MOUNT_POINT}"
+  mount "${partition_path}" "${MOUNT_POINT}"
+}
+
+# Unmounts $MOUNT_POINT
+unmount_partition () {
+  umount "${MOUNT_POINT}"
+}
+
+main () {
+  echo "Running external storage mount script..."
+  check_root
+  check_dependencies sed wipefs parted mount sync
+
+  block_devices=$(list_block_devices)
+  no_of_block_devices=$(list_block_devices | wc -l)
+
+  if [[ $no_of_block_devices -lt 1 ]]; then
+    echo "No block devices found"
+    echo "Exiting mount script without doing anything"
+    exit
+  fi
+
+  if [[ $no_of_block_devices -gt 1 ]]; then
+    echo "Multiple block devices found, only one drive is supported"
+    echo "Exiting mount script without doing anything"
+    exit 1
+  fi
+
+  # At this point we know there is only one block device attached
+  block_device=$block_devices
+  partition_path="/dev/${block_device}1"
+  block_device_model=$(get_block_device_model $block_device)
+  echo "Found device \"${block_device_model}\""
+
+  echo "Checking if device contains an Umbrel install..."
+  mount_partition "${partition_path}"
+  if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
+    echo "Yes, it does"
+  else
+    echo "No, it doesn't"
+
+    echo "Unmounting partition..."
+    unmount_partition
+
+    echo "Formatting device..."
+    format_block_device $block_device
+
+    echo "Mounting partition..."
+    mount_partition "${partition_path}"
+
+    echo "Copying Umbrel install to external storage..."
+    mkdir -p "${EXTERNAL_UMBREL_ROOT}"
+    cp  --recursive \
+        --archive \
+        --no-target-directory \
+        "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
+  fi
+
+  echo "Bind mounting external storage over local Umbrel installation..."
+  mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
+
+  echo "Checking Umbrel root is now on external storage..."
+  sync
+  sleep 1
+  "${UMBREL_ROOT}/scripts/umbrel-os/is-on-external-storage"
+
+  echo "Mount script completed successfully!"
+}
+
+main
