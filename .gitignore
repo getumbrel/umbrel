@@ -7,10 +7,22 @@
 .ssh
 .viminfo
 
-# Files created by containers that we shouldn't accidently commit
+# Files and data directories created by services
+# that we shouldn't accidently commit
+
 *.dat
 *.log
 *.lock
 *.cookie
 *.pid
+*.env
+bitcoin/*
+lnd/*
+tor/*
+
+# Commit these empty directories
+
+!lnd/.gitkeep
+!tor/data/.gitkeep
+!tor/run/.gitkeep
 
