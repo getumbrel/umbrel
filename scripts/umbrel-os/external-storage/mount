@@ -13,7 +13,7 @@ set -euo pipefail
 # - - Install Umbrel on it
 # - Bind mount the external installation on top of the local installation
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
 

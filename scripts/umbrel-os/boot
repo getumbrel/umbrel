@@ -18,26 +18,28 @@ if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
     exit 1
   fi
   echo
-  echo "Configuration complete. Setting up Umbrel initd startup service..."
+  echo "Configuration complete"
   echo
-  if [ ! -f /etc/rc2.d/S01umbrel ]; then
-    echo "Creating multiple runlevel symlinks..."
-    ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
-    echo "Enabling service defaults..."
-    update-rc.d umbrel defaults || exit 1
-    echo "Enabling startup service..."
-    update-rc.d umbrel enable || exit 1
-    echo "Starting service now..."
-    /etc/init.d/umbrel start
-  else
-    echo "Umbrel initd startup service already exists..."
+fi
+
+if [ ! -f /etc/systemd/system/umbrel.service ]; then
+  echo "Setting up Umbrel systemd startup service..."
+
+  if [! -f "${UMBREL_OS_SCRIPTS}/services/umbrel.service" ]; then
+    echo "umbrel.service not found inside ${UMBREL_OS_SCRIPTS}/services"
+    exit 1
   fi
+
+  echo "Copying umbrel.service to /etc/systemd/system/umbrel.service"
+  cp "${UMBREL_OS_SCRIPTS}/services/umbrel.service" /etc/systemd/system/umbrel.service
+
+  echo "Enabling umbrel.service..."
+  systemctl enable umbrel.service
+
+  echo "Starting umbrel.service..."
+  systemctl start umbrel.service
+else
+  echo "Umbrel systemd service already exists..."
 fi
 
 # Display connection details on the TTY

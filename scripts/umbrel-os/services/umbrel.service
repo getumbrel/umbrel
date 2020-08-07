@@ -1,0 +1,21 @@
+# Umbrel OS Start Service Script
+# Installed at /etc/systemd/system/umbrel.service
+
+[Unit]
+Description=Umbrel
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=forking
+ExecStartPre=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
+ExecStart=/home/umbrel/umbrel/scripts/start
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=umbrel
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

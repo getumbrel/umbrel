@@ -8,7 +8,7 @@ set -euo pipefail
 # - If yes
 # - - Unmount it
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
 
@@ -31,4 +31,3 @@ if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
 else
   echo "No Umbrel drive found"
 fi
-
