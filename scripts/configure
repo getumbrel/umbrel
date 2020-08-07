@@ -189,6 +189,10 @@ echo "Pulling Umbrel Docker images"
 echo
 docker-compose pull --quiet
 
+# Create configured status (used by the boot script on Umbrel OS
+# to check if Umbrel is configured or not)
+touch "$UMBREL_ROOT"/statuses/configured
+
 echo "Configuration successful"
 echo "You can now start Umbrel by running:"
 echo "  sudo ./scripts/start"

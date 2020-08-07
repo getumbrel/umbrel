@@ -3,46 +3,41 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
-# Check for statuses directory
-if [ ! -d "$UMBREL_ROOT"/statuses ]; then
-    mkdir -p "$UMBREL_ROOT"/statuses
-    # Ensure its writable by all
-    chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses
-    chmod 777 "$UMBREL_ROOT"/statuses
-fi
-
 # Mount and/or format external storage
 "${UMBREL_OS_SCRIPTS}/external-storage-mounter" || exit 1
 
-if [ ! -f "$UMBREL_ROOT"/statuses/service-configured ]; then
-    if [ -f "$UMBREL_ROOT"/scripts/configure ]; then
-        echo "Running configuration script"
-        cd "$UMBREL_ROOT"
-        ./scripts/configure || exit 1
-        # Marking this as done so we don't do configuration again
-        touch "$UMBREL_ROOT"/statuses/service-configured
-        chown -R umbrel.umbrel "$UMBREL_ROOT"/statuses/service-configured
-    fi
-
-    # Next stage, check if service-configured
-    echo "Service configured.. Checking for partitioned state"
-    if [ ! -f /etc/rc2.d/S01umbrel ]; then
-      echo "Set  up symlinks"
-      ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
-      ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
-      # Do partitioning at first boot
-      echo "Enabling defaults for umbrel"
-      update-rc.d umbrel defaults || exit 1
-      echo "Enabling startup for umbrel box"
-      update-rc.d umbrel enable || exit 1
-      echo "starting up umbrel get it started now)"
-      /etc/init.d/umbrel start
-    fi
+if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
+  echo "statuses/configured not found. Looks like the first boot..."
+  echo "Configuring Umbrel now..."
+  echo
+  if [ -f "$UMBREL_ROOT"/scripts/configure ]; then
+    cd "$UMBREL_ROOT"
+    ./scripts/configure || exit 1
+  else 
+    echo "Error: No configuration script not found at $UMBREL_ROOT/scripts/configure"
+    exit 1
+  fi
+  echo
+  echo "Configuration complete. Setting up Umbrel initd startup service..."
+  echo
+  if [ ! -f /etc/rc2.d/S01umbrel ]; then
+    echo "Creating multiple runlevel symlinks..."
+    ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
+    ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
+    echo "Enabling service defaults..."
+    update-rc.d umbrel defaults || exit 1
+    echo "Enabling startup service..."
+    update-rc.d umbrel enable || exit 1
+    echo "Starting service now..."
+    /etc/init.d/umbrel start
+  else
+    echo "Umbrel initd startup service already exists..."
+  fi
 fi
 
 # Display connection details on the TTY
