@@ -4,7 +4,7 @@ UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
 # Mount and/or format external storage
-"${UMBREL_OS_SCRIPTS}/external-storage-mounter" || exit 1
+"${UMBREL_OS_SCRIPTS}/external-storage/mount" || exit 1
 
 if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
   echo "statuses/configured not found. Looks like the first boot..."
