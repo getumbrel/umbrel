@@ -3,11 +3,9 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
-# Mount and/or format external storage
-"${UMBREL_OS_SCRIPTS}/external-storage/mount" || exit 1
+if [ ! -f /etc/systemd/system/umbrel.service ]; then
 
-if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
-  echo "statuses/configured not found. Looks like the first boot..."
+  echo "Umbrel systemd service not found. Looks like the first boot..."
   echo "Configuring Umbrel now..."
   echo
   if [ -f "$UMBREL_ROOT"/scripts/configure ]; then
@@ -20,13 +18,11 @@ if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
   echo
   echo "Configuration complete"
   echo
-fi
 
-if [ ! -f /etc/systemd/system/umbrel.service ]; then
   echo "Setting up Umbrel systemd startup service..."
 
-  if [! -f "${UMBREL_OS_SCRIPTS}/services/umbrel.service" ]; then
-    echo "umbrel.service not found inside ${UMBREL_OS_SCRIPTS}/services"
+  if [ ! -f "${UMBREL_OS_SCRIPTS}/services/umbrel.service" ]; then
+    echo "Error: umbrel.service not found inside ${UMBREL_OS_SCRIPTS}/services"
     exit 1
   fi
 
@@ -38,8 +34,6 @@ if [ ! -f /etc/systemd/system/umbrel.service ]; then
 
   echo "Starting umbrel.service..."
   systemctl start umbrel.service
-else
-  echo "Umbrel systemd service already exists..."
 fi
 
 # Display connection details on the TTY
