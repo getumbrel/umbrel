@@ -91,7 +91,7 @@ main () {
   if [[ $no_of_block_devices -lt 1 ]]; then
     echo "No block devices found"
     echo "Exiting mount script without doing anything"
-    exit
+    exit 1
   fi
 
   if [[ $no_of_block_devices -gt 1 ]]; then
