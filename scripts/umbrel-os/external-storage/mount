@@ -138,7 +138,7 @@ main () {
   echo "Checking Umbrel root is now on external storage..."
   sync
   sleep 1
-  "${UMBREL_ROOT}/scripts/umbrel-os/external-storage/has-umbrel"
+  "${UMBREL_ROOT}/scripts/umbrel-os/external-storage/is-mounted"
 
   echo "Mount script completed successfully!"
 }
