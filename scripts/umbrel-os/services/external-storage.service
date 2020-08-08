@@ -15,6 +15,7 @@ Group=root
 # SyslogIdentifier=external storage
 StandardOutput=tty
 TTYPath=/dev/tty1
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
