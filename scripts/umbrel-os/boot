@@ -9,7 +9,7 @@ enable_service() {
   if [ ! -f "/etc/systemd/system/${service}" ]; then
     echo "Setting up ${service}"
     if [ ! -f "${UMBREL_OS_SCRIPTS}/services/${service}" ]; then
-      echo "Error: service file not found at ${UMBREL_OS_SCRIPTS}/services/${service}"
+      echo "Error: No service file found at ${UMBREL_OS_SCRIPTS}/services/${service}"
       exit 1
     fi
     echo "Copying ${service} to /etc/systemd/system/${service}"
@@ -20,8 +20,6 @@ enable_service() {
 
     echo "Starting ${service}..."
     systemctl start "${service}"
-  else
-    echo "Skipping ${service}: Already exists"
   fi
 }
 
@@ -39,7 +37,7 @@ if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
     cd "$UMBREL_ROOT"
     NETWORK=regtest ./scripts/configure || exit 1
   else 
-    echo "Error: No configuration script not found at ${UMBREL_ROOT}/scripts/configure"
+    echo "Error: No configuration script found at ${UMBREL_ROOT}/scripts/configure"
     exit 1
   fi
 fi
