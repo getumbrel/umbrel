@@ -10,9 +10,11 @@ Restart=no
 ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
 User=root
 Group=root
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=external storage
+# StandardOutput=syslog
+# StandardError=syslog
+# SyslogIdentifier=external storage
+StandardOutput=tty
+TTYPath=/dev/tty1
 RemainAfterExit=yes
 
 [Install]
