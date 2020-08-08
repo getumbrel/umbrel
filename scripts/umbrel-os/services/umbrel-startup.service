@@ -7,6 +7,8 @@ Requires=umbrel-external-storage.service
 After=umbrel-external-storage.service
 Wants=network-online.target
 After=network-online.target
+BindsTo=docker.service
+After=docker.service
 
 [Service]
 Type=forking
@@ -14,11 +16,11 @@ TimeoutSec=infinity
 ExecStart=/home/umbrel/umbrel/scripts/start
 User=root
 Group=root
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=umbrel
-# StandardOutput=tty
-# TTYPath=/dev/tty1
+# StandardOutput=syslog
+# StandardError=syslog
+# SyslogIdentifier=umbrel
+StandardOutput=tty
+TTYPath=/dev/tty1
 RemainAfterExit=yes
 
 [Install]
