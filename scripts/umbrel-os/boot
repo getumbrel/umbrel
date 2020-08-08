@@ -24,8 +24,8 @@ enable_service() {
 }
 
 # Configure Umbrel on first boot
-# We assume that it's the first boot if 'umbrel-startup.service' doesn't exist
-if [ ! -f "/etc/systemd/system/umbrel-startup.service" ]; then
+# We assume that it's the first boot if Umbrel hasn't been configured
+if [ ! -f "${UMBREL_ROOT}/statuses/configured" ]; then
   echo
   echo "======================================"
   echo "============ FIRST BOOT =============="
