@@ -26,22 +26,33 @@ if [ ! -f /etc/systemd/system/umbrel.service ]; then
     exit 1
   fi
 
+
+  echo "Copying external-storage.service to /etc/systemd/system/external-storage.service"
+  cp "${UMBREL_OS_SCRIPTS}/services/external-storage.service" /etc/systemd/system/external-storage.service
+
   echo "Copying umbrel.service to /etc/systemd/system/umbrel.service"
   cp "${UMBREL_OS_SCRIPTS}/services/umbrel.service" /etc/systemd/system/umbrel.service
 
-  echo "Enabling umbrel.service..."
+  echo "Copying connection-details.service to /etc/systemd/system/connection-details.service"
+  cp "${UMBREL_OS_SCRIPTS}/services/connection-details.service" /etc/systemd/system/connection-details.service
+
+  echo "Enabling external-storage.service..."
+  systemctl enable external-storage.service
+
+   echo "Enabling umbrel.service..."
   systemctl enable umbrel.service
+
+   echo "Enabling connection-details.service..."
+  systemctl enable connection-details.service
+
+  echo "Starting external-storage.service..."
+  systemctl start external-storage.service
 
   echo "Starting umbrel.service..."
   systemctl start umbrel.service
-fi
 
-# Display connection details on the TTY
-if [ -x "$(command -v umbrel-details)" ]; then
-  # We run this in the background because it waits for the Tor hidden service
-  # to be created on first boot. rc.local needs to exit so the boot process
-  # can continue.
-  umbrel-details &
+  echo "Starting connection-details.service..."
+  systemctl start connection-details.service
 fi
 
 exit 0

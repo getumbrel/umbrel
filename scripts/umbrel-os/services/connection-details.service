@@ -1,0 +1,20 @@
+# Umbrel OS Connection Details Logger 
+# Installed at /etc/systemd/system/connection-details.service
+
+[Unit]
+Description=Connection Details
+Wants=umbrel.service
+After=umbrel.service
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/usr/local/bin/umbrel-details
+User=root
+Group=root
+StandardOutput=tty
+TTYPath=/dev/tty1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

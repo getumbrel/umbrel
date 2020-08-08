@@ -5,10 +5,12 @@
 Description=Umbrel
 Wants=network-online.target
 After=network-online.target
+Requires=external-storage.service
+After=external-storage.service
 
 [Service]
 Type=forking
-ExecStartPre=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
+TimeoutSec=infinity
 ExecStart=/home/umbrel/umbrel/scripts/start
 User=root
 Group=root
