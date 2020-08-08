@@ -7,7 +7,6 @@ Requires=umbrel-external-storage.service
 Wants=network-online.target
 After=umbrel-external-storage.service
 After=network-online.target
-After=docker.service
 
 [Service]
 Type=forking
