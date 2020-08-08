@@ -1,10 +1,10 @@
-# Umbrel OS Connection Details Logger 
-# Installed at /etc/systemd/system/connection-details.service
+# Umbrel Connection Details Logger (TTY) 
+# Installed at /etc/systemd/system/umbrel-connection-details.service
 
 [Unit]
 Description=Connection Details
-Requires=umbrel.service
-After=umbrel.service
+Requires=umbrel-startup.service
+After=umbrel-startup.service
 
 [Service]
 Type=oneshot

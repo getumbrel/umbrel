@@ -24,8 +24,9 @@ enable_service() {
 }
 
 # Configure Umbrel on first boot
-# We assume that it's the first boot if 'umbrel.service' doesn't exist
-if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
+# We assume that it's the first boot if 'umbrel-startup.service' doesn't exist
+if [ ! -f "/etc/systemd/system/umbrel-startup.service" ]; then
+  echo
   echo "======================================"
   echo "============ FIRST BOOT =============="
   echo "=========== hello world! ============="
@@ -43,8 +44,8 @@ if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
 fi
 
 # Enable all services
-enable_service "external-storage.service"
-enable_service "umbrel.service"
-enable_service "connection-details.service"
+enable_service "umbrel-external-storage.service"
+enable_service "umbrel-startup.service"
+enable_service "umbrel-connection-details.service"
 
 exit 0

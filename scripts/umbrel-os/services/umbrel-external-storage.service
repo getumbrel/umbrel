@@ -1,5 +1,5 @@
-# Umbrel OS External Storage Mounter
-# Installed at /etc/systemd/system/external-storage.service
+# Umbrel External Storage Mounter
+# Installed at /etc/systemd/system/umbrel-external-storage.service
 
 [Unit]
 Description=External Storage Mounter
