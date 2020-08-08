@@ -3,7 +3,7 @@
 
 [Unit]
 Description=Connection Details
-Wants=umbrel.service
+Requires=umbrel.service
 After=umbrel.service
 
 [Service]
