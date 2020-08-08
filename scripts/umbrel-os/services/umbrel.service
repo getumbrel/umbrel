@@ -1,12 +1,12 @@
-# Umbrel OS Start Service Script
+# Umbrel OS Startup Service Script
 # Installed at /etc/systemd/system/umbrel.service
 
 [Unit]
 Description=Umbrel
-Wants=network-online.target
-After=network-online.target
 Requires=external-storage.service
 After=external-storage.service
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=forking

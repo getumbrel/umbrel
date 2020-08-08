@@ -3,6 +3,7 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
+# Creates, enables and starts a systemd service
 enable_service() {
   service="${1}"
   if [ ! -f "/etc/systemd/system/${service}" ]; then
@@ -25,7 +26,13 @@ enable_service() {
 }
 
 # Configure Umbrel on first boot
+# We assume that it's the first boot if 'umbrel.service' doesn't exist
 if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
+  echo "======================================"
+  echo "============ FIRST BOOT =============="
+  echo "=========== hello world! ============="
+  echo "======================================"
+  echo 
   echo "Configuring Umbrel..."
   echo
   if [ -f "${UMBREL_ROOT}/scripts/configure" ]; then
@@ -37,6 +44,7 @@ if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
   fi
 fi
 
+# Enable all services
 enable_service "external-storage.service"
 enable_service "umbrel.service"
 enable_service "connection-details.service"
