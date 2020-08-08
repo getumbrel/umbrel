@@ -3,56 +3,42 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
-if [ ! -f /etc/systemd/system/umbrel.service ]; then
+enable_service() {
+  service="${1}"
+  if [ ! -f "/etc/systemd/system/${service}" ]; then
+    echo "Setting up ${service}"
+    if [ ! -f "${UMBREL_OS_SCRIPTS}/services/${service}" ]; then
+      echo "Error: service file not found at ${UMBREL_OS_SCRIPTS}/services/${service}"
+      exit 1
+    fi
+    echo "Copying ${service} to /etc/systemd/system/${service}"
+    cp "${UMBREL_OS_SCRIPTS}/services/${service}" "/etc/systemd/system/${service}"
 
-  echo "Umbrel systemd service not found. Looks like the first boot..."
-  echo "Configuring Umbrel now..."
+    echo "Enabling ${service}..."
+    systemctl enable "${service}"
+
+    echo "Starting ${service}..."
+    systemctl start "${service}"
+  else
+    echo "Skipping ${service}: Already exists"
+  fi
+}
+
+# Configure Umbrel on first boot
+if [ ! -f "/etc/systemd/system/umbrel.service" ]; then
+  echo "Configuring Umbrel..."
   echo
-  if [ -f "$UMBREL_ROOT"/scripts/configure ]; then
+  if [ -f "${UMBREL_ROOT}/scripts/configure" ]; then
     cd "$UMBREL_ROOT"
     NETWORK=regtest ./scripts/configure || exit 1
   else 
-    echo "Error: No configuration script not found at $UMBREL_ROOT/scripts/configure"
+    echo "Error: No configuration script not found at ${UMBREL_ROOT}/scripts/configure"
     exit 1
   fi
-  echo
-  echo "Configuration complete"
-  echo
-
-  echo "Setting up Umbrel systemd startup service..."
-
-  if [ ! -f "${UMBREL_OS_SCRIPTS}/services/umbrel.service" ]; then
-    echo "Error: umbrel.service not found inside ${UMBREL_OS_SCRIPTS}/services"
-    exit 1
-  fi
-
-
-  echo "Copying external-storage.service to /etc/systemd/system/external-storage.service"
-  cp "${UMBREL_OS_SCRIPTS}/services/external-storage.service" /etc/systemd/system/external-storage.service
-
-  echo "Copying umbrel.service to /etc/systemd/system/umbrel.service"
-  cp "${UMBREL_OS_SCRIPTS}/services/umbrel.service" /etc/systemd/system/umbrel.service
-
-  echo "Copying connection-details.service to /etc/systemd/system/connection-details.service"
-  cp "${UMBREL_OS_SCRIPTS}/services/connection-details.service" /etc/systemd/system/connection-details.service
-
-  echo "Enabling external-storage.service..."
-  systemctl enable external-storage.service
-
-   echo "Enabling umbrel.service..."
-  systemctl enable umbrel.service
-
-   echo "Enabling connection-details.service..."
-  systemctl enable connection-details.service
-
-  echo "Starting external-storage.service..."
-  systemctl start external-storage.service
-
-  echo "Starting umbrel.service..."
-  systemctl start umbrel.service
-
-  echo "Starting connection-details.service..."
-  systemctl start connection-details.service
 fi
+
+enable_service "external-storage.service"
+enable_service "umbrel.service"
+enable_service "connection-details.service"
 
 exit 0

@@ -83,7 +83,7 @@ unmount_partition () {
 main () {
   echo "Running external storage mount script..."
   check_root
-  check_dependencies sed wipefs parted mount sync umount mountpoint
+  check_dependencies sed wipefs parted mount sync umount
 
   block_devices=$(list_block_devices)
   no_of_block_devices=$(list_block_devices | wc -l)
@@ -108,11 +108,7 @@ main () {
 
   echo "Checking if device contains an Umbrel install..."
 
-  if mountpoint -q "${MOUNT_POINT}" ; then
-    echo "($MOUNT_POINT is already mounted)"
-  else
-    mount_partition "${partition_path}"
-  fi
+  mount_partition "${partition_path}"
 
   if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
     echo "Yes, it does"
