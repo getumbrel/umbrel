@@ -2,7 +2,7 @@
 # Installed at /etc/systemd/system/umbrel.service
 
 [Unit]
-Description=Umbrel
+Description=Umbrel Startup Service
 Requires=external-storage.service
 After=external-storage.service
 Wants=network-online.target
