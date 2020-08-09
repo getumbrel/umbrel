@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import time
+import subprocess
+import io
+import qrcode
+
+umbrel_ascii = '''
+              ,;###GGGGGGGGGGl#Sp
+           ,##GGGlW""^'  '`""%GGGG#S,
+         ,#GGG"                  "lGG#o
+        #GGl^                      '$GG#
+      ,#GGb                          \GGG,
+      lGG"                            "GGG
+     #GGGlGGGl##p,,p##lGGl##p,,p###ll##GGGG
+    !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
+     ""          "^          '"          ""
+
+
+                @GGS         lG#
+                !GGG        !GGG
+                !GGG        !GGG
+                !GGG        !GGG
+                !GGG        !GGG
+                !GGG        !GGG
+                'GGG        $GGl
+                 "GGG#psqp##GG#
+                   "%GGGGGG#"
+'''.strip('\n')
+
+def create_qr(data):
+    output_buffer = io.TextIOWrapper(io.BytesIO(), sys.stdout.encoding)
+
+    qr = qrcode.QRCode(border=0, error_correction=qrcode.constants.ERROR_CORRECT_Q)
+    qr.add_data(data)
+    qr.print_ascii(out=output_buffer)
+
+    output_buffer.seek(0)
+    qr_ascii = output_buffer.read().strip()
+
+    return qr_ascii
+
+def combine_ascii(left_ascii, right_ascii, spacing=0):
+    left_lines = left_ascii.split('\n')
+    right_lines = right_ascii.split('\n')
+
+    no_left_lines = len(left_lines)
+    no_right_lines = len(right_lines)
+
+    left_width = max(list(map(lambda line: len(line), left_lines)))
+    max_height = max(no_left_lines, no_right_lines)
+
+    lines = []
+    for i in range(max_height):
+        left_line = left_lines[i] if i < no_left_lines else ""
+        right_line = right_lines[i] if i < no_right_lines else ""
+
+        padding = " " * ((left_width - len(left_line)) + spacing)
+
+        lines.append(left_line + padding + right_line)
+
+    return "\n".join(lines)
+
+def read_file_when_available(file_path, timeout):
+    start = time.time()
+    while not os.path.exists(file_path):
+        if (time.time() - start) > timeout:
+            return False
+        time.sleep(1)
+
+    with open(file_path, "r") as file:
+        file_contents = file.read()
+
+    return file_contents
+
+def run(command):
+    result = subprocess.run(command, stdout=subprocess.PIPE)
+    return result.stdout.decode('utf-8').rstrip("\n")
+
+def main():
+    timeout = 30
+    tor_hostname_file = "/home/umbrel/umbrel/tor/data/web/hostname"
+    tor_hostname = read_file_when_available(tor_hostname_file, timeout)
+
+    ip = run(['hostname', '-I']).split(" ")[0]
+
+    if not tor_hostname or not ip:
+        print("Couldn't get connection details")
+        return
+
+    tor_hostname_qr_ascii = create_qr(tor_hostname.strip())
+    ascii_banner = combine_ascii(umbrel_ascii, tor_hostname_qr_ascii, spacing=10)
+
+    connection_details = f"""
+
+
+{ascii_banner}
+
+    Your Umbrel is up and running at:
+
+        http://umbrel.local
+        http://{ip}
+        http://{tor_hostname}
+    """
+    print(connection_details)
+
+main()
