@@ -9,7 +9,7 @@ After=umbrel-startup.service
 [Service]
 Type=oneshot
 Restart=no
-ExecStart=/usr/local/bin/umbrel-details
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/umbrel-details
 User=root
 Group=root
 StandardOutput=tty
