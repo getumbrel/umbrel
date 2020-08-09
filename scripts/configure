@@ -48,7 +48,7 @@ if [[ -f "${UMBREL_ROOT}/statuses/configured" ]]; then
 else
   echo "============ CONFIGURING ============="
 fi
-echo "============== UMBREL ================"
+echo "========= UMBREL (${NETWORK}) ==========="
 echo "======================================"
 echo
 
