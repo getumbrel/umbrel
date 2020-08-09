@@ -17,8 +17,6 @@ Group=root
 StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=umbrel startup
-# StandardOutput=tty
-# TTYPath=/dev/tty1
 RemainAfterExit=yes
 
 [Install]
