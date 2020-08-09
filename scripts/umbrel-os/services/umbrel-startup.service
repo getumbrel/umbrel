@@ -14,11 +14,11 @@ TimeoutSec=infinity
 ExecStart=/home/umbrel/umbrel/scripts/start
 User=root
 Group=root
-# StandardOutput=syslog
-# StandardError=syslog
-# SyslogIdentifier=umbrel
-StandardOutput=tty
-TTYPath=/dev/tty1
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=umbrel startup
+# StandardOutput=tty
+# TTYPath=/dev/tty1
 RemainAfterExit=yes
 
 [Install]
