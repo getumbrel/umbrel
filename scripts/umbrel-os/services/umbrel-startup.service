@@ -3,10 +3,12 @@
 
 [Unit]
 Description=Umbrel Startup Service
-Wants=network-online.target
-After=network-online.target
 Requires=umbrel-external-storage.service
 After=umbrel-external-storage.service
+Wants=network-online.target
+After=network-online.target
+Wants=docker.service
+After=docker.service
 
 [Service]
 Type=forking
