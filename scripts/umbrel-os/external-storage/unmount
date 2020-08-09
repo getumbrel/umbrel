@@ -37,9 +37,9 @@ if [[ ! -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
 fi
 
 echo "Unmounting external storage..."
-echo "Removing bind mount..."
-umount "${EXTERNAL_UMBREL_ROOT}"
 echo "Unmounting partition..."
 umount "${MOUNT_POINT}"
+echo "Removing bind mount..."
+umount "${EXTERNAL_UMBREL_ROOT}"
 sync
 sleep 1
