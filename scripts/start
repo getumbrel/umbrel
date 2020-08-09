@@ -28,9 +28,6 @@ check_dependencies fswatch
 # Check OTA update scripts' dependencies
 check_dependencies rsync jq wget
 
-echo "Starting Umbrel..."
-echo
-
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 
 if [[ ! -d "$UMBREL_ROOT" ]]; then
@@ -38,22 +35,33 @@ if [[ ! -d "$UMBREL_ROOT" ]]; then
   exit 1
 fi
 
+# Configure Umbrel if it isn't already configured
+if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
+  NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
+fi
+
+echo
+echo "======================================"
+echo "============= STARTING ==============="
+echo "============== UMBREL ================"
+echo "======================================"
+echo
+
 echo "Setting environment variables..."
 echo
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME="$(hostname)"
 export DEVICE_HOST="http://"${DEVICE_IP:-"$DEVICE_HOSTNAME".local}""
+# Increase default Docker and Compose timeouts to 240s
+# as bitcoin can take a long while to respond
+export DOCKER_CLIENT_TIMEOUT=240
+export COMPOSE_HTTP_TIMEOUT=240
 
 cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
 ./karen &
-
-# Increase default Docker and Compose timeouts to 240s
-# As bitcoin can take a long while to respond
-export DOCKER_CLIENT_TIMEOUT=240
-export COMPOSE_HTTP_TIMEOUT=240
 
 echo
 echo "Starting Docker services..."

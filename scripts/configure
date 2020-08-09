@@ -42,12 +42,15 @@ if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] &&
 fi
 
 echo
+echo "======================================"
 if [[ -f "${UMBREL_ROOT}/statuses/configured" ]]; then
-  echo "Reconfiguring Umbrel for $BITCOIN_NETWORK"
+  echo "=========== RECONFIGURING ============"
 else
-  echo "Configuring Umbrel for $BITCOIN_NETWORK"
+  echo "============ CONFIGURING ============="
 fi
-echo 
+echo "========= UMBREL (${NETWORK}) ==========="
+echo "======================================"
+echo
 
 
 ##########################################################
