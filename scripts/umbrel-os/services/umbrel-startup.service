@@ -1,0 +1,25 @@
+# Umbrel Startup Service
+# Installed at /etc/systemd/system/umbrel-startup.service
+
+[Unit]
+Description=Umbrel Startup Service
+Requires=umbrel-external-storage.service
+After=umbrel-external-storage.service
+Wants=network-online.target
+After=network-online.target
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=forking
+TimeoutSec=infinity
+ExecStart=/home/umbrel/umbrel/scripts/start
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=umbrel startup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -3,49 +3,49 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
-# Mount and/or format external storage
-"${UMBREL_OS_SCRIPTS}/external-storage-mounter" || exit 1
+# Creates, enables and starts a systemd service
+enable_service() {
+  service="${1}"
+  if [ ! -f "/etc/systemd/system/${service}" ]; then
+    echo "Setting up ${service}"
+    if [ ! -f "${UMBREL_OS_SCRIPTS}/services/${service}" ]; then
+      echo "Error: No service file found at ${UMBREL_OS_SCRIPTS}/services/${service}"
+      exit 1
+    fi
+    echo "Copying ${service} to /etc/systemd/system/${service}"
+    cp "${UMBREL_OS_SCRIPTS}/services/${service}" "/etc/systemd/system/${service}"
 
-if [ ! -f "$UMBREL_ROOT"/statuses/configured ]; then
-  echo "statuses/configured not found. Looks like the first boot..."
-  echo "Configuring Umbrel now..."
+    echo "Enabling ${service}..."
+    systemctl enable "${service}"
+
+    echo "Starting ${service}..."
+    systemctl start "${service}"
+  fi
+}
+
+# Configure Umbrel on first boot
+# We assume that it's the first boot if Umbrel hasn't been configured
+if [ ! -f "${UMBREL_ROOT}/statuses/configured" ]; then
   echo
-  if [ -f "$UMBREL_ROOT"/scripts/configure ]; then
+  echo "======================================"
+  echo "============ FIRST BOOT =============="
+  echo "=========== hello world! ============="
+  echo "======================================"
+  echo 
+  echo "Configuring Umbrel..."
+  echo
+  if [ -f "${UMBREL_ROOT}/scripts/configure" ]; then
     cd "$UMBREL_ROOT"
-    ./scripts/configure || exit 1
+    NETWORK=mainnet ./scripts/configure || exit 1
   else 
-    echo "Error: No configuration script not found at $UMBREL_ROOT/scripts/configure"
+    echo "Error: No configuration script found at ${UMBREL_ROOT}/scripts/configure"
     exit 1
   fi
-  echo
-  echo "Configuration complete. Setting up Umbrel initd startup service..."
-  echo
-  if [ ! -f /etc/rc2.d/S01umbrel ]; then
-    echo "Creating multiple runlevel symlinks..."
-    ln -s /etc/init.d/umbrel /etc/rc0.d/K01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc1.d/K01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc2.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc3.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc4.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc5.d/S01umbrel
-    ln -s /etc/init.d/umbrel /etc/rc6.d/K01umbrel
-    echo "Enabling service defaults..."
-    update-rc.d umbrel defaults || exit 1
-    echo "Enabling startup service..."
-    update-rc.d umbrel enable || exit 1
-    echo "Starting service now..."
-    /etc/init.d/umbrel start
-  else
-    echo "Umbrel initd startup service already exists..."
-  fi
 fi
 
-# Display connection details on the TTY
-if [ -x "$(command -v umbrel-details)" ]; then
-  # We run this in the background because it waits for the Tor hidden service
-  # to be created on first boot. rc.local needs to exit so the boot process
-  # can continue.
-  umbrel-details &
-fi
+# Enable all services
+enable_service "umbrel-external-storage.service"
+enable_service "umbrel-startup.service"
+enable_service "umbrel-connection-details.service"
 
 exit 0

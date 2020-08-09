@@ -13,7 +13,7 @@ set -euo pipefail
 # - - Install Umbrel on it
 # - Bind mount the external installation on top of the local installation
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
 
@@ -83,7 +83,7 @@ unmount_partition () {
 main () {
   echo "Running external storage mount script..."
   check_root
-  check_dependencies sed wipefs parted mount sync
+  check_dependencies sed wipefs parted mount sync umount
 
   block_devices=$(list_block_devices)
   no_of_block_devices=$(list_block_devices | wc -l)
@@ -91,7 +91,7 @@ main () {
   if [[ $no_of_block_devices -lt 1 ]]; then
     echo "No block devices found"
     echo "Exiting mount script without doing anything"
-    exit
+    exit 1
   fi
 
   if [[ $no_of_block_devices -gt 1 ]]; then
@@ -107,7 +107,9 @@ main () {
   echo "Found device \"${block_device_model}\""
 
   echo "Checking if device contains an Umbrel install..."
+
   mount_partition "${partition_path}"
+
   if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
     echo "Yes, it does"
   else
@@ -136,7 +138,7 @@ main () {
   echo "Checking Umbrel root is now on external storage..."
   sync
   sleep 1
-  "${UMBREL_ROOT}/scripts/umbrel-os/is-on-external-storage"
+  "${UMBREL_ROOT}/scripts/umbrel-os/external-storage/is-mounted"
 
   echo "Mount script completed successfully!"
 }

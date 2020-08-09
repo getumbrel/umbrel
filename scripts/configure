@@ -42,7 +42,11 @@ if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] &&
 fi
 
 echo
-echo "Configuring Umbrel for $BITCOIN_NETWORK"
+if [[ -f "${UMBREL_ROOT}/statuses/configured" ]]; then
+  echo "Reconfiguring Umbrel for $BITCOIN_NETWORK"
+else
+  echo "Configuring Umbrel for $BITCOIN_NETWORK"
+fi
 echo 
 
 
@@ -189,8 +193,7 @@ echo "Pulling Umbrel Docker images"
 echo
 docker-compose pull --quiet
 
-# Create configured status (used by the boot script on Umbrel OS
-# to check if Umbrel is configured or not)
+# Create configured status
 touch "$UMBREL_ROOT"/statuses/configured
 
 echo "Configuration successful"
