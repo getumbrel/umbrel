@@ -87,10 +87,10 @@ curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -
 sudo ./scripts/start
 
 # For testnet, run:
-NETWORK=testnet ./scripts/start
+sudo NETWORK=testnet ./scripts/start
 
 # For regtest, run:
-NETWORK=regtest ./scripts/start
+sudo NETWORK=regtest ./scripts/start
 ```
 
 To stop Umbrel, run:
