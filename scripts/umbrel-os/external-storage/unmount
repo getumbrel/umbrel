@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# This script will:
+# - Look for external storage devices
+# - Check if they contain an Umbrel install
+# - If yes
+# - - Unmount it
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+MOUNT_POINT="/mnt/data"
+EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_root
+check_dependencies sync umount
+
+if [[ ! -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
+  echo "No external storage with Umbrel install found..."
+  exit 1
+fi
+
+echo "Unmounting external storage..."
+echo "Removing bind mount..."
+umount --lazy "${UMBREL_ROOT}"
+echo "Unmounting partition..."
+umount --lazy "${MOUNT_POINT}"
+sync
+sleep 1

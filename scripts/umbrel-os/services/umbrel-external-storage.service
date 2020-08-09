@@ -8,6 +8,7 @@ Description=External Storage Mounter
 Type=oneshot
 Restart=no
 ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
+ExecStop=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/unmount
 User=root
 Group=root
 StandardOutput=syslog
