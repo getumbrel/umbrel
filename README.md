@@ -80,23 +80,17 @@ Ensure that your account is [correctly permissioned to use docker](https://docs.
 curl -L https://github.com/getumbrel/umbrel/archive/v0.1.6-beta.3.tar.gz | tar -xz --strip-components=1
 ```
 
-### Step 2. Configure
+### Step 2. Run
 
 ```bash
 # To use Umbrel on mainnet, run:
-./scripts/configure
+sudo ./scripts/start
 
 # For testnet, run:
-NETWORK=testnet ./scripts/configure
+NETWORK=testnet ./scripts/start
 
 # For regtest, run:
-NETWORK=regtest ./scripts/configure
-```
-
-### Step 3. Run
-
-```bash
-sudo ./scripts/start
+NETWORK=regtest ./scripts/start
 ```
 
 To stop Umbrel, run:
