@@ -68,7 +68,7 @@ If you're looking to run Umbrel on:
 
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
-- [Docker Compose](https://docs.docker.com/compose/install/#install-using-pip) (installed via python3 pip)
+- [Docker Compose](https://docs.docker.com/compose/install)
 
 Ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
