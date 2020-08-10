@@ -3,6 +3,12 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 UMBREL_OS_SCRIPTS="${UMBREL_ROOT}/scripts/umbrel-os"
 
+echo
+echo "========================================="
+echo "========== NEW BOOT SCRIPT 2 ============"
+echo "========================================="
+echo
+
 # Creates, enables and starts a systemd service
 enable_service() {
   service="${1}"

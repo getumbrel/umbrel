@@ -89,7 +89,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         sleep 1
 
         echo "Replacing /home/umbrel/umbrel on SD card with the new release"
-        mv "/home/umbrel/.umbrel-${RELEASE}" "/home/umbrel/umbrel"
+        rsync -av \
+            --delete \
+            "/home/umbrel/.umbrel-${RELEASE}/" \
+            "/home/umbrel/umbrel/"
+        rm -rf "/home/umbrel/.umbrel-${RELEASE}"
         echo "Fixing permissions"
         chown -R 1000:1000 "/home/umbrel/umbrel/"
 
