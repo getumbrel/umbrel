@@ -50,7 +50,7 @@ services:
                 restart: unless-stopped
                 stop_grace_period: 15m30s
                 ports:
-                    - "127.0.0.1:8333:8333"
+                    - "8333:8333"
                 networks:
                     net:
                         ipv4_address: 10.11.1.1
