@@ -44,9 +44,7 @@ services:
                 depends_on: [ tor, manager ]
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
-                        - ${PWD}/bitcoin:/root/.bitcoin
                         - ${PWD}/bitcoin:/data/.bitcoin
-                        - ${PWD}/bitcoin:/data/bitcoin
                 restart: unless-stopped
                 stop_grace_period: 15m30s
                 ports:
@@ -61,8 +59,6 @@ services:
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
-                        - ${PWD}/lnd:/root/.lnd
-                        - ${PWD}/bitcoin:/root/.bitcoin
                 restart: unless-stopped
                 stop_grace_period: 5m30s
                 networks:
