@@ -113,13 +113,10 @@ if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   sed -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
   # Switch LND to testnet
   sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
-  # Comment mainnet neutrino peers
-  sed -i "s/neutrino.addpeer=bb2.breez.technology/\;neutrino.addpeer=bb2.breez.technology/g;" "$LND_CONF_FILE"
-  sed -i "s/neutrino.addpeer=mainnet1-btcd.zaphq.io/\;neutrino.addpeer=mainnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  sed -i "s/neutrino.addpeer=mainnet2-btcd.zaphq.io/\;neutrino.addpeer=mainnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  # Uncomment testnet neutrino peers
-  sed -i "s/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  sed -i "s/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  # Uncomment testnet neutrino block and peers
+  sed -i "s/\# \[neutrino\]/\[neutrino\]/g;" "$LND_CONF_FILE"
+  sed -i "s/\# neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\# neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
 
 fi
 
