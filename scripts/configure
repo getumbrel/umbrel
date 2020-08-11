@@ -114,9 +114,9 @@ if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   # Switch LND to testnet
   sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
   # Uncomment testnet neutrino block and peers
-  sed -i "s/\;[neutrino]/[neutrino]/g;" "$LND_CONF_FILE"
-  sed -i "s/\;neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  sed -i "s/\;neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\# \[neutrino\]/\[neutrino\]/g;" "$LND_CONF_FILE"
+  sed -i "s/\# neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  sed -i "s/\# neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
 
 fi
 
