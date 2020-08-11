@@ -61,6 +61,8 @@ services:
                         - ${PWD}/lnd:/data/.lnd
                 restart: unless-stopped
                 stop_grace_period: 5m30s
+                ports:
+                    - "9735:9735"
                 networks:
                     net:
                         ipv4_address: 10.11.1.2
