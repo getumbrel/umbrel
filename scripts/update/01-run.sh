@@ -73,7 +73,7 @@ chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
 # Update SD card installation on Umbrel OS
-if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]; then
+if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]; then
     # Just make double sure we're not accidently installing on SSD
     # as the SD card umbrel should always be unconfigured
     if [[ ! -f "/sd-root/home/umbrel/umbrel/statuses/configured" ]] ; then
