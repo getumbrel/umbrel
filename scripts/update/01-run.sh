@@ -72,41 +72,21 @@ echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
-# Update SD card installation on Umbrel OS by temporarily
-# removing the bind-mount
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    if mountpoint -q /home/umbrel/umbrel ; then
-        echo "/home/umbrel/umbrel is bind-mounted" 
-        echo "Removing bind-mount to update installation on the SD card"
-        cd /home/umbrel
-
-        # We lazy unmount here because regular unmount wouldn't be possible as
-        # karen is watching /home/umbrel/umbrel/events/signals, and thus the
-        # storage will be busy
-        umount --lazy /home/umbrel/umbrel
-        echo "Successfully removed the bind-mount"
-        sync
-        sleep 1
-
-        echo "Replacing /home/umbrel/umbrel on SD card with the new release"
+# Update SD card installation on Umbrel OS
+if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]; then
+    # Just make double sure we're not accidently installing on SSD
+    # as the SD card umbrel should always be unconfigured
+    if [[ ! -f "/sd-root/home/umbrel/umbrel/statuses/configured" ]] ; then
+        echo "Replacing /sd-root/home/umbrel/umbrel on SD card with the new release"
         rsync -av \
             --delete \
             "/home/umbrel/.umbrel-${RELEASE}/" \
-            "/home/umbrel/umbrel/"
-        rm -rf "/home/umbrel/.umbrel-${RELEASE}"
+            "/sd-root/home/umbrel/umbrel/"
         echo "Fixing permissions"
-        chown -R 1000:1000 "/home/umbrel/umbrel/"
-
-        echo "Remounting /mnt/data/umbrel to /home/umbrel/umbrel"
-        mount --bind /mnt/data/umbrel /home/umbrel/umbrel
-        echo "Successfully mounted"
-        sync
-        sleep 1
-    else
-        echo "No bind mount found at /home/umbrel/umbrel"
-        echo "Removing temporary release directory"
-        [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
+        chown -R 1000:1000 "/sd-root/home/umbrel/umbrel/"
     fi
+    echo "Removing temporary release directory"
+    [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
 fi
 
 # Start updated containers
