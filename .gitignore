@@ -20,6 +20,8 @@ bitcoin/*
 lnd/*
 tor/*
 db/*
+statuses/*
+!statuses/update-status.json
 
 # Commit these empty directories
 

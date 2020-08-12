@@ -44,13 +44,11 @@ services:
                 depends_on: [ tor, manager ]
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
-                        - ${PWD}/bitcoin:/root/.bitcoin
                         - ${PWD}/bitcoin:/data/.bitcoin
-                        - ${PWD}/bitcoin:/data/bitcoin
                 restart: unless-stopped
                 stop_grace_period: 15m30s
                 ports:
-                    - "127.0.0.1:8333:8333"
+                    - "8333:8333"
                 networks:
                     net:
                         ipv4_address: 10.11.1.1
@@ -61,10 +59,10 @@ services:
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
-                        - ${PWD}/lnd:/root/.lnd
-                        - ${PWD}/bitcoin:/root/.bitcoin
                 restart: unless-stopped
                 stop_grace_period: 5m30s
+                ports:
+                    - "9735:9735"
                 networks:
                     net:
                         ipv4_address: 10.11.1.2
@@ -141,7 +139,7 @@ services:
                         ipv4_address: 10.11.2.2
         neutrino-switcher:
                 container_name: neutrino-switcher
-                image: lncm/neutrino-switcher:1.0.2
+                image: getumbrel/neutrino-switcher:v1.0.3
                 logging: *default-logging
                 depends_on: [ bitcoin, lnd ]
                 restart: unless-stopped
@@ -151,6 +149,7 @@ services:
                     - /var/run/docker.sock:/var/run/docker.sock
                 environment:
                     JSONRPCURL: "http://10.11.1.1:${BITCOIN_RPC_PORT}"
+                    RPCUSER: $BITCOIN_RPC_USER
                     RPCPASS: $BITCOIN_RPC_PASS
                     LND_CONTAINER_NAME: lnd
                     SLEEPTIME: 3600
