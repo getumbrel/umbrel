@@ -130,10 +130,16 @@ main () {
         --archive \
         --no-target-directory \
         "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
+    
+    echo "Creating /sd-root to bind-mount SD card root..."
+    mkdir "/sd-root"
   fi
 
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
+
+  echo "Bind mounting SD card root at /sd-card"
+  mount --bind "/" "/sd-root"
 
   echo "Checking Umbrel root is now on external storage..."
   sync
