@@ -12,7 +12,6 @@ check_dependencies () {
 check_dependencies jq wget git rsync
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
-RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
 
 update_type=""
 if [[ "${1}" == "--ota" ]]; then
@@ -28,6 +27,12 @@ fi
 if [[ "${update_type}" == "path" ]] && [[ ! -f "${update_path}/.umbrel" ]]; then
   echo "Update path doesn't seem to be an Umbrel install."
   exit 1
+fi
+
+if [[ "${update_type}" == "ota" ]]; then
+  RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
+elif [[ "${update_type}" == "path" ]]; then
+  RELEASE=$(cat "$UMBREL_ROOT"/info.json | jq .version -r)
 fi
 
 echo
