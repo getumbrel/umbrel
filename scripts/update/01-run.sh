@@ -4,6 +4,9 @@ set -euo pipefail
 RELEASE=$1
 UMBREL_ROOT=$2
 
+# Only used on Umbrel OS
+SD_CARD_UMBREL_ROOT="/sd-root/home/umbrel/umbrel"
+
 echo
 echo "======================================="
 echo "============= OTA UPDATE =============="
@@ -73,18 +76,18 @@ chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
 # Update SD card installation on Umbrel OS
-if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]; then
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
     # Just make double sure we're not accidently installing on SSD
     # as the SD card umbrel should always be unconfigured
-    if [[ ! -f "/sd-root/home/umbrel/umbrel/statuses/configured" ]]; then
-        echo "Replacing /sd-root/home/umbrel/umbrel on SD card with the new release"
+    if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]] && [[ ! -f "${SD_CARD_UMBREL_ROOT}/statuses/configured" ]]; then
+        echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
         rsync -av \
             --delete \
             "/home/umbrel/.umbrel-${RELEASE}/" \
-            "/sd-root/home/umbrel/umbrel/"
+            "${SD_CARD_UMBREL_ROOT}/"
         echo "Fixing permissions"
-        chown -R 1000:1000 "/sd-root/home/umbrel/umbrel/"
-        chmod -R 700 "/sd-root/home/umbrel/umbrel/tor/data/*"
+        chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
+        chmod -R 700 "${SD_CARD_UMBREL_ROOT}/tor/data/*"
     else
         echo "ERROR: The SD Card installation is configured"
         echo "Skipping upgrading on SD Card..."
