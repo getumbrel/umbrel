@@ -17,11 +17,11 @@ echo
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo 
     echo "============================================="
-    echo "=== Installing on Umbrel OS $UMBREL_OS ==="
+    echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
     echo 
 
-    echo "Copying new release from external storage to a temporary directory on the SD card"
+    echo "Copying new release from external storage to a temporary dir on the SD card"
 
     # Cleanup any tmp dir from unclean install run
     [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
@@ -76,7 +76,7 @@ chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]; then
     # Just make double sure we're not accidently installing on SSD
     # as the SD card umbrel should always be unconfigured
-    if [[ ! -f "/sd-root/home/umbrel/umbrel/statuses/configured" ]] ; then
+    if [[ ! -f "/sd-root/home/umbrel/umbrel/statuses/configured" ]]; then
         echo "Replacing /sd-root/home/umbrel/umbrel on SD card with the new release"
         rsync -av \
             --delete \
@@ -84,6 +84,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]
             "/sd-root/home/umbrel/umbrel/"
         echo "Fixing permissions"
         chown -R 1000:1000 "/sd-root/home/umbrel/umbrel/"
+    else
+        echo "ERROR: The SD Card installation is configured"
+        echo "Skipping upgrading on SD Card..."
     fi
     echo "Removing temporary release directory"
     [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
