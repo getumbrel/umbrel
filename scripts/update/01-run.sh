@@ -17,16 +17,16 @@ echo
 
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
+# Make Umbrel OS specific updates
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo 
     echo "============================================="
     echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
-    echo 
-
-    # Update SD card installation on Umbrel OS
-    echo "Copying new release from external storage to a temporary dir on the SD card"
-     # Just make double sure we're not accidently installing on SSD
+    echo
+    
+    # Update SD card installation
+    # Also make double sure we're not accidently installing on SSD
     # as the SD card umbrel should always be unconfigured
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]] && [[ ! -f "${SD_CARD_UMBREL_ROOT}/statuses/configured" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
