@@ -16,8 +16,6 @@ check_root () {
 check_semver_range () {
   range="${1}"
   version="${2}"
-  echo $range
-  echo $version
   "${UMBREL_ROOT}/scripts/umbrel-os/semver" -r "${range}" "${version}" | grep --quiet "^${version}$"
 }
 
