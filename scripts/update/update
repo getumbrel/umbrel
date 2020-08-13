@@ -14,6 +14,22 @@ check_dependencies jq wget git rsync
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
 
+update_type=""
+if [[ "${1}" == "--ota" ]]; then
+  update_type="ota"
+elif [[ "${1}" == "--path" ]]; then
+  update_type="path"
+  update_path="${2}"
+else
+  echo "Update requires \"--ota\" or \"--path <path>\" option."
+  exit 1
+fi
+
+if [[ "${update_type}" == "path" ]] && [[ ! -f "${update_path}/.umbrel" ]]; then
+  echo "Update path doesn't seem to be an Umbrel install."
+  exit 1
+fi
+
 echo
 echo "======================================="
 echo "=============== UPDATE ================"
@@ -40,11 +56,25 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 10, "description": "Downloading Umbrel $RELEASE", "updateTo": "$RELEASE"}
 EOF
 
-# Clone new release
-echo "Downloading Umbrel $RELEASE"
-mkdir -p "$UMBREL_ROOT"/.umbrel-"$RELEASE"
-cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
-curl -L "https://github.com/getumbrel/umbrel/archive/$RELEASE.tar.gz" | tar -xz --strip-components=1
+# Download new release
+if [[ "${update_type}" == "ota" ]]; then
+  echo "Downloading Umbrel ${RELEASE}"
+  mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  curl -L "https://github.com/getumbrel/umbrel/archive/$RELEASE.tar.gz" | tar -xz --strip-components=1
+fi
+
+# Copy over new release from path
+if [[ "${update_type}" == "path" ]]; then
+  echo "Copying Umbrel ${RELEASE} from ${update_path}"
+  mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cp --recursive \
+    --archive \
+    --no-target-directory \
+    "${update_path}" "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+fi
+
 
 # Run update scripts
 echo "Running update install scripts of the new release"
