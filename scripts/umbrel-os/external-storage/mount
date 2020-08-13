@@ -132,7 +132,7 @@ main () {
         "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
     
     echo "Creating /sd-root to bind-mount SD card root..."
-    mkdir "/sd-root"
+    mkdir -p "/sd-root"
   fi
 
   echo "Bind mounting external storage over local Umbrel installation..."
