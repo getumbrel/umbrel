@@ -85,7 +85,6 @@ if [[ "${update_type}" == "path" ]]; then
   cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
 fi
 
-
 # Run update scripts
 echo "Running update install scripts of the new release"
 cd scripts/update
