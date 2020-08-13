@@ -146,6 +146,9 @@ main () {
   sleep 1
   df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
 
+  echo "Checking SD Card root is bind mounted at /sd-root..."
+  df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
+
   echo "Mount script completed successfully!"
 }
 
