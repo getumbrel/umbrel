@@ -88,7 +88,6 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
         echo "Fixing permissions"
         chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
-        chmod -R 700 "${SD_CARD_UMBREL_ROOT}/tor/data/*"
     else
         echo "ERROR: The SD Card installation is configured"
         echo "Skipping upgrading on SD Card..."
