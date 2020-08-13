@@ -36,7 +36,7 @@ jobs:
         sudo systemctl restart docker
     - name: Download Umbrel OS build scripts
       run: |
-        git clone git://github.com/AaronDewes/umbrel-os.git -b test
+        git clone git://github.com/getumbrel/umbrel-os.git
     - name: Setting env vars
       run: |
         UMBREL_OS_VERSION="dev"
