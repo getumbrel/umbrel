@@ -85,6 +85,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
             --delete \
             "/home/umbrel/.umbrel-${RELEASE}/" \
             "${SD_CARD_UMBREL_ROOT}/"
+
         echo "Fixing permissions"
         chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
         chmod -R 700 "${SD_CARD_UMBREL_ROOT}/tor/data/*"
@@ -92,6 +93,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: The SD Card installation is configured"
         echo "Skipping upgrading on SD Card..."
     fi
+    
     echo "Removing temporary release directory"
     [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
 fi
