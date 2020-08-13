@@ -32,7 +32,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
         rsync -av \
             --delete \
-            "${UMBREL_ROOT}/.umbrel-${RELEASE}" \
+            "${UMBREL_ROOT}/.umbrel-${RELEASE}/" \
             "${SD_CARD_UMBREL_ROOT}/"
 
         echo "Fixing permissions"
