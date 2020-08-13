@@ -84,6 +84,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -f "/sd-root/home/umbrel/umbrel/.umbrel" ]]
             "/sd-root/home/umbrel/umbrel/"
         echo "Fixing permissions"
         chown -R 1000:1000 "/sd-root/home/umbrel/umbrel/"
+        chmod -R 700 "/sd-root/home/umbrel/umbrel/tor/data/*"
     else
         echo "ERROR: The SD Card installation is configured"
         echo "Skipping upgrading on SD Card..."
