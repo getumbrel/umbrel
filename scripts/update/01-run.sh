@@ -26,20 +26,19 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
     
     # Update SD card installation
-    # Also make double sure we're not accidently installing on SSD
-    # as the SD card umbrel should always be unconfigured
-    if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]] && [[ ! -f "${SD_CARD_UMBREL_ROOT}/statuses/configured" ]]; then
+    if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
         rsync -av \
-            --delete \
+            --include-from="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/update/.updateinclude" \
+            --exclude-from="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/update/.updateignore" \
             "${UMBREL_ROOT}/.umbrel-${RELEASE}/" \
             "${SD_CARD_UMBREL_ROOT}/"
 
         echo "Fixing permissions"
         chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
     else
-        echo "ERROR: The SD Card installation is configured"
-        echo "Skipping upgrading on SD Card..."
+        echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
+        echo "Skipping updating on SD Card..."
     fi
 fi
 
