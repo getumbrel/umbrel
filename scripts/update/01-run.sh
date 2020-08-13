@@ -5,7 +5,7 @@ RELEASE=$1
 UMBREL_ROOT=$2
 
 # Only used on Umbrel OS
-SD_CARD_UMBREL_ROOT="/sd-root/home/umbrel/umbrel"
+SD_CARD_UMBREL_ROOT="/sd-root${UMBREL_ROOT}"
 
 echo
 echo "======================================="
