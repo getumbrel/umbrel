@@ -28,9 +28,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
-        rsync -av \
+        rsync --archive \
+            --verbose \
             --include-from="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/update/.updateinclude" \
             --exclude-from="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/update/.updateignore" \
+            --delete \
             "${UMBREL_ROOT}/.umbrel-${RELEASE}/" \
             "${SD_CARD_UMBREL_ROOT}/"
 
@@ -69,9 +71,11 @@ cd "$UMBREL_ROOT"
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
-rsync -av \
+rsync --archive \
+    --verbose \
     --include-from="$UMBREL_ROOT/.umbrel-$RELEASE/scripts/update/.updateinclude" \
     --exclude-from="$UMBREL_ROOT/.umbrel-$RELEASE/scripts/update/.updateignore" \
+    --delete \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 

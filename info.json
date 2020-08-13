@@ -1,6 +1,6 @@
 {
-    "version": "0.1.7-beta",
-    "name": "Umbrel v0.1.7 Beta",
+    "version": "0.1.7-beta-delete",
+    "name": "Umbrel v0.1.7 Beta Delete Test",
     "requires": "=0.1.7-beta",
     "notes": ""
 }
