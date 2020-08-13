@@ -24,17 +24,23 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo 
 
+    # Update SD card installation on Umbrel OS
     echo "Copying new release from external storage to a temporary dir on the SD card"
+     # Just make double sure we're not accidently installing on SSD
+    # as the SD card umbrel should always be unconfigured
+    if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]] && [[ ! -f "${SD_CARD_UMBREL_ROOT}/statuses/configured" ]]; then
+        echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
+        rsync -av \
+            --delete \
+            "${UMBREL_ROOT}/.umbrel-${RELEASE}" \
+            "${SD_CARD_UMBREL_ROOT}/"
 
-    # Cleanup any tmp dir from unclean install run
-    [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
-
-    # Copy from external storage to SD card
-    mkdir -p "/home/umbrel/.umbrel-$RELEASE"
-    cp  --recursive \
-        --archive \
-        --no-target-directory \
-        "$UMBREL_ROOT/.umbrel-$RELEASE" "/home/umbrel/.umbrel-$RELEASE"
+        echo "Fixing permissions"
+        chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
+    else
+        echo "ERROR: The SD Card installation is configured"
+        echo "Skipping upgrading on SD Card..."
+    fi
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
@@ -74,28 +80,6 @@ rsync -av \
 echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
-
-# Update SD card installation on Umbrel OS
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    # Just make double sure we're not accidently installing on SSD
-    # as the SD card umbrel should always be unconfigured
-    if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]] && [[ ! -f "${SD_CARD_UMBREL_ROOT}/statuses/configured" ]]; then
-        echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
-        rsync -av \
-            --delete \
-            "/home/umbrel/.umbrel-${RELEASE}/" \
-            "${SD_CARD_UMBREL_ROOT}/"
-
-        echo "Fixing permissions"
-        chown -R 1000:1000 "${SD_CARD_UMBREL_ROOT}/"
-    else
-        echo "ERROR: The SD Card installation is configured"
-        echo "Skipping upgrading on SD Card..."
-    fi
-    
-    echo "Removing temporary release directory"
-    [[ -d "/home/umbrel/.umbrel-${RELEASE}" ]] && rm -rf "/home/umbrel/.umbrel-${RELEASE}"
-fi
 
 # Start updated containers
 echo "Starting new containers"
