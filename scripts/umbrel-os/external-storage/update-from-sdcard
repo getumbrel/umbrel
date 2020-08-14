@@ -14,16 +14,16 @@ check_root () {
 }
 
 check_semver_range () {
-  range="${1}"
-  version="${2}"
+  local range="${1}"
+  local version="${2}"
   "${UMBREL_ROOT}/scripts/umbrel-os/semver" -r "${range}" "${version}" | grep --quiet "^${version}$"
 }
 
 main () {
   check_root
   echo "Checking if SD card Umbrel is newer than external storage..."
-  external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
-  sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
+  local external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
+  local sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
 
   if ! check_semver_range ">${external_version}" "${sd_version}"; then
     echo "No, SD version is not newer, exiting."
@@ -34,7 +34,7 @@ main () {
   echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
   # This will fail if we ever have multiple ranges with pre-release tags.
   # e.g `1.2.3-beta <2.0.0` will become `1.2.3` due to striping the `-`
-  update_requirement=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .requires | cut -d "-" -f "1")
+  local update_requirement=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .requires | cut -d "-" -f "1")
 
   if ! check_semver_range "${update_requirement}" "${external_version}"; then
     echo "No, we can't do an automatic update, exiting."
