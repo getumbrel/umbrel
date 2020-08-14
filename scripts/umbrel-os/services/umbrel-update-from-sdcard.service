@@ -1,0 +1,21 @@
+# Update external Umbrel installation if the SD card install contains a newer version
+# Installed at /etc/systemd/system/umbrel-update-from-sdcard.service
+
+[Unit]
+Description=Update Umbrel from SD card
+Requires=umbrel-external-storage.service
+After=umbrel-external-storage.service
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/update-from-sdcard
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=update umbrel from sd card
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
