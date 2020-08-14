@@ -21,8 +21,7 @@ jobs:
         sudo rm -rf /var/lib/docker
     - name: Re-install Docker
       run: |
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
+        curl -fsSL https://get.docker.com | sudo sh
         docker --version
     - name: Enable experimental features in Docker
       run: |
