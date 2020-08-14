@@ -31,11 +31,11 @@ main () {
   fi
 
   echo "Yes, SD version is newer."
-  echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
   # This will fail if we ever have multiple ranges with pre-release tags.
   # e.g `1.2.3-beta <2.0.0` will become `1.2.3` due to striping the `-`
   local update_requirement=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .requires | cut -d "-" -f "1")
 
+  echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
   if ! check_semver_range "${update_requirement}" "${external_version}"; then
     echo "No, we can't do an automatic update, exiting."
     exit 0
