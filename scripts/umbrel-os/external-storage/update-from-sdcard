@@ -31,9 +31,9 @@ check_semver_range () {
 main () {
   check_root
   check_dependencies jq
-  echo "Checking if SD card Umbrel is newer than external storage..."
   local external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
   local sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
+  echo "Checking if SD card Umbrel \"${sd_version}\" is newer than external storage Umbrel \"${external_version}\"..."
 
   if ! check_semver_range ">${external_version}" "${sd_version}"; then
     echo "No, SD version is not newer, exiting."
@@ -45,7 +45,7 @@ main () {
   # e.g `1.2.3-beta <2.0.0` will become `1.2.3` due to striping the `-`
   local update_requirement=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .requires | cut -d "-" -f "1")
 
-  echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
+  echo "Checking if the external storage version \"${external_version}\" satisfies SD update requirement \"${update_requirement}\"..."
   if ! check_semver_range "${update_requirement}" "${external_version}"; then
     echo "No, we can't do an automatic update, exiting."
     exit 0
