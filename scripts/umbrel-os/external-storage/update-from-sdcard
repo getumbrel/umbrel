@@ -48,7 +48,7 @@ main () {
   echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
   if ! check_semver_range "${update_requirement}" "${external_version}"; then
     echo "No, we can't do an automatic update, exiting."
-    exit 1
+    exit 0
   fi
 
   echo "Yes, it does, attempting an automatic update..."
