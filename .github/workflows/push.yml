@@ -1,0 +1,70 @@
+name: Build OS image of current master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Run apt update
+      run: sudo apt update
+
+    - name: Install dependencies
+      run: sudo apt -y install quilt qemu-user-static debootstrap libarchive-tools jq
+
+    - name: Nuke current Docker installation
+      run: |
+        sudo systemctl stop docker
+        sudo apt-get purge docker-ce docker-ce-cli containerd.io moby-engine moby-cli
+        sudo rm -rf /var/lib/docker
+    - name: Re-install Docker
+      run: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        docker --version
+    - name: Enable experimental features in Docker
+      run: |
+        sudo rm -rf /etc/docker/daemon.json
+        echo '{"experimental": true}' | sudo tee -a /etc/docker/daemon.json
+        sudo systemctl restart docker
+    - name: Download Umbrel OS build scripts
+      run: |
+        git clone git://github.com/getumbrel/umbrel-os.git
+    - name: Setting env vars
+      run: |
+        UMBREL_OS_VERSION="dev"
+        IMAGE_NAME="umbrel-os-dev"
+        UMBREL_REPO="https://github.com/getumbrel/umbrel.git"
+        UMBREL_BRANCH="master"
+        echo "::set-env name=UMBREL_OS_VERSION::$UMBREL_OS_VERSION"
+        echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
+        echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
+        echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
+      run: |
+        echo "Building PR #${PR}"
+        UMBREL_REPO="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
+        UMBREL_BRANCH="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.ref | sed 's/"//g')"
+        echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
+        echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
+              
+    - name: Build Umbrel OS
+      run: |
+        cd umbrel-os
+        echo "Building $IMAGE_NAME"
+        sudo IMG_FILENAME=$IMAGE_NAME ZIP_FILENAME=$IMAGE_NAME UMBREL_OS_VERSION=$UMBREL_OS_VERSION UMBREL_REPO=$UMBREL_REPO UMBREL_BRANCH=$UMBREL_BRANCH ./build.sh
+        cd ..
+        
+    - name: Copy ZIP to current working dir
+      run: cp umbrel-os/deploy/*.zip ./
+
+    - name: Uploading artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        path: ${{ env.IMAGE_NAME }}.zip
+        name: ${{ env.IMAGE_NAME }}.zip

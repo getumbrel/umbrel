@@ -1,6 +1,6 @@
-name: Build OS image on push/PR
+name: Build OS image on PR
 
-on: [push]
+on: [pull_request]
 
 jobs:
   build:
@@ -9,10 +9,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: jwalton/gh-find-current-pr@b6f8d7342efe4913388d5d1ac7f4b956caa5db52 # v1.0.2
-      id: findPr
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Run apt update
       run: sudo apt update
 
@@ -48,9 +44,8 @@ jobs:
         echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
         echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
     - name: Setting env vars for PR
-      if: success() && steps.findPr.outputs.pr
       env:
-        PR: ${{ steps.findPr.outputs.pr }}
+        PR: ${{ github.event.number }}
       run: |
         echo "Building PR #${PR}"
         UMBREL_REPO="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
