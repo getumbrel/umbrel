@@ -37,19 +37,10 @@ jobs:
       run: |
         UMBREL_OS_VERSION="dev"
         IMAGE_NAME="umbrel-os-dev"
-        UMBREL_REPO="https://github.com/getumbrel/umbrel.git"
-        UMBREL_BRANCH="master"
+        UMBREL_REPO="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
+        UMBREL_BRANCH="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.ref | sed 's/"//g')"
         echo "::set-env name=UMBREL_OS_VERSION::$UMBREL_OS_VERSION"
         echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
-        echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
-        echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
-    - name: Setting env vars for PR
-      env:
-        PR: ${{ github.event.number }}
-      run: |
-        echo "Building PR #${PR}"
-        UMBREL_REPO="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
-        UMBREL_BRANCH="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.ref | sed 's/"//g')"
         echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
         echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
               
