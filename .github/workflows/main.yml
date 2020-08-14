@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: jwalton/gh-find-current-pr@v1
+    - uses: jwalton/gh-find-current-pr@b6f8d7342efe4913388d5d1ac7f4b956caa5db52 # v1.0.2
       id: findPr
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
