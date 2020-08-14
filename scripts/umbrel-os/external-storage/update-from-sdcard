@@ -13,6 +13,15 @@ check_root () {
   fi
 }
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
 check_semver_range () {
   local range="${1}"
   local version="${2}"
@@ -21,6 +30,7 @@ check_semver_range () {
 
 main () {
   check_root
+  check_dependencies jq
   echo "Checking if SD card Umbrel is newer than external storage..."
   local external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
   local sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
