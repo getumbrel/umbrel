@@ -12,7 +12,8 @@ After=docker.service
 
 [Service]
 Type=forking
-TimeoutSec=infinity
+TimeoutStartSec=infinity
+TimeoutStopSec=16min
 ExecStart=/home/umbrel/umbrel/scripts/start
 ExecStop=/home/umbrel/umbrel/scripts/stop
 User=root
