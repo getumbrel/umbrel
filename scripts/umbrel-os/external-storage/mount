@@ -54,6 +54,11 @@ get_block_device_model () {
   echo "$(echo $vendor) $(echo $model)"
 }
 
+is_partition_ext4 () {
+  partition_path="${1}"
+  blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$'
+}
+
 # Wipes a block device and reformats it with a single EXT4 partition
 format_block_device () {
   device="${1}"
@@ -110,7 +115,7 @@ main () {
 
   mount_partition "${partition_path}"
 
-  if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
+  if is_partition_ext4 "${partition_path}" && [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
     echo "Yes, it does"
   else
     echo "No, it doesn't"
