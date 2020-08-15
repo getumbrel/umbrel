@@ -77,7 +77,7 @@ Ensure that your account is [correctly permissioned to use docker](https://docs.
 > Run this in an empty directory where you want to install Umbrel
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.1.7-beta.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.2.0.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run
