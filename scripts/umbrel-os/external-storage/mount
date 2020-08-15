@@ -87,6 +87,9 @@ unmount_partition () {
 
 # Formats and sets up a new device
 setup_new_device () {
+  block_device="${1}"
+  partition_path="${2}"
+
   echo "Formatting device..."
   format_block_device $block_device
 
@@ -99,9 +102,6 @@ setup_new_device () {
       --archive \
       --no-target-directory \
       "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
-  
-  echo "Creating /sd-root to bind-mount SD card root..."
-  mkdir -p "/sd-root"
 }
 
 main () {
@@ -134,28 +134,30 @@ main () {
   echo "Checking if the device is ext4..."
 
   if is_partition_ext4 "${partition_path}" ; then
-    echo "Yes, it is"
+    echo "Yes, it is ext4"
     mount_partition "${partition_path}"
 
     echo "Checking if device contains an Umbrel install..."
+    
     if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
-      echo "Yes, it does"
+      echo "Yes, it contains an Umbrel install"
     else 
-      echo "No, it doesn't"
+      echo "No, it doesn't contain an Umbrel install"
       echo "Unmounting partition..."
       unmount_partition
-      setup_new_device
+      setup_new_device $block_device $partition_path
     fi
     
   else
-    echo "No, it's not"
-    setup_new_device
+    echo "No, it's not ext4"
+    setup_new_device $block_device $partition_path
   fi
 
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
 
-  echo "Bind mounting SD card root at /sd-card"
+  echo "Bind mounting SD card root at /sd-card..."
+  [[ ! -d "/sd-root" ]] && mkdir -p "/sd-root"
   mount --bind "/" "/sd-root"
 
   echo "Checking Umbrel root is now on external storage..."
