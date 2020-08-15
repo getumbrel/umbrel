@@ -91,3 +91,12 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 cd "$UMBREL_ROOT"
 ./scripts/start
+
+# Delete unused Docker images on Umbrel OS
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    echo "Deleting previous images"
+    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+    {"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
+EOF
+    docker image prune --all --force
+fi
