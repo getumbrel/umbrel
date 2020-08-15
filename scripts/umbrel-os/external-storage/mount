@@ -85,6 +85,25 @@ unmount_partition () {
   umount "${MOUNT_POINT}"
 }
 
+# Formats and sets up a new device
+setup_new_device () {
+  echo "Formatting device..."
+  format_block_device $block_device
+
+  echo "Mounting partition..."
+  mount_partition "${partition_path}"
+
+  echo "Copying Umbrel install to external storage..."
+  mkdir -p "${EXTERNAL_UMBREL_ROOT}"
+  cp  --recursive \
+      --archive \
+      --no-target-directory \
+      "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
+  
+  echo "Creating /sd-root to bind-mount SD card root..."
+  mkdir -p "/sd-root"
+}
+
 main () {
   echo "Running external storage mount script..."
   check_root
@@ -111,33 +130,26 @@ main () {
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  echo "Checking if device contains an Umbrel install..."
+  
+  echo "Checking if the device is ext4..."
 
-  mount_partition "${partition_path}"
-
-  if is_partition_ext4 "${partition_path}" && [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
-    echo "Yes, it does"
-  else
-    echo "No, it doesn't"
-
-    echo "Unmounting partition..."
-    unmount_partition
-
-    echo "Formatting device..."
-    format_block_device $block_device
-
-    echo "Mounting partition..."
+  if is_partition_ext4 "${partition_path}" ; then
+    echo "Yes, it is"
     mount_partition "${partition_path}"
 
-    echo "Copying Umbrel install to external storage..."
-    mkdir -p "${EXTERNAL_UMBREL_ROOT}"
-    cp  --recursive \
-        --archive \
-        --no-target-directory \
-        "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
+    echo "Checking if device contains an Umbrel install..."
+    if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
+      echo "Yes, it does"
+    else 
+      echo "No, it doesn't"
+      echo "Unmounting partition..."
+      unmount_partition
+      setup_new_device
+    fi
     
-    echo "Creating /sd-root to bind-mount SD card root..."
-    mkdir -p "/sd-root"
+  else
+    echo "No, it's not"
+    setup_new_device
   fi
 
   echo "Bind mounting external storage over local Umbrel installation..."
