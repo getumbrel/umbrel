@@ -26,7 +26,7 @@ check_dependencies readlink dirname docker docker-compose git
 check_dependencies fswatch 
 
 # Check OTA update scripts' dependencies
-check_dependencies rsync jq wget
+check_dependencies rsync jq curl
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 
