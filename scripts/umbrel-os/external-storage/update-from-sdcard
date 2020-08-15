@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+SD_MOUNT_POINT="/sd-root"
+SD_UMBREL_ROOT="${SD_MOUNT_POINT}${UMBREL_ROOT}"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_semver_range () {
+  local range="${1}"
+  local version="${2}"
+  "${UMBREL_ROOT}/scripts/umbrel-os/semver" -r "${range}" "${version}" | grep --quiet "^${version}$"
+}
+
+main () {
+  check_root
+  check_dependencies jq
+  echo "Checking if SD card Umbrel is newer than external storage..."
+  local external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
+  local sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
+
+  if ! check_semver_range ">${external_version}" "${sd_version}"; then
+    echo "No, SD version is not newer, exiting."
+    exit 0
+  fi
+
+  echo "Yes, SD version is newer."
+  # This will fail if we ever have multiple ranges with pre-release tags.
+  # e.g `1.2.3-beta <2.0.0` will become `1.2.3` due to striping the `-`
+  local update_requirement=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .requires | cut -d "-" -f "1")
+
+  echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
+  if ! check_semver_range "${update_requirement}" "${external_version}"; then
+    echo "No, we can't do an automatic update, exiting."
+    exit 0
+  fi
+
+  echo "Yes, it does, attempting an automatic update..."
+  "${UMBREL_ROOT}/scripts/update/update" --path "${SD_UMBREL_ROOT}"
+}
+
+main

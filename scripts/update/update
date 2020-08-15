@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+if [[ $UID != 0 ]]; then
+    echo "Update script must be run as root"
+    exit 1
+fi
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies jq wget git rsync
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+update_type=""
+if [[ "${1}" == "--ota" ]]; then
+  update_type="ota"
+elif [[ "${1}" == "--path" ]]; then
+  update_type="path"
+  update_path="${2}"
+else
+  echo "Update requires \"--ota\" or \"--path <path>\" option."
+  exit 1
+fi
+
+if [[ "${update_type}" == "path" ]] && [[ ! -f "${update_path}/.umbrel" ]]; then
+  echo "Update path doesn't seem to be an Umbrel install."
+  exit 1
+fi
+
+if [[ "${update_type}" == "ota" ]]; then
+  RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
+elif [[ "${update_type}" == "path" ]]; then
+  RELEASE=$(cat "$update_path"/info.json | jq .version -r)
+fi
+
+echo
+echo "======================================="
+echo "=============== UPDATE ================"
+echo "======================================="
+echo "========== Stage: Download ============"
+echo "======================================="
+echo
+
+# Make sure an update is not in progres
+if [[ -f "$UMBREL_ROOT/statuses/update-in-progress" ]]; then
+    echo "An update is already in progress. Exiting now."
+    exit 2
+fi
+
+echo "Creating lock"
+touch "$UMBREL_ROOT"/statuses/update-in-progress
+
+# Cleanup just in case there's temp stuff lying around from previous update
+echo "Cleaning up any previous mess"
+[[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
+
+# Update status file
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 10, "description": "Downloading Umbrel $RELEASE", "updateTo": "$RELEASE"}
+EOF
+
+# Download new release
+if [[ "${update_type}" == "ota" ]]; then
+  echo "Downloading Umbrel ${RELEASE}"
+  mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  curl -L "https://github.com/getumbrel/umbrel/archive/$RELEASE.tar.gz" | tar -xz --strip-components=1
+fi
+
+# Copy over new release from path
+if [[ "${update_type}" == "path" ]]; then
+  echo "Copying Umbrel ${RELEASE} from ${update_path}"
+  mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cp --recursive \
+    --archive \
+    --no-target-directory \
+    "${update_path}" "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+  cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
+fi
+
+# Run update scripts
+echo "Running update install scripts of the new release"
+cd scripts/update
+UPDATE_INSTALL_SCRIPTS=$(ls *-run.sh)
+for script in $UPDATE_INSTALL_SCRIPTS; do
+    if [[ -x $script ]]; then
+        echo
+        echo "== Begin Update Script $script =="
+        ./"$script" "$RELEASE" "$UMBREL_ROOT"
+        echo "== End Update Script $script =="
+        echo
+    fi
+done
+
+# Delete cloned repo
+echo "Deleting cloned repository"
+[[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
+
+echo "Removing lock"
+rm -f "$UMBREL_ROOT"/statuses/update-in-progress
+
+exit 0
