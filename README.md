@@ -101,9 +101,13 @@ sudo ./scripts/stop
 
 ---
 
-### ⚡️ Don't be too reckless
+## ⚡️ Don't be too reckless
 
-> Umbrel is still in early development and things are expected to break every now and then. We **DO NOT** recommend running it on the mainnet with real money just yet, unless you want to be really *#reckless*.
+Umbrel is still in beta development and should not be considered secure. [Read our full security disclosure](https://github.com/getumbrel/umbrel/blob/master/SECURITY.md) to understand the trade-offs that exist today.
+
+It's recommended that you note down your 24 secret words (seed phrase) with a pen and paper, and secure it safely. If you forget your dashboard's password, or in case something goes wrong with your Umbrel, you will need these 24 words to recover your funds in the Bitcoin wallet of your Umbrel.
+
+You're also recommended to download a backup of your payment channels as they'll be required to recover your funds on the Lightning network in case something goes wrong. You should also always download the latest backup file before installing an update.
 
 ## ❤️ Contributing
 
