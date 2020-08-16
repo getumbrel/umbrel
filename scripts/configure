@@ -107,10 +107,8 @@ if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   # Set testnet ports
   BITCOIN_RPC_PORT=18332
   BITCOIN_P2P_PORT=18333
-  # Uncomment "test" block
-  sed -i "s/\#\[test\]/\[test\]/g;" "$BITCOIN_CONF_FILE"
-  # Enable testnet
-  sed -i "s/\#testnet=1/testnet=1/g" "$BITCOIN_CONF_FILE"
+  # Switch Bitcoin Core to testnet
+  sed -i '1s/^/testnet=1\n[test]\n\n/' "$BITCOIN_CONF_FILE"
   # Switch LND to testnet
   sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
   # Uncomment testnet neutrino block and peers
@@ -124,10 +122,8 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   # Set regtest ports
   BITCOIN_RPC_PORT=18443
   BITCOIN_P2P_PORT=18444
-  # Uncomment "regtest" block
-  sed -i "s/\#\[regtest\]/\[regtest\]/g;" "$BITCOIN_CONF_FILE"
-  # Enable regtest
-  sed -i "s/\#regtest=1/regtest=1/g" "$BITCOIN_CONF_FILE"
+  # Switch Bitcoin Core to regtest
+  sed -i '1s/^/regtest=1\n[regtest]\n\n/' "$BITCOIN_CONF_FILE"
   # Switch LND to regtest
   sed -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
   # Use bitcoind as the node
