@@ -4,11 +4,6 @@ x-logging: &default-logging
     options:
         tag: "{{.Name}}"
 
-x-utility: &default-utility
-    image: alpine:3.11
-    logging: *default-logging
-    network_mode: host
-
 services:
         tor:
                 container_name: tor
