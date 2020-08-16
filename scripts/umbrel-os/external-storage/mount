@@ -109,14 +109,27 @@ main () {
   check_root
   check_dependencies sed wipefs parted mount sync umount
 
-  block_devices=$(list_block_devices)
   no_of_block_devices=$(list_block_devices | wc -l)
 
-  if [[ $no_of_block_devices -lt 1 ]]; then
+  retry_for_block_devices=1
+
+  while [[ $no_of_block_devices -lt 1 ]]; do
+
     echo "No block devices found"
-    echo "Exiting mount script without doing anything"
-    exit 1
-  fi
+    echo "Waiting for 5 seconds before checking again..."
+
+    sleep 5
+
+    no_of_block_devices=$(list_block_devices | wc -l)
+    retry_for_block_devices=$(( $retry_for_block_devices + 1 ))
+
+    if [[ $retry_for_block_devices -gt 20 ]]; then
+      echo "No block devices found in 20 tries..."
+      echo "Exiting mount script without doing anything"
+      exit 1
+    fi
+
+  done
 
   if [[ $no_of_block_devices -gt 1 ]]; then
     echo "Multiple block devices found, only one drive is supported"
@@ -125,7 +138,7 @@ main () {
   fi
 
   # At this point we know there is only one block device attached
-  block_device=$block_devices
+  block_device=$(list_block_devices)
   partition_path="/dev/${block_device}1"
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
