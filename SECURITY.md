@@ -10,7 +10,7 @@ We can't consider Umbrel secure due to the following reasons:
 
 The lack of signature verification means GitHub could backdoor the OTA update process or Docker Hub could backdoor our Docker images. It's quite unlikely that they would do this but currently we just have to trust that they won't. If this were to occur, the current update system would not detect or prevent it.
 
- We are using Node.js and its rich ecosystem of npm packages to rapidly build out features. However the npm ecosystem tends to use of a large number of small focused modules. This can make audibility difficult as you end up with a huge dependency tree for even relative simple projects.
+ We are using Node.js and its rich ecosystem of npm packages to rapidly build out features. However the npm ecosystem tends to make use of a large number of small focused modules. This can make audibility difficult as you end up with a huge dependency tree for even relatively simple projects.
 
  The lack of authentication on the logs page means that, in the correct circumstances, if someone could convince you to visit a malicious website, the website may be able to read the logs of your Umbrel.
 
