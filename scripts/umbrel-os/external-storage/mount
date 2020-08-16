@@ -112,11 +112,25 @@ main () {
   block_devices=$(list_block_devices)
   no_of_block_devices=$(list_block_devices | wc -l)
 
-  if [[ $no_of_block_devices -lt 1 ]]; then
+  retry_for_block_devices=1
+
+  while [[ $no_of_block_devices -lt 1 ]]; do
+
     echo "No block devices found"
-    echo "Exiting mount script without doing anything"
-    exit 1
-  fi
+    echo "Waiting for 5 seconds to check for a device again..."
+
+    sleep 5
+
+    no_of_block_devices=$(list_block_devices | wc -l)
+    retry_for_block_devices=$(( $retry_for_block_devices + 1 ))
+
+    if [[ $retry_for_block_devices -gt 10 ]]; then
+      echo "No block devices found in 10 tries..."
+      echo "Exiting mount script without doing anything"
+      exit 1
+    fi
+
+  done
 
   if [[ $no_of_block_devices -gt 1 ]]; then
     echo "Multiple block devices found, only one drive is supported"
