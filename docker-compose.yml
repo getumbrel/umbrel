@@ -77,7 +77,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.0
+                image: getumbrel/manager:v0.2.1
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
