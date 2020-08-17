@@ -181,6 +181,14 @@ mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
 mv -f "$ENV_FILE" "./.env"
 
+##########################################################
+################# Configure permissions ##################
+##########################################################
+
+echo "Configuring permissions..."
+echo
+chown -R 1000:1000 "$UMBREL_ROOT"
+chmod -R 700 "${UMBREL_ROOT}/tor/data/*"
 
 ##########################################################
 ################ Configuration complete ##################
