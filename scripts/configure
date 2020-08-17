@@ -190,6 +190,10 @@ echo "Pulling Umbrel Docker images"
 echo
 docker-compose pull --quiet
 
+echo "Configuring permissions..."
+echo
+chown -R 1000:1000 "$UMBREL_ROOT"
+
 # Create configured status
 touch "$UMBREL_ROOT"/statuses/configured
 
