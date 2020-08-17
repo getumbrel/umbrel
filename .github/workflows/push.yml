@@ -1,6 +1,9 @@
-name: Build OS image on push/PR
+name: Build OS image of current master
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -8,11 +11,6 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: jwalton/gh-find-current-pr@b6f8d7342efe4913388d5d1ac7f4b956caa5db52 # v1.0.2
-      id: findPr
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Run apt update
       run: sudo apt update
 
@@ -45,16 +43,6 @@ jobs:
         UMBREL_BRANCH="master"
         echo "::set-env name=UMBREL_OS_VERSION::$UMBREL_OS_VERSION"
         echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
-        echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
-        echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
-    - name: Setting env vars for PR
-      if: success() && steps.findPr.outputs.pr
-      env:
-        PR: ${{ steps.findPr.outputs.pr }}
-      run: |
-        echo "Building PR #${PR}"
-        UMBREL_REPO="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
-        UMBREL_BRANCH="$(curl https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.ref | sed 's/"//g')"
         echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
         echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
               
