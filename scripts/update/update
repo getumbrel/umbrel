@@ -14,7 +14,7 @@ check_dependencies () {
   done
 }
 
-check_dependencies jq curl git rsync
+check_dependencies jq curl rsync
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 
