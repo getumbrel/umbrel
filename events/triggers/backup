@@ -1,6 +1,38 @@
 #!/usr/bin/env bash
-set -euo pipefail
+
+BACKUP_ID="1234567890"
+BACKUP_KEY="abcdefghi"
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+# Make sure an update is not in progres
+if [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]]; then
+    echo "A backup is already in progress. Exiting now."
+    exit 1
+fi
+
+echo "Creating lock"
+touch "${UMBREL_ROOT}/statuses/backup-in-progress"
+
+[[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
+BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+
+[[ -d "${UMBREL_ROOT}/.backup" ]] && rm -rf "${UMBREL_ROOT}/.backup"
+
+mkdir -p "${UMBREL_ROOT}/.backup"
+
+cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${UMBREL_ROOT}/.backup/channel.backup"
+cp --archive "${UMBREL_ROOT}/db/user.json" "${UMBREL_ROOT}/.backup/user.json"
+
+cd "${UMBREL_ROOT}/.backup"
+
+tar -czvf "${UMBREL_ROOT}/backup.tar.gz" .
 
 echo "============================="
-echo "Backup successful"
+echo "===== Backup successful ====="
 echo "============================="
+
+echo "Removing lock"
+rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+
+exit 0

@@ -32,14 +32,22 @@ check_dependencies fswatch readlink dirname
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
 
-trigger_backup () {
-  touch "${UMBREL_ROOT}/events/signals/backup"
-}
+monitor_file () {
+  local file_path="${1}"
+  echo "Monitoring $file_path"
+  echo
 
-monitor_path () {
-  file_path="${1}"
-  echo "Monitoring $file_path..."
-  fswatch -0 --event=PlatformSpecific $file_path | xargs -0 -n 1 -I {} trigger_backup
+  if [[ ! -e "${file_path}" ]]; then
+    echo "$file_path doesn't exist, waiting for it to be created..."
+    echo
+    until [[ -e "${file_path}" ]]; do
+      echo "Nope, $file_path still doesn't exist..."
+      sleep 1
+    done
+    touch "${UMBREL_ROOT}/events/signals/backup"
+  fi
+
+  fswatch -0 --event Updated $file_path | xargs -0 -n 1 -I {} touch "${UMBREL_ROOT}/events/signals/backup"
 }
 
 if [[ ! -d "${UMBREL_ROOT}" ]]; then
@@ -47,13 +55,11 @@ if [[ ! -d "${UMBREL_ROOT}" ]]; then
   exit 1
 fi
 
-BITCOIN_NETWORK="mainnet"
 [[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
+BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 
 # Monitor LND channel.backup
-monitor_path "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup"
+monitor_file "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" &
 
 # Monitor db/user.json
-monitor_path "${UMBREL_ROOT}/db/user.json"
-
-done
+monitor_file "${UMBREL_ROOT}/db/user.json" &
