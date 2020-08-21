@@ -24,6 +24,16 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
     echo
+
+    # In Umbrel OS v0.1.2, we need to bind Avahi to only
+    # eth0,wlan0 interfaces to prevent hostname cycling
+    # https://github.com/getumbrel/umbrel-os/issues/76
+    # This patch can be safely removed from Umbrel v0.3.x+
+    if [[ $UMBREL_OS == "0.1.2" ]] && [[ -f "/etc/avahi/avahi-daemon.conf" ]]; then
+        echo "Binding Avahi to eth0 and wlan0"
+        sed -i "s/#allow-interfaces=eth0/allow-interfaces=eth0,wlan0/g;" "/etc/avahi/avahi-daemon.conf"
+        systemctl restart avahi-daemon.service
+    fi
     
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
