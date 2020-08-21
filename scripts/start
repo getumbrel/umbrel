@@ -20,10 +20,10 @@ check_dependencies () {
 }
 
 # Check system's dependencies
-check_dependencies readlink dirname docker docker-compose git
+check_dependencies readlink dirname docker docker-compose
 
 # Check karen's dependencies
-check_dependencies fswatch 
+check_dependencies fswatch
 
 # Check OTA update scripts' dependencies
 check_dependencies rsync jq curl
