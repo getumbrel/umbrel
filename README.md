@@ -25,9 +25,9 @@ If you're looking to run Umbrel on:
 
 ## 🛠 Installation
 
-Although [Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the recommended way to run Umbrel, it can be installed on any hardware running a Linux-based OS such as Ubuntu, Debian, etc.
+[Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the most recommended way to run Umbrel. If you don't have a Raspberry Pi, you can manually install Umbrel on any hardware running a Linux-based operating system such as Ubuntu, Debian, etc by following the instructions below.
 
-### Requirements
+### Installation Requirements
 
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
