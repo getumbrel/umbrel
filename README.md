@@ -23,47 +23,6 @@ If you're looking to run Umbrel on:
 - A Raspberry Pi 3 or 4 (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
 - Anything else (experimental) - [Install Umbrel](#-installation)
 
-## 🎹 Services orchestrated
-
-- [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
-- [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
-- [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
-- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
-- [`LND`](https://github.com/getumbrel/docker-lnd)
-- [`Tor`](https://github.com/getumbrel/docker-tor)
-- [`Nginx`](https://github.com/nginx/nginx)
-- [`LND Neutrino Switch`](https://github.com/lncm/docker-lnd-neutrino-switch)
-
-
-**Architecture**
-
-```
-                          + -------------------- +
-                          |   umbrel-dashboard   |
-                          + -------------------- +
-                                      |
-                                      |
-                              + ------------- +
-                              |     nginx     |
-                              + ------------- +
-                                      |
-                                      |
-              + - - - - - - - - - - - + - - - - - - - - - - - +
-              |                                               |
-              |                                               |
-   + ------------------ +                         + --------------------- +
-   |   umbrel-manager   | < - - - jwt auth - - -  |   umbrel-middleware   |
-   + ------------------ +                         + --------------------- +
-                                                              |
-                                                              |
-                                            + - - - - - - - - + - - - - - - - - +
-                                            |                                   |
-                                            |                                   |
-                                    + ------------- +                   + ------------- +
-                                    |    bitcoind   | < - - - - - - - - |      lnd      |
-                                    + ------------- +                   + ------------- +
-```
-
 ## 🛠 Installation
 
 ### Requirements
@@ -101,6 +60,47 @@ To stop Umbrel, run:
 
 ```bash
 sudo ./scripts/stop
+```
+
+## 🎹 Services orchestrated
+
+- [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
+- [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
+- [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
+- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
+- [`LND`](https://github.com/getumbrel/docker-lnd)
+- [`Tor`](https://github.com/getumbrel/docker-tor)
+- [`Nginx`](https://github.com/nginx/nginx)
+- [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
+
+
+**Architecture**
+
+```
+                          + -------------------- +
+                          |   umbrel-dashboard   |
+                          + -------------------- +
+                                      |
+                                      |
+                              + ------------- +
+                              |     nginx     |
+                              + ------------- +
+                                      |
+                                      |
+              + - - - - - - - - - - - + - - - - - - - - - - - +
+              |                                               |
+              |                                               |
+   + ------------------ +                         + --------------------- +
+   |   umbrel-manager   | < - - - jwt auth - - -  |   umbrel-middleware   |
+   + ------------------ +                         + --------------------- +
+                                                              |
+                                                              |
+                                            + - - - - - - - - + - - - - - - - - +
+                                            |                                   |
+                                            |                                   |
+                                    + ------------- +                   + ------------- +
+                                    |    bitcoind   | < - - - - - - - - |      lnd      |
+                                    + ------------- +                   + ------------- +
 ```
 
 ---
