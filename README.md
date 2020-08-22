@@ -25,7 +25,9 @@ If you're looking to run Umbrel on:
 
 ## 🛠 Installation
 
-### Requirements
+[Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the recommended way to run Umbrel. If you don't have a Raspberry Pi, you can manually install Umbrel on any hardware running a Linux-based operating system such as Ubuntu, Debian, etc by following the instructions below.
+
+### Installation Requirements
 
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
@@ -33,17 +35,17 @@ If you're looking to run Umbrel on:
 - [fswatch](https://emcrisostomo.github.io/fswatch/) (`apt-get install fswatch`)
 - [jq](https://stedolan.github.io/jq/) (`apt-get install jq`)
 
-Make sure your User ID is `1000` (can be verified by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
+Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
-### Step 1. Download
+### Step 1. Download Umbrel
 
-> Run this in an empty directory where you want to install Umbrel
+> Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
 curl -L https://github.com/getumbrel/umbrel/archive/v0.2.3.tar.gz | tar -xz --strip-components=1
 ```
 
-### Step 2. Run
+### Step 2. Run Umbrel
 
 ```bash
 # To use Umbrel on mainnet, run:
