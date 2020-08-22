@@ -33,7 +33,7 @@ If you're looking to run Umbrel on:
 - [fswatch](https://emcrisostomo.github.io/fswatch/) (`apt-get install fswatch`)
 - [jq](https://stedolan.github.io/jq/) (`apt-get install jq`)
 
-Ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
+Make sure your User ID is `1000` (can be verified by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
 ### Step 1. Download
 
