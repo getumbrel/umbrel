@@ -25,7 +25,7 @@ If you're looking to run Umbrel on:
 
 ## 🛠 Installation
 
-Although [Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the recommended way to run Umbrel, Umbrel can still be installed on any hardware running a Linux-based OS, such as Ubuntu, Debian, etc.
+Although [Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the recommended way to run Umbrel, Umbrel can be installed on any hardware running a Linux-based OS such as Ubuntu, Debian, etc.
 
 ### Requirements
 
@@ -37,7 +37,7 @@ Although [Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is
 
 Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
-### Step 1. Download
+### Step 1. Download Umbrel
 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
@@ -45,7 +45,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 curl -L https://github.com/getumbrel/umbrel/archive/v0.2.3.tar.gz | tar -xz --strip-components=1
 ```
 
-### Step 2. Run
+### Step 2. Run Umbrel
 
 ```bash
 # To use Umbrel on mainnet, run:
