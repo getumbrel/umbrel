@@ -12,4 +12,8 @@ echo "========= Stage: Post-update =========="
 echo "======================================="
 echo
 
-# Nothing here for now
+# Remove dphys-swapfile since we now use our own swapfile logic
+if command -v dphys-swapfile >/dev/null 2>&1; then
+  echo "Removing unused dependency \"dphys-swapfile\""
+  apt-get remove -y dphys-swapfile
+fi
