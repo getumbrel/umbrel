@@ -189,7 +189,7 @@ main () {
 
   echo "Setting up swapfile"
   rm "${SWAP_FILE}"
-  fallocate -l 2G "${SWAP_FILE}"
+  fallocate -l 4G "${SWAP_FILE}"
   chmod 600 "${SWAP_FILE}"
   mkswap "${SWAP_FILE}"
   swapon "${SWAP_FILE}"
