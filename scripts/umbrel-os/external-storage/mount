@@ -16,6 +16,8 @@ set -euo pipefail
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+SWAP_DIR="/swap"
+SWAP_FILE="${SWAP_DIR}/swapfile"
 
 check_root () {
   if [[ $UID != 0 ]]; then
@@ -169,11 +171,9 @@ main () {
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
 
-  echo "Bind mounting external storage to /swap"
-  systemctl stop dphys-swapfile
-  mkdir -p "${MOUNT_POINT}/swap" "/swap"
-  mount --bind "${MOUNT_POINT}/swap" "/swap"
-  systemctl start dphys-swapfile
+  echo "Bind mounting external storage to ${SWAP_DIR}"
+  mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+  mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
 
   echo "Bind mounting SD card root at /sd-card..."
   [[ ! -d "/sd-root" ]] && mkdir -p "/sd-root"
@@ -184,8 +184,15 @@ main () {
   sleep 1
   df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
 
-  echo "Checking /swap is now on external storage..."
-  df -h "/swap" | grep --quiet '/dev/sd'
+  echo "Checking ${SWAP_DIR} is now on external storage..."
+  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+
+  echo "Setting up swapfile"
+  rm "${SWAP_FILE}"
+  fallocate -l 2G "${SWAP_FILE}"
+  chmod 600 "${SWAP_FILE}"
+  mkswap "${SWAP_FILE}"
+  swapon "${SWAP_FILE}"
 
   echo "Checking SD Card root is bind mounted at /sd-root..."
   df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
