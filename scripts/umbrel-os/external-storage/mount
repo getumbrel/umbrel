@@ -188,7 +188,7 @@ main () {
   df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
 
   echo "Setting up swapfile"
-  rm "${SWAP_FILE}"
+  rm "${SWAP_FILE}" || true
   fallocate -l 4G "${SWAP_FILE}"
   chmod 600 "${SWAP_FILE}"
   mkswap "${SWAP_FILE}"
