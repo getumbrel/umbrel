@@ -12,6 +12,8 @@ echo "========= Stage: Post-update =========="
 echo "======================================="
 echo
 
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
