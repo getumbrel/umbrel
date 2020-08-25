@@ -170,8 +170,10 @@ main () {
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
 
   echo "Bind mounting external storage to /swap"
+  systemctl stop dphys-swapfile
   mkdir -p "${MOUNT_POINT}/swap" "/swap"
   mount --bind "${MOUNT_POINT}/swap" "/swap"
+  systemctl start dphys-swapfile
 
   echo "Bind mounting SD card root at /sd-card..."
   [[ ! -d "/sd-root" ]] && mkdir -p "/sd-root"
