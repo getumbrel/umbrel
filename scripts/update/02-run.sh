@@ -12,15 +12,4 @@ echo "========= Stage: Post-update =========="
 echo "======================================="
 echo
 
-[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
-
-# Make Umbrel OS specific post-update changes
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-
-  # Remove dphys-swapfile since we now use our own swapfile logic
-  if command -v dphys-swapfile >/dev/null 2>&1; then
-    echo "Removing unused dependency \"dphys-swapfile\""
-    apt-get remove -y dphys-swapfile
-  fi
-
-fi
+# Nothing here for now

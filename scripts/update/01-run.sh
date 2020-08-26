@@ -92,11 +92,22 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/start
 
-# Delete unused Docker images on Umbrel OS
+# Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    echo "Deleting previous images"
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-    {"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
+
+  # Delete unused Docker images on Umbrel OS
+  echo "Deleting previous images"
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
 EOF
-    docker image prune --all --force
+  docker image prune --all --force
+
+  # Remove dphys-swapfile since we now use our own swapfile logic
+  if command -v dphys-swapfile >/dev/null 2>&1; then
+    echo "Removing unused dependency \"dphys-swapfile\""
+    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 95, "description": "Removing unused dependencies", "updateTo": "$RELEASE"}
+EOF
+    apt-get remove -y dphys-swapfile
+  fi
 fi
