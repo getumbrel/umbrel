@@ -110,4 +110,28 @@ EOF
 EOF
     apt-get remove -y dphys-swapfile
   fi
+
+  # Setup swap if it doesn't already exist
+  MOUNT_POINT="/mnt/data"
+  SWAP_DIR="/swap"
+  SWAP_FILE="${SWAP_DIR}/swapfile"
+  if ! df -h "${SWAP_DIR}" 2> /dev/null | grep --quiet '/dev/sd'; then
+    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 97, "description": "Setting up swap", "updateTo": "$RELEASE"}
+EOF
+
+    echo "Bind mounting external storage to ${SWAP_DIR}"
+    mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+    mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+
+    echo "Checking ${SWAP_DIR} is now on external storage..."
+    df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+
+    echo "Setting up swapfile"
+    rm "${SWAP_FILE}" || true
+    fallocate -l 4G "${SWAP_FILE}"
+    chmod 600 "${SWAP_FILE}"
+    mkswap "${SWAP_FILE}"
+    swapon "${SWAP_FILE}"
+  fi
 fi
