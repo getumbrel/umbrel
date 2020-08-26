@@ -102,7 +102,8 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
 EOF
   docker image prune --all --force
 
-  # Remove dphys-swapfile since we now use our own swapfile logic
+  # Uninstall dphys-swapfile since we now use our own swapfile logic
+  # Remove this in the next breaking update
   if command -v dphys-swapfile >/dev/null 2>&1; then
     echo "Removing unused dependency \"dphys-swapfile\""
     cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
@@ -112,6 +113,7 @@ EOF
   fi
 
   # Setup swap if it doesn't already exist
+  # Remove this in the next breaking update
   MOUNT_POINT="/mnt/data"
   SWAP_DIR="/swap"
   SWAP_FILE="${SWAP_DIR}/swapfile"
