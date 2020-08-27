@@ -63,8 +63,7 @@ is_partition_ext4 () {
   if
     blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$' ||
     df -T "${partition_path}" | tail -n 1 | awk '{print $2}' | grep --quiet '^ext4$' ||
-    lsblk -f "${partition_path}" | tail -n 1 | awk '{print $2}' | grep --quiet '^ext4$' ||
-    mount | grep "^${partition_path} " | tail -n 1 | awk '{print $5}' | grep --quiet '^ext4$'
+    lsblk -f "${partition_path}" | tail -n 1 | awk '{print $2}' | grep --quiet '^ext4$'
   then
     true
   else
