@@ -102,11 +102,48 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/start
 
-# Delete unused Docker images on Umbrel OS
+# Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    echo "Deleting previous images"
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-    {"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
+
+  # Delete unused Docker images on Umbrel OS
+  echo "Deleting previous images"
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
 EOF
-    docker image prune --all --force
+  docker image prune --all --force
+
+  # Uninstall dphys-swapfile since we now use our own swapfile logic
+  # Remove this in the next breaking update
+  if command -v dphys-swapfile >/dev/null 2>&1; then
+    echo "Removing unused dependency \"dphys-swapfile\""
+    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 95, "description": "Removing unused dependencies", "updateTo": "$RELEASE"}
+EOF
+    apt-get remove -y dphys-swapfile
+  fi
+
+  # Setup swap if it doesn't already exist
+  # Remove this in the next breaking update
+  MOUNT_POINT="/mnt/data"
+  SWAP_DIR="/swap"
+  SWAP_FILE="${SWAP_DIR}/swapfile"
+  if ! df -h "${SWAP_DIR}" 2> /dev/null | grep --quiet '/dev/sd'; then
+    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 97, "description": "Setting up swap", "updateTo": "$RELEASE"}
+EOF
+
+    echo "Bind mounting external storage to ${SWAP_DIR}"
+    mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+    mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+
+    echo "Checking ${SWAP_DIR} is now on external storage..."
+    df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+
+    echo "Setting up swapfile"
+    rm "${SWAP_FILE}" || true
+    fallocate -l 4G "${SWAP_FILE}"
+    chmod 600 "${SWAP_FILE}"
+    mkswap "${SWAP_FILE}"
+    swapon "${SWAP_FILE}"
+  fi
 fi
