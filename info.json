@@ -1,6 +1,6 @@
 {
-    "version": "0.2.3",
-    "name": "Umbrel v0.2.3",
+    "version": "0.2.4",
+    "name": "Umbrel v0.2.4",
     "requires": ">=0.2.1",
-    "notes": "With this new version, you can now view the peer address of Bitcoin Core running on your Umbrel, and use to connect to wallets such as Wasabi. Some minor bug fixes have also been made."
+    "notes": "What's new? Performance improvements! Low RAM devices such as Raspberry Pi 3 will enjoy the maximum performance boost."
 }
