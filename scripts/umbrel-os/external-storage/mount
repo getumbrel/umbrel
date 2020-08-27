@@ -58,7 +58,18 @@ get_block_device_model () {
 
 is_partition_ext4 () {
   partition_path="${1}"
-  blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$'
+  # We check the partition type with multiple different methods since some can
+  # be unreliable
+  if
+    blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$' ||
+    df -T "${partition_path}" | tail -n 1 | awk '{print $2}' | grep --quiet '^ext4$' ||
+    lsblk -f "${partition_path}" | tail -n 1 | awk '{print $2}' | grep --quiet '^ext4$' ||
+    mount | grep "^${partition_path} " | tail -n 1 | awk '{print $5}' | grep --quiet '^ext4$'
+  then
+    true
+  else
+    false
+  fi
 }
 
 # Wipes a block device and reformats it with a single EXT4 partition
