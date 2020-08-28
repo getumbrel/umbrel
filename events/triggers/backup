@@ -28,11 +28,27 @@ cd "${UMBREL_ROOT}/.backup"
 
 tar -czvf "${UMBREL_ROOT}/backup.tar.gz" .
 
+echo "Removing lock"
+rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+
+[[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
+BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+
+BACKUP_API_URL="https://pvf3ozmmfl.execute-api.us-east-1.amazonaws.com/prod/v1/upload"
+
+if [[ $BITCOIN_NETWORK == "testnet" ]]; then
+    BACKUP_API_URL="https://as0ot0lg7h.execute-api.us-east-1.amazonaws.com/dev/v1/upload"  
+fi
+if [[ $BITCOIN_NETWORK == "regtest" ]]; then
+    BACKUP_API_URL="https://5fxwqbum7g.execute-api.us-east-1.amazonaws.com/dev/v1/upload"
+fi
+
+echo "Uploading backup..."
+
+curl -F "file=${UMBREL_ROOT}/backup.tar.gz" "${BACKUP_API_URL}/${BACKUP_ID}"
+
 echo "============================="
 echo "===== Backup successful ====="
 echo "============================="
-
-echo "Removing lock"
-rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
 
 exit 0
