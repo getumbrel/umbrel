@@ -23,6 +23,46 @@ If you're looking to run Umbrel on:
 - A Raspberry Pi 3 or 4 (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
 - Anything else (experimental) - [Install Umbrel](#-installation)
 
+## 🛠 Installation
+
+[Umbrel OS for Raspberry Pi](https://github.com/getumbrel/umbrel-os) is the easiest and the recommended way to run Umbrel. If you don't have a Raspberry Pi, you can manually install Umbrel on any hardware running a Linux-based operating system such as Ubuntu, Debian, etc by following the instructions below.
+
+### Installation Requirements
+
+- [Docker](https://docs.docker.com/engine/install)
+- [Python 3.0+](https://www.python.org/downloads)
+- [Docker Compose](https://docs.docker.com/compose/install)
+- [fswatch](https://emcrisostomo.github.io/fswatch/), [jq](https://stedolan.github.io/jq/), [rsync](https://linuxize.com/post/how-to-use-rsync-for-local-and-remote-data-transfer-and-synchronization/#installing-rsync), [curl](https://curl.haxx.se/docs/install.html) (`sudo apt-get install fswatch jq rsync curl`)
+
+Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
+
+### Step 1. Download Umbrel
+
+> Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
+
+```bash
+curl -L https://github.com/getumbrel/umbrel/archive/v0.2.4.tar.gz | tar -xz --strip-components=1
+```
+
+### Step 2. Run Umbrel
+
+```bash
+# To use Umbrel on mainnet, run:
+sudo ./scripts/start
+
+# For testnet, run:
+sudo NETWORK=testnet ./scripts/start
+
+# For regtest, run:
+sudo NETWORK=regtest ./scripts/start
+```
+
+To stop Umbrel, run:
+
+```bash
+sudo ./scripts/stop
+```
+
 ## 🎹 Services orchestrated
 
 - [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
@@ -32,7 +72,7 @@ If you're looking to run Umbrel on:
 - [`LND`](https://github.com/getumbrel/docker-lnd)
 - [`Tor`](https://github.com/getumbrel/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
-- [`LND Neutrino Switch`](https://github.com/lncm/docker-lnd-neutrino-switch)
+- [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
 
 
 **Architecture**
@@ -62,43 +102,6 @@ If you're looking to run Umbrel on:
                                     + ------------- +                   + ------------- +
                                     |    bitcoind   | < - - - - - - - - |      lnd      |
                                     + ------------- +                   + ------------- +
-```
-
-## 🛠 Installation
-
-### Requirements
-
-- [Docker](https://docs.docker.com/engine/install)
-- [Python 3.0+](https://www.python.org/downloads)
-- [Docker Compose](https://docs.docker.com/compose/install)
-
-Ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
-
-### Step 1. Download
-
-> Run this in an empty directory where you want to install Umbrel
-
-```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.2.2.tar.gz | tar -xz --strip-components=1
-```
-
-### Step 2. Run
-
-```bash
-# To use Umbrel on mainnet, run:
-sudo ./scripts/start
-
-# For testnet, run:
-sudo NETWORK=testnet ./scripts/start
-
-# For regtest, run:
-sudo NETWORK=regtest ./scripts/start
-```
-
-To stop Umbrel, run:
-
-```bash
-sudo ./scripts/stop
 ```
 
 ---

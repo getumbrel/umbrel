@@ -24,9 +24,28 @@ if [[ "${1}" == "--ota" ]]; then
 elif [[ "${1}" == "--path" ]]; then
   update_type="path"
   update_path="${2}"
+elif [[ "${1}" == "--repo" ]]; then
+  update_type="repo"
+  descriptor="${2}"
+  if [[ "${descriptor}" != *"#"* ]]; then
+    descriptor="${descriptor}#master"
+  fi
+  repo="${descriptor%%#*}"
+  branch="${descriptor#*#}"
 else
-  echo "Update requires \"--ota\" or \"--path <path>\" option."
+  echo "Update requires \"--ota\", \"--path <path>\", or \"--repo user/repo[#branch]\" option."
   exit 1
+fi
+
+if [[ "${update_type}" == "repo" ]]; then
+  repo_path="/tmp/umbrel-update/"
+  rm -rf "${repo_path}" 2> /dev/null || true
+  mkdir -p "${repo_path}"
+  git clone --single-branch --branch "${branch}" "https://github.com/${repo}.git" "${repo_path}"
+
+  # Now hand over to the path updater
+  update_type="path"
+  update_path="${repo_path}"
 fi
 
 if [[ "${update_type}" == "path" ]] && [[ ! -f "${update_path}/.umbrel" ]]; then

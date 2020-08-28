@@ -1,6 +1,6 @@
 {
-    "version": "0.2.2",
-    "name": "Umbrel v0.2.2",
+    "version": "0.2.4",
+    "name": "Umbrel v0.2.4",
     "requires": ">=0.2.1",
-    "notes": ""
+    "notes": "What's new? Performance improvements! Low RAM devices such as Raspberry Pi 3 will enjoy the maximum performance boost."
 }
