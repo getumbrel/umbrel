@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 BACKUP_ID="1234567890"
 BACKUP_KEY="abcdefghi"
-
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz"
 
 # Make sure an update is not in progres
 if [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]]; then
@@ -11,7 +11,7 @@ if [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]]; then
     exit 1
 fi
 
-echo "Creating lock"
+echo "Creating lock..."
 touch "${UMBREL_ROOT}/statuses/backup-in-progress"
 
 [[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
@@ -26,13 +26,7 @@ cp --archive "${UMBREL_ROOT}/db/user.json" "${UMBREL_ROOT}/.backup/user.json"
 
 cd "${UMBREL_ROOT}/.backup"
 
-tar -czvf "${UMBREL_ROOT}/backup.tar.gz" .
-
-echo "Removing lock"
-rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
-
-[[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
-BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+tar -czvf "${BACKUP_FILE}" .
 
 BACKUP_API_URL="https://pvf3ozmmfl.execute-api.us-east-1.amazonaws.com/prod/v1/upload"
 
@@ -44,8 +38,13 @@ if [[ $BITCOIN_NETWORK == "regtest" ]]; then
 fi
 
 echo "Uploading backup..."
+curl -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${BACKUP_ID}"
 
-curl -F "file=${UMBREL_ROOT}/backup.tar.gz" "${BACKUP_API_URL}/${BACKUP_ID}"
+rm -rf "${UMBREL_ROOT}/.backup"
+rm -f "${BACKUP_FILE}"
+
+echo "Removing lock..."
+rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
 
 echo "============================="
 echo "===== Backup successful ====="
