@@ -42,6 +42,13 @@ mkdir -p "${BACKUP_ROOT}"
 cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_ROOT}/channel.backup"
 cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_ROOT}/user.json"
 
+echo "Adding random padding..."
+
+padding="$(shuf -i 0-1024 -n 1)"
+dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_ROOT}/.padding"
+
+echo "Creating encrypted tarball..."
+
 tar \
   --create \
   --gzip \
