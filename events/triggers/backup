@@ -11,7 +11,10 @@ derive_entropy () {
   # This should be a random seed derived from the user's Umbrel mnemonic
   umbrel_seed="0000000000000000000000000000000000000000000000000000000000000000"
 
-  # TODO: Sanity checks to make sure $identifier and $umbrel_id are not empty
+  if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
+    echo "Missing derivation parameter, this is unsafe, exiting."
+    exit 1
+  fi
 
   echo -n "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}"
 }
