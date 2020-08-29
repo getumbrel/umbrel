@@ -31,7 +31,7 @@ tar -czvf "${BACKUP_FILE}" .
 BACKUP_API_URL="https://pvf3ozmmfl.execute-api.us-east-1.amazonaws.com/prod/v1/upload"
 
 if [[ $BITCOIN_NETWORK == "testnet" ]]; then
-    BACKUP_API_URL="https://as0ot0lg7h.execute-api.us-east-1.amazonaws.com/dev/v1/upload"  
+    BACKUP_API_URL="https://as0ot0lg7h.execute-api.us-east-1.amazonaws.com/dev/v1/upload"
 fi
 if [[ $BITCOIN_NETWORK == "regtest" ]]; then
     BACKUP_API_URL="https://5fxwqbum7g.execute-api.us-east-1.amazonaws.com/dev/v1/upload"
