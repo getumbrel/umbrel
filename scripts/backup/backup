@@ -10,9 +10,7 @@ BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.pgp"
 # Deterministically derives 128 bits of cryptographically secure entropy
 derive_entropy () {
   identifier="${1}"
-
-  # This should be a random seed derived from the user's Umbrel mnemonic
-  umbrel_seed="0000000000000000000000000000000000000000000000000000000000000000"
+  umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed")
 
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     echo "Missing derivation parameter, this is unsafe, exiting."
