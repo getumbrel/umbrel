@@ -2,7 +2,7 @@
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 BACKUP_ROOT="${UMBREL_ROOT}/.backup"
-BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.gpg"
+BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.pgp"
 
 # Deterministically derives 128 bits of cryptographically secure entropy
 derive_entropy () {
