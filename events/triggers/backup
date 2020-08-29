@@ -40,6 +40,16 @@ tar \
   --passphrase "${BACKUP_KEY}" \
   --output "${BACKUP_FILE}"
 
+# To decrypt:
+# cat "${BACKUP_FILE}" | gpg \
+#   --batch \
+#   --decrypt \
+#   --passphrase "${BACKUP_KEY}" \
+#   | tar \
+#   --extract \
+#   --verbose \
+#   --gzip
+
 BACKUP_API_URL="https://pvf3ozmmfl.execute-api.us-east-1.amazonaws.com/prod/v1/upload"
 
 if [[ $BITCOIN_NETWORK == "testnet" ]]; then
