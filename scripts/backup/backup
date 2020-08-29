@@ -3,7 +3,8 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
-BACKUP_ROOT="${UMBREL_ROOT}/.backup"
+BACKUP_FOLDER=".backup"
+BACKUP_ROOT="${UMBREL_ROOT}/${BACKUP_FOLDER}"
 BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.pgp"
 
 # Deterministically derives 128 bits of cryptographically secure entropy
@@ -59,7 +60,8 @@ tar \
   --create \
   --gzip \
   --verbose \
-  "${BACKUP_ROOT}" \
+  --directory "${UMBREL_ROOT}"
+  "${BACKUP_FOLDER}" \
   | gpg \
   --batch \
   --symmetric \
