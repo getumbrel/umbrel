@@ -29,7 +29,7 @@ main () {
   while true; do
     minutes_in_seconds="60"
     hours_in_seconds="$((${minutes_in_seconds} * 10))"
-    max_interval="$((2 * ${hours_in_seconds}))"
+    max_interval="$((8 * ${hours_in_seconds}))"
     delay="$(shuf -i 0-${max_interval} -n 1)"
     echo "Sleeping for ${delay} seconds..."
     sleep $delay
