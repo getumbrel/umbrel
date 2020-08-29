@@ -2,9 +2,19 @@
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 BACKUP_ROOT="${UMBREL_ROOT}/.backup"
-BACKUP_ID="1234567890"
-BACKUP_KEY="abcdefghi"
 BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.gpg"
+
+# Deterministically derives 128 bits of cryptographically secure entropy
+derive_entropy () {
+  identifier="${1}"
+
+  # This should be a random seed derived from the user's Umbrel mnemonic
+  umbrel_seed="0000000000000000000000000000000000000000000000000000000000000000"
+
+  # TODO: Sanity checks to make sure $identifier and $umbrel_id are not empty
+
+  echo -n "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}"
+}
 
 # Make sure an update is not in progres
 if [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]]; then
@@ -19,6 +29,11 @@ touch "${UMBREL_ROOT}/statuses/backup-in-progress"
 BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 
 [[ -d "${BACKUP_ROOT}" ]] && rm -rf "${BACKUP_ROOT}"
+
+echo "Deriving keys..."
+
+backup_id=$(derive_entropy "umbrel_backup_id")
+encryption_key=$(derive_entropy "umbrel_backup_encryption_key")
 
 echo "Creating backup..."
 
@@ -36,14 +51,14 @@ tar \
   --batch \
   --symmetric \
   --cipher-algo AES256 \
-  --passphrase "${BACKUP_KEY}" \
+  --passphrase "${encryption_key}" \
   --output "${BACKUP_FILE}"
 
 # To decrypt:
 # cat "${BACKUP_FILE}" | gpg \
 #   --batch \
 #   --decrypt \
-#   --passphrase "${BACKUP_KEY}" \
+#   --passphrase "${encryption_key}" \
 #   | tar \
 #   --extract \
 #   --verbose \
@@ -59,7 +74,7 @@ if [[ $BITCOIN_NETWORK == "regtest" ]]; then
 fi
 
 echo "Uploading backup..."
-curl -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${BACKUP_ID}"
+curl -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
 
 rm -rf "${BACKUP_ROOT}"
 rm -f "${BACKUP_FILE}"
