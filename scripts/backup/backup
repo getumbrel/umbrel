@@ -3,7 +3,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
-BACKUP_FOLDER=".backup"
+BACKUP_FOLDER="backup"
 BACKUP_ROOT="${UMBREL_ROOT}/${BACKUP_FOLDER}"
 BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.pgp"
 
