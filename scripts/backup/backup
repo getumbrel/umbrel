@@ -88,6 +88,7 @@ fi
 
 echo "Uploading backup..."
 curl -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
+echo
 
 rm -rf "${BACKUP_ROOT}"
 rm -f "${BACKUP_FILE}"
