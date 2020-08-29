@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+BACKUP_ROOT="${UMBREL_ROOT}/.backup"
 BACKUP_ID="1234567890"
 BACKUP_KEY="abcdefghi"
 BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.gpg"
@@ -17,16 +18,16 @@ touch "${UMBREL_ROOT}/statuses/backup-in-progress"
 [[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
 BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 
-[[ -d "${UMBREL_ROOT}/.backup" ]] && rm -rf "${UMBREL_ROOT}/.backup"
+[[ -d "${BACKUP_ROOT}" ]] && rm -rf "${BACKUP_ROOT}"
 
 echo "Creating backup..."
 
-mkdir -p "${UMBREL_ROOT}/.backup"
+mkdir -p "${BACKUP_ROOT}"
 
-cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${UMBREL_ROOT}/.backup/channel.backup"
-cp --archive "${UMBREL_ROOT}/db/user.json" "${UMBREL_ROOT}/.backup/user.json"
+cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_ROOT}/channel.backup"
+cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_ROOT}/user.json"
 
-cd "${UMBREL_ROOT}/.backup"
+cd "${BACKUP_ROOT}"
 
 tar \
   --create \
@@ -62,7 +63,7 @@ fi
 echo "Uploading backup..."
 curl -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${BACKUP_ID}"
 
-rm -rf "${UMBREL_ROOT}/.backup"
+rm -rf "${BACKUP_ROOT}"
 rm -f "${BACKUP_FILE}"
 
 echo "Removing lock..."
