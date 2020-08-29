@@ -12,7 +12,18 @@ check_if_not_already_running() {
   fi
 }
 
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
 check_if_not_already_running
+
+check_dependencies shuf
 
 main () {
   while true; do
