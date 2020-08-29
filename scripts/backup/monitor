@@ -62,4 +62,8 @@ BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 monitor_file "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" &
 
 # Monitor db/user.json
-monitor_file "${UMBREL_ROOT}/db/user.json" &
+# We want to back up user settings too, however we currently store the encrypted
+# mnemonic in this file which is not safe to backup remotely.
+# Uncomment this in the future once we've ensured there's no critical data in
+# this file.
+# monitor_file "${UMBREL_ROOT}/db/user.json" &
