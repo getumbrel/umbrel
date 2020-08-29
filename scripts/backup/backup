@@ -51,7 +51,8 @@ cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_ROOT}/user.json"
 
 echo "Adding random padding..."
 
-padding="$(shuf -i 0-1024 -n 1)"
+# Up to 10KB of random binary data
+padding="$(shuf -i 0-10240 -n 1)"
 dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_ROOT}/.padding"
 
 echo "Creating encrypted tarball..."
