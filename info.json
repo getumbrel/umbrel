@@ -2,5 +2,5 @@
     "version": "0.2.5",
     "name": "Umbrel v0.2.5",
     "requires": ">=0.2.1",
-    "notes": "What's new? Important bugfixes for Umbrel OS users who're using hard drives and not SSDs."
+    "notes": "What's new? Important bugfixes for Umbrel OS users who're using hard disk drives (not SSDs)."
 }
