@@ -32,7 +32,6 @@ tar \
   --create \
   --gzip \
   --verbose \
-  --file - \
   . \
   | gpg \
   --batch \
