@@ -23,6 +23,7 @@ derive_entropy () {
   identifier="${1}"
   umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed") || true
 
+  # TODO: Check this correctly handles when seed file doesn't exist!
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     echo "Missing derivation parameter, this is unsafe, exiting."
     rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
