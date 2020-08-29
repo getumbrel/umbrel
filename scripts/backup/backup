@@ -60,7 +60,7 @@ tar \
   --create \
   --gzip \
   --verbose \
-  --directory "${UMBREL_ROOT}"
+  --directory "${UMBREL_ROOT}" \
   "${BACKUP_FOLDER}" \
   | gpg \
   --batch \
