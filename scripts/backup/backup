@@ -110,7 +110,7 @@ if [[ $BITCOIN_NETWORK == "regtest" ]]; then
 fi
 
 echo "Uploading backup..."
-curl --socks5 localhost:9050 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
+curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
 echo
 
 rm -rf "${BACKUP_ROOT}"

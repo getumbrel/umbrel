@@ -16,7 +16,7 @@ services:
                     - ${PWD}/tor/data:/var/lib/tor/
                     - ${PWD}/tor/run:/var/run/tor/
                 ports:
-                  - "127.0.0.1:9050:29050"
+                  - "127.0.0.1:9150:29050"
                 networks:
                     net:
                         ipv4_address: 10.11.5.1
