@@ -53,13 +53,13 @@ echo "Deriving keys..."
 backup_id=$(derive_entropy "umbrel_backup_id")
 encryption_key=$(derive_entropy "umbrel_backup_encryption_key")
 
+echo "Creating backup..."
+
 if [[ ! -f "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" ]]; then
     echo "No channel.backup file found, skipping backup..."
     rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
     exit 1
 fi
-
-echo "Creating backup..."
 
 mkdir -p "${BACKUP_ROOT}"
 
