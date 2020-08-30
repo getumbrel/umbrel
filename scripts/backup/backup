@@ -68,6 +68,10 @@ cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.b
 echo "Adding random padding..."
 
 # Up to 10KB of random binary data
+# This prevents the server from being able to tell if the backup has increased
+# decreased or stayed the sme size. Combined with random interval decoy backups
+# this makes a (already very difficult) timing analysis attack to correlate backup
+# activity with channel state changes practically impossible.
 padding="$(shuf -i 0-10240 -n 1)"
 dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_ROOT}/.padding"
 
