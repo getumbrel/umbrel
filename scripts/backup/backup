@@ -46,6 +46,7 @@ touch "${UMBREL_ROOT}/statuses/backup-in-progress"
 BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 
 [[ -d "${BACKUP_ROOT}" ]] && rm -rf "${BACKUP_ROOT}"
+[[ -f "${BACKUP_FILE}" ]] && rm -f "${BACKUP_FILE}"
 
 echo "Deriving keys..."
 
