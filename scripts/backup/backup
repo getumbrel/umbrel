@@ -30,7 +30,7 @@ derive_entropy () {
   fi
 
   # We need `sed 's/^.* //'` to trim the "(stdin)= " prefix from some versions of openssl
-  printf "%s" "$identifier" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
+  printf "%s" "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
 }
 
 # Make sure an update is not in progres
