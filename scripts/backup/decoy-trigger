@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "decoy trigger is already running"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_if_not_already_running
+
+check_dependencies shuf
+
+main () {
+  while true; do
+    minutes_in_seconds="60"
+    hours_in_seconds="$((${minutes_in_seconds} * 10))"
+    max_interval="$((8 * ${hours_in_seconds}))"
+    delay="$(shuf -i 0-${max_interval} -n 1)"
+    echo "Sleeping for ${delay} seconds..."
+    sleep $delay
+    echo "Triggering decoy backup..."
+    touch "${UMBREL_ROOT}/events/signals/backup"
+  done
+}
+
+main

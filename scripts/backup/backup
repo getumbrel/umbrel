@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+BACKUP_FOLDER="backup"
+BACKUP_ROOT="${UMBREL_ROOT}/${BACKUP_FOLDER}"
+BACKUP_FILE="${UMBREL_ROOT}/backup.tar.gz.pgp"
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies openssl tar gpg shuf curl
+
+# Deterministically derives 128 bits of cryptographically secure entropy
+derive_entropy () {
+  identifier="${1}"
+  umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed") || true
+
+  if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
+    >&2 echo "Missing derivation parameter, this is unsafe, exiting."
+    rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+    exit 1
+  fi
+
+  # We need `sed 's/^.* //'` to trim the "(stdin)= " prefix from some versions of openssl
+  printf "%s" "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
+}
+
+# Make sure an update is not in progres
+if [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]]; then
+    echo "A backup is already in progress. Exiting now."
+    exit 1
+fi
+
+echo "Creating lock..."
+touch "${UMBREL_ROOT}/statuses/backup-in-progress"
+
+[[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
+BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+
+[[ -d "${BACKUP_ROOT}" ]] && rm -rf "${BACKUP_ROOT}"
+[[ -f "${BACKUP_FILE}" ]] && rm -f "${BACKUP_FILE}"
+
+echo "Deriving keys..."
+
+backup_id=$(derive_entropy "umbrel_backup_id")
+encryption_key=$(derive_entropy "umbrel_backup_encryption_key")
+
+echo "Creating backup..."
+
+mkdir -p "${BACKUP_ROOT}"
+
+cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_ROOT}/channel.backup"
+
+# We want to back up user settings too, however we currently store the encrypted
+# mnemonic in this file which is not safe to backup remotely.
+# Uncomment this in the future once we've ensured there's no critical data in
+# this file.
+# cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_ROOT}/user.json"
+
+echo "Adding random padding..."
+
+# Up to 10KB of random binary data
+# This prevents the server from being able to tell if the backup has increased
+# decreased or stayed the sme size. Combined with random interval decoy backups
+# this makes a (already very difficult) timing analysis attack to correlate backup
+# activity with channel state changes practically impossible.
+padding="$(shuf -i 0-10240 -n 1)"
+dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_ROOT}/.padding"
+
+echo "Creating encrypted tarball..."
+
+tar \
+  --create \
+  --gzip \
+  --verbose \
+  --directory "${UMBREL_ROOT}" \
+  "${BACKUP_FOLDER}" \
+  | gpg \
+  --batch \
+  --symmetric \
+  --cipher-algo AES256 \
+  --passphrase "${encryption_key}" \
+  --output "${BACKUP_FILE}"
+
+# To decrypt:
+# cat "${BACKUP_FILE}" | gpg \
+#   --batch \
+#   --decrypt \
+#   --passphrase "${encryption_key}" \
+#   | tar \
+#   --extract \
+#   --verbose \
+#   --gzip
+
+BACKUP_API_URL="https://pvf3ozmmfl.execute-api.us-east-1.amazonaws.com/prod/v1/upload"
+
+if [[ $BITCOIN_NETWORK == "testnet" ]]; then
+    BACKUP_API_URL="https://as0ot0lg7h.execute-api.us-east-1.amazonaws.com/dev/v1/upload"
+fi
+if [[ $BITCOIN_NETWORK == "regtest" ]]; then
+    BACKUP_API_URL="https://5fxwqbum7g.execute-api.us-east-1.amazonaws.com/dev/v1/upload"
+fi
+
+echo "Uploading backup..."
+curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
+echo
+
+rm -rf "${BACKUP_ROOT}"
+rm -f "${BACKUP_FILE}"
+
+echo "Removing lock..."
+rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+
+echo "============================="
+echo "===== Backup successful ====="
+echo "============================="
+
+exit 0

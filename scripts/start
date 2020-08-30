@@ -63,6 +63,14 @@ echo "Starting karen..."
 echo
 ./karen &
 
+echo "Starting backup monitor..."
+echo
+./scripts/backup/monitor &
+
+echo "Starting decoy backup trigger..."
+echo
+./scripts/backup/decoy-trigger &
+
 echo
 echo "Starting Docker services..."
 echo
