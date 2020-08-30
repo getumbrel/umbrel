@@ -1,6 +1,6 @@
 {
-    "version": "0.2.5",
-    "name": "Umbrel v0.2.5",
+    "version": "0.2.6",
+    "name": "Umbrel v0.2.6",
     "requires": ">=0.2.1",
-    "notes": "What's new? Important bugfixes for Umbrel OS users using external drives."
+    "notes": "What's new? Automatic backups of your Lightning channels! The backup file is first encrypted on your device and then uploaded to our servers via Tor. There isn't a way to disable this functionality or recover from a backup in the dashboard yet. Both of these features will be added in the coming updates."
 }
