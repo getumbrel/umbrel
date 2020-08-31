@@ -32,6 +32,13 @@ if [[ ! -d "$UMBREL_ROOT" ]]; then
 fi
 cd "$UMBREL_ROOT"
 
+# Make sure we use the status dir from the real Umbrel installation if this is
+# an OTA update.
+STATUS_DIR="${UMBREL_ROOT}/statuses"
+if [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
+  STATUS_DIR="${UMBREL_ROOT}/../statuses"
+fi
+
 # Configure for mainnet or testnet or regtest depending
 # upon the user-supplied value of $NETWORK
 BITCOIN_NETWORK="${NETWORK:-mainnet}"
@@ -43,7 +50,7 @@ fi
 
 echo
 echo "======================================"
-if [[ -f "${UMBREL_ROOT}/statuses/configured" ]]; then
+if [[ -f "${STATUS_DIR}/configured" ]]; then
   echo "=========== RECONFIGURING ============"
 else
   echo "============ CONFIGURING ============="
@@ -159,7 +166,7 @@ sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;
 # If node is already synced, do not reset to neutrino
 echo "UMBREL_ROOT: ${UMBREL_ROOT}"
 echo "LND_CONF_FILE: ${LND_CONF_FILE}"
-if [[ -f "${UMBREL_ROOT}/statuses/node-status-bitcoind-ready" ]]; then
+if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
@@ -201,7 +208,7 @@ echo
 chown -R 1000:1000 "$UMBREL_ROOT"
 
 # Create configured status
-touch "$UMBREL_ROOT"/statuses/configured
+touch "${STATUS_DIR}/configured"
 
 echo "Configuration successful"
 echo "You can now start Umbrel by running:"
