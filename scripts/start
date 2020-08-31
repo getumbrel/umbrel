@@ -62,6 +62,7 @@ cd "$UMBREL_ROOT"
 echo "Removing stale statuses and lock files..."
 echo
 [[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]] && rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+[[ -f "${UMBREL_ROOT}/statuses/node-status-bitcoind-ready" ]] && rm -f "${UMBREL_ROOT}/statuses/node-status-bitcoind-ready"
 
 echo "Starting karen..."
 echo
