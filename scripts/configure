@@ -164,8 +164,6 @@ sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
 
 # If node is already synced, do not reset to neutrino
-echo "UMBREL_ROOT: ${UMBREL_ROOT}"
-echo "LND_CONF_FILE: ${LND_CONF_FILE}"
 if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
