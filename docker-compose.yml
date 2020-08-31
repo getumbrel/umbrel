@@ -152,7 +152,7 @@ services:
                     RPCUSER: $BITCOIN_RPC_USER
                     RPCPASS: $BITCOIN_RPC_PASS
                     LND_CONTAINER_NAME: lnd
-                    SLEEPTIME: 3600
+                    SLEEPTIME: 60
                 networks:
                     net:
                         ipv4_address: 10.11.5.2
