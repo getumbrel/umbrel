@@ -26,7 +26,6 @@ derive_entropy () {
 
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     >&2 echo "Missing derivation parameter, this is unsafe, exiting."
-    rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
     exit 1
   fi
 
@@ -46,7 +45,6 @@ echo "Creating backup..."
 
 if [[ ! -f "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" ]]; then
     echo "No channel.backup file found, skipping backup..."
-    rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
     exit 1
 fi
 
