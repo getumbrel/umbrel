@@ -3,8 +3,9 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+BACKUP_ROOT="${UMBREL_ROOT}/.backup/$RANDOM"
 BACKUP_FOLDER_NAME="backup"
-BACKUP_ROOT="${UMBREL_ROOT}/.backup/$RANDOM/${BACKUP_FOLDER_NAME}"
+BACKUP_FOLDER_PATH="${BACKUP_ROOT}/${BACKUP_FOLDER_NAME}"
 BACKUP_FILE="${BACKUP_ROOT}/backup.tar.gz.pgp"
 
 check_dependencies () {
@@ -49,15 +50,15 @@ if [[ ! -f "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.bac
     exit 1
 fi
 
-mkdir -p "${BACKUP_ROOT}"
+mkdir -p "${BACKUP_FOLDER_PATH}"
 
-cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_ROOT}/channel.backup"
+cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_FOLDER_PATH}/channel.backup"
 
 # We want to back up user settings too, however we currently store the encrypted
 # mnemonic in this file which is not safe to backup remotely.
 # Uncomment this in the future once we've ensured there's no critical data in
 # this file.
-# cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_ROOT}/user.json"
+# cp --archive "${UMBREL_ROOT}/db/user.json" "${BACKUP_FOLDER_PATH}/user.json"
 
 echo "Adding random padding..."
 
@@ -67,7 +68,7 @@ echo "Adding random padding..."
 # this makes a (already very difficult) timing analysis attack to correlate backup
 # activity with channel state changes practically impossible.
 padding="$(shuf -i 0-10240 -n 1)"
-dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_ROOT}/.padding"
+dd if=/dev/urandom bs="${padding}" count=1 > "${BACKUP_FOLDER_PATH}/.padding"
 
 echo "Creating encrypted tarball..."
 
@@ -75,7 +76,7 @@ tar \
   --create \
   --gzip \
   --verbose \
-  --directory "${BACKUP_ROOT}/.." \
+  --directory "${BACKUP_FOLDER_PATH}/.." \
   "${BACKUP_FOLDER_NAME}" \
   | gpg \
   --batch \
@@ -108,7 +109,6 @@ curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${bac
 echo
 
 rm -rf "${BACKUP_ROOT}"
-rm -f "${BACKUP_FILE}"
 
 echo "============================="
 echo "===== Backup successful ====="
