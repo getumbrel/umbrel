@@ -3,9 +3,9 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
-BACKUP_FOLDER=".backup/$RANDOM"
-BACKUP_ROOT="${UMBREL_ROOT}/${BACKUP_FOLDER}"
-BACKUP_FILE="${BACKUP_FOLDER}/backup.tar.gz.pgp"
+BACKUP_FOLDER_NAME="backup"
+BACKUP_ROOT="${UMBREL_ROOT}/.backup/$RANDOM/${BACKUP_FOLDER_NAME}"
+BACKUP_FILE="${BACKUP_ROOT}/backup.tar.gz.pgp"
 
 check_dependencies () {
   for cmd in "$@"; do
@@ -35,9 +35,6 @@ derive_entropy () {
 
 [[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
 BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
-
-[[ -d "${BACKUP_ROOT}" ]] && rm -rf "${BACKUP_ROOT}"
-[[ -f "${BACKUP_FILE}" ]] && rm -f "${BACKUP_FILE}"
 
 echo "Deriving keys..."
 
@@ -78,8 +75,8 @@ tar \
   --create \
   --gzip \
   --verbose \
-  --directory "${UMBREL_ROOT}" \
-  "${BACKUP_FOLDER}" \
+  --directory "${BACKUP_ROOT}/.." \
+  "${BACKUP_FOLDER_NAME}" \
   | gpg \
   --batch \
   --symmetric \
