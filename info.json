@@ -1,6 +1,6 @@
 {
-    "version": "0.2.7",
-    "name": "Umbrel v0.2.7",
+    "version": "0.2.8",
+    "name": "Umbrel v0.2.8",
     "requires": ">=0.2.1",
-    "notes": "What's new? An important bugfix for Lightning Network Daemon (LND) to prevent incorrect switching of its backend."
+    "notes": "This update improves the reliability of automatic channel backups."
 }
