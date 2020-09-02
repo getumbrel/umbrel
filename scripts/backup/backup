@@ -116,7 +116,11 @@ if [[ $BITCOIN_NETWORK == "regtest" ]]; then
 fi
 
 echo "Uploading backup..."
-curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"
+if curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"; then
+  status="===== Backup successful ====="
+else
+  status="======= Backup failed ======="
+fi
 echo
 
 rm -rf "${BACKUP_ROOT}"
@@ -126,7 +130,7 @@ echo "Removing lock..."
 rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
 
 echo "============================="
-echo "===== Backup successful ====="
+echo "${status}"
 echo "============================="
 
 exit 0
