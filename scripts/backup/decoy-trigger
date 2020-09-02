@@ -3,6 +3,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+MAX_BACKUP_INTERVAL_IN_HOURS="12"
 
 check_if_not_already_running() {
   if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
@@ -29,7 +30,7 @@ main () {
   while true; do
     minutes_in_seconds="60"
     hours_in_seconds="$((60 * ${minutes_in_seconds}))"
-    max_interval="$((8 * ${hours_in_seconds}))"
+    max_interval="$((${MAX_BACKUP_INTERVAL_IN_HOURS} * ${hours_in_seconds}))"
     delay="$(shuf -i 0-${max_interval} -n 1)"
     echo "Sleeping for ${delay} seconds..."
     sleep $delay
