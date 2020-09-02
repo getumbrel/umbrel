@@ -59,10 +59,6 @@ export COMPOSE_HTTP_TIMEOUT=240
 
 cd "$UMBREL_ROOT"
 
-echo "Removing stale statuses and lock files..."
-echo
-[[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]] && rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
-
 echo "Starting karen..."
 echo
 ./karen &
