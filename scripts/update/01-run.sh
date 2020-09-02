@@ -102,6 +102,11 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/start
 
+# Delete obselete backup lock file
+# https://github.com/getumbrel/umbrel/pull/213
+# Remove this in the next breaking update
+[[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]] && rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
+
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
