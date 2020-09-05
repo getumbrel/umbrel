@@ -65,7 +65,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: mayankchhabra/dashboard:backup-status
+                image: getumbrel/dashboard:v0.3.5
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -74,7 +74,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: mayankchhabra/manager:backup-status
+                image: getumbrel/manager:v0.2.3
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
@@ -110,6 +110,7 @@ services:
                     UPDATE_STATUS_FILE: "/statuses/update-status.json"
                     UPDATE_SIGNAL_FILE: "/signals/update"
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
+                    BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
