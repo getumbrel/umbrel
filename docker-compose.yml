@@ -110,6 +110,7 @@ services:
                     UPDATE_STATUS_FILE: "/statuses/update-status.json"
                     UPDATE_SIGNAL_FILE: "/signals/update"
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
+                    BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1

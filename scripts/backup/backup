@@ -7,6 +7,7 @@ BACKUP_ROOT="${UMBREL_ROOT}/.backup/$RANDOM"
 BACKUP_FOLDER_NAME="backup"
 BACKUP_FOLDER_PATH="${BACKUP_ROOT}/${BACKUP_FOLDER_NAME}"
 BACKUP_FILE="${BACKUP_ROOT}/backup.tar.gz.pgp"
+BACKUP_STATUS_FILE="${UMBREL_ROOT}/statuses/backup-status.json"
 
 check_dependencies () {
   for cmd in "$@"; do
@@ -104,16 +105,21 @@ fi
 
 echo "Uploading backup..."
 if curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"; then
-  status="===== Backup successful ====="
+  status="success"
 else
-  status="======= Backup failed ======="
+  status="failed"
 fi
 echo
 
 rm -rf "${BACKUP_ROOT}"
 
+# Update status file
+cat <<EOF > ${BACKUP_STATUS_FILE}
+{"status": "${status}", "timestamp": $(date +%s000)}
+EOF
+
 echo "============================="
-echo "${status}"
+echo "====== Backup ${status} ======="
 echo "============================="
 
 exit 0
