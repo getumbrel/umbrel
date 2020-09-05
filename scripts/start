@@ -49,9 +49,19 @@ echo
 
 echo "Setting environment variables..."
 echo
+
+# Whitelist device IP, hostname and hidden service for CORS
+
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME="$(hostname)"
-export DEVICE_HOST="http://"${DEVICE_IP:-"$DEVICE_HOSTNAME".local}""
+
+if [[ -f "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname" ]]; then
+    hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname")
+    export DEVICE_HOSTS="['${DEVICE_IP}', 'http://${DEVICE_HOSTNAME}.local', 'https://${DEVICE_HOSTNAME}.local', 'http://${hidden_service_url}']"
+else
+    export DEVICE_HOSTS="['${DEVICE_IP}', 'http://${DEVICE_HOSTNAME}.local', 'https://${DEVICE_HOSTNAME}.local']"
+fi
+
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
 export DOCKER_CLIENT_TIMEOUT=240
