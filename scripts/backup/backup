@@ -119,7 +119,7 @@ cat <<EOF > ${BACKUP_STATUS_FILE}
 EOF
 
 echo "============================="
-echo "======= Backup ${status} ======="
+echo "====== Backup ${status} ======="
 echo "============================="
 
 exit 0
