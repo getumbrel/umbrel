@@ -54,13 +54,13 @@ echo
 
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME="$(hostname)"
+DEVICE_HOSTS="\"${DEVICE_IP}\",\"http://${DEVICE_HOSTNAME}.local\",\"https://${DEVICE_HOSTNAME}.local\""
 
-if [[ -f "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname" ]]; then
-    hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname")
-    export DEVICE_HOSTS="\"${DEVICE_IP}\",\"http://${DEVICE_HOSTNAME}.local\",\"https://${DEVICE_HOSTNAME}.local\",\"http://${hidden_service_url}\""
-else
-    export DEVICE_HOSTS="\"${DEVICE_IP}\",\"http://${DEVICE_HOSTNAME}.local\",\"https://${DEVICE_HOSTNAME}.local\""
+if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
+    hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/web/hostname")
+    DEVICE_HOSTS="${DEVICE_HOSTS},\"http://${hidden_service_url}\""
 fi
+export DEVICE_HOSTS
 
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
