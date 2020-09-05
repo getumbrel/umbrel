@@ -119,7 +119,7 @@ services:
                 image: mayankchhabra/middleware:cors
                 logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
-                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
+                # command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
                 restart: unless-stopped
                 depends_on: [ manager ]
                 volumes:
