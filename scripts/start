@@ -57,9 +57,9 @@ DEVICE_HOSTNAME="$(hostname)"
 
 if [[ -f "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname" ]]; then
     hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname")
-    export DEVICE_HOSTS="['${DEVICE_IP}', 'http://${DEVICE_HOSTNAME}.local', 'https://${DEVICE_HOSTNAME}.local', 'http://${hidden_service_url}']"
+    export DEVICE_HOSTS="\"${DEVICE_IP}\",\"http://${DEVICE_HOSTNAME}.local\",\"https://${DEVICE_HOSTNAME}.local\",\"http://${hidden_service_url}\""
 else
-    export DEVICE_HOSTS="['${DEVICE_IP}', 'http://${DEVICE_HOSTNAME}.local', 'https://${DEVICE_HOSTNAME}.local']"
+    export DEVICE_HOSTS="\"${DEVICE_IP}\",\"http://${DEVICE_HOSTNAME}.local\",\"https://${DEVICE_HOSTNAME}.local\""
 fi
 
 # Increase default Docker and Compose timeouts to 240s
@@ -88,4 +88,4 @@ docker-compose up --detach --build --remove-orphans
 echo
 
 echo "Umbrel is now accessible at"
-echo "  $DEVICE_HOST"
+echo "  $DEVICE_HOSTS"
