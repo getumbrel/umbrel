@@ -60,8 +60,6 @@ if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
 fi
 export DEVICE_HOSTS=$DEVICE_HOSTS
 
-echo
-
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
 export DOCKER_CLIENT_TIMEOUT=240
