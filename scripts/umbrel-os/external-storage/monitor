@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+source "${UMBREL_ROOT}/scripts/monitor-lib"
+
+EXTERNAL_UMBREL_ROOT=${1}
+
+# Monitor external storage (empty) check file
+#   This monitor should be able to detect if the check file becomes
+#   unavailable when the mount is faulty, or its file permissions
+#   change (for e.g. to read-only).
+
+file_path="${EXTERNAL_UMBREL_ROOT}/events/mount-checkfile"
+trigger="mount-check"
+
+touch ${file_path}
+monitor_file ${file_path} ${trigger} &

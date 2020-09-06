@@ -203,6 +203,10 @@ main () {
   echo "Checking SD Card root is bind mounted at /sd-root..."
   df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
 
+  echo "Starting external drive mount monitor..."
+  echo
+  ./scripts/umbrel-os/external-storage/monitor ${EXTERNAL_UMBREL_ROOT} &
+
   echo "Mount script completed successfully!"
 }
 

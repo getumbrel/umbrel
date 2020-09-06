@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Check if mount is still mounted here
+    # If (mount not mounted) then gracefully stop (with optional error UI signal to users)
