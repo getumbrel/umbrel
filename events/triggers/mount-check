@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
-# Check if mount is still mounted here
-    # If (mount not mounted) then gracefully stop (with optional error UI signal to users)
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+echo "Warning: external drive mount change detected, double-checking mount status..."
+"${UMBREL_ROOT}/scripts/umbrel-os/external-storage/mount"
