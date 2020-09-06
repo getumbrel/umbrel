@@ -86,4 +86,6 @@ docker-compose up --detach --build --remove-orphans
 echo
 
 echo "Umbrel is now accessible at"
-echo "$DEVICE_HOSTS"
+echo "  http://${DEVICE_HOSTNAME}.local"
+echo "  http://${DEVICE_IP}"
+[[ ! -z "${hidden_service_url:-}" ]] && echo "  http://${hidden_service_url}"
