@@ -51,7 +51,6 @@ echo "Setting environment variables..."
 echo
 
 # Whitelist device IP, hostname and hidden service for CORS
-
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME="$(hostname)"
 DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,https://${DEVICE_HOSTNAME}.local"
@@ -61,9 +60,8 @@ if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
 fi
 export DEVICE_HOSTS=$DEVICE_HOSTS
 
-echo $DEVICE_HOSTS
+echo
 
-echo 
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
 export DOCKER_CLIENT_TIMEOUT=240
@@ -90,4 +88,4 @@ docker-compose up --detach --build --remove-orphans
 echo
 
 echo "Umbrel is now accessible at"
-echo "  $DEVICE_HOSTS"
+echo "$DEVICE_HOSTS"
