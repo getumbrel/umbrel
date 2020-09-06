@@ -97,7 +97,7 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
-                    DEVICE_HOST: ${DEVICE_HOST:-http://umbrel.local}
+                    DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
@@ -134,7 +134,7 @@ services:
                     LND_NETWORK: $BITCOIN_NETWORK
                     LND_HOST: "10.11.1.2"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    DEVICE_HOST: ${DEVICE_HOST:-http://umbrel.local}
+                    DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                 networks:
                     net:
                         ipv4_address: 10.11.2.2
