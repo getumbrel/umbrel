@@ -53,7 +53,7 @@ echo
 # Whitelist device IP, hostname and hidden service for CORS
 DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
 DEVICE_HOSTNAME="$(hostname)"
-DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,https://${DEVICE_HOSTNAME}.local"
+DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,http://${DEVICE_HOSTNAME},https://${DEVICE_HOSTNAME}"
 if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
     hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/web/hostname")
     DEVICE_HOSTS="${DEVICE_HOSTS},http://${hidden_service_url}"
