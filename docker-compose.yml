@@ -65,7 +65,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.5
+                image: getumbrel/dashboard:v0.3.6
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
