@@ -1,6 +1,6 @@
 {
-    "version": "0.2.8",
-    "name": "Umbrel v0.2.8",
+    "version": "0.2.9",
+    "name": "Umbrel v0.2.9",
     "requires": ">=0.2.1",
-    "notes": "This update improves the reliability of automatic channel backups."
+    "notes": "What's new? LND has been upgraded to the latest version (v0.11.0). iOS users can now access their dashboard in any Tor browser without the CORS issue. The last backup status is now visible on the settings page, and some other minor bug fixes have also been made."
 }
