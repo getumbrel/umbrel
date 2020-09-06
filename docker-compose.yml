@@ -51,7 +51,7 @@ services:
                         ipv4_address: 10.11.1.1
         lnd:
                 container_name: lnd
-                image: lncm/lnd:v0.10.4
+                image: lncm/lnd:v0.11.0
                 logging: *default-logging
                 depends_on: [ tor, manager ]
                 volumes:
