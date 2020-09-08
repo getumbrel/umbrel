@@ -205,7 +205,7 @@ main () {
 
   echo "Starting external drive mount monitor..."
   echo
-  ./scripts/umbrel-os/external-storage/monitor ${EXTERNAL_UMBREL_ROOT} &
+  ./scripts/umbrel-os/external-storage/monitor ${block_device} ${MOUNT_POINT} &
 
   echo "Mount script completed successfully!"
 }

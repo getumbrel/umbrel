@@ -1,17 +1,48 @@
 #!/usr/bin/env bash
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+# Load monitor-lib
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies readlink dirname
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
+
 source "${UMBREL_ROOT}/scripts/monitor-lib"
 
-EXTERNAL_UMBREL_ROOT=${1}
 
-# Monitor external storage (empty) check file
-#   This monitor should be able to detect if the check file becomes
-#   unavailable when the mount is faulty, or its file permissions
-#   change (for e.g. to read-only).
+# Monitor external mount
+block_device="${1}"
+MOUNT_POINT="${2}"
 
-file_path="${EXTERNAL_UMBREL_ROOT}/events/mount-checkfile"
-trigger="mount-check"
+check_mount () {
+    # Check if device is still mounted
+    if ! grep -q "${MOUNT_POINT}" /proc/mounts; then
+        echo "External device not mounted at ${MOUNT_POINT}"
+        return 1
+    fi
 
-touch ${file_path}
-monitor_file ${file_path} ${trigger} &
+    # Check if device is read-only
+    READ_ONLY=$(cat /sys/block/${block_device}/ro)
+    if [[ "${READ_ONLY}" == "1" ]]; then
+        echo "External block device '${block_device}' set to 'read-only'"
+        return 1
+    fi
+
+    return 0
+}
+
+run_monitor () {
+    while check_mount; do :; done
+
+    # 'mount-fail' gets triggered if 'check_mount' fails
+    trigger="mount-fail"
+    touch "${UMBREL_ROOT}/events/signals/${trigger}"
+}
+
+run_monitor
