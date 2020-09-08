@@ -21,6 +21,12 @@ block_device="${1}"
 MOUNT_POINT="${2}"
 
 check_mount () {
+    # Check if Umbrel root is still bind mounted
+    if ! df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'; then
+        echo "External device not bind mounted to Umbrel root"
+        return 1
+    fi
+
     # Check if device is still mounted
     if ! grep -q "${MOUNT_POINT}" /proc/mounts; then
         echo "External device not mounted at ${MOUNT_POINT}"
@@ -38,7 +44,9 @@ check_mount () {
 }
 
 run_monitor () {
-    while check_mount; do :; done
+    while check_mount; do
+        sleep 1
+    done
 
     # 'mount-fail' gets triggered if 'check_mount' fails
     trigger="mount-fail"
