@@ -1,9 +1,42 @@
 #!/usr/bin/env bash
 
+# Load monitor-lib
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies readlink dirname
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
+
 source "${UMBREL_ROOT}/scripts/monitor-lib"
 
 # Monitor LND channel.backup
+check_dependencies fswatch
+
+monitor_file () {
+  local file_path="${1}"
+  local trigger="${2}"
+  echo "Monitoring $file_path"
+  echo
+
+  if [[ ! -e "${file_path}" ]]; then
+    echo "$file_path doesn't exist, waiting for it to be created..."
+    echo
+    until [[ -e "${file_path}" ]]; do
+      echo "Nope, $file_path still doesn't exist..."
+      sleep 1
+    done
+    touch "${UMBREL_ROOT}/events/signals/${trigger}"
+  fi
+
+  fswatch -0 --event Updated $file_path | xargs -0 -n 1 -I {} touch "${UMBREL_ROOT}/events/signals/${trigger}"
+}
+
 file_path="${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup"
 trigger="backup"
 monitor_file ${file_path} ${trigger} &

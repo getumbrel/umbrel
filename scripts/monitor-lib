@@ -15,41 +15,10 @@ check_if_not_already_running() {
   fi
 }
 
-check_dependencies () {
-  for cmd in "$@"; do
-    if ! command -v $cmd >/dev/null 2>&1; then
-      echo "This script requires \"${cmd}\" to be installed"
-      exit 1
-    fi
-  done
-}
-
 check_root
 
 check_if_not_already_running
 
-check_dependencies fswatch readlink dirname
-
-# UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
-
-monitor_file () {
-  local file_path="${1}"
-  local trigger="${2}"
-  echo "Monitoring $file_path"
-  echo
-
-  if [[ ! -e "${file_path}" ]]; then
-    echo "$file_path doesn't exist, waiting for it to be created..."
-    echo
-    until [[ -e "${file_path}" ]]; do
-      echo "Nope, $file_path still doesn't exist..."
-      sleep 1
-    done
-    touch "${UMBREL_ROOT}/events/signals/${trigger}"
-  fi
-
-  fswatch -0 --event Updated $file_path | xargs -0 -n 1 -I {} touch "${UMBREL_ROOT}/events/signals/${trigger}"
-}
 
 if [[ ! -d "${UMBREL_ROOT}" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
