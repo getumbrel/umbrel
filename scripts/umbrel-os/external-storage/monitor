@@ -48,9 +48,9 @@ run_monitor () {
         sleep 1
     done
 
-    # 'mount-fail' gets triggered if 'check_mount' fails
-    trigger="mount-fail"
-    touch "${UMBREL_ROOT}/events/signals/${trigger}"
+    echo "Warning: external drive mount change detected, stopping Umbrel..."
+    systemctl stop umbrel-external-storage
+    systemctl stop umbrel-startup
 }
 
 run_monitor

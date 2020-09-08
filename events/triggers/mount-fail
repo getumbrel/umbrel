@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-echo "Warning: external drive mount change detected, stopping Umbrel..."
-systemctl stop umbrel-external-storage
-systemctl stop umbrel-startup
