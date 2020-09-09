@@ -43,7 +43,7 @@ main () {
   done
 
   echo "Check failed, stopping Umbrel..."
-  docker stop $(docker ps -aq)
+  docker kill $(docker ps -aq)
 }
 
 main
