@@ -18,31 +18,31 @@ main () {
   check_if_not_already_running
 
   while true; do
-    echo "Checking Umbrel root is bind mounted to external storage..."
     if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
+      echo "Umbrel root is no longer bind mounted to external storage!"
       break
     fi
 
-    echo "Checking external storage is mounted..."
     mount_data=$(grep " ${mount_point} " /proc/mounts)
     if [[ "$(echo ${mount_data} | wc -l)" == "0" ]]; then
+      echo "External storage is no longer mounted!"
       break
     fi
 
-    echo "Checking external storage is not mounted as read only..."
     if echo "${mount_data}" | grep --quiet '[ ,]ro[ ,]'; then
+      echo "External storage is mounted as read only!"
       break
     fi
 
-    echo "Checking mounted block device still exists..."
     if ! [[ -e "/dev/${block_device}" ]]; then
+      echo "Mounted block device no longer exists!"
       break
     fi
 
     sleep 1
   done
 
-  echo "Check failed, stopping Umbrel..."
+  echo "Stopping Umbrel due to failed storage device check..."
   docker kill $(docker ps -aq)
 }
 
