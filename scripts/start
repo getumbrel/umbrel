@@ -88,4 +88,6 @@ echo
 echo "Umbrel is now accessible at"
 echo "  http://${DEVICE_HOSTNAME}.local"
 echo "  http://${DEVICE_IP}"
-[[ ! -z "${hidden_service_url:-}" ]] && echo "  http://${hidden_service_url}"
+if [[ ! -z "${hidden_service_url:-}" ]]; then
+    echo "  http://${hidden_service_url}"
+fi
