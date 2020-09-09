@@ -33,6 +33,12 @@ check_mount () {
         return 1
     fi
 
+    # Check if device is still registered
+    if ! cat /sys/block/${block_device}/ro; then
+        echo "External block device '${block_device}' not found"
+        return 1
+    fi
+
     # Check if device is read-only
     READ_ONLY=$(cat /sys/block/${block_device}/ro)
     if [[ "${READ_ONLY}" == "1" ]]; then
