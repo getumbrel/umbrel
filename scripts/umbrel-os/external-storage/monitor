@@ -43,7 +43,7 @@ main () {
   done
 
   echo "Check failed, stopping Umbrel..."
-  systemctl stop umbrel-startup
+  docker stop $(docker ps -aq)
 }
 
 main
