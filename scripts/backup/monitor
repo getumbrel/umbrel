@@ -1,6 +1,20 @@
 #!/usr/bin/env bash
 
-# Load monitor-lib
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "Error: This script must be run as root."
+    exit 1
+  fi
+}
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "backup monitor is already running"
+    exit 1
+  fi
+}
+
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
@@ -10,17 +24,16 @@ check_dependencies () {
   done
 }
 
-check_dependencies readlink dirname
+check_root
+
+check_if_not_already_running
+
+check_dependencies fswatch readlink dirname
+
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
-
-source "${UMBREL_ROOT}/scripts/monitor-lib"
-
-# Monitor LND channel.backup
-check_dependencies fswatch
 
 monitor_file () {
   local file_path="${1}"
-  local trigger="${2}"
   echo "Monitoring $file_path"
   echo
 
@@ -31,15 +44,22 @@ monitor_file () {
       echo "Nope, $file_path still doesn't exist..."
       sleep 1
     done
-    touch "${UMBREL_ROOT}/events/signals/${trigger}"
+    touch "${UMBREL_ROOT}/events/signals/backup"
   fi
 
-  fswatch -0 --event Updated $file_path | xargs -0 -n 1 -I {} touch "${UMBREL_ROOT}/events/signals/${trigger}"
+  fswatch -0 --event Updated $file_path | xargs -0 -n 1 -I {} touch "${UMBREL_ROOT}/events/signals/backup"
 }
 
-file_path="${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup"
-trigger="backup"
-monitor_file ${file_path} ${trigger} &
+if [[ ! -d "${UMBREL_ROOT}" ]]; then
+  echo "Root dir does not exist '$UMBREL_ROOT'"
+  exit 1
+fi
+
+[[ -f "${UMBREL_ROOT}/.env" ]] && source "${UMBREL_ROOT}/.env"
+BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
+
+# Monitor LND channel.backup
+monitor_file "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" &
 
 # Monitor db/user.json
 # We want to back up user settings too, however we currently store the encrypted

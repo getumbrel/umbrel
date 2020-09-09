@@ -1,64 +1,48 @@
 #!/usr/bin/env bash
 
-# Load monitor-lib
-check_dependencies () {
-  for cmd in "$@"; do
-    if ! command -v $cmd >/dev/null 2>&1; then
-      echo "This script requires \"${cmd}\" to be installed"
-      exit 1
-    fi
-  done
-}
+set -euo pipefail
 
-check_dependencies readlink dirname
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../../.."
-
-source "${UMBREL_ROOT}/scripts/monitor-lib"
-
-
-# Monitor external mount
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 block_device="${1}"
-MOUNT_POINT="${2}"
+mount_point="${2}"
 
-check_mount () {
-    # Check if Umbrel root is still bind mounted
-    if ! df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'; then
-        echo "External device not bind mounted to Umbrel root"
-        return 1
-    fi
-
-    # Check if device is still mounted
-    if ! grep -q "${MOUNT_POINT}" /proc/mounts; then
-        echo "External device not mounted at ${MOUNT_POINT}"
-        return 1
-    fi
-
-    # Check if device is still registered
-    if ! cat /sys/block/${block_device}/ro; then
-        echo "External block device '${block_device}' not found"
-        return 1
-    fi
-
-    # Check if device is read-only
-    READ_ONLY=$(cat /sys/block/${block_device}/ro)
-    if [[ "${READ_ONLY}" == "1" ]]; then
-        echo "External block device '${block_device}' set to 'read-only'"
-        return 1
-    fi
-
-    return 0
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "storage monitor is already running"
+    exit 1
+  fi
 }
 
-run_monitor () {
-    while check_mount; do
-        echo "Mount-check: Drive still mounted"
-        sleep 1
-    done
+main () {
+  check_if_not_already_running
 
-    echo "Warning: external drive mount change detected, stopping Umbrel..."
-    systemctl stop umbrel-startup
+  while true; do
+    if ! [[ -e "/dev/${block_device}" ]]; then
+      echo "Mounted block device no longer exists!"
+      break
+    fi
 
-    systemctl stop umbrel-external-storage
+    if ! grep --quiet " ${mount_point} " /proc/mounts; then
+      echo "External storage is no longer mounted!"
+      break
+    fi
+
+    if grep " ${mount_point} " /proc/mounts | grep --quiet '[ ,]ro[ ,]'; then
+      echo "External storage is mounted as read only!"
+      break
+    fi
+
+    if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
+      echo "Umbrel root is no longer bind mounted to external storage!"
+      break
+    fi
+
+    sleep 1
+  done
+
+  echo "Stopping Umbrel due to failed storage device check..."
+  docker kill $(docker ps -aq)
 }
 
-run_monitor
+main
