@@ -18,8 +18,8 @@ main () {
   check_if_not_already_running
 
   while true; do
-    if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
-      echo "Umbrel root is no longer bind mounted to external storage!"
+    if ! [[ -e "/dev/${block_device}" ]]; then
+      echo "Mounted block device no longer exists!"
       break
     fi
 
@@ -34,8 +34,8 @@ main () {
       break
     fi
 
-    if ! [[ -e "/dev/${block_device}" ]]; then
-      echo "Mounted block device no longer exists!"
+    if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
+      echo "Umbrel root is no longer bind mounted to external storage!"
       break
     fi
 
