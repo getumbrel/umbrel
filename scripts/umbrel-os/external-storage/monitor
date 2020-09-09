@@ -23,13 +23,12 @@ main () {
       break
     fi
 
-    mount_data=$(grep " ${mount_point} " /proc/mounts)
-    if [[ "$(echo ${mount_data} | wc -l)" == "0" ]]; then
+    if ! grep --quiet " ${mount_point} " /proc/mounts; then
       echo "External storage is no longer mounted!"
       break
     fi
 
-    if echo "${mount_data}" | grep --quiet '[ ,]ro[ ,]'; then
+    if grep " ${mount_point} " /proc/mounts | grep --quiet '[ ,]ro[ ,]'; then
       echo "External storage is mounted as read only!"
       break
     fi
