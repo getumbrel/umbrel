@@ -11,7 +11,7 @@ check_dependencies () {
 }
 
 check_dependencies readlink dirname
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../.."
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/../../.."
 
 source "${UMBREL_ROOT}/scripts/monitor-lib"
 
