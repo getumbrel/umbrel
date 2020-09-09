@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+block_device="${1}"
+mount_point="${2}"
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "storage monitor is already running"
+    exit 1
+  fi
+}
+
+main () {
+  check_if_not_already_running
+
+  while true; do
+    if ! [[ -e "/dev/${block_device}" ]]; then
+      echo "Mounted block device no longer exists!"
+      break
+    fi
+
+    if ! grep --quiet " ${mount_point} " /proc/mounts; then
+      echo "External storage is no longer mounted!"
+      break
+    fi
+
+    if grep " ${mount_point} " /proc/mounts | grep --quiet '[ ,]ro[ ,]'; then
+      echo "External storage is mounted as read only!"
+      break
+    fi
+
+    if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
+      echo "Umbrel root is no longer bind mounted to external storage!"
+      break
+    fi
+
+    sleep 1
+  done
+
+  echo "Stopping Umbrel due to failed storage device check..."
+  docker kill $(docker ps -aq)
+}
+
+main
