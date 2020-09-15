@@ -41,9 +41,9 @@ monitor_file () {
     echo "$file_path doesn't exist, waiting for it to be created..."
     echo
     until [[ -e "${file_path}" ]]; do
-      echo "Nope, $file_path still doesn't exist..."
       sleep 1
     done
+    echo "$file_path created! Triggering backup..."
     touch "${UMBREL_ROOT}/events/signals/backup"
   fi
 
