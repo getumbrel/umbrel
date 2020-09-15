@@ -126,6 +126,6 @@ If you're looking for a bigger challenge, before opening a pull request please [
 
 _"Being open source means anyone can independently review the code. If it was closed source, nobody could verify the security. I think it's essential for a program of this nature to be open source." — Satoshi Nakamoto_
 
-[![License](https://img.shields.io/github/license/getumbrel/umbrel?color=%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE.md)
 
 [getumbrel.com](https://getumbrel.com)
