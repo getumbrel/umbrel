@@ -107,7 +107,7 @@ services:
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
                     BITCOIN_P2P_PORT: $BITCOIN_P2P_PORT
                     LND_REST_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rest/hostname"
-                    LND_RPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rpc/hostname"
+                    LND_GRPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-grpc/hostname"
                     LND_CERT_FILE: "/lnd/tls.cert"
                     LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
                     SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
