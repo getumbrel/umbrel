@@ -86,8 +86,7 @@ services:
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
-                        - ${PWD}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon:/lnd/admin.macaroon
-                        - ${PWD}/lnd/tls.cert:/lnd/tls.cert
+                        - ${PWD}/lnd:/lnd:ro
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
@@ -110,7 +109,7 @@ services:
                     LND_REST_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rest/hostname"
                     LND_RPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rpc/hostname"
                     LND_CERT_FILE: "/lnd/tls.cert"
-                    LND_ADMIN_MACAROON_FILE: "/lnd/admin.macaroon"
+                    LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
                     SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
                     REBOOT_SIGNAL_FILE: "/signals/reboot"
                     GITHUB_REPO: "getumbrel/umbrel"
