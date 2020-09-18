@@ -101,7 +101,7 @@ services:
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
-                    DEVICE_IP: ${DEVICE_IP:-""}
+                    DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-""}
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"

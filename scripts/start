@@ -59,7 +59,7 @@ if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
     DEVICE_HOSTS="${DEVICE_HOSTS},http://${hidden_service_url}"
 fi
 export DEVICE_HOSTS=$DEVICE_HOSTS
-export DEVICE_IP=$DEVICE_IP
+export DEVICE_HOSTNAME=$DEVICE_HOSTNAME
 
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
