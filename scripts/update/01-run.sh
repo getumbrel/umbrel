@@ -79,8 +79,6 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
 
-OLD_UMBREL_VERSION=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
-
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync --archive \
