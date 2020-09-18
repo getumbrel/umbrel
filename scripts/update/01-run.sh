@@ -7,12 +7,6 @@ UMBREL_ROOT=$2
 # Only used on Umbrel OS
 SD_CARD_UMBREL_ROOT="/sd-root${UMBREL_ROOT}"
 
-check_semver_range () {
-  local range="${1}"
-  local version="${2}"
-  "${UMBREL_ROOT}/scripts/umbrel-os/semver" -r "${range}" "${version}" | grep --quiet "^${version}$"
-}
-
 echo
 echo "======================================="
 echo "=============== UPDATE ================"
@@ -101,18 +95,6 @@ rsync --archive \
 echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
-
-# In Umbrel v0.2.11 we whitelisted a tls domain in lnd.conf
-# which requires manually deleting old tls.cert and tls.key files
-# so lnd can re-generate new ones on the next run. We don't delete
-# them in all OTA updates as they'll break existing lndconnect urls
-# https://github.com/getumbrel/umbrel/pull/237
-# This logic can be safely removed from Umbrel v0.3.0+
-if check_semver_range "<0.2.11" "$OLD_UMBREL_VERSION"; then
-  echo "Deleting lnd/tls.cert and lnd/tls.key so they're regenerated..."
-  [[ -f "${UMBREL_ROOT}/lnd/tls.cert" ]] && rm -f "${UMBREL_ROOT}/lnd/tls.cert"
-  [[ -f "${UMBREL_ROOT}/lnd/tls.key" ]] && rm -f "${UMBREL_ROOT}/lnd/tls.key"
-fi
 
 # Start updated containers
 echo "Starting new containers"
