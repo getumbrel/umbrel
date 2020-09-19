@@ -1,6 +1,6 @@
 verbose = 4
-network = "bitcoin" # TODO: Inject network
+network = "bitcoin"
 db_dir = "/data/db"
-daemon_rpc_addr = "10.11.1.1:8332" # TODO: Inject RPC port
+daemon_rpc_addr = "10.11.1.1:<port>"
 electrum_rpc_addr = "0.0.0.0:50001"
-server_banner = "Umbrel <version>" # TODO: Inject version
+server_banner = "Umbrel <version>"
