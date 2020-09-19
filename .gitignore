@@ -20,6 +20,7 @@ bitcoin/*
 lnd/*
 tor/*
 db/*
+electrs/*
 statuses/*
 !statuses/update-status.json
 
