@@ -173,12 +173,6 @@ services:
               image: lukechilds/electrs:v0.8.5 # TODO: Change to official image
               logging: *default-logging
               depends_on: [ bitcoin ]
-              command: >-
-                -vvvv
-                --timestamp
-                --db-dir /data/db
-                --daemon-rpc-addr 10.11.1.1:8332
-                --electrum-rpc-addr 0.0.0.0:50001
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data

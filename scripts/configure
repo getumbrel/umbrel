@@ -68,6 +68,7 @@ echo
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
+ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
@@ -75,12 +76,14 @@ ENV_FILE="./templates/.env"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
+[[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
 
@@ -190,6 +193,7 @@ sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
+mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
 
