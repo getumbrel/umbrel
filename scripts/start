@@ -91,3 +91,9 @@ echo "  http://${DEVICE_IP}"
 if [[ ! -z "${hidden_service_url:-}" ]]; then
     echo "  http://${hidden_service_url}"
 fi
+
+# Store Process Group ID for killing all child processes later
+PGID_FILE="${UMBREL_ROOT}/start_pgid.log"
+PGID=$(ps -o pgid= $$ | grep -o '[0-9]*')
+echo $PGID > ${PGID_FILE}
+echo "Start script process group ID: ${PGID}"

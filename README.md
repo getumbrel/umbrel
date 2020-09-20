@@ -64,6 +64,12 @@ To stop Umbrel, run:
 sudo ./scripts/stop
 ```
 
+To stop background processes as well, use the `--all` flag:
+
+```bash
+sudo ./scripts/stop --all
+```
+
 ## 🎹 Services orchestrated
 
 - [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)

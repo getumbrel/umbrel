@@ -27,3 +27,17 @@ export COMPOSE_HTTP_TIMEOUT=240
 echo "Stopping Docker services..."
 echo
 docker-compose down
+
+stop_all () {
+  PGID_FILE="${UMBREL_ROOT}/start_pgid.log"
+  PGID=$(cat ${PGID_FILE} | head -n 1)
+  kill -9 -${PGID}
+  rm ${PGID_FILE}
+}
+
+if [[ "${1:-}" == "--all" ]]; then
+  echo
+  echo "Stopping background processes..."
+  stop_all
+  echo "Stopped"
+fi
