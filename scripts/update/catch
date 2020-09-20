@@ -31,6 +31,7 @@ RELEASE=$(cat ${STATUS_FILE} | jq -r .updateTo)
 
 NEW_DESCRIPTION="Update failed at ${PROGRESS}% during '${STATE}' for release version '${RELEASE}'"
 
+sleep 5
 cat <<EOF > "${STATUS_FILE}"
 {"state": "failed", "progress": 100, "description": "$NEW_DESCRIPTION", "updateTo": "$RELEASE"}
 EOF
