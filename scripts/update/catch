@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+echo
+echo "======================================="
+echo "=============== UPDATE ================"
+echo "======================================="
+echo "======== Stage: Catching error ========"
+echo "======================================="
+echo
+
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+check_dependencies jq
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+STATUS_FILE="$UMBREL_ROOT"/statuses/update-status.json
+
+STATE=$(cat ${STATUS_FILE} | jq -r .state)
+PROGRESS=$(cat ${STATUS_FILE} | jq -r .progress)
+RELEASE=$(cat ${STATUS_FILE} | jq -r .updateTo)
+
+NEW_DESCRIPTION="Update failed at ${PROGRESS}% during '${STATE}' for release version '${RELEASE}'"
+
+cat <<EOF > "${STATUS_FILE}"
+{"state": "failed", "progress": 100, "description": "$NEW_DESCRIPTION", "updateTo": "$RELEASE"}
+EOF
+
+
+# Delete cloned repo
+echo "Deleting cloned repository"
+[[ -d "$UMBREL_ROOT"/.umbrel-"$RELEASE" ]] && rm -rf "$UMBREL_ROOT"/.umbrel-"$RELEASE"
+
+echo "Removing lock"
+rm -f "$UMBREL_ROOT"/statuses/update-in-progress
+
+exit 0

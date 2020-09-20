@@ -2,4 +2,4 @@
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 
-"${UMBREL_ROOT}/scripts/update/update" --ota
+"${UMBREL_ROOT}/scripts/update/update" --ota || "${UMBREL_ROOT}/scripts/update/catch"

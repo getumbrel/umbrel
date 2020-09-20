@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 if [[ $UID != 0 ]]; then
     echo "Update script must be run as root"
     exit 1
