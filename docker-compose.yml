@@ -170,7 +170,7 @@ services:
                     ipv4_address: 10.11.3.0
         electrs:
               container_name: electrs
-              image: lukechilds/electrs:v0.8.5 # TODO: Change to official image
+              image: getumbrel/electrs:v0.8.5
               logging: *default-logging
               depends_on: [ bitcoin ]
               volumes:
