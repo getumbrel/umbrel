@@ -67,7 +67,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.7
+                image: mayankchhabra/dashboard:lndconnect
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -76,7 +76,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.4
+                image: mayankchhabra/manager:lndconnect
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
