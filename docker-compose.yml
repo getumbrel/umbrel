@@ -177,7 +177,7 @@ services:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data
               restart: unless-stopped
-              stop_grace_period: 1m
+              stop_grace_period: 5m
               ports:
                   - "50001:50001"
               networks:
