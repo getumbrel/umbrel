@@ -2,5 +2,5 @@
     "version": "0.2.11",
     "name": "Umbrel v0.2.11",
     "requires": ">=0.2.1",
-    "notes": "Knock knock! Who’s there? Wallets! Wallets who? Electrum, Blockstream Green, BlueWallet, Phoenix, Sparrow, Wasabi, Zap, and Zeus! You can now connect your favorite wallets directly to your Umbrel. Due to performance constraints of running an Electrum server, this update isn’t compatible with devices with less than 2GB RAM, such as the Raspberry Pi 3. We strongly recommend upgrading to a device with more RAM, such as the Raspberry Pi 4 with 4GB or 8GB RAM. Chat with us on telegram for any questions: https://t.me/getumbrel"
+    "notes": "Knock knock! Who’s there? Wallets! Wallets who? Electrum, Blockstream Green, BlueWallet, Phoenix, Sparrow, Wasabi, Zap, and Zeus! You can now connect your favorite wallets directly to your Umbrel. It may take 4-8 hours for the Electrum server to be available after the update. Due to performance constraints of running an Electrum server, this update isn’t compatible with devices with less than 2GB RAM, such as the Raspberry Pi 3. We strongly recommend upgrading to a device with more RAM, such as the Raspberry Pi 4 with 4GB or 8GB RAM. Chat with us on telegram for any questions: https://t.me/getumbrel"
 }
