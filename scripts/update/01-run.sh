@@ -4,6 +4,8 @@ set -euo pipefail
 RELEASE=$1
 UMBREL_ROOT=$2
 
+./check-memory "${RELEASE}" "${UMBREL_ROOT}" "notfirstrun"
+
 # Only used on Umbrel OS
 SD_CARD_UMBREL_ROOT="/sd-root${UMBREL_ROOT}"
 
@@ -19,7 +21,7 @@ echo
 
 # Make Umbrel OS specific updates
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    echo 
+    echo
     echo "============================================="
     echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
@@ -34,7 +36,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         sed -i "s/#allow-interfaces=eth0/allow-interfaces=eth0,wlan0/g;" "/etc/avahi/avahi-daemon.conf"
         systemctl restart avahi-daemon.service
     fi
-    
+
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"

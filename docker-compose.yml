@@ -176,6 +176,21 @@ services:
             networks:
                 net:
                     ipv4_address: 10.11.3.0
+        electrs:
+              container_name: electrs
+              image: getumbrel/electrs:v0.8.5
+              logging: *default-logging
+              depends_on: [ bitcoin ]
+              volumes:
+                - ${PWD}/bitcoin:/data/.bitcoin:ro
+                - ${PWD}/electrs:/data
+              restart: unless-stopped
+              stop_grace_period: 5m
+              ports:
+                  - "50001:50001"
+              networks:
+                  net:
+                      ipv4_address: 10.11.4.0
 networks:
     net:
         ipam:

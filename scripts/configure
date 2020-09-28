@@ -48,6 +48,9 @@ if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] &&
   exit 1
 fi
 
+# Get current Umbrel version
+UMBREL_VERSION="$(cat ${UMBREL_ROOT}/info.json | jq -r .version)"
+
 echo
 echo "======================================"
 if [[ -f "${STATUS_DIR}/configured" ]]; then
@@ -68,6 +71,7 @@ echo
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
+ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
@@ -75,12 +79,14 @@ ENV_FILE="./templates/.env"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
+[[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
 
@@ -122,6 +128,8 @@ if [ "$BITCOIN_NETWORK" == "testnet" ]; then
   sed -i "s/\# \[neutrino\]/\[neutrino\]/g;" "$LND_CONF_FILE"
   sed -i "s/\# neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
   sed -i "s/\# neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
+  # Set electrs to testnet
+  sed -i "s/network = \"bitcoin\"/network = \"testnet\"/g;" "$ELECTRS_CONF_FILE"
 
 fi
 
@@ -135,12 +143,15 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   sed -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
   # Use bitcoind as the node
   sed -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
+  # Set electrs to regtest
+  sed -i "s/network = \"bitcoin\"/network = \"regtest\"/g;" "$ELECTRS_CONF_FILE"
 fi
 
 # Update RPC and P2P Ports
 sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/<bitcoin-p2p-port>/$BITCOIN_P2P_PORT/g;" "$TOR_CONF_FILE"
+sed -i "/daemon_rpc_addr/s/<port>/$BITCOIN_RPC_PORT/g;" "$ELECTRS_CONF_FILE"
 sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
 sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
 
@@ -162,6 +173,9 @@ sed -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
 sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
+
+# Set Umbrel version in electrs banner
+sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
 
 # Add hostname to lnd.conf for TLS certificate
 DEVICE_HOSTNAME="$(hostname)"
@@ -194,6 +208,7 @@ sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
+mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
 
