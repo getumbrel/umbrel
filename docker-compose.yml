@@ -65,7 +65,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: lukechilds/dashboard:show-electrum-connection-details
+                image: getumbrel/dashboard:v0.3.7
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -74,7 +74,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: lukechilds/manager:electrum-hidden-service
+                image: getumbrel/manager:v0.2.4
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
