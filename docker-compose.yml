@@ -60,6 +60,8 @@ services:
                 stop_grace_period: 5m30s
                 ports:
                     - "9735:9735"
+                    - "8080:8080"
+                    - "10009:10009"
                 networks:
                     net:
                         ipv4_address: 10.11.1.2
@@ -84,6 +86,7 @@ services:
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
+                        - ${PWD}/lnd:/lnd:ro
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
@@ -98,11 +101,16 @@ services:
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
+                    DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-""}
                     MIDDLEWARE_API_URL: "http://10.11.2.2"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
                     BITCOIN_P2P_PORT: $BITCOIN_P2P_PORT
+                    LND_REST_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rest/hostname"
+                    LND_GRPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-grpc/hostname"
+                    LND_CERT_FILE: "/lnd/tls.cert"
+                    LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
                     SHUTDOWN_SIGNAL_FILE: "/signals/shutdown"
                     REBOOT_SIGNAL_FILE: "/signals/reboot"
                     GITHUB_REPO: "getumbrel/umbrel"

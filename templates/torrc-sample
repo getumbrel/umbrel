@@ -10,4 +10,12 @@ HiddenServicePort 80 10.11.0.2:80
 HiddenServiceDir /var/lib/tor/bitcoin-p2p
 HiddenServicePort <bitcoin-p2p-port> 10.11.1.1:<bitcoin-p2p-port>
 
+# LND REST Hidden Service
+HiddenServiceDir /var/lib/tor/lnd-rest
+HiddenServicePort 8080 10.11.1.2:8080
+
+# LND gRPC Hidden Service
+HiddenServiceDir /var/lib/tor/lnd-grpc
+HiddenServicePort 10009 10.11.1.2:10009
+
 HashedControlPassword <password>
