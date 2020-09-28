@@ -4,4 +4,5 @@ db
 lnd/*
 statuses
 tor/*
+electrs/*
 events/signals

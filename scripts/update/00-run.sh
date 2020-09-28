@@ -4,6 +4,8 @@ set -euo pipefail
 RELEASE=$1
 UMBREL_ROOT=$2
 
+./check-memory "${RELEASE}" "${UMBREL_ROOT}" "firstrun"
+
 echo
 echo "======================================="
 echo "=============== UPDATE ================"
