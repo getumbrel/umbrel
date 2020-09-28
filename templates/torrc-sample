@@ -14,4 +14,12 @@ HiddenServicePort <bitcoin-p2p-port> 10.11.1.1:<bitcoin-p2p-port>
 HiddenServiceDir /var/lib/tor/electrum
 HiddenServicePort 50001 10.11.4.0:50001
 
+# LND REST Hidden Service
+HiddenServiceDir /var/lib/tor/lnd-rest
+HiddenServicePort 8080 10.11.1.2:8080
+
+# LND gRPC Hidden Service
+HiddenServiceDir /var/lib/tor/lnd-grpc
+HiddenServicePort 10009 10.11.1.2:10009
+
 HashedControlPassword <password>

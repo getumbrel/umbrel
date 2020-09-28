@@ -177,6 +177,10 @@ sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;
 # Set Umbrel version in electrs banner
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
 
+# Add hostname to lnd.conf for TLS certificate
+DEVICE_HOSTNAME="$(hostname)"
+sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$LND_CONF_FILE"
+
 # If node is already synced, do not reset to neutrino
 if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
