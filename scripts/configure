@@ -96,6 +96,7 @@ ENV_FILE="./templates/.env"
 
 # Load existing credentials if we have some
 [[ -f "./.env" ]] && source "./.env"
+[[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
 # Bitcoin Core ports
 BITCOIN_RPC_PORT=8332
