@@ -106,7 +106,7 @@ BITCOIN_P2P_PORT=8333
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
   echo "Generating auth credentials"
   echo
-  BITCOIN_RPC_USER="umbrelrpc"
+  BITCOIN_RPC_USER="umbrel"
   BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
   BITCOIN_RPC_PASS=$(echo "$BITCOIN_RPC_DETAILS" | tail -1)
   BITCOIN_RPC_AUTH=$(echo "$BITCOIN_RPC_DETAILS" | head -2 | tail -1 | sed -e "s/^rpcauth=//")
