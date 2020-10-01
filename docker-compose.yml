@@ -107,6 +107,10 @@ services:
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
                     BITCOIN_P2P_PORT: $BITCOIN_P2P_PORT
+                    BITCOIN_RPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-rpc/hostname"
+                    BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
+                    BITCOIN_RPC_USER: $BITCOIN_RPC_USER
+                    BITCOIN_RPC_PASSWORD: $BITCOIN_RPC_PASS
                     LND_REST_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-rest/hostname"
                     LND_GRPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/lnd-grpc/hostname"
                     LND_CERT_FILE: "/lnd/tls.cert"
