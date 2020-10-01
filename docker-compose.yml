@@ -30,7 +30,7 @@ services:
                 restart: unless-stopped
                 stop_grace_period: 30s
                 ports:
-                    - "80:80"
+                    - "${WEBPORT:-80}:80"
                 networks:
                     net:
                         ipv4_address: 10.11.0.2
