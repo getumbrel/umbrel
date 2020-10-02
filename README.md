@@ -21,7 +21,7 @@ We run it on Raspbery Pis (ARMv8) as a part of [Umbrel OS](https://github.com/ge
 
 If you're looking to run Umbrel on:
 
-- A Raspberry Pi 3 or 4 (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
+- A Raspberry Pi 4 with at least 2GB RAM (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
 - Anything else (**not recommended** as it's experimental at the moment) - [Install Umbrel](#-installation)
 
 ## 🛠 Installation
