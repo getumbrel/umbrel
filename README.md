@@ -30,6 +30,7 @@ If you're looking to run Umbrel on:
 
 ### Installation Requirements
 
+- 2GB RAM (and ~600GB of free space if running on mainnet)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)
