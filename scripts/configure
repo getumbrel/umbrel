@@ -94,22 +94,32 @@ ENV_FILE="./templates/.env"
 ############ Generate configuration variables ############
 ##########################################################
 
-# Generate RPC credentials
-echo "Generating auth credentials"
-echo
-BITCOIN_RPC_USER="umbrelrpc"
-BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
-BITCOIN_RPC_AUTH=$(echo "$BITCOIN_RPC_DETAILS" | head -2 | tail -1)
-BITCOIN_RPC_PASS=$(echo "$BITCOIN_RPC_DETAILS" | tail -1)
+# Load existing credentials if we have some
+[[ -f "./.env" ]] && source "./.env"
+[[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
+
+# Bitcoin Core ports
 BITCOIN_RPC_PORT=8332
 BITCOIN_P2P_PORT=8333
 
+# Generate RPC credentials
+if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
+  echo "Generating auth credentials"
+  echo
+  BITCOIN_RPC_USER="umbrel"
+  BITCOIN_RPC_DETAILS=$("./scripts/rpcauth.py" "$BITCOIN_RPC_USER")
+  BITCOIN_RPC_PASS=$(echo "$BITCOIN_RPC_DETAILS" | tail -1)
+  BITCOIN_RPC_AUTH=$(echo "$BITCOIN_RPC_DETAILS" | head -2 | tail -1 | sed -e "s/^rpcauth=//")
+fi
+
 # Pull Tor image and generate Tor password
-echo "Generating Tor password"
-echo
-docker pull --quiet getumbrel/tor:v0.4.1.9
-TOR_PASS=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
-TOR_HASHED_PASS=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASS")
+if [[ -z ${TOR_PASSWORD+x} ]] || [[ -z ${TOR_HASHED_PASSWORD+x} ]]; then
+  echo "Generating Tor password"
+  echo
+  docker pull --quiet getumbrel/tor:v0.4.1.9
+  TOR_PASSWORD=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
+  TOR_HASHED_PASSWORD=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASSWORD")
+fi
 
 
 ##########################################################
@@ -150,13 +160,15 @@ fi
 # Update RPC and P2P Ports
 sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g;" "$TOR_CONF_FILE"
 sed -i "s/<bitcoin-p2p-port>/$BITCOIN_P2P_PORT/g;" "$TOR_CONF_FILE"
 sed -i "/daemon_rpc_addr/s/<port>/$BITCOIN_RPC_PORT/g;" "$ELECTRS_CONF_FILE"
 sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
 sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
 
-# Add rpcauth to bitcoin.conf
-sed -i "s/rpcauth=<rpcauth>/$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
+# Add rpcauth
+sed -i "s/rpcauth=<rpcauth>/rpcauth=$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/BITCOIN_RPC_AUTH=<rpcauth>/BITCOIN_RPC_AUTH='$BITCOIN_RPC_AUTH'/g;" "$ENV_FILE"
 # Add RPC credentials to lnd.conf
 sed -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
 sed -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
@@ -168,11 +180,11 @@ sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$E
 sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
 
 # Add Tor password
-sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASS/g;" "$TOR_CONF_FILE"
-sed -i "s/torpassword=<password>/torpassword=$TOR_PASS/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/tor.password=<password>/tor.password=$TOR_PASS/g;" "$LND_CONF_FILE"
-sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASS/g;" "$ENV_FILE"
-sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASS/g;" "$ENV_FILE"
+sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASSWORD/g;" "$TOR_CONF_FILE"
+sed -i "s/torpassword=<password>/torpassword=$TOR_PASSWORD/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE"
+sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
+sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
 
 # Set Umbrel version in electrs banner
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
