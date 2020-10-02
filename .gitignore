@@ -17,16 +17,21 @@
 *.pid
 *.env
 bitcoin/*
-lnd/*
-tor/*
 db/*
 electrs/*
+events/signals/*
+lnd/*
 statuses/*
+tor/*
+
+# Commit these files
+
 !statuses/update-status.json
 
 # Commit these empty directories
 
+!db/.gitkeep
+!events/signals/.gitkeep
 !lnd/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep
-!db/.gitkeep
