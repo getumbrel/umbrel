@@ -67,7 +67,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: lukechilds/dashboard:bitcoin-core-rpc
+                image: getumbrel/dashboard:v0.3.9
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -76,7 +76,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: lukechilds/manager:bitcoin-core-rpc
+                image: getumbrel/manager:v0.2.6
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
