@@ -57,6 +57,9 @@ sudo NETWORK=testnet ./scripts/start
 
 # For regtest, run:
 sudo NETWORK=regtest ./scripts/start
+
+# For a custom HTTP_PORT (example 8080)
+sudo UMBREL_HTTP_PORT=8080 ./scripts/start
 ```
 
 To stop Umbrel, run:
