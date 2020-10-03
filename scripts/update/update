@@ -128,12 +128,12 @@ rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 # Make sure the update-status file isn't stuck in an 
 # unresolved state (i.e anything except "success" or "failed")
 
-update_state=$(cat "statuses/update-status.json" | jq .state -r)
+update_state=$(cat "${UMBREL_ROOT}/statuses/update-status.json" | jq .state -r)
 
 if [[ "${update_state}" != "success" ]] && [[ "${update_state}" != "failed" ]]; then
-    cat <<EOF > "/statuses/update-status.json"
+    cat <<EOF > "${UMBREL_ROOT}/statuses/update-status.json"
 {"state": "failed", "progress": 0, "description": "An unexpected error occured", "updateTo": ""}
-EOF 
+EOF
 fi
 
 exit 0
