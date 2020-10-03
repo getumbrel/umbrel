@@ -5,11 +5,14 @@ RELEASE=$1
 UMBREL_ROOT=$2
 first_run=$3
 
+# We add a 200MB offset becuase the 2GB Pi actually only has ~1.9GB of RAM
 MIN_RAM=2000000
+OFFSET=200000
+LIMIT=$((MIN_RAM-OFFSET))
 
 # Abort on low memory devices
 memory="$(awk '/MemTotal/{printf "%d\n", $2}' /proc/meminfo)"
-if ((memory<MIN_RAM)); then
+if ((memory<LIMIT)); then
   if [[ "${first_run}" == "firstrun" ]]; then
     cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Checking device memory", "updateTo": "${RELEASE}"}
