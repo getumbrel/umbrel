@@ -6,7 +6,7 @@
 
 [![Twitter](https://img.shields.io/twitter/follow/getumbrel?style=social)](https://twitter.com/getumbrel)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/getumbrel?label=Subscribe%20%2Fr%2Fgetumbrel&style=social)](https://reddit.com/r/getumbrel)
-
+[![Discord](https://img.shields.io/discord/761667515368996885?label=Discord)](https://discord.gg/UJTms5u)
 # ☂️ Umbrel
 
 > ⚠️ Umbrel is currently in beta and is not considered secure. Please see [SECURITY.md](SECURITY.md) for more details.
