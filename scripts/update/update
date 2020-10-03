@@ -91,12 +91,6 @@ fi
 
 RELEASE_URL="https://github.com/getumbrel/umbrel/archive/$RELEASE.tar.gz"
 
-# Check that release url is valid
-if ! curl_check "${RELEASE_URL}"; then
-  echo "Could not reach any release files hosted at ${RELEASE_URL}"
-  exit 1
-fi
-
 echo "Creating lock"
 touch "$UMBREL_ROOT"/statuses/update-in-progress
 
@@ -111,6 +105,13 @@ EOF
 
 # Download new release
 if [[ "${update_type}" == "ota" ]]; then
+  # Check that release url is valid
+  if ! curl_check "${RELEASE_URL}"; then
+    echo "Could not reach any release files hosted at ${RELEASE_URL}"
+    exit 1
+  fi
+
+  # Download update is url is valid
   echo "Downloading Umbrel ${RELEASE}"
   mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
   cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
