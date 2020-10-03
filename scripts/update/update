@@ -17,12 +17,7 @@ check_dependencies () {
 }
 
 curl_check () {
-  status=$(curl -L --head --silent ${1} | grep 'HTTP.*200')
-  if echo $status | grep -q 200; then
-    return 0
-  else
-    return 1
-  fi
+  curl -LIs -o /dev/null -w "%{http_code}" "$1" | grep -q 200
 }
 
 check_dependencies jq curl rsync
