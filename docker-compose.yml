@@ -30,7 +30,7 @@ services:
                 restart: unless-stopped
                 stop_grace_period: 30s
                 ports:
-                    - "${WEBPORT:-80}:80"
+                    - "${UMBREL_HTTP_PORT:-80}:80"
                 networks:
                     net:
                         ipv4_address: 10.11.0.2
