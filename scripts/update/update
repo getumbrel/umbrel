@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+exec &>> "${UMBREL_ROOT}/logs/update.log"
 
 if [[ $UID != 0 ]]; then
     echo "Update script must be run as root"
@@ -15,8 +18,6 @@ check_dependencies () {
 }
 
 check_dependencies jq curl rsync
-
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 
 update_type=""
 if [[ "${1}" == "--ota" ]]; then
