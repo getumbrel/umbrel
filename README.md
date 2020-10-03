@@ -21,9 +21,10 @@ We run it on Raspbery Pis (ARMv8) as a part of [Umbrel OS](https://github.com/ge
 
 If you're looking to run Umbrel on:
 
-- A Raspberry Pi 4 with at least 2 Gb RAM - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os) or a 64-bit Linux based system with at least 2 Gb of RAM
+- A Raspberry Pi 4 with at least 2GB RAM (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
 - 1 TB of disk space (for bitcoin blockchain and electrum files)
 - Anything else (**not recommended** as it's experimental at the moment) - [Install Umbrel](#-installation)
+
 
 ## 🛠 Installation
 
@@ -31,6 +32,7 @@ If you're looking to run Umbrel on:
 
 ### Installation Requirements
 
+- 2GB RAM (and ~600GB of free space if running on mainnet)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)

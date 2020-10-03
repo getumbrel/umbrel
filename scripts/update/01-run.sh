@@ -69,9 +69,10 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 40, "description": "Configuring new release", "updateTo": "$RELEASE"}
 EOF
 
+PREV_ENV_FILE="$UMBREL_ROOT/.env"
 BITCOIN_NETWORK="mainnet"
-[[ -f "$UMBREL_ROOT/.env" ]] && source "$UMBREL_ROOT/.env"
-NETWORK=$BITCOIN_NETWORK ./scripts/configure
+[[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
+PREV_ENV_FILE="${PREV_ENV_FILE}" NETWORK=$BITCOIN_NETWORK ./scripts/configure
 
 # Stop existing containers
 echo "Stopping existing containers"
