@@ -198,6 +198,11 @@ if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
+# If there was an UMBREL_HTTP_PORT set before then add it to the $ENV_FILE
+if [ ! -z $UMBREL_HTTP_PORT ]; then
+    echo "Adding custom HTTP port"
+    echo "UMBREL_HTTP_PORT=${UMBREL_HTTP_PORT}" >> $ENV_FILE
+fi
 ##########################################################
 ############### Performance optimizations ################
 ##########################################################
