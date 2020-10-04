@@ -92,8 +92,27 @@ if [[ ! -z "${hidden_service_url:-}" ]]; then
     echo "  http://${hidden_service_url}"
 fi
 
+
 # Store Process Group ID for killing all child processes later
-PGID_FILE="${UMBREL_ROOT}/start_pgid.log"
 PGID=$(ps -o pgid= $$ | grep -o '[0-9]*')
-echo $PGID > ${PGID_FILE}
-echo "Start script process group ID: ${PGID}"
+PGID_FILE="${UMBREL_ROOT}/start_pgid.log"
+
+pgid_processes () {
+  ps -e -o pgid,pid | awk -v p=$1 '$1 == p {print $2}'
+}
+
+save_new_pgid () {
+  echo $PGID > ${PGID_FILE}
+  echo "Start script process group ID: ${PGID}"
+}
+
+if [[ -e "${PGID_FILE}" ]]; then
+  EXISTING_PGID=$(cat ${PGID_FILE} | head -n 1)
+  if [[ -z "$(pgid_processes ${EXISTING_PGID})" ]]; then
+    save_new_pgid
+  else
+    echo "Existing PGID with running processes found"
+  fi
+else
+  save_new_pgid
+fi
