@@ -21,6 +21,7 @@ db/*
 electrs/*
 events/signals/*
 lnd/*
+logs/*
 statuses/*
 tor/*
 
@@ -33,5 +34,6 @@ tor/*
 !db/.gitkeep
 !events/signals/.gitkeep
 !lnd/.gitkeep
+!logs/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep
