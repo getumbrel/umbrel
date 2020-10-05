@@ -68,10 +68,6 @@ export COMPOSE_HTTP_TIMEOUT=240
 
 cd "$UMBREL_ROOT"
 
-echo "Rotating log files..."
-echo
-rm -rf logs/*
-
 echo "Starting karen..."
 echo
 ./karen &
