@@ -6,3 +6,4 @@ statuses
 tor/*
 electrs/*
 events/signals
+logs
