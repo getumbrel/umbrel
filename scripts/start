@@ -72,15 +72,15 @@ cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
-./karen &>> "${UMBREL_LOGS}/karen" &
+./karen &>> "${UMBREL_LOGS}/karen.log" &
 
 echo "Starting backup monitor..."
 echo
-./scripts/backup/monitor &>> "${UMBREL_LOGS}/backup-monitor" &
+./scripts/backup/monitor &>> "${UMBREL_LOGS}/backup-monitor.log" &
 
 echo "Starting decoy backup trigger..."
 echo
-./scripts/backup/decoy-trigger &>> "${UMBREL_LOGS}/backup-decoy-trigger" &
+./scripts/backup/decoy-trigger &>> "${UMBREL_LOGS}/backup-decoy-trigger.log" &
 
 echo
 echo "Starting Docker services..."
