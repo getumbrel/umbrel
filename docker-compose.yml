@@ -67,7 +67,7 @@ services:
                         ipv4_address: 10.11.1.2
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.9
+                image: getumbrel/dashboard:v0.3.10
                 logging: *default-logging
                 restart: unless-stopped
                 stop_grace_period: 1m30s
@@ -76,7 +76,7 @@ services:
                         ipv4_address: 10.11.0.3
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.6
+                image: getumbrel/manager:v0.2.7
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: unless-stopped
@@ -123,6 +123,8 @@ services:
                     UPDATE_SIGNAL_FILE: "/signals/update"
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
+                    TOR_PROXY_IP: "10.11.5.1"
+                    TOR_PROXY_PORT: "29050"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
