@@ -1,6 +1,6 @@
 {
-    "version": "0.2.11",
-    "name": "Umbrel v0.2.11",
+    "version": "0.2.12",
+    "name": "Umbrel v0.2.12",
     "requires": ">=0.2.1",
-    "notes": "Knock knock! Who’s there? Wallets! Wallets who? Electrum, Blockstream Green, BlueWallet, Phoenix, Sparrow, Wasabi, Zap, and Zeus! You can now connect your favorite wallets directly to your Umbrel. It may take 4-8 hours for the Electrum server to be available after the update. Due to performance constraints of running an Electrum server, this update isn’t compatible with devices with less than 2GB RAM, such as the Raspberry Pi 3. We strongly recommend upgrading to a device with more RAM, such as the Raspberry Pi 4 with 4GB or 8GB RAM. Chat with us on telegram for any questions: https://t.me/getumbrel"
+    "notes": "This update brings support for remote Bitcoin RPC connections along with first class support for FullyNoded, Specter Desktop and BitBoxApp. You can also now specify custom fee amounts and Bitcoin price lookups are now done through Tor. OTA updates for non Umbrel OS users are now working, you can find the update instructions here: https://gist.github.com/lukechilds/031e06f29b5a1bd7135da9c3fe30a21e"
 }
