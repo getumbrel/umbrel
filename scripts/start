@@ -29,6 +29,7 @@ check_dependencies fswatch
 check_dependencies rsync jq curl
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+UMBREL_LOGS="${UMBREL_ROOT}/logs"
 
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
@@ -70,15 +71,15 @@ cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
-./karen &
+./karen &>> "${UMBREL_LOGS}/karen.log" &
 
 echo "Starting backup monitor..."
 echo
-./scripts/backup/monitor &
+./scripts/backup/monitor &>> "${UMBREL_LOGS}/backup-monitor.log" &
 
 echo "Starting decoy backup trigger..."
 echo
-./scripts/backup/decoy-trigger &
+./scripts/backup/decoy-trigger &>> "${UMBREL_LOGS}/backup-decoy-trigger.log" &
 
 echo
 echo "Starting Docker services..."
