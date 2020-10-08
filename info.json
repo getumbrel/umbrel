@@ -1,6 +1,6 @@
 {
-    "version": "0.2.12",
-    "name": "Umbrel v0.2.12",
+    "version": "0.2.13",
+    "name": "Umbrel v0.2.13",
     "requires": ">=0.2.1",
     "notes": "This update brings support for wallets that support Bitcoin Core RPC, along with first class support for Fully Noded, Specter Desktop and BitBoxApp. You can also now specify custom fee amounts for on-chain transactions and Bitcoin price lookups are now done through Tor. IMPORTANT: If you’re not running Umbrel on a Raspberry Pi, please read the update instructions here to fix a known bug with OTA updates: https://gist.github.com/lukechilds/031e06f29b5a1bd7135da9c3fe30a21e"
 }
