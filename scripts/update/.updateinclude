@@ -3,4 +3,3 @@ bitcoin/bitcoin.conf
 lnd/lnd.conf
 tor/torrc
 electrs/electrs.toml
-logs/.gitkeep
