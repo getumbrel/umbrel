@@ -16,10 +16,6 @@ check_dependencies () {
   done
 }
 
-curl_check () {
-  curl -LIs -o /dev/null -w "%{http_code}" "$1" | grep -q 200
-}
-
 check_dependencies jq curl rsync
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
@@ -100,17 +96,14 @@ EOF
 
 # Download new release
 if [[ "${update_type}" == "ota" ]]; then
-  # Check that release url is valid
-  if ! curl_check "${RELEASE_URL}"; then
-    echo "Could not reach any release files hosted at ${RELEASE_URL}"
-    exit 1
-  fi
-
-  # Download update is url is valid
+  # Download update, exit if url is invalid
   echo "Downloading Umbrel ${RELEASE}"
   mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
   cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
-  curl -L "${RELEASE_URL}" | tar -xz --strip-components=1
+  if ! curl -L "${RELEASE_URL}" | tar -xz --strip-components=1; then
+    echo "Could not reach any release files hosted at ${RELEASE_URL}"
+    exit 1
+  fi
 fi
 
 # Copy over new release from path
