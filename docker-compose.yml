@@ -9,7 +9,7 @@ services:
                 container_name: tor
                 image: getumbrel/tor:v0.4.1.9
                 user: toruser
-                restart: unless-stopped
+                restart: on-failure
                 logging: *default-logging
                 volumes:
                     - ${PWD}/tor/torrc:/etc/tor/torrc
@@ -27,7 +27,7 @@ services:
                 depends_on: [ dashboard, manager ]
                 volumes:
                         - ${PWD}/nginx:/etc/nginx
-                restart: unless-stopped
+                restart: on-failure
                 stop_grace_period: 30s
                 ports:
                     - "80:80"
@@ -42,7 +42,7 @@ services:
                 command: "-zmqpubrawblock=tcp://0.0.0.0:28332 -zmqpubrawtx=tcp://0.0.0.0:28333"
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
-                restart: unless-stopped
+                restart: on-failure
                 stop_grace_period: 15m30s
                 ports:
                     - "8333:8333"
@@ -56,7 +56,7 @@ services:
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
-                restart: unless-stopped
+                restart: on-failure
                 stop_grace_period: 5m30s
                 ports:
                     - "9735:9735"
@@ -69,7 +69,7 @@ services:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.3.11
                 logging: *default-logging
-                restart: unless-stopped
+                restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
                     net:
@@ -79,7 +79,7 @@ services:
                 image: getumbrel/manager:v0.2.7
                 logging: *default-logging
                 depends_on: [ tor ]
-                restart: unless-stopped
+                restart: on-failure
                 stop_grace_period: 5m30s
                 volumes:
                         - ${PWD}:${PWD}
@@ -134,7 +134,7 @@ services:
                 logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
-                restart: unless-stopped
+                restart: on-failure
                 depends_on: [ manager ]
                 volumes:
                         - ${PWD}/lnd:/lnd
@@ -157,7 +157,7 @@ services:
                 image: getumbrel/neutrino-switcher:v1.0.3
                 logging: *default-logging
                 depends_on: [ bitcoin, lnd ]
-                restart: unless-stopped
+                restart: on-failure
                 volumes:
                     - ${PWD}/lnd:/lnd
                     - ${PWD}/statuses:/statuses
@@ -175,7 +175,7 @@ services:
             container_name: frontail
             image: getumbrel/frontail:v4.9.1
             logging: *default-logging
-            restart: unless-stopped
+            restart: on-failure
             command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
             volumes:
                 - /var/log/syslog:/var/log/syslog:ro
@@ -190,7 +190,7 @@ services:
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data
-              restart: unless-stopped
+              restart: on-failure
               stop_grace_period: 5m
               ports:
                   - "50001:50001"
