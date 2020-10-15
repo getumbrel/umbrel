@@ -7,6 +7,9 @@
 .ssh
 .viminfo
 
+# umbrel-dev
+docker-compose.override.yml
+
 # Files and data directories created by services
 # that we shouldn't accidently commit
 
