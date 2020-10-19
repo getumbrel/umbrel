@@ -54,6 +54,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
         echo "Skipping updating on SD Card..."
     fi
+    
+    # Updating packages
+    echo "Updating packages"
+    apt update
+    apt upgrade -y
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
