@@ -19,7 +19,7 @@ jobs:
         IMAGE_NAME="umbrel-os-dev"
         UMBREL_REPO="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
         TMP=$(git show HEAD | head -n 2 | tail -n 1)
-        UMBREL_BRANCH=${TMP:7:7}
+        UMBREL_BRANCH=${TMP:14:7}
         echo "Building commit $UMBREL_BRANCH of $UMBREL_REPO"
         echo "UMBREL_OS_VERSION=$UMBREL_OS_VERSION"  >> $GITHUB_ENV
         echo "IMAGE_NAME=$IMAGE_NAME"  >> $GITHUB_ENV
