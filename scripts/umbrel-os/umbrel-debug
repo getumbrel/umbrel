@@ -1,0 +1,125 @@
+#!/bin/bash -e
+
+# Based on raspinfo: https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo
+
+# Copyright: 2018-2019, Raspberry Pi (Trading) Ltd.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
+# A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE HOLDERS OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+echo "====================="
+echo "= Umbrel debug info ="
+echo "====================="
+
+echo
+echo "Umbrel OS version"
+echo "-----------------"
+
+cat /etc/default/umbrel
+
+echo
+echo "Umbrel version"
+echo "---------------"
+cat /home/umbrel/umbrel/info.json | jq .version | sed 's/"//g'
+
+echo
+echo "Raspberry Pi Model"
+echo "------------------"
+
+cat /proc/cpuinfo | tail -3
+
+echo
+echo "Firmware"
+echo "--------"
+
+vcgencmd version
+
+
+echo
+echo "Tempature"
+echo "---------"
+
+vcgencmd measure_temp
+
+echo
+echo "Throttling"
+echo "----------"
+
+vcgencmd get_throttled
+
+echo
+echo "Filesystem information"
+echo "----------------------"
+
+df
+echo
+cat /proc/swaps
+
+
+echo
+echo "Networking Information"
+echo "----------------------"
+echo
+
+ifconfig | sed -e "s/\([0-9a-fA-F]\{1,4\}:\)\{7,7\}[0-9a-fA-F]\{1,4\}/y.y.y.y.y.y.y.y/g" | sed -e "s/[0-9a-fA-F]\{1,4\}:\(:[0-9a-fA-F]\{1,4\}\)\{1,4\}/y::y.y.y.y/g" | sed -e "s/\([0-9]\{1,3\}\.\)\{3,3\}[0-9]\{1,3\}/x.x.x.x/g" | sed -e "s/\([0-9a-fA-F]\{2,2\}\:\)\{5,5\}[0-9a-fA-F]\{2,2\}/m.m.m.m/g"
+
+echo
+echo "Docker logs"
+echo "-----------"
+
+cd /home/umbrel/umbrel
+docker-compose logs
+
+echo
+echo "SSD test"
+echo "--------"
+
+list_block_devices () {
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /sys/block/sd*
+  sync
+  # We use "2>/dev/null || true" to swallow errors if there are
+  # no block devices. In that case the function just returns nothing
+  # instead of an error which is what we want.
+  #
+  # sed 's!.*/!!' is to return the device path so we get sda
+  # instead of /sys/block/sda
+  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+}
+
+no_of_block_devices=$(list_block_devices | wc -l)
+if [[ $no_of_block_devices -lt 1 ]]; then
+  echo "Multiple block devices found, only one drive is supported"
+  echo "Exiting mount script without doing anything"
+  exit 0
+fi
+if [[ $no_of_block_devices -gt 1 ]]; then
+  echo "Multiple block devices found, only one drive is supported"
+  echo "Exiting mount script without doing anything"
+  exit 0
+fi
+# At this point we know there is only one block device attached
+block_device=$(list_block_devices)
+sudo smartctl -i "/dev/${block_device}"
+sudo smartctl -t short -a  "/dev/${block_device}"

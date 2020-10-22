@@ -27,6 +27,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo
 
+    apt install smartmontools -y
     # In Umbrel OS v0.1.2, we need to bind Avahi to only
     # eth0,wlan0 interfaces to prevent hostname cycling
     # https://github.com/getumbrel/umbrel-os/issues/76
