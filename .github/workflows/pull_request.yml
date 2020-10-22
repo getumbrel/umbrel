@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
+
+    - uses: actions/checkout@v1
+
     - name: Run apt update
       run: sudo apt update
 
@@ -38,8 +41,7 @@ jobs:
         UMBREL_OS_VERSION="dev"
         IMAGE_NAME="umbrel-os-dev"
         UMBREL_REPO="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
-        UMBREL_BRANCH="$GITHUB_SHA"
-        echo $(git rev-parse --short "$GITHUB_SHA")
+        UMBREL_BRANCH="$(git rev-parse --verify HEAD)"
         echo "UMBREL_OS_VERSION=$UMBREL_OS_VERSION"  >> $GITHUB_ENV
         echo "IMAGE_NAME=$IMAGE_NAME"  >> $GITHUB_ENV
         echo "UMBREL_REPO=$UMBREL_REPO"  >> $GITHUB_ENV
