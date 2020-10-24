@@ -1,0 +1,42 @@
+version: '3.7'
+x-logging: &default-logging
+    driver: journald
+    options:
+        tag: "umbrel-app {{.Name}}"
+
+services:
+        btc-rpc-explorer:
+              container_name: btc-rpc-explorer
+              image: getumbrel/btc-rpc-explorer:v2.0.2
+              logging: *default-logging
+              restart: on-failure
+              stop_grace_period: 1m
+              ports:
+                  - "3002:3002"
+              environment:
+                  # Docker requirements
+                  BTCEXP_HOST: 0.0.0.0
+                  # Bitcoin Core
+                  BTCEXP_BITCOIND_HOST: 10.11.1.1
+                  BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
+                  BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
+                  BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
+                  # Electrum
+                  BTCEXP_ADDRESS_API: electrumx
+                  BTCEXP_ELECTRUMX_SERVERS: tcp://10.11.4.0:50001
+                  # Log level
+                  DEBUG: "btcexp:*,electrumClient"
+                  # Performance
+                  BTCEXP_SLOW_DEVICE_MODE: "true"
+                  BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
+                  # Privacy
+                  BTCEXP_PRIVACY_MODE: "true"
+                  BTCEXP_NO_RATES: "true"
+                  # Disable RPC
+                  BTCEXP_RPC_ALLOWALL: "false"
+                  BTCEXP_BASIC_AUTH_PASSWORD: ""
+
+networks:
+  default:
+    external:
+      name: umbrel_net
