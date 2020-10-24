@@ -193,8 +193,27 @@ sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
 
 # Add hostname to lnd.conf for TLS certificate
+RESOLV_CONF="/etc/resolv.conf"
+if [[ -f "$RESOLV_CONF" ]]; then
+  # Try to parse dns suffix from resolv.conf
+  DEVICE_DNS_SUFFIX=$(sed -n 's/search \(.\+\)/\1/p' $RESOLV_CONF)
+  if [ -z "$DEVICE_DNS_SUFFIX" ]; then
+    DEVICE_DNS_SUFFIX=$(sed -n 's/domain \(.\+\)/\1/p' $RESOLV_CONF)
+  fi
+  if [ -n "$DEVICE_DNS_SUFFIX" ]; then
+    DEVICE_DNS_SUFFIX=".${DEVICE_DNS_SUFFIX}"
+  fi
+fi
+# Fall back to .local if we don't detect another dns suffix above.
+# This requires a mDNS resolver on machines that want to connect
+# to umbrel and a mDNS daemon (usually avahi) on the machine that
+# runs umbrel in order to annouce the local IP address in the network.
+DEVICE_DNS_SUFFIX="${DEVICE_DNS_SUFFIX:-.local}"
 DEVICE_HOSTNAME="$(hostname)"
-sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$LND_CONF_FILE"
+sed -i "s/tlsextradomain=<hostname>/tlsextradomain=${DEVICE_HOSTNAME}${DEVICE_DNS_SUFFIX}/g;" "$LND_CONF_FILE"
+
+# Store configured DEVICE_DNS_SUFFIX for later use in ./start script.
+sed -i "s/DEVICE_DNS_SUFFIX=.*/DEVICE_DNS_SUFFIX=${DEVICE_DNS_SUFFIX}/g;" "$ENV_FILE"
 
 # If node is already synced, do not reset to neutrino
 if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
