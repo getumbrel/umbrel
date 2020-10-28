@@ -65,20 +65,11 @@ To stop Umbrel, run:
 sudo ./scripts/stop
 ```
 
-## 🎹 Services orchestrated
+### Optional: How-to Upgrade Umbrel from the command line**
 
-- [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
-- [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
-- [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
-- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
-- [`LND`](https://github.com/getumbrel/docker-lnd)
-- [`Tor`](https://github.com/getumbrel/docker-tor)
-- [`Nginx`](https://github.com/nginx/nginx)
-- [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
+Updates OTA (over the air) work pretty well for most end-users, but if you prefer upgrading in a more controlled environment and the ability to specify the version, follow these steps:
 
-
-**Upgrade Umbrel from Command Line (when this is preferred over OTA updates)**
-
+```bash
 # cd into the dir you installed Umbrel in
 cd /path/to/your/custom/umbrel/install
 
@@ -93,7 +84,18 @@ cd /path/to/your/custom/umbrel/install
 
 # Start Umbrel again
 sudo scripts/start
+```
 
+## 🎹 Services orchestrated
+
+- [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
+- [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
+- [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
+- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
+- [`LND`](https://github.com/getumbrel/docker-lnd)
+- [`Tor`](https://github.com/getumbrel/docker-tor)
+- [`Nginx`](https://github.com/nginx/nginx)
+- [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
 
 **Architecture**
 
