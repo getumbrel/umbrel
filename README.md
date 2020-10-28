@@ -65,9 +65,9 @@ To stop Umbrel, run:
 sudo ./scripts/stop
 ```
 
-### Optional: How-to Upgrade Umbrel from the command line**
+### Upgrading Umbrel from the command line
 
-Updates OTA (over the air) work pretty well for most end-users, but if you prefer upgrading in a more controlled environment and the ability to specify the version, follow these steps:
+Updates OTA (over the air) work pretty well, but if you prefer upgrading in a more controlled environment and the ability to specify the version, follow these steps:
 
 ```bash
 # cd into the dir you installed Umbrel in
