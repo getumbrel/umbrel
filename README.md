@@ -77,6 +77,24 @@ sudo ./scripts/stop
 - [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
 
 
+**Upgrade Umbrel from Command Line (when this is preferred over OTA updates)**
+
+# cd into the dir you installed Umbrel in
+cd /path/to/your/custom/umbrel/install
+
+# Manually update to latest Umbrel (change version number to latest release from here: https://github.com/getumbrel/umbrel/releases )
+sudo scripts/update/update --repo getumbrel/umbrel#v0.2.13
+
+# Reboot system to make sure all background Umbrel services are stopped
+sudo reboot
+
+# cd into the dir you installed Umbrel in
+cd /path/to/your/custom/umbrel/install
+
+# Start Umbrel again
+sudo scripts/start
+
+
 **Architecture**
 
 ```
