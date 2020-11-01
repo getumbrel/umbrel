@@ -96,6 +96,7 @@ services:
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
+                    SETTINGS_FILE: "/db/settings.json"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
