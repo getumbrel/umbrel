@@ -187,7 +187,7 @@ sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
 
 # Store docker binary path
-DOCKER_BINARY=$(which docker)
+DOCKER_BINARY=$(readlink -f "$(which docker)")
 sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 
 # Set Umbrel version in electrs banner
