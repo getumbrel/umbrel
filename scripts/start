@@ -20,7 +20,7 @@ check_dependencies () {
 }
 
 # Check system's dependencies
-check_dependencies readlink dirname docker docker-compose
+check_dependencies readlink dirname ip docker docker-compose
 
 # Check karen's dependencies
 check_dependencies fswatch
