@@ -90,7 +90,7 @@ services:
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
-                        - /usr/bin/docker:/usr/bin/docker
+                        - ${DOCKER_BINARY:-/usr/bin/docker}:/usr/bin/docker
                         - jwt-public-key:/jwt-public-key
                         - jwt-private-key:/jwt-private-key
                 environment:
