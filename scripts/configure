@@ -58,7 +58,7 @@ if [[ -f "${STATUS_DIR}/configured" ]]; then
 else
   echo "============ CONFIGURING ============="
 fi
-echo "========= UMBREL (${NETWORK}) ==========="
+echo "========= UMBREL (${BITCOIN_NETWORK}) ==========="
 echo "======================================"
 echo
 
