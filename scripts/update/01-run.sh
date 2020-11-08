@@ -27,7 +27,10 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo
 
+    # This package is needed for the umbrel-debug script
+    # This can be safely removed from Umbrel v0.3.x+
     apt install smartmontools -y
+
     # In Umbrel OS v0.1.2, we need to bind Avahi to only
     # eth0,wlan0 interfaces to prevent hostname cycling
     # https://github.com/getumbrel/umbrel-os/issues/76
