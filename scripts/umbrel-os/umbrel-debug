@@ -55,7 +55,6 @@ echo "--------"
 
 vcgencmd version
 
-
 echo
 echo "Tempature"
 echo "---------"
@@ -110,16 +109,34 @@ list_block_devices () {
 
 no_of_block_devices=$(list_block_devices | wc -l)
 if [[ $no_of_block_devices -lt 1 ]]; then
-  echo "Multiple block devices found, only one drive is supported"
-  echo "Exiting mount script without doing anything"
+  echo "================"
+  echo "==== Result ===="
+  echo "================"
+  echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
   exit 0
 fi
 if [[ $no_of_block_devices -gt 1 ]]; then
-  echo "Multiple block devices found, only one drive is supported"
-  echo "Exiting mount script without doing anything"
+  echo "================"
+  echo "==== Result ===="
+  echo "================"
+  echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to usefor Umbrel."
   exit 0
 fi
 # At this point we know there is only one block device attached
 block_device=$(list_block_devices)
 sudo smartctl -i "/dev/${block_device}"
 sudo smartctl -t short -a  "/dev/${block_device}"
+
+echo "================"
+echo "==== Result ===="
+echo "================"
+
+if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
+  echo "There is probably an issue with either your power supply or the temperature of your Raspberry Pi is too high."
+  echo $(vcgencmd get_throttled)
+  echo 'If the value above starts with "0x5", it's probably a power issue, otherwise it's probably a temperature issue.'
+  exit 0
+fi
+
+echo "The script could not automatically detect an issue with your Raspberry Pi."
+echo "Please share the output of this command in the Umbrel Telegram group, and we will help you resolve the problem."
