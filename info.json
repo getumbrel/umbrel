@@ -1,6 +1,6 @@
 {
-    "version": "0.2.13",
-    "name": "Umbrel v0.2.13",
+    "version": "0.2.14",
+    "name": "Umbrel v0.2.14",
     "requires": ">=0.2.1",
-    "notes": "This update fixes an important bug with the background processes. If you're unable to start this update or it gets stuck at \"Starting Update...\" please follow the instructions here: https://gist.github.com/lukechilds/8dc223885f47579a77407ba7f5beaaec"
+    "notes": "This Umbrel release brings LND v0.11.1, native segwit addresses for on-chain deposits and a few tiny but mighty changes that will silently prepare your Umbrel for some big upcoming updates."
 }
