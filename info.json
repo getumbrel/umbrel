@@ -2,5 +2,5 @@
     "version": "0.2.14",
     "name": "Umbrel v0.2.14",
     "requires": ">=0.2.1",
-    "notes": "This Umbrel release brings LND v0.11.1, native segwit addresses for on-chain deposits and some tiny but mighty changes that will silently prepare your Umbrel for some big upcoming updates."
+    "notes": "This Umbrel release brings LND v0.11.1, native segwit addresses for on-chain deposits and a few tiny but mighty changes that will silently prepare your Umbrel for some big upcoming updates."
 }
