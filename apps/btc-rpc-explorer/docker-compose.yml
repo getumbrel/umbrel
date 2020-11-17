@@ -22,8 +22,8 @@ services:
                   BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
                   BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
                   # Electrum
-                  BTCEXP_ADDRESS_API: electrumx
-                  BTCEXP_ELECTRUMX_SERVERS: tcp://10.11.4.0:50001
+                  # BTCEXP_ADDRESS_API: electrumx
+                  # BTCEXP_ELECTRUMX_SERVERS: tcp://10.11.4.0:50001
                   # Log level
                   DEBUG: "btcexp:*,electrumClient"
                   # Performance
