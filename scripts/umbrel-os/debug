@@ -119,7 +119,7 @@ if [[ $no_of_block_devices -gt 1 ]]; then
   echo "================"
   echo "==== Result ===="
   echo "================"
-  echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to usefor Umbrel."
+  echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel."
   exit 0
 fi
 # At this point we know there is only one block device attached
