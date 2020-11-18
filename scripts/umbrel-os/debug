@@ -134,7 +134,7 @@ echo "================"
 if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
   echo "There is probably an issue with either your power supply or the temperature of your Raspberry Pi is too high."
   echo $(vcgencmd get_throttled)
-  echo 'If the value above starts with "0x5", it\'s probably a power issue, otherwise it's probably a temperature issue.'
+  echo 'If the value above starts with "0x5", it is probably a power issue, otherwise it is probably a temperature issue.'
   exit 0
 fi
 
