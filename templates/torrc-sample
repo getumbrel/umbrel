@@ -26,4 +26,8 @@ HiddenServicePort 8080 10.11.1.2:8080
 HiddenServiceDir /var/lib/tor/lnd-grpc
 HiddenServicePort 10009 10.11.1.2:10009
 
+# btc-rpc-explorer Hidden Service
+HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
+HiddenServicePort 80 btc-rpc-explorer:3002
+
 HashedControlPassword <password>
