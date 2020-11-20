@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+
+show_help() {
+  cat << EOF
+app 0.0.1
+
+CLI for managing Umbrel apps
+
+Usage: app <command> <app>
+
+Commands:
+    install                    Pulls down images for an app
+    uninstall                  Removes images and destroys all data for an app
+    start                      Starts an installed app
+    stop                       Stops an installed app
+EOF
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Check dependencies
+check_dependencies docker-compose
+
+if [ -z ${1+x} ]; then
+  command=""
+else
+  command="$1"
+fi
+
+if [ -z ${2+x} ]; then
+  app=""
+else
+  app="$2"
+fi
+
+# Pulls down images for an app
+if [[ "$command" = "install" ]]; then
+
+  echo "Pulling images for ${app}..."
+  # TODO: pull images
+
+  exit
+fi
+
+# Removes images and destroys all data for an app
+if [[ "$command" = "uninstall" ]]; then
+
+  echo "Deleting app data for ${app}..."
+  # TODO: delete app data
+
+  echo "Removing app images"
+  # TODO: remove app images
+
+  exit
+fi
+
+# Starts an installed app
+if [[ "$command" = "start" ]]; then
+
+  echo "Starting app ${app}..."
+  # TODO: start app
+
+  exit
+fi
+
+# Stops an installed app
+if [[ "$command" = "stop" ]]; then
+
+  echo "Stopping app ${app}..."
+  # TODO: stop app
+
+  exit
+fi
+
+# If we get here it means no valid command was supplied
+# Show help and exit
+show_help
+exit 1

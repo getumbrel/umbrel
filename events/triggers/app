@@ -6,4 +6,4 @@ signal="${1}"
 command=${signal%%"-"*}
 app=${signal#*"-"}
 
-echo ./app "${command}" "${app}"
+"${UMBREL_ROOT}/scripts/app" "${command}" "${app}"
