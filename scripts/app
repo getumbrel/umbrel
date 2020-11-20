@@ -71,7 +71,7 @@ if [[ "$command" = "uninstall" ]]; then
   # TODO: delete app data
 
   echo "Removing app images"
-  # TODO: remove app images
+  compose "${app}" down --rmi all --remove-orphans
 
   exit
 fi
