@@ -47,8 +47,12 @@ fi
 compose() {
   local app="${1}"
   shift
+  local env_file="${UMBREL_ROOT}/.env"
   local compose_file="${UMBREL_ROOT}/apps/${app}/docker-compose.yml"
-  docker-compose --file "${compose_file}" "${@}"
+  docker-compose \
+    --env-file "${env_file}" \
+    --file "${compose_file}" \
+    "${@}"
 }
 
 # Pulls down images for an app
@@ -76,7 +80,7 @@ fi
 if [[ "$command" = "start" ]]; then
 
   echo "Starting app ${app}..."
-  # TODO: start app
+  compose "${app}" up --detach
 
   exit
 fi
