@@ -89,7 +89,7 @@ fi
 if [[ "$command" = "stop" ]]; then
 
   echo "Stopping app ${app}..."
-  # TODO: stop app
+  compose "${app}" rm --force --stop
 
   exit
 fi
