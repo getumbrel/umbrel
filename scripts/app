@@ -16,6 +16,7 @@ Commands:
     uninstall                  Removes images and destroys all data for an app
     start                      Starts an installed app
     stop                       Stops an installed app
+    logs                       Watch logs of a running app
 EOF
 }
 
@@ -85,6 +86,15 @@ if [[ "$command" = "stop" ]]; then
 
   echo "Stopping app ${app}..."
   # TODO: stop app
+
+  exit
+fi
+
+# Watch logs of a running app
+if [[ "$command" = "logs" ]]; then
+
+  echo "Tailing logs for ${app}..."
+  compose "${app}" logs --follow
 
   exit
 fi
