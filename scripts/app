@@ -43,11 +43,18 @@ else
   app="$2"
 fi
 
+compose() {
+  local app="${1}"
+  shift
+  local compose_file="${UMBREL_ROOT}/apps/${app}/docker-compose.yml"
+  docker-compose --file "${compose_file}" "${@}"
+}
+
 # Pulls down images for an app
 if [[ "$command" = "install" ]]; then
 
   echo "Pulling images for ${app}..."
-  # TODO: pull images
+  compose "${app}" pull
 
   exit
 fi
