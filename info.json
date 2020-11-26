@@ -1,6 +1,6 @@
 {
-    "version": "0.2.14",
-    "name": "Umbrel v0.2.14",
+    "version": "0.2.15",
+    "name": "Umbrel v0.2.15",
     "requires": ">=0.2.1",
-    "notes": "This Umbrel release brings LND v0.11.1, native segwit addresses for on-chain deposits and a few tiny but mighty changes that will silently prepare your Umbrel for some big upcoming updates."
+    "notes": "This update fixes some compatibility issues between Umbrel and the latest version of Electrum Wallet."
 }
