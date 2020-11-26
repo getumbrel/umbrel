@@ -27,51 +27,53 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel
+
 
 echo "====================="
 echo "= Umbrel debug info ="
 echo "====================="
 
 echo
-echo "Umbrel OS version"
-echo "-----------------"
-
-cat /etc/default/umbrel
-
-echo
 echo "Umbrel version"
 echo "---------------"
 cat /home/umbrel/umbrel/info.json | jq .version | sed 's/"//g'
 
-echo
-echo "Raspberry Pi Model"
-echo "------------------"
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    echo
+    echo "Umbrel OS version"
+    echo "-----------------"
+    echo $UMBREL_OS
 
-cat /proc/cpuinfo | tail -3
+    echo
+    echo "Raspberry Pi Model"
+    echo "------------------"
 
-echo
-echo "Firmware"
-echo "--------"
+    cat /proc/cpuinfo | tail -3
 
-vcgencmd version
+    echo
+    echo "Firmware"
+    echo "--------"
 
-echo
-echo "Tempature"
-echo "---------"
+    vcgencmd version
 
-vcgencmd measure_temp
+    echo
+    echo "Tempature"
+    echo "---------"
 
-echo
-echo "Throttling"
-echo "----------"
+    vcgencmd measure_temp
 
-vcgencmd get_throttled
+    echo
+    echo "Throttling"
+    echo "----------"
 
+    vcgencmd get_throttled
+fi
 echo
 echo "Filesystem information"
 echo "----------------------"
 
-df
+df -h
 echo
 cat /proc/swaps
 
@@ -90,6 +92,7 @@ echo "-----------"
 cd /home/umbrel/umbrel
 docker-compose logs --tail=100
 
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
 echo
 echo "SSD test"
 echo "--------"
@@ -122,16 +125,17 @@ if [[ $no_of_block_devices -gt 1 ]]; then
   echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel."
   exit 0
 fi
+fi
 echo "================"
 echo "==== Result ===="
 echo "================"
-
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
 if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
   echo "There is probably an issue with either your power supply or the temperature of your Raspberry Pi is too high."
   echo $(vcgencmd get_throttled)
   echo 'If the value above starts with "0x5", it is probably a power issue, otherwise it is probably a temperature issue.'
   exit 0
 fi
-
+fi
 echo "The script could not automatically detect an issue with your Raspberry Pi."
 echo "Please share the output of this command in the Umbrel Telegram group, and we will help you resolve the problem."
