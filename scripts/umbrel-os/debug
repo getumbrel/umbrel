@@ -88,7 +88,7 @@ echo "Docker logs"
 echo "-----------"
 
 cd /home/umbrel/umbrel
-docker-compose logs
+docker-compose logs --tail=100
 
 echo
 echo "SSD test"
@@ -122,11 +122,6 @@ if [[ $no_of_block_devices -gt 1 ]]; then
   echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel."
   exit 0
 fi
-# At this point we know there is only one block device attached
-block_device=$(list_block_devices)
-sudo smartctl -i "/dev/${block_device}"
-sudo smartctl -t short -a  "/dev/${block_device}"
-
 echo "================"
 echo "==== Result ===="
 echo "================"
