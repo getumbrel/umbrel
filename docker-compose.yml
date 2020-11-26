@@ -183,7 +183,7 @@ services:
                     ipv4_address: 10.11.3.0
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.5
+              image: getumbrel/electrs:v0.8.6
               logging: *default-logging
               depends_on: [ bitcoin ]
               volumes:
