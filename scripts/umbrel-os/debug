@@ -34,10 +34,12 @@ echo "====================="
 echo "= Umbrel debug info ="
 echo "====================="
 
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+cd "${UMBREL_ROOT}"
 echo
 echo "Umbrel version"
 echo "---------------"
-cat /home/umbrel/umbrel/info.json | jq .version | sed 's/"//g'
+cat info.json | jq .version | sed 's/"//g'
 
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
@@ -89,13 +91,9 @@ echo
 echo "Docker logs"
 echo "-----------"
 
-cd /home/umbrel/umbrel
 docker-compose logs --tail=100
 
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
-echo
-echo "SSD test"
-echo "--------"
 
 list_block_devices () {
   # We need to run sync here to make sure the filesystem is reflecting the
