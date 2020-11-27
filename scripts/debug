@@ -71,6 +71,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
     vcgencmd get_throttled
 
+    echo
     echo "Startup status"
     echo "--------------"
     systemctl status umbrel-startup
