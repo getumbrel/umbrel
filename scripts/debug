@@ -163,5 +163,5 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         exit 0
     fi
 fi
-echo "The script could not automatically detect an issue with your Raspberry Pi."
-echo "Please share the output of this command in the Umbrel Telegram group, and we will help you resolve the problem."
+echo "This script could not automatically detect an issue with your Umbrel."
+echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
