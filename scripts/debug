@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 
 # This script is based on raspinfo: https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo
 # raspibfo is Copyright: 2018-2019, Raspberry Pi (Trading) Ltd.
