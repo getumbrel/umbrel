@@ -35,6 +35,7 @@ echo "====================="
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 cd "${UMBREL_ROOT}"
+
 echo
 echo "Umbrel version"
 echo "---------------"
@@ -142,6 +143,8 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "==== Result ===="
         echo "================"
         echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
+        echo "Please try to shutdown your Raspberry Pi ('sudo shutdown'), plug the SSD into the other USB3 port."
+        echo "After you've finished that, boot your Raspberry Pi back up."
         exit 0
     fi
     if [[ $no_of_block_devices -gt 1 ]]; then
@@ -158,7 +161,7 @@ echo "================"
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
         echo "There is probably an issue with either your power supply or the temperature of your Raspberry Pi is too high."
-        echo $(vcgencmd get_throttled)
+        vcgencmd get_throttled
         echo 'If the value above starts with "0x5", it is probably a power issue, otherwise it is probably a temperature issue.'
         exit 0
     fi
