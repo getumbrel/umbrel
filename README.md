@@ -116,6 +116,56 @@ It's recommended that you note down your 24 secret words (seed phrase) with a pe
 
 You're also recommended to download a backup of your payment channels regularly as it'll be required to recover your funds in the Lightning wallet of your Umbrel in case something goes wrong. You should also always download the latest backup file before installing an update.
 
+## Frequently asked questions
+<details>
+  <summary>Does Umbrel support .....?</summary>
+Currently not, but the we are working on an application infrastructure, so third-party developers can add their own apps to Umbrel.
+</details>
+
+<details>
+<summary>My Umbrel node keeps crashing. What can I do to fix the issue?</summary>
+If you're not using the official power supply, it's probably the power supply.
+To detect undervoltage, connect to your node via SSH and run this command: `vcgencmd get_throttled`.
+If it doesn't output throttled=0x0, then it's either the power supply or your SSD is using too much power (this can only be the case if you're not using the recommended hardware).
+</details>
+ 
+ <details>
+ <summary> My Umbrel node doesn't boot. What can I do?</summary>
+Do you have connected anything to the GPIO pins?
+If yes, try to unplug it and reboot the RPi by unplugging the power supply and then plugging it back in.
+</details>
+
+<details>
+  <summary>I can't access the dashboard at umbrel.local. What can I do?</summary>
+Check if your router detects your node
+If it does, try to access it with the IP address directly.
+If your router doesn't detect the node, either you ethernet cable isn't plugged in correctly or the node doesn't boot.
+If you think the ethernet cable isn't the issue, follow the answer of the previous question.
+If you can't access the dashboard via the IP address either, try to disconnect the drive from the Raspberry Pi and plug it into the other USB port.
+Then SSH into your node and run: `sudo systemctl start umbrel-external-storage`.
+After you've run the command, wait for two minutes, then run `sudo systemctl status umbrel-external-storage`.
+If the output of that command contains "Exiting the mount script without anything", the drive is connected wrongly.
+If the output doesn't contain this text, run `sudo systemctl start umbrel-startup`.
+You should now be able to access the dashboard.
+</details>
+
+<details>
+  <summary>What are the SSH username and password?</summary>
+The username is `umbrel`, the password is `moneyprintergobrrr`.
+</details>
+
+<details>
+<summary>I want to connect to my node using ...... over my local network, but it doesn't work. How can I fix this?</summary>
+If you want to connect to your Umbrel over the local network just replace your onion domain with umbrel.local for any of the connection strings.
+</details>
+
+<details>
+<summary>How can I use WiFi instead of ethernet?</summary>
+This works like it does in RaspiBlitz: Follow this tutorial after flashing the SD card, but before inserting it into the Raspberry Pi: https://stadicus.github.io/RaspiBolt/raspibolt_20_pi.html#prepare-wifi
+</details>
+
+If this doesn't help, ask in the Telegram chat for answers.
+
 ## ❤️ Contributing
 
 We welcome and appreciate new contributions.
