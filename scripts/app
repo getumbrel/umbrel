@@ -12,11 +12,8 @@ CLI for managing Umbrel apps
 Usage: app <command> <app>
 
 Commands:
-    install                    Pulls down images for an app
+    install                    Pulls down images for an app and starts it
     uninstall                  Removes images and destroys all data for an app
-    start                      Starts an installed app
-    stop                       Stops an installed app
-    logs                       Watch logs of a running app
     compose                    Passes all arguments to docker-compose
 EOF
 }
@@ -62,11 +59,14 @@ compose() {
     "${@}"
 }
 
-# Pulls down images for an app
+# Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
   echo "Pulling images for ${app}..."
   compose "${app}" pull
+
+  echo "Starting app ${app}..."
+  compose "${app}" up --detach
 
   exit
 fi
@@ -79,33 +79,6 @@ if [[ "$command" = "uninstall" ]]; then
 
   echo "Removing app images"
   compose "${app}" down --rmi all --remove-orphans
-
-  exit
-fi
-
-# Starts an installed app
-if [[ "$command" = "start" ]]; then
-
-  echo "Starting app ${app}..."
-  compose "${app}" up --detach
-
-  exit
-fi
-
-# Stops an installed app
-if [[ "$command" = "stop" ]]; then
-
-  echo "Stopping app ${app}..."
-  compose "${app}" rm --force --stop
-
-  exit
-fi
-
-# Watch logs of a running app
-if [[ "$command" = "logs" ]]; then
-
-  echo "Tailing logs for ${app}..."
-  compose "${app}" logs --follow
 
   exit
 fi
