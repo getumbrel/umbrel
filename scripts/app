@@ -39,7 +39,10 @@ fi
 if [ -z ${2+x} ]; then
   app=""
 else
+  # TODO: make sure this app exists so we don't go doing stuff with random DIRs
   app="$2"
+  app_dir="${UMBREL_ROOT}/apps/${app}"
+  app_data_dir="${UMBREL_ROOT}/app-data/${app}"
 fi
 
 if [ -z ${3+x} ]; then
@@ -52,8 +55,8 @@ compose() {
   local app="${1}"
   shift
   local env_file="${UMBREL_ROOT}/.env"
-  local compose_file="${UMBREL_ROOT}/apps/${app}/docker-compose.yml"
-  docker-compose \
+  local compose_file="${app_dir}/docker-compose.yml"
+  DATA_DIR="${app_data_dir}" docker-compose \
     --env-file "${env_file}" \
     --file "${compose_file}" \
     "${@}"
@@ -65,6 +68,12 @@ if [[ "$command" = "install" ]]; then
   echo "Pulling images for ${app}..."
   compose "${app}" pull
 
+  echo "Setting up data dir for ${app}..."
+  mkdir -p "${app_data_dir}"
+  if [[ -d "${app_dir}/data" ]]; then
+    cp -a "${app_dir}/data/." "${app_data_dir}"
+  fi
+
   echo "Starting app ${app}..."
   compose "${app}" up --detach
 
@@ -74,11 +83,13 @@ fi
 # Removes images and destroys all data for an app
 if [[ "$command" = "uninstall" ]]; then
 
-  echo "Deleting app data for ${app}..."
-  # TODO: delete app data
-
   echo "Removing app images"
   compose "${app}" down --rmi all --remove-orphans
+
+  echo "Deleting app data for ${app}..."
+  if [[ -d "${app_data_dir}" ]]; then
+    rm -rf "${app_data_dir}"
+  fi
 
   exit
 fi
