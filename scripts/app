@@ -17,6 +17,7 @@ Commands:
     start                      Starts an installed app
     stop                       Stops an installed app
     logs                       Watch logs of a running app
+    compose                    Passes all arguments to docker-compose
 EOF
 }
 
@@ -42,6 +43,12 @@ if [ -z ${2+x} ]; then
   app=""
 else
   app="$2"
+fi
+
+if [ -z ${3+x} ]; then
+  args=""
+else
+  args="${@:3}"
 fi
 
 compose() {
@@ -99,6 +106,13 @@ if [[ "$command" = "logs" ]]; then
 
   echo "Tailing logs for ${app}..."
   compose "${app}" logs --follow
+
+  exit
+fi
+
+# Passes all arguments to docker-compose
+if [[ "$command" = "compose" ]]; then
+  compose "${app}" ${args}
 
   exit
 fi
