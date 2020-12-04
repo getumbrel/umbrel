@@ -9,7 +9,7 @@ app 0.0.1
 
 CLI for managing Umbrel apps
 
-Usage: app <command> <app>
+Usage: app <command> <app> [<arguments>]
 
 Commands:
     install                    Pulls down images for an app and starts it
