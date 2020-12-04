@@ -37,12 +37,16 @@ else
 fi
 
 if [ -z ${2+x} ]; then
-  app=""
+  show_help
+  exit 1
 else
-  # TODO: make sure this app exists so we don't go doing stuff with random DIRs
   app="$2"
   app_dir="${UMBREL_ROOT}/apps/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
+  if [[ -z "${app}" ]] || [[ ! -d "${app_dir}" ]]; then
+    echo "Error: \"${app}\" is not a valid app"
+    exit 1
+  fi
 fi
 
 if [ -z ${3+x} ]; then
