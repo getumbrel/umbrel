@@ -28,7 +28,7 @@ check_dependencies () {
 }
 
 # Check dependencies
-check_dependencies docker-compose
+check_dependencies docker-compose jq
 
 if [ -z ${1+x} ]; then
   command=""
@@ -66,6 +66,15 @@ compose() {
     "${@}"
 }
 
+update_installed_apps() {
+  local json_file="${UMBREL_ROOT}/db/user.json"
+  local action="${1}"
+  local app="${2}"
+  [[ "${action}" == "add" ]] && operator="+" || operator="-"
+  updated_json=$(cat "${json_file}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
+  echo "${updated_json}" > "${json_file}"
+}
+
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
@@ -81,6 +90,9 @@ if [[ "$command" = "install" ]]; then
   echo "Starting app ${app}..."
   compose "${app}" up --detach
 
+  echo "Saving installed app in DB"
+  update_installed_apps add "${app}"
+
   exit
 fi
 
@@ -94,6 +106,9 @@ if [[ "$command" = "uninstall" ]]; then
   if [[ -d "${app_data_dir}" ]]; then
     rm -rf "${app_data_dir}"
   fi
+
+  echo "Removing installed app from DB"
+  update_installed_apps remove "${app}"
 
   exit
 fi
