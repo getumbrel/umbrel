@@ -75,6 +75,7 @@ sudo ./scripts/stop
 - [`Tor`](https://github.com/getumbrel/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
 - [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
+- [`Electrs`](https://github.com/romanz/electrs)
 
 
 **Architecture**
