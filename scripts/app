@@ -30,6 +30,10 @@ check_dependencies () {
   done
 }
 
+list_installed_apps() {
+  cat "${DB_FILE}" | jq -r '.installedApps | join("\n")'
+}
+
 # Check dependencies
 check_dependencies docker-compose jq
 
@@ -46,6 +50,12 @@ else
   app="$2"
   app_dir="${UMBREL_ROOT}/apps/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
+  if [[ "${app}" == "installed" ]]; then
+    list_installed_apps | while read app; do
+      "${0}" "${1}" "${app}" "${@:3}" &
+    done
+    exit
+  fi
   if [[ -z "${app}" ]] || [[ ! -d "${app_dir}" ]]; then
     echo "Error: \"${app}\" is not a valid app"
     exit 1
@@ -67,10 +77,6 @@ compose() {
     --env-file "${env_file}" \
     --file "${compose_file}" \
     "${@}"
-}
-
-list_installed_apps() {
-  cat "${DB_FILE}" | jq -r '.installedApps | join("\n")'
 }
 
 update_installed_apps() {
