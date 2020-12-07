@@ -14,6 +14,7 @@ Usage: app <command> <app> [<arguments>]
 Commands:
     install                    Pulls down images for an app and starts it
     uninstall                  Removes images and destroys all data for an app
+    stop                       Stops an installed app
     compose                    Passes all arguments to docker-compose
 EOF
 }
@@ -109,6 +110,15 @@ if [[ "$command" = "uninstall" ]]; then
 
   echo "Removing installed app from DB"
   update_installed_apps remove "${app}"
+
+  exit
+fi
+
+# Stops an installed app
+if [[ "$command" = "stop" ]]; then
+
+  echo "Stopping app ${app}..."
+  compose "${app}" rm --force --stop
 
   exit
 fi
