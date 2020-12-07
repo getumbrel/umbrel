@@ -15,6 +15,7 @@ Commands:
     install                    Pulls down images for an app and starts it
     uninstall                  Removes images and destroys all data for an app
     stop                       Stops an installed app
+    start                      Starts an installed app
     compose                    Passes all arguments to docker-compose
 EOF
 }
@@ -119,6 +120,20 @@ if [[ "$command" = "stop" ]]; then
 
   echo "Stopping app ${app}..."
   compose "${app}" rm --force --stop
+
+  exit
+fi
+
+# Starts an installed app
+if [[ "$command" = "start" ]]; then
+
+  if [[ ! -d "${app_data_dir}" ]]; then
+    echo "Error: \"${app}\" is not installed yet"
+    exit 1
+  fi
+
+  echo "Starting app ${app}..."
+  compose "${app}" up --detach
 
   exit
 fi
