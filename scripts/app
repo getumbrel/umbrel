@@ -52,7 +52,9 @@ else
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
   if [[ "${app}" == "installed" ]]; then
     list_installed_apps | while read app; do
-      "${0}" "${1}" "${app}" "${@:3}" &
+      if [[ "${app}" != "" ]]; then
+        "${0}" "${1}" "${app}" "${@:3}" &
+      fi
     done
     exit
   fi
