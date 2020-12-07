@@ -2,6 +2,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+DB_FILE="${UMBREL_ROOT}/db/user.json"
 
 show_help() {
   cat << EOF
@@ -68,13 +69,16 @@ compose() {
     "${@}"
 }
 
+list_installed_apps() {
+  cat "${DB_FILE}" | jq -r '.installedApps | join("\n")'
+}
+
 update_installed_apps() {
-  local json_file="${UMBREL_ROOT}/db/user.json"
   local action="${1}"
   local app="${2}"
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
-  updated_json=$(cat "${json_file}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
-  echo "${updated_json}" > "${json_file}"
+  updated_json=$(cat "${DB_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
+  echo "${updated_json}" > "${DB_FILE}"
 }
 
 # Pulls down images for an app and starts it
@@ -127,7 +131,7 @@ fi
 # Starts an installed app
 if [[ "$command" = "start" ]]; then
 
-  if [[ ! -d "${app_data_dir}" ]]; then
+  if list_installed_apps | grep --quiet --invert-match "^${app}$"; then
     echo "Error: \"${app}\" is not installed yet"
     exit 1
   fi
