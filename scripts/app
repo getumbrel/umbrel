@@ -53,7 +53,7 @@ else
   if [[ "${app}" == "installed" ]]; then
     list_installed_apps | while read app; do
       if [[ "${app}" != "" ]]; then
-        "${0}" "${1}" "${app}" "${@:3}" &
+        "${0}" "${1}" "${app}" "${@:3}" || true
       fi
     done
     exit
