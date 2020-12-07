@@ -86,6 +86,7 @@ services:
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
+                        - ${PWD}/apps:/apps
                         - ${PWD}/lnd:/lnd:ro
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
@@ -125,6 +126,7 @@ services:
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                     TOR_PROXY_IP: "10.11.5.1"
                     TOR_PROXY_PORT: "29050"
+                    TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                 networks:
                     net:
                         ipv4_address: 10.11.2.1
