@@ -35,6 +35,9 @@ services:
                   # Disable RPC
                   BTCEXP_RPC_ALLOWALL: "false"
                   BTCEXP_BASIC_AUTH_PASSWORD: ""
+              networks:
+                  default:
+                      ipv4_address: 10.11.9.9
 
 networks:
   default:
