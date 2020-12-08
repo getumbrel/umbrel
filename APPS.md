@@ -97,7 +97,7 @@ x-logging: &default-logging
 services:
         # Replace <app-id> with the app ID of your app. App IDs
         # can only contain lowercase alphabets and dashes.
-        <app-id>:
+        <app-id>-web:
               container_name: <app-id>
               # Replace <docker-image> with your app's image and tag
               image: <docker-image>
@@ -108,11 +108,12 @@ services:
                   # Replace <port> with the port that your app's web server
                   # is listening inside the Docker container. If you need to
                   # expose more ports, add them below.
-                  - 6969:<port>
+                  - <port>:<port>
               volumes:
-                  # Uncomment to mount a data directory inside the Docker
+                  # Uncomment to mount data directories inside the Docker
                   # container to store persistent data at path /data
-                  # - ${DATA_DIR}:/data
+                  # - ${DATA_DIR}/foo:/foo
+                  # - ${DATA_DIR}/bar:/bar
                   
                   # Uncomment to mount LND's data directory as read-only
                   # inside the Docker container at path /.lnd
@@ -150,6 +151,10 @@ services:
                   # $TOR_PROXY_HOST - Local IP of Tor proxy
                   # $TOR_PROXY_PORT - Port of Tor proxy
 
+        # If your app has more Docker containers, such as a
+        # database container, etc you can define these services below
+        # <app-id>-db:
+        
 networks:
   default:
     external:
@@ -158,7 +163,9 @@ networks:
 
 4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer:v1.0.0`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
 
-> If BTC RPC Explorer would have required any default configuration files, we would have created a new `data` directory in the same directory where we created the `docker-compose.yml` file. We'd have then placed the configuration files inside it, and uncommented the `- ${DATA_DIR}:/data` volume mount in `docker-compose.yml` to make the files available inside `/data` directory in the Docker container.
+BTC RPC Explorer is an application with a single Docker container, so we don't need to define any other additional services (such as a database service, etc) in the compose file.
+
+> If BTC RPC Explorer would have required any default configuration files, we would have created a new `data` directory in the same directory as the `docker-compose.yml` file. We'd have then placed the configuration files inside it, and uncommented the `- ${DATA_DIR}:/data` volume mount in `docker-compose.yml` to make the files available in the `/data` directory inside the container.
 
 Updated `docker-compose.yml` file:
 
@@ -170,14 +177,14 @@ x-logging: &default-logging
         tag: "umbrel-app {{.Name}}"
 
 services:
-        btc-rpc-explorer:
+        btc-rpc-explorer-web:
               container_name: btc-rpc-explorer
               image: getumbrel/btc-rpc-explorer:v1.0.0
               logging: *default-logging
               restart: on-failure
               stop_grace_period: 1m
               ports:
-                  - 6969:3002
+                  - 3002:3002
               environment:
 
 networks:
@@ -198,14 +205,14 @@ x-logging: &default-logging
         tag: "umbrel-app {{.Name}}"
 
 services:
-        btc-rpc-explorer:
+        btc-rpc-explorer-web:
               container_name: btc-rpc-explorer
               image: getumbrel/btc-rpc-explorer:v1.0.0
               logging: *default-logging
               restart: on-failure
               stop_grace_period: 1m
               ports:
-                  - 6969:3002
+                  - 3002:3002
               environment:
                   # Bitcoin Core environment variables
                   BTCEXP_BITCOIND_HOST: $BITCOIN_HOST
@@ -291,7 +298,7 @@ umbrel-dev ssh
 scripts/app install btc-rpc-explorer
 ```
 
-That's it! Our app should now be accessible at http://umbrel-dev.local:6969
+That's it! Our app should now be accessible at http://umbrel-dev.local:3002
 
 > If you need to make any changes in your app's `docker-compose.yml` file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/btc-rpc-explorer/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
 
@@ -329,7 +336,7 @@ sudo scripts/update/update --repo <username>/umbrel#btc-rpc-explorer
 scripts/app install btc-rpc-explorer
 ```
 
-The app should now be accessible at http://umbrel.local:6969
+The app should now be accessible at http://umbrel.local:3002
 
 4\. To uninstall:
 
