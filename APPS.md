@@ -26,21 +26,18 @@ git clone https://github.com/janoside/btc-rpc-explorer.git btc-rpc-explorer
 cd  btc-rpc-explorer
 ```
 
-2\. Next, we'll create a `Dockerfile` in the project's directory:
+2\. Next, we'll create a `Dockerfile` in the app's directory:
 
 ```Dockerfile
-ARG VERSION=v2.0.2
-
 FROM node:12-buster-slim AS builder
-ARG VERSION
+
 WORKDIR /build
 RUN apt-get update
-RUN apt-get install -y git python3 build-essential
-RUN git clone --branch $VERSION https://github.com/janoside/btc-rpc-explorer .
+RUN apt-get install -y python3 build-essential
 RUN npm ci --production
-RUN rm -rf .git
 
 FROM node:12-buster-slim
+
 USER 1000
 WORKDIR /data
 COPY --from=builder /build .
