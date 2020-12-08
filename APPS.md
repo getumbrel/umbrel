@@ -355,3 +355,13 @@ We're now ready to open a pull request on the main `getumbrel/umbrel` repo and s
 2. **How will users install/uninstall apps?**
 
     Users will not use the `scripts/app` CLI to install and uninstall. It's only meant for development use. They'll be able to install and uninstall the apps via a dedicated UI in their dashboard.
+    
+3. **If I submit an app, will my PR be merged for sure?**
+
+    For now, we're only accepting app submissions from developers who have been specifically invited by us. Over time, we'll allow anyone to submit their app.
+
+    > Need an invite to submit your app? Get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
+
+4. **I need help with something else?**
+
+    Join our [developer chat](https://keybase.io/team/getumbrel) on Keybase, or get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
