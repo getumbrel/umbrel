@@ -26,7 +26,7 @@ git clone https://github.com/janoside/btc-rpc-explorer.git btc-rpc-explorer
 cd  btc-rpc-explorer
 ```
 
-2\. Next, we'll create a `Dockerfile` in the project's root directory:
+2\. Next, we'll create a `Dockerfile` in the project's directory:
 
 ```Dockerfile
 ARG VERSION=v2.0.2
@@ -277,7 +277,7 @@ umbrel-dev boot
 
 After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
 
-4\. Now let's switch the Umbrel installation on `umbrel-dev` to our fork and branch. In the same directory (where we setup `umbrel-dev`), we'll run:
+4\. Now let's switch the Umbrel installation on `umbrel-dev` to our fork and branch. In the same directory where we setup `umbrel-dev`, we'll run:
 
 ```sh
 cd getumbrel/umbrel
@@ -300,7 +300,7 @@ scripts/app install btc-rpc-explorer
 
 That's it! Our app should now be accessible at http://umbrel-dev.local:3002
 
-> If you need to make any changes in your app's `docker-compose.yml` file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/btc-rpc-explorer/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
+> If you need to make any changes in your app's compose file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/btc-rpc-explorer/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
 
 7\. To test uninstall, we can run:
 
@@ -348,7 +348,7 @@ ___
 
 ## 4. Submitting the app
 
-We're now ready to open a pull request on the main `getumbrel/umbrel` repo and submit our app.
+We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo and submit our app.
 
 \[WIP\]
 
@@ -361,11 +361,11 @@ We're now ready to open a pull request on the main `getumbrel/umbrel` repo and s
 
 2. **How will users install/uninstall apps?**
 
-    Users will not use the `scripts/app` CLI to install and uninstall. It's only meant for development use. They'll be able to install and uninstall the apps via a dedicated UI in their dashboard.
-    
+    Users will install and uninstall the apps via dedicated UI in their dashboard. They will not use the `scripts/app` CLI directly as it's only meant for development use.
+
 3. **If I submit an app, will my PR be merged for sure?**
 
-    For now, we're only accepting app submissions from developers who have been specifically invited by us. Over time, we'll allow anyone to submit their app.
+    For now, we're only accepting app submissions from developers who have received an invitation from us. Over time, we'll allow anyone to submit their app.
 
     > Need an invite to submit your app? Get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
 
