@@ -214,12 +214,12 @@ services:
                   BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
 
                   # Electrum environment variables
-                  BTCEXP_ADDRESS_API: electrumx
                   BTCEXP_ELECTRUMX_SERVERS: tcp://${ELECTRUM_HOST}:${ELECTRUM_PORT}
                   
                   # App Config
                   BTCEXP_HOST: 0.0.0.0
                   DEBUG: "btcexp:*,electrumClient"
+                  BTCEXP_ADDRESS_API: electrumx
                   BTCEXP_SLOW_DEVICE_MODE: "true"
                   BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
                   BTCEXP_PRIVACY_MODE: "true"
