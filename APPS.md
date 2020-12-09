@@ -108,7 +108,7 @@ services:
                   - <port>:<port>
               volumes:
                   # Uncomment to mount data directories inside the Docker
-                  # container to store persistent data at path /data
+                  # container to store persistent data
                   # - ${DATA_DIR}/foo:/foo
                   # - ${DATA_DIR}/bar:/bar
                   
