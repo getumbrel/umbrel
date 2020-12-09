@@ -345,9 +345,59 @@ ___
 
 ## 4. Submitting the app
 
-We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo and submit our app.
+We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo and submit our app. Let's copy-paste the following markdown for the PR description, fill it up with the required details, and open the pull request.
 
-\[WIP\]
+```
+# App Submission
+
+### App name 
+...
+
+### Version 
+...
+
+### One line description of the app
+_(max 50 characters)_
+
+...
+
+### Summary of the app
+_(50 to 200 words)_
+
+...
+
+### Developed by
+...
+
+### Developer website
+...
+
+### Source code repository
+...
+
+### Uses
+- [ ] Bitcoin Core
+- [ ] Electrum server
+- [ ] LND
+
+### 256x256 SVG icon
+_(GitHub doesn't allow uploadig SVGs directly. Upload your file to an alternate service, such as https://svgur.com instead and update the embed link.)_
+
+...
+
+### App screenshots
+_(Upload 3 to 5 screenshots (1440x990px) of your app in PNG format.)_
+
+...
+
+
+### I have tested my app on:
+- [ ] [Umbrel dev environment](https://github.com/getumbrel/umbrel-dev)
+- [ ] [Umbrel OS on a Raspberry Pi 4](https://github.com/getumbrel/umbrel-os)
+- [ ] [Custom Umbrel install on Linux](https://github.com/getumbrel/umbrel#-installation)
+```
+
+**Here's our actual pull request — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls)**
 
 
 ## FAQs
