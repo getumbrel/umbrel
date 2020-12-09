@@ -10,14 +10,14 @@ Let's straightaway jump into action by packaging [BTC RPC Explorer](https://gith
 
 There are 4 steps:
 
-1. [Containerizing the app using Docker](#1-containerizing-the-app-using-docker)
-2. [Packaging the app for Umbrel](#2-packaging-the-app-for-umbrel)
-3. [Testing the app on Umbrel](#3-testing-the-app-on-umbrel)
+1. [🛳 Containerizing the app using Docker](#1-containerizing-the-app-using-docker)
+2. [☂️ Packaging the app for Umbrel](#2-packaging-the-app-for-umbrel)
+3. [🛠 Testing the app on Umbrel](#3-testing-the-app-on-umbrel)
     1. [Testing on Umbrel development environment (Linux or macOS)](#31-testing-the-app-on-umbrel-development-environment)
     2. [Testing on Umbrel OS (Raspberry Pi 4)](#32-testing-on-umbrel-os-raspberry-pi-4)
-4. [Submitting the app](#4-submitting-the-app)
+4. [🚀 Submitting the app](#4-submitting-the-app)
 
-## 1. Containerizing the app using Docker
+## 1. 🛳 Containerizing the app using Docker
 
 1\. Let's start by cloning BTC RPC Explorer on our system:
 
@@ -57,7 +57,7 @@ docker buildx build --platform linux/arm64,linux/amd64 --tag getumbrel/btc-rpc-e
 
 ___
 
-## 2. Packaging the app for Umbrel
+## 2. ☂️ Packaging the app for Umbrel
 
 1\. Let's fork the [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo on GitHub, clone our fork locally, create a new branch for our app, and then switch to it:
 
@@ -247,7 +247,7 @@ git push origin btc-rpc-explorer
 
 ___
 
-## 3. Testing the app on Umbrel
+## 3. 🛠 Testing the app on Umbrel
 
 ### 3.1 Testing the app on Umbrel development environment
 
@@ -343,7 +343,7 @@ scripts/app uninstall btc-rpc-explorer
 
 ___
 
-## 4. Submitting the app
+## 4. 🚀 Submitting the app
 
 We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the PR description, fill it up with the required details, and open a pull request.
 
