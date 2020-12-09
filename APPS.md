@@ -17,6 +17,8 @@ There are 4 steps:
     2. [Testing on Umbrel OS (Raspberry Pi 4)](#32-testing-on-umbrel-os-raspberry-pi-4)
 4. [🚀 Submitting the app](#4-submitting-the-app)
 
+___
+
 ## 1. 🛳&nbsp;&nbsp;Containerizing the app using Docker
 
 1\. Let's start by cloning BTC RPC Explorer on our system:
