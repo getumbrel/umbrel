@@ -28,7 +28,12 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+# Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+
+# function to upload the output to hastebin
+haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
 
 echo "====================="
 echo "= Umbrel debug info ="
@@ -75,7 +80,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
     echo "Startup service logs"
     echo "--------------------"
-    journalctl --unit=umbrel-startup.service | tail -n 30
+    journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
 
     echo
     echo "External storage service logs"
@@ -168,13 +173,13 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
 if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following link and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    ./scripts/debug | haste
+    ./scripts/debug | sed '/onion/d' | haste
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+    echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
 fi
