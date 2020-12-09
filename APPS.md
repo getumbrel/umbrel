@@ -345,7 +345,7 @@ ___
 
 ## 4. Submitting the app
 
-We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo and submit our app. Let's copy-paste the following markdown for the PR description, fill it up with the required details, and open the pull request.
+We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the PR description, fill it up with the required details, and open a pull request.
 
 ```
 # App Submission
