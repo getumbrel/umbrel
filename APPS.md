@@ -397,8 +397,13 @@ _(Upload 3 to 5 screenshots (1440x990px) of your app in PNG format.)_
 - [ ] [Custom Umbrel install on Linux](https://github.com/getumbrel/umbrel#-installation)
 ```
 
-**Here's our actual pull request — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls)**
+**Here's our actual pull request — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls).**
 
+> After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file such as removing any port conflicts with other apps, assigning unique IP addresses to the containers, etc before merging.
+
+🎉 Congratulations! That's all you need to do to package, test and submit your app to Umbrel. We can't wait to have you onboard!
+
+---
 
 ## FAQs
 
