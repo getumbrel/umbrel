@@ -48,7 +48,7 @@ services:
                     - "8333:8333"
                 networks:
                     net:
-                        ipv4_address: 10.11.1.1
+                        ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
                 image: lncm/lnd:v0.11.0
@@ -143,7 +143,7 @@ services:
                         - jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
-                    BITCOIN_HOST: "10.11.1.1"
+                    BITCOIN_HOST: $BITCOIN_IP
                     RPC_PORT: $BITCOIN_RPC_PORT
                     RPC_USER: $BITCOIN_RPC_USER
                     RPC_PASSWORD: $BITCOIN_RPC_PASS
@@ -165,7 +165,7 @@ services:
                     - ${PWD}/statuses:/statuses
                     - /var/run/docker.sock:/var/run/docker.sock
                 environment:
-                    JSONRPCURL: "http://10.11.1.1:${BITCOIN_RPC_PORT}"
+                    JSONRPCURL: "http://${BITCOIN_IP}:${BITCOIN_RPC_PORT}"
                     RPCUSER: $BITCOIN_RPC_USER
                     RPCPASS: $BITCOIN_RPC_PASS
                     LND_CONTAINER_NAME: lnd

@@ -98,6 +98,9 @@ ENV_FILE="./templates/.env"
 [[ -f "./.env" ]] && source "./.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
+# IP addresses
+BITCOIN_IP="10.11.1.1"
+
 # Bitcoin Core ports
 BITCOIN_RPC_PORT=8332
 BITCOIN_P2P_PORT=8333
@@ -197,6 +200,12 @@ sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$
 if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
+
+# TODO: Update all the above code to use this simpler logic
+for template in "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+  sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
+done
+
 
 ##########################################################
 ############### Performance optimizations ################

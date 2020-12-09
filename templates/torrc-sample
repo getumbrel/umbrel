@@ -8,11 +8,11 @@ HiddenServicePort 80 10.11.0.2:80
 
 # Bitcoin Core P2P Hidden Service
 HiddenServiceDir /var/lib/tor/bitcoin-p2p
-HiddenServicePort <bitcoin-p2p-port> 10.11.1.1:<bitcoin-p2p-port>
+HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>
 
 # Bitcoin Core RPC Hidden Service
 HiddenServiceDir /var/lib/tor/bitcoin-rpc
-HiddenServicePort <bitcoin-rpc-port> 10.11.1.1:<bitcoin-rpc-port>
+HiddenServicePort <bitcoin-rpc-port> <bitcoin-ip>:<bitcoin-rpc-port>
 
 # Electrum Hidden Service
 HiddenServiceDir /var/lib/tor/electrum

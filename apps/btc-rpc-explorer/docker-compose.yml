@@ -17,7 +17,7 @@ services:
                   # Docker requirements
                   BTCEXP_HOST: 0.0.0.0
                   # Bitcoin Core
-                  BTCEXP_BITCOIND_HOST: 10.11.1.1
+                  BTCEXP_BITCOIND_HOST: $BITCOIN_IP
                   BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
                   BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
                   BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
