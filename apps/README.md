@@ -281,7 +281,7 @@ After the VM has booted, we can verify if the Umbrel dashboard is accessible at 
 
 ```sh
 cd getumbrel/umbrel
-git add remote <username> https://github.com/<username>/umbrel.git
+git remote add <username> https://github.com/<username>/umbrel.git
 git fetch <username>
 git checkout <username>/btc-rpc-explorer
 ```
