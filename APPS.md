@@ -47,12 +47,12 @@ EXPOSE 3002
 CMD [ "npm", "start" ]
 ```
 
-> We recommend using `debian-buster-slim` (or a flavor of it, such as `node:12-buster-slim`, `python:3-buster-slim`, etc) as the base image for better performace, reliability and faster downloads of your app, unless you have a vey strong reason for not using it.
+> We recommend using `debian-buster-slim` (or a flavor of it, like `node:12-buster-slim`, `python:3-buster-slim`, etc) as the base image for better performace, reliability and faster downloads of your app, unless you have a vey strong reason for not using it.
 
 3\. We're now ready to build the Docker image of BTC RPC Explorer. Umbrel supports both 64-bit ARM and x86 architectures, so we'll use `docker buildx` to build, tag, and push multi-architecture Docker images of our app to Docker Hub.
 
 ```sh
-docker buildx build --platform linux/arm64,linux/amd64 --tag getumbrel/btc-rpc-explorer:v1.0.0 --output "type=registry" .
+docker buildx build --platform linux/arm64,linux/amd64 --tag getumbrel/btc-rpc-explorer:v2.0.2 --output "type=registry" .
 ```
 
 > You need to enable ["experimental features"](https://docs.docker.com/engine/reference/commandline/cli/#experimental-features) in Docker to use `docker buildx`.
@@ -70,9 +70,9 @@ git branch btc-rpc-explorer
 git checkout btc-rpc-explorer
 ```
 
-2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabets + dashes. Ideally it should be the name of the app. `btc-rpc-explorer` makes the perfect sense for our app, so we'll go with it.
+2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabets + dashes. Ideally, it should be the name of the app. `btc-rpc-explorer` makes the perfect sense for our app, so let's go with it.
 
-We'll now switch to the apps directory and create a new directory for our app by the name of our chosen app ID.
+We'll now switch to the apps directory and create a new directory for our app by the name of our chosen app ID:
 
 ```sh
 cd apps
@@ -97,20 +97,20 @@ services:
         # Replace <app-id> with the app ID of your app. App IDs
         # can only contain lowercase alphabets and dashes.
         <app-id>-web:
-              container_name: <app-id>
+              container_name: <app-id>-web
               # Replace <docker-image> with your app's image and tag
               image: <docker-image>
               logging: *default-logging
               restart: on-failure
-              stop_grace_period: 1m
+              stop_grace_period: 5m
               ports:
                   # Replace <port> with the port that your app's web server
                   # is listening inside the Docker container. If you need to
                   # expose more ports, add them below.
                   - <port>:<port>
               volumes:
-                  # Uncomment to mount data directories inside the Docker
-                  # container to store persistent data
+                  # Uncomment to mount your data directories inside
+                  # the Docker container for storing persistent data
                   # - ${DATA_DIR}/foo:/foo
                   # - ${DATA_DIR}/bar:/bar
                   
@@ -122,9 +122,10 @@ services:
                   # read-only inside the Docker container at path /.bitcoin
                   # - ${BITCOIN_DATA_DIR}:/.bitcoin:ro
               environment:
-                  # Pass any environment variables to your app for configuration
-                  # Here are all the environment variables that allow you to
-                  # connect to Bitcoin Core, LND, Electrum server and a Tor proxy
+                  # Pass any environment variables to your app for configuration.
+                  #
+                  # Here are all the environment variables that you can use to
+                  # connect to Bitcoin Core, LND, Electrum server and Tor proxy:
                   #
                   # Bitcoin Core environment variables
                   # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
@@ -150,8 +151,8 @@ services:
                   # $TOR_PROXY_HOST - Local IP of Tor proxy
                   # $TOR_PROXY_PORT - Port of Tor proxy
 
-        # If your app has more Docker containers, such as a
-        # database container, etc you can define these services below
+        # If your app has more Docker containers, like a
+        # database container, etc, you can define those services below
         # <app-id>-db:
         
 networks:
@@ -160,11 +161,11 @@ networks:
       name: umbrel_net
 ```
 
-4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer:v1.0.0`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
+4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer:v2.0.2`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
 
-BTC RPC Explorer is an application with a single Docker container, so we don't need to define any other additional services (such as a database service, etc) in the compose file.
+BTC RPC Explorer is an application with a single Docker container, so we don't need to define any other additional services (like a database service, etc) in the compose file.
 
-> If BTC RPC Explorer would have required any default configuration files, we would have created a new `data` directory in the same directory as the `docker-compose.yml` file. We'd have then placed the configuration files inside it, and uncommented the `- ${DATA_DIR}:/data` volume mount in `docker-compose.yml` to make the files available in the `/data` directory inside the container.
+> If BTC RPC Explorer would have required any default configuration files, we would have created a new `data` directory in the same directory as the `docker-compose.yml` file. We'd have then placed the configuration files inside it, and mounted the volumme `- ${DATA_DIR}:/data` in  `docker-compose.yml` to make the files available in `/data` directory inside the container.
 
 Updated `docker-compose.yml` file:
 
@@ -178,10 +179,10 @@ x-logging: &default-logging
 services:
         btc-rpc-explorer-web:
               container_name: btc-rpc-explorer
-              image: getumbrel/btc-rpc-explorer:v1.0.0
+              image: getumbrel/btc-rpc-explorer:v2.0.2
               logging: *default-logging
               restart: on-failure
-              stop_grace_period: 1m
+              stop_grace_period: 5m
               ports:
                   - 3002:3002
               environment:
@@ -206,10 +207,10 @@ x-logging: &default-logging
 services:
         btc-rpc-explorer-web:
               container_name: btc-rpc-explorer
-              image: getumbrel/btc-rpc-explorer:v1.0.0
+              image: getumbrel/btc-rpc-explorer:v2.0.2
               logging: *default-logging
               restart: on-failure
-              stop_grace_period: 1m
+              stop_grace_period: 5m
               ports:
                   - 3002:3002
               environment:
@@ -299,7 +300,7 @@ scripts/app install btc-rpc-explorer
 
 That's it! Our app should now be accessible at http://umbrel-dev.local:3002
 
-> If you need to make any changes in your app's compose file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/btc-rpc-explorer/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
+> If you need to make any changes in your app's compose file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/<app-id>/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
 
 7\. To test uninstall, we can run:
 
@@ -307,7 +308,7 @@ That's it! Our app should now be accessible at http://umbrel-dev.local:3002
 scripts/app uninstall btc-rpc-explorer
 ```
 
-To shutdown the `umbrel-dev` virtual machine after testing, we'll run:
+To shutdown the `umbrel-dev` virtual machine after testing, we can run:
 
 ```sh
 umbrel-dev shutdown
@@ -347,7 +348,7 @@ ___
 
 ## 4. 🚀&nbsp;&nbsp;Submitting the app
 
-We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the PR description, fill it up with the required details, and open a pull request.
+We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the pull request description, fill it up with the required details, and then open a pull request.
 
 ```
 # App Submission
@@ -383,7 +384,7 @@ _(50 to 200 words)_
 - [ ] LND
 
 ### 256x256 SVG icon
-_(GitHub doesn't allow uploadig SVGs directly. Upload your file to an alternate service, such as https://svgur.com instead and update the embed link.)_
+_(GitHub doesn't allow uploadig SVGs directly. Upload your file to an alternate service, like https://svgur.com, and paste the link below.)_
 
 ...
 
@@ -399,7 +400,7 @@ _(Upload 3 to 5 screenshots (1440x990px) of your app in PNG format.)_
 - [ ] [Custom Umbrel install on Linux](https://github.com/getumbrel/umbrel#-installation)
 ```
 
-**Here's our actual pull request submitting BTC RPC Explorer — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls).**
+**Here's our actual pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls).**
 
 > After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file such as removing any port conflicts with other apps, assigning unique IP addresses to the containers, etc before merging.
 
