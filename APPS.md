@@ -55,7 +55,7 @@ CMD [ "npm", "start" ]
 docker buildx build --platform linux/arm64,linux/amd64 --tag getumbrel/btc-rpc-explorer:v1.0.0 --output "type=registry" .
 ```
 
-> You need to enable ["experimental features"](https://docs.docker.com/engine/reference/commandline/cli/#experimental-features) in Docker to user `docker buildx`.
+> You need to enable ["experimental features"](https://docs.docker.com/engine/reference/commandline/cli/#experimental-features) in Docker to use `docker buildx`.
 
 ___
 
