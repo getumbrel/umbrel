@@ -47,10 +47,10 @@ CMD [ "npm", "start" ]
 
 > We recommend using `debian-buster-slim` (or a flavor of it, such as `node:12-buster-slim`, `python:3-buster-slim`, etc) as the base image for better performace, reliability and faster downloads of your app, unless you have a vey strong reason for not using it.
 
-3\. We're now ready to build the Docker image of BTC RPC Explorer. Umbrel supports ARM 32bit, ARM 64bit and AMD x86 architectures, so we'll use `docker buildx` to build, tag, and push multi-architecture Docker images of our app to Docker Hub.
+3\. We're now ready to build the Docker image of BTC RPC Explorer. Umbrel supports both 64-bit ARM and x86 architectures, so we'll use `docker buildx` to build, tag, and push multi-architecture Docker images of our app to Docker Hub.
 
 ```sh
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --tag getumbrel/btc-rpc-explorer:v1.0.0 --output "type=registry" .
+docker buildx build --platform linux/arm64,linux/amd64 --tag getumbrel/btc-rpc-explorer:v1.0.0 --output "type=registry" .
 ```
 
 > You need to enable ["experimental features"](https://docs.docker.com/engine/reference/commandline/cli/#experimental-features) in Docker to user `docker buildx`.
