@@ -16,10 +16,10 @@ services:
                     - ${PWD}/tor/data:/var/lib/tor/
                     - ${PWD}/tor/run:/var/run/tor/
                 ports:
-                  - "127.0.0.1:9150:29050"
+                  - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
                     net:
-                        ipv4_address: 10.11.5.1
+                        ipv4_address: $TOR_PROXY_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8
@@ -45,7 +45,7 @@ services:
                 restart: on-failure
                 stop_grace_period: 15m30s
                 ports:
-                    - "8333:8333"
+                    - "$BITCOIN_P2P_PORT:$BITCOIN_P2P_PORT"
                 networks:
                     net:
                         ipv4_address: $BITCOIN_IP
@@ -60,11 +60,11 @@ services:
                 stop_grace_period: 5m30s
                 ports:
                     - "9735:9735"
-                    - "8080:8080"
-                    - "10009:10009"
+                    - "$LND_REST_PORT:$LND_REST_PORT"
+                    - "$LND_GRPC_PORT:$LND_GRPC_PORT"
                 networks:
                     net:
-                        ipv4_address: 10.11.1.2
+                        ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.3.11
@@ -124,8 +124,8 @@ services:
                     UPDATE_SIGNAL_FILE: "/signals/update"
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
-                    TOR_PROXY_IP: "10.11.5.1"
-                    TOR_PROXY_PORT: "29050"
+                    TOR_PROXY_IP: "${TOR_PROXY_IP}"
+                    TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                 networks:
                     net:
@@ -148,7 +148,7 @@ services:
                     RPC_USER: $BITCOIN_RPC_USER
                     RPC_PASSWORD: $BITCOIN_RPC_PASS
                     LND_NETWORK: $BITCOIN_NETWORK
-                    LND_HOST: "10.11.1.2"
+                    LND_HOST: "${LND_IP}"
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                 networks:
@@ -195,10 +195,10 @@ services:
               restart: on-failure
               stop_grace_period: 5m
               ports:
-                  - "50001:50001"
+                  - "$ELECTRUM_PORT:$ELECTRUM_PORT"
               networks:
                   net:
-                      ipv4_address: 10.11.4.0
+                      ipv4_address: $ELECTRUM_IP
 networks:
     net:
         ipam:

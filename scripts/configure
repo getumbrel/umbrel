@@ -98,12 +98,18 @@ ENV_FILE="./templates/.env"
 [[ -f "./.env" ]] && source "./.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
-# IP addresses
+# Defaults
 BITCOIN_IP="10.11.1.1"
-
-# Bitcoin Core ports
-BITCOIN_RPC_PORT=8332
-BITCOIN_P2P_PORT=8333
+BITCOIN_RPC_PORT="8332"
+BITCOIN_P2P_PORT="8333"
+LND_IP="10.11.1.2"
+LND_GRPC_PORT="10009"
+LND_REST_PORT="8080"
+ELECTRUM_IP="10.11.4.0"
+ELECTRUM_PORT="50001"
+TOR_PROXY_IP="10.11.5.1"
+# TODO: Make sure we update backup script to use this port!
+TOR_PROXY_PORT="9050"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -204,6 +210,13 @@ fi
 # TODO: Update all the above code to use this simpler logic
 for template in "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
+  sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
+  sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
+  sed -i "s/<lnd-rest-port>/${LND_REST_PORT}/g" "${template}"
+  sed -i "s/<electrum-ip>/${ELECTRUM_IP}/g" "${template}"
+  sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
+  sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
+  sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
 done
 
 
