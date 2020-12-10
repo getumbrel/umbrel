@@ -75,7 +75,11 @@ compose() {
   shift
   local env_file="${UMBREL_ROOT}/.env"
   local compose_file="${app_dir}/docker-compose.yml"
-  APP_DATA_DIR="${app_data_dir}" docker-compose \
+
+  export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
+  export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
+  export APP_DATA_DIR="${app_data_dir}"
+  docker-compose \
     --env-file "${env_file}" \
     --file "${compose_file}" \
     "${@}"
