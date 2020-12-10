@@ -31,7 +31,7 @@ check_dependencies () {
 }
 
 list_installed_apps() {
-  cat "${DB_FILE}" | jq -r '.installedApps | join("\n")'
+  cat "${DB_FILE}" | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")'
 }
 
 # Check dependencies
