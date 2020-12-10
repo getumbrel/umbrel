@@ -284,6 +284,8 @@ git checkout <username>/btc-rpc-explorer
 umbrel-dev boot
 ```
 
+> The first `umbrel-dev` boot usually takes a while due to the initial setup and configuration. Subsequent boots are much faster.
+
 After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
 
 5\. Next, we'll SSH into the VM:
