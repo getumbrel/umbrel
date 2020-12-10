@@ -101,7 +101,7 @@ ENV_FILE="./templates/.env"
 [[ -f "./.env" ]] && source "./.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
-# Defaults
+# Umbrel
 NGINX_IP="10.11.0.2"
 DASHBOARD_IP="10.11.0.3"
 MANAGER_IP="10.11.2.1"
@@ -118,6 +118,10 @@ ELECTRUM_IP="10.11.4.0"
 ELECTRUM_PORT="50001"
 TOR_PROXY_IP="10.11.5.1"
 TOR_PROXY_PORT="9050"
+
+# Apps
+APP_BTC_RPC_EXPLORER_IP="10.11.9.9"
+APP_BTC_RPC_EXPLORER_PORT="3002"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -217,6 +221,7 @@ fi
 
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+  # Umbrel
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
   sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
   sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
@@ -231,6 +236,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
   sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
+
+  # Apps
+  sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
+  sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
 done
 
 

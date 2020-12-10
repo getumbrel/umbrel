@@ -2,6 +2,8 @@
 SocksPort   <tor-proxy-ip>:<tor-proxy-port>
 ControlPort <tor-proxy-ip>:29051
 
+# Umbrel
+
 # Dashboard Hidden Service
 HiddenServiceDir /var/lib/tor/web
 HiddenServicePort 80 10.11.0.2:80
@@ -26,8 +28,10 @@ HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
 HiddenServiceDir /var/lib/tor/lnd-grpc
 HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 
+# Apps
+
 # btc-rpc-explorer Hidden Service
 HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
-HiddenServicePort 80 10.11.9.9:3002
+HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
 
 HashedControlPassword <password>

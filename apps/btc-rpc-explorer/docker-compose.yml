@@ -12,7 +12,7 @@ services:
               restart: on-failure
               stop_grace_period: 1m
               ports:
-                  - "3002:3002"
+                  - "$APP_BTC_RPC_EXPLORER_PORT:$APP_BTC_RPC_EXPLORER_PORT"
               environment:
                   # Docker requirements
                   BTCEXP_HOST: 0.0.0.0
@@ -37,7 +37,7 @@ services:
                   BTCEXP_BASIC_AUTH_PASSWORD: ""
               networks:
                   default:
-                      ipv4_address: 10.11.9.9
+                      ipv4_address: $APP_BTC_RPC_EXPLORER_IP
 
 networks:
   default:
