@@ -68,6 +68,7 @@ echo
 ##########################################################
 
 # Store paths to intermediary config files
+NGINX_CONF_FILE="./templates/nginx.conf"
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
@@ -76,6 +77,7 @@ ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
+[[ -f "$NGINX_CONF_FILE" ]] && rm -f "$NGINX_CONF_FILE"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
@@ -83,6 +85,7 @@ ENV_FILE="./templates/.env"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
+[[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
@@ -214,7 +217,7 @@ if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
 fi
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
   sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
   sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
@@ -251,6 +254,7 @@ sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 ############## Override main config files ################
 ##########################################################
 
+mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
