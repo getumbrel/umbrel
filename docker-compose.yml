@@ -135,7 +135,7 @@ services:
                 image: getumbrel/middleware:v0.1.6
                 logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
-                command: ["./wait-for-node-manager.sh", "10.11.2.1", "npm", "start"]
+                command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
                 depends_on: [ manager ]
                 volumes:
