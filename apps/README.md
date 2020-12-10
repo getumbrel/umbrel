@@ -269,15 +269,7 @@ cd umbrel-dev
 umbrel-dev init
 ```
 
-3\. It's time to boot the `umbrel-dev` virtual machine:
-
-```sh
-umbrel-dev boot
-```
-
-After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
-
-4\. Now let's switch the Umbrel installation on `umbrel-dev` to our fork and branch. In the same directory where we setup `umbrel-dev`, we'll run:
+3\. Now let's switch the Umbrel installation on `umbrel-dev` to our fork and branch. In the same directory where we setup `umbrel-dev`, we'll run:
 
 ```sh
 cd getumbrel/umbrel
@@ -285,6 +277,14 @@ git remote add <username> https://github.com/<username>/umbrel.git
 git fetch <username>
 git checkout <username>/btc-rpc-explorer
 ```
+
+4\. It's time to boot the `umbrel-dev` virtual machine:
+
+```sh
+umbrel-dev boot
+```
+
+After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
 
 5\. Next, we'll SSH into the VM:
 
