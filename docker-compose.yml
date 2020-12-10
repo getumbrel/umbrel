@@ -33,7 +33,7 @@ services:
                     - "80:80"
                 networks:
                     net:
-                        ipv4_address: 10.11.0.2
+                        ipv4_address: $NGINX_IP
         bitcoin:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.20.1
@@ -73,7 +73,7 @@ services:
                 stop_grace_period: 1m30s
                 networks:
                     net:
-                        ipv4_address: 10.11.0.3
+                        ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
                 image: getumbrel/manager:v0.2.7
@@ -129,7 +129,7 @@ services:
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                 networks:
                     net:
-                        ipv4_address: 10.11.2.1
+                        ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.6
@@ -153,7 +153,7 @@ services:
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                 networks:
                     net:
-                        ipv4_address: 10.11.2.2
+                        ipv4_address: $MIDDLEWARE_IP
         neutrino-switcher:
                 container_name: neutrino-switcher
                 image: getumbrel/neutrino-switcher:v1.0.3
@@ -172,7 +172,7 @@ services:
                     SLEEPTIME: 3600
                 networks:
                     net:
-                        ipv4_address: 10.11.5.2
+                        ipv4_address: $NEUTRINO_SWITCHER_IP
         frontail:
             container_name: frontail
             image: getumbrel/frontail:v4.9.1
@@ -183,7 +183,7 @@ services:
                 - /var/log/syslog:/var/log/syslog:ro
             networks:
                 net:
-                    ipv4_address: 10.11.3.0
+                    ipv4_address: $FRONTAIL_IP
         electrs:
               container_name: electrs
               image: getumbrel/electrs:v0.8.5

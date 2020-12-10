@@ -99,6 +99,12 @@ ENV_FILE="./templates/.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
 # Defaults
+NGINX_IP="10.11.0.2"
+DASHBOARD_IP="10.11.0.3"
+MANAGER_IP="10.11.2.1"
+MIDDLEWARE_IP="10.11.2.2"
+NEUTRINO_SWITCHER_IP="10.11.5.2"
+FRONTAIL_IP="10.11.3.0"
 BITCOIN_IP="10.11.1.1"
 BITCOIN_RPC_PORT="8332"
 BITCOIN_P2P_PORT="8333"
@@ -209,6 +215,12 @@ fi
 
 # TODO: Update all the above code to use this simpler logic
 for template in "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+  sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
+  sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
+  sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
+  sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
+  sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
+  sed -i "s/<frontail-ip>/${FRONTAIL_IP}/g" "${template}"
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
   sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
   sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
