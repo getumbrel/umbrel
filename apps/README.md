@@ -389,7 +389,7 @@ _(GitHub doesn't allow uploadig SVGs directly. Upload your file to an alternate 
 ...
 
 ### App screenshots
-_(Upload 3 to 5 screenshots (1440x990px) of your app in PNG format.)_
+_(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PNG format.)_
 
 ...
 
