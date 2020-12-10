@@ -117,7 +117,6 @@ LND_REST_PORT="8080"
 ELECTRUM_IP="10.11.4.0"
 ELECTRUM_PORT="50001"
 TOR_PROXY_IP="10.11.5.1"
-# TODO: Make sure we update backup script to use this port!
 TOR_PROXY_PORT="9050"
 
 # Generate RPC credentials
