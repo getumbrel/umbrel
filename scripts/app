@@ -2,7 +2,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
-DB_FILE="${UMBREL_ROOT}/db/user.json"
+USER_FILE="${UMBREL_ROOT}/db/user.json"
 
 show_help() {
   cat << EOF
@@ -31,7 +31,7 @@ check_dependencies () {
 }
 
 list_installed_apps() {
-  cat "${DB_FILE}" | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+  cat "${USER_FILE}" | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
 }
 
 # Check dependencies
@@ -89,8 +89,8 @@ update_installed_apps() {
   local action="${1}"
   local app="${2}"
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
-  updated_json=$(cat "${DB_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
-  echo "${updated_json}" > "${DB_FILE}"
+  updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
+  echo "${updated_json}" > "${USER_FILE}"
 }
 
 # Pulls down images for an app and starts it
