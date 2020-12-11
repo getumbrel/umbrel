@@ -6,7 +6,7 @@ ControlPort <tor-proxy-ip>:29051
 
 # Dashboard Hidden Service
 HiddenServiceDir /var/lib/tor/web
-HiddenServicePort 80 10.11.0.2:80
+HiddenServicePort 80 <nginx-ip>:80
 
 # Bitcoin Core P2P Hidden Service
 HiddenServiceDir /var/lib/tor/bitcoin-p2p
