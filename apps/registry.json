@@ -18,6 +18,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6001
   },
   {
@@ -39,6 +40,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6002
   },
   {
@@ -60,6 +62,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 3002
   },
   {
@@ -81,6 +84,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6004
   },
   {
@@ -102,6 +106,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6005
   },
   {
@@ -123,6 +128,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6006
   },
   {
@@ -144,6 +150,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6007
   },
   {
@@ -165,6 +172,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6008
   },
   {
@@ -186,6 +194,7 @@
       "lnd"
     ],
     "website": "https://btcpayserver.org",
+    "support": "https://t.me/getumbrel",
     "port": 6009
   }
 ]
