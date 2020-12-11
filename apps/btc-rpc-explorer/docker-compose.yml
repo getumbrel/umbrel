@@ -42,4 +42,4 @@ services:
 networks:
   default:
     external:
-      name: umbrel_net
+      name: umbrel_main_network

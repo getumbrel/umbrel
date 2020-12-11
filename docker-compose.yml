@@ -18,7 +18,7 @@ services:
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
-                    net:
+                    default:
                         ipv4_address: $TOR_PROXY_IP
         nginx:
                 container_name: nginx
@@ -32,7 +32,7 @@ services:
                 ports:
                     - "80:80"
                 networks:
-                    net:
+                    default:
                         ipv4_address: $NGINX_IP
         bitcoin:
                 container_name: bitcoin
@@ -47,7 +47,7 @@ services:
                 ports:
                     - "$BITCOIN_P2P_PORT:$BITCOIN_P2P_PORT"
                 networks:
-                    net:
+                    default:
                         ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
@@ -63,7 +63,7 @@ services:
                     - "$LND_REST_PORT:$LND_REST_PORT"
                     - "$LND_GRPC_PORT:$LND_GRPC_PORT"
                 networks:
-                    net:
+                    default:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
@@ -72,7 +72,7 @@ services:
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
-                    net:
+                    default:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
@@ -128,7 +128,7 @@ services:
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                 networks:
-                    net:
+                    default:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
@@ -152,7 +152,7 @@ services:
                     JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                 networks:
-                    net:
+                    default:
                         ipv4_address: $MIDDLEWARE_IP
         neutrino-switcher:
                 container_name: neutrino-switcher
@@ -171,7 +171,7 @@ services:
                     LND_CONTAINER_NAME: lnd
                     SLEEPTIME: 3600
                 networks:
-                    net:
+                    default:
                         ipv4_address: $NEUTRINO_SWITCHER_IP
         frontail:
             container_name: frontail
@@ -182,7 +182,7 @@ services:
             volumes:
                 - /var/log/syslog:/var/log/syslog:ro
             networks:
-                net:
+                default:
                     ipv4_address: $FRONTAIL_IP
         electrs:
               container_name: electrs
@@ -197,15 +197,16 @@ services:
               ports:
                   - "$ELECTRUM_PORT:$ELECTRUM_PORT"
               networks:
-                  net:
+                  default:
                       ipv4_address: $ELECTRUM_IP
 networks:
-    net:
-        ipam:
-            driver: default
-            config:
-                - subnet: "${GATEWAY_IP}/16"
-                  gateway: $GATEWAY_IP
+    default:
+      name: umbrel_main_network
+      ipam:
+          driver: default
+          config:
+              - subnet: "${GATEWAY_IP}/16"
+                gateway: $GATEWAY_IP
 
 volumes:
     jwt-public-key:
