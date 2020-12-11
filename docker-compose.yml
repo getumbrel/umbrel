@@ -103,7 +103,7 @@ services:
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                     DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-""}
-                    MIDDLEWARE_API_URL: "http://10.11.2.2"
+                    MIDDLEWARE_API_URL: "http://$MIDDLEWARE_IP"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
