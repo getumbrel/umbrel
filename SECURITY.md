@@ -20,6 +20,10 @@ The lack of authentication on the logs page means that, in the correct circumsta
 
 Umbrel OS's current SSH password is same for all Umbrel OS users. In the future we'll have it automatically change to the user's dashboard password, but for now if a malicious actor is on the same network as your Umbrel node (running Umbrel OS), they could SSH into your node using the publicly available password. For that reason, we recommend advanced users to manually update their SSH password.
 
+**Relaxed Permissions**
+
+Currently we are being quite liberal with filesystem permissions and root usage. Some background jobs on the host are currently being run as root that don't strictly need to. Also some scripts executed by root are writable by non-root users. The `umbrel` user itself is also currently added to the `docker` group which makes it essentially root.
+
 Umbrel, in its current state, is intended to demonstrate what we have in mind, show the community what we are building, and to get early feedback. It's in a state that it can be used, but should not be considered secure. Thus, **you should not put more funds on your Umbrel than you're prepared to lose.**
 
 The issues raised above will all be resolved before we do a stable release of Umbrel.

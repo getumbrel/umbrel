@@ -8,6 +8,25 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
+
+    - uses: actions/checkout@v1
+
+    - name: Setting env vars
+      env:
+        PR: ${{ github.event.number }}
+      run: |
+        UMBREL_OS_VERSION="dev"
+        IMAGE_NAME="umbrel-os-dev"
+        UMBREL_REPO="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
+        TMP=$(git show HEAD | head -n 2 | tail -n 1)
+        UMBREL_BRANCH=${TMP:15:7}
+        echo "Building commit $UMBREL_BRANCH of $UMBREL_REPO"
+        echo "UMBREL_OS_VERSION=$UMBREL_OS_VERSION"  >> $GITHUB_ENV
+        echo "IMAGE_NAME=$IMAGE_NAME"  >> $GITHUB_ENV
+        echo "UMBREL_REPO=$UMBREL_REPO"  >> $GITHUB_ENV
+        echo "UMBREL_BRANCH=$UMBREL_BRANCH"  >> $GITHUB_ENV
+
+
     - name: Run apt update
       run: sudo apt update
 
@@ -31,19 +50,7 @@ jobs:
     - name: Download Umbrel OS build scripts
       run: |
         git clone git://github.com/getumbrel/umbrel-os.git
-    - name: Setting env vars
-      env:
-        PR: ${{ github.event.number }}
-      run: |
-        UMBREL_OS_VERSION="dev"
-        IMAGE_NAME="umbrel-os-dev"
-        UMBREL_REPO="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.repo.clone_url | sed 's/"//g')"
-        UMBREL_BRANCH="$(curl -s https://api.github.com/repos/getumbrel/umbrel/pulls/${PR} | jq .head.ref | sed 's/"//g')"
-        echo "::set-env name=UMBREL_OS_VERSION::$UMBREL_OS_VERSION"
-        echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
-        echo "::set-env name=UMBREL_REPO::$UMBREL_REPO"
-        echo "::set-env name=UMBREL_BRANCH::$UMBREL_BRANCH"
-              
+      
     - name: Build Umbrel OS
       run: |
         cd umbrel-os

@@ -58,7 +58,7 @@ if [[ -f "${STATUS_DIR}/configured" ]]; then
 else
   echo "============ CONFIGURING ============="
 fi
-echo "========= UMBREL (${NETWORK}) ==========="
+echo "========= UMBREL (${BITCOIN_NETWORK}) ==========="
 echo "======================================"
 echo
 
@@ -138,7 +138,6 @@ fi
 if [[ -z ${TOR_PASSWORD+x} ]] || [[ -z ${TOR_HASHED_PASSWORD+x} ]]; then
   echo "Generating Tor password"
   echo
-  docker pull --quiet getumbrel/tor:v0.4.1.9
   TOR_PASSWORD=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
   TOR_HASHED_PASSWORD=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASSWORD")
 fi
@@ -207,6 +206,10 @@ sed -i "s/torpassword=<password>/torpassword=$TOR_PASSWORD/g;" "$BITCOIN_CONF_FI
 sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE"
 sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
+
+# Store docker binary path
+DOCKER_BINARY=$(readlink -f "$(which docker)")
+sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 
 # Set Umbrel version in electrs banner
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
