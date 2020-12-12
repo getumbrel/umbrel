@@ -312,17 +312,7 @@ umbrel-dev reload
 
 Once you're happy with your changes just and commit + push.
 
-6\. To test uninstall, we can run:
-
-```sh
-umbrel-dev app uninstall btc-rpc-explorer
-```
-
-7\. To shutdown the `umbrel-dev` virtual machine after testing, we can run:
-
-```sh
-umbrel-dev shutdown
-```
+>Don't forget to shutdown the `umbrel-dev` virtual machine after testing with `umbrel-dev shutdown`!
 
 ### 3.2 Testing on Umbrel OS (Raspberry Pi 4)
 
