@@ -53,6 +53,7 @@ CMD ["npm", "start"]
 To increase the chances of your app being accepted you should follow Docker best practices such as:
 
 - Use multi-stage builds for smaller image sizes.
+- Ensure development files are not included in the image.
 - One service per container.
 - Don't run services as root.
 - Any remote assets are verified against a checksum.
