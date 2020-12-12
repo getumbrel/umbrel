@@ -39,8 +39,3 @@ services:
     networks:
       default:
         ipv4_address: $APP_BTC_RPC_EXPLORER_IP
-
-networks:
-  default:
-    external:
-      name: umbrel_main_network
