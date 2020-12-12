@@ -160,10 +160,6 @@ services:
   #   image: <docker-image>:<tag>@sha256:<checksum>
   #   ...
 
-networks:
-  default:
-    external:
-      name: umbrel_main_network
 ```
 
 4\. For our app, we'll update `<docker-image>` with `getumbrel/btc-rpc-explorer`, `<tag>` with `v2.0.2`, `<checksum>` with the hash of our multi-architecture Docker image and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
@@ -192,11 +188,6 @@ services:
     ports:
       - 3002:3002
     environment:
-
-networks:
-  default:
-    external:
-      name: umbrel_main_network
 
 ```
 
@@ -240,12 +231,7 @@ services:
       BTCEXP_PRIVACY_MODE: "true"
       BTCEXP_NO_RATES: "true"
       BTCEXP_RPC_ALLOWALL: "false"
-      BTCEXP_BASIC_AUTH_PASSWORD: ""
-
-networks:
-  default:
-    external:
-      name: umbrel_main_network
+      BTCEXP_BASIC_AUTH_PASSWORD: ""      
 
 ```
 
