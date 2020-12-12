@@ -2,7 +2,7 @@
 
 If you can code in any language, you already know how to develop an app for Umbrel. There is no restriction on the kind of programming languages, frameworks or databases that you can use. Apps run inside isolated Docker containers, and the only requirement (for now) is that they should have a web-based UI.
 
-> Some server apps might not have a UI at all. In that case the app should serve a simple web page listing the connection details, QR codes, setup instructions, and anything else needed for the user to connect. The user is never expected to have CLI access on Umbrel.
+> Some server apps might not have a UI at all. In that case, the app should serve a simple web page listing the connection details, QR codes, setup instructions, and anything else needed for the user to connect. The user is never expected to have CLI access on Umbrel.
 
 To keep this document short and easy, we won't go into the app development itself, and will instead focus on packaging an existing app.
 
@@ -11,7 +11,7 @@ Let's straightaway jump into action by packaging [BTC RPC Explorer](https://gith
 There are 4 steps:
 
 1. [🛳 Containerizing the app using Docker](#1-containerizing-the-app-using-docker)
-1. [☂️ Packaging the app for Umbrel](#2-packaging-the-app-for-umbrel)
+1. [☂️ Packaging the app for Umbrel](#2-%EF%B8%8Fpackaging-the-app-for-umbrel)
 1. [🛠 Testing the app on Umbrel](#3-testing-the-app-on-umbrel)
     1. [Testing on Umbrel development environment (Linux or macOS)](#31-testing-the-app-on-umbrel-development-environment)
     1. [Testing on Umbrel OS (Raspberry Pi 4)](#32-testing-on-umbrel-os-raspberry-pi-4)
@@ -48,16 +48,15 @@ EXPOSE 3002
 CMD ["npm", "start"]
 ```
 
-> We strongly encourage using `debian:buster-slim` (or derivatives such as `node:12-buster-slim`/`python:3-buster-slim`) as base images for your containers as these are already cached locally on Umbrel. This will result in your app installing/downloading much more quickly and will consume less storage space.
+### A good Dockerfile:
 
-To increase the chances of your app being accepted you should follow Docker best practices such as:
-
-- Use multi-stage builds for smaller image sizes.
-- Ensure development files are not included in the image.
-- One service per container.
-- Don't run services as root.
-- Any remote assets are verified against a checksum.
-- Image builds are deterministic.
+- [x] Uses `debian:buster-slim` (or its derivatives, like `node:12-buster-slim`) as the base image — resulting in less storage consumption and faster app installs as the base image is already cached on the user's Umbrel.
+- [x] Uses [multi-stage builds](https://docs.docker.com/develop/develop-images/multistage-build/) for smaller image size.
+- [x] Ensures development files are not included in the final image.
+- [x] Has only one service per container.
+- [x] Doesn't run the service as root.
+- [x] Uses remote assets that are verified against a checksum.
+- [x] Results in deterministic image builds.
 
 3\. We're now ready to build the Docker image of BTC RPC Explorer. Umbrel supports both 64-bit ARM and x86 architectures, so we'll use `docker buildx` to build, tag, and push multi-architecture Docker images of our app to Docker Hub.
 
@@ -79,9 +78,9 @@ cd umbrel
 git checkout -b btc-rpc-explorer
 ```
 
-2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabetical characters and dashes and should be humanly recognizable. For this app we'll go with `btc-rpc-explorer`.
+2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabetical characters and dashes, and should be humanly recognizable. For this app we'll go with `btc-rpc-explorer`.
 
-We need to create a new sibdirectory in the apps directory with same name as our app ID and move into it:
+We need to create a new subdirectory in the apps directory with same name as our app ID and move into it:
 
 ```sh
 mkdir apps/btc-rpc-explorer
@@ -155,7 +154,7 @@ services:
       # Tor proxy environment variables
       # $TOR_PROXY_IP - Local IP of Tor proxy
       # $TOR_PROXY_PORT - Port of Tor proxy
-  # If your app has more services like a database container you can define those
+  # If your app has more services, like a database container, you can define those
   # services below:
   # db:
   #   image: <docker-image>:<tag>@sha256:<checksum>
@@ -262,12 +261,6 @@ ___
 
 ## 3. 🛠&nbsp;&nbsp;Testing the app on Umbrel
 
-When testing your app be sure to verify that any application state is being persisted in volumes.
-
-A good way to test this is to restart the app with `scripts/app stop <app> && scripts/app start <app>`. If any state is lost it means that state should be mapped to a persistent volume.
-
-> When stop/starting all data in volumes will be persisted, anything else is discarded. When uninstalling/installing even persistent data will be wiped.
-
 ### 3.1 Testing the app on Umbrel development environment
 
 Umbrel development environment ([`umbrel-dev`](https://github.com/getumbrel/umbrel-dev)) is a lightweight regtest instance of Umbrel that runs inside a virtual machine on your system. It's currently only compatible with Linux or macOS, so if you're on Windows, you may skip this section and directly test your app on a Raspberry Pi 4 running [Umbrel OS](https://github.com/getumbrel/umbrel-os).
@@ -365,6 +358,12 @@ The app should now be accessible at http://umbrel.local:3002
 scripts/app uninstall btc-rpc-explorer
 ```
 
+> When testing your app, make sure to verify that any application state that needs to be persisted is in-fact being persisted in volumes.
+>
+> A good way to test this is to restart the app with `scripts/app stop <app-id> && scripts/app start <app-id>`. If any state is lost, it means that state should be mapped to a persistent volume.
+>
+> When stopping/starting the app, all data in volumes will be persisted and anything else will be discarded. When uninstalling/installing app, even persistent data will be discarded.
+
 ___
 
 ## 4. 🚀&nbsp;&nbsp;Submitting the app
@@ -428,7 +427,7 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 
 **Here's our actual pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls).**
 
-> After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file such as removing any port conflicts with other apps, assigning unique IP addresses to the containers, etc before merging.
+> After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file, such as removing any port conflicts with other apps, assigning unique IP addresses to the containers, etc before merging.
 
 🎉 Congratulations! That's all you need to do to package, test and submit your app to Umbrel. We can't wait to have you onboard!
 
@@ -438,7 +437,7 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 
 1. **How to push app updates?**
 
-    Every time you release a new version of your app, you should build, tag and push the new Docker images to Docker Hub. Then open a new PR on our main repo (getumbrel/umbrel) with your up-to-date docker image. For now, app updates will be bundled together in the Umbrel release. In the future, you'll be able to ship updates independently as soon as you make a new release.
+    Every time you release a new version of your app, you should build, tag and push the new Docker images to Docker Hub. Then open a new PR on our main repo (getumbrel/umbrel) with your up-to-date docker image. For now, app updates will be bundled together in the Umbrel releases. In the future, you'll be able to ship updates independently as soon as you make a new release.
 
 1. **How will users install/uninstall apps?**
 
