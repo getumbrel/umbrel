@@ -362,7 +362,7 @@ scripts/app uninstall btc-rpc-explorer
 >
 > A good way to test this is to restart the app with `scripts/app stop <app-id> && scripts/app start <app-id>`. If any state is lost, it means that state should be mapped to a persistent volume.
 >
-> When stopping/starting the app, all data in volumes will be persisted and anything else will be discarded. When uninstalling/installing app, even persistent data will be discarded.
+> When stopping/starting the app, all data in volumes will be persisted and anything else will be discarded. When uninstalling/installing an app, even persistent data will be discarded.
 
 ___
 
