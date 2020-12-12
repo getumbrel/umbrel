@@ -50,6 +50,14 @@ CMD ["npm", "start"]
 
 > We strongly encourage using `debian:buster-slim` (or derivatives such as `node:12-buster-slim`/`python:3-buster-slim`) as base images for your containers as these are already cached locally on Umbrel. This will result in your app installing/downloading much more quickly and will consume less storage space.
 
+To increase the chances of your app being accepted you should follow Docker best practices such as:
+
+- Use multi-stage builds for smaller image sizes.
+- One service per container.
+- Don't run services as root.
+- Any remote assets are verified against a checksum.
+- Image builds are deterministic.
+
 3\. We're now ready to build the Docker image of BTC RPC Explorer. Umbrel supports both 64-bit ARM and x86 architectures, so we'll use `docker buildx` to build, tag, and push multi-architecture Docker images of our app to Docker Hub.
 
 ```sh
