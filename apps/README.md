@@ -206,46 +206,48 @@ networks:
 So the final version of `docker-compose.yml` would be:
 
 ```yml
-version: '3.7'
-x-logging: &default-logging
-    driver: journald
-    options:
-        tag: "umbrel-app {{.Name}}"
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
 
 services:
-        btc-rpc-explorer-web:
-              container_name: btc-rpc-explorer
-              image: getumbrel/btc-rpc-explorer:v2.0.2
-              logging: *default-logging
-              restart: on-failure
-              stop_grace_period: 5m
-              ports:
-                  - 3002:3002
-              environment:
-                  # Bitcoin Core environment variables
-                  BTCEXP_BITCOIND_HOST: $BITCOIN_HOST
-                  BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
-                  BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
-                  BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
+  web:
+    image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      - 3002:3002
+    environment:
+      # Bitcoin Core conenction details
+      BTCEXP_BITCOIND_HOST: $BITCOIN_IP
+      BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
+      BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
+      BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
 
-                  # Electrum environment variables
-                  BTCEXP_ELECTRUMX_SERVERS: tcp://${ELECTRUM_HOST}:${ELECTRUM_PORT}
+      # Electrum connection details
+      BTCEXP_ELECTRUMX_SERVERS: "tcp://$ELECTRUM_IP:$ELECTRUM_PORT"
 
-                  # App Config
-                  BTCEXP_HOST: 0.0.0.0
-                  DEBUG: "btcexp:*,electrumClient"
-                  BTCEXP_ADDRESS_API: electrumx
-                  BTCEXP_SLOW_DEVICE_MODE: "true"
-                  BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
-                  BTCEXP_PRIVACY_MODE: "true"
-                  BTCEXP_NO_RATES: "true"
-                  BTCEXP_RPC_ALLOWALL: "false"
-                  BTCEXP_BASIC_AUTH_PASSWORD: ""
+      # App Config
+      BTCEXP_HOST: 0.0.0.0
+      DEBUG: "btcexp:*,electrumClient"
+      BTCEXP_ADDRESS_API: electrumx
+      BTCEXP_SLOW_DEVICE_MODE: "true"
+      BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
+      BTCEXP_PRIVACY_MODE: "true"
+      BTCEXP_NO_RATES: "true"
+      BTCEXP_RPC_ALLOWALL: "false"
+      BTCEXP_BASIC_AUTH_PASSWORD: ""
 
 networks:
   default:
     external:
-      name: umbrel_net
+      name: umbrel_main_network
+
 ```
 
 6\. We're pretty much done here. The next step is to commit the changes, push it to our fork's branch, and test out the app on Umbrel.
