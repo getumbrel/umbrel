@@ -74,10 +74,9 @@ ___
 1\. Let's fork the [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo on GitHub, clone our fork locally, create a new branch for our app, and then switch to it:
 
 ```sh
-git clone https://github.com/<username>/umbrel.git umbrel
+git clone https://github.com/<username>/umbrel.git
 cd umbrel
-git branch btc-rpc-explorer
-git checkout btc-rpc-explorer
+git checkout -b btc-rpc-explorer
 ```
 
 2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabets + dashes. Ideally, it should be the name of the app. `btc-rpc-explorer` makes the perfect sense for our app, so let's go with it.
