@@ -128,10 +128,11 @@ services:
       # read-only inside the Docker container at path /bitcoin
       # - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     environment:
-      # Pass any environment variables to your app for configuration.
+      # Pass any environment variables to your app for configuration in the form:
+      # VARIABLE_NAME: value
       #
-      # Here are all the environment variables that you can use to
-      # connect to Bitcoin Core, LND, Electrum and Tor:
+      # Here are all the Umbrel provided variables that you can pass through to
+      # your app to connect to Bitcoin Core, LND, Electrum and Tor:
       #
       # Bitcoin Core environment variables
       # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
