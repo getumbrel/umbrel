@@ -24,7 +24,7 @@ ___
 1\. Let's start by cloning BTC RPC Explorer on our system:
 
 ```sh
-git clone https://github.com/janoside/btc-rpc-explorer.git btc-rpc-explorer
+git clone --branch v2.0.2 https://github.com/janoside/btc-rpc-explorer.git
 cd  btc-rpc-explorer
 ```
 
