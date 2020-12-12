@@ -272,13 +272,18 @@ brew install lukechilds/tap/umbrel-dev
 brew cask install virtualbox vagrant
 ```
 
-2\. Now let's initialize our development environment:
+2\. Now let's initialize our development environment and boot the VM:
 
 ```sh
 mkdir umbrel-dev
 cd umbrel-dev
 umbrel-dev init
+umbrel-dev boot
 ```
+
+> The first `umbrel-dev` boot usually takes a while due to the initial setup and configuration of the VM. Subsequent boots are much faster.
+
+After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
 
 3\. We need to switch the Umbrel installation on `umbrel-dev` to our fork and branch:
 
@@ -289,39 +294,31 @@ git fetch <username> btc-rpc-explorer
 git checkout <username>/btc-rpc-explorer
 ```
 
-4\. It's time to boot the `umbrel-dev` virtual machine:
+4\. And finally, it's time to install our app:
 
 ```sh
-umbrel-dev boot
-```
-
-> The first `umbrel-dev` boot usually takes a while due to the initial setup and configuration. Subsequent boots are much faster.
-
-After the VM has booted, we can verify if the Umbrel dashboard is accessible at http://umbrel-dev.local in our browser to make sure everything is running fine.
-
-5\. Next, we'll SSH into the VM:
-
-```sh
-umbrel-dev ssh
-```
-
-6\. And finally, it's time to install our app:
-
-```sh
-scripts/app install btc-rpc-explorer
+umbrel-dev app install btc-rpc-explorer
 ```
 
 That's it! Our BTC RPC Explorer app should now be accessible at http://umbrel-dev.local:3002
 
-> If you need to make any changes in your app's compose file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/<app-id>/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
+5\. To make changes:
 
-7\. To test uninstall, we can run:
+Edit your app files at `getumbrel/umbrel/apps/<app-id>/` and then run:
 
 ```sh
-scripts/app uninstall btc-rpc-explorer
+umbrel-dev reload
 ```
 
-To shutdown the `umbrel-dev` virtual machine after testing, we can run:
+Once you're happy with your changes just and commit + push.
+
+6\. To test uninstall, we can run:
+
+```sh
+umbrel-dev app uninstall btc-rpc-explorer
+```
+
+7\. To shutdown the `umbrel-dev` virtual machine after testing, we can run:
 
 ```sh
 umbrel-dev shutdown
