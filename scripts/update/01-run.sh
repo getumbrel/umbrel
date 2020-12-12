@@ -97,6 +97,14 @@ echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
+# Pulling new containers
+echo "Pulling new containers"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 75, "description": "Pulling new containers", "updateTo": "$RELEASE"}
+EOF
+cd "$UMBREL_ROOT"
+docker-compose pull
+
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
