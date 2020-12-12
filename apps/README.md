@@ -266,25 +266,28 @@ ___
 
 Umbrel development environment ([`umbrel-dev`](https://github.com/getumbrel/umbrel-dev)) is a lightweight regtest instance of Umbrel that runs inside a virtual machine on your system. It's currently only compatible with Linux or macOS, so if you're on Windows, you may skip this section and directly test your app on a Raspberry Pi 4 running [Umbrel OS](https://github.com/getumbrel/umbrel-os).
 
-1\. First, we'll install [Homebrew](https://brew.sh) and [Virtual Box](https://www.virtualbox.org) on our system.
-
-2\. Now let's install `umbrel-dev` and initialize it:
+1\. First, we'll install the `umbrel-dev` CLI and it's dependencies [Virtual Box](https://www.virtualbox.org) and [Vagrant](https://vagrantup.com) on our system. If you use [Homebrew](https://brew.sh) you can do that with just:
 
 ```sh
 brew install lukechilds/tap/umbrel-dev
+brew cask install virtualbox vagrant
+```
 
+2\. Now let's initialize our development environment:
+
+```sh
 mkdir umbrel-dev
 cd umbrel-dev
 
 umbrel-dev init
 ```
 
-3\. Now let's switch the Umbrel installation on `umbrel-dev` to our fork and branch. In the same directory where we setup `umbrel-dev`, we'll run:
+3\. We need to switch the Umbrel installation on `umbrel-dev` to our fork and branch:
 
 ```sh
 cd getumbrel/umbrel
-git remote add <username> https://github.com/<username>/umbrel.git
-git fetch <username>
+git remote add <username> git@github.com:<username>/umbrel.git
+git fetch <username> btc-rpc-explorer
 git checkout <username>/btc-rpc-explorer
 ```
 
@@ -310,7 +313,7 @@ umbrel-dev ssh
 scripts/app install btc-rpc-explorer
 ```
 
-That's it! Our app should now be accessible at http://umbrel-dev.local:3002
+That's it! Our BTC RPC Explorer app should now be accessible at http://umbrel-dev.local:3002
 
 > If you need to make any changes in your app's compose file while you're testing the app on `umbrel-dev`, you can directly edit it at `getumbrel/umbrel/apps/<app-id>/docker-compose.yml` inside your `umbrel-dev` directory, test it on the fly, and commit + push the changes once you're done.
 
