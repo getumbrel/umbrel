@@ -117,8 +117,8 @@ services:
     volumes:
       # Uncomment to mount your data directories inside
       # the Docker container for storing persistent data
-      # - ${DATA_DIR}/foo:/foo
-      # - ${DATA_DIR}/bar:/bar
+      # - ${APP_DATA_DIR}/foo:/foo
+      # - ${APP_DATA_DIR}/bar:/bar
 
       # Uncomment to mount LND's data directory as read-only
       # inside the Docker container at path /lnd
