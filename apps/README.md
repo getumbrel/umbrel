@@ -262,6 +262,12 @@ ___
 
 ## 3. 🛠&nbsp;&nbsp;Testing the app on Umbrel
 
+When testing your app be sure to verify that any application state is being persisted in volumes.
+
+A good way to test this is to restart the app with `scripts/app stop <app> && scripts/app start <app>`. If any state is lost it means that state should be mapped to a persistent volume.
+
+When stop/starting all data in volumes will be persisted, anything else is discarded. When uninstalling/installing even persistent data will be wiped.
+
 ### 3.1 Testing the app on Umbrel development environment
 
 Umbrel development environment ([`umbrel-dev`](https://github.com/getumbrel/umbrel-dev)) is a lightweight regtest instance of Umbrel that runs inside a virtual machine on your system. It's currently only compatible with Linux or macOS, so if you're on Windows, you may skip this section and directly test your app on a Raspberry Pi 4 running [Umbrel OS](https://github.com/getumbrel/umbrel-os).
