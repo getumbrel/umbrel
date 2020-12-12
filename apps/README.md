@@ -2,7 +2,7 @@
 
 If you can code in any language, you already know how to develop an app for Umbrel. There is no restriction on the kind of programming languages, frameworks or databases that you can use. Apps run inside isolated Docker containers, and the only requirement (for now) is that they should have a web-based UI.
 
-> Some server apps might not have a UI as they only provide the user with connection info for their client apps. In that case, the app should serve a simple web page with all the connection info, steps, QR code, and such because the user never has CLI access on Umbrel.
+> Some server apps might not have a UI at all. In that case the app should serve a simple web page listing the connection details, QR codes, setup instructions, and anything else needed for the user to connect. The user is never expected to have CLI access on Umbrel.
 
 To keep this tutorial short and easy, we won't go into the app development itself, and will instead focus on packaging (or "porting") an existing app.
 
