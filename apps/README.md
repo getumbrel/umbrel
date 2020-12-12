@@ -310,7 +310,7 @@ Edit your app files at `getumbrel/umbrel/apps/<app-id>/` and then run:
 umbrel-dev reload
 ```
 
-Once you're happy with your changes just and commit + push.
+Once you're happy with your changes, just commit and push.
 
 >Don't forget to shutdown the `umbrel-dev` virtual machine after testing with `umbrel-dev shutdown`!
 
