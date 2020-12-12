@@ -4,7 +4,7 @@ If you can code in any language, you already know how to develop an app for Umbr
 
 > Some server apps might not have a UI at all. In that case the app should serve a simple web page listing the connection details, QR codes, setup instructions, and anything else needed for the user to connect. The user is never expected to have CLI access on Umbrel.
 
-To keep this tutorial short and easy, we won't go into the app development itself, and will instead focus on packaging (or "porting") an existing app.
+To keep this document short and easy, we won't go into the app development itself, and will instead focus on packaging an existing app.
 
 Let's straightaway jump into action by packaging [BTC RPC Explorer](https://github.com/janoside/btc-rpc-explorer), a Node.js based blockchain explorer, for Umbrel.
 
