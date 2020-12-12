@@ -36,7 +36,7 @@ FROM node:12-buster-slim AS builder
 WORKDIR /build
 COPY . .
 RUN apt-get update
-RUN apt-get install -y python3 build-essential
+RUN apt-get install -y git python3 build-essential
 RUN npm ci --production
 
 FROM node:12-buster-slim
