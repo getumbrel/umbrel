@@ -11,11 +11,11 @@ Let's straightaway jump into action by packaging [BTC RPC Explorer](https://gith
 There are 4 steps:
 
 1. [🛳 Containerizing the app using Docker](#1-containerizing-the-app-using-docker)
-2. [☂️ Packaging the app for Umbrel](#2-packaging-the-app-for-umbrel)
-3. [🛠 Testing the app on Umbrel](#3-testing-the-app-on-umbrel)
+1. [☂️ Packaging the app for Umbrel](#2-packaging-the-app-for-umbrel)
+1. [🛠 Testing the app on Umbrel](#3-testing-the-app-on-umbrel)
     1. [Testing on Umbrel development environment (Linux or macOS)](#31-testing-the-app-on-umbrel-development-environment)
-    2. [Testing on Umbrel OS (Raspberry Pi 4)](#32-testing-on-umbrel-os-raspberry-pi-4)
-4. [🚀 Submitting the app](#4-submitting-the-app)
+    1. [Testing on Umbrel OS (Raspberry Pi 4)](#32-testing-on-umbrel-os-raspberry-pi-4)
+1. [🚀 Submitting the app](#4-submitting-the-app)
 
 ___
 
@@ -421,16 +421,16 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 
     Every time you release a new version of your app, you should build, tag and push the new Docker images to Docker Hub. Then open a new PR on our main repo (getumbrel/umbrel) with your up-to-date docker image. For now, app updates will be bundled together in the Umbrel release. In the future, you'll be able to ship updates independently as soon as you make a new release.
 
-2. **How will users install/uninstall apps?**
+1. **How will users install/uninstall apps?**
 
     Users will install and uninstall the apps via dedicated UI in their dashboard. They will not use the `scripts/app` CLI directly as it's only meant for development use.
 
-3. **If I submit an app, will my PR be merged for sure?**
+1. **If I submit an app, will my PR be merged for sure?**
 
     For now, we're only accepting app submissions from developers who have received an invitation from us. Over time, we'll allow anyone to submit their app.
 
     > Need an invite to submit your app? Get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
 
-4. **I need help with something else?**
+1. **I need help with something else?**
 
     Join our [developer chat](https://keybase.io/team/getumbrel) on Keybase, or get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
