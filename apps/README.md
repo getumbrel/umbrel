@@ -277,7 +277,6 @@ brew cask install virtualbox vagrant
 ```sh
 mkdir umbrel-dev
 cd umbrel-dev
-
 umbrel-dev init
 ```
 
