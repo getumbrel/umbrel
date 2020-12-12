@@ -95,78 +95,75 @@ cd apps/btc-rpc-explorer
 Let's copy-paste the following template `docker-compose.yml` file in a text editor and edit it according to our app.
 
 ```yml
-version: '3.7'
-x-logging: &default-logging
-    driver: journald
-    options:
-        tag: "umbrel-app {{.Name}}"
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
 
 services:
-        # Replace <app-id> with the app ID of your app. App IDs
-        # can only contain lowercase alphabets and dashes.
-        <app-id>-web:
-              container_name: <app-id>-web
-              # Replace <docker-image> with your app's image and tag
-              image: <docker-image>
-              logging: *default-logging
-              restart: on-failure
-              stop_grace_period: 5m
-              ports:
-                  # Replace <port> with the port that your app's web server
-                  # is listening inside the Docker container. If you need to
-                  # expose more ports, add them below.
-                  - <port>:<port>
-              volumes:
-                  # Uncomment to mount your data directories inside
-                  # the Docker container for storing persistent data
-                  # - ${DATA_DIR}/foo:/foo
-                  # - ${DATA_DIR}/bar:/bar
+  web:
+    image: <docker-image>:<tag>@sha256:<checksum>
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      # Replace <port> with the port that your app's web server
+      # is listening inside the Docker container. If you need to
+      # expose more ports, add them below.
+      - <port>:<port>
+    volumes:
+      # Uncomment to mount your data directories inside
+      # the Docker container for storing persistent data
+      # - ${DATA_DIR}/foo:/foo
+      # - ${DATA_DIR}/bar:/bar
 
-                  # Uncomment to mount LND's data directory as read-only
-                  # inside the Docker container at path /.lnd
-                  # - ${LND_DATA_DIR}:/.lnd:ro
+      # Uncomment to mount LND's data directory as read-only
+      # inside the Docker container at path /lnd
+      # - ${LND_DATA_DIR}:/lnd:ro
 
-                  # Uncomment to mount Bitcoin Core's data directory as
-                  # read-only inside the Docker container at path /.bitcoin
-                  # - ${BITCOIN_DATA_DIR}:/.bitcoin:ro
-              environment:
-                  # Pass any environment variables to your app for configuration.
-                  #
-                  # Here are all the environment variables that you can use to
-                  # connect to Bitcoin Core, LND, Electrum server and Tor proxy:
-                  #
-                  # Bitcoin Core environment variables
-                  # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
-                  # $BITCOIN_HOST - Local IP of Bitcoin Core
-                  # $BITCOIN_P2P_PORT - P2P port
-                  # $BITCOIN_RPC_PORT - RPC port
-                  # $BITCOIN_RPC_USER - RPC username
-                  # $BITCOIN_RPC_PASS - RPC password
-                  # $BITCOIN_RPC_AUTH - RPC auth string
-                  #
-                  # LND environment variables
-                  # $LND_HOST - Local IP of LND
-                  # $LND_GRPC_PORT - gRPC Port of LND
-                  # $LND_REST_PORT - REST Port of LND
-                  # $LND_TLS_CERT - Hex encoded TLS certificate
-                  # $LND_ADMIN_MACROON - Hex encoded admin.macroon
-                  #
-                  # Electrum server environment variables
-                  # $ELECTRUM_HOST - Local IP of Electrum server
-                  # $ELECTRUM_PORT - Port of Electrum server
-                  #
-                  # Tor proxy environment variables
-                  # $TOR_PROXY_HOST - Local IP of Tor proxy
-                  # $TOR_PROXY_PORT - Port of Tor proxy
-
-        # If your app has more Docker containers, like a
-        # database container, etc, you can define those services below
-        # <app-id>-db:
+      # Uncomment to mount Bitcoin Core's data directory as
+      # read-only inside the Docker container at path /bitcoin
+      # - ${BITCOIN_DATA_DIR}:/bitcoin:ro
+    environment:
+      # Pass any environment variables to your app for configuration.
+      #
+      # Here are all the environment variables that you can use to
+      # connect to Bitcoin Core, LND, Electrum and Tor:
+      #
+      # Bitcoin Core environment variables
+      # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
+      # $BITCOIN_IP - Local IP of Bitcoin Core
+      # $BITCOIN_P2P_PORT - P2P port
+      # $BITCOIN_RPC_PORT - RPC port
+      # $BITCOIN_RPC_USER - RPC username
+      # $BITCOIN_RPC_PASS - RPC password
+      # $BITCOIN_RPC_AUTH - RPC auth string
+      #
+      # LND environment variables
+      # $LND_IP - Local IP of LND
+      # $LND_GRPC_PORT - gRPC Port of LND
+      # $LND_REST_PORT - REST Port of LND
+      #
+      # Electrum server environment variables
+      # $ELECTRUM_IP - Local IP of Electrum server
+      # $ELECTRUM_PORT - Port of Electrum server
+      #
+      # Tor proxy environment variables
+      # $TOR_PROXY_IP - Local IP of Tor proxy
+      # $TOR_PROXY_PORT - Port of Tor proxy
+  # If your app has more services like a database container you can define those
+  # services below:
+  # db:
+  #   image: <docker-image>:<tag>@sha256:<checksum>
+  #   ...
 
 networks:
   default:
     external:
-      name: umbrel_net
+      name: umbrel_main_network
 ```
 
 4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer:v2.0.2`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
