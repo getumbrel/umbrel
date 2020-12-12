@@ -79,14 +79,13 @@ cd umbrel
 git checkout -b btc-rpc-explorer
 ```
 
-2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabets + dashes. Ideally, it should be the name of the app. `btc-rpc-explorer` makes the perfect sense for our app, so let's go with it.
+2\. It's now time to decide an ID for our app. An app ID should only contain lowercase alphabetical characters and dashes and should be humanly recognizable. For this app we'll go with `btc-rpc-explorer`.
 
-We'll now switch to the apps directory and create a new directory for our app by the name of our chosen app ID:
+We need to create a new sibdirectory in the apps directory with same name as our app ID and move into it:
 
 ```sh
-cd apps
-mkdir btc-rpc-explorer
-cd btc-rpc-explorer
+mkdir apps/btc-rpc-explorer
+cd apps/btc-rpc-explorer
 ```
 
 3\. We'll now create a `docker-compose.yml` file in this directory to define our application.
