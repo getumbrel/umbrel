@@ -141,7 +141,7 @@ fi
 # Starts an installed app
 if [[ "$command" = "start" ]]; then
 
-  if list_installed_apps | grep --quiet --invert-match "^${app}$"; then
+  if ! list_installed_apps | grep --quiet "^${app}$"; then
     echo "Error: \"${app}\" is not installed yet"
     exit 1
   fi
