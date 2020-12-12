@@ -34,6 +34,7 @@ cd  btc-rpc-explorer
 FROM node:12-buster-slim AS builder
 
 WORKDIR /build
+COPY . .
 RUN apt-get update
 RUN apt-get install -y python3 build-essential
 RUN npm ci --production
