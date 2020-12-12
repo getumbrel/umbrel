@@ -45,7 +45,7 @@ USER 1000
 WORKDIR /build
 COPY --from=builder /build .
 EXPOSE 3002
-CMD [ "npm", "start" ]
+CMD ["npm", "start"]
 ```
 
 > We recommend using `debian-buster-slim` (or a flavor of it, like `node:12-buster-slim`, `python:3-buster-slim`, etc) as the base image for better performace, reliability and faster downloads of your app, unless you have a vey strong reason for not using it.
