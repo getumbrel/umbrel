@@ -5,8 +5,7 @@ x-logging: &default-logging
         tag: "umbrel-app {{.Name}}"
 
 services:
-        btc-rpc-explorer:
-              container_name: btc-rpc-explorer
+        web:
               image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
               logging: *default-logging
               restart: on-failure
