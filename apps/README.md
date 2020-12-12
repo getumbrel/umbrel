@@ -167,36 +167,38 @@ networks:
       name: umbrel_main_network
 ```
 
-4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer:v2.0.2`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
+4\. For our app, we'll update `<app-id>` with `btc-rpc-explorer`, `<docker-image>` with `getumbrel/btc-rpc-explorer`, `<tag>` with `v2.0.2`, `<checksum>` with the hash of our multi-architecture Docker image and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
 
 BTC RPC Explorer is an application with a single Docker container, so we don't need to define any other additional services (like a database service, etc) in the compose file.
 
-> If BTC RPC Explorer would have required any default configuration files, we would have created a new `data` directory in the same directory as the `docker-compose.yml` file. We'd have then placed the configuration files inside it, and mounted the volumme `- ${DATA_DIR}:/data` in  `docker-compose.yml` to make the files available in `/data` directory inside the container.
+> If BTC RPC Explorer needed to persist some data we would have created a new `data` directory next to the `docker-compose.yml` file. We'd then mount the volume `- ${APP_DATA_DIR}/data:/data` in  `docker-compose.yml` to make the directory available at `/data` inside the container.
 
 Updated `docker-compose.yml` file:
 
 ```yml
-version: '3.7'
-x-logging: &default-logging
-    driver: journald
-    options:
-        tag: "umbrel-app {{.Name}}"
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
 
 services:
-        btc-rpc-explorer-web:
-              container_name: btc-rpc-explorer
-              image: getumbrel/btc-rpc-explorer:v2.0.2
-              logging: *default-logging
-              restart: on-failure
-              stop_grace_period: 5m
-              ports:
-                  - 3002:3002
-              environment:
+  web:
+    image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      - 3002:3002
+    environment:
 
 networks:
   default:
     external:
-      name: umbrel_net
+      name: umbrel_main_network
+
 ```
 
 5\. Next, let's set the environment variables required by our app to connect to Bitcoin Core, Electrum server, and for app-related configuration ([as required by the app](https://github.com/janoside/btc-rpc-explorer/blob/master/.env-sample)).
