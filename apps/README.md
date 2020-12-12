@@ -113,12 +113,12 @@ services:
                   # the Docker container for storing persistent data
                   # - ${DATA_DIR}/foo:/foo
                   # - ${DATA_DIR}/bar:/bar
-                  
+
                   # Uncomment to mount LND's data directory as read-only
                   # inside the Docker container at path /.lnd
                   # - ${LND_DATA_DIR}:/.lnd:ro
-                  
-                  # Uncomment to mount Bitcoin Core's data directory as 
+
+                  # Uncomment to mount Bitcoin Core's data directory as
                   # read-only inside the Docker container at path /.bitcoin
                   # - ${BITCOIN_DATA_DIR}:/.bitcoin:ro
               environment:
@@ -154,7 +154,7 @@ services:
         # If your app has more Docker containers, like a
         # database container, etc, you can define those services below
         # <app-id>-db:
-        
+
 networks:
   default:
     external:
@@ -222,7 +222,7 @@ services:
 
                   # Electrum environment variables
                   BTCEXP_ELECTRUMX_SERVERS: tcp://${ELECTRUM_HOST}:${ELECTRUM_PORT}
-                  
+
                   # App Config
                   BTCEXP_HOST: 0.0.0.0
                   DEBUG: "btcexp:*,electrumClient"
@@ -355,10 +355,10 @@ We're now ready to open a pull request on the main [getumbrel/umbrel](https://gi
 ```
 # App Submission
 
-### App name 
+### App name
 ...
 
-### Version 
+### Version
 ...
 
 ### One line description of the app
