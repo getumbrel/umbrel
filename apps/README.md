@@ -223,7 +223,7 @@ services:
     ports:
       - 3002:3002
     environment:
-      # Bitcoin Core conenction details
+      # Bitcoin Core connection details
       BTCEXP_BITCOIND_HOST: $BITCOIN_IP
       BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
       BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
