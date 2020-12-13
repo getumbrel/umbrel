@@ -104,7 +104,7 @@ if [[ $BITCOIN_NETWORK == "regtest" ]]; then
 fi
 
 echo "Uploading backup..."
-if curl --socks5 localhost:9150 -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"; then
+if curl --socks5 "localhost:${TOR_PROXY_PORT}" -F "file=@/${BACKUP_FILE}" "${BACKUP_API_URL}/${backup_id}"; then
   status="success"
 else
   status="failed"

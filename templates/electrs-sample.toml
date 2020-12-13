@@ -1,6 +1,6 @@
 verbose = 4
 network = "bitcoin"
 db_dir = "/data/db"
-daemon_rpc_addr = "10.11.1.1:<port>"
-electrum_rpc_addr = "0.0.0.0:50001"
+daemon_rpc_addr = "<bitcoin-ip>:<port>"
+electrum_rpc_addr = "0.0.0.0:<electrum-port>"
 server_banner = "Umbrel v<version>"

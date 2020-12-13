@@ -87,6 +87,12 @@ echo
 docker-compose up --detach --build --remove-orphans
 echo
 
+echo
+echo "Starting installed apps..."
+echo
+"${UMBREL_ROOT}/scripts/app" start installed
+echo
+
 echo "Umbrel is now accessible at"
 echo "  http://${DEVICE_HOSTNAME}"
 echo "  http://${DEVICE_IP}"

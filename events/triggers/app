@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+signal="${1}"
+command=${signal%%"-"*}
+app=${signal#*"-"}
+
+"${UMBREL_ROOT}/scripts/app" "${command}" "${app}"
