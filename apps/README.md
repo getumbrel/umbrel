@@ -397,7 +397,7 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 - [ ] [Custom Umbrel install on Linux](https://github.com/getumbrel/umbrel#-installation)
 ```
 
-**Here's our actual pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#999](https://github.com/getumbrel/umbrel/pulls).**
+**Here's our actual pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#334](https://github.com/getumbrel/umbrel/pull/334).**
 
 > After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file, such as removing any port conflicts with other apps, pinning Docker images to their sha256 digests, assigning unique IP addresses to the containers, etc before merging.
 
