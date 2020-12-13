@@ -1,24 +1,2 @@
 [
-  {
-    "id": "btc-rpc-explorer",
-    "category": "Explorers",
-    "name": "BTC RPC Explorer",
-    "version": "0.7.2",
-    "tagline": "A simple explorer for the Bitcoin blockchain",
-    "description": "BTCPay is a non-custodial invoicing system which eliminates the involvement of a third-party. Payments with BTCPay go directly to your wallet, which increases the privacy and security. Your private keys are never uploaded to the server. There is no address re-use, since each invoice generates a new address deriving from your xpubkey.",
-    "developer": "BTCPay Foundation",
-    "repo": "https://github.com/btcpayserver/btcpayserver",
-    "gallery": [
-      "1.png",
-      "2.png",
-      "3.png"
-    ],
-    "dependencies": [
-      "bitcoind",
-      "lnd"
-    ],
-    "website": "https://btcpayserver.org",
-    "support": "https://t.me/getumbrel",
-    "port": 3002
-  }
 ]

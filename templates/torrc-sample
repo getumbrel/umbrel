@@ -30,8 +30,4 @@ HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 
 # Apps
 
-# btc-rpc-explorer Hidden Service
-HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
-HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
-
 HashedControlPassword <password>
