@@ -8,12 +8,12 @@ x-logging:
 
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v2.0.2
+    image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
     ports:
-      - "3002:3002"
+      - "$APP_BTC_RPC_EXPLORER_PORT:$APP_BTC_RPC_EXPLORER_PORT"
     environment:
       # Docker requirements
       BTCEXP_HOST: 0.0.0.0
@@ -36,3 +36,6 @@ services:
       # Disable RPC
       BTCEXP_RPC_ALLOWALL: "false"
       BTCEXP_BASIC_AUTH_PASSWORD: ""
+    networks:
+      default:
+        ipv4_address: $APP_BTC_RPC_EXPLORER_IP

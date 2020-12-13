@@ -121,6 +121,8 @@ TOR_PROXY_IP="10.0.0.11"
 TOR_PROXY_PORT="9050"
 
 # Apps
+APP_BTC_RPC_EXPLORER_IP="10.0.1.0"
+APP_BTC_RPC_EXPLORER_PORT="3002"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -241,6 +243,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
 
   # Apps
+  sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
+  sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
 done
 
 
