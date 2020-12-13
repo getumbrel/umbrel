@@ -28,7 +28,7 @@ lnd/*
 logs/*
 statuses/*
 tor/*
-app-data
+app-data/*
 
 # Commit these files
 
