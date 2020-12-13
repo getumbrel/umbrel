@@ -74,6 +74,13 @@ BITCOIN_NETWORK="mainnet"
 [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 PREV_ENV_FILE="${PREV_ENV_FILE}" NETWORK=$BITCOIN_NETWORK ./scripts/configure
 
+# Pulling new containers
+echo "Pulling new containers"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 50, "description": "Pulling new containers", "updateTo": "$RELEASE"}
+EOF
+docker-compose pull
+
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
@@ -96,14 +103,6 @@ rsync --archive \
 echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
-
-# Pulling new containers
-echo "Pulling new containers"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 75, "description": "Pulling new containers", "updateTo": "$RELEASE"}
-EOF
-cd "$UMBREL_ROOT"
-docker-compose pull
 
 # Start updated containers
 echo "Starting new containers"
