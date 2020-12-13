@@ -104,7 +104,7 @@ x-logging:
 
 services:
   web:
-    image: <docker-image>:<tag>@sha256:<checksum>
+    image: <docker-image>:<tag>
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
@@ -157,12 +157,12 @@ services:
   # If your app has more services, like a database container, you can define those
   # services below:
   # db:
-  #   image: <docker-image>:<tag>@sha256:<checksum>
+  #   image: <docker-image>:<tag>
   #   ...
 
 ```
 
-4\. For our app, we'll update `<docker-image>` with `getumbrel/btc-rpc-explorer`, `<tag>` with `v2.0.2`, `<checksum>` with the hash of our multi-architecture Docker image and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
+4\. For our app, we'll update `<docker-image>` with `getumbrel/btc-rpc-explorer`, `<tag>` with `v2.0.2`, and `<port>` with `3002`. Since BTC RPC Explorer doesn't need to store any persistent data and doesn't require access to Bitcoin Core's or LND's data directories, we can remove the entire `volumes` block.
 
 BTC RPC Explorer is an application with a single Docker container, so we don't need to define any other additional services (like a database service, etc) in the compose file.
 
@@ -181,7 +181,7 @@ x-logging:
 
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
+    image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
@@ -206,7 +206,7 @@ x-logging:
 
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
+    image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
