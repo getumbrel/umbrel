@@ -370,8 +370,8 @@ _(50 to 200 words)_
 ### Source code repository
 ...
 
-### Support Link
-_(Link to your Telegram support channel, GitHub issues/discussions, support portal, or any other place where users could contact you for support)_
+### Support link
+_(Link to your Telegram support channel, GitHub issues/discussions, support portal, or any other place where users could contact you for support.)_
 
 ...
 
