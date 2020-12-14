@@ -82,6 +82,7 @@ compose() {
   export APP_DATA_DIR="${app_data_dir}"
   docker-compose \
     --env-file "${env_file}" \
+    --project-name "${app}" \
     --file "${app_base_compose_file}" \
     --file "${app_compose_file}" \
     "${@}"
