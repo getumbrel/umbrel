@@ -1,0 +1,27 @@
+version: "3.7"
+
+x-logging: &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  sphinx-relay:
+    container_name: sphinx-relay
+    image: gonzaloaune/sphinxrelay:0.1
+    restart: on-failure
+    logging: *default-logging
+    volumes:
+      - ${PWD}/lnd:/lnd:ro
+      - ${APP_DATA_DIR}/data/:/relay/.lnd/
+    ports:
+      - 3300:3300
+    environment:
+      #PUBLIC_URL: "$APP_HIDDEN_SERVICE:3300"
+      PUBLIC_URL: "YOUR_ONION_URL_HERE:3300"
+      LND_IP: $LND_IP
+      CONNECT_UI: "true"
+      LND_PORT: $LND_GRPC_PORT
+      TLS_LOCATION: /lnd/tls.cert
+      MACAROON_LOCATION: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon
+      LND_LOG_LOCATION: /lnd/logs/bitcoin/mainnet/lnd.log
