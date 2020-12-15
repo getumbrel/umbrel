@@ -1,0 +1,26 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: lightninglabs/lightning-terminal:v0.3.3-alpha
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      - "3004:80"
+    volumes:
+      - ${APP_DATA_DIR}/data:/lit
+      - ${LND_DATA_DIR}:/lnd:ro
+    command: --lit-dir "/lit" \
+             --insecure-httplisten 0.0.0.0:80 \
+             --lnd-mode "remote" \
+             --remote.lnd.rpcserver $LND_IP:$LND_GRPC_PORT \
+             --remote.lnd.macaroondir "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK" \
+             --remote.lnd.tlscertpath "/lnd/tls.cert"
+
