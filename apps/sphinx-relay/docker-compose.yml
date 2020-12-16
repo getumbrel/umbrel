@@ -17,8 +17,7 @@ services:
     ports:
       - 3300:3300
     environment:
-      #PUBLIC_URL: "$APP_HIDDEN_SERVICE:3300"
-      PUBLIC_URL: "YOUR_ONION_URL_HERE:3300"
+      PUBLIC_URL: "$APP_HIDDEN_SERVICE:3300"
       LND_IP: $LND_IP
       CONNECT_UI: "true"
       LND_PORT: $LND_GRPC_PORT
