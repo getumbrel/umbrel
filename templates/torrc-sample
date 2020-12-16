@@ -34,4 +34,9 @@ HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
 HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
 
+# sphinx-relay Hidden Service
+HiddenServiceDir /var/lib/tor/app-sphinx-relay
+HiddenServicePort <app-sphinx-relay-port> <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+# TODO: Expose UI at port 80
+
 HashedControlPassword <password>

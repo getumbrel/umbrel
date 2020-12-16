@@ -123,6 +123,9 @@ TOR_PROXY_PORT="9050"
 # Apps
 APP_BTC_RPC_EXPLORER_IP="10.0.1.0"
 APP_BTC_RPC_EXPLORER_PORT="3002"
+APP_SPHINX_RELAY_IP="10.0.2.0"
+# TODO: Use this var in compose config before merge
+APP_SPHINX_RELAY_PORT="3300"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -245,6 +248,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-ip>/${APP_SPHINX_RELAY_IP}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-port>/${APP_SPHINX_RELAY_PORT}/g" "${template}"
 done
 
 
