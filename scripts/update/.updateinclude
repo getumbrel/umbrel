@@ -1,5 +1,4 @@
 .env
-templates/.env-sample
 bitcoin/bitcoin.conf
 lnd/lnd.conf
 tor/torrc
