@@ -12,8 +12,8 @@ services:
     restart: on-failure
     logging: *default-logging
     volumes:
-      - ${PWD}/lnd:/lnd:ro
-      - ${APP_DATA_DIR}/data/:/relay/.lnd/
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}:/relay/.lnd/
     ports:
       - 3300:3300
     environment:
