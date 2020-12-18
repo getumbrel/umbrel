@@ -61,4 +61,8 @@ HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
 HiddenServiceDir /var/lib/tor/app-btcpay-server
 HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 
+# LNDHub Beta Hidden Service
+HiddenServiceDir /var/lib/tor/app-lndhub
+HiddenServicePort 3000 <app-lndhub-ip>:<app-lndhub-port>
+
 HashedControlPassword <password>

@@ -1,0 +1,43 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+        redis:
+              container_name: redis
+              image: redis:6.0-alpine
+              command: redis-server --requirepass moneyprintergobrrr
+              restart: on-failure
+              stop_grace_period: 5m
+              ports:
+                  - "6379:6379"
+              volumes:
+                  - ${LND_DATA_DIR}:/lnd:ro
+                  - ${APP_DATA_DIR}/redis:/data
+              networks:
+                  default:
+                      ipv4_address: 10.0.1.8
+        web:
+                container_name: lndhub
+                image: aarondewes/lndhub:v0.1.5
+                logging: *default-logging
+                depends_on: [ redis ]
+                restart: on-failure
+                stop_grace_period: 5m30s
+                ports:
+                    - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
+                volumes:
+                        - ${PWD}/lnd:/lnd:ro
+                        - ${PWD}/tor/data/app-lndhub/hostname:/lndhub/hostname
+                environment:
+                    PORT: "${APP_LNDHUB_PORT}"
+                    LND_CERT_FILE: "/lnd/tls.cert"
+                    LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
+                    CONFIG: '{ "redis": { "port": 6379, "host": "10.0.1.8", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
+                networks:
+                     default:
+                        ipv4_address: $APP_LNDHUB_IP
