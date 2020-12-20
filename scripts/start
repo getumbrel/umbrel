@@ -38,6 +38,7 @@ fi
 
 # Configure Umbrel if it isn't already configured
 if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
+  FIRST_RUN=1
   NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
 fi
 
@@ -87,11 +88,13 @@ echo
 docker-compose up --detach --build --remove-orphans
 echo
 
-echo
-echo "Starting installed apps..."
-echo
-"${UMBREL_ROOT}/scripts/app" start installed
-echo
+if [[ $FIRST_RUN != 1 ]]; then
+    echo
+    echo "Starting installed apps..."
+    echo
+    "${UMBREL_ROOT}/scripts/app" start installed
+    echo
+fi
 
 echo "Umbrel is now accessible at"
 echo "  http://${DEVICE_HOSTNAME}"
