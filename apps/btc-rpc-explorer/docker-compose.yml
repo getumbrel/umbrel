@@ -8,6 +8,7 @@ x-logging:
 
 services:
   web:
+    user: "1000:1000"
     image: getumbrel/btc-rpc-explorer:v2.0.2@sha256:f8ba8b97e550f65e5bc935d7516cce7172910e9009f3154a434c7baf55e82a2b
     logging: *default-logging
     restart: on-failure
