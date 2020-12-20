@@ -34,4 +34,8 @@ HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
 HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
 
+# thunderhub Hidden Service
+HiddenServiceDir /var/lib/tor/app-thunderhub
+HiddenServicePort 80 <app-thunderhub-ip>:<app-thunderhub-port>
+
 HashedControlPassword <password>
