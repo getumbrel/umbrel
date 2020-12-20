@@ -9,6 +9,7 @@ x-logging:
 services:
   web:
     image: apotdevin/thunderhub:v0.12.0
+    user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
