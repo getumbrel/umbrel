@@ -1,0 +1,56 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: shahanafarooqui/rtl:0.10.0
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      - 3001:3001
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${BITCOIN_DATA_DIR}:/bitcoin:ro
+    environment:
+        # App config
+        PORT: 3001
+        RTL_CONFIG_PATH: "/data"
+        CHANNEL_BACKUP_PATH: "/data/backup"
+        LN_IMPLEMENTATION: "LND"
+
+        # Bitcoin Core
+        BITCOIND_CONFIG_PATH: "/bitcoin/bitcoin.conf"
+
+        # LND connection details
+        LN_SERVER_URL: "https://$LND_IP:$LND_REST_PORT"   
+        MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+        CONFIG_PATH: "/lnd/lnd.conf"
+
+        # Pool
+        SWAP_SERVER_URL: "https://loop:8081"
+        SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
+
+  loop: 
+    image: louneskmt/loop:v0.11.2-beta
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    command: 
+      - --network=$BITCOIN_NETWORK
+      - --loopdir="/data/loop"
+      - --lnd.host="$LND_IP:$LND_GRPC_PORT" 
+      - --lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+      - --lnd.tlspath="/lnd/tls.cert"
+      - --restlisten=0.0.0.0:8081
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
