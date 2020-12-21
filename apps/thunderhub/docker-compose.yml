@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: apotdevin/thunderhub:v0.12.0@sha256:6b7148313cddad9a4e46afd6a4eacd3f55f56f6af61828177b12059a64e400d7
+    image: apotdevin/thunderhub:v0.12.1
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -22,6 +22,7 @@ services:
       NO_VERSION_CHECK: "true"
       LOG_LEVEL: "debug"
       ACCOUNT_CONFIG_PATH: "/data/thubConfig.yaml"
+      YML_ENV_1: "$LND_IP:$LND_GRPC_PORT"
     networks:
       default:
         ipv4_address: $APP_THUNDERHUB_IP
