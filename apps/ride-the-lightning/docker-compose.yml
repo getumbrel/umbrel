@@ -14,14 +14,14 @@ services:
     restart: on-failure
     stop_grace_period: 5m
     ports:
-      - 3001:3001
+      - "$APP_RIDE_THE_LIGHTNING_PORT:$APP_RIDE_THE_LIGHTNING_PORT"
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - ${LND_DATA_DIR}:/lnd:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     environment:
         # App config
-        PORT: 3001
+        PORT: $APP_RIDE_THE_LIGHTNING_PORT
         RTL_CONFIG_PATH: "/data"
         CHANNEL_BACKUP_PATH: "/data/backup"
         LN_IMPLEMENTATION: "LND"
@@ -30,24 +30,27 @@ services:
         BITCOIND_CONFIG_PATH: "/bitcoin/bitcoin.conf"
 
         # LND connection details
-        LN_SERVER_URL: "https://$LND_IP:$LND_REST_PORT"   
+        LN_SERVER_URL: "https://$LND_IP:$LND_REST_PORT"
         MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
         CONFIG_PATH: "/lnd/lnd.conf"
 
         # Pool
         SWAP_SERVER_URL: "https://loop:8081"
         SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
+    networks:
+      default:
+        ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
 
-  loop: 
+  loop:
     image: louneskmt/loop:v0.11.2-beta
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
-    command: 
+    command:
       - --network=$BITCOIN_NETWORK
       - --loopdir="/data/loop"
-      - --lnd.host="$LND_IP:$LND_GRPC_PORT" 
+      - --lnd.host="$LND_IP:$LND_GRPC_PORT"
       - --lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
       - --lnd.tlspath="/lnd/tls.cert"
       - --restlisten=0.0.0.0:8081
