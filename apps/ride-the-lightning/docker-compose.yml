@@ -26,9 +26,6 @@ services:
         CHANNEL_BACKUP_PATH: "/data/backup"
         LN_IMPLEMENTATION: "LND"
 
-        # Bitcoin Core
-        BITCOIND_CONFIG_PATH: "/bitcoin/bitcoin.conf"
-
         # LND connection details
         LN_SERVER_URL: "https://$LND_IP:$LND_REST_PORT"
         MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
