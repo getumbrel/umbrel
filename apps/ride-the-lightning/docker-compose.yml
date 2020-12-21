@@ -31,7 +31,7 @@ services:
         MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
         CONFIG_PATH: "/lnd/lnd.conf"
 
-        # Pool
+        # Loop
         SWAP_SERVER_URL: "https://loop:8081"
         SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
     networks:
