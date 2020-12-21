@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: shahanafarooqui/rtl:0.10.0
+    image: shahanafarooqui/rtl:0.10.0@sha256:036d94c582911caa74cbe8a0f5646d98b3549010bdbdd2cebd92d3b08a00d82a
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -42,7 +42,7 @@ services:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
 
   loop:
-    image: louneskmt/loop:v0.11.2-beta
+    image: louneskmt/loop:v0.11.2-beta@sha256:97b481a52e3b3f336a21d3be0eb1414dcd72e230de2e22a57287d15aab0a7af0
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
