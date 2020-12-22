@@ -24,7 +24,7 @@ services:
     command:
         - --lit-dir="/lit"
         - --faraday.faradaydir="/faraday"
-        - --loop.datadir="/loop"
+        - --loop.loopdir="/loop"
         - --pool.basedir="/pool"
         - --insecure-httplisten=0.0.0.0:80
         - --lnd-mode="remote"
