@@ -34,4 +34,8 @@ HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
 HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
 
+# lightning-terminal Hidden Service
+HiddenServiceDir /var/lib/tor/app-lightning-terminal
+HiddenServicePort 80 <app-lightning-terminal-ip>:<app-lightning-terminal-port>
+
 HashedControlPassword <password>

@@ -13,7 +13,7 @@ services:
     restart: on-failure
     stop_grace_period: 5m
     ports:
-      - "3004:80"
+      - "$APP_LIGHTNING_TERMINAL_PORT:80"
     volumes:
       - ${APP_DATA_DIR}/data:/lit
       - ${LND_DATA_DIR}:/lnd:ro
@@ -25,3 +25,6 @@ services:
         - --remote.lnd.rpcserver=$LND_IP:$LND_GRPC_PORT
         - --remote.lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
         - --remote.lnd.tlscertpath="/lnd/tls.cert"
+    networks:
+      default:
+        ipv4_address: $APP_LIGHTNING_TERMINAL_IP
