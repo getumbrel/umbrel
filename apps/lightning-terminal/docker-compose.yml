@@ -18,11 +18,13 @@ services:
     volumes:
       - ${APP_DATA_DIR}/lit:/lit
       - ${APP_DATA_DIR}/faraday:/faraday
+      - ${APP_DATA_DIR}/loop:/loop
       - ${APP_DATA_DIR}/pool:/pool
       - ${LND_DATA_DIR}:/lnd:ro
     command:
         - --lit-dir="/lit"
         - --faraday.faradaydir="/faraday"
+        - --loop.datadir="/loop"
         - --pool.basedir="/pool"
         - --insecure-httplisten=0.0.0.0:80
         - --lnd-mode="remote"
