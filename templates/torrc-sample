@@ -53,4 +53,8 @@ HiddenServicePort 80 <app-ride-the-lightning-ip>:<app-ride-the-lightning-port>
 HiddenServiceDir /var/lib/tor/app-lightning-terminal
 HiddenServicePort 80 <app-lightning-terminal-ip>:<app-lightning-terminal-port>
 
+# specter-desktop Hidden Service
+HiddenServiceDir /var/lib/tor/app-specter-desktop
+HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
+
 HashedControlPassword <password>
