@@ -123,6 +123,8 @@ TOR_PROXY_PORT="9050"
 # Apps
 APP_BTC_RPC_EXPLORER_IP="10.0.1.0"
 APP_BTC_RPC_EXPLORER_PORT="3002"
+APP_THUNDERHUB_IP="10.0.1.1"
+APP_THUNDERHUB_PORT="3000"
 APP_SPHINX_RELAY_IP="10.0.1.2"
 APP_SPHINX_RELAY_PORT="3300"
 
@@ -247,6 +249,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
+  sed -i "s/<app-thunderhub-ip>/${APP_THUNDERHUB_IP}/g" "${template}"
+  sed -i "s/<app-thunderhub-port>/${APP_THUNDERHUB_PORT}/g" "${template}"
   sed -i "s/<app-sphinx-relay-ip>/${APP_SPHINX_RELAY_IP}/g" "${template}"
   sed -i "s/<app-sphinx-relay-port>/${APP_SPHINX_RELAY_PORT}/g" "${template}"
 done
@@ -262,7 +266,13 @@ echo
 
 echo "Setting dbcache size"
 echo
-DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
+  # Limit dbcache to 200 after IBD
+  DBCACHE_SIZE="200"
+else
+  # Allocate (50% of RAM) - 300MB to dbcache for IDB
+  DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+fi
 sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
 # TODO: Adjust prune size based on available disk space
