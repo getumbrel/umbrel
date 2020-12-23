@@ -16,16 +16,11 @@ services:
     ports:
       - "$APP_LIGHTNING_TERMINAL_PORT:$APP_LIGHTNING_TERMINAL_PORT"
     volumes:
-      - ${APP_DATA_DIR}/lit:/lit
-      - ${APP_DATA_DIR}/faraday:/faraday
-      - ${APP_DATA_DIR}/loop:/loop
-      - ${APP_DATA_DIR}/pool:/pool
+      - ${APP_DATA_DIR}/data:/data
       - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      HOME: "/data"
     command:
-        - --lit-dir="/lit"
-        - --faraday.faradaydir="/faraday"
-        - --loop.loopdir="/loop"
-        - --pool.basedir="/pool"
         - --insecure-httplisten=0.0.0.0:$APP_LIGHTNING_TERMINAL_PORT
         - --lnd-mode="remote"
         - --remote.lnd.network="$BITCOIN_NETWORK"
