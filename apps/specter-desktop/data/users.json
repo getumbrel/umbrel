@@ -1,0 +1,11 @@
+[
+    {
+        "id": "admin",
+        "username": "admin",
+        "password": {
+            "salt": "Raqdb55MYPm8uk9p94IuirPwvDmPsNg5H3LIUQzw9d0=",
+            "pwdhash": "w1PLHkdKOhGgDyGzTUxYoyyzZf/VKLi5SjLoE28rffQ="
+        },
+        "is_admin": true
+    }
+]
