@@ -34,4 +34,23 @@ HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
 HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
 
+# thunderhub Hidden Service
+HiddenServiceDir /var/lib/tor/app-thunderhub
+HiddenServicePort 80 <app-thunderhub-ip>:<app-thunderhub-port>
+
+# sphinx-relay Hidden Service
+# We expose 80 for the connection string UI and <app-sphinx-relay-port> for the
+# actual server connection
+HiddenServiceDir /var/lib/tor/app-sphinx-relay
+HiddenServicePort 80 <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+HiddenServicePort <app-sphinx-relay-port> <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+
+# ride-the-lightning Hidden Service
+HiddenServiceDir /var/lib/tor/app-ride-the-lightning
+HiddenServicePort 80 <app-ride-the-lightning-ip>:<app-ride-the-lightning-port>
+
+# lightning-terminal Hidden Service
+HiddenServiceDir /var/lib/tor/app-lightning-terminal
+HiddenServicePort 80 <app-lightning-terminal-ip>:<app-lightning-terminal-port>
+
 HashedControlPassword <password>
