@@ -123,7 +123,10 @@ TOR_PROXY_PORT="9050"
 # Apps
 APP_BTC_RPC_EXPLORER_IP="10.0.1.0"
 APP_BTC_RPC_EXPLORER_PORT="3002"
-
+APP_THUNDERHUB_IP="10.0.1.1"
+APP_THUNDERHUB_PORT="3000"
+APP_SPHINX_RELAY_IP="10.0.1.2"
+APP_SPHINX_RELAY_PORT="3300"
 APP_RIDE_THE_LIGHTNING_IP="10.0.1.3"
 APP_RIDE_THE_LIGHTNING_PORT="3001"
 
@@ -248,7 +251,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
-
+  sed -i "s/<app-thunderhub-ip>/${APP_THUNDERHUB_IP}/g" "${template}"
+  sed -i "s/<app-thunderhub-port>/${APP_THUNDERHUB_PORT}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-ip>/${APP_SPHINX_RELAY_IP}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-port>/${APP_SPHINX_RELAY_PORT}/g" "${template}"
   sed -i "s/<app-ride-the-lightning-ip>/${APP_RIDE_THE_LIGHTNING_IP}/g" "${template}"
   sed -i "s/<app-ride-the-lightning-port>/${APP_RIDE_THE_LIGHTNING_PORT}/g" "${template}"
 done
