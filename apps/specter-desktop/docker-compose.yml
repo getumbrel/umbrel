@@ -9,6 +9,7 @@ x-logging:
 services:
   web:
     image: lncm/specter-desktop:v0.10.4
+    stop_signal: SIGINT
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
