@@ -42,8 +42,7 @@ services:
         BTCPAY_BIND: 0.0.0.0:3003
         BTCPAY_CHAINS: "btc"
         BTCPAY_BTCEXPLORERURL: "http://nbxplorer:32838"
-        BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_GRPC_PORT/;macaroonfilepath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
-        BTCPAY_BTCEXTERNALLNDGRPC: "server=https://$LND_IP:$LND_GRPC_PORT/;macaroonfilepath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;macaroondirectorypath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+        BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_REST_PORT/;macaroonfilepath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
         BTCPAY_SOCKSENDPOINT: $TOR_PROXY_IP:$TOR_PROXY_PORT
     volumes:
         - ${APP_DATA_DIR}/data/btcpay:/datadir
