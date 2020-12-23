@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: lncm/specter-desktop:v0.10.4
+    image: lncm/specter-desktop:v0.10.4@sha256:bca14d04397d26fd9da085e0f5c97c6fc89dccff39a22719584d13b352fe1800
     stop_signal: SIGINT
     logging: *default-logging
     restart: on-failure
