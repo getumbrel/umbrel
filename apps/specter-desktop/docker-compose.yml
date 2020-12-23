@@ -15,9 +15,10 @@ services:
     ports:
       - 25441:25441
     volumes:
-      - ${APP_DATA_DIR}/.specter:/home/specter/.specter
+      - ${APP_DATA_DIR}/data:/data
     command: --host 0.0.0.0
     environment:
+      HOME: "/data"
       BTC_RPC_USER: $BITCOIN_RPC_USER
       BTC_RPC_PASSWORD: $BITCOIN_RPC_PASS
       BTC_RPC_HOST: $BITCOIN_IP
