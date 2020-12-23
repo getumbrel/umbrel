@@ -45,4 +45,8 @@ HiddenServiceDir /var/lib/tor/app-sphinx-relay
 HiddenServicePort 80 <app-sphinx-relay-ip>:<app-sphinx-relay-port>
 HiddenServicePort <app-sphinx-relay-port> <app-sphinx-relay-ip>:<app-sphinx-relay-port>
 
+# ride-the-lightning Hidden Service
+HiddenServiceDir /var/lib/tor/app-ride-the-lightning
+HiddenServicePort 80 <app-ride-the-lightning-ip>:<app-ride-the-lightning-port>
+
 HashedControlPassword <password>
