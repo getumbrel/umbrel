@@ -34,12 +34,12 @@ services:
     depends_on: [ nbxplorer, postgres ]
     entrypoint: [ "dotnet", "BTCPayServer.dll" ]
     ports: 
-        - "3003:3003"
+        - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
     environment:
         BTCPAY_DOCKERDEPLOYMENT: "false"
         BTCPAY_POSTGRES: "User ID=postgres;Host=postgres;Port=5432;Database=btcpayserver$BITCOIN_NETWORK"
         BTCPAY_NETWORK: "$BITCOIN_NETWORK"
-        BTCPAY_BIND: 0.0.0.0:3003
+        BTCPAY_BIND: 0.0.0.0:$APP_BTCPAY_SERVER_PORT
         BTCPAY_CHAINS: "btc"
         BTCPAY_BTCEXPLORERURL: "http://nbxplorer:32838"
         BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_REST_PORT/;macaroonfilepath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
@@ -48,6 +48,9 @@ services:
         - ${APP_DATA_DIR}/data/btcpay:/datadir
         - ${APP_DATA_DIR}/data/nbxplorer:/root/.nbxplorer
         - ${LND_DATA_DIR}:/root/.lnd:ro
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_IP
 
   postgres:
     image: postgres:9.6.20
