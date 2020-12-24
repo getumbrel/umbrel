@@ -11,7 +11,8 @@ services:
     image: "nicolasdorier/nbxplorer:2.1.46"
     user: "1000:1000"
     logging: *default-logging
-    restart: always
+    restart: on-failure
+    stop_grace_period: 5m
     environment:
         NBXPLORER_NETWORK: "$BITCOIN_NETWORK"
         NBXPLORER_PORT: 32838
