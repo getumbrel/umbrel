@@ -76,12 +76,15 @@ compose() {
   local env_file="${UMBREL_ROOT}/.env"
   local app_base_compose_file="${UMBREL_ROOT}/apps/docker-compose.common.yml"
   local app_compose_file="${app_dir}/docker-compose.yml"
+  local app_hidden_servive_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
 
   export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
   export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
   export APP_DATA_DIR="${app_data_dir}"
+  export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
   docker-compose \
     --env-file "${env_file}" \
+    --project-name "${app}" \
     --file "${app_base_compose_file}" \
     --file "${app_compose_file}" \
     "${@}"

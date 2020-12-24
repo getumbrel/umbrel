@@ -154,6 +154,9 @@ services:
       # Tor proxy environment variables
       # $TOR_PROXY_IP - Local IP of Tor proxy
       # $TOR_PROXY_PORT - Port of Tor proxy
+      #
+      # App specific environment variables
+      # $APP_HIDDEN_SERVICE - The address of the Tor hidden service your app will be exposed at
   # If your app has more services, like a database container, you can define those
   # services below:
   # db:
@@ -370,8 +373,8 @@ _(50 to 200 words)_
 ### Source code repository
 ...
 
-### Support Link
-_(Link to your Telegram support channel, GitHub issues/discussions, support portal, or any other place where users could contact you for support)_
+### Support link
+_(Link to your Telegram support channel, GitHub issues/discussions, support portal, or any other place where users could contact you for support.)_
 
 ...
 

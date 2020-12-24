@@ -1,0 +1,31 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: lncm/specter-desktop:v0.10.4@sha256:bca14d04397d26fd9da085e0f5c97c6fc89dccff39a22719584d13b352fe1800
+    stop_signal: SIGINT
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    ports:
+      - "$APP_SPECTER_DESKTOP_PORT:$APP_SPECTER_DESKTOP_PORT"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    command:
+      - --host=0.0.0.0
+      - --specter-data-folder=/data
+    environment:
+      BTC_RPC_USER: $BITCOIN_RPC_USER
+      BTC_RPC_PASSWORD: $BITCOIN_RPC_PASS
+      BTC_RPC_HOST: $BITCOIN_IP
+      BTC_RPC_PORT: $BITCOIN_RPC_PORT
+      BTC_RPC_PROTOCOL: http
+    networks:
+      default:
+        ipv4_address: $APP_SPECTER_DESKTOP_IP
