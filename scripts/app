@@ -106,7 +106,7 @@ if [[ "$command" = "install" ]]; then
 
   echo "Setting up data dir for ${app}..."
   mkdir -p "${app_data_dir}"
-  cp -a "${app_dir}/." "${app_data_dir}"
+  rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
 
   echo "Starting app ${app}..."
   compose "${app}" up --detach
