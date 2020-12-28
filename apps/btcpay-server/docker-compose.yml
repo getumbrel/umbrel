@@ -16,7 +16,6 @@ services:
     volumes:
         - ${APP_DATA_DIR}/data/nbxplorer:/data
     environment:
-        HOME: "/data"
         NBXPLORER_DATADIR: "/data"
         NBXPLORER_NETWORK: "$BITCOIN_NETWORK"
         NBXPLORER_PORT: 32838
