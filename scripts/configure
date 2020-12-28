@@ -133,6 +133,8 @@ APP_LIGHTNING_TERMINAL_IP="10.0.1.4"
 APP_LIGHTNING_TERMINAL_PORT="3004"
 APP_SPECTER_DESKTOP_IP="10.0.1.5"
 APP_SPECTER_DESKTOP_PORT="25441"
+APP_BTCPAY_SERVER_IP="10.0.1.6"
+APP_BTCPAY_SERVER_PORT="3003"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -265,6 +267,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-lightning-terminal-port>/${APP_LIGHTNING_TERMINAL_PORT}/g" "${template}"
   sed -i "s/<app-specter-desktop-ip>/${APP_SPECTER_DESKTOP_IP}/g" "${template}"
   sed -i "s/<app-specter-desktop-port>/${APP_SPECTER_DESKTOP_PORT}/g" "${template}"
+  sed -i "s/<app-btcpay-server-ip>/${APP_BTCPAY_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
 done
 
 
