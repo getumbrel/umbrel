@@ -40,11 +40,10 @@ services:
         - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
     volumes:
         - ${APP_DATA_DIR}/data/btcpay:/data
-        - ${APP_DATA_DIR}/data/nbxplorer:/nbxplorer
+        - ${APP_DATA_DIR}/data/nbxplorer:/data/.nbxplorer
         - ${LND_DATA_DIR}:/lnd:ro
     environment:
         HOME: "/data"
-        NBXPLORER_DATADIR: "/nbxplorer"
         BTCPAY_DATADIR: "/data"
         BTCPAY_PLUGINDIR: "/data/plugins"
         BTCPAY_DOCKERDEPLOYMENT: "false"
