@@ -34,7 +34,7 @@ services:
     stop_grace_period: 5m
     depends_on: [ nbxplorer, postgres ]
     entrypoint: [ "dotnet", "BTCPayServer.dll" ]
-    ports: 
+    ports:
         - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
     environment:
         BTCPAY_DOCKERDEPLOYMENT: "false"
@@ -61,4 +61,3 @@ services:
         POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
         - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
-
