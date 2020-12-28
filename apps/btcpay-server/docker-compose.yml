@@ -13,7 +13,10 @@ services:
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
+    volumes:
+        - ${APP_DATA_DIR}/data/nbxplorer:/datadir
     environment:
+        HOME: "/datadir"
         NBXPLORER_NETWORK: "$BITCOIN_NETWORK"
         NBXPLORER_PORT: 32838
         NBXPLORER_BIND: 0.0.0.0
@@ -23,12 +26,10 @@ services:
         NBXPLORER_BTCNODEENDPOINT: $BITCOIN_IP:$BITCOIN_P2P_PORT
         NBXPLORER_BTCRPCUSER: $BITCOIN_RPC_USER
         NBXPLORER_BTCRPCPASSWORD: $BITCOIN_RPC_PASS
-    volumes:
-        - ${BITCOIN_DATA_DIR}:/root/.bitcoin:ro
-        - ${APP_DATA_DIR}/data/nbxplorer:/datadir
 
   web:
     image: btcpayserver/btcpayserver:1.0.6.4
+    user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
@@ -36,19 +37,19 @@ services:
     entrypoint: [ "dotnet", "BTCPayServer.dll" ]
     ports:
         - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
+    volumes:
+        - ${APP_DATA_DIR}/data/btcpay:/datadir
+        - ${LND_DATA_DIR}:/lnd:ro
     environment:
+        HOME: "/datadir"
         BTCPAY_DOCKERDEPLOYMENT: "false"
         BTCPAY_POSTGRES: "User ID=postgres;Host=postgres;Port=5432;Database=btcpayserver$BITCOIN_NETWORK"
         BTCPAY_NETWORK: "$BITCOIN_NETWORK"
         BTCPAY_BIND: 0.0.0.0:$APP_BTCPAY_SERVER_PORT
         BTCPAY_CHAINS: "btc"
         BTCPAY_BTCEXPLORERURL: "http://nbxplorer:32838"
-        BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_REST_PORT/;macaroonfilepath=/root/.lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
+        BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_REST_PORT/;macaroonfilepath=/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
         BTCPAY_SOCKSENDPOINT: $TOR_PROXY_IP:$TOR_PROXY_PORT
-    volumes:
-        - ${APP_DATA_DIR}/data/btcpay:/datadir
-        - ${APP_DATA_DIR}/data/nbxplorer:/root/.nbxplorer
-        - ${LND_DATA_DIR}:/root/.lnd:ro
     networks:
       default:
         ipv4_address: $APP_BTCPAY_SERVER_IP
