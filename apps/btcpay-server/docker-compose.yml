@@ -8,7 +8,7 @@ x-logging:
 
 services:
   nbxplorer:
-    image: "nicolasdorier/nbxplorer:2.1.46"
+    image: "nicolasdorier/nbxplorer:2.1.46@sha256:368789f27867c54fc7435424e05a8c8440a4c2355afad237f1845b62c9aa9d1c"
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -28,7 +28,7 @@ services:
         NBXPLORER_BTCRPCPASSWORD: $BITCOIN_RPC_PASS
 
   web:
-    image: btcpayserver/btcpayserver:1.0.6.4
+    image: btcpayserver/btcpayserver:1.0.6.4@sha256:080ce1637b3f7ddaa63ee99799108bde535494e1aa50fdb7bac7a91fa2e21228
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -58,7 +58,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_IP
 
   postgres:
-    image: postgres:9.6.20
+    image: postgres:9.6.20@sha256:82c335ccb6b60941cb860cbb8252c12f63fd3e27a0d15bce5bc6de110c02a2b4
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 5m
