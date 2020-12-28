@@ -14,9 +14,10 @@ services:
     restart: on-failure
     stop_grace_period: 5m
     volumes:
-        - ${APP_DATA_DIR}/data/nbxplorer:/datadir
+        - ${APP_DATA_DIR}/data/nbxplorer:/data
     environment:
-        HOME: "/datadir"
+        HOME: "/data"
+        NBXPLORER_DATADIR: "/data"
         NBXPLORER_NETWORK: "$BITCOIN_NETWORK"
         NBXPLORER_PORT: 32838
         NBXPLORER_BIND: 0.0.0.0
@@ -38,10 +39,14 @@ services:
     ports:
         - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
     volumes:
-        - ${APP_DATA_DIR}/data/btcpay:/datadir
+        - ${APP_DATA_DIR}/data/btcpay:/data
+        - ${APP_DATA_DIR}/data/nbxplorer:/nbxplorer
         - ${LND_DATA_DIR}:/lnd:ro
     environment:
-        HOME: "/datadir"
+        HOME: "/data"
+        NBXPLORER_DATADIR: "/nbxplorer"
+        BTCPAY_DATADIR: "/data"
+        BTCPAY_PLUGINDIR: "/data/plugins"
         BTCPAY_DOCKERDEPLOYMENT: "false"
         BTCPAY_POSTGRES: "User ID=postgres;Host=postgres;Port=5432;Database=btcpayserver$BITCOIN_NETWORK"
         BTCPAY_NETWORK: "$BITCOIN_NETWORK"
