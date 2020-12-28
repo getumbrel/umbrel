@@ -11,7 +11,7 @@ services:
     image: getumbrel/btc-rpc-explorer:v2.1.0@sha256:62eda653cc2d0eb8cf491e05876ebffeebaa29ce900b82852214d0c07ca8457b
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - "$APP_BTC_RPC_EXPLORER_PORT:$APP_BTC_RPC_EXPLORER_PORT"
     environment:

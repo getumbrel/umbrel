@@ -107,7 +107,7 @@ services:
     image: <docker-image>:<tag>
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       # Replace <port> with the port that your app's web server
       # is listening inside the Docker container. If you need to
@@ -187,7 +187,7 @@ services:
     image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - 3002:3002
     environment:
@@ -212,7 +212,7 @@ services:
     image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - 3002:3002
     environment:

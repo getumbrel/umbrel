@@ -12,7 +12,7 @@ services:
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - "$APP_THUNDERHUB_PORT:$APP_THUNDERHUB_PORT"
     volumes:

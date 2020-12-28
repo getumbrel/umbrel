@@ -12,7 +12,7 @@ services:
     stop_signal: SIGINT
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - "$APP_SPECTER_DESKTOP_PORT:$APP_SPECTER_DESKTOP_PORT"
     volumes:

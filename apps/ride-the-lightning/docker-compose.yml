@@ -12,7 +12,7 @@ services:
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - "$APP_RIDE_THE_LIGHTNING_PORT:$APP_RIDE_THE_LIGHTNING_PORT"
     volumes:
@@ -43,7 +43,7 @@ services:
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     volumes:
       - ${APP_DATA_DIR}/loop:/data
       - ${LND_DATA_DIR}:/lnd:ro
