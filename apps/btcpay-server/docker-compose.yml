@@ -55,6 +55,7 @@ services:
 
   postgres:
     image: postgres:9.6.20
+    user: "1000:1000"
     restart: on-failure
     stop_grace_period: 5m
     environment:
