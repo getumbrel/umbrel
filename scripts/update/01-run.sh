@@ -104,6 +104,13 @@ echo "Fixing permissions"
 chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
+# Killing karen
+echo "Killing karen"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 75, "description": "Killing karen", "updateTo": "$RELEASE"}
+EOF
+sudo pkill -f "\./karen"
+
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
