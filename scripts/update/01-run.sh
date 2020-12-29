@@ -101,7 +101,7 @@ rsync --archive \
 
 # Fix permissions
 echo "Fixing permissions"
-chown -R 1000:1000 "$UMBREL_ROOT"/
+find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
 # Start updated containers
