@@ -105,9 +105,9 @@ chown -R 1000:1000 "$UMBREL_ROOT"/
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
 # Killing karen
-echo "Killing karen"
+echo "Killing background daemon"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 75, "description": "Killing karen", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 75, "description": "Killing background daemon", "updateTo": "$RELEASE"}
 EOF
 pkill -f "\./karen"
 
