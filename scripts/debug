@@ -98,11 +98,11 @@ cat /proc/swaps
 
 
 echo
-echo "Networking information"
-echo "----------------------"
+echo "Karen logs"
+echo "----------"
 echo
 
-ifconfig | sed -e "s/\([0-9a-fA-F]\{1,4\}:\)\{7,7\}[0-9a-fA-F]\{1,4\}/y.y.y.y.y.y.y.y/g" | sed -e "s/[0-9a-fA-F]\{1,4\}:\(:[0-9a-fA-F]\{1,4\}\)\{1,4\}/y::y.y.y.y/g" | sed -e "s/\([0-9]\{1,3\}\.\)\{3,3\}[0-9]\{1,3\}/x.x.x.x/g" | sed -e "s/\([0-9a-fA-F]\{2,2\}\:\)\{5,5\}[0-9a-fA-F]\{2,2\}/m.m.m.m/g"
+tail -n 50 logs/karen.log | sed '/onion/d'
 
 echo
 echo "Docker containers"
@@ -157,6 +157,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         if [[ "${1}" == "--upload" ]]; then
             echo "You can also share this link instead:"
             ./scripts/debug | sed '/onion/d' | haste
+            dmesg | haste
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
@@ -174,8 +175,9 @@ fi
 if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
-    echo "Please share the following link and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+    echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
     ./scripts/debug | sed '/onion/d' | haste
+    dmesg | haste
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
