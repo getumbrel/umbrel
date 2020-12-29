@@ -81,6 +81,22 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 docker-compose pull
 
+echo "Updating installed apps"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
+EOF
+# We can just loop over this once everyone has the latest app script
+# "$UMBREL_ROOT/scripts/app" ls-installed
+# but for now we need to implement it here manually
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+list_installed_apps() {
+  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+}
+list_installed_apps | while read app; do
+  echo "${app}..."
+  scripts/app compose "${app}" pull
+done
+
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
