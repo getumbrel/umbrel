@@ -120,6 +120,13 @@ echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
+# Killing karen
+echo "Killing background daemon"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 75, "description": "Killing background daemon", "updateTo": "$RELEASE"}
+EOF
+pkill -f "\./karen"
+
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
