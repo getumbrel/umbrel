@@ -141,7 +141,6 @@ if [[ "$command" = "uninstall" ]]; then
   update_installed_apps remove "${app}"
 
   echo "Successfully uninstalled app ${app}"
-
   exit
 fi
 
