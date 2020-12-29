@@ -93,8 +93,10 @@ list_installed_apps() {
   cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
 }
 list_installed_apps | while read app; do
-  echo "${app}..."
-  scripts/app compose "${app}" pull
+  if [[ "${app}" != "" ]]; then
+    echo "${app}..."
+    scripts/app compose "${app}" pull
+  fi
 done
 
 # Stop existing containers
