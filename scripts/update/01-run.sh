@@ -109,7 +109,7 @@ echo "Killing karen"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 75, "description": "Killing karen", "updateTo": "$RELEASE"}
 EOF
-sudo pkill -f "\./karen"
+pkill -f "\./karen"
 
 # Start updated containers
 echo "Starting new containers"
