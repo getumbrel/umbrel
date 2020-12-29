@@ -82,7 +82,6 @@ EOF
 docker-compose pull
 
 echo "Pulling new app containers"
-
 # We can just loop over this once everyone has the latest app script
 # "$UMBREL_ROOT/scripts/app" ls-installed
 # but for now we need to implement it here manually
