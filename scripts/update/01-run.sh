@@ -80,6 +80,9 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 50, "description": "Pulling new containers", "updateTo": "$RELEASE"}
 EOF
 docker-compose pull
+"$UMBREL_ROOT/scripts/app" ls-installed | while read app; do
+  scripts/app compose "$app" pull
+done
 
 # Stop existing containers
 echo "Stopping existing containers"
