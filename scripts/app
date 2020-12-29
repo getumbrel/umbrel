@@ -109,35 +109,38 @@ update_installed_apps() {
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
-  echo "Pulling images for ${app}..."
+  echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
-  echo "Setting up data dir for ${app}..."
+  echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
   rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
 
   echo "Starting app ${app}..."
   compose "${app}" up --detach
 
-  echo "Saving installed app in DB"
+  echo "Saving app ${app} in DB..."
   update_installed_apps add "${app}"
 
+  echo "Successfully installed app ${app}"
   exit
 fi
 
 # Removes images and destroys all data for an app
 if [[ "$command" = "uninstall" ]]; then
 
-  echo "Removing app images"
+  echo "Removing images for app ${app}..."
   compose "${app}" down --rmi all --remove-orphans
 
-  echo "Deleting app data for ${app}..."
+  echo "Deleting app data for app ${app}..."
   if [[ -d "${app_data_dir}" ]]; then
     rm -rf "${app_data_dir}"
   fi
 
-  echo "Removing installed app from DB"
+  echo "Removing app ${app} from DB..."
   update_installed_apps remove "${app}"
+
+  echo "Successfully uninstalled app ${app}"
 
   exit
 fi
@@ -155,7 +158,7 @@ fi
 if [[ "$command" = "start" ]]; then
 
   if ! list_installed_apps | grep --quiet "^${app}$"; then
-    echo "Error: \"${app}\" is not installed yet"
+    echo "Error: app \"${app}\" is not installed yet"
     exit 1
   fi
 
