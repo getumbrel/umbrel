@@ -18,6 +18,7 @@ Commands:
     stop                       Stops an installed app
     start                      Starts an installed app
     compose                    Passes all arguments to docker-compose
+    ls-installed               Lists installed apps
 EOF
 }
 
@@ -31,7 +32,7 @@ check_dependencies () {
 }
 
 list_installed_apps() {
-  cat "${USER_FILE}" | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
 }
 
 # Check dependencies
@@ -41,6 +42,13 @@ if [ -z ${1+x} ]; then
   command=""
 else
   command="$1"
+fi
+
+# Lists installed apps
+if [[ "$command" = "ls-installed" ]]; then
+  list_installed_apps
+
+  exit
 fi
 
 if [ -z ${2+x} ]; then
