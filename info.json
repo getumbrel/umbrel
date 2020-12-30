@@ -1,6 +1,6 @@
 {
-    "version": "0.2.15",
-    "name": "Umbrel v0.2.15",
+    "version": "0.3.0",
+    "name": "Umbrel v0.3.0",
     "requires": ">=0.2.1",
-    "notes": "This update fixes some compatibility issues between Umbrel and the latest version of Electrum Wallet."
+    "notes": "Introducing the Umbrel App Store. You can now download and install BTCPay Server, Specter Desktop, Sphinx Relay, BTC RPC Explorer, Ride The Lightning, Lightning Terminal, and ThunderHub — all on your Umbrel in one click."
 }
