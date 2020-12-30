@@ -109,12 +109,12 @@ update_installed_apps() {
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
-  echo "Pulling images for app ${app}..."
-  compose "${app}" pull
-
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
   rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
+  
+  echo "Pulling images for app ${app}..."
+  compose "${app}" pull
 
   echo "Starting app ${app}..."
   compose "${app}" up --detach
