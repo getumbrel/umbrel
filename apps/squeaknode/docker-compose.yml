@@ -17,11 +17,12 @@ services:
       # is listening inside the Docker container. If you need to
       # expose more ports, add them below.
       - 8774:8774
+      - 8994:8994
       - 12994:12994
     volumes:
       # Uncomment to mount your data directories inside
       # the Docker container for storing persistent data
-      - ${APP_DATA_DIR}/sqk:/sqk
+      # - ${APP_DATA_DIR}/sqk:/sqk
       # - ${APP_DATA_DIR}/bar:/bar
 
       # Uncomment to mount LND's data directory as read-only
