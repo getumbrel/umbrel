@@ -22,7 +22,7 @@ services:
     volumes:
       # Uncomment to mount your data directories inside
       # the Docker container for storing persistent data
-      # - ${APP_DATA_DIR}/sqk:/sqk
+      - ${APP_DATA_DIR}/sqk:/sqk
       # - ${APP_DATA_DIR}/bar:/bar
 
       # Uncomment to mount LND's data directory as read-only
@@ -61,8 +61,12 @@ services:
       # $LND_REST_PORT - REST Port of LND
 
       # LND environment variables
+      SQUEAKNODE_LND_TLS_CERT_PATH: "/lnd/tls.cert"
+      SQUEAKNODE_LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
       SQUEAKNODE_LND_HOST: $LND_IP
       SQUEAKNODE_LND_GRPC_PORT: $LND_GRPC_PORT
+
+      SQUEAKNODE_SQK_DIR_PATH: "/sqk"
 
       #
       # Electrum server environment variables
