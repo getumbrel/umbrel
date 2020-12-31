@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: <docker-image>:<tag>
+    image: squeaknode:latest
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
@@ -16,6 +16,7 @@ services:
       # Replace <port> with the port that your app's web server
       # is listening inside the Docker container. If you need to
       # expose more ports, add them below.
+      - 8774:8774
       - 12994:12994
     volumes:
       # Uncomment to mount your data directories inside
