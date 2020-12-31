@@ -59,9 +59,8 @@ services:
       # $LND_REST_PORT - REST Port of LND
 
       # LND environment variables
-      $SQUEAKNODE_LND_HOST: $LND_IP
-      $SQUEAKNODE_LND_GRPC_PORT: $LND_GRPC_PORT
-      $SQUEAKNODE_LND_REST_PORT: $LND_REST_PORT
+      SQUEAKNODE_LND_HOST: $LND_IP
+      SQUEAKNODE_LND_GRPC_PORT: $LND_GRPC_PORT
 
       #
       # Electrum server environment variables
