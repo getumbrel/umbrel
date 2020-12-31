@@ -67,6 +67,9 @@ services:
       SQUEAKNODE_LND_GRPC_PORT: $LND_GRPC_PORT
 
       SQUEAKNODE_SQK_DIR_PATH: "/sqk"
+      SQUEAKNODE_WEBADMIN_ENABLED: "true"
+      SQUEAKNODE_WEBADMIN_USERNAME: "devuser"
+      SQUEAKNODE_WEBADMIN_PASSWORD: "devpass"
 
       #
       # Electrum server environment variables
