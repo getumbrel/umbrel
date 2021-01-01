@@ -17,7 +17,7 @@ services:
       # is listening inside the Docker container. If you need to
       # expose more ports, add them below.
       - 8774:8774
-      # - 8994:8994
+      - 8994:8994
       - 12994:12994
     volumes:
       # Uncomment to mount your data directories inside
