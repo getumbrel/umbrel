@@ -71,7 +71,7 @@ cd "$UMBREL_ROOT"
 
 echo "Starting karen..."
 echo
-./karen &>> "${UMBREL_LOGS}/karen.log" &
+./scripts/karen
 
 echo "Starting backup monitor..."
 echo

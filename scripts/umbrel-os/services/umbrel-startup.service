@@ -9,6 +9,8 @@ Wants=network-online.target
 After=network-online.target
 Wants=docker.service
 After=docker.service
+Requires=karen.service
+After=karen.service
 
 [Service]
 Type=forking

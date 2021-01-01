@@ -1,0 +1,22 @@
+# Umbrel Karen Service
+# Installed at /etc/systemd/system/karen.service
+
+[Unit]
+Description=Umbrel Karen Service
+Requires=umbrel-external-storage.service
+After=umbrel-external-storage.service
+
+[Service]
+Type=forking
+TimeoutStartSec=infinity
+TimeoutStopSec=16min
+ExecStart=/home/umbrel/umbrel/scripts/karen
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=karen
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

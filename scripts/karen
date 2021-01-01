@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# Simple wrapper script for karen to log to the correct logfile
+
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+UMBREL_LOGS="${UMBREL_ROOT}/logs"
+
+./karen &>> "${UMBREL_LOGS}/karen.log" &
