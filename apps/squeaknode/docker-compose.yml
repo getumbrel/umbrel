@@ -8,13 +8,12 @@ x-logging:
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.4@sha256:d0a5c02ce28f741cdf1dc57770cb1251e8189ad03d3bb9a6a7d1ecb0959f15b2
+    image: yzernik/squeaknode:latest
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 8774:8774
-      - 8994:8994
       - 12994:12994
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
