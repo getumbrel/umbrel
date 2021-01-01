@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.4@sha256:9bb044810a6f76aa3dc693c98258e19b4591939b31710a5c93dae51a6b1cfd46
+    image: yzernik/squeaknode:v0.1.4@sha256:d0a5c02ce28f741cdf1dc57770cb1251e8189ad03d3bb9a6a7d1ecb0959f15b2
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
