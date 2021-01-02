@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.5@sha256:21fee21ae1b5fa5467f2597a9238a3541f805f60e2e311613d6442b1405cb7ac
+    image: yzernik/squeaknode:latest
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
@@ -38,7 +38,5 @@ services:
       SQUEAKNODE_WEBADMIN_PASSWORD: "moneyprintergobrrr"
       SQUEAKNODE_NETWORK: "$BITCOIN_NETWORK"
       SQUEAKNODE_SQK_DIR_PATH: "sqk"
-      SQUEAKNODE_PRICE_MSAT: 10
-      SQUEAKNODE_SYNC_INTERVAL_S: 10
 
       DEBUG: "squeaknode:*"
