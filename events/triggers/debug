@@ -22,3 +22,5 @@ result64=$(${DEBUG_FILE} | base64 | tr -d '\n')
 cat <<EOF > "$UMBREL_ROOT"/statuses/debug-result.json
 {"status": "success", "linkDebug": "${debuglink}", "linkDmesg": "${dmesglink}", "output": "${result64}"}
 EOF
+
+echo "Debug result file generated"
