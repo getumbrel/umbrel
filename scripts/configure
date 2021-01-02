@@ -102,8 +102,8 @@ ENV_FILE="./templates/.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
 # Umbrel
-NETWORK_IP="10.21.1.0"
-GATEWAY_IP="10.21.1.1"
+NETWORK_IP="10.21.0.0"
+GATEWAY_IP="10.21.0.1"
 NGINX_IP="10.21.1.2"
 DASHBOARD_IP="10.21.1.3"
 MANAGER_IP="10.21.1.4"
