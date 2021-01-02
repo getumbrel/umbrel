@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# Function to upload the output to hastebin
+# Source: https://github.com/seejohnrun/haste-client#lightweight-alternative
+haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+DEBUG_FILE="${UMBREL_ROOT}/scripts/debug"
+
+if [ ! -f ${DEBUG_FILE} ]; then
+  wget https://raw.githubusercontent.com/getumbrel/umbrel/master/scripts/debug -O ${DEBUG_FILE} && chmod +x ${DEBUG_FILE}
+fi
+
+cat <<EOF > "$UMBREL_ROOT"/statuses/debug-result.json
+{"status": "processing", "linkDebug": "", "linkDmesg": "", "output": ""}
+EOF
+
+debuglink=$(${DEBUG_FILE} | sed '/onion/d' | haste)
+dmesglink=$(dmesg | haste)
+result64=$(${DEBUG_FILE} | base64 | tr -d '\n')
+
+cat <<EOF > "$UMBREL_ROOT"/statuses/debug-result.json
+{"status": "success", "linkDebug": "${debuglink}", "linkDmesg": "${dmesglink}", "output": "${result64}"}
+EOF
