@@ -102,6 +102,7 @@ ENV_FILE="./templates/.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
 # Umbrel
+NETWORK_IP="10.21.21.0"
 GATEWAY_IP="10.21.21.1"
 NGINX_IP="10.21.21.2"
 DASHBOARD_IP="10.21.21.3"
@@ -242,6 +243,7 @@ fi
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
+  sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
   sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"

@@ -206,7 +206,7 @@ networks:
       ipam:
           driver: default
           config:
-              - subnet: "$GATEWAY_IP/24"
+              - subnet: "$NETWORK_IP/24"
 
 volumes:
     jwt-public-key:
