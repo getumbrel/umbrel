@@ -28,7 +28,7 @@ services:
         NBXPLORER_BTCRPCPASSWORD: $BITCOIN_RPC_PASS
     networks:
       default:
-        ipv4_address: $APP_BTCPAY_NBXPLORER_IP
+        ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
     image: btcpayserver/btcpayserver:1.0.6.4@sha256:080ce1637b3f7ddaa63ee99799108bde535494e1aa50fdb7bac7a91fa2e21228
@@ -71,4 +71,4 @@ services:
         - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
     networks:
       default:
-        ipv4_address: $APP_BTCPAY_DB_IP
+        ipv4_address: $APP_BTCPAY_SERVER_DB_IP
