@@ -269,12 +269,15 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-sphinx-relay-port>/${APP_SPHINX_RELAY_PORT}/g" "${template}"
   sed -i "s/<app-ride-the-lightning-ip>/${APP_RIDE_THE_LIGHTNING_IP}/g" "${template}"
   sed -i "s/<app-ride-the-lightning-port>/${APP_RIDE_THE_LIGHTNING_PORT}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-loop-ip>/${APP_RIDE_THE_LIGHTNING_LOOP_IP}/g" "${template}"
   sed -i "s/<app-lightning-terminal-ip>/${APP_LIGHTNING_TERMINAL_IP}/g" "${template}"
   sed -i "s/<app-lightning-terminal-port>/${APP_LIGHTNING_TERMINAL_PORT}/g" "${template}"
   sed -i "s/<app-specter-desktop-ip>/${APP_SPECTER_DESKTOP_IP}/g" "${template}"
   sed -i "s/<app-specter-desktop-port>/${APP_SPECTER_DESKTOP_PORT}/g" "${template}"
   sed -i "s/<app-btcpay-server-ip>/${APP_BTCPAY_SERVER_IP}/g" "${template}"
   sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
+  sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
 done
 
 
