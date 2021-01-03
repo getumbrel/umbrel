@@ -75,7 +75,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.8
+                image: getumbrel/manager:v0.2.9
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: on-failure
