@@ -53,6 +53,7 @@ if [ "$BITCOIN_NETWORK" == "mainnet" ] && [ ! -f "${STATUS_DIR}/configured" ]; t
   # check if drive has more then 700GB
   if [[ $(df -k "$UMBREL_ROOT" | grep -v "Available" | awk '{ print $4 }') -lt 700000000 ]]; then
     echo "Not enough space on drive - 1TB drive needed"
+    touch "$UMBREL_ROOT/statuses/disk-too-small"
   fi
 fi
 
