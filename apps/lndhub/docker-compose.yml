@@ -23,7 +23,7 @@ services:
                   default:
                       ipv4_address: 10.0.1.8
         web:
-                container_name: lndhub
+                container_name: web
                 image: aarondewes/lndhub:v0.2.1
                 logging: *default-logging
                 depends_on: [ redis ]
