@@ -48,6 +48,14 @@ if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] &&
   exit 1
 fi
 
+if [ "$BITCOIN_NETWORK" == "mainnet" ] && [ ! -f "${STATUS_DIR}/configured" ]; then
+  # check size of drive when mainnet is used and Umbrel is not configured
+  # check if drive has more then 700GB
+  if [[ $(df -k "$UMBREL_ROOT" | grep -v "Available" | awk '{ print $4 }') -lt 700000000 ]]; then
+    echo "Not enough space on drive - 1TB drive needed"
+  fi
+fi
+
 # Get current Umbrel version
 UMBREL_VERSION="$(cat ${UMBREL_ROOT}/info.json | jq -r .version)"
 
