@@ -155,9 +155,15 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
         if [[ "${1}" == "--upload" ]]; then
+<<<<<<< HEAD
             echo "You can also share these links instead:"
             ./scripts/debug | sed '/onion/d' | upload
             dmesg | upload
+=======
+            echo "You can also share this link instead:"
+            ./scripts/debug | sed '/onion/d' | haste
+            dmesg -T | haste
+>>>>>>> Update debug
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
@@ -176,8 +182,13 @@ if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+<<<<<<< HEAD
     ./scripts/debug | sed '/onion/d' | upload
     dmesg | upload
+=======
+    ./scripts/debug | sed '/onion/d' | haste
+    dmesg -T | haste
+>>>>>>> Update debug
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
