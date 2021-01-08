@@ -1,29 +1,64 @@
-# Bind only to "10.11.5.1" which is the tor IP within the container
-SocksPort   10.11.5.1:29050
-ControlPort 10.11.5.1:29051
+# Bind only to "<tor-proxy-ip>" which is the tor IP within the container
+SocksPort   <tor-proxy-ip>:<tor-proxy-port>
+ControlPort <tor-proxy-ip>:29051
+
+# Umbrel
 
 # Dashboard Hidden Service
 HiddenServiceDir /var/lib/tor/web
-HiddenServicePort 80 10.11.0.2:80
+HiddenServicePort 80 <nginx-ip>:80
 
 # Bitcoin Core P2P Hidden Service
 HiddenServiceDir /var/lib/tor/bitcoin-p2p
-HiddenServicePort <bitcoin-p2p-port> 10.11.1.1:<bitcoin-p2p-port>
+HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>
 
 # Bitcoin Core RPC Hidden Service
 HiddenServiceDir /var/lib/tor/bitcoin-rpc
-HiddenServicePort <bitcoin-rpc-port> 10.11.1.1:<bitcoin-rpc-port>
+HiddenServicePort <bitcoin-rpc-port> <bitcoin-ip>:<bitcoin-rpc-port>
 
 # Electrum Hidden Service
 HiddenServiceDir /var/lib/tor/electrum
-HiddenServicePort 50001 10.11.4.0:50001
+HiddenServicePort <electrum-port> <electrum-ip>:<electrum-port>
 
 # LND REST Hidden Service
 HiddenServiceDir /var/lib/tor/lnd-rest
-HiddenServicePort 8080 10.11.1.2:8080
+HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
 
 # LND gRPC Hidden Service
 HiddenServiceDir /var/lib/tor/lnd-grpc
-HiddenServicePort 10009 10.11.1.2:10009
+HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
+
+# Apps
+
+# btc-rpc-explorer Hidden Service
+HiddenServiceDir /var/lib/tor/app-btc-rpc-explorer
+HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
+
+# thunderhub Hidden Service
+HiddenServiceDir /var/lib/tor/app-thunderhub
+HiddenServicePort 80 <app-thunderhub-ip>:<app-thunderhub-port>
+
+# sphinx-relay Hidden Service
+# We expose 80 for the connection string UI and <app-sphinx-relay-port> for the
+# actual server connection
+HiddenServiceDir /var/lib/tor/app-sphinx-relay
+HiddenServicePort 80 <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+HiddenServicePort <app-sphinx-relay-port> <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+
+# ride-the-lightning Hidden Service
+HiddenServiceDir /var/lib/tor/app-ride-the-lightning
+HiddenServicePort 80 <app-ride-the-lightning-ip>:<app-ride-the-lightning-port>
+
+# lightning-terminal Hidden Service
+HiddenServiceDir /var/lib/tor/app-lightning-terminal
+HiddenServicePort 80 <app-lightning-terminal-ip>:<app-lightning-terminal-port>
+
+# specter-desktop Hidden Service
+HiddenServiceDir /var/lib/tor/app-specter-desktop
+HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
+
+# btcpay-server Hidden Service
+HiddenServiceDir /var/lib/tor/app-btcpay-server
+HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 
 HashedControlPassword <password>

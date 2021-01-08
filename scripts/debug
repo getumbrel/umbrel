@@ -1,0 +1,185 @@
+#!/bin/bash
+
+# This script is based on raspinfo: https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo
+# raspinfo is Copyright: 2018-2019, Raspberry Pi (Trading) Ltd.
+# This fork is Copyright 2020, Umbrel
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 3. Neither the name of the University nor the names of its contributors
+#    may be used to endorse or promote products derived from this software
+#    without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
+# A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE HOLDERS OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+# Try to load Umbrel OS version info to detect Umbrel OS
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+
+# function to upload the output to hastebin
+# Source: https://github.com/seejohnrun/haste-client#lightweight-alternative
+haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
+
+echo "====================="
+echo "= Umbrel debug info ="
+echo "====================="
+
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+cd "${UMBREL_ROOT}"
+
+echo
+echo "Umbrel version"
+echo "--------------"
+cat info.json | jq .version | sed 's/"//g'
+
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    echo
+    echo "Umbrel OS version"
+    echo "-----------------"
+    echo $UMBREL_OS
+
+    echo
+    echo "Raspberry Pi Model"
+    echo "------------------"
+
+    cat /proc/cpuinfo | tail -3
+
+    echo
+    echo "Firmware"
+    echo "--------"
+
+    vcgencmd version
+
+    echo
+    echo "Temperature"
+    echo "-----------"
+
+    vcgencmd measure_temp
+
+    echo
+    echo "Throttling"
+    echo "----------"
+
+    vcgencmd get_throttled
+
+    echo
+    echo "Startup service logs"
+    echo "--------------------"
+    journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
+
+    echo
+    echo "External storage service logs"
+    echo "-----------------------------"
+    journalctl --unit=umbrel-external-storage.service | tail -n 30
+fi
+echo
+echo "Filesystem information"
+echo "----------------------"
+
+df -h
+echo
+cat /proc/swaps
+
+
+echo
+echo "Karen logs"
+echo "----------"
+echo
+
+tail -n 50 logs/karen.log | sed '/onion/d'
+
+echo
+echo "Docker containers"
+echo "-----------------"
+
+docker ps --format="table {{.Names}}\t{{.Status}}"
+
+echo
+echo "Bitcoin Core logs"
+echo "-----------------"
+echo
+docker-compose logs --tail=30 bitcoin
+
+echo
+echo "LND logs"
+echo "--------"
+echo
+docker-compose logs --tail=30 lnd
+
+echo
+echo "Tor logs"
+echo "--------"
+echo
+docker-compose logs --tail=30 tor
+
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    list_block_devices () {
+        # Documented in the mount script for Umbrel OS
+        sync
+        (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+    }
+    no_of_block_devices=$(list_block_devices | wc -l)
+fi
+
+echo "================"
+echo "==== Result ===="
+echo "================"
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
+        if [[ $(vcgencmd get_throttled) = "throttled=0x5"* ]]; then
+            echo "There is probably issue with your power supply. We recommend using the official power supply to avoid this issue"
+        else
+            echo "The temperature of your Raspberry Pi is too high. We recommend either using a case that lowers the temperature of your Pi or a case with a builtin fan."
+        fi
+        exit 0
+    fi
+    if [[ $no_of_block_devices -lt 1 ]]; then
+        echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
+        echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
+        echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
+        echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
+        if [[ "${1}" == "--upload" ]]; then
+            echo "You can also share this link instead:"
+            ./scripts/debug | sed '/onion/d' | haste
+            dmesg | haste
+        else
+            echo "Run this script again with the --upload flag to automatically generate a link to share."
+        fi
+        exit 0
+    fi
+    if [[ $no_of_block_devices -gt 1 ]]; then
+        echo "================"
+        echo "==== Result ===="
+        echo "================"
+        echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel."
+        exit 0
+    fi
+fi
+
+if [[ "${1}" == "--upload" ]]; then
+    # This runs the script twice, but it works
+    echo "This script could not automatically detect an issue with your Umbrel."
+    echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+    ./scripts/debug | sed '/onion/d' | haste
+    dmesg | haste
+else
+    echo "This script could not automatically detect an issue with your Umbrel."
+    echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+    echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
+fi

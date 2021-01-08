@@ -30,7 +30,7 @@ If you're looking to run Umbrel on:
 
 ### Installation Requirements
 
-- 2GB RAM (and ~600GB of free space if running on mainnet)
+- 2GB RAM and 600GB+ free space (for mainnet)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)
@@ -43,7 +43,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.2.11.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.3.1.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run Umbrel
@@ -78,6 +78,7 @@ sudo ./scripts/stop
 - [`Tor`](https://github.com/getumbrel/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
 - [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
+- [`Electrs`](https://github.com/romanz/electrs)
 
 
 **Architecture**

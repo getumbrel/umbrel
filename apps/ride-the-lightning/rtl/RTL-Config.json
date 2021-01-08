@@ -1,0 +1,22 @@
+{
+  "multiPass": "moneyprintergobrrr",
+  "defaultNodeIndex": 1,
+  "SSO": {
+    "rtlSSO": 0,
+    "rtlCookiePath": "",
+    "logoutRedirectLink": ""
+  },
+  "nodes": [
+    {
+      "index": 1,
+      "lnNode": "Umbrel",
+      "Settings": {
+        "userPersona": "MERCHANT",
+        "themeMode": "DAY",
+        "themeColor": "PURPLE",
+        "enableLogging": true,
+        "fiatConversion": true
+      }
+    }
+  ]
+}

@@ -7,6 +7,9 @@
 .ssh
 .viminfo
 
+# umbrel-dev
+docker-compose.override.yml
+
 # Files and data directories created by services
 # that we shouldn't accidently commit
 
@@ -19,10 +22,13 @@
 bitcoin/*
 db/*
 electrs/*
+nginx/*
 events/signals/*
 lnd/*
+logs/*
 statuses/*
 tor/*
+app-data/*
 
 # Commit these files
 
@@ -33,5 +39,6 @@ tor/*
 !db/.gitkeep
 !events/signals/.gitkeep
 !lnd/.gitkeep
+!logs/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep

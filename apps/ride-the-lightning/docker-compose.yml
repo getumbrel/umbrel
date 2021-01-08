@@ -1,0 +1,60 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: shahanafarooqui/rtl:0.10.0@sha256:036d94c582911caa74cbe8a0f5646d98b3549010bdbdd2cebd92d3b08a00d82a
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_RIDE_THE_LIGHTNING_PORT:$APP_RIDE_THE_LIGHTNING_PORT"
+    volumes:
+      - ${APP_DATA_DIR}/rtl:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${BITCOIN_DATA_DIR}:/bitcoin:ro
+    environment:
+        # App config
+        PORT: $APP_RIDE_THE_LIGHTNING_PORT
+        RTL_CONFIG_PATH: "/data"
+        CHANNEL_BACKUP_PATH: "/data/backup"
+        LN_IMPLEMENTATION: "LND"
+
+        # LND connection details
+        LN_SERVER_URL: "https://$LND_IP:$LND_REST_PORT"
+        MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+        CONFIG_PATH: "/lnd/lnd.conf"
+
+        # Loop
+        SWAP_SERVER_URL: "https://loop:8081"
+        SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
+    networks:
+      default:
+        ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
+
+  loop:
+    image: louneskmt/loop:v0.11.2-beta@sha256:97b481a52e3b3f336a21d3be0eb1414dcd72e230de2e22a57287d15aab0a7af0
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/loop:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      HOME: "/data"
+    command:
+      - --network=$BITCOIN_NETWORK
+      - --lnd.host="$LND_IP:$LND_GRPC_PORT"
+      - --lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+      - --lnd.tlspath="/lnd/tls.cert"
+      - --restlisten=0.0.0.0:8081
+    networks:
+      default:
+        ipv4_address: $APP_RIDE_THE_LIGHTNING_LOOP_IP

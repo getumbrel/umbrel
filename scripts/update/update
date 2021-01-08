@@ -125,4 +125,17 @@ echo "Deleting cloned repository"
 echo "Removing lock"
 rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 
+# Make sure the update-status file isn't stuck in an 
+# unresolved state (i.e anything except "success" or "failed")
+
+update_state=$(cat "${UMBREL_ROOT}/statuses/update-status.json" | jq .state -r)
+
+if [[ "${update_state}" != "success" ]] && [[ "${update_state}" != "failed" ]]; then
+    # Sleep for a few seconds to make sure the user is on the update view
+    sleep 8
+    cat <<EOF > "${UMBREL_ROOT}/statuses/update-status.json"
+{"state": "failed", "progress": 100, "description": "An unexpected error occured", "updateTo": ""}
+EOF
+fi
+
 exit 0
