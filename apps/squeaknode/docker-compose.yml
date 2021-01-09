@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: yzernik/squeaknode:latest
+    image: yzernik/squeaknode:v0.1.7@sha256:7d04d10b9546c1fbf88435c5a5cd423cb6fea34924e4695620db83229c785861
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
@@ -20,22 +20,23 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Bitcoin Core connection details
-      SQUEAKNODE_BITCOIND_HOST: $BITCOIN_IP
-      SQUEAKNODE_BITCOIND_PORT: $BITCOIN_RPC_PORT
-      SQUEAKNODE_BITCOIND_USER: $BITCOIN_RPC_USER
-      SQUEAKNODE_BITCOIND_PASS: $BITCOIN_RPC_PASS
+      SQUEAKNODE_BITCOIN_RPC_HOST: $BITCOIN_IP
+      SQUEAKNODE_BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
+      SQUEAKNODE_BITCOIN_RPC_USER: $BITCOIN_RPC_USER
+      SQUEAKNODE_BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
 
       # LND environment variables
+      SQUEAKNODE_LND_HOST: $LND_IP
+      SQUEAKNODE_LND_RPC_PORT: $LND_GRPC_PORT
       SQUEAKNODE_LND_TLS_CERT_PATH: "/lnd/tls.cert"
       SQUEAKNODE_LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
-      SQUEAKNODE_LND_HOST: $LND_IP
-      SQUEAKNODE_LND_GRPC_PORT: $LND_GRPC_PORT
 
       # App specific environment variables
       SQUEAKNODE_WEBADMIN_ENABLED: "true"
       SQUEAKNODE_WEBADMIN_USERNAME: "umbrel"
       SQUEAKNODE_WEBADMIN_PASSWORD: "moneyprintergobrrr"
-      SQUEAKNODE_NETWORK: "$BITCOIN_NETWORK"
-      SQUEAKNODE_SQK_DIR_PATH: "/sqk"
+
+      SQUEAKNODE_CORE_NETWORK: "$BITCOIN_NETWORK"
+      SQUEAKNODE_CORE_SQK_DIR_PATH: "/sqk"
 
       DEBUG: "squeaknode:*"
