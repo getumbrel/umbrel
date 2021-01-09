@@ -59,7 +59,7 @@ sudo NETWORK=testnet ./scripts/start
 sudo NETWORK=regtest ./scripts/start
 
 # For a custom HTTP_PORT (example 8080)
-sudo UMBREL_HTTP_PORT=8080 ./scripts/start
+sudo NGINX_PORT=8080 ./scripts/start
 ```
 
 To stop Umbrel, run:
