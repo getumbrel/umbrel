@@ -55,13 +55,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "Skipping updating on SD Card..."
     fi
     
-    # Configure unattended-upgrades
-    # This can be safely removed from Umbrel v0.3.x+
-    echo "Configuring automated updates of apt packages"
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
-    echo unattended-upgrades unattended-upgrades/enable_auto_updates boolean true | debconf-set-selections
-    dpkg-reconfigure -f noninteractive unattended-upgrades
+    # Update apt packages on update
+    # Tis checks if the package will be installed from buster-security and if yes, installs it.
+    apt-get -s dist-upgrade | grep "^Inst" | grep -i securi | awk -F " " {'print $2'} | xargs apt-get install
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
