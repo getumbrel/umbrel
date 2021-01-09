@@ -4,6 +4,7 @@ set -euo pipefail
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 
+
 show_help() {
   cat << EOF
 app 0.0.1
@@ -20,6 +21,15 @@ Commands:
     compose                    Passes all arguments to docker-compose
     ls-installed               Lists installed apps
 EOF
+}
+
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    return 2
+  fi
+  return 0
 }
 
 check_dependencies () {
@@ -105,6 +115,11 @@ update_installed_apps() {
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
   echo "${updated_json}" > "${USER_FILE}"
 }
+
+# Make sure no other install script is running, if it is, wait for it to exit
+while [ $(check_if_not_already_running) == 2]; do 
+    sleep 1
+done
 
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
