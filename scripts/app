@@ -4,7 +4,6 @@ set -euo pipefail
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 
-
 show_help() {
   cat << EOF
 app 0.0.1
@@ -22,7 +21,6 @@ Commands:
     ls-installed               Lists installed apps
 EOF
 }
-
 
 check_if_not_already_running() {
   if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
@@ -117,9 +115,12 @@ update_installed_apps() {
 }
 
 # Make sure no other install script is running, if it is, wait for it to exit
-while [[ "$(check_if_not_already_running)" == "2" ]]; do 
-    sleep 1
-done
+if [[ "$(check_if_not_already_running)" == "2" ]]; then
+    echo "Another instance of the app script is already running, waiting for it to finish..."
+    while [[ "$(check_if_not_already_running)" == "2" ]]; do
+        sleep 1
+    done
+fi
 
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
