@@ -27,16 +27,6 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo
 
-    # In Umbrel OS v0.1.2, we need to bind Avahi to only
-    # eth0,wlan0 interfaces to prevent hostname cycling
-    # https://github.com/getumbrel/umbrel-os/issues/76
-    # This patch can be safely removed from Umbrel v0.3.x+
-    if [[ $UMBREL_OS == "v0.1.2" ]] && [[ -f "/etc/avahi/avahi-daemon.conf" ]]; then
-        echo "Binding Avahi to eth0 and wlan0"
-        sed -i "s/#allow-interfaces=eth0/allow-interfaces=eth0,wlan0/g;" "/etc/avahi/avahi-daemon.conf"
-        systemctl restart avahi-daemon.service
-    fi
-
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
@@ -56,8 +46,10 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
     
     # Update apt packages on update
-    # Tis checks if the package will be installed from buster-security and if yes, installs it.
-    apt-get -s dist-upgrade | grep "^Inst" | grep -i securi | awk -F " " {'print $2'} | xargs apt-get install
+    DEBIAN_FRONTEND=noninteractive apt-get install unattended-updates -y
+    # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
+    # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
+    unattended-upgrade -d
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
