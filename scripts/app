@@ -117,7 +117,7 @@ update_installed_apps() {
 }
 
 # Make sure no other install script is running, if it is, wait for it to exit
-while [ $(check_if_not_already_running) == 2]; do 
+while [[ "$(check_if_not_already_running)" == "2" ]]; do 
     sleep 1
 done
 
