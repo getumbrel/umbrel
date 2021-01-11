@@ -1,6 +1,6 @@
 {
-    "version": "0.3.0",
-    "name": "Umbrel v0.3.0",
+    "version": "0.3.1",
+    "name": "Umbrel v0.3.1",
     "requires": ">=0.2.1",
-    "notes": "Introducing the Umbrel App Store. You can now download and install BTCPay Server, Specter Desktop, Sphinx Relay, BTC RPC Explorer, Ride The Lightning, Lightning Terminal, and ThunderHub — all on your Umbrel in one click."
+    "notes": "This update brings some minor bugfixes to keep your Umbrel ticking over smoothly."
 }

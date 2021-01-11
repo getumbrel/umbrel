@@ -26,6 +26,9 @@ services:
         NBXPLORER_BTCNODEENDPOINT: $BITCOIN_IP:$BITCOIN_P2P_PORT
         NBXPLORER_BTCRPCUSER: $BITCOIN_RPC_USER
         NBXPLORER_BTCRPCPASSWORD: $BITCOIN_RPC_PASS
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
     image: btcpayserver/btcpayserver:1.0.6.4@sha256:080ce1637b3f7ddaa63ee99799108bde535494e1aa50fdb7bac7a91fa2e21228
@@ -66,3 +69,6 @@ services:
         POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
         - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_DB_IP
