@@ -148,6 +148,10 @@ main () {
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
   partition_path="/dev/${block_device}1"
+  if [[ $(eval $(lsblk -oMOUNTPOINT,PKNAME -P -M | grep 'MOUNTPOINT="/"'); echo $PKNAME) == $partition_path ]]; then
+    exit 0
+  fi
+
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
