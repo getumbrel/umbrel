@@ -1,0 +1,17 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: bguillaumat/caravan:v0.3.5-no-https
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    stdin_open: true
+    ports:
+      - 3010:3000
