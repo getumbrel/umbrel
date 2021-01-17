@@ -8,10 +8,11 @@ x-logging:
 
 services:
   web:
-    image: bguillaumat/caravan:v0.3.5-no-https
+    image: bguillaumat/caravan:v0.3.5
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    stdin_open: true
     ports:
-      - 3010:3000
+      - 3010:80
+    environment:
+      NODE_ENV: production
