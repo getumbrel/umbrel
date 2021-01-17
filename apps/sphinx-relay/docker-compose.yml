@@ -8,7 +8,7 @@ x-logging: &default-logging
 services:
   sphinx-relay:
     container_name: sphinx-relay
-    image: sphinxlightning/sphinx-relay:v1.3.2@sha256:84d54879ca6f1b593210ffa93d8cbaa6f28d796d2838575764d2e5ac50ea6601
+    image: sphinxlightning/sphinx-relay:v1.3.8@sha256:cfffa6a821356838a0079d2ea8720d4f7f4415275535812da815b6db0ca67149
     init: true
     restart: on-failure
     stop_grace_period: 1m
