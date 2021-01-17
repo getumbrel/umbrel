@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: bguillaumat/caravan:v0.3.5
+    image: bguillaumat/caravan:v0.3.5@sha256:f3fecff29e42bca815ca9f1b3ea0b4d086dba359c7d3ec0238854371c61eb9f3
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
