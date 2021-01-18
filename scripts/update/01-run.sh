@@ -57,8 +57,8 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     
     # Update apt packages on update
     # Remember, the apt package is called unattended-updates, the command is unattended-update
-    if ! command -v unattended-update &> /dev/null; then       
-        DEBIAN_FRONTEND=noninteractive apt-get install unattended-updates -y
+    if ! command -v unattended-upgrade &> /dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
     # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
     # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
