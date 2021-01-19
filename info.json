@@ -2,5 +2,5 @@
     "version": "0.3.2",
     "name": "Umbrel v0.3.2",
     "requires": ">=0.2.1",
-    "notes": "This update brings the latest versions of Sphinx Relay, Specter Desktop and Thunderhub to your Umbrel."
+    "notes": "This update brings the latest versions of BTCPay Server, Sphinx Relay, Specter Desktop and Thunderhub to your Umbrel."
 }
