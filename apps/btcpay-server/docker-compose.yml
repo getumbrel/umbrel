@@ -31,7 +31,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.0.6.4@sha256:080ce1637b3f7ddaa63ee99799108bde535494e1aa50fdb7bac7a91fa2e21228
+    image: btcpayserver/btcpayserver:1.0.6.7@sha256:080ce1637b3f7ddaa63ee99799108bde535494e1aa50fdb7bac7a91fa2e21228
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
