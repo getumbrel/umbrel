@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: apotdevin/thunderhub:v0.12.2@sha256:c6e22cd3f489924185da20b1a10c07ecce219b874adf35b9c0be46725033840f
+    image: apotdevin/thunderhub:v0.12.4
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
