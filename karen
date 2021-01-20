@@ -54,7 +54,10 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
   trigger="$trigger_dir/$signal"
   args=""
 
-  echo "Got signal: $signal"
+  if [[ ! -z "$signal" ]]; then
+    echo "Got signal: $signal"
+  fi
+
 
   app_prefix="app-"
   if [[ "$signal" == "$app_prefix"* ]]; then
@@ -63,10 +66,13 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
     args="${signal#$app_prefix}"
   fi
 
-  if test -x "$trigger"; then
+  if [[ -x "$trigger" ]] && [[ ! -d "$trigger" ]]; then
     echo "karen is getting triggered!"
     "$trigger" $args &
   else
-    echo "No trigger found"
+    if [[ ! -z "$signal" ]]; then
+      echo "No trigger found"
+    fi
   fi
 done
+
