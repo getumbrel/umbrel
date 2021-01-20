@@ -9,9 +9,9 @@ echo "false" > $1
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
 # Only change password on Umbrel OS and it should not be true/false or be empty/only spaces
-if [[ ! -z "${UMBREL_OS:-}" ]] && [[ -z "${signal// }" ]] && [[ "${signal}" != "true" ]] && [[ "${signal}" != "false" ]]; then
+if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -z "${signal// }" ]] && [[ "${signal}" != "true" ]] && [[ "${signal}" != "false" ]]; then
     # Script runs as root, we need to set the username
-    echo ${1} | passwd umbrel --stdin
+    echo -e  "${signal}\n${signal}" | passwd umbrel
 fi
 
 # Define password as set

@@ -64,7 +64,7 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
   fi
 
   if [[ "$signal" == "passwd-changed" ]]; then
-    args="$root_dir/statuses/password-updated"
+    args="$root_dir/../statuses/password-updated"
   fi
 
   if test -x "$trigger"; then
