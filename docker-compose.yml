@@ -66,7 +66,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.14
+                image: getumbrel/dashboard:v0.3.15
                 logging: *default-logging
                 restart: on-failure
                 stop_grace_period: 1m30s
