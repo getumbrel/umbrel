@@ -63,12 +63,9 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
     args="${signal#$app_prefix}"
   fi
 
-  pw_prefix="passwd-"
-  if [[ "$signal" == "$pw_prefix"* ]]; then
-    trigger="$trigger_dir/passwd"
-    args="${signal#$pw_prefix}"
-    # Delete signal to remove pw from file system
-    rm "$signal_dir/$signal"
+  pw_prefix="passw"
+  if [[ "$signal" == "passwd" ]]; then
+    args="$signal_dir/$signal"
   fi
 
   if test -x "$trigger"; then
