@@ -17,6 +17,7 @@ services:
       - "$APP_RIDE_THE_LIGHTNING_PORT:$APP_RIDE_THE_LIGHTNING_PORT"
     volumes:
       - ${APP_DATA_DIR}/rtl:/data
+      - ${APP_DATA_DIR}/loop:/loop
       - ${LND_DATA_DIR}:/lnd:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     environment:
@@ -33,7 +34,7 @@ services:
 
         # Loop
         SWAP_SERVER_URL: "https://loop:8081"
-        SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
+        SWAP_MACAROON_PATH: "/loop/$BITCOIN_NETWORK"
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
@@ -45,7 +46,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     volumes:
-      - ${APP_DATA_DIR}/loop:/data
+      - ${APP_DATA_DIR}/loop:/data/.loop
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       HOME: "/data"
