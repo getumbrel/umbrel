@@ -58,7 +58,7 @@ if [[ -f "${STATUS_DIR}/configured" ]]; then
 else
   echo "============ CONFIGURING ============="
 fi
-echo "========= UMBREL (${NETWORK}) ==========="
+echo "========= UMBREL (${BITCOIN_NETWORK}) ==========="
 echo "======================================"
 echo
 
@@ -68,6 +68,7 @@ echo
 ##########################################################
 
 # Store paths to intermediary config files
+NGINX_CONF_FILE="./templates/nginx.conf"
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
@@ -76,6 +77,7 @@ ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
+[[ -f "$NGINX_CONF_FILE" ]] && rm -f "$NGINX_CONF_FILE"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
@@ -83,6 +85,7 @@ ENV_FILE="./templates/.env"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
+[[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
@@ -98,9 +101,45 @@ ENV_FILE="./templates/.env"
 [[ -f "./.env" ]] && source "./.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
-# Bitcoin Core ports
-BITCOIN_RPC_PORT=8332
-BITCOIN_P2P_PORT=8333
+# Umbrel
+NETWORK_IP="10.21.21.0"
+GATEWAY_IP="10.21.21.1"
+NGINX_IP="10.21.21.2"
+DASHBOARD_IP="10.21.21.3"
+MANAGER_IP="10.21.21.4"
+MIDDLEWARE_IP="10.21.21.5"
+NEUTRINO_SWITCHER_IP="10.21.21.6"
+FRONTAIL_IP="10.21.21.7"
+BITCOIN_IP="10.21.21.8"
+BITCOIN_RPC_PORT="8332"
+BITCOIN_P2P_PORT="8333"
+LND_IP="10.21.21.9"
+LND_GRPC_PORT="10009"
+LND_REST_PORT="8080"
+ELECTRUM_IP="10.21.21.10"
+ELECTRUM_PORT="50001"
+TOR_PROXY_IP="10.21.21.11"
+TOR_PROXY_PORT="9050"
+
+# Apps
+APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
+APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
+APP_BTC_RPC_EXPLORER_PORT="3002"
+APP_THUNDERHUB_IP="10.21.21.13"
+APP_THUNDERHUB_PORT="3000"
+APP_SPHINX_RELAY_IP="10.21.21.14"
+APP_SPHINX_RELAY_PORT="3300"
+APP_RIDE_THE_LIGHTNING_IP="10.21.21.15"
+APP_RIDE_THE_LIGHTNING_PORT="3001"
+APP_RIDE_THE_LIGHTNING_LOOP_IP="10.21.21.16"
+APP_LIGHTNING_TERMINAL_IP="10.21.21.17"
+APP_LIGHTNING_TERMINAL_PORT="3004"
+APP_SPECTER_DESKTOP_IP="10.21.21.18"
+APP_SPECTER_DESKTOP_PORT="25441"
+APP_BTCPAY_SERVER_IP="10.21.21.19"
+APP_BTCPAY_SERVER_PORT="3003"
+APP_BTCPAY_SERVER_NBXPLORER_IP="10.21.21.20"
+APP_BTCPAY_SERVER_DB_IP="10.21.21.21"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -116,7 +155,6 @@ fi
 if [[ -z ${TOR_PASSWORD+x} ]] || [[ -z ${TOR_HASHED_PASSWORD+x} ]]; then
   echo "Generating Tor password"
   echo
-  docker pull --quiet getumbrel/tor:v0.4.1.9
   TOR_PASSWORD=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
   TOR_HASHED_PASSWORD=$(docker run --rm getumbrel/tor:v0.4.1.9 --quiet --hash-password "$TOR_PASSWORD")
 fi
@@ -186,6 +224,10 @@ sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE
 sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
 
+# Store docker binary path
+DOCKER_BINARY=$(readlink -f "$(which docker)")
+sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
+
 # Set Umbrel version in electrs banner
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
 
@@ -198,6 +240,47 @@ if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
+# TODO: Update all the above code to use this simpler logic
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+  # Umbrel
+  sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
+  sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
+  sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
+  sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
+  sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
+  sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
+  sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
+  sed -i "s/<frontail-ip>/${FRONTAIL_IP}/g" "${template}"
+  sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
+  sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
+  sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
+  sed -i "s/<lnd-rest-port>/${LND_REST_PORT}/g" "${template}"
+  sed -i "s/<electrum-ip>/${ELECTRUM_IP}/g" "${template}"
+  sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
+  sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
+  sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
+
+  # Apps
+  sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
+  sed -i "s/<app-btc-rpc-explorer-port>/${APP_BTC_RPC_EXPLORER_PORT}/g" "${template}"
+  sed -i "s/<app-thunderhub-ip>/${APP_THUNDERHUB_IP}/g" "${template}"
+  sed -i "s/<app-thunderhub-port>/${APP_THUNDERHUB_PORT}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-ip>/${APP_SPHINX_RELAY_IP}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-port>/${APP_SPHINX_RELAY_PORT}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-ip>/${APP_RIDE_THE_LIGHTNING_IP}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-port>/${APP_RIDE_THE_LIGHTNING_PORT}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-loop-ip>/${APP_RIDE_THE_LIGHTNING_LOOP_IP}/g" "${template}"
+  sed -i "s/<app-lightning-terminal-ip>/${APP_LIGHTNING_TERMINAL_IP}/g" "${template}"
+  sed -i "s/<app-lightning-terminal-port>/${APP_LIGHTNING_TERMINAL_PORT}/g" "${template}"
+  sed -i "s/<app-specter-desktop-ip>/${APP_SPECTER_DESKTOP_IP}/g" "${template}"
+  sed -i "s/<app-specter-desktop-port>/${APP_SPECTER_DESKTOP_PORT}/g" "${template}"
+  sed -i "s/<app-btcpay-server-ip>/${APP_BTCPAY_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
+  sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
+done
+
+
 ##########################################################
 ############### Performance optimizations ################
 ##########################################################
@@ -208,7 +291,13 @@ echo
 
 echo "Setting dbcache size"
 echo
-DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
+  # Limit dbcache to 200 after IBD
+  DBCACHE_SIZE="200"
+else
+  # Allocate (50% of RAM) - 300MB to dbcache for IDB
+  DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
+fi
 sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 
 # TODO: Adjust prune size based on available disk space
@@ -217,6 +306,7 @@ sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
 ############## Override main config files ################
 ##########################################################
 
+mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
@@ -227,10 +317,6 @@ mv -f "$ENV_FILE" "./.env"
 ##########################################################
 ################ Configuration complete ##################
 ##########################################################
-
-echo "Pulling Umbrel Docker images"
-echo
-docker-compose pull --quiet
 
 echo "Configuring permissions..."
 echo

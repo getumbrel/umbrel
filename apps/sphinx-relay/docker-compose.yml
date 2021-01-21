@@ -1,0 +1,31 @@
+version: "3.7"
+
+x-logging: &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  sphinx-relay:
+    container_name: sphinx-relay
+    image: sphinxlightning/sphinx-relay:v1.3.8@sha256:cfffa6a821356838a0079d2ea8720d4f7f4415275535812da815b6db0ca67149
+    init: true
+    restart: on-failure
+    stop_grace_period: 1m
+    logging: *default-logging
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/relay/.lnd/
+    ports:
+      - "$APP_SPHINX_RELAY_PORT:$APP_SPHINX_RELAY_PORT"
+    environment:
+      PUBLIC_URL: "$APP_HIDDEN_SERVICE:$APP_SPHINX_RELAY_PORT"
+      LND_IP: $LND_IP
+      CONNECT_UI: "true"
+      LND_PORT: $LND_GRPC_PORT
+      TLS_LOCATION: /lnd/tls.cert
+      MACAROON_LOCATION: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon
+      LND_LOG_LOCATION: /lnd/logs/bitcoin/${BITCOIN_NETWORK}/lnd.log
+    networks:
+      default:
+        ipv4_address: $APP_SPHINX_RELAY_IP

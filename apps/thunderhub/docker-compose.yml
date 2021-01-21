@@ -1,0 +1,29 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: apotdevin/thunderhub:v0.12.4@sha256:6ca79079a1989681c7e1bc60d8e86704febe88ce0f85343a1a8185768e936011
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_THUNDERHUB_PORT:$APP_THUNDERHUB_PORT"
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      NO_VERSION_CHECK: "true"
+      LOG_LEVEL: "debug"
+      ACCOUNT_CONFIG_PATH: "/data/thubConfig.yaml"
+      YML_ENV_1: "$LND_IP:$LND_GRPC_PORT"
+      TOR_PROXY_SERVER: "socks://$TOR_PROXY_IP:$TOR_PROXY_PORT"
+    networks:
+      default:
+        ipv4_address: $APP_THUNDERHUB_IP

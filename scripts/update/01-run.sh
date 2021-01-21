@@ -54,10 +54,22 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
         echo "Skipping updating on SD Card..."
     fi
+    
+    # Update apt packages on update
+    # Remember, the apt package is called unattended-updates, the command is unattended-update
+    if ! command -v unattended-upgrade &> /dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
+    fi
+    # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
+    # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 30, "description": "Installing security updates", "updateTo": "$RELEASE"}
+EOF
+    unattended-upgrade -d
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 35, "description": "Configuring settings", "updateTo": "$RELEASE"}
 EOF
 
 # Checkout to the new release
@@ -73,6 +85,31 @@ PREV_ENV_FILE="$UMBREL_ROOT/.env"
 BITCOIN_NETWORK="mainnet"
 [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 PREV_ENV_FILE="${PREV_ENV_FILE}" NETWORK=$BITCOIN_NETWORK ./scripts/configure
+
+# Pulling new containers
+echo "Pulling new containers"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 50, "description": "Pulling new containers", "updateTo": "$RELEASE"}
+EOF
+docker-compose pull
+
+echo "Updating installed apps"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
+EOF
+# We can just loop over this once everyone has the latest app script
+# "$UMBREL_ROOT/scripts/app" ls-installed
+# but for now we need to implement it here manually
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+list_installed_apps() {
+  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+}
+list_installed_apps | while read app; do
+  if [[ "${app}" != "" ]]; then
+    echo "${app}..."
+    scripts/app compose "${app}" pull
+  fi
+done
 
 # Stop existing containers
 echo "Stopping existing containers"
@@ -94,8 +131,15 @@ rsync --archive \
 
 # Fix permissions
 echo "Fixing permissions"
-chown -R 1000:1000 "$UMBREL_ROOT"/
+find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
+
+# Killing karen
+echo "Killing background daemon"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 75, "description": "Killing background daemon", "updateTo": "$RELEASE"}
+EOF
+pkill -f "\./karen"
 
 # Start updated containers
 echo "Starting new containers"

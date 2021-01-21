@@ -24,6 +24,11 @@ cd "$UMBREL_ROOT"
 export DOCKER_CLIENT_TIMEOUT=240
 export COMPOSE_HTTP_TIMEOUT=240
 
+echo "Stopping installed apps..."
+echo
+"${UMBREL_ROOT}/scripts/app" stop installed
+echo
+
 echo "Stopping Docker services..."
 echo
 docker-compose down

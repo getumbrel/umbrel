@@ -1,6 +1,6 @@
 {
-    "version": "0.2.13",
-    "name": "Umbrel v0.2.13",
+    "version": "0.3.2",
+    "name": "Umbrel v0.3.2",
     "requires": ">=0.2.1",
-    "notes": "This update fixes an important bug with the background processes. If you're unable to start this update or it gets stuck at \"Starting Update...\" please follow the instructions here: https://gist.github.com/lukechilds/8dc223885f47579a77407ba7f5beaaec"
+    "notes": "This update brings the latest versions of BTCPay Server, Sphinx Relay, Specter Desktop and Thunderhub to your Umbrel."
 }

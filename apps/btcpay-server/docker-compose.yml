@@ -1,0 +1,74 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  nbxplorer:
+    image: "nicolasdorier/nbxplorer:2.1.46@sha256:368789f27867c54fc7435424e05a8c8440a4c2355afad237f1845b62c9aa9d1c"
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+        - ${APP_DATA_DIR}/data/nbxplorer:/data
+    environment:
+        NBXPLORER_DATADIR: "/data"
+        NBXPLORER_NETWORK: "$BITCOIN_NETWORK"
+        NBXPLORER_PORT: 32838
+        NBXPLORER_BIND: 0.0.0.0
+        NBXPLORER_CHAINS: "btc"
+        NBXPLORER_SIGNALFILEDIR: "/data"
+        NBXPLORER_BTCRPCURL: "http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
+        NBXPLORER_BTCNODEENDPOINT: $BITCOIN_IP:$BITCOIN_P2P_PORT
+        NBXPLORER_BTCRPCUSER: $BITCOIN_RPC_USER
+        NBXPLORER_BTCRPCPASSWORD: $BITCOIN_RPC_PASS
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
+
+  web:
+    image: btcpayserver/btcpayserver:1.0.6.7@sha256:01a5636fd24841eb382cc2ee9c3387f9ff0c818bd7ef34330008ef0f1d694f2d
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    depends_on: [ nbxplorer, postgres ]
+    entrypoint: [ "dotnet", "BTCPayServer.dll" ]
+    ports:
+        - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
+    volumes:
+        - ${APP_DATA_DIR}/data/btcpay:/data
+        - ${APP_DATA_DIR}/data/nbxplorer:/data/.nbxplorer
+        - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+        HOME: "/data"
+        BTCPAY_DATADIR: "/data"
+        BTCPAY_PLUGINDIR: "/data/plugins"
+        BTCPAY_DOCKERDEPLOYMENT: "false"
+        BTCPAY_POSTGRES: "User ID=postgres;Host=postgres;Port=5432;Database=btcpayserver$BITCOIN_NETWORK"
+        BTCPAY_NETWORK: "$BITCOIN_NETWORK"
+        BTCPAY_BIND: 0.0.0.0:$APP_BTCPAY_SERVER_PORT
+        BTCPAY_CHAINS: "btc"
+        BTCPAY_BTCEXPLORERURL: "http://nbxplorer:32838"
+        BTCPAY_BTCLIGHTNING: "type=lnd-rest;server=https://$LND_IP:$LND_REST_PORT/;macaroonfilepath=/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon;allowinsecure=true"
+        BTCPAY_SOCKSENDPOINT: $TOR_PROXY_IP:$TOR_PROXY_PORT
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_IP
+
+  postgres:
+    image: postgres:9.6.20@sha256:82c335ccb6b60941cb860cbb8252c12f63fd3e27a0d15bce5bc6de110c02a2b4
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+        POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+        - ${APP_DATA_DIR}/data/postgres:/var/lib/postgresql/data
+    networks:
+      default:
+        ipv4_address: $APP_BTCPAY_SERVER_DB_IP

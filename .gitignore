@@ -22,11 +22,13 @@ docker-compose.override.yml
 bitcoin/*
 db/*
 electrs/*
+nginx/*
 events/signals/*
 lnd/*
 logs/*
 statuses/*
 tor/*
+app-data/*
 
 # Commit these files
 

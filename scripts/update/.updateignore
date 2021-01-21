@@ -1,4 +1,4 @@
-.*
+/.*
 bitcoin/*
 db
 lnd/*
@@ -7,3 +7,4 @@ tor/*
 electrs/*
 events/signals
 logs/*
+app-data/*

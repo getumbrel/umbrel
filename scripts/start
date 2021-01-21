@@ -20,7 +20,7 @@ check_dependencies () {
 }
 
 # Check system's dependencies
-check_dependencies readlink dirname docker docker-compose
+check_dependencies readlink dirname ip docker docker-compose
 
 # Check karen's dependencies
 check_dependencies fswatch
@@ -52,7 +52,7 @@ echo "Setting environment variables..."
 echo
 
 # Whitelist device IP, hostname and hidden service for CORS
-DEVICE_IP="$(hostname -I | cut -d ' ' -f 1)"
+DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
 DEVICE_HOSTNAME="$(hostname)"
 DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,https://${DEVICE_HOSTNAME}.local,http://${DEVICE_HOSTNAME},https://${DEVICE_HOSTNAME}"
 if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
@@ -85,6 +85,12 @@ echo
 echo "Starting Docker services..."
 echo
 docker-compose up --detach --build --remove-orphans
+echo
+
+echo
+echo "Starting installed apps..."
+echo
+"${UMBREL_ROOT}/scripts/app" start installed
 echo
 
 echo "Umbrel is now accessible at"
