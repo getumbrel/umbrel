@@ -15,13 +15,13 @@ services:
               stop_grace_period: 5m
               stop_signal: SIGINT
               ports:
-                  - "6379:6379"
+                  - "$APP_LNDHUB_REDIS_PORT:$APP_LNDHUB_REDIS_PORT"
               volumes:
                   - ${LND_DATA_DIR}:/lnd:ro
                   - ${APP_DATA_DIR}/redis:/data
               networks:
                   default:
-                      ipv4_address: 10.0.1.8
+                      ipv4_address: $APP_LNDHUB_REDIS_IP
         web:
                 container_name: web
                 image: aarondewes/lndhub:v0.2.1
@@ -39,7 +39,7 @@ services:
                     PORT: "${APP_LNDHUB_PORT}"
                     LND_CERT_FILE: "/lnd/tls.cert"
                     LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
-                    CONFIG: '{ "redis": { "port": 6379, "host": "10.0.1.8", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
+                    CONFIG: '{ "redis": { "port": $APP_LNDHUB_REDIS_PORT, "host": "$APP_LNDHUB_REDIS_IP", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
                 networks:
                      default:
                         ipv4_address: $APP_LNDHUB_IP
