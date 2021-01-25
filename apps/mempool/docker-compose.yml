@@ -1,0 +1,21 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: mempool/mempool:v1.0@sha256:aad79c7ad76ccb05505800c0071c5bde6fb9be201883d44268f894b799b6728e
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 3012:80
+    environment:
+      BITCOIN_NODE_HOST: $BITCOIN_IP
+      BITCOIN_NODE_USER: $BITCOIN_RPC_USER
+      BITCOIN_NODE_PASS: $BITCOIN_RPC_PASS
+      BITCOIN_NODE_PORT: $BITCOIN_RPC_PORT
