@@ -34,6 +34,8 @@ services:
 
       # MYSQL 
       MYSQL_DATABASE: samourai-main
+      MYSQL_USER: samourai
+      MYSQL_PASSWORD: password
 
       # NODEJS
       NODE_GAP_EXTERNAL: 100
