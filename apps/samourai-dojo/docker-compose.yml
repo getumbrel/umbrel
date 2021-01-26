@@ -1,0 +1,103 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  db:
+    image: "louneskmt/dojo-db:1.2.0"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 5m
+    environment:
+        MYSQL_DATABASE: samourai-main
+        MYSQL_ROOT_PASSWORD: rootpassword
+        MYSQL_USER: samourai
+        MYSQL_PASSWORD: password
+    volumes:
+      - ${APP_DATA_DIR}/mysql:/var/lib/mysql
+    expose:
+      - "3306"
+  
+  node:
+    image: "louneskmt/dojo-nodejs:1.8.0"
+    logging: *default-logging
+    restart: always
+    command: "/home/node/app/wait-for-it.sh db:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
+    environment: 
+      # GLOBAL
+      COMMON_BTC_NETWORK: $BITCOIN_NETWORK
+      DOJO_NODEJS_VERSION_TAG: 1.8.0
+
+      # MYSQL 
+      MYSQL_DATABASE: samourai-main
+
+      # NODEJS
+      NODE_GAP_EXTERNAL: 100
+      NODE_GAP_INTERNAL: 100
+      NODE_ADDR_FILTER_THRESHOLD: 1000
+      NODE_URL_OXT_API: https://api.oxt.me
+      NODE_URL_ESPLORA_API: https://blockstream.info/testnet
+      NODE_ADDR_DERIVATION_MIN_CHILD: 2
+      NODE_ADDR_DERIVATION_MAX_CHILD: 2
+      NODE_ADDR_DERIVATION_THRESHOLD: 10
+      NODE_TXS_SCHED_MAX_ENTRIES: 10
+      NODE_TXS_SCHED_MAX_DELTA_HEIGHT: 18
+      NODE_JWT_ACCESS_EXPIRES: 900
+      NODE_JWT_REFRESH_EXPIRES: 7200
+      NODE_PREFIX_STATUS: status
+      NODE_PREFIX_SUPPORT: support
+      NODE_PREFIX_STATUS_PUSHTX: status
+      NODE_TRACKER_MEMPOOL_PERIOD: 10000
+      NODE_TRACKER_UNCONF_TXS_PERIOD: 300000
+      NODE_ACTIVE_INDEXER: local_indexer
+      NODE_FEE_TYPE: ECONOMICAL
+
+      # SECURITY
+      NODE_API_KEY: "00000000000000000000000000000000"
+      NODE_ADMIN_KEY: "00000000000000000000000000000000"
+      NODE_JWT_SECRET: "00000000000000000000000000000000"
+
+      # BITCOIN
+      BITCOIND_INSTALL: off
+      BITCOIND_IP: $BITCOIN_IP
+      BITCOIND_RPC_PORT: $BITCOIN_RPC_PORT
+      BITCOIND_ZMQ_RAWTXS: $BITCOIN_ZMQ_RAWTX_PORT
+      BITCOIND_ZMQ_BLK_HASH: $BITCOIN_ZMQ_HASHBLOCK_PORT
+      BITCOIND_SHUTDOWN_DELAY: 180
+      BITCOIND_EPHEMERAL_HS: off
+
+      # EXPLORER  
+      EXPLORER_INSTALL: off
+
+      # INDEXER
+      INDEXER_INSTALL: off
+      INDEXER_IP: $ELECTRUM_IP
+      INDEXER_RPC_PORT: $ELECTRUM_PORT
+      INDEXER_BATCH_SUPPORT: inactive # 'active' for ElectrumX, 'inactive' otherwise
+    volumes:
+      - ${TOR_DATA_DIR}/app-dojo:/var/lib/tor/hsv3dojo
+    expose:
+      - "8080"
+      - "8081"
+      - "8082"
+    depends_on:
+      - db
+
+  nginx:
+    image: "louneskmt/dojo-nginx:1.5.0"
+    logging: *default-logging
+    restart: always
+    command: "/wait-for node:8080 --timeout=720 -- nginx"
+    ports: 
+      - "$APP_DOJO_PORT:80"
+    expose:
+      - "80"
+    depends_on:
+      - node
+    networks:
+       default:
+         ipv4_address: $APP_DOJO_IP
