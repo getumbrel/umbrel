@@ -93,11 +93,11 @@ services:
     restart: always
     command: "/wait-for node:8080 --timeout=720 -- nginx"
     ports: 
-      - "$APP_DOJO_PORT:80"
+      - "$APP_SAMOURAI_DOJO_PORT:80"
     expose:
       - "80"
     depends_on:
       - node
     networks:
        default:
-         ipv4_address: $APP_DOJO_IP
+         ipv4_address: $APP_SAMOURAI_DOJO_IP
