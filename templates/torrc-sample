@@ -61,4 +61,8 @@ HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
 HiddenServiceDir /var/lib/tor/app-btcpay-server
 HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 
+# samourai-dojo Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-dojo
+HiddenServicePort 80 <app-samourai-dojo-ip>:<app-samourai-dojo-port>
+
 HashedControlPassword <password>
