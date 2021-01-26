@@ -112,6 +112,9 @@ FRONTAIL_IP="10.0.0.7"
 BITCOIN_IP="10.0.0.8"
 BITCOIN_RPC_PORT="8332"
 BITCOIN_P2P_PORT="8333"
+BITCOIN_ZMQ_RAWBLOCK_PORT="28332"
+BITCOIN_ZMQ_RAWTX_PORT="28333"
+BITCOIN_ZMQ_HASHBLOCK_PORT="28334"
 LND_IP="10.0.0.9"
 LND_GRPC_PORT="10009"
 LND_REST_PORT="8080"
@@ -188,8 +191,13 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   sed -i "s/network = \"bitcoin\"/network = \"regtest\"/g;" "$ELECTRS_CONF_FILE"
 fi
 
-# Update RPC and P2P Ports
+# Update RPC, P2P and ZMQ Ports
 sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/zmqpubrawblock=tcp:\/\/0.0.0.0:<port>/zmqpubrawblock=tcp:\/\/0.0.0.0:$BITCOIN_ZMQ_RAWBLOCK_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/zmqpubrawtx=tcp:\/\/0.0.0.0:<port>/zmqpubrawtx=tcp:\/\/0.0.0.0:$BITCOIN_ZMQ_RAWTX_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/zmqpubhashblock=tcp:\/\/0.0.0.0:<port>/zmqpubhashblock=tcp:\/\/0.0.0.0:$BITCOIN_ZMQ_HASHBLOCK_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
+sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g;" "$TOR_CONF_FILE"
 sed -i "s/<bitcoin-p2p-port>/$BITCOIN_P2P_PORT/g;" "$TOR_CONF_FILE"
