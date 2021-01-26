@@ -1,6 +1,6 @@
 {
-    "version": "0.2.15",
-    "name": "Umbrel v0.2.15",
+    "version": "0.3.2",
+    "name": "Umbrel v0.3.2",
     "requires": ">=0.2.1",
-    "notes": "This update fixes some compatibility issues between Umbrel and the latest version of Electrum Wallet."
+    "notes": "This update brings the latest versions of BTCPay Server, Sphinx Relay, Specter Desktop and Thunderhub to your Umbrel."
 }

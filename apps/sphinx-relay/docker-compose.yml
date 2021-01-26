@@ -8,8 +8,10 @@ x-logging: &default-logging
 services:
   sphinx-relay:
     container_name: sphinx-relay
-    image: sphinxlightning/sphinx-relay:v1.2.9@sha256:21e457a44efc8286c6fa066204db72d45c47417676d802ed3e0e4cbc923b87c0
+    image: sphinxlightning/sphinx-relay:v1.3.8@sha256:cfffa6a821356838a0079d2ea8720d4f7f4415275535812da815b6db0ca67149
+    init: true
     restart: on-failure
+    stop_grace_period: 1m
     logging: *default-logging
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
