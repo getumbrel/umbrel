@@ -31,6 +31,8 @@ services:
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
       DOJO_NODEJS_VERSION_TAG: 1.8.0
+      TOR_PROXY_IP: $TOR_PROXY_IP 
+      TOR_PROXY_PORT: $TOR_PROXY_PORT
 
       # MYSQL 
       MYSQL_DATABASE: samourai-main
