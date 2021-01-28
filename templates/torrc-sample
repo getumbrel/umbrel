@@ -65,4 +65,8 @@ HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 HiddenServiceDir /var/lib/tor/app-samourai-dojo
 HiddenServicePort 80 <app-samourai-dojo-ip>:<app-samourai-dojo-port>
 
+# samourai-dojo whirlpool Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-dojo-whirlpool
+HiddenServicePort 80 <app-samourai-dojo-whirlpool-ip>:<app-samourai-dojo-whirlpool-port>
+
 HashedControlPassword <password>

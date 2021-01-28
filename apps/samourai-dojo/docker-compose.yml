@@ -91,6 +91,24 @@ services:
     depends_on:
       - db
 
+  whirlpool:
+    image: "louneskmt/dojo-whirlpool:1.2.0"
+    logging: *default-logging
+    restart: always
+    command: /restart.sh
+    environment:
+        COMMON_BTC_NETWORK: $BITCOIN_NETWORK
+        WHIRLPOOL_RESYNC: "off"
+        WHIRLPOOL_DEBUG: "off"
+        WHIRLPOOL_DEBUG_CLIENT: "off"
+    expose:
+      - "$APP_SAMOURAI_DOJO_WHIRLPOOL_PORT"
+    volumes:
+      - ${APP_DATA_DIR}/whirlpool:/home/whirlpool
+    networks:
+       default:
+         ipv4_address: $APP_SAMOURAI_DOJO_WHIRLPOOL_IP
+
   nginx:
     image: "louneskmt/dojo-nginx:1.5.0"
     logging: *default-logging

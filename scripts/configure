@@ -145,6 +145,8 @@ APP_BTCPAY_SERVER_NBXPLORER_IP="10.21.21.20"
 APP_BTCPAY_SERVER_DB_IP="10.21.21.21"
 APP_SAMOURAI_DOJO_IP="10.21.21.22"
 APP_SAMOURAI_DOJO_PORT="3005"
+APP_SAMOURAI_DOJO_WHIRLPOOL_IP="10.21.21.23"
+APP_SAMOURAI_DOJO_WHIRLPOOL_PORT="8898"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -291,6 +293,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
   sed -i "s/<app-samourai-dojo-ip>/${APP_SAMOURAI_DOJO_IP}/g" "${template}"
   sed -i "s/<app-samourai-dojo-port>/${APP_SAMOURAI_DOJO_PORT}/g" "${template}"
+  sed -i "s/<app-samourai-dojo-whirlpool-ip>/${APP_SAMOURAI_DOJO_WHIRLPOOL_IP}/g" "${template}"
+  sed -i "s/<app-samourai-dojo-whirlpool-port>/${APP_SAMOURAI_DOJO_WHIRLPOOL_PORT}/g" "${template}"
 done
 
 
