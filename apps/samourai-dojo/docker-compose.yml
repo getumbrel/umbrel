@@ -101,8 +101,8 @@ services:
         WHIRLPOOL_RESYNC: "off"
         WHIRLPOOL_DEBUG: "off"
         WHIRLPOOL_DEBUG_CLIENT: "off"
-    expose:
-      - "$APP_SAMOURAI_DOJO_WHIRLPOOL_PORT"
+    ports:
+      - "$APP_SAMOURAI_DOJO_WHIRLPOOL_PORT:8898"
     volumes:
       - ${APP_DATA_DIR}/whirlpool:/home/whirlpool
     networks:
