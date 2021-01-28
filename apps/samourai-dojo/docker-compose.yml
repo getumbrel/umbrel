@@ -84,8 +84,6 @@ services:
       INDEXER_IP: $ELECTRUM_IP
       INDEXER_RPC_PORT: $ELECTRUM_PORT
       INDEXER_BATCH_SUPPORT: inactive # 'active' for ElectrumX, 'inactive' otherwise
-    volumes:
-      - ${TOR_DATA_DIR}/app-samourai-dojo:/var/lib/tor/hsv3dojo
     expose:
       - "8080"
       - "8081"
