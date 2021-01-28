@@ -114,6 +114,8 @@ services:
     logging: *default-logging
     restart: always
     command: "/wait-for node:8080 --timeout=720 -- nginx"
+    volumes:
+      - ${APP_DATA_DIR}/nginx/${BITCOIN_NETWORK}.conf:/etc/nginx/sites-enabled/dojo.conf
     ports: 
       - "$APP_SAMOURAI_DOJO_PORT:80"
     expose:
