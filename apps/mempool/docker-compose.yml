@@ -7,15 +7,13 @@ x-logging:
     tag: "umbrel-app {{.Name}}"
 
 services:
-  app:
+  web:
     image: bguillaumat/mempool-frontend:v2.0.1
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - ${APP_MEMPOOL_PORT}:80
-    links:
-      - api
     environment:
       API_IP: $APP_MEMPOOL_API_IP
     networks:
@@ -35,10 +33,6 @@ services:
       ELECTRS_HOST: $ELECTRUM_IP
       ELECTRS_PORT: $ELECTRUM_PORT
       MYSQL_HOST: $APP_MEMPOOL_DB_IP
-    expose:
-      - "8999"
-    links:
-      - db
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
@@ -52,8 +46,6 @@ services:
     environment:
       MYSQL_USER: "mempool"
       MYSQL_PASSWORD: "mempool"
-    expose:
-     - "3306"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_DB_IP
