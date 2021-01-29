@@ -1,0 +1,59 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  app:
+    image: bguillaumat/mempool-frontend:v2.0.1
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - ${APP_MEMPOOL_PORT}:80
+    links:
+      - api
+    environment:
+      API_IP: $APP_MEMPOOL_API_IP
+    networks:
+      default:
+        ipv4_address: $APP_MEMPOOL_IP
+  api:
+    image: bguillaumat/mempool-backend:v2.0.1
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "./wait-for-it.sh db:3306 --timeout=720 --strict -- ./start.sh"
+    environment:
+      RPC_HOST: $BITCOIN_IP
+      RPC_PORT: $BITCOIN_RPC_PORT
+      RPC_USER: $BITCOIN_RPC_USER
+      RPC_PASS: $BITCOIN_RPC_PASS
+      ELECTRS_HOST: $ELECTRUM_IP
+      ELECTRS_PORT: $ELECTRUM_PORT
+      MYSQL_HOST: $APP_MEMPOOL_DB_IP
+    expose:
+      - "8999"
+    links:
+      - db
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_API_IP
+  db:
+    image: bguillaumat/mempool-db:v2.0.1
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/mysql:/var/lib/mysql
+    environment:
+      MYSQL_USER: "mempool"
+      MYSQL_PASSWORD: "mempool"
+    expose:
+     - "3306"
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_DB_IP

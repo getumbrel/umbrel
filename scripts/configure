@@ -140,6 +140,10 @@ APP_BTCPAY_SERVER_IP="10.21.21.19"
 APP_BTCPAY_SERVER_PORT="3003"
 APP_BTCPAY_SERVER_NBXPLORER_IP="10.21.21.20"
 APP_BTCPAY_SERVER_DB_IP="10.21.21.21"
+APP_MEMPOOL_IP="10.21.21.26"
+APP_MEMPOOL_PORT="3006"
+APP_MEMPOOL_API_IP="10.21.21.27"
+APP_MEMPOOL_DB_IP="10.21.21.28"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -278,6 +282,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-mempool-ip>/${APP_MEMPOOL_IP}/g" "${template}"
+  sed -i "s/<app-mempool-port>/${APP_MEMPOOL_PORT}/g" "${template}"
+  sed -i "s/<app-mempool-db-ip>/${APP_MEMPOOL_DB_IP}/g" "${template}"
+  sed -i "s/<app-mempool-api-ip>/${APP_MEMPOOL_API_IP}/g" "${template}"
 done
 
 
