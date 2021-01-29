@@ -195,45 +195,11 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   sed -i "s/network = \"bitcoin\"/network = \"regtest\"/g;" "$ELECTRS_CONF_FILE"
 fi
 
-# Update RPC and P2P Ports
-sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g;" "$TOR_CONF_FILE"
-sed -i "s/<bitcoin-p2p-port>/$BITCOIN_P2P_PORT/g;" "$TOR_CONF_FILE"
-sed -i "/daemon_rpc_addr/s/<port>/$BITCOIN_RPC_PORT/g;" "$ELECTRS_CONF_FILE"
-sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
-sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
-
-# Add rpcauth
-sed -i "s/rpcauth=<rpcauth>/rpcauth=$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/BITCOIN_RPC_AUTH=<rpcauth>/BITCOIN_RPC_AUTH='$BITCOIN_RPC_AUTH'/g;" "$ENV_FILE"
-# Add RPC credentials to lnd.conf
-sed -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
-sed -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
-# Add RPC credentials to env file
-sed -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
-sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
-
-# Add chain to env file
-sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
-
-# Add Tor password
-sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASSWORD/g;" "$TOR_CONF_FILE"
-sed -i "s/torpassword=<password>/torpassword=$TOR_PASSWORD/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE"
-sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
-sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
-
 # Store docker binary path
 DOCKER_BINARY=$(readlink -f "$(which docker)")
-sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 
-# Set Umbrel version in electrs banner
-sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
-
-# Add hostname to lnd.conf for TLS certificate
+# Store hostname
 DEVICE_HOSTNAME="$(hostname)"
-sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$LND_CONF_FILE"
 
 # If node is already synced, do not reset to neutrino
 if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
@@ -243,6 +209,8 @@ fi
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
+  sed -i "s/<umbrel-version>/${UMBREL_VERSION}.local/g" "${template}"
+  sed -i "s/<hostname>/${DEVICE_HOSTNAME}/g" "${template}"
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
@@ -251,12 +219,29 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
   sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
   sed -i "s/<frontail-ip>/${FRONTAIL_IP}/g" "${template}"
+  sed -i "s#<docker-path>#${DOCKER_BINARY}#g" "${template}"
+
+  # Bitcoin
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
+  sed -i "s/<bitcoin-network>/${BITCOIN_NETWORK}/g" "${template}"
+  sed -i "s/<bitcoin-rpc-port>/${BITCOIN_RPC_PORT}/g" "${template}"
+  sed -i "s/<bitcoin-p2p-port>/${BITCOIN_P2P_PORT}/g" "${template}"
+  sed -i "s/<bitcoin-rpc-auth>/${BITCOIN_RPC_AUTH}/g" "${template}"
+  sed -i "s/<bitcoin-rpc-username>/${BITCOIN_RPC_USER}/g" "${template}"
+  sed -i "s/<bitcoin-rpc-password>/${BITCOIN_RPC_PASS}/g" "${template}"
+
+  # LND
   sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
   sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
   sed -i "s/<lnd-rest-port>/${LND_REST_PORT}/g" "${template}"
+
+  # Electrum
   sed -i "s/<electrum-ip>/${ELECTRUM_IP}/g" "${template}"
   sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
+
+  # Tor
+  sed -i "s/<tor-password>/${TOR_PASSWORD}/g" "${template}"
+  sed -i "s/<tor-hashed-password>/${TOR_HASHED_PASSWORD}/g" "${template}"
   sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
 
