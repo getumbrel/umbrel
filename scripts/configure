@@ -209,8 +209,8 @@ fi
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
-  sed -i "s/<umbrel-version>/${UMBREL_VERSION}.local/g" "${template}"
-  sed -i "s/<hostname>/${DEVICE_HOSTNAME}/g" "${template}"
+  sed -i "s/<umbrel-version>/${UMBREL_VERSION}/g" "${template}"
+  sed -i "s/<hostname>/${DEVICE_HOSTNAME}.local/g" "${template}"
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
