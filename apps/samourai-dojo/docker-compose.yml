@@ -108,11 +108,13 @@ services:
          ipv4_address: $APP_SAMOURAI_DOJO_WHIRLPOOL_IP
 
   nginx:
-    image: "louneskmt/dojo-nginx:1.5.0"
+    image: "nginx:1.19-alpine"
     logging: *default-logging
     restart: always
     command: "/wait-for node:8080 --timeout=720 -- nginx"
     volumes:
+      - ${APP_DATA_DIR}/nginx/wait-for:/wait-for
+      - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ${APP_DATA_DIR}/nginx/${BITCOIN_NETWORK}.conf:/etc/nginx/sites-enabled/dojo.conf
     ports: 
       - "$APP_SAMOURAI_DOJO_PORT:80"
