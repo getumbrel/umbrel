@@ -99,12 +99,12 @@ services:
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
         WHIRLPOOL_RESYNC: "off"
-        WHIRLPOOL_DEBUG: "off"
+        WHIRLPOOL_DEBUG: "on"
         WHIRLPOOL_DEBUG_CLIENT: "off"
     ports:
       - "$APP_SAMOURAI_DOJO_WHIRLPOOL_PORT:8898"
     volumes:
-      - ${APP_DATA_DIR}/whirlpool:/home/whirlpool
+      - ${APP_DATA_DIR}/whirlpool:/home/whirlpool/.whirlpool-cli
     networks:
        default:
          ipv4_address: $APP_SAMOURAI_DOJO_WHIRLPOOL_IP
