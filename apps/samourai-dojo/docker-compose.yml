@@ -101,6 +101,7 @@ services:
         WHIRLPOOL_RESYNC: "off"
         WHIRLPOOL_DEBUG: "on"
         WHIRLPOOL_DEBUG_CLIENT: "off"
+        NGINX_IP: $APP_SAMOURAI_DOJO_IP
     ports:
       - "$APP_SAMOURAI_DOJO_WHIRLPOOL_PORT:8898"
     volumes:
