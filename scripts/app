@@ -88,7 +88,6 @@ compose() {
 
   export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
   export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
-  export TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
   export APP_DATA_DIR="${app_data_dir}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
   docker-compose \
