@@ -6,6 +6,7 @@
 .profile
 .ssh
 .viminfo
+.DS_Store
 
 # umbrel-dev
 docker-compose.override.yml
