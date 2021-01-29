@@ -19,6 +19,9 @@ services:
         MYSQL_PASSWORD: password
     volumes:
       - ${APP_DATA_DIR}/mysql:/var/lib/mysql
+    networks:
+       default:
+         ipv4_address: $APP_SAMOURAI_DOJO_DB_IP
   
   node:
     image: "louneskmt/dojo-nodejs:1.8.0"
@@ -80,6 +83,9 @@ services:
       INDEXER_BATCH_SUPPORT: inactive # 'active' for ElectrumX, 'inactive' otherwise
     depends_on:
       - db
+    networks:
+       default:
+         ipv4_address: $APP_SAMOURAI_DOJO_NODE_IP
 
   whirlpool:
     image: "louneskmt/dojo-whirlpool:1.2.0"
