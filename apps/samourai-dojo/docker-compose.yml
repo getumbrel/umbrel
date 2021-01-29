@@ -98,7 +98,7 @@ services:
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
         WHIRLPOOL_RESYNC: "off"
-        WHIRLPOOL_DEBUG: "on"
+        WHIRLPOOL_DEBUG: "off"
         WHIRLPOOL_DEBUG_CLIENT: "off"
         NGINX_IP: $APP_SAMOURAI_DOJO_IP
     volumes:
