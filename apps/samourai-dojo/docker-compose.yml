@@ -93,7 +93,7 @@ services:
   whirlpool:
     image: "louneskmt/dojo-whirlpool:1.2.0"
     logging: *default-logging
-    restart: on-error
+    restart: on-failure
     command: /restart.sh
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
