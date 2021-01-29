@@ -8,7 +8,7 @@ x-logging:
 
 services:
   db:
-    image: "louneskmt/dojo-db:1.2.0"
+    image: "mariadb:10.5.8"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
@@ -18,7 +18,10 @@ services:
         MYSQL_USER: samourai
         MYSQL_PASSWORD: password
     volumes:
-      - ${APP_DATA_DIR}/mysql:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
+      - ${APP_DATA_DIR}/mysql/mysql-dojo.cnf:/etc/mysql/conf.d/mysql-dojo.cnf
+      - ${APP_DATA_DIR}/mysql/update-db.sh:/update-db.sh
     networks:
        default:
          ipv4_address: $APP_SAMOURAI_DOJO_DB_IP
