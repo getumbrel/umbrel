@@ -93,7 +93,7 @@ services:
          ipv4_address: $APP_SAMOURAI_DOJO_NODE_IP
 
   whirlpool:
-    image: "louneskmt/dojo-whirlpool:1.2.0"
+    image: "louneskmt/dojo-whirlpool:1.2.1"
     logging: *default-logging
     restart: on-failure
     command: /restart.sh
