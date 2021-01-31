@@ -9,11 +9,13 @@ x-logging:
 services:
   web:
     image: bguillaumat/mempool-frontend:v2.0.1
+    user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
+    command: "./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;'"
     ports:
-      - ${APP_MEMPOOL_PORT}:80
+      - ${APP_MEMPOOL_PORT}:8080
     environment:
       API_IP: $APP_MEMPOOL_API_IP
     networks:
@@ -21,10 +23,13 @@ services:
         ipv4_address: $APP_MEMPOOL_IP
   api:
     image: bguillaumat/mempool-backend:v2.0.1
+    user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     command: "./wait-for-it.sh db:3306 --timeout=720 --strict -- ./start.sh"
+    volumes:
+      - ${APP_DATA_DIR}/data:/backend/cache    
     environment:
       RPC_HOST: $BITCOIN_IP
       RPC_PORT: $BITCOIN_RPC_PORT
@@ -38,15 +43,17 @@ services:
          ipv4_address: $APP_MEMPOOL_API_IP
   db:
     image: bguillaumat/mempool-db:v2.0.1
+    user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    command: --sql-mode="STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
     volumes:
       - ${APP_DATA_DIR}/mysql:/var/lib/mysql
     environment:
+      MYSQL_DATABASE: "mempool"
       MYSQL_USER: "mempool"
       MYSQL_PASSWORD: "mempool"
+      MYSQL_ROOT_PASSWORD: "moneyprintergobrrr"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_DB_IP
