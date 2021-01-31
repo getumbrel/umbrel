@@ -12,6 +12,7 @@ services:
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
+    user: "1000:1000"
     environment:
         MYSQL_DATABASE: samourai-main
         MYSQL_ROOT_PASSWORD: rootpassword
@@ -31,6 +32,7 @@ services:
     logging: *default-logging
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh db:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
+    user: "1000:1000"
     environment: 
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
@@ -95,6 +97,7 @@ services:
     logging: *default-logging
     restart: on-failure
     command: /restart.sh
+    user: "1000:1000"
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
         WHIRLPOOL_RESYNC: "off"
