@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: bguillaumat/mempool-frontend:v2.0.1@sha256:e2ec1fce00a851e1569c580ec6ac66e07c44cf73e0c7bc95aae792b8c6aa0cca
+    image: bguillaumat/mempool-frontend:v2.0.1@sha256:644a09e690cd4813ed2d48cbf66645ba29c00a58d0f2c1ad2f8d46e8d5297053
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
