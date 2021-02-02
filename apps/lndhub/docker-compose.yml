@@ -17,14 +17,13 @@ services:
               ports:
                   - "$APP_LNDHUB_REDIS_PORT:$APP_LNDHUB_REDIS_PORT"
               volumes:
-                  - ${LND_DATA_DIR}:/lnd:ro
                   - ${APP_DATA_DIR}/redis:/data
               networks:
                   default:
                       ipv4_address: $APP_LNDHUB_REDIS_IP
         web:
                 container_name: web
-                image: aarondewes/lndhub:v0.2.1
+                image: aarondewes/lndhub:v0.2.2
                 logging: *default-logging
                 depends_on: [ redis ]
                 restart: on-failure
@@ -33,10 +32,10 @@ services:
                 ports:
                     - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
                 volumes:
-                        - ${PWD}/lnd:/lnd:ro
-                        - ${PWD}/tor/data/app-lndhub/hostname:/lndhub/hostname
+                        - ${LND_DATA_DIR}:/lnd:ro
                 environment:
                     PORT: "${APP_LNDHUB_PORT}"
+                    TOR_URL: "$APP_HIDDEN_SERVICE"
                     LND_CERT_FILE: "/lnd/tls.cert"
                     LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
                     CONFIG: '{ "redis": { "port": $APP_LNDHUB_REDIS_PORT, "host": "$APP_LNDHUB_REDIS_IP", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
