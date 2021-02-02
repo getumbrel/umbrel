@@ -20,7 +20,7 @@ The lack of authentication on the logs page means that, in the correct circumsta
 
 Umbrel currently makes the assumption that the local network is secure. This means local network communication is unencrypted using plain text HTTP. (Remote access via Tor is encrypted)
 
-This is pretty much the industry standard when it comes to locally networked devices. All routers and smart devices that expose a web interface work this way. Bootstrapping a secure connection over an insecure network without being able to rely on certificate authorities is not an easy problem to solve.
+This is pretty much the industry standard when it comes to locally networked devices. All routers and smart devices that expose a web interface work this way. Bootstrapping a secure connection over an insecure network and avoiding MITM attacks without being able to rely on certificate authorities is not an easy problem to solve.
 
 However, we think we can do better and have some interesting ideas on how to make Umbrel safe to run even when the local network is untrusted.
 
