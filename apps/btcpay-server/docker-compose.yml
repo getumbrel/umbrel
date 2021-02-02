@@ -8,7 +8,7 @@ x-logging:
 
 services:
   nbxplorer:
-    image: "nicolasdorier/nbxplorer:2.1.46@sha256:368789f27867c54fc7435424e05a8c8440a4c2355afad237f1845b62c9aa9d1c"
+    image: "nicolasdorier/nbxplorer:2.1.49@sha256:b247343d3127c737ed2ce250e780e52a958241fff1d897a5b6e8cd20fb5f142a"
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -31,7 +31,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.0.6.7@sha256:01a5636fd24841eb382cc2ee9c3387f9ff0c818bd7ef34330008ef0f1d694f2d
+    image: btcpayserver/btcpayserver:1.0.6.8@sha256:10c6acff736b869b731ebb1609c6bd33ecab469b5be4bb5ede8614347466abfc
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
