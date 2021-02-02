@@ -24,6 +24,14 @@ This is pretty much the industry standard when it comes to locally networked dev
 
 However, we think we can do better and have some interesting ideas on how to make Umbrel safe to run even when the local network is untrusted.
 
+**Hardcoded app passwords**
+
+We use hardcoded passwords for apps that support password authentication. These hardcoded passwords aren't providing any actual security, they are there to prevent "annoying sibling" level attackers.
+
+We plan to resolve this by implementing SSO authentication across all apps. We can implement this at the Umbrel level transparently without any modifications required from individual apps.
+
+This means all Umbrel apps exposing a web interface will be protected by your Umbrel dashboard password.
+
 **SSH password of Umbrel OS.**
 
 Umbrel OS's current SSH password is same for all Umbrel OS users. In the future we'll have it automatically change to the user's dashboard password, but for now if a malicious actor is on the same network as your Umbrel node (running Umbrel OS), they could SSH into your node using the publicly available password. For that reason, we recommend advanced users to manually update their SSH password.
