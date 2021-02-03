@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: bguillaumat/mempool-frontend:v2.0.1@sha256:644a09e690cd4813ed2d48cbf66645ba29c00a58d0f2c1ad2f8d46e8d5297053
+    image: mempool/frontend:v2.1.0-rc1
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -17,12 +17,12 @@ services:
     ports:
       - ${APP_MEMPOOL_PORT}:8080
     environment:
-      API_IP: $APP_MEMPOOL_API_IP
+      BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
     networks:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: bguillaumat/mempool-backend:v2.0.1@sha256:23e2265c0feb854e2ac4ecce04da13b4d40fb6cc1e314574b5eb0b061a80b973
+    image: mempool/backend:v2.1.0-rc1
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -38,17 +38,20 @@ services:
       ELECTRS_HOST: $ELECTRUM_IP
       ELECTRS_PORT: $ELECTRUM_PORT
       MYSQL_HOST: $APP_MEMPOOL_DB_IP
+      CACHE_DIR: "/backend/cache/"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
   db:
-    image: bguillaumat/mempool-db:v2.0.1@sha256:59ca93aa31a8898de0a603c6c00077d16e005155238fae8fb26763a88f3a8eb1
+    image: mariadb:10.5.8
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     volumes:
-      - ${APP_DATA_DIR}/mysql:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/mysql-mempool.cnf:/etc/mysql/conf.d/mysql-mempool.cnf
+      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
     environment:
       MYSQL_DATABASE: "mempool"
       MYSQL_USER: "mempool"
