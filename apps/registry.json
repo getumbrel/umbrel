@@ -96,7 +96,7 @@
         "id": "lightning-terminal",
         "category": "Lightning Node Management",
         "name": "Lightning Terminal",
-        "version": "0.3.4-alpha",
+        "version": "0.4.0-alpha",
         "tagline": "The easiest way to manage channel liquidity",
         "description": "Lightning Terminal is the easiest way to manage inbound and outbound liquidity on the Lightning Network. Keep your channels open and the funds flowing. It provides a visual interface for interacting with your channels and balances using Loop. Making the process of managing your funds easier and more intuitive allows you to focus on running your business, not on your liquidity. Loop is the first of several upcoming Terminal features that enable new use cases and open up a new world of possibilities on Lightning.\n\nWhy use Loop?\n\n- Add \"inbound liquidity\" to receive payments\n- Reduce transaction fees by recycling and reusing Lightning channels\n- Send funds to and from users or services that aren't yet Lightning enabled\n- Configurable wait times and \"batching\" allow for further fee savings\n- Refill and offload funds from any number of Lightning channels in a single on-chain transaction\n\nPricing:\n\nLoop Out: 0.05-0.5%\nLoop In: 0.10-1%\nLoop pricing varies based on wait time and on-chain fee conditions.",
         "developer": "Lightning Labs",
