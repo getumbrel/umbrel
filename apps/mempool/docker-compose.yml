@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: mempool/frontend:v2.1.0-rc1
+    image: mempool/frontend:v2.1.0
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -22,7 +22,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.1.0-rc1
+    image: mempool/backend:v2.1.0
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
