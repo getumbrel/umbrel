@@ -13,13 +13,13 @@ services:
     restart: on-failure
     stop_grace_period: 5m
     ports:
-      - "3007:3007"
+      - "$APP_LNBITS_PORT:$APP_LNBITS_PORT"
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Global
-      PORT: 3007
+      PORT: $APP_LNBITS_PORT
       LNBITS_DATA_FOLDER: "/data"
 
       # LND
@@ -36,3 +36,6 @@ services:
       LNBITS_ALLOWED_USERS: ""
       LNBITS_FORCE_HTTPS: "true"
       LNBITS_SERVICE_FEE: "0.0"
+    networks:
+        default:
+          ipv4_address: $APP_LNBITS_IP
