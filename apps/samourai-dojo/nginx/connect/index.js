@@ -1,9 +1,9 @@
 var baseRoute = "";
 
 if(bitcoinNetwork == "testnet") {
-  baseRoute = "v2";
+  baseRoute = "test/v2";
 } else {
-  baseRoute = "test/v2"
+  baseRoute = "v2"
 }
 
 var pairingRequest = `http://node:8080/${baseRoute}/${supportPrefix}/pairing`
