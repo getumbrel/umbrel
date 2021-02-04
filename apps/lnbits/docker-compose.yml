@@ -19,7 +19,7 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Global
-      PORT: 3005
+      PORT: 3007
       LNBITS_DATA_FOLDER: "/data"
 
       # LND
@@ -35,5 +35,3 @@ services:
       LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
       LNBITS_FORCE_HTTPS: "false"
       LNBITS_SERVICE_FEE: "0.0"
-    env_file: 
-      - ${APP_DATA_DIR}/lnbits.conf
