@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: mempool/frontend:v2.1.0@sha256:2305dfeab1ce31853b4af3e3bba9cb8d7a11ce7bc1c5b0bb9f4217c020bd0e47
+    image: mempool/frontend:v2.1.0@sha256:ee952d10f6463bff2de21bcceac8ff8f43ba4a5bba2a1aa39901c8a05761a9b9
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -22,7 +22,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.1.0@sha256:977126b460a0349236c6a88066e3a0616cb6b5ebc185f714cd2ed71dde64b89a
+    image: mempool/backend:v2.1.0@sha256:237270551748a3445ae84d1e4e390ed1610486725bd7e8b561e3b1e10155f575
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
