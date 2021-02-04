@@ -8,11 +8,11 @@ x-logging:
 
 services:
   web:
-    image: apotdevin/thunderhub:v0.12.1@sha256:d78fd60c8eec6fced800c254593e76cb5cd75608a35bdbde7eca5f5f533781b5
+    image: apotdevin/thunderhub:v0.12.5@sha256:0d28566fb11283fea136bcfca090222f80248293b9bf1e9f298164b07e7b30a2
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - "$APP_THUNDERHUB_PORT:$APP_THUNDERHUB_PORT"
     volumes:
@@ -23,6 +23,7 @@ services:
       LOG_LEVEL: "debug"
       ACCOUNT_CONFIG_PATH: "/data/thubConfig.yaml"
       YML_ENV_1: "$LND_IP:$LND_GRPC_PORT"
+      TOR_PROXY_SERVER: "socks://$TOR_PROXY_IP:$TOR_PROXY_PORT"
     networks:
       default:
         ipv4_address: $APP_THUNDERHUB_IP

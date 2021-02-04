@@ -1,4 +1,4 @@
-# Developing apps for Umbrel
+# Umbrel App Framework
 
 If you can code in any language, you already know how to develop an app for Umbrel. There is no restriction on the kind of programming languages, frameworks or databases that you can use. Apps run inside isolated Docker containers, and the only requirement (for now) is that they should have a web-based UI.
 
@@ -107,7 +107,7 @@ services:
     image: <docker-image>:<tag>
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       # Replace <port> with the port that your app's web server
       # is listening inside the Docker container. If you need to
@@ -187,7 +187,7 @@ services:
     image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - 3002:3002
     environment:
@@ -212,7 +212,7 @@ services:
     image: getumbrel/btc-rpc-explorer:v2.0.2
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     ports:
       - 3002:3002
     environment:
@@ -257,8 +257,8 @@ Umbrel development environment ([`umbrel-dev`](https://github.com/getumbrel/umbr
 1\. First, we'll install the `umbrel-dev` CLI and it's dependencies [Virtual Box](https://www.virtualbox.org) and [Vagrant](https://vagrantup.com) on our system. If you use [Homebrew](https://brew.sh) you can do that with just:
 
 ```sh
-brew install lukechilds/tap/umbrel-dev
-brew cask install virtualbox vagrant
+brew install lukechilds/tap/umbrel-dev gnu-sed
+brew install --cask virtualbox vagrant
 ```
 
 2\. Now let's initialize our development environment and boot the VM:
@@ -417,12 +417,6 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 1. **How will users install/uninstall apps?**
 
     Users will install and uninstall the apps via dedicated UI in their dashboard. They will not use the `scripts/app` CLI directly as it's only meant for development use.
-
-1. **If I submit an app, will my PR be merged for sure?**
-
-    For now, we're only accepting app submissions from developers who have received an invitation from us. Over time, we'll allow anyone to submit their app.
-
-    > Need an invite to submit your app? Get in touch with [@mayankchhabra](https://t.me/mayankchhabra) or [@lukechilds](https://t.me/lukechilds) on Telegram.
 
 1. **I need help with something else?**
 
