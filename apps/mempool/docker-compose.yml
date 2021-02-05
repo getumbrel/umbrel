@@ -13,9 +13,9 @@ services:
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    command: "./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;'"
+    command: /bin/sh -c "cp /etc/nginx/nginx.conf /patch/nginx.conf && sed -i 's/8080/${APP_MEMPOOL_PORT}/g' /patch/nginx.conf && ./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;' -c /patch/nginx.conf"
     ports:
-      - ${APP_MEMPOOL_PORT}:8080
+      - ${APP_MEMPOOL_PORT}:${APP_MEMPOOL_PORT}
     environment:
       BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
     networks:
@@ -38,6 +38,9 @@ services:
       ELECTRS_HOST: $ELECTRUM_IP
       ELECTRS_PORT: $ELECTRUM_PORT
       MYSQL_HOST: $APP_MEMPOOL_DB_IP
+      MYSQL_DATABASE: "mempool"
+      MYSQL_USER: "mempool"
+      MYSQL_PASS: "mempool"
       CACHE_DIR: "/backend/cache/"
     networks:
        default:
