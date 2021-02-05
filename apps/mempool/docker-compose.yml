@@ -17,7 +17,7 @@ services:
     ports:
       - ${APP_MEMPOOL_PORT}:8080
     environment:
-      BACKEND_MAINNET_HTTP_HOST: "api"
+      BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
     networks:
       default:
         ipv4_address: $APP_MEMPOOL_IP
@@ -37,8 +37,11 @@ services:
       RPC_PASS: $BITCOIN_RPC_PASS
       ELECTRS_HOST: $ELECTRUM_IP
       ELECTRS_PORT: $ELECTRUM_PORT
-      MYSQL_HOST: "db"
+      MYSQL_HOST: $APP_MEMPOOL_DB_IP
       CACHE_DIR: "/backend/cache/"
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_API_IP
   db:
     image: mariadb:10.5.8
     user: "1000:1000"
@@ -53,3 +56,6 @@ services:
       MYSQL_USER: "mempool"
       MYSQL_PASSWORD: "mempool"
       MYSQL_ROOT_PASSWORD: "moneyprintergobrrr"
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_DB_IP
