@@ -74,6 +74,7 @@ LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
 ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
+APP_GRAFANA_PROMETHEUS_CONF_FILE="./templates/prometheus.yml"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
@@ -83,6 +84,7 @@ ENV_FILE="./templates/.env"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
 [[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
+[[ -f "$APP_GRAFANA_PROMETHEUS_CONF_FILE" ]] && rm -f "$APP_GRAFANA_PROMETHEUS_CONF_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
@@ -91,6 +93,7 @@ ENV_FILE="./templates/.env"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
 [[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
+[[ -f "./templates/prometheus-sample.yml" ]] && cp "./templates/prometheus-sample.yml" "$ENV_FILE"
 
 
 ##########################################################
@@ -143,6 +146,13 @@ APP_BTCPAY_SERVER_IP="10.21.21.19"
 APP_BTCPAY_SERVER_PORT="3003"
 APP_BTCPAY_SERVER_NBXPLORER_IP="10.21.21.20"
 APP_BTCPAY_SERVER_DB_IP="10.21.21.21"
+APP_GRAFANA_NETWORK_IP="10.21.22.0"
+APP_GRAFANA_IP="10.21.22.2"
+APP_GRAFANA_PORT="3005"
+APP_GRAFANA_PROMETHEUS_IP="10.21.22.3"
+APP_GRAFANA_PROMETHEUS_PORT="9090"
+APP_GRAFANA_NODEEXPORTER_IP="10.21.22.4"
+APP_GRAFANA_NODEEXPORTER_PORT="9100"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -244,7 +254,7 @@ if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
 fi
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}" "${APP_GRAFANA_PROMETHEUS_CONF_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
@@ -284,6 +294,13 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-grafana-network-ip>/${APP_GRAFANA_NETWORK_IP}/g" "${template}"
+  sed -i "s/<app-grafana-ip>/${APP_GRAFANA_IP}/g" "${template}"
+  sed -i "s/<app-grafana-port>/${APP_GRAFANA_PORT}/g" "${template}"
+  sed -i "s/<app-grafana-prometheus-ip>/${APP_GRAFANA_PROMETHEUS_IP}/g" "${template}"
+  sed -i "s/<app-grafana-prometheus-port>/${APP_GRAFANA_PROMETHEUS_PORT}/g" "${template}"
+  sed -i "s/<app-grafana-nodeexporter-ip>/${APP_GRAFANA_NODEEXPORTER_IP}/g" "${template}"
+  sed -i "s/<app-grafana-nodeexporter-port>/${APP_GRAFANA_NODEEXPORTER_PORT}/g" "${template}"
 done
 
 
@@ -318,6 +335,7 @@ mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
 mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
+mv -f "$APP_GRAFANA_PROMETHEUS_CONF_FILE" "./apps/grafana/data/prometheus/prometheus.yml"
 
 
 ##########################################################
