@@ -29,8 +29,8 @@ services:
                 depends_on: [ node_exporter ]
                 user: "65534"
                 volumes:
-                        - ${PWD}/data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-                        - ${PWD}/data/prometheus/data/:/prometheus
+                        - ${APP_DATA_DIR}/data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+                        - ${APP_DATA_DIR}/data/prometheus/data/:/prometheus
                 restart: on-failure
                 stop_grace_period: 30s
                 ports:
@@ -45,11 +45,11 @@ services:
                 logging: *default-logging
                 depends_on: [ prometheus, node_exporter ]
                 volumes:
-                         - ${PWD}/data/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-                         - ${PWD}/data/grafana/grafana_provisioning/datasources/:/etc/grafana/provisioning/datasources:ro
-                         - ${PWD}/data/node_exporter.json:/usr/share/grafana/public/dashboards/home.json:ro
-                         - ${PWD}/data/grafana/gettingstarted:/usr/share/grafana/public/gettingstarted:ro
-#                        - ${PWD}/data/grafana_data:/var/lib/grafana
+                         - ${APP_DATA_DIR}/data/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+                         - ${APP_DATA_DIR}/data/grafana/grafana_provisioning/datasources/:/etc/grafana/provisioning/datasources:ro
+                         - ${APP_DATA_DIR}/data/node_exporter.json:/usr/share/grafana/public/dashboards/home.json:ro
+                         - ${APP_DATA_DIR}/data/grafana/gettingstarted:/usr/share/grafana/public/gettingstarted:ro
+#                        - ${APP_DATA_DIR}/data/grafana_data:/var/lib/grafana
                 restart: on-failure
                 stop_grace_period: 30s
                 ports:
