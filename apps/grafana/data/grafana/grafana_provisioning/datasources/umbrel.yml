@@ -1,0 +1,6 @@
+apiVersion: 1
+deleteDatasources: []
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://${APP_GRAFANA_PROMETHEUS_IP}:${APP_GRAFANA_PROMETHEUS_PORT}

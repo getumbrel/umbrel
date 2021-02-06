@@ -1,0 +1,67 @@
+version: '3.7'
+x-logging: &default-logging
+    driver: journald
+    options:
+        tag: "{{.Name}}"
+
+services:
+        node_exporter:
+                container_name: node_exporter
+                image: quay.io/prometheus/node-exporter:latest
+                restart: on-failure
+                logging: *default-logging
+                expose:
+                  - "$APP_GRAFANA_NODEEXPORTER_PORT"
+                command:
+                  - '--path.rootfs=/host'
+                pid: host
+                restart: unless-stopped
+                stop_grace_period: 30s
+                volumes:
+                  - '/:/host:ro,rslave'
+                networks:
+                    default:
+                        ipv4_address: $APP_GRAFANA_NODEEXPORTER_IP
+        prometheus:
+                container_name: prometheus
+                image: prom/prometheus
+                logging: *default-logging
+                depends_on: [ node_exporter ]
+                user: "65534"
+                volumes:
+                        - ${PWD}/data/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+                        - ${PWD}/data/prometheus/data/:/prometheus
+                restart: on-failure
+                stop_grace_period: 30s
+                ports:
+                    - "$APP_GRAFANA_PROMETHEUS_PORT:$APP_GRAFANA_PROMETHEUS_PORT"
+                networks:
+                    default:
+                        ipv4_address: $APP_GRAFANA_PROMETHEUS_IP
+        grafana:
+                container_name: grafana
+                image: grafana/grafana
+                user: "472"
+                logging: *default-logging
+                depends_on: [ prometheus, node_exporter ]
+                volumes:
+                         - ${PWD}/data/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+                         - ${PWD}/data/grafana/grafana_provisioning/datasources/:/etc/grafana/provisioning/datasources:ro
+                         - ${PWD}/data/node_exporter.json:/usr/share/grafana/public/dashboards/home.json:ro
+                         - ${PWD}/data/grafana/gettingstarted:/usr/share/grafana/public/gettingstarted:ro
+#                        - ${PWD}/data/grafana_data:/var/lib/grafana
+                restart: on-failure
+                stop_grace_period: 30s
+                ports:
+                    - "$APP_GRAFANA_PORT:$APP_GRAFANA_PORT"
+                networks:
+                    default:
+                        ipv4_address: $APP_GRAFANA_IP
+
+networks:
+    default:
+      name: umbrel_monitoring_network
+      ipam:
+          driver: default
+          config:
+              - subnet: "$APP_GRAFANA_NETWORK_IP/24"
