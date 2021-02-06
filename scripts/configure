@@ -93,7 +93,7 @@ APP_GRAFANA_PROMETHEUS_CONF_FILE="./templates/prometheus.yml"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
 [[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
-[[ -f "./templates/prometheus-sample.yml" ]] && cp "./templates/prometheus-sample.yml" "$ENV_FILE"
+[[ -f "./templates/prometheus-sample.yml" ]] && cp "./templates/prometheus-sample.yml" "$APP_GRAFANA_PROMETHEUS_CONF_FILE"
 
 
 ##########################################################
