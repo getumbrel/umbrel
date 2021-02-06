@@ -47,7 +47,7 @@ services:
                 volumes:
                          - ${APP_DATA_DIR}/data/grafana/grafana.ini:/etc/grafana/grafana.ini:ro
                          - ${APP_DATA_DIR}/data/grafana/grafana_provisioning/datasources/:/etc/grafana/provisioning/datasources:ro
-                         - ${APP_DATA_DIR}/data/node_exporter.json:/usr/share/grafana/public/dashboards/home.json:ro
+                         - ${APP_DATA_DIR}/data/grafana/node_exporter.json:/usr/share/grafana/public/dashboards/home.json:ro
                          - ${APP_DATA_DIR}/data/grafana/gettingstarted:/usr/share/grafana/public/gettingstarted:ro
 #                        - ${APP_DATA_DIR}/data/grafana_data:/var/lib/grafana
                 restart: on-failure
