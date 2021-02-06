@@ -114,7 +114,7 @@ services:
     image: "nginx:1.19-alpine"
     logging: *default-logging
     restart: always
-    command: /bin/sh -c "envsubst < /var/www/connect/conf.template.js > /var/www/connect/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
+    command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
     volumes:
       - ${APP_DATA_DIR}/nginx/wait-for:/wait-for
       - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf

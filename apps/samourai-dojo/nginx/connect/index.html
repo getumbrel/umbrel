@@ -1,34 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Samourai - Pairing</title>
-</head>
-<body>
-  <div id="pairing">
-    <h1>PAIRING</h1>
-  
-    <div>Pair your wallet to your Dojo and to your Whirlpool with a simple QRCode.</div>
-  
-    <div>
-      <div id="dojo-pairing">
-        <div>DOJO</div>
-        <div id="dojo-hidden-service"></div>
-        <div id="qr-container">
-          <div class="center">Scan this QRCode with your wallet</div>
-          <div id="qr-pairing"></div>
-        </div>
-      </div>
-  
-      <div id="whirlpool-pairing">
-        <div>WHIRLPOOL</div>
-        <div id="dojo-hidden-service"></div>
-      </div>
-    </div>
-  </div>
-</body>
-<script src="conf.js"></script>
-<script src="index.js"></script>
-</html>
+<!doctype html>
 
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Samourai Server</title>
+
+    <link rel="shortcut icon" type="image/jpg" href="img/icon.jpg" />
+
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <section class="container">
+        <div class="app">
+            <img class="app-icon" src="img/icon.jpg" />
+            <div class="app-details">
+                <span class="app-status success">&#9679; Running</span>
+                <h1 class="app-name">Samourai Server</h1>
+            </div>
+        </div>
+        <p class="text-muted">Follow the instructions below to pair Dojo and Whirpool running on your Umbrel to your
+            Samourai Wallet.
+        </p>
+    </section>
+    <hr />
+    <section class="container">
+        <div class="heading">
+            <span class="number">1</span>
+            <h2 class="text">How to connect Dojo</h2>
+        </div>
+        <ol class="steps">
+            <li class="step">Open the Samourai Wallet app on your phone.</li>
+            <li class="step">If you already have an existing wallet on it, send all of your funds to a different wallet
+                that you
+                control and erase your existing wallet from Settings > Wallet > Secure Erase Wallet. If you don’t
+                have a wallet setup, skip this step.</li>
+            <li class="step">Select Mainnet.</li>
+            <li class="step">Tap the 3-dot menu and select “Connect to existing Dojo”.</li>
+            <li class="step">Tap “Connect to existing Dojo” and scan this QR Code:
+                <!-- <div class="qr" id="dojo-qrcode"></div> -->
+                <img class="qr" id="dojo-qrcode" src="" />
+            </li>
+            <li class="step">Tap "Start New Wallet" and finish the wallet creation process.</li>
+            <li class="step">Congratulations! Your Samourai Wallet is now backed by the Dojo server running on your
+                Umbrel. Open
+                Network Options by tapping the WiFi-like icon on the top to verify if “Dojo Full Node” is successfully
+                enabled (it should display a green dot).</li>
+        </ol>
+    </section>
+    <hr />
+    <section class="container">
+        <div class="heading">
+            <span class="number">2</span>
+            <h2 class="text">How to connect Whirpool (desktop)</h2>
+        </div>
+        <ol class="steps">
+            <li class="step">Download and install Whirpool GUI.</li>
+            <li class="step">Select: Advanced: remote CLI.</li>
+            <li class="step">Enter "<b id="whirpool-hidden-service"></b>" (without quotes) in “CLI
+                address”.</li>
+            <li class="step">Tor proxy should now auto enable and set itself to “socks5://127.0.0.1:9050”.</li>
+            <li class="step">Click connect.</li>
+            <li class="step">Click QR code icon and scan the QR code from the Samourai Wallet app.</li>
+        </ol>
+    </section>
+    <hr />
+    <section class="container">
+        <div class="heading">
+            <span class="number">3</span>
+            <h2 class="text">How to connect Whirpool (mobile)</h2>
+        </div>
+        <ol class="steps">
+            <li class="step">Download and install Whirpool GUI.</li>
+            <li class="step">Open the Samourai Wallet app on your phone.</li>
+            <li class="step">Go Settings > Transactions > Experimental > Pair to Whirlpool GUI. It will display a QR
+                code.</li>
+            <li class="step">Open Whirpool GUI on your desktop and scan the QR code displayed on your phone using your
+                webcam.</li>
+            <li class="step">Click “Initialize GUI”.</li>
+            <li class="step">Enter your Samourai Wallet’s passphrase (BIP39 passphrase set in Samourai wallet).</li>
+            <li class="step">Choose a number of mixes for a UTXO.</li>
+            <li class="step">Click “Mix”.</li>
+            <li class="step">Congratulations! Whirpool is now mixing your UTXOs on your Umbrel!</li>
+        </ol>
+    </section>
+    <script src="js/awesome-qr.js"></script>
+    <script src="js/conf.js"></script>
+    <script src="js/script.js"></script>
+</body>
+
+</html>
