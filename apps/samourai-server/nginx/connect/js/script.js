@@ -31,6 +31,6 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
             document.getElementById('dojo-qrcode').src = dataURL;
         });
 
-        document.getElementById('whirpool-hidden-service').innerText = `${whirlpoolHiddenService}:8898`;
+        document.getElementById('whirpool-hidden-service').innerText = `${whirlpoolHiddenService}`;
     });
  });

@@ -1,7 +1,7 @@
 # Database tables
 
 # Copyright © 2019 – Katana Cryptographic Ltd. All Rights Reserved.
- 
+
 
 # Naming conventions
 # 1. Table names are lowercase plural

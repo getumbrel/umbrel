@@ -61,12 +61,12 @@ HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
 HiddenServiceDir /var/lib/tor/app-btcpay-server
 HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 
-# samourai-dojo Hidden Service
-HiddenServiceDir /var/lib/tor/app-samourai-dojo
-HiddenServicePort 80 <app-samourai-dojo-ip>:80
+# samourai-server Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server
+HiddenServicePort 80 <app-samourai-server-ip>:80
 
-# samourai-dojo whirlpool Hidden Service
-HiddenServiceDir /var/lib/tor/app-samourai-dojo-whirlpool
-HiddenServicePort 80 <app-samourai-dojo-whirlpool-ip>:<app-samourai-dojo-whirlpool-port>
+# samourai-server whirlpool Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
+HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
 
 HashedControlPassword <password>
