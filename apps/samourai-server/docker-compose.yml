@@ -122,7 +122,8 @@ services:
       - ${APP_DATA_DIR}/nginx/connect:/var/www/connect
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-        APP_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
+        DOJO_HIDDEN_SERVICE: "blabladojo.onion"
+        WHIRLPOOL_HIDDEN_SERVICE: "blablawhirlpool.onion"
         NODE_PREFIX_SUPPORT: support
         NODE_API_KEY: "00000000000000000000000000000000"
     ports:
