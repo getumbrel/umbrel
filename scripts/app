@@ -111,7 +111,7 @@ update_installed_apps() {
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
   echo "${updated_json}" > "${USER_FILE}"
-  touch "${USER_FILE}.lock"
+  rm "${USER_FILE}.lock"
 }
 
 # Pulls down images for an app and starts it
