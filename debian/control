@@ -1,0 +1,15 @@
+Source: umbrel
+Section: unknown
+Priority: optional
+Maintainer: Mayank Chhabra <hi@mayank.ch>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.5.1
+Homepage: getumbrel.com
+Vcs-Browser: https://github.com/getumbrel/umbrel
+Vcs-Git: https://github.com/getumbrel/umbrel.git
+Rules-Requires-Root: no
+
+Package: umbrel
+Architecture: any
+Depends: ${misc:Depends}, docker.io, python3, python3-pip, jq, rsync, curl
+Description: Become Bitcoin.

@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: umbrel
+Upstream-Contact: getumbrel.com
+Source: github.com/getumbrel/umbrel
+
+Files: *
+Copyright: 2020-2021 Umbrel
+License: CC-BY-NC-ND 4.0
+Umbrel is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+
+You should have received a copy of the license along with this work. If not, see https://creativecommons.org/licenses/by-nc-nd/4.0/.

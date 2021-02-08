@@ -42,3 +42,16 @@ app-data/*
 !logs/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep
+
+# Ignore files of the debian build system
+debhelper-build-stamp
+*.deb
+*.dsc
+*.build
+*.buildinfo
+*.changes
+*.tar.gz
+*.log
+*.substvars
+debian/umbrel
+debian/files

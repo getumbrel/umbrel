@@ -3,6 +3,7 @@
 
 [Unit]
 Description=External Storage Mounter
+Before=umbrel-startup.service
 
 [Service]
 Type=oneshot
