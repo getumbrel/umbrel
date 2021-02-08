@@ -22,14 +22,6 @@ Commands:
 EOF
 }
 
-check_if_not_already_running() {
-  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
-  then
-    return 2
-  fi
-  return 0
-}
-
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
@@ -107,20 +99,20 @@ compose() {
 }
 
 update_installed_apps() {
+    if [[ ! -f "${USER_FILE}.lock" ]]; then
+      echo "The user file is locked, waiting for it to unlock..."
+      while [[ ! -f "${USER_FILE}.lock" ]]; do
+          sleep 1
+      done
+  fi
+  touch "${USER_FILE}.lock"
   local action="${1}"
   local app="${2}"
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
   echo "${updated_json}" > "${USER_FILE}"
+  touch "${USER_FILE}.lock"
 }
-
-# Make sure no other install script is running, if it is, wait for it to exit
-if [[ "$(check_if_not_already_running)" == "2" ]]; then
-    echo "Another instance of the app script is already running, waiting for it to finish..."
-    while [[ "$(check_if_not_already_running)" == "2" ]]; do
-        sleep 1
-    done
-fi
 
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
