@@ -156,6 +156,8 @@ main () {
 
   if is_partition_ext4 "${partition_path}" ; then
     echo "Yes, it is ext4"
+    echo "Checking and fixing the file system"
+    fsck -y "${block_device}"
     mount_partition "${partition_path}"
 
     echo "Checking if device contains an Umbrel install..."
