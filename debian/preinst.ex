@@ -15,10 +15,7 @@ set -e
 
 
 case "$1" in
-    install)
-    pip3 install docker-compose
-    ;;
-    upgrade)
+    install|upgrade)
     ;;
 
     abort-upgrade)

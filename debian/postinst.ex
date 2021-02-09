@@ -20,9 +20,6 @@ set -e
 
 case "$1" in
     configure)
-        /usr/umbrel/scripts/configure
-        systemctl enable umbrel-startup
-        systemctl start umbrel-startup
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

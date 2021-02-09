@@ -10,6 +10,6 @@ Vcs-Git: https://github.com/getumbrel/umbrel.git
 Rules-Requires-Root: no
 
 Package: umbrel
-Architecture: any
-Depends: ${misc:Depends}, docker.io, python3, python3-pip, jq, rsync, curl
+Architecture: all
+Depends: ${misc:Depends}, docker.io, python3, python3-qrcode, jq, rsync, curl, docker-compose
 Description: Become Bitcoin.
