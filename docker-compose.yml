@@ -136,7 +136,6 @@ services:
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
-                depends_on: [ manager ]
                 volumes:
                         - ${PWD}/lnd:/lnd
                         - jwt-public-key:/jwt-public-key
