@@ -99,9 +99,9 @@ compose() {
 }
 
 update_installed_apps() {
-    if [[ ! -f "${USER_FILE}.lock" ]]; then
+    if [[ -f "${USER_FILE}.lock" ]]; then
       echo "The user file is locked, waiting for it to unlock..."
-      while [[ ! -f "${USER_FILE}.lock" ]]; do
+      while [[ -f "${USER_FILE}.lock" ]]; do
           sleep 1
       done
   fi
