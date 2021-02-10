@@ -6,7 +6,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - "$APP_BTC_RPC_EXPLORER_PORT:$APP_BTC_RPC_EXPLORER_PORT"
+      - "$BIND_ADDRESS:$APP_BTC_RPC_EXPLORER_PORT:$APP_BTC_RPC_EXPLORER_PORT"
     environment:
       # Docker requirements
       BTCEXP_HOST: 0.0.0.0

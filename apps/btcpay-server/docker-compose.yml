@@ -31,7 +31,7 @@ services:
     depends_on: [ nbxplorer, postgres ]
     entrypoint: [ "dotnet", "BTCPayServer.dll" ]
     ports:
-        - "$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
+        - "$BIND_ADDRESS:$APP_BTCPAY_SERVER_PORT:$APP_BTCPAY_SERVER_PORT"
     volumes:
         - ${APP_DATA_DIR}/data/btcpay:/data
         - ${APP_DATA_DIR}/data/nbxplorer:/data/.nbxplorer

@@ -7,7 +7,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - "$APP_THUNDERHUB_PORT:$APP_THUNDERHUB_PORT"
+      - "$BIND_ADDRESS:$APP_THUNDERHUB_PORT:$APP_THUNDERHUB_PORT"
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/data

@@ -111,6 +111,7 @@ ENV_FILE="./templates/.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
 
 # Umbrel
+BIND_ADDRESS="${BIND_ADDRESS:-0.0.0.0}"
 NETWORK_IP="10.21.21.0"
 GATEWAY_IP="10.21.21.1"
 NGINX_IP="10.21.21.2"
@@ -313,6 +314,7 @@ fi
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${APPS_TOR_CONF_FILE}" "${APPS_2_TOR_CONF_FILE}" "${APPS_3_TOR_CONF_FILE}" "${UMBREL_TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
+  sed -i "s/<bind-address>/${BIND_ADDRESS}/g" "${template}"
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
