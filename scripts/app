@@ -99,11 +99,11 @@ compose() {
 }
 
 update_installed_apps() {
-    if [[ -f "${USER_FILE}.lock" ]]; then
-      echo "The user file is locked, waiting for it to unlock..."
-      while [[ -f "${USER_FILE}.lock" ]]; do
-          sleep 1
-      done
+  if [[ -f "${USER_FILE}.lock" ]]; then
+    echo "The user file is locked, waiting for it to unlock..."
+    while [[ -f "${USER_FILE}.lock" ]]; do
+      sleep 1
+    done
   fi
   touch "${USER_FILE}.lock"
   local action="${1}"
