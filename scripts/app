@@ -100,21 +100,28 @@ compose() {
 
 update_installed_apps() {
   local lockfile="${USER_FILE}.lock"
-  if (set -o noclobber; echo "$$" > "$lockfile") 2> /dev/null;  then
+  if (set -o noclobber; echo "$$" > "$lockfile") 2> /dev/null; then
+    echo "File locked!" 
+    echo "Waiting for it to be unlocked..."
+    sleep 1
     # This will cause the lock-file to be deleted in case of a
     # premature exit.
     trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
 
-    update_installed_apps_sub $@
+    local action="${1}"
+    local app="${2}"
+    [[ "${action}" == "add" ]] && operator="+" || operator="-"
+    updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
+    echo "${updated_json}" > "${USER_FILE}"
 
     rm -f "$lockfile"
     trap - INT TERM EXIT
-else
-   echo "File locked!" 
-   echo "Waiting for it to be unlocked..."
-   sleep 1
-   update_installed_apps $@
-fi
+  else
+    echo "File locked!" 
+    echo "Waiting for it to be unlocked..."
+    sleep 1
+    update_installed_apps $@
+  fi
 }
 
 update_installed_apps_sub() {
