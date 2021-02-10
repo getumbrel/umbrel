@@ -19,7 +19,7 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
     .then(response => response.json())
     .then(data => {
         var pairingInfo = data;
-        pairingInfo.url = `http://${dojoHiddenService}/${baseRoute}`;
+        pairingInfo.pairing.url = `http://${dojoHiddenService}/${baseRoute}`;
 
         new AwesomeQR.AwesomeQR({
             text: JSON.stringify(pairingInfo),
