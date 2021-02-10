@@ -124,14 +124,6 @@ update_installed_apps() {
   fi
 }
 
-update_installed_apps_sub() {
-  local action="${1}"
-  local app="${2}"
-  [[ "${action}" == "add" ]] && operator="+" || operator="-"
-  updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
-  echo "${updated_json}" > "${USER_FILE}"
-}
-
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
