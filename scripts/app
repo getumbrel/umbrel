@@ -106,6 +106,16 @@ compose() {
   export APP_DATA_DIR="${app_data_dir}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
   export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
+
+  # App specific env vars
+  # Note: Hardcoding app specific env vars is a short term solution. Long term
+  # these values will be registered in an apps manifest and generated dynamically.
+  local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
+  export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
+  export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
+  export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
+
   docker-compose \
     --env-file "${env_file}" \
     --project-name "${app}" \
