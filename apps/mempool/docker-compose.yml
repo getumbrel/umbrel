@@ -8,21 +8,22 @@ x-logging:
 
 services:
   web:
-    image: mempool/frontend:v2.1.0@sha256:ee952d10f6463bff2de21bcceac8ff8f43ba4a5bba2a1aa39901c8a05761a9b9
+    image: mempool/frontend:v2.1.1
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    command: /bin/sh -c "cp /etc/nginx/nginx.conf /patch/nginx.conf && sed -i 's/8080/${APP_MEMPOOL_PORT}/g' /patch/nginx.conf && ./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;' -c /patch/nginx.conf"
+    command: "./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;'"
     ports:
       - ${APP_MEMPOOL_PORT}:${APP_MEMPOOL_PORT}
     environment:
+      FRONTEND_HTTP_PORT: ${APP_MEMPOOL_PORT}
       BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
     networks:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.1.0@sha256:237270551748a3445ae84d1e4e390ed1610486725bd7e8b561e3b1e10155f575
+    image: mempool/backend:v2.1.1
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure

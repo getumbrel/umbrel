@@ -84,24 +84,3 @@ ALTER TABLE `transactions`
 
 ALTER TABLE `statistics`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-
-CREATE TABLE `donations` (
-  `id` int(11) NOT NULL,
-  `added` datetime NOT NULL,
-  `amount` float NOT NULL,
-  `handle` varchar(250) NOT NULL,
-  `order_id` varchar(25) NOT NULL,
-  `imageUrl` varchar(250) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-ALTER TABLE `donations`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `donations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `donations` ADD UNIQUE(`order_id`);
-
-ALTER TABLE `donations` ADD `image` MEDIUMBLOB NULL AFTER `imageUrl`;
-ALTER TABLE `donations` ADD `twitter_id` VARCHAR(250) NULL AFTER `handle`;
