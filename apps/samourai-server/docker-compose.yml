@@ -9,6 +9,7 @@ x-logging:
 services:
   db:
     image: "mariadb:10.5.8"
+    init: true
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
@@ -29,6 +30,7 @@ services:
 
   node:
     image: "louneskmt/dojo-nodejs:1.8.0"
+    init: true
     logging: *default-logging
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh db:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
@@ -92,6 +94,7 @@ services:
 
   whirlpool:
     image: "louneskmt/dojo-whirlpool:1.2.1"
+    init: true
     logging: *default-logging
     restart: on-failure
     command: /restart.sh
@@ -110,6 +113,7 @@ services:
 
   nginx:
     image: "nginx:1.19-alpine"
+    init: true
     logging: *default-logging
     restart: always
     command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
