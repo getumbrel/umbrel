@@ -93,7 +93,7 @@ echo
 # Unlock the user file on each start of Umbrel to avoid issues
 # Normally, the user file shouldn't ever be locked, if it is, something went wrong, but it could still be working
 if [[ -f "${UMBREL_ROOT}/db/user.json.lock" ]]; then
-  echo "WARNING: The user file was locked, Umbrel properly wasn't shut down properly"
+  echo "WARNING: The user file was locked, Umbrel probably wasn't shut down properly"
   rm "${UMBREL_ROOT}/db/user.json.lock"
 fi
 "${UMBREL_ROOT}/scripts/app" start installed
