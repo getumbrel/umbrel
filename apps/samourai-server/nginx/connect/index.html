@@ -41,8 +41,13 @@
             <li class="step">Select Mainnet.</li>
             <li class="step">Tap the 3-dot menu and select “Connect to existing Dojo”.</li>
             <li class="step">Tap “Connect to existing Dojo” and scan this QR Code:
-                <!-- <div class="qr" id="dojo-qrcode"></div> -->
-                <img class="qr" id="dojo-qrcode" src="" />
+              <div class="qr">
+                <div class="samourai-logo">
+                  <img src="img/logo.svg" />
+                </div>
+                <div class="qr-contents"></div>
+              </div>
+
             </li>
             <li class="step">Tap "Start New Wallet" and finish the wallet creation process.</li>
             <li class="step">Congratulations! Your Samourai Wallet is now backed by the Dojo server running on your
@@ -77,7 +82,7 @@
             <li class="step">Congratulations! Whirpool is now mixing your UTXOs on your Umbrel!</li>
         </ol>
     </section>
-    <script src="js/awesome-qr.js"></script>
+    <script src="js/qrcode.min.js"></script>
     <script src="js/conf.js"></script>
     <script src="js/script.js"></script>
 </body>
