@@ -30,7 +30,7 @@ services:
     stop_grace_period: 1m
     command: "./wait-for-it.sh db:3306 --timeout=720 --strict -- ./start.sh"
     volumes:
-      - ${APP_DATA_DIR}/data:/backend/cache    
+      - ${APP_DATA_DIR}/data:/backend/cache
     environment:
       RPC_HOST: $BITCOIN_IP
       RPC_PORT: $BITCOIN_RPC_PORT
