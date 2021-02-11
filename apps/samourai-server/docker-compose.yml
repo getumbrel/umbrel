@@ -115,7 +115,7 @@ services:
     image: "nginx:1.19-alpine"
     init: true
     logging: *default-logging
-    restart: always
+    restart: on-failure
     command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
     volumes:
       - ${APP_DATA_DIR}/nginx/wait-for:/wait-for
