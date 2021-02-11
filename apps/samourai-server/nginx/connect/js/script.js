@@ -25,9 +25,8 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
           content: JSON.stringify(pairingInfo),
           container: "svg-viewbox",
           padding: 0,
-          color: "rgba(0,0,0,0.7)",
-          // color: "rgba(0,0,0,1)",
-          background: "rgba(0,0,0,0)",
+          color: "#000",
+          background: "#fff",
           ecl: "M",
         }).svg();
         document.querySelector('.qr-contents').innerHTML = qrcodeSvg;

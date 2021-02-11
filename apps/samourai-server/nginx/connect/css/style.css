@@ -31,6 +31,10 @@ hr {
     margin: auto;
 }
 
+.app-icon {
+    border-radius: 20px;
+}
+
 .app {
     display: flex;
     margin: 20px 0 40px 0;
@@ -40,7 +44,6 @@ hr {
     flex-shrink: 0;
     height: 140px;
     width: 140px;
-    border-radius: 20px;
     box-shadow: 0 0 40px 0 rgba(0,0,0,0.95);
     margin-right: 24px;
 }
@@ -96,25 +99,23 @@ hr {
 
 .qr {
     margin-top: 20px;
-    margin-left: 12px;
     position: relative;
     width: 300px;
     height: 300px;
+    border: 8px solid #fff;
 }
-.qr .samourai-logo,
+.qr .app-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    border: 2px solid black;
+}
+
 .qr .qr-contents {
     position: absolute;
     width: 100%;
     height: 100%;
-}
-
-.qr .samourai-logo {
-    outline: 12px solid white;
-    background: #C12525;
-}
-.qr .samourai-logo img {
-    position: absolute;
-    top: 18px;
-    width: 300px;
-    height: 300px;
 }
