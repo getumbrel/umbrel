@@ -61,4 +61,8 @@ HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
 HiddenServiceDir /var/lib/tor/app-btcpay-server
 HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 
+# mempool Hidden Service
+HiddenServiceDir /var/lib/tor/app-mempool
+HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
+
 HashedControlPassword <password>
