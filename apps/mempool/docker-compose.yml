@@ -10,6 +10,7 @@ services:
   web:
     image: mempool/frontend:v2.1.1@sha256:17e7fedcd27b6f99de2f159f0f6372b76dd5825f1a98c1b0114ea9564cab1c0e
     user: "1000:1000"
+    init: true
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
@@ -25,6 +26,7 @@ services:
   api:
     image: mempool/backend:v2.1.1@sha256:c15c3d1af0f9df4672f3760b0ff9b79d1dd60235cde7316a7860b1d650b31360
     user: "1000:1000"
+    init: true
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
