@@ -319,6 +319,18 @@ mv -f "$TOR_CONF_FILE" "./tor/torrc"
 mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
+##########################################################
+######### Generate hidden services on first run ##########
+##########################################################
+
+# Prevents CORS issue if hidden service doesn't exist 
+# on the first run
+if [[ ! -f "${STATUS_DIR}/configured" ]]; then
+  echo "Generating hidden services..."
+  echo
+  docker-compose up --detach tor
+  docker-compose down
+fi
 
 ##########################################################
 ################ Configuration complete ##################
