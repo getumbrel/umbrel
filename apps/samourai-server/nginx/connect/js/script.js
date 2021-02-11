@@ -23,10 +23,11 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
 
         const qrcodeSvg = new QRCode({
           content: JSON.stringify(pairingInfo),
+          join: true,
           container: "svg-viewbox",
-          padding: 0,
-          color: "#000",
-          background: "#fff",
+          padding: 3,
+          color: "#000000",
+          background: "#ffffff",
           ecl: "M",
         }).svg();
         document.querySelector('.qr-contents').innerHTML = qrcodeSvg;
