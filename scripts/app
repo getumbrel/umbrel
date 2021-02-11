@@ -99,9 +99,8 @@ compose() {
 }
 
 update_installed_apps() {
-  until (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null
-  do
-    echo "File locked!" 
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "File locked!"
     echo "Waiting for it to be unlocked..."
     sleep 1
   done
