@@ -18,7 +18,7 @@ services:
     ports:
       - ${APP_MEMPOOL_PORT}:${APP_MEMPOOL_PORT}
     environment:
-      FRONTEND_HTTP_PORT: ${APP_MEMPOOL_PORT}
+      FRONTEND_HTTP_PORT: $APP_MEMPOOL_PORT
       BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
     networks:
       default:
