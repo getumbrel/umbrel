@@ -32,6 +32,6 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
         }).svg();
         document.querySelector('.qr-contents').innerHTML = qrcodeSvg;
 
-        document.getElementById('whirpool-hidden-service').innerText = `${whirlpoolHiddenService}`;
+        document.getElementById('whirlpool-hidden-service').innerText = `${whirlpoolHiddenService}`;
     });
  });
