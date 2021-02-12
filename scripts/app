@@ -127,9 +127,20 @@ compose() {
 update_installed_apps() {
   local action="${1}"
   local app="${2}"
+
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "Waiting for JSON lock to be released for ${app} update..."
+    sleep 1
+  done
+  # This will cause the lock-file to be deleted in case of a
+  # premature exit.
+  trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
   echo "${updated_json}" > "${USER_FILE}"
+
+  rm -f "${USER_FILE}.lock"
 }
 
 # Pulls down images for an app and starts it
