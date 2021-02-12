@@ -8,7 +8,7 @@ x-logging:
 
 services:
   db:
-    image: "mariadb:10.5.8"
+    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
     init: true
     logging: *default-logging
     restart: on-failure
@@ -29,7 +29,7 @@ services:
          ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: "louneskmt/dojo-nodejs:1.8.0"
+    image: louneskmt/dojo-nodejs:1.8.0@sha256:6643de76267e3a2cfd4f6d593d560a8dd001a54a7e5f9cc8df77d4cab5f1e1bf
     init: true
     logging: *default-logging
     restart: on-failure
@@ -93,7 +93,7 @@ services:
          ipv4_address: $APP_SAMOURAI_SERVER_NODE_IP
 
   whirlpool:
-    image: "louneskmt/dojo-whirlpool:1.2.1"
+    image: louneskmt/dojo-whirlpool:1.2.1@sha256:8674bca0d901e8d65d49e5cf38c597c37bf1d99168114a58b63b242dd1b38d05
     init: true
     logging: *default-logging
     restart: on-failure
@@ -112,7 +112,7 @@ services:
          ipv4_address: $APP_SAMOURAI_SERVER_WHIRLPOOL_IP
 
   nginx:
-    image: "nginx:1.19-alpine"
+    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
     init: true
     logging: *default-logging
     restart: on-failure
