@@ -101,7 +101,7 @@ services:
     user: "1000:1000"
     environment:
         COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-        WHIRLPOOL_RESYNC: "off"
+        WHIRLPOOL_RESYNC: "on"
         WHIRLPOOL_DEBUG: "off"
         WHIRLPOOL_DEBUG_CLIENT: "off"
         NGINX_IP: $APP_SAMOURAI_SERVER_IP
