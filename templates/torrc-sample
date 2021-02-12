@@ -65,4 +65,12 @@ HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 HiddenServiceDir /var/lib/tor/app-mempool
 HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
 
+# samourai-server Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server
+HiddenServicePort 80 <app-samourai-server-ip>:80
+
+# samourai-server whirlpool Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
+HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
+
 HashedControlPassword <password>
