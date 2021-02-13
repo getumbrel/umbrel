@@ -296,10 +296,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
-<<<<<<< HEAD
   sed -i "s/<app-lnbits-ip>/${APP_LNBITS_IP}/g" "${template}"
   sed -i "s/<app-lnbits-port>/${APP_LNBITS_PORT}/g" "${template}"
-=======
   sed -i "s/<app-mempool-ip>/${APP_MEMPOOL_IP}/g" "${template}"
   sed -i "s/<app-mempool-port>/${APP_MEMPOOL_PORT}/g" "${template}"
   sed -i "s/<app-mempool-db-ip>/${APP_MEMPOOL_DB_IP}/g" "${template}"
@@ -310,7 +308,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-samourai-server-whirlpool-port>/${APP_SAMOURAI_SERVER_WHIRLPOOL_PORT}/g" "${template}"
   sed -i "s/<app-samourai-server-db-ip>/${APP_SAMOURAI_SERVER_DB_IP}/g" "${template}"
   sed -i "s/<app-samourai-server-node-ip>/${APP_SAMOURAI_SERVER_NODE_IP}/g" "${template}"
->>>>>>> master
 done
 
 
