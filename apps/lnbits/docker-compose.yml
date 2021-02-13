@@ -9,6 +9,7 @@ x-logging:
 services:
   web:
     image: louneskmt/lnbits:v0.2.0
+    init: true
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
