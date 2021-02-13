@@ -37,8 +37,15 @@ list_installed_apps() {
 
 # Deterministically derives 128 bits of cryptographically secure entropy
 derive_entropy () {
+  # Make sure we use the seed from the real Umbrel installation if this is
+  # an OTA update.
+  SEED_FILE="${UMBREL_ROOT}/db/umbrel-seed/seed"
+  if [[ ! -f "${SEED_FILE}" ]] && [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
+    SEED_FILE="${UMBREL_ROOT}/../db/umbrel-seed/seed"
+  fi
+
   identifier="${1}"
-  umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed") || true
+  umbrel_seed=$(cat "${SEED_FILE}") || true
 
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     >&2 echo "Missing derivation parameter, this is unsafe, exiting."
