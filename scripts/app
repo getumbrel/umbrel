@@ -40,7 +40,7 @@ derive_entropy () {
   # Make sure we use the seed from the real Umbrel installation if this is
   # an OTA update.
   SEED_FILE="${UMBREL_ROOT}/db/umbrel-seed/seed"
-  if [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
+  if [[ ! -f "${SEED_FILE}" ]] && [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
     SEED_FILE="${UMBREL_ROOT}/../db/umbrel-seed/seed"
   fi
 
