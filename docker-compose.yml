@@ -7,7 +7,7 @@ x-logging: &default-logging
 services:
         tor:
                 container_name: tor
-                image: getumbrel/tor:v0.4.1.9
+                image: lncm/tor:0.4.4.7
                 user: toruser
                 restart: on-failure
                 logging: *default-logging
