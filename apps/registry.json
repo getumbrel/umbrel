@@ -94,6 +94,29 @@
         "defaultPassword": ""
     },
     {
+        "id": "sphinx-relay",
+        "category": "Messaging",
+        "name": "Sphinx Relay",
+        "version": "1.3.8",
+        "tagline": "Chat and pay over the Lightning Network",
+        "description": "Sphinx Relay turns your Lightning node into a personal communication server. Messages are end-to-end encrypted and transmitted over the Bitcoin Lightning Network. Download Sphinx on your phone from https://sphinx.chat and pair it with Sphinx Relay on Umbrel.\n\nCommunication between Sphinx Relay nodes takes place entirely on the Lightning Network, so it is decentralized, untraceable, and encrypted. Messages are encrypted using client public keys on the Sphinx app.\n\nYou can join tribes at https://tribes.sphinx.chat. If you join a podcast tribe, you can listen to the podcast in Sphinx and stream donations to the host.",
+        "developer": "Stakwork",
+        "website": "https://sphinx.chat",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/stakwork/sphinx-relay",
+        "support": "https://t.me/joinchat/Fb4OcRo4LrRD6NXfsNdeeQ",
+        "port": 3300,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/connect",
+        "defaultPassword": ""
+    },
+    {
         "id": "ride-the-lightning",
         "category": "Lightning Node Management",
         "name": "Ride The Lightning",
@@ -163,26 +186,26 @@
         "defaultPassword": "moneyprintergobrrr"
     },
     {
-        "id": "sphinx-relay",
-        "category": "Messaging",
-        "name": "Sphinx Relay",
-        "version": "1.3.8",
-        "tagline": "Chat and pay over the Lightning Network",
-        "description": "Sphinx Relay turns your Lightning node into a personal communication server. Messages are end-to-end encrypted and transmitted over the Bitcoin Lightning Network. Download Sphinx on your phone from https://sphinx.chat and pair it with Sphinx Relay on Umbrel.\n\nCommunication between Sphinx Relay nodes takes place entirely on the Lightning Network, so it is decentralized, untraceable, and encrypted. Messages are encrypted using client public keys on the Sphinx app.\n\nYou can join tribes at https://tribes.sphinx.chat. If you join a podcast tribe, you can listen to the podcast in Sphinx and stream donations to the host.",
-        "developer": "Stakwork",
-        "website": "https://sphinx.chat",
+        "id": "lnbits",
+        "category": "Lightning Node Management",
+        "name": "LNbits",
+        "version": "0.2.0",
+        "tagline": "Multi-user wallet management system",
+        "description": "LNbits is a simple multi-user and account system for Lightning Network that can be used for creating separate Lightning wallets for friends and family members. You can also create multiple accounts for yourself to mitigate the risk of exposing applications to your full balance via unique API keys for each wallet.\n\nLNbits is packaged with tools to help manage funds, such as a table of transactions, line chart of spending, export to CSV, and more to come. It provides an extendable platform for expanding Lightning Network functionality via LNbits extension framework, and can also be used as a fallback wallet for the LNURL scheme.",
+        "developer": "LNbits",
+        "website": "https://lnbits.org",
         "dependencies": [
             "lnd"
         ],
-        "repo": "https://github.com/stakwork/sphinx-relay",
-        "support": "https://t.me/joinchat/Fb4OcRo4LrRD6NXfsNdeeQ",
-        "port": 3300,
+        "repo": "https://github.com/lnbits/lnbits",
+        "support": "https://github.com/lnbits/lnbits/issues/new",
+        "port": 3007,
         "gallery": [
             "1.jpg",
             "2.jpg",
             "3.jpg"
         ],
-        "path": "/connect",
+        "path": "",
         "defaultPassword": ""
     },
     {
