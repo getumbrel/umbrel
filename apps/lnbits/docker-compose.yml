@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: louneskmt/lnbits:v0.2.0
+    image: louneskmt/lnbits:v0.2.0@sha256:15e10d926d4b14774c7b2cc74f722e887ec198f1f1e7d35ee66a517e297ae064
     init: true
     logging: *default-logging
     restart: on-failure
