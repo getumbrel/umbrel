@@ -33,9 +33,6 @@ services:
       # App
       LNBITS_SITE_TITLE: "LNbits - Umbrel"
       LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
-      LNBITS_ALLOWED_USERS: ""
-      LNBITS_FORCE_HTTPS: "true"
-      LNBITS_SERVICE_FEE: "0.0"
     networks:
         default:
           ipv4_address: $APP_LNBITS_IP
