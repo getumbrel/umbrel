@@ -1,0 +1,38 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: louneskmt/lnbits:v0.2.0@sha256:15e10d926d4b14774c7b2cc74f722e887ec198f1f1e7d35ee66a517e297ae064
+    init: true
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_LNBITS_PORT:$APP_LNBITS_PORT"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      # Global
+      PORT: $APP_LNBITS_PORT
+      LNBITS_DATA_FOLDER: "/data"
+
+      # LND
+      LNBITS_BACKEND_WALLET_CLASS: LndWallet
+      LND_GRPC_ENDPOINT: $LND_IP
+      LND_GRPC_PORT: $LND_GRPC_PORT
+      LND_GRPC_CERT: "/lnd/tls.cert"
+      LND_GRPC_MACAROON: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+
+      # App
+      LNBITS_SITE_TITLE: "LNbits - Umbrel"
+      LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
+    networks:
+        default:
+          ipv4_address: $APP_LNBITS_IP
