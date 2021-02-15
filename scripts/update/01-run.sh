@@ -60,6 +60,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     if ! command -v unattended-upgrade &> /dev/null; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
+    # Disable auto updates
+    echo unattended-upgrades unattended-upgrades/enable_auto_updates boolean false | debconf-set-selections
+    dpkg-reconfigure -f noninteractive unattended-upgrades
+    # Let current updates stop
+    sleep 10
     # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
     # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
