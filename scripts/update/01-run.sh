@@ -60,16 +60,10 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     if ! command -v unattended-upgrade &> /dev/null; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
-    # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
-    # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 30, "description": "Installing security updates", "updateTo": "$RELEASE"}
-EOF
-    unattended-upgrade -d
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 35, "description": "Configuring settings", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
 EOF
 
 # Checkout to the new release
