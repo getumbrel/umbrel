@@ -1,6 +1,6 @@
 {
-    "version": "0.3.3",
-    "name": "Umbrel v0.3.3",
+    "version": "0.3.4",
+    "name": "Umbrel v0.3.4",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.3 is here with 3 brand new apps in the Umbrel App Store — Samourai Server (Dojo + Whirlpool), Mempool, LNbits —  a totally redesigned wallet connector, Lightning Pool, Bitcoin Core v0.21.0, and more.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel v0.3.4 fixes a minor bug in v0.3.3 that was causing the update process to fail for some users.\n\nHere's what new in Umbrel v0.3.3:\n\nUmbrel v0.3.3 is here with 3 brand new apps in the Umbrel App Store — Samourai Server (Dojo + Whirlpool), Mempool, LNbits —  a totally redesigned wallet connector, Lightning Pool, Bitcoin Core v0.21.0, and more.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
 }
