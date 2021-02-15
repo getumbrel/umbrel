@@ -54,9 +54,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
         echo "Skipping updating on SD Card..."
     fi
-    
-    # Update apt packages on update
-    # Remember, the apt package is called unattended-updates, the command is unattended-update
+
+    # Install unattended-updates for automatic security updates
+    # The binary is unattended-upgrade, the package is unattended-upgrades
     if ! command -v unattended-upgrade &> /dev/null; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
