@@ -63,8 +63,22 @@ hr {
     margin: 10px 0 0 0;
 }
 
+.maintenance-tools a {
+  display: inline-block;
+  background: #C12525;
+  padding: 0.6em 0.8em;
+  border-radius: 5px;
+  text-decoration: none;
+  box-shadow: 0 0 20px 0 rgba(0,0,0,0.8);
+  margin-bottom: 1em;
+}
+
 .heading {
     display: flex;
+}
+
+.maintenance-tools #dojo-admin-key {
+  font-size: 12px;
 }
 
 .heading > .number {
