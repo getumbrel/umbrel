@@ -32,9 +32,9 @@
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
-# function to upload the output to hastebin
-# Source: https://github.com/seejohnrun/haste-client#lightweight-alternative
-haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
+# function to upload the output to our paste server
+# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
+haste() { a=$(cat); curl -X POST -s -d "$a" https://umbrel-paste.vercel.app/documents | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'; }
 
 echo "====================="
 echo "= Umbrel debug info ="
