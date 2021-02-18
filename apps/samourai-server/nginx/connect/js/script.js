@@ -1,3 +1,5 @@
+document.getElementById('dojo-admin-key').innerText = dojoAdminKey;
+
 var baseRoute = bitcoinNetwork == "testnet" ? "test/v2" : "v2";
 
 fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
@@ -5,7 +7,7 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
     headers: new Headers({
       'Content-Type': 'application/x-www-form-urlencoded'
     }),
-    body: `apikey=${apiKey}`
+    body: `apikey=${dojoAdminKey}`
  })
  .then(response => response.json())
  .then(data => {
