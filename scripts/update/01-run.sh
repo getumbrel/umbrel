@@ -54,22 +54,16 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
         echo "Skipping updating on SD Card..."
     fi
-    
-    # Update apt packages on update
-    # Remember, the apt package is called unattended-updates, the command is unattended-update
+
+    # Install unattended-updates for automatic security updates
+    # The binary is unattended-upgrade, the package is unattended-upgrades
     if ! command -v unattended-upgrade &> /dev/null; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
-    # Manual run of the update (Normally for debugging purposes only, but we don't want to have a potential backdoor in Umbrel)
-    # https://wiki.debian.org/UnattendedUpgrades#Manual_run_.28for_debugging.29
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 30, "description": "Installing security updates", "updateTo": "$RELEASE"}
-EOF
-    unattended-upgrade -d
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 35, "description": "Configuring settings", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
 EOF
 
 # Checkout to the new release
