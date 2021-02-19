@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: lnbitsdocker/lnbits:042052e@sha256:7e1ad25eb41347f834164cf49bfe235ab66e2738868c6d4a9f065dc7287031a2
+    image: louneskmt/lnbits:8188ae0@sha256:191b1696e8a532dfd94f982cd8249e7896dfd69c25fbe0a8437b0d08795670ef
     init: true
     logging: *default-logging
     restart: on-failure
