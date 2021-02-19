@@ -157,7 +157,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         if [[ "${1}" == "--upload" ]]; then
             echo "You can also share these links instead:"
             ./scripts/debug | sed '/onion/d' | upload
-            dmesg | haste
+            dmesg | upload
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
