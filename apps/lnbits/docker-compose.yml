@@ -8,7 +8,8 @@ x-logging:
 
 services:
   web:
-    image: louneskmt/lnbits:v0.2.0@sha256:15e10d926d4b14774c7b2cc74f722e887ec198f1f1e7d35ee66a517e297ae064
+    image: louneskmt/lnbits:8188ae0@sha256:191b1696e8a532dfd94f982cd8249e7896dfd69c25fbe0a8437b0d08795670ef
+    user: 1000:1000
     init: true
     logging: *default-logging
     restart: on-failure
@@ -20,7 +21,7 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Global
-      PORT: $APP_LNBITS_PORT
+      LNBITS_BIND: "0.0.0.0:$APP_LNBITS_PORT"
       LNBITS_DATA_FOLDER: "/data"
 
       # LND
