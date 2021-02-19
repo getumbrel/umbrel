@@ -33,6 +33,7 @@ services:
       # App
       LNBITS_SITE_TITLE: "LNbits - Umbrel"
       LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
+      LNBITS_DISABLED_EXTENSIONS: "amilk"
     networks:
         default:
           ipv4_address: $APP_LNBITS_IP
