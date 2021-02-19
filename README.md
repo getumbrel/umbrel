@@ -70,7 +70,7 @@ sudo ./scripts/stop
 - [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
 - [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
 - [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
-- [`Bitcoin Core`](https://github.com/lncm/docker-bitcoind/)
+- [`Bitcoin Core`](https://github.com/lncm/docker-bitcoind)
 - [`LND`](https://github.com/lncm/docker-lnd)
 - [`Tor`](https://github.com/lncm/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
