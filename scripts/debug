@@ -163,7 +163,10 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
             echo "You can also share this link instead:"
             ./scripts/debug | sed '/onion/d' | haste
             dmesg -T | haste
+<<<<<<< HEAD
 >>>>>>> Update debug
+=======
+>>>>>>> 49f0936016e0d75c8cb0f7444bbdec584dcaab0e
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
@@ -182,13 +185,8 @@ if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-<<<<<<< HEAD
     ./scripts/debug | sed '/onion/d' | upload
-    dmesg | upload
-=======
-    ./scripts/debug | sed '/onion/d' | haste
-    dmesg -T | haste
->>>>>>> Update debug
+    dmesg -T | upload
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
