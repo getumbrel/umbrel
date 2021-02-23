@@ -38,7 +38,7 @@ fi
 
 # Configure Umbrel if it isn't already configured
 if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
-  NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
+  UMBREL_LISTEN_PORT=${UMBREL_LISTEN_PORT:-80} NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
 fi
 
 echo

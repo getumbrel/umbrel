@@ -30,7 +30,7 @@ services:
                 restart: on-failure
                 stop_grace_period: 30s
                 ports:
-                    - "80:80"
+                    - "${UMBREL_LISTEN_PORT:-80}:80"
                 networks:
                     default:
                         ipv4_address: $NGINX_IP
