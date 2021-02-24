@@ -235,8 +235,8 @@
     },
     {
         "id": "lndhub",
-        "category": "Lightning Node Management",
-        "name": "LndHub",
+        "category": "Wallet Servers",
+        "name": "BlueWallet Server",
         "version": "1.3.0",
         "tagline": "Connect a BlueWallet to your Umbrel",
         "description": "Wrapper for Lightning Network Daemon. It provides separate accounts and trust minimization for end users.",
