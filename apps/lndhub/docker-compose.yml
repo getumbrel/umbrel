@@ -9,7 +9,7 @@ x-logging:
 services:
         redis:
               container_name: redis
-              image: redis:6.0-alpine
+              image: redis:6.2-alpine
               command: redis-server --requirepass moneyprintergobrrr
               restart: on-failure
               stop_grace_period: 5m
