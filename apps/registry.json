@@ -232,5 +232,28 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "lndhub",
+        "category": "Lightning Node Management",
+        "name": "LndHub",
+        "version": "1.3.0",
+        "tagline": "Connect a BlueWallet to your Umbrel",
+        "description": "Wrapper for Lightning Network Daemon. It provides separate accounts and trust minimization for end users.",
+        "developer": "BlueWallet",
+        "website": "https://lndhub.io",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/BlueWallet/LndHub",
+        "support": "https://t.me/bluewallet",
+        "port": 3008,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
     }
 ]
