@@ -1,0 +1,44 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+        redis:
+              container_name: redis
+              image: redis:6.0-alpine
+              command: redis-server --requirepass moneyprintergobrrr
+              restart: on-failure
+              stop_grace_period: 5m
+              stop_signal: SIGINT
+              ports:
+                  - "$APP_LNDHUB_REDIS_PORT:$APP_LNDHUB_REDIS_PORT"
+              volumes:
+                  - ${APP_DATA_DIR}/redis:/data
+              networks:
+                  default:
+                      ipv4_address: $APP_LNDHUB_REDIS_IP
+        web:
+                container_name: web
+                image: bluewalletorganization/lndhub:v1.3.0
+                logging: *default-logging
+                depends_on: [ redis ]
+                restart: on-failure
+                stop_grace_period: 5m30s
+                stop_signal: SIGINT
+                ports:
+                    - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
+                volumes:
+                        - ${LND_DATA_DIR}:/lnd:ro
+                environment:
+                    PORT: "${APP_LNDHUB_PORT}"
+                    TOR_URL: "$APP_HIDDEN_SERVICE"
+                    LND_CERT_FILE: "/lnd/tls.cert"
+                    LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
+                    CONFIG: '{ "redis": { "port": $APP_LNDHUB_REDIS_PORT, "host": "$APP_LNDHUB_REDIS_IP", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
+                networks:
+                     default:
+                        ipv4_address: $APP_LNDHUB_IP
