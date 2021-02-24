@@ -67,9 +67,9 @@ sudo NETWORK=regtest ./scripts/start
 sudo NGINX_PORT=12345 ./scripts/start
 ```
 
-If you host Umbrel on a VPS (while it is **not recommended** as Umbrel is designed to be run on a secure local network), set the `BIND_ADDRESS` environment variable to `127.0.0.1`:
+If you host Umbrel on a VPS (while it is **not recommended** as Umbrel is designed to be run on a secure local network), set the `UMBREL_BIND_ADDRESS` environment variable to `127.0.0.1`:
 ```
-sudo BIND_ADDRESS=127.0.0.1 ./scripts/start
+sudo UMBREL_BIND_ADDRESS=127.0.0.1 ./scripts/start
 ```
 
 To stop Umbrel, run:
