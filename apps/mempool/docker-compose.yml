@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: mempool/frontend:v2.1.1@sha256:17e7fedcd27b6f99de2f159f0f6372b76dd5825f1a98c1b0114ea9564cab1c0e
+    image: mempool/frontend:v2.1.2@sha256:69fefe55dc1eb4c8373c32d57362df7eeb672fc591d55033d68ae79355274dcc
     user: "1000:1000"
     init: true
     logging: *default-logging
@@ -24,7 +24,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.1.1@sha256:c15c3d1af0f9df4672f3760b0ff9b79d1dd60235cde7316a7860b1d650b31360
+    image: mempool/backend:v2.1.2@sha256:58394cb35aad82b95ab2496fd4a6d3c983a712a1003454d94b0a53197d306f6d
     user: "1000:1000"
     init: true
     logging: *default-logging
@@ -44,7 +44,7 @@ services:
       MYSQL_DATABASE: "mempool"
       MYSQL_USER: "mempool"
       MYSQL_PASS: "mempool"
-      CACHE_DIR: "/backend/cache/"
+      CACHE_DIR: "/backend/cache"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
