@@ -239,7 +239,7 @@
         "name": "BlueWallet Server",
         "version": "1.3.0",
         "tagline": "Connect a BlueWallet to your Umbrel",
-        "description": "Wrapper for Lightning Network Daemon. It provides separate accounts and trust minimization for end users.",
+        "description": "Wrapper for Lightning Network Daemon. It provides separate accounts and trust minimization for end users. Onboard your family and friends to Lightning powered by your own node!",
         "developer": "BlueWallet",
         "website": "https://lndhub.io",
         "dependencies": [
