@@ -14,8 +14,6 @@ services:
               restart: on-failure
               stop_grace_period: 5m
               stop_signal: SIGINT
-              ports:
-                  - "$APP_LNDHUB_REDIS_PORT:$APP_LNDHUB_REDIS_PORT"
               volumes:
                   - ${APP_DATA_DIR}/redis:/data
               networks:
