@@ -34,7 +34,7 @@
 
 # function to upload the output to our paste server
 # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
-upload() { curl -H "Content-Type: text/plain" -X POST -s --data-binary @- https://umbrel-paste.vercel.app/documents | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'; }
+upload() { curl --header "Content-Type: text/plain" --request POST --silent --data-binary @- https://umbrel-paste.vercel.app/documents | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'; }
 
 echo "====================="
 echo "= Umbrel debug info ="
