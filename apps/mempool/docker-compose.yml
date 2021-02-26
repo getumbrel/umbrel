@@ -14,7 +14,7 @@ services:
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    command: "./wait-for db:3306 --timeout=720 -- nginx -g 'daemon off;'"
+    command: "./wait-for mariadb:3306 --timeout=720 -- nginx -g 'daemon off;'"
     ports:
       - ${APP_MEMPOOL_PORT}:${APP_MEMPOOL_PORT}
     environment:
@@ -30,7 +30,7 @@ services:
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
-    command: "./wait-for-it.sh db:3306 --timeout=720 --strict -- ./start.sh"
+    command: "./wait-for-it.sh mariadb:3306 --timeout=720 --strict -- ./start.sh"
     volumes:
       - ${APP_DATA_DIR}/data:/backend/cache
     environment:
