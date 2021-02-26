@@ -48,7 +48,7 @@ services:
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
-  db:
+  mariadb:
     image: mariadb:10.5.8
     user: "1000:1000"
     logging: *default-logging
