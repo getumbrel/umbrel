@@ -63,7 +63,7 @@ sudo NETWORK=testnet ./scripts/start
 sudo NETWORK=regtest ./scripts/start
 
 # For umbrel to listen on port 12345 instead of 80, run:
-sudo UMBREL_LISTEN_PORT=12345 ./scripts/start
+sudo NGINX_PORT=12345 ./scripts/start
 ```
 
 To stop Umbrel, run:
