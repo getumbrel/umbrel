@@ -14,6 +14,12 @@ check_if_not_already_running() {
   fi
 }
 
+get_uas_string () {
+  ID_VENDOR=$(udevadm test /block/${block_device} | grep "ID_VENDOR_ID" | sed 's/ID_VENDOR_ID=//')
+  ID_MODEL=$(udevadm test /block/${block_device} | grep "ID_MODEL_ID" | sed 's/ID_MODEL_ID=//')
+  echo "${ID_VENDOR}:${ID_MODEL}:u"
+}
+
 main () {
   check_if_not_already_running
 
@@ -36,6 +42,14 @@ main () {
     if ! df -h "${UMBREL_ROOT}" | grep --quiet "/dev/${block_device}"; then
       echo "Umbrel root is no longer bind mounted to external storage!"
       break
+    fi
+
+    if [[ $(dmesg | grep --quiet "uas_abort_handler") > 0 ]]; then
+      echo "External storage might have UAS issues"
+      sed "s/usb-storage.quirks=/usb-storage.quirks=$(get_uas_string),/g" -i /boot/cmdline.txt
+      echo "Rebooting"
+      docker kill $(docker ps -aq) 
+      sudo reboot
     fi
 
     sleep 1
