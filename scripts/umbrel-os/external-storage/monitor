@@ -47,9 +47,12 @@ main () {
 
     if [[ $(dmesg | grep --quiet "uas_abort_handler") > 0 ]]; then
       echo "External storage might have UAS issues"
-      sed "s/usb-storage.quirks=/usb-storage.quirks=$(get_uas_string),/g" -i /boot/cmdline.txt
-      echo "Rebooting"
-      sudo reboot
+      UAS_STRING=$(get_uas_string)
+      if [[ $(cat /boot/cmdline.txt | grep --quiet "${UAS_STRING}") == 0 ]]; then
+        sed "s/usb-storage.quirks=/usb-storage.quirks=$(get_uas_string),/g" -i /boot/cmdline.txt
+        echo "Rebooting"
+        sudo reboot
+      fi
     fi
 
     sleep 1
