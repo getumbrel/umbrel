@@ -158,7 +158,6 @@ APP_SAMOURAI_SERVER_NODE_IP="10.21.21.25"
 APP_LNDHUB_IP="10.21.21.26"
 APP_LNDHUB_PORT="3008"
 APP_LNDHUB_REDIS_IP="10.21.21.27"
-APP_LNDHUB_REDIS_PORT="6379"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -322,7 +321,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-lndhub-ip>/${APP_LNDHUB_IP}/g" "${template}"
   sed -i "s/<app-lndhub-port>/${APP_LNDHUB_PORT}/g" "${template}"
   sed -i "s/<app-lndhub-redis-ip>/${APP_LNDHUB_REDIS_IP}/g" "${template}"
-  sed -i "s/<app-lndhub-redis-port>/${APP_LNDHUB_REDIS_PORT}/g" "${template}"
 done
 
 
