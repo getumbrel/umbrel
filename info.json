@@ -1,6 +1,6 @@
 {
-    "version": "0.3.5",
-    "name": "Umbrel v0.3.5",
+    "version": "0.3.6",
+    "name": "Umbrel v0.3.6",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.5 fixes some bugs that were preventing the sending of transactions and causing Umbrel to hang on the \"Loading LND...\" message.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel v0.3.6 Brings some perfomrance improvements to the Mempool app, updates LND to v0.12.1, and includes some other small bug fixes.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
 }
