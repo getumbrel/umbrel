@@ -48,7 +48,6 @@ main () {
       echo "External storage might have UAS issues"
       sed "s/usb-storage.quirks=/usb-storage.quirks=$(get_uas_string),/g" -i /boot/cmdline.txt
       echo "Rebooting"
-      docker kill $(docker ps -aq) 
       sudo reboot
     fi
 
