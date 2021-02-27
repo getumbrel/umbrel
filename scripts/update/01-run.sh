@@ -84,7 +84,11 @@ echo "Migrating Docker to SSD"
 if [[ $(grep ExecStart /lib/systemd/system/docker.service | grep -c "/mnt/data/docker") -eq 0 ]]; then
   # update systemd service for Docker
   sed -i '/^ExecStart/s/-H/-g \/mnt\/data\/docker\/ -H/g' /lib/systemd/system/docker.service
-  
+
+  # stopping umbrel
+  echo "Stopping Umbrel"
+  systemctl stop umbrel-startup.service
+
   # stopping docker
   echo "Stopping Docker"
   systemctl stop docker
@@ -107,6 +111,11 @@ if [[ $(grep ExecStart /lib/systemd/system/docker.service | grep -c "/mnt/data/d
   # start docker
   echo "Starting Docker"
   systemctl start docker
+
+  # stopping umbrel
+  echo "Starting Umbrel"
+  systemctl start umbrel-startup.service
+
 else
   echo "Docker already migrated.. skipping."
 fi
