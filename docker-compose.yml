@@ -38,7 +38,7 @@ services:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.21.0
                 logging: *default-logging
-                depends_on: [ tor, manager ]
+                depends_on: [ tor, manager, nginx ]
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
                 restart: on-failure
