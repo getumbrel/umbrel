@@ -75,6 +75,42 @@ EOF
 # Checkout to the new release
 cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 38, "description": "Migrating Docker filesystem to SSD", "updateTo": "$RELEASE"}
+EOF
+
+# migrating docker to SSD
+echo "Migrating Docker to SSD"
+if [[ $(grep ExecStart /lib/systemd/system/docker.service | grep -c "/mnt/data/docker") -eq 0 ]]; then
+  # update systemd service for Docker
+  sed -i '/^ExecStart/s/-H/-g \/mnt\/data\/docker\/ -H/g' /lib/systemd/system/docker.service
+  
+  # stopping docker
+  echo "Stopping Docker"
+  systemctl stop docker
+
+  # reload systemd
+  echo "Reloading systemd"
+  systemctl daemon-reload
+
+  # create new path
+  echo "Creating Docker folder on SSD"
+  mkdir /mnt/data/docker/
+
+  # move data from /var/lib/docker to SSD
+  echo "Copying data to /mnt/data/docker"
+  rsync --archive \
+        --verbose \
+        --delete \
+        /var/lib/docker/ /mnt/data/docker/
+  
+  # start docker
+  echo "Starting Docker"
+  systemctl start docker
+else
+  echo "Docker already migrated.. skipping."
+fi
+
 # Configure new install
 echo "Configuring new release"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
