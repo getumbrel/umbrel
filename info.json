@@ -1,6 +1,6 @@
 {
-    "version": "0.3.6",
-    "name": "Umbrel v0.3.6",
+    "version": "0.3.7",
+    "name": "Umbrel v0.3.7",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.6 brings some performance improvements to the Mempool app, updates LND to v0.12.1, and includes some other small bug fixes.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update includes minor bug fixes for improved stability and security of your Umbrel.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
