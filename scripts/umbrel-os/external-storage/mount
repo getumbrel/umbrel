@@ -209,8 +209,8 @@ main () {
     cp  --recursive \
         --archive \
         --no-target-directory \
-        /var/lib/docker /mnt/data/docker
-    mount --bind /mnt/data/docker /var/lib/docker
+        /var/lib/docker ${MOUNT_POINT}/docker
+    mount --bind ${MOUNT_POINT}/docker /var/lib/docker
   fi
 
   echo "Checking SD Card root is bind mounted at /sd-root..."
