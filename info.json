@@ -2,5 +2,5 @@
     "version": "0.3.7",
     "name": "Umbrel v0.3.7",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.7 pins core Docker images for security and stability.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update includes minor bug fixes for improved stability and security of your Umbrel.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
