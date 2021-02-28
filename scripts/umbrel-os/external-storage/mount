@@ -200,6 +200,19 @@ main () {
   mkswap "${SWAP_FILE}"
   swapon "${SWAP_FILE}"
 
+  echo "Checking if docker containers are on the SSD"
+  if [[ -f "${MOUNT_POINT}/docker" ]]; then
+    echo "Yes, docker data is on the SSD"
+  else 
+    echo "No, docker data is on the SD"
+    echo "Moving data..."
+    cp  --recursive \
+        --archive \
+        --no-target-directory \
+        /var/lib/docker /mnt/data/docker
+    mount --bind /mnt/data/docker /var/lib/docker
+  fi
+
   echo "Checking SD Card root is bind mounted at /sd-root..."
   df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
 
