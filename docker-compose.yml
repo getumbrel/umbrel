@@ -36,7 +36,7 @@ services:
                         ipv4_address: $NGINX_IP
         bitcoin:
                 container_name: bitcoin
-                image: lncm/bitcoind:v0.21.0@sha256:3d1a817524951f1dfe8ca924af34f08c7e07ba99b7d2a2aba176ed9a054f87a4
+                image: lncm/bitcoind:v0.21.0@sha256:f9348bff310e1c2bfeca9ca44318ed81a7e74172658881245d0922f77e6c4ca5
                 logging: *default-logging
                 depends_on: [ tor, manager, nginx ]
                 volumes:
