@@ -210,8 +210,11 @@ main () {
         --archive \
         --no-target-directory \
         /var/lib/docker ${MOUNT_POINT}/docker
-    mount --bind ${MOUNT_POINT}/docker /var/lib/docker
   fi
+  mount --bind ${MOUNT_POINT}/docker /var/lib/docker
+
+  echo "Checking if docker data is now on external storage..."
+  df -h "/var/lib/docker" | grep --quiet '/dev/sd'
 
   echo "Checking SD Card root is bind mounted at /sd-root..."
   df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
