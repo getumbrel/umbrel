@@ -213,7 +213,7 @@ main () {
   fi
   mount --bind ${MOUNT_POINT}/docker /var/lib/docker
 
-  echo "Checking if docker data is now on external storage..."
+  echo "Checking if Docker data is now on external storage..."
   df -h "/var/lib/docker" | grep --quiet '/dev/sd'
 
   echo "Checking SD Card root is bind mounted at /sd-root..."
