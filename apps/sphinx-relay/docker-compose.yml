@@ -11,7 +11,7 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/relay/.lnd/
     ports:
-      - "$BIND_ADDRESS:$APP_SPHINX_RELAY_PORT:$APP_SPHINX_RELAY_PORT"
+      - "${BIND_ADDRESS}:$APP_SPHINX_RELAY_PORT:$APP_SPHINX_RELAY_PORT"
     environment:
       PUBLIC_URL: "$APP_HIDDEN_SERVICE:$APP_SPHINX_RELAY_PORT"
       LND_IP: $LND_IP

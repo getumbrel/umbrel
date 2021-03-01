@@ -9,7 +9,7 @@ services:
     stop_grace_period: 1m
     command: "./wait-for mariadb:3306 --timeout=720 -- nginx -g 'daemon off;'"
     ports:
-      - "$BIND_ADDRESS:$APP_MEMPOOL_PORT:$APP_MEMPOOL_PORT"
+      - "${BIND_ADDRESS}:$APP_MEMPOOL_PORT:$APP_MEMPOOL_PORT"
     environment:
       FRONTEND_HTTP_PORT: $APP_MEMPOOL_PORT
       BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
