@@ -200,11 +200,11 @@ main () {
   mkswap "${SWAP_FILE}"
   swapon "${SWAP_FILE}"
 
-  echo "Checking if docker containers are on the SSD"
+  echo "Checking if Docker data dir is on external storage..."
   if [[ -f "${MOUNT_POINT}/docker" ]]; then
-    echo "Yes, docker data is on the SSD"
+    echo "Yes, Docker data dir is on the SSD"
   else 
-    echo "No, docker data is on the SD"
+    echo "No, Docker data dir is on the SD card"
     echo "Moving data..."
     cp  --recursive \
         --archive \
