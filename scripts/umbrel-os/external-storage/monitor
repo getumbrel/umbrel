@@ -45,7 +45,7 @@ main () {
       break
     fi
 
-    if [[ $(dmesg | grep --quiet "uas_abort_handler") > 0 ]]; then
+    if [[ $(dmesg | grep --quiet "uas_eh_abort_handler") > 0 ]]; then
       echo "External storage might have UAS issues"
       UAS_STRING=$(get_uas_string)
       if [[ $(cat /boot/cmdline.txt | grep --quiet "${UAS_STRING}") == 0 ]]; then
