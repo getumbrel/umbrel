@@ -40,8 +40,8 @@ upload() {
     --request POST \
     --silent \
     --data-binary @- \
-    https://umbrel-paste.vercel.app/documents \
-    | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
+    https://debug.umbrel.tech/documents \
+    | awk -F '"' '{print "https://debug.umbrel.tech/"$6}'
 }
 
 echo "====================="
