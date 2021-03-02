@@ -59,7 +59,7 @@ get_block_device_model () {
   echo "$(echo $vendor) $(echo $model)"
 }
 
-is_partition_ext4 () {
+is_partition_ext4_or_btrfs () {
   partition_path="${1}"
   # We need to run sync here to make sure the filesystem is reflecting the
   # the latest changes in /dev/*
@@ -74,11 +74,11 @@ format_block_device () {
   partition_path="${device_path}1"
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
-  parted --script "${device_path}" mkpart primary ext4 0% 100%
+  parted --script "${device_path}" mkpart primary btrfs 0% 100%
   # We need to run sync here to make sure the filesystem is reflecting the
   # the latest changes in /dev/*
   sync
-  mkfs.ext4 -F -L umbrel "${partition_path}"
+  mkfs.btrfs -F -L umbrel "${partition_path}"
 }
 
 # Mounts the device given in the first argument at $MOUNT_POINT
@@ -152,10 +152,10 @@ main () {
   echo "Found device \"${block_device_model}\""
 
   
-  echo "Checking if the device is ext4..."
+  echo "Checking if the device is ext4 or btrfs..."
 
-  if is_partition_ext4 "${partition_path}" ; then
-    echo "Yes, it is ext4"
+  if is_partition_ext4_or_btrfs "${partition_path}" ; then
+    echo "Yes, it is ext4 or btrfs"
     mount_partition "${partition_path}"
 
     echo "Checking if device contains an Umbrel install..."
@@ -170,7 +170,7 @@ main () {
     fi
     
   else
-    echo "No, it's not ext4"
+    echo "No, it's not ext4 or btrfs"
     setup_new_device $block_device $partition_path
   fi
 
