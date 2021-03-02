@@ -25,7 +25,7 @@ fi
 check_dependencies docker docker-compose dirname readlink
 
 # Switch to Umbrel's root directory
-UMBREL_ROOT="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")"/..)"
+UMBREL_ROOT="$(pwd "$(dirname "$(readlink -f $0)")/..")"
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
   exit 1
@@ -35,7 +35,7 @@ cd "$UMBREL_ROOT"
 # Make sure we use the status dir from the real Umbrel installation if this is
 # an OTA update.
 STATUS_DIR="${UMBREL_ROOT}/statuses"
-if [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
+if [[ -d "${UMBREL_ROOT}/../.umbrel" ]]; then
   STATUS_DIR="${UMBREL_ROOT}/../statuses"
 fi
 

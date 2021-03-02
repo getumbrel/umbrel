@@ -28,7 +28,7 @@ check_dependencies fswatch
 # Check OTA update scripts' dependencies
 check_dependencies rsync jq curl
 
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+UMBREL_ROOT="$(pwd "$(dirname "$(readlink -f $0)")/..")"
 UMBREL_LOGS="${UMBREL_ROOT}/logs"
 
 if [[ ! -d "$UMBREL_ROOT" ]]; then
