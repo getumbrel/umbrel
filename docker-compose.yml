@@ -186,7 +186,7 @@ services:
                     ipv4_address: $FRONTAIL_IP
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.6@sha256:ecca81b063b23f08414bab91b4cf164b6cb6a485ddede5c1f5810883318954e3
+              image: getumbrel/electrs:v0.8.6@sha256:ee283764a054247d56c2174f63c3bd798c9ca089438590711ba713b47a53bfc1
               logging: *default-logging
               depends_on: [ bitcoin ]
               volumes:
