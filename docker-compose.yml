@@ -180,7 +180,7 @@ services:
             restart: on-failure
             command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
             volumes:
-                - /var/log/syslog:/var/log/syslog:ro
+                - /var/log:/var/log:ro
             networks:
                 default:
                     ipv4_address: $FRONTAIL_IP
