@@ -2,7 +2,15 @@
 
 # function to upload the output to our paste server
 # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
-upload() { a=$(cat); curl -X POST -s -d "$a" https://umbrel-paste.vercel.app/documents | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'; }
+upload() {
+  curl \
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --silent \
+    --data-binary @- \
+    https://debug.umbrel.tech/documents \
+    | awk -F '"' '{print "https://debug.umbrel.tech/"$6}'
+}
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 DEBUG_SCRIPT="${UMBREL_ROOT}/scripts/debug"
@@ -13,12 +21,11 @@ EOF
 
 debug_result=$(${DEBUG_SCRIPT} | sed '/onion/d')
 
-dmesglink=$(dmesg | upload)
-debuglink=$(echo "$debug_result" | upload)
-result64=$(echo "$debug_result" | base64 | tr -d '\n')
+debug_link=$(echo "${debug_result} === Umbrel-Paste split === $(dmesg)" | upload)
+result64=$(echo "${debug_result}" | base64 | tr -d '\n')
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/debug-result.json
-{"status": "success", "linkDebug": "${debuglink}", "linkDmesg": "${dmesglink}", "output": "${result64}"}
+{"status": "success", "linkDebug": "${debug_link}", "output": "${result64}"}
 EOF
 
 echo "Debug result file generated"
