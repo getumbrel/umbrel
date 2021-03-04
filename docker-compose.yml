@@ -6,10 +6,9 @@ services:
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
                 restart: on-failure
+                command: "-f /data/torrc"
                 volumes:
-                    - ${PWD}/tor/torrc:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
-                    - ${PWD}/tor/run:/var/run/tor/
+                    - ${PWD}/tor:/data
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
