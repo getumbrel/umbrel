@@ -45,10 +45,10 @@ main () {
       break
     fi
 
-    if [[ $(dmesg | grep --quiet "uas_eh_abort_handler") > 0 ]]; then
+    if [[ $(dmesg) == *"uas_eh_abort_handler"* ]]; then
       echo "External storage might have UAS issues"
       UAS_STRING=$(get_uas_string)
-      if [[ $(cat /boot/cmdline.txt | grep --quiet "${UAS_STRING}") == 0 ]]; then
+      if [[ $(cat /boot/cmdline.txt) == *"${UAS_STRING}"* ]]; then
         sed "s/usb-storage.quirks=/usb-storage.quirks=$(get_uas_string),/g" -i /boot/cmdline.txt
         echo "Rebooting"
         sudo reboot
