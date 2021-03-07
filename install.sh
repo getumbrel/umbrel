@@ -2,6 +2,32 @@
 
 UMBREL_VERSION=0.3.7
 
+# Helper functions
+
+list_block_devices () {
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /sys/block/sd*
+  sync
+  # We use "2>/dev/null || true" to swallow errors if there are
+  # no block devices. In that case the function just returns nothing
+  # instead of an error which is what we want.
+  #
+  # sed 's!.*/!!' is to return the device path so we get sda
+  # instead of /sys/block/sda
+  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+}
+
+get_root_dev () {
+    dev=$(eval $(lsblk -oMOUNTPOINT,PKNAME -P -M | grep 'MOUNTPOINT="/"'); echo $PKNAME | sed 's/[0-9]*$//')
+    echo $dev
+} 
+
+list_block_devices_without_root () {
+    list_block_devices | sed "s/$(get_root_dev)//g"
+}
+
+
+# Actual script
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be installed as root"
     exit 1
@@ -29,8 +55,22 @@ read install_dir
 
 echo "Do you want us to use an external drive for Umbrel? If yes, please provide the path of that device in /dev"
 echo "Please make sure to NOT enter the drive your OS is installed on, all data on the drive will be deleted"
-echo "If you want to use the same disk for Umbrel and your OS, just press enter."
-read external_disk
+echo "If you want to use the same disk for Umbrel and your OS, select none."
+select opt in $(list_block_devices_without_root) none
+do
+    case $opt in
+        "none")
+            break
+            ;;
+        "")
+            break
+            ;;
+        *)
+            external_disk=$REPLY
+            break
+            ;;
+    esac
+done
 
 echo "Do you want us to use mainnet, testnet or regtest?"
 options=("mainnet (default)" "testnet" "regtest")
@@ -49,7 +89,10 @@ do
             btc_network="regtest"
             break
             ;;
-        *) echo "invalid option $REPLY";;
+        *)
+            btc_network="mainnet"
+            break
+            ;;
     esac
 done
 
