@@ -3,7 +3,6 @@
 UMBREL_VERSION=0.3.7
 
 # Helper functions
-
 list_block_devices () {
   # We need to run sync here to make sure the filesystem is reflecting the
   # the latest changes in /sys/block/sd*
@@ -98,10 +97,6 @@ done
 
 if [[ -z "${install_dir}" ]]; then
     install_dir="/etc/umbrel"
-fi
-
-if [[ -z "${btc_network}" ]]; then
-    btc_network="mainnet"
 fi
 
 
