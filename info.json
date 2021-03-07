@@ -1,6 +1,6 @@
 {
-    "version": "0.3.5",
-    "name": "Umbrel v0.3.5",
+    "version": "0.3.7",
+    "name": "Umbrel v0.3.7",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.5 fixes some bugs that were preventing the sending of transactions and causing Umbrel to hang on the \"Loading LND...\" message.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update includes minor bug fixes for improved stability and security of your Umbrel.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
