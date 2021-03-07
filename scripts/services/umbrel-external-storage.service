@@ -1,0 +1,21 @@
+# Umbrel External Storage Mounter
+# Installed at /etc/systemd/system/umbrel-external-storage.service
+
+[Unit]
+Description=External Storage Mounter
+Before=umbrel-startup.service
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/home/umbrel/umbrel/scripts/mount
+TimeoutStartSec=45min
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=external storage mounter
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

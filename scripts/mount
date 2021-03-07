@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# This script will:
+# - Look for external storage devices
+# - Check if they contain an Umbrel install
+# - If yes
+# - - Mount it
+# - If no
+# - - Format it
+# - - Mount it
+# - - Install Umbrel on it
+# - Bind mount the external installation on top of the local installation
+
+EXTERNAL_STORAGE_PATH="undefined"
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}"))"
+MOUNT_POINT="/mnt/data"
+EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+SWAP_DIR="/swap"
+SWAP_FILE="${SWAP_DIR}/swapfile"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+is_partition_ext4 () {
+  partition_path="${1}"
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /dev/*
+  sync
+  blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$'
+}
+
+# Wipes a block device and reformats it with a single EXT4 partition
+format_block_device () {
+  device="${1}"
+  device_path="/dev/${device}"
+  partition_path="${device_path}1"
+  wipefs -a "${device_path}"
+  parted --script "${device_path}" mklabel gpt
+  parted --script "${device_path}" mkpart primary ext4 0% 100%
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /dev/*
+  sync
+  mkfs.ext4 -F -L umbrel "${partition_path}"
+}
+
+# Mounts the device given in the first argument at $MOUNT_POINT
+mount_partition () {
+  partition_path="${1}"
+  mkdir -p "${MOUNT_POINT}"
+  mount "${partition_path}" "${MOUNT_POINT}"
+}
+
+# Unmounts $MOUNT_POINT
+unmount_partition () {
+  umount "${MOUNT_POINT}"
+}
+
+# Formats and sets up a new device
+setup_new_device () {
+  block_device="${1}"
+  partition_path="${2}"
+
+  echo "Formatting device..."
+  format_block_device $block_device
+
+  echo "Mounting partition..."
+  mount_partition "${partition_path}"
+
+  echo "Copying Umbrel install to external storage..."
+  mkdir -p "${EXTERNAL_UMBREL_ROOT}"
+  cp  --recursive \
+      --archive \
+      --no-target-directory \
+      "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
+}
+
+main () {
+  echo "Running external storage mount script..."
+  check_root
+  check_dependencies sed wipefs parted mount sync umount
+
+  # At this point we know there is only one block device attached
+  block_device=$EXTERNAL_STORAGE_PATH
+  partition_path="/dev/${block_device}1"
+  
+  echo "Checking if the device is ext4..."
+
+  if is_partition_ext4 "${partition_path}" ; then
+    echo "Yes, it is ext4"
+    mount_partition "${partition_path}"
+
+    echo "Checking if device contains an Umbrel install..."
+    
+    if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
+      echo "Yes, it contains an Umbrel install"
+    else 
+      echo "No, it doesn't contain an Umbrel install"
+      echo "Unmounting partition..."
+      unmount_partition
+      setup_new_device $block_device $partition_path
+    fi
+    
+  else
+    echo "No, it's not ext4"
+    setup_new_device $block_device $partition_path
+  fi
+
+  echo "Bind mounting external storage over local Umbrel installation..."
+  mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
+
+  echo "Bind mounting external storage to ${SWAP_DIR}"
+  mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+  mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
+
+  echo "Bind mounting SD card root at /sd-card..."
+  [[ ! -d "/sd-root" ]] && mkdir -p "/sd-root"
+  mount --bind "/" "/sd-root"
+
+  echo "Checking Umbrel root is now on external storage..."
+  sync
+  sleep 1
+  df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
+
+  echo "Checking ${SWAP_DIR} is now on external storage..."
+  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+
+  echo "Setting up swapfile"
+  rm "${SWAP_FILE}" || true
+  fallocate -l 4G "${SWAP_FILE}"
+  chmod 600 "${SWAP_FILE}"
+  mkswap "${SWAP_FILE}"
+  swapon "${SWAP_FILE}"
+
+  echo "Checking SD Card root is bind mounted at /sd-root..."
+  df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
+
+  echo "Starting external drive mount monitor..."
+  echo
+  ${UMBREL_ROOT}/scripts/umbrel-os/external-storage/monitor ${block_device} ${MOUNT_POINT} &
+
+  echo "Mount script completed successfully!"
+}
+
+main
