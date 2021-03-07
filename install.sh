@@ -32,9 +32,26 @@ echo "Please make sure to NOT enter the drive your OS is installed on, all data 
 echo "If you want to use the same disk for Umbrel and your OS, just press enter."
 read external_disk
 
-echo "Do you want us to use mainnet, testnet or regtest"
-echo "If you're unsure, press enter to use mainnet"
-read btc_network
+echo "Do you want us to use mainnet, testnet or regtest?"
+options=("mainnet (default)" "testnet" "regtest")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "mainnet (default)")
+            btc_network="mainnet"
+            break
+            ;;
+        "testnet")
+            btc_network="testnet"
+            break
+            ;;
+        "regtest")
+            btc_network="regtest"
+            break
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
 
 if [[ -z "${install_dir}" ]]; then
     install_dir="/etc/umbrel"
@@ -54,14 +71,14 @@ fi
 echo "Press enter to start the setup"
 read
 
-echo "Strarting setup..."
+echo "Starting setup..."
 mkdir -p ${install_dir}
 cd ${install_dir}
 echo "Downloading Umbrel..."
 curl -L https://github.com/getumbrel/umbrel/archive/v${UMBREL_VERSION}.tar.gz | tar -xz --strip-components=1
 
 echo "Configuring Umbrel"
-BITCOIN_NETWORK=$btc_network ./scripts/configure
+NETWORK=$btc_network ./scripts/configure
 
 if [[ ! -z "${external_disk}" ]]; then
     echo "Installing mount service"
