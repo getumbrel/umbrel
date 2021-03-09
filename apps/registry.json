@@ -232,5 +232,26 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "bitwarden-rs",
+        "category": "Password Manager",
+        "name": "Bitwarden RS",
+        "version": "1.19.0",
+        "tagline": "Manage your passwords from anywhere",
+        "description": "An alternative server side implementation of the Bitwarden protocol made to run on small devices, like your umbrel! The original bitwarden was kind enough to open source their server and client side source code, so community projects like this could flourish. Please consider donating to both the bitwarden_rs and bitwarden developers.\n\nYou can use this app with the Bitwarden app available in both iOS and Android app stores. You must change your host URL to match your umbrel.",
+        "developer": "Daniel García",
+        "website": "https://github.com/dani-garcia/bitwarden_rs",
+        "dependencies": [],
+        "repo": "https://github.com/dani-garcia/bitwarden_rs",
+        "support": "https://bitwardenrs.discourse.group",
+        "port": 4649,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
     }
 ]

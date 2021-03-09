@@ -76,4 +76,8 @@ HiddenServicePort 80 <app-samourai-server-ip>:80
 HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
 HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
 
+# Bitwarden RS Hidden Service
+HiddenServiceDir /var/lib/tor/app-bitwarden-rs
+HiddenServicePort 80 <app-bitwarden-rs-ip>:<app-bitwarden-rs-port>
+
 HashedControlPassword <password>
