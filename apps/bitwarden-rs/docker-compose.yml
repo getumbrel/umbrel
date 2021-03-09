@@ -9,11 +9,11 @@ x-logging:
 services:
   web:
     container_name: web
-    image: "bitwardenrs/server@sha256:1cc26a5754dff74dd9df95bbbb79af168cd21dfbd83f627ea72c85fa5852ef15"
+    image: "bitwardenrs/server:1.19.0@sha256:1cc26a5754dff74dd9df95bbbb79af168cd21dfbd83f627ea72c85fa5852ef15"
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
-    stop_grace_period: 30s
+    stop_grace_period: 1m
     ports:
         - "$APP_BITWARDEN_RS_PORT:8080"
     volumes:
