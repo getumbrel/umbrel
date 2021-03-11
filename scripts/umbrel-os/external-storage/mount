@@ -209,9 +209,9 @@ main () {
     cp  --recursive \
         --archive \
         --no-target-directory \
-        /var/lib/docker ${MOUNT_POINT}/docker
+        /var/lib/docker "${MOUNT_POINT}/docker"
   fi
-  mount --bind ${MOUNT_POINT}/docker /var/lib/docker
+  mount --bind "${MOUNT_POINT}/docker" /var/lib/docker
 
   echo "Checking if Docker data is now on external storage..."
   df -h "/var/lib/docker" | grep --quiet '/dev/sd'
