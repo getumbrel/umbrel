@@ -9,6 +9,8 @@ Wants=network-online.target
 After=network-online.target
 Wants=docker.service
 After=docker.service
+StartLimitInterval=200
+StartLimitBurst=5
 
 [Service]
 Type=forking
@@ -22,6 +24,8 @@ StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=umbrel startup
 RemainAfterExit=yes
+Restart=always
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
