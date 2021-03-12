@@ -11,6 +11,7 @@ services:
                 user: toruser
                 restart: on-failure
                 logging: *default-logging
+                depends_on: [ dashboard, manager ] 
                 volumes:
                     - ${PWD}/tor/torrc:/etc/tor/torrc
                     - ${PWD}/tor/data:/var/lib/tor/
@@ -77,7 +78,6 @@ services:
                 container_name: manager
                 image: getumbrel/manager:v0.2.10@sha256:aaeddfd7bd861dc9c418b34a4a4aa83a873e8b0304e28999d1d594eabf0e1b70
                 logging: *default-logging
-                depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
                 volumes:
