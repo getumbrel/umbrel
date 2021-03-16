@@ -1,4 +1,4 @@
->Umbrel is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+>Umbrel is licensed under a Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License with some modifications in section 9.
 >
 >You should have received a copy of the license along with this work. If not, see [here](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 
@@ -143,6 +143,26 @@ b. To the extent possible, if any provision of this Public License is deemed une
 c. No term or condition of this Public License will be waived and no failure to comply consented to unless expressly agreed to by the Licensor.
 
 d. Nothing in this Public License constitutes or may be interpreted as a limitation upon, or waiver of, any privileges and immunities that apply to the Licensor or You, including from the legal processes of any jurisdiction or authority.
+
+Section 9 -- Umbrel License Additions
+
+  a. Distribution as source via GitHub forks is permitted under the
+     following conditions:
+
+       1. Modifications remain public and can be merged back into the 
+          main Umbrel repo without restriction.
+
+       2. Modifications to the licensing, product key, or access to
+          premium features is prohibited.
+
+       3. Addition of new applications and modifications to enable or
+          disable signaling of new features or forks for services like
+          Bitcoin is encouraged.
+
+       4. Distribution as binaries or images is prohibited.
+
+       5. Use of the Umbrel logo or brand material to act on behalf of
+          or impersonate Umbrel is prohibited.
 
 > Creative Commons is not a party to its public licenses. Notwithstanding, Creative Commons may elect to apply one of its public licenses to material it publishes and in those instances will be considered the “Licensor.” Except for the limited purpose of indicating that material is shared under a Creative Commons public license or as otherwise permitted by the Creative Commons policies published at [creativecommons.org/policies](http://creativecommons.org/policies), Creative Commons does not authorize the use of the trademark “Creative Commons” or any other trademark or logo of Creative Commons without its prior written consent including, without limitation, in connection with any unauthorized modifications to any of its public licenses or any other arrangements, understandings, or agreements concerning use of licensed material. For the avoidance of doubt, this paragraph does not form part of the public licenses.
 >
