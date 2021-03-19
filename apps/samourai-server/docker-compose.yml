@@ -99,7 +99,6 @@ services:
     restart: on-failure
     user: "1000:1000"
     command:
-      - "--listen"
       - "--cli.api.http-enable=true"
       - "--cli.api.http-port=$APP_SAMOURAI_SERVER_WHIRLPOOL_PORT"
       - "--cli.tor=true"
