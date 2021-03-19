@@ -114,7 +114,7 @@ services:
     environment:
       WHIRLPOOL_BITCOIN_NETWORK: $BITCOIN_NETWORK
       WHIRLPOOL_DOJO: "on"
-      WHIRLPOOL_DOJO_IP: $NGINX_IP
+      WHIRLPOOL_DOJO_IP: $APP_SAMOURAI_SERVER_IP
     volumes:
       - ${APP_DATA_DIR}/whirlpool:/home/whirlpool/.whirlpool-cli
     networks:
