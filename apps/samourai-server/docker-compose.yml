@@ -93,19 +93,28 @@ services:
          ipv4_address: $APP_SAMOURAI_SERVER_NODE_IP
 
   whirlpool:
-    image: louneskmt/dojo-whirlpool:1.3.0
+    image: louneskmt/whirlpool:0.10.10
     init: true
     logging: *default-logging
     restart: on-failure
-    command: /restart.sh
     user: "1000:1000"
+    command:
+      - "--listen"
+      - "--cli.api.http-enable=true"
+      - "--cli.api.http-port=$APP_SAMOURAI_SERVER_WHIRLPOOL_PORT"
+      - "--cli.tor=true"
+      - "--cli.torConfig.coordinator.enabled=true"
+      - "--cli.torConfig.coordinator.onion=true"
+      - "--cli.torConfig.backend.enabled=false"
+      - "--cli.torConfig.backend.onion=false"
+      - "--cli.mix.liquidityClient=true"
+      - "--cli.mix.clientsPerPool=1"
+      - "--cli.server=$BITCOIN_NETWORK"
+      - "--resync"
     environment:
-        COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-        WHIRLPOOL_RESYNC: "on"
-        WHIRLPOOL_DEBUG: "off"
-        WHIRLPOOL_DEBUG_CLIENT: "off"
-        WHIRLPOOL_COORDINATOR_ONION: "on"
-        NGINX_IP: $APP_SAMOURAI_SERVER_IP
+      WHIRLPOOL_BITCOIN_NETWORK: $BITCOIN_NETWORK
+      WHIRLPOOL_DOJO: "on"
+      WHIRLPOOL_DOJO_IP: $NGINX_IP
     volumes:
       - ${APP_DATA_DIR}/whirlpool:/home/whirlpool/.whirlpool-cli
     networks:
