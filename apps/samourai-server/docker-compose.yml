@@ -108,7 +108,6 @@ services:
       - "--cli.torConfig.backend.onion=false"
       - "--cli.mix.liquidityClient=true"
       - "--cli.mix.clientsPerPool=1"
-      - "--cli.server=$BITCOIN_NETWORK"
       - "--resync"
     environment:
       WHIRLPOOL_BITCOIN_NETWORK: $BITCOIN_NETWORK
