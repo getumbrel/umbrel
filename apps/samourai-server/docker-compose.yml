@@ -93,7 +93,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_NODE_IP
 
   whirlpool:
-    image: louneskmt/whirlpool:0.10.10
+    image: louneskmt/whirlpool:0.10.10@sha256:0914a0784a59819d55605e45b595b2715e5d1ed9b5aa5cd58db0fb068d8f6367
     init: true
     logging: *default-logging
     restart: on-failure
