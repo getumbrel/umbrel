@@ -29,7 +29,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.9.0
+    image: louneskmt/dojo-nodejs:1.9.0@sha256:fbef514d55dd848e038f9852e5b5146f18675c7c207e6370fb9f54d0fd6eb6ce
     init: true
     logging: *default-logging
     restart: on-failure
