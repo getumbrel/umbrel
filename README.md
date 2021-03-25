@@ -43,7 +43,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.3.5.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.3.7.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run Umbrel
@@ -52,11 +52,18 @@ curl -L https://github.com/getumbrel/umbrel/archive/v0.3.5.tar.gz | tar -xz --st
 # To use Umbrel on mainnet, run:
 sudo ./scripts/start
 
+# The following environment settings can only be set
+# during first run of the start script and will be persisted through
+# any updates
+
 # For testnet, run:
 sudo NETWORK=testnet ./scripts/start
 
 # For regtest, run:
 sudo NETWORK=regtest ./scripts/start
+
+# For umbrel to listen on port 12345 instead of 80, run:
+sudo NGINX_PORT=12345 ./scripts/start
 ```
 
 To stop Umbrel, run:
