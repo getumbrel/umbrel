@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: lightninglabs/lightning-terminal:v0.4.0-alpha@sha256:1273ffa9e818dea2d21adc9a226692b8117ab29582b80c6d6e4c53316392da05
+    image: lightninglabs/lightning-terminal:v0.4.1-alpha@sha256:8e48ecceb53a243dc9a5323003bc61b571c1c31c1c55f968c87275b30bc965d6
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
