@@ -49,7 +49,7 @@ services:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
   mariadb:
-    image: mariadb:10.5.8
+    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
