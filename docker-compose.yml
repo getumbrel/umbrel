@@ -7,7 +7,7 @@ x-logging: &default-logging
 services:
         tor:
                 container_name: tor
-                image: lncm/tor:0.4.5.7@sha256:5a00971a00143b46e57fd2ce577fe54ed6a5450fa9f463f6876b3616b5dc1dbb
+                image: lncm/tor:0.4.4.7@sha256:48094db3afff76472b20cd7b6a41151ef5e380e5ec5e6042c36b0f861236c45f
                 user: toruser
                 restart: on-failure
                 logging: *default-logging
