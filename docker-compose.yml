@@ -7,7 +7,7 @@ x-logging: &default-logging
 services:
         tor:
                 container_name: tor
-                image: lncm/tor:0.4.4.7@sha256:48094db3afff76472b20cd7b6a41151ef5e380e5ec5e6042c36b0f861236c45f
+                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
                 restart: on-failure
                 logging: *default-logging
@@ -36,7 +36,7 @@ services:
                         ipv4_address: $NGINX_IP
         bitcoin:
                 container_name: bitcoin
-                image: lncm/bitcoind:v0.21.0@sha256:3d1a817524951f1dfe8ca924af34f08c7e07ba99b7d2a2aba176ed9a054f87a4
+                image: lncm/bitcoind:v0.21.0@sha256:f9348bff310e1c2bfeca9ca44318ed81a7e74172658881245d0922f77e6c4ca5
                 logging: *default-logging
                 depends_on: [ tor, manager, nginx ]
                 volumes:
@@ -66,7 +66,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.17@sha256:db9789c29db44db545efbbb8ffdad243afb270ed19a2d23c83710ecc5ffcfb1a
+                image: getumbrel/dashboard:v0.3.18@sha256:56a964bb624551345480cc442ddfd065c561d42192877dfcf49a925bcfb3b2a7
                 logging: *default-logging
                 restart: on-failure
                 stop_grace_period: 1m30s
@@ -180,13 +180,13 @@ services:
             restart: on-failure
             command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
             volumes:
-                - /var/log/syslog:/var/log/syslog:ro
+                - /var/log:/var/log:ro
             networks:
                 default:
                     ipv4_address: $FRONTAIL_IP
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.6@sha256:ecca81b063b23f08414bab91b4cf164b6cb6a485ddede5c1f5810883318954e3
+              image: getumbrel/electrs:v0.8.9@sha256:592fb50cdf16fa2b2e20f7c0a28d4a132c2ee636d89d4b9c24f14886763b5478
               logging: *default-logging
               depends_on: [ bitcoin ]
               volumes:
