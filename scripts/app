@@ -65,13 +65,6 @@ else
   command="$1"
 fi
 
-# Lists installed apps
-if [[ "$command" = "ls-installed" ]]; then
-  list_installed_apps
-
-  exit
-fi
-
 if [ -z ${2+x} ]; then
   show_help
   exit 1
@@ -151,8 +144,7 @@ update_installed_apps() {
 }
 
 # Pulls down images for an app and starts it
-if [[ "$command" = "install" ]]; then
-
+install() {
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
   rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
@@ -167,12 +159,10 @@ if [[ "$command" = "install" ]]; then
   update_installed_apps add "${app}"
 
   echo "Successfully installed app ${app}"
-  exit
-fi
+}
 
 # Removes images and destroys all data for an app
-if [[ "$command" = "uninstall" ]]; then
-
+uninstall() {
   echo "Removing images for app ${app}..."
   compose "${app}" down --rmi all --remove-orphans
 
@@ -185,21 +175,16 @@ if [[ "$command" = "uninstall" ]]; then
   update_installed_apps remove "${app}"
 
   echo "Successfully uninstalled app ${app}"
-  exit
-fi
+}
 
 # Stops an installed app
-if [[ "$command" = "stop" ]]; then
-
+stop() {
   echo "Stopping app ${app}..."
   compose "${app}" rm --force --stop
-
-  exit
-fi
+}
 
 # Starts an installed app
-if [[ "$command" = "start" ]]; then
-
+start() {
   if ! list_installed_apps | grep --quiet "^${app}$"; then
     echo "Error: app \"${app}\" is not installed yet"
     exit 1
@@ -207,18 +192,35 @@ if [[ "$command" = "start" ]]; then
 
   echo "Starting app ${app}..."
   compose "${app}" up --detach
+}
 
-  exit
-fi
+case "${command}" in
+  install)
+    install()
+    ;;
 
-# Passes all arguments to docker-compose
-if [[ "$command" = "compose" ]]; then
-  compose "${app}" ${args}
+  uninstall)
+    uninstall()
+    ;;
 
-  exit
-fi
+  start)
+    start()
+    ;;
 
-# If we get here it means no valid command was supplied
-# Show help and exit
-show_help
-exit 1
+  stop)
+    stop()
+    ;;
+
+  compose)
+    compose "${app}" ${args}
+    ;;
+
+  ls-installed)
+    list_installed_apps
+    ;;
+
+  *)  
+    show_help
+    exit 1
+    ;;
+esac
