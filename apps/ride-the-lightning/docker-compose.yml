@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: shahanafarooqui/rtl:0.10.0@sha256:036d94c582911caa74cbe8a0f5646d98b3549010bdbdd2cebd92d3b08a00d82a
+    image: shahanafarooqui/rtl:0.10.1@sha256:d076f91c4b994d3059d3c0db80dc560ca05f675924d5625bae724df473877882
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -33,7 +33,7 @@ services:
         CONFIG_PATH: "/lnd/lnd.conf"
 
         # Loop
-        SWAP_SERVER_URL: "https://loop:8081"
+        SWAP_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_LOOP_IP:8081"
         SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
     networks:
       default:

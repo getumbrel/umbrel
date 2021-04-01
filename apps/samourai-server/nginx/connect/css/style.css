@@ -18,6 +18,10 @@ body {
     opacity: 0.8;
 }
 
+.text-small {
+    font-size: 14px;
+}
+
 hr {
     width: 100%;
     height: 2px;
@@ -54,8 +58,6 @@ hr {
     margin: 10px 0 0 0;
 }
 
-
-
 .app > .app-details > .app-name {
     font-size: 52px;
     line-height: 52px;
@@ -79,6 +81,7 @@ hr {
     font-weight: bold;
     box-shadow: 0 0 20px 0 rgba(0,0,0,0.8);
 }
+
 .heading > .text {
     font-size: 52px;
     line-height: 52px;
@@ -120,4 +123,21 @@ hr {
     height: 60px;
     margin: 3px 0 0 3px;
     border-radius: 15%;
+}
+
+.note {
+    margin-top: 30px;
+    background: #111010;
+    border-radius: 8px;
+    padding: 30px;
+    border: 2px dashed #3D3838;
+}
+
+.note > .note-heading {
+    margin: 0 0 20px 0;
+    font-weight: 300;
+}
+
+.note > .note-text {
+    word-wrap: break-word
 }
