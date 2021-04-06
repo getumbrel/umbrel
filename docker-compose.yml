@@ -66,7 +66,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.18@sha256:56a964bb624551345480cc442ddfd065c561d42192877dfcf49a925bcfb3b2a7
+                image: lukechilds/dashboard:lnd-unlocker
                 logging: *default-logging
                 restart: on-failure
                 stop_grace_period: 1m30s
@@ -75,7 +75,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.10@sha256:aaeddfd7bd861dc9c418b34a4a4aa83a873e8b0304e28999d1d594eabf0e1b70
+                image: lukechilds/manager:lnd-unlocker
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: on-failure
@@ -131,7 +131,7 @@ services:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
-                image: getumbrel/middleware:v0.1.9@sha256:8001338c3e6804afc9078eb08e8ee820e9d2c908a44303a3e4968ab57c8ad90b
+                image: lukechilds/middleware:lnd-unlocker
                 logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
