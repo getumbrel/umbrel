@@ -75,7 +75,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: lukechilds/manager:lnd-unlocker
+                image: lukechilds/manager:remove-builder-image
                 logging: *default-logging
                 depends_on: [ tor ]
                 restart: on-failure
