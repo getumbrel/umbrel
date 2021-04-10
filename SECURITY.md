@@ -38,4 +38,7 @@ Currently we are being quite liberal with filesystem permissions and root usage.
 
 Umbrel, in its current state, is intended to demonstrate what we have in mind, show the community what we are building, and to get early feedback. It's in a state that it can be used, but should not be considered secure. Thus, **you should not put more funds on your Umbrel than you're prepared to lose.**
 
-The issues raised above will all be resolved before we do a stable release of Umbrel.
+
+-----
+
+**👆 The issues raised above will all be resolved before we do a stable release of Umbrel.**
