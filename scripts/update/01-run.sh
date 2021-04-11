@@ -113,6 +113,40 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
 
+# Move Docker data dir to external storage now if this is an old install.
+# This is only needed temporarily until all users have transitioned Docker to SSD.
+DOCKER_DIR="/var/lib/docker"
+MOUNT_POINT="/mnt/data"
+EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
+if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
+  echo "Attempting to move Docker to external storage..."
+
+  echo "Stopping Docker service..."
+  service docker stop
+
+  # Copy Docker data dir to external storage
+  copy_docker_to_external_storage () {
+    mkdir -p "${EXTERNAL_DOCKER_DIR}"
+    cp  --recursive \
+        --archive \
+        --no-target-directory \
+        "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
+  }
+
+  echo "Copying Docker data directory to external storage..."
+  copy_docker_to_external_storage
+
+  echo "Bind mounting external storage over local Docker data dir..."
+  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
+
+  # Ensure fs changes are registered
+  sync
+  sleep 1
+
+  echo "Starting Docker service..."
+  service docker start
+fi
+
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync --archive \
