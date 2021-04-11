@@ -29,8 +29,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+cd "${UMBREL_ROOT}"
+
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+[[ -f "./.env" ]] && source "./.env"
 
 # function to upload the output to our paste server
 # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
@@ -44,12 +48,20 @@ upload() {
     | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
 }
 
+upload_tor() {
+  curl \
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --socks5 "localhost:${TOR_PROXY_PORT}" \
+    --silent \
+    --data-binary @- \
+    https://umbrel-paste.vercel.app/documents \
+    | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
+}
+
 echo "====================="
 echo "= Umbrel debug info ="
 echo "====================="
-
-UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
-cd "${UMBREL_ROOT}"
 
 echo
 echo "Umbrel version"
@@ -179,11 +191,16 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-if [[ "${1}" == "--upload" ]]; then
+if [[ "${1}" == "--no-tor" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
     echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
+elif [[ "${1}" == "--upload" ]]; then
+    # This runs the script twice, but it works
+    echo "This script could not automatically detect an issue with your Umbrel."
+    echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
+    echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload_tor
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
