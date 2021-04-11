@@ -120,6 +120,9 @@ MOUNT_POINT="/mnt/data"
 EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
   echo "Attempting to move Docker to external storage..."
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 72, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
+EOF
 
   echo "Stopping Docker service..."
   service docker stop
