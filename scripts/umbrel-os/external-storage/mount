@@ -16,6 +16,8 @@ set -euo pipefail
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+DOCKER_DIR="/var/lib/docker"
+EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 SWAP_DIR="/swap"
 SWAP_FILE="${SWAP_DIR}/swapfile"
 
@@ -112,6 +114,15 @@ setup_new_device () {
       "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
 }
 
+# Copy Docker data dir to external storage
+copy_docker_to_external_storage () {
+  mkdir -p "${EXTERNAL_DOCKER_DIR}"
+  cp  --recursive \
+      --archive \
+      --no-target-directory \
+      "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
+}
+
 main () {
   echo "Running external storage mount script..."
   check_root
@@ -174,8 +185,16 @@ main () {
     setup_new_device $block_device $partition_path
   fi
 
+  if [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
+    echo "Copying Docker data directory to external storage..."
+    copy_docker_to_external_storage
+  fi
+
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
+
+  echo "Bind mounting external storage over local Docker data dir..."
+  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
 
   echo "Bind mounting external storage to ${SWAP_DIR}"
   mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
@@ -190,6 +209,9 @@ main () {
   sleep 1
   df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
 
+  echo "Checking ${DOCKER_DIR} is now on external storage..."
+  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd'
+
   echo "Checking ${SWAP_DIR} is now on external storage..."
   df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
 
@@ -199,22 +221,6 @@ main () {
   chmod 600 "${SWAP_FILE}"
   mkswap "${SWAP_FILE}"
   swapon "${SWAP_FILE}"
-
-  echo "Checking if Docker data dir is on external storage..."
-  if [[ -f "${MOUNT_POINT}/docker" ]]; then
-    echo "Yes, Docker data dir is on the SSD"
-  else 
-    echo "No, Docker data dir is on the SD card"
-    echo "Moving data..."
-    cp  --recursive \
-        --archive \
-        --no-target-directory \
-        /var/lib/docker "${MOUNT_POINT}/docker"
-  fi
-  mount --bind "${MOUNT_POINT}/docker" /var/lib/docker
-
-  echo "Checking if Docker data is now on external storage..."
-  df -h "/var/lib/docker" | grep --quiet '/dev/sd'
 
   echo "Checking SD Card root is bind mounted at /sd-root..."
   df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
