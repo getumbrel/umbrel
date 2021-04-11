@@ -125,7 +125,7 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 
   echo "Stopping Docker service..."
-  service docker stop
+  systemctl stop docker
 
   # Copy Docker data dir to external storage
   copy_docker_to_external_storage () {
@@ -147,7 +147,7 @@ EOF
   sleep 1
 
   echo "Starting Docker service..."
-  service docker start
+  systemctl start docker
 fi
 
 # Overlay home dir structure with new dir tree
