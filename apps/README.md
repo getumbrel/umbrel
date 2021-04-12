@@ -257,7 +257,7 @@ Umbrel development environment ([`umbrel-dev`](https://github.com/getumbrel/umbr
 1\. First, we'll install the `umbrel-dev` CLI and it's dependencies [Virtual Box](https://www.virtualbox.org) and [Vagrant](https://vagrantup.com) on our system. If you use [Homebrew](https://brew.sh) you can do that with just:
 
 ```sh
-brew install lukechilds/tap/umbrel-dev
+brew install lukechilds/tap/umbrel-dev gnu-sed
 brew install --cask virtualbox vagrant
 ```
 

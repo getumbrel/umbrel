@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v2.1.0@sha256:62eda653cc2d0eb8cf491e05876ebffeebaa29ce900b82852214d0c07ca8457b
+    image: getumbrel/btc-rpc-explorer:v2.2.0@sha256:0caa2adf7d480c366942f565543c97b589bcbf8298180d7a143e73f484c04c9f
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m

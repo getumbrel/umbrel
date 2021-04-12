@@ -1,0 +1,67 @@
+version: "3.7"
+
+x-logging:
+  &default-logging
+  driver: journald
+  options:
+    tag: "umbrel-app {{.Name}}"
+
+services:
+  web:
+    image: mempool/frontend:v2.1.2@sha256:69fefe55dc1eb4c8373c32d57362df7eeb672fc591d55033d68ae79355274dcc
+    user: "1000:1000"
+    init: true
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "./wait-for mariadb:3306 --timeout=720 -- nginx -g 'daemon off;'"
+    ports:
+      - ${APP_MEMPOOL_PORT}:${APP_MEMPOOL_PORT}
+    environment:
+      FRONTEND_HTTP_PORT: $APP_MEMPOOL_PORT
+      BACKEND_MAINNET_HTTP_HOST: $APP_MEMPOOL_API_IP
+    networks:
+      default:
+        ipv4_address: $APP_MEMPOOL_IP
+  api:
+    image: mempool/backend:v2.1.2@sha256:58394cb35aad82b95ab2496fd4a6d3c983a712a1003454d94b0a53197d306f6d
+    user: "1000:1000"
+    init: true
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "./wait-for-it.sh mariadb:3306 --timeout=720 --strict -- ./start.sh"
+    volumes:
+      - ${APP_DATA_DIR}/data:/backend/cache
+    environment:
+      RPC_HOST: $BITCOIN_IP
+      RPC_PORT: $BITCOIN_RPC_PORT
+      RPC_USER: $BITCOIN_RPC_USER
+      RPC_PASS: $BITCOIN_RPC_PASS
+      ELECTRS_HOST: $ELECTRUM_IP
+      ELECTRS_PORT: $ELECTRUM_PORT
+      MYSQL_HOST: $APP_MEMPOOL_DB_IP
+      MYSQL_DATABASE: "mempool"
+      MYSQL_USER: "mempool"
+      MYSQL_PASS: "mempool"
+      CACHE_DIR: "/backend/cache"
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_API_IP
+  mariadb:
+    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    user: "1000:1000"
+    logging: *default-logging
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_DATABASE: "mempool"
+      MYSQL_USER: "mempool"
+      MYSQL_PASSWORD: "mempool"
+      MYSQL_ROOT_PASSWORD: "moneyprintergobrrr"
+    networks:
+       default:
+         ipv4_address: $APP_MEMPOOL_DB_IP

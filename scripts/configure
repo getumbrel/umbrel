@@ -105,6 +105,7 @@ ENV_FILE="./templates/.env"
 NETWORK_IP="10.21.21.0"
 GATEWAY_IP="10.21.21.1"
 NGINX_IP="10.21.21.2"
+NGINX_PORT="${NGINX_PORT:-80}"
 DASHBOARD_IP="10.21.21.3"
 MANAGER_IP="10.21.21.4"
 MIDDLEWARE_IP="10.21.21.5"
@@ -113,6 +114,9 @@ FRONTAIL_IP="10.21.21.7"
 BITCOIN_IP="10.21.21.8"
 BITCOIN_RPC_PORT="8332"
 BITCOIN_P2P_PORT="8333"
+BITCOIN_ZMQ_RAWBLOCK_PORT="28332"
+BITCOIN_ZMQ_RAWTX_PORT="28333"
+BITCOIN_ZMQ_HASHBLOCK_PORT="28334"
 LND_IP="10.21.21.9"
 LND_GRPC_PORT="10009"
 LND_REST_PORT="8080"
@@ -140,6 +144,18 @@ APP_BTCPAY_SERVER_IP="10.21.21.19"
 APP_BTCPAY_SERVER_PORT="3003"
 APP_BTCPAY_SERVER_NBXPLORER_IP="10.21.21.20"
 APP_BTCPAY_SERVER_DB_IP="10.21.21.21"
+APP_LNBITS_IP="10.21.21.29"
+APP_LNBITS_PORT="3007"
+APP_MEMPOOL_IP="10.21.21.26"
+APP_MEMPOOL_PORT="3006"
+APP_MEMPOOL_API_IP="10.21.21.27"
+APP_MEMPOOL_DB_IP="10.21.21.28"
+APP_SAMOURAI_SERVER_IP="10.21.21.22"
+APP_SAMOURAI_SERVER_PORT="3005"
+APP_SAMOURAI_SERVER_WHIRLPOOL_IP="10.21.21.23"
+APP_SAMOURAI_SERVER_WHIRLPOOL_PORT="8898"
+APP_SAMOURAI_SERVER_DB_IP="10.21.21.24"
+APP_SAMOURAI_SERVER_NODE_IP="10.21.21.25"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -195,7 +211,7 @@ if [ "$BITCOIN_NETWORK" == "regtest" ]; then
   sed -i "s/network = \"bitcoin\"/network = \"regtest\"/g;" "$ELECTRS_CONF_FILE"
 fi
 
-# Update RPC and P2P Ports
+# Update RPC, P2P and ZMQ Ports
 sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g;" "$TOR_CONF_FILE"
@@ -240,12 +256,19 @@ if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
   sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
 fi
 
+# Set LND fee URL (but only for mainnet Neutrino)
+LND_FEE_URL=""
+if [[ "$BITCOIN_NETWORK" == "mainnet" ]] && [[ ! -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
+  LND_FEE_URL="https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json"
+fi
+
 # TODO: Update all the above code to use this simpler logic
 for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
   sed -i "s/<nginx-ip>/${NGINX_IP}/g" "${template}"
+  sed -i "s/<nginx-port>/${NGINX_PORT}/g" "${template}"
   sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
   sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
   sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
@@ -259,6 +282,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
   sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
+  sed -i "s/<zmq-rawblock-port>/${BITCOIN_ZMQ_RAWBLOCK_PORT}/g;" "${template}"
+  sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
+  sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
+  sed -i "s#<lndfeeurl>#${LND_FEE_URL}#g;" "${template}"
 
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
@@ -278,6 +305,18 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-btcpay-server-port>/${APP_BTCPAY_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-btcpay-server-nbxplorer-ip>/${APP_BTCPAY_SERVER_NBXPLORER_IP}/g" "${template}"
   sed -i "s/<app-btcpay-server-db-ip>/${APP_BTCPAY_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-lnbits-ip>/${APP_LNBITS_IP}/g" "${template}"
+  sed -i "s/<app-lnbits-port>/${APP_LNBITS_PORT}/g" "${template}"
+  sed -i "s/<app-mempool-ip>/${APP_MEMPOOL_IP}/g" "${template}"
+  sed -i "s/<app-mempool-port>/${APP_MEMPOOL_PORT}/g" "${template}"
+  sed -i "s/<app-mempool-db-ip>/${APP_MEMPOOL_DB_IP}/g" "${template}"
+  sed -i "s/<app-mempool-api-ip>/${APP_MEMPOOL_API_IP}/g" "${template}"
+  sed -i "s/<app-samourai-server-ip>/${APP_SAMOURAI_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-samourai-server-port>/${APP_SAMOURAI_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-samourai-server-whirlpool-ip>/${APP_SAMOURAI_SERVER_WHIRLPOOL_IP}/g" "${template}"
+  sed -i "s/<app-samourai-server-whirlpool-port>/${APP_SAMOURAI_SERVER_WHIRLPOOL_PORT}/g" "${template}"
+  sed -i "s/<app-samourai-server-db-ip>/${APP_SAMOURAI_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-samourai-server-node-ip>/${APP_SAMOURAI_SERVER_NODE_IP}/g" "${template}"
 done
 
 
@@ -313,6 +352,28 @@ mv -f "$TOR_CONF_FILE" "./tor/torrc"
 mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
+##########################################################
+######### Generate hidden services on first run ##########
+##########################################################
+
+# Prevents CORS issue if dashboard's hidden service
+# doesn't exist on the first run
+if [[ ! -f "${STATUS_DIR}/configured" ]]; then
+  echo "Generating hidden services..."
+  echo
+  docker-compose up --detach tor
+  wait_for_tor=10
+  while [[ ! -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; do
+    if [[ "${wait_for_tor}" == 0 ]]; then
+      echo "Dashboard's hidden service file wasn't created..."
+      echo
+      break
+    fi
+    sleep 1
+    ((wait_for_tor--))
+  done
+  docker-compose down
+fi
 
 ##########################################################
 ################ Configuration complete ##################

@@ -2,7 +2,7 @@
 
 # This script is based on raspinfo: https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo
 # raspinfo is Copyright: 2018-2019, Raspberry Pi (Trading) Ltd.
-# This fork is Copyright 2020, Umbrel
+# This fork is Copyright 2020-2021, Umbrel
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,9 +32,17 @@
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
-# function to upload the output to hastebin
-# Source: https://github.com/seejohnrun/haste-client#lightweight-alternative
-haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
+# function to upload the output to our paste server
+# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
+upload() {
+  curl \
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --silent \
+    --data-binary @- \
+    https://umbrel-paste.vercel.app/documents \
+    | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
+}
 
 echo "====================="
 echo "= Umbrel debug info ="
@@ -155,9 +163,8 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
         if [[ "${1}" == "--upload" ]]; then
-            echo "You can also share this link instead:"
-            ./scripts/debug | sed '/onion/d' | haste
-            dmesg | haste
+            echo "You can also share these links instead:"
+            echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
@@ -176,8 +183,7 @@ if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    ./scripts/debug | sed '/onion/d' | haste
-    dmesg | haste
+    echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."

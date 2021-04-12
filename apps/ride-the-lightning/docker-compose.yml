@@ -8,7 +8,7 @@ x-logging:
 
 services:
   web:
-    image: shahanafarooqui/rtl:0.10.0@sha256:036d94c582911caa74cbe8a0f5646d98b3549010bdbdd2cebd92d3b08a00d82a
+    image: shahanafarooqui/rtl:0.10.1@sha256:d076f91c4b994d3059d3c0db80dc560ca05f675924d5625bae724df473877882
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -17,6 +17,7 @@ services:
       - "$APP_RIDE_THE_LIGHTNING_PORT:$APP_RIDE_THE_LIGHTNING_PORT"
     volumes:
       - ${APP_DATA_DIR}/rtl:/data
+      - ${APP_DATA_DIR}/loop:/loop
       - ${LND_DATA_DIR}:/lnd:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     environment:
@@ -32,14 +33,14 @@ services:
         CONFIG_PATH: "/lnd/lnd.conf"
 
         # Loop
-        SWAP_SERVER_URL: "https://loop:8081"
-        SWAP_MACAROON_PATH: "/data/loop/$BITCOIN_NETWORK"
+        SWAP_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_LOOP_IP:8081"
+        SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
 
   loop:
-    image: louneskmt/loop:v0.11.2-beta@sha256:97b481a52e3b3f336a21d3be0eb1414dcd72e230de2e22a57287d15aab0a7af0
+    image: louneskmt/loop:v0.11.4-beta@sha256:5e9d882921ca74abdbf613428406e32ffb48a635235cd2c9710fe2a28a225271
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
@@ -52,7 +53,7 @@ services:
     command:
       - --network=$BITCOIN_NETWORK
       - --lnd.host="$LND_IP:$LND_GRPC_PORT"
-      - --lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+      - --lnd.macaroonpath="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
       - --lnd.tlspath="/lnd/tls.cert"
       - --restlisten=0.0.0.0:8081
     networks:
