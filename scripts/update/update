@@ -25,6 +25,7 @@ elif [[ "${1}" == "--path" ]]; then
   update_type="path"
   update_path="${2}"
 elif [[ "${1}" == "--repo" ]]; then
+  check_dependencies git
   update_type="repo"
   descriptor="${2}"
   if [[ "${descriptor}" != *"#"* ]]; then
