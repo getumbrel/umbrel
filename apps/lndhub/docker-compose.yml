@@ -1,11 +1,5 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
         redis:
               container_name: redis
@@ -22,7 +16,6 @@ services:
         web:
                 container_name: web
                 image: bluewalletorganization/lndhub:v1.3.0
-                logging: *default-logging
                 depends_on: [ redis ]
                 restart: on-failure
                 stop_grace_period: 5m30s
