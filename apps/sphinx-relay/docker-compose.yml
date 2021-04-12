@@ -1,10 +1,5 @@
 version: "3.7"
 
-x-logging: &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   sphinx-relay:
     container_name: sphinx-relay
@@ -12,7 +7,6 @@ services:
     init: true
     restart: on-failure
     stop_grace_period: 1m
-    logging: *default-logging
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/relay/.lnd/
