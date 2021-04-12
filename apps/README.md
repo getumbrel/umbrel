@@ -96,16 +96,9 @@ Let's copy-paste the following template `docker-compose.yml` file in a text edit
 ```yml
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: <docker-image>:<tag>
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
