@@ -1,6 +1,6 @@
 {
     "version": "0.3.8",
     "name": "Umbrel v0.3.8",
-    "requires": ">=0.2.1",
+    "requires": ">=0.3.9",
     "notes": "Umbrel v0.3.8 brings the following apps up to their latest versions:\n\n- Thunderhub\n- RTL\n- BTCPay\n- Lightning Terminal\n- Specter Desktop\n- Sphinx Relay\n- Samourai Server\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

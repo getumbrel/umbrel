@@ -27,16 +27,6 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo
 
-    # In Umbrel OS v0.1.2, we need to bind Avahi to only
-    # eth0,wlan0 interfaces to prevent hostname cycling
-    # https://github.com/getumbrel/umbrel-os/issues/76
-    # This patch can be safely removed from Umbrel v0.3.x+
-    if [[ $UMBREL_OS == "v0.1.2" ]] && [[ -f "/etc/avahi/avahi-daemon.conf" ]]; then
-        echo "Binding Avahi to eth0 and wlan0"
-        sed -i "s/#allow-interfaces=eth0/allow-interfaces=eth0,wlan0/g;" "/etc/avahi/avahi-daemon.conf"
-        systemctl restart avahi-daemon.service
-    fi
-
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
         echo "Replacing ${SD_CARD_UMBREL_ROOT} on SD card with the new release"
@@ -99,14 +89,8 @@ echo "Updating installed apps"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
 EOF
-# We can just loop over this once everyone has the latest app script
-# "$UMBREL_ROOT/scripts/app" ls-installed
-# but for now we need to implement it here manually
-USER_FILE="${UMBREL_ROOT}/db/user.json"
-list_installed_apps() {
-  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
-}
-list_installed_apps | while read app; do
+
+echo $(${UMBREL_ROOT}/scripts/app ls-installed) | while read app; do
   if [[ "${app}" != "" ]]; then
     echo "${app}..."
     scripts/app compose "${app}" pull
@@ -120,43 +104,6 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
-
-# Move Docker data dir to external storage now if this is an old install.
-# This is only needed temporarily until all users have transitioned Docker to SSD.
-DOCKER_DIR="/var/lib/docker"
-MOUNT_POINT="/mnt/data"
-EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
-if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
-  echo "Attempting to move Docker to external storage..."
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 72, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
-EOF
-
-  echo "Stopping Docker service..."
-  systemctl stop docker
-
-  # Copy Docker data dir to external storage
-  copy_docker_to_external_storage () {
-    mkdir -p "${EXTERNAL_DOCKER_DIR}"
-    cp  --recursive \
-        --archive \
-        --no-target-directory \
-        "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
-  }
-
-  echo "Copying Docker data directory to external storage..."
-  copy_docker_to_external_storage
-
-  echo "Bind mounting external storage over local Docker data dir..."
-  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
-
-  # Ensure fs changes are registered
-  sync
-  sleep 1
-
-  echo "Starting Docker service..."
-  systemctl start docker
-fi
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
@@ -188,11 +135,6 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/start
 
-# Delete obselete backup lock file
-# https://github.com/getumbrel/umbrel/pull/213
-# Remove this in the next breaking update
-[[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]] && rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
-
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
@@ -202,39 +144,4 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
 {"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
 EOF
   docker image prune --all --force
-
-  # Uninstall dphys-swapfile since we now use our own swapfile logic
-  # Remove this in the next breaking update
-  if command -v dphys-swapfile >/dev/null 2>&1; then
-    echo "Removing unused dependency \"dphys-swapfile\""
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 95, "description": "Removing unused dependencies", "updateTo": "$RELEASE"}
-EOF
-    apt-get remove -y dphys-swapfile
-  fi
-
-  # Setup swap if it doesn't already exist
-  # Remove this in the next breaking update
-  MOUNT_POINT="/mnt/data"
-  SWAP_DIR="/swap"
-  SWAP_FILE="${SWAP_DIR}/swapfile"
-  if ! df -h "${SWAP_DIR}" 2> /dev/null | grep --quiet '/dev/sd'; then
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 97, "description": "Setting up swap", "updateTo": "$RELEASE"}
-EOF
-
-    echo "Bind mounting external storage to ${SWAP_DIR}"
-    mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
-    mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
-
-    echo "Checking ${SWAP_DIR} is now on external storage..."
-    df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
-
-    echo "Setting up swapfile"
-    rm "${SWAP_FILE}" || true
-    fallocate -l 4G "${SWAP_FILE}"
-    chmod 600 "${SWAP_FILE}"
-    mkswap "${SWAP_FILE}"
-    swapon "${SWAP_FILE}"
-  fi
 fi
