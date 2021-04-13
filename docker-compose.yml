@@ -1,8 +1,4 @@
 version: '3.7'
-x-logging: &default-logging
-    driver: journald
-    options:
-        tag: "{{.Name}}"
 
 services:
         tor:
@@ -10,7 +6,6 @@ services:
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
                 restart: on-failure
-                logging: *default-logging
                 volumes:
                     - ${PWD}/tor/torrc:/etc/tor/torrc
                     - ${PWD}/tor/data:/var/lib/tor/
@@ -23,7 +18,6 @@ services:
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
-                logging: *default-logging
                 depends_on: [ dashboard, manager ]
                 volumes:
                         - ${PWD}/nginx:/etc/nginx
@@ -37,7 +31,6 @@ services:
         bitcoin:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.21.0@sha256:f9348bff310e1c2bfeca9ca44318ed81a7e74172658881245d0922f77e6c4ca5
-                logging: *default-logging
                 depends_on: [ tor, manager, nginx ]
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
@@ -51,7 +44,6 @@ services:
         lnd:
                 container_name: lnd
                 image: lncm/lnd:v0.12.1@sha256:bdc442c00bc4dd4d5bfa42efd7d977bfe4d21a08d466c933b9cff7cfc83e0c0e
-                logging: *default-logging
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
@@ -67,7 +59,6 @@ services:
         dashboard:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.3.18@sha256:56a964bb624551345480cc442ddfd065c561d42192877dfcf49a925bcfb3b2a7
-                logging: *default-logging
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -76,7 +67,6 @@ services:
         manager:
                 container_name: manager
                 image: getumbrel/manager:v0.2.10@sha256:aaeddfd7bd861dc9c418b34a4a4aa83a873e8b0304e28999d1d594eabf0e1b70
-                logging: *default-logging
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -132,7 +122,6 @@ services:
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.9@sha256:8001338c3e6804afc9078eb08e8ee820e9d2c908a44303a3e4968ab57c8ad90b
-                logging: *default-logging
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
@@ -155,7 +144,6 @@ services:
         neutrino-switcher:
                 container_name: neutrino-switcher
                 image: getumbrel/neutrino-switcher:v1.2.0@sha256:4d9636aabd9d06ed3693173870d6ab57d4e08716c618a0457512d542c4cf9b01
-                logging: *default-logging
                 depends_on: [ bitcoin, lnd ]
                 restart: on-failure
                 volumes:
@@ -176,7 +164,6 @@ services:
         frontail:
             container_name: frontail
             image: getumbrel/frontail:v4.9.1@sha256:9fa345b7a947361e2732909db8bd316b8157749d7dd9949abd8150eb023906db
-            logging: *default-logging
             restart: on-failure
             command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
             volumes:
@@ -187,7 +174,6 @@ services:
         electrs:
               container_name: electrs
               image: getumbrel/electrs:v0.8.9@sha256:592fb50cdf16fa2b2e20f7c0a28d4a132c2ee636d89d4b9c24f14886763b5478
-              logging: *default-logging
               depends_on: [ bitcoin ]
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
