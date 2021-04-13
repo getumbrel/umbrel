@@ -1,0 +1,34 @@
+# The JSONPath filter expression used to identify which PRs to close.
+# The data filtered is the pull request data along with other metadata passed in
+# by probot.
+# See http://goessner.net/articles/JsonPath/
+# Default behavior: matches all non-Bot created PRs where the user does not have
+# permission to push to the PR itself.
+filters:
+    - '@.pull_request.head.user.login == @.pull_request.base.user.login',
+    - '@.pull_request.user.type != "Bot"',
+    - '!@.has_push_access'
+
+# The message to post to the closed PR.
+commentBody: |
+  Thanks for your submission.
+  It appears that you've created a pull request using one of our repository's branches. Since this is
+  almost always a mistake, we're going to go ahead and close this. If it was intentional, please
+  let us know what you were intending and we can see about reopening it.
+  Thanks again!
+
+# Whether or not to add a label to the closed PR.
+# Default: true
+addLabel: true
+
+# The name of the label to add.
+# Default: invalid
+labelName: invalid
+
+# The desired color of the label, in the event that it needs to be created.
+# Default: e6e6e6
+labelColor: e6e6e6
+
+# Users that can't use the bot. Added UmbrelBot v1 as an example and for testing purposes.
+# Default: none
+blacklist: ["UmbrelBot"]
