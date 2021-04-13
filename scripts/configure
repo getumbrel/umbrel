@@ -39,15 +39,6 @@ if [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
   STATUS_DIR="${UMBREL_ROOT}/../statuses"
 fi
 
-# Configure for mainnet or testnet or regtest depending
-# upon the user-supplied value of $NETWORK
-BITCOIN_NETWORK="${NETWORK:-mainnet}"
-
-if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] && [ "$BITCOIN_NETWORK" != "regtest" ]; then
-  echo "Error: Umbrel can only be configured for mainnet (default), testnet or regtest"
-  exit 1
-fi
-
 # Get current Umbrel version
 UMBREL_VERSION="$(cat ${UMBREL_ROOT}/info.json | jq -r .version)"
 
@@ -58,7 +49,7 @@ if [[ -f "${STATUS_DIR}/configured" ]]; then
 else
   echo "============ CONFIGURING ============="
 fi
-echo "========= UMBREL (${BITCOIN_NETWORK}) ==========="
+echo "============== UMBREL ================"
 echo "======================================"
 echo
 
@@ -97,15 +88,28 @@ ENV_FILE="./templates/.env"
 ############ Generate configuration variables ############
 ##########################################################
 
+# Temporary variables for external configuration
+NGINX_PORT_TMP=${NGINX_PORT:-}
+BITCOIN_NETWORK_TMP=${NETWORK:-}
+
 # Load existing credentials if we have some
 [[ -f "./.env" ]] && source "./.env"
 [[ ! -z ${PREV_ENV_FILE+x} ]] && [[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
+
+BITCOIN_NETWORK="${BITCOIN_NETWORK_TMP:-${BITCOIN_NETWORK:-mainnet}}"
+echo "Setting network to ${BITCOIN_NETWORK}"
+
+# Check Bitcoin network
+if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] && [ "$BITCOIN_NETWORK" != "regtest" ]; then
+  echo "Error: Umbrel can only be configured for mainnet (default), testnet or regtest"
+  exit 1
+fi
 
 # Umbrel
 NETWORK_IP="10.21.21.0"
 GATEWAY_IP="10.21.21.1"
 NGINX_IP="10.21.21.2"
-NGINX_PORT="${NGINX_PORT:-80}"
+NGINX_PORT="${NGINX_PORT_TMP:-${NGINX_PORT:-80}}"
 DASHBOARD_IP="10.21.21.3"
 MANAGER_IP="10.21.21.4"
 MIDDLEWARE_IP="10.21.21.5"
