@@ -161,16 +161,6 @@ services:
                 networks:
                     default:
                         ipv4_address: $NEUTRINO_SWITCHER_IP
-        frontail:
-            container_name: frontail
-            image: getumbrel/frontail:v4.9.1@sha256:9fa345b7a947361e2732909db8bd316b8157749d7dd9949abd8150eb023906db
-            restart: on-failure
-            command: "/var/log/syslog --url-path /logs --number 100 --disable-usage-stats"
-            volumes:
-                - /var/log:/var/log:ro
-            networks:
-                default:
-                    ipv4_address: $FRONTAIL_IP
         electrs:
               container_name: electrs
               image: getumbrel/electrs:v0.8.9@sha256:592fb50cdf16fa2b2e20f7c0a28d4a132c2ee636d89d4b9c24f14886763b5478
