@@ -3,6 +3,7 @@
 
 [Unit]
 Description=External Storage Mounter
+Before=docker.service
 
 [Service]
 Type=oneshot

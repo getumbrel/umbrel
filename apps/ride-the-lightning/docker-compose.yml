@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
-    image: shahanafarooqui/rtl:0.10.0@sha256:036d94c582911caa74cbe8a0f5646d98b3549010bdbdd2cebd92d3b08a00d82a
+    image: shahanafarooqui/rtl:0.10.1@sha256:d076f91c4b994d3059d3c0db80dc560ca05f675924d5625bae724df473877882
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -33,7 +26,7 @@ services:
         CONFIG_PATH: "/lnd/lnd.conf"
 
         # Loop
-        SWAP_SERVER_URL: "https://loop:8081"
+        SWAP_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_LOOP_IP:8081"
         SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
     networks:
       default:
@@ -42,7 +35,6 @@ services:
   loop:
     image: louneskmt/loop:v0.11.4-beta@sha256:5e9d882921ca74abdbf613428406e32ffb48a635235cd2c9710fe2a28a225271
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     volumes:
