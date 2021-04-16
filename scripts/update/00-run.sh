@@ -23,6 +23,9 @@ fi
 
 echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
+# Clear old log file for karen to remove all remaining sensitive information
+echo "" > "$UMBREL_ROOT/logs/karen.log"
+
 # Update status file
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Backing up", "updateTo": "$RELEASE"}

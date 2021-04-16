@@ -41,6 +41,7 @@ else
 fi
 signal_dir="$root_dir/signals"
 trigger_dir="$root_dir/triggers"
+logs_dir="$root_dir/../logs"
 
 if [[ ! -d "$root_dir" ]]; then
   echo "Root dir does not exist '$root_dir'"
@@ -63,7 +64,9 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
     args="${signal#$app_prefix}"
   fi
 
-  if test -x "$trigger"; then
+  if [[ "$signal" == "backup" ]]; then
+    "$trigger" $args & >> "$logs_dir/backup.log"
+  else if test -x "$trigger"; then
     echo "karen is getting triggered!"
     "$trigger" $args &
   else
