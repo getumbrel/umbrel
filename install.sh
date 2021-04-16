@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-UMBREL_VERSION=0.3.7
+UMBREL_VERSION=0.3.9
 
 # Helper functions
 list_block_devices () {
@@ -113,7 +113,8 @@ echo "Starting setup..."
 mkdir -p ${install_dir}
 cd ${install_dir}
 echo "Downloading Umbrel..."
-curl -L https://github.com/getumbrel/umbrel/archive/v${UMBREL_VERSION}.tar.gz | tar -xz --strip-components=1
+#curl -L https://github.com/getumbrel/umbrel/archive/v${UMBREL_VERSION}.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/AaronDewes/umbrel/archive/installer.tar.gz | tar -xz --strip-components=1
 
 echo "Configuring Umbrel..."
 NETWORK=$btc_network ./scripts/configure
