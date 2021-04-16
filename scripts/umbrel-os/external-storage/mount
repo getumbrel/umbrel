@@ -61,6 +61,25 @@ get_block_device_model () {
   echo "$(echo $vendor) $(echo $model)"
 }
 
+# By default Linux uses the UAS driver for most devices. This causes major
+# stability problems on the Raspberry Pi, not due to issues with UAS, but due
+# to devices running in UAS mode using much more power. The Pi can't reliably
+# provide enough power to the USB port and the entire system experiences
+# extreme instability. By blacklisting all devices from the UAS driver on boot
+# we fall back to the mass-storage driver, which results in decreased
+# performance, but lower power usage, and much better system stability.
+blacklist_uas () {
+  usb_quirks=$(lsusb | awk '{print $6":u"}' | tr '\n' ',' | sed 's/,$//')
+  echo -n "${usb_quirks}" > /sys/module/usb_storage/parameters/quirks
+
+  echo "Rebinding USB drivers..."
+  for i in /sys/bus/pci/drivers/[uoex]hci_hcd/*:*; do
+    [[ -e "$i" ]] || continue;
+    echo "${i##*/}" > "${i%/*}/unbind"
+    echo "${i##*/}" > "${i%/*}/bind"
+  done
+}
+
 is_partition_ext4 () {
   partition_path="${1}"
   # We need to run sync here to make sure the filesystem is reflecting the
@@ -162,7 +181,9 @@ main () {
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  
+  echo "Blacklisting USB device IDs against UAS driver..."
+  blacklist_uas
+
   echo "Checking if the device is ext4..."
 
   if is_partition_ext4 "${partition_path}" ; then
