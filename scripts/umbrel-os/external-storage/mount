@@ -184,6 +184,20 @@ main () {
   echo "Blacklisting USB device IDs against UAS driver..."
   blacklist_uas
 
+  echo "Checking USB devices are back..."
+  retry_for_usb_devices=1
+  while [[ ! -e "${partition_path}" ]]; do
+    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
+    if [[ $retry_for_usb_devices -gt 10 ]]; then
+      echo "USB devices weren't registered after 10 tries..."
+      echo "Exiting mount script without doing anything"
+      exit 1
+    fi
+
+    echo "Waiting for USB devices..."
+    sleep 1
+  done
+
   echo "Checking if the device is ext4..."
 
   if is_partition_ext4 "${partition_path}" ; then
