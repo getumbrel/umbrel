@@ -164,7 +164,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
         if [[ "${1}" == "--upload" ]]; then
             echo "You can also share these links instead:"
-            echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
+            echo "$(./scripts/debug | sed '/onion/d' | sed -r 's/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g') === Umbrel-Paste split === $(dmesg)" | upload
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
