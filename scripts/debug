@@ -183,7 +183,7 @@ if [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
+    echo "$(./scripts/debug | sed '/onion/d' | sed -r 's/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g') === Umbrel-Paste split === $(dmesg)" | upload
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
