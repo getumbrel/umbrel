@@ -114,8 +114,6 @@ services:
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                     DEBUG_STATUS_FILE: "/statuses/debug-status.json"
-                    DEBUG_RESULT_FILE: "/statuses/debug-result"
-                    DMESG_RESULT_FILE: "/statuses/dmesg-result"
                     TOR_PROXY_IP: "${TOR_PROXY_IP}"
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"

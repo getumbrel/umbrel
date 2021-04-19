@@ -7,13 +7,19 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/debug-status.json
 {"status": "processing"}
 EOF
 
-debug_result=$(${DEBUG_SCRIPT} | sed '/onion/d' | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")
-dmesg_result=$(dmesg)
-echo "$debug_result" > "$UMBREL_ROOT"/statuses/debug-result
-echo "$dmesg_result" > "$UMBREL_ROOT"/statuses/dmesg-result
+json_encode () {
+  jq --null-input --raw-input 'reduce inputs as $line (""; . += "\($line)\n")'
+}
+
+debug_json_string=$(${DEBUG_SCRIPT} | sed '/onion/d' | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" | json_encode)
+dmesg_json_string=$(dmesg | json_encode)
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/debug-status.json
-{"status": "success"}
+{
+  "status": "success",
+  "debug": ${debug_json_string},
+  "dmesg": ${dmesg_json_string}
+}
 EOF
 
 echo "Debug result file generated"
