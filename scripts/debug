@@ -179,7 +179,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-if [[ "${1}" == "--upload" ]]; then
+if [[ "${1}" == "--dashboard" ]]; then
+    echo "The debug script did not automatically detect any issues with your Umbrel."
+elif [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
