@@ -23,7 +23,7 @@ StandardError=syslog
 SyslogIdentifier=umbrel startup
 RemainAfterExit=yes
 Restart=always
-RestartSec=30
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
