@@ -9,8 +9,6 @@ Wants=network-online.target
 After=network-online.target
 Wants=docker.service
 After=docker.service
-StartLimitInterval=200
-StartLimitBurst=5
 
 [Service]
 Type=forking
