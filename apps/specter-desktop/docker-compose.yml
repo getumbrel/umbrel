@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
-    image: lncm/specter-desktop:v1.1.0@sha256:07253c572789b256a25f7acb5961f9d3bb9e65aaacd62e162b38f38d559c4f40
+    image: lncm/specter-desktop:v1.2.2@sha256:22d6abe4ba97dcb9d3f5f1695524c5262be176d873f5f57c9d9c3a95840cb3da
     stop_signal: SIGINT
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:

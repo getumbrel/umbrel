@@ -1,17 +1,10 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: louneskmt/lnbits:8188ae0@sha256:191b1696e8a532dfd94f982cd8249e7896dfd69c25fbe0a8437b0d08795670ef
     user: 1000:1000
     init: true
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
