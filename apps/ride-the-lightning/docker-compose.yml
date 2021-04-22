@@ -33,7 +33,7 @@ services:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
 
   loop:
-    image: louneskmt/loop:v0.11.4-beta@sha256:5e9d882921ca74abdbf613428406e32ffb48a635235cd2c9710fe2a28a225271
+    image: louneskmt/loop:v0.12.1-beta@sha256:f57abd0cbccfaa741d6f0eb301421be1649e7dd42c1fc804a7759d7521866436
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
