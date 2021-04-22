@@ -10,6 +10,10 @@ After=network-online.target
 Wants=docker.service
 After=docker.service
 
+# This prevents us hitting restart rate limits and ensures we keep restarting
+# indefinitely.
+StartLimitInterval=0
+
 [Service]
 Type=forking
 TimeoutStartSec=infinity
