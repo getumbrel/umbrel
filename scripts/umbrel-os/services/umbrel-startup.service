@@ -5,6 +5,8 @@
 Description=Umbrel Startup Service
 Requires=umbrel-external-storage.service
 After=umbrel-external-storage.service
+Requires=umbrel-external-storage-sdcard-update.service
+After=umbrel-external-storage-sdcard-update.service
 Wants=network-online.target
 After=network-online.target
 Wants=docker.service
