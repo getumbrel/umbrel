@@ -1,8 +1,8 @@
-# Umbrel External Storage Updater
-# Installed at /etc/systemd/system/umbrel-external-storage-update.service
+# Umbrel External Storage SDcard Updater
+# Installed at /etc/systemd/system/umbrel-external-storage-sdcard-update.service
 
 [Unit]
-Description=External Storage Updater
+Description=External Storage SDcard Updater
 Requires=umbrel-external-storage.service
 After=umbrel-external-storage.service
 Wants=network-online.target
