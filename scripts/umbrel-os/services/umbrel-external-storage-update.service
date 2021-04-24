@@ -1,0 +1,26 @@
+# Umbrel External Storage Updater
+# Installed at /etc/systemd/system/umbrel-external-storage-update.service
+
+[Unit]
+Description=External Storage Updater
+Requires=umbrel-external-storage.service
+After=umbrel-external-storage.service
+Wants=network-online.target
+After=network-online.target
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/update-from-sdcard
+TimeoutStartSec=45min
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=external storage updater
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
