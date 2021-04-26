@@ -97,64 +97,62 @@ Let's copy-paste the following template `docker-compose.yml` file in a text edit
 version: "3.7"
 
 services:
-  web:
-    image: <docker-image>:<tag>
-    restart: on-failure
-    stop_grace_period: 1m
-    ports:
-      # Replace <port> with the port that your app's web server
-      # is listening inside the Docker container. If you need to
-      # expose more ports, add them below.
-      - <port>:<port>
-    volumes:
-      # Uncomment to mount your data directories inside
-      # the Docker container for storing persistent data
-      # - ${APP_DATA_DIR}/foo:/foo
-      # - ${APP_DATA_DIR}/bar:/bar
-
-      # Uncomment to mount LND's data directory as read-only
-      # inside the Docker container at path /lnd
-      # - ${LND_DATA_DIR}:/lnd:ro
-
-      # Uncomment to mount Bitcoin Core's data directory as
-      # read-only inside the Docker container at path /bitcoin
-      # - ${BITCOIN_DATA_DIR}:/bitcoin:ro
-    environment:
-      # Pass any environment variables to your app for configuration in the form:
-      # VARIABLE_NAME: value
-      #
-      # Here are all the Umbrel provided variables that you can pass through to
-      # your app to connect to Bitcoin Core, LND, Electrum and Tor:
-      #
-      # Bitcoin Core environment variables
-      # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
-      # $BITCOIN_IP - Local IP of Bitcoin Core
-      # $BITCOIN_P2P_PORT - P2P port
-      # $BITCOIN_RPC_PORT - RPC port
-      # $BITCOIN_RPC_USER - RPC username
-      # $BITCOIN_RPC_PASS - RPC password
-      # $BITCOIN_RPC_AUTH - RPC auth string
-      #
-      # LND environment variables
-      # $LND_IP - Local IP of LND
-      # $LND_GRPC_PORT - gRPC Port of LND
-      # $LND_REST_PORT - REST Port of LND
-      #
-      # Electrum server environment variables
-      # $ELECTRUM_IP - Local IP of Electrum server
-      # $ELECTRUM_PORT - Port of Electrum server
-      #
-      # Tor proxy environment variables
-      # $TOR_PROXY_IP - Local IP of Tor proxy
-      # $TOR_PROXY_PORT - Port of Tor proxy
-      #
-      # App specific environment variables
-      # $APP_HIDDEN_SERVICE - The address of the Tor hidden service your app will be exposed at
-  # If your app has more services, like a database container, you can define those
-  # services below:
-  # db:
-  #   image: <docker-image>:<tag>
-  #   ...
+    web:
+        mage: <docker-image>:<tag>
+        restart: on-failure
+        stop_grace_period: 1m
+        volumes:
+            # Uncomment to mount your data directories inside
+            # the Docker container for storing persistent data
+            # - "${APP_DATA_DIR}/foo:/foo"
+            # - "${APP_DATA_DIR}/bar:/ba"
+            # Uncomment to mount LND's data directory as read-only
+            # inside the Docker container at path /lnd
+            # - "${LND_DATA_DIR}:/lnd:ro"
+            # Uncomment to mount Bitcoin Core's data directory as
+            # read-only inside the Docker container at path /bitcoin
+            # - "${BITCOIN_DATA_DIR}:/bitcoin:ro"
+        ports:
+            # Replace <port> with the port that your app's web server
+            # is listening inside the Docker container. If you need to
+            # expose more ports, add them below.
+            - "<port>:<port>"
+        environment:
+            # Pass any environment variables to your app for configuration in the form:
+            # VARIABLE_NAME: value
+            #
+            # Here are all the Umbrel provided variables that you can pass through to
+            # your app to connect to Bitcoin Core, LND, Electrum and Tor:
+            #
+            # Bitcoin Core environment variables
+            # $BITCOIN_NETWORK - Can be "mainnet", "testnet" or "regtest"
+            # $BITCOIN_IP - Local IP of Bitcoin Core
+            # $BITCOIN_P2P_PORT - P2P port
+            # $BITCOIN_RPC_PORT - RPC port
+            # $BITCOIN_RPC_USER - RPC username
+            # $BITCOIN_RPC_PASS - RPC password
+            # $BITCOIN_RPC_AUTH - RPC auth string
+            #
+            # LND environment variables
+            # $LND_IP - Local IP of LND
+            # $LND_GRPC_PORT - gRPC Port of LND
+            # $LND_REST_PORT - REST Port of LND
+            #
+            # Electrum server environment variables
+            # $ELECTRUM_IP - Local IP of Electrum server
+            # $ELECTRUM_PORT - Port of Electrum server
+            #
+            # Tor proxy environment variables
+            # $TOR_PROXY_IP - Local IP of Tor proxy
+            # $TOR_PROXY_PORT - Port of Tor proxy
+            #
+            # App specific environment variables
+            # $APP_HIDDEN_SERVICE - The address of the Tor hidden service your app will be exposed at
+    # If your app has more services, like a database container, you can define those
+    # services below:
+    # db:
+    #   image: <docker-image>:<tag>
+    #   ...
 
 ```
 
@@ -170,13 +168,13 @@ Updated `docker-compose.yml` file:
 version: "3.7"
 
 services:
-  web:
-    image: getumbrel/btc-rpc-explorer:v2.0.2
-    restart: on-failure
-    stop_grace_period: 1m
-    ports:
-      - 3002:3002
-    environment:
+    web:
+        image: "getumbrel/btc-rpc-explorer:v2.0.2"
+        restart: "on-failure"
+        stop_grace_period: "1m"
+        ports:
+            - "3002:3002"
+        environment:
 
 ```
 
@@ -188,32 +186,32 @@ So the final version of `docker-compose.yml` would be:
 version: "3.7"
 
 services:
-  web:
-    image: getumbrel/btc-rpc-explorer:v2.0.2
-    restart: on-failure
-    stop_grace_period: 1m
-    ports:
-      - 3002:3002
-    environment:
-      # Bitcoin Core connection details
-      BTCEXP_BITCOIND_HOST: $BITCOIN_IP
-      BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
-      BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
-      BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
+    web:
+        image: "getumbrel/btc-rpc-explorer:v2.0.2"
+        restart: "on-failure"
+        stop_grace_period: "1m"
+        ports:
+            - "3002:3002"
+        environment:
+            # Bitcoin Core connection details
+            BTCEXP_BITCOIND_HOST: "${BITCOIN_IP}"
+            BTCEXP_BITCOIND_PORT: "${BITCOIN_RPC_PORT}"
+            BTCEXP_BITCOIND_USER: "${BITCOIN_RPC_USER}"
+            BTCEXP_BITCOIND_PASS: "${BITCOIN_RPC_PASS}"
 
-      # Electrum connection details
-      BTCEXP_ELECTRUMX_SERVERS: "tcp://$ELECTRUM_IP:$ELECTRUM_PORT"
+            # Electrum connection details
+            BTCEXP_ELECTRUMX_SERVERS: "tcp://$ELECTRUM_IP:$ELECTRUM_PORT"
 
-      # App Config
-      BTCEXP_HOST: 0.0.0.0
-      DEBUG: "btcexp:*,electrumClient"
-      BTCEXP_ADDRESS_API: electrumx
-      BTCEXP_SLOW_DEVICE_MODE: "true"
-      BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
-      BTCEXP_PRIVACY_MODE: "true"
-      BTCEXP_NO_RATES: "true"
-      BTCEXP_RPC_ALLOWALL: "false"
-      BTCEXP_BASIC_AUTH_PASSWORD: ""      
+            # App Config
+            BTCEXP_HOST: "0.0.0.0"
+            DEBUG: "btcexp:*,electrumClient"
+            BTCEXP_ADDRESS_API: "electrumx"
+            BTCEXP_SLOW_DEVICE_MODE: "true"
+            BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
+            BTCEXP_PRIVACY_MODE: "true"
+            BTCEXP_NO_RATES: "true"
+            BTCEXP_RPC_ALLOWALL: "false"
+            BTCEXP_BASIC_AUTH_PASSWORD: ""
 
 ```
 
