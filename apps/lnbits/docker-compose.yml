@@ -1,33 +1,33 @@
 version: "3.7"
 
 services:
-  web:
-    image: lnbitsdocker/lnbits:7134821@sha256:c5e58fa94e01180a9c538b0d5a66dc9824c900c6671e8c5ede9adb270d885579
-    user: 1000:1000
-    init: true
-    restart: on-failure
-    stop_grace_period: 1m
-    ports:
-      - "$APP_LNBITS_PORT:$APP_LNBITS_PORT"
-    volumes:
-      - ${APP_DATA_DIR}/data:/data
-      - ${LND_DATA_DIR}:/lnd:ro
-    environment:
-      # Global
-      LNBITS_BIND: "0.0.0.0:$APP_LNBITS_PORT"
-      LNBITS_DATA_FOLDER: "/data"
+    web:
+        image: "lnbitsdocker/lnbits:7134821@sha256:c5e58fa94e01180a9c538b0d5a66dc9824c900c6671e8c5ede9adb270d885579"
+        user: "1000:1000"
+        init: true
+        restart: "on-failure"
+        stop_grace_period: "1m"
+        volumes:
+            - "${APP_DATA_DIR}/data:/data"
+            - "${LND_DATA_DIR}:/lnd:ro"
+        ports:
+            - "${APP_LNBITS_PORT}:${APP_LNBITS_PORT}"
+        environment:
+            # Global
+            LNBITS_BIND: "0.0.0.0:${APP_LNBITS_PORT}"
+            LNBITS_DATA_FOLDER: "/data"
 
-      # LND
-      LNBITS_BACKEND_WALLET_CLASS: LndWallet
-      LND_GRPC_ENDPOINT: $LND_IP
-      LND_GRPC_PORT: $LND_GRPC_PORT
-      LND_GRPC_CERT: "/lnd/tls.cert"
-      LND_GRPC_MACAROON: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+            # LND
+            LNBITS_BACKEND_WALLET_CLASS: "LndWallet"
+            LND_GRPC_ENDPOINT: "${LND_IP}"
+            LND_GRPC_PORT: "${LND_GRPC_PORT}"
+            LND_GRPC_CERT: "/lnd/tls.cert"
+            LND_GRPC_MACAROON: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
 
-      # App
-      LNBITS_SITE_TITLE: "LNbits - Umbrel"
-      LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
-      LNBITS_DISABLED_EXTENSIONS: "amilk"
-    networks:
-        default:
-          ipv4_address: $APP_LNBITS_IP
+            # App
+            LNBITS_SITE_TITLE: "LNbits - Umbrel"
+            LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
+            LNBITS_DISABLED_EXTENSIONS: "amilk"
+        networks:
+            default:
+                ipv4_address: "${APP_LNBITS_IP}"
