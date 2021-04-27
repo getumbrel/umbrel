@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+
+PERCENT_MEMORY_THRESHOLD=90
+
+check_if_not_already_running() {
+  if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
+  then
+    echo "Memory monitor is already running"
+    exit 1
+  fi
+}
+
+log () {
+  echo "$(date "+%Y-%m-%d %H:%M:%S") ${@}"
+}
+
+check_if_not_already_running
+log "Memory monitor running!"
+
+while true; do
+  percent_memory_used=$(free | awk 'NR==2{print int($3*100/$2) }')
+  if (( $percent_memory_used > $PERCENT_MEMORY_THRESHOLD )); then
+    touch "${UMBREL_ROOT}/statuses/memory-warning"
+    log "Warning memory usage at ${percent_memory_used}%"
+  fi
+  sleep 10
+done
