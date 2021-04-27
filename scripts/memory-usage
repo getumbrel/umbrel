@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+
+get_container_memory_use () {
+  local container="${1}"
+
+  local container_memory=0
+
+  local container_pids=$(docker top "${container}" | tail -n +2 | awk '{print $2}')
+  for pid in "${container_pids}"; do
+    local pid_memory=$(ps u "${pid}" | awk '{print $4}' | grep -v 'MEM')
+    if [[ ! -z "${pid_memory}" ]]; then
+      container_memory=$(awk "BEGIN {print ${container_memory}+${pid_memory}}")
+    fi
+  done
+
+  echo "${container_memory}"
+}
+
+get_app_memory_use () {
+  local app="${1}"
+
+  local app_memory=0
+
+  local app_containers=$("${UMBREL_ROOT}/scripts/app" compose "${app}" ps | awk '{print $1}' | grep -v 'Name\|-----')
+  for container in "${app_containers}"; do
+    local container_memory=$(get_container_memory_use "${container}")
+    app_memory=$(awk "BEGIN {print ${app_memory}+${container_memory}}")
+  done
+
+  echo "${app_memory}"
+}
+
+main() {
+  local total_system_memory_usage=$(free | awk 'NR==2{print sprintf("%.1f", $3*100/$2) }')
+  echo "total: ${total_system_memory_usage}%"
+
+  local total_container_memory=0
+
+  # Core services memory use
+  for service in bitcoin lnd electrs tor; do
+    local service_memory=$(get_container_memory_use "${service}")
+    total_container_memory=$(awk "BEGIN {print ${total_container_memory}+${service_memory}}")
+    echo "${service}: ${service_memory}%"
+  done
+
+  # Installed app memory use
+  for app in $("${UMBREL_ROOT}/scripts/app" ls-installed); do
+    local app_memory=$(get_app_memory_use "${app}")
+    total_container_memory=$(awk "BEGIN {print ${total_container_memory}+${app_memory}}")
+    echo "${app}: ${app_memory}%"
+  done
+
+  # Misc system memory use
+  local system_memory=$(awk "function pos(x){return(x<0?0:x)} BEGIN {print pos(${total_system_memory_usage}-${total_container_memory})}")
+  echo "system: ${system_memory}%"
+}
+
+main 2> /dev/null | sort --key 2 --numeric-sort --reverse
