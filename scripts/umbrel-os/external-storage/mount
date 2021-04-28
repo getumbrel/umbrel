@@ -69,14 +69,40 @@ get_block_device_model () {
 # we fall back to the mass-storage driver, which results in decreased
 # performance, but lower power usage, and much better system stability.
 blacklist_uas () {
-  usb_quirks=$(lsusb | awk '{print $6":u"}' | tr '\n' ',' | sed 's/,$//')
-  echo -n "${usb_quirks}" > /sys/module/usb_storage/parameters/quirks
+  local action="${1-}"
+
+  if [[ "${action}" == "--undo" ]]; then
+    usb_quirks=""
+  else
+    usb_quirks=$(lsusb | awk '{print $6":u"}' | tr '\n' ',' | sed 's/,$//')
+  fi
+  echo "${usb_quirks}" > /sys/module/usb_storage/parameters/quirks
 
   echo "Rebinding USB drivers..."
   for i in /sys/bus/pci/drivers/[uoex]hci_hcd/*:*; do
-    [[ -e "$i" ]] || continue;
+    [[ -e "$i" ]] || continue
     echo "${i##*/}" > "${i%/*}/unbind"
     echo "${i##*/}" > "${i%/*}/bind"
+  done
+
+  echo "Checking USB devices are back..."
+  retry_for_usb_devices=1
+  while [[ ! -e "${block_device_path}" ]]; do
+    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
+    if [[ $retry_for_usb_devices -gt 10 ]]; then
+      echo "USB devices weren't registered after 10 tries"
+      if [[ "${action}" == "--undo" ]]; then
+        echo "Exiting mount script without doing anything"
+        exit 1
+      else
+        echo "Removing quirks..."
+        blacklist_uas --undo
+        return
+      fi
+    fi
+
+    echo "Waiting for USB devices..."
+    sleep 1
   done
 }
 
@@ -184,20 +210,6 @@ main () {
 
   echo "Blacklisting USB device IDs against UAS driver..."
   blacklist_uas
-
-  echo "Checking USB devices are back..."
-  retry_for_usb_devices=1
-  while [[ ! -e "${block_device_path}" ]]; do
-    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
-    if [[ $retry_for_usb_devices -gt 10 ]]; then
-      echo "USB devices weren't registered after 10 tries..."
-      echo "Exiting mount script without doing anything"
-      exit 1
-    fi
-
-    echo "Waiting for USB devices..."
-    sleep 1
-  done
 
   echo "Checking if the device is ext4..."
 
