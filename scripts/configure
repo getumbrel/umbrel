@@ -317,6 +317,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-samourai-server-node-ip>/${APP_SAMOURAI_SERVER_NODE_IP}/g" "${template}"
 done
 
+echo "Downloading app registry"
+git clone https://github.com/getumbrel/umbrel-apps "${UMBREL_ROOT}/apps"
 
 ##########################################################
 ############### Performance optimizations ################

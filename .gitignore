@@ -29,6 +29,7 @@ logs/*
 statuses/*
 tor/*
 app-data/*
+apps/*
 
 # Commit these files
 

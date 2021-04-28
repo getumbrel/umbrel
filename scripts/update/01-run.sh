@@ -95,9 +95,17 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 docker-compose pull
 
-echo "Updating installed apps"
+# Download app registry
+echo "Downloading app list"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 55, "description": "Downloading list of apps", "updateTo": "$RELEASE"}
+EOF
+git clone https://github.com/getumbrel/umbrel-apps "${UMBREL_ROOT}/apps"
+
+# Pull new app containers
+echo "Installing app updates"
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 60, "description": "Installing app updates", "updateTo": "$RELEASE"}
 EOF
 # We can just loop over this once everyone has the latest app script
 # "$UMBREL_ROOT/scripts/app" ls-installed
