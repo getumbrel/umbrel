@@ -3,9 +3,9 @@
 # karen watches for signals and executes triggers in the events dir
 # karen gets triggered a lot
 
-check_root () {
-  if [[ $UID != 0 ]]; then
-    echo "Error: This script must be run as root."
+check_permissions () {
+  if ! id --name --groups --zero "$USER" | grep --quiet --null-data --line-regexp --fixed-strings "docker" && [[ $UID != 0 ]]; then
+    echo "Error: This script must be run as root or with docker permissions."
     echo "Can I speak to a manager please?"
     exit 1
   fi
@@ -28,7 +28,7 @@ check_dependencies () {
   done
 }
 
-check_root
+check_permissions
 
 check_if_not_already_running
 
