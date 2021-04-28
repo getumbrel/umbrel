@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Start Umbrel
 
-if [[ $UID != 0 ]]; then
-    echo "Umbrel must be started as root"
+if ! id --name --groups --zero "$USER" | grep --quiet --null-data --line-regexp --fixed-strings "docker" && [[ $UID != 0 ]]; then
+    echo "Umbrel must be started as root or with docker permissions"
     echo "Please re-run this script as"
     echo "  sudo ./scripts/start"
     exit 1
