@@ -238,8 +238,8 @@
         "category": "Wallet Servers",
         "name": "BlueWallet Server",
         "version": "1.3.0",
-        "tagline": "Connect a BlueWallet to your Umbrel",
-        "description": "Wrapper for Lightning Network Daemon. It provides separate accounts and trust minimization for end users. Onboard your family and friends to Lightning powered by your own node!",
+        "tagline": "Run Lightning on BlueWallet. A radically simple & powerful Bitcoin wallet",
+        "description": "Run BlueWallet in a self-custody fashion with full privacy and no 3rd parties. It provides a multiple account plugin for a Lightning Network wallet. It allows that a group of users run different accounts with only one node in a trust-minimized setup.\n\nIdeal for hosted shared services or groups, families and friends that want to share their own node. Or, to just simply connect your own Lightning node to BlueWallet.",
         "developer": "BlueWallet",
         "website": "https://lndhub.io",
         "dependencies": [
