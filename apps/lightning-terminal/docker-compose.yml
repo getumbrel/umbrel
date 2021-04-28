@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
-    image: lightninglabs/lightning-terminal:v0.4.0-alpha@sha256:1273ffa9e818dea2d21adc9a226692b8117ab29582b80c6d6e4c53316392da05
+    image: lightninglabs/lightning-terminal:v0.4.1-alpha@sha256:624376ebaf286cf7118ca271ed43fb852be4aad814c1f4f6a56634f673671a4a
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -22,10 +15,10 @@ services:
       HOME: "/data"
     command:
         - --insecure-httplisten=0.0.0.0:$APP_LIGHTNING_TERMINAL_PORT
+        - --network="$BITCOIN_NETWORK"
         - --lnd-mode="remote"
-        - --remote.lnd.network="$BITCOIN_NETWORK"
         - --remote.lnd.rpcserver=$LND_IP:$LND_GRPC_PORT
-        - --remote.lnd.macaroondir="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK"
+        - --remote.lnd.macaroonpath="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
         - --remote.lnd.tlscertpath="/lnd/tls.cert"
     networks:
       default:

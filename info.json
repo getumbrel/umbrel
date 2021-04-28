@@ -1,6 +1,6 @@
 {
-    "version": "0.3.5",
-    "name": "Umbrel v0.3.5",
+    "version": "0.3.9",
+    "name": "Umbrel v0.3.9",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.5 fixes some bugs that were preventing the sending of transactions and causing Umbrel to hang on the \"Loading LND...\" message.\n\nIf your update gets stuck for some reason, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel v0.3.9 brings up to 5x faster performance, a brand new way to troubleshoot, always online Lightning node, wider support for SSDs and enclosures, connection support for LilyWallet, bug fixes, and more.\n\nNote: It may take up to 5 minutes for Lightning and Bitcoin Core data to appear after the update.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
