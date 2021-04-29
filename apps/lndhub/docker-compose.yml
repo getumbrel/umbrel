@@ -2,7 +2,6 @@ version: "3.7"
 
 services:
         redis:
-              container_name: redis
               image: redis:6.2-buster
               command: redis-server --requirepass moneyprintergobrrr
               restart: on-failure
@@ -14,7 +13,6 @@ services:
                   default:
                       ipv4_address: $APP_LNDHUB_REDIS_IP
         web:
-                container_name: web
                 image: bluewalletorganization/lndhub:v1.3.0
                 depends_on: [ redis ]
                 restart: on-failure
