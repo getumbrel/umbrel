@@ -236,7 +236,7 @@
     {
         "id": "lndhub",
         "category": "Wallet Servers",
-        "name": "BlueWallet Server",
+        "name": "BlueWallet Lightning",
         "version": "1.3.0",
         "tagline": "Run Lightning on BlueWallet. A radically simple & powerful Bitcoin wallet",
         "description": "Run BlueWallet in a self-custody fashion with full privacy and no 3rd parties. It provides a multiple account plugin for a Lightning Network wallet. It allows that a group of users run different accounts with only one node in a trust-minimized setup.\n\nIdeal for hosted shared services or groups, families and friends that want to share their own node. Or, to just simply connect your own Lightning node to BlueWallet.",
