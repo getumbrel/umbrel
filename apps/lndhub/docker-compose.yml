@@ -14,7 +14,7 @@ services:
       default:
         ipv4_address: "${APP_LNDHUB_REDIS_IP}"
 
-  web:
+  lndhub:
     image: "bluewalletorganization/lndhub:v1.3.3
     user: "1000:1000"
     depends_on: [ "redis" ]
