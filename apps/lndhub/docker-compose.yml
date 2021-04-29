@@ -5,7 +5,7 @@ services:
               image: redis:6.2-buster
               command: redis-server --requirepass moneyprintergobrrr
               restart: on-failure
-              stop_grace_period: 5m
+              stop_grace_period: 1m
               init: true
               volumes:
                   - ${APP_DATA_DIR}/redis:/data
@@ -16,7 +16,7 @@ services:
                 image: bluewalletorganization/lndhub:v1.3.0
                 depends_on: [ redis ]
                 restart: on-failure
-                stop_grace_period: 5m30s
+                stop_grace_period: 1m
                 init: true
                 ports:
                     - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
