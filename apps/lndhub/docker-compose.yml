@@ -2,35 +2,35 @@ version: "3.7"
 
 services:
   redis:
-    image: redis:6.2.2-buster@sha256:e10f55f92478715698a2cef97c2bbdc48df2a05081edd884938903aa60df6396
+    image: "redis:6.2.2-buster@sha256:e10f55f92478715698a2cef97c2bbdc48df2a05081edd884938903aa60df6396"
     user: "1000:1000"
-    command: redis-server --requirepass moneyprintergobrrr
-    restart: on-failure
-    stop_grace_period: 1m
+    command: "redis-server --requirepass moneyprintergobrrr"
+    restart: "on-failure"
+    stop_grace_period: "1m"
     init: true
     volumes:
-      - ${APP_DATA_DIR}/data/redis:/data
+      - "${APP_DATA_DIR}/data/redis:/data"
     networks:
       default:
-        ipv4_address: $APP_LNDHUB_REDIS_IP
+        ipv4_address: "${APP_LNDHUB_REDIS_IP}"
 
   web:
-    image: bluewalletorganization/lndhub:v1.3.2@sha256:711f8915a6995d0588247f99170036d243d618b9455610e3d5e97c9cce7aaf5b
+    image: "bluewalletorganization/lndhub:v1.3.2@sha256:711f8915a6995d0588247f99170036d243d618b9455610e3d5e97c9cce7aaf5b"
     user: "1000:1000"
-    depends_on: [ redis ]
-    restart: on-failure
-    stop_grace_period: 1m
+    depends_on: [ "redis" ]
+    restart: "on-failure"
+    stop_grace_period: "1m"
     init: true
     ports:
       - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
     volumes:
-      - ${LND_DATA_DIR}:/lnd:ro
+      - "${LND_DATA_DIR}:/lnd:ro"
     environment:
       PORT: "${APP_LNDHUB_PORT}"
-      TOR_URL: "$APP_HIDDEN_SERVICE"
+      TOR_URL: "${APP_HIDDEN_SERVICE}"
       LND_CERT_FILE: "/lnd/tls.cert"
       LND_ADMIN_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon"
       CONFIG: '{ "redis": { "port": 6379, "host": "$APP_LNDHUB_REDIS_IP", "family": 4, "password": "moneyprintergobrrr", "db": 0 }, "lnd": { "url": "$LND_IP:$LND_GRPC_PORT", "password": ""}}'
     networks:
       default:
-        ipv4_address: $APP_LNDHUB_IP
+        ipv4_address: "${APP_LNDHUB_IP}"
