@@ -96,16 +96,9 @@ Let's copy-paste the following template `docker-compose.yml` file in a text edit
 ```yml
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: <docker-image>:<tag>
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -176,16 +169,9 @@ Updated `docker-compose.yml` file:
 ```yml
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: getumbrel/btc-rpc-explorer:v2.0.2
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -201,16 +187,9 @@ So the final version of `docker-compose.yml` would be:
 ```yml
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: getumbrel/btc-rpc-explorer:v2.0.2
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:

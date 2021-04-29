@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   db:
     image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
     init: true
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 5m
     user: "1000:1000"
@@ -31,7 +24,6 @@ services:
   node:
     image: louneskmt/dojo-nodejs:1.9.0@sha256:fbef514d55dd848e038f9852e5b5146f18675c7c207e6370fb9f54d0fd6eb6ce
     init: true
-    logging: *default-logging
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh db:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
     user: "1000:1000"
@@ -95,7 +87,6 @@ services:
   whirlpool:
     image: louneskmt/whirlpool:0.10.10@sha256:0914a0784a59819d55605e45b595b2715e5d1ed9b5aa5cd58db0fb068d8f6367
     init: true
-    logging: *default-logging
     restart: on-failure
     user: "1000:1000"
     command:
@@ -123,7 +114,6 @@ services:
   nginx:
     image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
     init: true
-    logging: *default-logging
     restart: on-failure
     command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
     volumes:
