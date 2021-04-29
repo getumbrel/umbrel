@@ -3,6 +3,7 @@ version: "3.7"
 services:
         redis:
               image: redis:6.2-buster
+              user: "1000:1000"
               command: redis-server --requirepass moneyprintergobrrr
               restart: on-failure
               stop_grace_period: 1m
@@ -14,6 +15,7 @@ services:
                       ipv4_address: $APP_LNDHUB_REDIS_IP
         web:
                 image: bluewalletorganization/lndhub:v1.3.0
+                user: "1000:1000"
                 depends_on: [ redis ]
                 restart: on-failure
                 stop_grace_period: 1m
