@@ -234,7 +234,7 @@
         "defaultPassword": ""
     },
     {
-        "id": "lndhub",
+        "id": "bluewallet",
         "category": "Wallet Servers",
         "name": "BlueWallet Lightning",
         "version": "1.3.3",
