@@ -77,7 +77,7 @@ HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
 HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
 
 # LndHub Hidden Service
-HiddenServiceDir /var/lib/tor/app-lndhub
+HiddenServiceDir /var/lib/tor/app-bluewallet
 HiddenServicePort 80 <app-bluewallet-lndhub-ip>:<app-bluewallet-lndhub-port>
 
 HashedControlPassword <password>
