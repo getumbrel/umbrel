@@ -9,7 +9,7 @@ services:
     stop_grace_period: 1m
     init: true
     volumes:
-      - ${APP_DATA_DIR}/redis:/data
+      - ${APP_DATA_DIR}/data/redis:/data
     networks:
       default:
         ipv4_address: $APP_LNDHUB_REDIS_IP
