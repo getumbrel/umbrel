@@ -15,7 +15,7 @@ services:
         ipv4_address: $APP_LNDHUB_REDIS_IP
 
   web:
-    image: bluewalletorganization/lndhub:v1.3.0
+    image: bluewalletorganization/lndhub:v1.3.2
     user: "1000:1000"
     depends_on: [ redis ]
     restart: on-failure
