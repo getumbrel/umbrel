@@ -6,6 +6,7 @@ services:
               command: redis-server --requirepass moneyprintergobrrr
               restart: on-failure
               stop_grace_period: 5m
+              init: true
               volumes:
                   - ${APP_DATA_DIR}/redis:/data
               networks:
@@ -16,6 +17,7 @@ services:
                 depends_on: [ redis ]
                 restart: on-failure
                 stop_grace_period: 5m30s
+                init: true
                 ports:
                     - "${APP_LNDHUB_PORT}:${APP_LNDHUB_PORT}"
                 volumes:
