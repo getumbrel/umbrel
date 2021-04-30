@@ -1,7 +1,9 @@
 name: Build OS image of current master
 
 on:
-  push
+  push:
+    branches:
+      - master
 
 jobs:
   build:
