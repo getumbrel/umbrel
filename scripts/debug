@@ -109,7 +109,7 @@ echo
 echo "Filesystem information"
 echo "----------------------"
 
-df -h / "${UMBREL_ROOT}"
+df --human-readable / "${UMBREL_ROOT}"
 
 
 echo
