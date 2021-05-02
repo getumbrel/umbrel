@@ -97,7 +97,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     journalctl --unit=umbrel-external-storage.service | tail -n 30
 
     echo
-    echo "External storage update service logs"
+    echo "External storage SDcard update service logs"
     echo "-----------------------------------"
     journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
 fi
