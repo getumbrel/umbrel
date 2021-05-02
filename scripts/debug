@@ -114,9 +114,7 @@ echo
 echo "Filesystem information"
 echo "----------------------"
 
-df -h
-echo
-cat /proc/swaps
+df --human-readable / "${UMBREL_ROOT}"
 
 
 echo
