@@ -96,6 +96,15 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "-----------------------------"
     journalctl --unit=umbrel-external-storage.service | tail -n 30
 fi
+
+echo
+echo "Memory usage"
+echo "------------"
+free --human --mega
+echo
+"${UMBREL_ROOT}/scripts/memory-usage"
+
+
 echo
 echo "Filesystem information"
 echo "----------------------"
