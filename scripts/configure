@@ -155,6 +155,9 @@ APP_SAMOURAI_SERVER_WHIRLPOOL_IP="10.21.21.23"
 APP_SAMOURAI_SERVER_WHIRLPOOL_PORT="8898"
 APP_SAMOURAI_SERVER_DB_IP="10.21.21.24"
 APP_SAMOURAI_SERVER_NODE_IP="10.21.21.25"
+APP_BLUEWALLET_LNDHUB_IP="10.21.21.30"
+APP_BLUEWALLET_LNDHUB_PORT="3008"
+APP_BLUEWALLET_REDIS_IP="10.21.21.31"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -315,6 +318,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-samourai-server-whirlpool-port>/${APP_SAMOURAI_SERVER_WHIRLPOOL_PORT}/g" "${template}"
   sed -i "s/<app-samourai-server-db-ip>/${APP_SAMOURAI_SERVER_DB_IP}/g" "${template}"
   sed -i "s/<app-samourai-server-node-ip>/${APP_SAMOURAI_SERVER_NODE_IP}/g" "${template}"
+  sed -i "s/<app-bluewallet-lndhub-ip>/${APP_BLUEWALLET_LNDHUB_IP}/g" "${template}"
+  sed -i "s/<app-bluewallet-lndhub-port>/${APP_BLUEWALLET_LNDHUB_PORT}/g" "${template}"
+  sed -i "s/<app-bluewallet-redis-ip>/${APP_BLUEWALLET_REDIS_IP}/g" "${template}"
 done
 
 
