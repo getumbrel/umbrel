@@ -144,12 +144,11 @@ services:
                         ipv4_address: $MIDDLEWARE_IP
         neutrino-switcher:
                 container_name: neutrino-switcher
-                image: getumbrel/neutrino-switcher:v1.2.0@sha256:4d9636aabd9d06ed3693173870d6ab57d4e08716c618a0457512d542c4cf9b01
+                image: getumbrel/neutrino-switcher:v1.3.0@sha256:399ccea7f39129ff16c9c408f9e68a01dd4671f428273f3c3f401a8a0d2f7ddc
                 depends_on: [ bitcoin, lnd ]
                 restart: on-failure
                 volumes:
                     - ${PWD}/lnd:/lnd
-                    - ${PWD}/bitcoin:/bitcoin
                     - ${PWD}/statuses:/statuses
                     - /var/run/docker.sock:/var/run/docker.sock
                 environment:
@@ -157,7 +156,6 @@ services:
                     RPCUSER: $BITCOIN_RPC_USER
                     RPCPASS: $BITCOIN_RPC_PASS
                     LND_CONTAINER_NAME: lnd
-                    BITCOIN_CONTAINER_NAME: bitcoin
                     SLEEPTIME: 3600
                 networks:
                     default:
