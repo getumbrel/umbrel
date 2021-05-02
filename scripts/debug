@@ -148,6 +148,20 @@ echo "--------"
 echo
 docker-compose logs --tail=30 tor
 
+installed_apps=$(./scripts/app ls-installed)
+if [[ ! -z "${installed_apps:-}" ]]; then
+  echo
+  echo "App logs"
+  echo "--------"
+  for app in $installed_apps; do
+    echo
+    echo "${app}"
+    echo
+    # Double tail because we want 30 lines total not per container
+    ./scripts/app compose $app logs --tail 30 | tail -n 30;
+  done
+fi
+
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     list_block_devices () {
         # Documented in the mount script for Umbrel OS
