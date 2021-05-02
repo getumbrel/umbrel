@@ -239,7 +239,7 @@
         "name": "BlueWallet Lightning",
         "version": "1.3.3",
         "tagline": "Connect BlueWallet to your Lightning node",
-        "description": "Run BlueWallet in a self-custody fashion with full privacy and no 3rd parties. It provides a multiple account plugin for a Lightning Network wallet. It allows that a group of users run different accounts with only one node in a trust-minimized setup.\n\nIdeal for hosted shared services or groups, families and friends that want to share their own node. Or, to just simply connect your own Lightning node to BlueWallet.",
+        "description": "Run BlueWallet in the most private and secure way possible by removing 3rd parties and connecting it directly to your Umbrel's Lightning node.\n\nYou can pair multiple BlueWallet accounts, so your friends and family can pair their BlueWallet with your Umbrel for a trust-minimized setup.",
         "developer": "BlueWallet",
         "website": "https://lndhub.io",
         "dependencies": [
