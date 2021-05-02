@@ -85,21 +85,6 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "----------"
 
     vcgencmd get_throttled
-
-    echo
-    echo "Startup service logs"
-    echo "--------------------"
-    journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
-
-    echo
-    echo "External storage service logs"
-    echo "-----------------------------"
-    journalctl --unit=umbrel-external-storage.service | tail -n 30
-
-    echo
-    echo "External storage SD card update service logs"
-    echo "--------------------------------------------"
-    journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
 fi
 
 echo
@@ -115,6 +100,23 @@ echo "Filesystem information"
 echo "----------------------"
 
 df --human-readable / "${UMBREL_ROOT}"
+
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+    echo
+    echo "Startup service logs"
+    echo "--------------------"
+    journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
+
+    echo
+    echo "External storage service logs"
+    echo "-----------------------------"
+    journalctl --unit=umbrel-external-storage.service | tail -n 30
+
+    echo
+    echo "External storage SD card update service logs"
+    echo "--------------------------------------------"
+    journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
+fi
 
 
 echo
