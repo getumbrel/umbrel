@@ -148,6 +148,19 @@ echo "--------"
 echo
 docker-compose logs --tail=30 tor
 
+installed_apps=$(./scripts/app ls-installed)
+if [[ ! -z "${installed_apps:-}" ]]; then
+  echo
+  echo "App logs"
+  echo "--------"
+  for app in $installed_apps; do
+    echo
+    echo "${app}"
+    echo
+    ./scripts/app compose $app logs --tail 10 | tail -n 10;
+  done
+fi
+
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     list_block_devices () {
         # Documented in the mount script for Umbrel OS
