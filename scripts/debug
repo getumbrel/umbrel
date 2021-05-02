@@ -157,7 +157,7 @@ if [[ ! -z "${installed_apps:-}" ]]; then
     echo
     echo "${app}"
     echo
-    ./scripts/app compose $app logs --tail 10 | tail -n 10;
+    ./scripts/app compose $app logs --tail 30 | tail -n 30;
   done
 fi
 
