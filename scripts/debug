@@ -109,7 +109,7 @@ echo
 echo "Filesystem information"
 echo "----------------------"
 
-df -h "${UMBREL_ROOT}"
+df -h / "${UMBREL_ROOT}"
 
 
 echo
