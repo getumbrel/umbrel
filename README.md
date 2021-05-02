@@ -11,7 +11,7 @@
 
 > ⚠️ Umbrel is currently in beta and is not considered secure. Please see [SECURITY.md](SECURITY.md) for more details.
 
-This is the master respository of Umbrel and contains the framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
+This is the master repository of Umbrel and contains the framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
 
 It is platform and architecture-agnostic, thus can be used to directly spin up instances of Umbrel without installing the [Umbrel OS](https://github.com/getumbrel/umbrel-os) since all orchestrated services use multi-architecture Docker images.
 
@@ -43,7 +43,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.3.8.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.3.9.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run Umbrel

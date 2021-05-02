@@ -96,6 +96,15 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "-----------------------------"
     journalctl --unit=umbrel-external-storage.service | tail -n 30
 fi
+
+echo
+echo "Memory usage"
+echo "------------"
+free --human --mega
+echo
+"${UMBREL_ROOT}/scripts/memory-usage"
+
+
 echo
 echo "Filesystem information"
 echo "----------------------"
@@ -179,7 +188,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-if [[ "${1}" == "--upload" ]]; then
+if [[ "${1}" == "--dashboard" ]]; then
+    echo "The debug script did not automatically detect any issues with your Umbrel."
+elif [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."

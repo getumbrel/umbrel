@@ -110,7 +110,6 @@ DASHBOARD_IP="10.21.21.3"
 MANAGER_IP="10.21.21.4"
 MIDDLEWARE_IP="10.21.21.5"
 NEUTRINO_SWITCHER_IP="10.21.21.6"
-FRONTAIL_IP="10.21.21.7"
 BITCOIN_IP="10.21.21.8"
 BITCOIN_RPC_PORT="8332"
 BITCOIN_P2P_PORT="8333"
@@ -156,6 +155,9 @@ APP_SAMOURAI_SERVER_WHIRLPOOL_IP="10.21.21.23"
 APP_SAMOURAI_SERVER_WHIRLPOOL_PORT="8898"
 APP_SAMOURAI_SERVER_DB_IP="10.21.21.24"
 APP_SAMOURAI_SERVER_NODE_IP="10.21.21.25"
+APP_BLUEWALLET_LNDHUB_IP="10.21.21.30"
+APP_BLUEWALLET_LNDHUB_PORT="3008"
+APP_BLUEWALLET_REDIS_IP="10.21.21.31"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -273,7 +275,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
   sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
   sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
-  sed -i "s/<frontail-ip>/${FRONTAIL_IP}/g" "${template}"
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
   sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
   sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
@@ -317,29 +318,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-samourai-server-whirlpool-port>/${APP_SAMOURAI_SERVER_WHIRLPOOL_PORT}/g" "${template}"
   sed -i "s/<app-samourai-server-db-ip>/${APP_SAMOURAI_SERVER_DB_IP}/g" "${template}"
   sed -i "s/<app-samourai-server-node-ip>/${APP_SAMOURAI_SERVER_NODE_IP}/g" "${template}"
+  sed -i "s/<app-bluewallet-lndhub-ip>/${APP_BLUEWALLET_LNDHUB_IP}/g" "${template}"
+  sed -i "s/<app-bluewallet-lndhub-port>/${APP_BLUEWALLET_LNDHUB_PORT}/g" "${template}"
+  sed -i "s/<app-bluewallet-redis-ip>/${APP_BLUEWALLET_REDIS_IP}/g" "${template}"
 done
-
-
-##########################################################
-############### Performance optimizations ################
-##########################################################
-
-echo
-echo "Making performance optimizations"
-echo
-
-echo "Setting dbcache size"
-echo
-if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
-  # Limit dbcache to 200 after IBD
-  DBCACHE_SIZE="200"
-else
-  # Allocate (50% of RAM) - 300MB to dbcache for IDB
-  DBCACHE_SIZE=$(awk '/MemTotal/{printf "%d\n", ($2/2^10 * 0.5) - 300}' /proc/meminfo)
-fi
-sed -i -e "s/dbcache=<size>/dbcache=$DBCACHE_SIZE/g" "$BITCOIN_CONF_FILE"
-
-# TODO: Adjust prune size based on available disk space
 
 ##########################################################
 ############## Override main config files ################

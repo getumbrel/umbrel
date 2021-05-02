@@ -1,6 +1,6 @@
 {
-    "version": "0.3.8",
-    "name": "Umbrel v0.3.8",
+    "version": "0.3.9",
+    "name": "Umbrel v0.3.9",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.8 brings the following apps up to their latest versions:\n\n- Thunderhub\n- RTL\n- BTCPay\n- Lightning Terminal\n- Specter Desktop\n- Sphinx Relay\n- Samourai Server\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel v0.3.9 brings up to 5x faster performance, a brand new way to troubleshoot, always online Lightning node, wider support for SSDs and enclosures, connection support for LilyWallet, bug fixes, and more.\n\nNote: It may take up to 5 minutes for Lightning and Bitcoin Core data to appear after the update.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
