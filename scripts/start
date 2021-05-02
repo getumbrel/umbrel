@@ -36,9 +36,13 @@ if [[ ! -d "$UMBREL_ROOT" ]]; then
   exit 1
 fi
 
+# make sure NGINX_PORT andd NETWORK are set
+NGINX_PORT="${NGINX_PORT:-80}"
+NETWORK="${NETWORK:-mainnet}"
+
 # Configure Umbrel if it isn't already configured
 if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
-  NGINX_PORT=${NGINX_PORT:-80} NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
+  "${UMBREL_ROOT}/scripts/configure"
 fi
 
 echo
