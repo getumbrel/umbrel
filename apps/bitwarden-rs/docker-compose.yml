@@ -7,19 +7,19 @@ x-logging:
     tag: "umbrel-app {{.Name}}"
 
 services:
-  web:
-    container_name: web
-    image: "bitwardenrs/server:1.19.0@sha256:1cc26a5754dff74dd9df95bbbb79af168cd21dfbd83f627ea72c85fa5852ef15"
+  vaultwarden:
+    container_name: vaultwarden
+    image: "vaultwarden/server:1.21.0@sha256:9303a3efb19f002631c7825b8db1eceb4a97bac716d391ac4b434f9aef344958"
     user: "1000:1000"
     logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
-        - "$APP_BITWARDEN_RS_PORT:8080"
+        - "$APP_VAULTWARDEN_PORT:$APP_VAULTWARDEN_PORT"
     volumes:
         - ${APP_DATA_DIR}/data:/data
     environment:
-        ROCKET_PORT: "8080"
+        ROCKET_PORT: "$APP_VAULTWARDEN_PORT"
     networks:
       default:
-        ipv4_address: $APP_BITWARDEN_RS_IP
+        ipv4_address: $APP_VAULTWARDEN_IP

@@ -234,17 +234,17 @@
         "defaultPassword": ""
     },
     {
-        "id": "bitwarden-rs",
+        "id": "vaultwarden",
         "category": "Password Manager",
-        "name": "Bitwarden RS",
+        "name": "Vaultwarden",
         "version": "1.19.0",
         "tagline": "Manage your passwords from anywhere",
-        "description": "This app is a self-hosted password manager, similar to LastPass or 1Password, but self-sovereign.\n\nAnyone with http access to your umbrel can create an account, and start storing their encrypted passwords on your umbrel.\n\nEverything is encrypted on the client app (Android, iOS, browser extension, etc.), so the server (your umbrel) knows nothing except the user's email address. The worst thing someone with access to your umbrel could do is delete your database, but even then, the client app will retain a copy of the passwords unless you explicitly log out of your device. Client users can also export encrypted backup csv files if they don't trust the availability of your umbrel.\n\nThis is perfect for Bitcoin users, it can store your exchange passwords, 2FA QR codes, and everything secret you need kept safe.\n\nYou know how to be your own bank. But now, you can be your own synced multi-device password manager, with bitwarden_rs!\n\n(Note: Bitwarden and bitwarden_rs are not affiliated, but are compatible. So any support issues should be directed at bitwarden_rs support channels.)\n\n(Also, consider donating to both Bitwarden and bitwarden_rs developers.)",
+        "description": "This app is a self-hosted password manager, similar to LastPass or 1Password, but self-sovereign.\n\nAnyone with http access to your umbrel can create an account, and start storing their encrypted passwords on your umbrel.\n\nEverything is encrypted on the client app (Android, iOS, browser extension, etc.), so the server (your umbrel) knows nothing except the user's email address. The worst thing someone with access to your umbrel could do is delete your database, but even then, the client app will retain a copy of the passwords unless you explicitly log out of your device. Client users can also export encrypted backup csv files if they don't trust the availability of your umbrel.\n\nThis is perfect for Bitcoin users, it can store your exchange passwords, 2FA QR codes, and everything secret you need kept safe.\n\nYou know how to be your own bank. But now, you can be your own synced multi-device password manager, with Vaultwarden!\n\n(Note: Bitwarden and Vaultwarden are not affiliated, but are compatible. So any support issues should be directed at Vaultwarden support channels.)\n\n(Also, consider donating to both Bitwarden and Vaultwarden developers.)",
         "developer": "Daniel García",
-        "website": "https://github.com/dani-garcia/bitwarden_rs",
+        "website": "https://github.com/dani-garcia/vaultwarden",
         "dependencies": [],
-        "repo": "https://github.com/dani-garcia/bitwarden_rs",
-        "support": "https://bitwardenrs.discourse.group",
+        "repo": "https://github.com/dani-garcia/vaultwarden",
+        "support": "https://vaultwarden.discourse.group",
         "port": 4649,
         "gallery": [
             "1.jpg",
