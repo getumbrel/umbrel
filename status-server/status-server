@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+from os import path
+import subprocess
+
+from util.server import Server
+
+def get_static_assets_path():
+    script_path = path.dirname(path.realpath(__file__))
+    return path.join(script_path, 'static')
+
+def run(command):
+    # TODO: Check this is allowed
+    subprocess.run(command, check=True)
+
+def main():
+    server = Server(directory=get_static_assets_path())
+    server.post('/shutdown', lambda: run(['say', 'shutdown']))
+    server.post('/restart', lambda: run(['say', 'restart']))
+    server.post('/fail', lambda: run(['thiswillfail']))
+    server.listen(8000)
+
+main()

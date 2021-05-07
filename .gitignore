@@ -7,6 +7,10 @@
 .ssh
 .viminfo
 
+# Python bytecode
+__pycache__
+*.py[cod]
+
 # umbrel-dev
 docker-compose.override.yml
 
