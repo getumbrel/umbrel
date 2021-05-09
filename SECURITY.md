@@ -12,10 +12,6 @@ The lack of signature verification means GitHub as a company could backdoor the 
 
 During the beta phase we are making use of Node.js and its rich ecosystem of npm packages to rapidly build out features. However the npm ecosystem tends to make use of a large number of small focused modules. This can make audibility difficult as you end up with a huge dependency tree for even relatively simple projects.
 
-**Unauthenticated streaming of logs.**
-
-The lack of authentication on the logs page means that, in the correct circumstances, if someone could convince you to visit a malicious website, the website may be able to read the logs of your Umbrel.
-
 **Assuming the local network is secure**
 
 Umbrel currently makes the assumption that the local network is secure. This means local network communication is unencrypted using plain text HTTP. (Remote access via Tor is encrypted)

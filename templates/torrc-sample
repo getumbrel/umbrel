@@ -76,6 +76,10 @@ HiddenServicePort 80 <app-samourai-server-ip>:80
 HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
 HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
 
+# LndHub Hidden Service
+HiddenServiceDir /var/lib/tor/app-bluewallet
+HiddenServicePort 80 <app-bluewallet-lndhub-ip>:<app-bluewallet-lndhub-port>
+
 # Vaultwarden Hidden Service
 HiddenServiceDir /var/lib/tor/app-vaultwarden
 HiddenServicePort 80 <app-vaultwarden-ip>:<app-vaultwarden-port>
