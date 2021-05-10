@@ -9,7 +9,6 @@ Before=docker.service
 Type=oneshot
 Restart=no
 ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
-ExecStartPost=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/update-from-sdcard
 TimeoutStartSec=45min
 User=root
 Group=root

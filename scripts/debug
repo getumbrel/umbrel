@@ -17,15 +17,15 @@
 #    without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
+# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE HOLDERS OR
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
@@ -85,7 +85,23 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "----------"
 
     vcgencmd get_throttled
+fi
 
+echo
+echo "Memory usage"
+echo "------------"
+free --human --mega
+echo
+"${UMBREL_ROOT}/scripts/memory-usage"
+
+
+echo
+echo "Filesystem information"
+echo "----------------------"
+
+df --human-readable / "${UMBREL_ROOT}"
+
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
     echo "Startup service logs"
     echo "--------------------"
@@ -95,14 +111,12 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "External storage service logs"
     echo "-----------------------------"
     journalctl --unit=umbrel-external-storage.service | tail -n 30
-fi
-echo
-echo "Filesystem information"
-echo "----------------------"
 
-df -h
-echo
-cat /proc/swaps
+    echo
+    echo "External storage SD card update service logs"
+    echo "--------------------------------------------"
+    journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
+fi
 
 
 echo
@@ -135,6 +149,20 @@ echo "Tor logs"
 echo "--------"
 echo
 docker-compose logs --tail=30 tor
+
+installed_apps=$(./scripts/app ls-installed)
+if [[ ! -z "${installed_apps:-}" ]]; then
+  echo
+  echo "App logs"
+  echo "--------"
+  for app in $installed_apps; do
+    echo
+    echo "${app}"
+    echo
+    # Double tail because we want 30 lines total not per container
+    ./scripts/app compose $app logs --tail 30 | tail -n 30;
+  done
+fi
 
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     list_block_devices () {

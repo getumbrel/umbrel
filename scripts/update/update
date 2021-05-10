@@ -48,7 +48,7 @@ if [[ "${update_type}" == "repo" ]]; then
   mv "${repo_path}/info.json" "${repo_path}/info.json.orig"
   jq \
     --arg commit "${commit}" \
-    '.version = .version + "-build-" + $commit' \
+    '.build = $commit' \
     "${repo_path}/info.json.orig" \
     > "${repo_path}/info.json"
 

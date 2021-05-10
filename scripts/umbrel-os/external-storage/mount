@@ -177,7 +177,8 @@ main () {
 
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
-  partition_path="/dev/${block_device}1"
+  block_device_path="/dev/${block_device}"
+  partition_path="${block_device_path}1"
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
@@ -186,7 +187,7 @@ main () {
 
   echo "Checking USB devices are back..."
   retry_for_usb_devices=1
-  while [[ ! -e "${partition_path}" ]]; do
+  while [[ ! -e "${block_device_path}" ]]; do
     retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
     if [[ $retry_for_usb_devices -gt 10 ]]; then
       echo "USB devices weren't registered after 10 tries..."
