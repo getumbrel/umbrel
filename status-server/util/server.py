@@ -47,8 +47,9 @@ class Server():
                         try:
                             # Execute handler
                             self.send_json_response(200, route['handler']())
-                        except:
+                        except Exception as e:
                             # If it failed, send internal server error
+                            print(f'Exception: {e}')
                             self.send_json_response(500)
                         # Route matched, return True
                         return True
