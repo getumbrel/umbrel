@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+# A status file has status entries, one per line, in the format:
+# $id:$status[:$error-code]
+# e.g:
+# foo:started
+# foo:completed
+# bar:started
+# fizz:started
+# fizz:completed
+# bar:errored:no-network-access
+
 # Creates an empty status file
 def create_empty(status_file_path):
     Path(status_file_path).open('w').close()
