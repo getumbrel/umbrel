@@ -14,7 +14,7 @@ def run(command):
 
 def main():
     status_file.create_empty(STATUS_FILE_PATH)
-    static_assets_path = Path(__file__).parent.joinpath('static')
+    static_assets_path = str(Path(__file__).parent.joinpath('static'))
     server = Server(directory=static_assets_path)
     server.get('/status', lambda: status_file.parse(STATUS_FILE_PATH))
     server.post('/shutdown', lambda: run(['say', 'shutdown']))
