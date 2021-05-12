@@ -5,7 +5,7 @@ import subprocess
 from util.server import Server
 import util.status_file as status_file
 
-STATUS_FILE_PATH='/Users/lukechilds/umbrel-status'
+STATUS_FILE_PATH='/umbrel-status'
 
 def get_relative_path(path):
     script_dir = Path(__file__).resolve().parent
@@ -20,9 +20,8 @@ def main():
     status_file.create_empty(STATUS_FILE_PATH)
     server = Server(directory=get_relative_path('static'))
     server.get('/status', lambda: status_file.parse(STATUS_FILE_PATH))
-    server.post('/shutdown', lambda: run(['say', 'shutdown']))
-    server.post('/restart', lambda: run(['say', 'restart']))
-    server.post('/fail', lambda: run(['thiswillfail']))
+    server.post('/shutdown', lambda: run(['poweroff']))
+    server.post('/restart', lambda: run(['restart']))
     server.listen(8000)
 
 main()
