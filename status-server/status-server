@@ -4,6 +4,41 @@ import subprocess
 
 from util.server import Server
 
+STATUS_PATH='/Users/lukechilds/umbrel-status'
+
+from pathlib import Path
+
+status_file = Path(STATUS_PATH)
+status_file.open('w').close()
+
+def get_index(entries, id):
+    for i, entry in enumerate(entries):
+        if entry['id'] == id:
+            return i
+    return None
+
+def get_status():
+    # Empty list for holding the status entries
+    statuses = []
+    # Read the status file and loop over the entries
+    for entry in status_file.read_text().split():
+        # Decode parts with ":" seperator
+        parts = entry.split(':')
+        parsed_entry = {
+            'id': parts[0],
+            'status': parts[1],
+            'error': parts[2] if len(parts) >2 else None
+        }
+        # Check if we already have an entry for this id
+        index = get_index(statuses, parsed_entry['id'])
+        # If we don't, append the entry
+        if index == None:
+            statuses.append(parsed_entry)
+        # If we do, update the entry
+        else:
+            statuses[index] = parsed_entry
+    return statuses
+
 def get_static_assets_path():
     script_path = path.dirname(path.realpath(__file__))
     return path.join(script_path, 'static')
@@ -14,6 +49,7 @@ def run(command):
 
 def main():
     server = Server(directory=get_static_assets_path())
+    server.get('/status', get_status)
     server.post('/shutdown', lambda: run(['say', 'shutdown']))
     server.post('/restart', lambda: run(['say', 'restart']))
     server.post('/fail', lambda: run(['thiswillfail']))
