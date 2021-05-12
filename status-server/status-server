@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-from os import path
+from pathlib import Path
 import subprocess
 
 from util.server import Server
 
 STATUS_PATH='/Users/lukechilds/umbrel-status'
-
-from pathlib import Path
 
 status_file = Path(STATUS_PATH)
 status_file.open('w').close()
@@ -39,16 +37,13 @@ def get_status():
             statuses[index] = parsed_entry
     return statuses
 
-def get_static_assets_path():
-    script_path = path.dirname(path.realpath(__file__))
-    return path.join(script_path, 'static')
-
 def run(command):
     # TODO: Check this is allowed
     subprocess.run(command, check=True)
 
 def main():
-    server = Server(directory=get_static_assets_path())
+    static_assets_path = Path(__file__).parent.joinpath('static')
+    server = Server(directory=static_assets_path)
     server.get('/status', get_status)
     server.post('/shutdown', lambda: run(['say', 'shutdown']))
     server.post('/restart', lambda: run(['say', 'restart']))
