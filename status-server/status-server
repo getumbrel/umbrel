@@ -7,6 +7,10 @@ import util.status_file as status_file
 
 STATUS_FILE_PATH='/Users/lukechilds/umbrel-status'
 
+def get_relative_path(path):
+    script_dir = Path(__file__).resolve().parent
+    return str(script_dir.joinpath(path))
+
 def run(command):
     if not status_file.contains_errors(STATUS_FILE_PATH):
         raise Exception("Running commands is disabled if there are no status errors")
@@ -14,8 +18,7 @@ def run(command):
 
 def main():
     status_file.create_empty(STATUS_FILE_PATH)
-    static_assets_path = str(Path(__file__).parent.joinpath('static'))
-    server = Server(directory=static_assets_path)
+    server = Server(directory=get_relative_path('static'))
     server.get('/status', lambda: status_file.parse(STATUS_FILE_PATH))
     server.post('/shutdown', lambda: run(['say', 'shutdown']))
     server.post('/restart', lambda: run(['say', 'restart']))
