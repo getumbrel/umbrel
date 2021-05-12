@@ -37,8 +37,16 @@ def get_status():
             statuses[index] = parsed_entry
     return statuses
 
+def status_file_contains_errors():
+    status = get_status()
+    for entry in status:
+        if entry['status'] == 'errored':
+            return True
+    return False
+
 def run(command):
-    # TODO: Check this is allowed
+    if not status_file_contains_errors():
+        raise Exception("Running commands is disabled if there are no status errors")
     subprocess.run(command, check=True)
 
 def main():
