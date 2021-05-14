@@ -29,14 +29,12 @@ class Server():
 
             # JSON helper
             def send_json_response(self, status_code, data=None):
-                response = {
-                    'success': status_code < 400,
-                    'result': data
-                }
+                if status_code >= 400:
+                    data = {'error': True}
                 self.send_response(status_code)
                 self.send_header('Content-type','application/json')
                 self.end_headers()
-                self.wfile.write(bytes(json.dumps(response), 'utf8'))
+                self.wfile.write(bytes(json.dumps(data), 'utf8'))
 
             # Loop over routes and execute one if there's a match
             def handle_routes(self, routes):
