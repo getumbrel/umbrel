@@ -1,1 +1,104 @@
-Hi there
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Umbrel</title>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="icon" href="/favicon.png">
+  <meta name="description" content="Welcome back">
+</head>
+
+<body>
+  <noscript>
+    <strong>We're sorry but Umbrel
+      doesn't work properly without JavaScript enabled. Please enable it to
+      continue.</strong>
+  </noscript>
+
+  <div class="app"></div>
+
+  <script>
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const createNode = html => {
+      const container = document.createElement('div');
+      container.innerHTML = html;
+      return container.children[0];
+    };
+
+    const getStatus = async () => {
+      const response = await fetch('/status');
+      return response.json();
+    };
+
+    const render = (app, status) => {
+      // Remove any elements that no longer exist
+      const ids = status.map(service => service.id);
+      app.querySelectorAll(`.service`).forEach(node => {
+        if (!ids.includes(node.dataset.service)) {
+          node.remove();
+        }
+      });
+
+      status.forEach(service => {
+        // Create a new node if it doesn't already exist
+        let node = app.querySelector(`.service[data-service="${service.id}"]`);
+        if (!node) {
+          node = createNode(`
+          <div data-service="${service.id}" class="service">
+            <span class="icon"></span>
+            <span class="title"></span>
+          </div>
+          `);
+          app.append(node);
+        }
+
+        // Render title
+        const titles = {
+          mount: 'Mounting external storage',
+          'sdcard-update': 'Checking SD card for update',
+        };
+        node.querySelector('.title').innerText = titles[service.id];
+
+        // Render icon
+        const icons = {
+          started: '⏳',
+          errored: '🚫',
+          completed: '✅',
+        };
+        node.querySelector('.icon').classList[service.status == 'started' ? 'add' : 'remove']('rotate');
+        node.querySelector('.icon').innerText = icons[service.status];
+      });
+    };
+
+    const main = async () => {
+      const app = document.querySelector('.app');
+      while (true) {
+        const status = await getStatus();
+        render(app, status);
+        await delay(1000);
+      }
+    };
+
+    main();
+  </script>
+
+  <style>
+    .rotate {
+      display: inline-block;
+      animation: rotate 2s infinite;
+    }
+    @keyframes rotate {
+      from {transform: rotate(0deg)}
+      50% {transform: rotate(360deg)}
+      to {transform: rotate(360deg)}
+    }
+  </style>
+
+</body>
+
+</html>
