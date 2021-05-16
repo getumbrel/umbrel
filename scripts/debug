@@ -13,7 +13,7 @@ upload() {
     --data-binary @- \
     https://api.debug.umbrel.tech/api/upload \
     | jq '.logKey' \
-    | sed 's/"//g'
+    | sed 's/"//g' \
     | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
 }
 
