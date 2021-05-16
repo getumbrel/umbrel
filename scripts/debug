@@ -6,22 +6,28 @@
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 cd "${UMBREL_ROOT}"
 
-if [[ "${1}" == "--run" ]]; then
-    # function to upload the output to our debug log server
-    # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
-    upload() {
+# function to upload the output to our debug log server
+# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
+upload() {
     echo "Generating link..."
     curl \
-        --header "Content-Type: text/plain" \
-        --request POST \
-        --silent \
-        --data-binary @- \
-        https://api.debug.umbrel.tech/api/upload \
-        | jq '.logKey' \
-        | sed 's/"//g' \
-        | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
-    }
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --silent \
+    --data-binary @- \
+    https://api.debug.umbrel.tech/api/upload \
+    | jq '.logKey' \
+    | sed 's/"//g' \
+    | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
+}
 
+list_block_devices () {
+    # Documented in the mount script for Umbrel OS
+    sync
+    (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+}
+
+if [[ "${1}" == "--run" ]]; then
     echo "====================="
     echo "= Umbrel debug info ="
     echo "====================="
@@ -141,16 +147,6 @@ else
 
     echo "${OWN_OUTPUT}"
 
-
-    if [[ ! -z "${UMBREL_OS:-}" ]]; then
-        list_block_devices () {
-            # Documented in the mount script for Umbrel OS
-            sync
-            (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
-        }
-        no_of_block_devices=$(list_block_devices | wc -l)
-    fi
-
     echo "================"
     echo "==== Result ===="
     echo "================"
@@ -164,6 +160,8 @@ else
             fi
             exit 0
         fi
+
+        no_of_block_devices=$(list_block_devices | wc -l)
         if [[ $no_of_block_devices -lt 1 ]]; then
             echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
             echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
@@ -172,12 +170,11 @@ else
             if [[ "${1}" == "--upload" ]]; then
                 echo "To make it possible for us to analyze your problem easier, please share the following link with us:"
                 append_dmesg $OUTPUT | sed '/onion/d' | upload
-            elif [[ "${1}" == "--dashboard" ]]; then
+            elif [[ "${1}" != "--dashboard" ]]; then
                 echo "Please run this script again with the --upload flag to generate a link to share."
             fi
             exit 0
-        fi
-        if [[ $no_of_block_devices -gt 1 ]]; then
+        elif [[ $no_of_block_devices -gt 1 ]]; then
             echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel,"
             echo "then reboot your Raspberry Pi by running 'sudo reboot'."
             exit 0
