@@ -155,7 +155,7 @@ else
     echo "Loading data..."
     OWN_OUTPUT="$(./scripts/debug --run)"
     append_dmesg () {
-        echo $1
+        echo "${1}"
         echo "dmesg"
         echo "-----"
         dmesg
