@@ -6,6 +6,7 @@
 # function to upload the output to our debug log server
 # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
 upload() {
+  echo "Generating link..."
   curl \
     --header "Content-Type: text/plain" \
     --request POST \
