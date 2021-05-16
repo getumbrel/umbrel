@@ -130,15 +130,6 @@ if [[ "${1}" == "--run" ]]; then
         ./scripts/app compose $app logs --tail 30 | tail -n 30;
     done
     fi
-
-    if [[ ! -z "${UMBREL_OS:-}" ]]; then
-        list_block_devices () {
-            # Documented in the mount script for Umbrel OS
-            sync
-            (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
-        }
-        no_of_block_devices=$(list_block_devices | wc -l)
-    fi
 else
     OWN_OUTPUT="$(./scripts/debug --run)"
     append_dmesg () {
@@ -149,6 +140,16 @@ else
     }
 
     echo "${OWN_OUTPUT}"
+
+
+    if [[ ! -z "${UMBREL_OS:-}" ]]; then
+        list_block_devices () {
+            # Documented in the mount script for Umbrel OS
+            sync
+            (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+        }
+        no_of_block_devices=$(list_block_devices | wc -l)
+    fi
 
     echo "================"
     echo "==== Result ===="
