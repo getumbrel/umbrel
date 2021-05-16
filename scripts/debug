@@ -3,188 +3,195 @@
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
-# function to upload the output to our debug log server
-# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
-upload() {
-  echo "Generating link..."
-  curl \
-    --header "Content-Type: text/plain" \
-    --request POST \
-    --silent \
-    --data-binary @- \
-    https://api.debug.umbrel.tech/api/upload \
-    | jq '.logKey' \
-    | sed 's/"//g' \
-    | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
-}
-
-echo "====================="
-echo "= Umbrel debug info ="
-echo "====================="
-
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 cd "${UMBREL_ROOT}"
 
-echo
-echo "Umbrel version"
-echo "--------------"
-cat info.json | jq .version | sed 's/"//g'
-
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    echo
-    echo "Umbrel OS version"
-    echo "-----------------"
-    echo $UMBREL_OS
-
-    echo
-    echo "Raspberry Pi Model"
-    echo "------------------"
-
-    cat /proc/cpuinfo | tail -1
-
-    echo
-    echo "Temperature"
-    echo "-----------"
-
-    vcgencmd measure_temp
-
-    echo
-    echo "Throttling"
-    echo "----------"
-
-    vcgencmd get_throttled
-fi
-
-echo
-echo "Memory usage"
-echo "------------"
-free --human --mega
-echo
-"${UMBREL_ROOT}/scripts/memory-usage"
-
-
-echo
-echo "Filesystem information"
-echo "----------------------"
-
-df --human-readable / "${UMBREL_ROOT}"
-
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    echo
-    echo "Startup service logs"
-    echo "--------------------"
-    journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
-
-    echo
-    echo "External storage service logs"
-    echo "-----------------------------"
-    journalctl --unit=umbrel-external-storage.service | tail -n 30
-
-    echo
-    echo "External storage SD card update service logs"
-    echo "--------------------------------------------"
-    journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
-fi
-
-
-echo
-echo "Karen logs"
-echo "----------"
-echo
-tail -n 50 logs/karen.log | sed '/onion/d'
-
-echo
-echo "Docker containers"
-echo "-----------------"
-docker ps --format="table {{.Names}}\t{{.Status}}"
-
-echo
-echo "Bitcoin Core logs"
-echo "-----------------"
-echo
-docker-compose logs --tail=30 bitcoin
-
-echo
-echo "LND logs"
-echo "--------"
-echo
-docker-compose logs --tail=30 lnd
-
-echo
-echo "Tor logs"
-echo "--------"
-echo
-docker-compose logs --tail=30 tor
-
-installed_apps=$(./scripts/app ls-installed)
-if [[ ! -z "${installed_apps:-}" ]]; then
-  echo
-  echo "App logs"
-  echo "--------"
-  for app in $installed_apps; do
-    echo
-    echo "${app}"
-    echo
-    # Double tail because we want 30 lines total not per container
-    ./scripts/app compose $app logs --tail 30 | tail -n 30;
-  done
-fi
-
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    list_block_devices () {
-        # Documented in the mount script for Umbrel OS
-        sync
-        (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+if [[ "${1}" == "--run" ]]; then
+    # function to upload the output to our debug log server
+    # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
+    upload() {
+    echo "Generating link..."
+    curl \
+        --header "Content-Type: text/plain" \
+        --request POST \
+        --silent \
+        --data-binary @- \
+        https://api.debug.umbrel.tech/api/upload \
+        | jq '.logKey' \
+        | sed 's/"//g' \
+        | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
     }
-    no_of_block_devices=$(list_block_devices | wc -l)
-fi
 
-echo "================"
-echo "==== Result ===="
-echo "================"
-echo
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-    if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
-        if [[ $(vcgencmd get_throttled) = "throttled=0x5"* ]]; then
-            echo "There is probably issue with your power supply. We recommend using the official power supply to avoid this issue."
-        else
-            echo "The temperature of your Raspberry Pi is too high. We recommend either using a case that lowers the temperature of your Pi or a case with a builtin fan."
-        fi
-        exit 0
-    fi
-    if [[ $no_of_block_devices -lt 1 ]]; then
-        echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
-        echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
-        echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
-        echo "you can contact us on our forum (https://community.getumbrel.com/g/staff)."
-        if [[ "${1}" == "--upload" ]]; then
-            echo "To make it possible for us to analyze your problem easier, please share the following link with us:"
-            echo "$(./scripts/debug --with-dmesg | sed '/onion/d')" | upload
-        else
-            echo "Please run this script again with the --upload flag to generate a link to share."
-        fi
-        exit 0
-    fi
-    if [[ $no_of_block_devices -gt 1 ]]; then
-        echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel,"
-        echo "then reboot your Raspberry Pi by running 'sudo reboot'."
-        exit 0
-    fi
-fi
+    echo "====================="
+    echo "= Umbrel debug info ="
+    echo "====================="
 
-if [[ "${1}" == "--dashboard" ]]; then
-    echo "The debug script did not automatically detect any issues with your Umbrel."
-elif [[ "${1}" == "--with-dmesg" ]]; then
-    echo "dmesg"
-    echo "-----"
-    dmesg
-elif [[ "${1}" == "--upload" ]]; then
-    # This runs the script twice, but it works
-    echo "This script could not automatically detect an issue with your Umbrel."
-    echo "Please share the following link and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
-    echo "$(./scripts/debug --with-dmesg | sed '/onion/d')" | upload
-else
-    echo "This script could not automatically detect an issue with your Umbrel."
-    echo "Please copy the entire output of this script and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
-    echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
+    echo
+    echo "Umbrel version"
+    echo "--------------"
+    cat info.json | jq .version | sed 's/"//g'
+
+    if [[ ! -z "${UMBREL_OS:-}" ]]; then
+        echo
+        echo "Umbrel OS version"
+        echo "-----------------"
+        echo $UMBREL_OS
+
+        echo
+        echo "Raspberry Pi Model"
+        echo "------------------"
+
+        cat /proc/cpuinfo | tail -1
+
+        echo
+        echo "Temperature"
+        echo "-----------"
+
+        vcgencmd measure_temp
+
+        echo
+        echo "Throttling"
+        echo "----------"
+
+        vcgencmd get_throttled
+    fi
+
+    echo
+    echo "Memory usage"
+    echo "------------"
+    free --human --mega
+    echo
+    "${UMBREL_ROOT}/scripts/memory-usage"
+
+
+    echo
+    echo "Filesystem information"
+    echo "----------------------"
+
+    df --human-readable / "${UMBREL_ROOT}"
+
+    if [[ ! -z "${UMBREL_OS:-}" ]]; then
+        echo
+        echo "Startup service logs"
+        echo "--------------------"
+        journalctl --unit=umbrel-startup.service | tail -n 30  | sed '/onion/d'
+
+        echo
+        echo "External storage service logs"
+        echo "-----------------------------"
+        journalctl --unit=umbrel-external-storage.service | tail -n 30
+
+        echo
+        echo "External storage SD card update service logs"
+        echo "--------------------------------------------"
+        journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
+    fi
+
+
+    echo
+    echo "Karen logs"
+    echo "----------"
+    echo
+    tail -n 50 logs/karen.log | sed '/onion/d'
+
+    echo
+    echo "Docker containers"
+    echo "-----------------"
+    docker ps --format="table {{.Names}}\t{{.Status}}"
+
+    echo
+    echo "Bitcoin Core logs"
+    echo "-----------------"
+    echo
+    docker-compose logs --tail=30 bitcoin
+
+    echo
+    echo "LND logs"
+    echo "--------"
+    echo
+    docker-compose logs --tail=30 lnd
+
+    echo
+    echo "Tor logs"
+    echo "--------"
+    echo
+    docker-compose logs --tail=30 tor
+
+    installed_apps=$(./scripts/app ls-installed)
+    if [[ ! -z "${installed_apps:-}" ]]; then
+    echo
+    echo "App logs"
+    echo "--------"
+    for app in $installed_apps; do
+        echo
+        echo "${app}"
+        echo
+        # Double tail because we want 30 lines total not per container
+        ./scripts/app compose $app logs --tail 30 | tail -n 30;
+    done
+    fi
+
+    if [[ ! -z "${UMBREL_OS:-}" ]]; then
+        list_block_devices () {
+            # Documented in the mount script for Umbrel OS
+            sync
+            (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+        }
+        no_of_block_devices=$(list_block_devices | wc -l)
+    fi
+elif
+    OWN_OUTPUT=$(./scripts/debug --run)
+    append_dmesg () {
+        echo $1
+        echo "dmesg"
+        echo "-----"
+        dmesg
+    }
+
+    echo $OWN_OUTPUT
+
+    echo "================"
+    echo "==== Result ===="
+    echo "================"
+    echo
+    if [[ ! -z "${UMBREL_OS:-}" ]]; then
+        if [[ $(vcgencmd get_throttled) != "throttled=0x0" ]]; then
+            if [[ $(vcgencmd get_throttled) = "throttled=0x5"* ]]; then
+                echo "There is probably issue with your power supply. We recommend using the official power supply to avoid this issue."
+            else
+                echo "The temperature of your Raspberry Pi is too high. We recommend either using a case that lowers the temperature of your Pi or a case with a builtin fan."
+            fi
+            exit 0
+        fi
+        if [[ $no_of_block_devices -lt 1 ]]; then
+            echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
+            echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
+            echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
+            echo "you can contact us on our forum (https://community.getumbrel.com/g/staff)."
+            if [[ "${1}" == "--upload" ]]; then
+                echo "To make it possible for us to analyze your problem easier, please share the following link with us:"
+                append_dmesg $OUTPUT | sed '/onion/d' | upload
+            elif [[ "${1}" == "--dashboard" ]]; then
+                echo "Please run this script again with the --upload flag to generate a link to share."
+            fi
+            exit 0
+        fi
+        if [[ $no_of_block_devices -gt 1 ]]; then
+            echo "You have multiple external drives connected to your Raspberry Pi. Please remove the drive(s) you don't want to use for Umbrel,"
+            echo "then reboot your Raspberry Pi by running 'sudo reboot'."
+            exit 0
+        fi
+    fi
+
+    if [[ "${1}" == "--dashboard" ]]; then
+        echo "The debug script did not automatically detect any issues with your Umbrel."
+    elif [[ "${1}" == "--upload" ]]; then
+        echo "This script could not automatically detect an issue with your Umbrel."
+        echo "Please share the following link and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
+        append_dmesg $OUTPUT | sed '/onion/d' | upload
+    else
+        echo "This script could not automatically detect an issue with your Umbrel."
+        echo "Please copy the entire output of this script and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
+        echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
+    fi
 fi
