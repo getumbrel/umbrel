@@ -137,6 +137,22 @@ if [[ "${1}" == "--run" ]]; then
     done
     fi
 else
+    filter_sensitive=false
+    allow_colors=true
+    upload=false
+    instructions=true
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            -c|--no-colors) allow_colors=false ;;
+            -i|--no-instructions instructions=false ;;
+            -f|--filter) filter_sensitive=true ;;
+            -u|--upload) upload=true ;;
+            -r|--run) echo "--run can't be used with other options!"; exit 1 ;;
+            *) echo "Unknown parameter passed: $1"; exit 1 ;;
+        esac
+        shift
+    done
+    echo "Loading data..."
     OWN_OUTPUT="$(./scripts/debug --run)"
     append_dmesg () {
         echo $1
@@ -144,6 +160,15 @@ else
         echo "-----"
         dmesg
     }
+
+    if [[ $allow_colors = false ]]; then
+        OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")
+    fi
+
+    if [[ $filter_sensitive = true ]]; then
+        # TODO: Add more filters
+        OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
+    fi
 
     echo "${OWN_OUTPUT}"
 
@@ -167,10 +192,10 @@ else
             echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
             echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
             echo "you can contact us on our forum (https://community.getumbrel.com/g/staff)."
-            if [[ "${1}" == "--upload" ]]; then
+            if [[ $upload = true ]]; then
                 echo "To make it possible for us to analyze your problem easier, please share the following link with us:"
                 append_dmesg $OUTPUT | sed '/onion/d' | upload
-            elif [[ "${1}" != "--dashboard" ]]; then
+            elif [[ $instructions = true ]]; then
                 echo "Please run this script again with the --upload flag to generate a link to share."
             fi
             exit 0
@@ -181,14 +206,11 @@ else
         fi
     fi
 
-    if [[ "${1}" == "--dashboard" ]]; then
-        echo "The debug script did not automatically detect any issues with your Umbrel."
-    elif [[ "${1}" == "--upload" ]]; then
-        echo "This script could not automatically detect an issue with your Umbrel."
+    echo "The debug script did not automatically detect any issues with your Umbrel."
+    if [[ $upload = true ]]; then
         echo "Please share the following link and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
         append_dmesg $OUTPUT | sed '/onion/d' | upload
-    else
-        echo "This script could not automatically detect an issue with your Umbrel."
+    elif [[ $instructions = true ]]; then
         echo "Please copy the entire output of this script and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
         echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
     fi

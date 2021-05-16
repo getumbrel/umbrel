@@ -11,7 +11,7 @@ json_encode () {
   jq --null-input --raw-input 'reduce inputs as $line (""; . += "\($line)\n")'
 }
 
-debug_json_string=$("${DEBUG_SCRIPT}" --dashboard | sed '/onion/d' | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g" | json_encode)
+debug_json_string=$("${DEBUG_SCRIPT}" --filter --no-colors --no-instructions | json_encode)
 dmesg_json_string=$(dmesg | json_encode)
 
 cat <<EOF > "${UMBREL_ROOT}/statuses/debug-status.json"
