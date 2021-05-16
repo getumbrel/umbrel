@@ -144,7 +144,7 @@ else
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             -c|--no-colors) allow_colors=false ;;
-            -i|--no-instructions instructions=false ;;
+            -i|--no-instructions) instructions=false ;;
             -f|--filter) filter_sensitive=true ;;
             -u|--upload) upload=true ;;
             -r|--run) echo "--run can't be used with other options!"; exit 1 ;;
