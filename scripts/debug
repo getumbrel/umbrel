@@ -140,7 +140,7 @@ if [[ "${1}" == "--run" ]]; then
         no_of_block_devices=$(list_block_devices | wc -l)
     fi
 else
-    OWN_OUTPUT=$(./scripts/debug --run)
+    OWN_OUTPUT="$(./scripts/debug --run)"
     append_dmesg () {
         echo $1
         echo "dmesg"
@@ -148,7 +148,7 @@ else
         dmesg
     }
 
-    echo $OWN_OUTPUT
+    echo "${OWN_OUTPUT}"
 
     echo "================"
     echo "==== Result ===="
