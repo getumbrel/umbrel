@@ -194,7 +194,7 @@ else
             echo "you can contact us on our forum (https://community.getumbrel.com/g/staff)."
             if [[ $upload = true ]]; then
                 echo "To make it possible for us to analyze your problem easier, please share the following link with us:"
-                append_dmesg $OUTPUT | sed '/onion/d' | upload
+                append_dmesg "${OUTPUT}" | sed '/onion/d' | upload
             elif [[ $instructions = true ]]; then
                 echo "Please run this script again with the --upload flag to generate a link to share."
             fi
@@ -209,7 +209,7 @@ else
     echo "The debug script did not automatically detect any issues with your Umbrel."
     if [[ $upload = true ]]; then
         echo "Please share the following link and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
-        append_dmesg $OUTPUT | sed '/onion/d' | upload
+        append_dmesg "${OUTPUT}" | sed '/onion/d' | upload
     elif [[ $instructions = true ]]; then
         echo "Please copy the entire output of this script and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
         echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
