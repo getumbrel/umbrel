@@ -30,7 +30,7 @@ services:
                         ipv4_address: $NGINX_IP
         bitcoin:
                 container_name: bitcoin
-                image: lncm/bitcoind:v0.21.1@sha256:5bedb46d698de16c59e9e43d31485d0d82239bd437d62ac7cf47ebb633214f37
+                image: lncm/bitcoind:v0.21.1@sha256:07fe4abfdaf752abbf943035b05538f277e4433b9a39c9e851e40fe9c0a7ea79
                 depends_on: [ tor, manager, nginx ]
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
