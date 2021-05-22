@@ -19,7 +19,8 @@
       continue.</strong>
   </noscript>
 
-  <div class="app"></div>
+  <img class="logo" src="/umbrel.svg" />
+  <div class="services"></div>
 
   <script>
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -35,10 +36,11 @@
       return response.json();
     };
 
-    const render = (app, status) => {
+    const render = status => {
+      const services = document.querySelector('.services');
       // Remove any elements that no longer exist
       const ids = status.map(service => service.id);
-      app.querySelectorAll(`.service`).forEach(node => {
+      services.querySelectorAll(`.service`).forEach(node => {
         if (!ids.includes(node.dataset.service)) {
           node.remove();
         }
@@ -46,15 +48,15 @@
 
       status.forEach(service => {
         // Create a new node if it doesn't already exist
-        let node = app.querySelector(`.service[data-service="${service.id}"]`);
+        let node = services.querySelector(`.service[data-service="${service.id}"]`);
         if (!node) {
           node = createNode(`
-          <div data-service="${service.id}" class="service">
+          <div data-service="${service.id}" class="service fade-in">
             <span class="icon"></span>
             <span class="title"></span>
           </div>
           `);
-          app.append(node);
+          services.append(node);
         }
 
         // Render title
@@ -76,10 +78,9 @@
     };
 
     const main = async () => {
-      const app = document.querySelector('.app');
       while (true) {
         const status = await getStatus();
-        render(app, status);
+        render(status);
         await delay(1000);
       }
     };
@@ -88,6 +89,34 @@
   </script>
 
   <style>
+    body {
+      background-color: #F7F9FB;
+      max-width: 1920px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", "Segoe UI", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    }
+
+    .logo {
+      height: 20vh;
+      max-height: 200px;
+      width: auto;
+      display: block;
+      margin: 0 auto 20px;
+    }
+
+    .services {
+      margin: 0 auto;
+      max-width: 600px;
+    }
+
+    .service {
+      background: #fff;
+      padding: 0.6rem 1rem;
+      border-radius: 1rem;
+      box-shadow: 0px 10px 30px rgb(209 213 223 / 50%);
+      color: #373a3e;
+      margin-bottom: 1rem;
+    }
+
     .rotate {
       display: inline-block;
       animation: rotate 2s infinite;
@@ -96,6 +125,20 @@
       from {transform: rotate(0deg)}
       50% {transform: rotate(360deg)}
       to {transform: rotate(360deg)}
+    }
+
+    .fade-in {
+      animation: fade-in 0.4s ease-out;
+    }
+    @keyframes fade-in {
+      from {
+        transform: translateY(-5px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0px);
+        opacity: 1;
+      }
     }
   </style>
 
