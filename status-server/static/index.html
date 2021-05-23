@@ -117,8 +117,10 @@
       on('.restart', 'click', restart);
 
       while (true) {
-        const status = await getStatus();
-        render(status);
+        try {
+          const status = await getStatus();
+          render(status);
+        } catch (e) {}
         await delay(1000);
       }
     };
