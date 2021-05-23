@@ -19,6 +19,11 @@
       continue.</strong>
   </noscript>
 
+  <div class="header hidden">
+    <a href="#" class="button shutdown">Shutdown</a>
+    <a href="#" class="button restart">Restart</a>
+  </div>
+
   <img class="logo" src="/umbrel.svg" />
   <div class="services"></div>
 
@@ -36,6 +41,31 @@
       return response.json();
     };
 
+    const shutdown = async () => {
+      const response = await fetch('/shutdown', {method: 'POST'});
+      if (!response.ok) {
+        alert('Failed to shutdown Umbrel');
+        return;
+      }
+      // TODO: Show shutdown UI feedback
+    };
+
+    const restart = async () => {
+      const response = await fetch('/restart', {method: 'POST'});
+      if (!response.ok) {
+        alert('Failed to restart Umbrel');
+        return;
+      }
+      // TODO: Show restart UI feedback
+    };
+
+    const on = (selector, eventName, callback) => {
+      document.querySelector(selector).addEventListener(eventName, event => {
+        event.preventDefault();
+        callback();
+      });
+    };
+
     const render = status => {
       const services = document.querySelector('.services');
       // Remove any elements that no longer exist
@@ -46,6 +76,7 @@
         }
       });
 
+      // Add/update statuses
       status.forEach(service => {
         // Create a new node if it doesn't already exist
         let node = services.querySelector(`.service[data-service="${service.id}"]`);
@@ -75,9 +106,16 @@
         node.querySelector('.icon').classList[service.status == 'started' ? 'add' : 'remove']('rotate');
         node.querySelector('.icon').innerText = icons[service.status];
       });
+
+      // Togle button visiblity
+      const isError = Boolean(status.find(service => service.status === 'errored'));
+      document.querySelector('.header').classList[isError ? 'remove' : 'add']('hidden');
     };
 
     const main = async () => {
+      on('.shutdown', 'click', shutdown);
+      on('.restart', 'click', restart);
+
       while (true) {
         const status = await getStatus();
         render(status);
@@ -93,6 +131,24 @@
       background-color: #F7F9FB;
       max-width: 1920px;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", "Segoe UI", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      margin: 0;
+    }
+
+    .header {
+      background: #ffffff;
+      padding: 1em;
+      margin-bottom: 3em;
+      box-shadow: 0px 10px 30px rgb(209 213 223 / 50%);
+      transition: opacity 0.2s ease;
+    }
+
+    .button {
+      display: inline-block;
+      text-decoration: none;
+      background: #F46E6E;
+      color: #ffffff;
+      padding: 0.5rem;
+      border-radius: 0.2rem;
     }
 
     .logo {
@@ -115,6 +171,11 @@
       box-shadow: 0px 10px 30px rgb(209 213 223 / 50%);
       color: #373a3e;
       margin-bottom: 1rem;
+    }
+
+    .hidden {
+      visibility: hidden;
+      opacity: 0;
     }
 
     .rotate {
