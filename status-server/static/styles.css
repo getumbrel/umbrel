@@ -35,13 +35,16 @@ body {
   max-width: 600px;
 }
 
-.service {
+.card {
   background: #fff;
   padding: 0.6rem 1rem;
   border-radius: 1rem;
   box-shadow: 0px 10px 30px rgb(209 213 223 / 50%);
   color: #373a3e;
   margin-bottom: 1rem;
+}
+.card.error {
+  margin: 1rem;
 }
 
 .hidden {

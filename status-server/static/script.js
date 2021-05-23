@@ -53,8 +53,10 @@ const render = status => {
     if (!node) {
       node = createNode(`
       <div data-service="${service.id}" class="service fade-in">
-        <span class="icon"></span>
-        <span class="title"></span>
+        <div class="card">
+          <span class="icon"></span>
+          <span class="title"></span>
+        </div>
       </div>
       `);
       services.append(node);
@@ -75,6 +77,24 @@ const render = status => {
     };
     node.querySelector('.icon').classList[service.status == 'started' ? 'add' : 'remove']('rotate');
     node.querySelector('.icon').innerText = icons[service.status];
+
+    // Render Error
+    if(service.status === 'errored' && !node.querySelector('.error')) {
+      const renderError = error => {
+        const errorTemplates = {
+          'no-file': `<b>Warning:</b> Couldn't find some file...`,
+        };
+
+        if (errorTemplates[error]) {
+          node.appendChild(createNode(`
+            <div class="error card fade-in">
+              ${errorTemplates[error]}
+            </div>
+          `));
+        }
+      };
+      renderError(service.error);
+    }
   });
 
   // Togle button visiblity
