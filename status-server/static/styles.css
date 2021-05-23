@@ -33,6 +33,7 @@ body {
 .services {
   margin: 0 auto;
   max-width: 600px;
+  padding: 0 1rem;
 }
 
 .card {
@@ -44,7 +45,7 @@ body {
   margin-bottom: 1rem;
 }
 .card.error {
-  margin: 1rem;
+  margin: 1rem 2rem;
 }
 
 .hidden {
