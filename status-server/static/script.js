@@ -107,7 +107,9 @@ const main = async () => {
     try {
       const status = await getStatus();
       render(status);
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
     await delay(1000);
   }
 };
