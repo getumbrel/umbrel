@@ -80,20 +80,17 @@ const render = status => {
 
     // Render Error
     if(service.status === 'errored' && !node.querySelector('.error')) {
-      const renderError = error => {
-        const errorTemplates = {
-          'no-file': `<b>Warning:</b> Couldn't find some file...`,
-        };
-
-        if (errorTemplates[error]) {
-          node.appendChild(createNode(`
-            <div class="error card fade-in">
-              ${errorTemplates[error]}
-            </div>
-          `));
-        }
+      const errorTemplates = {
+        'no-file': `<b>Error:</b> Couldn't find some file...`,
       };
-      renderError(service.error);
+
+      if (errorTemplates[service.error]) {
+        node.appendChild(createNode(`
+          <div class="error card fade-in">
+            ${errorTemplates[service.error]}
+          </div>
+        `));
+      }
     }
   });
 
