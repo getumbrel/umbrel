@@ -1,0 +1,30 @@
+version: 0
+
+meta:
+    category: "Explorers"
+    name: "Mempool"
+    version: 2.1.2
+    tagline: "A mempool visualizer, explorer and fee estimator"
+    description: |
+        Mempool is the official self-hosted version of the fully featured explorer, visualizer, fee estimator, and API service running on mempool.space, an open source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market to help our transition into a multi-layer ecosystem.
+
+        Features:
+
+        - Live dashboard visualizing the mempool and blockchain
+        - Live transaction tracking
+        - Search any transaction, block or address
+        - Fee estimations
+        - Mempool historical data
+        - TV View for larger displays as a TV in a cafe or bar
+        - View transaction scripts and op_return messages
+        - Audio notifications on transaction confirmed and address balance change
+        - Multiple languages support
+        - JSON APIs
+    developer: "mempool.space"
+    website: "https://mempool.space/about"
+    dependencies:
+    - "bitcoind"
+    - "electrum"
+    repo: "https://github.com/mempool/mempool"
+    support: "https://t.me/mempoolspace"
+    port: 3006

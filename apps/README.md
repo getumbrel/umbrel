@@ -217,7 +217,42 @@ services:
 
 ```
 
-6\. We're pretty much done here. The next step is to commit the changes, push it to our fork's branch, and test out the app on Umbrel.
+6\. Now, we need to prepare more information about the appp for the app store in a new file called `app.yml`
+
+```yml
+# This is the version off the app.yml format used, not the version of your app
+# Currently, the latest version is 0
+version: 0
+
+meta:
+  category: Explorers
+  name: BTC RPC Explorer
+  version: 2.0.2
+  # Max. 50 characters
+  tagline: Simple, database-free blockchain explorer
+  # 50-200 words
+  description: |
+    BTC RPC Explorer is a full-featured, self-hosted explorer for the Bitcoin blockchain. With this explorer, you can explore not just the blockchain database, but also explore the functional capabilities of your Umbrel.
+
+    It comes with a network summary dashboard, detailed view of blocks, transactions, addresses, along with analysis tools for viewing stats on miner activity, mempool summary, with fee, size, and age breakdowns. You can also search by transaction ID, block hash/height, and addresses.
+
+    It's time to appreciate the "fullness" of your node.
+  developer: Dan Janosik
+  website: https://explorer.btc21.org
+  dependencies:
+  - bitcoind
+  - electrum
+  repo: https://github.com/janoside/btc-rpc-explorer
+  support: https://github.com/janoside/btc-rpc-explorer/discussions
+  port: 3002
+  # [Optional] The path of the app that should be opened when clicking on the open button, example: /login
+  path: ''
+  # [Optional] The default password of the app
+  defaultPassword: ''
+```
+
+
+7\. We're pretty much done here. The next step is to commit the changes, push it to our fork's branch, and test out the app on Umbrel.
 
 ```sh
 git add .
@@ -322,7 +357,7 @@ ___
 
 ## 4. 🚀&nbsp;&nbsp;Submitting the app
 
-We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the pull request description, fill it up with the required details, and then open a pull request.
+We're now ready to open a pull request on the main [getumbrel/umbrel](https://github.com/getumbrel/umbrel) repo to submit our app. Let's copy-paste the following markdown for the pull request description, fill it up with the required details (the same ones you already defined in app.yml), and then open a pull request.
 
 ```
 # App Submission

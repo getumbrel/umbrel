@@ -1,0 +1,21 @@
+version: 0
+
+meta:
+    category: "Messaging"
+    name: "Sphinx Relay"
+    version: 2.0.12
+    tagline: "Chat and pay over the Lightning Network"
+    description: |
+        Sphinx Relay turns your Lightning node into a personal communication server. Messages are end-to-end encrypted and transmitted over the Bitcoin Lightning Network. Download Sphinx on your phone from https://sphinx.chat and pair it with Sphinx Relay on Umbrel.
+
+        Communication between Sphinx Relay nodes takes place entirely on the Lightning Network, so it is decentralized, untraceable, and encrypted. Messages are encrypted using client public keys on the Sphinx app.
+
+        You can join tribes at https://tribes.sphinx.chat. If you join a podcast tribe, you can listen to the podcast in Sphinx and stream donations to the host.
+    developer: "Stakwork"
+    website: "https://sphinx.chat"
+    dependencies:
+    - "lnd"
+    repo: "https://github.com/stakwork/sphinx-relay"
+    support: "https://t.me/joinchat/Fb4OcRo4LrRD6NXfsNdeeQ"
+    port: 3300
+    path: "/connect"

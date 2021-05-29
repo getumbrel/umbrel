@@ -1,0 +1,19 @@
+version: 0
+
+meta:
+    category: "Lightning Node Management"
+    name: "ThunderHub"
+    version: 0.12.14
+    tagline: "Take full control of your Lightning node"
+    description: |
+        ThunderHub allows you to take full control of your Lightning node with a slick and awesome UI. Explore all the options that ThunderHub has to offer, from sending and receiving Lightning payments, to checking your node's health statistics, and even more advanced options like channel rebalancing and multi-path lightning payments.
+
+        Managing and monitoring your node has never been easier with transaction reports, graphs and a huge assortment of different features all bundled inside of this great tool.
+    developer: "Anthony Potdevin"
+    website: "https://apotdevin.com"
+    dependencies:
+    - "lnd"
+    repo: "https://github.com/apotdevin/thunderhub"
+    support: "https://t.me/thunderhub"
+    port: 3000
+    defaultPassword: "moneyprintergobrrr"

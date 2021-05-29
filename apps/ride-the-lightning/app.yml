@@ -1,0 +1,27 @@
+version: 0
+
+meta:
+    category: "Lightning Node Management"
+    name: "Ride The Lightning"
+    version: "0.10.0-beta"
+    tagline: "A powerful dashboard for the Lightning Network"
+    description: |
+        RTL is a full function, device agnostic, web user interface to help manage lightning node operation. It enables full control over your lightning node with rich functionality for Bitcoin base layer and Lightning Network. Some cool features available on RTL are:
+
+        - Rich dashboard with two layout options
+        - Send/Receive funds on-chain
+        - Rich channel management with advanced features like balance score, circular re-balancing etc.
+        - Payments and Invoice management with QR codes
+        - Routing analysis for the payments forwarded
+        - Channel backups
+        - Detailed reports on routing and transaction history
+        - Optional Loop interface for submarine swaps
+        - Customizable UI with multiple color schemes and dark/light modes
+    developer: "Shahana and Suheb"
+    website: "https://github.com/Ride-The-Lightning/RTL"
+    dependencies:
+    - "lnd"
+    repo: "https://github.com/Ride-The-Lightning/RTL"
+    support: "https://github.com/Ride-The-Lightning/RTL/issues/new"
+    port: 3001
+    defaultPassword: "moneyprintergobrrr"

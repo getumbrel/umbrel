@@ -1,0 +1,27 @@
+version: 0
+
+meta:
+    category: "Wallets"
+    name: "Specter Desktop"
+    version: 1.3.0
+    tagline: "Multisig with hardware wallets made easy"
+    description: |
+        Specter Desktop connects to the Bitcoin Core running on your Umbrel and functions as a watch-only coordinator for multi-signature and single-key Bitcoin wallets. At the moment Specter Desktop is working with all major hardware wallets including:
+
+        - Trezor
+        - Ledger
+        - KeepKey
+        - BitBox02
+        - ColdCard (optionally airgapped, using an SD card)
+        - Electrum (optionally airgapped, if running Electrum on an airgapped computer/phone)
+        - Specter DIY (optionally airgapped, using QR codes)
+        - Cobo (airgapped, using QR codes)
+
+        Specter Desktop also supports using the Bitcoin Core on your Umbrel as a hot wallet, by importing or generating a random BIP39 mnemonic, but this feature is experimental and we do not recommend using it at this stage. We plan to add support for other hardware wallets as they come up.
+    developer: "Crypto Advance"
+    website: "https://specter.solutions"
+    dependencies:
+    - "bitcoind"
+    repo: "https://github.com/cryptoadvance/specter-desktop"
+    support: "https://t.me/spectersupport"
+    port: 25441
