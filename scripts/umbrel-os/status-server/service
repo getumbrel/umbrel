@@ -18,17 +18,11 @@ main () {
   # The status server runs on port 8000 but this rule will route all port 80
   # HTTP traffic to it.
   # When the Umbrel service has started Docker will overwrite this rule and
-  # forward port 80 to the Umbrel HTTP server container.
-  iptables \
-    --append PREROUTING \
-    --table nat \
-    --proto tcp \
-    --dport 80 \
-    --jump REDIRECT \
-    --to-port 8000
+  # instead forward port 80 to the Umbrel HTTP server container.
+  "${UMBREL_ROOT}/scripts/umbrel-os/status-server/setup-iptables"
 
-    # Spawn the server
-    exec "${UMBREL_ROOT}/scripts/umbrel-os/status-server/status-server"
+  # Spawn the server
+  exec "${UMBREL_ROOT}/scripts/umbrel-os/status-server/status-server"
 }
 
 main
