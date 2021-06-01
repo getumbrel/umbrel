@@ -16,13 +16,18 @@ main () {
 
   # Remove and then re-append iptables rule
   rule=(PREROUTING \
-        --table nat \
-        --proto tcp \
-        --dport 80 \
-        --jump REDIRECT \
-        --to-port 8000)
-  iptables --delete ${rule[@]} 2> /dev/null || true
+    --table nat \
+    --proto tcp \
+    --dport 80 \
+    --jump REDIRECT \
+    --to-port 8000)
+  if iptables --delete ${rule[@]} 2> /dev/null; then
+    echo "Removed existing iptables entry."
+  else
+    echo "No existing iptables entry found."
+  fi
   iptables --append ${rule[@]}
+  echo "Appended new iptables entry."
 }
 
 main
