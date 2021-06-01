@@ -21,7 +21,7 @@ main () {
         --dport 80 \
         --jump REDIRECT \
         --to-port 8000)
-  iptables --delete ${rule[@]} 2> /dev/null
+  iptables --delete ${rule[@]} 2> /dev/null || true
   iptables --append ${rule[@]}
 }
 
