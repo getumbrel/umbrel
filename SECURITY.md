@@ -32,6 +32,10 @@ This means all Umbrel apps exposing a web interface will be protected by your Um
 
 Currently we are being quite liberal with filesystem permissions and root usage. Some background jobs on the host are currently being run as root that don't strictly need to. Also some scripts executed by root are writable by non-root users. The `umbrel` user itself is also currently added to the `docker` group which makes it essentially root.
 
+**No Network Level Sandboxing**
+
+Apps already have process level sandboxing and filesystem level sandboxing but not network level sandboxing. We plan to implement network level sandboxing so one app will not be able to interact with another app over the network. Apps will also not be able to interact with other physical devices on the local network without explicitly asking the user for permission.
+
 Umbrel, in its current state, is intended to demonstrate what we have in mind, show the community what we are building, and to get early feedback. It's in a state that it can be used, but should not be considered secure. Thus, **you should not put more funds on your Umbrel than you're prepared to lose.**
 
 The issues raised above will all be resolved before we do a stable release of Umbrel.
