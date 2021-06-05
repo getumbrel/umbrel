@@ -15,7 +15,7 @@ from pathlib import Path
 def create_empty(status_file_path):
     Path(status_file_path).open('w').close()
 
-# Retuns the index of the dict with a matching ID from a list
+# Returns the index of the dict with a matching ID from a list
 def _get_index(list, id):
     for i, dict in enumerate(list):
         if dict['id'] == id:
