@@ -19,7 +19,7 @@ User=root
 Group=root
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=status server
+SyslogIdentifier=status server iptables
 
 [Install]
 WantedBy=multi-user.target
