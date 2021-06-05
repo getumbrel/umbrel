@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
-# Try to load Umbrel OS version info to detect Umbrel OS
-[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
-
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 cd "${UMBREL_ROOT}"
+
+# Try to load Umbrel OS version info to detect Umbrel OS
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+[[ -f "./.env" ]] && source "./.env"
 
 # function to upload the output to our debug log server
 # Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
@@ -13,6 +14,19 @@ upload() {
     curl \
     --header "Content-Type: text/plain" \
     --request POST \
+    --silent \
+    --data-binary @- \
+    https://api.debug.umbrel.tech/api/upload \
+    | jq '.logKey' \
+    | sed 's/"//g' \
+    | awk -F '"' '{print "https://v3.debug.umbrel.tech/"$1}'
+}
+
+torupload() {
+  curl \
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --socks5 "localhost:${TOR_PROXY_PORT}" \
     --silent \
     --data-binary @- \
     https://api.debug.umbrel.tech/api/upload \
@@ -141,12 +155,16 @@ else
     allow_colors=true
     upload=false
     instructions=true
+    dmesg=false
+    tor=false
     while [[ "$#" -gt 0 ]]; do
         case $1 in
-            -c|--no-colors) allow_colors=false ;;
-            -i|--no-instructions) instructions=false ;;
+            --no-colors) allow_colors=false ;;
+            --no-instructions) instructions=false ;;
             -f|--filter) filter_sensitive=true ;;
             -u|--upload) upload=true ;;
+            -t|--tor) tor=true ;;
+            -d|--dmesg) dmesg=true ;;
             -r|--run) echo "--run can't be used with other options!"; exit 1 ;;
             *) echo "Unknown parameter passed: $1"; exit 1 ;;
         esac
@@ -170,9 +188,14 @@ else
         OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
     fi
 
-    echo "${OWN_OUTPUT}"
+    if [[ $dmesg = true ]]; then
+        OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
+        OWN_OUTPUT=$(append_dmesg "${OWN_OUTPUT}")
+    fi
 
-    if [[ $upload = true ]]; then
+    echo "${OWN_OUTPUT}"
+    
+    if [[ $dmesg = false ]] && [[ $upload = true ]]; then
         OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
         OWN_OUTPUT=$(append_dmesg "${OWN_OUTPUT}")
     fi
@@ -214,7 +237,11 @@ else
     echo "The debug script did not automatically detect any issues with your Umbrel."
     if [[ $upload = true ]]; then
         echo "Please share the following link and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
-        echo "${OWN_OUTPUT}" | upload
+        if [[ $tor = true ]]; then
+            echo "${OWN_OUTPUT}" | torupload
+        else
+            echo "${OWN_OUTPUT}" | upload
+        fi
     elif [[ $instructions = true ]]; then
         echo "Please copy the entire output of this script and share it with the Umbrel team at https://community.getumbrel.com/g/staff so we can help you with your problem."
         echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
