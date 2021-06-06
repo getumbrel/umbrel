@@ -18,6 +18,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
       - ${LND_DATA_DIR}:/lnd:ro
+    user: "1000:1000"
     environment:
       # Bitcoin Core connection details
       SQUEAKNODE_BITCOIN_RPC_HOST: $BITCOIN_IP
