@@ -156,14 +156,14 @@ else
     upload=false
     instructions=true
     dmesg=false
-    tor=false
+    tor=true
     while [[ "$#" -gt 0 ]]; do
         case $1 in
             --no-colors) allow_colors=false ;;
             --no-instructions) instructions=false ;;
             -f|--filter) filter_sensitive=true ;;
             -u|--upload) upload=true ;;
-            -t|--tor) tor=true ;;
+            --no-tor) tor=false ;;
             -d|--dmesg) dmesg=true ;;
             -r|--run) echo "--run can't be used with other options!"; exit 1 ;;
             *) echo "Unknown parameter passed: $1"; exit 1 ;;
@@ -189,15 +189,16 @@ else
     fi
 
     if [[ $dmesg = true ]]; then
-        OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
         OWN_OUTPUT=$(append_dmesg "${OWN_OUTPUT}")
     fi
 
     echo "${OWN_OUTPUT}"
     
-    if [[ $dmesg = false ]] && [[ $upload = true ]]; then
+    if [[ $upload = true ]]; then
+        if [[ $dmesg = false ]]; then
+            OWN_OUTPUT=$(append_dmesg "${OWN_OUTPUT}")
+        fi
         OWN_OUTPUT=$(echo "${OWN_OUTPUT}" | sed '/onion/d')
-        OWN_OUTPUT=$(append_dmesg "${OWN_OUTPUT}")
     fi
 
     echo "================"
