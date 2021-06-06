@@ -6,6 +6,7 @@ service_id="${1}"
 status="${2}"
 error_code="${3}"
 
+source /etc/default/umbrel 2> /dev/null
 if [[ -z "${UMBREL_OS:-}" ]]; then
   echo "Skipping status update when not on Umbrel OS"
   exit
