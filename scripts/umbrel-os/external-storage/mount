@@ -21,6 +21,8 @@ EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 SWAP_DIR="/swap"
 SWAP_FILE="${SWAP_DIR}/swapfile"
 
+set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
+
 check_root () {
   if [[ $UID != 0 ]]; then
     echo "This script must be run as root"
@@ -143,6 +145,7 @@ copy_docker_to_external_storage () {
 }
 
 main () {
+  $set_status mount started
   echo "Running external storage mount script..."
   check_root
   check_dependencies sed wipefs parted mount sync umount
@@ -164,6 +167,7 @@ main () {
     if [[ $retry_for_block_devices -gt 20 ]]; then
       echo "No block devices found in 20 tries..."
       echo "Exiting mount script without doing anything"
+      $set_status mount errored no-block-device
       exit 1
     fi
 
@@ -172,6 +176,7 @@ main () {
   if [[ $no_of_block_devices -gt 1 ]]; then
     echo "Multiple block devices found, only one drive is supported"
     echo "Exiting mount script without doing anything"
+    $set_status mount errored multiple-block-devices
     exit 1
   fi
 
@@ -192,6 +197,7 @@ main () {
     if [[ $retry_for_usb_devices -gt 10 ]]; then
       echo "USB devices weren't registered after 10 tries..."
       echo "Exiting mount script without doing anything"
+      $set_status mount errored rebinding-failed
       exit 1
     fi
 
@@ -206,16 +212,16 @@ main () {
     mount_partition "${partition_path}"
 
     echo "Checking if device contains an Umbrel install..."
-    
+
     if [[ -f "${EXTERNAL_UMBREL_ROOT}"/.umbrel ]]; then
       echo "Yes, it contains an Umbrel install"
-    else 
+    else
       echo "No, it doesn't contain an Umbrel install"
       echo "Unmounting partition..."
       unmount_partition
       setup_new_device $block_device $partition_path
     fi
-    
+
   else
     echo "No, it's not ext4"
     setup_new_device $block_device $partition_path
@@ -266,6 +272,7 @@ main () {
   ${UMBREL_ROOT}/scripts/umbrel-os/external-storage/monitor ${block_device} ${MOUNT_POINT} &
 
   echo "Mount script completed successfully!"
+  $set_status mount completed
 }
 
 main
