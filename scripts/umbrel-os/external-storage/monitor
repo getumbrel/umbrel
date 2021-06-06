@@ -18,7 +18,6 @@ check_if_not_already_running() {
 
 main () {
   check_if_not_already_running
-  $set_status storage-monitor started
 
   while true; do
     if ! [[ -e "/dev/${block_device}" ]]; then
@@ -45,7 +44,7 @@ main () {
   done
 
   echo "Stopping Umbrel due to failed storage device check..."
-  $set_status storage-monitor errored
+  $set_status mount errored monitor-check
   docker kill $(docker ps -aq)
 }
 
