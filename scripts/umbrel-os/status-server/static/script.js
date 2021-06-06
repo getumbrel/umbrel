@@ -1,3 +1,5 @@
+const isIframe = (window.self !== window.top);
+
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const createNode = html => {
@@ -124,6 +126,10 @@ const render = status => {
 };
 
 const main = async () => {
+  if (isIframe) {
+    document.body.innerText = 'For security reasons Umbrel doesn\'t work in an iframe.';
+    return;
+  }
   on('.shutdown', 'click', shutdown);
   on('.restart', 'click', restart);
 
