@@ -1,15 +1,8 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: yzernik/squeaknode:v0.1.42@sha256:90235afeabc8b0a758d69af99df5dfb8854d297f96e1aa5da4f9070f0875d5e7
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
