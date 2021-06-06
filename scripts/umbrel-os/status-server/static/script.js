@@ -6,7 +6,7 @@ const createNode = html => {
   return container.children[0];
 };
 
-const getUmbrelStatus = async () => {
+const isUmbrelUp = async () => {
   const response = await fetch('/manager-api/ping');
   return response.status === 200;
 };
@@ -110,18 +110,11 @@ const main = async () => {
 
   while (true) {
     try {
-      const [
-        isUmbrelUp,
-        status,
-      ] = await Promise.all([
-        getUmbrelStatus(),
-        getStatus(),
-      ]);
-
-      if (isUmbrelUp) {
+      if (await isUmbrelUp()) {
         window.location.reload();
       }
 
+      const status = await getStatus();
       render(status);
     } catch (e) {
       console.error(e);
