@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: lightninglabs/lightning-terminal:v0.4.1-alpha@sha256:624376ebaf286cf7118ca271ed43fb852be4aad814c1f4f6a56634f673671a4a
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:

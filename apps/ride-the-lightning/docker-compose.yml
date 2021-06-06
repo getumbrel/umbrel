@@ -1,16 +1,9 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
     image: shahanafarooqui/rtl:0.10.1@sha256:d076f91c4b994d3059d3c0db80dc560ca05f675924d5625bae724df473877882
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -40,9 +33,8 @@ services:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
 
   loop:
-    image: louneskmt/loop:v0.11.4-beta@sha256:5e9d882921ca74abdbf613428406e32ffb48a635235cd2c9710fe2a28a225271
+    image: louneskmt/loop:v0.12.1-beta@sha256:f57abd0cbccfaa741d6f0eb301421be1649e7dd42c1fc804a7759d7521866436
     user: "1000:1000"
-    logging: *default-logging
     restart: on-failure
     stop_grace_period: 1m
     volumes:

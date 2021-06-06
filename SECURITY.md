@@ -12,10 +12,6 @@ The lack of signature verification means GitHub as a company could backdoor the 
 
 During the beta phase we are making use of Node.js and its rich ecosystem of npm packages to rapidly build out features. However the npm ecosystem tends to make use of a large number of small focused modules. This can make audibility difficult as you end up with a huge dependency tree for even relatively simple projects.
 
-**Unauthenticated streaming of logs.**
-
-The lack of authentication on the logs page means that, in the correct circumstances, if someone could convince you to visit a malicious website, the website may be able to read the logs of your Umbrel.
-
 **Assuming the local network is secure**
 
 Umbrel currently makes the assumption that the local network is secure. This means local network communication is unencrypted using plain text HTTP. (Remote access via Tor is encrypted)
@@ -35,6 +31,10 @@ This means all Umbrel apps exposing a web interface will be protected by your Um
 **Relaxed Permissions**
 
 Currently we are being quite liberal with filesystem permissions and root usage. Some background jobs on the host are currently being run as root that don't strictly need to. Also some scripts executed by root are writable by non-root users. The `umbrel` user itself is also currently added to the `docker` group which makes it essentially root.
+
+**No Network Level Sandboxing**
+
+Apps already have process level sandboxing and filesystem level sandboxing but not network level sandboxing. We plan to implement network level sandboxing so one app will not be able to interact with another app over the network. Apps will also not be able to interact with other physical devices on the local network without explicitly asking the user for permission.
 
 Umbrel, in its current state, is intended to demonstrate what we have in mind, show the community what we are building, and to get early feedback. It's in a state that it can be used, but should not be considered secure. Thus, **you should not put more funds on your Umbrel than you're prepared to lose.**
 
