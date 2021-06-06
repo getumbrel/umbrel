@@ -6,6 +6,11 @@ service_id="${1}"
 status="${2}"
 error_code="${3}"
 
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  echo "Skipping status update when not on Umbrel OS"
+  exit
+fi
+
 if [[ "${service_id}" == "" ]]; then
   echo "Error: Missing ID"
   exit 1
