@@ -5,7 +5,7 @@ STATUS_FILE_PATH="/umbrel-status"
 
 # Clear status file
 echo "clearing status file..."
-echo "" >> "${STATUS_FILE_PATH}"
+echo "" > "${STATUS_FILE_PATH}"
 
 # Append iptables rule to forward port 80 to port 8000
 # The status server runs on port 8000 but this rule will route all port 80
