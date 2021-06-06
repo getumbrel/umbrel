@@ -1,0 +1,136 @@
+version: "3.7"
+
+services:
+  db:
+    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    init: true
+    restart: on-failure
+    stop_grace_period: 5m
+    user: "1000:1000"
+    environment:
+      MYSQL_DATABASE: samourai-main
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: samourai
+      MYSQL_PASSWORD: password
+    volumes:
+      - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
+      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
+      - ${APP_DATA_DIR}/mysql/mysql-dojo.cnf:/etc/mysql/conf.d/mysql-dojo.cnf
+      - ${APP_DATA_DIR}/mysql/update-db.sh:/update-db.sh
+    networks:
+      default:
+        ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
+
+  node:
+    image: louneskmt/dojo-nodejs:1.9.0@sha256:fbef514d55dd848e038f9852e5b5146f18675c7c207e6370fb9f54d0fd6eb6ce
+    init: true
+    restart: on-failure
+    command: "/home/node/app/wait-for-it.sh db:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
+    user: "1000:1000"
+    environment:
+      # GLOBAL
+      COMMON_BTC_NETWORK: $BITCOIN_NETWORK
+      DOJO_NODEJS_VERSION_TAG: 1.9.0
+      TOR_PROXY_IP: $TOR_PROXY_IP
+      TOR_PROXY_PORT: $TOR_PROXY_PORT
+
+      # MYSQL
+      MYSQL_DATABASE: samourai-main
+      MYSQL_USER: samourai
+      MYSQL_PASSWORD: password
+
+      # NODEJS
+      NODE_GAP_EXTERNAL: 100
+      NODE_GAP_INTERNAL: 100
+      NODE_ADDR_FILTER_THRESHOLD: 1000
+      NODE_ADDR_DERIVATION_MIN_CHILD: 2
+      NODE_ADDR_DERIVATION_MAX_CHILD: 2
+      NODE_ADDR_DERIVATION_THRESHOLD: 10
+      NODE_TXS_SCHED_MAX_ENTRIES: 10
+      NODE_TXS_SCHED_MAX_DELTA_HEIGHT: 18
+      NODE_JWT_ACCESS_EXPIRES: 900
+      NODE_JWT_REFRESH_EXPIRES: 7200
+      NODE_PREFIX_STATUS: status
+      NODE_PREFIX_SUPPORT: support
+      NODE_PREFIX_STATUS_PUSHTX: status
+      NODE_TRACKER_MEMPOOL_PERIOD: 10000
+      NODE_TRACKER_UNCONF_TXS_PERIOD: 300000
+      NODE_ACTIVE_INDEXER: local_indexer
+      NODE_FEE_TYPE: ECONOMICAL
+
+      # SECURITY
+      NODE_API_KEY: $SAMOURAI_SERVER_NODE_API_KEY
+      NODE_ADMIN_KEY: $SAMOURAI_SERVER_NODE_ADMIN_KEY
+      NODE_JWT_SECRET: $SAMOURAI_SERVER_NODE_JWT_SECRET
+
+      # BITCOIN
+      BITCOIND_IP: $BITCOIN_IP
+      BITCOIND_RPC_PORT: $BITCOIN_RPC_PORT
+      BITCOIND_RPC_USER: $BITCOIN_RPC_USER
+      BITCOIND_RPC_PASSWORD: $BITCOIN_RPC_PASS
+      BITCOIND_ZMQ_RAWTXS: $BITCOIN_ZMQ_RAWTX_PORT
+      BITCOIND_ZMQ_BLK_HASH: $BITCOIN_ZMQ_HASHBLOCK_PORT
+
+      # EXPLORER
+      EXPLORER_INSTALL: "off"
+
+      # INDEXER
+      INDEXER_IP: $ELECTRUM_IP
+      INDEXER_RPC_PORT: $ELECTRUM_PORT
+      INDEXER_BATCH_SUPPORT: inactive # 'active' for ElectrumX, 'inactive' otherwise
+    depends_on:
+      - db
+    networks:
+      default:
+        ipv4_address: $APP_SAMOURAI_SERVER_NODE_IP
+
+  whirlpool:
+    image: louneskmt/whirlpool:0.10.10@sha256:0914a0784a59819d55605e45b595b2715e5d1ed9b5aa5cd58db0fb068d8f6367
+    init: true
+    restart: on-failure
+    user: "1000:1000"
+    command:
+      - "--listen"
+      - "--cli.api.http-enable=true"
+      - "--cli.api.http-port=$APP_SAMOURAI_SERVER_WHIRLPOOL_PORT"
+      - "--cli.tor=true"
+      - "--cli.torConfig.coordinator.enabled=true"
+      - "--cli.torConfig.coordinator.onion=true"
+      - "--cli.torConfig.backend.enabled=false"
+      - "--cli.torConfig.backend.onion=false"
+      - "--cli.mix.liquidityClient=true"
+      - "--cli.mix.clientsPerPool=1"
+      - "--resync"
+    environment:
+      WHIRLPOOL_BITCOIN_NETWORK: $BITCOIN_NETWORK
+      WHIRLPOOL_DOJO: "on"
+      WHIRLPOOL_DOJO_IP: $APP_SAMOURAI_SERVER_IP
+    volumes:
+      - ${APP_DATA_DIR}/whirlpool:/home/whirlpool/.whirlpool-cli
+    networks:
+      default:
+        ipv4_address: $APP_SAMOURAI_SERVER_WHIRLPOOL_IP
+
+  nginx:
+    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    init: true
+    restart: on-failure
+    command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"
+    volumes:
+      - ${APP_DATA_DIR}/nginx/wait-for:/wait-for
+      - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${APP_DATA_DIR}/nginx/${BITCOIN_NETWORK}.conf:/etc/nginx/sites-enabled/dojo.conf
+      - ${APP_DATA_DIR}/nginx/connect:/var/www/connect
+    environment:
+      COMMON_BTC_NETWORK: $BITCOIN_NETWORK
+      DOJO_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
+      WHIRLPOOL_HIDDEN_SERVICE: $SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE
+      NODE_PREFIX_SUPPORT: support
+      NODE_ADMIN_KEY: $SAMOURAI_SERVER_NODE_ADMIN_KEY
+    ports:
+      - "$APP_SAMOURAI_SERVER_PORT:80"
+    depends_on:
+      - node
+    networks:
+      default:
+        ipv4_address: $APP_SAMOURAI_SERVER_IP

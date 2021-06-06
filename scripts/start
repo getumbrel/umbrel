@@ -38,7 +38,7 @@ fi
 
 # Configure Umbrel if it isn't already configured
 if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
-  NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
+  NGINX_PORT=${NGINX_PORT:-80} NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
 fi
 
 echo
@@ -90,6 +90,12 @@ echo
 echo
 echo "Starting installed apps..."
 echo
+# Unlock the user file on each start of Umbrel to avoid issues
+# Normally, the user file shouldn't ever be locked, if it is, something went wrong, but it could still be working
+if [[ -f "${UMBREL_ROOT}/db/user.json.lock" ]]; then
+  echo "WARNING: The user file was locked, Umbrel probably wasn't shut down properly"
+  rm "${UMBREL_ROOT}/db/user.json.lock"
+fi
 "${UMBREL_ROOT}/scripts/app" start installed
 echo
 

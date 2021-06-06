@@ -1,15 +1,8 @@
 version: "3.7"
 
-x-logging:
-  &default-logging
-  driver: journald
-  options:
-    tag: "umbrel-app {{.Name}}"
-
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v2.1.0@sha256:62eda653cc2d0eb8cf491e05876ebffeebaa29ce900b82852214d0c07ca8457b
-    logging: *default-logging
+    image: getumbrel/btc-rpc-explorer:v3.1.1@sha256:df6810c00cb026a1d8cadaba2f4926f1310b996eebe006d29929fece5bff63bf
     restart: on-failure
     stop_grace_period: 1m
     ports:

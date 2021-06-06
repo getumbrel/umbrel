@@ -2,7 +2,7 @@
 
 # This script is based on raspinfo: https://github.com/raspberrypi/utils/blob/master/raspinfo/raspinfo
 # raspinfo is Copyright: 2018-2019, Raspberry Pi (Trading) Ltd.
-# This fork is Copyright 2020, Umbrel
+# This fork is Copyright 2020-2021, Umbrel
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -17,24 +17,32 @@
 #    without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR 
+# ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE HOLDERS OR
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
-# function to upload the output to hastebin
-# Source: https://github.com/seejohnrun/haste-client#lightweight-alternative
-haste() { a=$(cat); curl -X POST -s -d "$a" https://hastebin.com/documents | awk -F '"' '{print "https://hastebin.com/"$4}'; }
+# function to upload the output to our paste server
+# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
+upload() {
+  curl \
+    --header "Content-Type: text/plain" \
+    --request POST \
+    --silent \
+    --data-binary @- \
+    https://umbrel-paste.vercel.app/documents \
+    | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
+}
 
 echo "====================="
 echo "= Umbrel debug info ="
@@ -77,7 +85,23 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "----------"
 
     vcgencmd get_throttled
+fi
 
+echo
+echo "Memory usage"
+echo "------------"
+free --human --mega
+echo
+"${UMBREL_ROOT}/scripts/memory-usage"
+
+
+echo
+echo "Filesystem information"
+echo "----------------------"
+
+df --human-readable / "${UMBREL_ROOT}"
+
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
     echo "Startup service logs"
     echo "--------------------"
@@ -87,14 +111,12 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "External storage service logs"
     echo "-----------------------------"
     journalctl --unit=umbrel-external-storage.service | tail -n 30
-fi
-echo
-echo "Filesystem information"
-echo "----------------------"
 
-df -h
-echo
-cat /proc/swaps
+    echo
+    echo "External storage SD card update service logs"
+    echo "--------------------------------------------"
+    journalctl --unit=umbrel-external-storage-sdcard-update.service | tail -n 30
+fi
 
 
 echo
@@ -128,6 +150,20 @@ echo "--------"
 echo
 docker-compose logs --tail=30 tor
 
+installed_apps=$(./scripts/app ls-installed)
+if [[ ! -z "${installed_apps:-}" ]]; then
+  echo
+  echo "App logs"
+  echo "--------"
+  for app in $installed_apps; do
+    echo
+    echo "${app}"
+    echo
+    # Double tail because we want 30 lines total not per container
+    ./scripts/app compose $app logs --tail 30 | tail -n 30;
+  done
+fi
+
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     list_block_devices () {
         # Documented in the mount script for Umbrel OS
@@ -155,9 +191,8 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
         if [[ "${1}" == "--upload" ]]; then
-            echo "You can also share this link instead:"
-            ./scripts/debug | sed '/onion/d' | haste
-            dmesg | haste
+            echo "You can also share these links instead:"
+            echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
         else
             echo "Run this script again with the --upload flag to automatically generate a link to share."
         fi
@@ -172,12 +207,13 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-if [[ "${1}" == "--upload" ]]; then
+if [[ "${1}" == "--dashboard" ]]; then
+    echo "The debug script did not automatically detect any issues with your Umbrel."
+elif [[ "${1}" == "--upload" ]]; then
     # This runs the script twice, but it works
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    ./scripts/debug | sed '/onion/d' | haste
-    dmesg | haste
+    echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
 else
     echo "This script could not automatically detect an issue with your Umbrel."
     echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."

@@ -16,6 +16,8 @@ set -euo pipefail
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 MOUNT_POINT="/mnt/data"
 EXTERNAL_UMBREL_ROOT="${MOUNT_POINT}/umbrel"
+DOCKER_DIR="/var/lib/docker"
+EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 SWAP_DIR="/swap"
 SWAP_FILE="${SWAP_DIR}/swapfile"
 
@@ -57,6 +59,25 @@ get_block_device_model () {
 
   # We echo in a subshell without quotes to strip surrounding whitespace
   echo "$(echo $vendor) $(echo $model)"
+}
+
+# By default Linux uses the UAS driver for most devices. This causes major
+# stability problems on the Raspberry Pi, not due to issues with UAS, but due
+# to devices running in UAS mode using much more power. The Pi can't reliably
+# provide enough power to the USB port and the entire system experiences
+# extreme instability. By blacklisting all devices from the UAS driver on boot
+# we fall back to the mass-storage driver, which results in decreased
+# performance, but lower power usage, and much better system stability.
+blacklist_uas () {
+  usb_quirks=$(lsusb | awk '{print $6":u"}' | tr '\n' ',' | sed 's/,$//')
+  echo -n "${usb_quirks}" > /sys/module/usb_storage/parameters/quirks
+
+  echo "Rebinding USB drivers..."
+  for i in /sys/bus/pci/drivers/[uoex]hci_hcd/*:*; do
+    [[ -e "$i" ]] || continue;
+    echo "${i##*/}" > "${i%/*}/unbind"
+    echo "${i##*/}" > "${i%/*}/bind"
+  done
 }
 
 is_partition_ext4 () {
@@ -112,6 +133,15 @@ setup_new_device () {
       "${UMBREL_ROOT}" "${EXTERNAL_UMBREL_ROOT}"
 }
 
+# Copy Docker data dir to external storage
+copy_docker_to_external_storage () {
+  mkdir -p "${EXTERNAL_DOCKER_DIR}"
+  cp  --recursive \
+      --archive \
+      --no-target-directory \
+      "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
+}
+
 main () {
   echo "Running external storage mount script..."
   check_root
@@ -147,11 +177,28 @@ main () {
 
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
-  partition_path="/dev/${block_device}1"
+  block_device_path="/dev/${block_device}"
+  partition_path="${block_device_path}1"
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  
+  echo "Blacklisting USB device IDs against UAS driver..."
+  blacklist_uas
+
+  echo "Checking USB devices are back..."
+  retry_for_usb_devices=1
+  while [[ ! -e "${block_device_path}" ]]; do
+    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
+    if [[ $retry_for_usb_devices -gt 10 ]]; then
+      echo "USB devices weren't registered after 10 tries..."
+      echo "Exiting mount script without doing anything"
+      exit 1
+    fi
+
+    echo "Waiting for USB devices..."
+    sleep 1
+  done
+
   echo "Checking if the device is ext4..."
 
   if is_partition_ext4 "${partition_path}" ; then
@@ -174,8 +221,16 @@ main () {
     setup_new_device $block_device $partition_path
   fi
 
+  if [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
+    echo "Copying Docker data directory to external storage..."
+    copy_docker_to_external_storage
+  fi
+
   echo "Bind mounting external storage over local Umbrel installation..."
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
+
+  echo "Bind mounting external storage over local Docker data dir..."
+  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
 
   echo "Bind mounting external storage to ${SWAP_DIR}"
   mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
@@ -189,6 +244,9 @@ main () {
   sync
   sleep 1
   df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
+
+  echo "Checking ${DOCKER_DIR} is now on external storage..."
+  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd'
 
   echo "Checking ${SWAP_DIR} is now on external storage..."
   df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'

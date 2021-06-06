@@ -54,6 +54,20 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "ERROR: No Umbrel installation found at SD root ${SD_CARD_UMBREL_ROOT}"
         echo "Skipping updating on SD Card..."
     fi
+
+    # Install unattended-updates for automatic security updates
+    # The binary is unattended-upgrade, the package is unattended-upgrades
+    if ! command -v unattended-upgrade &> /dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
+    fi
+
+    # This makes sure systemd services are always updated (and new ones are enabled).
+    UMBREL_SYSTEMD_SERVICES="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services/*.service"
+    for service_path in $UMBREL_SYSTEMD_SERVICES; do
+      service_name=$(basename "${service_path}")
+      install -m 644 "${service_path}" "/etc/systemd/system/${service_name}"
+      systemctl enable "${service_name}"
+    done
 fi
 
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
@@ -106,6 +120,43 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
+
+# Move Docker data dir to external storage now if this is an old install.
+# This is only needed temporarily until all users have transitioned Docker to SSD.
+DOCKER_DIR="/var/lib/docker"
+MOUNT_POINT="/mnt/data"
+EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
+if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
+  echo "Attempting to move Docker to external storage..."
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 72, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
+EOF
+
+  echo "Stopping Docker service..."
+  systemctl stop docker
+
+  # Copy Docker data dir to external storage
+  copy_docker_to_external_storage () {
+    mkdir -p "${EXTERNAL_DOCKER_DIR}"
+    cp  --recursive \
+        --archive \
+        --no-target-directory \
+        "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
+  }
+
+  echo "Copying Docker data directory to external storage..."
+  copy_docker_to_external_storage
+
+  echo "Bind mounting external storage over local Docker data dir..."
+  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
+
+  # Ensure fs changes are registered
+  sync
+  sleep 1
+
+  echo "Starting Docker service..."
+  systemctl start docker
+fi
 
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"

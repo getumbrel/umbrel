@@ -35,8 +35,29 @@ list_installed_apps() {
   cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
 }
 
+# Deterministically derives 128 bits of cryptographically secure entropy
+derive_entropy () {
+  # Make sure we use the seed from the real Umbrel installation if this is
+  # an OTA update.
+  SEED_FILE="${UMBREL_ROOT}/db/umbrel-seed/seed"
+  if [[ ! -f "${SEED_FILE}" ]] && [[ -f "${UMBREL_ROOT}/../.umbrel" ]]; then
+    SEED_FILE="${UMBREL_ROOT}/../db/umbrel-seed/seed"
+  fi
+
+  identifier="${1}"
+  umbrel_seed=$(cat "${SEED_FILE}") || true
+
+  if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
+    >&2 echo "Missing derivation parameter, this is unsafe, exiting."
+    exit 1
+  fi
+
+  # We need `sed 's/^.* //'` to trim the "(stdin)= " prefix from some versions of openssl
+  printf "%s" "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
+}
+
 # Check dependencies
-check_dependencies docker-compose jq
+check_dependencies docker-compose jq openssl
 
 if [ -z ${1+x} ]; then
   command=""
@@ -85,11 +106,23 @@ compose() {
   local app_base_compose_file="${UMBREL_ROOT}/apps/docker-compose.common.yml"
   local app_compose_file="${app_dir}/docker-compose.yml"
   local app_hidden_servive_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
+  local app_entropy_identifier="app-${app}-seed"
 
   export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
   export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
   export APP_DATA_DIR="${app_data_dir}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
+  export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
+
+  # App specific env vars
+  # Note: Hardcoding app specific env vars is a short term solution. Long term
+  # these values will be registered in an apps manifest and generated dynamically.
+  local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
+  export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
+  export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
+  export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
+
   docker-compose \
     --env-file "${env_file}" \
     --project-name "${app}" \
@@ -101,9 +134,20 @@ compose() {
 update_installed_apps() {
   local action="${1}"
   local app="${2}"
+
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "Waiting for JSON lock to be released for ${app} update..."
+    sleep 1
+  done
+  # This will cause the lock-file to be deleted in case of a
+  # premature exit.
+  trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
   echo "${updated_json}" > "${USER_FILE}"
+
+  rm -f "${USER_FILE}.lock"
 }
 
 # Pulls down images for an app and starts it
