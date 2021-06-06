@@ -71,6 +71,7 @@ const render = status => {
     const titles = {
       mount: 'Mounting external storage',
       'sdcard-update': 'Checking SD card for update',
+      umbrel: 'Starting Umbrel',
     };
     node.querySelector('.title').innerText = titles[service.id];
 
@@ -86,7 +87,25 @@ const render = status => {
     // Render Error
     if(service.status === 'errored' && !node.querySelector('.error')) {
       const errorTemplates = {
-        'no-file': `<b>Error:</b> Couldn't find some file...`,
+        'monitor-check': `
+          <b>Error:</b> External storage device check failed.
+          <p>This can sometimes be cause by using an unnoficial power supply.</p>
+        `,
+        'semver-mismatch': `
+          <b>Error:</b> Can't upgrade from SDcard due to version mismatch.
+        `,
+        'no-block-device': `
+          <b>Error:</b> Umbrel couldn't find a storage device attached.
+          Please make sure your device is attached and then reboot.
+        `,
+        'multiple-block-devices': `
+          <b>Error:</b> Umbrel found multiple storage devices attached.
+          Please remove one of them and reboot.
+        `,
+        'rebinding-failed': `
+          <b>Error:</b> Umbrel failed to use your storage device in low power mode.
+          Are you using the reccomended hardware?
+        `,
       };
 
       if (errorTemplates[service.error]) {
