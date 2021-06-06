@@ -13,7 +13,6 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 8774:8774
       - 12994:12994
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
