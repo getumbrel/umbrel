@@ -121,7 +121,7 @@ const render = status => {
         `,
         'rebinding-failed': `
           <b>Error:</b> Umbrel failed to use your storage device in low power mode.
-          Are you using the reccomended hardware?
+          Are you using the recommended hardware?
         `,
       };
 
