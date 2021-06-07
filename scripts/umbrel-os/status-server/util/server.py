@@ -8,12 +8,12 @@ class Server():
         self.post_routes = []
 
     # Register a GET handler
-    def get(self, path, handler):
-        self.get_routes.append({'path': path, 'handler': handler})
+    def get(self, path, *handlers):
+        self.get_routes.append({'path': path, 'handlers': handlers})
 
     # Register a POST handler
-    def post(self, path, handler):
-        self.post_routes.append({'path': path, 'handler': handler})
+    def post(self, path, *handlers):
+        self.post_routes.append({'path': path, 'handlers': handlers})
 
     # Create the server
     def listen(self, port):
@@ -43,8 +43,16 @@ class Server():
                     # Check if we have a match
                     if self.path == route['path']:
                         try:
-                            # Execute handler
-                            self.send_json_response(200, route['handler']())
+                            request = {}
+                            # Parse post data
+                            if self.headers['Content-Length'] and self.headers['Content-Type'] == 'application/json':
+                                content_length = int(self.headers['Content-Length'])
+                                raw_post_data = self.rfile.read(content_length)
+                                request['post_data'] = json.loads(raw_post_data.decode('utf-8'))
+                            # Execute handlers
+                            for handler in route['handlers']:
+                                response = handler(request)
+                            self.send_json_response(200, response)
                         except Exception as e:
                             # If it failed, send internal server error
                             print(f'Exception: {e}')

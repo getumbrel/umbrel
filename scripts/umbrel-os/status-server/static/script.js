@@ -18,8 +18,23 @@ const getStatus = async () => {
   return response.json();
 };
 
+const getCsrfToken = async () => {
+    const response = await fetch('/token');
+    return response.json();
+};
+
+const post = async endpoint => fetch(endpoint, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    token: await getCsrfToken()
+  }),
+});
+
 const shutdown = async () => {
-  const response = await fetch('/shutdown', {method: 'POST'});
+  const response = await post('/shutdown');
   if (!response.ok) {
     alert('Failed to shutdown Umbrel');
     return;
@@ -28,7 +43,7 @@ const shutdown = async () => {
 };
 
 const restart = async () => {
-  const response = await fetch('/restart', {method: 'POST'});
+  const response = await post('/restart');
   if (!response.ok) {
     alert('Failed to restart Umbrel');
     return;
