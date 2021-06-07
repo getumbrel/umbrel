@@ -135,7 +135,7 @@ const render = status => {
     }
   });
 
-  // Togle button visiblity
+  // Toggle button visibility
   const isError = Boolean(status.find(service => service.status === 'errored'));
   document.querySelector('.header').classList[isError ? 'remove' : 'add']('hidden');
 };
