@@ -91,7 +91,7 @@ const render = status => {
       const errorTemplates = {
         'monitor-check': `
           <b>Error:</b> External storage device check failed.
-          <p>This can sometimes be cause by using an unnoficial power supply.</p>
+          <p>This can sometimes be caused by using an unnoficial power supply.</p>
         `,
         'semver-mismatch': `
           <b>Error:</b> Can't upgrade from SDcard due to version mismatch.
