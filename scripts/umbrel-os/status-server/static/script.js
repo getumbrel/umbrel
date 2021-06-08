@@ -47,21 +47,27 @@ const showShutdown = async () => {
 };
 
 const shutdown = async () => {
-  const response = await post('/shutdown');
-  if (!response.ok) {
-    alert('Failed to shutdown Umbrel');
-    return;
+  try {
+    const response = await post('/shutdown');
+    if (!response.ok) {
+      alert('Failed to restart Umbrel');
+      return;
+    }
+  } catch (e) {
+    showShutdown();
   }
-  showShutdown();
 };
 
 const restart = async () => {
-  const response = await post('/restart');
-  if (!response.ok) {
-    alert('Failed to restart Umbrel');
-    return;
+  try {
+    const response = await post('/restart');
+    if (!response.ok) {
+      alert('Failed to restart Umbrel');
+      return;
+    }
+  } catch (e) {
+    showShutdown();
   }
-  showShutdown();
 };
 
 const on = (selector, eventName, callback) => {
