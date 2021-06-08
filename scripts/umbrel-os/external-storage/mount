@@ -65,10 +65,10 @@ get_block_device_model () {
 # stability problems on the Raspberry Pi, not due to issues with UAS, but due
 # to devices running in UAS mode using much more power. The Pi can't reliably
 # provide enough power to the USB port and the entire system experiences
-# extreme instability. By blacklisting all devices from the UAS driver on boot
+# extreme instability. By blocklisting all devices from the UAS driver on boot
 # we fall back to the mass-storage driver, which results in decreased
 # performance, but lower power usage, and much better system stability.
-blacklist_uas () {
+blocklist_uas () {
   usb_quirks=$(lsusb | awk '{print $6":u"}' | tr '\n' ',' | sed 's/,$//')
   echo -n "${usb_quirks}" > /sys/module/usb_storage/parameters/quirks
 
@@ -182,8 +182,8 @@ main () {
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  echo "Blacklisting USB device IDs against UAS driver..."
-  blacklist_uas
+  echo "Blocklisting USB device IDs against UAS driver..."
+  blocklist_uas
 
   echo "Checking USB devices are back..."
   retry_for_usb_devices=1
