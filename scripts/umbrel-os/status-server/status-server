@@ -26,7 +26,7 @@ def main():
     server.get('/status', lambda _: status_file.parse(STATUS_FILE_PATH))
     server.get('/token', lambda _: get_csrf_token())
     server.post('/shutdown', csrf, lambda _: run(['poweroff']))
-    server.post('/restart', csrf, lambda _: run(['restart']))
+    server.post('/restart', csrf, lambda _: run(['reboot']))
     server.listen(8000)
 
 main()
