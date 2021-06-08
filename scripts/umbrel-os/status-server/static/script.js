@@ -33,13 +33,26 @@ const post = async endpoint => fetch(endpoint, {
   }),
 });
 
+let doingShutdown = false;
+
+const showShutdown = async () => {
+  doingShutdown = true;
+  const shutdownElem = document.querySelector('.shutting-down');
+  shutdownElem.classList.remove('hidden');
+  shutdownElem.classList.add('fade-in');
+  await delay(10000);
+  shutdownElem.querySelector('.logo').style.filter = 'grayscale(1)';
+  shutdownElem.querySelector('.spinner').remove()
+  shutdownElem.querySelector('.title').innerText = 'Shutdown Complete';
+};
+
 const shutdown = async () => {
   const response = await post('/shutdown');
   if (!response.ok) {
     alert('Failed to shutdown Umbrel');
     return;
   }
-  // TODO: Show shutdown UI feedback
+  showShutdown();
 };
 
 const restart = async () => {
@@ -48,7 +61,7 @@ const restart = async () => {
     alert('Failed to restart Umbrel');
     return;
   }
-  // TODO: Show restart UI feedback
+  showShutdown();
 };
 
 const on = (selector, eventName, callback) => {
@@ -155,6 +168,11 @@ const main = async () => {
       }
 
       const status = await getStatus();
+      if(doingShutdown) {
+        // If the reques suceeds after shutdown it means the server is back up
+        // so we should reload.
+        window.location.reload();
+      }
       render(status);
     } catch (e) {
       console.error(e);
