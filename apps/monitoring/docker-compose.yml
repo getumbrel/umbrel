@@ -1,0 +1,57 @@
+version: "3.7"
+
+services:
+  web:
+    image: grafana/grafana:7.5.7
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    links:
+      - prometheus
+    ports:
+      - ${APP_MONITORING_PORT}:3000
+    volumes:
+       - ${APP_DATA_DIR}/data/grafana/data:/var/lib/grafana
+       - ${APP_DATA_DIR}/data/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: moneyprintergobrrr
+    networks:
+      default:
+        ipv4_address: $APP_MONITORING_IP
+
+  prometheus:
+    image: prom/prometheus:v2.27.1
+    user: "1000:1000"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ${APP_DATA_DIR}/data/prometheus/data:/prometheus
+      - ${APP_DATA_DIR}/data/prometheus/config:/etc/prometheus
+    command:
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=1y'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    links:
+      - bitcoin_exporter
+      - lndmon
+    restart: on-failure
+
+  bitcoin_exporter:
+    image: jvstein/bitcoin-prometheus-exporter:v0.6.0
+    user: "1000:1000"
+    environment:
+      BITCOIN_RPC_HOST: $BITCOIN_IP
+      BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
+      BITCOIN_RPC_USER: $BITCOIN_RPC_USER
+      BITCOIN_RPC_PASSWORD: $BITCOIN_RPC_PASS
+    restart: on-failure
+
+  lndmon:
+    image: maxhollmann/lndmon:latest
+    ports:
+      - "9092:9092"
+    restart: on-failure
+    volumes:
+      - ${LND_DATA_DIR}/data/chain/bitcoin/$BITCOIN_NETWORK/readonly.macaroon:/lnd/data/chain/bitcoin/$BITCOIN_NETWORK:ro
+    command: --prometheus.listenaddr=0.0.0.0:9092 --lnd.host=$LND_IP --lnd.macaroondir=/lnd/data/chain/bitcoin/$BITCOIN_NETWORK --lnd.tlspath=/lnd/tls.cert

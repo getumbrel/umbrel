@@ -1,0 +1,21 @@
+apiVersion: 1
+
+providers:
+# from https://github.com/lightninglabs/lndmon/tree/master/grafana/provisioning/dashboards
+- name: 'umbrel-lnd'
+  orgId: 1
+  folder: 'LND'
+  folderUid: 'lnd'
+  type: file
+  disableDeletion: false
+  editable: true
+  options:
+    path: /etc/grafana/provisioning/dashboards/lnd
+- name: 'umbrel-other'
+  orgId: 1
+  folder: ''
+  type: file
+  disableDeletion: false
+  editable: true
+  options:
+    path: /etc/grafana/provisioning/dashboards/other

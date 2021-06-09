@@ -73,6 +73,7 @@ services:
         lnd:
                 container_name: lnd
                 image: lightninglabs/lnd:v0.13.3-beta@sha256:b8f96d4d7fb9dcd349542240a6bff1ca0170715a16e6d79b0e9188e34ea18471
+                # image: lncm/lnd:v0.12.1-monitoring@sha256:37bcbcc742128a02d550c1e020aa4f5e29301773b03654fff2228631aec96422
                 user: 1000:1000
                 depends_on: [ tor, manager ]
                 volumes:

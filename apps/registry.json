@@ -592,5 +592,29 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "monitoring",
+        "category": "Other",
+        "name": "Monitoring",
+        "version": "0.1.0",
+        "tagline": "Monitor your Raspberry Pi, Bitcoin node and Lightning node",
+        "description": "...",
+        "developer": "Various",
+        "website": "https://grafana.com/",
+        "dependencies": [
+            "bitcoind",
+            "lnd"
+        ],
+        "repo": "https://example.org/",
+        "support": "https://example.org/",
+        "port": 3011,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": "admin / moneyprintergobrrr"
     }
 ]
