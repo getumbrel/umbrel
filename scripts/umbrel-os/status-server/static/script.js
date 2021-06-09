@@ -1,3 +1,25 @@
+const ERROR_TEMPLATES = {
+  'monitor-check': `
+  <b>Error:</b> External storage device check failed.
+  <p>This can sometimes be caused by using an unofficial power supply.</p>
+  `,
+  'semver-mismatch': `
+  <b>Error:</b> Can't upgrade from SDcard due to version mismatch.
+  `,
+  'no-block-device': `
+  <b>Error:</b> Umbrel couldn't find a storage device attached.
+  Please make sure your device is attached and then reboot.
+  `,
+  'multiple-block-devices': `
+  <b>Error:</b> Umbrel found multiple storage devices attached.
+  Please remove one of them and reboot.
+  `,
+  'rebinding-failed': `
+  <b>Error:</b> Umbrel failed to use your storage device in low power mode.
+  Are you using the recommended hardware?
+  `,
+};
+
 const isIframe = (window.self !== window.top);
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -78,85 +100,21 @@ const on = (selector, eventName, callback) => {
 };
 
 const render = status => {
-  const services = document.querySelector('.services');
-  // Remove any elements that no longer exist
-  const ids = status.map(service => service.id);
-  services.querySelectorAll(`.service`).forEach(node => {
-    if (!ids.includes(node.dataset.service)) {
-      node.remove();
-    }
-  });
+  const errorElem = document.querySelector('.error');
+  const statusElem = document.querySelector('.status');
+  const errorCode = (status.find(service => service.status === 'errored') || {}).error;
 
-  // Add/update statuses
-  status.forEach(service => {
-    // Create a new node if it doesn't already exist
-    let node = services.querySelector(`.service[data-service="${service.id}"]`);
-    if (!node) {
-      node = createNode(`
-      <div data-service="${service.id}" class="service fade-in">
-        <div class="card">
-          <span class="icon"></span>
-          <span class="title"></span>
-        </div>
-      </div>
-      `);
-      services.append(node);
-    }
+  if (!errorCode) {
+    statusElem.classList.remove('hidden');
+    errorElem.classList.add('hidden');
+    errorElem.classList.remove('fade-in');
+    return;
+  }
 
-    // Render title
-    const titles = {
-      mount: 'Mounting external storage',
-      'sdcard-update': 'Checking SD card for update',
-      umbrel: 'Starting Umbrel',
-    };
-    node.querySelector('.title').innerText = titles[service.id];
-
-    // Render icon
-    const icons = {
-      started: '⏳',
-      errored: '🚫',
-      completed: '✅',
-    };
-    node.querySelector('.icon').classList[service.status == 'started' ? 'add' : 'remove']('rotate');
-    node.querySelector('.icon').innerText = icons[service.status];
-
-    // Render Error
-    if(service.status === 'errored' && !node.querySelector('.error')) {
-      const errorTemplates = {
-        'monitor-check': `
-          <b>Error:</b> External storage device check failed.
-          <p>This can sometimes be caused by using an unofficial power supply.</p>
-        `,
-        'semver-mismatch': `
-          <b>Error:</b> Can't upgrade from SDcard due to version mismatch.
-        `,
-        'no-block-device': `
-          <b>Error:</b> Umbrel couldn't find a storage device attached.
-          Please make sure your device is attached and then reboot.
-        `,
-        'multiple-block-devices': `
-          <b>Error:</b> Umbrel found multiple storage devices attached.
-          Please remove one of them and reboot.
-        `,
-        'rebinding-failed': `
-          <b>Error:</b> Umbrel failed to use your storage device in low power mode.
-          Are you using the recommended hardware?
-        `,
-      };
-
-      if (errorTemplates[service.error]) {
-        node.appendChild(createNode(`
-          <div class="error card fade-in">
-            ${errorTemplates[service.error]}
-          </div>
-        `));
-      }
-    }
-  });
-
-  // Toggle button visibility
-  const isError = Boolean(status.find(service => service.status === 'errored'));
-  document.querySelector('.header').classList[isError ? 'remove' : 'add']('hidden');
+  statusElem.classList.add('hidden');
+  errorElem.querySelector('.text').innerHTML = ERROR_TEMPLATES[errorCode];
+  errorElem.classList.remove('hidden');
+  errorElem.classList.add('fade-in');
 };
 
 const main = async () => {

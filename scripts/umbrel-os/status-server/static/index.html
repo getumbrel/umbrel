@@ -20,20 +20,20 @@
       continue.</strong>
   </noscript>
 
-  <div class="shutting-down hidden">
-    <img class="logo" src="/umbrel.svg" />
-    <span class="spinner rotate"></span>
-    <span class="title">Shutting down...</span>
-  </div>
-
-  <div class="header hidden">
-    <a href="#" class="button shutdown">Shutdown</a>
-    <a href="#" class="button restart">Restart</a>
-  </div>
-
   <img class="logo" src="/umbrel.svg" />
 
-  <div class="services"></div>
+  <div class="status">
+    <span class="spinner rotate"></span>
+    <span class="text">Starting Umbrel...</span>
+  </div>
+
+  <div class="error card hidden">
+    <div class="text"></div>
+    <div class="buttons">
+      <a href="#" class="button shutdown">Shutdown</a>
+      <a href="#" class="button restart">Restart</a>
+    </div>
+  </div>
 
   <script src="/script.js"></script>
 </body>
