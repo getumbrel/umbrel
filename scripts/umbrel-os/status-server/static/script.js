@@ -1,143 +1,103 @@
-const ERROR_TEMPLATES = {
-  'monitor-check': `
-  <b>Error:</b> External storage device check failed.
-  <p>This can sometimes be caused by using an unofficial power supply.</p>
-  `,
-  'semver-mismatch': `
-  <b>Error:</b> Can't upgrade from SDcard due to version mismatch.
-  `,
-  'no-block-device': `
-  <b>Error:</b> Umbrel couldn't find a storage device attached.
-  Please make sure your device is attached and then reboot.
-  `,
-  'multiple-block-devices': `
-  <b>Error:</b> Umbrel found multiple storage devices attached.
-  Please remove one of them and reboot.
-  `,
-  'rebinding-failed': `
-  <b>Error:</b> Umbrel failed to use your storage device in low power mode.
-  Are you using the recommended hardware?
-  `,
-};
-
 const isIframe = (window.self !== window.top);
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-const createNode = html => {
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  return container.children[0];
+const on = (selector, eventName, callback) => {
+  for (element of document.querySelectorAll(selector)) {
+    element.addEventListener(eventName, event => {
+      event.preventDefault();
+      callback();
+    });
+  }
 };
+
+const setState = (key, value) => document.body.dataset[key] = value;
+const getState = key => document.body.dataset[key];
 
 const isUmbrelUp = async () => {
   const response = await fetch('/manager-api/ping');
   return response.status === 200;
 };
 
-const getStatus = async () => {
+const checkForError = async () => {
   const response = await fetch('/status');
-  return response.json();
-};
-
-const getCsrfToken = async () => {
-    const response = await fetch('/token');
-    return response.json();
-};
-
-const post = async endpoint => fetch(endpoint, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    token: await getCsrfToken()
-  }),
-});
-
-let doingShutdown = false;
-
-const showShutdown = async () => {
-  doingShutdown = true;
-  const shutdownElem = document.querySelector('.shutting-down');
-  shutdownElem.classList.remove('hidden');
-  shutdownElem.classList.add('fade-in');
-  await delay(10000);
-  shutdownElem.querySelector('.logo').style.filter = 'grayscale(1)';
-  shutdownElem.querySelector('.spinner').remove()
-  shutdownElem.querySelector('.title').innerText = 'Shutdown Complete';
-};
-
-const shutdown = async () => {
-  try {
-    const response = await post('/shutdown');
-    if (!response.ok) {
-      alert('Failed to restart Umbrel');
-      return;
-    }
-  } catch (e) {
-    showShutdown();
-  }
-};
-
-const restart = async () => {
-  try {
-    const response = await post('/restart');
-    if (!response.ok) {
-      alert('Failed to restart Umbrel');
-      return;
-    }
-  } catch (e) {
-    showShutdown();
-  }
-};
-
-const on = (selector, eventName, callback) => {
-  document.querySelector(selector).addEventListener(eventName, event => {
-    event.preventDefault();
-    callback();
-  });
-};
-
-const render = status => {
-  const errorElem = document.querySelector('.error');
-  const statusElem = document.querySelector('.status');
+  const status = await response.json();
   const errorCode = (status.find(service => service.status === 'errored') || {}).error;
+  return errorCode;
+};
 
-  if (!errorCode) {
-    statusElem.classList.remove('hidden');
-    errorElem.classList.add('hidden');
-    errorElem.classList.remove('fade-in');
+const power = async action => {
+  try {
+    const token = await (await fetch('/token')).json();
+    const response = await fetch(`/${action}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({token}),
+    });
+    if (!response.ok) {
+      return false;
+    }
+  } catch (e) {} finally {
+    return true;
+  }
+};
+
+on('.shutdown', 'click', async () => {
+  if (! await power('shutdown')) {
+    alert('Failed to shutdown Umbrel');
     return;
   }
 
-  statusElem.classList.add('hidden');
-  errorElem.querySelector('.text').innerHTML = ERROR_TEMPLATES[errorCode];
-  errorElem.classList.remove('hidden');
-  errorElem.classList.add('fade-in');
-};
+  setState('status', 'shutting-down');
+  await delay(30000);
+  setState('status', 'shutdown-complete');
+});
+
+on('.restart', 'click', async () => {
+  if (! await power('restart')) {
+    alert('Failed to restart Umbrel');
+    return;
+  }
+
+  setState('status', 'restarting');
+  await delay(10000);
+  // Wait for Umbrel to come back up then reload the page.
+  while (true) {
+    try {
+      if (await isUmbrelUp() || await checkForError()) {
+        window.location.reload();
+      }
+    } catch (e) {}
+    await delay(1000);
+  }
+});
 
 const main = async () => {
+  // Protect against clickjacking
   if (isIframe) {
     document.body.innerText = 'For security reasons Umbrel doesn\'t work in an iframe.';
     return;
   }
-  on('.shutdown', 'click', shutdown);
-  on('.restart', 'click', restart);
 
-  while (true) {
+  // Set initial loading state
+  setState('status', 'starting');
+
+  // Start loop
+  while (getState('status') === 'starting') {
     try {
+      // If Umbrel is ready, reload
       if (await isUmbrelUp()) {
         window.location.reload();
       }
 
-      const status = await getStatus();
-      if(doingShutdown) {
-        // If the reques suceeds after shutdown it means the server is back up
-        // so we should reload.
-        window.location.reload();
+      // If there are errors, set error state
+      const error = await checkForError();
+      if (error) {
+        setState('status', 'error');
+        setState('error', error);
       }
-      render(status);
     } catch (e) {
       console.error(e);
     }

@@ -27,16 +27,34 @@ p {
   padding: 0 20px;
 }
 
-.status {
+.view {
   display: none;
   flex-direction: column;
   justify-content: center;
   align-items: center;
 }
-
-.status.active {
+[data-status="starting"] .view.starting,
+[data-status="restarting"] .view.restarting,
+[data-status="shutting-down"] .view.shutting-down,
+[data-status="shutdown-complete"] .view.shutdown-complete,
+[data-status="error"] .view.error {
   display: flex;
 }
+
+.error-text {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+[data-error="monitor-check"] .error-text.monitor-check,
+[data-error="semver-mismatch"] .error-text.semver-mismatch,
+[data-error="no-block-device"] .error-text.no-block-device,
+[data-error="multiple-block-devices"] .error-text.multiple-block-devices,
+[data-error="rebinding-failed"] .error-text.rebinding-failed {
+  display: flex;
+}
+
 
 .logo {
   max-height: 200px;
