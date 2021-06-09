@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+main () {
+  echo "Bind mounting SD card root at /sd-root..."
+  [[ ! -d "/sd-root" ]] && mkdir -p "/sd-root"
+  mount --bind "/" "/sd-root"
+
+  echo "Checking SD Card root is bind mounted at /sd-root..."
+  sync
+  sleep 1
+  df -h "/sd-root${UMBREL_ROOT}" | grep --quiet "/dev/root"
+
+  echo "/sd-root bind mounted successfully!"
+}
+
+main
