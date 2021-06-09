@@ -9,8 +9,8 @@ Before=umbrel-startup.service
 
 [Service]
 Type=exec
-ExecStartPre=/sd-root/home/umbrel/umbrel/scripts/umbrel-os/status-server/setup
-ExecStart=/sd-root/home/umbrel/umbrel/scripts/umbrel-os/status-server/status-server
+ExecStartPre=/home/umbrel/umbrel/scripts/umbrel-os/status-server/setup
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/status-server/status-server
 User=root
 Group=root
 StandardOutput=syslog
