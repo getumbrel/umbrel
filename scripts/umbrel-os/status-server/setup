@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+BIND_MOUNT_PATH="/status-server"
 STATUS_FILE_PATH="/umbrel-status"
+
+# Bind mount status server to new location so we always run on the SD card
+echo "Bind mounting status server to ${BIND_MOUNT_PATH}..."
+[[ ! -d "${BIND_MOUNT_PATH}" ]] && mkdir -p "${BIND_MOUNT_PATH}"
+mount --bind "${UMBREL_ROOT}/scripts/umbrel-os/status-server/" "${BIND_MOUNT_PATH}"
+sync
+sleep 1
 
 # Clear status file
 echo "clearing status file..."
@@ -13,4 +21,4 @@ echo "" > "${STATUS_FILE_PATH}"
 # When the Umbrel service has started Docker will overwrite this rule and
 # instead forward port 80 to the Umbrel HTTP server container.
 echo "Setting iptables rules..."
-"${UMBREL_ROOT}/scripts/umbrel-os/status-server/setup-iptables"
+"${BIND_MOUNT_PATH}/setup-iptables"

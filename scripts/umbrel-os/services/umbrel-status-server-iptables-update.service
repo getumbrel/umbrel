@@ -14,7 +14,7 @@ After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/status-server/setup-iptables
+ExecStart=/status-server/setup-iptables
 User=root
 Group=root
 StandardOutput=syslog
