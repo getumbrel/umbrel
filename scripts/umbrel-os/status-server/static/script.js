@@ -26,6 +26,15 @@ const checkForError = async () => {
   return errorCode;
 };
 
+const isStatusServerUp = async () => {
+  try {
+    await checkForError();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
 const power = async action => {
   try {
     const token = await (await fetch('/token')).json();
@@ -66,7 +75,7 @@ on('.restart', 'click', async () => {
   // Wait for Umbrel to come back up then reload the page.
   while (true) {
     try {
-      if (await isUmbrelUp() || await checkForError()) {
+      if (await isStatusServerUp() || await isUmbrelUp()) {
         window.location.reload();
       }
     } catch (e) {}
