@@ -6,7 +6,7 @@ UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 block_device="${1}"
 mount_point="${2}"
 
-set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
+set_status="/sd-root/${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
 
 check_if_not_already_running() {
   if ps ax | grep $0 | grep -v $$ | grep bash | grep -v grep
