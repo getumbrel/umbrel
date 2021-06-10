@@ -27,6 +27,14 @@ class Server():
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, directory=directory, **kwargs)
 
+            def send_error(self, code, message=None):
+                if code == 404 and self.path != '/':
+                    self.send_response(302)
+                    self.send_header('Location','/')
+                    self.end_headers()
+                else:
+                    super().send_error(code, message)
+
             # JSON helper
             def send_json_response(self, status_code, data=None):
                 if status_code >= 400:
