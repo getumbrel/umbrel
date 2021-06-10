@@ -27,5 +27,5 @@ while true; do
       touch "${UMBREL_ROOT}/statuses/memory-warning"
     fi
   fi
-  sleep 10
+  sleep 60
 done
