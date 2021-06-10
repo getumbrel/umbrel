@@ -87,7 +87,7 @@ p {
   width: 1rem;
   height: 1rem;
   border-width: 0.2em;
-  margin-right: 1em;
+  margin: 0.2em 1em 0 0;
 }
 
 .button {
@@ -101,8 +101,14 @@ p {
   margin-right: 0.1rem;
 }
 
+.button.community {
+  position: absolute;
+  bottom: 0;
+  left: auto;
+  right: auto;
+}
+
 .rotate {
-  display: inline-block;
   animation: rotate 1s linear infinite;
 }
 @keyframes rotate {

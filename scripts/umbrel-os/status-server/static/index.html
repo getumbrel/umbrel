@@ -37,7 +37,7 @@
         <path fill-rule="evenodd" clip-rule="evenodd" d="M133.969 32.9107C122.302 22.7916 107.261 17.6512 88.1548 18.0182C68.9596 18.3871 54.0522 23.9035 42.7387 34.0244C31.3296 44.2309 22.8201 59.7981 17.7954 81.5961C16.803 85.9015 12.5082 88.5872 8.20286 87.5947C3.89749 86.6023 1.21181 82.3076 2.20425 78.0022C7.71919 54.0773 17.4796 35.153 32.071 22.0997C46.7579 8.96082 65.5814 2.44902 87.8474 2.0212C110.203 1.59166 129.301 7.68281 144.452 20.8236C159.471 33.8502 169.858 53.1503 176.202 77.8057C177.303 82.0846 174.727 86.4459 170.448 87.5468C166.169 88.6478 161.808 86.0715 160.707 81.7926C154.876 59.1318 145.767 43.1438 133.969 32.9107Z" fill="#5351FB"/>
       </svg>
       <p><span class="spinner rotate"></span>Restarting...</p>
-      <p>Please do not disconnect the power supply while the restart is in progress</p>
+      <p>Please do not disconnect the power supply while the restart is in progress.</p>
     </div>
 
     <div class="view shutting-down">
@@ -47,7 +47,7 @@
         <path fill-rule="evenodd" clip-rule="evenodd" d="M133.969 32.9107C122.302 22.7916 107.261 17.6512 88.1548 18.0182C68.9596 18.3871 54.0522 23.9035 42.7387 34.0244C31.3296 44.2309 22.8201 59.7981 17.7954 81.5961C16.803 85.9015 12.5082 88.5872 8.20286 87.5947C3.89749 86.6023 1.21181 82.3076 2.20425 78.0022C7.71919 54.0773 17.4796 35.153 32.071 22.0997C46.7579 8.96082 65.5814 2.44902 87.8474 2.0212C110.203 1.59166 129.301 7.68281 144.452 20.8236C159.471 33.8502 169.858 53.1503 176.202 77.8057C177.303 82.0846 174.727 86.4459 170.448 87.5468C166.169 88.6478 161.808 86.0715 160.707 81.7926C154.876 59.1318 145.767 43.1438 133.969 32.9107Z" fill="#5351FB"/>
       </svg>
       <p><span class="spinner rotate"></span>Shutting down...</p>
-      <p>Please do not disconnect the power supply until the shutdown is complete</p>
+      <p>Please do not disconnect the power supply until the shutdown is complete.</p>
     </div>
 
     <div class="view shutdown-complete">
@@ -67,28 +67,28 @@
       </svg>
 
       <div class="error-text monitor-check">
-        <p><b class="text-dark">Error: External drive not connected</b></p>
-        <p>This can sometimes be caused by using an unofficial power supply.</p>
+        <p><b class="text-dark">Error: External drive disconnected</b></p>
+        <p>The external drive was disconnected while Umbrel was running. This can sometimes happen when using an unofficial Raspberry Pi power supply.</p>
       </div>
 
       <div class="error-text semver-mismatch">
-        <p><b class="text-dark">Error: Can't upgrade from SDcard due to version mismatch</b></p>
-        <p>Can't upgrade from SDcard due to version mismatch.</p>
+        <p><b class="text-dark">Error: Version mismatch</b></p>
+        <p>The version of UmbrelOS on your microSD card is different than the version of Umbrel on your external drive.</p>
       </div>
 
       <div class="error-text no-block-device">
-        <p><b class="text-dark">Error: Umbrel couldn't find a storage device attached</b></p>
-        <p>Please make sure your device is attached and then reboot.</p>
+        <p><b class="text-dark">Error: No external drive found</b></p>
+        <p>Please connect an external drive (either SSD or HDD) of at least 1TB size to a USB 3.0 port (blue color) on your Raspberry Pi and restart your Umbrel.</p>
       </div>
 
       <div class="error-text multiple-block-devices">
-        <p><b class="text-dark">Error: Umbrel found multiple storage devices attached</b></p>
-        <p>Please remove one of them and reboot.</p>
+        <p><b class="text-dark">Error: Multiple external drives found</b></p>
+        <p>Umbrel only works with one external drive of atleast 1TB size. Please disconnect any additional external drives and restart your Umbrel.</p>
       </div>
 
       <div class="error-text rebinding-failed">
-        <p><b class="text-dark">Error: Umbrel failed to use your storage device in low power mode</b></p>
-        <p>Are you using the recommended hardware?</p>
+        <p><b class="text-dark">Error: Failed to rebind external drive</b></p>
+        <p>There was an error connecting your external drive. Please consider using the recommended hardware listed on getumbrel.com.</p>
       </div>
 
       <br/><br/>
@@ -103,6 +103,8 @@
         </svg>
         Shutdown
       </a>
+
+      <a class="button community" href="https://community.getumbrel.com" target="_blank">community</a>
     </div>
   </div>
 
