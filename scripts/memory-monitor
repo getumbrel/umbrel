@@ -22,8 +22,10 @@ log "Memory monitor running!"
 while true; do
   percent_memory_used=$(free | awk 'NR==2{print int($3*100/$2) }')
   if (( $percent_memory_used > $PERCENT_MEMORY_THRESHOLD )); then
-    touch "${UMBREL_ROOT}/statuses/memory-warning"
     log "Warning memory usage at ${percent_memory_used}%"
+    if [[ "$(jq -r '.installedApps | length > 0' ${UMBREL_ROOT}/db/user.json)" == "true" ]]; then
+      touch "${UMBREL_ROOT}/statuses/memory-warning"
+    fi
   fi
   sleep 10
 done
