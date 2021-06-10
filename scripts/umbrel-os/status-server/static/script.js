@@ -16,7 +16,7 @@ const getState = key => document.body.dataset[key];
 
 const isUmbrelUp = async () => {
   const response = await fetch('/manager-api/ping');
-  return response.status === 200;
+  return response.status === 200 && response.redirected === false;
 };
 
 const checkForError = async () => {
