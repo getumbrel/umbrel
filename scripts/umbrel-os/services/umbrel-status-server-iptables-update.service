@@ -1,0 +1,25 @@
+# Umbrel Status Server iptables Update
+# Installed at /etc/systemd/system/umbrel-status-server-iptables-update.service
+
+# This is needed because when Docker starts it appends its own iptables rules
+# after ours. This means traffic on port 80 will never arrive at a Docker container
+# because we always redirect it. We can remove the rule and then re-apply it so
+# it gets appended after the Docker rule so port 80 will only continue to be
+# routed to the status server until a Docker container listens on port 80.
+
+[Unit]
+Description=Status Server iptables Update
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/status-server/setup-iptables
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=status server iptables
+
+[Install]
+WantedBy=multi-user.target

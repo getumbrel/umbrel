@@ -1,0 +1,32 @@
+#!/usr/bin/env -S python3 -u
+from pathlib import Path
+import subprocess
+
+from util.server import Server
+from util.csrf import get_csrf_token, verify_csrf_token
+import util.status_file as status_file
+
+STATUS_FILE_PATH='/umbrel-status'
+
+def csrf(request):
+    if not verify_csrf_token(request['post_data']['token']):
+        raise Exception("Invalid CSRF token")
+
+def get_relative_path(path):
+    script_dir = Path(__file__).resolve().parent
+    return str(script_dir.joinpath(path))
+
+def run(command):
+    if not status_file.contains_errors(STATUS_FILE_PATH):
+        raise Exception("Running commands is disabled if there are no status errors")
+    subprocess.run(command, check=True)
+
+def main():
+    server = Server(directory=get_relative_path('static'))
+    server.get('/status', lambda _: status_file.parse(STATUS_FILE_PATH))
+    server.get('/token', lambda _: get_csrf_token())
+    server.post('/shutdown', csrf, lambda _: run(['poweroff']))
+    server.post('/restart', csrf, lambda _: run(['reboot']))
+    server.listen(8000)
+
+main()
