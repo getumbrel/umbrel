@@ -30,7 +30,7 @@ class Server():
             def send_error(self, code, message=None):
                 if code == 404 and self.path != '/':
                     self.send_response(302)
-                    self.send_header('Location','/')
+                    self.send_header('Location', '/')
                     self.end_headers()
                 else:
                     super().send_error(code, message)
@@ -40,7 +40,7 @@ class Server():
                 if status_code >= 400:
                     data = {'error': True}
                 self.send_response(status_code)
-                self.send_header('Content-type','application/json')
+                self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(bytes(json.dumps(data), 'utf8'))
 
