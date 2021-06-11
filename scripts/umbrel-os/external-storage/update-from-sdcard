@@ -6,7 +6,7 @@ UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 SD_MOUNT_POINT="/sd-root"
 SD_UMBREL_ROOT="${SD_MOUNT_POINT}${UMBREL_ROOT}"
 
-set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
+set_status="/status-server/set-status"
 
 check_root () {
   if [[ $UID != 0 ]]; then
