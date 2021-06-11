@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lnbitsdocker/lnbits:558f3ac@sha256:edff8ce0073d165e4db85cb5c3c96e7beb863b89a5f608f1951f3a6928d915d3
+    image: lnbitsdocker/lnbits:8500b77@sha256:78b3862016e54c9a3b2a0d3eb389d3c1e697b5d6aec755168cba9e6d9e01467b
     user: 1000:1000
     init: true
     restart: on-failure
