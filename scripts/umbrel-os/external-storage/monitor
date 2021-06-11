@@ -45,7 +45,7 @@ main () {
   echo "Stopping Umbrel due to failed storage device check..."
   docker kill $(docker ps -aq)
   $set_status mount errored monitor-check
-  $setup_iptables
+  $setup_iptables --force
 }
 
 main
