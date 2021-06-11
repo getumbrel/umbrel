@@ -42,15 +42,15 @@ check_dependencies () {
 # Returns a list of block device paths
 list_block_devices () {
   # We need to run sync here to make sure the filesystem is reflecting the
-  # the latest changes in /sys/block/sd*
+  # the latest changes in /sys/block/*
   sync
   # We use "2>/dev/null || true" to swallow errors if there are
   # no block devices. In that case the function just returns nothing
   # instead of an error which is what we want.
   #
-  # sed 's!.*/!!' is to return the device path so we get sda
-  # instead of /sys/block/sda
-  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+  # sed 's!.*/!!' is to return the device path so we get sda (or nvme0)
+  # instead of /sys/block/sda (or /sys/block/nvme0)
+  (ls -d /sys/block/sd* /sys/block/nvme* 2>/dev/null || true) | sed 's!.*/!!'
 }
 
 # Returns the vendor and model name of a block device
@@ -148,7 +148,10 @@ main () {
   $set_status mount started
   echo "Running external storage mount script..."
   check_root
-  check_dependencies sed wipefs parted mount sync umount
+  check_dependencies sed wipefs parted mount sync umount modprobe
+
+  # Enable NVME kernel module if not enabled
+  modprobe nvme
 
   no_of_block_devices=$(list_block_devices | wc -l)
 
@@ -187,23 +190,25 @@ main () {
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
-  echo "Blacklisting USB device IDs against UAS driver..."
-  blacklist_uas
+  if [[ $block_device != nvme* ]]; then
+    echo "Blacklisting USB device IDs against UAS driver..."
+    blacklist_uas
 
-  echo "Checking USB devices are back..."
-  retry_for_usb_devices=1
-  while [[ ! -e "${block_device_path}" ]]; do
-    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
-    if [[ $retry_for_usb_devices -gt 10 ]]; then
-      echo "USB devices weren't registered after 10 tries..."
-      echo "Exiting mount script without doing anything"
-      $set_status mount errored rebinding-failed
-      exit 1
-    fi
+    echo "Checking USB devices are back..."
+    retry_for_usb_devices=1
+    while [[ ! -e "${block_device_path}" ]]; do
+      retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
+      if [[ $retry_for_usb_devices -gt 10 ]]; then
+        echo "USB devices weren't registered after 10 tries..."
+        echo "Exiting mount script without doing anything"
+        $set_status mount errored rebinding-failed
+        exit 1
+      fi
 
-    echo "Waiting for USB devices..."
-    sleep 1
-  done
+      echo "Waiting for USB devices..."
+      sleep 1
+    done
+  fi
 
   echo "Checking if the device is ext4..."
 
