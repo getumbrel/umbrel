@@ -4,6 +4,17 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 
+source /etc/default/umbrel 2> /dev/null || true
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  echo "Exiting iptables setup when not on Umbrel OS"
+  exit
+fi
+
+delete="false"
+if [[ "${@}" == *"--delete"* ]]; then
+  delete="true"
+fi
+
 check_root () {
   if [[ $UID != 0 ]]; then
     echo "This script must be run as root"
@@ -26,8 +37,10 @@ main () {
   else
     echo "No existing iptables entry found."
   fi
-  iptables --append ${rule[@]}
-  echo "Appended new iptables entry."
+  if [[ "${delete}" == "false" ]]; then
+    iptables --append ${rule[@]}
+    echo "Appended new iptables entry."
+  fi
 }
 
 main
