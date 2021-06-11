@@ -96,6 +96,9 @@ echo
 docker-compose up --detach --build --remove-orphans
 echo
 
+echo "Removing status server iptables entry..."
+"${UMBREL_ROOT}/scripts/umbrel-os/status-server/setup-iptables" --delete
+
 echo
 echo "Starting installed apps..."
 echo
