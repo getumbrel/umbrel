@@ -109,9 +109,10 @@ list_installed_apps() {
 list_installed_apps | while read app; do
   if [[ "${app}" != "" ]]; then
     echo "${app}..."
-    scripts/app compose "${app}" pull
+    scripts/app compose "${app}" pull &
   fi
 done
+wait
 
 # Stop existing containers
 echo "Stopping existing containers"

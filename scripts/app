@@ -80,11 +80,12 @@ else
   app_dir="${UMBREL_ROOT}/apps/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
   if [[ "${app}" == "installed" ]]; then
-    list_installed_apps | while read app; do
+    for app in $(list_installed_apps); do
       if [[ "${app}" != "" ]]; then
-        "${0}" "${1}" "${app}" "${@:3}" || true
+        "${0}" "${1}" "${app}" "${@:3}" &
       fi
     done
+    wait
     exit
   fi
   if [[ -z "${app}" ]] || [[ ! -d "${app_dir}" ]]; then
@@ -156,7 +157,6 @@ if [[ "$command" = "install" ]]; then
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
   rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
-  
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
