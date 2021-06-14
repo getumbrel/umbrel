@@ -6,6 +6,8 @@ UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
 SD_MOUNT_POINT="/sd-root"
 SD_UMBREL_ROOT="${SD_MOUNT_POINT}${UMBREL_ROOT}"
 
+set_status="/status-server/set-status"
+
 check_root () {
   if [[ $UID != 0 ]]; then
     echo "This script must be run as root"
@@ -31,12 +33,14 @@ check_semver_range () {
 main () {
   check_root
   check_dependencies jq
+  $set_status sdcard-update started
   echo "Checking if SD card Umbrel is newer than external storage..."
   local external_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
   local sd_version=$(cat "${SD_UMBREL_ROOT}/info.json" | jq -r .version | cut -d "-" -f "1")
 
   if ! check_semver_range ">${external_version}" "${sd_version}"; then
     echo "No, SD version is not newer, exiting."
+    $set_status sdcard-update completed
     exit 0
   fi
 
@@ -48,11 +52,13 @@ main () {
   echo "Checking if the external storage version \"${external_version}\" satisfies update requirement \"${update_requirement}\"..."
   if ! check_semver_range "${update_requirement}" "${external_version}"; then
     echo "No, we can't do an automatic update, exiting."
+    $set_status sdcard-update errored semver-mismatch
     exit 0
   fi
 
   echo "Yes, it does, attempting an automatic update..."
   "${UMBREL_ROOT}/scripts/update/update" --path "${SD_UMBREL_ROOT}"
+  $set_status sdcard-update completed
 }
 
 main
