@@ -31,8 +31,13 @@ check_dependencies rsync jq curl
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 UMBREL_LOGS="${UMBREL_ROOT}/logs"
 
+set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
+
+$set_status umbrel started
+
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
+  $set_status umbrel errored umbrel-root-missing
   exit 1
 fi
 
@@ -91,6 +96,9 @@ echo
 docker-compose up --detach --build --remove-orphans
 echo
 
+echo "Removing status server iptables entry..."
+"${UMBREL_ROOT}/scripts/umbrel-os/status-server/setup-iptables" --delete
+
 echo
 echo "Starting installed apps..."
 echo
@@ -109,3 +117,5 @@ echo "  http://${DEVICE_IP}"
 if [[ ! -z "${hidden_service_url:-}" ]]; then
     echo "  http://${hidden_service_url}"
 fi
+
+$set_status umbrel completed

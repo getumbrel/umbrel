@@ -1,6 +1,6 @@
 {
-    "version": "0.3.10",
-    "name": "Umbrel v0.3.10",
+    "version": "0.3.12",
+    "name": "Umbrel v0.3.12",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.10 is here with Taproot ready Bitcoin Core v0.21.1, the new BlueWallet Lightning app in the Umbrel App Store, and Tor connection support for BlueWallet on both iOS and Android.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel v0.3.12 fixes a bug that made Umbrel inaccessible over Tor.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

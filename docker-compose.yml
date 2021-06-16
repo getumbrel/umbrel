@@ -58,7 +58,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.20@sha256:a5cb7f9057dc772992617fa591b8ecde1b201455b856f353a1cd481c9feb1423
+                image: getumbrel/dashboard:v0.3.22@sha256:144105c0b7b6717f22e18171eec481897bb96344c7c298c681c9c04ce2b764a6
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -66,7 +66,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.11@sha256:605eda9e0b2d3d3e16e702b9d6c44c7edfabf763e757425a79669a3130bc39e8
+                image: getumbrel/manager:v0.2.12@sha256:1d9dc50743b10c7f57f0514a50932e4c99e5a77616ef24ecd1f9826b6085b8fc
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s

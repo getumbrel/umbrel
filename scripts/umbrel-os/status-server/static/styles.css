@@ -1,0 +1,117 @@
+body {
+  background-color: #F7F9FB;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", "Segoe UI", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #6c757d;
+  text-align: center;
+}
+
+span, p {
+  margin: 0 0 1em 0;
+}
+
+p {
+  display: flex;
+}
+
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.view {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+[data-status="starting"] .view.starting,
+[data-status="restarting"] .view.restarting,
+[data-status="shutting-down"] .view.shutting-down,
+[data-status="shutdown-complete"] .view.shutdown-complete,
+[data-status="error"] .view.error {
+  display: flex;
+}
+
+.error-text {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+[data-error="monitor-check"] .error-text.monitor-check,
+[data-error="semver-mismatch"] .error-text.semver-mismatch,
+[data-error="no-block-device"] .error-text.no-block-device,
+[data-error="multiple-block-devices"] .error-text.multiple-block-devices,
+[data-error="rebinding-failed"] .error-text.rebinding-failed {
+  display: flex;
+}
+
+
+.logo {
+  max-height: 200px;
+  width: auto;
+  display: block;
+  margin-bottom: 80px;
+}
+
+.logo.danger path {
+  fill: #F46E6E;
+}
+
+.logo.dark path {
+  fill: #858997;
+}
+
+.text-dark {
+  color: #141821;
+}
+
+.spinner {
+  font-size: 80%;
+  font-weight: 400;
+  box-sizing: border-box;
+  display: inline-block;
+  vertical-align: text-bottom;
+  border: 0.25em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.2em;
+  margin: 0.17em 1em 0 0;
+}
+
+.button {
+  display: block;
+  margin-bottom: 1rem;
+  text-decoration: none;
+  color: #5351FB;
+}
+
+.button svg {
+  margin-right: 0.1rem;
+}
+
+.button.community {
+  position: absolute;
+  bottom: 0;
+  left: auto;
+  right: auto;
+}
+
+.rotate {
+  animation: rotate 1s linear infinite;
+}
+@keyframes rotate {
+  from {transform: rotate(0deg)}
+  to {transform: rotate(360deg)}
+}
