@@ -58,7 +58,7 @@ cat info.json | jq .version | sed 's/"//g'
 
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
-    echo "Umbrel OS version"
+    echo "Flashed OS version"
     echo "-----------------"
     echo $UMBREL_OS
 
