@@ -365,7 +365,7 @@ _(Link to your Telegram support channel, GitHub issues/discussions, support port
 - [ ] LND
 
 ### 256x256 SVG icon
-_(Submit an icon with no rounded corners it will be dynamically rounded with CSS. GitHub doesn't allow uploading SVGs directly, so please upload your file to an alternate service, like https://svgur.com, and paste the link below.)_
+_(Submit an icon with no rounded corners as it will be dynamically rounded with CSS. GitHub doesn't allow uploading SVGs directly, so please upload your icon to an alternate service, like https://svgur.com, and paste the link below.)_
 
 ...
 
