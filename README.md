@@ -21,7 +21,7 @@ We run it on Raspbery Pis (ARMv8) as a part of [Umbrel OS](https://github.com/ge
 
 If you're looking to run Umbrel on:
 
-- A Raspberry Pi 4 with at least 2GB RAM (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
+- A Raspberry Pi 4 with at least 4GB RAM (recommended) - [Download Umbrel OS](https://github.com/getumbrel/umbrel-os)
 - Anything else (**not recommended** as it's experimental at the moment) - [Install Umbrel](#-installation)
 
 ## 🛠 Installation
@@ -30,7 +30,7 @@ If you're looking to run Umbrel on:
 
 ### Installation Requirements
 
-- 2GB RAM and 600GB+ free space (for mainnet)
+- 4GB RAM and 600GB+ free space (for mainnet)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)
