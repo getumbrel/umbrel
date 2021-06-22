@@ -290,7 +290,7 @@ Once you're happy with your changes, just commit and push.
 ssh umbrel@umbrel.local
 ```
 
-Password `moneyprintergobrrr`
+(SSH password is the same as your Umbrel's dashboard password)
 
 2\. Next, we'll switch the Umbrel installation to our fork and branch:
 
@@ -343,13 +343,15 @@ _(50 to 200 words)_
 
 ...
 
-### Developed by
+### Developer name
 ...
 
 ### Developer website
 ...
 
-### Source code repository
+### Source code link
+_(Link to your app's source code repository.)_
+
 ...
 
 ### Support link
@@ -357,18 +359,18 @@ _(Link to your Telegram support channel, GitHub issues/discussions, support port
 
 ...
 
-### Uses
+### Requires
 - [ ] Bitcoin Core
 - [ ] Electrum server
 - [ ] LND
 
 ### 256x256 SVG icon
-_(GitHub doesn't allow uploadig SVGs directly. Upload your file to an alternate service, like https://svgur.com, and paste the link below.)_
+_(Submit an icon with no rounded corners as it will be dynamically rounded with CSS. GitHub doesn't allow uploading SVGs directly, so please upload your icon to an alternate service, like https://svgur.com, and paste the link below.)_
 
 ...
 
-### App screenshots
-_(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PNG format.)_
+### Gallery images
+_(Upload 3 to 5 high-quality gallery images (1440x900px) of your app in PNG format, or just upload 3 to 5 screenshots of your app and we'll help you design the gallery images.)_
 
 ...
 
@@ -379,7 +381,11 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 - [ ] [Custom Umbrel install on Linux](https://github.com/getumbrel/umbrel#-installation)
 ```
 
-**Here's our actual pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#334](https://github.com/getumbrel/umbrel/pull/334).**
+This is where the above information is used when the app goes live in the Umbrel App Store:
+
+![Umbrel App Store Labels](https://i.imgur.com/0CorPRK.png)
+
+**Here's our real pull request submitting the BTC RPC Explorer app — [getumbrel/umbrel#334](https://github.com/getumbrel/umbrel/pull/334).**
 
 > After you've submitted your app, we'll review your pull request, create the required Tor hidden services for it, make some adjustments in the `docker-compose.yml` file, such as removing any port conflicts with other apps, pinning Docker images to their sha256 digests, assigning unique IP addresses to the containers, etc before merging.
 
@@ -391,11 +397,11 @@ _(Upload 3 to 5 high-quality screenshots (at least 1280x800px) of your app in PN
 
 1. **How to push app updates?**
 
-    Every time you release a new version of your app, you should build, tag and push the new Docker images to Docker Hub. Then open a new PR on our main repo (getumbrel/umbrel) with your up-to-date docker image. For now, app updates will be bundled together in the Umbrel releases. In the future, you'll be able to ship updates independently as soon as you make a new release.
+    Every time you release a new version of your app, you should build, tag and push the new Docker images to Docker Hub. Then open a new PR on our main repo (getumbrel/umbrel) with your up-to-date docker image. For now, app updates are bundled together in the Umbrel releases. In the future, you'll be able to ship updates independently as soon as you make a new release.
 
-1. **How will users install/uninstall apps?**
+1. **How do users install apps?**
 
-    Users will install and uninstall the apps via dedicated UI in their dashboard. They will not use the `scripts/app` CLI directly as it's only meant for development use.
+    Users install apps via the Umbrel App Store. They do not use the `scripts/app` CLI directly as it's only meant for development use.
 
 1. **I need help with something else?**
 
