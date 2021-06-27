@@ -1,0 +1,21 @@
+name: Build Umbrel OS image
+
+on: push
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v2
+
+      - name: Build image
+        run: ./os/build.sh
+
+      - name: Uploading image
+        uses: actions/upload-artifact@v2
+        with:
+          path: ./os/umbrel-os.img
+          name: ./os/umbrel-os.img
