@@ -33,6 +33,8 @@ logs/*
 statuses/*
 tor/*
 app-data/*
+os/packer_cache
+os/*.img
 
 # Commit these files
 

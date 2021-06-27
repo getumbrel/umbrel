@@ -1,0 +1,41 @@
+{
+  "variables": {},
+  "builders": [{
+    "type": "arm",
+    "file_urls" : ["https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2021-05-28/2021-05-07-raspios-buster-arm64-lite.zip"],
+    "file_checksum": "868cca691a75e4280c878eb6944d95e9789fa5f4bbce2c84060d4c39d057a042",
+    "file_checksum_type": "sha256",
+    "file_target_extension": "zip",
+    "image_build_method": "resize",
+    "image_path": "umbrel-os.img",
+    "image_size": "4G",
+    "image_type": "dos",
+    "image_partitions": [
+      {
+        "name": "boot",
+        "type": "c",
+        "start_sector": "8192",
+        "filesystem": "vfat",
+        "size": "256M",
+        "mountpoint": "/boot"
+      },
+      {
+        "name": "root",
+        "type": "83",
+        "start_sector": "532480",
+        "filesystem": "ext4",
+        "size": "0",
+        "mountpoint": "/"
+      }
+    ],
+    "image_chroot_env": ["PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"],
+    "qemu_binary_source_path": "/usr/bin/qemu-aarch64-static",
+    "qemu_binary_destination_path": "/usr/bin/qemu-aarch64-static"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "script": "provision.sh"
+    }
+  ]
+}
