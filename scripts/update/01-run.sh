@@ -61,6 +61,14 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
 
+    # Make sure dhcpd ignores virtual network interfaces
+    dhcpd_conf="/etc/dhcpcd.conf"
+    dhcpd_rule="denyinterfaces veth*"
+    if [[ -f "${dhcpd_conf}" ]] && ! cat "${dhcpd_conf}" | grep --quiet "${dhcpd_rule}"; then
+      echo "${dhcpd_rule}" >> "${dhcpd_conf}"
+      systemctl restart dhcpcd
+    fi
+
     # This makes sure systemd services are always updated (and new ones are enabled).
     UMBREL_SYSTEMD_SERVICES="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services/*.service"
     for service_path in $UMBREL_SYSTEMD_SERVICES; do
