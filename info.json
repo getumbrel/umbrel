@@ -1,6 +1,6 @@
 {
-    "version": "0.3.13",
-    "name": "Umbrel v0.3.13",
+    "version": "0.3.14",
+    "name": "Umbrel v0.3.14",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.13 brings the latest versions of Ride The Lightning, Specter Desktop, ThunderHub and LNbits in the Umbrel App Store. The new Ride The Lightning version includes an important security fix and updating quickly is strongly recommended.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update resolves a stability issue that can cause Umbrel to randomly disconnect from the network and become inaccessible.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
