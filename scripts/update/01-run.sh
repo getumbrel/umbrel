@@ -65,7 +65,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     dhcpd_conf="/etc/dhcpcd.conf"
     dhcpd_rule="denyinterfaces veth*"
     if [[ -f "${dhcpd_conf}" ]] && ! cat "${dhcpd_conf}" | grep --quiet "${dhcpd_rule}"; then
-      echo "${dhcpd_rule}" >> "${dhcpd_conf}"
+      echo "${dhcpd_rule}" | tee -a "${dhcpd_conf}"
       systemctl restart dhcpcd
     fi
 
