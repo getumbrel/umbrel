@@ -2,5 +2,5 @@
     "version": "0.3.14",
     "name": "Umbrel v0.3.14",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.14 resolves a major stability issue that was causing Umbrel devices to randomly go offline.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update resolves a stability issue that can cause Umbrel to randomly disconnect from the network and become inaccessible.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
