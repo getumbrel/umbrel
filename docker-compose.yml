@@ -1,20 +1,6 @@
 version: '3.7'
 
 services:
-        tor:
-                container_name: tor
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
-                user: toruser
-                restart: on-failure
-                volumes:
-                    - ${PWD}/tor/torrc:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
-                    - ${PWD}/tor/run:/var/run/tor/
-                ports:
-                  - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
-                networks:
-                    default:
-                        ipv4_address: $TOR_PROXY_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
@@ -31,7 +17,7 @@ services:
         bitcoin:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.21.1@sha256:5bedb46d698de16c59e9e43d31485d0d82239bd437d62ac7cf47ebb633214f37
-                depends_on: [ tor, manager, nginx ]
+                depends_on: [ manager, nginx ]
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
                 restart: on-failure
@@ -44,7 +30,7 @@ services:
         lnd:
                 container_name: lnd
                 image: lncm/lnd:v0.12.1@sha256:bdc442c00bc4dd4d5bfa42efd7d977bfe4d21a08d466c933b9cff7cfc83e0c0e
-                depends_on: [ tor, manager ]
+                depends_on: [ manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
                 restart: on-failure
@@ -67,7 +53,7 @@ services:
         manager:
                 container_name: manager
                 image: getumbrel/manager:v0.2.12@sha256:1d9dc50743b10c7f57f0514a50932e4c99e5a77616ef24ecd1f9826b6085b8fc
-                depends_on: [ tor ]
+                depends_on: [ ]
                 restart: on-failure
                 stop_grace_period: 5m30s
                 volumes:
