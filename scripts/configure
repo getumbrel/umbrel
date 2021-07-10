@@ -340,22 +340,7 @@ mv -f "$ENV_FILE" "./.env"
 
 # Prevents CORS issue if dashboard's hidden service
 # doesn't exist on the first run
-if [[ ! -f "${STATUS_DIR}/configured" ]]; then
-  echo "Generating hidden services..."
-  echo
-  docker-compose up --detach tor
-  wait_for_tor=10
-  while [[ ! -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; do
-    if [[ "${wait_for_tor}" == 0 ]]; then
-      echo "Dashboard's hidden service file wasn't created..."
-      echo
-      break
-    fi
-    sleep 1
-    ((wait_for_tor--))
-  done
-  docker-compose down
-fi
+## DSE: DELETE TOR
 
 ##########################################################
 ################ Configuration complete ##################
