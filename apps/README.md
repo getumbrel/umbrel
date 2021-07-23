@@ -150,6 +150,7 @@ services:
       #
       # App specific environment variables
       # $APP_HIDDEN_SERVICE - The address of the Tor hidden service your app will be exposed at
+      # $APP_DOMAIN - Local domain name of the app ("umbrel.local" on Umbrel OS)
   # If your app has more services, like a database container, you can define those
   # services below:
   # db:
