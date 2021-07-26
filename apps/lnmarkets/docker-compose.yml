@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+  lnmarkets:
+    image: ghcr.io/lnmarkets/umbrel:v0.0.1
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 4242:4242
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      LND_IP: $LND_IP
+      LND_GRPC_PORT: $LND_GRPC_PORT
+      LND_REST_PORT: $LND_REST_PORT
+      BITCOIN_NETWORK: $BITCOIN_NETWORK
