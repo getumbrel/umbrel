@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: mempool/frontend:v2.1.2@sha256:69fefe55dc1eb4c8373c32d57362df7eeb672fc591d55033d68ae79355274dcc
+    image: mempool/frontend:v2.2.0@sha256:e3c3dd393c99018a69068b0a924dd24cf8de47389cb6ef2cfd0fe2d31d77f931
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -17,7 +17,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.1.2@sha256:58394cb35aad82b95ab2496fd4a6d3c983a712a1003454d94b0a53197d306f6d
+    image: mempool/backend:v2.2.0@sha256:5eb38b094288a6f12ac2e738ff5cff9257eaa8522ebf1d23827edebe4730ebf1
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -30,13 +30,17 @@ services:
       RPC_PORT: $BITCOIN_RPC_PORT
       RPC_USER: $BITCOIN_RPC_USER
       RPC_PASS: $BITCOIN_RPC_PASS
-      ELECTRS_HOST: $ELECTRUM_IP
-      ELECTRS_PORT: $ELECTRUM_PORT
+      ELECTRUM_HOST: $ELECTRUM_IP
+      ELECTRUM_PORT: $ELECTRUM_PORT
+      ELECTRUM_TLS: "false"
       MYSQL_HOST: $APP_MEMPOOL_DB_IP
+      MYSQL_PORT: "3306"
       MYSQL_DATABASE: "mempool"
       MYSQL_USER: "mempool"
       MYSQL_PASS: "mempool"
+      BACKEND_MAINNET_HTTP_PORT: "8999"
       CACHE_DIR: "/backend/cache"
+      MEMPOOL_CLEAR_PROTECTION_MINUTES: "20"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
