@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   nbxplorer:
-    image: "nicolasdorier/nbxplorer:2.1.49@sha256:b247343d3127c737ed2ce250e780e52a958241fff1d897a5b6e8cd20fb5f142a"
+    image: "nicolasdorier/nbxplorer:2.1.55@sha256:e13a24507aa0623a21cd647cbad028ac5c108382142044b1d2d3bcf4410f5fab"
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -24,7 +24,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.0.7.0@sha256:a18d7133dc858d3596f05b8b0f570396f963ce325713e670fe2b4cb633eb50f8
+    image: btcpayserver/btcpayserver:1.1.2@sha256:2632c85646aefa0217285ff9b08cfab4529fdb213c217731bf2218789d091f88
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
