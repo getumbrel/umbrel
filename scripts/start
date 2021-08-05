@@ -78,6 +78,13 @@ echo "Starting karen..."
 echo
 ./karen &>> "${UMBREL_LOGS}/karen.log" &
 
+echo "Starting status monitors..."
+pkill -f ./scripts/status-monitor || true
+./scripts/status-monitor memory 60 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor storage 60 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor temperature 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor uptime 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
+
 echo "Starting memory monitor..."
 echo
 ./scripts/memory-monitor &>> "${UMBREL_LOGS}/memory-monitor.log" &

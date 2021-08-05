@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+filesystem_total_storage_bytes() {
+  local directory="${1}"
+  df --block-size=1 --output=size "${directory}" | tail -n 1
+}
+
+filesystem_used_storage_bytes() {
+  local directory="${1}"
+  df --block-size=1 --output=used "${directory}" | tail -n 1
+}
+
+directory_size_bytes() {
+  local directory="${1}"
+  du --block-size=1 --max-depth=0 "${directory}" | awk '{print $1}'
+}
+
+json="{}"
+
+total=$(filesystem_total_storage_bytes "${UMBREL_ROOT}")
+json=$(echo $json | jq --arg total "${total}" '. + {total: $total|tonumber}')
+
+used=$(filesystem_used_storage_bytes "${UMBREL_ROOT}")
+json=$(echo $json | jq --arg used "${used}" '. + {used: $used|tonumber}')
+
+cumulative_app_size="0"
+for app in $( "${UMBREL_ROOT}/scripts/app" ls-installed)
+do
+  app_size=$(directory_size_bytes "${UMBREL_ROOT}/app-data/${app}")
+  cumulative_app_size=$(($cumulative_app_size+$app_size))
+  json=$(echo $json | jq --arg app "${app}" --arg app_size "${app_size}" '.breakdown |= .+ [{id: $app, used: $app_size|tonumber}]')
+done
+
+umbrel=$(($used-$cumulative_app_size))
+json=$(echo $json | jq --arg umbrel "${umbrel}" '.breakdown |= .+ [{id: "umbrel", used: $umbrel|tonumber}]')
+
+echo $json | jq '.breakdown |= sort_by(-.used)'
