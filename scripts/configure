@@ -167,6 +167,10 @@ APP_PIHOLE_PORT="8082"
 APP_PIHOLE_IP="10.21.21.36"
 APP_HOME_ASSISTANT_PORT="8083"
 APP_HOME_ASSISTANT_IP="10.21.21.37"
+APP_GITEA_PORT="8085"
+APP_GITEA_SSH_PORT="2222"
+APP_GITEA_IP="10.21.21.39"
+APP_GITEA_DB_IP="10.21.21.40"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -339,6 +343,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-pihole-ip>/${APP_PIHOLE_IP}/g" "${template}"
   sed -i "s/<app-home-assistant-port>/${APP_HOME_ASSISTANT_PORT}/g" "${template}"
   sed -i "s/<app-home-assistant-ip>/${APP_HOME_ASSISTANT_IP}/g" "${template}"
+  sed -i "s/<app-gitea-port>/${APP_GITEA_PORT}/g" "${template}"
+  sed -i "s/<app-gitea-ssh-port>/${APP_GITEA_SSH_PORT}/g" "${template}"
+  sed -i "s/<app-gitea-ip>/${APP_GITEA_IP}/g" "${template}"
+  sed -i "s/<app-gitea-db-ip>/${APP_GITEA_DB_IP}/g" "${template}"
 done
 
 ##########################################################

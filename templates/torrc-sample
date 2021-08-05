@@ -96,4 +96,9 @@ HiddenServicePort 80 <app-pihole-ip>:80
 HiddenServiceDir /var/lib/tor/app-home-assistant
 HiddenServicePort 80 <app-home-assistant-ip>:8123
 
+# gitea Hidden Service
+HiddenServiceDir /var/lib/tor/app-gitea
+HiddenServicePort 80 <app-gitea-ip>:<app-gitea-port>
+HiddenServicePort 22 <app-gitea-ip>:<app-gitea-ssh-port>
+
 HashedControlPassword <password>
