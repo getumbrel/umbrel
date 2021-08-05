@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  server:
+    image: homeassistant/home-assistant:2021.7.4@sha256:ba02887fcde92e57a08e3376479e24cddb62a4198a8f3ff0a6f77f426ecc33da
+    ports:
+      - "${APP_HOME_ASSISTANT_PORT}:8123"
+    volumes:
+      - ${APP_DATA_DIR}/data:/config
+    networks:
+      default:
+        ipv4_address: $APP_HOME_ASSISTANT_IP
