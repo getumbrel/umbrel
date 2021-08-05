@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+  web:
+    # TODO: Update to release tag when photoprism support multiarch images
+    image: photoprism/photoprism:preview@sha256:7fd6df5b78270d01299c1ce7dd8d4dc4de76540323a7c84f13e39cd48b12eac5
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: "1m"
+    ports:
+      - ${APP_PHOTOPRISM_PORT}:${APP_PHOTOPRISM_PORT}
+    volumes:
+      - "${APP_DATA_DIR}/originals:/photoprism/originals"
+      - "${APP_DATA_DIR}/storage:/photoprism/storage"
+    environment:
+      PHOTOPRISM_ADMIN_PASSWORD: "moneyprintergobrrr"
+      PHOTOPRISM_ORIGINALS_LIMIT: 10000
+      PHOTOPRISM_HTTP_COMPRESSION: "gzip"
+      PHOTOPRISM_HTTP_PORT: "${APP_PHOTOPRISM_PORT}"
+      PHOTOPRISM_DATABASE_DRIVER: "mysql"
+      PHOTOPRISM_DATABASE_SERVER: "${APP_PHOTOPRISM_DB_IP}:3306"
+      PHOTOPRISM_DATABASE_NAME: "photoprism"
+      PHOTOPRISM_DATABASE_USER: "photoprism"
+      PHOTOPRISM_DATABASE_PASSWORD: "photoprism"
+      PHOTOPRISM_SITE_URL: "http://${APP_DOMAIN}:${APP_PHOTOPRISM_PORT}/"
+      PHOTOPRISM_SITE_TITLE: "PhotoPrism"
+      PHOTOPRISM_SITE_CAPTION: "Digital Asset Management"
+      PHOTOPRISM_SITE_DESCRIPTION: ""
+      PHOTOPRISM_SITE_AUTHOR: ""
+    networks:
+      default:
+        ipv4_address: ${APP_PHOTOPRISM_IP}
+
+  db:
+    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: "1m"
+    command: mysqld --transaction-isolation=READ-COMMITTED --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-connections=512 --innodb-rollback-on-timeout=OFF --innodb-lock-wait-timeout=50
+    volumes:
+      - "${APP_DATA_DIR}/database:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: "photoprism"
+      MYSQL_DATABASE: "photoprism"
+      MYSQL_USER: "photoprism"
+      MYSQL_PASSWORD: "photoprism"
+    networks:
+      default:
+        ipv4_address: ${APP_PHOTOPRISM_DB_IP}

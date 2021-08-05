@@ -68,6 +68,11 @@ HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
 # lnbits Hidden Service
 HiddenServiceDir /var/lib/tor/app-lnbits
 HiddenServicePort 80 <app-lnbits-ip>:<app-lnbits-port>
+
+# photoprism Hidden Service
+HiddenServiceDir /var/lib/tor/app-photoprism
+HiddenServicePort 80 <app-photoprism-ip>:<app-photoprism-port>
+
 # mempool Hidden Service
 HiddenServiceDir /var/lib/tor/app-mempool
 HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
