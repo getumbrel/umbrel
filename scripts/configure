@@ -176,6 +176,8 @@ APP_SIMPLETORRENT_IP="10.21.21.41"
 APP_PHOTOPRISM_IP="10.21.21.42"
 APP_PHOTOPRISM_PORT="8087"
 APP_PHOTOPRISM_DB_IP="10.21.21.43"
+APP_SYNAPSE_IP="10.21.21.44"
+APP_SYNAPSE_PORT="8008"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -357,6 +359,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-photoprism-ip>/${APP_PHOTOPRISM_IP}/g" "${template}"
   sed -i "s/<app-photoprism-port>/${APP_PHOTOPRISM_PORT}/g" "${template}"
   sed -i "s/<app-photoprism-db-ip>/${APP_PHOTOPRISM_DB_IP}/g" "${template}"
+  sed -i "s/<app-synapse-ip>/${APP_SYNAPSE_IP}/g" "${template}"
+  sed -i "s/<app-synapse-port>/${APP_SYNAPSE_PORT}/g" "${template}"
 done
 
 ##########################################################

@@ -110,4 +110,9 @@ HiddenServicePort 22 <app-gitea-ip>:<app-gitea-ssh-port>
 HiddenServiceDir /var/lib/tor/app-simple-torrent
 HiddenServicePort 80 <app-simple-torrent-ip>:<app-simple-torrent-port>
 
+# synapse Hidden Service
+HiddenServiceDir /var/lib/tor/app-synapse
+HiddenServicePort 80 <app-synapse-ip>:<app-synapse-port>
+HiddenServicePort <app-synapse-port> <app-synapse-ip>:<app-synapse-port>
+
 HashedControlPassword <password>
