@@ -115,4 +115,8 @@ HiddenServiceDir /var/lib/tor/app-synapse
 HiddenServicePort 80 <app-synapse-ip>:<app-synapse-port>
 HiddenServicePort <app-synapse-port> <app-synapse-ip>:<app-synapse-port>
 
+# element Hidden Service
+HiddenServiceDir /var/lib/tor/app-element
+HiddenServicePort 80 <app-element-ip>:80
+
 HashedControlPassword <password>
