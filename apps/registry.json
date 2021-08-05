@@ -131,7 +131,7 @@
         "defaultPassword": "",
         "torOnly": false
     },
-        {
+    {
         "id": "synapse",
         "category": "Messaging",
         "name": "Synapse",
