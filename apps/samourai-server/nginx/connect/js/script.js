@@ -1,5 +1,4 @@
 document.getElementById('dojo-admin-key').innerText = dojoAdminKey;
-document.getElementById('whirlpool-api-key').innerText = whirlpoolApiKey;
 
 var baseRoute = bitcoinNetwork == "testnet" ? "test/v2" : "v2";
 
