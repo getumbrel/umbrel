@@ -88,4 +88,8 @@ HiddenServicePort 80 <app-bluewallet-lndhub-ip>:<app-bluewallet-lndhub-port>
 HiddenServiceDir /var/lib/tor/app-nextcloud
 HiddenServicePort 80 <app-nextcloud-ip>:80
 
+# pihole Hidden Service
+HiddenServiceDir /var/lib/tor/app-pihole
+HiddenServicePort 80 <app-pihole-ip>:80
+
 HashedControlPassword <password>
