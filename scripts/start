@@ -56,6 +56,14 @@ echo
 echo "Setting environment variables..."
 echo
 
+# Check Umbrel OS
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  export IS_UMBREL_OS="false"
+else
+  export IS_UMBREL_OS="true"
+fi
+
 # Whitelist device IP, hostname and hidden service for CORS
 DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
 DEVICE_HOSTNAME="$(hostname)"

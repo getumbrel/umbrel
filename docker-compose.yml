@@ -66,7 +66,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.12@sha256:1d9dc50743b10c7f57f0514a50932e4c99e5a77616ef24ecd1f9826b6085b8fc
+                image: getumbrel/manager:v0.2.13@sha256:cb0c7a66de89c0a8b8c8e292086f9508f19a8c63c7e962d7f97723c4fd8ec367
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -117,6 +117,7 @@ services:
                     TOR_PROXY_IP: "${TOR_PROXY_IP}"
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
+                    IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
