@@ -171,6 +171,8 @@ APP_GITEA_PORT="8085"
 APP_GITEA_SSH_PORT="2222"
 APP_GITEA_IP="10.21.21.39"
 APP_GITEA_DB_IP="10.21.21.40"
+APP_SIMPLETORRENT_PORT="8086"
+APP_SIMPLETORRENT_IP="10.21.21.41"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -347,6 +349,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-gitea-ssh-port>/${APP_GITEA_SSH_PORT}/g" "${template}"
   sed -i "s/<app-gitea-ip>/${APP_GITEA_IP}/g" "${template}"
   sed -i "s/<app-gitea-db-ip>/${APP_GITEA_DB_IP}/g" "${template}"
+  sed -i "s/<app-simple-torrent-port>/${APP_SIMPLETORRENT_PORT}/g" "${template}"
+  sed -i "s/<app-simple-torrent-ip>/${APP_SIMPLETORRENT_IP}/g" "${template}"
 done
 
 ##########################################################

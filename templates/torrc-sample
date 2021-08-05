@@ -101,4 +101,8 @@ HiddenServiceDir /var/lib/tor/app-gitea
 HiddenServicePort 80 <app-gitea-ip>:<app-gitea-port>
 HiddenServicePort 22 <app-gitea-ip>:<app-gitea-ssh-port>
 
+# simple-torrent Hidden Service
+HiddenServiceDir /var/lib/tor/app-simple-torrent
+HiddenServicePort 80 <app-simple-torrent-ip>:<app-simple-torrent-port>
+
 HashedControlPassword <password>
