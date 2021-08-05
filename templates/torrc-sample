@@ -84,4 +84,8 @@ HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whi
 HiddenServiceDir /var/lib/tor/app-bluewallet
 HiddenServicePort 80 <app-bluewallet-lndhub-ip>:<app-bluewallet-lndhub-port>
 
+# nextcloud Hidden Service
+HiddenServiceDir /var/lib/tor/app-nextcloud
+HiddenServicePort 80 <app-nextcloud-ip>:80
+
 HashedControlPassword <password>

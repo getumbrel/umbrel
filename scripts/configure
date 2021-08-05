@@ -158,6 +158,11 @@ APP_SAMOURAI_SERVER_NODE_IP="10.21.21.25"
 APP_BLUEWALLET_LNDHUB_IP="10.21.21.30"
 APP_BLUEWALLET_LNDHUB_PORT="3008"
 APP_BLUEWALLET_REDIS_IP="10.21.21.31"
+APP_NEXTCLOUD_PORT="8081"
+APP_NEXTCLOUD_IP="10.21.21.32"
+APP_NEXTCLOUD_DB_IP="10.21.21.33"
+APP_NEXTCLOUD_REDIS_IP="10.21.21.34"
+APP_NEXTCLOUD_CRON_IP="10.21.21.35"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -321,6 +326,11 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-bluewallet-lndhub-ip>/${APP_BLUEWALLET_LNDHUB_IP}/g" "${template}"
   sed -i "s/<app-bluewallet-lndhub-port>/${APP_BLUEWALLET_LNDHUB_PORT}/g" "${template}"
   sed -i "s/<app-bluewallet-redis-ip>/${APP_BLUEWALLET_REDIS_IP}/g" "${template}"
+  sed -i "s/<app-nextcloud-port>/${APP_NEXTCLOUD_PORT}/g" "${template}"
+  sed -i "s/<app-nextcloud-ip>/${APP_NEXTCLOUD_IP}/g" "${template}"
+  sed -i "s/<app-nextcloud-db-ip>/${APP_NEXTCLOUD_DB_IP}/g" "${template}"
+  sed -i "s/<app-nextcloud-redis-ip>/${APP_NEXTCLOUD_REDIS_IP}/g" "${template}"
+  sed -i "s/<app-nextcloud-cron-ip>/${APP_NEXTCLOUD_CRON_IP}/g" "${template}"
 done
 
 ##########################################################
