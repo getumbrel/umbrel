@@ -119,4 +119,8 @@ HiddenServicePort <app-synapse-port> <app-synapse-ip>:<app-synapse-port>
 HiddenServiceDir /var/lib/tor/app-element
 HiddenServicePort 80 <app-element-ip>:80
 
+# vaultwarden Hidden Service
+HiddenServiceDir /var/lib/tor/app-vaultwarden
+HiddenServicePort 80 <app-vaultwarden-ip>:<app-vaultwarden-port>
+
 HashedControlPassword <password>

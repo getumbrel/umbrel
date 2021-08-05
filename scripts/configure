@@ -180,6 +180,8 @@ APP_SYNAPSE_IP="10.21.21.44"
 APP_SYNAPSE_PORT="8008"
 APP_ELEMENT_IP="10.21.21.45"
 APP_ELEMENT_PORT="8088"
+APP_VAULTWARDEN_IP="10.21.21.46"
+APP_VAULTWARDEN_PORT="8089"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -365,6 +367,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-synapse-port>/${APP_SYNAPSE_PORT}/g" "${template}"
   sed -i "s/<app-element-ip>/${APP_ELEMENT_IP}/g" "${template}"
   sed -i "s/<app-element-port>/${APP_ELEMENT_PORT}/g" "${template}"
+  sed -i "s/<app-vaultwarden-ip>/${APP_VAULTWARDEN_IP}/g" "${template}"
+  sed -i "s/<app-vaultwarden-port>/${APP_VAULTWARDEN_PORT}/g" "${template}"
 done
 
 ##########################################################

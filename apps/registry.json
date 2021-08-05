@@ -176,6 +176,28 @@
         "torOnly": false
     },
     {
+        "id": "vaultwarden",
+        "category": "Password Managers",
+        "name": "Vaultwarden",
+        "version": "1.22.1",
+        "tagline": "Unofficial Bitwarden® compatible server",
+        "description": "Vaultwarden (formerly known as Bitwarden_RS) is an alternative implementation of the Bitwarden® server API written in Rust, compatible with upstream Bitwarden® clients*. Vaultwarden is perfect for self-hosting all of your passwords in an encrypted vault on your Umbrel. Vaultwarden is a full implementation of Bitwarden® API that includes:\n\n- Organizations support\n- Attachments\n- Vault API support\n- Serving the static files for Vault interface\n- Website icons API\n- Authenticator and U2F support\n- YubiKey and Duo support\n\n Please note that Vaultwarden is not associated with the Bitwarden® project nor 8bit Solutions LLC. When using this app, please report any bugs or suggestions to us directly, regardless of whatever clients you are using (mobile, desktop, browser, etc), and do not use Bitwarden®'s official support channels.",
+        "developer": "Daniel García",
+        "website": "https://github.com/dani-garcia",
+        "dependencies": [],
+        "repo": "https://github.com/dani-garcia/vaultwarden",
+        "support": "https://vaultwarden.discourse.group/",
+        "port": 8089,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": "",
+        "torOnly": true
+    },
+    {
         "id": "mempool",
         "category": "Explorers",
         "name": "Mempool",
