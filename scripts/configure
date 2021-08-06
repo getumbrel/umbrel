@@ -184,6 +184,8 @@ APP_VAULTWARDEN_IP="10.21.21.46"
 APP_VAULTWARDEN_PORT="8089"
 APP_CODE_SERVER_IP="10.21.21.53"
 APP_CODE_SERVER_PORT="8091"
+APP_TESLAMATE_IP="10.21.21.47"
+APP_TESLAMATE_GRAFANA_IP="10.21.21.48"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -373,6 +375,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-vaultwarden-port>/${APP_VAULTWARDEN_PORT}/g" "${template}"
   sed -i "s/<app-code-server-ip>/${APP_CODE_SERVER_IP}/g" "${template}"
   sed -i "s/<app-code-server-port>/${APP_CODE_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-teslamate-ip>/${APP_TESLAMATE_IP}/g" "${template}"
+  sed -i "s/<app-teslamate-grafana-ip>/${APP_TESLAMATE_GRAFANA_IP}/g" "${template}"
 done
 
 ##########################################################

@@ -1,0 +1,50 @@
+version: "3.7"
+
+services:
+  home:
+    image: teslamate/teslamate:1.23.7@sha256:389ab5d9b166e908be2db7936064710adad8829f08e70f89c4a4aaf139f71a55
+    restart: on-failure
+    stop_grace_period: 1m
+    expose:
+      - "4000"
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=BitcoinRunsOnRenewables
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+      - DISABLE_MQTT=true
+      - TZ=Etc/UTC
+    cap_drop:
+      - all
+    networks:
+      default:
+        ipv4_address: $APP_TESLAMATE_IP
+
+  grafana:
+    image: teslamate/grafana:1.23.7@sha256:cdc8b41245c71d62d34b979232fc6738b8f85c2089aa96beac082d3fde8ec9d7
+    restart: on-failure
+    stop_grace_period: 1m
+    expose:
+      - "3000"
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=BitcoinRunsOnRenewables
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+    volumes:
+      - ${APP_DATA_DIR}/data/grafana:/var/lib/grafana
+    networks:
+      default:
+        ipv4_address: $APP_TESLAMATE_GRAFANA_IP
+
+  database:
+    image: postgres:13.3-alpine@sha256:cd1b837c86e9c2df778b3b4ece70dcd5a74f3ea68f82d00714aec91f34ba328d
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      - POSTGRES_USER=teslamate
+      - POSTGRES_PASSWORD=BitcoinRunsOnRenewables
+      - POSTGRES_DB=teslamate
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data

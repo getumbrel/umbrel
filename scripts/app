@@ -153,6 +153,20 @@ update_installed_apps() {
   rm -f "${USER_FILE}.lock"
 }
 
+run_post_install_hook() {
+  local app="${1}"
+  local app_data_dir="${2}"
+
+  if [[ ! -f "${app_data_dir}/post_install.sh" ]]; then
+    # Ignore if it doesn't exist
+    exit
+  fi
+
+  echo "Running post install hook for app ${app}..."
+  "${app_data_dir}/post_install.sh" "${app}" "${app_data_dir}"
+  exit
+}
+
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
@@ -168,6 +182,9 @@ if [[ "$command" = "install" ]]; then
 
   echo "Saving app ${app} in DB..."
   update_installed_apps add "${app}"
+
+  # Only echoes if a hook script is found
+  run_post_install_hook "${app}" "${app_data_dir}"
 
   echo "Successfully installed app ${app}"
   exit
