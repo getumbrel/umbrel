@@ -17,8 +17,8 @@
           "2.jpg",
           "3.jpg"
       ],
-      "path": "",
-      "defaultPassword": "",
+      "path": "/login?user=umbrel",
+      "defaultPassword": "moneyprintergobrrr",
       "torOnly": false
     },
     {
