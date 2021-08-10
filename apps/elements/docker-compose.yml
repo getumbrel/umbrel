@@ -1,0 +1,17 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/vulpemventures/elements:0.18.1.12@sha256:290172429526c2c94f2f5d62fa835d30796bdef5b5f14a0ed842a4eb95368790
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 7041:7041
+      - 18332:18332
+    volumes:
+      - ${APP_DATA_DIR}/data:/home/elements/.elements
+    command: 
+      - -validatepegin=0
+      - -port=18332
+      - -rpcport=7041
+
