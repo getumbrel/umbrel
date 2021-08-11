@@ -194,6 +194,14 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Handle updating static assets for samourai-server app
+samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
+samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
+if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
+  echo "Found samourai-server install, attempting to update static assets and nginx configuration..."
+  rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
