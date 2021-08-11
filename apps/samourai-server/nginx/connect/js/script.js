@@ -38,3 +38,11 @@ fetch(`http://${window.location.host}/${baseRoute}/auth/login`, {
         document.getElementById('whirlpool-hidden-service').innerText = `${whirlpoolHiddenService}`;
     });
  });
+
+let dojoHost = `${window.location.host}:${dojoLocalPort}`;
+
+if(window.location.host.endsWith(".onion")) {
+  dojoHost = dojoHiddenService;
+}
+
+document.getElementById('dmt-link').setAttribute("href", `http://${dojoHost}/admin`);

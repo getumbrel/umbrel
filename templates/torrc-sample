@@ -77,9 +77,13 @@ HiddenServicePort 80 <app-photoprism-ip>:<app-photoprism-port>
 HiddenServiceDir /var/lib/tor/app-mempool
 HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
 
-# samourai-server Hidden Service
-HiddenServiceDir /var/lib/tor/app-samourai-server
-HiddenServicePort 80 <app-samourai-server-ip>:80
+# samourai-server dojo Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server-dojo
+HiddenServicePort 80 <app-samourai-server-ip>:<app-samourai-server-dojo-port>
+
+# samourai-server connect Hidden Service
+HiddenServiceDir /var/lib/tor/app-samourai-server-connect
+HiddenServicePort 80 <app-samourai-server-ip>:<app-samourai-server-connect-port>
 
 # samourai-server whirlpool Hidden Service
 HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
