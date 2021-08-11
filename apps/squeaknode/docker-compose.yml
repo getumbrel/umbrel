@@ -2,11 +2,13 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.45@sha256:7be066cb3e7b9260f4bcda756e488524e6581ae4eecd13f419d877aed230f7da
+    image: yzernik/squeaknode:v0.1.46@sha256:33add63e5231425de970cbe63594288f73ac7fc2ac32456a554a155c3484ee4f
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 12994:12994
+      - 8555:8555
+      - 18555:18555
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
       - ${LND_DATA_DIR}:/lnd:ro
