@@ -144,6 +144,7 @@ if [[ "${current_umbrel_version}" = "0.4.0" ]] && [[ -f "${nextcloud_config_file
     -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27umbrel.local:8081\x27, 2 => \x27'$nextcloud_hs'\x27),' \
     -e 'd' \
     -i "${nextcloud_config_file}"
+  echo
 fi
 
 # Move Docker data dir to external storage now if this is an old install.
