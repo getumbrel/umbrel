@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+STATUS_FILE_PATH="/umbrel-status"
+
+service_id="${1}"
+status="${2}"
+error_code="${3}"
+
+source /etc/default/umbrel 2> /dev/null
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  echo "Skipping status update when not on Umbrel OS"
+  exit
+fi
+
+if [[ "${service_id}" == "" ]]; then
+  echo "Error: Missing ID"
+  exit 1
+fi
+
+if [[ "${status}" == "" ]]; then
+  echo "Error: Missing Status"
+  exit 1
+fi
+
+entry="${service_id}:${status}"
+
+if [[ "${error_code}" != "" ]]; then
+  entry="${entry}:${error_code}"
+fi
+
+echo "${entry}" >> "${STATUS_FILE_PATH}"

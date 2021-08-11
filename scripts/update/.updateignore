@@ -1,6 +1,6 @@
 /.*
 bitcoin/*
-db
+/db/*
 lnd/*
 statuses
 tor/*

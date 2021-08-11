@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+  server:
+    image: pihole/pihole:v5.8.1@sha256:d2f764c4531515a1b93d5a8d1d82272ddc961e580f19c84ed764e4fa863823b1
+    # Pi-hole doesn't currently support running as non-root
+    # https://github.com/pi-hole/docker-pi-hole/issues/685
+    # user: "1000:1000"
+    restart: on-failure
+    ports:
+      - 53:53
+      - 53:53/udp
+      - ${APP_PI_HOLE_PORT}:80
+    volumes:
+      - ${APP_DATA_DIR}/data/pihole:/etc/pihole/
+      - ${APP_DATA_DIR}/data/dnsmasq:/etc/dnsmasq.d/
+    environment:
+      - VIRTUAL_HOST=${APP_DOMAIN}
+      - WEBPASSWORD=moneyprintergobrrr
+    networks:
+      default:
+        ipv4_address: $APP_PI_HOLE_IP

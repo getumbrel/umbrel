@@ -61,6 +61,14 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
 
+    # Make sure dhcpd ignores virtual network interfaces
+    dhcpd_conf="/etc/dhcpcd.conf"
+    dhcpd_rule="denyinterfaces veth*"
+    if [[ -f "${dhcpd_conf}" ]] && ! cat "${dhcpd_conf}" | grep --quiet "${dhcpd_rule}"; then
+      echo "${dhcpd_rule}" | tee -a "${dhcpd_conf}"
+      systemctl restart dhcpcd
+    fi
+
     # This makes sure systemd services are always updated (and new ones are enabled).
     UMBREL_SYSTEMD_SERVICES="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services/*.service"
     for service_path in $UMBREL_SYSTEMD_SERVICES; do
@@ -106,12 +114,13 @@ USER_FILE="${UMBREL_ROOT}/db/user.json"
 list_installed_apps() {
   cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
 }
-list_installed_apps | while read app; do
+for app in $(list_installed_apps); do
   if [[ "${app}" != "" ]]; then
     echo "${app}..."
-    scripts/app compose "${app}" pull
+    scripts/app compose "${app}" pull &
   fi
 done
+wait
 
 # Stop existing containers
 echo "Stopping existing containers"

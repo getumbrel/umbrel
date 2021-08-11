@@ -1,6 +1,6 @@
 {
-    "version": "0.3.10",
-    "name": "Umbrel v0.3.10",
+    "version": "0.4.0",
+    "name": "Umbrel v0.4.0",
     "requires": ">=0.2.1",
-    "notes": "Umbrel v0.3.10 is here with Taproot ready Bitcoin Core v0.21.1, the new BlueWallet Lightning app in the Umbrel App Store, and Tor connection support for BlueWallet on both iOS and Android.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Introducing Umbrel v0.4 — a personal server OS for everyone. You can now run your own personal cloud with Nextcloud, host your photos and videos with PhotoPrism, passwords with Vaultwarden, code repositories with Gitea, block ads on your entire network with Pi-hole, automate your home with Home Assistant, run your own messaging server with Matrix, stream torrents with SimpleTorrent, code in VS Code with code-server, view your RAM and storage usage, along with your uptime and Raspberry Pi’s temperature in the settings.\n\nRead the full announcement here: https://bit.ly/umbrel-v04\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

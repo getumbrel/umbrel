@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../../..)"
+
+source /etc/default/umbrel 2> /dev/null || true
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  echo "Exiting iptables setup when not on Umbrel OS"
+  exit
+fi
+
+delete="false"
+if [[ "${@}" == *"--delete"* ]]; then
+  delete="true"
+fi
+
+force="false"
+if [[ "${@}" == *"--force"* ]]; then
+  force="true"
+fi
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+main () {
+  check_root
+
+  # Remove and then re-append iptables rule
+  rule=(PREROUTING \
+    --table nat \
+    --proto tcp \
+    --dport 80 \
+    --jump REDIRECT \
+    --to-port 8000)
+  if iptables --delete ${rule[@]} 2> /dev/null; then
+    echo "Removed existing iptables entry."
+  else
+    echo "No existing iptables entry found."
+  fi
+  if [[ "${delete}" == "false" ]]; then
+    position="--append"
+    if [[ "${force}" == "true" ]]; then
+      position="--insert"
+    fi
+    iptables "${position}" ${rule[@]}
+    echo "Appended new iptables entry."
+  fi
+}
+
+main

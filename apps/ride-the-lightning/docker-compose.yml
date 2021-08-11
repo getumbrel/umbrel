@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: shahanafarooqui/rtl:0.10.1@sha256:d076f91c4b994d3059d3c0db80dc560ca05f675924d5625bae724df473877882
+    image: shahanafarooqui/rtl:0.11.0@sha256:d0cd3d868acab40352bc3c8f4b62e49a7ae833878ac09d64debffdddfc063322
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m

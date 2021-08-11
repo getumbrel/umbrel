@@ -1,3 +1,7 @@
+# Warning: it's not recommended to modify these files directly. Any
+# modifications you make can break the functionality of your umbrel. These files
+# are automatically reset with every Umbrel update.
+
 verbose = 4
 network = "bitcoin"
 db_dir = "/data/db"

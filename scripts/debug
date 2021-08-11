@@ -58,7 +58,7 @@ cat info.json | jq .version | sed 's/"//g'
 
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo
-    echo "Umbrel OS version"
+    echo "Flashed OS version"
     echo "-----------------"
     echo $UMBREL_OS
 
@@ -94,6 +94,10 @@ free --human --mega
 echo
 "${UMBREL_ROOT}/scripts/memory-usage"
 
+echo
+echo "Memory monitor logs"
+echo "-------------------"
+tail -n 10 "${UMBREL_ROOT}/logs/memory-monitor.log"
 
 echo
 echo "Filesystem information"

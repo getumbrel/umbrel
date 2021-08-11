@@ -31,8 +31,13 @@ check_dependencies rsync jq curl
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 UMBREL_LOGS="${UMBREL_ROOT}/logs"
 
+set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
+
+$set_status umbrel started
+
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
+  $set_status umbrel errored umbrel-root-missing
   exit 1
 fi
 
@@ -50,6 +55,14 @@ echo
 
 echo "Setting environment variables..."
 echo
+
+# Check Umbrel OS
+[[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+if [[ -z "${UMBREL_OS:-}" ]]; then
+  export IS_UMBREL_OS="false"
+else
+  export IS_UMBREL_OS="true"
+fi
 
 # Whitelist device IP, hostname and hidden service for CORS
 DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
@@ -73,6 +86,17 @@ echo "Starting karen..."
 echo
 ./karen &>> "${UMBREL_LOGS}/karen.log" &
 
+echo "Starting status monitors..."
+pkill -f ./scripts/status-monitor || true
+./scripts/status-monitor memory 60 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor storage 60 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor temperature 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor uptime 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
+
+echo "Starting memory monitor..."
+echo
+./scripts/memory-monitor &>> "${UMBREL_LOGS}/memory-monitor.log" &
+
 echo "Starting backup monitor..."
 echo
 ./scripts/backup/monitor &>> "${UMBREL_LOGS}/backup-monitor.log" &
@@ -86,6 +110,9 @@ echo "Starting Docker services..."
 echo
 docker-compose up --detach --build --remove-orphans
 echo
+
+echo "Removing status server iptables entry..."
+"${UMBREL_ROOT}/scripts/umbrel-os/status-server/setup-iptables" --delete
 
 echo
 echo "Starting installed apps..."
@@ -105,3 +132,5 @@ echo "  http://${DEVICE_IP}"
 if [[ ! -z "${hidden_service_url:-}" ]]; then
     echo "  http://${hidden_service_url}"
 fi
+
+$set_status umbrel completed

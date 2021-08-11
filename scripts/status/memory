@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+memory_total_bytes() {
+  free --bytes | awk 'NR==2 {print $2}'
+}
+
+memory_used_bytes() {
+  free --bytes | awk 'NR==2 {print $3}'
+}
+
+get_container_memory_use() {
+  local container="${1}"
+
+  local container_memory=0
+
+  local container_pids=$(docker top "${container}" | tail -n +2 | awk '{print $2}')
+  for pid in $container_pids; do
+    local pid_memory=$(ps u "${pid}" | awk '{print $4}' | grep -v 'MEM')
+    if [[ ! -z "${pid_memory}" ]]; then
+      container_memory=$(awk "BEGIN {print ${container_memory}+${pid_memory}}")
+    fi
+  done
+
+  echo "${container_memory}"
+}
+
+get_app_memory_use() {
+  local app="${1}"
+
+  local app_memory=0
+
+  local app_containers=$("${UMBREL_ROOT}/scripts/app" compose "${app}" ps | awk '{print $1}' | grep -v 'Name\|-----')
+  for container in $app_containers; do
+    local container_memory=$(get_container_memory_use "${container}")
+    app_memory=$(awk "BEGIN {print ${app_memory}+${container_memory}}")
+  done
+
+  # Above values return % of total memory used so we need to convert to bytes
+  total=$(memory_total_bytes)
+  awk "BEGIN {print int(${total}*${app_memory}/100)}"
+}
+
+json="{}"
+
+total=$(memory_total_bytes)
+json=$(echo $json | jq --arg total "${total}" '. + {total: $total|tonumber}')
+
+used=$(memory_used_bytes)
+json=$(echo $json | jq --arg used "${used}" '. + {used: $used|tonumber}')
+
+cumulative_app_memory="0"
+for app in $( "${UMBREL_ROOT}/scripts/app" ls-installed)
+do
+  app_memory=$(get_app_memory_use "${app}")
+  cumulative_app_memory=$(($cumulative_app_memory+$app_memory))
+  json=$(echo $json | jq --arg app "${app}" --arg app_memory "${app_memory}" '.breakdown |= .+ [{id: $app, used: $app_memory|tonumber}]')
+done
+
+umbrel=$(($used-$cumulative_app_memory))
+json=$(echo $json | jq --arg umbrel "${umbrel}" '.breakdown |= .+ [{id: "umbrel", used: $umbrel|tonumber}]')
+
+echo $json | jq '.breakdown |= sort_by(-.used)'

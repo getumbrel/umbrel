@@ -58,7 +58,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.20@sha256:a5cb7f9057dc772992617fa591b8ecde1b201455b856f353a1cd481c9feb1423
+                image: getumbrel/dashboard:v0.3.24@sha256:0e3cdfeab37433cccd6f5146c6bd203c63f1bcab38eab53b66dc1d03a7338d6b
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -66,7 +66,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.11@sha256:605eda9e0b2d3d3e16e702b9d6c44c7edfabf763e757425a79669a3130bc39e8
+                image: getumbrel/manager:v0.2.13@sha256:cb0c7a66de89c0a8b8c8e292086f9508f19a8c63c7e962d7f97723c4fd8ec367
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -117,6 +117,7 @@ services:
                     TOR_PROXY_IP: "${TOR_PROXY_IP}"
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
+                    IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
