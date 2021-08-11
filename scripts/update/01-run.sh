@@ -130,6 +130,21 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
 
+# Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
+# umbrel.local and Tor
+nextcloud_config_file="${UMBREL_ROOT}/app-data/nextcloud/data/nextcloud/config/config.php"
+nextcloud_tor_file="${UMBREL_ROOT}/tor/data/app-nextcloud/hostname"
+if [[ -f "${nextcloud_config_file}" ]] && [[ -f "${nextcloud_tor_file}" ]]; then
+  echo
+  echo "Fixing broken Umbrel v0.4.0 Nextcloud install..."
+  nextcloud_hs=$(cat "${nextcloud_tor_file}")
+  sed \
+    -e '/trusted_domains\x27 => $/,/)/!b' \
+    -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27umbrel.local:8081\x27, 2 => \x27'$nextcloud_hs'\x27),' \
+    -e 'd' \
+    -i "${nextcloud_config_file}"
+fi
+
 # Move Docker data dir to external storage now if this is an old install.
 # This is only needed temporarily until all users have transitioned Docker to SSD.
 DOCKER_DIR="/var/lib/docker"
