@@ -79,11 +79,11 @@ HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
 
 # samourai-server dojo Hidden Service
 HiddenServiceDir /var/lib/tor/app-samourai-server-dojo
-HiddenServicePort 80 <app-samourai-server-ip>:<app-samourai-server-dojo-port>
+HiddenServicePort 80 <app-samourai-server-ip>:80
 
 # samourai-server connect Hidden Service
 HiddenServiceDir /var/lib/tor/app-samourai-server
-HiddenServicePort 80 <app-samourai-server-ip>:<app-samourai-server-connect-port>
+HiddenServicePort 80 <app-samourai-server-ip>:8081
 
 # samourai-server whirlpool Hidden Service
 HiddenServiceDir /var/lib/tor/app-samourai-server-whirlpool
