@@ -19,7 +19,7 @@ fetch(`http://${dojoHost}/${dojoBaseRoute}/auth/login`, {
  })
  .then(response => response.json())
  .then(data => {
-    fetch(`http://${dojoHost}/${dojoBaseRoute}/${dojoSupportPrefix}/pairing`, {
+    fetch(`http://${window.location.host}/${dojoBaseRoute}/${dojoSupportPrefix}/pairing`, {
         method: 'GET',
         headers: new Headers({
             'Authorization': 'Bearer ' + data.authorizations.access_token,
