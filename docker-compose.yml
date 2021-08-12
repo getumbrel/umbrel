@@ -43,10 +43,13 @@ services:
                         ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
-                image: lncm/lnd:v0.12.1@sha256:bdc442c00bc4dd4d5bfa42efd7d977bfe4d21a08d466c933b9cff7cfc83e0c0e
+                image: lightninglabs/lnd:v0.13.1-beta@sha256:f26ddbbea3f7bad45d994e6258b8198acaebf65e575eedf2a566d04f0c1fb9d9
+                user: 1000:1000
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
+                environment:
+                  HOME: /data
                 restart: on-failure
                 stop_grace_period: 5m30s
                 ports:
@@ -123,7 +126,7 @@ services:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
-                image: getumbrel/middleware:v0.1.10@sha256:ff3d5929a506739286f296c803105cca9d83e73e9eb1b7c6833533e345d77736
+                image: getumbrel/middleware:v0.1.11@sha256:50fd0d3dd4e94dad2b6f7f4dddbdea625e3df04b29f9c4da0f1e4c20d4deecd3
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
