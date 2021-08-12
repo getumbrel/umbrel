@@ -8,7 +8,7 @@ if(window.location.hostname.endsWith(".onion")) {
 document.getElementById('dojo-admin-key').innerText = dojoAdminKey;
 document.getElementById('whirlpool-api-key').innerText = whirlpoolApiKey;
 document.getElementById('whirlpool-hidden-service').innerText = `http://${whirlpoolHiddenService}`;
-document.getElementById('dmt-link').setAttribute("href", `http://${dojoHost}/admin`);
+document.getElementById('dmt-link').setAttribute("href", `http://${dojoHost}/admin/`);
 
 fetch(`http://${dojoHost}/${dojoBaseRoute}/auth/login`, {
     method: 'POST',
