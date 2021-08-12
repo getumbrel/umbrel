@@ -26,7 +26,7 @@ The process for contributing to any of the [Umbrel repositories](https://github.
 
 ### Contributor License
 
-By submitting your contribution, you agree that all of your present and past contributions to us are licensed under the MIT license (text below) and do not require the inclusion of copyright notice.
+By submitting your contribution, you agree that all of your present and past contributions to us are licensed from you under the MIT license (text below) and do not require us to include your copyright notice. However, if you want to be on our contributor list, please let us know [here].
 
 ```
 Permission is hereby granted, free of charge, to any 
