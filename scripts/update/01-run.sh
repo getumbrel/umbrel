@@ -194,6 +194,22 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Handle updating static assets for samourai-server app
+samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
+samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
+if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
+  echo "Found samourai-server install, attempting to update static assets and nginx configuration..."
+  rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
+fi
+
+# Handle hidden service migration for samourai-server app
+samourai_app_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server"
+samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
+if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_tor_dir}" ]]; then
+  echo "Found samourai-server install, attempting to migrate dojo hidden service directory..."
+  mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +

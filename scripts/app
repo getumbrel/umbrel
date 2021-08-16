@@ -120,11 +120,14 @@ compose() {
   # App specific env vars
   # Note: Hardcoding app specific env vars is a short term solution. Long term
   # these values will be registered in an apps manifest and generated dynamically.
+  local dojo_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-dojo/hostname"
   local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
+  export SAMOURAI_SERVER_DOJO_HIDDEN_SERVICE="$(cat "${dojo_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
   export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
   export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
+  export SAMOURAI_SERVER_WHIRLPOOL_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-WHIRLPOOL_API_KEY")
 
   docker-compose \
     --env-file "${env_file}" \
