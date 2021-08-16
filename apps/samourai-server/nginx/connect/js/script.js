@@ -1,5 +1,5 @@
 let dojoHost = `${window.location.hostname}:${dojoLocalPort}`;
-let dojoBaseRoute = bitcoinNetwork == "testnet" ? "test/v2" : "v2";
+const dojoBaseRoute = bitcoinNetwork == "testnet" ? "test/v2" : "v2";
 
 if(window.location.hostname.endsWith(".onion")) {
   dojoHost = dojoHiddenService;
@@ -27,8 +27,7 @@ fetch(`http://${dojoHost}/${dojoBaseRoute}/auth/login`, {
         })
     })
     .then(response => response.json())
-    .then(data => {
-        let pairingInfo = data;
+    .then(pairingInfo => {
         pairingInfo.pairing.url = `http://${dojoHiddenService}/${dojoBaseRoute}`;
 
         const qrcodeSvg = new QRCode({
