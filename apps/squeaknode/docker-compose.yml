@@ -39,8 +39,6 @@ services:
 
   envoy:
     image: envoyproxy/envoy:v1.16.0
-    ports:
-      - 15081:15081
     network_mode: "host"
     volumes:
       - ${APP_DATA_DIR}/envoy.yaml:/etc/envoy/envoy.yaml:ro
