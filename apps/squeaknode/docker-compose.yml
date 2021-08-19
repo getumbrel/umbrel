@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.70@sha256:643bc705d17dacc8779ea1f9933c30b85bd085b823324d5dacb013b89ca61480
+    image: yzernik/squeaknode:v0.1.71@sha256:b865f9a320763aa438d9faeec19223bf047b27e788bfb3461fe6fb475029cb61
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -35,12 +35,3 @@ services:
       SQUEAKNODE_CORE_SQK_DIR_PATH: "/sqk"
 
       DEBUG: "squeaknode:*"
-
-  envoy:
-    image: envoyproxy/envoy:v1.16.0
-    ports:
-      - 15081:8080
-    volumes:
-      - ./envoy.yaml:/envoy.yaml
-    links:
-      - "web:web"
