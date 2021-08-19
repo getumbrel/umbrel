@@ -37,7 +37,7 @@ services:
       DEBUG: "squeaknode:*"
 
   envoy:
-    image: envoy
+    image: envoyproxy/envoy
     ports:
       - 8080:8080
     volumes:
