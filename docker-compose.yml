@@ -1,6 +1,16 @@
 version: '3.7'
 
 services:
+        umbrel_tor:
+                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
+                user: toruser
+                restart: on-failure
+                volumes:
+                    - ${PWD}/tor/torrc-umbrel:/etc/tor/torrc
+                    - ${PWD}/tor/data:/var/lib/tor/
+                networks:
+                    default:
+                        ipv4_address: $UMBREL_TOR_IP
         tor:
                 container_name: tor
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c

@@ -72,6 +72,7 @@ NGINX_CONF_FILE="./templates/nginx.conf"
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
 TOR_CONF_FILE="./templates/torrc"
+UMBREL_TOR_CONF_FILE="./templates/torrc-umbrel"
 ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
 
@@ -81,6 +82,7 @@ ENV_FILE="./templates/.env"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_CONF_FILE" ]] && rm -f "$TOR_CONF_FILE"
+[[ -f "$UMBREL_TOR_CONF_FILE" ]] && rm -f "$UMBREL_TOR_CONF_FILE"
 [[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
@@ -89,6 +91,7 @@ ENV_FILE="./templates/.env"
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-sample" ]] && cp "./templates/torrc-sample" "$TOR_CONF_FILE"
+[[ -f "./templates/torrc-umbrel-sample" ]] && cp "./templates/torrc-umbrel-sample" "$UMBREL_TOR_CONF_FILE"
 [[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
@@ -122,6 +125,7 @@ LND_REST_PORT="8080"
 ELECTRUM_IP="10.21.21.10"
 ELECTRUM_PORT="50001"
 TOR_PROXY_IP="10.21.21.11"
+UMBREL_TOR_IP="10.21.21.47"
 TOR_PROXY_PORT="9050"
 
 # Apps
@@ -292,7 +296,7 @@ if [[ "$BITCOIN_NETWORK" == "mainnet" ]] && [[ ! -f "${STATUS_DIR}/node-status-b
 fi
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${UMBREL_TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
@@ -310,6 +314,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
   sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
+  sed -i "s/<umbrel-tor-ip>/${UMBREL_TOR_IP}/g" "${template}"
   sed -i "s/<zmq-rawblock-port>/${BITCOIN_ZMQ_RAWBLOCK_PORT}/g;" "${template}"
   sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
   sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
@@ -384,6 +389,7 @@ done
 mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$TOR_CONF_FILE" "./tor/torrc"
+mv -f "$UMBREL_TOR_CONF_FILE" "./tor/torrc-umbrel"
 mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
