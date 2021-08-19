@@ -296,7 +296,7 @@ if [[ "$BITCOIN_NETWORK" == "mainnet" ]] && [[ ! -f "${STATUS_DIR}/node-status-b
 fi
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_CONF_FILE}" "${UMBREL_TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${APPS_TOR_CONF_FILE}" "${UMBREL_TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
