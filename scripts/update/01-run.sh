@@ -131,7 +131,7 @@ cd "$UMBREL_ROOT"
 ./scripts/stop
 
 # Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
-# umbrel.local and Tor
+# <hostname>.local and Tor
 current_umbrel_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version)
 nextcloud_config_file="${UMBREL_ROOT}/app-data/nextcloud/data/nextcloud/config/config.php"
 nextcloud_tor_file="${UMBREL_ROOT}/tor/data/app-nextcloud/hostname"
@@ -139,9 +139,10 @@ if [[ "${current_umbrel_version}" = "0.4.0" ]] && [[ -f "${nextcloud_config_file
   echo
   echo "Fixing broken Umbrel v0.4.0 Nextcloud install..."
   nextcloud_hs=$(cat "${nextcloud_tor_file}")
+  nextcloud_local_url="$(hostname -s 2>/dev/null || echo "umbrel").local:8081"
   sed \
     -e '/trusted_domains\x27 => $/,/)/!b' \
-    -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27umbrel.local:8081\x27, 2 => \x27'$nextcloud_hs'\x27),' \
+    -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27'$nextcloud_local_url'\x27, 2 => \x27'$nextcloud_hs'\x27),' \
     -e 'd' \
     -i "${nextcloud_config_file}"
   echo
