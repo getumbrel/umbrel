@@ -1,3 +1,11 @@
+# Warning: it's not recommended to modify these files directly. Any
+# modifications you make can break the functionality of your umbrel. These files
+# are automatically reset with every Umbrel update.
+
+# Bind only to "<tor-proxy-ip>" which is the tor IP within the container
+SocksPort   <tor-proxy-ip>:<tor-proxy-port>
+ControlPort <tor-proxy-ip>:29051
+
 # Umbrel
 
 # Dashboard Hidden Service
@@ -23,3 +31,5 @@ HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
 # LND gRPC Hidden Service
 HiddenServiceDir /var/lib/tor/lnd-grpc
 HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
+
+HashedControlPassword <password>
