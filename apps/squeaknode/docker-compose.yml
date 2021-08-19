@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.68@sha256:70bd2042ccd252183ea96cde18f5b9dc0af83d7c5a9d160b0d5573608596b624
+    image: yzernik/squeaknode:v0.1.69@sha256:0753812543c3227844c1f53110bc8a54a3eeccec12bb41d1b10fdf93b4fb41e3
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -39,7 +39,7 @@ services:
   envoy:
     image: envoyproxy/envoy-dev:5909e49ba90bac459c8920f76eb5e1b172275993
     ports:
-      - 8080:8080
+      - 15081:8080
     volumes:
       - ./envoy.yaml:/envoy.yaml
     links:
