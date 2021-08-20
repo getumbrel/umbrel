@@ -80,7 +80,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.24@sha256:0e3cdfeab37433cccd6f5146c6bd203c63f1bcab38eab53b66dc1d03a7338d6b
+                image: getumbrel/dashboard:v0.3.25@sha256:03ac7a94d08f2e678e494baf748152a4d6905d2b4dd1726ae55e3c5b154bec62
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
