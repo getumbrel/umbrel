@@ -19,6 +19,7 @@ static_resources:
               - match: { prefix: "/" }
                 route:
                   cluster: squeak_admin_service
+                  max_grpc_timeout: 0s
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
               cors:
