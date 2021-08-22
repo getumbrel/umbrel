@@ -3,12 +3,23 @@ set -euo pipefail
 
 # Start Umbrel
 
+check_umbrel_os () {
+  [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+  if [[ -v UMBREL_OS ]] && [[ -z "${RUN_AS_SERVICE:-}" ]]; then
+    echo "You cannot start your node using this script on Umbrel OS"
+    echo "To make sure the drive is properly mounted, instead use 'sudo systemctl start umbrel-startup'."
+    exit 1
+  fi
+}
+
 if [[ $UID != 0 ]]; then
     echo "Umbrel must be started as root"
     echo "Please re-run this script as"
     echo "  sudo ./scripts/start"
     exit 1
 fi
+
+check_umbrel_os
 
 check_dependencies () {
   for cmd in "$@"; do
