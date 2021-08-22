@@ -20,6 +20,7 @@ StartLimitInterval=0
 Type=forking
 TimeoutStartSec=infinity
 TimeoutStopSec=16min
+Environment=RUN_AS_SERVICE=1
 ExecStart=/home/umbrel/umbrel/scripts/start
 ExecStop=/home/umbrel/umbrel/scripts/stop
 User=root
