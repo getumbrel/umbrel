@@ -5,7 +5,7 @@
       "name": "Nextcloud",
       "version": "21.0.2",
       "tagline": "Productivity platform that keeps you in control",
-      "description": "Nextcloud puts your data at your fingertips, under your control. Store your documents, calendar, contacts and photos on your Umbrel instead of some company's data center. Features:\n\n- Mobile and desktop sync \n- Versioning and undelete \n- Galleries and activity feed \n- File editing and preview support for PDF, images, text files, Open Document, Word files and more. \n- Smooth performance and easy user interface. \n- Fine-grained control over access to data and sharing capabilities by user and by group.\n\nNote: After creating your admin account when you open Nextcloud for the first time, you'll be taken to a white (blank) screen. Please close the app and open it again to continue.",
+      "description": "Nextcloud puts your data at your fingertips, under your control. Store your documents, calendar, contacts and photos on your Umbrel instead of some company's data center. Features:\n\n- Mobile and desktop sync \n- Versioning and undelete \n- Galleries and activity feed \n- File editing and preview support for PDF, images, text files, Open Document, Word files and more. \n- Smooth performance and easy user interface. \n- Fine-grained control over access to data and sharing capabilities by user and by group.\n\nNote: After logging in to Nextcloud please change the password to something secure before sharing the address with anyone.",
       "developer": "Nextcloud GmbH",
       "website": "https://nextcloud.com",
       "dependencies": [],
@@ -17,8 +17,8 @@
           "2.jpg",
           "3.jpg"
       ],
-      "path": "",
-      "defaultPassword": "",
+      "path": "/login?user=umbrel",
+      "defaultPassword": "moneyprintergobrrr",
       "torOnly": false
     },
     {
@@ -223,7 +223,7 @@
         "id": "mempool",
         "category": "Explorers",
         "name": "Mempool",
-        "version": "2.2.0",
+        "version": "2.2.1",
         "tagline": "A mempool visualizer, explorer and fee estimator",
         "description": "Mempool is the official self-hosted version of the fully featured explorer, visualizer, fee estimator, and API service running on mempool.space, an open source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market to help our transition into a multi-layer ecosystem.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
         "developer": "mempool.space",
@@ -271,15 +271,15 @@
         "id": "samourai-server",
         "category": "Wallet Servers",
         "name": "Samourai Server",
-        "version": "1.9.0",
+        "version": "1.10.1",
         "tagline": "Your private backing server for Samourai Wallet",
-        "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.",
+        "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.\n\nBundles Whirlpool CLI v0.10.11.",
         "developer": "Samourai",
         "website": "https://samouraiwallet.com",
         "dependencies": [
             "bitcoind"
         ],
-        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.9.0-umbrel",
+        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.10.1-umbrel",
         "support": "https://t.me/SamouraiWallet",
         "port": 3005,
         "gallery": [
@@ -287,14 +287,14 @@
             "2.jpg",
             "3.jpg"
         ],
-        "path": "/connect/",
+        "path": "",
         "defaultPassword": ""
     },
     {
         "id": "specter-desktop",
         "category": "Wallets",
         "name": "Specter Desktop",
-        "version": "1.5.0",
+        "version": "1.5.1",
         "tagline": "Multisig with hardware wallets made easy",
         "description": "Specter Desktop connects to the Bitcoin Core running on your Umbrel and functions as a watch-only coordinator for multi-signature and single-key Bitcoin wallets. At the moment Specter Desktop is working with all major hardware wallets including:\n\n- Trezor\n- Ledger\n- KeepKey\n- BitBox02\n- ColdCard (optionally airgapped, using an SD card)\n- Electrum (optionally airgapped, if running Electrum on an airgapped computer/phone)\n- Specter DIY (optionally airgapped, using QR codes)\n- Cobo (airgapped, using QR codes)\n\nSpecter Desktop also supports using the Bitcoin Core on your Umbrel as a hot wallet, by importing or generating a random BIP39 mnemonic, but this feature is experimental and we do not recommend using it at this stage. We plan to add support for other hardware wallets as they come up.",
         "developer": "Crypto Advance",
@@ -410,7 +410,7 @@
         "id": "lnbits",
         "category": "Lightning Node Management",
         "name": "LNbits",
-        "version": "baf3b76",
+        "version": "ab446a8",
         "tagline": "Multi-user wallet management system",
         "description": "LNbits is a simple multi-user and account system for Lightning Network that can be used for creating separate Lightning wallets for friends and family members. You can also create multiple accounts for yourself to mitigate the risk of exposing applications to your full balance via unique API keys for each wallet.\n\nLNbits is packaged with tools to help manage funds, such as a table of transactions, line chart of spending, export to CSV, and more to come. It provides an extendable platform for expanding Lightning Network functionality via LNbits extension framework, and can also be used as a fallback wallet for the LNURL scheme.",
         "developer": "LNbits",
@@ -433,7 +433,7 @@
         "id": "btcpay-server",
         "category": "Payments",
         "name": "BTCPay Server",
-        "version": "1.1.2",
+        "version": "1.2.1",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
         "description": "BTCPay Server is a payment processor that allows you to receive payments in Bitcoin (and altcoins) directly, with no fees, transaction cost or a middleman. It is a non-custodial invoicing system which eliminates the involvement of a third-party.\n\nPayments with BTCPay Server go directly to your wallet, which increases the privacy and security. Your private keys are never uploaded to your Umbrel. There is no address re-use, since each invoice generates a new address deriving from your xpubkey.\n\nYou can not only to attach an unlimited number of stores and use the Lightning Network but also become a payment processor for others. Thanks to the apps built on top of it, you can use BTCPay to receive donations, start a crowdfunding campaign or have an in-store Point of Sale.",
         "developer": "BTCPay Server Foundation",

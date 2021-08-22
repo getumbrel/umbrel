@@ -130,6 +130,24 @@ EOF
 cd "$UMBREL_ROOT"
 ./scripts/stop
 
+# Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
+# <hostname>.local and Tor
+current_umbrel_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version)
+nextcloud_config_file="${UMBREL_ROOT}/app-data/nextcloud/data/nextcloud/config/config.php"
+nextcloud_tor_file="${UMBREL_ROOT}/tor/data/app-nextcloud/hostname"
+if [[ "${current_umbrel_version}" = "0.4.0" ]] && [[ -f "${nextcloud_config_file}" ]] && [[ -f "${nextcloud_tor_file}" ]]; then
+  echo
+  echo "Fixing broken Umbrel v0.4.0 Nextcloud install..."
+  nextcloud_hs=$(cat "${nextcloud_tor_file}")
+  nextcloud_local_url="$(hostname -s 2>/dev/null || echo "umbrel").local:8081"
+  sed \
+    -e '/trusted_domains\x27 => $/,/)/!b' \
+    -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27'$nextcloud_local_url'\x27, 2 => \x27'$nextcloud_hs'\x27),' \
+    -e 'd' \
+    -i "${nextcloud_config_file}"
+  echo
+fi
+
 # Move Docker data dir to external storage now if this is an old install.
 # This is only needed temporarily until all users have transitioned Docker to SSD.
 DOCKER_DIR="/var/lib/docker"
@@ -176,6 +194,22 @@ rsync --archive \
     --delete \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
+
+# Handle updating static assets for samourai-server app
+samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
+samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
+if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
+  echo "Found samourai-server install, attempting to update static assets and nginx configuration..."
+  rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
+fi
+
+# Handle hidden service migration for samourai-server app
+samourai_app_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server"
+samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
+if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_tor_dir}" ]]; then
+  echo "Found samourai-server install, attempting to migrate dojo hidden service directory..."
+  mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
+fi
 
 # Fix permissions
 echo "Fixing permissions"
