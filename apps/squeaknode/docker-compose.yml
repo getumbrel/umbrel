@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.90@sha256:79d4a0c8e5fd12df6aa0840615bcbe10ee883b2ae9d14bf172e39dd7da32dd14
+    image: yzernik/squeaknode:v0.1.91@sha256:1e5f8837d5f02e691b5a7f3d2b89d34fdecd3df73d87dc06b50abd2207abfb41
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -31,6 +31,7 @@ services:
       SQUEAKNODE_WEBADMIN_ENABLED: "true"
       SQUEAKNODE_WEBADMIN_USERNAME: "umbrel"
       SQUEAKNODE_WEBADMIN_PASSWORD: "moneyprintergobrrr"
+      SQUEAKNODE_WEBADMIN_RPC_PROXY_HOST: "envoy"
 
       SQUEAKNODE_CORE_NETWORK: "$BITCOIN_NETWORK"
       SQUEAKNODE_CORE_SQK_DIR_PATH: "/sqk"
@@ -39,6 +40,7 @@ services:
 
   envoy:
     image: envoyproxy/envoy:v1.16.0
-    network_mode: "host"
+    ports:
+      - 15081:15081
     volumes:
       - ${APP_DATA_DIR}/envoy.yaml:/etc/envoy/envoy.yaml:ro
