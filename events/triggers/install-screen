@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_umbrel_os () {
+  [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+  if [[ -z "${UMBREL_OS:-}" ]]; then
+    echo "This script must only be run on Umbrel OS"
+    exit 1
+  fi
+}
+
+check_root
+check_umbrel_os
+
+# This script installs a screen driver, then reboots Umbrel
+echo "dtoverlay=piscreen,speed=16000000,rotate=270" >> /boot/config.txt
+echo "dtparam=spi=on" >> /boot/config.txt
+modprobe spi-bcm2835
+touch "${UMBREL_ROOT}/statuses/screen-configured"
