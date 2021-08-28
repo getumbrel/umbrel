@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.99@sha256:9af2b601b798e5ad5ff18cb36d6264826776180303bd868103a447e873d658a1
+    image: yzernik/squeaknode:v0.1.100@sha256:45903f3b3c95c30a605bd7e8f384035d11a80934357fe46402bd13879cf32e57
     restart: on-failure
     stop_grace_period: 1m
     ports:
