@@ -8,6 +8,8 @@ services:
     ports:
       - 8994:8994
       - 12994:12994
+      - 8555:8555
+      - 18555:18555
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
       - ${LND_DATA_DIR}:/lnd:ro
