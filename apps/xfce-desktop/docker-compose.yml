@@ -1,0 +1,26 @@
+---
+version: "3.7"
+services:
+  ubuntu:
+    image: ghcr.io/linuxserver/webtop:ubuntu-xfce@sha256:d819b286b71b5f0d062b80a2d39c55571138cd7afe3912093d8c100306e11553
+    #container_name: ubuntu-xfce
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ${APP_DATA_DIR}/data/xfce-desktop:/config
+    restart: unless-stopped
+    shm_size: "2gb"
+    stop_grace_period: 1m
+  web:
+    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    init: true
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/data/nginx/conf.d:/etc/nginx/conf.d
+      - ${APP_DATA_DIR}/data/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${APP_DATA_DIR}/htpasswd:/etc/nginx/.htpasswd
+    ports:
+      - 3000:81
+    depends_on:
+      - ubuntu
