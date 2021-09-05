@@ -20,7 +20,10 @@ services:
       - ${APP_DATA_DIR}/data/nginx/conf.d:/etc/nginx/conf.d
       - ${APP_DATA_DIR}/data/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ${APP_DATA_DIR}/htpasswd:/etc/nginx/.htpasswd
+      - ${APP_DATA_DIR}/ssl/nginx-selfsigned.crt:/etc/ssl/certs/nginx-selfsigned.crt
+      - ${APP_DATA_DIR}/ssl/nginx-selfsigned.key:/etc/ssl/private/nginx-selfsigned.key
     ports:
       - 3000:81
+      - 4000:4000
     depends_on:
       - ubuntu
