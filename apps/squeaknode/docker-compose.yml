@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.124@sha256:ccb34256c150ac21ee6cfb4ef7dbc9443ec8863f9f1c85eff53f437877fc101a
+    image: yzernik/squeaknode:v0.1.125@sha256:d83349ef6026fed2218d7277cad81509ab882b4a90286618f8abfc2d9ff74b1c
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -18,7 +18,7 @@ services:
       SQUEAKNODE_BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
       SQUEAKNODE_BITCOIN_RPC_USER: $BITCOIN_RPC_USER
       SQUEAKNODE_BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
-      SQUEAKNODE_BITCOIN_ZEROMQ_PORT: $BITCOIN_ZMQ_HASHBLOCK_PORT
+      SQUEAKNODE_BITCOIN_ZEROMQ_HASHBLOCK_PORT: $BITCOIN_ZMQ_HASHBLOCK_PORT
 
       # LND environment variables
       SQUEAKNODE_LND_HOST: $LND_IP
