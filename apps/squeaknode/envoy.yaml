@@ -47,5 +47,5 @@ static_resources:
             - endpoint:
                 address:
                   socket_address:
-                    address: web
+                    address: squeaknode_web_1
                     port_value: 8994
