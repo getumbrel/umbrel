@@ -31,6 +31,8 @@ static_resources:
                 max_age: "1728000"
                 expose_headers: custom-header-1,grpc-status,grpc-message
           http_filters:
+          - name: envoy.filters.http.grpc_web
+          - name: envoy.filters.http.cors
           - name: envoy.filters.http.lua
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
@@ -38,8 +40,6 @@ static_resources:
                 function envoy_on_response(response_handle)
                   response_handle:headers():add("Access-Control-Allow-Origin", "*")
                 end
-          - name: envoy.filters.http.grpc_web
-          - name: envoy.filters.http.cors
           - name: envoy.filters.http.router
   clusters:
   - name: squeak_admin_service
