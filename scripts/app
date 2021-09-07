@@ -129,7 +129,7 @@ compose() {
   export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
   export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
   export SAMOURAI_SERVER_WHIRLPOOL_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-WHIRLPOOL_API_KEY")
-  export SQUEAKNODE_P2P_HIDDEN_SERVICE="$(cat "${squeaknode_p2p_hidden_service_file }" 2>/dev/null || echo "notyetset.onion")"
+  export SQUEAKNODE_P2P_HIDDEN_SERVICE="$(cat "${squeaknode_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
 
   docker-compose \
     --env-file "${env_file}" \
