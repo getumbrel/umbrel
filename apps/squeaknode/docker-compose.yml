@@ -6,8 +6,8 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 8994:8994
-      - 12994:12994
+      - "$APP_SQUEAKNODE_PORT:$APP_SQUEAKNODE_PORT"
+      - "$APP_SQUEAKNODE_GRPC_PORT:$APP_SQUEAKNODE_GRPC_PORT"
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
       - ${LND_DATA_DIR}:/lnd:ro
@@ -36,10 +36,16 @@ services:
       SQUEAKNODE_NODE_MAX_SQUEAKS: 10000
 
       DEBUG: "squeaknode:*"
+    networks:
+      default:
+        ipv4_address: $APP_SQUEAKNODE_IP
 
   envoy:
     image: envoyproxy/envoy:v1.16.0
     ports:
-      - 15081:15081
+      - "$APP_SQUEAKNODE_ENVOY_PORT:$APP_SQUEAKNODE_ENVOY_PORT"
     volumes:
       - ${APP_DATA_DIR}/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks:
+      default:
+        ipv4_address: $APP_SQUEAKNODE_ENVOY_IP

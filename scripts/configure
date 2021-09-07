@@ -193,6 +193,13 @@ APP_VAULTWARDEN_IP="10.21.21.46"
 APP_VAULTWARDEN_PORT="8089"
 APP_CODE_SERVER_IP="10.21.21.53"
 APP_CODE_SERVER_PORT="8091"
+APP_SQUEAKNODE_IP="10.21.21.54"
+APP_SQUEAKNODE_PORT="12994"
+APP_SQUEAKNODE_GRPC_PORT="8994"
+APP_SQUEAKNODE_P2P_PORT="8555"
+APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
+APP_SQUEAKNODE_ENVOY_IP="10.21.21.55"
+APP_SQUEAKNODE_ENVOY_PORT="15081"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -385,6 +392,13 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-vaultwarden-port>/${APP_VAULTWARDEN_PORT}/g" "${template}"
   sed -i "s/<app-code-server-ip>/${APP_CODE_SERVER_IP}/g" "${template}"
   sed -i "s/<app-code-server-port>/${APP_CODE_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-squeaknode-ip>/${APP_SQUEAKNODE_IP}/g" "${template}"
+  sed -i "s/<app-squeaknode-port>/${APP_SQUEAKNODE_PORT}/g" "${template}"
+  sed -i "s/<app-squeaknode-grpc-port>/${APP_SQUEAKNODE_GRPC_PORT}/g" "${template}"
+  sed -i "s/<app-squeaknode-p2p-port>/${APP_SQUEAKNODE_P2P_PORT}/g" "${template}"
+  sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
+  sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
+  sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
 done
 
 ##########################################################
