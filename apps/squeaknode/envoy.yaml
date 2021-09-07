@@ -24,8 +24,6 @@ static_resources:
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
           http_filters:
-          - name: envoy.filters.http.grpc_web
-          - name: envoy.filters.http.router
           - name: envoy.filters.http.lua
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
@@ -33,6 +31,8 @@ static_resources:
                 function envoy_on_response(response_handle)
                   response_handle:headers():add("Access-Control-Allow-Origin", "*")
                 end
+          - name: envoy.filters.http.grpc_web
+          - name: envoy.filters.http.router
   clusters:
   - name: squeak_admin_service
     connect_timeout: 0.25s
