@@ -36,6 +36,14 @@ services:
       SQUEAKNODE_NODE_MAX_SQUEAKS: 10000
 
       DEBUG: "squeaknode:*"
+
+      # Tor
+      # @yzernik just adding these here for your reference. Feel free to
+      # remove/rename them.
+      UI_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
+      P2P_HIDDEN_SERVICE: $SQUEAKNODE_P2P_HIDDEN_SERVICE
+      TOR_PROXY_IP: $TOR_PROXY_IP
+      TOR_PROXY_PORT: $TOR_PROXY_PORT
     networks:
       default:
         ipv4_address: $APP_SQUEAKNODE_IP
