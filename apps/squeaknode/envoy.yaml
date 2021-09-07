@@ -25,9 +25,7 @@ static_resources:
                     grpc_timeout_header_max: 0s
               cors:
                 allow_origin_string_match:
-                  - safe_regex:
-                      google_re2: {}
-                      regex: \*
+                  - prefix: "*"
                 allow_methods: GET, PUT, DELETE, POST, OPTIONS
                 allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
                 max_age: "1728000"
@@ -35,13 +33,6 @@ static_resources:
           http_filters:
           - name: envoy.filters.http.grpc_web
           - name: envoy.filters.http.cors
-          - name: envoy.filters.http.lua
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-              inline_code: |
-                function envoy_on_response(response_handle)
-                  response_handle:headers():add("Access-Control-Allow-Origin", null)
-                end
           - name: envoy.filters.http.router
   clusters:
   - name: squeak_admin_service
