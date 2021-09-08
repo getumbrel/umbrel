@@ -185,7 +185,7 @@ services:
                         ipv4_address: $NEUTRINO_SWITCHER_IP
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.9@sha256:592fb50cdf16fa2b2e20f7c0a28d4a132c2ee636d89d4b9c24f14886763b5478
+              image: getumbrel/electrs:v0.8.11@sha256:71f3cb021f113fbeaf2312d37998c1dc99ff2c7a399d29c9e540b16e62c3696c
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data
