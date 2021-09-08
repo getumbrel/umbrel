@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.126@sha256:07684910c35fd0eaa21ad6446fa25d1f17056d7df8b5d3749ab71246988f059b
+    image: yzernik/squeaknode:v0.1.127@sha256:599ea2507499323c24c45b31c09b1a0eb35934f6877ceebd1782fb9571320d62
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -47,13 +47,3 @@ services:
     networks:
       default:
         ipv4_address: $APP_SQUEAKNODE_IP
-
-  envoy:
-    image: envoyproxy/envoy:v1.16.0
-    ports:
-      - "$APP_SQUEAKNODE_ENVOY_PORT:$APP_SQUEAKNODE_ENVOY_PORT"
-    volumes:
-      - ${APP_DATA_DIR}/envoy.yaml:/etc/envoy/envoy.yaml:ro
-    networks:
-      default:
-        ipv4_address: $APP_SQUEAKNODE_ENVOY_IP
