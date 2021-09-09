@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.135@sha256:82f16d1e0f368e2d2c4c3b4e39934dc858d5ac1ebd61f7f1258ada3d5d2c7dcf
+    image: yzernik/squeaknode:v0.1.138@sha256:5ad6361eb3f1bb63ac865b7dd5726e1731c3afced8483b4ea1e03ff504b8b0f2
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -25,7 +25,6 @@ services:
       SQUEAKNODE_LND_RPC_PORT: $LND_GRPC_PORT
       SQUEAKNODE_LND_TLS_CERT_PATH: "/lnd/tls.cert"
       SQUEAKNODE_LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
-      SQUEAKNODE_LND_EXTERNAL_HOST: $LND_IP
 
       # App specific environment variables
       SQUEAKNODE_WEBADMIN_ENABLED: "true"
