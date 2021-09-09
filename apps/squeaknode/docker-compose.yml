@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.132@sha256:3838976813cf06f339286a3c21fee631e147543566a7841cfce807833504c98b
+    image: yzernik/squeaknode:v0.1.133@sha256:b75dd3fd2af77036237268c2abe5fa0bb17abd83ecdd220ae34bf66014b65be5
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -36,6 +36,7 @@ services:
       SQUEAKNODE_NODE_MAX_SQUEAKS: 10000
       SQUEAKNODE_NODE_TOR_PROXY_IP: $TOR_PROXY_IP
       SQUEAKNODE_NODE_TOR_PROXY_PORT: $TOR_PROXY_PORT
+      SQUEAKNODE_NODE_EXTERNAL_ADDRESS: $SQUEAKNODE_P2P_HIDDEN_SERVICE
 
       DEBUG: "squeaknode:*"
 
@@ -43,7 +44,6 @@ services:
       # @yzernik just adding these here for your reference. Feel free to
       # remove/rename them.
       UI_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
-      P2P_HIDDEN_SERVICE: $SQUEAKNODE_P2P_HIDDEN_SERVICE
     networks:
       default:
         ipv4_address: $APP_SQUEAKNODE_IP
