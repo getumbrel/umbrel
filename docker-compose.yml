@@ -7,14 +7,33 @@ services:
                 user: toruser
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc:/etc/tor/torrc
+                    - ${PWD}/tor/torrc-umbrel:/etc/tor/torrc
                     - ${PWD}/tor/data:/var/lib/tor/
-                    - ${PWD}/tor/run:/var/run/tor/
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
+        app_tor:
+                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
+                user: toruser
+                restart: on-failure
+                volumes:
+                    - ${PWD}/tor/torrc-apps:/etc/tor/torrc
+                    - ${PWD}/tor/data:/var/lib/tor/
+                networks:
+                    default:
+                        ipv4_address: $APPS_TOR_IP
+        app_2_tor:
+                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
+                user: toruser
+                restart: on-failure
+                volumes:
+                    - ${PWD}/tor/torrc-apps-2:/etc/tor/torrc
+                    - ${PWD}/tor/data:/var/lib/tor/
+                networks:
+                    default:
+                        ipv4_address: $APPS_2_TOR_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
@@ -43,10 +62,13 @@ services:
                         ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
-                image: lncm/lnd:v0.12.1@sha256:bdc442c00bc4dd4d5bfa42efd7d977bfe4d21a08d466c933b9cff7cfc83e0c0e
+                image: lightninglabs/lnd:v0.13.1-beta@sha256:f26ddbbea3f7bad45d994e6258b8198acaebf65e575eedf2a566d04f0c1fb9d9
+                user: 1000:1000
                 depends_on: [ tor, manager ]
                 volumes:
                         - ${PWD}/lnd:/data/.lnd
+                environment:
+                  HOME: /data
                 restart: on-failure
                 stop_grace_period: 5m30s
                 ports:
@@ -58,7 +80,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.22@sha256:144105c0b7b6717f22e18171eec481897bb96344c7c298c681c9c04ce2b764a6
+                image: getumbrel/dashboard:v0.3.25@sha256:03ac7a94d08f2e678e494baf748152a4d6905d2b4dd1726ae55e3c5b154bec62
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -66,7 +88,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.12@sha256:1d9dc50743b10c7f57f0514a50932e4c99e5a77616ef24ecd1f9826b6085b8fc
+                image: getumbrel/manager:v0.2.13@sha256:cb0c7a66de89c0a8b8c8e292086f9508f19a8c63c7e962d7f97723c4fd8ec367
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -117,12 +139,13 @@ services:
                     TOR_PROXY_IP: "${TOR_PROXY_IP}"
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
+                    IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
-                image: getumbrel/middleware:v0.1.10@sha256:ff3d5929a506739286f296c803105cca9d83e73e9eb1b7c6833533e345d77736
+                image: getumbrel/middleware:v0.1.12@sha256:2d689fbf9248d638a772f77c85e3fbf92c6bf69134533cbe4b450d80b2319c92
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
@@ -162,7 +185,7 @@ services:
                         ipv4_address: $NEUTRINO_SWITCHER_IP
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.9@sha256:592fb50cdf16fa2b2e20f7c0a28d4a132c2ee636d89d4b9c24f14886763b5478
+              image: getumbrel/electrs:v0.8.11@sha256:71f3cb021f113fbeaf2312d37998c1dc99ff2c7a399d29c9e540b16e62c3696c
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data

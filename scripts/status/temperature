@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# This may not always be the CPU sensor on other hardware.
+# To be sure we need to iterate through /sys/class/thermal/thermal_zone*/type
+# https://www.kernel.org/doc/Documentation/thermal/sysfs-api.txt
+temperature_file="/sys/class/thermal/thermal_zone0/temp"
+
+# Check temperature file exists
+if [[ ! -f "${temperature_file}" ]]
+then
+  echo "null"
+  exit
+fi
+
+# Read temperature file
+temperature=$(cat "${temperature_file}")
+
+# Convert millidegrees celsius to degrees celsius
+echo "${temperature}" | awk '{print int($1/1000)}'
