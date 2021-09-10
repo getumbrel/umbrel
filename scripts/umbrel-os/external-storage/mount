@@ -48,16 +48,19 @@ list_block_devices () {
   # no block devices. In that case the function just returns nothing
   # instead of an error which is what we want.
   #
-  # sed 's!.*/!!' is to return the device path so we get sda (or nvme0)
-  # instead of /sys/block/sda (or /sys/block/nvme0)
-  (ls -d /sys/block/sd* /sys/block/nvme* 2>/dev/null || true) | sed 's!.*/!!'
+  # sed 's!.*/!!' is to return the device path so we get sda (or nvme0n1)
+  # instead of /sys/block/sda (or /sys/block/nvme0n1)
+  (ls -d /sys/block/sd* /sys/block/nvme*n* 2>/dev/null || true) | sed 's!.*/!!'
 }
 
 # Returns the vendor and model name of a block device
 get_block_device_model () {
   device="${1}"
-  vendor=$(cat "/sys/block/${device}/device/vendor")
-  model=$(cat "/sys/block/${device}/device/model")
+  # We use "2>/dev/null || true" to swallow errors if there is
+  # no vendor/device recognized. In that case the function just returns nothing
+  # instead of an error which is what we want.
+  vendor=$(cat "/sys/block/${device}/device/vendor" 2>/dev/null || true)
+  model=$(cat "/sys/block/${device}/device/model"  2>/dev/null || true)
 
   # We echo in a subshell without quotes to strip surrounding whitespace
   echo "$(echo $vendor) $(echo $model)"
@@ -188,6 +191,9 @@ main () {
   block_device=$(list_block_devices)
   block_device_path="/dev/${block_device}"
   partition_path="${block_device_path}1"
+  if [[ $block_device != sda* ]]; then
+    partition_path="${block_device_path}p1"
+  fi
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
