@@ -475,5 +475,29 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "squeaknode",
+        "category": "Social",
+        "name": "Squeaknode",
+        "version": "0.1.152",
+        "tagline": "Squeaknode is a peer-to-peer status feed",
+        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the timestamp/blockhash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
+        "developer": "Jonathan Zernik",
+        "website": "https://github.com/yzernik",
+        "dependencies": [
+            "bitcoind",
+            "lnd"
+        ],
+        "repo": "https://github.com/yzernik/squeaknode",
+        "support": "https://github.com/yzernik/squeaknode/discussions",
+        "port": 12994,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/login?user=umbrel",
+        "defaultPassword": "moneyprintergobrrr"
     }
 ]
