@@ -39,11 +39,6 @@ services:
       SQUEAKNODE_NODE_EXTERNAL_ADDRESS: $SQUEAKNODE_P2P_HIDDEN_SERVICE
 
       DEBUG: "squeaknode:*"
-
-      # Tor
-      # @yzernik just adding these here for your reference. Feel free to
-      # remove/rename them.
-      UI_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
     networks:
       default:
         ipv4_address: $APP_SQUEAKNODE_IP
