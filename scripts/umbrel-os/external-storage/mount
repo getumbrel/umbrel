@@ -146,7 +146,6 @@ copy_docker_to_external_storage () {
 
 main () {
   $set_status mount started
-  trap '[[ "$?" != "0" ]] && $set_status mount errored mount-script-exit' EXIT
   echo "Running external storage mount script..."
   check_root
   check_dependencies sed wipefs parted mount sync umount
