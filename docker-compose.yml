@@ -39,7 +39,7 @@ services:
                 user: toruser
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc-apps-2:/etc/tor/torrc
+                    - ${PWD}/tor/torrc-apps-3:/etc/tor/torrc
                     - ${PWD}/tor/data:/var/lib/tor/
                 networks:
                     default:
