@@ -7,9 +7,10 @@
 [![Twitter](https://img.shields.io/twitter/follow/getumbrel?style=social)](https://twitter.com/getumbrel)
 [![Reddit](https://img.shields.io/reddit/subreddit-subscribers/getumbrel?label=Subscribe%20%2Fr%2Fgetumbrel&style=social)](https://reddit.com/r/getumbrel)
 
-# ☂️ Umbrel
-
+# ☂️ Umbrel — a personal server for everyone
 > ⚠️ Umbrel is currently in beta and is not considered secure. Please see [SECURITY.md](SECURITY.md) for more details.
+
+[![Umbrel](https://static.getumbrel.com/github/umbrel-github-hero.png)](https://getumbrel.com)
 
 This is the master repository of Umbrel and contains the framework for orchestration of all containerized services running on [Umbrel OS](https://github.com/getumbrel/umbrel-os).
 
