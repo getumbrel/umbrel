@@ -133,7 +133,7 @@
     },
     {
         "id": "synapse",
-        "category": "Messaging",
+        "category": "Social",
         "name": "Synapse",
         "version": "1.38.0",
         "tagline": "Matrix reference homeserver",
@@ -155,7 +155,7 @@
     },
     {
         "id": "element",
-        "category": "Messaging",
+        "category": "Social",
         "name": "Element",
         "version": "2.1.5",
         "tagline": "A glossy Matrix client compatible with Synapse",
@@ -315,7 +315,7 @@
     },
     {
         "id": "sphinx-relay",
-        "category": "Messaging",
+        "category": "Social",
         "name": "Sphinx Relay",
         "version": "2.2.0",
         "tagline": "Chat and pay over the Lightning Network",
