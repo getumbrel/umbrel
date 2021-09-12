@@ -41,25 +41,3 @@ HiddenServicePort 80 <app-simple-torrent-ip>:<app-simple-torrent-port>
 HiddenServiceDir /var/lib/tor/app-synapse
 HiddenServicePort 80 <app-synapse-ip>:<app-synapse-port>
 HiddenServicePort <app-synapse-port> <app-synapse-ip>:<app-synapse-port>
-
-# element Hidden Service
-HiddenServiceDir /var/lib/tor/app-element
-HiddenServicePort 80 <app-element-ip>:80
-
-# vaultwarden Hidden Service
-HiddenServiceDir /var/lib/tor/app-vaultwarden
-HiddenServicePort 80 <app-vaultwarden-ip>:<app-vaultwarden-port>
-
-# code-server Hidden Service
-HiddenServiceDir /var/lib/tor/app-code-server
-HiddenServicePort 80 <app-code-server-ip>:8080
-
-# squeaknode Hidden Service
-HiddenServiceDir /var/lib/tor/app-squeaknode
-HiddenServicePort 80 <app-squeaknode-ip>:<app-squeaknode-port>
-HiddenServicePort <app-squeaknode-envoy-port> <app-squeaknode-envoy-ip>:<app-squeaknode-envoy-port>
-
-# squeaknode p2p Hidden Service
-HiddenServiceDir /var/lib/tor/app-squeaknode-p2p
-HiddenServicePort <app-squeaknode-p2p-port> <app-squeaknode-ip>:<app-squeaknode-p2p-port>
-HiddenServicePort <app-squeaknode-p2p-testnet-port> <app-squeaknode-ip>:<app-squeaknode-p2p-testnet-port>
