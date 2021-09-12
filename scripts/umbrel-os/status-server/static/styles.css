@@ -14,10 +14,6 @@ span, p {
   margin: 0 0 1em 0;
 }
 
-p {
-  display: flex;
-}
-
 .container {
   min-height: 100vh;
   display: flex;
