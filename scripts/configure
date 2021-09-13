@@ -193,6 +193,10 @@ APP_VAULTWARDEN_IP="10.21.21.46"
 APP_VAULTWARDEN_PORT="8089"
 APP_CODE_SERVER_IP="10.21.21.53"
 APP_CODE_SERVER_PORT="8091"
+APP_KRYSTAL_BULL_IP="10.21.21.60"
+APP_KRYSTAL_BULL_PORT="3010"
+APP_KRYSTAL_BULL_ORACLE_SERVER_IP=<"10.21.21.63"
+
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -385,6 +389,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-vaultwarden-port>/${APP_VAULTWARDEN_PORT}/g" "${template}"
   sed -i "s/<app-code-server-ip>/${APP_CODE_SERVER_IP}/g" "${template}"
   sed -i "s/<app-code-server-port>/${APP_CODE_SERVER_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-ip>/${APP_KRYSTAL_BULL_IP}/g" "${template}"
+  sed -i "s/<app-krystal-bull-port>/${APP_KRYSTAL_BULL_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-oracle-server-ip>/${APP_KRYSTAL_BULL_ORACLE_SERVER_IP}/g" "${template}"
 done
 
 ##########################################################
