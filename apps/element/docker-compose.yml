@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: getumbrel/element-web:v1.7.34@sha256:f7f6229d2dca55b08fc976088d5797d6348842bcb2317e72d40704c3c9b117c2
+    image: getumbrel/element-web:v1.8.3@sha256:
     # NGINX parent container requires root
     # user: "1000:1000"
     restart: on-failure
