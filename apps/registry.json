@@ -157,7 +157,7 @@
         "id": "element",
         "category": "Social",
         "name": "Element",
-        "version": "2.1.5",
+        "version": "1.8.4",
         "tagline": "A glossy Matrix client compatible with Synapse",
         "description": "Element is a new type of messaging app. You choose where your messages are stored, putting you in control of your data. You can connect it to the Synapse installation running on your Umbrel. An easy way to get started is to install the \"Synapse\" Matrix homserver on your Umbrel and change Element's Homserver URL from matrix.org to your Synapse's homeserver URL (http://umbrel.local:8008 or http://<synapse-tor-hidden-service-url). \n\nIt gives you access to the Matrix open network, so you can talk to anyone. Element provides a new level of security, adding cross-signed device verification to default end-to-end encryption.\n\nThe very best end-to-end encryption and Element’s unique cross-signed device verification means only those that should be in the conversation can read the messages - no eavesdroppers or imposters.\n\nMost important of all, Element is open; built on the Matrix network, it connects to all other Matrix-based apps as well as bridging into proprietary systems. You can stay in Element while talking to friends and family in other apps.\n\nElement is open source. You know exactly what you’re getting. Full transparency, the freedom to extend and customise with the support of a vibrant community of developers.",
         "developer": "New Vector Ltd",
