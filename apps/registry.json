@@ -135,7 +135,7 @@
         "id": "synapse",
         "category": "Social",
         "name": "Synapse",
-        "version": "1.38.0",
+        "version": "v1.42.0",
         "tagline": "Matrix reference homeserver",
         "description": "Synapse is a reference \"homeserver\" implementation of Matrix from the core development team at matrix.org, written in Python/Twisted. It is intended to showcase the concept of Matrix and let folks see the spec in the context of a codebase and let you run your own homeserver and generally help bootstrap the ecosystem.\n\nThe easiest way to try out your new Synapse installation is by connecting to it from a web client.\n\nAn easy way to get started is to install the \"Element\" app on your Umbrel and change its Homeserver URL from matrix.org server to your Synapse's Homeserver URL of http://umbrel.local:8008 (or http://<synapse-tor-hidden-service-url> if you are accessing remotely).\n\nIn Matrix, every user runs one or more Matrix clients, which connect through to a Matrix homeserver. The homeserver stores all their personal chat history and user account information - much as a mail client connects through to an IMAP/SMTP server. Just like email, you can either run your own Matrix homeserver and control and own your own communications and history or use one hosted by someone else (e.g. matrix.org) - there is no single point of control or mandatory service provider in Matrix, unlike WhatsApp, Facebook, Hangouts, etc.",
         "developer": "Matrix",
