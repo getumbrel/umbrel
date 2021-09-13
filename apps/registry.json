@@ -3,7 +3,7 @@
       "id": "nextcloud",
       "category": "Files",
       "name": "Nextcloud",
-      "version": "21.0.2",
+      "version": "22.1.1",
       "tagline": "Productivity platform that keeps you in control",
       "description": "Nextcloud puts your data at your fingertips, under your control. Store your documents, calendar, contacts and photos on your Umbrel instead of some company's data center. Features:\n\n- Mobile and desktop sync \n- Versioning and undelete \n- Galleries and activity feed \n- File editing and preview support for PDF, images, text files, Open Document, Word files and more. \n- Smooth performance and easy user interface. \n- Fine-grained control over access to data and sharing capabilities by user and by group.\n\nNote: After logging in to Nextcloud please change the password to something secure before sharing the address with anyone.",
       "developer": "Nextcloud GmbH",
