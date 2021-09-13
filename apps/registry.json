@@ -113,7 +113,7 @@
         "id": "gitea",
         "category": "Development",
         "name": "Gitea",
-        "version": "1.14.3",
+        "version": "1.15.2",
         "tagline": "A painless self-hosted Git service",
         "description": "Gitea is a painless self-hosted Git service. It is similar to GitHub, Bitbucket, and GitLab. It is a community managed lightweight code hosting solution written in Go. Gitea's minimal requirements allow it to run seamlessly on inexpensive hardware like a Raspberry Pi. Features:\n\n- Fully self-hosted and private\n- Issue tracker\n- Account/Organization/Repository management\n- Tor support\n- Repository Git hooks/deploy keys\n- Repository issues, pull requests and wiki\n- Add/Remove repository collaborators\n- Gravatar and custom source\n- Admin panel",
         "developer": "Gitea",
