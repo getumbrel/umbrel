@@ -1,6 +1,6 @@
 {
-    "version": "0.4.1",
-    "name": "Umbrel v0.4.1",
+    "version": "0.4.2",
+    "name": "Umbrel v0.4.2",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.1 brings LND v0.13.1, along with the latest versions of apps including Mempool, Specter Desktop, BTCPay Server, Samourai Server to the app store, visual improvements for Windows/Linux users, better Tor performance, persistent lnd.conf modifications, Tor access bugfix for Nextcloud, celsius/fahrenheit switch for CPU temperature, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel 0.4.2 brings the latest versions of Samourai Server, Mempool, Home Assistant, BTCPay Server, Nextcloud, BTC RPC Explorer, Pi-hole, Synapse, Element, LNbits, Gitea, code-server, and a brand new app — Squeaknode, to the Umbrel App Store, along with the updated Electrum server, performance upgrades, bug fixes & more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
