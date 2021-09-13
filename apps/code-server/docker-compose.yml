@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: codercom/code-server:3.11.0@sha256:d712341c622b0ae896d8f5b8c02368e44e1f5a03b93cd0489f937352dfc7bab8
+    image: codercom/code-server:3.11.1@sha256:9bb2444f9d0c26765924e29155ac4a8febecb1e080f12c4e368e71dbe6a675b5
     restart: on-failure
     user: "1000:1000"
     ports:
