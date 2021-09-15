@@ -25,7 +25,4 @@ services:
     networks:
       default:
         ipv4_address: 10.21.21.61
-
-networks:
-  default:
     
