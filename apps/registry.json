@@ -475,27 +475,5 @@
         ],
         "path": "",
         "defaultPassword": ""
-    },
-    {
-        "id": "krystal-bull",
-        "category": "DLC",
-        "name": "Krystal Bull",
-        "version": "1.3.3",
-        "tagline": "Become an oracle",
-        "description": "Krystal Bull is a full featured DLC Oracle that allows you to create your own DLC events and sign them.",
-        "developer": "SuredBits",
-        "website": "https://suredbits.com",
-        "dependencies": [
-        ],
-        "repo": "https://github.com/bitcoin-s/bitcoin-s-ts",
-        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
-        "port": 3010,
-        "gallery": [
-            "1.jpg",
-            "2.jpg",
-            "3.jpg"
-        ],
-        "path": "",
-        "defaultPassword": ""
     }    
 ]
