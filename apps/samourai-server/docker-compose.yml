@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: louneskmt/dojo-db:1.3.0-low-mem
+    image: louneskmt/dojo-db:1.3.0-low-mem@sha256:a60c51f50ae3d13e475c2387cbb9e3950bb0fda85c67639572f0b3c7a115fb60
     init: true
     restart: on-failure
     stop_grace_period: 5m
@@ -19,7 +19,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.11.0
+    image: louneskmt/dojo-nodejs:1.11.0@sha256:ab9a59fdc6a1271938774f0945d6012fecb8832b85651012659c60101590bb01
     init: true
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh ${APP_SAMOURAI_SERVER_DB_IP}:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
