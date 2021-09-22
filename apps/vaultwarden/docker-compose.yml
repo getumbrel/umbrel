@@ -12,6 +12,8 @@ services:
       - ${APP_DATA_DIR}/data:/data
     environment:
       ROCKET_PORT: "${APP_VAULTWARDEN_PORT}"
+      YUBICO_CLIENT_ID: "${APP_VAULTWARDEN_YUBICO_CLIENT_ID}"
+      YUBICO_SECRET_KEY: "${APP_VAULTWARDEN_YUBICO_SECRET_KEY}"      
     networks:
       default:
         ipv4_address: $APP_VAULTWARDEN_IP
