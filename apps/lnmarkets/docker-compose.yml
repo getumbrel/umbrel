@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   lnmarkets:
-    image: ghcr.io/lnmarkets/umbrel:v0.0.1
+    image: ghcr.io/lnmarkets/umbrel:v0.0.3
     restart: on-failure
     stop_grace_period: 1m
     ports:
