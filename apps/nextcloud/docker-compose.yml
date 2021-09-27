@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     restart: on-failure
