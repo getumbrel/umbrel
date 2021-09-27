@@ -108,7 +108,11 @@ echo
 echo
 echo "Starting Docker services..."
 echo
-docker-compose up --detach --build --remove-orphans
+docker-compose up --detach --build --remove-orphans || {
+  echo "Failed to start containers"
+  $set_status umbrel errored docker-failed
+  exit 1
+}
 echo
 
 echo "Removing status server iptables entry..."
