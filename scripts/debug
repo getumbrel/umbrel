@@ -172,7 +172,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     list_block_devices () {
         # Documented in the mount script for Umbrel OS
         sync
-        (ls -d /sys/block/sd* /sys/block/nvme* 2>/dev/null || true) | sed 's!.*/!!'
+        (ls -d /sys/block/sd* /sys/block/nvme*n* 2>/dev/null || true) | sed 's!.*/!!'
     }
     no_of_block_devices=$(list_block_devices | wc -l)
 fi
