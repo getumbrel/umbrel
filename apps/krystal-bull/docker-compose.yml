@@ -7,7 +7,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     environment:
-      - ORACLE_SERVER_API_URL=http://10.21.21.61:9998/
+      ORACLE_SERVER_API_URL: http://10.21.21.61:9998/
     ports:
       - 3010:3001
     networks:
@@ -21,7 +21,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
     environment:
-      - BITCOIN_S_KEYMANAGER_ENTROPY=$APP_SEED  
+      BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
     networks:
       default:
         ipv4_address: 10.21.21.61
