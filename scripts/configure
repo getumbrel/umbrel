@@ -135,9 +135,23 @@ APPS_TOR_IP="10.21.21.47"
 APPS_2_TOR_IP="10.21.21.48"
 APPS_3_TOR_IP="10.21.21.49"
 TOR_PROXY_PORT="9050"
+# IPv6
+NETWORK_IPV6=`echo $NETWORK_IP | sed 'y/\./:/; s/^/fd00::/'`
+GATEWAY_IPV6=`echo $GATEWAY_IP | sed 'y/\./:/; s/^/fd00::/'`
+NGINX_IPV6=`echo $NGINX_IP | sed 'y/\./:/; s/^/fd00::/'`
+DASHBOARD_IPV6=`echo $DASHBOARD_IP | sed 'y/\./:/; s/^/fd00::/'`
+MANAGER_IPV6=`echo $MANAGER_IP | sed 'y/\./:/; s/^/fd00::/'`
+MIDDLEWARE_IPV6=`echo $MIDDLEWARE_IP | sed 'y/\./:/; s/^/fd00::/'`
+NEUTRINO_SWITCHER_IPV6=`echo $NEUTRINO_SWITCHER_IP | sed 'y/\./:/; s/^/fd00::/'`
+BITCOIN_IPV6=`echo $BITCOIN_IP | sed 'y/\./:/; s/^/fd00::/'`
+LND_IPV6=`echo $LND_IP | sed 'y/\./:/; s/^/fd00::/'`
+ELECTRUM_IPV6=`echo $ELECTRUM_IP | sed 'y/\./:/; s/^/fd00::/'`
+TOR_PROXY_IPV6=`echo $TOR_PROXY_IP | sed 'y/\./:/; s/^/fd00::/'`
+APPS_TOR_IPV6=`echo $APPS_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
+APPS_2_TOR_IPV6=`echo $APPS_2_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
+APPS_3_TOR_IPV6=`echo $APPS_3_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
 
 # Apps
-APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
 APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
 APP_BTC_RPC_EXPLORER_PORT="3002"
 APP_THUNDERHUB_IP="10.21.21.13"
@@ -204,6 +218,45 @@ APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
 APP_SQUEAKNODE_ENVOY_IP="10.21.21.55"
 APP_SQUEAKNODE_ENVOY_PORT="15081"
+# IPv6
+APPS_3_TOR_IPV6=`echo $APPS_3_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BTC_RPC_EXPLORER_IPV6=`echo $APP_BTC_RPC_EXPLORER_IPV6 | sed 'y/\./:/; s/^/fd00::/'`
+APP_THUNDERHUB_IPV6=`echo $APP_THUNDERHUB_IPV6 | sed 'y/\./:/; s/^/fd00::/'`
+APP_SPHINX_RELAY_IPV6=`echo $APP_SPHINX_RELAY_IPV6 | sed 'y/\./:/; s/^/fd00::/'`
+APP_RIDE_THE_LIGHTNING_IPV6=`echo $APP_RIDE_THE_LIGHTNING_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_RIDE_THE_LIGHTNING_LOOP_IPV6=`echo $APP_RIDE_THE_LIGHTNING_LOOP_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_LIGHTNING_TERMINAL_IPV6=`echo $APP_LIGHTNING_TERMINAL_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SPECTER_DESKTOP_IPV6=`echo $APP_SPECTER_DESKTOP_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BTCPAY_SERVER_IPV6=`echo $APP_BTCPAY_SERVER_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BTCPAY_SERVER_NBXPLORER_IPV6=`echo $APP_BTCPAY_SERVER_NBXPLORER_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BTCPAY_SERVER_DB_IPV6=`echo $APP_BTCPAY_SERVER_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_LNBITS_IPV6=`echo $APP_LNBITS_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_MEMPOOL_IPV6=`echo $APP_MEMPOOL_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_MEMPOOL_API_IPV6=`echo $APP_MEMPOOL_API_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_MEMPOOL_DB_IPV6=`echo $APP_MEMPOOL_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SAMOURAI_SERVER_IPV6=`echo $APP_SAMOURAI_SERVER_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SAMOURAI_SERVER_WHIRLPOOL_IPV6=`echo $APP_SAMOURAI_SERVER_WHIRLPOOL_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SAMOURAI_SERVER_DB_IPV6=`echo $APP_SAMOURAI_SERVER_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SAMOURAI_SERVER_NODE_IPV6=`echo $APP_SAMOURAI_SERVER_NODE_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BLUEWALLET_LNDHUB_IPV6=`echo $APP_BLUEWALLET_LNDHUB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_BLUEWALLET_REDIS_IPV6=`echo $APP_BLUEWALLET_REDIS_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_NEXTCLOUD_IPV6=`echo $APP_NEXTCLOUD_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_NEXTCLOUD_DB_IPV6=`echo $APP_NEXTCLOUD_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_NEXTCLOUD_REDIS_IPV6=`echo $APP_NEXTCLOUD_REDIS_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_NEXTCLOUD_CRON_IPV6=`echo $APP_NEXTCLOUD_CRON_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_PI_HOLE_IPV6=`echo $APP_PI_HOLE_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_HOME_ASSISTANT_IPV6=`echo $APP_HOME_ASSISTANT_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_GITEA_IPV6=`echo $APP_GITEA_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_GITEA_DB_IPV6=`echo $APP_GITEA_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SIMPLETORRENT_IPV6=`echo $APP_SIMPLETORRENT_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_PHOTOPRISM_IPV6=`echo $APP_PHOTOPRISM_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_PHOTOPRISM_DB_IPV6=`echo $APP_PHOTOPRISM_DB_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SYNAPSE_IPV6=`echo $APP_SYNAPSE_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_ELEMENT_IPV6=`echo $APP_ELEMENT_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_VAULTWARDEN_IPV6=`echo $APP_VAULTWARDEN_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_CODE_SERVER_IPV6=`echo $APP_CODE_SERVER_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SQUEAKNODE_IPV6=`echo $APP_SQUEAKNODE_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SQUEAKNODE_ENVOY_IPV6=`echo $APP_SQUEAKNODE_ENVOY_IP | sed 'y/\./:/; s/^/fd00::/'`
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -336,6 +389,21 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
   sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
   sed -i "s#<lndfeeurl>#${LND_FEE_URL}#g;" "${template}"
+  # Umbrel IPv6
+  sed -i "s/<network-ipv6>/${NETWORK_IPV6}/g" "${template}"
+  sed -i "s/<gateway-ipv6>/${GATEWAY_IPV6}/g" "${template}"
+  sed -i "s/<nginx-ipv6>/${NGINX_IPV6}/g" "${template}"
+  sed -i "s/<dashboard-ipv6>/${DASHBOARD_IPV6}/g" "${template}"
+  sed -i "s/<manager-ipv6>/${MANAGER_IPV6}/g" "${template}"
+  sed -i "s/<middleware-ipv6>/${MIDDLEWARE_IPV6}/g" "${template}"
+  sed -i "s/<neutrino-switcher-ipv6>/${NEUTRINO_SWITCHER_IPV6}/g" "${template}"
+  sed -i "s/<bitcoin-ipv6>/${BITCOIN_IPV6}/g" "${template}"
+  sed -i "s/<lnd-ipv6>/${LND_IPV6}/g" "${template}"
+  sed -i "s/<electrum-ipv6>/${ELECTRUM_IPV6}/g" "${template}"
+  sed -i "s/<tor-proxy-ipv6>/${TOR_PROXY_IPV6}/g" "${template}"
+  sed -i "s/<apps-tor-ipv6>/${APPS_TOR_IPV6}/g" "${template}"
+  sed -i "s/<apps-2-tor-ipv6>/${APPS_2_TOR_IPV6}/g" "${template}"
+  sed -i "s/<apps-3-tor-ipv6>/${APPS_3_TOR_IPV6}/g" "${template}"
 
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
@@ -404,6 +472,45 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
+  #Apps IPv6
+  sed -i "s/<app-btc-rpc-explorer-ipv6>/${APP_BTC_RPC_EXPLORER_IPV6}/g" "${template}"
+  sed -i "s/<app-thunderhub-ipv6>/${APP_THUNDERHUB_IPV6}/g" "${template}"
+  sed -i "s/<app-sphinx-relay-ipv6>/${APP_SPHINX_RELAY_IPV6}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-ipv6>/${APP_RIDE_THE_LIGHTNING_IPV6}/g" "${template}"
+  sed -i "s/<app-ride-the-lightning-loop-ipv6>/${APP_RIDE_THE_LIGHTNING_LOOP_IPV6}/g" "${template}"
+  sed -i "s/<app-lightning-terminal-ipv6>/${APP_LIGHTNING_TERMINAL_IPV6}/g" "${template}"
+  sed -i "s/<app-specter-desktop-ipv6>/${APP_SPECTER_DESKTOP_IPV6}/g" "${template}"
+  sed -i "s/<app-btcpay-server-ipv6>/${APP_BTCPAY_SERVER_IPV6}/g" "${template}"
+  sed -i "s/<app-btcpay-server-nbxplorer-ipv6>/${APP_BTCPAY_SERVER_NBXPLORER_IPV6}/g" "${template}"
+  sed -i "s/<app-btcpay-server-db-ipv6>/${APP_BTCPAY_SERVER_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-lnbits-ipv6>/${APP_LNBITS_IPV6}/g" "${template}"
+  sed -i "s/<app-mempool-ipv6>/${APP_MEMPOOL_IPV6}/g" "${template}"
+  sed -i "s/<app-mempool-db-ipv6>/${APP_MEMPOOL_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-mempool-api-ipv6>/${APP_MEMPOOL_API_IPV6}/g" "${template}"
+  sed -i "s/<app-samourai-server-ipv6>/${APP_SAMOURAI_SERVER_IPV6}/g" "${template}"
+  sed -i "s/<app-samourai-server-whirlpool-ipv6>/${APP_SAMOURAI_SERVER_WHIRLPOOL_IPV6}/g" "${template}"
+  sed -i "s/<app-samourai-server-db-ipv6>/${APP_SAMOURAI_SERVER_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-samourai-server-node-ipv6>/${APP_SAMOURAI_SERVER_NODE_IPV6}/g" "${template}"
+  sed -i "s/<app-bluewallet-lndhub-ipv6>/${APP_BLUEWALLET_LNDHUB_IPV6}/g" "${template}"
+  sed -i "s/<app-bluewallet-redis-ipv6>/${APP_BLUEWALLET_REDIS_IPV6}/g" "${template}"
+  sed -i "s/<app-nextcloud-ipv6>/${APP_NEXTCLOUD_IPV6}/g" "${template}"
+  sed -i "s/<app-nextcloud-db-ipv6>/${APP_NEXTCLOUD_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-nextcloud-redis-ipv6>/${APP_NEXTCLOUD_REDIS_IPV6}/g" "${template}"
+  sed -i "s/<app-nextcloud-cron-ipv6>/${APP_NEXTCLOUD_CRON_IPV6}/g" "${template}"
+  sed -i "s/<app-pi-hole-ipv6>/${APP_PI_HOLE_IPV6}/g" "${template}"
+  sed -i "s/<app-home-assistant-ipv6>/${APP_HOME_ASSISTANT_IPV6}/g" "${template}"
+  sed -i "s/<app-gitea-ipv6>/${APP_GITEA_IPV6}/g" "${template}"
+  sed -i "s/<app-gitea-db-ipv6>/${APP_GITEA_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-simple-torrent-ipv6>/${APP_SIMPLETORRENT_IPV6}/g" "${template}"
+  sed -i "s/<app-photoprism-ipv6>/${APP_PHOTOPRISM_IPV6}/g" "${template}"
+  sed -i "s/<app-photoprism-db-ipv6>/${APP_PHOTOPRISM_DB_IPV6}/g" "${template}"
+  sed -i "s/<app-synapse-ipv6>/${APP_SYNAPSE_IPV6}/g" "${template}"
+  sed -i "s/<app-element-ipv6>/${APP_ELEMENT_IPV6}/g" "${template}"
+  sed -i "s/<app-vaultwarden-ipv6>/${APP_VAULTWARDEN_IPV6}/g" "${template}"
+  sed -i "s/<app-code-server-ipv6>/${APP_CODE_SERVER_IPV6}/g" "${template}"
+  sed -i "s/<app-squeaknode-ipv6>/${APP_SQUEAKNODE_IPV6}/g" "${template}"
+  sed -i "s/<app-squeaknode-envoy-ipv6>/${APP_SQUEAKNODE_ENVOY_IPV6}/g" "${template}"
+
 done
 
 ##########################################################

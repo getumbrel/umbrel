@@ -84,7 +84,9 @@ def main():
     tor_hostname_file = "/home/umbrel/umbrel/tor/data/web/hostname"
     tor_hostname = read_file_when_available(tor_hostname_file, timeout)
 
-    ip = run(['hostname', '-I']).split(" ")[0]
+    ips = run(['hostname', '-I']).split(" ")[0]
+    ip = ips[0]
+    ipv6 = ips[2]
 
     if not tor_hostname or not ip:
         print("Couldn't get connection details")
@@ -102,6 +104,7 @@ def main():
 
         http://umbrel.local
         http://{ip}
+        http://{ipv6}
         http://{tor_hostname}
     """
     print(connection_details)

@@ -1,6 +1,17 @@
 version: '3.7'
 
 services:
+        ipv6nat:
+                container_name: ipv6nat
+                image: robbertkl/ipv6nat
+                user: root
+                container_name: ipv6nat
+                privileged: true
+                restart: always
+                network_mode: host
+                volumes:
+                    - /var/run/docker.sock:/var/run/docker.sock:ro
+                    - /lib/modules:/lib/modules:ro
         tor:
                 container_name: tor
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
@@ -14,6 +25,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
+                        ipv6_address: $TOR_PROXY_IPV6
         app_tor:
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
@@ -24,6 +36,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $APPS_TOR_IP
+                        ipv6_address: $APPS_TOR_IPV6
         app_2_tor:
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
@@ -34,6 +47,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $APPS_2_TOR_IP
+                        ipv6_address: $APPS_2_TOR_IPV6
         app_3_tor:
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
@@ -44,6 +58,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $APPS_3_TOR_IP
+                        ipv6_address: $APPS_3_TOR_IPV6
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
@@ -57,6 +72,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $NGINX_IP
+                        ipv6_address: $NGINX_IPV6
         bitcoin:
                 container_name: bitcoin
                 image: lncm/bitcoind:v0.21.1@sha256:5bedb46d698de16c59e9e43d31485d0d82239bd437d62ac7cf47ebb633214f37
@@ -70,6 +86,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $BITCOIN_IP
+                        ipv6_address: $BITCOIN_IPV6
         lnd:
                 container_name: lnd
                 image: lightninglabs/lnd:v0.13.1-beta@sha256:f26ddbbea3f7bad45d994e6258b8198acaebf65e575eedf2a566d04f0c1fb9d9
@@ -88,6 +105,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $LND_IP
+                        ipv6_address: $LND_IPV6
         dashboard:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.3.25@sha256:03ac7a94d08f2e678e494baf748152a4d6905d2b4dd1726ae55e3c5b154bec62
@@ -96,6 +114,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $DASHBOARD_IP
+                        ipv6_address: $DASHBOARD_IPV6
         manager:
                 container_name: manager
                 image: getumbrel/manager:v0.2.13@sha256:cb0c7a66de89c0a8b8c8e292086f9508f19a8c63c7e962d7f97723c4fd8ec367
@@ -153,6 +172,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
+                        ipv6_address: $MANAGER_IPV6
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.12@sha256:2d689fbf9248d638a772f77c85e3fbf92c6bf69134533cbe4b450d80b2319c92
@@ -175,6 +195,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $MIDDLEWARE_IP
+                        ipv6_address: $MIDDLEWARE_IPV6
         neutrino-switcher:
                 container_name: neutrino-switcher
                 image: getumbrel/neutrino-switcher:v1.3.0@sha256:399ccea7f39129ff16c9c408f9e68a01dd4671f428273f3c3f401a8a0d2f7ddc
@@ -193,6 +214,7 @@ services:
                 networks:
                     default:
                         ipv4_address: $NEUTRINO_SWITCHER_IP
+                        ipv6_address: $NEUTRINO_SWITCHER_IPV6
         electrs:
               container_name: electrs
               image: getumbrel/electrs:v0.8.11@sha256:71f3cb021f113fbeaf2312d37998c1dc99ff2c7a399d29c9e540b16e62c3696c
@@ -206,14 +228,16 @@ services:
               networks:
                   default:
                       ipv4_address: $ELECTRUM_IP
+                      ipv6_address: $ELECTRUM_IPV6
 networks:
     default:
       name: umbrel_main_network
+      enable_ipv6: true
       ipam:
           driver: default
           config:
               - subnet: "$NETWORK_IP/24"
-
+              - subnet: "$NETWORK_IPV6/112"
 volumes:
     jwt-public-key:
     jwt-private-key:
