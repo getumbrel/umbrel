@@ -1,17 +1,6 @@
 version: '3.7'
 
 services:
-        ipv6nat:
-                container_name: ipv6nat
-                image: robbertkl/ipv6nat
-                user: root
-                container_name: ipv6nat
-                privileged: true
-                restart: always
-                network_mode: host
-                volumes:
-                    - /var/run/docker.sock:/var/run/docker.sock:ro
-                    - /lib/modules:/lib/modules:ro
         tor:
                 container_name: tor
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
