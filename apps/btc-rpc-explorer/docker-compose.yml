@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: getumbrel/btc-rpc-explorer:v3.1.1@sha256:df6810c00cb026a1d8cadaba2f4926f1310b996eebe006d29929fece5bff63bf
+    image: getumbrel/btc-rpc-explorer:v3.2.0@sha256:ae22dae91a00268c8e02b50da332c6ffcb8c12a1f32991a1f85dfc1496a1c673
     restart: on-failure
     stop_grace_period: 1m
     ports:
