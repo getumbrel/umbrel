@@ -204,6 +204,8 @@ APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
 APP_SQUEAKNODE_ENVOY_IP="10.21.21.55"
 APP_SQUEAKNODE_ENVOY_PORT="15081"
+APP_LNMARKETS_IP="10.21.21.50"
+APP_LNMARKETS_PORT="4242"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -404,6 +406,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
+  sed -i "s/<app-lnmarkets-ip>/${APP_LNMARKETS_IP}/g" "${template}"
+  sed -i "s/<app-lnmarkets-port>/${APP_LNMARKETS_PORT}/g" "${template}"
 done
 
 ##########################################################
