@@ -21,3 +21,7 @@ HiddenServicePort <app-squeaknode-envoy-port> <app-squeaknode-envoy-ip>:<app-squ
 HiddenServiceDir /var/lib/tor/app-squeaknode-p2p
 HiddenServicePort <app-squeaknode-p2p-port> <app-squeaknode-ip>:<app-squeaknode-p2p-port>
 HiddenServicePort <app-squeaknode-p2p-testnet-port> <app-squeaknode-ip>:<app-squeaknode-p2p-testnet-port>
+
+# lnmarkets Hidden Service
+HiddenServiceDir /var/lib/tor/app-lnmarkets
+HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
