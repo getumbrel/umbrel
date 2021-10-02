@@ -65,6 +65,9 @@ sudo NETWORK=regtest ./scripts/start
 
 # For umbrel to listen on port 12345 instead of 80, run:
 sudo NGINX_PORT=12345 ./scripts/start
+
+# If you don't want to open any ports and only want to expose Umbrel via Tor hidden services, run:
+sudo BIND_ADDRESS=127.0.0.1 ./scripts/start
 ```
 
 To stop Umbrel, run:
