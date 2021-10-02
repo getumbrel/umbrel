@@ -106,7 +106,8 @@ ENV_FILE="./templates/.env"
 ############ Generate configuration variables ############
 ##########################################################
 
-BIND_ADDRESS_TMP="${BIND_ADDRESS}"
+# Temporary variables for external configuration
+BIND_ADDRESS_TMP=${BIND_ADDRESS:-}
 
 # Load existing credentials if we have some
 [[ -f "./.env" ]] && source "./.env"
