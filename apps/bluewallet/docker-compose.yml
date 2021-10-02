@@ -22,7 +22,7 @@ services:
     stop_grace_period: "1m"
     init: true
     ports:
-      - "${APP_BLUEWALLET_LNDHUB_PORT}:${APP_BLUEWALLET_LNDHUB_PORT}"
+      - "${BIND_ADDRESS}:${APP_BLUEWALLET_LNDHUB_PORT}:${APP_BLUEWALLET_LNDHUB_PORT}"
     volumes:
       - "${LND_DATA_DIR}:/lnd:ro"
     environment:

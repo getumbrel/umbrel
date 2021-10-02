@@ -6,8 +6,8 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - "$APP_SQUEAKNODE_PORT:$APP_SQUEAKNODE_PORT"
-      - "$APP_SQUEAKNODE_GRPC_PORT:$APP_SQUEAKNODE_GRPC_PORT"
+      - "${BIND_ADDRESS}:$APP_SQUEAKNODE_PORT:$APP_SQUEAKNODE_PORT"
+      - "${BIND_ADDRESS}:$APP_SQUEAKNODE_GRPC_PORT:$APP_SQUEAKNODE_GRPC_PORT"
     volumes:
       - ${APP_DATA_DIR}/sqk:/sqk
       - ${LND_DATA_DIR}:/lnd:ro

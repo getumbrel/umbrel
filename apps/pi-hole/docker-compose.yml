@@ -10,7 +10,7 @@ services:
     ports:
       - 53:53
       - 53:53/udp
-      - ${APP_PI_HOLE_PORT}:80
+      - ${BIND_ADDRESS}:${APP_PI_HOLE_PORT}:80
     volumes:
       - ${APP_DATA_DIR}/data/pihole:/etc/pihole/
       - ${APP_DATA_DIR}/data/dnsmasq:/etc/dnsmasq.d/

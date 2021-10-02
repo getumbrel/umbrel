@@ -6,7 +6,7 @@ services:
     user: "1000:1000"
     restart: on-failure
     ports:
-      - "${APP_SIMPLETORRENT_PORT}:${APP_SIMPLETORRENT_PORT}"
+      - "${BIND_ADDRESS}:${APP_SIMPLETORRENT_PORT}:${APP_SIMPLETORRENT_PORT}"
     command: >
       --port=${APP_SIMPLETORRENT_PORT}
       --config-path /config/simple-torrent.json

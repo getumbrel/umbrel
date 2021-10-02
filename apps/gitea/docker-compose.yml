@@ -6,8 +6,8 @@ services:
     user: "1000:1000"
     restart: on-failure
     ports:
-      - "${APP_GITEA_PORT}:${APP_GITEA_PORT}"
-      - "${APP_GITEA_SSH_PORT}:${APP_GITEA_SSH_PORT}"
+      - "${BIND_ADDRESS}:${APP_GITEA_PORT}:${APP_GITEA_PORT}"
+      - "${BIND_ADDRESS}:${APP_GITEA_SSH_PORT}:${APP_GITEA_SSH_PORT}"
     volumes:
       - ${APP_DATA_DIR}/data/gitea/data:/var/lib/gitea
       - ${APP_DATA_DIR}/data/gitea/config:/etc/gitea

@@ -6,7 +6,7 @@ services:
     restart: on-failure
     user: "1000:1000"
     ports:
-      - "${APP_CODE_SERVER_PORT}:8080"
+      - "${BIND_ADDRESS}:${APP_CODE_SERVER_PORT}:8080"
     volumes:
       - ${APP_DATA_DIR}/data:/home/coder
     environment:

@@ -4,7 +4,7 @@ services:
   server:
     image: homeassistant/home-assistant:2021.9.6@sha256:3b0b1d1e595a77fdca2e765d4441545ab873841fc311964f8d6cf9cb9e99f38e
     ports:
-      - "${APP_HOME_ASSISTANT_PORT}:8123"
+      - "${BIND_ADDRESS}:${APP_HOME_ASSISTANT_PORT}:8123"
     volumes:
       - ${APP_DATA_DIR}/data:/config
     networks:
