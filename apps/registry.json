@@ -25,7 +25,7 @@
         "id": "photoprism",
         "category": "Files",
         "name": "PhotoPrism",
-        "version": "210523-b1856b9d",
+        "version": "20210925",
         "tagline": "Self-host your photo and video library",
         "description": "PhotoPrism® is a privately hosted app for browsing, organizing, and sharing your photo collection. It makes use of the latest technologies to tag and find pictures automatically without getting in your way. Say goodbye to solutions that force you to upload your visual memories to the cloud!\n\n- Our intuitive user interface makes browsing and organizing your photo collection as easy as it should be — whether it’s on a phone, tablet, or desktop computer.\n\n- Index everything without worrying about duplicates or RAW to JPEG conversion.\n\n- Automatic image classification based on Google TensorFlow. In addition, our indexer detects colors, chroma, luminance, quality, panoramic projection, location type, and many other properties.\n\n- Includes four high-resolution world maps to see where you've been, and for rediscovering long-forgotten shots.\n\n- WebDAV clients, like Microsoft’s Windows Explorer or Apple's Finder, may connect directly to PhotoPrism so that you to can open, edit, and delete files from your computer or phone as if they were local. You may easily sync your pictures with PhotoSync as well.\n\n- Because PhotoPrism is built as a progressive web app, it provides a native app-like experience, and you may install it on your home screen. There's also a community-maintained native app in development.",
         "developer": "PhotoPrism",
