@@ -97,7 +97,12 @@ is_partition_ext4 () {
 format_block_device () {
   device="${1}"
   device_path="/dev/${device}"
-  partition_path="${device_path}1"
+  if [[ $block_device != sd* ]]; then
+    echo "SSD device"
+    partition_path="${block_device_path}p1"
+  else
+    partition_path="${block_device_path}1"
+  fi
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
   parted --script "${device_path}" mkpart primary ext4 0% 100%
@@ -193,7 +198,6 @@ main () {
     echo "SSD device"
     partition_path="${block_device_path}p1"
   else
-    echo "Not an SSD"
     partition_path="${block_device_path}1"
   fi
   echo "Block device is ${block_device}"
