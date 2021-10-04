@@ -195,13 +195,6 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
-# Remove legacy electrs dir
-legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
-if [[ -d "${legacy_electrs_dir}" ]]; then
-  echo "Found legacy electrs dir, removing it..."
-  rm --recursive --force "${legacy_electrs_dir}"
-fi
-
 # Handle updating static assets for samourai-server app
 samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
 samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
