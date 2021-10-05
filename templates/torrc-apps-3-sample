@@ -15,7 +15,6 @@ HiddenServicePort 80 <app-code-server-ip>:8080
 # squeaknode Hidden Service
 HiddenServiceDir /var/lib/tor/app-squeaknode
 HiddenServicePort 80 <app-squeaknode-ip>:<app-squeaknode-port>
-HiddenServicePort <app-squeaknode-envoy-port> <app-squeaknode-envoy-ip>:<app-squeaknode-envoy-port>
 
 # squeaknode p2p Hidden Service
 HiddenServiceDir /var/lib/tor/app-squeaknode-p2p
