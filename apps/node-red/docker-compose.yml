@@ -21,7 +21,6 @@ services:
       LND_GRPC_PORT: $LND_GRPC_PORT
       ELECTRUM_IP: $ELECTRUM_IP
       ELECTRUM_PORT: $ELECTRUM_PORT
-      APP_DOMAIN: $APP_DOMAIN
     networks:
       default:
           ipv4_address: $APP_NODE_RED_IP
