@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: matrixdotorg/synapse:v1.39.0@sha256:f2cfc838172a3c8c3f3595a637ba465f0d933049ba48b7c7822cec2f0ccc9d80
+    image: matrixdotorg/synapse:v1.42.0@sha256:10a1dd576504af002a1107d6d1edddc5bb891ccfc404218fbd99a15531cef742
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m

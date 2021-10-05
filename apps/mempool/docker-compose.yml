@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: mempool/frontend:v2.2.1@sha256:6c87505b89cce1bb3dd99ff2d59cfac5ff2b78136a0f17fe5c37c3f832b9aff6
+    image: mempool/frontend:v2.2.2@sha256:515b9a3ab3cc593fe599393b316d4d016335801fbba02ef8c6bb38082597f7cc
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -17,7 +17,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.2.1@sha256:175f33ab2e96319c2730c020f28207cef9d1f4cb330eab4f40fa4721d01fa272
+    image: mempool/backend:v2.2.2@sha256:c758345017587dd9e42047528cf6cd71ceae70cebd1a09ce875959259612a2ee
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -45,7 +45,7 @@ services:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
   mariadb:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m

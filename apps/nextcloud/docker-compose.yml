@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     restart: on-failure
@@ -28,7 +28,7 @@ services:
         ipv4_address: $APP_NEXTCLOUD_REDIS_IP
 
   web:
-    image: nextcloud:22.0.0-apache@sha256:55de721417c16ff110720217406778e16f1b63154d2e8d42fc7913c37dbe6d50
+    image: nextcloud:22.1.1-apache@sha256:99d94124b2024c9f7f38dc12144a92bc0d68d110bcfd374169ebb7e8df0adf8e
     # Currently needs to be run as root, if we run as uid 1000 this fails
     # https://github.com/nextcloud/docker/blob/05026b029d37fc5cd488d4a4a2a79480e39841ba/21.0/apache/entrypoint.sh#L53-L77
     # user: "1000:1000"
