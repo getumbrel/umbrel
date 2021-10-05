@@ -88,7 +88,7 @@
       "type": "function",
       "z": "f50232d5dd80c5b3",
       "name": "build admin-credentials.json",
-      "func": "msg.payload = JSON.stringify({\n    username: \"admin\",\n    password: bcryptjs.hashSync(msg.payload, 8),\n    permissions: \"*\",\n});\nreturn msg;\n",
+      "func": "msg.payload = JSON.stringify({\n    username: \"umbrel\",\n    password: bcryptjs.hashSync(msg.payload, 8),\n    permissions: \"*\",\n});\nreturn msg;\n",
       "outputs": 1,
       "noerr": 0,
       "initialize": "",
