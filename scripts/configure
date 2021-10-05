@@ -204,6 +204,9 @@ APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
 APP_SQUEAKNODE_ENVOY_IP="10.21.21.55"
 APP_SQUEAKNODE_ENVOY_PORT="15081"
+APP_KRYSTAL_BULL_IP="10.21.21.56"
+APP_KRYSTAL_BULL_PORT="3010"
+APP_KRYSTAL_BULL_SERVER_IP="10.21.21.57"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -404,6 +407,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-ip>/${APP_KRYSTAL_BULL_IP}/g" "${template}"
+  sed -i "s/<app-krystal-bull-port>/${APP_KRYSTAL_BULL_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-server-ip>/${APP_KRYSTAL_BULL_SERVER_IP}/g" "${template}"
 done
 
 ##########################################################
