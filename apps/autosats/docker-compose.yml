@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  web:
+    image: bezysoftware/autosats:v0.0.2
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 3311:80
+    volumes:
+       - ${APP_DATA_DIR}/autosats:/app_data
+    environment:
+       Bitcoin__Auth=$BITCOIN_RPC_AUTH
+       Bitcoin__Url="http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
