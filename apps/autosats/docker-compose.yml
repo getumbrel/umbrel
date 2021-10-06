@@ -10,5 +10,5 @@ services:
     volumes:
       - ${APP_DATA_DIR}/autosats:/app_data
     environment:
-      Bitcoin__Auth=$BITCOIN_RPC_AUTH
-      Bitcoin__Url="http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
+      Bitcoin__Auth: "$BITCOIN_RPC_USER:$BITCOIN_RPC_PASS"
+      Bitcoin__Url: "http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
