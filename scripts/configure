@@ -202,8 +202,6 @@ APP_SQUEAKNODE_PORT="12994"
 APP_SQUEAKNODE_GRPC_PORT="8994"
 APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
-APP_SQUEAKNODE_ENVOY_IP="10.21.21.55"
-APP_SQUEAKNODE_ENVOY_PORT="15081"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -322,6 +320,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
   sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
+  sed -i "s/<bitcoin-p2p-port>/${BITCOIN_P2P_PORT}/g" "${template}"
   sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
   sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
   sed -i "s/<lnd-rest-port>/${LND_REST_PORT}/g" "${template}"
@@ -402,8 +401,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-grpc-port>/${APP_SQUEAKNODE_GRPC_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-port>/${APP_SQUEAKNODE_P2P_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
-  sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
-  sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
 done
 
 ##########################################################

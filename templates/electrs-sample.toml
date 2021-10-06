@@ -2,9 +2,10 @@
 # modifications you make can break the functionality of your umbrel. These files
 # are automatically reset with every Umbrel update.
 
-verbose = 4
+verbose = 2
 network = "bitcoin"
 db_dir = "/data/db"
 daemon_rpc_addr = "<bitcoin-ip>:<port>"
+daemon_p2p_addr = "<bitcoin-ip>:<bitcoin-p2p-port>"
 electrum_rpc_addr = "0.0.0.0:<electrum-port>"
 server_banner = "Umbrel v<version>"
