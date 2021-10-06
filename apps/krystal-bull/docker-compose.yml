@@ -2,22 +2,22 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/oracle-server-ui:0.0.1-cc6ea29a-SNAPSHOT
+    image: bitcoinscala/oracle-server-ui:0.0.1-9fad4881-SNAPSHOT
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
     environment:
-      ORACLE_SERVER_API_URL: "http://${APP_KRYSTAL_BULL_SERVER_IP}:9998/"
+      ORACLE_SERVER_API_URL: http://10.21.21.61:9998/
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
     ports:
-      - "${APP_KRYSTAL_BULL_PORT}:3001"
+      - 3010:3001
     networks:
       default:
-        ipv4_address: $APP_KRYSTAL_BULL_IP
+        ipv4_address: 10.21.21.60
     depends_on: 
       - oracleserver
   oracleserver:
-    image: bitcoinscala/bitcoin-s-oracle-server:1.7.0-199-98ceddfc-SNAPSHOT
+    image: bitcoinscala/bitcoin-s-oracle-server:1.7.0-206-99e12a39-SNAPSHOT
     user: "1000:1000"
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
@@ -25,4 +25,4 @@ services:
       BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
     networks:
       default:
-        ipv4_address: $APP_KRYSTAL_BULL_SERVER_IP
+        ipv4_address: 10.21.21.61
