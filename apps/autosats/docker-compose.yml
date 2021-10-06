@@ -8,7 +8,7 @@ services:
     ports:
       - 3311:80
     volumes:
-      - ${APP_DATA_DIR}/autosats:/app_data
+      - ${APP_DATA_DIR}/data:/app_data
     environment:
       Bitcoin__Auth: "$BITCOIN_RPC_USER:$BITCOIN_RPC_PASS"
       Bitcoin__Url: "http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
