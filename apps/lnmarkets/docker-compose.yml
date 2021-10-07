@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   lnmarkets:
-    image: ghcr.io/lnmarkets/umbrel:v0.0.4@sha256:5f529a7dcbb81196614177e3df7138fcf1106db90944ae586225724067a012d7
+    image: ghcr.io/lnmarkets/umbrel:v1.0.0@sha256:0b4c340f7a8b676f093904d3c3ac4ae8e82965d3a8b5b440f2c21a1b8807a4ee
     user: 1000:1000
     init: true
     restart: on-failure
