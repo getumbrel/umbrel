@@ -5,7 +5,7 @@
         "name": "Node-RED",
         "version": "2.0.6-12",
         "tagline": "A visual tool for wiring the Internet of Things.",
-        "description": "Node-RED is a programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.\n\nIt provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click.\n\nWarning: Node-RED one Umbrel is able to talk directly to Bitcoin Core, LND and Electrum. Bear this in mind when installing third-party Node-RED nodes.",
+        "description": "Node-RED is a programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.\n\nIt provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click.\n\nWarning: Node-RED on Umbrel is able to talk directly to Bitcoin Core, LND and Electrum, due to this you should be careful when installing third-party Node-RED nodes.",
         "developer": "OpenJS Foundation",
         "website": "https://nextcloud.com",
         "dependencies": [
