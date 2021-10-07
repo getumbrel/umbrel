@@ -210,14 +210,6 @@ if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
   rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
 fi
 
-# Handle updating mysql conf for samourai-server app
-samourai_app_mysql_conf="${UMBREL_ROOT}/apps/samourai-server/mysql/mysql-dojo.cnf"
-samourai_data_mysql_conf="${UMBREL_ROOT}/app-data/samourai-server/mysql/mysql-dojo.cnf"
-if [[ -f "${samourai_app_mysql_conf}" ]] && [[ -f "${samourai_data_mysql_conf}" ]]; then
-  echo "Found samourai-server install, attempting to update DB configuration..."
-  cp "${samourai_app_mysql_conf}" "${samourai_data_mysql_conf}"
-fi
-
 # Handle hidden service migration for samourai-server app
 samourai_app_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server"
 samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
