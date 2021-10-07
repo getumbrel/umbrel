@@ -19,6 +19,7 @@ services:
   oracleserver:
     image: bitcoinscala/bitcoin-s-oracle-server:1.7.0-212-d9126650-SNAPSHOT
     user: "1000:1000"
+    restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
     environment:
