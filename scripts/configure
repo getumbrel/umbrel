@@ -407,6 +407,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-krystal-bull-ip>/${APP_KRYSTAL_BULL_IP}/g" "${template}"
   sed -i "s/<app-krystal-bull-port>/${APP_KRYSTAL_BULL_PORT}/g" "${template}"
   sed -i "s/<app-krystal-bull-server-ip>/${APP_KRYSTAL_BULL_SERVER_IP}/g" "${template}"
+done
 
 ##########################################################
 ############## Override main config files ################
