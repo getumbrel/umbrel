@@ -137,12 +137,6 @@ echo "-----------------"
 docker ps --format="table {{.Names}}\t{{.Status}}"
 
 echo
-echo "IPv6NAT logs"
-echo "-----------------"
-echo
-docker-compose logs --tail=30 ipv6nat
-
-echo
 echo "Bitcoin Core logs"
 echo "-----------------"
 echo
