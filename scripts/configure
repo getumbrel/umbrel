@@ -202,6 +202,8 @@ APP_SQUEAKNODE_PORT="12994"
 APP_SQUEAKNODE_GRPC_PORT="8994"
 APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
+APP_NODE_RED_IP="10.21.21.57"
+APP_NODE_RED_PORT="1880"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -401,6 +403,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-grpc-port>/${APP_SQUEAKNODE_GRPC_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-port>/${APP_SQUEAKNODE_P2P_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
+  sed -i "s/<app-node-red-ip>/${APP_NODE_RED_IP}/g" "${template}"
+  sed -i "s/<app-node-red-port>/${APP_NODE_RED_PORT}/g" "${template}"
 done
 
 ##########################################################
