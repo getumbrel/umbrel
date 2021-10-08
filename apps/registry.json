@@ -1,31 +1,5 @@
 [
     {
-        "id": "node-red",
-        "category": "Automation",
-        "name": "Node-RED",
-        "version": "2.0.6-12",
-        "tagline": "A visual tool for wiring the Internet of Things.",
-        "description": "Node-RED is a programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.\n\nIt provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click.\n\nWarning: Node-RED on Umbrel is able to talk directly to Bitcoin Core, LND and Electrum, due to this you should be careful when installing third-party Node-RED nodes.",
-        "developer": "OpenJS Foundation",
-        "website": "https://nextcloud.com",
-        "dependencies": [
-            "bitcoind",
-            "electrum",
-            "lnd"
-        ],
-        "repo": "https://github.com/node-red/node-red",
-        "support": "https://nodered.org/about/community/slack/",
-        "port": 1880,
-        "gallery": [
-            "1.jpg",
-            "2.jpg",
-            "3.jpg"
-        ],
-        "path": "",
-        "defaultPassword": "moneyprintergobrrr",
-        "torOnly": false
-    },
-    {
       "id": "nextcloud",
       "category": "Files",
       "name": "Nextcloud",
@@ -111,6 +85,32 @@
         ],
         "path": "",
         "defaultPassword": "",
+        "torOnly": false
+    },
+    {
+        "id": "node-red",
+        "category": "Automation",
+        "name": "Node-RED",
+        "version": "2.0.6-12",
+        "tagline": "Wire together the Internet of Things",
+        "description": "Node-RED is a visual programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.\n\nIt provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click. A built-in library allows you to save useful functions, templates or flows for re-use.\n\nThe flows created in Node-RED are stored using JSON which can be easily imported and exported for sharing with others. An online flow library allows you to share your best flows with the world.\n\nWarning: Node-RED on Umbrel is able to connect directly to Bitcoin Core, LND and Electrum, due to this you should be careful when installing third-party Node-RED nodes.",
+        "developer": "OpenJS Foundation",
+        "website": "https://nodered.org",
+        "dependencies": [
+            "bitcoind",
+            "electrum",
+            "lnd"
+        ],
+        "repo": "https://github.com/node-red/node-red",
+        "support": "https://nodered.org/about/community/slack/",
+        "port": 1880,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
     {
