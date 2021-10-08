@@ -28,3 +28,7 @@ HiddenServicePort 80 <app-krystal-bull-ip>:3001
 # node-red Hidden Service
 HiddenServiceDir /var/lib/tor/app-node-red
 HiddenServicePort 80 <app-node-red-ip>:<app-node-red-port>
+
+# lnmarkets Hidden Service
+HiddenServiceDir /var/lib/tor/app-lnmarkets
+HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
