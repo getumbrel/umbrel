@@ -21,6 +21,10 @@ HiddenServiceDir /var/lib/tor/app-squeaknode-p2p
 HiddenServicePort <app-squeaknode-p2p-port> <app-squeaknode-ip>:<app-squeaknode-p2p-port>
 HiddenServicePort <app-squeaknode-p2p-testnet-port> <app-squeaknode-ip>:<app-squeaknode-p2p-testnet-port>
 
+# krystal-bull Hidden Service
+HiddenServiceDir /var/lib/tor/app-krystal-bull
+HiddenServicePort 80 <app-krystal-bull-ip>:3001
+
 # node-red Hidden Service
 HiddenServiceDir /var/lib/tor/app-node-red
 HiddenServicePort 80 <app-node-red-ip>:<app-node-red-port>
