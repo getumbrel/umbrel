@@ -17,7 +17,8 @@
           "2.jpg",
           "3.jpg"
       ],
-      "path": "/login?user=umbrel",
+      "path": "",
+      "defaultUsername": "umbrel",
       "defaultPassword": "moneyprintergobrrr",
       "torOnly": false
     },
@@ -40,6 +41,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -62,6 +64,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -84,6 +87,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -110,6 +114,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "umbrel",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -132,6 +137,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -154,6 +160,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -176,6 +183,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -198,6 +206,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -220,6 +229,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -242,6 +252,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": true
     },
@@ -267,6 +278,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -291,6 +303,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -314,6 +327,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -337,6 +351,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -360,6 +375,7 @@
             "3.jpg"
         ],
         "path": "/connect",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -383,6 +399,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
@@ -407,6 +424,7 @@
             "4.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
@@ -430,11 +448,12 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
         "id": "lnbits",
-        "category": "Lightning Node Management",
+        "category": "Finance",
         "name": "LNbits",
         "version": "9f67b98",
         "tagline": "Multi-user wallet management system",
@@ -453,11 +472,12 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
         "id": "btcpay-server",
-        "category": "Payments",
+        "category": "Finance",
         "name": "BTCPay Server",
         "version": "1.2.3",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
@@ -477,6 +497,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -500,6 +521,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -523,12 +545,13 @@
             "2.jpg",
             "3.jpg"
         ],
-        "path": "/login?user=umbrel",
+        "path": "",
+        "defaultUsername": "umbrel",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
         "id": "krystal-bull",
-        "category": "Social",
+        "category": "Finance",
         "name": "Krystal Bull",
         "version": "1.7.0-212-d9126650",
         "tagline": "Become an oracle and create Bitcoin bets",
