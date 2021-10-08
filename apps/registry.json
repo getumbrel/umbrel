@@ -549,7 +549,7 @@
     },
     {
         "id": "lnmarkets",
-        "category": "",
+        "category": "Finance",
         "name": "LNMarkets",
         "version": "1.0.0",
         "tagline": "Trade Bitcoin derivatives on Lightning",
