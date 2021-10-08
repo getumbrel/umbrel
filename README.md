@@ -16,7 +16,7 @@ This is the master repository of Umbrel and contains the framework for orchestra
 
 It is platform and architecture-agnostic, thus can be used to directly spin up instances of Umbrel without installing the [Umbrel OS](https://github.com/getumbrel/umbrel-os) since all orchestrated services use multi-architecture Docker images.
 
-We run it on Raspbery Pis (ARMv8) as a part of [Umbrel OS](https://github.com/getumbrel/umbrel-os), Ubuntu (x64) for [testnet.getumbrel.com](https://testnet.getumbrel.com) and macOS (x64) for local development.
+We run it on Raspberry Pis (ARMv8) as a part of [Umbrel OS](https://github.com/getumbrel/umbrel-os), Ubuntu (x64) for [testnet.getumbrel.com](https://testnet.getumbrel.com) and macOS (x64) for local development.
 
 ## 🚀 Getting started
 
@@ -44,7 +44,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.4.2.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.4.3.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run Umbrel
@@ -135,7 +135,7 @@ If you're looking for a bigger challenge, before opening a pull request please [
 
 ## 📜 License
 
-Umbrel is licensed under the PolyForm Noncommercial 1.0.0 license. TL;DR — You're free to use, fork, modify, and redestribute Umbrel for personal and nonprofit use under the same license. If you're interested to use Umbrel for commercial purposes, such as selling plug-and-play home servers with Umbrel, etc — please reach out to us at partner@getumbrel.com.
+Umbrel is licensed under the PolyForm Noncommercial 1.0.0 license. TL;DR — You're free to use, fork, modify, and redestribute Umbrel for personal and nonprofit use under the same license. If you're interested in using Umbrel for commercial purposes, such as selling plug-and-play home servers with Umbrel, etc — please reach out to us at partner@getumbrel.com.
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE.md)
 

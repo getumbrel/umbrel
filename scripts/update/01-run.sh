@@ -195,20 +195,19 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Remove legacy electrs dir
+legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
+if [[ -d "${legacy_electrs_dir}" ]]; then
+  echo "Found legacy electrs dir, removing it..."
+  rm --recursive --force "${legacy_electrs_dir}"
+fi
+
 # Handle updating static assets for samourai-server app
 samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
 samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
 if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
   echo "Found samourai-server install, attempting to update static assets and nginx configuration..."
   rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
-fi
-
-# Handle updating mysql conf for samourai-server app
-samourai_app_mysql_conf="${UMBREL_ROOT}/apps/samourai-server/mysql/mysql-dojo.cnf"
-samourai_data_mysql_conf="${UMBREL_ROOT}/app-data/samourai-server/mysql/mysql-dojo.cnf"
-if [[ -f "${samourai_app_mysql_conf}" ]] && [[ -f "${samourai_data_mysql_conf}" ]]; then
-  echo "Found samourai-server install, attempting to update DB configuration..."
-  cp "${samourai_app_mysql_conf}" "${samourai_data_mysql_conf}"
 fi
 
 # Handle hidden service migration for samourai-server app
