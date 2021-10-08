@@ -1,6 +1,6 @@
 {
-    "version": "0.4.2",
-    "name": "Umbrel v0.4.2",
+    "version": "0.4.4",
+    "name": "Umbrel v0.4.4",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.2 brings the latest versions of Samourai Server, Mempool, Home Assistant, BTCPay Server, Nextcloud, BTC RPC Explorer, Pi-hole, Synapse, Element, LNbits, Gitea, code-server, and a brand new app — Squeaknode, to the Umbrel App Store, along with an updated Electrum server, performance upgrades, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This version of Umbrel brings Bitcoin Core 22.0, lower disk space usage (free up ~50GB), 3 brand new apps in the Umbrel App Store — Node-RED, Krystal Bull and LN Markets, performance improvements, updated apps, and more.\n\nPlease note that the Electrum server on your Umbrel will be unavailable for ~12 hours after the update, and any wallets connected to it (BitBoxApp, BlueWallet on-chain only, Electrum Wallet and Sparrow) will not be able to connect to your Umbrel during that time, along with the Mempool and BTC RPC Explorer apps.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

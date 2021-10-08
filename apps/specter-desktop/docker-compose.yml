@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lncm/specter-desktop:v1.5.1@sha256:fcfd2d5b5808c48717af7830b6da92606fbd7f5edcdd62b5766a0cb2f08f2ffe
+    image: lncm/specter-desktop:v1.6.0@sha256:d641f3f81f2450e4f36803b39dc061a999f48eed8a8c4a1de4110391115938b0
     stop_signal: SIGINT
     restart: on-failure
     stop_grace_period: 1m

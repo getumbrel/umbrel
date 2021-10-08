@@ -64,7 +64,7 @@ services:
                         ipv6_address: $NGINX_IPV6
         bitcoin:
                 container_name: bitcoin
-                image: lncm/bitcoind:v0.21.1@sha256:5bedb46d698de16c59e9e43d31485d0d82239bd437d62ac7cf47ebb633214f37
+                image: lncm/bitcoind:v22.0@sha256:37a1adb29b3abc9f972f0d981f45e41e5fca2e22816a023faa9fdc0084aa4507
                 depends_on: [ tor, manager, nginx ]
                 volumes:
                         - ${PWD}/bitcoin:/data/.bitcoin
@@ -78,7 +78,7 @@ services:
                         ipv6_address: $BITCOIN_IPV6
         lnd:
                 container_name: lnd
-                image: lightninglabs/lnd:v0.13.1-beta@sha256:f26ddbbea3f7bad45d994e6258b8198acaebf65e575eedf2a566d04f0c1fb9d9
+                image: lightninglabs/lnd:v0.13.3-beta@sha256:b8f96d4d7fb9dcd349542240a6bff1ca0170715a16e6d79b0e9188e34ea18471
                 user: 1000:1000
                 depends_on: [ tor, manager ]
                 volumes:
@@ -97,7 +97,7 @@ services:
                         ipv6_address: $LND_IPV6
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.25@sha256:03ac7a94d08f2e678e494baf748152a4d6905d2b4dd1726ae55e3c5b154bec62
+                image: getumbrel/dashboard:v0.3.27@sha256:acffdd690dd3b6da8cd7910bac970cc1bbab07090869dbd982ae48706fee36ac
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -106,7 +106,7 @@ services:
                         ipv6_address: $DASHBOARD_IPV6
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.13@sha256:cb0c7a66de89c0a8b8c8e292086f9508f19a8c63c7e962d7f97723c4fd8ec367
+                image: getumbrel/manager:v0.2.14@sha256:331406ac0232285b729404dc28e6bccb89def6c7974baf640b3726dfb9704105
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -206,7 +206,7 @@ services:
                         ipv6_address: $NEUTRINO_SWITCHER_IPV6
         electrs:
               container_name: electrs
-              image: getumbrel/electrs:v0.8.11@sha256:71f3cb021f113fbeaf2312d37998c1dc99ff2c7a399d29c9e540b16e62c3696c
+              image: getumbrel/electrs:v0.9.0@sha256:e52c137ec59b44d76695722f03a5fc021c9b02c2e40c324b4bb6094b358561e8
               volumes:
                 - ${PWD}/bitcoin:/data/.bitcoin:ro
                 - ${PWD}/electrs:/data
