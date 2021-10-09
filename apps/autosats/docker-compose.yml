@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bezysoftware/autosats:v0.0.2
+    image: bezysoftware/autosats:v0.0.3
     restart: on-failure
     stop_grace_period: 1m
     ports:
