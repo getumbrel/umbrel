@@ -32,3 +32,7 @@ HiddenServicePort 80 <app-node-red-ip>:<app-node-red-port>
 # lnmarkets Hidden Service
 HiddenServiceDir /var/lib/tor/app-lnmarkets
 HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
+
+# tallycoin-connectHidden Service
+HiddenServiceDir /var/lib/tor/app-tallycoin-connect
+HiddenServicePort 80 <app-tallycoin-connect-ip>:<app-tallycoin-connect-port>
