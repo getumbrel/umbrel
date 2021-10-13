@@ -2,13 +2,13 @@ version: "3.7"
 
 services:
   web:
-    image: trinitytech/feeds:v2.0.1.1@sha256:42a213afefa68a74190298755edc44c06218a89586c2ea43442c9706719107dc
+    image: trinitytech/feeds:v2.0.1.1@sha256:6787f3278e333b5e48fb61a931a7c00c00948823c21dca914ad570bc1e8264fd
     restart: on-failure
     stop_grace_period: 5s
     ports:
       - "$APP_FEEDS_SERVICE_PORT:10018"
     volumes:
-      - ${APP_DATA_DIR}/data:/var/lib/feedsd
+      - ${APP_DATA_DIR}/data:/feedsd/var/lib
     networks:
       default:
         ipv4_address: $APP_FEEDS_SERVICE_IP
