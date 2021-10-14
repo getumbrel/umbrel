@@ -2,13 +2,17 @@ version: "3.7"
 
 services:
   web:
-    image: bezysoftware/autosats:v0.0.3
+    image: bezysoftware/autosats:v0.1.0
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 3311:80
     volumes:
       - ${APP_DATA_DIR}/data:/app_data
+      - ${LND_DATA_DIR}:/lnd:ro
     environment:
-      Bitcoin__Auth: "$BITCOIN_RPC_USER:$BITCOIN_RPC_PASS"
-      Bitcoin__Url: "http://$BITCOIN_IP:$BITCOIN_RPC_PORT"
+      Wallet__Type: lightning
+      Wallet__Lightning__ConnectionType: "lndREST"
+      Wallet__Lightning__BaseUri: "https://$LND_IP:$LND_REST_PORT"
+      Wallet__Lightning__MacaroonFilePath: "/lnd/data/chain/bitcoin/mainnet/walletkit.macaroon"
+      Wallet__Lightning__AllowInsecure: "true"
