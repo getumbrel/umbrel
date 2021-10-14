@@ -202,6 +202,13 @@ APP_SQUEAKNODE_PORT="12994"
 APP_SQUEAKNODE_GRPC_PORT="8994"
 APP_SQUEAKNODE_P2P_PORT="8555"
 APP_SQUEAKNODE_P2P_TESTNET_PORT="18555"
+APP_KRYSTAL_BULL_IP="10.21.21.56"
+APP_KRYSTAL_BULL_PORT="3010"
+APP_KRYSTAL_BULL_SERVER_IP="10.21.21.57"
+APP_NODE_RED_IP="10.21.21.55"
+APP_NODE_RED_PORT="1880"
+APP_LNMARKETS_IP="10.21.21.58"
+APP_LNMARKETS_PORT="4242"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -401,6 +408,13 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-grpc-port>/${APP_SQUEAKNODE_GRPC_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-port>/${APP_SQUEAKNODE_P2P_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-ip>/${APP_KRYSTAL_BULL_IP}/g" "${template}"
+  sed -i "s/<app-krystal-bull-port>/${APP_KRYSTAL_BULL_PORT}/g" "${template}"
+  sed -i "s/<app-krystal-bull-server-ip>/${APP_KRYSTAL_BULL_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-node-red-ip>/${APP_NODE_RED_IP}/g" "${template}"
+  sed -i "s/<app-node-red-port>/${APP_NODE_RED_PORT}/g" "${template}"
+  sed -i "s/<app-lnmarkets-ip>/${APP_LNMARKETS_IP}/g" "${template}"
+  sed -i "s/<app-lnmarkets-port>/${APP_LNMARKETS_PORT}/g" "${template}"
 done
 
 ##########################################################

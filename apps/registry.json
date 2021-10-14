@@ -17,7 +17,8 @@
           "2.jpg",
           "3.jpg"
       ],
-      "path": "/login?user=umbrel",
+      "path": "",
+      "defaultUsername": "umbrel",
       "defaultPassword": "moneyprintergobrrr",
       "torOnly": false
     },
@@ -40,6 +41,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -47,7 +49,7 @@
         "id": "pi-hole",
         "category": "Networking",
         "name": "Pi-hole",
-        "version": "2021.09",
+        "version": "2021.10",
         "tagline": "Block ads on your entire network",
         "description": "Instead of browser plugins or other software on each computer, install Pi-hole® on your Umbrel and your entire network is protected. Network-level blocking allows you to block ads in non-traditional places such as mobile apps and smart TVs, regardless of hardware or OS. Since advertisements are blocked before they are downloaded, network performance is improved and will feel faster. \n\nIn addition to blocking advertisements, Pi-hole® has an informative Web interface that shows stats on all the domains being queried on your network. Pi-hole® works fine with an existing DHCP server, but you can use Pi-hole®’s to keep your network management in one place.\n\n Pi-hole® and the Pi-hole® logo are registered trademarks of Pi-hole. Umbrel is not sponsored, endorsed by, or associated with Pi-hole®.",
         "developer": "Pi-hole®",
@@ -62,6 +64,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -84,7 +87,35 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
+        "torOnly": false
+    },
+    {
+        "id": "node-red",
+        "category": "Automation",
+        "name": "Node-RED",
+        "version": "2.0.6-12",
+        "tagline": "Wire together the Internet of Things",
+        "description": "Node-RED is a visual programming tool for wiring together hardware devices, APIs and online services in new and interesting ways.\n\nIt provides a browser-based editor that makes it easy to wire together flows using the wide range of nodes in the palette that can be deployed to its runtime in a single-click. A built-in library allows you to save useful functions, templates or flows for re-use.\n\nThe flows created in Node-RED are stored using JSON which can be easily imported and exported for sharing with others. An online flow library allows you to share your best flows with the world.\n\nWarning: Node-RED on Umbrel is able to connect directly to Bitcoin Core, LND and Electrum, due to this you should be careful when installing third-party Node-RED nodes.",
+        "developer": "OpenJS Foundation",
+        "website": "https://nodered.org",
+        "dependencies": [
+            "bitcoind",
+            "electrum",
+            "lnd"
+        ],
+        "repo": "https://github.com/node-red/node-red",
+        "support": "https://nodered.org/about/community/slack/",
+        "port": 1880,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
     {
@@ -106,6 +137,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr",
         "torOnly": false
     },
@@ -128,6 +160,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -150,6 +183,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -172,6 +206,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -194,6 +229,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": false
     },
@@ -216,6 +252,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "",
         "torOnly": true
     },
@@ -241,6 +278,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -265,13 +303,14 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
         "id": "samourai-server",
         "category": "Wallet Servers",
         "name": "Samourai Server",
-        "version": "1.10.1",
+        "version": "1.11.0",
         "tagline": "Your private backing server for Samourai Wallet",
         "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.\n\nBundles Whirlpool CLI v0.10.11.",
         "developer": "Samourai",
@@ -288,6 +327,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -311,6 +351,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -334,6 +375,7 @@
             "3.jpg"
         ],
         "path": "/connect",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -357,6 +399,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
@@ -381,13 +424,14 @@
             "4.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
         "id": "thunderhub",
         "category": "Lightning Node Management",
         "name": "ThunderHub",
-        "version": "0.12.24",
+        "version": "0.12.30",
         "tagline": "Take full control of your Lightning node",
         "description": "ThunderHub allows you to take full control of your Lightning node with a slick and awesome UI. Explore all the options that ThunderHub has to offer, from sending and receiving Lightning payments, to checking your node's health statistics, and even more advanced options like channel rebalancing and multi-path lightning payments.\n\nManaging and monitoring your node has never been easier with transaction reports, graphs and a huge assortment of different features all bundled inside of this great tool.",
         "developer": "Anthony Potdevin",
@@ -404,13 +448,14 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": "moneyprintergobrrr"
     },
     {
         "id": "lnbits",
-        "category": "Lightning Node Management",
+        "category": "Finance",
         "name": "LNbits",
-        "version": "19ae1dd",
+        "version": "9f67b98",
         "tagline": "Multi-user wallet management system",
         "description": "LNbits is a simple multi-user and account system for Lightning Network that can be used for creating separate Lightning wallets for friends and family members. You can also create multiple accounts for yourself to mitigate the risk of exposing applications to your full balance via unique API keys for each wallet.\n\nLNbits is packaged with tools to help manage funds, such as a table of transactions, line chart of spending, export to CSV, and more to come. It provides an extendable platform for expanding Lightning Network functionality via LNbits extension framework, and can also be used as a fallback wallet for the LNURL scheme.",
         "developer": "LNbits",
@@ -427,11 +472,12 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
         "id": "btcpay-server",
-        "category": "Payments",
+        "category": "Finance",
         "name": "BTCPay Server",
         "version": "1.2.3",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
@@ -451,6 +497,7 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
@@ -474,13 +521,14 @@
             "3.jpg"
         ],
         "path": "",
+        "defaultUsername": "",
         "defaultPassword": ""
     },
     {
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.152",
+        "version": "0.1.159",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
         "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the timestamp/blockhash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
@@ -497,7 +545,52 @@
             "2.jpg",
             "3.jpg"
         ],
-        "path": "/login?user=umbrel",
+        "path": "",
+        "defaultUsername": "umbrel",
         "defaultPassword": "moneyprintergobrrr"
+    },
+    {
+        "id": "krystal-bull",
+        "category": "Finance",
+        "name": "Krystal Bull",
+        "version": "1.7.0-212-d9126650",
+        "tagline": "Become an oracle and create Bitcoin bets",
+        "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
+        "developer": "SuredBits",
+        "website": "https://suredbits.com/",
+        "dependencies": [],
+        "repo": "https://github.com/bitcoin-s/krystal-bull",
+        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "port": 3010,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
+    },
+    {
+        "id": "lnmarkets",
+        "category": "Finance",
+        "name": "LN Markets",
+        "version": "1.0.0",
+        "tagline": "Trade Bitcoin derivatives on Lightning",
+        "description": "LN Markets is the first Lightning-native Bitcoin derivatives trading platform.\n\nLN Markets enables traders to take minimal counterparty risk: you can trade directly from your Lightning wallet for instant and almost costless transactions. Since March 2020, we have processed over $200 million of trading volume, with a median fee of 1 sat for instant P&L delivery to your wallet.\n\nThis Umbrel App gives you another way to interact with LN Markets: you can directly deposit, withdraw, get trading stats and get instantly connected to your account to take positions as usual. More features may come in the future!\n\nThank you for your support and let’s keep building the future of finance together!",
+        "developer": "LN Markets",
+        "website": "https://lnmarkets.com",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/lnmarkets/umbrel",
+        "support": "https://www.t.me/lnmarkets",
+        "port": 4242,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
     }
 ]
