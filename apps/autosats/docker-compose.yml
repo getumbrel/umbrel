@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bezysoftware/autosats:v0.1.0
+    image: bezysoftware/autosats:v0.2.0
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -14,5 +14,5 @@ services:
       Wallet__Type: lightning
       Wallet__Lightning__ConnectionType: "lndREST"
       Wallet__Lightning__BaseUri: "https://$LND_IP:$LND_REST_PORT"
-      Wallet__Lightning__MacaroonFilePath: "/lnd/data/chain/bitcoin/mainnet/walletkit.macaroon"
-      Wallet__Lightning__AllowInsecure: "true"
+      Wallet__Lightning__MacaroonFilePath: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/walletkit.macaroon"
+      Wallet__Lightning__CertificatePath: "/lnd/tls.cert"
