@@ -125,6 +125,12 @@ echo "-----------------"
 docker ps --format="table {{.Names}}\t{{.Status}}"
 
 echo
+echo "Umbrel logs"
+echo "-----------"
+echo
+docker-compose logs --tail=30 manager middleware
+
+echo
 echo "Bitcoin Core logs"
 echo "-----------------"
 echo
