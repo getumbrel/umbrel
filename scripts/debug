@@ -137,6 +137,12 @@ echo
 docker-compose logs --tail=30 lnd
 
 echo
+echo "electrs logs"
+echo "--------"
+echo
+docker-compose logs --tail=30 electrs
+
+echo
 echo "Tor logs"
 echo "--------"
 echo
