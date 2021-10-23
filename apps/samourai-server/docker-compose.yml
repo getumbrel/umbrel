@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: louneskmt/dojo-db:1.3.0-low-mem@sha256:c48331c7c71fa5e1e16dec91f3a5ddea7cc1cb590316de1c4e5f7e1f0033e144
+    image: louneskmt/dojo-db:1.3.0-low-mem@sha256:6ca2bb6a3f0861abf1b5c9df7c4b6e85d13c3bf697fe81ea8d3d0d861116fe3b
     init: true
     restart: on-failure
     stop_grace_period: 5m
