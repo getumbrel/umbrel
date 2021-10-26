@@ -1,6 +1,6 @@
 {
-    "version": "0.4.5",
-    "name": "Umbrel v0.4.5",
+    "version": "0.4.6",
+    "name": "Umbrel v0.4.6",
     "requires": ">=0.2.1",
-    "notes": "This version of Umbrel brings the latest version of Electrum server (electrs 0.9.1), bug fixes, and updated apps to the Umbrel App Store, including the latest Samourai Server app which fixes a connectivity issue in the previous version.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This version of Umbrel contains a bugfix for the Samourai Server app's connectivity issue. If you're facing an issue with it currently, please try re-installing the app again after the update.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
