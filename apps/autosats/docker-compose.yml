@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bezysoftware/autosats:v0.2.0
+    image: bezysoftware/autosats:v0.3.0
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -11,6 +11,7 @@ services:
       - ${APP_DATA_DIR}/data:/app_data
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
+      Application__Password: moneyprintergobrrr
       Wallet__Type: lightning
       Wallet__Lightning__ConnectionType: "lndREST"
       Wallet__Lightning__BaseUri: "https://$LND_IP:$LND_REST_PORT"
