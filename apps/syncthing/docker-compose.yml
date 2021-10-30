@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+  syncthing:
+    image: syncthing/syncthing
+    restart: on-failure
+    container_name: syncthing
+    stop_grace_period: 1m
+    hostname: umbrel-syncthing
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ${APP_DATA_DIR}/data:/var/syncthing
+      - ${LND_DATA_DIR}:/var/lnd:ro
+    ports:
+      - 8384:8384
+      - 22000:22000
+  # Used to create the marker Syncthing needs to share the lnd data dir.
+  lnd-marker:
+    image: debian:buster-slim
+    command: "mkdir /lnd/.stfolder && exit"
+    volumes:
+      - ${LND_DATA_DIR}:/lnd
