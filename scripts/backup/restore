@@ -85,4 +85,8 @@ echo "This can take a while, depending on your number of channels."
 
 $UMBREL_ROOT/bin/lncli restorechanbackup --multi_file "/data/.lnd/channel-$RESTORE_ID.backup"
 
+echo "Cleaning files..."
+
 rm -Rf "$BACKUP_FOLDER_PATH" "$BACKUP_FILE_LND"
+
+echo "Done!"
