@@ -3,6 +3,7 @@
 set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+RESTORE_ID="$RANDOM"
 
 show_help() {
   cat << EOF
@@ -54,7 +55,7 @@ fi
 if [[ "$BACKUP_FILE" == *.pgp ]]; then
   echo "Backup is encrypted, decrypting backup..."
 
-  BACKUP_FOLDER_PATH="/tmp/backup"
+  BACKUP_FOLDER_PATH="/tmp/backup-$RESTORE_ID"
   mkdir -p "${BACKUP_FOLDER_PATH}"
 
   cat "${BACKUP_FILE}" | gpg \
@@ -76,13 +77,12 @@ if [[ "$BACKUP_FILE" == *.pgp ]]; then
   echo "Backup decrypted."
 fi
 
-echo "Extracting backup data from file..."
-
-BACKUP_DATA="$(cat $BACKUP_FILE | xxd -p | tr -d '\n')"
+BACKUP_FILE_LND="$UMBREL_ROOT/lnd/channel-$RESTORE_ID.backup"
+mv -f "$BACKUP_FILE" "$BACKUP_FILE_LND"
 
 echo "Restoring channel backup..."
 echo "This can take a while, depending on your number of channels."
 
-$UMBREL_ROOT/bin/lncli restorechanbackup --multi_backup "$BACKUP_DATA"
+$UMBREL_ROOT/bin/lncli restorechanbackup --multi_file "/data/.lnd/channel-$RESTORE_ID.backup"
 
-rm -Rf "$BACKUP_FOLDER_PATH"
+rm -Rf "$BACKUP_FOLDER_PATH" "$BACKUP_FILE_LND"
