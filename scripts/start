@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "$1" == "-h" ]; then
+  cat << EOF
+CLI for starting your Umbrel instance
+
+Usage: [-h] [-u]
+
+Arguments:
+    -h                         show this help text
+    -u                         specify a url aka https://example.com
+EOF
+  exit 0
+fi
+
 # Start Umbrel
 
 if [[ $UID != 0 ]]; then
@@ -68,6 +81,9 @@ fi
 DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
 DEVICE_HOSTNAME="$(hostname)"
 DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,https://${DEVICE_HOSTNAME}.local,http://${DEVICE_HOSTNAME},https://${DEVICE_HOSTNAME}"
+if [ "$1" == "-u" ]; then
+  DEVICE_HOSTS="$DEVICE_HOSTS,$2"
+fi
 if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
     hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/web/hostname")
     DEVICE_HOSTS="${DEVICE_HOSTS},http://${hidden_service_url}"
