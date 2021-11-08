@@ -467,7 +467,7 @@ fi
 
 echo "Configuring permissions..."
 echo
-find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
+find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} + || true
 
 # Create configured status
 touch "${STATUS_DIR}/configured"
