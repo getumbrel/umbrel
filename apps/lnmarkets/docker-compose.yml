@@ -1,10 +1,10 @@
-version: '3.7'
+version: "3.7"
 
 services:
   lnmarkets:
-    image: ghcr.io/ln-markets/umbrel:v1.0.0@sha256:e7bfe4ae840bfddc0af398a9bc700044778d1090a7a56389265116d23dc13cab
-    user: 1000:1000
+    image: ghcr.io/ln-markets/umbrel:v1.1.4@sha256:d9168a2a3e1016b7cd302cde579ae3013aac57ebeaf89c44f5dbc02f604779cc
     init: true
+    user: 1000:1000
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -12,14 +12,12 @@ services:
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
-      APP_URL: 0.0.0.0
-      API_PORT: $APP_LNMARKETS_PORT
-
       LND_IP: $LND_IP
       LND_GRPC_PORT: $LND_GRPC_PORT
-      LND_REST_PORT: $LND_REST_PORT
-
       BITCOIN_NETWORK: $BITCOIN_NETWORK
+      APP_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
+      APP_DOMAIN: $APP_DOMAIN
+      API_PORT: $APP_LNMARKETS_PORT
     networks:
       default:
         ipv4_address: $APP_LNMARKETS_IP
