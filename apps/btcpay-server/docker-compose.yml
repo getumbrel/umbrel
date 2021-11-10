@@ -54,7 +54,8 @@ services:
 
   postgres:
     image: btcpayserver/postgres:13.4-4@sha256:938574253f985b9ac7814329b576dc04a8fe6e330e214afcf3cd0bf4b41eceb8
-    user: "1000:1000"
+    # This needs to run as root for migrations to succeed
+    # user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
     environment:
