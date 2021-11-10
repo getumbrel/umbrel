@@ -574,7 +574,7 @@
         "id": "lnmarkets",
         "category": "Finance",
         "name": "LN Markets",
-        "version": "1.1.3",
+        "version": "1.1.0",
         "tagline": "Trade Bitcoin derivatives on Lightning",
         "description": "LN Markets is the first Lightning-native Bitcoin derivatives trading platform.\n\nLN Markets enables traders to take minimal counterparty risk: you can trade directly from your Lightning wallet for instant and almost costless transactions. Since March 2020, we have processed over $200 million of trading volume, with a median fee of 1 sat for instant P&L delivery to your wallet.\n\nThis Umbrel App gives you another way to interact with LN Markets: you can directly deposit, withdraw, get trading stats and get instantly connected to your account to take positions as usual. More features may come in the future!\n\nThank you for your support and let’s keep building the future of finance together!",
         "developer": "LN Markets",
