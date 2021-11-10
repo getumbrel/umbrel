@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+  satsale:
+    image: satsale/satsale:0.2.1
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+    ports:
+      - 5000:5000
+    environment:
+      # Bitcoin Core connection details
+      BITCOIND_HOST: $BITCOIN_IP
+      BITCOIND_PORT: $BITCOIN_RPC_PORT
+      BITCOIND_USER: $BITCOIN_RPC_USER
+      BITCOIND_PASS: $BITCOIN_RPC_PASS
+      LND_DATA_DIR: $LND_DATA_DIR
+      LND_HOST: $LND_IP
+      LND_GRPC_PORT: $LND_GRPC_PORT
+      MACAROON_FILE: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon
+      TLS_FILE: /lnd/tls.cert
+
