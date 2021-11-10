@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: pihole/pihole:2021.10@sha256:ce9ba6e58a48ed3dbd6d1dbd884cb5dab6c1edb384b7f4b745ad72cca147a07a
+    image: pihole/pihole:2021.10.1@sha256:51d4686985cab06913588970ec386457c84f3df0a79dd7856c60b263b8cb40cc
     # Pi-hole doesn't currently support running as non-root
     # https://github.com/pi-hole/docker-pi-hole/issues/685
     # user: "1000:1000"

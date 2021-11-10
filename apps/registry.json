@@ -49,7 +49,7 @@
         "id": "pi-hole",
         "category": "Networking",
         "name": "Pi-hole",
-        "version": "2021.10",
+        "version": "2021.10.1",
         "tagline": "Block ads on your entire network",
         "description": "Instead of browser plugins or other software on each computer, install Pi-hole® on your Umbrel and your entire network is protected. Network-level blocking allows you to block ads in non-traditional places such as mobile apps and smart TVs, regardless of hardware or OS. Since advertisements are blocked before they are downloaded, network performance is improved and will feel faster. \n\nIn addition to blocking advertisements, Pi-hole® has an informative Web interface that shows stats on all the domains being queried on your network. Pi-hole® works fine with an existing DHCP server, but you can use Pi-hole®’s to keep your network management in one place.\n\n Pi-hole® and the Pi-hole® logo are registered trademarks of Pi-hole. Umbrel is not sponsored, endorsed by, or associated with Pi-hole®.",
         "developer": "Pi-hole®",
