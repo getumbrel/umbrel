@@ -1,6 +1,6 @@
 {
-    "version": "0.4.6",
-    "name": "Umbrel v0.4.6",
+    "version": "0.4.7",
+    "name": "Umbrel v0.4.7",
     "requires": ">=0.2.1",
-    "notes": "This version of Umbrel contains a bugfix for the Samourai Server app's connectivity issue. If you're facing an issue with it currently, please try re-installing the app again after the update.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This version of Umbrel brings LND 0.13.4 and updated apps (BTCPay Server, Specter Desktop, Pi-hole, Lightning Terminal, and more) to the Umbrel App Store.\n\nLND 0.13.4 fixes a bug discovered in the previous version which will break Neutrino functionality after the Taproot activation in ~3 days. Because Neutrino is only used when Bitcoin Core is still syncing, in short: if Bitcoin Core on your Umbrel hasn't finished syncing, please update immediately. If Bitcoin Core on your Umbrel is 100% synced already, you remain unaffected by this bug and can update at your convenience.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
