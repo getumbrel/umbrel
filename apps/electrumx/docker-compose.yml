@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  server:
+    image: lukechilds/electrumx:v1.16.0
+    user: "1000:1000"
+    init: true
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "${APP_ELECTRUMX_PORT}:50001"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      DAEMON_URL: http://${BITCOIN_RPC_USER}:${BITCOIN_RPC_PASS}@${BITCOIN_IP}:${BITCOIN_RPC_PORT}
+      COIN: BitcoinSegwit
+    networks:
+       default:
+         ipv4_address: $APP_ELECTRUMX_IP
