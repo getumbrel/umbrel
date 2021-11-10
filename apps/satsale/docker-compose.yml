@@ -11,6 +11,7 @@ services:
     ports:
       - 5000:5000
     environment:
+      DATA_DIR: ${APP_DATA_DIR}
       # Bitcoin Core connection details
       BITCOIND_HOST: $BITCOIN_IP
       BITCOIND_PORT: $BITCOIN_RPC_PORT
