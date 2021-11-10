@@ -19,6 +19,6 @@ services:
       LND_DATA_DIR: $LND_DATA_DIR
       LND_HOST: $LND_IP
       LND_GRPC_PORT: $LND_GRPC_PORT
-      MACAROON_FILE: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/admin.macaroon
+      MACAROON_FILE: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/invoice.macaroon
       TLS_FILE: /lnd/tls.cert
 
