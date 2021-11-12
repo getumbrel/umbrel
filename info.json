@@ -1,6 +1,6 @@
 {
-    "version": "0.4.4",
-    "name": "Umbrel v0.4.4",
+    "version": "0.4.7",
+    "name": "Umbrel v0.4.7",
     "requires": ">=0.2.1",
-    "notes": "This version of Umbrel brings Bitcoin Core 22.0, lower disk space usage (free up ~50GB), 3 brand new apps in the Umbrel App Store — Node-RED, Krystal Bull and LN Markets, performance improvements, updated apps, and more.\n\nPlease note that the Electrum server on your Umbrel will be unavailable for ~12 hours after the update, and any wallets connected to it (BitBoxApp, BlueWallet on-chain only, Electrum Wallet and Sparrow) will not be able to connect to your Umbrel during that time, along with the Mempool and BTC RPC Explorer apps.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This version of Umbrel brings LND 0.13.4 and updated apps (BTCPay Server, Specter Desktop, Pi-hole, Lightning Terminal, and more) to the Umbrel App Store.\n\nLND 0.13.4 fixes a bug discovered in the previous version which will break Neutrino functionality after the Taproot activation in ~3 days. Because Neutrino is only used when Bitcoin Core is still syncing, in short: if Bitcoin Core on your Umbrel hasn't finished syncing, please update immediately. If Bitcoin Core on your Umbrel is 100% synced already, you remain unaffected by this bug and can update at your convenience.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
