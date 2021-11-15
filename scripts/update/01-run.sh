@@ -236,6 +236,13 @@ if [[ -d "${thunderhub_data_dir}" ]]; then
   cp "${thunderhub_app_entrypoint}" "${thunderhub_data_entrypoint}"
 fi
 
+# Handle stripping hardcoded password for lightning-terminal app
+lightning_terminal_conf="${UMBREL_ROOT}/app-data/lightning-terminal/data/.lit/lit.conf"
+if [[ -f "${lightning_terminal_conf}" ]]; then
+  echo "Found lightning-terminal install, attempting to strip hardcoded password..."
+  sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
