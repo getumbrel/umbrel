@@ -227,6 +227,15 @@ if [[ -d "${rtl_data_dir}" ]]; then
   cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
 fi
 
+# Handle updating entrypoint for thunderhub app
+thunderhub_data_dir="${UMBREL_ROOT}/app-data/thunderhub"
+thunderhub_data_entrypoint="${thunderhub_data_dir}/data/entrypoint.sh"
+thunderhub_app_entrypoint="${UMBREL_ROOT}/apps/thunderhub/data/entrypoint.sh"
+if [[ -d "${thunderhub_data_dir}" ]]; then
+  echo "Found thunderhub install, attempting to update entrypoint..."
+  cp "${thunderhub_app_entrypoint}" "${thunderhub_data_entrypoint}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
