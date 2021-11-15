@@ -33,7 +33,7 @@ services:
       # App specific environment variables
       SQUEAKNODE_WEBADMIN_ENABLED: "true"
       SQUEAKNODE_WEBADMIN_USERNAME: "umbrel"
-      SQUEAKNODE_WEBADMIN_PASSWORD: "moneyprintergobrrr"
+      SQUEAKNODE_WEBADMIN_PASSWORD: "${APP_PASSWORD}"
 
       SQUEAKNODE_NODE_NETWORK: "$BITCOIN_NETWORK"
       SQUEAKNODE_NODE_SQK_DIR_PATH: "/sqk"
