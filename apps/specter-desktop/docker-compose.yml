@@ -14,6 +14,7 @@ services:
       - --host=0.0.0.0
       - --specter-data-folder=/data
     environment:
+      # TODO: APP_PASSWORD
       BTC_RPC_USER: $BITCOIN_RPC_USER
       BTC_RPC_PASSWORD: $BITCOIN_RPC_PASS
       BTC_RPC_HOST: $BITCOIN_IP
