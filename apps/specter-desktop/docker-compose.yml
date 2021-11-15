@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lncm/specter-desktop:v1.6.0@sha256:d641f3f81f2450e4f36803b39dc061a999f48eed8a8c4a1de4110391115938b0
+    image: lncm/specter-desktop:v1.7.1@sha256:e208bd4d9e20eadabaa543ce6093493c9727a6f9a083dd0d3b3d6723f82c4da6
     stop_signal: SIGINT
     restart: on-failure
     stop_grace_period: 1m
@@ -14,6 +14,7 @@ services:
       - --host=0.0.0.0
       - --specter-data-folder=/data
     environment:
+      # TODO: APP_PASSWORD
       BTC_RPC_USER: $BITCOIN_RPC_USER
       BTC_RPC_PASSWORD: $BITCOIN_RPC_PASS
       BTC_RPC_HOST: $BITCOIN_IP

@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: yzernik/squeaknode:v0.1.159@sha256:a6b9bd68f5d45015ef437a6b315ac79372bc273fcd9a7957c228b3a4a4908b7c
+    image: yzernik/squeaknode:v0.1.169@sha256:f4a7ee3a5a80f0e035ef78d38ac050de71168cfd6c463f877d2352dc8a77ebf1
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -26,17 +26,20 @@ services:
       SQUEAKNODE_LND_TLS_CERT_PATH: "/lnd/tls.cert"
       SQUEAKNODE_LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
 
+      # Tor environment variables
+      SQUEAKNODE_TOR_PROXY_IP: $TOR_PROXY_IP
+      SQUEAKNODE_TOR_PROXY_PORT: $TOR_PROXY_PORT
+
       # App specific environment variables
       SQUEAKNODE_WEBADMIN_ENABLED: "true"
       SQUEAKNODE_WEBADMIN_USERNAME: "umbrel"
-      SQUEAKNODE_WEBADMIN_PASSWORD: "moneyprintergobrrr"
+      SQUEAKNODE_WEBADMIN_PASSWORD: "${APP_PASSWORD}"
 
       SQUEAKNODE_NODE_NETWORK: "$BITCOIN_NETWORK"
       SQUEAKNODE_NODE_SQK_DIR_PATH: "/sqk"
       SQUEAKNODE_NODE_MAX_SQUEAKS: 10000
-      SQUEAKNODE_NODE_TOR_PROXY_IP: $TOR_PROXY_IP
-      SQUEAKNODE_NODE_TOR_PROXY_PORT: $TOR_PROXY_PORT
-      SQUEAKNODE_NODE_EXTERNAL_ADDRESS: $SQUEAKNODE_P2P_HIDDEN_SERVICE
+
+      SQUEAKNODE_SERVER_EXTERNAL_ADDRESS: $SQUEAKNODE_P2P_HIDDEN_SERVICE
 
       DEBUG: "squeaknode:*"
     networks:
