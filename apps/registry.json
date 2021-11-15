@@ -19,7 +19,7 @@
       ],
       "path": "",
       "defaultUsername": "umbrel",
-      "defaultPassword": "moneyprintergobrrr",
+      "deterministicPassword": true,
       "torOnly": false
     },
     {
@@ -42,7 +42,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr",
+        "deterministicPassword": true,
         "torOnly": false
     },
     {
@@ -65,7 +65,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr",
+        "deterministicPassword": true,
         "torOnly": false
     },
     {
@@ -138,7 +138,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr",
+        "deterministicPassword": true,
         "torOnly": false
     },
     {
@@ -400,7 +400,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr"
+        "deterministicPassword": true
     },
     {
         "id": "lightning-terminal",
@@ -425,7 +425,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr"
+        "deterministicPassword": true
     },
     {
         "id": "thunderhub",
@@ -449,7 +449,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": "moneyprintergobrrr"
+        "deterministicPassword": true
     },
     {
         "id": "lnbits",
@@ -547,7 +547,7 @@
         ],
         "path": "",
         "defaultUsername": "umbrel",
-        "defaultPassword": "moneyprintergobrrr"
+        "deterministicPassword": true
     },
     {
         "id": "krystal-bull",
