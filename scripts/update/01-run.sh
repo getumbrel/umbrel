@@ -218,6 +218,15 @@ if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_t
   mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
 fi
 
+# Handle updating entrypoint for ride-the-lightning app
+rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
+rtl_data_entrypoint="${rtl_data_dir}/rtl/entrypoint.sh"
+rtl_app_entrypoint="${UMBREL_ROOT}/apps/ride-the-lightning/rtl/entrypoint.sh"
+if [[ -d "${rtl_data_dir}" ]]; then
+  echo "Found ride-the-lightning install, attempting to update entrypoint..."
+  cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
