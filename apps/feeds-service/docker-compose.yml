@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: trinitytech/feeds:v2.0.1.2@sha256:6d473a3d27e6bb69f77762e6eacaea0b37a5557b0a61c33117932a650e3f8ed6
+    image: trinitytech/feeds:v2.0.2.1@sha256:56b3b29c4784f9464db363ff7228530b4075f0f45a4202d2d381257a58db78eb
     restart: on-failure
     stop_grace_period: 5s
     ports:
