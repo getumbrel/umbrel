@@ -1,6 +1,6 @@
 {
-    "version": "0.4.7",
-    "name": "Umbrel v0.4.7",
+    "version": "0.4.8",
+    "name": "Umbrel v0.4.8",
     "requires": ">=0.2.1",
-    "notes": "This version of Umbrel brings LND 0.13.4 and updated apps (BTCPay Server, Specter Desktop, Pi-hole, Lightning Terminal, and more) to the Umbrel App Store.\n\nLND 0.13.4 fixes a bug discovered in the previous version which will break Neutrino functionality after the Taproot activation in ~3 days. Because Neutrino is only used when Bitcoin Core is still syncing, in short: if Bitcoin Core on your Umbrel hasn't finished syncing, please update immediately. If Bitcoin Core on your Umbrel is 100% synced already, you remain unaffected by this bug and can update at your convenience.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel 0.4.8 brings a new security feature — unique cryptographically secure default app passwords derived from your 24 secret words. This will help protect your Umbrel even if an app's unique Tor URL gets leaked and you have not changed that app's default password.\n\nIf you have currently installed ThunderHub, Lightning Terminal, Ride The Lightning, Squeaknode or Code Server on your Umbrel, their default passwords will automatically upgrade to the newer, more secure passwords which can be found on their app store listing pages. In case you have already updated passwords of these apps manually, you can continue to use the same.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

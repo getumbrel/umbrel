@@ -13,7 +13,9 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       HOME: "/data"
+      APP_PASSWORD: "$APP_PASSWORD"
     command:
+        - --uipassword_env=APP_PASSWORD
         - --insecure-httplisten=0.0.0.0:$APP_LIGHTNING_TERMINAL_PORT
         - --network="$BITCOIN_NETWORK"
         - --lnd-mode="remote"

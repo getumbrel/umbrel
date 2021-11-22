@@ -16,7 +16,7 @@ services:
       - ${APP_DATA_DIR}/data/dnsmasq:/etc/dnsmasq.d/
     environment:
       - VIRTUAL_HOST=${APP_DOMAIN}
-      - WEBPASSWORD=moneyprintergobrrr
+      - WEBPASSWORD=${APP_PASSWORD}
     networks:
       default:
         ipv4_address: $APP_PI_HOLE_IP
