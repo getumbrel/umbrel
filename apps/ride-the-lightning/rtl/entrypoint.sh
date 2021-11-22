@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Migrate legacy default password
 sed -i 's/"multiPassHashed": "70c882380045d35807b45245bd49185991904ff47a5036dfe82103c49f9f0f31"/"multiPass": "'${APP_PASSWORD}'"/' $RTL_CONFIG_PATH/RTL-Config.json
