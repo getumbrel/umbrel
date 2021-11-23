@@ -32,3 +32,7 @@ HiddenServicePort 80 <app-node-red-ip>:<app-node-red-port>
 # lnmarkets Hidden Service
 HiddenServiceDir /var/lib/tor/app-lnmarkets
 HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
+
+# electrumx Hidden Service
+HiddenServiceDir /var/lib/tor/app-electrumx
+HiddenServicePort 50001 <app-electrumx-ip>:50001

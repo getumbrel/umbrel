@@ -225,6 +225,9 @@ APP_NODE_RED_IP="10.21.21.55"
 APP_NODE_RED_PORT="1880"
 APP_LNMARKETS_IP="10.21.21.58"
 APP_LNMARKETS_PORT="4242"
+APP_ELECTRUMX_IP="10.21.21.59"
+APP_ELECTRUMX_PORT="55001"
+
 # IPv6
 APPS_3_TOR_IPV6=`echo $APPS_3_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_BTC_RPC_EXPLORER_IPV6=`echo $APP_BTC_RPC_EXPLORER_IPV6 | sed 'y/\./:/; s/^/fd00::/'`
@@ -268,6 +271,7 @@ APP_KRYSTAL_BULL_IPV6=`echo APP_KRYSTAL_BULL_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_KRYSTAL_BULL_SERVER_IPV6=`echo APP_KRYSTAL_BULL_SERVER_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_NODE_RED_IPV6=`echo APP_NODE_RED_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_LNMARKETS_IPV6=`echo APP_LNMARKETS_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_ELECTRUMX_IPV6=`echo APP_ELECTRUMX_IP | sed 'y/\./:/; s/^/fd00::/'`
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -482,7 +486,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-squeaknode-grpc-port>/${APP_SQUEAKNODE_GRPC_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-port>/${APP_SQUEAKNODE_P2P_PORT}/g" "${template}"
   sed -i "s/<app-squeaknode-p2p-testnet-port>/${APP_SQUEAKNODE_P2P_TESTNET_PORT}/g" "${template}"
-
   sed -i "s/<app-squeaknode-envoy-ip>/${APP_SQUEAKNODE_ENVOY_IP}/g" "${template}"
   sed -i "s/<app-squeaknode-envoy-port>/${APP_SQUEAKNODE_ENVOY_PORT}/g" "${template}"
   sed -i "s/<app-krystal-bull-ip>/${APP_KRYSTAL_BULL_IP}/g" "${template}"
@@ -492,7 +495,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-node-red-port>/${APP_NODE_RED_PORT}/g" "${template}"
   sed -i "s/<app-lnmarkets-ip>/${APP_LNMARKETS_IP}/g" "${template}"
   sed -i "s/<app-lnmarkets-port>/${APP_LNMARKETS_PORT}/g" "${template}"
-  
+  sed -i "s/<app-electrumx-ip>/${APP_ELECTRUMX_IP}/g" "${template}"
+  sed -i "s/<app-electrumx-port>/${APP_ELECTRUMX_PORT}/g" "${template}"
   #Apps IPv6
   sed -i "s/<app-btc-rpc-explorer-ipv6>/${APP_BTC_RPC_EXPLORER_IPV6}/g" "${template}"
   sed -i "s/<app-thunderhub-ipv6>/${APP_THUNDERHUB_IPV6}/g" "${template}"
@@ -535,6 +539,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-krystal-bull-server-ipv6>/${APP_KRYSTAL_BULL_SERVER_IPV6}/g" "${template}"
   sed -i "s/<app-node-red-ipv6>/${APP_NODE_RED_IPV6}/g" "${template}"
   sed -i "s/<app-lnmarkets-ipv6>/${APP_LNMARKETS_IPV6}/g" "${template}"
+  sed -i "s/<app-electrumx-ipv6>/${APP_ELECTRUMX_IPV6}/g" "${template}"
   
 done
 
@@ -588,7 +593,7 @@ fi
 
 echo "Configuring permissions..."
 echo
-find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
+find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} + || true
 
 # Create configured status
 touch "${STATUS_DIR}/configured"

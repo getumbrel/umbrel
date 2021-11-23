@@ -12,7 +12,7 @@ services:
       - "${APP_DATA_DIR}/originals:/photoprism/originals"
       - "${APP_DATA_DIR}/storage:/photoprism/storage"
     environment:
-      PHOTOPRISM_ADMIN_PASSWORD: "moneyprintergobrrr"
+      PHOTOPRISM_ADMIN_PASSWORD: "${APP_PASSWORD}"
       PHOTOPRISM_ORIGINALS_LIMIT: 10000
       PHOTOPRISM_HTTP_COMPRESSION: "gzip"
       PHOTOPRISM_HTTP_PORT: "${APP_PHOTOPRISM_PORT}"
