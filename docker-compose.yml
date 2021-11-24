@@ -222,7 +222,7 @@ services:
             volumes:
                 - "${PWD}/boltz/data:/.boltz-lnd"
                 - "${PWD}/lnd:/lnd:ro"
-            command: /root/boltzd --lnd.host "$LND_IP" --lnd.macaroon "/lnd/data/chain/bitcoin/mainnet/admin.macaroon" - --lnd.certificate "/lnd/tls.cert"
+            command: /root/boltzd --lnd.host "$LND_IP" --lnd.macaroon "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon" - --lnd.certificate "/lnd/tls.cert"
             build:
                 dockerfile: boltz/Dockerfile
 networks:
