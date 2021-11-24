@@ -211,6 +211,8 @@ APP_LNMARKETS_IP="10.21.21.58"
 APP_LNMARKETS_PORT="4242"
 APP_ELECTRUMX_IP="10.21.21.59"
 APP_ELECTRUMX_PORT="55001"
+APP_TALLYCOIN_CONNECT_IP="10.21.21.60"
+APP_TALLYCOIN_CONNECT_PORT="8123"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -419,6 +421,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-lnmarkets-port>/${APP_LNMARKETS_PORT}/g" "${template}"
   sed -i "s/<app-electrumx-ip>/${APP_ELECTRUMX_IP}/g" "${template}"
   sed -i "s/<app-electrumx-port>/${APP_ELECTRUMX_PORT}/g" "${template}"
+  sed -i "s/<app-tallycoin-connect-ip>/${APP_TALLYCOIN_CONNECT_IP}/g" "${template}"
+  sed -i "s/<app-tallycoin-connect-port>/${APP_TALLYCOIN_CONNECT_PORT}/g" "${template}"
 done
 
 ##########################################################

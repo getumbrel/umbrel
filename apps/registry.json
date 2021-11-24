@@ -592,5 +592,28 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "tallycoin-connect",
+        "category": "Finance",
+        "name": "Tallycoin Connect",
+        "version": "v1.7.0",
+        "tagline": "Connect Tallycoin with your Umbrel node",
+        "description": "Receive Tallycoin Lightning payouts directly to your own node.",
+        "developer": "djbooth007",
+        "website": "https://github.com/djbooth007/tallycoin_connect",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/djbooth007/tallycoin_connect",
+        "support": "https://github.com/djbooth007/tallycoin_connect/issues",
+        "port": 8123,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
     }
 ]

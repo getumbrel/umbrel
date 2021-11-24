@@ -36,3 +36,7 @@ HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
 # electrumx Hidden Service
 HiddenServiceDir /var/lib/tor/app-electrumx
 HiddenServicePort 50001 <app-electrumx-ip>:50001
+
+# tallycoin-connectHidden Service
+HiddenServiceDir /var/lib/tor/app-tallycoin-connect
+HiddenServicePort 80 <app-tallycoin-connect-ip>:<app-tallycoin-connect-port>
