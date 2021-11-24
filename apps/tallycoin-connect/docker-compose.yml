@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: dennisreimann/tallycoin_connect:v1.7.0
+    image: dennisreimann/tallycoin_connect:v1.7.0@sha256:fabec3867a977e093b6572ad13a4d408a57da771c088ee85a868c1e023fd62db
     restart: on-failure
     stop_grace_period: 1m
     ports:
