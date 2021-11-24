@@ -206,6 +206,25 @@ services:
               networks:
                   default:
                       ipv4_address: $ELECTRUM_IP
+        boltz:
+            container_name: boltz
+            image: boltz/boltz-lnd
+            ports:
+                - "$BOLTZ_GRPC_PORT:$BOLTZ_GRPC_PORT"
+                - "$BOLTZ_REST_PORT:$BOLTZ_REST_PORT"
+            networks:
+                  default:
+                      ipv4_address: $BOLTZ_IP
+            restart: "on-failure"
+            stop_grace_period: "1m"
+            init: true
+            depends_on: [ lnd ]
+            volumes:
+                - "${PWD}/boltz/data:/.boltz-lnd"
+                - "${PWD}/lnd:/lnd:ro"
+            command: /root/boltzd --lnd.host "$LND_IP" --lnd.macaroon "/lnd/data/chain/bitcoin/mainnet/admin.macaroon" - --lnd.certificate "/lnd/tls.cert"
+            build:
+                dockerfile: boltz/Dockerfile
 networks:
     default:
       name: umbrel_main_network
