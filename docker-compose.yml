@@ -208,7 +208,7 @@ services:
                       ipv4_address: $ELECTRUM_IP
         boltz:
             container_name: boltz
-            image: boltz/boltz-lnd
+            image: getumbrel/boltz-lnd:v1.2.6
             ports:
                 - "$BOLTZ_GRPC_PORT:$BOLTZ_GRPC_PORT"
                 - "$BOLTZ_REST_PORT:$BOLTZ_REST_PORT"
