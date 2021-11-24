@@ -12,6 +12,7 @@ services:
       - ${APP_DATA_DIR}/rtl:/data
       - ${APP_DATA_DIR}/loop:/loop
       - ${LND_DATA_DIR}:/lnd:ro
+      - ${BOLTZ_DATA_DIR}:/boltz:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     entrypoint: /data/entrypoint.sh
     environment:
@@ -30,6 +31,10 @@ services:
         # Loop
         SWAP_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_LOOP_IP:8081"
         SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
+
+        # Boltz
+        BOLTZ_SERVER_URL: "https://$BOLTZ_IP:$BOLTZ_REST_PORT"
+        BOLTZ_MACAROON_PATH: "/boltz/.boltz-lnd/macaroons"
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
