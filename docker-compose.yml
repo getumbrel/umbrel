@@ -72,7 +72,7 @@ services:
                         ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
-                image: lightninglabs/lnd:v0.13.3-beta@sha256:b8f96d4d7fb9dcd349542240a6bff1ca0170715a16e6d79b0e9188e34ea18471
+                image: lightninglabs/lnd:v0.14.0-beta@sha256:4bf574d546822e17ddda46f80502034e58231a8c8696ada0aacaf9c7368f9ab5
                 user: 1000:1000
                 depends_on: [ tor, manager ]
                 volumes:
@@ -98,7 +98,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.14@sha256:331406ac0232285b729404dc28e6bccb89def6c7974baf640b3726dfb9704105
+                image: getumbrel/manager:v0.2.15@sha256:20faf263a721913e02ec3452924556352946d718747d239900f5720e57afb3fc
                 depends_on: [ tor ]
                 restart: on-failure
                 stop_grace_period: 5m30s
