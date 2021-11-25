@@ -217,7 +217,6 @@ services:
                       ipv4_address: $BOLTZ_IP
             restart: "on-failure"
             stop_grace_period: "1m"
-            init: true
             depends_on: [ lnd ]
             volumes:
                 - "${PWD}/boltz/data:/.boltz-lnd"
