@@ -406,7 +406,7 @@
         "id": "lightning-terminal",
         "category": "Lightning Node Management",
         "name": "Lightning Terminal",
-        "version": "v0.5.2-alpha",
+        "version": "v0.6.0-alpha",
         "tagline": "The easiest way to manage channel liquidity",
         "description": "Lightning Terminal is the easiest way to manage inbound and outbound liquidity on the Lightning Network. Keep your channels open and the funds flowing. It provides a visual interface for interacting with your channels and balances using Loop. \n\nNew: Introducing Lightning Pool, a marketplace for Lightning channels. You can now earn sats by opening new channels to those looking to receive funds on Lightning for a set period of time, or rent a channel to start accepting payments instantly. Join the marketplace and start putting your Bitcoin to work.\n\nWhy use Pool?\n- Earn a return on Lightning capital\n- Rent a channel and start accepting payments instantly\n- Open channels for less with transaction batching\n\nWhy use Loop?\n- Add \"inbound liquidity\" to receive payments\n- Reduce transaction fees by recycling and reusing Lightning channels\n- Send funds to and from users or services that aren't yet Lightning enabled\n- Configurable wait times and \"batching\" allow for further fee savings\n- Refill and offload funds from any number of Lightning channels in a single on-chain transaction",
         "developer": "Lightning Labs",
