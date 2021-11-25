@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   lnmarkets:
-    image: ghcr.io/ln-markets/umbrel:v1.1.4@sha256:d9168a2a3e1016b7cd302cde579ae3013aac57ebeaf89c44f5dbc02f604779cc
+    image: ghcr.io/ln-markets/umbrel:v1.1.5@sha256:0c93976a369bba02fbcbe64420bd26d0d31c3873ec3d8d8faba99f66e53d2ae1
     init: true
     user: 1000:1000
     restart: on-failure
@@ -17,7 +17,9 @@ services:
       BITCOIN_NETWORK: $BITCOIN_NETWORK
       APP_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
       APP_DOMAIN: $APP_DOMAIN
+      APP_PASSWORD: $APP_PASSWORD
       API_PORT: $APP_LNMARKETS_PORT
+      
     networks:
       default:
         ipv4_address: $APP_LNMARKETS_IP
