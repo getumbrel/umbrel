@@ -208,7 +208,6 @@ services:
                       ipv4_address: $ELECTRUM_IP
         boltz:
             container_name: boltz
-            image: getumbrel/boltz-lnd:v1.2.6
             ports:
                 - "$BOLTZ_GRPC_PORT:$BOLTZ_GRPC_PORT"
                 - "$BOLTZ_REST_PORT:$BOLTZ_REST_PORT"
@@ -222,8 +221,7 @@ services:
                 - "${PWD}/boltz/data:/.boltz-lnd"
                 - "${PWD}/lnd:/lnd:ro"
             command: /root/boltzd --lnd.host "$LND_IP" --lnd.macaroon "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon" - --lnd.certificate "/lnd/tls.cert"
-            build:
-                dockerfile: boltz/Dockerfile
+            build: ./boltz
 networks:
     default:
       name: umbrel_main_network
