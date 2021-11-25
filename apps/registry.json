@@ -599,7 +599,7 @@
         "name": "Tallycoin Connect",
         "version": "v1.7.0",
         "tagline": "Connect Tallycoin with your Umbrel node",
-        "description": "Receive Tallycoin Lightning payouts directly to your own node.",
+        "description": "Tallycoin is a crowdfunding platform built on top of the Bitcoin blockchain. Every satoshi donated to you, belongs to you. Tallycoin takes no cut. You can receive Tallycoin Lightning payouts directly to your own node by pairing the Tallycoin Connect Umbrel app to your Tallycoin account.",
         "developer": "djbooth007",
         "website": "https://github.com/djbooth007/tallycoin_connect",
         "dependencies": [
