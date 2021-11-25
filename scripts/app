@@ -116,6 +116,7 @@ compose() {
   export APP_DOMAIN="${app_domain}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
   export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
+  export APP_PASSWORD=$(derive_entropy "${app_entropy_identifier}-APP_PASSWORD")
 
   # App specific env vars
   # Note: Hardcoding app specific env vars is a short term solution. Long term

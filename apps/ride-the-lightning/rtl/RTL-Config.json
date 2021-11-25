@@ -1,5 +1,5 @@
 {
-  "multiPass": "moneyprintergobrrr",
+  "multiPass": "$APP_PASSWORD",
   "defaultNodeIndex": 1,
   "SSO": {
     "rtlSSO": 0,

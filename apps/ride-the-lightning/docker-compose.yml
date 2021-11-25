@@ -13,8 +13,10 @@ services:
       - ${APP_DATA_DIR}/loop:/loop
       - ${LND_DATA_DIR}:/lnd:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
+    entrypoint: /data/entrypoint.sh
     environment:
         # App config
+        APP_PASSWORD: $APP_PASSWORD
         PORT: $APP_RIDE_THE_LIGHTNING_PORT
         RTL_CONFIG_PATH: "/data"
         CHANNEL_BACKUP_PATH: "/data/backup"
