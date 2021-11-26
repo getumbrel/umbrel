@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+
+  tdexd:
+    image: ghcr.io/tdex-network/tdexd:v0.8.0-rc.1
+    restart: on-failure
+    stop_grace_period: 2m
+    ports:
+      - 9945:9945
+      - 9000:9000
+    volumes:
+      - ${APP_DATA_DIR}/tdex-data:/home/user/.tdex-daemon
+    environment:
+      TDEX_LOG_LEVEL: 5
+
+  dashboard:
+    image: ghcr.io/tdex-network/dashboard:v0.0.4
+    restart: on-failure
+    ports:
+      - 8080:8080
+    environment:
+      USE_PROXY: true
+      PROXY_URL: "http://proxy:3030"
+
+  proxy: 
+    image: ghcr.io/tdex-network/rpcproxy:v0.0.4
+    restart: on-failure
+    stop_grace_period: 1m
+    command:
+      - --insecure-httplisten=0.0.0.0:3030
+    ports:
+      - 3030:3030
