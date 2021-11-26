@@ -213,6 +213,9 @@ APP_ELECTRUMX_IP="10.21.21.59"
 APP_ELECTRUMX_PORT="55001"
 APP_TALLYCOIN_CONNECT_IP="10.21.21.60"
 APP_TALLYCOIN_CONNECT_PORT="8123"
+APP_SYNCTHING_IP="10.21.21.61"
+APP_SYNCTHING_PORT="8384"
+APP_SYNCTHING_SYNC_PORT="22000"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -423,6 +426,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-electrumx-port>/${APP_ELECTRUMX_PORT}/g" "${template}"
   sed -i "s/<app-tallycoin-connect-ip>/${APP_TALLYCOIN_CONNECT_IP}/g" "${template}"
   sed -i "s/<app-tallycoin-connect-port>/${APP_TALLYCOIN_CONNECT_PORT}/g" "${template}"
+  sed -i "s/<app-syncthing-ip>/${APP_SYNCTHING_IP}/g" "${template}"
+  sed -i "s/<app-syncthing-port>/${APP_SYNCTHING_PORT}/g" "${template}"
+  sed -i "s/<app-syncthing-sync-port>/${APP_SYNCTHING_SYNC_PORT}/g" "${template}"
 done
 
 ##########################################################
