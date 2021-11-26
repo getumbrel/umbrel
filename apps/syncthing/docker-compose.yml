@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: syncthing/syncthing
+    image: syncthing/syncthing:1.18.4@sha256:97fc6221819aceab9055d120a01d2981a30d3aef962f1ec5eda2b21cfaa883c8
     restart: on-failure
     stop_grace_period: 1m
     hostname: umbrel
