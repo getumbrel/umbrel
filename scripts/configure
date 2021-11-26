@@ -135,9 +135,6 @@ APPS_TOR_IP="10.21.21.47"
 APPS_2_TOR_IP="10.21.21.48"
 APPS_3_TOR_IP="10.21.21.49"
 TOR_PROXY_PORT="9050"
-BOLTZ_IP="10.21.21.60"
-BOLTZ_GRPC_PORT="9002"
-BOLTZ_REST_PORT="9003"
 
 # Apps
 APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
@@ -219,6 +216,9 @@ APP_TALLYCOIN_CONNECT_PORT="8123"
 APP_SYNCTHING_IP="10.21.21.61"
 APP_SYNCTHING_PORT="8384"
 APP_SYNCTHING_SYNC_PORT="22000"
+APP_BOLTZ_IP="10.21.21.62"
+APP_BOLTZ_GRPC_PORT="9002"
+APP_BOLTZ_REST_PORT="9003"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -352,9 +352,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
   sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
   sed -i "s#<lndfeeurl>#${LND_FEE_URL}#g;" "${template}"
-  sed -i "s/<boltz-ip>/${BOLTZ_IP}/g" "${template}"
-  sed -i "s/<boltz-grpc-port>/${BOLTZ_GRPC_PORT}/g" "${template}"
-  sed -i "s/<boltz-rest-port>/${BOLTZ_REST_PORT}/g" "${template}"
 
   # Apps
   sed -i "s/<app-btc-rpc-explorer-ip>/${APP_BTC_RPC_EXPLORER_IP}/g" "${template}"
@@ -435,6 +432,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-syncthing-ip>/${APP_SYNCTHING_IP}/g" "${template}"
   sed -i "s/<app-syncthing-port>/${APP_SYNCTHING_PORT}/g" "${template}"
   sed -i "s/<app-syncthing-sync-port>/${APP_SYNCTHING_SYNC_PORT}/g" "${template}"
+  sed -i "s/<app-boltz-ip>/${APP_BOLTZ_IP}/g" "${template}"
+  sed -i "s/<app-boltz-grpc-port>/${APP_BOLTZ_GRPC_PORT}/g" "${template}"
+  sed -i "s/<app-boltz-rest-port>/${APP_BOLTZ_REST_PORT}/g" "${template}"
 done
 
 ##########################################################
