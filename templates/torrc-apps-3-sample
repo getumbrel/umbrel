@@ -40,3 +40,7 @@ HiddenServicePort 50001 <app-electrumx-ip>:50001
 # tallycoin-connectHidden Service
 HiddenServiceDir /var/lib/tor/app-tallycoin-connect
 HiddenServicePort 80 <app-tallycoin-connect-ip>:<app-tallycoin-connect-port>
+
+# syncthing Hidden Service
+HiddenServiceDir /var/lib/tor/app-syncthing
+HiddenServicePort 80 <app-syncthing-ip>:<app-syncthing-port>

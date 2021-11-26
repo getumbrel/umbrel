@@ -12,7 +12,10 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/var/syncthing
     ports:
-      - 8384:8384
-      - 22000:22000/tcp
-      - 22000:22000/udp
+      - ${APP_SYNCTHING_PORT}:${APP_SYNCTHING_PORT}
+      - ${APP_SYNCTHING_SYNC_PORT}:${APP_SYNCTHING_SYNC_PORT}/tcp
+      - ${APP_SYNCTHING_SYNC_PORT}:${APP_SYNCTHING_SYNC_PORT}/udp
+    networks:
+      default:
+        ipv4_address: ${APP_SYNCTHING_IP}
       
