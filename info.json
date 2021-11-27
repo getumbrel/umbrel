@@ -1,6 +1,6 @@
 {
-    "version": "0.4.8",
-    "name": "Umbrel v0.4.8",
+    "version": "0.4.9",
+    "name": "Umbrel v0.4.9",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.8 brings a new security feature — unique cryptographically secure default app passwords derived from your 24 secret words. This will help protect your Umbrel even if an app's unique Tor URL gets leaked and you have not changed that app's default password.\n\nIf you have currently installed ThunderHub, Lightning Terminal, Ride The Lightning, Squeaknode or Code Server on your Umbrel, their default passwords will automatically upgrade to the newer, more secure passwords which can be found on their app store listing pages. In case you have already updated passwords of these apps manually, you can continue to use the same.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel 0.4.9 brings two-factor authentication (2FA) to add an extra layer of security to your Umbrel, LND 0.14.1, two brand new apps in the Umbrel App Store — Tallycoin Connect and Syncthing, updated apps, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
