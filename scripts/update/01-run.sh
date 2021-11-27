@@ -210,20 +210,37 @@ if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
   rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
 fi
 
-# Handle updating mysql conf for samourai-server app
-samourai_app_mysql_conf="${UMBREL_ROOT}/apps/samourai-server/mysql/mysql-dojo.cnf"
-samourai_data_mysql_conf="${UMBREL_ROOT}/app-data/samourai-server/mysql/mysql-dojo.cnf"
-if [[ -f "${samourai_app_mysql_conf}" ]] && [[ -f "${samourai_data_mysql_conf}" ]]; then
-  echo "Found samourai-server install, attempting to update DB configuration..."
-  cp "${samourai_app_mysql_conf}" "${samourai_data_mysql_conf}"
-fi
-
 # Handle hidden service migration for samourai-server app
 samourai_app_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server"
 samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
 if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_tor_dir}" ]]; then
   echo "Found samourai-server install, attempting to migrate dojo hidden service directory..."
   mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
+fi
+
+# Handle updating entrypoint for ride-the-lightning app
+rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
+rtl_data_entrypoint="${rtl_data_dir}/rtl/entrypoint.sh"
+rtl_app_entrypoint="${UMBREL_ROOT}/apps/ride-the-lightning/rtl/entrypoint.sh"
+if [[ -d "${rtl_data_dir}" ]]; then
+  echo "Found ride-the-lightning install, attempting to update entrypoint..."
+  cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
+fi
+
+# Handle updating entrypoint for thunderhub app
+thunderhub_data_dir="${UMBREL_ROOT}/app-data/thunderhub"
+thunderhub_data_entrypoint="${thunderhub_data_dir}/data/entrypoint.sh"
+thunderhub_app_entrypoint="${UMBREL_ROOT}/apps/thunderhub/data/entrypoint.sh"
+if [[ -d "${thunderhub_data_dir}" ]]; then
+  echo "Found thunderhub install, attempting to update entrypoint..."
+  cp "${thunderhub_app_entrypoint}" "${thunderhub_data_entrypoint}"
+fi
+
+# Handle stripping hardcoded password for lightning-terminal app
+lightning_terminal_conf="${UMBREL_ROOT}/app-data/lightning-terminal/data/.lit/lit.conf"
+if [[ -f "${lightning_terminal_conf}" ]]; then
+  echo "Found lightning-terminal install, attempting to strip hardcoded password..."
+  sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
 fi
 
 # Fix permissions

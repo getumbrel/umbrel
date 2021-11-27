@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
+    image: louneskmt/dojo-db:1.3.0-low-mem@sha256:76dd4bc0bd3386195adc4564dc6a712c50af9b8400707c4e6ffcb0a859f76c71
     init: true
     restart: on-failure
     stop_grace_period: 5m
@@ -14,15 +14,12 @@ services:
       MYSQL_PASSWORD: password
     volumes:
       - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
-      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
-      - ${APP_DATA_DIR}/mysql/mysql-dojo.cnf:/etc/mysql/conf.d/mysql-dojo.cnf
-      - ${APP_DATA_DIR}/mysql/update-db.sh:/update-db.sh
     networks:
       default:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.10.1@sha256:d1460df18df091837718fcd0a6d3850e2f1a4a49da5914a697648c40d5477184
+    image: louneskmt/dojo-nodejs:1.12.1@sha256:b409a8801b071966f19799ae90a12faf3d8863542a2e24a155ae9ff142d4d95b
     init: true
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh ${APP_SAMOURAI_SERVER_DB_IP}:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
@@ -30,7 +27,7 @@ services:
     environment:
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-      DOJO_NODEJS_VERSION_TAG: 1.10.1
+      DOJO_NODEJS_VERSION_TAG: 1.12.1
       NET_DOJO_TOR_IPV4: $TOR_PROXY_IP
       NET_DOJO_TOR_PORT: $TOR_PROXY_PORT
       NET_DOJO_MYSQL_IPV4: $APP_SAMOURAI_SERVER_DB_IP
@@ -114,7 +111,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_WHIRLPOOL_IP
 
   nginx:
-    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    image: nginx:1.21-alpine@sha256:686aac2769fd6e7bab67663fd38750c135b72d993d0bb0a942ab02ef647fc9c3
     init: true
     restart: on-failure
     command: /bin/sh -c "envsubst < /var/www/connect/js/conf.template.js > /var/www/connect/js/conf.js && /wait-for node:8080 --timeout=720 -- nginx"

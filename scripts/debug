@@ -32,18 +32,6 @@
 # Try to load Umbrel OS version info to detect Umbrel OS
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
-# function to upload the output to our paste server
-# Based on https://github.com/seejohnrun/haste-client#lightweight-alternative
-upload() {
-  curl \
-    --header "Content-Type: text/plain" \
-    --request POST \
-    --silent \
-    --data-binary @- \
-    https://umbrel-paste.vercel.app/documents \
-    | awk -F '"' '{print "https://umbrel-paste.vercel.app/"$6}'
-}
-
 echo "====================="
 echo "= Umbrel debug info ="
 echo "====================="
@@ -137,6 +125,12 @@ echo "-----------------"
 docker ps --format="table {{.Names}}\t{{.Status}}"
 
 echo
+echo "Umbrel logs"
+echo "-----------"
+echo
+docker-compose logs --tail=30 manager middleware
+
+echo
 echo "Bitcoin Core logs"
 echo "-----------------"
 echo
@@ -149,10 +143,16 @@ echo
 docker-compose logs --tail=30 lnd
 
 echo
+echo "electrs logs"
+echo "--------"
+echo
+docker-compose logs --tail=30 electrs
+
+echo
 echo "Tor logs"
 echo "--------"
 echo
-docker-compose logs --tail=30 tor
+docker-compose logs --tail=10 tor app_tor app_2_tor app_3_tor
 
 installed_apps=$(./scripts/app ls-installed)
 if [[ ! -z "${installed_apps:-}" ]]; then
@@ -194,12 +194,6 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
         echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
-        if [[ "${1}" == "--upload" ]]; then
-            echo "You can also share these links instead:"
-            echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
-        else
-            echo "Run this script again with the --upload flag to automatically generate a link to share."
-        fi
         exit 0
     fi
     if [[ $no_of_block_devices -gt 1 ]]; then
@@ -211,15 +205,4 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-if [[ "${1}" == "--dashboard" ]]; then
-    echo "The debug script did not automatically detect any issues with your Umbrel."
-elif [[ "${1}" == "--upload" ]]; then
-    # This runs the script twice, but it works
-    echo "This script could not automatically detect an issue with your Umbrel."
-    echo "Please share the following links and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    echo "$(./scripts/debug | sed '/onion/d') === Umbrel-Paste split === $(dmesg)" | upload
-else
-    echo "This script could not automatically detect an issue with your Umbrel."
-    echo "Please copy the entire output of this script and paste it in the Umbrel Telegram group (https://t.me/getumbrel) so we can help you with your problem."
-    echo "It's recommended to upload the output somewhere and share a link to it. Run this script with '--upload' to automatically generate a link to share."
-fi
+echo "The debug script did not automatically detect any issues with your Umbrel."

@@ -44,7 +44,7 @@ services:
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
       - NEXTCLOUD_ADMIN_USER=umbrel
-      - NEXTCLOUD_ADMIN_PASSWORD=moneyprintergobrrr
+      - NEXTCLOUD_ADMIN_PASSWORD=${APP_PASSWORD}
       - NEXTCLOUD_TRUSTED_DOMAINS=${APP_DOMAIN}:${APP_NEXTCLOUD_PORT} ${APP_HIDDEN_SERVICE}
     depends_on:
       - db
