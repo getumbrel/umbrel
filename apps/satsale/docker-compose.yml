@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   satsale:
-    image: satsale/satsale:0.2.10
+    image: satsale/satsale:0.2.11
     restart: on-failure
     stop_grace_period: 1m
     volumes:
@@ -12,7 +12,7 @@ services:
       - 5000:5000
     environment:
       DATA_DIR: "/data"
-      # Bitcoin Core connection details
+      # Lightning node connection details
       LND_DATA_DIR: $LND_DATA_DIR
       LND_HOST: $LND_IP
       LND_GRPC_PORT: $LND_GRPC_PORT
