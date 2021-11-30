@@ -13,10 +13,6 @@ services:
     environment:
       DATA_DIR: "/data"
       # Bitcoin Core connection details
-      BITCOIND_HOST: $BITCOIN_IP
-      BITCOIND_PORT: $BITCOIN_RPC_PORT
-      BITCOIND_USER: $BITCOIN_RPC_USER
-      BITCOIND_PASS: $BITCOIN_RPC_PASS
       LND_DATA_DIR: $LND_DATA_DIR
       LND_HOST: $LND_IP
       LND_GRPC_PORT: $LND_GRPC_PORT
