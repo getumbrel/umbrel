@@ -1,0 +1,10 @@
+version: "3.7"
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.10.2-alpine
+    restart: on-failure
+    ports:
+      - ${APP_UPTIME_KUMA_PORT}:3001
+    volumes:
+      - ${APP_DATA_DIR}/data/uptime-kuma:/app/data
