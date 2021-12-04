@@ -24,6 +24,10 @@ HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
 HiddenServiceDir /data/lnd-grpc
 HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
 
+# ssh Hidden Service
+HiddenServiceDir /var/lib/tor/ssh
+HiddenServicePort <ssh-port> <ssh-ip>:<ssh-port>
+
 
 # Apps
 
