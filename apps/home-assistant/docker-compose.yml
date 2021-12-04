@@ -2,7 +2,9 @@ version: "3.7"
 
 services:
   server:
-    image: homeassistant/home-assistant:2021.9.6@sha256:3b0b1d1e595a77fdca2e765d4441545ab873841fc311964f8d6cf9cb9e99f38e
+    image: "ghcr.io/home-assistant/home-assistant:2021.11.5@sha256:1091e8745acbefe1dfa170748d5bf02e5591aff80cc763c8694b030dfb51cf15"
+    devices:
+      - /dev/ttyACM0
     ports:
       - "${APP_HOME_ASSISTANT_PORT}:8123"
     volumes:
