@@ -8,3 +8,6 @@ services:
       - ${APP_UPTIME_KUMA_PORT}:3001
     volumes:
       - ${APP_DATA_DIR}/data/uptime-kuma:/app/data
+    networks:
+      default:
+        ipv4_address: $APP_UPTIME_KUMA_IP
