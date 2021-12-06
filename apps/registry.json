@@ -636,28 +636,5 @@
         ],
         "path": "",
         "defaultPassword": ""
-    },
-    {
-        "id": "uptime-kuma",
-        "category": "Networking",
-        "name": "Pi-hole",
-        "version": "1.10.2",
-        "tagline": "A fancy self-hosted monitoring tool",
-        "description": "It is a self-hosted monitoring tool like 'Uptime Robot'.",
-        "developer": "Louis Lam",
-        "website": "https://uptime.kuma.pet",
-        "dependencies": [],
-        "repo": "https://github.com/louislam/uptime-kuma",
-        "support": "https://uptime.kuma.pet/docs/",
-        "port": 3001,
-        "gallery": [
-            "1.jpg",
-            "2.jpg",
-            "3.jpg"
-        ],
-        "path": "",
-        "defaultUsername": "",
-        "defaultPassword": "",
-        "torOnly": false
     }
 ]
