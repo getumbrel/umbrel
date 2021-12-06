@@ -216,6 +216,10 @@ APP_TALLYCOIN_CONNECT_PORT="8123"
 APP_SYNCTHING_IP="10.21.21.61"
 APP_SYNCTHING_PORT="8384"
 APP_SYNCTHING_SYNC_PORT="22000"
+APP_SUREDBITS_WALLET_IP="10.21.21.100"
+APP_SUREDBITS_WALLET_SERVER_IP="10.21.21.101"
+APP_SUREDBITS_WALLET_PORT="3020"
+APP_SUREDBITS_WALLET_P2P_PORT="2862"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -429,6 +433,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-syncthing-ip>/${APP_SYNCTHING_IP}/g" "${template}"
   sed -i "s/<app-syncthing-port>/${APP_SYNCTHING_PORT}/g" "${template}"
   sed -i "s/<app-syncthing-sync-port>/${APP_SYNCTHING_SYNC_PORT}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-ip>/${APP_SUREDBITS_WALLET_IP}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-server-ip>/${APP_SUREDBITS_WALLET_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-port>/${APP_SUREDBITS_WALLET_PORT}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-p2p-port>/${APP_SUREDBITS_WALLET_P2P_PORT}/g" "${template}"
 done
 
 ##########################################################
