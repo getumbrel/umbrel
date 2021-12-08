@@ -4,6 +4,7 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:1.10.2-alpine
     restart: on-failure
+    stop_grace_period: 1m
     ports:
       - ${APP_UPTIME_KUMA_PORT}:3001
     volumes:
