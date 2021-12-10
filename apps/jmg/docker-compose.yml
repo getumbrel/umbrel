@@ -9,19 +9,17 @@ services:
     stop_grace_period: 1m
     ports:
       - 5002:5002
+ jmwallet:
+    image: manasgandy/jm:<tag>
+    user: 1000:1000
+    init: true
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 28183:28183
     environment:
- # jmwallet:
- #    image: manasgandy/jm:v0.9.4
- #    user: 1000:1000
- #    init: true
- #    restart: on-failure
- #    stop_grace_period: 1m
- #    ports:
- #      - 27183:27183
- #      - 28183:28183
- #    environment:
- #      # Bitcoin Core connection details
- #      JM_BITCOIND_HOST: $BITCOIN_IP
- #      JM_BITCOIND_PORT: $BITCOIN_RPC_PORT
- #      JM_BITCOIND_USER: $BITCOIN_RPC_USER
- #      JM_BITCOIND_PASS: $BITCOIN_RPC_PASS
+      # Bitcoin Core connection details
+      JM_BITCOIND_HOST: $BITCOIN_IP
+      JM_BITCOIND_PORT: $BITCOIN_RPC_PORT
+      JM_BITCOIND_USER: $BITCOIN_RPC_USER
+      JM_BITCOIND_PASS: $BITCOIN_RPC_PASS
