@@ -227,6 +227,11 @@ APP_LNMARKETS_IP="10.21.21.58"
 APP_LNMARKETS_PORT="4242"
 APP_ELECTRUMX_IP="10.21.21.59"
 APP_ELECTRUMX_PORT="55001"
+APP_TALLYCOIN_CONNECT_IP="10.21.21.60"
+APP_TALLYCOIN_CONNECT_PORT="8123"
+APP_SYNCTHING_IP="10.21.21.61"
+APP_SYNCTHING_PORT="8384"
+APP_SYNCTHING_SYNC_PORT="22000"
 
 # IPv6
 APPS_3_TOR_IPV6=`echo $APPS_3_TOR_IP | sed 'y/\./:/; s/^/fd00::/'`
@@ -272,6 +277,8 @@ APP_KRYSTAL_BULL_SERVER_IPV6=`echo APP_KRYSTAL_BULL_SERVER_IP | sed 'y/\./:/; s/
 APP_NODE_RED_IPV6=`echo APP_NODE_RED_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_LNMARKETS_IPV6=`echo APP_LNMARKETS_IP | sed 'y/\./:/; s/^/fd00::/'`
 APP_ELECTRUMX_IPV6=`echo APP_ELECTRUMX_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_TALLYCOIN_CONNECT_IPV6=`echo APP_TALLYCOIN_CONNECT_IP | sed 'y/\./:/; s/^/fd00::/'`
+APP_SYNCTHING_IPV6=`echo APP_SYNCTHING_IP | sed 'y/\./:/; s/^/fd00::/'`
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -497,6 +504,12 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-lnmarkets-port>/${APP_LNMARKETS_PORT}/g" "${template}"
   sed -i "s/<app-electrumx-ip>/${APP_ELECTRUMX_IP}/g" "${template}"
   sed -i "s/<app-electrumx-port>/${APP_ELECTRUMX_PORT}/g" "${template}"
+  sed -i "s/<app-tallycoin-connect-ip>/${APP_TALLYCOIN_CONNECT_IP}/g" "${template}"
+  sed -i "s/<app-tallycoin-connect-port>/${APP_TALLYCOIN_CONNECT_PORT}/g" "${template}"
+  sed -i "s/<app-syncthing-ip>/${APP_SYNCTHING_IP}/g" "${template}"
+  sed -i "s/<app-syncthing-sync-port>/${APP_SYNCTHING_SYNC_PORT}/g" "${template}"
+  sed -i "s/<app-syncthing-port>/${APP_SYNCTHING_PORT}/g" "${template}"
+
   #Apps IPv6
   sed -i "s/<app-btc-rpc-explorer-ipv6>/${APP_BTC_RPC_EXPLORER_IPV6}/g" "${template}"
   sed -i "s/<app-thunderhub-ipv6>/${APP_THUNDERHUB_IPV6}/g" "${template}"
@@ -540,7 +553,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-node-red-ipv6>/${APP_NODE_RED_IPV6}/g" "${template}"
   sed -i "s/<app-lnmarkets-ipv6>/${APP_LNMARKETS_IPV6}/g" "${template}"
   sed -i "s/<app-electrumx-ipv6>/${APP_ELECTRUMX_IPV6}/g" "${template}"
-  
+  sed -i "s/<app-tallycoin-connect-ipv6>/${APP_TALLYCOIN_CONNECT_IPV6}/g" "${template}"
+  sed -i "s/<app-syncthing-ipv6>/${APP_SYNCTHING_IPV6}/g" "${template}"
 done
 
 ##########################################################
