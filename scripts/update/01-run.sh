@@ -127,10 +127,6 @@ echo "Stopping existing containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
-
-# Simulate crash here
-false
-
 cd "$UMBREL_ROOT"
 ./scripts/stop
 
