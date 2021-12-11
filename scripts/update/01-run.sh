@@ -128,7 +128,17 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
 cd "$UMBREL_ROOT"
-./scripts/stop
+./scripts/stop || {
+  # If Docker fails to stop containers we're most likely hitting this Docker bug: https://github.com/moby/moby/issues/17217
+  # Restarting the Docker service seems to fix it
+  echo "Attempting to autofix Docker failure"
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 70, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
+EOF
+  sudo systemctl restart docker
+  sleep 1
+  ./scripts/stop
+}
 
 # Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
 # <hostname>.local and Tor
