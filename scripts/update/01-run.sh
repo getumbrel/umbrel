@@ -141,6 +141,7 @@ EOF
     # If this doesn't resolve the issue, start containers again before failing so the web UI is still accessible
     echo "That didn't work, attempting to restart containers"
     ./scripts/start
+    echo "Error stopping Docker containers" > "${UMBREL_ROOT}/statuses/update-failure"
     false
   }
 }

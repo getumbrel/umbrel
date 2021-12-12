@@ -139,6 +139,16 @@ rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 
 update_state=$(cat "${UMBREL_ROOT}/statuses/update-status.json" | jq .state -r)
 
+# Show error
+update_failure_status_file="${UMBREL_ROOT}/statuses/update-failure"
+if [[ -f "${update_failure_status_file}" ]]; then
+  reason=$(cat "${update_failure_status_file}")
+  rm "${update_failure_status_file}"
+  cat <<EOF > "${UMBREL_ROOT}/statuses/update-status.json"
+{"state": "failed", "progress": 100, "description": "${reason}", "updateTo": ""}
+EOF
+fi
+
 if [[ "${update_state}" != "success" ]] && [[ "${update_state}" != "failed" ]]; then
     # Sleep for a few seconds to make sure the user is on the update view
     sleep 8
