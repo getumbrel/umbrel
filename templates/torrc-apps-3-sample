@@ -44,3 +44,7 @@ HiddenServicePort 80 <app-tallycoin-connect-ip>:<app-tallycoin-connect-port>
 # syncthing Hidden Service
 HiddenServiceDir /var/lib/tor/app-syncthing
 HiddenServicePort 80 <app-syncthing-ip>:<app-syncthing-port>
+
+# uptime-kuma Hidden Service
+HiddenServiceDir /var/lib/tor/app-uptime-kuma
+HiddenServicePort 80 <app-uptime-kuma-ip>:3001
