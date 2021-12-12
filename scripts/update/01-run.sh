@@ -138,7 +138,7 @@ EOF
   sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
   ./scripts/stop || {
-    # If this doesn't catch the error, start Umbrel again before failing so the web UI is still accessible
+    # If this doesn't resolve the issue, start containers again before failing so the web UI is still accessible
     echo "That didn't work, attempting to restart containers"
     ./scripts/start
     false
