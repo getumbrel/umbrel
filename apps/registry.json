@@ -72,7 +72,7 @@
         "id": "home-assistant",
         "category": "Automation",
         "name": "Home Assistant",
-        "version": "2021.9.6",
+        "version": "2021.12.0",
         "tagline": "Home automation that puts local control & privacy first",
         "description": "Open source home automation that puts local control and privacy first, powered by a worldwide community of tinkerers and DIY enthusiasts. Home Assistant integrates with over a thousand different devices and services. Once you have integrated all your devices at home, you can unleash Home Assistant’s advanced automation engine to make your home work for you. Examples: \n\n- Turn on the light when the sun sets or when coming home \n- Alert you when you leave your garage door open \n\nAll your smart home data stays local. Home Assistant communicates with your devices locally, and will fallback to pulling in data from the cloud if there is no other option. No data is stored in the cloud, and everything is processed locally.",
         "developer": "Home Assistant",
