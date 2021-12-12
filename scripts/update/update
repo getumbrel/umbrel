@@ -141,16 +141,13 @@ update_state=$(cat "${UMBREL_ROOT}/statuses/update-status.json" | jq .state -r)
 
 # Show error
 update_failure_status_file="${UMBREL_ROOT}/statuses/update-failure"
-echo "checking error status..."
 if [[ -f "${update_failure_status_file}" ]]; then
-  echo "file exists"
   reason=$(cat "${update_failure_status_file}")
   rm "${update_failure_status_file}"
   cat <<EOF > "${UMBREL_ROOT}/statuses/update-status.json"
 {"state": "failed", "progress": 100, "description": "${reason}", "updateTo": ""}
 EOF
 fi
-echo file does not exist
 
 if [[ "${update_state}" != "success" ]] && [[ "${update_state}" != "failed" ]]; then
     # Sleep for a few seconds to make sure the user is on the update view
