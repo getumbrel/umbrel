@@ -455,7 +455,7 @@
         "id": "lnbits",
         "category": "Finance",
         "name": "LNbits",
-        "version": "9f67b98",
+        "version": "ec874ba",
         "tagline": "Multi-user wallet management system",
         "description": "LNbits is a simple multi-user and account system for Lightning Network that can be used for creating separate Lightning wallets for friends and family members. You can also create multiple accounts for yourself to mitigate the risk of exposing applications to your full balance via unique API keys for each wallet.\n\nLNbits is packaged with tools to help manage funds, such as a table of transactions, line chart of spending, export to CSV, and more to come. It provides an extendable platform for expanding Lightning Network functionality via LNbits extension framework, and can also be used as a fallback wallet for the LNURL scheme.",
         "developer": "LNbits",
