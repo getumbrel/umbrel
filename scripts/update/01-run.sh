@@ -139,6 +139,7 @@ EOF
   sleep 1
   ./scripts/stop || {
     # If this doesn't catch the error, start Umbrel again before failing so the web UI is still accessible
+    echo "That didn't work, attempting to restart containers"
     ./scripts/start
     false
   }
