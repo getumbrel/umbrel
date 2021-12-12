@@ -135,7 +135,7 @@ cd "$UMBREL_ROOT"
   cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
 EOF
-  sudo systemctl restart docker
+  sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
   ./scripts/stop
 }
