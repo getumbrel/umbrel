@@ -137,7 +137,11 @@ cd "$UMBREL_ROOT"
 EOF
   sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
-  ./scripts/stop
+  ./scripts/stop || {
+    # If this doesn't catch the error, start Umbrel again before failing so the web UI is still accessible
+    ./scripts/start
+    false
+  }
 }
 
 # Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
