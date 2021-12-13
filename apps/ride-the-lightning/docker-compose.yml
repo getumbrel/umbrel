@@ -11,6 +11,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/rtl:/data
       - ${APP_DATA_DIR}/loop:/loop
+      - ${APP_DATA_DIR}/boltz:/boltz:ro
       - ${LND_DATA_DIR}:/lnd:ro
       - ${BITCOIN_DATA_DIR}:/bitcoin:ro
     entrypoint: /data/entrypoint.sh
@@ -30,6 +31,10 @@ services:
         # Loop
         SWAP_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_LOOP_IP:8081"
         SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
+
+        # Boltz
+        BOLTZ_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_BOLTZ_IP:9003"
+        BOLTZ_MACAROON_PATH: "/boltz/.boltz-lnd/macaroons"
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_IP
@@ -53,3 +58,23 @@ services:
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_LOOP_IP
+
+  boltz:
+    image: boltz/boltz-lnd:1.2.6@sha256:01a56dd357a2460bfd0ecdd726d6db3ab59d78ee691250831d09ba5de3fec7ce
+    user: "1000:1000"
+    restart: "on-failure"
+    stop_grace_period: "1m"
+    environment:
+      HOME: "/data"
+    volumes:
+      - "${APP_DATA_DIR}/boltz:/data"
+      - "${LND_DATA_DIR}:/lnd:ro"
+    command:
+      - --lnd.host="$LND_IP"
+      - --lnd.macaroon="/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+      - --lnd.certificate="/lnd/tls.cert"
+      - --rpc.rest.host="$APP_RIDE_THE_LIGHTNING_BOLTZ_IP"
+      - --rpc.rest.port="9003"
+    networks:
+      default:
+        ipv4_address: $APP_RIDE_THE_LIGHTNING_BOLTZ_IP

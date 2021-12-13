@@ -243,6 +243,15 @@ if [[ -d "${rtl_data_dir}" ]]; then
   cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
 fi
 
+# Handle new boltz container for ride-the-lightning app
+rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
+rtl_boltz_data_dir="${rtl_data_dir}/boltz"
+if [[ -d "${rtl_data_dir}" ]] && [[ ! -d "${rtl_boltz_data_dir}" ]]; then
+  echo "Found ride-the-lightning install without boltz data dir, attempting to create it..."
+  mkdir "${rtl_boltz_data_dir}"
+  chown 1000:1000 "${rtl_boltz_data_dir}"
+fi
+
 # Handle updating entrypoint for thunderhub app
 thunderhub_data_dir="${UMBREL_ROOT}/app-data/thunderhub"
 thunderhub_data_entrypoint="${thunderhub_data_dir}/data/entrypoint.sh"
