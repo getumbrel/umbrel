@@ -33,7 +33,7 @@ services:
         SWAP_MACAROON_PATH: "/loop/.loop/$BITCOIN_NETWORK"
 
         # Boltz
-        BOLTZ_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_BOLTZ_IP:$APP_RIDE_THE_LIGHTNING_BOLTZ_REST_PORT"
+        BOLTZ_SERVER_URL: "https://$APP_RIDE_THE_LIGHTNING_BOLTZ_IP:9003"
         BOLTZ_MACAROON_PATH: "/boltz/.boltz-lnd/macaroons"
     networks:
       default:
