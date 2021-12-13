@@ -58,7 +58,7 @@ services:
     networks:
       default:
         ipv4_address: $APP_RIDE_THE_LIGHTNING_LOOP_IP
-        
+
   boltz:
     image: boltz/boltz-lnd:1.2.6@sha256:01a56dd357a2460bfd0ecdd726d6db3ab59d78ee691250831d09ba5de3fec7ce
     container_name: boltz
