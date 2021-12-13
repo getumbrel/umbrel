@@ -61,12 +61,12 @@ services:
 
   boltz:
     image: boltz/boltz-lnd:1.2.6@sha256:01a56dd357a2460bfd0ecdd726d6db3ab59d78ee691250831d09ba5de3fec7ce
-    networks:
-      default:
-        ipv4_address: $APP_RIDE_THE_LIGHTNING_BOLTZ_IP
     restart: "on-failure"
     stop_grace_period: "1m"
     volumes:
       - "${APP_DATA_DIR}/boltz:/root/.boltz-lnd"
       - "${LND_DATA_DIR}:/lnd:ro"
     command: /root/boltzd --lnd.host "$LND_IP" --lnd.macaroon "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon" --lnd.certificate "/lnd/tls.cert"
+    networks:
+      default:
+        ipv4_address: $APP_RIDE_THE_LIGHTNING_BOLTZ_IP
