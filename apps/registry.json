@@ -537,8 +537,8 @@
             "bitcoind",
             "lnd"
         ],
-        "repo": "https://github.com/yzernik/squeaknode",
-        "support": "https://github.com/yzernik/squeaknode/discussions",
+        "repo": "https://github.com/squeaknode/squeaknode",
+        "support": "https://github.com/squeaknode/squeaknode/discussions",
         "port": 12994,
         "gallery": [
             "1.jpg",
