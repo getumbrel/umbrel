@@ -1,6 +1,6 @@
 {
-    "version": "0.4.9",
-    "name": "Umbrel v0.4.9",
+    "version": "0.4.10",
+    "name": "Umbrel v0.4.10",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.9 brings two-factor authentication (2FA) to add an extra layer of security to your Umbrel, LND 0.14.1, two brand new apps in the Umbrel App Store — Tallycoin Connect and Syncthing, updated apps, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel 0.4.10 brings a brand new app to the Umbrel App Store — Uptime Kuma, support for Boltz swaps in Ride The Lightning app, updated apps including the latest Lightning Terminal app which contains an important security fix, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
