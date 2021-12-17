@@ -8,7 +8,7 @@ services:
     stop_grace_period: 1m
     environment:
       WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
-      WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/"
+      WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/events"
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
     ports:
       - "${APP_SUREDBITS_WALLET_PORT}:3002"
