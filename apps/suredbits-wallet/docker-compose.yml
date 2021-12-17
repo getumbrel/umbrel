@@ -8,6 +8,7 @@ services:
     stop_grace_period: 1m
     environment:
       WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
+      WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/"
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
     ports:
       - "${APP_SUREDBITS_WALLET_PORT}:3002"
@@ -17,7 +18,7 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.8.0-75-f8f5a8e8-SNAPSHOT
+    image: bitcoinscala/bitcoin-s-server:1.8.0-82-c0c54acc-SNAPSHOT
     user: "1000:1000"
     restart: on-failure
     volumes:
