@@ -9,6 +9,10 @@ services:
       - "8889:8000"
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
+    command:
+      - sh
+      - -c
+      - python initialize.py -net 'mainnet' -server 'localhost:10009' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
     networks:
       default:
         ipv4_address: 10.21.21.89
