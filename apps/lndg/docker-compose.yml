@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/cryptosharks131/lndg:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "8889:8000"
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+    networks:
+      default:
+        ipv4_address: 10.21.21.89
