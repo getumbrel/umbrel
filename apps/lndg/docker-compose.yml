@@ -9,10 +9,11 @@ services:
       - "8889:8000"
     volumes:
       - ${LND_DATA_DIR}:/root/.lnd:ro
+      - ${APP_DATA_DIR}/db.sqlite3:/lndg/db.sqlite3
     command:
       - sh
       - -c
-      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
+      - python initialize.py -dx -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
     networks:
       default:
         ipv4_address: 10.21.21.89
