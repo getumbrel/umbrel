@@ -9,7 +9,6 @@ services:
       - "8889:8000"
     volumes:
       - ${LND_DATA_DIR}:/root/.lnd:ro
-      - ${APP_DATA_DIR}/db.sqlite3:/lndg/db.sqlite3
     command:
       - sh
       - -c
