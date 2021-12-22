@@ -8,11 +8,11 @@ services:
     ports:
       - "8889:8000"
     volumes:
-      - ${LND_DATA_DIR}:/lnd:ro
+      - ${LND_DATA_DIR}:/root/.lnd:ro
     command:
       - sh
       - -c
-      - python initialize.py -dx -net 'mainnet' -server '$LND_IP:10009' -dir '/lnd' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
+      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
     networks:
       default:
         ipv4_address: 10.21.21.89
