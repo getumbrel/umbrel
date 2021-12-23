@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   satsale:
-    image: satsale/satsale:0.2.11
+    image: satsale/satsale:0.3.5
     restart: on-failure
     stop_grace_period: 1m
     volumes:
@@ -18,4 +18,4 @@ services:
       LND_GRPC_PORT: $LND_GRPC_PORT
       MACAROON_FILE: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/invoice.macaroon
       TLS_FILE: /lnd/tls.cert
-
+      APP_PASSWORD: $APP_PASSWORD
