@@ -14,8 +14,3 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       LND_URL: "$LND_IP:$LND_GRPC_PORT"
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "20m"
