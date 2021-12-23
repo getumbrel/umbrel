@@ -3,6 +3,7 @@ version: "3.7"
 services:
   web:
     image: podcastindexorg/podcasting20-boosts:v0.1.4
+    init: true
     restart: on-failure
     stop_grace_period: 1m
     user: "1000:1000"
