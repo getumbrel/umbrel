@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: podcastindexorg/podcasting20-boosts:v0.1.4
+    image: podcastindexorg/podcasting20-boosts:v0.1.4@sha256:b00eb53b7750e5f764d562c62b320dd72ec5b387189fc3caa9d876b100f5a3a4
     init: true
     restart: on-failure
     stop_grace_period: 1m
