@@ -1,0 +1,20 @@
+version: "3.7"
+
+services:
+  web:
+    image: podcastindexorg/podcasting20-helipad:v0.1.5
+    restart: on-failure
+    stop_grace_period: 1m
+    user: "1000:1000"
+    ports:
+      - 2112:2112
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      LND_URL: "$LND_IP:$LND_GRPC_PORT"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "20m"
