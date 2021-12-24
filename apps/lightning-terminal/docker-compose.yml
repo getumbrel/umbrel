@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lightninglabs/lightning-terminal:v0.6.0-alpha@sha256:9943bf0701181179bac160eacee093231836fc8e57a1bcc13ed47a113760cd92
+    image: lightninglabs/lightning-terminal:v0.6.1-alpha@sha256:cb1af6b972b7fa686886ace5794c4d56dda8f96cacda677b4601518e02b8b894
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
