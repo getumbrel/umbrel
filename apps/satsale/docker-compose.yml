@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   satsale:
-    image: satsale/satsale:0.1.02
+    image: satsale/satsale:0.1.03
     restart: on-failure
     stop_grace_period: 1m
     volumes:
