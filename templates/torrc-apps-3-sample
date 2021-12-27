@@ -48,3 +48,7 @@ HiddenServicePort 80 <app-syncthing-ip>:<app-syncthing-port>
 # uptime-kuma Hidden Service
 HiddenServiceDir /var/lib/tor/app-uptime-kuma
 HiddenServicePort 80 <app-uptime-kuma-ip>:3001
+
+# helipad Hidden Service
+HiddenServiceDir /var/lib/tor/app-helipad
+HiddenServicePort 80 <app-helipad-ip>:2112

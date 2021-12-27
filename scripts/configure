@@ -219,6 +219,8 @@ APP_SYNCTHING_PORT="8384"
 APP_SYNCTHING_SYNC_PORT="22000"
 APP_UPTIME_KUMA_PORT="8385"
 APP_UPTIME_KUMA_IP="10.21.21.62"
+APP_HELIPAD_PORT="2112"
+APP_HELIPAD_IP="10.21.21.65"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -435,6 +437,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-syncthing-sync-port>/${APP_SYNCTHING_SYNC_PORT}/g" "${template}"
   sed -i "s/<app-uptime-kuma-port>/${APP_UPTIME_KUMA_PORT}/g" "${template}"
   sed -i "s/<app-uptime-kuma-ip>/${APP_UPTIME_KUMA_IP}/g" "${template}"
+  sed -i "s/<app-helipad-port>/${APP_HELIPAD_PORT}/g" "${template}"
+  sed -i "s/<app-helipad-ip>/${APP_HELIPAD_IP}/g" "${template}"
 done
 
 ##########################################################
