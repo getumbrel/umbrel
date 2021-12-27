@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  web:
+    image: bleskomat/bleskomat-server:1.2.0@sha256:1566bee49252c2aa431094f07fdb6ad1cb71eb0e916bfe7484f9d54e75b38bf1
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_BLESKOMAT_SERVER_PORT:$APP_BLESKOMAT_SERVER_PORT"
+    volumes:
+      - $APP_DATA_DIR/data:/data
+      - $LND_DATA_DIR:/lnd:ro
+    entrypoint: /data/entrypoint.sh
+    environment:
+      DEBUG: bleskomat-server*,lnurl*
+      BLESKOMAT_SERVER_HOST: 0.0.0.0
+      BLESKOMAT_SERVER_PORT: $APP_BLESKOMAT_SERVER_PORT
+      BLESKOMAT_SERVER_URL: $APP_HIDDEN_SERVICE
+      BLESKOMAT_SERVER_ENDPOINT: /u
+      BLESKOMAT_SERVER_AUTH_API_KEYS: '[]'
+      BLESKOMAT_SERVER_LIGHTNING: '{"backend":"lnd","config":{"cert":"/lnd/tls.cert","protocol":"https","hostname":"$LND_IP:$LND_REST_PORT","macaroon":"/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"}}'
+      BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"sqlite3","connection":{"filename":"/data/db.sqlite3"},"useNullAsDefault":true}}'
+      BLESKOMAT_SERVER_COINRATES_DEFAULTS_PROVIDER: coinbase
+      BLESKOMAT_SERVER_ADMIN_WEB: true
+    networks:
+      default:
+        ipv4_address: $APP_BLESKOMAT_SERVER_IP
