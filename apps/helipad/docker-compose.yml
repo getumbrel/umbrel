@@ -2,7 +2,8 @@ version: "3.7"
 
 services:
   web:
-    image: podcastindexorg/podcasting20-helipad:v0.1.5
+    image: podcastindexorg/podcasting20-helipad:v0.1.5@sha256:2021a21cb650d6d010fac846268644acfee62b54ac7f75c758aae160a2c6bd39
+    init: true
     restart: on-failure
     stop_grace_period: 1m
     user: "1000:1000"
@@ -13,8 +14,3 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       LND_URL: "$LND_IP:$LND_GRPC_PORT"
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "20m"
