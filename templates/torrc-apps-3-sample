@@ -49,6 +49,11 @@ HiddenServicePort 80 <app-syncthing-ip>:<app-syncthing-port>
 HiddenServiceDir /var/lib/tor/app-uptime-kuma
 HiddenServicePort 80 <app-uptime-kuma-ip>:3001
 
+# helipad Hidden Service
+HiddenServiceDir /var/lib/tor/app-helipad
+HiddenServicePort 80 <app-helipad-ip>:2112
+
+
 # suredbits-wallet Hidden Service
 HiddenServiceDir /var/lib/tor/app-suredbits-wallet
 HiddenServicePort 80 <app-suredbits-wallet-ip>:<app-suredbits-wallet-port>
