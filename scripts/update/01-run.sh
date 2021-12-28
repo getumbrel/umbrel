@@ -128,7 +128,23 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
 cd "$UMBREL_ROOT"
-./scripts/stop
+./scripts/stop || {
+  # If Docker fails to stop containers we're most likely hitting this Docker bug: https://github.com/moby/moby/issues/17217
+  # Restarting the Docker service seems to fix it
+  echo "Attempting to autofix Docker failure"
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 70, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
+EOF
+  sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
+  sleep 1
+  ./scripts/stop || {
+    # If this doesn't resolve the issue, start containers again before failing so the web UI is still accessible
+    echo "That didn't work, attempting to restart containers"
+    ./scripts/start
+    echo "Error stopping Docker containers" > "${UMBREL_ROOT}/statuses/update-failure"
+    false
+  }
+}
 
 # Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
 # <hostname>.local and Tor
@@ -216,6 +232,40 @@ samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
 if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_tor_dir}" ]]; then
   echo "Found samourai-server install, attempting to migrate dojo hidden service directory..."
   mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
+fi
+
+# Handle updating entrypoint for ride-the-lightning app
+rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
+rtl_data_entrypoint="${rtl_data_dir}/rtl/entrypoint.sh"
+rtl_app_entrypoint="${UMBREL_ROOT}/apps/ride-the-lightning/rtl/entrypoint.sh"
+if [[ -d "${rtl_data_dir}" ]]; then
+  echo "Found ride-the-lightning install, attempting to update entrypoint..."
+  cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
+fi
+
+# Handle new boltz container for ride-the-lightning app
+rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
+rtl_boltz_data_dir="${rtl_data_dir}/boltz"
+if [[ -d "${rtl_data_dir}" ]] && [[ ! -d "${rtl_boltz_data_dir}" ]]; then
+  echo "Found ride-the-lightning install without boltz data dir, attempting to create it..."
+  mkdir "${rtl_boltz_data_dir}"
+  chown 1000:1000 "${rtl_boltz_data_dir}"
+fi
+
+# Handle updating entrypoint for thunderhub app
+thunderhub_data_dir="${UMBREL_ROOT}/app-data/thunderhub"
+thunderhub_data_entrypoint="${thunderhub_data_dir}/data/entrypoint.sh"
+thunderhub_app_entrypoint="${UMBREL_ROOT}/apps/thunderhub/data/entrypoint.sh"
+if [[ -d "${thunderhub_data_dir}" ]]; then
+  echo "Found thunderhub install, attempting to update entrypoint..."
+  cp "${thunderhub_app_entrypoint}" "${thunderhub_data_entrypoint}"
+fi
+
+# Handle stripping hardcoded password for lightning-terminal app
+lightning_terminal_conf="${UMBREL_ROOT}/app-data/lightning-terminal/data/.lit/lit.conf"
+if [[ -f "${lightning_terminal_conf}" ]]; then
+  echo "Found lightning-terminal install, attempting to strip hardcoded password..."
+  sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
 fi
 
 # Fix permissions

@@ -10,7 +10,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/home/coder
     environment:
-      PASSWORD: "moneyprintergobrrr"
+      PASSWORD: $APP_PASSWORD
     networks:
       default:
         ipv4_address: $APP_CODE_SERVER_IP
