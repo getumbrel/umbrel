@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  frontend:
+    image: kaybesee/lily-frontend:latest
+    stdin_open: true
+    build:
+      dockerfile: Dockerfile.frontend
+      context: ./
+    ports:
+      - '42069:80'
+    networks:
+      - lily
+
+  express:
+    image: kaybesee/lily-express:latest
+    volumes:
+      - lily-data:/data
+    env_file:
+      - .env.production
+    build:
+      dockerfile: Dockerfile.express
+      context: ./
+    ports:
+      - '5000:5000'
+    networks:
+      - lily
+
+networks:
+  lily:
+    driver: bridge
+
+volumes:
+  lily-data:
