@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/itchysats/itchysats/taker:0.3.3@sha256:216d19fafe41860c78366737a79088f1049240723cf587ba7b049b071c1fac62
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - ${APP_ITCHYSATS_PORT}:8000
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+    command:
+      - --maker=mainnet.itchysats.network:9999
+      - --maker-id=7e35e34801e766a6a29ecb9e22810ea4e3476c2b37bf75882edf94a68b1d9607
+      - --password=$APP_PASSWORD
+      - mainnet
+      - --electrum=tcp://$ELECTRUM_IP:$ELECTRUM_PORT
+
+    networks:
+      default:
+        ipv4_address: $APP_ITCHYSATS_IP

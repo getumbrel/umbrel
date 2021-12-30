@@ -680,5 +680,30 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "itchysats",
+        "category": "Finance",
+        "name": "ItchySats",
+        "version": "v0.3.3",
+        "tagline": "Peer-2-peer derivatives on Bitcoin",
+        "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. CFDs period ends after 7 days - perpetual positions are in the making :)\n4. The leverage is fixed at 2\n\nWe are woking hard on perpetual positions and allowing sell positions.\nUpdate to be expected soon!",
+        "developer": "ItchySats",
+        "website": "https://itchysats.network",
+        "dependencies": [
+            "electrum"
+        ],
+        "repo": "https://github.com/itchysats/itchysats",
+        "support": "https://github.com/itchysats/itchysats/issues",
+        "port": 7113,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "itchysats",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]
