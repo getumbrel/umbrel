@@ -19,6 +19,11 @@ services:
     build:
       dockerfile: Dockerfile.express
       context: ./
+    environment:
+      - ELECTRUM_IP=$ELECTRUM_IP
+      - ELECTRUM_PORT=$ELECTRUM_PORT
+      - LND_IP=$LND_IP
+      - LND_GRPC_PORT=$LND_GRPC_PORT
     ports:
       - '5000:5000'
 
