@@ -9,8 +9,6 @@ services:
       context: ./
     ports:
       - '42069:80'
-    networks:
-      - lily
 
   express:
     image: kaybesee/lily-express:latest
@@ -23,12 +21,6 @@ services:
       context: ./
     ports:
       - '5000:5000'
-    networks:
-      - lily
-
-networks:
-  lily:
-    driver: bridge
 
 volumes:
   lily-data:
