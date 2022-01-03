@@ -6,7 +6,13 @@ services:
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data/backup:/backup
+      - ${APP_DATA_DIR}/data/log:/log
     environment:
+      LOG_PATH: "/log/"
+      BITCOIN_S_HOME: "/"
+      MEMPOOL_API_URL: "http://umbrel.local:${APP_MEMPOOL_PORT}/api"
       WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
       WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/events"
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
