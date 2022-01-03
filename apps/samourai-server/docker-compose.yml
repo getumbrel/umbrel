@@ -19,7 +19,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.12.0@sha256:312c93f2f3fd577cb35dfa59bd4030e4b34cb7cce8ee139485cf1c555b64e7ef
+    image: louneskmt/dojo-nodejs:1.12.1@sha256:b409a8801b071966f19799ae90a12faf3d8863542a2e24a155ae9ff142d4d95b
     init: true
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh ${APP_SAMOURAI_SERVER_DB_IP}:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
@@ -27,7 +27,7 @@ services:
     environment:
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-      DOJO_NODEJS_VERSION_TAG: 1.12.0
+      DOJO_NODEJS_VERSION_TAG: 1.12.1
       NET_DOJO_TOR_IPV4: $TOR_PROXY_IP
       NET_DOJO_TOR_PORT: $TOR_PROXY_PORT
       NET_DOJO_MYSQL_IPV4: $APP_SAMOURAI_SERVER_DB_IP
