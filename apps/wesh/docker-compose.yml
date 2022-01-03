@@ -2,15 +2,16 @@ version: "3.7"
 
 services:
   web:
-    image: ibz0/wesh:v0.2.1
+    image: ibz0/wesh:v0.3.2
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 7681:7681
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/data
     environment:
-        LND_HOST: "${LND_IP}"
-        LND_ADDRESS: "//${LND_IP}:10009"
-        CERT_PATH: "/lnd/tls.cert"
-        MACAROON_PATH: "/lnd/data/chain/bitcoin/mainnet/readonly.macaroon"
+        WESH_VERSION: "v0.3.2"
+        APP_PASSWORD: "${APP_PASSWORD}"
+        LND_IP: "${LND_IP}"
+        LND_GRPC_PORT: ${LND_GRPC_PORT}
