@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/cryptosharks131/lndg:latest@sha256:07a9ef4280ddbc16dde0520a54299262f9ee8cefcc95fbc61f050d3df39a7eb5
+    image: ghcr.io/cryptosharks131/lndg:v1.0.0@sha256:7260e3117b5b44691c6f61f0b54d58a49d8382e9ad7431da39232d6a18b013ec
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -13,7 +13,7 @@ services:
     command:
       - sh
       - -c
-      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
+      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -pw '$APP_PASSWORD' -d && python manage.py migrate && python manage.py collectstatic --no-input && supervisord && python manage.py runserver 0.0.0.0:8000
     networks:
       default:
         ipv4_address: 10.21.21.89
