@@ -2,7 +2,7 @@
 # modifications you make can break the functionality of your umbrel. These files
 # are automatically reset with every Umbrel update.
 
-verbose = 2
+log_filters = "INFO"
 network = "bitcoin"
 db_dir = "/data/db"
 daemon_rpc_addr = "<bitcoin-ip>:<port>"
