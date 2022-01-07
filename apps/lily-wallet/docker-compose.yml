@@ -13,7 +13,8 @@ services:
   express:
     image: kaybesee/lily-express:latest
     volumes:
-      - lily-data:/data
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
     env_file:
       - .env.production
     build:
