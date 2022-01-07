@@ -13,20 +13,17 @@ services:
   express:
     image: kaybesee/lily-express:latest
     volumes:
-      - ${APP_DATA_DIR}/data:/data
+      - ${APP_DATA_DIR}/config
       - ${LND_DATA_DIR}:/lnd:ro
-    env_file:
-      - .env.production
     build:
       dockerfile: Dockerfile.express
       context: ./
     environment:
+      - EXPRESS_PORT=5000
+      - USER_DATA_DIRECTORY="/data"
       - ELECTRUM_IP=$ELECTRUM_IP
       - ELECTRUM_PORT=$ELECTRUM_PORT
       - LND_IP=$LND_IP
       - LND_GRPC_PORT=$LND_GRPC_PORT
     ports:
       - '5000:5000'
-
-volumes:
-  lily-data:
