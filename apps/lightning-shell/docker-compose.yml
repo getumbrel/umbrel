@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ibz0/wesh:v0.3.2
+    image: ibz0/lightning-shell:v0.1.1
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -11,7 +11,6 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/data
     environment:
-        WESH_VERSION: "v0.3.2"
         APP_PASSWORD: "${APP_PASSWORD}"
         LND_IP: "${LND_IP}"
         LND_GRPC_PORT: ${LND_GRPC_PORT}
