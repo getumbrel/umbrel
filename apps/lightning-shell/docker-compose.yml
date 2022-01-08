@@ -6,7 +6,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 7681:7681
+      - ${APP_LIGHTNING_SHELL_PORT}:7681
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/data
@@ -14,3 +14,6 @@ services:
         APP_PASSWORD: "${APP_PASSWORD}"
         LND_IP: "${LND_IP}"
         LND_GRPC_PORT: ${LND_GRPC_PORT}
+    networks:
+      default:
+        ipv4_address: $APP_LIGHTNING_SHELL_IP
