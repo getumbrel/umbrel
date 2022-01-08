@@ -528,7 +528,7 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.194",
+        "version": "0.1.187",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
         "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
@@ -662,7 +662,7 @@
         "id": "helipad",
         "category": "Lightning Node Management",
         "name": "Helipad",
-        "version": "0.1.6",
+        "version": "0.1.5",
         "tagline": "View boosts and boost-a-grams from Podcasting 2.0 enabled apps",
         "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
         "developer": "Podcastindex.org",
@@ -705,5 +705,29 @@
         "defaultUsername": "itchysats",
         "deterministicPassword": true,
         "torOnly": false
+    },
+    {
+        "id": "lightning-shell",
+        "category": "Lightning Node Management",
+        "name": "Lightning Shell",
+        "version": "0.1.1",
+        "tagline": "Web shell with a selection of LN node management utilities",
+        "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
+        "developer": "Ioan Bizău",
+        "website": "https://ibz.me",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://ibz.github.io/lightning-shell/",
+        "support": "https://ibz.github.io/lightning-shell/issues",
+        "port": 7681,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "deterministicPassword": true
     }
 ]

@@ -56,3 +56,7 @@ HiddenServicePort 80 <app-helipad-ip>:2112
 # itchysats Hidden Service
 HiddenServiceDir /var/lib/tor/app-itchysats
 HiddenServicePort 80 <app-itchysats-ip>:8000
+
+# lightning-shell Hidden Service
+HiddenServiceDir /var/lib/tor/app-lightning-shell
+HiddenServicePort 80 <app-lightning-shell-ip>:7681
