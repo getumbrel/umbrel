@@ -7,11 +7,11 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     volumes:
-      - ${APP_DATA_DIR}/data/backup:/backup
+      - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s
       - ${APP_DATA_DIR}/data/log:/log
     environment:
       LOG_PATH: "/log/"
-      BITCOIN_S_HOME: "/"
+      BITCOIN_S_HOME: "/home/bitcoin-s/.bitcoin-s/"
       MEMPOOL_API_URL: "http://umbrel.local:${APP_MEMPOOL_PORT}/api"
       WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
       WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/events"
@@ -24,7 +24,7 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.8.0-108-524c5212-SNAPSHOT
+    image: bitcoinscala/bitcoin-s-server:1.8.0-117-a58ef1cd-SNAPSHOT
     user: "1000:1000"
     restart: on-failure
     volumes:
