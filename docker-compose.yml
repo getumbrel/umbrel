@@ -1,49 +1,30 @@
 version: '3.7'
 
 services:
-        tor:
+        tor_proxy:
                 container_name: tor
                 image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
                 user: toruser
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc-umbrel:/etc/tor/torrc
+                    - ${PWD}/tor/torrc-proxy:/etc/tor/torrc
                     - ${PWD}/tor/data:/var/lib/tor/
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
-        app_tor:
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
-                user: toruser
+        tor_server:
+                image: getumbrel/tor-server:0.4.6.8@sha256:a81797e4a6b0c4709dd6f7c5543ab99e318af329bdf728c5b267f412c51b9a31
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc-apps:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
+                    - ${PWD}/tor/torrc-server:/torrc
+                    - ${PWD}/tor/data:/data
+                environment:
+                    HS_PER_PROCESS: "10"
                 networks:
                     default:
-                        ipv4_address: $APPS_TOR_IP
-        app_2_tor:
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
-                user: toruser
-                restart: on-failure
-                volumes:
-                    - ${PWD}/tor/torrc-apps-2:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
-                networks:
-                    default:
-                        ipv4_address: $APPS_2_TOR_IP
-        app_3_tor:
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
-                user: toruser
-                restart: on-failure
-                volumes:
-                    - ${PWD}/tor/torrc-apps-3:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
-                networks:
-                    default:
-                        ipv4_address: $APPS_3_TOR_IP
+                        ipv4_address: $TOR_SERVER_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
