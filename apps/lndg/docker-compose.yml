@@ -13,7 +13,7 @@ services:
     command:
       - sh
       - -c
-      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -pw '$APP_PASSWORD' -d && supervisord && python manage.py runserver 0.0.0.0:8000
+      - python initialize.py -net '$BITCOIN_NETWORK' -server '$LND_IP:$LND_GRPC_PORT' -pw 'umbrel-test-login' -d && supervisord && python manage.py runserver 0.0.0.0:8000
     networks:
       default:
         ipv4_address: 10.21.21.89
