@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/cryptosharks131/lndg:v1.0.0@sha256:7260e3117b5b44691c6f61f0b54d58a49d8382e9ad7431da39232d6a18b013ec
+    image: ghcr.io/cryptosharks131/lndg:v1.0.1@sha256:5c85b23a812c34ec55dd7823ed82fc8c26545dd688275e2e4d1fd8b0c776b48c
     restart: on-failure
     stop_grace_period: 1m
     ports:
