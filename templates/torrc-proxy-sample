@@ -7,6 +7,10 @@ SocksPort   <tor-proxy-ip>:<tor-proxy-port>
 ControlPort <tor-proxy-ip>:29051
 
 # Dashboard Hidden Service
+#
+# We include the dashboard hs in the proxy torrc because it's the only hs entry and so more
+# Tor acts much more reliably and there is a higher chance the dashboard hs will come back
+# online quickly after an update.
 HiddenServiceDir /var/lib/tor/web
 HiddenServicePort 80 <nginx-ip>:80
 
