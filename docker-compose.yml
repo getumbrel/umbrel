@@ -21,7 +21,7 @@ services:
                     - ${PWD}/tor/torrc-server:/torrc
                     - ${PWD}/tor/data:/data
                 environment:
-                    HS_PER_PROCESS: "5"
+                    HS_PER_PROCESS: "10"
                 networks:
                     default:
                         ipv4_address: $TOR_SERVER_IP
