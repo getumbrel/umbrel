@@ -1,0 +1,174 @@
+# Warning: it's not recommended to modify these files directly. Any
+# modifications you make can break the functionality of your umbrel. These files
+# are automatically reset with every Umbrel update.
+
+# Umbrel
+
+# Bitcoin Core P2P Hidden Service
+HiddenServiceDir /data/bitcoin-p2p
+HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>
+
+# Bitcoin Core RPC Hidden Service
+HiddenServiceDir /data/bitcoin-rpc
+HiddenServicePort <bitcoin-rpc-port> <bitcoin-ip>:<bitcoin-rpc-port>
+
+# Electrum Hidden Service
+HiddenServiceDir /data/electrum
+HiddenServicePort <electrum-port> <electrum-ip>:<electrum-port>
+
+# LND REST Hidden Service
+HiddenServiceDir /data/lnd-rest
+HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
+
+# LND gRPC Hidden Service
+HiddenServiceDir /data/lnd-grpc
+HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>
+
+
+# Apps
+
+# btc-rpc-explorer Hidden Service
+HiddenServiceDir /data/app-btc-rpc-explorer
+HiddenServicePort 80 <app-btc-rpc-explorer-ip>:<app-btc-rpc-explorer-port>
+
+# thunderhub Hidden Service
+HiddenServiceDir /data/app-thunderhub
+HiddenServicePort 80 <app-thunderhub-ip>:<app-thunderhub-port>
+
+# sphinx-relay Hidden Service
+# We expose 80 for the connection string UI and <app-sphinx-relay-port> for the
+# actual server connection
+HiddenServiceDir /data/app-sphinx-relay
+HiddenServicePort 80 <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+HiddenServicePort <app-sphinx-relay-port> <app-sphinx-relay-ip>:<app-sphinx-relay-port>
+
+# ride-the-lightning Hidden Service
+HiddenServiceDir /data/app-ride-the-lightning
+HiddenServicePort 80 <app-ride-the-lightning-ip>:<app-ride-the-lightning-port>
+
+# lightning-terminal Hidden Service
+HiddenServiceDir /data/app-lightning-terminal
+HiddenServicePort 80 <app-lightning-terminal-ip>:<app-lightning-terminal-port>
+
+# specter-desktop Hidden Service
+HiddenServiceDir /data/app-specter-desktop
+HiddenServicePort 80 <app-specter-desktop-ip>:<app-specter-desktop-port>
+
+# btcpay-server Hidden Service
+HiddenServiceDir /data/app-btcpay-server
+HiddenServicePort 80 <app-btcpay-server-ip>:<app-btcpay-server-port>
+
+# lnbits Hidden Service
+HiddenServiceDir /data/app-lnbits
+HiddenServicePort 80 <app-lnbits-ip>:<app-lnbits-port>
+
+# photoprism Hidden Service
+HiddenServiceDir /data/app-photoprism
+HiddenServicePort 80 <app-photoprism-ip>:<app-photoprism-port>
+
+# mempool Hidden Service
+HiddenServiceDir /data/app-mempool
+HiddenServicePort 80 <app-mempool-ip>:<app-mempool-port>
+
+# samourai-server dojo Hidden Service
+HiddenServiceDir /data/app-samourai-server-dojo
+HiddenServicePort 80 <app-samourai-server-ip>:80
+
+# samourai-server connect Hidden Service
+HiddenServiceDir /data/app-samourai-server
+HiddenServicePort 80 <app-samourai-server-ip>:8081
+
+# samourai-server whirlpool Hidden Service
+HiddenServiceDir /data/app-samourai-server-whirlpool
+HiddenServicePort 80 <app-samourai-server-whirlpool-ip>:<app-samourai-server-whirlpool-port>
+
+# LndHub Hidden Service
+HiddenServiceDir /data/app-bluewallet
+HiddenServicePort 80 <app-bluewallet-lndhub-ip>:<app-bluewallet-lndhub-port>
+
+# nextcloud Hidden Service
+HiddenServiceDir /data/app-nextcloud
+HiddenServicePort 80 <app-nextcloud-ip>:80
+
+# pi-hole Hidden Service
+HiddenServiceDir /data/app-pi-hole
+HiddenServicePort 80 <app-pi-hole-ip>:80
+
+# home-assistant Hidden Service
+HiddenServiceDir /data/app-home-assistant
+HiddenServicePort 80 <app-home-assistant-ip>:8123
+
+# gitea Hidden Service
+HiddenServiceDir /data/app-gitea
+HiddenServicePort 80 <app-gitea-ip>:<app-gitea-port>
+HiddenServicePort 22 <app-gitea-ip>:<app-gitea-ssh-port>
+
+# simple-torrent Hidden Service
+HiddenServiceDir /data/app-simple-torrent
+HiddenServicePort 80 <app-simple-torrent-ip>:<app-simple-torrent-port>
+
+# synapse Hidden Service
+HiddenServiceDir /data/app-synapse
+HiddenServicePort 80 <app-synapse-ip>:<app-synapse-port>
+HiddenServicePort <app-synapse-port> <app-synapse-ip>:<app-synapse-port>
+
+# element Hidden Service
+HiddenServiceDir /data/app-element
+HiddenServicePort 80 <app-element-ip>:80
+
+# vaultwarden Hidden Service
+HiddenServiceDir /data/app-vaultwarden
+HiddenServicePort 80 <app-vaultwarden-ip>:<app-vaultwarden-port>
+
+# code-server Hidden Service
+HiddenServiceDir /data/app-code-server
+HiddenServicePort 80 <app-code-server-ip>:8080
+
+# squeaknode Hidden Service
+HiddenServiceDir /data/app-squeaknode
+HiddenServicePort 80 <app-squeaknode-ip>:<app-squeaknode-port>
+
+# squeaknode p2p Hidden Service
+HiddenServiceDir /data/app-squeaknode-p2p
+HiddenServicePort <app-squeaknode-p2p-port> <app-squeaknode-ip>:<app-squeaknode-p2p-port>
+HiddenServicePort <app-squeaknode-p2p-testnet-port> <app-squeaknode-ip>:<app-squeaknode-p2p-testnet-port>
+
+# krystal-bull Hidden Service
+HiddenServiceDir /data/app-krystal-bull
+HiddenServicePort 80 <app-krystal-bull-ip>:3001
+
+# node-red Hidden Service
+HiddenServiceDir /data/app-node-red
+HiddenServicePort 80 <app-node-red-ip>:<app-node-red-port>
+
+# lnmarkets Hidden Service
+HiddenServiceDir /data/app-lnmarkets
+HiddenServicePort 80 <app-lnmarkets-ip>:<app-lnmarkets-port>
+
+# electrumx Hidden Service
+HiddenServiceDir /data/app-electrumx
+HiddenServicePort 50001 <app-electrumx-ip>:50001
+
+# tallycoin-connectHidden Service
+HiddenServiceDir /data/app-tallycoin-connect
+HiddenServicePort 80 <app-tallycoin-connect-ip>:<app-tallycoin-connect-port>
+
+# syncthing Hidden Service
+HiddenServiceDir /data/app-syncthing
+HiddenServicePort 80 <app-syncthing-ip>:<app-syncthing-port>
+
+# uptime-kuma Hidden Service
+HiddenServiceDir /data/app-uptime-kuma
+HiddenServicePort 80 <app-uptime-kuma-ip>:3001
+
+# helipad Hidden Service
+HiddenServiceDir /data/app-helipad
+HiddenServicePort 80 <app-helipad-ip>:2112
+
+# itchysats Hidden Service
+HiddenServiceDir /data/app-itchysats
+HiddenServicePort 80 <app-itchysats-ip>:8000
+
+# lightning-shell Hidden Service
+HiddenServiceDir /data/app-lightning-shell
+HiddenServicePort 80 <app-lightning-shell-ip>:7681

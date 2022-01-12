@@ -71,10 +71,8 @@ echo
 NGINX_CONF_FILE="./templates/nginx.conf"
 BITCOIN_CONF_FILE="./templates/bitcoin.conf"
 LND_CONF_FILE="./templates/lnd.conf"
-APPS_TOR_CONF_FILE="./templates/torrc-apps"
-APPS_2_TOR_CONF_FILE="./templates/torrc-apps-2"
-APPS_3_TOR_CONF_FILE="./templates/torrc-apps-3"
-UMBREL_TOR_CONF_FILE="./templates/torrc-umbrel"
+TOR_SERVER_CONF_FILE="./templates/torrc-server"
+TOR_PROXY_CONF_FILE="./templates/torrc-proxy"
 ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
 
@@ -83,10 +81,8 @@ ENV_FILE="./templates/.env"
 [[ -f "$NGINX_CONF_FILE" ]] && rm -f "$NGINX_CONF_FILE"
 [[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
 [[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
-[[ -f "$APPS_TOR_CONF_FILE" ]] && rm -f "$APPS_TOR_CONF_FILE"
-[[ -f "$APPS_2_TOR_CONF_FILE" ]] && rm -f "$APPS_2_TOR_CONF_FILE"
-[[ -f "$APPS_3_TOR_CONF_FILE" ]] && rm -f "$APPS_3_TOR_CONF_FILE"
-[[ -f "$UMBREL_TOR_CONF_FILE" ]] && rm -f "$UMBREL_TOR_CONF_FILE"
+[[ -f "$TOR_SERVER_CONF_FILE" ]] && rm -f "$TOR_SERVER_CONF_FILE"
+[[ -f "$TOR_PROXY_CONF_FILE" ]] && rm -f "$TOR_PROXY_CONF_FILE"
 [[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
@@ -94,10 +90,8 @@ ENV_FILE="./templates/.env"
 [[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
 [[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
 [[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
-[[ -f "./templates/torrc-apps-sample" ]] && cp "./templates/torrc-apps-sample" "$APPS_TOR_CONF_FILE"
-[[ -f "./templates/torrc-apps-2-sample" ]] && cp "./templates/torrc-apps-2-sample" "$APPS_2_TOR_CONF_FILE"
-[[ -f "./templates/torrc-apps-3-sample" ]] && cp "./templates/torrc-apps-3-sample" "$APPS_3_TOR_CONF_FILE"
-[[ -f "./templates/torrc-umbrel-sample" ]] && cp "./templates/torrc-umbrel-sample" "$UMBREL_TOR_CONF_FILE"
+[[ -f "./templates/torrc-server-sample" ]] && cp "./templates/torrc-server-sample" "$TOR_SERVER_CONF_FILE"
+[[ -f "./templates/torrc-proxy-sample" ]] && cp "./templates/torrc-proxy-sample" "$TOR_PROXY_CONF_FILE"
 [[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
@@ -131,10 +125,8 @@ LND_REST_PORT="8080"
 ELECTRUM_IP="10.21.21.10"
 ELECTRUM_PORT="50001"
 TOR_PROXY_IP="10.21.21.11"
-APPS_TOR_IP="10.21.21.47"
-APPS_2_TOR_IP="10.21.21.48"
-APPS_3_TOR_IP="10.21.21.49"
 TOR_PROXY_PORT="9050"
+TOR_SERVER_IP="10.21.21.49"
 
 # Apps
 APP_BTC_RPC_EXPLORER_IP="10.21.21.12"
@@ -283,8 +275,6 @@ fi
 # Update RPC, P2P and ZMQ Ports
 sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g;" "$UMBREL_TOR_CONF_FILE"
-sed -i "s/<bitcoin-p2p-port>/$BITCOIN_P2P_PORT/g;" "$UMBREL_TOR_CONF_FILE"
 sed -i "/daemon_rpc_addr/s/<port>/$BITCOIN_RPC_PORT/g;" "$ELECTRS_CONF_FILE"
 sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
 sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
@@ -303,7 +293,7 @@ sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$E
 sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_FILE"
 
 # Add Tor password
-sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASSWORD/g;" "$UMBREL_TOR_CONF_FILE"
+sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASSWORD/g;" "$TOR_PROXY_CONF_FILE"
 sed -i "s/torpassword=<password>/torpassword=$TOR_PASSWORD/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE"
 sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
@@ -332,7 +322,7 @@ if [[ "$BITCOIN_NETWORK" == "mainnet" ]] && [[ ! -f "${STATUS_DIR}/node-status-b
 fi
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${APPS_TOR_CONF_FILE}" "${APPS_2_TOR_CONF_FILE}" "${APPS_3_TOR_CONF_FILE}" "${UMBREL_TOR_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_PROXY_CONF_FILE}" "${TOR_SERVER_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
@@ -344,6 +334,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
   sed -i "s/<bitcoin-p2p-port>/${BITCOIN_P2P_PORT}/g" "${template}"
+  sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g" "${template}"
   sed -i "s/<lnd-ip>/${LND_IP}/g" "${template}"
   sed -i "s/<lnd-grpc-port>/${LND_GRPC_PORT}/g" "${template}"
   sed -i "s/<lnd-rest-port>/${LND_REST_PORT}/g" "${template}"
@@ -351,9 +342,7 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<electrum-port>/${ELECTRUM_PORT}/g" "${template}"
   sed -i "s/<tor-proxy-ip>/${TOR_PROXY_IP}/g" "${template}"
   sed -i "s/<tor-proxy-port>/${TOR_PROXY_PORT}/g" "${template}"
-  sed -i "s/<apps-tor-ip>/${APPS_TOR_IP}/g" "${template}"
-  sed -i "s/<apps-2-tor-ip>/${APPS_2_TOR_IP}/g" "${template}"
-  sed -i "s/<apps-3-tor-ip>/${APPS_3_TOR_IP}/g" "${template}"
+  sed -i "s/<tor-server-ip>/${TOR_SERVER_IP}/g" "${template}"
   sed -i "s/<zmq-rawblock-port>/${BITCOIN_ZMQ_RAWBLOCK_PORT}/g;" "${template}"
   sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
   sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
@@ -455,10 +444,8 @@ done
 
 mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
 mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
-mv -f "$APPS_TOR_CONF_FILE" "./tor/torrc-apps"
-mv -f "$APPS_2_TOR_CONF_FILE" "./tor/torrc-apps-2"
-mv -f "$APPS_3_TOR_CONF_FILE" "./tor/torrc-apps-3"
-mv -f "$UMBREL_TOR_CONF_FILE" "./tor/torrc-umbrel"
+mv -f "$TOR_SERVER_CONF_FILE" "./tor/torrc-server"
+mv -f "$TOR_PROXY_CONF_FILE" "./tor/torrc-proxy"
 mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
 
@@ -479,7 +466,7 @@ fi
 if [[ ! -f "${STATUS_DIR}/configured" ]]; then
   echo "Generating hidden services..."
   echo
-  docker-compose up --detach tor
+  docker-compose up --detach tor_proxy
   wait_for_tor=10
   while [[ ! -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; do
     if [[ "${wait_for_tor}" == 0 ]]; then
