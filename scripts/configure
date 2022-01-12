@@ -466,7 +466,7 @@ fi
 if [[ ! -f "${STATUS_DIR}/configured" ]]; then
   echo "Generating hidden services..."
   echo
-  docker-compose up --detach tor_server
+  docker-compose up --detach tor_proxy
   wait_for_tor=10
   while [[ ! -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; do
     if [[ "${wait_for_tor}" == 0 ]]; then
