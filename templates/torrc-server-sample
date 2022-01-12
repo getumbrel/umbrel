@@ -4,10 +4,6 @@
 
 # Umbrel
 
-# Dashboard Hidden Service
-HiddenServiceDir /data/web
-HiddenServicePort 80 <nginx-ip>:80
-
 # Bitcoin Core P2P Hidden Service
 HiddenServiceDir /data/bitcoin-p2p
 HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>

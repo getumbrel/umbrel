@@ -6,4 +6,8 @@
 SocksPort   <tor-proxy-ip>:<tor-proxy-port>
 ControlPort <tor-proxy-ip>:29051
 
+# Dashboard Hidden Service
+HiddenServiceDir /var/lib/tor/web
+HiddenServicePort 80 <nginx-ip>:80
+
 HashedControlPassword <password>
