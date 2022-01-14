@@ -12,6 +12,7 @@ services:
       - '42069:80'
 
   express:
+    privileged: true
     image: kaybesee/lily-express:latest
     restart: on-failure
     volumes:
@@ -30,6 +31,3 @@ services:
       - LND_GRPC_PORT=$LND_GRPC_PORT
     ports:
       - '5000:5000'
-    devices:
-      - /dev/sda:/dev/sda
-      - /dev/sda1:/dev/sda1
