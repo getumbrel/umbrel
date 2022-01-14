@@ -18,6 +18,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/config
       - ${LND_DATA_DIR}/:/lnd:ro
+      - /dev:/dev
     build:
       dockerfile: Dockerfile.express
       context: ./
