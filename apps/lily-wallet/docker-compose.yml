@@ -3,6 +3,7 @@ version: '3'
 services:
   frontend:
     image: kaybesee/lily-frontend:latest
+    restart: on-failure
     stdin_open: true
     build:
       dockerfile: Dockerfile.frontend
@@ -12,6 +13,7 @@ services:
 
   express:
     image: kaybesee/lily-express:latest
+    restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/config
       - ${LND_DATA_DIR}/:/lnd:ro
@@ -20,7 +22,6 @@ services:
       context: ./
     environment:
       - EXPRESS_PORT=5000
-      - USER_DATA_DIRECTORY=/data
       - ELECTRUM_IP=$ELECTRUM_IP
       - ELECTRUM_PORT=$ELECTRUM_PORT
       - APP_PASSWORD=$APP_PASSWORD
@@ -29,3 +30,6 @@ services:
       - LND_GRPC_PORT=$LND_GRPC_PORT
     ports:
       - '5000:5000'
+    devices:
+      - /dev/sda:/dev/sda
+      - /dev/sda1:/dev/sda1
