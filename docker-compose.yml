@@ -136,7 +136,7 @@ services:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
-                image: getumbrel/middleware:v0.1.12@sha256:2d689fbf9248d638a772f77c85e3fbf92c6bf69134533cbe4b450d80b2319c92
+                image: getumbrel/middleware:v0.1.13@sha256:21bfbed04eee536acf49345051a6ae9162bdbd0f9049c635db0b672beaf28f4b
                 depends_on: [ manager, bitcoin, lnd ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
