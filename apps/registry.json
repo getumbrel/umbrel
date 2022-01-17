@@ -259,18 +259,18 @@
     {
         "id": "mempool",
         "category": "Explorers",
-        "name": "Mempool",
+        "name": "mempool",
         "version": "2.3.0",
-        "tagline": "A mempool visualizer, explorer and fee estimator",
-        "description": "Mempool is the official self-hosted version of the fully featured explorer, visualizer, fee estimator, and API service running on mempool.space, an open source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market to help our transition into a multi-layer ecosystem.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
-        "developer": "mempool.space",
+        "tagline": "A self-hosted explorer for the Bitcoin community",
+        "description": "Trusted third parties are security holes. Self-host your own instance of mempool.space on Umbrel for maximum privacy.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
+        "developer": "Mempool Space K.K.",
         "website": "https://mempool.space/about",
         "dependencies": [
             "bitcoind",
             "electrum"
         ],
         "repo": "https://github.com/mempool/mempool",
-        "support": "https://t.me/mempoolspace",
+        "support": "https://mempool.support",
         "port": 3006,
         "gallery": [
             "1.jpg",
