@@ -663,7 +663,7 @@
         "category": "Lightning Node Management",
         "name": "Helipad",
         "version": "0.1.5",
-        "tagline": "View boosts and boost-a-grams from Podcasting 2.0 enabled apps",
+        "tagline": "View boosts & boost-a-grams from Podcasting 2.0 apps",
         "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
         "developer": "Podcastindex.org",
         "website": "https://podcastindex.org",
