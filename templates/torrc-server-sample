@@ -172,3 +172,7 @@ HiddenServicePort 80 <app-itchysats-ip>:8000
 # lightning-shell Hidden Service
 HiddenServiceDir /data/app-lightning-shell
 HiddenServicePort 80 <app-lightning-shell-ip>:7681
+
+# satsale Hidden Service
+HiddenServiceDir /data/app-satsale
+HiddenServicePort 80 <app-satsale-ip>:5000

@@ -217,6 +217,8 @@ APP_ITCHYSATS_IP="10.21.21.64"
 APP_ITCHYSATS_PORT="7113"
 APP_LIGHTNING_SHELL_PORT="7681"
 APP_LIGHTNING_SHELL_IP="10.21.21.66"
+APP_SATSALE_PORT="5000"
+APP_SATSALE_IP="10.21.21.67"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -436,6 +438,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-itchysats-port>/${APP_ITCHYSATS_PORT}/g" "${template}"
   sed -i "s/<app-lightning-shell-port>/${APP_LIGHTNING_SHELL_PORT}/g" "${template}"
   sed -i "s/<app-lightning-shell-ip>/${APP_LIGHTNING_SHELL_IP}/g" "${template}"
+  sed -i "s/<app-satsale-port>/${APP_SATSALE_PORT}/g" "${template}"
+  sed -i "s/<app-satsale-ip>/${APP_SATSALE_IP}/g" "${template}"
 done
 
 ##########################################################
