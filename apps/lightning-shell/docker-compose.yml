@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  web:
+    image: ibz0/lightning-shell:v0.1.1@sha256:47e271333410475dad92a91b2e35a58c723bbf9cc688fc2cd6cec1013d469f28
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - ${APP_LIGHTNING_SHELL_PORT}:7681
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+        APP_PASSWORD: "${APP_PASSWORD}"
+        LND_IP: "${LND_IP}"
+        LND_GRPC_PORT: ${LND_GRPC_PORT}
+    networks:
+      default:
+        ipv4_address: $APP_LIGHTNING_SHELL_IP
