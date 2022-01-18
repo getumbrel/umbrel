@@ -2,14 +2,14 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/cryptosharks131/lndg:latest@sha256:5151982d2e57f36a4065eaac2c24a4ee5a2961f67de3a63954b5dd1a7b1a2f7f
+    image: ghcr.io/cryptosharks131/lndg:latest@sha256:7685f09e7110832e8e597a17b1ce982b4d28d26ffea9d6cb3d08551f227365b5
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - "8889:8000"
     volumes:
       - ${LND_DATA_DIR}:/root/.lnd:ro
-      - ${APP_DATA_DIR}/db.sqlite3:/lndg/db.sqlite3:rw
+      - ${APP_DATA_DIR}/data:/lndg/data:rw
     command:
       - sh
       - -c
