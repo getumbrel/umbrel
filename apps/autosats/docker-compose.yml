@@ -2,13 +2,14 @@ version: "3.7"
 
 services:
   web:
-    image: bezysoftware/autosats:v0.4.0
+    image: bezysoftware/autosats:v0.10.0
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 3311:80
     volumes:
       - ${APP_DATA_DIR}/data:/app_data
+      - ${APP_DATA_DIR}/data/home:/root
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       Application__Password: "${APP_PASSWORD}"
