@@ -11,7 +11,6 @@ services:
     volumes:
       - $APP_DATA_DIR/data:/data
       - $LND_DATA_DIR:/lnd:ro
-    entrypoint: /data/entrypoint.sh
     environment:
       DEBUG: bleskomat-server*,lnurl*
       BLESKOMAT_SERVER_HOST: 0.0.0.0
@@ -23,6 +22,7 @@ services:
       BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"sqlite3","connection":{"filename":"/data/db.sqlite3"},"useNullAsDefault":true}}'
       BLESKOMAT_SERVER_COINRATES_DEFAULTS_PROVIDER: coinbase
       BLESKOMAT_SERVER_ADMIN_WEB: "true"
+      BLESKOMAT_SERVER_ADMIN_PASSWORD_PLAINTEXT: $APP_PASSWORD
     networks:
       default:
         ipv4_address: $APP_BLESKOMAT_SERVER_IP
