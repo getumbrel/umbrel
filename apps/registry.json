@@ -259,18 +259,18 @@
     {
         "id": "mempool",
         "category": "Explorers",
-        "name": "Mempool",
-        "version": "2.2.2",
-        "tagline": "A mempool visualizer, explorer and fee estimator",
-        "description": "Mempool is the official self-hosted version of the fully featured explorer, visualizer, fee estimator, and API service running on mempool.space, an open source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market to help our transition into a multi-layer ecosystem.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
-        "developer": "mempool.space",
+        "name": "mempool",
+        "version": "2.3.0",
+        "tagline": "A self-hosted explorer for the Bitcoin community",
+        "description": "Trusted third parties are security holes. Self-host your own instance of mempool.space on Umbrel for maximum privacy.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
+        "developer": "Mempool Space K.K.",
         "website": "https://mempool.space/about",
         "dependencies": [
             "bitcoind",
             "electrum"
         ],
         "repo": "https://github.com/mempool/mempool",
-        "support": "https://t.me/mempoolspace",
+        "support": "https://mempool.support",
         "port": 3006,
         "gallery": [
             "1.jpg",
@@ -528,7 +528,7 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.188",
+        "version": "0.1.187",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
         "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
@@ -663,7 +663,7 @@
         "category": "Lightning Node Management",
         "name": "Helipad",
         "version": "0.1.5",
-        "tagline": "View boosts and boost-a-grams from Podcasting 2.0 enabled apps",
+        "tagline": "View boosts & boost-a-grams from Podcasting 2.0 apps",
         "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
         "developer": "Podcastindex.org",
         "website": "https://podcastindex.org",
@@ -685,7 +685,7 @@
         "id": "itchysats",
         "category": "Finance",
         "name": "ItchySats",
-        "version": "v0.3.3",
+        "version": "v0.3.6",
         "tagline": "Peer-2-peer derivatives on Bitcoin",
         "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. CFDs period ends after 7 days - perpetual positions are in the making :)\n4. The leverage is fixed at 2\n\nWe are woking hard on perpetual positions and allowing sell positions.\nUpdate to be expected soon!",
         "developer": "ItchySats",
@@ -705,5 +705,52 @@
         "defaultUsername": "itchysats",
         "deterministicPassword": true,
         "torOnly": false
+    },
+    {
+        "id": "lightning-shell",
+        "category": "Lightning Node Management",
+        "name": "Lightning Shell",
+        "version": "0.1.1",
+        "tagline": "Web shell with a selection of LN node management utilities",
+        "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
+        "developer": "Ioan Bizău",
+        "website": "https://ibz.me",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://ibz.github.io/lightning-shell/",
+        "support": "https://ibz.github.io/lightning-shell/issues",
+        "port": 7681,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "deterministicPassword": true
+    },
+    {
+        "id": "satsale",
+        "category": "Finance",
+        "name": "SatSale",
+        "version": "0.1.11",
+        "tagline": "Lightweight Bitcoin payment processor",
+        "description": "SatSale is a simple, easily deployable, lightweight Bitcoin payment processor that connects to your own Bitcoin node. You can use SatSale to instantly turn your Umbrel into a point-of-sale (settings under /admin). SatSale can process donations from your supporters, facilitating direct peer-to-peer payments without any middleman and greater privacy than reusing donation addresses.\n\nHost your own Bitcoin payment gateway for Woocommerce without a middleman or custodian, allowing you to turn any wordpress site into a bitcoin-accepting store.\n\nThis Umbrel app contains a subset of the features we have in the works for SatSale, but will push updates out as they are ready. Check out the website and GitHub for more!\n\nPlease note that SatSale is still in early development. As such, we are not responsible for any loss of funds, vulnerabilities, or any other grievances which arise. Always confirm large payments manually and use cold storage as much as possible. Please contribute if you can!",
+        "developer": "Nick Farrow",
+        "website": "https://satsale.org",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/nickfarrow/SatSale/",
+        "support": "https://github.com/nickfarrow/SatSale/issues",
+        "port": 5000,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/admin",
+        "deterministicPassword": true
     }
 ]

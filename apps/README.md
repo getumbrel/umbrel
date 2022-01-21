@@ -152,7 +152,7 @@ services:
       # $APP_HIDDEN_SERVICE - The address of the Tor hidden service your app will be exposed at
       # $APP_DOMAIN - Local domain name of the app ("umbrel.local" on Umbrel OS)
       # $APP_PASSWORD - Unique plain text password that can be used for authentication in your app, shown to the user in the Umbrel UI
-      # $APP_SEED - Unique 128 bit hex string deterministically derived from user's Umbrel seed and your app's ID
+      # $APP_SEED - Unique 256 bit long hex string (128 bits of entropy) deterministically derived from user's Umbrel seed and your app's ID
   # If your app has more services, like a database container, you can define those
   # services below:
   # db:

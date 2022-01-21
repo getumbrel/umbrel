@@ -1,7 +1,5 @@
 .env
 bitcoin/bitcoin.conf
-tor/torrc-apps
-tor/torrc-apps-2
-tor/torrc-apps-3
-tor/torrc-umbrel
+tor/torrc-server
+tor/torrc-proxy
 electrs/electrs.toml
