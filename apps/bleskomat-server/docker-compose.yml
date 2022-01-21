@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bleskomat/bleskomat-server:1.2.0@sha256:1566bee49252c2aa431094f07fdb6ad1cb71eb0e916bfe7484f9d54e75b38bf1
+    image: bleskomat/bleskomat-server:1.3.0@sha256:36a7c237c546ce56c93e38c61e5344adb739f1d968da667588f768dbbf68a14b
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
