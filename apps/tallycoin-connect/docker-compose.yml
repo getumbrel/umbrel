@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  web:
+    image: dennisreimann/tallycoin_connect:v1.7.0@sha256:fabec3867a977e093b6572ad13a4d408a57da771c088ee85a868c1e023fd62db
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_TALLYCOIN_CONNECT_PORT:$APP_TALLYCOIN_CONNECT_PORT"
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      LND_SOCKET: "$LND_IP:$LND_GRPC_PORT"
+      LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+      LND_TLSCERT_PATH: "/lnd/tls.cert"
+      CONFIG_FILE: "/data/tallycoin_api.key"
+    networks:
+      default:
+        ipv4_address: $APP_TALLYCOIN_CONNECT_IP
