@@ -50,11 +50,11 @@ json=$(echo $json | jq --arg total "${total}" '. + {total: $total|tonumber}')
 used=$(memory_used_bytes)
 json=$(echo $json | jq --arg used "${used}" '. + {used: $used|tonumber}')
 
-cumulative_app_memory="0"
+cumulative_app_memory=0
 for app in $( "${UMBREL_ROOT}/scripts/app" ls-installed)
 do
   app_memory=$(get_app_memory_use "${app}")
-  cumulative_app_memory=$(($cumulative_app_memory+$app_memory))
+  cumulative_app_memory=$(awk "BEGIN {print ${cumulative_app_memory}+${app_memory}}")
   json=$(echo $json | jq --arg app "${app}" --arg app_memory "${app_memory}" '.breakdown |= .+ [{id: $app, used: $app_memory|tonumber}]')
 done
 
