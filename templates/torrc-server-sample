@@ -178,10 +178,10 @@ HiddenServiceDir /data/app-satsale
 HiddenServicePort 80 <app-satsale-ip>:5000
 
 # suredbits-wallet Hidden Service
-HiddenServiceDir /var/lib/tor/app-suredbits-wallet
+HiddenServiceDir /data/app-suredbits-wallet
 HiddenServicePort 80 <app-suredbits-wallet-ip>:<app-suredbits-wallet-port>
 
 # suredbits-wallet p2p Hidden Service
-HiddenServiceDir /var/lib/tor/app-suredbits-wallet-p2p
+HiddenServiceDir /data/app-suredbits-wallet-p2p
 HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-ip>:<app-suredbits-wallet-p2p-port>
 
