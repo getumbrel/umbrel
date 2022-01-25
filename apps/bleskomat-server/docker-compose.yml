@@ -10,7 +10,7 @@ services:
     ports:
       - "$APP_BLESKOMAT_SERVER_PORT:$APP_BLESKOMAT_SERVER_PORT"
     volumes:
-      - $APP_DATA_DIR/data:/data
+      - $APP_DATA_DIR/data:/usr/src/app/data
       - $LND_DATA_DIR:/lnd:ro
     environment:
       DEBUG: "bleskomat-server*,lnurl*"
@@ -20,7 +20,7 @@ services:
       BLESKOMAT_SERVER_ENDPOINT: "/u"
       BLESKOMAT_SERVER_AUTH_API_KEYS: '[]'
       BLESKOMAT_SERVER_LIGHTNING: '{"backend":"lnd","config":{"cert":"/lnd/tls.cert","protocol":"https","hostname":"$LND_IP:$LND_REST_PORT","macaroon":"/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"}}'
-      BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"sqlite3","connection":{"filename":"/data/db.sqlite3"},"useNullAsDefault":true}}'
+      BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"sqlite3","connection":{"filename":"./data/db.sqlite3"},"useNullAsDefault":true}}'
       BLESKOMAT_SERVER_COINRATES_DEFAULTS_PROVIDER: "coinbase"
       BLESKOMAT_SERVER_ADMIN_WEB: "true"
       BLESKOMAT_SERVER_ADMIN_PASSWORD_PLAINTEXT: "$APP_PASSWORD"
