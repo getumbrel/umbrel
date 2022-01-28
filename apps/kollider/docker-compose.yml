@@ -1,0 +1,40 @@
+version: "3.7"
+
+services:
+  backend:
+    image: kolliderhq/kollider-lite-backend:v1.0.0
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_HH_IP
+  ws:
+    image: kolliderhq/kollider-ws-client:v1.0.0
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_KOLLIDER_WS_PORT:8080"
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      APP_PASSWORD: $APP_PASSWORD
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_WS_IP
+  web:
+    image: kolliderhq/kollider-lite-app:v1.0.0
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_KOLLIDER_PORT:3000"
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_IP
