@@ -260,7 +260,7 @@
         "id": "mempool",
         "category": "Explorers",
         "name": "mempool",
-        "version": "2.3.0",
+        "version": "2.3.1",
         "tagline": "A self-hosted explorer for the Bitcoin community",
         "description": "Trusted third parties are security holes. Self-host your own instance of mempool.space on Umbrel for maximum privacy.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
         "developer": "Mempool Space K.K.",
