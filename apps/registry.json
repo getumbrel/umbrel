@@ -798,6 +798,7 @@
             "3.jpg"
         ],
         "path": "",
-        "deterministicPassword": true
+        "deterministicPassword": true,
+        "torOnly": true
     }
 ]
