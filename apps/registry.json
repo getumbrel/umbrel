@@ -455,7 +455,7 @@
         "id": "thunderhub",
         "category": "Lightning Node Management",
         "name": "ThunderHub",
-        "version": "0.12.30",
+        "version": "0.13.1",
         "tagline": "Take full control of your Lightning node",
         "description": "ThunderHub allows you to take full control of your Lightning node with a slick and awesome UI. Explore all the options that ThunderHub has to offer, from sending and receiving Lightning payments, to checking your node's health statistics, and even more advanced options like channel rebalancing and multi-path lightning payments.\n\nManaging and monitoring your node has never been easier with transaction reports, graphs and a huge assortment of different features all bundled inside of this great tool.",
         "developer": "Anthony Potdevin",
