@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: apotdevin/thunderhub:v0.12.31@sha256:f86341cb1987a3907f7227ccd4c00dead68d372e464b111414b8427228062276
+    image: apotdevin/thunderhub:v0.13.1@sha256:5ce39630a07a9a8de49326d113bdae646caa967e00802b682e8712540f5c6be9
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -19,6 +19,7 @@ services:
       ACCOUNT_CONFIG_PATH: "/data/thubConfig.yaml"
       YML_ENV_1: "$LND_IP:$LND_GRPC_PORT"
       TOR_PROXY_SERVER: "socks://$TOR_PROXY_IP:$TOR_PROXY_PORT"
+      MEMPOOL_URL: "https://APP_MEMPOOL_IP:APP_MEMPOOL_PORT"
     networks:
       default:
         ipv4_address: $APP_THUNDERHUB_IP
