@@ -9,6 +9,8 @@ services:
     stop_grace_period: 1m
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      LND_IP: $LND_IP
     networks:
       default:
         ipv4_address: $APP_KOLLIDER_HH_IP
