@@ -799,6 +799,6 @@
         ],
         "path": "",
         "deterministicPassword": true,
-        "torOnly": true
+        "torOnly": false
     }
 ]
