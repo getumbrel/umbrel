@@ -22,8 +22,6 @@ services:
     stop_grace_period: 1m
     ports:
       - "$APP_KOLLIDER_WS_PORT:8080"
-    volumes:
-      - ${LND_DATA_DIR}:/lnd:ro
     environment:
       APP_PASSWORD: $APP_PASSWORD
     networks:
