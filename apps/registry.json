@@ -461,6 +461,7 @@
         "developer": "Anthony Potdevin",
         "website": "https://apotdevin.com",
         "dependencies": [
+            "mempool",
             "lnd"
         ],
         "repo": "https://github.com/apotdevin/thunderhub",
