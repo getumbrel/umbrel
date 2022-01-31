@@ -3,7 +3,7 @@ version: "3.7"
 services:
   joinmarket-webui:
     # TODO: change to a non-development version before merge
-    image: ghcr.io/theborakompanioni/jmui-dev-standalone:tbk-devel-upload-docker
+    image: ghcr.io/theborakompanioni/jmui-standalone:v0.0.1-alpha-dev
     restart: on-failure
     stop_grace_period: 1m
     init: true
