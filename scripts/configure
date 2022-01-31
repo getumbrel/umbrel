@@ -448,17 +448,14 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-lightning-shell-ip>/${APP_LIGHTNING_SHELL_IP}/g" "${template}"
   sed -i "s/<app-satsale-port>/${APP_SATSALE_PORT}/g" "${template}"
   sed -i "s/<app-satsale-ip>/${APP_SATSALE_IP}/g" "${template}"
-<<<<<<< HEAD
-  sed -i "s/<app-suredbits-wallet-ip>/${APP_SUREDBITS_WALLET_IP}/g" "${template}"
-  sed -i "s/<app-suredbits-wallet-server-ip>/${APP_SUREDBITS_WALLET_SERVER_IP}/g" "${template}"
-  sed -i "s/<app-suredbits-wallet-port>/${APP_SUREDBITS_WALLET_PORT}/g" "${template}"
-  sed -i "s/<app-suredbits-wallet-p2p-port>/${APP_SUREDBITS_WALLET_P2P_PORT}/g" "${template}"
-=======
   sed -i "s/<app-bitfeed-ip>/${APP_BITFEED_IP}/g" "${template}"
   sed -i "s/<app-bitfeed-port>/${APP_BITFEED_PORT}/g" "${template}"
   sed -i "s/<app-bitfeed-api-ip>/${APP_BITFEED_API_IP}/g" "${template}"
   sed -i "s/<app-bitfeed-api-port>/${APP_BITFEED_API_PORT}/g" "${template}"
->>>>>>> master
+  sed -i "s/<app-suredbits-wallet-ip>/${APP_SUREDBITS_WALLET_IP}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-server-ip>/${APP_SUREDBITS_WALLET_SERVER_IP}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-port>/${APP_SUREDBITS_WALLET_PORT}/g" "${template}"
+  sed -i "s/<app-suredbits-wallet-p2p-port>/${APP_SUREDBITS_WALLET_P2P_PORT}/g" "${template}"
 done
 
 ##########################################################
