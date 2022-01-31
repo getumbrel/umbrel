@@ -1,0 +1,37 @@
+version: "2.1"
+
+services:
+  web:
+    image: bitfeed/client:2.1.2@sha256:2ee766841cfdc0741bbfa5f9e5ca777ca02a135cba1bcbf232e5dee255b8268c
+    restart: on-failure
+    stop_grace_period: 1m
+    depends_on:
+      - "api"
+    environment:
+      TARGET: "umbrel"
+      BACKEND_HOST: "$APP_BITFEED_API_IP"
+      BACKEND_PORT: "$APP_BITFEED_API_PORT"
+    ports:
+      - "$APP_BITFEED_PORT:80"
+    networks:
+      default:
+        ipv4_address: $APP_BITFEED_IP
+
+  api:
+    image: bitfeed/server:2.1.2@sha256:2b5097274b2c433e30cb82b7fdda13c0b856527957ddd15545bd498034be8e51
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      PORT: "$APP_BITFEED_API_PORT"
+      BITCOIN_HOST: "$BITCOIN_IP"
+      BITCOIN_ZMQ_RAWTX_PORT: "$BITCOIN_ZMQ_RAWTX_PORT"
+      BITCOIN_ZMQ_RAWBLOCK_PORT: "$BITCOIN_ZMQ_RAWBLOCK_PORT"
+      BITCOIN_RPC_PORT: "$BITCOIN_RPC_PORT"
+      BITCOIN_RPC_USER: "$BITCOIN_RPC_USER"
+      BITCOIN_RPC_PASS: "$BITCOIN_RPC_PASS"
+    volumes:
+      - ${APP_DATA_DIR}/data:/app/data
+    networks:
+      default:
+        ipv4_address: $APP_BITFEED_API_IP
