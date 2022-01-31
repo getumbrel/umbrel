@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+  joinmarket-webui:
+    # TODO: change to a non-development version before merge
+    image: ghcr.io/theborakompanioni/jmui-dev-standalone:tbk-devel-upload-docker
+    restart: on-failure
+    stop_grace_period: 1m
+    init: true
+    # Some changes need to be made to run as non-root
+    # https://github.com/JoinMarket-Org/joinmarket-clientserver/pull/669
+    # user: "1000:1000"
+    ports:
+      - "5002:80"
+    volumes:
+      - ${APP_DATA_DIR}/data:/root/.joinmarket
+    environment:
+      ENSURE_WALLET: 1
+      jm_tor_control_host: $TOR_PROXY_IP
+      jm_tor_control_port: 29051
+      jm_onion_socks5_host: $TOR_PROXY_IP
+      jm_onion_socks5_port: $TOR_PROXY_PORT
+      jm_socks5_host: $TOR_PROXY_IP
+      jm_socks5_port: $TOR_PROXY_PORT
+      jm_rpc_host: $BITCOIN_IP
+      jm_rpc_port: $BITCOIN_RPC_PORT
+      jm_rpc_user: $BITCOIN_RPC_USER
+      jm_rpc_password: "${BITCOIN_RPC_PASS}"
+      jm_rpc_wallet_file: jm_webui_default
+      jm_network: $BITCOIN_NETWORK
+      jm_tx_broadcast: self
+      jm_max_cj_fee_abs: 21000 # in sats
+      jm_max_cj_fee_rel: 0.001 # 0.1%
