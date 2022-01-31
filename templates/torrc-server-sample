@@ -177,6 +177,10 @@ HiddenServicePort 80 <app-lightning-shell-ip>:7681
 HiddenServiceDir /data/app-satsale
 HiddenServicePort 80 <app-satsale-ip>:5000
 
+# bitfeed Hidden Service
+HiddenServiceDir /data/app-bitfeed
+HiddenServicePort 80 <app-bitfeed-ip>:80
+
 # suredbits-wallet Hidden Service
 HiddenServiceDir /data/app-suredbits-wallet
 HiddenServicePort 80 <app-suredbits-wallet-ip>:<app-suredbits-wallet-port>
@@ -184,4 +188,3 @@ HiddenServicePort 80 <app-suredbits-wallet-ip>:<app-suredbits-wallet-port>
 # suredbits-wallet p2p Hidden Service
 HiddenServiceDir /data/app-suredbits-wallet-p2p
 HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-ip>:<app-suredbits-wallet-p2p-port>
-
