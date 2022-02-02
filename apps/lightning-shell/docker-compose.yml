@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/ibz/lightning-shell:v0.1.4-buster-slim@sha256:785143de9514cb72ba9d04aa5549480745ca8763d2ce485113f1bdc93f6a68ee
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - ${APP_LIGHTNING_SHELL_PORT}:7681
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+        APP_PASSWORD: "${APP_PASSWORD}"
+        LND_IP: "${LND_IP}"
+        LND_GRPC_PORT: ${LND_GRPC_PORT}
+    networks:
+      default:
+        ipv4_address: $APP_LIGHTNING_SHELL_IP

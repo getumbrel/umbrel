@@ -259,19 +259,43 @@
     {
         "id": "mempool",
         "category": "Explorers",
-        "name": "Mempool",
-        "version": "2.2.2",
-        "tagline": "A mempool visualizer, explorer and fee estimator",
-        "description": "Mempool is the official self-hosted version of the fully featured explorer, visualizer, fee estimator, and API service running on mempool.space, an open source project developed and operated for the benefit of the Bitcoin community, with a focus on the emerging transaction fee market to help our transition into a multi-layer ecosystem.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
-        "developer": "mempool.space",
+        "name": "mempool",
+        "version": "2.3.1",
+        "tagline": "A self-hosted explorer for the Bitcoin community",
+        "description": "Trusted third parties are security holes. Self-host your own instance of mempool.space on Umbrel for maximum privacy.\n\nFeatures:\n\n- Live dashboard visualizing the mempool and blockchain\n- Live transaction tracking\n- Search any transaction, block or address\n- Fee estimations\n- Mempool historical data\n- TV View for larger displays as a TV in a cafe or bar\n- View transaction scripts and op_return messages\n- Audio notifications on transaction confirmed and address balance change\n- Multiple languages support\n- JSON APIs",
+        "developer": "Mempool Space K.K.",
         "website": "https://mempool.space/about",
         "dependencies": [
             "bitcoind",
             "electrum"
         ],
         "repo": "https://github.com/mempool/mempool",
-        "support": "https://t.me/mempoolspace",
+        "support": "https://mempool.support",
         "port": 3006,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "",
+        "defaultPassword": ""
+    },
+    {
+        "id": "bitfeed",
+        "category": "Explorers",
+        "name": "Bitfeed",
+        "version": "2.1.2",
+        "tagline": "A live visualization of your node's mempool",
+        "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live. Watch as new transactions drop into your node's mempool, before being packaged into newly mined blocks. Monitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
+        "developer": "Mononaut",
+        "website": "https://monospace.live",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/bitfeed-project/bitfeed",
+        "support": "https://github.com/bitfeed-project/bitfeed/issues",
+        "port": 8314,
         "gallery": [
             "1.jpg",
             "2.jpg",
@@ -334,7 +358,7 @@
         "id": "specter-desktop",
         "category": "Wallets",
         "name": "Specter Desktop",
-        "version": "1.7.2",
+        "version": "1.8.1",
         "tagline": "Multisig with hardware wallets made easy",
         "description": "Specter Desktop connects to the Bitcoin Core running on your Umbrel and functions as a watch-only coordinator for multi-signature and single-key Bitcoin wallets. At the moment Specter Desktop is working with all major hardware wallets including:\n\n- Trezor\n- Ledger\n- KeepKey\n- BitBox02\n- ColdCard (optionally airgapped, using an SD card)\n- Electrum (optionally airgapped, if running Electrum on an airgapped computer/phone)\n- Specter DIY (optionally airgapped, using QR codes)\n- Cobo (airgapped, using QR codes)\n\nSpecter Desktop also supports using the Bitcoin Core on your Umbrel as a hot wallet, by importing or generating a random BIP39 mnemonic, but this feature is experimental and we do not recommend using it at this stage. We plan to add support for other hardware wallets as they come up.",
         "developer": "Crypto Advance",
@@ -355,10 +379,35 @@
         "defaultPassword": ""
     },
     {
+        "id": "suredbits-wallet",
+        "category": "Wallets",
+        "name": "Suredbits Wallet",
+        "version": "1.8.0-160-2066447c",
+        "tagline": "A universal DLC wallet",
+        "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
+        "developer": "Suredbits",
+        "website": "https://suredbits.com",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/bitcoin-s/bitcoin-s",
+        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "port": 3020,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "",
+        "defaultPassword": "",
+        "deterministicPassword": true
+    },
+    {
         "id": "sphinx-relay",
         "category": "Social",
         "name": "Sphinx Relay",
-        "version": "2.2.3",
+        "version": "2.2.5",
         "tagline": "Chat and pay over the Lightning Network",
         "description": "Sphinx Relay turns your Lightning node into a personal communication server. Messages are end-to-end encrypted and transmitted over the Bitcoin Lightning Network. Download Sphinx on your phone from https://sphinx.chat and pair it with Sphinx Relay on Umbrel.\n\nCommunication between Sphinx Relay nodes takes place entirely on the Lightning Network, so it is decentralized, untraceable, and encrypted. Messages are encrypted using client public keys on the Sphinx app.\n\nYou can join tribes at https://tribes.sphinx.chat. If you join a podcast tribe, you can listen to the podcast in Sphinx and stream donations to the host.",
         "developer": "Stakwork",
@@ -528,7 +577,7 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.182",
+        "version": "0.1.187",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
         "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
@@ -553,7 +602,7 @@
         "id": "krystal-bull",
         "category": "Finance",
         "name": "Krystal Bull",
-        "version": "1.8.0-18-4f081b9d",
+        "version": "1.8.0-155-cf16d936",
         "tagline": "Become an oracle and create Bitcoin bets",
         "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
         "developer": "SuredBits",
@@ -568,7 +617,7 @@
             "3.jpg"
         ],
         "path": "",
-        "defaultPassword": ""
+        "deterministicPassword": true
     },
     {
         "id": "lnmarkets",
@@ -657,5 +706,124 @@
         ],
         "path": "",
         "defaultPassword": ""
+    },
+    {
+        "id": "helipad",
+        "category": "Lightning Node Management",
+        "name": "Helipad",
+        "version": "0.1.8",
+        "tagline": "View boosts & boost-a-grams from Podcasting 2.0 apps",
+        "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
+        "developer": "Podcastindex.org",
+        "website": "https://podcastindex.org",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/Podcastindex-org/helipad",
+        "support": "https://podcastindex.social",
+        "port": 2112,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
+    },
+    {
+        "id": "itchysats",
+        "category": "Finance",
+        "name": "ItchySats",
+        "version": "v0.3.6",
+        "tagline": "Peer-2-peer derivatives on Bitcoin",
+        "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. CFDs period ends after 7 days - perpetual positions are in the making :)\n4. The leverage is fixed at 2\n\nWe are woking hard on perpetual positions and allowing sell positions.\nUpdate to be expected soon!",
+        "developer": "ItchySats",
+        "website": "https://itchysats.network",
+        "dependencies": [
+            "electrum"
+        ],
+        "repo": "https://github.com/itchysats/itchysats",
+        "support": "https://github.com/itchysats/itchysats/issues",
+        "port": 7113,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "itchysats",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
+        "id": "lightning-shell",
+        "category": "Lightning Node Management",
+        "name": "Lightning Shell",
+        "version": "0.1.4",
+        "tagline": "Web shell with a selection of LN node management utilities",
+        "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
+        "developer": "Ioan Bizău",
+        "website": "https://ibz.me",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://ibz.github.io/lightning-shell/",
+        "support": "https://ibz.github.io/lightning-shell/issues",
+        "port": 7681,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "deterministicPassword": true
+    },
+    {
+        "id": "satsale",
+        "category": "Finance",
+        "name": "SatSale",
+        "version": "0.1.11",
+        "tagline": "Lightweight Bitcoin payment processor",
+        "description": "SatSale is a simple, easily deployable, lightweight Bitcoin payment processor that connects to your own Bitcoin node. You can use SatSale to instantly turn your Umbrel into a point-of-sale (settings under /admin). SatSale can process donations from your supporters, facilitating direct peer-to-peer payments without any middleman and greater privacy than reusing donation addresses.\n\nHost your own Bitcoin payment gateway for Woocommerce without a middleman or custodian, allowing you to turn any wordpress site into a bitcoin-accepting store.\n\nThis Umbrel app contains a subset of the features we have in the works for SatSale, but will push updates out as they are ready. Check out the website and GitHub for more!\n\nPlease note that SatSale is still in early development. As such, we are not responsible for any loss of funds, vulnerabilities, or any other grievances which arise. Always confirm large payments manually and use cold storage as much as possible. Please contribute if you can!",
+        "developer": "Nick Farrow",
+        "website": "https://satsale.org",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/nickfarrow/SatSale/",
+        "support": "https://github.com/nickfarrow/SatSale/issues",
+        "port": 5000,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/admin",
+        "deterministicPassword": true
+    },
+    {
+        "id": "kollider",
+        "category": "Finance",
+        "name": "Kollider",
+        "version": "1.0.0",
+        "tagline": "Lightning-fast derivative trading",
+        "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
+        "developer": "Kollider",
+        "website": "https://kollider.xyz",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/kolliderhq/kollider-lite-app",
+        "support": "https://t.me/kolliderhq",
+        "port": 4243,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]

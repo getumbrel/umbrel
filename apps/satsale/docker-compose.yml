@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+  satsale:
+    image: satsale/satsale:0.1.11@sha256:d9b0cd4beb711f2e95562cdc76b05d71a10edb09c97920a3e21c861398320447
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${LND_DATA_DIR}:/lnd:ro
+    ports:
+      - ${APP_SATSALE_PORT}:5000
+    environment:
+      DATA_DIR: "/data"
+      # Lightning node connection details
+      LND_DATA_DIR: $LND_DATA_DIR
+      LND_HOST: $LND_IP
+      LND_GRPC_PORT: $LND_GRPC_PORT
+      MACAROON_FILE: /lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/invoice.macaroon
+      TLS_FILE: /lnd/tls.cert
+      APP_PASSWORD: $APP_PASSWORD
+    networks:
+        default:
+          ipv4_address: $APP_SATSALE_IP

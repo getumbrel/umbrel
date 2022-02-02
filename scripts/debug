@@ -152,7 +152,7 @@ echo
 echo "Tor logs"
 echo "--------"
 echo
-docker-compose logs --tail=10 tor app_tor app_2_tor app_3_tor
+docker-compose logs --tail=10 tor_proxy tor_server
 
 installed_apps=$(./scripts/app ls-installed)
 if [[ ! -z "${installed_apps:-}" ]]; then

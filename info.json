@@ -1,6 +1,6 @@
 {
-    "version": "0.4.10",
-    "name": "Umbrel v0.4.10",
+    "version": "0.4.11",
+    "name": "Umbrel v0.4.11",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.10 brings a brand new app to the Umbrel App Store — Uptime Kuma, support for Boltz swaps in Ride The Lightning app, updated apps including the latest Lightning Terminal app which contains an important security fix, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Umbrel 0.4.11 brings 4 brand new apps in the Umbrel App Store — ItchySats, Lightning Shell, Helipad, and SatSale, updated apps, latest Electrum server, performance improvements, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }

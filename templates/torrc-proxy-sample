@@ -1,0 +1,17 @@
+# Warning: it's not recommended to modify these files directly. Any
+# modifications you make can break the functionality of your umbrel. These files
+# are automatically reset with every Umbrel update.
+
+# Bind only to "<tor-proxy-ip>" which is the tor IP within the container
+SocksPort   <tor-proxy-ip>:<tor-proxy-port>
+ControlPort <tor-proxy-ip>:29051
+
+# Dashboard Hidden Service
+#
+# We include the dashboard hs in the proxy torrc because it's the only hs entry and so more
+# Tor acts much more reliably and there is a higher chance the dashboard hs will come back
+# online quickly after an update.
+HiddenServiceDir /var/lib/tor/web
+HiddenServicePort 80 <nginx-ip>:80
+
+HashedControlPassword <password>

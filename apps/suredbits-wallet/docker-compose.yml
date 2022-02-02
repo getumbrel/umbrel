@@ -1,0 +1,52 @@
+version: "3.7"
+
+services:
+  web:
+    image: bitcoinscala/wallet-server-ui:0.0.1-23764b9b-SNAPSHOT@sha256:608e09a8a7b58d62ae4c18b49597e1881024bb40c32e599b3c550c5f11de883c
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s
+      - ${APP_DATA_DIR}/data/log:/log
+    environment:
+      LOG_PATH: "/log/"
+      BACKUP_PATH: "/home/bitcoin-s/.bitcoin-s/"
+      MEMPOOL_API_URL: "http://umbrel.local:${APP_MEMPOOL_PORT}/api"
+      WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
+      WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/events"
+      TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
+      DEFAULT_UI_PASSWORD: $APP_PASSWORD
+      BITCOIN_S_SERVER_RPC_PASSWORD: $APP_PASSWORD
+    ports:
+      - "${APP_SUREDBITS_WALLET_PORT}:3002"
+    networks:
+      default:
+        ipv4_address: $APP_SUREDBITS_WALLET_IP
+    depends_on: 
+      - walletserver
+  walletserver:
+    image: bitcoinscala/bitcoin-s-server:1.8.0-160-2066447c-SNAPSHOT@sha256:5c8e9050730407e528864937cf6365a49e3b5fc1d317615c4cb76d3825956876
+    user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s
+    environment:
+      BITCOIN_S_NETWORK: $BITCOIN_NETWORK
+      BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
+      BITCOIN_S_PROXY_ENABLED: "false"
+      BITCOIN_S_TOR_ENABLED: "false"
+      BITCOIN_S_TOR_PROVIDED: "true"
+      BITCOIN_S_DLCNODE_PROXY_ENABLED: "true"
+      BITCOIN_S_DLCNODE_PROXY_SOCKS5: "${TOR_PROXY_IP}:${TOR_PROXY_PORT}"
+      BITCOIN_S_DLCNODE_EXTERNAL_IP: $SUREDBITS_WALLET_P2P_HIDDEN_SERVICE
+      BITCOIN_S_BITCOIND_HOST: $BITCOIN_IP
+      BITCOIN_S_BITCOIND_PORT: $BITCOIN_RPC_PORT
+      BITCOIN_S_BITCOIND_USER: $BITCOIN_RPC_USER
+      BITCOIN_S_BITCOIND_PASSWORD: $BITCOIN_RPC_PASS
+      BITCOIN_S_SERVER_RPC_PASSWORD: $APP_PASSWORD
+    ports:
+      - "$APP_SUREDBITS_WALLET_P2P_PORT:$APP_SUREDBITS_WALLET_P2P_PORT"
+    networks:
+      default:
+        ipv4_address: $APP_SUREDBITS_WALLET_SERVER_IP
