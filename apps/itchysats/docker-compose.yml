@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/itchysats/itchysats/taker:0.3.6@sha256:14f2af91a1fc5a80e565c682680aa81a2c55e7a182268c1bef1de786993656b3
+    image: ghcr.io/itchysats/itchysats/taker:0.4.0@sha256:410332660845d7973c29a4a6b79b59b0748653dd73faade5b40e7c98061793ff
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -10,7 +10,7 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/data
     command:
-      - --maker=mainnet.itchysats.network:9999
+      - --maker=mainnet.itchysats.network:10000
       - --maker-id=7e35e34801e766a6a29ecb9e22810ea4e3476c2b37bf75882edf94a68b1d9607
       - --password=$APP_PASSWORD
       - --umbrel-seed=$APP_SEED
