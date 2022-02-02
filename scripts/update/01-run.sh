@@ -275,6 +275,15 @@ if [[ -f "${lightning_terminal_conf}" ]]; then
   sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
 fi
 
+# Handle new logs dir for krystal-bull app
+krystal_bull_data_dir="${UMBREL_ROOT}/app-data/krystal-bull"
+krystal_bull_logs_data_dir="${krystal_bull_data_dir}/data/log"
+if [[ -d "${krystal_bull_data_dir}" ]] && [[ ! -d "${krystal_bull_logs_data_dir}" ]]; then
+  echo "Found krystal-bull install without log data dir, attempting to create it..."
+  mkdir "${krystal_bull_logs_data_dir}"
+  chown 1000:1000 "${krystal_bull_logs_data_dir}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
