@@ -1,6 +1,6 @@
 {
-    "version": "0.4.12",
-    "name": "Umbrel v0.4.12",
+    "version": "0.4.13",
+    "name": "Umbrel v0.4.13",
     "requires": ">=0.2.1",
-    "notes": "Umbrel 0.4.12 brings four brand new apps in the Umbrel App Store — Kollider, Bitfeed, Suredbits Wallet, and LNDg, updated apps, a security patch, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update includes the latest Kollider app which contains a bugfix.\n\nUmbrel 0.4.12 brings four brand new apps in the Umbrel App Store — Kollider, Bitfeed, Suredbits Wallet, and LNDg, updated apps, a security patch, bug fixes, and more.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
