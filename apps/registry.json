@@ -825,5 +825,29 @@
         "path": "",
         "deterministicPassword": true,
         "torOnly": false
+    },
+    {
+        "id": "lndg",
+        "category": "Lightning Node Management",
+        "name": "LNDg",
+        "version": "1.0.2",
+        "tagline": "Lite GUI web interface to analyze LND data and manage your node with automation.",
+        "description": "LNDg is your command center for running a profitable and efficient routing node. From quickly viewing your node's health, automated rebalancing, selecting new potential peers and much more.",
+        "developer": "cryptosharks131",
+        "website": "https://github.com/cryptosharks131",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/cryptosharks131/lndg",
+        "support": "https://t.me/+-RxoZdi7snk2ZGYx",
+        "port": 8889,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "lndg-admin",
+        "deterministicPassword": true
     }
 ]

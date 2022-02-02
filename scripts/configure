@@ -232,6 +232,8 @@ APP_SUREDBITS_WALLET_IP="10.21.21.73"
 APP_SUREDBITS_WALLET_PORT="3020"
 APP_SUREDBITS_WALLET_SERVER_IP="10.21.21.74"
 APP_SUREDBITS_WALLET_P2P_PORT="2862"
+APP_LNDG_IP="10.21.21.75"
+APP_LNDG_PORT="8889"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -466,6 +468,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-suredbits-wallet-port>/${APP_SUREDBITS_WALLET_PORT}/g" "${template}"
   sed -i "s/<app-suredbits-wallet-server-ip>/${APP_SUREDBITS_WALLET_SERVER_IP}/g" "${template}"
   sed -i "s/<app-suredbits-wallet-p2p-port>/${APP_SUREDBITS_WALLET_P2P_PORT}/g" "${template}"
+  sed -i "s/<app-lndg-ip>/${APP_LNDG_IP}/g" "${template}"
+  sed -i "s/<app-lndg-port>/${APP_LNDG_PORT}/g" "${template}"
 done
 
 ##########################################################
