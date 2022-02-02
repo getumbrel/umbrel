@@ -528,7 +528,7 @@
         "id": "btcpay-server",
         "category": "Finance",
         "name": "BTCPay Server",
-        "version": "1.3.4",
+        "version": "1.4.2",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
         "description": "BTCPay Server is a payment processor that allows you to receive payments in Bitcoin (and altcoins) directly, with no fees, transaction cost or a middleman. It is a non-custodial invoicing system which eliminates the involvement of a third-party.\n\nPayments with BTCPay Server go directly to your wallet, which increases the privacy and security. Your private keys are never uploaded to your Umbrel. There is no address re-use, since each invoice generates a new address deriving from your xpubkey.\n\nYou can not only to attach an unlimited number of stores and use the Lightning Network but also become a payment processor for others. Thanks to the apps built on top of it, you can use BTCPay to receive donations, start a crowdfunding campaign or have an in-store Point of Sale.\n\nPlease note: Due to your BTCPay instance running on your local network connecting remote applications, such as Shopify or WordPress for example, will fail to connect.",
         "developer": "BTCPay Server Foundation",
