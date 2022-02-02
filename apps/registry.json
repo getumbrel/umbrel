@@ -379,31 +379,6 @@
         "defaultPassword": ""
     },
     {
-        "id": "suredbits-wallet",
-        "category": "Wallets",
-        "name": "Suredbits Wallet",
-        "version": "1.8.0-160-2066447c",
-        "tagline": "A universal DLC wallet",
-        "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
-        "developer": "Suredbits",
-        "website": "https://suredbits.com",
-        "dependencies": [
-            "bitcoind"
-        ],
-        "repo": "https://github.com/bitcoin-s/bitcoin-s",
-        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
-        "port": 3020,
-        "gallery": [
-            "1.jpg",
-            "2.jpg",
-            "3.jpg"
-        ],
-        "path": "",
-        "defaultUsername": "",
-        "defaultPassword": "",
-        "deterministicPassword": true
-    },
-    {
         "id": "sphinx-relay",
         "category": "Social",
         "name": "Sphinx Relay",
@@ -596,6 +571,31 @@
         ],
         "path": "",
         "defaultUsername": "umbrel",
+        "deterministicPassword": true
+    },
+    {
+        "id": "suredbits-wallet",
+        "category": "Finance",
+        "name": "Suredbits Wallet",
+        "version": "1.8.0-160-2066447c",
+        "tagline": "A universal DLC wallet",
+        "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
+        "developer": "Suredbits",
+        "website": "https://suredbits.com",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/bitcoin-s/bitcoin-s",
+        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "port": 3020,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "",
+        "defaultPassword": "",
         "deterministicPassword": true
     },
     {
