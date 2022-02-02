@@ -193,3 +193,7 @@ HiddenServicePort 80 <app-suredbits-wallet-ip>:3002
 # suredbits-wallet p2p Hidden Service
 HiddenServiceDir /data/app-suredbits-wallet-p2p
 HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-ip>:<app-suredbits-wallet-p2p-port>
+
+# lndg Hidden Service
+HiddenServiceDir /data/app-lndg
+HiddenServicePort 80 <app-lndg-ip>:<app-lndg-port>
