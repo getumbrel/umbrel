@@ -32,7 +32,7 @@ services:
       default:
         ipv4_address: $APP_KOLLIDER_WS_IP
   web:
-    image: kolliderhq/kollider-lite-app:v1.0.0@sha256:b930aa6e519b78b5db69915300796807ac09b7356f9b099b7630585aed47d0b5
+    image: kolliderhq/kollider-lite-app:v1.0.0@sha256:8f7109ab30526b8f0dbc14090441e13a7dd87d809f5a54068c97b0786da5ac27
     init: true
     user: 1000:1000
     restart: on-failure
