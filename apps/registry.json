@@ -831,7 +831,7 @@
         "category": "Lightning Node Management",
         "name": "LNDg",
         "version": "1.0.2",
-        "tagline": "Lite GUI web interface to analyze LND data and manage your node with automation.",
+        "tagline": "Analyze and automate your Lightning node management",
         "description": "LNDg is your command center for running a profitable and efficient routing node. From quickly viewing your node's health, automated rebalancing, selecting new potential peers and much more.",
         "developer": "cryptosharks131",
         "website": "https://github.com/cryptosharks131",
