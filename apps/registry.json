@@ -776,5 +776,29 @@
         ],
         "path": "/admin",
         "deterministicPassword": true
+    },
+    {
+        "id": "kollider",
+        "category": "Finance",
+        "name": "Kollider",
+        "version": "1.0.0",
+        "tagline": "Lightning-fast derivative trading",
+        "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
+        "developer": "Kollider",
+        "website": "https://kollider.xyz",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/kolliderhq/kollider-lite-app",
+        "support": "https://t.me/kolliderhq",
+        "port": 4243,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]
