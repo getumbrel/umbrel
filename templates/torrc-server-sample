@@ -185,3 +185,11 @@ HiddenServicePort 80 <app-bitfeed-ip>:80
 HiddenServiceDir /data/app-kollider
 HiddenServicePort 80 <app-kollider-ip>:3000
 HiddenServicePort 4244 <app-kollider-ws-ip>:8080
+
+# suredbits-wallet Hidden Service
+HiddenServiceDir /data/app-suredbits-wallet
+HiddenServicePort 80 <app-suredbits-wallet-ip>:3002
+
+# suredbits-wallet p2p Hidden Service
+HiddenServiceDir /data/app-suredbits-wallet-p2p
+HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-ip>:<app-suredbits-wallet-p2p-port>
