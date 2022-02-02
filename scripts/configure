@@ -223,6 +223,11 @@ APP_BITFEED_IP="10.21.21.68"
 APP_BITFEED_PORT="8314"
 APP_BITFEED_API_IP="10.21.21.69"
 APP_BITFEED_API_PORT="8315"
+APP_KOLLIDER_IP="10.21.21.70"
+APP_KOLLIDER_PORT="4243"
+APP_KOLLIDER_WS_IP="10.21.21.71"
+APP_KOLLIDER_WS_PORT="4244"
+APP_KOLLIDER_HH_IP="10.21.21.72"
 
 
 # Generate RPC credentials
@@ -449,6 +454,11 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-bitfeed-port>/${APP_BITFEED_PORT}/g" "${template}"
   sed -i "s/<app-bitfeed-api-ip>/${APP_BITFEED_API_IP}/g" "${template}"
   sed -i "s/<app-bitfeed-api-port>/${APP_BITFEED_API_PORT}/g" "${template}"
+  sed -i "s/<app-kollider-ip>/${APP_KOLLIDER_IP}/g" "${template}"
+  sed -i "s/<app-kollider-port>/${APP_KOLLIDER_PORT}/g" "${template}"
+  sed -i "s/<app-kollider-ws-ip>/${APP_KOLLIDER_WS_IP}/g" "${template}"
+  sed -i "s/<app-kollider-ws-port>/${APP_KOLLIDER_WS_PORT}/g" "${template}"
+  sed -i "s/<app-kollider-hh-ip>/${APP_KOLLIDER_HH_IP}/g" "${template}"
 done
 
 ##########################################################

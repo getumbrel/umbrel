@@ -1,0 +1,44 @@
+version: "3.7"
+
+services:
+  backend:
+    image: kolliderhq/kollider-lite-backend:v1.0.0@sha256:50556ad9c14b39f327f270499c6188b15c036c4c7865346c2c26198b3e6eabb0
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      LND_IP: $LND_IP
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_HH_IP
+  ws:
+    image: kolliderhq/kollider-ws-client:v1.0.0@sha256:ec37e3c75d62cf197e1a28031bcf0ebf62f7bd815181c8414ad27a8b1db9e942
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_KOLLIDER_WS_PORT:8080"
+    environment:
+      APP_PASSWORD: $APP_PASSWORD
+      KOLLIDER_ZMQ_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5556"
+      KOLLIDER_ZMQ_SUB_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5557"
+      KOLLIDER_ZMQ_HEDGER_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5558"
+      KOLLIDER_ZMQ_HEDGER_SUB_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5559"
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_WS_IP
+  web:
+    image: kolliderhq/kollider-lite-app:v1.0.0@sha256:b930aa6e519b78b5db69915300796807ac09b7356f9b099b7630585aed47d0b5
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_KOLLIDER_PORT:3000"
+    networks:
+      default:
+        ipv4_address: $APP_KOLLIDER_IP

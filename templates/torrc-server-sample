@@ -180,3 +180,8 @@ HiddenServicePort 80 <app-satsale-ip>:5000
 # bitfeed Hidden Service
 HiddenServiceDir /data/app-bitfeed
 HiddenServicePort 80 <app-bitfeed-ip>:80
+
+# kollider Hidden Service
+HiddenServiceDir /data/app-kollider
+HiddenServicePort 80 <app-kollider-ip>:3000
+HiddenServicePort 4244 <app-kollider-ws-ip>:8080
