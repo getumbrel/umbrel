@@ -15,7 +15,7 @@ services:
         ipv4_address: "${APP_BLUEWALLET_REDIS_IP}"
 
   lndhub:
-    image: "bluewalletorganization/lndhub:v1.3.3@sha256:b99408dfb53f503def405668f5fc4d8185de39a87843d4ea8774544a5df1fe36"
+    image: "bluewalletorganization/lndhub:v1.4.1@sha256:b99408dfb53f503def405668f5fc4d8185de39a87843d4ea8774544a5df1fe36"
     user: "1000:1000"
     depends_on: [ "redis" ]
     restart: "on-failure"

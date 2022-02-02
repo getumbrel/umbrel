@@ -553,7 +553,7 @@
         "id": "bluewallet",
         "category": "Wallet Servers",
         "name": "BlueWallet Lightning",
-        "version": "1.3.3",
+        "version": "1.4.1",
         "tagline": "Connect BlueWallet to your Lightning node",
         "description": "Run BlueWallet in the most private and secure way possible by removing 3rd parties and connecting it directly to your Umbrel's Lightning node.\n\nYou can pair multiple BlueWallet accounts, so your friends and family can pair their BlueWallet with your Umbrel for a trust-minimized setup.",
         "developer": "BlueWallet",
