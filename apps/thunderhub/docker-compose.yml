@@ -2,8 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: apotdevin/thunderhub:v0.13.2@sha256:5ce4e3b5b1b742283c0ff01161d36b9dbc3d0e6107d707f5fb496b43a3b93a11
-    user: "1000:1000"
+    image: apotdevin/thunderhub:v0.13.5@sha256:ba941f6d4551d0995f8dd500e0da4b0bae6e695e06fc7b4bd31053da3fd20910
     restart: on-failure
     stop_grace_period: 1m
     ports:
