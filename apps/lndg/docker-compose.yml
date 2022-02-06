@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/cryptosharks131/lndg:v1.0.2@sha256:3c55173dca8af79fd122587e5e53ddc68159ed7c3a4865a72c4e90b4b84ce787
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "${APP_LNDG_PORT}:${APP_LNDG_PORT}"
+    volumes:
+      - ${LND_DATA_DIR}:/root/.lnd:ro
+      - ${APP_DATA_DIR}:/lndg/data
+    command:
+      - sh
+      - -c
+      - python initialize.py -net '${BITCOIN_NETWORK}' -server '${LND_IP}:${LND_GRPC_PORT}' -pw '${APP_PASSWORD}' -d && supervisord && python manage.py runserver 0.0.0.0:${APP_LNDG_PORT}
+    networks:
+      default:
+        ipv4_address: ${APP_LNDG_IP}

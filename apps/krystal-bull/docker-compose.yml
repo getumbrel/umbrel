@@ -2,13 +2,20 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/oracle-server-ui:0.0.1-a0bbe697-SNAPSHOT@sha256:fc8199473ec13e0cedef9aef50d437a065a68c70d9529098304fc30c20aa5a0b
+    image: bitcoinscala/oracle-server-ui:0.0.1-17bd7fd5-SNAPSHOT@sha256:95e74ea025c08ef1bf18d71a8bc06ad603454e9e3f6f7a24bdfb80f9422b448a
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
+      - ${APP_DATA_DIR}/data/log:/log
     environment:
+      LOG_PATH: "/log/"
+      BACKUP_PATH: "/home/bitcoin-s/.bitcoin-s/"
       ORACLE_SERVER_API_URL: "http://${APP_KRYSTAL_BULL_SERVER_IP}:9998/"
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
+      DEFAULT_UI_PASSWORD: $APP_PASSWORD
+      BITCOIN_S_ORACLE_RPC_PASSWORD: $APP_PASSWORD
     ports:
       - "${APP_KRYSTAL_BULL_PORT}:3001"
     networks:
@@ -17,13 +24,13 @@ services:
     depends_on: 
       - oracleserver
   oracleserver:
-    image: bitcoinscala/bitcoin-s-oracle-server:1.8.0-18-4f081b9d-SNAPSHOT@sha256:28bbe2432b13d62c9cc67be38d07d23d40a8eb76936c073231b7c23592d6773a
-    user: "1000:1000"
+    image: bitcoinscala/bitcoin-s-oracle-server:1.8.0-155-cf16d936-SNAPSHOT@sha256:5361594b55dbb9d371952bc25ad53b0c73b8e38d88c178d3d395568434de4610
     restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
     environment:
-      BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
+      BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED
+      BITCOIN_S_ORACLE_RPC_PASSWORD: $APP_PASSWORD
     networks:
       default:
         ipv4_address: $APP_KRYSTAL_BULL_SERVER_IP
