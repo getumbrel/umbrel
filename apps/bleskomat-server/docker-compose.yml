@@ -2,15 +2,30 @@ version: "3.7"
 
 services:
 
+  db:
+    image: postgres:10@sha256:15d933c1a8f5d907280507da66bc741ffb30bd789f407ba04368c2f82b86c526
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+        - $APP_DATA_DIR/data/db:/var/lib/postgresql/data
+    networks:
+      default:
+        ipv4_address: $APP_BLESKOMAT_SERVER_DB_IP
+    environment:
+      - POSTGRES_USER=bleskomat_server
+      - POSTGRES_DB=bleskomat_server
+      - POSTGRES_PASSWORD=moneyprintergobrrr
+
   web:
-    image: bleskomat/bleskomat-server:1.3.2@sha256:a6a2cce0766e98975548bc74edef7a97c7eee5f2db82c5088e9bdf9e7f64d1af
+    image: bleskomat/bleskomat-server:1.3.3@sha256:4bd29cc8a1e9888254728f48e36408621e8b940423a7b30fce2613cb16d6f7b0
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - "$APP_BLESKOMAT_SERVER_PORT:$APP_BLESKOMAT_SERVER_PORT"
     volumes:
-      - $APP_DATA_DIR/data:/usr/src/app/data
+      - $APP_DATA_DIR/data/web:/usr/src/app/data
       - $LND_DATA_DIR:/lnd:ro
     environment:
       DEBUG: "bleskomat-server*,lnurl*"
@@ -20,7 +35,7 @@ services:
       BLESKOMAT_SERVER_ENDPOINT: "/u"
       BLESKOMAT_SERVER_AUTH_API_KEYS: '[]'
       BLESKOMAT_SERVER_LIGHTNING: '{"backend":"lnd","config":{"cert":"/lnd/tls.cert","protocol":"https","hostname":"$LND_IP:$LND_REST_PORT","macaroon":"/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"}}'
-      BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"sqlite3","connection":{"filename":"./data/db.sqlite3"},"useNullAsDefault":true}}'
+      BLESKOMAT_SERVER_STORE: '{"backend":"knex","config":{"client":"postgres","connection":{"host":"$APP_BLESKOMAT_SERVER_DB_IP","port":5432,"user":"bleskomat_server","password":"moneyprintergobrrr","database":"bleskomat_server"}}}'
       BLESKOMAT_SERVER_COINRATES_DEFAULTS_PROVIDER: "coinbase"
       BLESKOMAT_SERVER_ADMIN_WEB: "true"
       BLESKOMAT_SERVER_ADMIN_PASSWORD_PLAINTEXT: "$APP_PASSWORD"
