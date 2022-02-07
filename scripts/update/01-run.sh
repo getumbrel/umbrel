@@ -61,6 +61,13 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
 
+    # Patch PwnKit
+    # https://security-tracker.debian.org/tracker/CVE-2021-4034
+    policykit_version=$(dpkg -s policykit-1 | grep '^Version:')
+    if [[ "$policykit_version" != "Version: 0.105-25+rpt1+deb10u1" ]]; then
+      apt-get install --yes --only-upgrade policykit-1
+    fi
+
     # Make sure dhcpd ignores virtual network interfaces
     dhcpd_conf="/etc/dhcpcd.conf"
     dhcpd_rule="denyinterfaces veth*"

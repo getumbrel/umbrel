@@ -49,7 +49,7 @@
         "id": "pi-hole",
         "category": "Networking",
         "name": "Pi-hole",
-        "version": "2021.10.1",
+        "version": "2022.01.1",
         "tagline": "Block ads on your entire network",
         "description": "Instead of browser plugins or other software on each computer, install Pi-hole® on your Umbrel and your entire network is protected. Network-level blocking allows you to block ads in non-traditional places such as mobile apps and smart TVs, regardless of hardware or OS. Since advertisements are blocked before they are downloaded, network performance is improved and will feel faster. \n\nIn addition to blocking advertisements, Pi-hole® has an informative Web interface that shows stats on all the domains being queried on your network. Pi-hole® works fine with an existing DHCP server, but you can use Pi-hole®’s to keep your network management in one place.\n\n Pi-hole® and the Pi-hole® logo are registered trademarks of Pi-hole. Umbrel is not sponsored, endorsed by, or associated with Pi-hole®.",
         "developer": "Pi-hole®",
@@ -358,7 +358,7 @@
         "id": "specter-desktop",
         "category": "Wallets",
         "name": "Specter Desktop",
-        "version": "1.8.0",
+        "version": "1.8.1",
         "tagline": "Multisig with hardware wallets made easy",
         "description": "Specter Desktop connects to the Bitcoin Core running on your Umbrel and functions as a watch-only coordinator for multi-signature and single-key Bitcoin wallets. At the moment Specter Desktop is working with all major hardware wallets including:\n\n- Trezor\n- Ledger\n- KeepKey\n- BitBox02\n- ColdCard (optionally airgapped, using an SD card)\n- Electrum (optionally airgapped, if running Electrum on an airgapped computer/phone)\n- Specter DIY (optionally airgapped, using QR codes)\n- Cobo (airgapped, using QR codes)\n\nSpecter Desktop also supports using the Bitcoin Core on your Umbrel as a hot wallet, by importing or generating a random BIP39 mnemonic, but this feature is experimental and we do not recommend using it at this stage. We plan to add support for other hardware wallets as they come up.",
         "developer": "Crypto Advance",
@@ -503,7 +503,7 @@
         "id": "btcpay-server",
         "category": "Finance",
         "name": "BTCPay Server",
-        "version": "1.3.4",
+        "version": "1.4.2",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
         "description": "BTCPay Server is a payment processor that allows you to receive payments in Bitcoin (and altcoins) directly, with no fees, transaction cost or a middleman. It is a non-custodial invoicing system which eliminates the involvement of a third-party.\n\nPayments with BTCPay Server go directly to your wallet, which increases the privacy and security. Your private keys are never uploaded to your Umbrel. There is no address re-use, since each invoice generates a new address deriving from your xpubkey.\n\nYou can not only to attach an unlimited number of stores and use the Lightning Network but also become a payment processor for others. Thanks to the apps built on top of it, you can use BTCPay to receive donations, start a crowdfunding campaign or have an in-store Point of Sale.\n\nPlease note: Due to your BTCPay instance running on your local network connecting remote applications, such as Shopify or WordPress for example, will fail to connect.",
         "developer": "BTCPay Server Foundation",
@@ -528,7 +528,7 @@
         "id": "bluewallet",
         "category": "Wallet Servers",
         "name": "BlueWallet Lightning",
-        "version": "1.3.3",
+        "version": "1.4.1",
         "tagline": "Connect BlueWallet to your Lightning node",
         "description": "Run BlueWallet in the most private and secure way possible by removing 3rd parties and connecting it directly to your Umbrel's Lightning node.\n\nYou can pair multiple BlueWallet accounts, so your friends and family can pair their BlueWallet with your Umbrel for a trust-minimized setup.",
         "developer": "BlueWallet",
@@ -571,6 +571,31 @@
         ],
         "path": "",
         "defaultUsername": "umbrel",
+        "deterministicPassword": true
+    },
+    {
+        "id": "suredbits-wallet",
+        "category": "Finance",
+        "name": "Suredbits Wallet",
+        "version": "1.8.0-160-2066447c",
+        "tagline": "A universal DLC wallet",
+        "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
+        "developer": "Suredbits",
+        "website": "https://suredbits.com",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/bitcoin-s/bitcoin-s",
+        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "port": 3020,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "",
+        "defaultPassword": "",
         "deterministicPassword": true
     },
     {
@@ -686,7 +711,7 @@
         "id": "helipad",
         "category": "Lightning Node Management",
         "name": "Helipad",
-        "version": "0.1.5",
+        "version": "0.1.8",
         "tagline": "View boosts & boost-a-grams from Podcasting 2.0 apps",
         "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
         "developer": "Podcastindex.org",
@@ -709,9 +734,9 @@
         "id": "itchysats",
         "category": "Finance",
         "name": "ItchySats",
-        "version": "v0.3.6",
+        "version": "v0.4.1",
         "tagline": "Peer-2-peer derivatives on Bitcoin",
-        "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. CFDs period ends after 7 days - perpetual positions are in the making :)\n4. The leverage is fixed at 2\n\nWe are woking hard on perpetual positions and allowing sell positions.\nUpdate to be expected soon!",
+        "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. The leverage is fixed at 2\n\nWith 0.4.0 your CFDs are perpetual positions that are extended hourly. This means your CFD position will remain open forever unless you decide to close it. A funding fee is collected hourly when the CFD is extended.\nUpdate for going short to be expected soon!",
         "developer": "ItchySats",
         "website": "https://itchysats.network",
         "dependencies": [
@@ -734,11 +759,11 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.4",
+        "version": "0.1.5",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
-        "website": "https://ibz.me",
+        "website": "https://lightningshell.app",
         "dependencies": [
             "lnd"
         ],
@@ -758,7 +783,7 @@
         "id": "satsale",
         "category": "Finance",
         "name": "SatSale",
-        "version": "0.1.11",
+        "version": "0.1.13",
         "tagline": "Lightweight Bitcoin payment processor",
         "description": "SatSale is a simple, easily deployable, lightweight Bitcoin payment processor that connects to your own Bitcoin node. You can use SatSale to instantly turn your Umbrel into a point-of-sale (settings under /admin). SatSale can process donations from your supporters, facilitating direct peer-to-peer payments without any middleman and greater privacy than reusing donation addresses.\n\nHost your own Bitcoin payment gateway for Woocommerce without a middleman or custodian, allowing you to turn any wordpress site into a bitcoin-accepting store.\n\nThis Umbrel app contains a subset of the features we have in the works for SatSale, but will push updates out as they are ready. Check out the website and GitHub for more!\n\nPlease note that SatSale is still in early development. As such, we are not responsible for any loss of funds, vulnerabilities, or any other grievances which arise. Always confirm large payments manually and use cold storage as much as possible. Please contribute if you can!",
         "developer": "Nick Farrow",
@@ -775,6 +800,54 @@
             "3.jpg"
         ],
         "path": "/admin",
+        "deterministicPassword": true
+    },
+    {
+        "id": "kollider",
+        "category": "Finance",
+        "name": "Kollider",
+        "version": "1.0.0",
+        "tagline": "Lightning-fast derivative trading",
+        "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
+        "developer": "Kollider",
+        "website": "https://kollider.xyz",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/kolliderhq/kollider-lite-app",
+        "support": "https://t.me/kolliderhq",
+        "port": 4243,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
+        "id": "lndg",
+        "category": "Lightning Node Management",
+        "name": "LNDg",
+        "version": "1.0.2",
+        "tagline": "Analyze and automate your Lightning node management",
+        "description": "LNDg is your command center for running a profitable and efficient routing node. From quickly viewing your node's health, automated rebalancing, selecting new potential peers and much more.",
+        "developer": "cryptosharks131",
+        "website": "https://github.com/cryptosharks131",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/cryptosharks131/lndg",
+        "support": "https://t.me/+-RxoZdi7snk2ZGYx",
+        "port": 8889,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "lndg-admin",
         "deterministicPassword": true
     }
 ]
