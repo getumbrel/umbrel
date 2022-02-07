@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/ibz/usocial:v0.1.1-buster@sha256:144c1c27b95ffb5b221c8917fc158517b5a61dcdc7b0e7c02631c3770cc6b36b
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 8448:5000
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data:/instance
+    environment:
+        USOCIAL_JOB: "WEB"
+        APP_PASSWORD: "${APP_PASSWORD}"
+        LND_IP: "${LND_IP}"
+        LND_GRPC_PORT: ${LND_GRPC_PORT}
+        LND_DIR: "/lnd"
+  fetcher:
+    depends_on:
+      - web
+    image: ghcr.io/ibz/usocial:v0.1.1-buster@sha256:144c1c27b95ffb5b221c8917fc158517b5a61dcdc7b0e7c02631c3770cc6b36b
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data:/instance
+    environment:
+        USOCIAL_JOB: "FETCH_FEEDS"
