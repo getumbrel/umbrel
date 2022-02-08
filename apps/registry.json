@@ -759,7 +759,7 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.5",
+        "version": "0.1.6",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
