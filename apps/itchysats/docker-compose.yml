@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/itchysats/itchysats/taker:0.4.1@sha256:debe9a8b0ce275f48b8ed3bc43430241ea91c9d8c2a65eaa7f6d8a534453c099
+    image: ghcr.io/itchysats/itchysats/taker:0.4.2@sha256:4f0d9b4628e6f7d1129556341c18b46628e7eb47416bf60f8609d1d646bd80a2
     restart: on-failure
     stop_grace_period: 1m
     ports:
