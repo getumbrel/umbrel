@@ -6,15 +6,9 @@ services:
     ports:
       - "34343:34343"
       - "8090:8090"
-      - "50002:50002"
     volumes:
       - ${APP_DATA_DIR}/piers:/data/piers
       - ${APP_DATA_DIR}/keys:/data/keys
     environment:
       FLASK_APP: app
-      ELECTRUM_IP: $ELECTRUM_IP
-      ELECTRUM_PORT: $ELECTRUM_PORT
-      BITCOIN_IP: $BITCOIN_IP
-      BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
-      BITCOIN_RPC_USER: $BITCOIN_RPC_USER
-      BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
+      APP_PASSWORD: $APP_PASSWORD
