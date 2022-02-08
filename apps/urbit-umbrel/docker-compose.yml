@@ -11,4 +11,4 @@ services:
       - ${APP_DATA_DIR}/keys:/data/keys
     environment:
       FLASK_APP: app
-      APP_PASSWORD: $APP_PASSWORD
+      APP_PASSWORD: ${APP_PASSWORD}
