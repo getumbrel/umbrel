@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/oracle-server-ui:0.0.1-59b4b595-SNAPSHOT
+    image: bitcoinscala/oracle-server-ui:0.0.1-59b4b595-SNAPSHOT@sha256:04aa5ac3214acaf934cf81849758333e0eff948d9094e434001c8355084bbac6
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
