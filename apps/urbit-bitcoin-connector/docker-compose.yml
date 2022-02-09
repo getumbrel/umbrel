@@ -6,8 +6,8 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 55555:50002
-      - 9090:9090
+      - ${APP_URBIT_BITCOIN_CONNECTOR_PORT}:${APP_URBIT_BITCOIN_CONNECTOR_PORT}
+      - ${APP_URBIT_BITCOIN_CONNECTOR_SERVER_PORT}:50002
     environment:
       ELECTRUM_IP: $ELECTRUM_IP
       ELECTRUM_PORT: $ELECTRUM_PORT
@@ -16,5 +16,6 @@ services:
       BITCOIN_RPC_USER: $BITCOIN_RPC_USER
       BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
       BITCOIN_RPC_AUTH: $BITCOIN_RPC_AUTH
-    extra_hosts:
-        - "host.docker.internal:host-gateway"
+    networks:
+      default:
+          ipv4_address: $APP_URBIT_BITCOIN_CONNECTOR_IP
