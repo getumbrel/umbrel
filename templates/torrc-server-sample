@@ -197,3 +197,7 @@ HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-i
 # lndg Hidden Service
 HiddenServiceDir /data/app-lndg
 HiddenServicePort 80 <app-lndg-ip>:<app-lndg-port>
+
+# urbit Hidden Service
+HiddenServiceDir /data/app-urbit
+HiddenServicePort 80 <app-urbit-ip>:<app-urbit-port>
