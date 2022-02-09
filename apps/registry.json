@@ -887,7 +887,7 @@
         ],
         "repo": "https://github.com/ibz/usocial",
         "support": "https://github.com/ibz/usocial/issues",
-        "port": 8090,
+        "port": 8448,
         "gallery": [
             "1.jpg",
             "2.jpg",
