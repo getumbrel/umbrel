@@ -2,12 +2,12 @@ version: "3.7"
 
 services:
   web:
-    image: urbit-btc-node:latest
+    image: matwet/urbit-btc-node:latest
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 55555:50002
-      - 9091:9090
+      - 9090:9090
     environment:
       ELECTRUM_IP: $ELECTRUM_IP
       ELECTRUM_PORT: $ELECTRUM_PORT
