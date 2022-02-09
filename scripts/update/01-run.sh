@@ -284,6 +284,18 @@ if [[ -d "${krystal_bull_data_dir}" ]] && [[ ! -d "${krystal_bull_logs_data_dir}
   chown 1000:1000 "${krystal_bull_logs_data_dir}"
 fi
 
+# Handle new data dirs for kollider app
+kollider_data_dir="${UMBREL_ROOT}/app-data/kollider"
+kollider_logs_data_dir="${kollider_data_dir}/data/logs"
+kollider_cache_data_dir="${kollider_data_dir}/data/cache"
+if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; then
+  echo "Found kollider install without data dirs, attempting to create them..."
+  mkdir -p "${kollider_logs_data_dir}"
+  chown 1000:1000 "${kollider_logs_data_dir}"
+  mkdir -p "${kollider_cache_data_dir}"
+  chown 1000:1000 "${kollider_cache_data_dir}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +

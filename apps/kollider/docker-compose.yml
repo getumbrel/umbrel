@@ -2,20 +2,21 @@ version: "3.7"
 
 services:
   backend:
-    image: kolliderhq/kollider-lite-backend:v1.0.0@sha256:50556ad9c14b39f327f270499c6188b15c036c4c7865346c2c26198b3e6eabb0
+    image: kolliderhq/kollider-lite-backend:v1.0.1@sha256:e095cd6209751277a1842ce4fa9e8de3a067963b9478441e890158c56161c2c3
     init: true
     user: 1000:1000
     restart: on-failure
     stop_grace_period: 1m
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data/logs:/app/logs
     environment:
       LND_IP: $LND_IP
     networks:
       default:
         ipv4_address: $APP_KOLLIDER_HH_IP
   ws:
-    image: kolliderhq/kollider-ws-client:v1.0.0@sha256:ec37e3c75d62cf197e1a28031bcf0ebf62f7bd815181c8414ad27a8b1db9e942
+    image: kolliderhq/kollider-ws-client:v1.0.1@sha256:f365931a4ddb3aeb39ad545967eb175a155d35f8df125aa04ce93fd8405f68d4
     init: true
     user: 1000:1000
     restart: on-failure
@@ -32,11 +33,13 @@ services:
       default:
         ipv4_address: $APP_KOLLIDER_WS_IP
   web:
-    image: kolliderhq/kollider-lite-app:v1.0.0@sha256:8f7109ab30526b8f0dbc14090441e13a7dd87d809f5a54068c97b0786da5ac27
+    image: kolliderhq/kollider-lite-app:v1.0.1@sha256:704f6beb8c53e58180368372b483543d7a3fd115977a6028acab605a73af0d10
     init: true
     user: 1000:1000
     restart: on-failure
     stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data/cache/images:/app/.next/cache/images
     ports:
       - "$APP_KOLLIDER_PORT:3000"
     networks:
