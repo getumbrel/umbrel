@@ -205,3 +205,7 @@ HiddenServicePort 80 <app-urbit-ip>:<app-urbit-port>
 # usocial Hidden Service
 HiddenServiceDir /data/app-usocial
 HiddenServicePort 80 <app-usocial-ip>:5000
+
+# tailscale Hidden Service
+HiddenServiceDir /data/app-tailscale
+HiddenServicePort 80 <app-tailscale-ip>:<app-tailscale-port>

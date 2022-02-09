@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  web:
+    network_mode: "host"
+    image: tailscale/tailscalev1.20.2@sha256:ce7d5663390a170eb9f05789c00b069a2cd3cea185ce15231e9f77ad8d016d49
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "sh -c 'tailscale web --listen 0.0.0.0:${APP_TAILSCALE_PORT} & exec tailscaled --tun=userspace-networking'"
+    ports:
+      - ${APP_TAILSCALE_PORT}:${APP_TAILSCALE_PORT}
+    volumes:
+      - ${APP_DATA_DIR}/data:/var/lib
+    networks:
+      default:
+          ipv4_address: $APP_TAILSCALE_IP
