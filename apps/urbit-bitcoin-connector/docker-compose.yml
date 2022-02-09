@@ -3,6 +3,7 @@ version: "3.7"
 services:
   web:
     image: matwet/urbit-btc-node:latest@sha256:8f1be2af8b3df4b76d077f61176f16b4e2e8ae242ea9b9704a83c0b070cd9d9c
+    init: true
     restart: on-failure
     stop_grace_period: 1m
     ports:
