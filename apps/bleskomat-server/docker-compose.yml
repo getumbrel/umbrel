@@ -18,7 +18,7 @@ services:
       - POSTGRES_PASSWORD=moneyprintergobrrr
 
   web:
-    image: bleskomat/bleskomat-server:1.3.3@sha256:4bd29cc8a1e9888254728f48e36408621e8b940423a7b30fce2613cb16d6f7b0
+    image: bleskomat/bleskomat-server:1.3.4@sha256:7bd91b896c5ca4f69b7c9509b40ccfae273cc46120ec66b2e27b295b0186f230
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
