@@ -879,7 +879,7 @@
         "name": "usocial",
         "version": "0.1.2",
         "tagline": "Read. Listen. Pay back.",
-        "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n\n- Optionally multi-user\n\n- Decentralized karma\n\n- Clean code (Python / Flask / SQLite)\n\n- Search podcasts from Podcast Index\n\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
+        "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n- Optionally multi-user\n- Decentralized karma\n- Clean code (Python / Flask / SQLite)\n- Search podcasts from Podcast Index\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
         "developer": "Ioan Bizău",
         "website": "http://usocial.me",
         "dependencies": [
