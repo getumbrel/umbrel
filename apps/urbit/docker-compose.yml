@@ -1,0 +1,16 @@
+version: "3.3"
+services:
+  manager:
+    image: mopfelwinrux/urbit-umbrel:latest@sha256:72630ed72801d615a1ef5de0bbe0234855d7434d529542b09206a72fb4a8367c
+    ports:
+      - "${APP_URBIT_PORT}:8090"
+      - "${APP_URBIT_P2P_PORT}:34343"
+    volumes:
+      - ${APP_DATA_DIR}/piers:/data/piers
+      - ${APP_DATA_DIR}/keys:/data/keys
+    environment:
+      FLASK_APP: app
+      APP_PASSWORD: ${APP_PASSWORD}
+    networks:
+      default:
+        ipv4_address: $APP_URBIT_IP
