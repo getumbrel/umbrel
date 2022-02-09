@@ -1,8 +1,8 @@
-version: "2.1"
+version: "3.7"
 
 services:
   web:
-    image: bitfeed/client:2.1.2@sha256:2ee766841cfdc0741bbfa5f9e5ca777ca02a135cba1bcbf232e5dee255b8268c
+    image: ghcr.io/bitfeed-project/bitfeed-client:v2.1.5@sha256:36155dc32d423b07519515fda7cfa204e5abeb978a03cf4e27e993b10b585426
     restart: on-failure
     stop_grace_period: 1m
     depends_on:
@@ -18,7 +18,7 @@ services:
         ipv4_address: $APP_BITFEED_IP
 
   api:
-    image: bitfeed/server:2.1.2@sha256:2b5097274b2c433e30cb82b7fdda13c0b856527957ddd15545bd498034be8e51
+    image: ghcr.io/bitfeed-project/bitfeed-server:v2.1.5@sha256:26c15a003ae3848bd1c3dd5d25279ef7c7bb6bbaeeeda615121e6e12754a7f88
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
