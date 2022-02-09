@@ -287,13 +287,13 @@ fi
 # Handle new data dirs for kollider app
 kollider_data_dir="${UMBREL_ROOT}/app-data/kollider"
 kollider_logs_data_dir="${kollider_data_dir}/data/logs"
-kollider_cache_data_dir="${kollider_data_dir}/data/cache"
+kollider_image_cache_data_dir="${kollider_data_dir}/data/cache/images"
 if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; then
   echo "Found kollider install without data dirs, attempting to create them..."
   mkdir -p "${kollider_logs_data_dir}"
   chown 1000:1000 "${kollider_logs_data_dir}"
-  mkdir -p "${kollider_cache_data_dir}"
-  chown 1000:1000 "${kollider_cache_data_dir}"
+  mkdir -p "${kollider_image_cache_data_dir}"
+  chown 1000:1000 "${kollider_image_cache_data_dir}"
 fi
 
 # Fix permissions
