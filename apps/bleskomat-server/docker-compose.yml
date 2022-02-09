@@ -22,6 +22,8 @@ services:
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
+    depends_on:
+      - db
     ports:
       - "$APP_BLESKOMAT_SERVER_PORT:$APP_BLESKOMAT_SERVER_PORT"
     volumes:
