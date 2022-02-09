@@ -79,7 +79,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.18@sha256:ded4dd850f6e41fc03c7e657417c87014aac4ec7fa1efecb767a999f313b26e3
+                image: getumbrel/manager:v0.2.19@sha256:d94327034d99ec8121d42b61bbec89f2e1797148c56ef60b7cec17486e6a399d
                 depends_on: [ tor_proxy ]
                 restart: on-failure
                 stop_grace_period: 5m30s
