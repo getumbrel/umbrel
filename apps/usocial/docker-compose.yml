@@ -16,6 +16,9 @@ services:
         LND_IP: "${LND_IP}"
         LND_GRPC_PORT: ${LND_GRPC_PORT}
         LND_DIR: "/lnd"
+    networks:
+      default:
+          ipv4_address: $APP_USOCIAL_IP
   fetcher:
     depends_on:
       - web
@@ -28,4 +31,4 @@ services:
         USOCIAL_JOB: "FETCH_FEEDS"
     networks:
       default:
-          ipv4_address: $APP_USOCIAL_IP
+          ipv4_address: $APP_USOCIAL_FETCHER_IP
