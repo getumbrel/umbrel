@@ -11,6 +11,3 @@ services:
       - ${APP_TAILSCALE_PORT}:${APP_TAILSCALE_PORT}
     volumes:
       - ${APP_DATA_DIR}/data:/var/lib
-    networks:
-      default:
-          ipv4_address: $APP_TAILSCALE_IP
