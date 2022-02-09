@@ -244,6 +244,9 @@ APP_USOCIAL_PORT="8448"
 APP_USOCIAL_FETCHER_IP="10.21.21.78"
 APP_TAILSCALE_IP="10.21.21.80"
 APP_TAILSCALE_PORT="2100"
+APP_URBIT_BITCOIN_CONNECTOR_IP="10.21.21.81"
+APP_URBIT_BITCOIN_CONNECTOR_PORT="9090"
+APP_URBIT_BITCOIN_CONNECTOR_SERVER_PORT="55555"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -488,6 +491,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-usocial-fetcher-ip>/${APP_USOCIAL_FETCHER_IP}/g" "${template}"
   sed -i "s/<app-tailscale-ip>/${APP_TAILSCALE_IP}/g" "${template}"
   sed -i "s/<app-tailscale-port>/${APP_TAILSCALE_PORT}/g" "${template}"
+  sed -i "s/<app-urbit-bitcoin-connector-ip>/${APP_URBIT_BITCOIN_CONNECTOR_IP}/g" "${template}"
+  sed -i "s/<app-urbit-bitcoin-connector-port>/${APP_URBIT_BITCOIN_CONNECTOR_PORT}/g" "${template}"
+  sed -i "s/<app-urbit-bitcoin-connector-server-port>/${APP_URBIT_BITCOIN_CONNECTOR_SERVER_PORT}/g" "${template}"
 done
 
 ##########################################################
