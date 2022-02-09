@@ -6,7 +6,7 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 8448:5000
+      - ${APP_USOCIAL_PORT}:5000
     volumes:
       - ${LND_DATA_DIR}:/lnd:ro
       - ${APP_DATA_DIR}/data:/instance
@@ -26,3 +26,6 @@ services:
       - ${APP_DATA_DIR}/data:/instance
     environment:
         USOCIAL_JOB: "FETCH_FEEDS"
+    networks:
+      default:
+          ipv4_address: $APP_USOCIAL_IP

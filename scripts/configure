@@ -239,6 +239,8 @@ APP_LNDG_PORT="8889"
 APP_URBIT_IP="10.21.21.76"
 APP_URBIT_PORT="8090"
 APP_URBIT_P2P_PORT="34343"
+APP_USOCIAL_IP="10.21.21.77"
+APP_USOCIAL_PORT="8448"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -478,6 +480,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-urbit-ip>/${APP_URBIT_IP}/g" "${template}"
   sed -i "s/<app-urbit-port>/${APP_URBIT_PORT}/g" "${template}"
   sed -i "s/<app-urbit-p2p-port>/${APP_URBIT_P2P_PORT}/g" "${template}"
+  sed -i "s/<app-usocial-ip>/${APP_USOCIAL_IP}/g" "${template}"
+  sed -i "s/<app-usocial-port>/${APP_USOCIAL_PORT}/g" "${template}"
 done
 
 ##########################################################
