@@ -285,7 +285,7 @@
         "id": "bitfeed",
         "category": "Explorers",
         "name": "Bitfeed",
-        "version": "2.1.2",
+        "version": "2.1.5",
         "tagline": "A live visualization of your node's mempool",
         "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live. Watch as new transactions drop into your node's mempool, before being packaged into newly mined blocks. Monitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
         "developer": "Mononaut",
