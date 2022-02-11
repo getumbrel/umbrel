@@ -334,7 +334,7 @@
         "id": "samourai-server",
         "category": "Wallet Servers",
         "name": "Samourai Server",
-        "version": "1.12.1",
+        "version": "1.13.0",
         "tagline": "Your private backing server for Samourai Wallet",
         "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.\n\nBundles Whirlpool CLI v0.10.11.",
         "developer": "Samourai",
@@ -342,7 +342,7 @@
         "dependencies": [
             "bitcoind"
         ],
-        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.12.1-umbrel",
+        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.13.0-umbrel",
         "support": "https://t.me/SamouraiWallet",
         "port": 3005,
         "gallery": [
