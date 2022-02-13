@@ -1,0 +1,20 @@
+version: "3.7"
+
+services:
+  server:
+    image: oznu/homebridge:latest
+    restart: on-failure
+    ports:
+      # Replace <port> with the port that your app's web server
+      # is listening inside the Docker container. If you need to
+      # expose more ports, add them below.
+      - 8581:8581
+    volumes:
+      - ${APP_DATA_DIR}/data/homebridge:/homebridge
+
+    environment:
+      - TZ=Australia/Sydney
+      - PGID=1000
+      - PUID=1000
+      - HOMEBRIDGE_CONFIG_UI=1
+      - HOMEBRIDGE_CONFIG_UI_PORT=8581

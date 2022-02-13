@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+  server:
+    image: oznu/homebridge:latest
+    restart: on-failure
+    ports:
+      - 8581:8581
+    volumes:
+      - ${APP_DATA_DIR}/data/homebridge:/homebridge
+    environment:
+      HOMEBRIDGE_CONFIG_UI : $HOMEBRIDGE_CONFIG_UI
+      HOMEBRIDGE_CONFIG_UI_PORT: $HOMEBRIDGE_CONFIG_UI_PORT
+    networks:
+      default:
+        ipv4_address: $HOMEBRIDGE_CONFIG_UI_IP
