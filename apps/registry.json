@@ -943,5 +943,27 @@
         "path": "",
         "deterministicPassword": false,
         "torOnly": false
+    },
+    {
+        "id": "homebridge",
+        "category": "Automation",
+        "name": "Homebridge",
+        "version": "1.4.0",
+        "tagline": "HomeKit support for the impatient.",
+        "description": "Homebridge allows you to integrate with smart home devices that do not natively support HomeKit. There are over 2,000 Homebridge plugins supporting thousands of different smart accessories.",
+        "developer": "Homebridge Contributors",
+        "website": "https://homebridge.io/",
+        "dependencies": [],
+        "repo": "https://github.com/homebridge/homebridge",
+        "support": "https://github.com/homebridge/homebridge/issues",
+        "port": 8581,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "admin",
+        "defaultPassword": "admin"
     }
 ]
