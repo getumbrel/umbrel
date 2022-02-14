@@ -8,13 +8,12 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - "$APP_LNBITS_PORT:$APP_LNBITS_PORT"
+      - "$APP_LNBITS_PORT:5000"
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Global
-      LNBITS_BIND: "0.0.0.0:$APP_LNBITS_PORT"
       LNBITS_DATA_FOLDER: "/data"
 
       # LND
