@@ -497,7 +497,7 @@
         ],
         "path": "",
         "defaultUsername": "",
-        "defaultPassword": ""
+        "deterministicPassword": true
     },
     {
         "id": "btcpay-server",

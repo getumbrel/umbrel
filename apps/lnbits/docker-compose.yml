@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lnbitsdocker/lnbits:ec874ba@sha256:be659f3c11556fd757cd27f55f3a6bf07ab31302765f63b6a44fba60e393763b
+    image: ghcr.io/runcitadel/lnbits:feat-admin-password@sha256:d62fe931a83fbd9ad35cb88b468c9d29bc800a7fada6c93430918757b163831b
     user: 1000:1000
     init: true
     restart: on-failure
@@ -28,6 +28,8 @@ services:
       LNBITS_SITE_TITLE: "LNbits - Umbrel"
       LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
       LNBITS_DISABLED_EXTENSIONS: "amilk"
+      LNBITS_ADMIN_LOGIN_KEY: $APP_PASSWORD
+      LNBITS_ADMIN_EXTENSIONS: ngrok
     networks:
         default:
           ipv4_address: $APP_LNBITS_IP
