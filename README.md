@@ -44,7 +44,7 @@ Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that 
 > Run this in an empty directory where you want to install Umbrel. If using an external storage such as an SSD or HDD, run this inside an empty directory on that drive.
 
 ```bash
-curl -L https://github.com/getumbrel/umbrel/archive/v0.4.13.tar.gz | tar -xz --strip-components=1
+curl -L https://github.com/getumbrel/umbrel/archive/v0.4.14.tar.gz | tar -xz --strip-components=1
 ```
 
 ### Step 2. Run Umbrel

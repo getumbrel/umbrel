@@ -285,7 +285,7 @@
         "id": "bitfeed",
         "category": "Explorers",
         "name": "Bitfeed",
-        "version": "2.1.2",
+        "version": "2.1.5",
         "tagline": "A live visualization of your node's mempool",
         "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live. Watch as new transactions drop into your node's mempool, before being packaged into newly mined blocks. Monitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
         "developer": "Mononaut",
@@ -577,7 +577,7 @@
         "id": "suredbits-wallet",
         "category": "Finance",
         "name": "Suredbits Wallet",
-        "version": "1.8.0-160-2066447c",
+        "version": "1.8.0-172-99418c79",
         "tagline": "A universal DLC wallet",
         "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
         "developer": "Suredbits",
@@ -586,7 +586,7 @@
             "bitcoind"
         ],
         "repo": "https://github.com/bitcoin-s/bitcoin-s",
-        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "support": "https://t.me/suredbits",
         "port": 3020,
         "gallery": [
             "1.jpg",
@@ -602,14 +602,14 @@
         "id": "krystal-bull",
         "category": "Finance",
         "name": "Krystal Bull",
-        "version": "1.8.0-155-cf16d936",
+        "version": "1.8.0-172-99418c79",
         "tagline": "Become an oracle and create Bitcoin bets",
         "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
         "developer": "SuredBits",
         "website": "https://suredbits.com/",
         "dependencies": [],
         "repo": "https://github.com/bitcoin-s/krystal-bull",
-        "support": "https://join.slack.com/t/suredbits/shared_invite/zt-eavycu0x-WQL7XOakzQo8tAy7jHHZUw",
+        "support": "https://t.me/suredbits",
         "port": 3010,
         "gallery": [
             "1.jpg",
@@ -734,7 +734,7 @@
         "id": "itchysats",
         "category": "Finance",
         "name": "ItchySats",
-        "version": "v0.4.1",
+        "version": "v0.4.2",
         "tagline": "Peer-2-peer derivatives on Bitcoin",
         "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. The leverage is fixed at 2\n\nWith 0.4.0 your CFDs are perpetual positions that are extended hourly. This means your CFD position will remain open forever unless you decide to close it. A funding fee is collected hourly when the CFD is extended.\nUpdate for going short to be expected soon!",
         "developer": "ItchySats",
@@ -759,7 +759,7 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.5",
+        "version": "0.1.7",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
@@ -806,7 +806,7 @@
         "id": "kollider",
         "category": "Finance",
         "name": "Kollider",
-        "version": "1.0.0",
+        "version": "1.0.2",
         "tagline": "Lightning-fast derivative trading",
         "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
         "developer": "Kollider",
@@ -849,5 +849,99 @@
         "path": "",
         "defaultUsername": "lndg-admin",
         "deterministicPassword": true
+    },
+    {
+        "id": "urbit",
+        "category": "Networking",
+        "name": "Urbit",
+        "version": "0.1.0",
+        "tagline": "Run Urbit on your Umbrel",
+        "description": "Urbit is a personal server for self-sovereign personal & networked computing. Nock, a functional combinator, is built into Hoon, a system programming language, used to implement Arvo, a deterministic operating system, that communicates over Ames, a decentralized, encrypted P2P network.\n\nThis app helps you boot and manage Urbit instances on your Umbrel. It provides a simple management GUI, start and stop operations, and passes your +code through the interface.\n\nCredit to ~timluc-miptev, ~master-forwex, ~sipsen-pilser & ~rivpyl-sidfyl",
+        "developer": "~mopfel-winrux & ~sitful-hatred",
+        "website": "https://github.com/mopfel-winrux/urbit-umbrel",
+        "dependencies": [],
+        "repo": "https://github.com/mopfel-winrux/urbit-umbrel",
+        "support": "https://github.com/mopfel-winrux/urbit-umbrel/issues",
+        "port": 8090,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/launch",
+        "defaultUsername": "umbrel",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
+        "id": "usocial",
+        "category": "Social",
+        "name": "usocial",
+        "version": "0.1.3",
+        "tagline": "Read. Listen. Pay back.",
+        "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n- Optionally multi-user\n- Decentralized karma\n- Clean code (Python / Flask / SQLite)\n- Search podcasts from Podcast Index\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
+        "developer": "Ioan Bizău",
+        "website": "http://usocial.me",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/ibz/usocial",
+        "support": "https://github.com/ibz/usocial/issues",
+        "port": 8448,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
+        "id": "tailscale",
+        "category": "Networking",
+        "name": "Tailscale",
+        "version": "1.20.2",
+        "tagline": "Zero config VPN to access your Umbrel from anywhere",
+        "description": "Tailscale is zero config VPN that creates a secure network between your Umbrel and your other devices. Even when separated by firewalls or subnets, Tailscale just works.\n\nTailscale will assign your Umbrel a stable IP and an auto-assigned domain that stays consistent, no matter what network your Umbrel is connected to. It’s like a local network that works everywhere.\n\nTailscale builds on top of WireGuard®’s Noise protocol encryption, a peer-reviewed and trusted standard.",
+        "developer": "Tailscale Inc.",
+        "website": "https://tailscale.com",
+        "dependencies": [],
+        "repo": "https://github.com/tailscale/tailscale",
+        "support": "https://tailscale.com/contact/support",
+        "port": 2100,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
+    },
+    {
+        "id": "urbit-bitcoin-connector",
+        "category": "Wallet Servers",
+        "name": "Urbit Bitcoin Connector",
+        "version": "0.1.0",
+        "tagline": "Connect your Urbit's Bitcoin wallet to your Bitcoin node",
+        "description": "Urbit has a native Bitcoin wallet that you can connect to a full node via an intermediary, called a provider. Providers run a piece of backend software called %btc-provider that communicates with a full node with bitcoind and electrs, as well as a custome Node Express proxy to translate RPC calls between TCP and HTTP. This app will install the Express proxy and configure it to point at your Umbrel's Bitcoin full node. Using this, you can configure a Bitcoin provider on a ship (even one running on your Umbrel) and configure it, or other ships to point their wallets at it.\n\nThis app also provides an information GUI web page, with instructions on connecting your provider ship and Bitcoin wallet. The web UI is accessible at port 9090. Note that if your Urbit is running on your Umbrel, you must configure your provider to point at the Umbrel's local/private IP address (like http://192.168.0.10:55555).\n\nCredit to ~timluc-miptev & ~master-forwex",
+        "developer": "~sitful-hatred & ~mopfel-winrux",
+        "website": "https://subject.network",
+        "dependencies": [
+            "bitcoind",
+            "electrum"
+        ],
+        "repo": "https://github.com/yapishu/urbit-bitcoin-node",
+        "support": "https://github.com/yapishu/urbit-bitcoin-node",
+        "port": 9090,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
     }
 ]
