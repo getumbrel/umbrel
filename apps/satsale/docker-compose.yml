@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   satsale:
-    image: satsale/satsale:0.1.11@sha256:d9b0cd4beb711f2e95562cdc76b05d71a10edb09c97920a3e21c861398320447
+    image: satsale/satsale:0.1.13@sha256:98380ad6c5166d83e627c4d1f4efdbcfd5b9217096f7fb26b287fda89eebccbb
     restart: on-failure
     stop_grace_period: 1m
     volumes:

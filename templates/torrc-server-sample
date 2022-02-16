@@ -176,3 +176,40 @@ HiddenServicePort 80 <app-lightning-shell-ip>:7681
 # satsale Hidden Service
 HiddenServiceDir /data/app-satsale
 HiddenServicePort 80 <app-satsale-ip>:5000
+
+# bitfeed Hidden Service
+HiddenServiceDir /data/app-bitfeed
+HiddenServicePort 80 <app-bitfeed-ip>:80
+
+# kollider Hidden Service
+HiddenServiceDir /data/app-kollider
+HiddenServicePort 80 <app-kollider-ip>:3000
+HiddenServicePort 4244 <app-kollider-ws-ip>:8080
+
+# suredbits-wallet Hidden Service
+HiddenServiceDir /data/app-suredbits-wallet
+HiddenServicePort 80 <app-suredbits-wallet-ip>:3002
+
+# suredbits-wallet p2p Hidden Service
+HiddenServiceDir /data/app-suredbits-wallet-p2p
+HiddenServicePort <app-suredbits-wallet-p2p-port> <app-suredbits-wallet-server-ip>:<app-suredbits-wallet-p2p-port>
+
+# lndg Hidden Service
+HiddenServiceDir /data/app-lndg
+HiddenServicePort 80 <app-lndg-ip>:<app-lndg-port>
+
+# urbit Hidden Service
+HiddenServiceDir /data/app-urbit
+HiddenServicePort 80 <app-urbit-ip>:<app-urbit-port>
+
+# usocial Hidden Service
+HiddenServiceDir /data/app-usocial
+HiddenServicePort 80 <app-usocial-ip>:5000
+
+# tailscale Hidden Service
+HiddenServiceDir /data/app-tailscale
+HiddenServicePort 80 <app-tailscale-ip>:<app-tailscale-port>
+
+# urbit-bitcoin-connector Hidden Service
+HiddenServiceDir /data/app-urbit-bitcoin-connector
+HiddenServicePort 80 <app-urbit-bitcoin-connector-ip>:<app-urbit-bitcoin-connector-port>

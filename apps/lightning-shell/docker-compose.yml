@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ibz0/lightning-shell:v0.1.1@sha256:47e271333410475dad92a91b2e35a58c723bbf9cc688fc2cd6cec1013d469f28
+    image: ghcr.io/ibz/lightning-shell:v0.1.7-buster-slim@sha256:f78a4daa0820bb0a9764a5fe814032d11cf27a96f588ae627551d7e603d1b41c
     restart: on-failure
     stop_grace_period: 1m
     ports:
