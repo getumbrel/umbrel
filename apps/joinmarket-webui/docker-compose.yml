@@ -31,5 +31,5 @@ services:
       jm_rpc_wallet_file: jm_webui_default
       jm_network: $BITCOIN_NETWORK
       jm_tx_broadcast: self
-      jm_max_cj_fee_abs: 40000 # in sats
-      jm_max_cj_fee_rel: 0.004 # 0.4%
+      jm_max_cj_fee_abs: 30000  # in sats
+      jm_max_cj_fee_rel: 0.0003 # 0.03%
