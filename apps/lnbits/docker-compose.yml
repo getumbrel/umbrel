@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/runcitadel/lnbits:feat-admin-password@sha256:d62fe931a83fbd9ad35cb88b468c9d29bc800a7fada6c93430918757b163831b
+    image: ghcr.io/runcitadel/lnbits-legends:feat-admin-password@sha256:caed274b15ba2deea298db829d2a67cd4e1eb3cf90b9fae26209ef383ab1f93a
     user: 1000:1000
     init: true
     restart: on-failure
