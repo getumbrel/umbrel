@@ -2,14 +2,10 @@ version: "3.7"
 
 services:
   joinmarket-webui:
-    # TODO: change to a non-development version before merge
-    image: ghcr.io/joinmarket-webui/joinmarket-webui-dev-standalone:master
+    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.3-clientserver-v0.9.5
     restart: on-failure
     stop_grace_period: 1m
     init: true
-    # Some changes need to be made to run as non-root
-    # https://github.com/JoinMarket-Org/joinmarket-clientserver/pull/669
-    # user: "1000:1000"
     ports:
       - "5002:80"
     volumes:
