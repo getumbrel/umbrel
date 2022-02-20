@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/bitfeed-project/bitfeed-client:v2.1.5@sha256:36155dc32d423b07519515fda7cfa204e5abeb978a03cf4e27e993b10b585426
+    image: ghcr.io/bitfeed-project/bitfeed-client:v2.2.0@sha256:050c4e7c7744a856fbd49758db046c4dfead40d39a0719f35b3918e9f778b074
     restart: on-failure
     stop_grace_period: 1m
     depends_on:
@@ -18,7 +18,7 @@ services:
         ipv4_address: $APP_BITFEED_IP
 
   api:
-    image: ghcr.io/bitfeed-project/bitfeed-server:v2.1.5@sha256:26c15a003ae3848bd1c3dd5d25279ef7c7bb6bbaeeeda615121e6e12754a7f88
+    image: ghcr.io/bitfeed-project/bitfeed-server:v2.2.0@sha256:b04d9ef4f2c56bd25cd1cb6b33261a8716d6710d71c7e3c0388d12f2cc236e11
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -27,6 +27,7 @@ services:
       BITCOIN_HOST: "$BITCOIN_IP"
       BITCOIN_ZMQ_RAWTX_PORT: "$BITCOIN_ZMQ_RAWTX_PORT"
       BITCOIN_ZMQ_RAWBLOCK_PORT: "$BITCOIN_ZMQ_RAWBLOCK_PORT"
+      BITCOIN_ZMQ_SEQUENCE_PORT: "$BITCOIN_ZMQ_SEQUENCE_PORT"
       BITCOIN_RPC_PORT: "$BITCOIN_RPC_PORT"
       BITCOIN_RPC_USER: "$BITCOIN_RPC_USER"
       BITCOIN_RPC_PASS: "$BITCOIN_RPC_PASS"
