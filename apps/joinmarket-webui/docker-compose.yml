@@ -9,7 +9,7 @@ services:
     ports:
       - "5002:80"
     volumes:
-      - ${APP_DATA_DIR}/data:/root/.joinmarket
+      - ${APP_DATA_DIR}/data/joinmarket:/root/.joinmarket
     environment:
       ENSURE_WALLET: 1
       APP_USER: umbrel
