@@ -1,0 +1,81 @@
+version: "3.7"
+services:
+  passky-web:
+    container_name: passky-web
+    image: 'zigazajc007/passky-web:6.0.1'
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 8081:80
+  passky-database:
+    container_name: passky-database
+    image: 'zigazajc007/passky-database:6.0.0'
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      # Database
+      - MYSQL_DATABASE: "passky"
+      - MYSQL_USER: "passky"
+      - MYSQL_PASSWORD: ""
+      - MYSQL_ROOT_PASSWORD: ""
+      # Backup
+      - BACKUP_ENABLED: false
+      - BACKUP_HOST: ""
+      - BACKUP_PORT: 21
+      - BACKUP_USER: ""
+      - BACKUP_PASSWORD: ""
+      - BACKUP_LOCATION: ""
+    volumes:
+      - ${APP_DATA_DIR}/data/passky:/var/lib/mysql
+    networks:
+      - passky
+  passky-api:
+    container_name: passky-api
+    image: 'zigazajc007/passky-api:6.0.0'
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      # Location
+      - SERVER_LOCATION: "US"
+      # Database
+      - MYSQL_HOST: "passky-database"
+      - MYSQL_USER: "passky"
+      - MYSQL_PASSWORD: ""
+      # Mail
+      - MAIL_ENABLED: false
+      - MAIL_HOST: ""
+      - MAIL_PORT: 578
+      - MAIL_USERNAME: ""
+      - MAIL_PASSWORD: ""
+      - MAIL_USE_TLS: true
+      # Account
+      - ACCOUNT_MAX: 100
+      - ACCOUNT_MAX_PASSWORDS: 1000
+      # YUBICO
+      - YUBI_CLOUD: "https://api.yubico.com/wsapi/2.0/verify"
+      - YUBI_ID: 67857
+      # Limiter
+      - LIMITER_ENABLED: true
+      - LIMITER_GET_STATS: 1
+      - LIMITER_GET_TOKEN: 3
+      - LIMITER_GET_PASSWORDS: 2
+      - LIMITER_SAVE_PASSWORD: 2
+      - LIMITER_EDIT_PASSWORD: 2
+      - LIMITER_DELETE_PASSWORD: 2
+      - LIMITER_CREATE_ACCOUNT: 10
+      - LIMITER_DELETE_ACCOUNT: 10
+      - LIMITER_IMPORT_PASSWORDS: 10
+      - LIMITER_FORGOT_USERNAME: 60
+      - LIMITER_ENABLE_2FA: 10
+      - LIMITER_DISABLE_2FA: 10
+      - LIMITER_ADD_YUBIKEY: 10
+      - LIMITER_REMOVE_YUBIKEY: 10
+    networks:
+      - passky
+    ports:
+      - 8080:80
+    depends_on:
+      - passky-database
+networks:
+  passky:
+    driver: bridge
