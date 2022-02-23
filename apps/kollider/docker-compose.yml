@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   backend:
-    image: kolliderhq/kollider-lite-backend:v1.0.2@sha256:e095cd6209751277a1842ce4fa9e8de3a067963b9478441e890158c56161c2c3
+    image: kolliderhq/kollider-lite-backend:v1.0.3@sha256:1229b8d800447ddd43b8e21e5dbbdc4773e873d3bc4f13a00976bc14607c393b
     init: true
     user: 1000:1000
     restart: on-failure
@@ -12,11 +12,12 @@ services:
       - ${APP_DATA_DIR}/data/logs:/app/logs
     environment:
       LND_IP: $LND_IP
+      LND_ZMQ_SUB_ADDRESS: "tcp://${APP_KOLLIDER_WS_IP}:5556"
     networks:
       default:
         ipv4_address: $APP_KOLLIDER_HH_IP
   ws:
-    image: kolliderhq/kollider-ws-client:v1.0.2@sha256:f365931a4ddb3aeb39ad545967eb175a155d35f8df125aa04ce93fd8405f68d4
+    image: kolliderhq/kollider-ws-client:v1.0.3@sha256:567ed821291e76fa6c9a0e4e5895375600d1bffc7876938d489f799fbbe0249f
     init: true
     user: 1000:1000
     restart: on-failure
@@ -25,7 +26,7 @@ services:
       - "$APP_KOLLIDER_WS_PORT:8080"
     environment:
       APP_PASSWORD: $APP_PASSWORD
-      KOLLIDER_ZMQ_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5556"
+      KOLLIDER_ZMQ_PUB_ADDRESS: "tcp://*:5556"
       KOLLIDER_ZMQ_SUB_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5557"
       KOLLIDER_ZMQ_HEDGER_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5558"
       KOLLIDER_ZMQ_HEDGER_SUB_ADDRESS: "tcp://${APP_KOLLIDER_HH_IP}:5559"
@@ -33,7 +34,7 @@ services:
       default:
         ipv4_address: $APP_KOLLIDER_WS_IP
   web:
-    image: kolliderhq/kollider-lite-app:v1.0.2@sha256:4af7d14eaaa908669716f7c97300d5e5422edb6cfec56471322e6574370453ac
+    image: kolliderhq/kollider-lite-app:v1.0.3@sha256:a7356b606e3062f74cf60bf0464fda736ae32e44920b7200bcf1f18c3eb1dd1a
     init: true
     user: 1000:1000
     restart: on-failure
