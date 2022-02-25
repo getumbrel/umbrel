@@ -296,6 +296,21 @@ if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; th
   chown 1000:1000 "${kollider_image_cache_data_dir}"
 fi
 
+# Handle new data dirs for zonic app
+zonic_data_dir="${UMBREL_ROOT}/app-data/zonic"
+zonic_logs_data_dir="${zonic_data_dir}/data/logs"
+zonic_cache_data_dir="${zonic_data_dir}/data/cache"
+zonic_config_data_dir="${zonic_data_dir}/data/config"
+if [[ -d "${zonic_data_dir}" ]] && [[ ! -d "${zonic_logs_data_dir}" ]] && [[ ! -d "${zonic_config_data_dir}" ]]; then
+  echo "Found zonic install without data dirs, attempting to create them..."
+  mkdir -p "${zonic_logs_data_dir}"
+  chown 1000:1000 "${zonic_logs_data_dir}"
+  mkdir -p "${zonic_cache_data_dir}"
+  chown 1000:1000 "${zonic_cache_data_dir}"
+  mkdir -p "${zonic_config_data_dir}"
+  chown 1000:1000 "${zonic_config_data_dir}"
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +

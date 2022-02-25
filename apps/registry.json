@@ -827,6 +827,30 @@
         "torOnly": false
     },
     {
+        "id": "zonic",
+        "category": "Finance",
+        "name": "Zonic",
+        "version": "1.0.0",
+        "tagline": "Convert satoshis to USD and back, instantly",
+        "description": "Zonic allows you to convert your Satoshis into US dollars and back without ever having to sell your Bitcoin.\n\nIt connects to your LND node and to the Kollider API to create a synthetic USD account.\n\nThis is useful for anyone who wants to take a break from the Bitcoin price rollercoaster and lock in a fixed US dollar amount. Individuals or businesses that have to pay their bills in dollars may find this particularly beneficial.\n\nNote: This is not a stable coin on Lightning. It is a short position on an inverse perpetual swap executed on Kollider. You are exposed to Kollider’s counterparty risk and as long as you hold synthetic USD your Sats are controlled by Kollider.",
+        "developer": "Kollider",
+        "website": "https://kollider.xyz",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/kolliderhq/zonic-app",
+        "support": "https://t.me/kolliderhq",
+        "port": 4344,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
         "id": "lndg",
         "category": "Lightning Node Management",
         "name": "LNDg",

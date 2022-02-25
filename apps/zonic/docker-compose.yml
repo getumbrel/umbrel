@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  backend:
+    image: kolliderhq/zonic-backend:v1.0.0@sha256:5410c068eb529ad31d00db42081c7468e6509bd4b33dc0ba3e611143bd2792c8
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${LND_DATA_DIR}:/lnd:ro
+      - ${APP_DATA_DIR}/data/logs:/app/logs
+      - ${APP_DATA_DIR}/config:/app/config
+    environment:
+      ENV: prod
+      LND_IP: $LND_IP
+      ZONIC_ZMQ_SUB_ADDRESS: "tcp://${APP_ZONIC_WS_IP}:5558"
+    networks:
+      default:
+        ipv4_address: $APP_ZONIC_API_IP
+  ws:
+    image: kolliderhq/zonic-ws-server:v1.0.0@sha256:1118913f695528c858d95846c9677bde5283fb77009c33517ca0e6bdc744d87e
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_ZONIC_WS_PORT:8080"
+    environment:
+      APP_PASSWORD: $APP_PASSWORD
+      ZONIC_ZMQ_HEDGER_ADDRESS: "tcp://*:5558"
+      ZONIC_ZMQ_HEDGER_SUB_ADDRESS: "tcp://${APP_ZONIC_API_IP}:5559"
+    networks:
+      default:
+        ipv4_address: $APP_ZONIC_WS_IP
+  web:
+    image: kolliderhq/zonic-app:v1.0.0@sha256:510ab607986cbcc44845382bdb68f71b1f2c7b58bd8aa6cd72ac22e018c1d45e
+    init: true
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data/cache/images:/app/.next/cache/images
+    ports:
+      - "$APP_ZONIC_PORT:3000"
+    networks:
+      default:
+        ipv4_address: $APP_ZONIC_IP
