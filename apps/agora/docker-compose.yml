@@ -1,0 +1,30 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/yzernik/agora:add_dockerfile@sha256:1d15e7bf2a262eaad3f7f879c9c84f0fcb003d6fc01463b895d52d1345230de2
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "$APP_AGORA_PORT:$APP_AGORA_PORT"
+    volumes:
+      - ${APP_DATA_DIR}/agora-files:/files
+      - ${LND_DATA_DIR}:/lnd:ro
+    user: "1000:1000"
+    environment:
+      # LND environment variables
+      LND_RPC_AUTHORITY: "$LND_IP:$LND_GRPC_PORT"
+      TLS_CERT_PATH: "/lnd/tls.cert"
+      INVOICES_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+
+      SQUEAKNODE_LND_HOST: $LND_IP
+      SQUEAKNODE_LND_RPC_PORT: $LND_GRPC_PORT
+      SQUEAKNODE_LND_TLS_CERT_PATH: "/lnd/tls.cert"
+      SQUEAKNODE_LND_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+
+      # App specific environment variables
+      FILES_DIR: "/files"
+
+    networks:
+      default:
+        ipv4_address: $APP_AGORA_IP
