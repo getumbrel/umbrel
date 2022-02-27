@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   joinmarket-webui:
-    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.3-clientserver-v0.9.5
+    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.3-clientserver-v0.9.5@sha256:d33817e4daec4ddaaf95a1c08e54f50cff4893b7d8c5b3bbe8b179ced74bbaa2
     restart: on-failure
     stop_grace_period: 1m
     init: true
