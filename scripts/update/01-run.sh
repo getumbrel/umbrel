@@ -61,6 +61,13 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
     fi
 
+    # Patch PwnKit
+    # https://security-tracker.debian.org/tracker/CVE-2021-4034
+    policykit_version=$(dpkg -s policykit-1 | grep '^Version:')
+    if [[ "$policykit_version" != "Version: 0.105-25+rpt1+deb10u1" ]]; then
+      apt-get install --yes --only-upgrade policykit-1
+    fi
+
     # Make sure dhcpd ignores virtual network interfaces
     dhcpd_conf="/etc/dhcpcd.conf"
     dhcpd_rule="denyinterfaces veth*"
@@ -266,6 +273,27 @@ lightning_terminal_conf="${UMBREL_ROOT}/app-data/lightning-terminal/data/.lit/li
 if [[ -f "${lightning_terminal_conf}" ]]; then
   echo "Found lightning-terminal install, attempting to strip hardcoded password..."
   sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
+fi
+
+# Handle new logs dir for krystal-bull app
+krystal_bull_data_dir="${UMBREL_ROOT}/app-data/krystal-bull"
+krystal_bull_logs_data_dir="${krystal_bull_data_dir}/data/log"
+if [[ -d "${krystal_bull_data_dir}" ]] && [[ ! -d "${krystal_bull_logs_data_dir}" ]]; then
+  echo "Found krystal-bull install without log data dir, attempting to create it..."
+  mkdir "${krystal_bull_logs_data_dir}"
+  chown 1000:1000 "${krystal_bull_logs_data_dir}"
+fi
+
+# Handle new data dirs for kollider app
+kollider_data_dir="${UMBREL_ROOT}/app-data/kollider"
+kollider_logs_data_dir="${kollider_data_dir}/data/logs"
+kollider_image_cache_data_dir="${kollider_data_dir}/data/cache/images"
+if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; then
+  echo "Found kollider install without data dirs, attempting to create them..."
+  mkdir -p "${kollider_logs_data_dir}"
+  chown 1000:1000 "${kollider_logs_data_dir}"
+  mkdir -p "${kollider_image_cache_data_dir}"
+  chown 1000:1000 "${kollider_image_cache_data_dir}"
 fi
 
 # Fix permissions

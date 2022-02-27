@@ -53,7 +53,7 @@ services:
                         ipv4_address: $BITCOIN_IP
         lnd:
                 container_name: lnd
-                image: lightninglabs/lnd:v0.14.1-beta@sha256:810f290f4da51adaf57d53bc1f1e65b52b03c543f322da0b98fb8c47be94a27a
+                image: lightninglabs/lnd:v0.14.2-beta@sha256:8318a24a3ad7319e424253eb56efcbf38e820ebc6d6b6edeec6a8a4e3e9314a0
                 user: 1000:1000
                 depends_on: [ tor_proxy, manager ]
                 volumes:
@@ -71,7 +71,7 @@ services:
                         ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.31@sha256:a98cc7aa26ddaf7e7e141dd087c50f5da400c44d653261045f8b0a3212cd6fea
+                image: getumbrel/dashboard:v0.3.32@sha256:545d0253653bb6e48b39b09caf34a1ef55484a6dd8644e5f5e8f164977a7af18
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -79,7 +79,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.18@sha256:ded4dd850f6e41fc03c7e657417c87014aac4ec7fa1efecb767a999f313b26e3
+                image: getumbrel/manager:v0.2.19@sha256:d94327034d99ec8121d42b61bbec89f2e1797148c56ef60b7cec17486e6a399d
                 depends_on: [ tor_proxy ]
                 restart: on-failure
                 stop_grace_period: 5m30s

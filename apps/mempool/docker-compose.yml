@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: mempool/frontend:v2.3.0@sha256:39f9d92571390de500215a65ba9a20d2344e4ccfa4230de7cfb1bac558e50807
+    image: mempool/frontend:v2.3.1@sha256:38c955caeb58014b266904b059bfabbdab8321d20b11e7cccb139be6dfc8e36e
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -17,7 +17,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.3.0@sha256:6b7f3e6cf402917d1442d9ecbac34a50f42aed0ac7bb75e93457e966f05c250d
+    image: mempool/backend:v2.3.1@sha256:f7b16a6b00ea8aabf3b71a34ec05bb373fa0b6f1d31c7981b767edb2d1b7cf89
     user: "1000:1000"
     init: true
     restart: on-failure

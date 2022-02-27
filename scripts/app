@@ -124,6 +124,7 @@ compose() {
   local dojo_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-dojo/hostname"
   local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
   local squeaknode_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
+  local suredbits_wallet_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
   export SAMOURAI_SERVER_DOJO_HIDDEN_SERVICE="$(cat "${dojo_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
@@ -131,6 +132,7 @@ compose() {
   export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
   export SAMOURAI_SERVER_WHIRLPOOL_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-WHIRLPOOL_API_KEY")
   export SQUEAKNODE_P2P_HIDDEN_SERVICE="$(cat "${squeaknode_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export SUREDBITS_WALLET_P2P_HIDDEN_SERVICE="$(cat "${suredbits_wallet_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
 
   docker-compose \
     --env-file "${env_file}" \

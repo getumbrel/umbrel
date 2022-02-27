@@ -3,7 +3,7 @@ version: "3.7"
 services:
   sphinx-relay:
     container_name: sphinx-relay
-    image: sphinxlightning/sphinx-relay:v2.2.3@sha256:d72093d7faac4b94b752ce7ae445180ba286df851c4d3b7da514aa4ba5f8bafb
+    image: sphinxlightning/sphinx-relay:v2.2.5@sha256:9c7b112ead4585a92b6d65ebaa6206cf64069813b382b361c6c928c0def8a682
     init: true
     restart: on-failure
     stop_grace_period: 1m
