@@ -943,5 +943,27 @@
         "path": "",
         "deterministicPassword": false,
         "torOnly": false
+    },
+    {
+        "id": "snowflake",
+        "category": "Networking",
+        "name": "Tor Snowflake Proxy",
+        "version": "v2.1.0",
+        "tagline": "Help defeat internet censorship",
+        "description": "Snowflake is a system to defeat internet censorship. People who are censored can use Snowflake to access the internet. Their connection goes through Snowflake proxies, which are run by volunteers.\n\nIf your internet access is not censored, you should consider running a Snowflake proxy to help users in censored networks. There is no need to worry about which websites people are accessing through your proxy. Their visible browsing IP address will match their Tor exit node, not yours.",
+        "developer": "The Tor Project, Inc.",
+        "website": "https://snowflake.torproject.org/",
+        "dependencies": [],
+        "repo": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main",
+        "support": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/issues",
+        "port": 3800,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
     }
 ]
