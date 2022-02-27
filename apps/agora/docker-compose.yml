@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/yzernik/agora:add_dockerfile@sha256:dac0b6ab1ba001d41dad86cf2505fc0654366ea20d824a850f59e1272f4f5cbf
+    image: ghcr.io/agora-org/agora:sha-48d3205@sha256:35eda120a8d868c7fa3b9cbdcad7cc2245b9fe7e0c5356c8091bb0bf9a65222d
     restart: on-failure
     stop_grace_period: 1m
     ports:
