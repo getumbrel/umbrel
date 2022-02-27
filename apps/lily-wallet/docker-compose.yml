@@ -8,7 +8,7 @@ services:
       - ${APP_DATA_DIR}/config
       - ${LND_DATA_DIR}/:/lnd:ro
     environment:
-      - EXPRESS_PORT=5000
+      - EXPRESS_PORT=42069
       - ELECTRUM_IP=$ELECTRUM_IP
       - ELECTRUM_PORT=$ELECTRUM_PORT
       - APP_PASSWORD=$APP_PASSWORD
