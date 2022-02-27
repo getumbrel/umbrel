@@ -1,27 +1,12 @@
 version: '3'
 
 services:
-  frontend:
-    image: kaybesee/lily-frontend:latest
-    restart: on-failure
-    stdin_open: true
-    build:
-      dockerfile: Dockerfile.frontend
-      context: ./
-    ports:
-      - '42069:80'
-
-  express:
-    privileged: true
-    image: kaybesee/lily-express:latest
+  lily-wallet:
+    image: kaybesee/lily-wallet:latest
     restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/config
       - ${LND_DATA_DIR}/:/lnd:ro
-      - /dev:/dev
-    build:
-      dockerfile: Dockerfile.express
-      context: ./
     environment:
       - EXPRESS_PORT=5000
       - ELECTRUM_IP=$ELECTRUM_IP
@@ -31,4 +16,4 @@ services:
       - LND_IP=$LND_IP
       - LND_GRPC_PORT=$LND_GRPC_PORT
     ports:
-      - '5000:5000'
+      - '42069:42069'
