@@ -334,7 +334,7 @@
         "id": "samourai-server",
         "category": "Wallet Servers",
         "name": "Samourai Server",
-        "version": "1.12.1",
+        "version": "1.13.0",
         "tagline": "Your private backing server for Samourai Wallet",
         "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.\n\nBundles Whirlpool CLI v0.10.11.",
         "developer": "Samourai",
@@ -342,7 +342,7 @@
         "dependencies": [
             "bitcoind"
         ],
-        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.12.1-umbrel",
+        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.13.0-umbrel",
         "support": "https://t.me/SamouraiWallet",
         "port": 3005,
         "gallery": [
@@ -476,6 +476,31 @@
         "deterministicPassword": true
     },
     {
+        "id": "jam",
+        "category": "Wallets",
+        "name": "Jam",
+        "version": "v0.0.3",
+        "tagline": "A user-friendly UI for JoinMarket",
+        "description": "Jam is a user-interface for JoinMarket with a focus on user-friendliness.\nIt is time for top-notch privacy for your bitcoin. Widespread use of JoinMarket improves bitcoin's fungibility and privacy for all.\n\nThe app provides sensible defaults and is easy to use for beginners while still providing the features advanced users expect.",
+        "developer": "JoinMarket WebUI Organisation",
+        "website": "https://github.com/joinmarket-webui",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/joinmarket-webui/joinmarket-webui",
+        "support": "https://github.com/joinmarket-webui/joinmarket-webui/issues",
+        "port": 5002,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "defaultPassword": "",
+        "deterministicPassword": true
+    },
+    {
         "id": "lnbits",
         "category": "Finance",
         "name": "LNbits",
@@ -552,9 +577,9 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.187",
+        "version": "0.2.8",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
-        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
+        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with the digital signature of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
         "website": "https://squeaknode.org",
         "dependencies": [
@@ -577,7 +602,7 @@
         "id": "suredbits-wallet",
         "category": "Finance",
         "name": "Suredbits Wallet",
-        "version": "1.8.0-172-99418c79",
+        "version": "1.9.0",
         "tagline": "A universal DLC wallet",
         "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
         "developer": "Suredbits",
@@ -602,7 +627,7 @@
         "id": "krystal-bull",
         "category": "Finance",
         "name": "Krystal Bull",
-        "version": "1.8.0-172-99418c79",
+        "version": "1.9.0",
         "tagline": "Become an oracle and create Bitcoin bets",
         "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
         "developer": "SuredBits",
@@ -759,13 +784,14 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.7",
+        "version": "0.1.9",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
         "website": "https://lightningshell.app",
         "dependencies": [
-            "lnd"
+            "lnd",
+            "bitcoind"
         ],
         "repo": "https://ibz.github.io/lightning-shell/",
         "support": "https://ibz.github.io/lightning-shell/issues",
@@ -830,7 +856,7 @@
         "id": "lndg",
         "category": "Lightning Node Management",
         "name": "LNDg",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "tagline": "Analyze and automate your Lightning node management",
         "description": "LNDg is your command center for running a profitable and efficient routing node. From quickly viewing your node's health, automated rebalancing, selecting new potential peers and much more.",
         "developer": "cryptosharks131",
@@ -877,7 +903,7 @@
         "id": "usocial",
         "category": "Social",
         "name": "usocial",
-        "version": "0.1.3",
+        "version": "0.1.5",
         "tagline": "Read. Listen. Pay back.",
         "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n- Optionally multi-user\n- Decentralized karma\n- Clean code (Python / Flask / SQLite)\n- Search podcasts from Podcast Index\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
         "developer": "Ioan Bizău",
@@ -935,6 +961,28 @@
         "repo": "https://github.com/yapishu/urbit-bitcoin-node",
         "support": "https://github.com/yapishu/urbit-bitcoin-node",
         "port": 9090,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
+    },
+    {
+        "id": "snowflake",
+        "category": "Networking",
+        "name": "Tor Snowflake Proxy",
+        "version": "v2.1.0",
+        "tagline": "Help defeat internet censorship",
+        "description": "Snowflake is a system to defeat internet censorship. People who are censored can use Snowflake to access the internet. Their connection goes through Snowflake proxies, which are run by volunteers.\n\nIf your internet access is not censored, you should consider running a Snowflake proxy to help users in censored networks. There is no need to worry about which websites people are accessing through your proxy. Their visible browsing IP address will match their Tor exit node, not yours.",
+        "developer": "The Tor Project, Inc.",
+        "website": "https://snowflake.torproject.org/",
+        "dependencies": [],
+        "repo": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main",
+        "support": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/issues",
+        "port": 3800,
         "gallery": [
             "1.jpg",
             "2.jpg",
