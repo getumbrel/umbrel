@@ -477,7 +477,7 @@
     },
     {
         "id": "jam",
-        "category": "Finance",
+        "category": "Wallet",
         "name": "Jam",
         "version": "v0.0.3",
         "tagline": "A user-friendly UI for JoinMarket",
