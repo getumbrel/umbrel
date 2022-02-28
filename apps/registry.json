@@ -880,7 +880,7 @@
         "id": "urbit",
         "category": "Networking",
         "name": "Urbit",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "tagline": "Run Urbit on your Umbrel",
         "description": "Urbit is a personal server for self-sovereign personal & networked computing. Nock, a functional combinator, is built into Hoon, a system programming language, used to implement Arvo, a deterministic operating system, that communicates over Ames, a decentralized, encrypted P2P network.\n\nThis app helps you boot and manage Urbit instances on your Umbrel. It provides a simple management GUI, start and stop operations, and passes your +code through the interface.\n\nCredit to ~timluc-miptev, ~master-forwex, ~sipsen-pilser & ~rivpyl-sidfyl",
         "developer": "~mopfel-winrux & ~sitful-hatred",
