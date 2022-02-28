@@ -993,7 +993,7 @@
     },
     {
         "id": "bleskomat-server",
-        "category": "Networking",
+        "category": "Wallet Servers",
         "name": "Bleskomat Server",
         "version": "v1.3.4",
         "tagline": "Connect a Bleskomat ATM to your Lightning node",
