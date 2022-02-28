@@ -218,6 +218,6 @@ HiddenServicePort 80 <app-urbit-bitcoin-connector-ip>:<app-urbit-bitcoin-connect
 HiddenServiceDir /data/app-snowflake
 HiddenServicePort 80 <app-snowflake-ip>:<app-snowflake-port>
 
-# joinmarket-webui Hidden Service
-HiddenServiceDir /data/app-joinmarket-webui
-HiddenServicePort 80 <app-joinmarket-webui-ip>:80
+# jam Hidden Service
+HiddenServiceDir /data/app-jam
+HiddenServicePort 80 <app-jam-ip>:80

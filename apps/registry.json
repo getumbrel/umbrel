@@ -476,12 +476,12 @@
         "deterministicPassword": true
     },
     {
-        "id": "joinmarket-webui",
+        "id": "jam",
         "category": "Finance",
-        "name": "JoinMarket Web UI",
+        "name": "Jam",
         "version": "v0.0.3",
         "tagline": "A user-friendly UI for JoinMarket",
-        "description": "JoinMarket WebUI is a user-interface for JoinMarket with a focus on user-friendliness.\nIt is time for top-notch privacy for your bitcoin. Widespread use of JoinMarket improves bitcoin's fungibility and privacy for all.\n\nThe app provides sensible defaults and is easy to use for beginners while still providing the features advanced users expect.",
+        "description": "Jam is a user-interface for JoinMarket with a focus on user-friendliness.\nIt is time for top-notch privacy for your bitcoin. Widespread use of JoinMarket improves bitcoin's fungibility and privacy for all.\n\nThe app provides sensible defaults and is easy to use for beginners while still providing the features advanced users expect.",
         "developer": "JoinMarket WebUI Organisation",
         "website": "https://github.com/joinmarket-webui",
         "dependencies": [
