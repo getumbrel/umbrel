@@ -84,11 +84,27 @@
             width: 100% !important;
             max-width: 1360px !important;
         }
+        
+        /* Firefox iframe-ception fix */
+
+        body.iframe {
+            background-color: #101010;
+        }
+
+        body.iframe .app-container {
+            display: none;
+        }
+
+        body.iframe .container.terminal-container {
+            border-radius: 0;
+            padding: 0;
+            margin: 0;
+        }
     </style>
     <link rel="shortcut icon" type="image/jpg" href="favicon.png" />
   </head>
   <body>
-    <section class="container">
+    <section class="container app-container">
         <div class="app">
             <svg class="app-icon" width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                 <rect width="256" height="256" fill="#3C194F"/>
@@ -126,5 +142,11 @@
     <script src="./js/hterm.js"></script>
     <script src="./auth_token.js"></script>
     <script src="./js/gotty.js"></script>
+    <!-- Firefox iframe-ception fix -->
+    <script> 
+        if (window.location !== window.parent.location) {
+          document.body.classList.add('iframe');
+        }
+    </script>
   </body>
 </html>
