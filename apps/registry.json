@@ -765,7 +765,8 @@
         "developer": "Ioan Bizău",
         "website": "https://lightningshell.app",
         "dependencies": [
-            "lnd"
+            "lnd",
+            "bitcoind"
         ],
         "repo": "https://ibz.github.io/lightning-shell/",
         "support": "https://ibz.github.io/lightning-shell/issues",
