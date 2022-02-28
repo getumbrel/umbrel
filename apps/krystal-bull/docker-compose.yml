@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/oracle-server-ui:0.0.1-59b4b595-SNAPSHOT@sha256:04aa5ac3214acaf934cf81849758333e0eff948d9094e434001c8355084bbac6
+    image: bitcoinscala/oracle-server-ui:1.9.0-e1b26241-SNAPSHOT@sha256:7dded80461c5759714ab985f6c404ed2e6d55f6d9ba6ca32c29c9c495f86ab42
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -11,7 +11,7 @@ services:
       - ${APP_DATA_DIR}/data/log:/log
     environment:
       LOG_PATH: "/log/"
-      BACKUP_PATH: "/home/bitcoin-s/.bitcoin-s/"
+      BITCOIN_S_HOME: "/home/bitcoin-s/.bitcoin-s/"
       ORACLE_SERVER_API_URL: "http://${APP_KRYSTAL_BULL_SERVER_IP}:9998/"
       TOR_PROXY: socks5://${TOR_PROXY_IP}:${TOR_PROXY_PORT}
       DEFAULT_UI_PASSWORD: $APP_PASSWORD
@@ -24,7 +24,7 @@ services:
     depends_on: 
       - oracleserver
   oracleserver:
-    image: bitcoinscala/bitcoin-s-oracle-server:1.8.0-172-99418c79-SNAPSHOT@sha256:36dd60f662f6b99cf0ca09353d141adcd8fb5b779ce2777885c863391df698c6
+    image: bitcoinscala/bitcoin-s-oracle-server:1.9.0@sha256:a0c6bb1ed494cb6f06ec45799384a0be27748cd8c86ef59d23b3e1bda292151c
     restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
