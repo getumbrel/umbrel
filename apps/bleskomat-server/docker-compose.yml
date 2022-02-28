@@ -3,7 +3,7 @@ version: "3.7"
 services:
 
   db:
-    image: postgres:10@sha256:15d933c1a8f5d907280507da66bc741ffb30bd789f407ba04368c2f82b86c526
+    image: postgres:10.20-stretch@sha256:130e08bb19199bd055e585e8938c5ebb0555dc13b445fad5b0bd727e4b75149c
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
