@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   server:
-    image: oznu/homebridge:2022-02-09@sha256:46b6953b84f58fe4f947b1001f82bc52cb6a664031d0719ad7179b1fab37346a
+    image: oznu/homebridge:2022-02-09@sha256:b495951642d36406d83dfe14e7725647160a7fb4205c0730153661c37eaec6357346a
     restart: on-failure
     ports:
       - ${APP_HOMEBRIDGE_PORT}:8581
