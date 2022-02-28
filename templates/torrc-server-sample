@@ -217,3 +217,7 @@ HiddenServicePort 80 <app-urbit-bitcoin-connector-ip>:<app-urbit-bitcoin-connect
 # snowflake Hidden Service
 HiddenServiceDir /data/app-snowflake
 HiddenServicePort 80 <app-snowflake-ip>:<app-snowflake-port>
+
+# jam Hidden Service
+HiddenServiceDir /data/app-jam
+HiddenServicePort 80 <app-jam-ip>:80

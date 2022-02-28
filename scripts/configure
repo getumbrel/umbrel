@@ -250,6 +250,8 @@ APP_URBIT_BITCOIN_CONNECTOR_SERVER_PORT="55555"
 APP_SNOWFLAKE_IP="10.21.21.82"
 APP_SNOWFLAKE_PORT="3800"
 APP_SNOWFLAKE_PROXY_IP="10.21.21.83"
+APP_JAM_IP="10.21.21.84"
+APP_JAM_PORT="5002"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -500,6 +502,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-snowflake-ip>/${APP_SNOWFLAKE_IP}/g" "${template}"
   sed -i "s/<app-snowflake-port>/${APP_SNOWFLAKE_PORT}/g" "${template}"
   sed -i "s/<app-snowflake-proxy-ip>/${APP_SNOWFLAKE_PROXY_IP}/g" "${template}"
+  sed -i "s/<app-jam-ip>/${APP_JAM_IP}/g" "${template}"
+  sed -i "s/<app-jam-port>/${APP_JAM_PORT}/g" "${template}"
 done
 
 ##########################################################
