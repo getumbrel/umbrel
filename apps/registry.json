@@ -285,7 +285,7 @@
         "id": "bitfeed",
         "category": "Explorers",
         "name": "Bitfeed",
-        "version": "2.1.2",
+        "version": "2.1.5",
         "tagline": "A live visualization of your node's mempool",
         "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live. Watch as new transactions drop into your node's mempool, before being packaged into newly mined blocks. Monitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
         "developer": "Mononaut",
@@ -473,6 +473,31 @@
         ],
         "path": "",
         "defaultUsername": "",
+        "deterministicPassword": true
+    },
+    {
+        "id": "jam",
+        "category": "Wallets",
+        "name": "Jam",
+        "version": "v0.0.3",
+        "tagline": "A user-friendly UI for JoinMarket",
+        "description": "Jam is a user-interface for JoinMarket with a focus on user-friendliness.\nIt is time for top-notch privacy for your bitcoin. Widespread use of JoinMarket improves bitcoin's fungibility and privacy for all.\n\nThe app provides sensible defaults and is easy to use for beginners while still providing the features advanced users expect.",
+        "developer": "JoinMarket WebUI Organisation",
+        "website": "https://github.com/joinmarket-webui",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/joinmarket-webui/joinmarket-webui",
+        "support": "https://github.com/joinmarket-webui/joinmarket-webui/issues",
+        "port": 5002,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "defaultPassword": "",
         "deterministicPassword": true
     },
     {
@@ -759,7 +784,7 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.6",
+        "version": "0.1.7",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
@@ -806,7 +831,7 @@
         "id": "kollider",
         "category": "Finance",
         "name": "Kollider",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "tagline": "Lightning-fast derivative trading",
         "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
         "developer": "Kollider",
@@ -877,7 +902,7 @@
         "id": "usocial",
         "category": "Social",
         "name": "usocial",
-        "version": "0.1.2",
+        "version": "0.1.5",
         "tagline": "Read. Listen. Pay back.",
         "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n- Optionally multi-user\n- Decentralized karma\n- Clean code (Python / Flask / SQLite)\n- Search podcasts from Podcast Index\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
         "developer": "Ioan Bizău",
@@ -904,12 +929,59 @@
         "version": "1.20.2",
         "tagline": "Zero config VPN to access your Umbrel from anywhere",
         "description": "Tailscale is zero config VPN that creates a secure network between your Umbrel and your other devices. Even when separated by firewalls or subnets, Tailscale just works.\n\nTailscale will assign your Umbrel a stable IP and an auto-assigned domain that stays consistent, no matter what network your Umbrel is connected to. It’s like a local network that works everywhere.\n\nTailscale builds on top of WireGuard®’s Noise protocol encryption, a peer-reviewed and trusted standard.",
-        "developer": "Tailscale Inc",
+        "developer": "Tailscale Inc.",
         "website": "https://tailscale.com",
         "dependencies": [],
         "repo": "https://github.com/tailscale/tailscale",
         "support": "https://tailscale.com/contact/support",
         "port": 2100,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
+    },
+    {
+        "id": "urbit-bitcoin-connector",
+        "category": "Wallet Servers",
+        "name": "Urbit Bitcoin Connector",
+        "version": "0.1.0",
+        "tagline": "Connect your Urbit's Bitcoin wallet to your Bitcoin node",
+        "description": "Urbit has a native Bitcoin wallet that you can connect to a full node via an intermediary, called a provider. Providers run a piece of backend software called %btc-provider that communicates with a full node with bitcoind and electrs, as well as a custome Node Express proxy to translate RPC calls between TCP and HTTP. This app will install the Express proxy and configure it to point at your Umbrel's Bitcoin full node. Using this, you can configure a Bitcoin provider on a ship (even one running on your Umbrel) and configure it, or other ships to point their wallets at it.\n\nThis app also provides an information GUI web page, with instructions on connecting your provider ship and Bitcoin wallet. The web UI is accessible at port 9090. Note that if your Urbit is running on your Umbrel, you must configure your provider to point at the Umbrel's local/private IP address (like http://192.168.0.10:55555).\n\nCredit to ~timluc-miptev & ~master-forwex",
+        "developer": "~sitful-hatred & ~mopfel-winrux",
+        "website": "https://subject.network",
+        "dependencies": [
+            "bitcoind",
+            "electrum"
+        ],
+        "repo": "https://github.com/yapishu/urbit-bitcoin-node",
+        "support": "https://github.com/yapishu/urbit-bitcoin-node",
+        "port": 9090,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
+    },
+    {
+        "id": "snowflake",
+        "category": "Networking",
+        "name": "Tor Snowflake Proxy",
+        "version": "v2.1.0",
+        "tagline": "Help defeat internet censorship",
+        "description": "Snowflake is a system to defeat internet censorship. People who are censored can use Snowflake to access the internet. Their connection goes through Snowflake proxies, which are run by volunteers.\n\nIf your internet access is not censored, you should consider running a Snowflake proxy to help users in censored networks. There is no need to worry about which websites people are accessing through your proxy. Their visible browsing IP address will match their Tor exit node, not yours.",
+        "developer": "The Tor Project, Inc.",
+        "website": "https://snowflake.torproject.org/",
+        "dependencies": [],
+        "repo": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main",
+        "support": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/issues",
+        "port": 3800,
         "gallery": [
             "1.jpg",
             "2.jpg",

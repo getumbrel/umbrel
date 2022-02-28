@@ -209,3 +209,15 @@ HiddenServicePort 80 <app-usocial-ip>:5000
 # tailscale Hidden Service
 HiddenServiceDir /data/app-tailscale
 HiddenServicePort 80 <app-tailscale-ip>:<app-tailscale-port>
+
+# urbit-bitcoin-connector Hidden Service
+HiddenServiceDir /data/app-urbit-bitcoin-connector
+HiddenServicePort 80 <app-urbit-bitcoin-connector-ip>:<app-urbit-bitcoin-connector-port>
+
+# snowflake Hidden Service
+HiddenServiceDir /data/app-snowflake
+HiddenServicePort 80 <app-snowflake-ip>:<app-snowflake-port>
+
+# jam Hidden Service
+HiddenServiceDir /data/app-jam
+HiddenServicePort 80 <app-jam-ip>:80
