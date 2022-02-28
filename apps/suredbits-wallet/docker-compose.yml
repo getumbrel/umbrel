@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/wallet-server-ui:0.0.1-59b4b595-SNAPSHOT@sha256:fb4eef12e3cefe379f2bca9b9cf2260edc6e5c3d24416b3db47fe1ff85f83af6
+    image: bitcoinscala/wallet-server-ui:1.9.0-e1b26241-SNAPSHOT@sha256:dde9add7d564280eadc332c1e9b4e088761eecbdbc489718875491d6759cc688
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -11,7 +11,7 @@ services:
       - ${APP_DATA_DIR}/data/log:/log
     environment:
       LOG_PATH: "/log/"
-      BACKUP_PATH: "/home/bitcoin-s/.bitcoin-s/"
+      BITCOIN_S_HOME: "/home/bitcoin-s/.bitcoin-s/"
       MEMPOOL_API_URL: "http://umbrel.local:${APP_MEMPOOL_PORT}/api"
       WALLET_SERVER_API_URL: "http://${APP_SUREDBITS_WALLET_SERVER_IP}:9999/"
       WALLET_SERVER_WS: "ws://${APP_SUREDBITS_WALLET_SERVER_IP}:19999/events"
@@ -26,11 +26,11 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.8.0-172-99418c79-SNAPSHOT@sha256:df2c0debce0a71c326283fd316bfbfd40c8af0cf630e386f07c76929b4a84a45
+    image: bitcoinscala/bitcoin-s-server:1.9.0
     user: "1000:1000"
     restart: on-failure
     volumes:
-      - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s
+      - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s@sha256:201717d8af909714bc8320d95d9cbbf5dcf0ddcc59d4031841ad5ec017c0f708
     environment:
       BITCOIN_S_NETWORK: $BITCOIN_NETWORK
       BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
