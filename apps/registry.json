@@ -991,5 +991,29 @@
         "path": "",
         "deterministicPassword": false,
         "torOnly": false
+    },
+    {
+        "id": "bleskomat-server",
+        "category": "Wallet Servers",
+        "name": "Bleskomat Server",
+        "version": "v1.3.4",
+        "tagline": "Connect a Bleskomat ATM to your Lightning node",
+        "description": "The Bleskomat ATM is the next generation Bitcoin Lightning ATM. This app will allow you to easily connect your Bleskomat ATM to the Lightning node on your Umbrel. A simple web interface is provided which you can use to manage and authorize one or more Bleskomat ATMs as well as view a list of recent payments handled by the server.",
+        "developer": "Bleskomat",
+        "website": "https://www.bleskomat.com",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/samotari/bleskomat-server",
+        "support": "https://t.me/bleskomat",
+        "port": 3333,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]
