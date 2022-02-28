@@ -832,7 +832,7 @@
         "id": "kollider",
         "category": "Finance",
         "name": "Kollider",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "tagline": "Lightning-fast derivative trading",
         "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
         "developer": "Kollider",
