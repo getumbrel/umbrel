@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/ibz/lightning-shell:v0.1.7-buster-slim@sha256:f78a4daa0820bb0a9764a5fe814032d11cf27a96f588ae627551d7e603d1b41c
+    image: ghcr.io/ibz/lightning-shell:v0.1.9-buster-slim@sha256:230ac17b2eeb639f582358b8d20377caf3b688f9d8da3eb6ab2fa6822907790c
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -12,6 +12,10 @@ services:
       - ${APP_DATA_DIR}/data:/data
     environment:
         APP_PASSWORD: "${APP_PASSWORD}"
+        BITCOIN_IP: "${BITCOIN_IP}"
+        BITCOIN_RPC_PORT: "${BITCOIN_RPC_PORT}"
+        BITCOIN_RPC_USER: "${BITCOIN_RPC_USER}"
+        BITCOIN_RPC_PASS: "${BITCOIN_RPC_PASS}"
         LND_IP: "${LND_IP}"
         LND_GRPC_PORT: ${LND_GRPC_PORT}
     networks:

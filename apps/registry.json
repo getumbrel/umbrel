@@ -784,13 +784,14 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.7",
+        "version": "0.1.9",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
         "website": "https://lightningshell.app",
         "dependencies": [
-            "lnd"
+            "lnd",
+            "bitcoind"
         ],
         "repo": "https://ibz.github.io/lightning-shell/",
         "support": "https://ibz.github.io/lightning-shell/issues",
