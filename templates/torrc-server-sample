@@ -221,3 +221,7 @@ HiddenServicePort 80 <app-snowflake-ip>:<app-snowflake-port>
 # jam Hidden Service
 HiddenServiceDir /data/app-jam
 HiddenServicePort 80 <app-jam-ip>:80
+
+# bleskomat-server Hidden Service
+HiddenServiceDir /data/app-bleskomat-server
+HiddenServicePort 80 <app-bleskomat-server-ip>:<app-bleskomat-server-port>
