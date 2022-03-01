@@ -214,6 +214,18 @@ HiddenServicePort 80 <app-tailscale-ip>:<app-tailscale-port>
 HiddenServiceDir /data/app-urbit-bitcoin-connector
 HiddenServicePort 80 <app-urbit-bitcoin-connector-ip>:<app-urbit-bitcoin-connector-port>
 
+# snowflake Hidden Service
+HiddenServiceDir /data/app-snowflake
+HiddenServicePort 80 <app-snowflake-ip>:<app-snowflake-port>
+
+# jam Hidden Service
+HiddenServiceDir /data/app-jam
+HiddenServicePort 80 <app-jam-ip>:80
+
+# bleskomat-server Hidden Service
+HiddenServiceDir /data/app-bleskomat-server
+HiddenServicePort 80 <app-bleskomat-server-ip>:<app-bleskomat-server-port>
+
 # agora Hidden Service
 HiddenServiceDir /data/app-agora
 HiddenServicePort 80 <app-agora-ip>:<app-agora-port>
