@@ -5,15 +5,21 @@ services:
     image: kaybesee/lily-wallet:latest
     restart: on-failure
     volumes:
-      - ${APP_DATA_DIR}/config
+      - ${APP_DATA_DIR}
       - ${LND_DATA_DIR}/:/lnd:ro
+      - /dev/bus:/dev/bus:ro
+      - /run/udev:/run/udev:ro
     environment:
       - EXPRESS_PORT=42069
       - ELECTRUM_IP=$ELECTRUM_IP
       - ELECTRUM_PORT=$ELECTRUM_PORT
       - APP_PASSWORD=$APP_PASSWORD
-      - APP_DATA_DIR=$APP_DATA_DIR
+      - APP_DATA_DIR=${APP_DATA_DIR}
       - LND_IP=$LND_IP
       - LND_GRPC_PORT=$LND_GRPC_PORT
+    devices:
+      - /dev/bus/usb
     ports:
       - '42069:42069'
+    device_cgroup_rules:
+      - 'c 189:* rmw'
