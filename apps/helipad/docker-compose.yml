@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: podcastindexorg/podcasting20-helipad:v0.1.8@sha256:12ea841b931cf93e80461a67f13ae44fad6741f65f396530add4015121ec4621
+    image: podcastindexorg/podcasting20-helipad:v0.1.9@sha256:9706dc5a337dd087b188b32685a342d5d69d154b3e0449e4623c4a4e3988dd22
     init: true
     restart: on-failure
     stop_grace_period: 1m

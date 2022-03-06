@@ -285,9 +285,9 @@
         "id": "bitfeed",
         "category": "Explorers",
         "name": "Bitfeed",
-        "version": "2.1.5",
+        "version": "2.2.0",
         "tagline": "A live visualization of your node's mempool",
-        "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live. Watch as new transactions drop into your node's mempool, before being packaged into newly mined blocks. Monitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
+        "description": "A self-hosted version of Bitfeed - the open source mempool & block visualizer available at https://bits.monospace.live.\n\nWatch as new transactions drop into your node's mempool, before being packaged into newly mined blocks.\n\nMonitor Bitcoin network activity, explore the composition of the latest block, or simply enjoy a soothing Bitcoin screensaver.",
         "developer": "Mononaut",
         "website": "https://monospace.live",
         "dependencies": [
@@ -334,7 +334,7 @@
         "id": "samourai-server",
         "category": "Wallet Servers",
         "name": "Samourai Server",
-        "version": "1.12.1",
+        "version": "1.13.0",
         "tagline": "Your private backing server for Samourai Wallet",
         "description": "Samourai Server is an exclusive Umbrel app that runs Samourai Dojo and Whirlpool backing servers, and provides you easy step-by-step instructions to connect your Samourai Wallet to them. Samourai Wallet is unrivaled in transaction privacy, but its default configuration is still subject to network level privacy loss.\n\nBy default, Samourai Wallet will connect to its centrally controlled Dojo hosted in Iceland. By hosting your own Samourai Server, you can bypass its servers completely when using Samourai Wallet or Sentinel, and gain total financial sovereignty without any complexity.\n\nBundles Whirlpool CLI v0.10.11.",
         "developer": "Samourai",
@@ -342,7 +342,7 @@
         "dependencies": [
             "bitcoind"
         ],
-        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.12.1-umbrel",
+        "repo": "https://github.com/louneskmt/umbrel-samourai-dojo/tree/v1.13.0-umbrel",
         "support": "https://t.me/SamouraiWallet",
         "port": 3005,
         "gallery": [
@@ -406,7 +406,7 @@
         "id": "ride-the-lightning",
         "category": "Lightning Node Management",
         "name": "Ride The Lightning",
-        "version": "0.11.2",
+        "version": "0.12.1",
         "tagline": "A powerful dashboard for the Lightning Network",
         "description": "RTL is a full function, device agnostic, web user interface to help manage lightning node operation. It enables full control over your lightning node with rich functionality for Bitcoin base layer and Lightning Network. Some cool features available on RTL are:\n\n- Rich dashboard with two layout options\n- Send/Receive funds on-chain\n- Rich channel management with advanced features like balance score, circular re-balancing etc.\n- Payments and Invoice management with QR codes\n- Routing analysis for the payments forwarded\n- Channel backups\n- Detailed reports on routing and transaction history\n- Optional Loop interface for submarine swaps\n- Customizable UI with multiple color schemes and dark/light modes",
         "developer": "Shahana and Suheb",
@@ -473,6 +473,31 @@
         ],
         "path": "",
         "defaultUsername": "",
+        "deterministicPassword": true
+    },
+    {
+        "id": "jam",
+        "category": "Wallets",
+        "name": "Jam",
+        "version": "v0.0.3",
+        "tagline": "A user-friendly UI for JoinMarket",
+        "description": "Jam is a user-interface for JoinMarket with a focus on user-friendliness.\nIt is time for top-notch privacy for your bitcoin. Widespread use of JoinMarket improves bitcoin's fungibility and privacy for all.\n\nThe app provides sensible defaults and is easy to use for beginners while still providing the features advanced users expect.",
+        "developer": "JoinMarket WebUI Organisation",
+        "website": "https://github.com/joinmarket-webui",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/joinmarket-webui/joinmarket-webui",
+        "support": "https://github.com/joinmarket-webui/joinmarket-webui/issues",
+        "port": 5002,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultUsername": "umbrel",
+        "defaultPassword": "",
         "deterministicPassword": true
     },
     {
@@ -552,9 +577,9 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.1.187",
+        "version": "0.2.8",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
-        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with a digital signature of the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
+        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with the digital signature of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
         "website": "https://squeaknode.org",
         "dependencies": [
@@ -577,7 +602,7 @@
         "id": "suredbits-wallet",
         "category": "Finance",
         "name": "Suredbits Wallet",
-        "version": "1.8.0-172-99418c79",
+        "version": "1.9.0",
         "tagline": "A universal DLC wallet",
         "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
         "developer": "Suredbits",
@@ -602,7 +627,7 @@
         "id": "krystal-bull",
         "category": "Finance",
         "name": "Krystal Bull",
-        "version": "1.8.0-172-99418c79",
+        "version": "1.9.0",
         "tagline": "Become an oracle and create Bitcoin bets",
         "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
         "developer": "SuredBits",
@@ -711,9 +736,9 @@
         "id": "helipad",
         "category": "Lightning Node Management",
         "name": "Helipad",
-        "version": "0.1.8",
-        "tagline": "View boosts & boost-a-grams from Podcasting 2.0 apps",
-        "description": "Helipad shows boosts and boost-a-gram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
+        "version": "0.1.9",
+        "tagline": "View boosts & boostagrams from Podcasting 2.0 apps",
+        "description": "Helipad shows boosts and boostagram messages coming in to your Lightning node from your listeners who are using Podcasting 2.0 apps.",
         "developer": "Podcastindex.org",
         "website": "https://podcastindex.org",
         "dependencies": [
@@ -734,7 +759,7 @@
         "id": "itchysats",
         "category": "Finance",
         "name": "ItchySats",
-        "version": "v0.4.2",
+        "version": "v0.4.7",
         "tagline": "Peer-2-peer derivatives on Bitcoin",
         "description": "ItchySats enables peer-2-peer CFD trading on Bitcoin using DLCs (discreet log contracts). No account needed, no trusted third-party - just you and your keys.\n\nThis is beta software. We tested it on test- and mainnet, but there are no guarantees that it will always behave as expected.\nPlease be mindful with how much money you trust the application with.\nCFDs trading is inherently risky, be sure to read up on it before using this application.\n\nThat said: This is pretty awesome, go nuts!\n\n1. Fund the ItchySats wallet\n2. Open a position\n3. Watch the price go up\n4. Profit\n\nLimitations of the mainnet beta:\n\n1. You can only open long positions at the moment\n2. Minimum position quantity is $100, maximum $1000\n3. The leverage is fixed at 2\n\nWith 0.4.0 your CFDs are perpetual positions that are extended hourly. This means your CFD position will remain open forever unless you decide to close it. A funding fee is collected hourly when the CFD is extended.\nUpdate for going short to be expected soon!",
         "developer": "ItchySats",
@@ -759,13 +784,14 @@
         "id": "lightning-shell",
         "category": "Lightning Node Management",
         "name": "Lightning Shell",
-        "version": "0.1.7",
+        "version": "0.1.10",
         "tagline": "Web shell with a selection of LN node management utilities",
         "description": "Lightning Shell is a web shell for the Umbrel personal server that includes the following utilities:\n\n- lncli\n- charge-lnd\n- lntop\n- rebalance-lnd\n- suez\n",
         "developer": "Ioan Bizău",
         "website": "https://lightningshell.app",
         "dependencies": [
-            "lnd"
+            "lnd",
+            "bitcoind"
         ],
         "repo": "https://ibz.github.io/lightning-shell/",
         "support": "https://ibz.github.io/lightning-shell/issues",
@@ -806,7 +832,7 @@
         "id": "kollider",
         "category": "Finance",
         "name": "Kollider",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "tagline": "Lightning-fast derivative trading",
         "description": "Kollider lets you instantly trade perpetual contracts with low fees and up to 100x buying power.\n\nNo need to pre-fund a trading account, each trade settles directly from your own wallet or even from your own lightning node in milliseconds.\n\nThe Kollider Umbrel App lets you use the Lightning Network to get instant exposure to a range of products using Bitcoin, directly from your Umbrel node.\n\nMore features coming soon!",
         "developer": "Kollider",
@@ -830,7 +856,7 @@
         "id": "lndg",
         "category": "Lightning Node Management",
         "name": "LNDg",
-        "version": "1.0.2",
+        "version": "1.0.3",
         "tagline": "Analyze and automate your Lightning node management",
         "description": "LNDg is your command center for running a profitable and efficient routing node. From quickly viewing your node's health, automated rebalancing, selecting new potential peers and much more.",
         "developer": "cryptosharks131",
@@ -854,7 +880,7 @@
         "id": "urbit",
         "category": "Networking",
         "name": "Urbit",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "tagline": "Run Urbit on your Umbrel",
         "description": "Urbit is a personal server for self-sovereign personal & networked computing. Nock, a functional combinator, is built into Hoon, a system programming language, used to implement Arvo, a deterministic operating system, that communicates over Ames, a decentralized, encrypted P2P network.\n\nThis app helps you boot and manage Urbit instances on your Umbrel. It provides a simple management GUI, start and stop operations, and passes your +code through the interface.\n\nCredit to ~timluc-miptev, ~master-forwex, ~sipsen-pilser & ~rivpyl-sidfyl",
         "developer": "~mopfel-winrux & ~sitful-hatred",
@@ -877,7 +903,7 @@
         "id": "usocial",
         "category": "Social",
         "name": "usocial",
-        "version": "0.1.3",
+        "version": "0.1.5",
         "tagline": "Read. Listen. Pay back.",
         "description": "The podcast client and feed reader for your personal server. With Lightning Network support.\n\n- Simple interface (minimalist HN-like design)\n- Optionally multi-user\n- Decentralized karma\n- Clean code (Python / Flask / SQLite)\n- Search podcasts from Podcast Index\n- Support for the Podcasting 2.0 value tag, sending Bitcoin payments to podcast creators over the Lightning Network",
         "developer": "Ioan Bizău",
@@ -945,6 +971,7 @@
         "torOnly": false
     },
     {
+
         "id": "homebridge",
         "category": "Automation",
         "name": "Homebridge",
@@ -962,8 +989,53 @@
             "2.jpg",
             "3.jpg"
         ],
-        "path": "",
         "defaultUsername": "admin",
         "defaultPassword": "admin"
+      },
+      {
+        "id": "snowflake",
+        "category": "Networking",
+        "name": "Tor Snowflake Proxy",
+        "version": "v2.1.0",
+        "tagline": "Help defeat internet censorship",
+        "description": "Snowflake is a system to defeat internet censorship. People who are censored can use Snowflake to access the internet. Their connection goes through Snowflake proxies, which are run by volunteers.\n\nIf your internet access is not censored, you should consider running a Snowflake proxy to help users in censored networks. There is no need to worry about which websites people are accessing through your proxy. Their visible browsing IP address will match their Tor exit node, not yours.",
+        "developer": "The Tor Project, Inc.",
+        "website": "https://snowflake.torproject.org/",
+        "dependencies": [],
+        "repo": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/tree/main",
+        "support": "https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake/-/issues",
+        "port": 3800,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": ""
+        "deterministicPassword": false,
+        "torOnly": false
+    },
+    {
+        "id": "bleskomat-server",
+        "category": "Wallet Servers",
+        "name": "Bleskomat Server",
+        "version": "v1.3.4",
+        "tagline": "Connect a Bleskomat ATM to your Lightning node",
+        "description": "The Bleskomat ATM is the next generation Bitcoin Lightning ATM. This app will allow you to easily connect your Bleskomat ATM to the Lightning node on your Umbrel. A simple web interface is provided which you can use to manage and authorize one or more Bleskomat ATMs as well as view a list of recent payments handled by the server.",
+        "developer": "Bleskomat",
+        "website": "https://www.bleskomat.com",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/samotari/bleskomat-server",
+        "support": "https://t.me/bleskomat",
+        "port": 3333,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]
