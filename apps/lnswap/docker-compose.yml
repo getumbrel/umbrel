@@ -18,6 +18,7 @@ services:
       LND_IP: $LND_IP 
       LND_GRPC_PORT: $LND_GRPC_PORT
       APP_FOLDER: "$APP_DATA_DIR/data"
+      APP_PASSWORD: $APP_PASSWORD
   dashboard:
     container_name: lnstxbridge-dashboard
     image: pseudozach/lnstxbridge-dashboard:latest
