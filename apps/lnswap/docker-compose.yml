@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  api:
+    container_name: lnstxbridge-client
+    image: pseudozach/lnstxbridge-client:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "9008:9008"
+    volumes:
+      - ${APP_DATA_DIR}/data:/root/.lnstx-client/
+      - ${LND_DATA_DIR}:/lnd:ro
+    environment:
+      BITCOIN_IP: $BITCOIN_IP
+      BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
+      BITCOIN_RPC_USER: $BITCOIN_RPC_USER
+      BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
+      LND_IP: $LND_IP 
+      LND_GRPC_PORT: $LND_GRPC_PORT
+      APP_FOLDER: "$APP_DATA_DIR/data"
+  dashboard:
+    container_name: lnstxbridge-dashboard
+    image: pseudozach/lnstxbridge-dashboard:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "9009:3000"
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: "$APP_LNSWAP_API_IP:9008"
