@@ -516,6 +516,10 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-bleskomat-server-port>/${APP_BLESKOMAT_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-bleskomat-server-ip>/${APP_BLESKOMAT_SERVER_IP}/g" "${template}"
   sed -i "s/<app-bleskomat-server-db-ip>/${APP_BLESKOMAT_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-lnswap-api-ip>/${APP_LNSWAP_API_IP}/g" "${template}"
+  sed -i "s/<app-lnswap-api-port>/${APP_LNSWAP_API_PORT}/g" "${template}"
+  sed -i "s/<app-lnswap-dashboard-ip>/${APP_LNSWAP_DASHBOARD_IP}/g" "${template}"
+  sed -i "s/<app-lnswap-dashboard-port>/${APP_LNSWAP_DASHBOARD_PORT}/g" "${template}"
 done
 
 ##########################################################
