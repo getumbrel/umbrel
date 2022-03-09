@@ -21,7 +21,6 @@ services:
       BITCOIN_ZMQ_HASHBLOCK_PORT: $BITCOIN_ZMQ_HASHBLOCK_PORT
       LND_IP: $LND_IP 
       LND_GRPC_PORT: $LND_GRPC_PORT
-      APP_FOLDER: "$APP_DATA_DIR/data"
       APP_PASSWORD: $APP_PASSWORD
     networks:
       default:
