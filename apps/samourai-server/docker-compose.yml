@@ -19,7 +19,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.12.1@sha256:b409a8801b071966f19799ae90a12faf3d8863542a2e24a155ae9ff142d4d95b
+    image: louneskmt/dojo-nodejs:1.13.0@sha256:81f0846d4ec139f0a6bf99d925cb6d39e3afb8288cab826a38d304fd1565be27
     init: true
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh ${APP_SAMOURAI_SERVER_DB_IP}:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
@@ -27,9 +27,9 @@ services:
     environment:
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-      DOJO_NODEJS_VERSION_TAG: 1.12.1
+      DOJO_NODEJS_VERSION_TAG: 1.13.0
       NET_DOJO_TOR_IPV4: $TOR_PROXY_IP
-      NET_DOJO_TOR_PORT: $TOR_PROXY_PORT
+      TOR_SOCKS_PORT: $TOR_PROXY_PORT
       NET_DOJO_MYSQL_IPV4: $APP_SAMOURAI_SERVER_DB_IP
 
       # MYSQL
@@ -83,7 +83,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_NODE_IP
 
   whirlpool:
-    image: louneskmt/whirlpool:0.10.11@sha256:a7cfb9e287aa5f2e4137a5d2fdddbfd348624e24e7dd7bed7fa0f4e2e22734d5
+    image: louneskmt/whirlpool:0.10.13@sha256:f978fde6b200cddabd42f2a1fcfaad0271e05c30409bb128bfc57935ef32976a
     init: true
     restart: on-failure
     user: "1000:1000"
