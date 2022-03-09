@@ -19,6 +19,9 @@ services:
       LND_GRPC_PORT: $LND_GRPC_PORT
       APP_FOLDER: "$APP_DATA_DIR/data"
       APP_PASSWORD: $APP_PASSWORD
+    networks:
+      default:
+        ipv4_address: $APP_LNSWAP_API_IP
   dashboard:
     container_name: lnstxbridge-dashboard
     image: pseudozach/lnstxbridge-dashboard:latest
@@ -28,3 +31,6 @@ services:
       - "9009:3000"
     environment:
       NEXT_PUBLIC_BACKEND_URL: "$APP_LNSWAP_API_IP:9008"
+    networks:
+      default:
+        ipv4_address: $APP_LNSWAP_DASHBOARD_IP
