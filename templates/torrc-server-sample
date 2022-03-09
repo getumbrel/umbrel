@@ -225,3 +225,8 @@ HiddenServicePort 80 <app-jam-ip>:80
 # bleskomat-server Hidden Service
 HiddenServiceDir /data/app-bleskomat-server
 HiddenServicePort 80 <app-bleskomat-server-ip>:<app-bleskomat-server-port>
+
+# lnswap Hidden Service
+HiddenServiceDir /data/app-lnswap
+HiddenServicePort 80 <app-lnswap-api-ip>:<app-lnswap-api-port>
+HiddenServicePort 80 <app-lnswap-dashboard-ip>:<app-lnswap-dashboard-port>
