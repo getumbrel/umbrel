@@ -1,7 +1,7 @@
 version: "3.3"
 services:
   manager:
-    image: mopfelwinrux/urbit-umbrel:v0.3.0@sha256:cda883f93fa6e56ab8082035b89bc1fbe8c01218986d5802e61e74097fdcc4f4
+    image: mopfelwinrux/urbit-umbrel:v0.3.0@sha256:09ee4550be66894cc2b763d5cff9a4ed15b13a3c2a298519a857c6542069d8c7
     ports:
       - "${APP_URBIT_PORT}:8090"
       - "${APP_URBIT_P2P_PORT}:34343"
