@@ -26,7 +26,7 @@ services:
       jm_rpc_password: "${BITCOIN_RPC_PASS}"
       jm_rpc_wallet_file: jam_default
       jm_network: $BITCOIN_NETWORK
-      jm_max_cj_fee_abs: 30000  # in sats
+      jm_max_cj_fee_abs: 300000 # in sats
       jm_max_cj_fee_rel: 0.0003 # 0.03%
     networks:
       default:
