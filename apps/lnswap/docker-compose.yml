@@ -22,6 +22,7 @@ services:
       LND_IP: $LND_IP 
       LND_GRPC_PORT: $LND_GRPC_PORT
       APP_PASSWORD: $APP_PASSWORD
+      APP_HIDDEN_SERVICE: $APP_HIDDEN_SERVICE
     networks:
       default:
         ipv4_address: $APP_LNSWAP_API_IP
