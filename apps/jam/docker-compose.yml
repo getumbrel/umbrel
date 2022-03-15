@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   jam:
-    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.3-clientserver-v0.9.5@sha256:d33817e4daec4ddaaf95a1c08e54f50cff4893b7d8c5b3bbe8b179ced74bbaa2
+    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.4-clientserver-v0.9.5@sha256:45a47e5a2ea69183479f69df0683e59ea226d20e601a868439b2980a568ca2f6
     restart: on-failure
     stop_grace_period: 1m
     init: true
@@ -12,6 +12,7 @@ services:
       - ${APP_DATA_DIR}/data/joinmarket:/root/.joinmarket
     environment:
       ENSURE_WALLET: 1
+      RESTORE_DEFAULT_CONFIG: 1
       APP_USER: umbrel
       APP_PASSWORD: "${APP_PASSWORD}"
       jm_tor_control_host: $TOR_PROXY_IP
@@ -26,7 +27,7 @@ services:
       jm_rpc_password: "${BITCOIN_RPC_PASS}"
       jm_rpc_wallet_file: jam_default
       jm_network: $BITCOIN_NETWORK
-      jm_max_cj_fee_abs: 30000  # in sats
+      jm_max_cj_fee_abs: 300000 # in sats
       jm_max_cj_fee_rel: 0.0003 # 0.03%
     networks:
       default:
