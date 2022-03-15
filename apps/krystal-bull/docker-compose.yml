@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/oracle-server-ui:1.9.0-3dbf8400-SNAPSHOT@sha256:b5d3a0389f67f99fed811cc7c6c97fa59637d96ca593affc0818c2b249242b31
+    image: bitcoinscala/oracle-server-ui:1.9.0-9ca96ac1-SNAPSHOT@sha256:8f63ebf314c8757d531cb4238758142d1e12fd923ed43cdcbba68ef39d4cb56b
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -24,7 +24,7 @@ services:
     depends_on: 
       - oracleserver
   oracleserver:
-    image: bitcoinscala/bitcoin-s-oracle-server:1.9.0-23-ee98aa1d-SNAPSHOT@sha256:a222501d04e3eaec90a9c829233153a0c28487a715cfacf6e03fc745e8b0f5b5
+    image: bitcoinscala/bitcoin-s-oracle-server:1.9.0-59-faac871d-SNAPSHOT@sha256:6f5df67335e12acd2259e1e64bcaa292bb0b910d97f74f5f2a93b44823603885
     restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/data/oracleserver:/home/bitcoin-s/.bitcoin-s
