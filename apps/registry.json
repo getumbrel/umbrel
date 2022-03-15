@@ -602,7 +602,7 @@
         "id": "suredbits-wallet",
         "category": "Finance",
         "name": "Suredbits Wallet",
-        "version": "1.9.0",
+        "version": "1.9.0-59-faac871d",
         "tagline": "A universal DLC wallet",
         "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
         "developer": "Suredbits",
