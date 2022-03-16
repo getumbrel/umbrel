@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/squeaknode/squeaknode:v0.2.11@sha256:0e8aa461ae4e4cf69fc50c72d1c5d85eb8c03bd5b549c5d4ff4fee8b80a91b63
+    image: ghcr.io/squeaknode/squeaknode:v0.2.12@sha256:389701835f9ee1e6836d6c0ecbdb7025a08704b7b7271e58041fdfadbb136746
     restart: on-failure
     stop_grace_period: 1m
     ports:
