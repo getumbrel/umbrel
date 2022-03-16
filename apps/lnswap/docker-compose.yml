@@ -28,7 +28,7 @@ services:
         ipv4_address: $APP_LNSWAP_API_IP
   dashboard:
     container_name: lnstxbridge-dashboard
-    image: pseudozach/lnstxbridge-dashboard:1.0.0@sha256:a5ce5a80f6fcce23980838b39a8a7dad8aa1478f4414c30dc0060030c3480c02
+    image: pseudozach/lnstxbridge-dashboard:1.0.0@sha256:8f87a3367407eb33ceff3f8b9d16d2e58cddfab7b015d72816b55a60820a5731
     restart: on-failure
     stop_grace_period: 1m
     ports:
