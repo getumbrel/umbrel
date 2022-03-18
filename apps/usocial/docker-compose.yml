@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/ibz/usocial:v0.1.5-buster@sha256:1b1215d7fba847bf922a2615fee6400ce61cac4545dff6bfcf9703af8e05b953
+    image: ghcr.io/ibz/usocial:v0.1.6-buster@sha256:c4ad3524a0eaccf505f3e477ab8ac2eb4e79ddca7f4266e4af0afd49caba389a
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -22,7 +22,7 @@ services:
   fetcher:
     depends_on:
       - web
-    image: ghcr.io/ibz/usocial:v0.1.5-buster@sha256:1b1215d7fba847bf922a2615fee6400ce61cac4545dff6bfcf9703af8e05b953
+    image: ghcr.io/ibz/usocial:v0.1.6-buster@sha256:c4ad3524a0eaccf505f3e477ab8ac2eb4e79ddca7f4266e4af0afd49caba389a
     restart: on-failure
     stop_grace_period: 1m
     volumes:
