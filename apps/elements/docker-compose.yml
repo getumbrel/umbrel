@@ -9,7 +9,7 @@ services:
       - 7041:7041
       - 18332:18332
     volumes:
-      - ${APP_DATA_DIR}/data:/home/elements
+      - ${APP_DATA_DIR}/data:/home/elements/.elements
     command: 
       - -validatepegin=0
       - -port=18332
