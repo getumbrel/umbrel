@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   nbxplorer:
-    image: "nicolasdorier/nbxplorer:2.1.55@sha256:e13a24507aa0623a21cd647cbad028ac5c108382142044b1d2d3bcf4410f5fab"
+    image: nicolasdorier/nbxplorer:2.2.20@sha256:8f0e7f68513596e0a2555990d262169088a70204abe397bf18ba921f9b0608f3
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -24,7 +24,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.1.2@sha256:2632c85646aefa0217285ff9b08cfab4529fdb213c217731bf2218789d091f88
+    image: btcpayserver/btcpayserver:1.4.2@sha256:17507f737d4398b7270f480468c088cd3f8dec9d3d5480a017645e3fd2351bb1
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -53,8 +53,9 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_IP
 
   postgres:
-    image: postgres:9.6.20@sha256:82c335ccb6b60941cb860cbb8252c12f63fd3e27a0d15bce5bc6de110c02a2b4
-    user: "1000:1000"
+    image: btcpayserver/postgres:13.4-4@sha256:938574253f985b9ac7814329b576dc04a8fe6e330e214afcf3cd0bf4b41eceb8
+    # This needs to run as root for migrations to succeed
+    # user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
     environment:

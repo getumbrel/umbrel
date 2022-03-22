@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: gitea/gitea:1.14.5-rootless@sha256:6ff3d1e527d65d285fa248920e36b381e08f7c6f408a8883230751ff2a0c0823
+    image: gitea/gitea:1.15.2-rootless@sha256:6caabcf0e1a21a2d885f44c8f19693ce44ec3d443e2116f86a2937db453566a8
     user: "1000:1000"
     restart: on-failure
     ports:
@@ -28,7 +28,7 @@ services:
       default:
         ipv4_address: $APP_GITEA_IP
   db:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     restart: on-failure
     volumes:

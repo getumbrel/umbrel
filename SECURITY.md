@@ -20,14 +20,6 @@ This is pretty much the industry standard when it comes to locally networked dev
 
 However, we think we can do better and have some interesting ideas on how to make Umbrel safe to run even when the local network is untrusted.
 
-**Hardcoded app passwords**
-
-We use hardcoded passwords for apps that support password authentication. These hardcoded passwords aren't providing any actual security, they are there to prevent "annoying sibling" level attackers.
-
-We plan to resolve this by implementing SSO authentication across all apps. We can implement this at the Umbrel level transparently without any modifications required from individual apps.
-
-This means all Umbrel apps exposing a web interface will be protected by your Umbrel dashboard password.
-
 **Relaxed Permissions**
 
 Currently we are being quite liberal with filesystem permissions and root usage. Some background jobs on the host are currently being run as root that don't strictly need to. Also some scripts executed by root are writable by non-root users. The `umbrel` user itself is also currently added to the `docker` group which makes it essentially root.

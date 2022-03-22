@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: mempool/frontend:v2.2.0@sha256:e3c3dd393c99018a69068b0a924dd24cf8de47389cb6ef2cfd0fe2d31d77f931
+    image: mempool/frontend:v2.3.1@sha256:38c955caeb58014b266904b059bfabbdab8321d20b11e7cccb139be6dfc8e36e
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -17,7 +17,7 @@ services:
       default:
         ipv4_address: $APP_MEMPOOL_IP
   api:
-    image: mempool/backend:v2.2.0@sha256:5eb38b094288a6f12ac2e738ff5cff9257eaa8522ebf1d23827edebe4730ebf1
+    image: mempool/backend:v2.3.1@sha256:f7b16a6b00ea8aabf3b71a34ec05bb373fa0b6f1d31c7981b767edb2d1b7cf89
     user: "1000:1000"
     init: true
     restart: on-failure
@@ -26,32 +26,31 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/backend/cache
     environment:
-      RPC_HOST: $BITCOIN_IP
-      RPC_PORT: $BITCOIN_RPC_PORT
-      RPC_USER: $BITCOIN_RPC_USER
-      RPC_PASS: $BITCOIN_RPC_PASS
+      CORE_RPC_HOST: $BITCOIN_IP
+      CORE_RPC_PORT: $BITCOIN_RPC_PORT
+      CORE_RPC_USERNAME: $BITCOIN_RPC_USER
+      CORE_RPC_PASSWORD: $BITCOIN_RPC_PASS
       ELECTRUM_HOST: $ELECTRUM_IP
       ELECTRUM_PORT: $ELECTRUM_PORT
       ELECTRUM_TLS: "false"
-      MYSQL_HOST: $APP_MEMPOOL_DB_IP
-      MYSQL_PORT: "3306"
-      MYSQL_DATABASE: "mempool"
-      MYSQL_USER: "mempool"
-      MYSQL_PASS: "mempool"
-      BACKEND_MAINNET_HTTP_PORT: "8999"
-      CACHE_DIR: "/backend/cache"
+      DATABASE_HOST: $APP_MEMPOOL_DB_IP
+      DATABASE_PORT: "3306"
+      DATABASE_DATABASE: "mempool"
+      DATABASE_USERNAME: "mempool"
+      DATABASE_PASSWORD: "mempool"
+      MEMPOOL_HTTP_PORT: "8999"
+      MEMPOOL_CACHE_DIR: "/backend/cache"
       MEMPOOL_CLEAR_PROTECTION_MINUTES: "20"
     networks:
        default:
          ipv4_address: $APP_MEMPOOL_API_IP
   mariadb:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
     volumes:
       - ${APP_DATA_DIR}/mysql/data:/var/lib/mysql
-      - ${APP_DATA_DIR}/mysql/db-scripts:/docker-entrypoint-initdb.d
     environment:
       MYSQL_DATABASE: "mempool"
       MYSQL_USER: "mempool"

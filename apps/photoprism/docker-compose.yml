@@ -2,8 +2,7 @@ version: "3.7"
 
 services:
   web:
-    # TODO: Update to release tag when photoprism support multiarch images
-    image: photoprism/photoprism:preview@sha256:7fd6df5b78270d01299c1ce7dd8d4dc4de76540323a7c84f13e39cd48b12eac5
+    image: photoprism/photoprism:20210925@sha256:238e6955804d82097d08f0e4318835721f46bd844f9065a38aa7d112ab72906e
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: "1m"
@@ -13,7 +12,7 @@ services:
       - "${APP_DATA_DIR}/originals:/photoprism/originals"
       - "${APP_DATA_DIR}/storage:/photoprism/storage"
     environment:
-      PHOTOPRISM_ADMIN_PASSWORD: "moneyprintergobrrr"
+      PHOTOPRISM_ADMIN_PASSWORD: "${APP_PASSWORD}"
       PHOTOPRISM_ORIGINALS_LIMIT: 10000
       PHOTOPRISM_HTTP_COMPRESSION: "gzip"
       PHOTOPRISM_HTTP_PORT: "${APP_PHOTOPRISM_PORT}"
@@ -32,7 +31,7 @@ services:
         ipv4_address: ${APP_PHOTOPRISM_IP}
 
   db:
-    image: mariadb:10.5.8@sha256:8040983db146f729749081c6b216a19d52e0973134e2e34c0b4fd87f48bc15b0
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: "1m"
