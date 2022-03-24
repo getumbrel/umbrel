@@ -2,7 +2,7 @@ version: "3.9"
 services:
   api:
     container_name: lnstxbridge-client
-    image: pseudozach/lnstxbridge-client:1.0.0@sha256:32193eddb9e75d1620261348fb39bb57ec2363325f5ef508f454a2fb665d3d13
+    image: pseudozach/lnstxbridge-client:1.1.1@sha256:c90fc1cde0c0044b044ef01f5f27b38b9ff9fa990ac43942d80f0bfc0d3c8f4d
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -28,7 +28,7 @@ services:
         ipv4_address: $APP_LNSWAP_API_IP
   dashboard:
     container_name: lnstxbridge-dashboard
-    image: pseudozach/lnstxbridge-dashboard:1.0.0@sha256:8f87a3367407eb33ceff3f8b9d16d2e58cddfab7b015d72816b55a60820a5731
+    image: pseudozach/lnstxbridge-dashboard:1.0.1@sha256:4029fa0ae8b2e82858bd4e59c043db3e14292c2ed7196037675e2693d3a6ebe9
     restart: on-failure
     stop_grace_period: 1m
     ports:
