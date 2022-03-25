@@ -2,7 +2,7 @@ version: "3.9"
 services:
   api:
     container_name: lnstxbridge-client
-    image: pseudozach/lnstxbridge-client:1.1.1@sha256:c90fc1cde0c0044b044ef01f5f27b38b9ff9fa990ac43942d80f0bfc0d3c8f4d
+    image: pseudozach/lnstxbridge-client:1.1.1@sha256:f9369b19c7b3e05dc5d4ef953a4858e2609fd42822c5463cb8cca985750c27df
     restart: on-failure
     stop_grace_period: 1m
     ports:
