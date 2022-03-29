@@ -39,13 +39,14 @@ jobs:
     - name: Setting env vars
       run: |
         UMBREL_OS_VERSION="dev"
-        IMAGE_NAME="umbrel-os-dev"
+        IMAGE_NAME="umbrel-playground"
         UMBREL_REPO="https://github.com/getumbrel/umbrel.git"
         UMBREL_BRANCH="master"
         echo "UMBREL_OS_VERSION=$UMBREL_OS_VERSION" >> $GITHUB_ENV
         echo "IMAGE_NAME=$IMAGE_NAME">> $GITHUB_ENV
         echo "UMBREL_REPO=$UMBREL_REPO">> $GITHUB_ENV
         echo "UMBREL_BRANCH=$UMBREL_BRANCH" >> $GITHUB_ENV
+        printenv
 
     - name: Build Umbrel OS
       run: |
