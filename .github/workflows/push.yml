@@ -35,12 +35,17 @@ jobs:
         sudo systemctl restart docker
     - name: Download Umbrel OS build scripts
       run: |
-        git clone https://github.com/getumbrel/umbrel-os.git
+        # The GITHUB_ACTOR must have their own fork of umbrel-os-playground.git
+        # Until this is forked by PLEBNET-PLAYGROUND/...
+        git clone https://github.com/$GITHUB_ACTOR/umbrel-os-playground.git
     - name: Setting env vars
       run: |
-        UMBREL_OS_VERSION="dev"
+        cd umbrel-os-playground
+        echo $(git rev-parse --abbrev-ref HEAD)
+        echo $(git rev-parse --short HEAD)
         IMAGE_NAME="umbrel-playground"
-        UMBREL_REPO="https://github.com/$GITHUB_ACTOR/umbrel-playground.git"
+        UMBREL_OS_VERSION=$IMAGE_NAME-$(date +%s)
+        UMBREL_REPO="https://github.com/$GITHUB_ACTOR/$IMAGE_NAME.git"
         UMBREL_BRANCH="master"
         echo "UMBREL_OS_VERSION=$UMBREL_OS_VERSION" >> $GITHUB_ENV
         echo "IMAGE_NAME=$IMAGE_NAME">> $GITHUB_ENV
@@ -50,7 +55,7 @@ jobs:
 
     - name: Build Umbrel OS
       run: |
-        cd umbrel-os
+        cd umbrel-os-playground
         echo "Building $IMAGE_NAME"
         sudo IMG_FILENAME=$IMAGE_NAME ZIP_FILENAME=$IMAGE_NAME UMBREL_OS_VERSION=$UMBREL_OS_VERSION UMBREL_REPO=$UMBREL_REPO UMBREL_BRANCH=$UMBREL_BRANCH ./build.sh
         cd ..
