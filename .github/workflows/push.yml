@@ -62,4 +62,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         path: ${{ env.IMAGE_NAME }}.zip
-        name: ${{ env.IMAGE_NAME }}.zip
+        name: ${{ env.IMAGE_NAME }}
