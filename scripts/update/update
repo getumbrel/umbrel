@@ -99,7 +99,7 @@ if [[ "${update_type}" == "ota" ]]; then
   echo "Downloading Umbrel ${RELEASE}"
   mkdir -p "${UMBREL_ROOT}/.umbrel-${RELEASE}"
   cd "${UMBREL_ROOT}/.umbrel-${RELEASE}"
-  curl -L "https://github.com/getumbrel/umbrel/archive/$RELEASE.tar.gz" | tar -xz --strip-components=1
+  curl -L "https://github.com/randymcmillan/umbrel-playground/archive/$RELEASE.tar.gz" | tar -xz --strip-components=1
 fi
 
 # Copy over new release from path
@@ -134,7 +134,7 @@ echo "Deleting cloned repository"
 echo "Removing lock"
 rm -f "$UMBREL_ROOT"/statuses/update-in-progress
 
-# Make sure the update-status file isn't stuck in an 
+# Make sure the update-status file isn't stuck in an
 # unresolved state (i.e anything except "success" or "failed")
 
 update_state=$(cat "${UMBREL_ROOT}/statuses/update-status.json" | jq .state -r)
