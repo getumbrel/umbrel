@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   uptime-kuma:
-    image: louislam/uptime-kuma:1.11.1@sha256:9fd26d8adae499533e0079f218b4c9139e89b3a085ec04b246c3fbf7af04aa62
+    image: louislam/uptime-kuma:1.13.1@sha256:913721c815e9aa17b1653d384bf7f4d51f9f0e7fc4161930bc80efbae8ad1d12
     restart: on-failure
     stop_grace_period: 1m
     ports:
