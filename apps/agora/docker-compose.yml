@@ -6,8 +6,6 @@ services:
     user: 1000:1000
     restart: on-failure
     stop_grace_period: 1m
-    ports:
-      - "$APP_AGORA_ADMIN_PORT:80"
     volumes:
       - ${APP_DATA_DIR}/files:/srv
       - ${APP_DATA_DIR}/database/filebrowser.db:/database.db
@@ -15,16 +13,11 @@ services:
     environment:
       APP_PASSWORD: "$APP_PASSWORD"
     entrypoint: /data/entrypoint.sh
-    networks:
-      default:
-        ipv4_address: "${APP_AGORA_ADMIN_IP}"
 
-  web:
+  agora:
     image: ghcr.io/agora-org/agora:sha-48d3205@sha256:35eda120a8d868c7fa3b9cbdcad7cc2245b9fe7e0c5356c8091bb0bf9a65222d
     restart: on-failure
     stop_grace_period: 1m
-    ports:
-      - "$APP_AGORA_PORT:$APP_AGORA_PORT"
     volumes:
       - ${APP_DATA_DIR}/files:/files
       - ${LND_DATA_DIR}:/lnd:ro
@@ -37,8 +30,20 @@ services:
 
       # App specific environment variables
       FILES_DIR: "/files"
-      AGORA_PORT: $APP_AGORA_PORT
+      AGORA_PORT: 8080
 
+  nginx:
+    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    init: true
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${APP_DATA_DIR}/data/www:/usr/share/nginx/html
+    ports:
+      - "$APP_AGORA_PORT:80"
+    depends_on:
+      - agora
+      - filebrowser
     networks:
       default:
         ipv4_address: $APP_AGORA_IP
