@@ -40,7 +40,7 @@ services:
       - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
       - ${APP_DATA_DIR}/data/www:/usr/share/nginx/html
     ports:
-      - "$APP_AGORA_PORT:$APP_AGORA_PORT"
+      - "$APP_AGORA_PORT:80"
     depends_on:
       - agora
       - filebrowser
