@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: lnbitsdocker/lnbits:ec874ba@sha256:be659f3c11556fd757cd27f55f3a6bf07ab31302765f63b6a44fba60e393763b
+    image: lnbitsdocker/lnbits-legend:0.8.0@sha256:3426e326bac347d09b4e018780cb1ecd8e5eac35851383d476076769ab4a9b2e
     user: 1000:1000
     init: true
     restart: on-failure
@@ -14,20 +14,21 @@ services:
       - ${LND_DATA_DIR}:/lnd:ro
     environment:
       # Global
-      LNBITS_BIND: "0.0.0.0:$APP_LNBITS_PORT"
+      LNBITS_HOST: "0.0.0.0"
+      LNBITS_PORT: "$APP_LNBITS_PORT"
       LNBITS_DATA_FOLDER: "/data"
 
       # LND
-      LNBITS_BACKEND_WALLET_CLASS: LndWallet
-      LND_GRPC_ENDPOINT: $LND_IP
-      LND_GRPC_PORT: $LND_GRPC_PORT
-      LND_GRPC_CERT: "/lnd/tls.cert"
-      LND_GRPC_MACAROON: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
+      LNBITS_BACKEND_WALLET_CLASS: LndRestWallet
+      LND_REST_ENDPOINT: https://$LND_IP:$LND_REST_PORT/
+      LND_REST_CERT: "/lnd/tls.cert"
+      LND_REST_MACAROON: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/admin.macaroon"
 
       # App
       LNBITS_SITE_TITLE: "LNbits - Umbrel"
       LNBITS_DEFAULT_WALLET_NAME: "LNbits wallet"
       LNBITS_DISABLED_EXTENSIONS: "amilk"
+      LNBITS_ADMIN_EXTENSIONS: "ngrok"
     networks:
         default:
           ipv4_address: $APP_LNBITS_IP
