@@ -577,9 +577,9 @@
         "id": "squeaknode",
         "category": "Social",
         "name": "Squeaknode",
-        "version": "0.2.8",
+        "version": "0.2.16",
         "tagline": "A peer-to-peer status feed with Lightning monetization",
-        "description": "The Squeaknode app allows you to create, view, buy, and sell squeaks. A squeak is a single post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the block hash embedded in each squeak. Each squeak is signed with the digital signature of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
+        "description": "Squeaknode is a peer-to-peer microblog with posts unlocked by Lightning Network payments. The app allows you to create, view, buy, and sell squeaks. A squeak is a post that can contain up to 280 characters.\n\nThe Squeaknode timeline is ordered by the height of the Bitcoin block hash embedded in each squeak. Each squeak must be signed with the private key of the author. Squeaks can be downloaded from any peer to any peer, but they remain locked until the downloader makes a Lightning payment to decrypt the content.",
         "developer": "Jonathan Zernik",
         "website": "https://squeaknode.org",
         "dependencies": [
