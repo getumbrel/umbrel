@@ -4,6 +4,7 @@ services:
   web:
     image: jensgertsen/sparkkiosk:v1.0.0@sha256:d49500ce9c47d04436e64dae7e336416aa32f83673058154aa8a983e1420008c
     user: 1000:1000
+    init: true
     restart: on-failure
     stop_grace_period: 1m
     ports:
