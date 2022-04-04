@@ -256,6 +256,8 @@ APP_JAM_PORT="5002"
 APP_BLESKOMAT_SERVER_PORT="3333"
 APP_BLESKOMAT_SERVER_IP="10.21.21.85"
 APP_BLESKOMAT_SERVER_DB_IP="10.21.21.86"
+APP_AGORA_IP="10.21.21.87"
+APP_AGORA_PORT="12080"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -512,6 +514,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-bleskomat-server-port>/${APP_BLESKOMAT_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-bleskomat-server-ip>/${APP_BLESKOMAT_SERVER_IP}/g" "${template}"
   sed -i "s/<app-bleskomat-server-db-ip>/${APP_BLESKOMAT_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-agora-ip>/${APP_AGORA_IP}/g" "${template}"
+  sed -i "s/<app-agora-port>/${APP_AGORA_PORT}/g" "${template}"
 done
 
 ##########################################################

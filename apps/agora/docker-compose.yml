@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+  filebrowser:
+    image: filebrowser/filebrowser:v2.21.1@sha256:6da71bfffc1345075a5cc06e0a7ae270098186407c62f4f71994e079677364d0
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/files:/srv
+      - ${APP_DATA_DIR}/database/filebrowser.db:/database.db
+      - ${APP_DATA_DIR}/data:/data
+    environment:
+      APP_PASSWORD: "$APP_PASSWORD"
+    entrypoint: /data/entrypoint.sh
+
+  agora:
+    image: ghcr.io/agora-org/agora:sha-48d3205@sha256:35eda120a8d868c7fa3b9cbdcad7cc2245b9fe7e0c5356c8091bb0bf9a65222d
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/files:/files
+      - ${LND_DATA_DIR}:/lnd:ro
+    user: "1000:1000"
+    environment:
+      # LND environment variables
+      LND_RPC_AUTHORITY: "$LND_IP:$LND_GRPC_PORT"
+      TLS_CERT_PATH: "/lnd/tls.cert"
+      INVOICES_MACAROON_PATH: "/lnd/data/chain/bitcoin/$BITCOIN_NETWORK/invoice.macaroon"
+
+      # App specific environment variables
+      FILES_DIR: "/files"
+      AGORA_PORT: 8080
+
+  nginx:
+    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    init: true
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${APP_DATA_DIR}/data/www:/usr/share/nginx/html
+    ports:
+      - "$APP_AGORA_PORT:80"
+    depends_on:
+      - agora
+      - filebrowser
+    networks:
+      default:
+        ipv4_address: $APP_AGORA_IP

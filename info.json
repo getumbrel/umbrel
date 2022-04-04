@@ -1,6 +1,6 @@
 {
-    "version": "0.4.15",
-    "name": "Umbrel v0.4.15",
+    "version": "0.4.16",
+    "name": "Umbrel v0.4.16",
     "requires": ">=0.2.1",
-    "notes": "This update brings three brand new apps to the Umbrel App Store — Jam (JoinMarket UI), Snowflake Tor Proxy, and Bleskomat Server, along with updated apps and bugfixes.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "This update brings the latest versions of Jam, Krystal Bull, Suredbits Wallet, Bitfeed, LNDg, and Urbit to the Umbrel App Store.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
 }
