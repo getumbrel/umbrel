@@ -17,6 +17,7 @@ services:
   agora:
     image: ghcr.io/agora-org/agora:sha-48d3205@sha256:35eda120a8d868c7fa3b9cbdcad7cc2245b9fe7e0c5356c8091bb0bf9a65222d
     restart: on-failure
+    init: true
     stop_grace_period: 1m
     volumes:
       - ${APP_DATA_DIR}/files:/files
