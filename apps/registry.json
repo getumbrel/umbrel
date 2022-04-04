@@ -1015,5 +1015,30 @@
         "path": "",
         "deterministicPassword": true,
         "torOnly": false
+    },
+    {
+        "id": "agora",
+        "category": "Files",
+        "name": "Agora",
+        "version": "v0.1.2",
+        "tagline": "Earn Bitcoin for hosting files",
+        "description": "Agora is a project that allows anyone to sell files on the web for bitcoin using the Lightning Network.\n\nAgora serves the contents of a local directory, providing file listings and downloads over HTTP. For example, you can point it at a directory full of PDFs, allowing users to browse and view the PDFs in their web browser. If agora is connected to an LND node, it can be configured to require Lightning Network payments for downloads.",
+        "developer": "Casey Rodarmor & Sönke Hahn",
+        "website": "https://agora-org.github.io/agora/",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/agora-org/agora",
+        "support": "https://t.me/agoradiscussion",
+        "port": 12080,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/admin/",
+        "deterministicPassword": true,
+        "defaultUsername": "umbrel",
+        "torOnly": false
     }
 ]

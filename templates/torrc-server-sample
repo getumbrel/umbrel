@@ -225,3 +225,7 @@ HiddenServicePort 80 <app-jam-ip>:80
 # bleskomat-server Hidden Service
 HiddenServiceDir /data/app-bleskomat-server
 HiddenServicePort 80 <app-bleskomat-server-ip>:<app-bleskomat-server-port>
+
+# agora Hidden Service
+HiddenServiceDir /data/app-agora
+HiddenServicePort 80 <app-agora-ip>:80
