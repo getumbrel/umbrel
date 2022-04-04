@@ -13,6 +13,10 @@ services:
     environment:
       APP_PASSWORD: "$APP_PASSWORD"
     entrypoint: /data/entrypoint.sh
+    networks:
+      default:
+        ipv4_address: $APP_AGORA_FILEBROWSER_IP
+
 
   agora:
     image: ghcr.io/agora-org/agora:sha-48d3205@sha256:35eda120a8d868c7fa3b9cbdcad7cc2245b9fe7e0c5356c8091bb0bf9a65222d
@@ -32,14 +36,21 @@ services:
       # App specific environment variables
       FILES_DIR: "/files"
       AGORA_PORT: 8080
+    networks:
+      default:
+        ipv4_address: $APP_AGORA_SERVER_IP
 
   nginx:
     image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
     init: true
     restart: on-failure
     volumes:
-      - ${APP_DATA_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${APP_DATA_DIR}/nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template
       - ${APP_DATA_DIR}/data/www:/usr/share/nginx/html
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/
+      APP_AGORA_SERVER_IP: $APP_AGORA_SERVER_IP
+      APP_AGORA_FILEBROWSER_IP: $APP_AGORA_FILEBROWSER_IP
     ports:
       - "$APP_AGORA_PORT:80"
     depends_on:
