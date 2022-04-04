@@ -1040,5 +1040,29 @@
         "deterministicPassword": true,
         "defaultUsername": "umbrel",
         "torOnly": false
+    },
+    {
+        "id": "sparkkiosk",
+        "category": "Finance",
+        "name": "Sparkkiosk",
+        "version": "v1.0.0",
+        "tagline": "Minimal LNURL kiosk",
+        "description": "Use sparkkiosk to enable lightning payments from printed QR codes in selfservice kiosks / cafés or other places where POS interaction is not needed or an option.\n\nLog into the dashboard, create a new LNURL, set currency and amount and download QR to print. Monitor latest invoices.",
+        "developer": "Jens Gertsen",
+        "website": "https://github.com/jensgertsen/sparkkiosk",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/jensgertsen/sparkkiosk",
+        "support": "https://github.com/jensgertsen/sparkkiosk/discussions",
+        "port": 21214,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
     }
 ]
