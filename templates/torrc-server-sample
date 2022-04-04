@@ -229,3 +229,7 @@ HiddenServicePort 80 <app-bleskomat-server-ip>:<app-bleskomat-server-port>
 # agora Hidden Service
 HiddenServiceDir /data/app-agora
 HiddenServicePort 80 <app-agora-ip>:80
+
+# sparkkiosk Hidden Service
+HiddenServiceDir /data/app-sparkkiosk
+HiddenServicePort 80 <app-sparkkiosk-ip>:21214
