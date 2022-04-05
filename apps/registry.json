@@ -688,7 +688,7 @@
             "3.jpg"
         ],
         "path": "",
-        "defaultPassword": ""
+        "deterministicPassword": true
     },
     {
         "id": "syncthing",
