@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   filebrowser:
-    image: filebrowser/filebrowser:v2.21.1@sha256:6da71bfffc1345075a5cc06e0a7ae270098186407c62f4f71994e079677364d0
+    image: filebrowser/filebrowser:v2.21.1@sha256:e1f43b1b8a1acb1d7cd5f934454e7a2ef571ea3bab48b0e1ed0fa97ef9df8d69
     user: 1000:1000
     restart: on-failure
     stop_grace_period: 1m
@@ -41,7 +41,7 @@ services:
         ipv4_address: $APP_AGORA_SERVER_IP
 
   nginx:
-    image: nginx:1.19-alpine@sha256:c2ce58e024275728b00a554ac25628af25c54782865b3487b11c21cafb7fabda
+    image: nginx:1.19-alpine@sha256:07ab71a2c8e4ecb19a5a5abcfb3a4f175946c001c8af288b1aa766d67b0d05d2
     init: true
     restart: on-failure
     volumes:
