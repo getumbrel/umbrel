@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   backend:
-    image: kolliderhq/kollider-lite-backend:v1.0.3@sha256:1229b8d800447ddd43b8e21e5dbbdc4773e873d3bc4f13a00976bc14607c393b
+    image: kolliderhq/kollider-lite-backend:v1.0.4@sha256:c371b0177e0da15220518e2bdcdf728f7cb2c82bb1b6b215117bc8d8570b46b0
     init: true
     user: 1000:1000
     restart: on-failure
@@ -17,7 +17,7 @@ services:
       default:
         ipv4_address: $APP_KOLLIDER_HH_IP
   ws:
-    image: kolliderhq/kollider-ws-client:v1.0.3@sha256:567ed821291e76fa6c9a0e4e5895375600d1bffc7876938d489f799fbbe0249f
+    image: kolliderhq/kollider-ws-client:v1.0.4@sha256:8813338163f081dfa6bbe3fc8e8c22376e19dcfe9ff1b9fb1db64e13e5ce32dc
     init: true
     user: 1000:1000
     restart: on-failure
@@ -34,7 +34,7 @@ services:
       default:
         ipv4_address: $APP_KOLLIDER_WS_IP
   web:
-    image: kolliderhq/kollider-lite-app:v1.0.3@sha256:a7356b606e3062f74cf60bf0464fda736ae32e44920b7200bcf1f18c3eb1dd1a
+    image: kolliderhq/kollider-lite-app:v1.0.4@sha256:7ec3b105f90ab78af19ef63530739095d4fb7a0645007888b50d5573a20d8f47
     init: true
     user: 1000:1000
     restart: on-failure
