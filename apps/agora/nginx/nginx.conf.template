@@ -14,7 +14,7 @@ server {
     location /admin {
         root /usr/share/nginx/html;
         ssi on;
-        set $ssihiddenserviceaddress "${HIDDEN_SERVICE_ADDRESS}";
+        set $ssihiddenservice "${APP_HIDDEN_SERVICE}";
         index index.html;
     }
 
