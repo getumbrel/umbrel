@@ -46,6 +46,17 @@ if [[ ! -f "${UMBREL_ROOT}/statuses/configured" ]]; then
   NGINX_PORT=${NGINX_PORT:-80} NETWORK="${NETWORK:-mainnet}" "${UMBREL_ROOT}/scripts/configure"
 fi
 
+UMBREL_UPDATE_REBOOT_PERFORMED="${UMBREL_ROOT}/statuses/umbrel-update-reboot-performed"
+if [[ -f "${UMBREL_UPDATE_REBOOT_PERFORMED}" ]]; then
+  # Cleanup status file
+  rm "${UMBREL_UPDATE_REBOOT_PERFORMED}"
+
+  # Mark update status as successful
+  cat <<EOF > "${UMBREL_ROOT}/statuses/update-status.json"
+{"state": "success", "progress": 100, "description": "", "updateTo": ""}
+EOF
+fi
+
 echo
 echo "======================================"
 echo "============= STARTING ==============="

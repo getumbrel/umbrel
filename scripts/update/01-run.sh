@@ -17,6 +17,10 @@ echo "=========== Stage: Install ============"
 echo "======================================="
 echo
 
+versionToInt () {
+  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
 # Make Umbrel OS specific updates
@@ -26,6 +30,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
     echo
+
+    # Update status file
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 30, "description": "Updating Umbrel OS", "updateTo": "$RELEASE"}
+EOF
 
     # In Umbrel OS v0.1.2, we need to bind Avahi to only
     # eth0,wlan0 interfaces to prevent hostname cycling
@@ -66,6 +75,16 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     policykit_version=$(dpkg -s policykit-1 | grep '^Version:')
     if [[ "$policykit_version" != "Version: 0.105-25+rpt1+deb10u1" ]]; then
       apt-get install --yes --only-upgrade policykit-1
+    fi
+
+    # Patch raspberry pi kernel (to fix Dirtypipe vuln.)
+    # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-0847
+    active_kernel_version=$(uname -r)
+    if [[ $(versionToInt "${active_kernel_version}") -lt $(versionToInt "5.10.103") ]]; then
+      apt-get update
+      apt-get install --yes --only-upgrade raspberrypi-kernel
+
+      touch "/tmp/umbrel-update-reboot-required"
     fi
 
     # Make sure dhcpd ignores virtual network interfaces
