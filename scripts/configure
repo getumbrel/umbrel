@@ -262,6 +262,9 @@ APP_AGORA_SERVER_IP="10.21.21.88"
 APP_AGORA_FILEBROWSER_IP="10.21.21.89"
 APP_SPARKKIOSK_IP="10.21.21.90"
 APP_SPARKKIOSK_PORT="21214"
+APP_IPFSHOST_IP=`ip -o route get to 1.1.1.1 | sed -n 's/.*src \([0-9.]\+\).*/\1/p'`
+APP_IPFSPOD_IP="10.21.21.26"
+APP_IPFSPOD_PORT="8675"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -524,6 +527,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-agora-filebrowser-ip>/${APP_AGORA_FILEBROWSER_IP}/g" "${template}"
   sed -i "s/<app-sparkkiosk-ip>/${APP_SPARKKIOSK_IP}/g" "${template}"
   sed -i "s/<app-sparkkiosk-port>/${APP_SPARKKIOSK_PORT}/g" "${template}"
+  sed -i "s/<app-ipfspod-port>/${APP_IPFSPOD_PORT}/g" "${template}"
+  sed -i "s/<app-ipfspod-ip>/${APP_IPFSPOD_IP}/g" "${template}"
 done
 
 ##########################################################
