@@ -3,28 +3,17 @@ version: '3.7'
 services:
         tor_proxy:
                 container_name: tor
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
+                image: lncm/tor:0.4.6.9@sha256:ae1a136822d82571309074adc227fe8a1317873ba6e9cdb93bf2f9ad3a8d07d3
                 user: toruser
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc-proxy:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
+                    - ${PWD}/tor/torrc-proxy:/etc/tor/torrc:ro
+                    - ${PWD}/tor/data:/data
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
-        tor_server:
-                image: getumbrel/tor-server:0.4.6.8@sha256:a81797e4a6b0c4709dd6f7c5543ab99e318af329bdf728c5b267f412c51b9a31
-                restart: on-failure
-                volumes:
-                    - ${PWD}/tor/torrc-server:/torrc
-                    - ${PWD}/tor/data:/data
-                environment:
-                    HS_PER_PROCESS: "10"
-                networks:
-                    default:
-                        ipv4_address: $TOR_SERVER_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
@@ -88,7 +77,8 @@ services:
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
-                        - ${PWD}/apps:/apps
+                        - ${PWD}/app-data:/app-data
+                        - ${PWD}/repos:/repos
                         - ${PWD}/lnd:/lnd:ro
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
@@ -193,7 +183,7 @@ networks:
       ipam:
           driver: default
           config:
-              - subnet: "$NETWORK_IP/24"
+              - subnet: "$NETWORK_IP/16"
 
 volumes:
     jwt-public-key:

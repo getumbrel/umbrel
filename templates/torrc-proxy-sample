@@ -6,12 +6,30 @@
 SocksPort   <tor-proxy-ip>:<tor-proxy-port>
 ControlPort <tor-proxy-ip>:29051
 
+HashedControlPassword <password>
+
+# Umbrel
+
 # Dashboard Hidden Service
-#
-# We include the dashboard hs in the proxy torrc because it's the only hs entry and so more
-# Tor acts much more reliably and there is a higher chance the dashboard hs will come back
-# online quickly after an update.
-HiddenServiceDir /var/lib/tor/web
+HiddenServiceDir /data/web
 HiddenServicePort 80 <nginx-ip>:80
 
-HashedControlPassword <password>
+# Bitcoin Core P2P Hidden Service
+HiddenServiceDir /data/bitcoin-p2p
+HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>
+
+# Bitcoin Core RPC Hidden Service
+HiddenServiceDir /data/bitcoin-rpc
+HiddenServicePort <bitcoin-rpc-port> <bitcoin-ip>:<bitcoin-rpc-port>
+
+# Electrum Hidden Service
+HiddenServiceDir /data/electrum
+HiddenServicePort <electrum-port> <electrum-ip>:<electrum-port>
+
+# LND REST Hidden Service
+HiddenServiceDir /data/lnd-rest
+HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
+
+# LND gRPC Hidden Service
+HiddenServiceDir /data/lnd-grpc
+HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>

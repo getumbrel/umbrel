@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+
+show_help() {
+  cat << EOF
+repo 0.0.1
+
+CLI for managing local Umbrel App Repos
+
+Usage: repo <command> <arguments...>
+
+Commands:
+  id                          Get id of active app repo
+  set                         Set remote app repo
+  update                      Update local app repo
+    
+EOF
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Check dependencies
+check_dependencies git jq timeout
+
+if [ -z ${1+x} ]; then
+  command=""
+else
+  command="$1"
+fi
+
+APP_REPO_URL=$(cat "${USER_FILE}" | jq -r '.appRepo')
+
+function repo_id() {
+  echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
+}
+
+# Prints out repo ID
+if [[ "$command" = "id" ]]; then
+  repo_id
+
+  exit
+fi
+
+# Sets the active repo
+if [[ "$command" = "set" ]]; then
+  repo_url="${2-}"
+
+  if [[ -z "${repo_url}" ]]; then
+    >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/apps.git"
+    exit 1
+  fi
+
+  echo "Setting app repo to: ${repo_url}"
+
+  jq ".appRepo = \"${repo_url}\"" "${USER_FILE}" > /tmp/user.json
+  mv /tmp/user.json "${USER_FILE}"
+
+  exit
+fi
+
+# Update local copies of repos from remote
+if [[ "$command" = "update" ]]; then
+  repo=$(repo_id)
+
+  if [[ -z "${repo}" ]]; then
+    >&2 echo "Error, can't update app repo when no repo is set."
+    exit 1
+  fi
+
+  echo "Processing repo: ${repo}"
+
+  LOCAL_REPO_PATH="${UMBREL_ROOT}/repos/${repo}"
+  if [[ -d "${LOCAL_REPO_PATH}" ]]; then
+    echo "Updating repo: ${repo}"
+
+    timeout --foreground 30 git -C "${LOCAL_REPO_PATH}" pull
+  else
+    echo "Cloning repo: ${repo} from: ${APP_REPO_URL}"
+
+    timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
+  fi
+
+  exit
+fi
+
+# If we get here it means no valid command was supplied
+# Show help and exit
+show_help
+exit 1

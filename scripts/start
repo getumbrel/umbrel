@@ -104,6 +104,9 @@ pkill -f ./scripts/status-monitor || true
 ./scripts/status-monitor temperature 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
 ./scripts/status-monitor uptime 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
+# Automatically update app repos every 15 minutes
+./scripts/status-monitor repos 900 &>> "${UMBREL_LOGS}/status-monitor.log" &
+
 echo "Starting memory monitor..."
 echo
 ./scripts/memory-monitor &>> "${UMBREL_LOGS}/memory-monitor.log" &

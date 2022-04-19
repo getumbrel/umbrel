@@ -104,10 +104,6 @@ EOF
     done
 fi
 
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
-EOF
-
 # Checkout to the new release
 cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
@@ -129,37 +125,19 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 docker-compose pull
 
-echo "Updating installed apps"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
-EOF
-# We can just loop over this once everyone has the latest app script
-# "$UMBREL_ROOT/scripts/app" ls-installed
-# but for now we need to implement it here manually
-USER_FILE="${UMBREL_ROOT}/db/user.json"
-list_installed_apps() {
-  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
-}
-for app in $(list_installed_apps); do
-  if [[ "${app}" != "" ]]; then
-    echo "${app}..."
-    scripts/app compose "${app}" pull &
-  fi
-done
-wait
-
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 60, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
+
 cd "$UMBREL_ROOT"
 ./scripts/stop || {
   # If Docker fails to stop containers we're most likely hitting this Docker bug: https://github.com/moby/moby/issues/17217
   # Restarting the Docker service seems to fix it
   echo "Attempting to autofix Docker failure"
   cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 70, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 65, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
 EOF
   sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
@@ -198,7 +176,7 @@ EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
   echo "Attempting to move Docker to external storage..."
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 72, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 68, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
 EOF
 
   echo "Stopping Docker service..."
@@ -236,6 +214,9 @@ rsync --archive \
     --delete \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
+
+# Migrate 'apps' structure to using app repos
+$UMBREL_ROOT/scripts/update/steps/migrate-to-repo.sh "$RELEASE" "$UMBREL_ROOT"
 
 # Remove legacy electrs dir
 legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"

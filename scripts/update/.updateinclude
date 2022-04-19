@@ -1,3 +1,4 @@
+.gitignore
 .env
 bitcoin/bitcoin.conf
 tor/torrc-server

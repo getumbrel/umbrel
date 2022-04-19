@@ -3,10 +3,12 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
+DEFAULT_APP_REPO_ID=$($UMBREL_ROOT/scripts/repo id)
+ACTIVE_APP_REPO_PATH="${UMBREL_ROOT}/repos/${DEFAULT_APP_REPO_ID}"
 
 show_help() {
   cat << EOF
-app 0.0.1
+app 0.0.2
 
 CLI for managing Umbrel apps
 
@@ -25,7 +27,7 @@ EOF
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
-      echo "This script requires \"${cmd}\" to be installed"
+      >&2 echo "This script requires \"${cmd}\" to be installed"
       exit 1
     fi
   done
@@ -56,8 +58,34 @@ derive_entropy () {
   printf "%s" "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
 }
 
+# Setup env. for this context for a given app
+source_app() {
+  local -r app="${1}"
+
+  local -r app_domain="$(hostname -s 2>/dev/null || echo "umbrel").local"
+  local -r app_entropy_identifier="app-${app}-seed"
+
+  # Set env using all installed apps exports.sh
+  # Do this first so that no app exports can
+  # Override any exports defined below 
+  APP_EXPORTS="${UMBREL_ROOT}/app-data/*/exports.sh"
+  for app_export in $APP_EXPORTS; do
+    if [[ -f "${app_export}" ]]; then
+      . "${app_export}"
+    fi
+  done
+
+  export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
+  export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
+  export APP_DATA_DIR="${app_data_dir}"
+  export APP_DOMAIN="${app_domain}"
+  export APP_HIDDEN_SERVICE="$(cat "${app_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
+  export APP_PASSWORD=$(derive_entropy "${app_entropy_identifier}-APP_PASSWORD")
+}
+
 # Check dependencies
-check_dependencies docker-compose jq openssl
+check_dependencies docker-compose jq openssl envsubst
 
 if [ -z ${1+x} ]; then
   command=""
@@ -77,8 +105,11 @@ if [ -z ${2+x} ]; then
   exit 1
 else
   app="$2"
-  app_dir="${UMBREL_ROOT}/apps/${app}"
+  app_repo_dir="${ACTIVE_APP_REPO_PATH}/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
+  app_torrc_file="${app_data_dir}/torrc"
+  app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
+  
   if [[ "${app}" == "installed" ]]; then
     for app in $(list_installed_apps); do
       if [[ "${app}" != "" ]]; then
@@ -88,8 +119,9 @@ else
     wait
     exit
   fi
-  if [[ -z "${app}" ]] || [[ ! -d "${app_dir}" ]]; then
-    echo "Error: \"${app}\" is not a valid app"
+  
+  if [[ -z "${app}" ]]; then
+    >&2 echo "Error: \"${app}\" is not a valid app"
     exit 1
   fi
 fi
@@ -101,50 +133,39 @@ else
 fi
 
 compose() {
-  local app="${1}"
+  local -r app="${1}"
   shift
-  local env_file="${UMBREL_ROOT}/.env"
-  local app_base_compose_file="${UMBREL_ROOT}/apps/docker-compose.common.yml"
-  local app_compose_file="${app_dir}/docker-compose.yml"
-  local app_domain="$(hostname -s 2>/dev/null || echo "umbrel").local"
-  local app_hidden_servive_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
-  local app_entropy_identifier="app-${app}-seed"
 
-  export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
-  export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
-  export APP_DATA_DIR="${app_data_dir}"
-  export APP_DOMAIN="${app_domain}"
-  export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
-  export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
-  export APP_PASSWORD=$(derive_entropy "${app_entropy_identifier}-APP_PASSWORD")
+  # Source env.
+  source_app "${app}"
 
-  # App specific env vars
-  # Note: Hardcoding app specific env vars is a short term solution. Long term
-  # these values will be registered in an apps manifest and generated dynamically.
-  local dojo_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-dojo/hostname"
-  local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
-  local squeaknode_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
-  local suredbits_wallet_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
-  export SAMOURAI_SERVER_DOJO_HIDDEN_SERVICE="$(cat "${dojo_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
-  export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
-  export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
-  export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
-  export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
-  export SAMOURAI_SERVER_WHIRLPOOL_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-WHIRLPOOL_API_KEY")
-  export SQUEAKNODE_P2P_HIDDEN_SERVICE="$(cat "${squeaknode_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
-  export SUREDBITS_WALLET_P2P_HIDDEN_SERVICE="$(cat "${suredbits_wallet_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  local -r umbrel_env_file="${UMBREL_ROOT}/.env"
+  local -r app_tor_docker_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.tor.yml"
+  local -r app_common_docker_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.common.yml"
+  local -r app_docker_compose_file="${app_data_dir}/docker-compose.yml"
+
+  compose_files=( "--file" "${app_common_docker_compose_file}" "--file" "${app_docker_compose_file}" )
+
+  # If an app has a torrc file
+  # Then include a compose file for Tor
+  if [[ -f "${app_torrc_file}" ]]; then
+    export APP_TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
+
+    compose_files+=( "--file" "${app_tor_docker_compose_file}" )
+  fi
+
+  # Merge compose files and args. passed into 'compose'
+  compose_args=("${compose_files[@]}" "${@}")
 
   docker-compose \
-    --env-file "${env_file}" \
+    --env-file "${umbrel_env_file}" \
     --project-name "${app}" \
-    --file "${app_base_compose_file}" \
-    --file "${app_compose_file}" \
-    "${@}"
+    "${compose_args[@]}"
 }
 
 update_installed_apps() {
-  local action="${1}"
-  local app="${2}"
+  local -r action="${1}"
+  local -r app="${2}"
 
   while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
     echo "Waiting for JSON lock to be released for ${app} update..."
@@ -161,18 +182,116 @@ update_installed_apps() {
   rm -f "${USER_FILE}.lock"
 }
 
+template_app() {
+  local -r app="${1}"
+
+  # Loop over all templates within app and populate them
+  APP_TEMPLATE_FILES="${app_data_dir}/*.template"
+  
+  shopt -s nullglob
+  for APP_TEMPLATE_INPUT_FILE in $APP_TEMPLATE_FILES; do
+    # Output filename is the same as input with .template stripped off
+    APP_TEMPLATE_OUTPUT_FILE="${APP_TEMPLATE_INPUT_FILE%.*}"
+
+    cat "${APP_TEMPLATE_INPUT_FILE}" | envsubst > "${APP_TEMPLATE_OUTPUT_FILE}"
+  done
+}
+
+copy_app_files() {
+  local -r files_to_copy="${1}"
+
+  for filename in $files_to_copy; do
+    APP_FILES="${app_repo_dir}/${filename}"
+
+    for app_file in $APP_FILES; do
+      if [[ -f "${app_file}" ]]; then
+        cp --archive "${app_file}" "${app_data_dir}"
+      fi
+    done
+  done
+}
+
+wait_for_tor_hs() {
+  local -r app="${1}"
+
+  # Check only on start if a 'torrc` 
+  # config. file does NOT exist
+  if [[ ! -f "${app_torrc_file}" ]]; then
+    echo
+    >&2 echo "Warning: \"${app}\" is missing a 'torrc' config. file"
+    >&2 echo "         \"${app}\" will be inaccessible over Tor"
+    echo
+  fi
+
+  # If a tor service will start
+  # and there is no existing tor hs hostname
+  # Let's allow 10 seconds to generate it and then start the app
+  if [[ -f "${app_torrc_file}" ]] && [[ ! -f "${app_hidden_service_file}" ]]; then
+    echo "Generating hidden services..."
+    compose "${app}" up --detach tor_server
+
+    for attempt in $(seq 1 100); do
+      if [[ -f "${app_hidden_service_file}" ]]; then
+        echo "Hidden service file created successfully!"
+        break
+      fi
+      sleep 0.1
+    done
+
+    if [[ ! -f "${app_hidden_service_file}" ]]; then
+      echo "Hidden service file wasn't created"
+    fi
+  fi
+}
+
+start_app() {
+  local -r app="${1}"
+
+  # Source env.
+  source_app "${app}"
+
+  # Now apply templates
+  template_app "${app}"
+
+  # Wait for Tor's HS hostname to exist
+  wait_for_tor_hs "${app}"
+
+  # Start all the app's containers
+  compose "${app}" up --detach
+}
+
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
+  if [[ ! -d "${app_repo_dir}" ]]; then
+    >&2 echo "Error: \"${app}\" not found in app repo"
+    exit 1
+  fi
+
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
-  rsync --archive --verbose --exclude ".gitkeep" "${app_dir}/." "${app_data_dir}"
+
+  # Copy all app files
+  rsync --archive --verbose --exclude ".gitkeep" "${app_repo_dir}/." "${app_data_dir}"
+
+  # Source env.
+  source_app "${app}"
+
+  # Now apply templates
+  template_app "${app}"
+
+  # Execute migration file
+  MIGRATE_FILE="${app_data_dir}/migrate.sh"
+  if [[ -f "${MIGRATE_FILE}" ]] && [[ -x "${MIGRATE_FILE}" ]]; then
+    echo "Running ${app} migration..."
+    "${MIGRATE_FILE}"
+  fi
 
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
   echo "Starting app ${app}..."
-  compose "${app}" up --detach
+  start_app "${app}"
 
   echo "Saving app ${app} in DB..."
   update_installed_apps add "${app}"
@@ -183,6 +302,11 @@ fi
 
 # Removes images and destroys all data for an app
 if [[ "$command" = "uninstall" ]]; then
+
+  if ! list_installed_apps | grep --quiet "^${app}$"; then
+    >&2 echo "Error: app \"${app}\" is not installed yet"
+    exit 1
+  fi
 
   echo "Removing images for app ${app}..."
   compose "${app}" down --rmi all --remove-orphans
@@ -212,12 +336,67 @@ fi
 if [[ "$command" = "start" ]]; then
 
   if ! list_installed_apps | grep --quiet "^${app}$"; then
-    echo "Error: app \"${app}\" is not installed yet"
+    >&2 echo "Error: app \"${app}\" is not installed yet"
     exit 1
   fi
 
   echo "Starting app ${app}..."
-  compose "${app}" up --detach
+  start_app "${app}"
+
+  exit
+fi
+
+# Update an installed app
+if [[ "$command" = "update" ]]; then
+
+  if ! list_installed_apps | grep --quiet "^${app}$"; then
+    >&2 echo "Error: app \"${app}\" is not installed yet"
+    exit 1
+  fi
+
+  if [[ ! -d "${app_repo_dir}" ]]; then
+    >&2 echo "Error: \"${app}\" not found in app repo"
+    exit 1
+  fi
+
+  echo "Updating app ${app}..."
+
+  if [[ "$*" != *"--skip-stop"* ]]; then
+    "${0}" "stop" "${app}"
+  fi
+  
+  # App updates will only copy files from this whitelist:
+  UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh migrate.sh"
+
+  # We copy umbrel-app.yml after the app has started
+  # That way the frontend knows the update has finished
+  # And the app is running again
+  UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
+
+  copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
+
+  # Copy remaining files in the event of error or success
+  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
+
+  # Source env. after new exports.sh is copied (above)
+  source_app "${app}"
+
+  # Now apply templates
+  template_app "${app}"
+
+  # Execute migration file
+  MIGRATE_FILE="${app_data_dir}/migrate.sh"
+  if [[ -f "${MIGRATE_FILE}" ]] && [[ -x "${MIGRATE_FILE}" ]]; then
+    echo "Running ${app} migration..."
+    "${MIGRATE_FILE}"
+  fi
+
+  echo "Pulling images for app ${app}..."
+  compose "${app}" pull
+
+  if [[ "$*" != *"--skip-start"* ]]; then
+    "${0}" "start" "${app}"
+  fi
 
   exit
 fi
