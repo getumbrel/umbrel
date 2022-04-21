@@ -13,7 +13,7 @@ services:
     command: 
       - -listen=1
       - -txindex=1
-      - -validatepegin=0
+      - -validatepegin=1
       - -fallbackfee=0.000001
       # Attach to Bitcoin network
       - -mainchainrpcport=$BITCOIN_RPC_PORT
