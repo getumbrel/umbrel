@@ -1,20 +1,45 @@
-version: "3.7"
+version: "3.8"
 
 services:
-  web:
+  node:
     image: ghcr.io/vulpemventures/elements:0.21.0.2@sha256:25f407a8289835f89d6829a8a14c1520ed3509fe7f594b9bc2b616b522d570c4
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 7041:7041
-      - 18332:18332
+      - 7041:7041 # JSONRPC
+      - 18332:18332 # P2P PORT
     volumes:
       - ${APP_DATA_DIR}/data:/home/elements/.elements
     command: 
+      - -listen=1
+      - -txindex=1
       - -validatepegin=0
-      - -port=18332
-      - -rpcport=7041
-      # Use 
+      - -fallbackfee=0.000001
+      # Attach to Bitcoin network
+      - -mainchainrpcport=$BITCOIN_RPC_PORT
+      - -mainchainrpcuser=$BITCOIN_RPC_USER
+      - -mainchainrpcpassword=$BITCOIN_RPC_PASS
+      # Elements RPC
       - -rpcuser=elements
       - -rpcpassword=$APP_PASSWORD
+      - -rpcbind=0.0.0.0 # can we do better here?
+      - -rpcallowip=0.0.0.0/0 # can we do better here?
+      - -rpcport=7041
+      # P2P 
+      - -port=18332
+      - -blockfilterindex=1
+      - -peerblockfilters=1
+  web: 
+    image: ghcr.io/tiero/elements-web:v0.0.1@sha256:d0b0b7b6638033e08fbfc9bd0f467309b02f5a7bda78872694b625e1c4d60862
+    depends_on:
+      - node
+    restart: on-failure
+    ports:
+      - 8080:8080
+    environment:
+      RPC_USER: elements
+      RPC_PASS: $APP_PASSWORD
+      RPC_PORT: 7041
+      RPC_HOST: $APP_HIDDEN_SERVICE
 
+  
