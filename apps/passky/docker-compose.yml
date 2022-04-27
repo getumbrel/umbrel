@@ -1,15 +1,8 @@
 version: "3.7"
 services:
-  passky-web:
-    container_name: passky-web
-    image: 'zigazajc007/passky-web:6.0.1'
-    restart: on-failure
-    stop_grace_period: 1m
-    ports:
-      - 8081:80
   passky-database:
     container_name: passky-database
-    image: 'zigazajc007/passky-database:6.0.0'
+    image: 'zigazajc007/passky-database:6.1.0'
     restart: on-failure
     stop_grace_period: 1m
     environment:
@@ -31,7 +24,7 @@ services:
       - passky
   passky-api:
     container_name: passky-api
-    image: 'zigazajc007/passky-api:6.0.0'
+    image: 'zigazajc007/passky-api:6.1.0'
     restart: on-failure
     stop_grace_period: 1m
     environment:
