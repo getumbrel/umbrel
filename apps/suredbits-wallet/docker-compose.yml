@@ -26,7 +26,7 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.9.1-24-16c13568-SNAPSHOT@sha256:b64bece3a76e0d949eae3b1acfbc6935103c8b1a2836af2ea0e7b77b5772cd86
+    image: bitcoinscala/bitcoin-s-server:1.9.1-29-0c6c9180-SNAPSHOT@sha256:addee020e6db43aba8f1918ef029f66197b24e3ada0844598ff421988318e7f2
     user: "1000:1000"
     restart: on-failure
     volumes:
