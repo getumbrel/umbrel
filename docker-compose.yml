@@ -98,6 +98,7 @@ services:
                     MIDDLEWARE_API_URL: "http://$MIDDLEWARE_IP"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
+                    UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
                     BITCOIN_P2P_PORT: $BITCOIN_P2P_PORT
                     BITCOIN_RPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-rpc/hostname"
@@ -146,6 +147,25 @@ services:
                 networks:
                     default:
                         ipv4_address: $MIDDLEWARE_IP
+        auth:
+                container_name: auth
+                image: getumbrel/app-auth
+                user: "1000:1000"
+                build: ./deps/app-auth
+                restart: on-failure
+                environment:
+                    PORT: 2000
+                    UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
+                    MANAGER_IP: $MANAGER_IP
+                    MANAGER_PORT: 3006
+                volumes:
+                        - ${PWD}/tor/data:/var/lib/tor:ro
+                        - ${PWD}/app-data:/app-data:ro
+                ports:
+                    - "${AUTH_PORT}:2000"
+                networks:
+                    default:
+                        ipv4_address: $AUTH_IP
         neutrino-switcher:
                 container_name: neutrino-switcher
                 image: getumbrel/neutrino-switcher:v1.3.0@sha256:399ccea7f39129ff16c9c408f9e68a01dd4671f428273f3c3f401a8a0d2f7ddc

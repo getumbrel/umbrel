@@ -1,0 +1,27 @@
+version: '3.7'
+
+services:
+    app_proxy:
+        image: getumbrel/app-proxy
+        build: ../../deps/app-proxy
+        user: "1000:1000"
+        restart: on-failure
+        hostname: $APP_PROXY_HOSTNAME
+        ports:
+            - "${APP_PROXY_PORT}:${APP_PROXY_PORT}"
+        volumes:
+            - "${APP_MANIFEST_FILE}:/extra/umbrel-app.yml:ro"
+            - "${TOR_DATA_DIR}:/var/lib/tor:ro"
+            - "${APP_DATA_DIR}:/data:ro"
+        environment:
+            LOG_LEVEL: debug
+            PROXY_PORT: $APP_PROXY_PORT
+            PROXY_AUTH_ADD: "true"
+            PROXY_AUTH_WHITELIST: 
+            PROXY_AUTH_BLACKLIST: 
+            APP_HOST: 
+            APP_PORT: 
+            AUTH_SERVICE_PORT: 2000
+            UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
+            MANAGER_IP: $MANAGER_IP
+            MANAGER_PORT: 3006

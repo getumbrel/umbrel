@@ -1,0 +1,9 @@
+version: '3.7'
+
+services:
+    app_proxy:
+        environment:
+            APP_HOST: ws_server
+            APP_PORT: 8010
+    ws_server:
+        image: ksdn117/web-socket-test

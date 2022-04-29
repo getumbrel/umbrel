@@ -20,7 +20,6 @@ docker-compose.override.yml
 
 *.dat
 *.log
-*.lock
 *.cookie
 *.pid
 *.env

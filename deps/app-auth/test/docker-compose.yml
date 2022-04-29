@@ -1,0 +1,25 @@
+version: '3.7'
+
+services:
+    auth:
+        image: getumbrel/app-auth1
+        user: "1000:1000"
+        build:
+            context: ..
+            dockerfile: Dockerfile.dev
+        ports:
+            - "2001:2000"
+        environment:
+            PORT: 2000
+            UMBREL_AUTH_SECRET: umbrel
+            MANAGER_IP: $MANAGER_IP
+            MANAGER_PORT: 3006
+        volumes:
+            - ..:/app
+            - ./fixtures/tor/data:/var/lib/tor:ro
+            - ./fixtures/app-data:/app-data:ro
+
+networks:
+    default:
+        external:
+            name: umbrel_main_network

@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+const cookieParser = require('cookie-parser');
+const express = require('express');
+const waitPort = require('wait-port');
+
+const proxy = require('../utils/proxy.js');
+const umbrelRoutes = require('../routes/umbrel.js');
+const handleErrorMiddleware = require('../middleware/handle_error.js');
+
+const CONSTANTS = require('../utils/const.js');
+
+const app = express();
+
+app.disable('x-powered-by');
+app.set('view engine', 'ejs');
+
+app.use(cookieParser(CONSTANTS.UMBREL_AUTH_SECRET));
+app.use('/umbrel_', umbrelRoutes);
+
+app.use(handleErrorMiddleware);
+
+const middleware = proxy.apply(app);
+
+// We'll only open the app proxy's port
+// Once the app's port is open
+console.log(`Waiting for ${CONSTANTS.APP_HOST}:${CONSTANTS.APP_PORT} to open...`);
+
+waitPort({
+	host: CONSTANTS.APP_HOST,
+	port: CONSTANTS.APP_PORT,
+	output: "silent",
+	// Wait indefinitely for the app to start
+	timeout: 0
+})
+.then(() => {
+	console.log(`${CONSTANTS.APP.name} is now ready...`);
+
+	const server = app.listen(CONSTANTS.PROXY_PORT, () => {
+		console.log(`Listening on port: ${CONSTANTS.PROXY_PORT}`);
+	});
+
+	// This allows it to proxy WebSockets without the initial http request
+	server.on('upgrade', middleware.upgrade);
+})
+.catch((err) => {
+	console.error('An unknown error occured while waiting for the port', err);
+});

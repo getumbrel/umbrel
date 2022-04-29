@@ -109,6 +109,8 @@ NGINX_PORT="${NGINX_PORT:-80}"
 DASHBOARD_IP="10.21.21.3"
 MANAGER_IP="10.21.21.4"
 MIDDLEWARE_IP="10.21.21.5"
+AUTH_IP="10.21.21.12"
+AUTH_PORT="2000"
 NEUTRINO_SWITCHER_IP="10.21.21.6"
 BITCOIN_IP="10.21.21.8"
 BITCOIN_RPC_PORT="8332"
@@ -124,6 +126,10 @@ ELECTRUM_IP="10.21.21.10"
 ELECTRUM_PORT="50001"
 TOR_PROXY_IP="10.21.21.11"
 TOR_PROXY_PORT="9050"
+
+if [[ -z ${UMBREL_AUTH_SECRET+x} ]]; then
+  UMBREL_AUTH_SECRET="$(openssl rand -hex 32)"
+fi
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -238,6 +244,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<dashboard-ip>/${DASHBOARD_IP}/g" "${template}"
   sed -i "s/<manager-ip>/${MANAGER_IP}/g" "${template}"
   sed -i "s/<middleware-ip>/${MIDDLEWARE_IP}/g" "${template}"
+  sed -i "s/<auth-ip>/${AUTH_IP}/g" "${template}"
+  sed -i "s/<auth-port>/${AUTH_PORT}/g" "${template}"
+  sed -i "s/<umbrel-auth-secret>/${UMBREL_AUTH_SECRET}/g" "${template}"
   sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
   sed -i "s/<bitcoin-p2p-port>/${BITCOIN_P2P_PORT}/g" "${template}"

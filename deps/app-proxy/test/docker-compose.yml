@@ -1,0 +1,36 @@
+version: '3.7'
+
+services:
+    app_proxy:
+        image: getumbrel/app-proxy
+        build:
+            context: .
+            dockerfile: Dockerfile.dev
+        user: "1000:1000"
+        restart: on-failure
+        ports:
+            - "${APP_PORT}:4000"
+        volumes:
+            - ..:/app
+            - ./fixtures/mempool-umbrel-app.yml:/extra/umbrel-app.yml:ro
+            - ./fixtures/tor/data:/var/lib/tor:ro
+            - ./data:/app-data:ro
+        environment:
+            LOG_LEVEL: info
+            PROXY_PORT: 4000
+            PROXY_AUTH_ADD: "true"
+            PROXY_AUTH_WHITELIST: 
+            PROXY_AUTH_BLACKLIST: 
+            APP_HOST: 
+            APP_PORT: 
+            APP_MANIFEST_FILE: "/extra/umbrel-app.yml"
+            UMBREL_AUTH_PORT: 2000
+            UMBREL_AUTH_SECRET: umbrel
+            UMBREL_AUTH_HIDDEN_SERVICE_FILE: "/var/lib/tor/auth/hostname"
+            MANAGER_IP: $MANAGER_IP
+            MANAGER_PORT: 3006
+
+networks:
+    default:
+        external:
+            name: umbrel_main_network

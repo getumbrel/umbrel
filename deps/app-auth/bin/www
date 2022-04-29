@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+
+const cookieParser = require("cookie-parser");
+const express = require('express');
+const { StatusCodes } = require('http-status-codes');
+
+const authRoutes = require('../routes/auth.js');
+
+const handleErrorMiddleware = require('../middleware/handle_error.js');
+const CONSTANTS = require('../utils/const.js');
+
+const app = express();
+
+app.disable('x-powered-by');
+app.set('view engine', 'ejs');
+
+app.use(cookieParser(CONSTANTS.UMBREL_AUTH_SECRET));
+app.use('/', authRoutes);
+
+app.use(handleErrorMiddleware);
+app.use((req, res) => {
+	res.status(StatusCodes.NOT_FOUND).json();
+});
+
+app.listen(CONSTANTS.PORT, () => {
+	console.log(`Listening on port: ${CONSTANTS.PORT}`);
+});

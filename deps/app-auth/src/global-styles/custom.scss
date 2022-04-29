@@ -1,0 +1,419 @@
+//Custom Variables (outside Bootstrap's scope)
+body {
+    background-color: #F7F9FB;
+    max-width: 1920px;
+    margin-left: auto;
+    margin-right: auto;
+}
+// to fill svgs, eg. circle in status component
+.fill- {
+    &primary {
+        fill: $primary;
+    }
+    &success {
+        fill: $green;
+    }
+    &warning {
+        fill: $yellow;
+    }
+    &danger {
+        fill: $red;
+    }
+    &muted {
+        fill: #6c757d;
+    }
+    &default {
+        fill: #6c757d;
+    }
+}
+
+.min-vh100 {
+    min-height: 100vh; /* Fallback for browsers that do not support Custom Properties */
+    min-height: var(--vh100, 100vh);
+}
+
+// Overrides
+a {
+    outline: 0 !important; 
+}
+
+.btn, button {
+    outline: 0 !important;
+    border: none !important;
+    text-transform: uppercase;
+    box-shadow: none !important;
+    &.btn-danger,&.btn-warning {
+        color: #fff;
+    }
+    &.btn-outline-danger {
+        &:hover,&:active {
+            color: #fff !important;
+        }
+    }
+    
+}
+
+.cursor-wait {
+    cursor: wait;
+}
+
+.progress-bar {
+    border-radius: 4px;
+}
+
+.card {
+    background: #ffffff;
+    box-shadow: 0px 10px 30px rgba(209, 213, 223, 0.5);
+    border-radius: 1rem;
+    &:hover {
+        box-shadow: 0px 10px 40px rgba(209, 213, 223, 0.6);
+    }
+    border: none !important;
+    outline: 0 !important;
+    // Loading bar safari bug https://gist.github.com/ayamflow/b602ab436ac9f05660d9c15190f4fd7b
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
+    -moz-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+}
+
+.neu-input {
+    background: linear-gradient(346.78deg, #f7fcfc 0%, #fafcfa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    box-shadow: inset 0px 5px 10px rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.8);
+    transition: box-shadow 0.3s ease;
+    &:focus {
+        border: 1px solid rgba(0, 0, 0, 0.02);
+        box-shadow: inset 0px 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    &:disabled {
+        color: rgba(0, 0, 0, 0.5);
+        cursor: not-allowed;
+    }
+}
+
+.neu-input-group {
+    .neu-input {
+        padding-right: 2rem;
+        border-radius: 0.3rem !important;
+    }
+    .input-group-append {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        // border: 2px solid rgba(0, 0, 0, 0.02);
+        border-top-right-radius: 0.3rem;
+        border-bottom-right-radius: 0.3rem;
+        z-index: 3;
+        // background: rgb(255,255,255);
+        // background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9346113445378151) 22%, rgba(255,255,255,1) 100%);
+        height: 100%;
+        padding-left: 0.5rem;
+        padding-right:0.5rem;
+    }
+    .input-group-append > .btn {
+        background: none !important;
+        color: #616877;
+        border: none !important;    
+        outline: none !important;
+        box-shadow: none !important;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 0.5rem;
+    }
+}
+  
+
+.dropdown-menu {
+    background: #ffffff;
+    box-shadow: 0px 10px 30px rgba(209, 213, 223, 0.8);
+    border-radius: 1rem;
+    padding: 1rem 0;
+    border: none !important;
+}
+.dropdown-item, .dropdown-group {
+    padding: 0.6rem 2rem;
+}
+
+.card-input {
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0px 10px 30px rgba(209, 213, 223, 0.5);
+    -webkit-appearance: none; //iOS messes up forms - See: https://stackoverflow.com/questions/10757146/iphone-ios-will-not-display-box-shadow-properly
+    border-radius: 1rem;
+    height: calc(2.25em + 1.125rem + 2px);
+    padding: 0.5rem 1.5rem;
+    outline: 0 !important;
+    border: none !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      box-shadow: 0px 10px 40px rgba(209, 213, 223, 0.6);
+    }
+}
+
+.card-input-group {
+    .card-input {
+        padding-right: 3rem;
+    }
+    .input-group-append > .btn {
+        background: none !important;
+        color: #616877;
+        border: none !important;    
+        outline: none !important;
+        box-shadow: none !important;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 0.5rem;
+    }
+}
+
+.card-list {
+    max-height: 15rem;
+    overflow-y: scroll;
+}
+
+
+#confetti-canvas {
+    z-index: 99999;
+}
+
+.card-custom {
+    overflow-x: hidden;
+    position: relative;
+}
+.card-custom-loading-bar {
+    position: absolute;
+    top: 0;
+    height: 4px;
+    background-color: #c3c6d1;
+    display: block;
+    border-radius: 1px;
+    width: 100%;
+    animation: card-custom-loading-bar-animation ease-in-out infinite 2s;
+}
+
+@keyframes card-custom-loading-bar-animation {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    25% {
+        transform: translate3d(100% ,0, 0);
+    }
+    75% {
+        transform: translate3d(-100% ,0, 0);
+    }
+    100% {
+        transform: translate3d(0, 0, 0);
+    }
+  }
+
+  //Loading placeholders
+
+  .loading-placeholder {
+      display: inline-block;
+      height: 1rem;
+      width: 100%;
+      background-color: #EDEEF1;
+      border-radius: 0.5rem;
+      animation: loading-placeholder 1.5s infinite ease;
+      &.loading-placeholder-sm {
+          height: 0.75rem;
+          border-radius: 0.375rem;
+      }
+      &.loading-placeholder-lg {
+        height: 1.25rem;
+        border-radius: 0.625rem;
+    }
+  }
+  
+  @keyframes loading-placeholder {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  // toasts
+
+  .b-toast {
+    .toast {
+        outline: none !important;
+        .toast-header {
+            color: rgba(0,0,0,0.5);
+            .close {
+                text-shadow: none;
+                opacity: 0.3;
+            }
+        }
+        .toast-body {
+            padding-top: 0;
+        }
+    }
+
+    &.b-toast-success {
+        .toast {
+            .toast-header {
+                color: #fff;
+                background: $green;
+            }
+            .toast-body {
+                color: #fff;
+                background: $green;
+            }
+        }
+    }
+    &.b-toast-warning {
+        .toast {
+            .toast-header {
+                color: #fff;
+                background: $yellow;
+            }
+            .toast-body {
+                color: #fff;
+                background: $yellow;
+            }
+        }
+    }
+    &.b-toast-danger {
+        .toast {
+            .toast-header {
+                color: #fff;
+                background: $red;
+            }
+            .toast-body {
+                color: #fff;
+                background: $red;
+            }
+        }
+    }
+  }
+
+  
+//clock pending animating icon
+svg.icon-clock {
+    height: 15px;
+    width: 15px;
+    fill: none;
+    stroke: #6c757d;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    --start-seconds: 57;
+    --start-minutes: 45;
+    --start-hours: 11;
+
+    &.icon-clock-warning {
+        stroke: #8a6c10;
+    }
+
+    circle {
+      fill: none;
+    }
+  
+    .seconds,
+    .minute,
+    .hour {
+      transform: translate(20px, 20px) rotate(0deg);
+    }
+  
+    .minute {
+      transform: translate(20px, 20px) rotate(calc(var(--start-minutes) * 6deg));
+      stroke-width: 3;
+      animation: rotateMinuteHand 10s linear infinite;
+    }
+  
+    .hour {
+      transform: translate(20px, 20px) rotate(calc(var(--start-hours) * 30deg));
+      animation: rotateHourHand 60s linear infinite;
+      stroke-width: 3;
+    }
+}
+  @keyframes rotateMinuteHand {
+    from {
+      transform: translate(20px, 20px) rotate(calc(var(--start-minutes) * 6deg));
+    }
+    to {
+      transform: translate(20px, 20px)
+        rotate(calc(var(--start-minutes) * 6deg + 360deg));
+    }
+  }
+  
+  @keyframes rotateHourHand {
+    from {
+      transform: translate(20px, 20px) rotate(calc(var(--start-hours) * 30deg));
+    }
+    to {
+      transform: translate(20px, 20px)
+        rotate(calc(var(--start-hours) * 30deg + 360deg));
+    }
+  }
+
+
+// blur background content on modal open
+.modal-backdrop {
+    opacity: 0.3;
+}
+body {
+    #app {
+        transition: filter 0.2s ease;
+    }
+    &.modal-open {
+        overflow: hidden !important;
+        #app {
+            filter: blur(2px);
+        }
+    }
+    
+}
+
+// Helper class to support text with "\n" newline characters
+.text-newlines {
+    white-space: pre-line; 
+}
+
+.connect-wallet-steps {
+    .connect-wallet-step {
+        margin-bottom: 1.2rem;
+    }   
+}
+.connect-wallet-substeps {
+    list-style-type: lower-roman;
+    padding: 0 0 0 20px;
+    .connect-wallet-substep {
+        margin-bottom: 1.2rem;
+    }
+}
+
+// Helper class to truncate text with "..."
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+// Helper class for fade in and out animation
+.fade-in-out {
+    animation: fadeInOut 1s infinite linear;
+}
+
+@keyframes fadeInOut {
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}

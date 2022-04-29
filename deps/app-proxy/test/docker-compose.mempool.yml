@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: web_mempool
+      APP_PORT: 3006
+      PROXY_AUTH_WHITELIST: "/admin/"
+  web_mempool:
+    image: mempool/frontend:v2.3.1@sha256:38c955caeb58014b266904b059bfabbdab8321d20b11e7cccb139be6dfc8e36e
+    user: "1000:1000"
+    init: true
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "./wait-for mariadb:3306 --timeout=720 -- nginx -g 'daemon off;'"
+    environment:
+      FRONTEND_HTTP_PORT: 3006
+      BACKEND_MAINNET_HTTP_HOST: "api"
+  api:
+    image: mempool/backend:v2.3.1@sha256:f7b16a6b00ea8aabf3b71a34ec05bb373fa0b6f1d31c7981b767edb2d1b7cf89
+    user: "1000:1000"
+    init: true
+    restart: on-failure
+    stop_grace_period: 1m
+    command: "./wait-for-it.sh mariadb:3306 --timeout=720 --strict -- ./start.sh"
+    volumes:
+      - ./apps/mempool/data:/backend/cache
+    environment:
+      ELECTRUM_TLS: "false"
+      DATABASE_HOST: "mariadb"
+      DATABASE_PORT: "3306"
+      DATABASE_DATABASE: "mempool"
+      DATABASE_USERNAME: "mempool"
+      DATABASE_PASSWORD: "mempool"
+      MEMPOOL_HTTP_PORT: "8999"
+      MEMPOOL_CACHE_DIR: "/backend/cache"
+      MEMPOOL_CLEAR_PROTECTION_MINUTES: "20"
+  mariadb:
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ./apps/mempool/mysql/data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: "mempool"
+      MYSQL_USER: "mempool"
+      MYSQL_PASSWORD: "mempool"
+      MYSQL_ROOT_PASSWORD: "moneyprintergobrrr"

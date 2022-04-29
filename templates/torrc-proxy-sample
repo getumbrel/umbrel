@@ -14,6 +14,10 @@ HashedControlPassword <password>
 HiddenServiceDir /data/web
 HiddenServicePort 80 <nginx-ip>:80
 
+# Auth Hidden Service
+HiddenServiceDir /data/auth
+HiddenServicePort 80 <auth-ip>:<auth-port>
+
 # Bitcoin Core P2P Hidden Service
 HiddenServiceDir /data/bitcoin-p2p
 HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>

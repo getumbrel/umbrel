@@ -35,7 +35,7 @@ If you're looking to run Umbrel on:
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)
-- [fswatch](https://emcrisostomo.github.io/fswatch/), [jq](https://stedolan.github.io/jq/), [rsync](https://linuxize.com/post/how-to-use-rsync-for-local-and-remote-data-transfer-and-synchronization/#installing-rsync), [curl](https://curl.haxx.se/docs/install.html), [git](https://git-scm.com/downloads) (`sudo apt-get install fswatch jq rsync curl git`)
+- [fswatch](https://emcrisostomo.github.io/fswatch/), [jq](https://stedolan.github.io/jq/), [yq](https://github.com/mikefarah/yq), [rsync](https://linuxize.com/post/how-to-use-rsync-for-local-and-remote-data-transfer-and-synchronization/#installing-rsync), [curl](https://curl.haxx.se/docs/install.html), [git](https://git-scm.com/downloads) (`sudo apt-get install fswatch jq rsync curl git`)
 
 Make sure your User ID is `1000` (verify it by running `id -u`) and ensure that your account is [correctly permissioned to use docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 

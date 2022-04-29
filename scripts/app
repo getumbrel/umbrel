@@ -77,6 +77,14 @@ source_app() {
 
   export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
   export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
+
+  # App specific exports
+  export APP_ID="${app}"
+  # This provides the app proxy with context of the app
+  export APP_MANIFEST_FILE="${app_data_dir}/umbrel-app.yml"
+  export APP_PROXY_HOSTNAME="app_proxy_${app}"
+  export APP_PROXY_PORT=$(cat "${APP_MANIFEST_FILE}" | yq '.port')
+  
   export APP_DATA_DIR="${app_data_dir}"
   export APP_DOMAIN="${app_domain}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
@@ -85,7 +93,7 @@ source_app() {
 }
 
 # Check dependencies
-check_dependencies docker-compose jq openssl envsubst
+check_dependencies docker-compose jq yq openssl envsubst
 
 if [ -z ${1+x} ]; then
   command=""
@@ -139,20 +147,31 @@ compose() {
   # Source env.
   source_app "${app}"
 
+  # Define support compose files
+  local -r proxy_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.app_proxy.yml"
+  local -r tor_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.tor.yml"
+  local -r common_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.common.yml"
+
   local -r umbrel_env_file="${UMBREL_ROOT}/.env"
-  local -r app_tor_docker_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.tor.yml"
-  local -r app_common_docker_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.common.yml"
-  local -r app_docker_compose_file="${app_data_dir}/docker-compose.yml"
+  local -r app_compose_file="${app_data_dir}/docker-compose.yml"
 
-  compose_files=( "--file" "${app_common_docker_compose_file}" "--file" "${app_docker_compose_file}" )
+  export TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
 
+  # We need to use the proxy compose file first
+  # To allow vars. in the app's compose file to override variables
+  compose_files=()
+  compose_files+=( "--file" "${proxy_compose_file}" )
+  
   # If an app has a torrc file
   # Then include a compose file for Tor
   if [[ -f "${app_torrc_file}" ]]; then
-    export APP_TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
-
-    compose_files+=( "--file" "${app_tor_docker_compose_file}" )
+    compose_files+=( "--file" "${tor_compose_file}" )
   fi
+
+  # Add app's compose file last so that it can override
+  # Any of the other compose files
+  compose_files+=( "--file" "${common_compose_file}" )
+  compose_files+=( "--file" "${app_compose_file}" )
 
   # Merge compose files and args. passed into 'compose'
   compose_args=("${compose_files[@]}" "${@}")
