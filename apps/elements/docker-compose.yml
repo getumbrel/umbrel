@@ -2,14 +2,14 @@ version: "3.8"
 
 services:
   node:
-    image: ghcr.io/vulpemventures/elements:0.21.0.2@sha256:25f407a8289835f89d6829a8a14c1520ed3509fe7f594b9bc2b616b522d570c4
+    image: ghcr.io/vulpemventures/elements:0.21.0.2@sha256:a7b0c160966fa391f6b75efc2bd4416ef13d19996aa45dd43347eac5c33ec7e4
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - 7041:7041 # JSONRPC
       - 18332:18332 # P2P PORT
     volumes:
-      - ${APP_DATA_DIR}/data:/home/elements/.elements
+      - ${APP_DATA_DIR}/data:/data/.elements
 #      - ${APP_DATA_DIR}/data:/datadir  //TODO to circumvent permission denied
     command:
 #      - -datadir=/datadir
