@@ -10,12 +10,15 @@ services:
       - 18332:18332 # P2P PORT
     volumes:
       - ${APP_DATA_DIR}/data:/home/elements/.elements
-    command: 
+#      - ${APP_DATA_DIR}/data:/datadir  //TODO to circumvent permission denied
+    command:
+#      - -datadir=/datadir
       - -listen=1
       - -txindex=1
       - -validatepegin=1
       - -fallbackfee=0.000001
       # Attach to Bitcoin network
+      - -mainchainrpchost=$BITCOIN_IP
       - -mainchainrpcport=$BITCOIN_RPC_PORT
       - -mainchainrpcuser=$BITCOIN_RPC_USER
       - -mainchainrpcpassword=$BITCOIN_RPC_PASS
@@ -35,11 +38,11 @@ services:
       - node
     restart: on-failure
     ports:
-      - 8080:8080
+      - 3042:8080
     environment:
       RPC_USER: elements
       RPC_PASS: $APP_PASSWORD
       RPC_PORT: 7041
-      RPC_HOST: $APP_HIDDEN_SERVICE
+      RPC_HOST: node
 
   
