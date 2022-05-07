@@ -3,8 +3,7 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
-DEFAULT_APP_REPO_ID=$($UMBREL_ROOT/scripts/repo id)
-ACTIVE_APP_REPO_PATH="${UMBREL_ROOT}/repos/${DEFAULT_APP_REPO_ID}"
+ACTIVE_APP_REPO_PATH=$($UMBREL_ROOT/scripts/repo path)
 
 show_help() {
   cat << EOF
@@ -56,6 +55,15 @@ derive_entropy () {
 
   # We need `sed 's/^.* //'` to trim the "(stdin)= " prefix from some versions of openssl
   printf "%s" "${identifier}" | openssl dgst -sha256 -hmac "${umbrel_seed}" | sed 's/^.* //'
+}
+
+# If the app does not provide a torrc or torrc.template file
+# Then we'll provide a default Tor torrc.template file
+copy_default_torrc_template() {
+  if [[ ! -f "${app_data_dir}/torrc.template" ]] && [[ ! -f "${app_data_dir}/torrc" ]]; then
+    local -r torrc_template_file="${UMBREL_ROOT}/scripts/support/torrc.template"
+    cp --archive "${torrc_template_file}" "${app_data_dir}"
+  fi
 }
 
 # Setup env. for this context for a given app
@@ -247,6 +255,11 @@ wait_for_tor_hs() {
   # Let's allow 10 seconds to generate it and then start the app
   if [[ -f "${app_torrc_file}" ]] && [[ ! -f "${app_hidden_service_file}" ]]; then
     echo "Generating hidden services..."
+    # We need to also boot the app proxy, otherwise I get this weird error:
+    # Failed to parse/validate config: Unknown option 's6-setuidgid'.  Failing.
+    # I can only imagine because the app proxy hostname must be resolvable
+    # In order to generate HS hostnames...
+    compose "${app}" up --detach app_proxy
     compose "${app}" up --detach tor_server
 
     for attempt in $(seq 1 100); do
@@ -293,18 +306,14 @@ if [[ "$command" = "install" ]]; then
   # Copy all app files
   rsync --archive --verbose --exclude ".gitkeep" "${app_repo_dir}/." "${app_data_dir}"
 
+  # Copy default torrc.template file (if needed)
+  copy_default_torrc_template
+
   # Source env.
   source_app "${app}"
 
   # Now apply templates
   template_app "${app}"
-
-  # Execute migration file
-  MIGRATE_FILE="${app_data_dir}/migrate.sh"
-  if [[ -f "${MIGRATE_FILE}" ]] && [[ -x "${MIGRATE_FILE}" ]]; then
-    echo "Running ${app} migration..."
-    "${MIGRATE_FILE}"
-  fi
 
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
@@ -385,7 +394,7 @@ if [[ "$command" = "update" ]]; then
   fi
   
   # App updates will only copy files from this whitelist:
-  UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh migrate.sh"
+  UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc"
 
   # We copy umbrel-app.yml after the app has started
   # That way the frontend knows the update has finished
@@ -397,18 +406,14 @@ if [[ "$command" = "update" ]]; then
   # Copy remaining files in the event of error or success
   trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
-  # Source env. after new exports.sh is copied (above)
+  # Copy default torrc.template file (if needed)
+  copy_default_torrc_template
+
+  # Source env. after new exports.sh is copied (done above via 'copy_app_files')
   source_app "${app}"
 
   # Now apply templates
   template_app "${app}"
-
-  # Execute migration file
-  MIGRATE_FILE="${app_data_dir}/migrate.sh"
-  if [[ -f "${MIGRATE_FILE}" ]] && [[ -x "${MIGRATE_FILE}" ]]; then
-    echo "Running ${app} migration..."
-    "${MIGRATE_FILE}"
-  fi
 
   echo "Pulling images for app ${app}..."
   compose "${app}" pull

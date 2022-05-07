@@ -3,6 +3,7 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
+DEFAULT_UMBREL_APP_REPO_URL="git@github.com:nevets963/umbrel-repo.git"
 
 show_help() {
   cat << EOF
@@ -14,8 +15,10 @@ Usage: repo <command> <arguments...>
 
 Commands:
   id                          Get id of active app repo
-  set                         Set remote app repo
+  path                        Get path of active app repo
+  set                         Set remote app repo url
   update                      Update local app repo
+  default-repo                Get default remote app repo url
     
 EOF
 }
@@ -38,16 +41,28 @@ else
   command="$1"
 fi
 
-APP_REPO_URL=$(cat "${USER_FILE}" | jq -r '.appRepo')
+# If the 'user.json' doesn't exist or the 'appRepo' property is empty
+# Then we use the default app repo url
+USER_JSON=$(cat "${USER_FILE}" 2> /dev/null || echo "null")
+APP_REPO_URL=$(echo "${USER_JSON}" | jq -r "if (has(\"appRepo\") and (.appRepo | length > 0)) then .appRepo else \"${DEFAULT_UMBREL_APP_REPO_URL}\" end")
 
 function repo_id() {
   echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
 }
 
+function repo_path() {
+  REPO=$(repo_id)
+  echo "${UMBREL_ROOT}/repos/${REPO}"
+}
+
 # Prints out repo ID
 if [[ "$command" = "id" ]]; then
   repo_id
+  exit
+fi
 
+if [[ "$command" = "path" ]]; then
+  repo_path
   exit
 fi
 
@@ -77,11 +92,10 @@ if [[ "$command" = "update" ]]; then
     exit 1
   fi
 
-  echo "Processing repo: ${repo}"
-
-  LOCAL_REPO_PATH="${UMBREL_ROOT}/repos/${repo}"
+  LOCAL_REPO_PATH=$(repo_path)
   if [[ -d "${LOCAL_REPO_PATH}" ]]; then
-    echo "Updating repo: ${repo}"
+    REPO_BRANCH=$(git -C "${LOCAL_REPO_PATH}" rev-parse --abbrev-ref HEAD)
+    echo "Updating repo: ${repo} (${REPO_BRANCH})"
 
     timeout --foreground 30 git -C "${LOCAL_REPO_PATH}" pull
   else
@@ -90,6 +104,11 @@ if [[ "$command" = "update" ]]; then
     timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
   fi
 
+  exit
+fi
+
+if [[ "$command" = "default-repo" ]]; then
+  echo "${DEFAULT_UMBREL_APP_REPO_URL}"
   exit
 fi
 
