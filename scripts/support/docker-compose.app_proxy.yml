@@ -14,14 +14,14 @@ services:
             - "${TOR_DATA_DIR}:/var/lib/tor:ro"
             - "${APP_DATA_DIR}:/data:ro"
         environment:
-            LOG_LEVEL: debug
+            LOG_LEVEL: info
             PROXY_PORT: $APP_PROXY_PORT
             PROXY_AUTH_ADD: "true"
             PROXY_AUTH_WHITELIST: 
             PROXY_AUTH_BLACKLIST: 
             APP_HOST: 
             APP_PORT: 
-            AUTH_SERVICE_PORT: 2000
+            AUTH_SERVICE_PORT: $AUTH_PORT
             UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
             MANAGER_IP: $MANAGER_IP
             MANAGER_PORT: 3006
