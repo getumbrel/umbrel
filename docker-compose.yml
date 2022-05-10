@@ -121,7 +121,7 @@ services:
                 build: ./deps/app-auth
                 restart: on-failure
                 environment:
-                    PORT: 2000
+                    PORT: $AUTH_PORT
                     UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
                     MANAGER_IP: $MANAGER_IP
                     MANAGER_PORT: 3006
@@ -129,7 +129,7 @@ services:
                         - ${PWD}/tor/data:/var/lib/tor:ro
                         - ${PWD}/app-data:/app-data:ro
                 ports:
-                    - "${AUTH_PORT}:2000"
+                    - "${AUTH_PORT}:${AUTH_PORT}"
                 networks:
                     default:
                         ipv4_address: $AUTH_IP
