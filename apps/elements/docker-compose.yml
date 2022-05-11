@@ -32,7 +32,7 @@ services:
       - -peerblockfilters=1
     networks:
       default:
-        ipv4_address: $APP_ELEMENTS_IP
+        ipv4_address: $APP_ELEMENTS_NODE_IP
   web: 
     image: ghcr.io/tiero/elements-web:v0.0.2@sha256:735519fee17ae0b5a9b5c101cfed13c56cec818c8a17027ba512c2868792649f
     depends_on:
@@ -50,6 +50,6 @@ services:
       REMOTE_P2P_HOST: $ELEMENTS_P2P_HIDDEN_SERVICE
     networks:
       default:
-        ipv4_address: $APP_ELEMENTS_NODE_IP
+        ipv4_address: $APP_ELEMENTS_IP
 
   
