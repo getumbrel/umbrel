@@ -235,5 +235,5 @@ HiddenServiceDir /data/app-elements-rpc
 HiddenServicePort <app-elements-node-rpc-port> <app-elements-node-ip>:<app-elements-node-rpc-port>
 
 # elements p2p Hidden Service
-HiddenServiceDir /data/app-elements-rpc
+HiddenServiceDir /data/app-elements-p2p
 HiddenServicePort <app-elements-node-p2p-port> <app-elements-node-ip>:<app-elements-node-p2p-port>
