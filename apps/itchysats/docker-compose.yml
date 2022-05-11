@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/itchysats/itchysats/taker:0.4.12@sha256:d83f62995cedf7d499d4b2da13d7d1c3d1edf79d9334e8a66f2578255d5539c1
+    image: ghcr.io/itchysats/itchysats/taker:0.4.14@sha256:ae760e9685144d18c4ec11af05024fb93f8b70ad093efd640e427d9c0bc9d6b1
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -10,8 +10,6 @@ services:
     volumes:
       - ${APP_DATA_DIR}/data:/data
     command:
-      - --maker=$BITCOIN_NETWORK.itchysats.network:10000
-      - --maker-id=7e35e34801e766a6a29ecb9e22810ea4e3476c2b37bf75882edf94a68b1d9607
       - --password=$APP_PASSWORD
       - --umbrel-seed=$APP_SEED
       - $BITCOIN_NETWORK
