@@ -34,7 +34,7 @@ services:
       default:
         ipv4_address: $APP_ELEMENTS_IP
   web: 
-    image: ghcr.io/tiero/elements-web:v0.0.1@sha256:d0b0b7b6638033e08fbfc9bd0f467309b02f5a7bda78872694b625e1c4d60862
+    image: ghcr.io/tiero/elements-web:v0.0.1@sha256:735519fee17ae0b5a9b5c101cfed13c56cec818c8a17027ba512c2868792649f
     depends_on:
       - node
     restart: on-failure
@@ -45,6 +45,9 @@ services:
       RPC_PASS: $APP_PASSWORD
       RPC_PORT: $APP_ELEMENTS_NODE_RPC_PORT
       RPC_HOST: $APP_ELEMENTS_IP
+      # Remote 
+      REMOTE_RPC_HOST: $ELEMENTS_RPC_HIDDEN_SERVICE
+      REMOTE_P2P_HOST: $ELEMENTS_P2P_HIDDEN_SERVICE
     networks:
       default:
         ipv4_address: $APP_ELEMENTS_NODE_IP
