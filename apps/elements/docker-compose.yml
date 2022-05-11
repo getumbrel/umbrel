@@ -6,8 +6,8 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     ports:
-      - 7041:7041 # JSONRPC
-      - 18332:18332 # P2P PORT
+      - $APP_ELEMENTS_NODE_RPC_PORT:$APP_ELEMENTS_NODE_RPC_PORT # JSONRPC
+      - $APP_ELEMENTS_NODE_P2P_PORT:$APP_ELEMENTS_NODE_P2P_PORT # P2P PORT
     volumes:
       - ${APP_DATA_DIR}/data:/home/elements/.elements
     command:
@@ -25,22 +25,28 @@ services:
       - -rpcpassword=$APP_PASSWORD
       - -rpcbind=0.0.0.0 # can we do better here?
       - -rpcallowip=0.0.0.0/0 # can we do better here?
-      - -rpcport=7041
+      - -rpcport=$APP_ELEMENTS_NODE_RPC_PORT
       # P2P 
-      - -port=18332
+      - -port=$APP_ELEMENTS_NODE_P2P_PORT
       - -blockfilterindex=1
       - -peerblockfilters=1
+    networks:
+      default:
+        ipv4_address: $APP_ELEMENTS_IP
   web: 
     image: ghcr.io/tiero/elements-web:v0.0.1@sha256:d0b0b7b6638033e08fbfc9bd0f467309b02f5a7bda78872694b625e1c4d60862
     depends_on:
       - node
     restart: on-failure
     ports:
-      - 3042:8080
+      - $APP_ELEMENTS_PORT:8080
     environment:
       RPC_USER: elements
       RPC_PASS: $APP_PASSWORD
-      RPC_PORT: 7041
-      RPC_HOST: node
+      RPC_PORT: $APP_ELEMENTS_NODE_RPC_PORT
+      RPC_HOST: $APP_ELEMENTS_IP
+    networks:
+      default:
+        ipv4_address: $APP_ELEMENTS_NODE_IP
 
   

@@ -256,6 +256,11 @@ APP_JAM_PORT="5002"
 APP_BLESKOMAT_SERVER_PORT="3333"
 APP_BLESKOMAT_SERVER_IP="10.21.21.85"
 APP_BLESKOMAT_SERVER_DB_IP="10.21.21.86"
+APP_ELEMENTS_PORT="3042"
+APP_ELEMENTS_IP="10.21.21.87"
+APP_ELEMENTS_NODE_IP="10.21.21.88"
+APP_ELEMENTS_NODE_RPC_PORT="7041"
+APP_ELEMENTS_NODE_P2P_PORT="18332"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -512,6 +517,11 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-bleskomat-server-port>/${APP_BLESKOMAT_SERVER_PORT}/g" "${template}"
   sed -i "s/<app-bleskomat-server-ip>/${APP_BLESKOMAT_SERVER_IP}/g" "${template}"
   sed -i "s/<app-bleskomat-server-db-ip>/${APP_BLESKOMAT_SERVER_DB_IP}/g" "${template}"
+  sed -i "s/<app-elements-port>/${APP_ELEMENTS_PORT}/g" "${template}"
+  sed -i "s/<app-elements-ip>/${APP_ELEMENTS_IP}/g" "${template}"
+  sed -i "s/<app-elements-node-ip>/${APP_ELEMENTS_NODE_IP}/g" "${template}"
+  sed -i "s/<app-elements-node-rpc-port>/${APP_ELEMENTS_NODE_RPC_PORT}/g" "${template}"
+  sed -i "s/<app-elements-node-p2p-port>/${APP_ELEMENTS_NODE_P2P_PORT}/g" "${template}"
 done
 
 ##########################################################
