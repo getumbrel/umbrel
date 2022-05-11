@@ -24,7 +24,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.4.2@sha256:17507f737d4398b7270f480468c088cd3f8dec9d3d5480a017645e3fd2351bb1
+    image: btcpayserver/btcpayserver:1.4.9@sha256:3310ef8c5fecb3a1c66507b97ebc84a3475fc77e63cd3bd29ab8b76474214566
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -53,10 +53,12 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_IP
 
   postgres:
-    image: btcpayserver/postgres:13.4-4@sha256:938574253f985b9ac7814329b576dc04a8fe6e330e214afcf3cd0bf4b41eceb8
+    image: btcpayserver/postgres:13.6@sha256:dadf0048895a888d88a2dd773dde2f5868c45f74ad37c6d208694df54b590531
     # This needs to run as root for migrations to succeed
     # user: "1000:1000"
     restart: on-failure
+    # https://github.com/btcpayserver/btcpayserver-docker/commit/a65e7db6851092c75c5ac6c091a5f36ccc5fc26e
+    command: [ "-c", "random_page_cost=1.0" ]
     stop_grace_period: 1m
     environment:
         POSTGRES_HOST_AUTH_METHOD: trust
