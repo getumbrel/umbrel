@@ -34,7 +34,7 @@ services:
       default:
         ipv4_address: $APP_ELEMENTS_IP
   web: 
-    image: ghcr.io/tiero/elements-web:v0.0.1@sha256:735519fee17ae0b5a9b5c101cfed13c56cec818c8a17027ba512c2868792649f
+    image: ghcr.io/tiero/elements-web:v0.0.2@sha256:735519fee17ae0b5a9b5c101cfed13c56cec818c8a17027ba512c2868792649f
     depends_on:
       - node
     restart: on-failure
