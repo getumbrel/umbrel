@@ -265,7 +265,6 @@ APP_SPARKKIOSK_PORT="21214"
 APP_IPFSPOD_IP="10.21.21.26"
 APP_IPFSPOD_PORT="8675"
 APP_IPFS_PORT="4001"
-APP_IPFS_UI="5001"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -531,7 +530,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-ipfspod-port>/${APP_IPFSPOD_PORT}/g" "${template}"
   sed -i "s/<app-ipfspod-ip>/${APP_IPFSPOD_IP}/g" "${template}"
   sed -i "s/<app-ipfs-port>/${APP_IPFS_PORT}/g" "${template}"
-  sed -i "s/<app-ipfs-ui>/${APP_IPFS_UI}/g" "${template}"
 done
 
 ##########################################################
