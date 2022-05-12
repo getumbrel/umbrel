@@ -1064,5 +1064,29 @@
         "path": "",
         "deterministicPassword": true,
         "torOnly": false
+    },
+    {
+        "id": "elements",
+        "category": "Wallet Servers",
+        "name": "Elements Core",
+        "version": "v0.21.0.2",
+        "tagline": "Liquid Network full node",
+        "description": "Elements is an open source full node implementation to run the Liquid Network, a Bitcoin layer-2 solution enabling the fast, confidential settlement and issuance of digital assets, such as stablecoins, security tokens, and other financial instruments, on top of the Bitcoin timechain.",
+        "developer": "Elements Core Developers",
+        "website": "https://elementsproject.org",
+        "dependencies": [
+            "bitcoind"
+        ],
+        "repo": "https://github.com/ElementsProject/elements",
+        "support": "https://t.me/liquid_community",
+        "port": 3042,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false
     }
 ]
