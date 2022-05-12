@@ -8,14 +8,13 @@ services:
     stop_grace_period: 1m
     user: "1000:1000"
     ports:
-      - 4001:4001
-      - 5001:5001
-      - 8675:8675
+      - ${APP_IPFS_PORT}:4001  # IPFS
+      - ${APP_IPFS_UI}:5001  # IPFS UI
+      - ${APP_IPFSPOD_PORT}:8675  # Web UI
     volumes:
       - ${APP_DATA_DIR}/ipfs:/ipfs-podcasting/ipfs
       - ${APP_DATA_DIR}/cfg:/ipfs-podcasting/cfg
     environment:
-      HOST_IP: $APP_IPFSHOST_IP
       LOCAL_IP: $APP_IPFSPOD_IP
     networks:
       default:
