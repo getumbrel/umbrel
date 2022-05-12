@@ -234,6 +234,18 @@ HiddenServicePort 80 <app-agora-ip>:80
 HiddenServiceDir /data/app-sparkkiosk
 HiddenServicePort 80 <app-sparkkiosk-ip>:21214
 
+# elements Hidden Service
+HiddenServiceDir /data/app-elements
+HiddenServicePort 80 <app-elements-ip>:8080
+
+# elements rpc Hidden Service
+HiddenServiceDir /data/app-elements-rpc
+HiddenServicePort <app-elements-node-rpc-port> <app-elements-node-ip>:<app-elements-node-rpc-port>
+
+# elements p2p Hidden Service
+HiddenServiceDir /data/app-elements-p2p
+HiddenServicePort <app-elements-node-p2p-port> <app-elements-node-ip>:<app-elements-node-p2p-port>
+
 # ipfs-podcasting Hidden Service
 HiddenServiceDir /data/app-ipfspod
 HiddenServicePort 80 <app-ipfspod-ip>:<app-ipfspod-port>
