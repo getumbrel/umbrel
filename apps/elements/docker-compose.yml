@@ -15,7 +15,7 @@ services:
       - -txindex=1
       # Current Elements Core requires >8GB of RAM to verify confidential proofs during IBD
       # We skip historical block verification for now, as we don't have a way to set the memory limit
-      - -assumevalid=tip
+      - -assumevalid=d4046e2c27e32e8582af39e402528e5df6ede1e1dd3c551764699e02e50bbf1e
       - -validatepegin=1
       - -fallbackfee=0.000001
       # Attach to Bitcoin network
