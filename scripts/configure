@@ -360,7 +360,7 @@ sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
 
 # Add hostname to lnd.conf for TLS certificate
-DEVICE_HOSTNAME="$(hostname)"
+DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname)"
 sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$LND_CONF_FILE"
 
 # If node is already synced, do not reset to neutrino
