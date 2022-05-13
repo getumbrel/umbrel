@@ -8,11 +8,11 @@ services:
     stop_grace_period: 1m
     user: "1000:1000"
     ports:
-      - ${APP_IPFS_PORT}:4001  # IPFS
-      - ${APP_IPFSPOD_PORT}:8675  # Web UI
+      - ${APP_IPFS_PODCASTING_P2P_PORT}:4001  # IPFS
+      - ${APP_IPFS_PODCASTING_PORT}:8675  # Web UI
     volumes:
       - ${APP_DATA_DIR}/ipfs:/ipfs-podcasting/ipfs
       - ${APP_DATA_DIR}/cfg:/ipfs-podcasting/cfg
     networks:
       default:
-        ipv4_address: $APP_IPFSPOD_IP
+        ipv4_address: $APP_IPFS_PODCASTING_IP

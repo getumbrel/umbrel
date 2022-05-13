@@ -247,5 +247,5 @@ HiddenServiceDir /data/app-elements-p2p
 HiddenServicePort <app-elements-node-p2p-port> <app-elements-node-ip>:<app-elements-node-p2p-port>
 
 # ipfs-podcasting Hidden Service
-HiddenServiceDir /data/app-ipfspod
-HiddenServicePort 80 <app-ipfspod-ip>:<app-ipfspod-port>
+HiddenServiceDir /data/app-ipfs-podcasting
+HiddenServicePort 80 <app-ipfs-podcasting-ip>:<app-ipfs-podcasting-port>
