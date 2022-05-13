@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   nbxplorer:
-    image: nicolasdorier/nbxplorer:2.3.24@sha256:4e06c878cf7243986dc57a5090f220d4e33ff238dd3f21d9aeeb7368c9a4c315
+    image: nicolasdorier/nbxplorer:2.2.20@sha256:8f0e7f68513596e0a2555990d262169088a70204abe397bf18ba921f9b0608f3
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
