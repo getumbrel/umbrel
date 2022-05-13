@@ -1,0 +1,37 @@
+version: "3.7"
+
+services:
+  web:
+    image: woofbot/woofbot:v0.1.0@sha256:33cc12fe506bc5c250c571a877ecbe4b391567a5ac7948dfd000fbdfe0f76ba1
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 8084:8080
+    environment:
+      MONGODB_URI: mongodb://10.21.21.92:27017/woofbot
+      APP_SEED: $APP_SEED
+      APP_PASSWORD: $APP_PASSWORD
+      BITCOIN_IP: $BITCOIN_IP
+      BITCOIN_RPC_USER: $BITCOIN_RPC_USER
+      BITCOIN_RPC_PASS: $BITCOIN_RPC_PASS
+      BITCOIN_RPC_PORT: $BITCOIN_RPC_PORT
+    networks:
+      default:
+        ipv4_address: 10.21.21.91
+    depends_on:
+      - mongodb
+  mongodb:
+    # Newer mongo versions don't support Raspberry Pi 4 arm64
+    image: mongo:4.4.6-bionic@sha256:3d0e6df9fd5bc42cbf8ef8bc9e6c4e78f6f26c7157dbd7bdec72d202ab8ebe3a
+    user: 1000:1000
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 27017:27017
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/data/db
+      - ${APP_DATA_DIR}/data/db/diagnostic.data:/data/db/diagnostic.data
+      - ${APP_DATA_DIR}/data/db/journal:/data/db/journal
+    networks:
+      default:
+        ipv4_address: 10.21.21.92
