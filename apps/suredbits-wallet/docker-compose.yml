@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/wallet-server-ui:1.9.1@sha256:34f6f57ffd87b200895a528b37b4fb80c0d508af088753a98dc70740c0d7b93a
+    image: bitcoinscala/wallet-server-ui:1.9.1@sha256:3eb479b106811d523c4e0cfde244949f6c76a27c7d1fe59be9b8b51ba2372649
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
