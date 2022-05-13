@@ -1,0 +1,21 @@
+# Umbrel Service Monitor
+# Installed at /etc/systemd/system/umbrel-service-monitor.service
+
+[Unit]
+Description=Service Monitor
+After=umbrel-status-server.service
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/service-monitor
+TimeoutStartSec=45min
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=service monitor
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,5 @@
 .env
 bitcoin/bitcoin.conf
-lnd/lnd.conf
-tor/torrc
+tor/torrc-server
+tor/torrc-proxy
 electrs/electrs.toml

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+STATUS_FILE_PATH="/umbrel-status"
+
+set_status="/status-server/set-status"
+
+check_root () {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+check_umbrel_os () {
+  [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
+  if [[ -z "${UMBREL_OS:-}" ]]; then
+    echo "This script must only be run on Umbrel OS"
+    exit 1
+  fi
+}
+
+has_service_failed () {
+  systemctl is-failed --quiet '*'
+}
+
+has_umbrel_started () {
+  cat "${STATUS_FILE_PATH}" | grep --silent '^umbrel:completed$'
+}
+
+has_error_been_caught () {
+  cat "${STATUS_FILE_PATH}" | grep --silent ':errored:'
+}
+
+check_root
+check_umbrel_os
+
+$set_status service-monitor started
+echo "Starting service monitor..."
+
+while true
+do
+  if has_umbrel_started
+  then
+    echo "Umbrel successfully started, exiting service monitor!"
+    exit 0
+  fi
+  if has_service_failed
+  then
+    echo "Service failed!"
+    if has_error_been_caught
+    then
+      echo "Error already caught, doing nothing."
+    else
+      echo "Error not caught, writing an error."
+      $set_status service-monitor errored service-failed
+    fi
+    echo "Exiting service monitor"
+    exit 0
+  fi
+  sleep 1
+done

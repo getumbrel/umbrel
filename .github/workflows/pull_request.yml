@@ -49,7 +49,7 @@ jobs:
         sudo systemctl restart docker
     - name: Download Umbrel OS build scripts
       run: |
-        git clone git://github.com/getumbrel/umbrel-os.git
+        git clone https://github.com/getumbrel/umbrel-os.git
       
     - name: Build Umbrel OS
       run: |

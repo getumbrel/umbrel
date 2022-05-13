@@ -116,15 +116,27 @@ compose() {
   export APP_DOMAIN="${app_domain}"
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_servive_file}" 2>/dev/null || echo "notyetset.onion")"
   export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
+  export APP_PASSWORD=$(derive_entropy "${app_entropy_identifier}-APP_PASSWORD")
 
   # App specific env vars
   # Note: Hardcoding app specific env vars is a short term solution. Long term
   # these values will be registered in an apps manifest and generated dynamically.
+  local dojo_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-dojo/hostname"
   local whirlpool_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-whirlpool/hostname"
+  local squeaknode_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
+  local suredbits_wallet_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
+  local elements_rpc_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-rpc/hostname"
+  local elements_p2p_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}-p2p/hostname"
+  export SAMOURAI_SERVER_DOJO_HIDDEN_SERVICE="$(cat "${dojo_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_WHIRLPOOL_HIDDEN_SERVICE="$(cat "${whirlpool_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export SAMOURAI_SERVER_NODE_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_API_KEY")
   export SAMOURAI_SERVER_NODE_ADMIN_KEY=$(derive_entropy "env-${app_entropy_identifier}-NODE_ADMIN_KEY")
   export SAMOURAI_SERVER_NODE_JWT_SECRET=$(derive_entropy "env-${app_entropy_identifier}-NODE_JWT_SECRET")
+  export SAMOURAI_SERVER_WHIRLPOOL_API_KEY=$(derive_entropy "env-${app_entropy_identifier}-WHIRLPOOL_API_KEY")
+  export SQUEAKNODE_P2P_HIDDEN_SERVICE="$(cat "${squeaknode_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export SUREDBITS_WALLET_P2P_HIDDEN_SERVICE="$(cat "${suredbits_wallet_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export ELEMENTS_RPC_HIDDEN_SERVICE="$(cat "${elements_rpc_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
+  export ELEMENTS_P2P_HIDDEN_SERVICE="$(cat "${elements_p2p_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
 
   docker-compose \
     --env-file "${env_file}" \
