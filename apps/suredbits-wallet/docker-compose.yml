@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/wallet-server-ui:1.9.0-19b72728-SNAPSHOT@sha256:e3a4dfd7748a4cfce714beacca869c9116026c03dda9130987e151531d374290
+    image: bitcoinscala/wallet-server-ui:1.9.1@sha256:3eb479b106811d523c4e0cfde244949f6c76a27c7d1fe59be9b8b51ba2372649
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -26,12 +26,13 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.9.0-93-4b964074-SNAPSHOT@sha256:e657deb2e6f65cce2f780680322f1b1212d9707a395dd57bace20617cb417833
+    image: bitcoinscala/bitcoin-s-server:1.9.1-34-3dc70938-SNAPSHOT@sha256:1cd82d19059382f740f7b8acbc2d3aaeaf0c1fd7c662bdbc3ef7b97a27ee181f
     user: "1000:1000"
     restart: on-failure
     volumes:
       - ${APP_DATA_DIR}/data/wallet:/home/bitcoin-s/.bitcoin-s
     environment:
+      BITCOIN_S_NODE_MODE: "bitcoind"
       BITCOIN_S_NETWORK: $BITCOIN_NETWORK
       BITCOIN_S_KEYMANAGER_ENTROPY: $APP_SEED  
       BITCOIN_S_PROXY_ENABLED: "false"
