@@ -1088,5 +1088,26 @@
         "path": "",
         "deterministicPassword": false,
         "torOnly": false
+    },
+    {
+        "id": "ipfs-podcasting",
+        "category": "Files",
+        "name": "IPFS Podcasting",
+        "version": "0.5",
+        "tagline": "Crowd-host podcast episodes over IPFS",
+        "description": "Turn your Umbrel into an IPFS node for self-hosting, crowd-hosting, and archiving of your favorite podcasts to the IPFS network.\n\nIPFSPodcasting.net uses participating nodes to manage & track hashes of podcast episodes and generates IPFS/RSS feeds that load media from the IPFS network.\n\nYou only need to run the app to participate. You can optionally configure your email, and manage your node from the website. View the FAQ to learn more.",
+        "developer": "IPFSPodcasting.net",
+        "website": "https://IPFSPodcasting.net",
+        "dependencies": [],
+        "repo": "https://github.com/Cameron-IPFSPodcasting/podcastnode",
+        "support": "https://github.com/Cameron-IPFSPodcasting/podcastnode/issues",
+        "port": 8675,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "defaultPassword": ""
     }
 ]

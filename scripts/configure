@@ -267,6 +267,9 @@ APP_ELEMENTS_IP="10.21.21.91"
 APP_ELEMENTS_NODE_IP="10.21.21.92"
 APP_ELEMENTS_NODE_RPC_PORT="7041"
 APP_ELEMENTS_NODE_P2P_PORT="18332"
+APP_IPFS_PODCASTING_IP="10.21.21.93"
+APP_IPFS_PODCASTING_PORT="8675"
+APP_IPFS_PODCASTING_P2P_PORT="4001"
 
 # Generate RPC credentials
 if [[ -z ${BITCOIN_RPC_USER+x} ]] || [[ -z ${BITCOIN_RPC_PASS+x} ]] || [[ -z ${BITCOIN_RPC_AUTH+x} ]]; then
@@ -534,6 +537,9 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<app-elements-node-ip>/${APP_ELEMENTS_NODE_IP}/g" "${template}"
   sed -i "s/<app-elements-node-rpc-port>/${APP_ELEMENTS_NODE_RPC_PORT}/g" "${template}"
   sed -i "s/<app-elements-node-p2p-port>/${APP_ELEMENTS_NODE_P2P_PORT}/g" "${template}"
+  sed -i "s/<app-ipfs-podcasting-ip>/${APP_IPFS_PODCASTING_IP}/g" "${template}"
+  sed -i "s/<app-ipfs-podcasting-port>/${APP_IPFS_PODCASTING_PORT}/g" "${template}"
+  sed -i "s/<app-ipfs-podcasting-p2p-port>/${APP_IPFS_PODCASTING_P2P_PORT}/g" "${template}"
 done
 
 ##########################################################
