@@ -39,7 +39,7 @@ get_app_memory_use() {
 
   # Above values return % of total memory used so we need to convert to bytes
   total=$(memory_total_bytes)
-  awk "BEGIN {print int(${total}*${app_memory}/100)}"
+  awk "BEGIN {printf(\"%.f\", ${total}*${app_memory}/100)}"
 }
 
 json="{}"
