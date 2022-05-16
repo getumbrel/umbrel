@@ -296,6 +296,16 @@ if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; th
   chown 1000:1000 "${kollider_image_cache_data_dir}"
 fi
 
+# Handle updating files for agora app
+agora_data_dir="${UMBREL_ROOT}/app-data/agora"
+if [[ -d "${agora_data_dir}" ]]; then
+  echo "Found agora install, attempting to update files..."
+  for file in "data/entrypoint.sh" "data/www/admin/index.html" "nginx/nginx.conf.template"
+  do
+    cp "${UMBREL_ROOT}/apps/agora/${file}" "${agora_data_dir}/${file}" || true
+  done
+fi
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +

@@ -22,7 +22,7 @@ services:
   fetcher:
     depends_on:
       - web
-    image: ghcr.io/ibz/usocial:v0.1.5-buster@sha256:1b1215d7fba847bf922a2615fee6400ce61cac4545dff6bfcf9703af8e05b953
+    image: ghcr.io/ibz/usocial:v0.1.7-buster@sha256:864d0d225ed3f48060e6020abbe95355c99fb4426da3fdfb4e185581ccd0368b
     restart: on-failure
     stop_grace_period: 1m
     volumes:
