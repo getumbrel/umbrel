@@ -1,0 +1,29 @@
+version: "3.7"
+
+services:
+  lnvisweb:
+    image: maxkotlan/ln-visualizer-web:v0.0.18@sha256:2e44ffcdd281780e600feaa3898109d6b160f9e139c60a95972fc00b1046a47e
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "${APP_LNVISUALIZER_WEB_PORT}:80"
+    environment:
+      LN_VISUALIZER_API_URL: "http://lnvisapi:5647"
+    networks:
+      default:
+        ipv4_address: "${APP_LNVISUALIZER_WEB_IP}"
+  lnvisapi:
+    image: maxkotlan/ln-visualizer-api:v0.0.18@sha256:8012398ef7b0f7ef309239243982fd9b14d2a8d9c7cedb75c289c8ee4f6ea8ef
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "${APP_LNVISUALIZER_API_PORT}:5647"
+    volumes:
+      - "${LND_DATA_DIR}:/lnd:ro"
+    environment:
+      LND_CERT_FILE: "/lnd/tls.cert"
+      LND_MACAROON_FILE: "/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/readonly.macaroon"
+      LND_SOCKET: "${LND_IP}:${LND_GRPC_PORT}"
+    networks:
+      default:
+        ipv4_address: "${APP_LNVISUALIZER_API_IP}"

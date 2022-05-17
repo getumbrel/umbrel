@@ -249,3 +249,7 @@ HiddenServicePort <app-elements-node-p2p-port> <app-elements-node-ip>:<app-eleme
 # ipfs-podcasting Hidden Service
 HiddenServiceDir /data/app-ipfs-podcasting
 HiddenServicePort 80 <app-ipfs-podcasting-ip>:<app-ipfs-podcasting-port>
+
+# ln-visualizer Hidden Service
+HiddenServiceDir /data/app-ln-visualizer
+HiddenServicePort 80 <app-ln-visualizer-web-ip>:80
