@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/bitfeed-project/bitfeed-client:v2.3.1@sha256:969e16d07a96151c3773743eaf9da71ee601d81f5d371d7ee6b51a7b0d442e4f
+    image: ghcr.io/bitfeed-project/bitfeed-client:v2.3.2@sha256:d1a9652ece022a93d35924f02f63acc9bd6350e705fbfd5e7245d3ed651066cc
     restart: on-failure
     stop_grace_period: 1m
     depends_on:
@@ -18,10 +18,10 @@ services:
         ipv4_address: $APP_BITFEED_IP
 
   api:
-    image: ghcr.io/bitfeed-project/bitfeed-server:v2.3.1@sha256:b2bac98f3b7efabf18b04c8cc3b4297624f5fb6cbdecffba717760571aba9e5b
+    image: ghcr.io/bitfeed-project/bitfeed-server:v2.3.2@sha256:42219748f44beccfb4dc402a1acc543fba1094dd50f2ef580505df885bd0a06e
     user: "1000:1000"
     restart: on-failure
-    stop_grace_period: 5m
+    stop_grace_period: 1m
     environment:
       PORT: "$APP_BITFEED_API_PORT"
       BITCOIN_HOST: "$BITCOIN_IP"

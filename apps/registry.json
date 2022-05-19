@@ -285,7 +285,7 @@
         "id": "bitfeed",
         "category": "Explorers",
         "name": "Bitfeed",
-        "version": "2.3.1",
+        "version": "2.3.2",
         "tagline": "A live mempool visualizer and block explorer",
         "description": "A self-hosted version of Bitfeed - the open source mempool visualizer & block explorer available at https://bitfeed.live.\n\nWatch as new transactions drop into your node's mempool, before being packaged into newly mined blocks.\n\nMonitor Bitcoin network activity, explore blocks and transactions, or simply enjoy a soothing Bitcoin screensaver.",
         "developer": "Mononaut",
