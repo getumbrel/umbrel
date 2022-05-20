@@ -31,7 +31,7 @@ If you're looking to run Umbrel on:
 
 ### Installation Requirements
 
-- 4GB RAM and 600GB+ free space (for mainnet)
+- 4GB RAM and 10GB+ free space (or 600GB+ to sync full Bitcoin mainnet)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python 3.0+](https://www.python.org/downloads)
 - [Docker Compose](https://docs.docker.com/compose/install)
@@ -57,12 +57,6 @@ sudo ./scripts/start
 # during first run of the start script and will be persisted through
 # any updates
 
-# For testnet, run:
-sudo NETWORK=testnet ./scripts/start
-
-# For regtest, run:
-sudo NETWORK=regtest ./scripts/start
-
 # For umbrel to listen on port 12345 instead of 80, run:
 sudo NGINX_PORT=12345 ./scripts/start
 ```
@@ -78,13 +72,9 @@ sudo ./scripts/stop
 - [`Umbrel Dashboard`](https://github.com/getumbrel/umbrel-dashboard)
 - [`Umbrel Manager`](https://github.com/getumbrel/umbrel-manager)
 - [`Umbrel Middleware`](https://github.com/getumbrel/umbrel-middleware)
-- [`Bitcoin Core`](https://github.com/getumbrel/docker-bitcoind)
-- [`LND`](https://github.com/getumbrel/docker-lnd)
 - [`Tor`](https://github.com/getumbrel/docker-tor)
 - [`Nginx`](https://github.com/nginx/nginx)
 - [`Neutrino Switcher`](https://github.com/lncm/docker-lnd-neutrino-switch)
-- [`Electrs`](https://github.com/romanz/electrs)
-
 
 **Architecture**
 
@@ -105,14 +95,6 @@ sudo ./scripts/stop
    + ------------------ +                         + --------------------- +
    |   umbrel-manager   | < - - - jwt auth - - -  |   umbrel-middleware   |
    + ------------------ +                         + --------------------- +
-                                                              |
-                                                              |
-                                            + - - - - - - - - + - - - - - - - - +
-                                            |                                   |
-                                            |                                   |
-                                    + ------------- +                   + ------------- +
-                                    |    bitcoind   | < - - - - - - - - |      lnd      |
-                                    + ------------- +                   + ------------- +
 ```
 
 ---

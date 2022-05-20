@@ -73,23 +73,37 @@ source_app() {
   local -r app_domain="$(hostname -s 2>/dev/null || echo "umbrel").local"
   local -r app_entropy_identifier="app-${app}-seed"
 
+  # Load in existing Umbrel .env
+  # So that apps in their exports.sh can access
+  # e.g. $TOR_PROXY_IP, $TOR_PROXY_PORT
+  [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
+
+  # Set other useful vars. used in exports
+  export DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "umbrel")"
+  export DEVICE_DOMAIN_NAME="${DEVICE_HOSTNAME}.local"
+
   # Set env using all installed apps exports.sh
   # Do this first so that no app exports can
-  # Override any exports defined below 
-  APP_EXPORTS="${UMBREL_ROOT}/app-data/*/exports.sh"
-  for app_export in $APP_EXPORTS; do
-    if [[ -f "${app_export}" ]]; then
-      . "${app_export}"
-    fi
-  done
+  # Override any exports defined below
+  EXPORTS_TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
 
-  export BITCOIN_DATA_DIR="${UMBREL_ROOT}/bitcoin"
-  export LND_DATA_DIR="${UMBREL_ROOT}/lnd"
+  ALL_APPS="${UMBREL_ROOT}/app-data/*"
+  for EXPORTS_APP_DIR in $ALL_APPS; do
+    # Provide some context to the export script
+    # That will be sourced in below
+    EXPORTS_APP_ID=$(basename "${EXPORTS_APP_DIR}")
+    EXPORTS_APP_FILE="${EXPORTS_APP_DIR}/exports.sh"
+    EXPORTS_APP_DATA_DIR="${EXPORTS_APP_DIR}/data"
+
+    [[ -f "${EXPORTS_APP_FILE}" ]] && . "${EXPORTS_APP_FILE}"
+  done
 
   # App specific exports
   export APP_ID="${app}"
-  # This provides the app proxy with context of the app
   export APP_MANIFEST_FILE="${app_data_dir}/umbrel-app.yml"
+  export APP_VERSION=$(cat "${APP_MANIFEST_FILE}" | yq '.version')
+  
+  # This provides the app proxy with context of the app
   export APP_PROXY_HOSTNAME="app_proxy_${app}"
   export APP_PROXY_PORT=$(cat "${APP_MANIFEST_FILE}" | yq '.port')
   
@@ -98,6 +112,8 @@ source_app() {
   export APP_HIDDEN_SERVICE="$(cat "${app_hidden_service_file}" 2>/dev/null || echo "notyetset.onion")"
   export APP_SEED=$(derive_entropy "${app_entropy_identifier}")
   export APP_PASSWORD=$(derive_entropy "${app_entropy_identifier}-APP_PASSWORD")
+
+  export UMBREL_ROOT
 }
 
 # Check dependencies
@@ -292,13 +308,26 @@ start_app() {
   compose "${app}" up --detach
 }
 
-# Pulls down images for an app and starts it
-if [[ "$command" = "install" ]]; then
+# Check that the app is installed
+must_be_installed_guard() {
+  if ! list_installed_apps | grep --quiet "^${app}$"; then
+    >&2 echo "Error: app \"${app}\" is not installed yet"
+    exit 1
+  fi
+}
 
+# Check that the app exists in the local app repo
+must_exist_in_app_repo_guard() {
   if [[ ! -d "${app_repo_dir}" ]]; then
     >&2 echo "Error: \"${app}\" not found in app repo"
     exit 1
   fi
+}
+
+# Pulls down images for an app and starts it
+if [[ "$command" = "install" ]]; then
+  
+  must_exist_in_app_repo_guard
 
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
@@ -318,8 +347,10 @@ if [[ "$command" = "install" ]]; then
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
-  echo "Starting app ${app}..."
-  start_app "${app}"
+  if [[ "$*" != *"--skip-start"* ]]; then
+    echo "Starting app ${app}..."
+    start_app "${app}"
+  fi
 
   echo "Saving app ${app} in DB..."
   update_installed_apps add "${app}"
@@ -331,10 +362,7 @@ fi
 # Removes images and destroys all data for an app
 if [[ "$command" = "uninstall" ]]; then
 
-  if ! list_installed_apps | grep --quiet "^${app}$"; then
-    >&2 echo "Error: app \"${app}\" is not installed yet"
-    exit 1
-  fi
+  must_be_installed_guard
 
   echo "Removing images for app ${app}..."
   compose "${app}" down --rmi all --remove-orphans
@@ -363,10 +391,7 @@ fi
 # Starts an installed app
 if [[ "$command" = "start" ]]; then
 
-  if ! list_installed_apps | grep --quiet "^${app}$"; then
-    >&2 echo "Error: app \"${app}\" is not installed yet"
-    exit 1
-  fi
+  must_be_installed_guard
 
   echo "Starting app ${app}..."
   start_app "${app}"
@@ -377,15 +402,9 @@ fi
 # Update an installed app
 if [[ "$command" = "update" ]]; then
 
-  if ! list_installed_apps | grep --quiet "^${app}$"; then
-    >&2 echo "Error: app \"${app}\" is not installed yet"
-    exit 1
-  fi
+  must_be_installed_guard
 
-  if [[ ! -d "${app_repo_dir}" ]]; then
-    >&2 echo "Error: \"${app}\" not found in app repo"
-    exit 1
-  fi
+  must_exist_in_app_repo_guard
 
   echo "Updating app ${app}..."
 
@@ -427,6 +446,9 @@ fi
 
 # Passes all arguments to docker-compose
 if [[ "$command" = "compose" ]]; then
+  
+  must_be_installed_guard
+
   compose "${app}" ${args}
 
   exit

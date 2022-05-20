@@ -48,9 +48,6 @@ if [ "$BITCOIN_NETWORK" != "mainnet" ] && [ "$BITCOIN_NETWORK" != "testnet" ] &&
   exit 1
 fi
 
-# Get current Umbrel version
-UMBREL_VERSION="$(cat ${UMBREL_ROOT}/info.json | jq -r .version)"
-
 echo
 echo "======================================"
 if [[ -f "${STATUS_DIR}/configured" ]]; then
@@ -69,27 +66,18 @@ echo
 
 # Store paths to intermediary config files
 NGINX_CONF_FILE="./templates/nginx.conf"
-BITCOIN_CONF_FILE="./templates/bitcoin.conf"
-LND_CONF_FILE="./templates/lnd.conf"
 TOR_PROXY_CONF_FILE="./templates/torrc-proxy"
-ELECTRS_CONF_FILE="./templates/electrs.toml"
 ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
 [[ -f "$NGINX_CONF_FILE" ]] && rm -f "$NGINX_CONF_FILE"
-[[ -f "$BITCOIN_CONF_FILE" ]] && rm -f "$BITCOIN_CONF_FILE"
-[[ -f "$LND_CONF_FILE" ]] && rm -f "$LND_CONF_FILE"
 [[ -f "$TOR_PROXY_CONF_FILE" ]] && rm -f "$TOR_PROXY_CONF_FILE"
-[[ -f "$ELECTRS_CONF_FILE" ]] && rm -f "$ELECTRS_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
-[[ -f "./templates/bitcoin-sample.conf" ]] && cp "./templates/bitcoin-sample.conf" "$BITCOIN_CONF_FILE"
-[[ -f "./templates/lnd-sample.conf" ]] && cp "./templates/lnd-sample.conf" "$LND_CONF_FILE"
 [[ -f "./templates/torrc-proxy-sample" ]] && cp "./templates/torrc-proxy-sample" "$TOR_PROXY_CONF_FILE"
-[[ -f "./templates/electrs-sample.toml" ]] && cp "./templates/electrs-sample.toml" "$ELECTRS_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
 
@@ -111,7 +99,10 @@ MANAGER_IP="10.21.21.4"
 MIDDLEWARE_IP="10.21.21.5"
 AUTH_IP="10.21.21.12"
 AUTH_PORT="2000"
-NEUTRINO_SWITCHER_IP="10.21.21.6"
+TOR_PROXY_IP="10.21.21.11"
+TOR_PROXY_PORT="9050"
+
+# App specific state
 BITCOIN_IP="10.21.21.8"
 BITCOIN_RPC_PORT="8332"
 BITCOIN_P2P_PORT="8333"
@@ -124,8 +115,6 @@ LND_GRPC_PORT="10009"
 LND_REST_PORT="8080"
 ELECTRUM_IP="10.21.21.10"
 ELECTRUM_PORT="50001"
-TOR_PROXY_IP="10.21.21.11"
-TOR_PROXY_PORT="9050"
 
 if [[ -z ${UMBREL_AUTH_SECRET+x} ]]; then
   UMBREL_AUTH_SECRET="$(openssl rand -hex 32)"
@@ -154,50 +143,13 @@ fi
 ### Update config files with configuration variables #####
 ##########################################################
 
-if [ "$BITCOIN_NETWORK" == "testnet" ]; then
-  # Set testnet ports
-  BITCOIN_RPC_PORT=18332
-  BITCOIN_P2P_PORT=18333
-  # Switch Bitcoin Core to testnet
-  sed -i '1s/^/testnet=1\n[test]\n\n/' "$BITCOIN_CONF_FILE"
-  # Switch LND to testnet
-  sed -i "s/bitcoin.mainnet=1/bitcoin.testnet=1/g;" "$LND_CONF_FILE"
-  # Uncomment testnet neutrino block and peers
-  sed -i "s/\# \[neutrino\]/\[neutrino\]/g;" "$LND_CONF_FILE"
-  sed -i "s/\# neutrino.addpeer=testnet1-btcd.zaphq.io/neutrino.addpeer=testnet1-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  sed -i "s/\# neutrino.addpeer=testnet2-btcd.zaphq.io/neutrino.addpeer=testnet2-btcd.zaphq.io/g;" "$LND_CONF_FILE"
-  # Set electrs to testnet
-  sed -i "s/network = \"bitcoin\"/network = \"testnet\"/g;" "$ELECTRS_CONF_FILE"
-
-fi
-
-if [ "$BITCOIN_NETWORK" == "regtest" ]; then
-  # Set regtest ports
-  BITCOIN_RPC_PORT=18443
-  BITCOIN_P2P_PORT=18444
-  # Switch Bitcoin Core to regtest
-  sed -i '1s/^/regtest=1\n[regtest]\n\n/' "$BITCOIN_CONF_FILE"
-  # Switch LND to regtest
-  sed -i "s/bitcoin.mainnet=1/bitcoin.regtest=1/g;" "$LND_CONF_FILE"
-  # Use bitcoind as the node
-  sed -i "s/bitcoin.node=neutrino/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
-  # Set electrs to regtest
-  sed -i "s/network = \"bitcoin\"/network = \"regtest\"/g;" "$ELECTRS_CONF_FILE"
-fi
-
 # Update RPC, P2P and ZMQ Ports
-sed -i "s/rpcport=<port>/rpcport=$BITCOIN_RPC_PORT/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/port=<port>/port=$BITCOIN_P2P_PORT/g;" "$BITCOIN_CONF_FILE"
-sed -i "/daemon_rpc_addr/s/<port>/$BITCOIN_RPC_PORT/g;" "$ELECTRS_CONF_FILE"
 sed -i "s/BITCOIN_RPC_PORT=<port>/BITCOIN_RPC_PORT=$BITCOIN_RPC_PORT/g;" "$ENV_FILE"
 sed -i "s/BITCOIN_P2P_PORT=<port>/BITCOIN_P2P_PORT=$BITCOIN_P2P_PORT/g;" "$ENV_FILE"
 
 # Add rpcauth
-sed -i "s/rpcauth=<rpcauth>/rpcauth=$BITCOIN_RPC_AUTH/g;" "$BITCOIN_CONF_FILE"
 sed -i "s/BITCOIN_RPC_AUTH=<rpcauth>/BITCOIN_RPC_AUTH='$BITCOIN_RPC_AUTH'/g;" "$ENV_FILE"
-# Add RPC credentials to lnd.conf
-sed -i "s/bitcoind.rpcuser=<username>/bitcoind.rpcuser=$BITCOIN_RPC_USER/g;" "$LND_CONF_FILE"
-sed -i "s/bitcoind.rpcpass=<password>/bitcoind.rpcpass=$BITCOIN_RPC_PASS/g;" "$LND_CONF_FILE"
+
 # Add RPC credentials to env file
 sed -i "s/BITCOIN_RPC_USER=<username>/BITCOIN_RPC_USER=$BITCOIN_RPC_USER/g;" "$ENV_FILE"
 sed -i "s/BITCOIN_RPC_PASS=<password>/BITCOIN_RPC_PASS=$BITCOIN_RPC_PASS/g;" "$ENV_FILE"
@@ -207,8 +159,6 @@ sed -i "s/BITCOIN_NETWORK=<network>/BITCOIN_NETWORK=$BITCOIN_NETWORK/g;" "$ENV_F
 
 # Add Tor password
 sed -i "s/HashedControlPassword <password>/HashedControlPassword $TOR_HASHED_PASSWORD/g;" "$TOR_PROXY_CONF_FILE"
-sed -i "s/torpassword=<password>/torpassword=$TOR_PASSWORD/g;" "$BITCOIN_CONF_FILE"
-sed -i "s/tor.password=<password>/tor.password=$TOR_PASSWORD/g;" "$LND_CONF_FILE"
 sed -i "s/TOR_PASSWORD=<password>/TOR_PASSWORD=$TOR_PASSWORD/g;" "$ENV_FILE"
 sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWORD/g;" "$ENV_FILE"
 
@@ -216,26 +166,8 @@ sed -i "s/TOR_HASHED_PASSWORD=<password>/TOR_HASHED_PASSWORD=$TOR_HASHED_PASSWOR
 DOCKER_BINARY=$(readlink -f "$(which docker)")
 sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 
-# Set Umbrel version in electrs banner
-sed -i "/server_banner/s/<version>/$UMBREL_VERSION/g;" "$ELECTRS_CONF_FILE"
-
-# Add hostname to lnd.conf for TLS certificate
-DEVICE_HOSTNAME="$(hostname)"
-sed -i "s/tlsextradomain=<hostname>/tlsextradomain=$DEVICE_HOSTNAME.local/g;" "$LND_CONF_FILE"
-
-# If node is already synced, do not reset to neutrino
-if [[ -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
-  sed -i "s/bitcoin.node=.*/bitcoin.node=bitcoind/g;" "$LND_CONF_FILE"
-fi
-
-# Set LND fee URL (but only for mainnet Neutrino)
-LND_FEE_URL=""
-if [[ "$BITCOIN_NETWORK" == "mainnet" ]] && [[ ! -f "${STATUS_DIR}/node-status-bitcoind-ready" ]]; then
-  LND_FEE_URL="https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json"
-fi
-
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "${TOR_PROXY_CONF_FILE}" "${ELECTRS_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${TOR_PROXY_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
@@ -247,7 +179,8 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<auth-ip>/${AUTH_IP}/g" "${template}"
   sed -i "s/<auth-port>/${AUTH_PORT}/g" "${template}"
   sed -i "s/<umbrel-auth-secret>/${UMBREL_AUTH_SECRET}/g" "${template}"
-  sed -i "s/<neutrino-switcher-ip>/${NEUTRINO_SWITCHER_IP}/g" "${template}"
+
+  # App specific state  
   sed -i "s/<bitcoin-ip>/${BITCOIN_IP}/g" "${template}"
   sed -i "s/<bitcoin-p2p-port>/${BITCOIN_P2P_PORT}/g" "${template}"
   sed -i "s/<bitcoin-rpc-port>/$BITCOIN_RPC_PORT/g" "${template}"
@@ -262,7 +195,6 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
   sed -i "s/<zmq-rawtx-port>/${BITCOIN_ZMQ_RAWTX_PORT}/g;" "${template}"
   sed -i "s/<zmq-hashblock-port>/${BITCOIN_ZMQ_HASHBLOCK_PORT}/g;" "${template}"
   sed -i "s/<zmq-sequence-port>/${BITCOIN_ZMQ_SEQUENCE_PORT}/g;" "${template}"
-  sed -i "s#<lndfeeurl>#${LND_FEE_URL}#g;" "${template}"
 done
 
 ##########################################################
@@ -270,18 +202,8 @@ done
 ##########################################################
 
 mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
-mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$TOR_PROXY_CONF_FILE" "./tor/torrc-proxy"
-mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
 mv -f "$ENV_FILE" "./.env"
-
-# Only write LND config if one doesn't already exist to preserve any user changes.
-if [[ -f "./lnd/lnd.conf" ]]; then
-  echo "Skipping lnd.conf update to preserve user changes..."
-  rm "$LND_CONF_FILE"
-else
-  mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
-fi
 
 ##########################################################
 ######### Generate hidden services on first run ##########

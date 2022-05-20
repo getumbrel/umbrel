@@ -4,10 +4,15 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 
-result=$(docker-compose \
-  --file "${UMBREL_ROOT}/docker-compose.yml" \
-  --env-file "${UMBREL_ROOT}/.env" \
-  exec bitcoin bitcoin-cli "$@")
+echo
+echo "  *** Deprecation notice ***"
+echo "  In a future version of Umbrel, 'bitcoin-cli' will be removed."
+echo
+echo "  Please instead use:"
+echo "  ./scripts/app compose umbrel-bitcoin exec bitcoind bitcoin-cli <sub-command>"
+echo
+
+result=$("${UMBREL_ROOT}/scripts/app" compose bitcoin exec bitcoind bitcoin-cli "$@")
 
 # We need to echo with quotes to preserve output formatting
 echo "$result"

@@ -17,23 +17,3 @@ HiddenServicePort 80 <nginx-ip>:80
 # Auth Hidden Service
 HiddenServiceDir /data/auth
 HiddenServicePort 80 <auth-ip>:<auth-port>
-
-# Bitcoin Core P2P Hidden Service
-HiddenServiceDir /data/bitcoin-p2p
-HiddenServicePort <bitcoin-p2p-port> <bitcoin-ip>:<bitcoin-p2p-port>
-
-# Bitcoin Core RPC Hidden Service
-HiddenServiceDir /data/bitcoin-rpc
-HiddenServicePort <bitcoin-rpc-port> <bitcoin-ip>:<bitcoin-rpc-port>
-
-# Electrum Hidden Service
-HiddenServiceDir /data/electrum
-HiddenServicePort <electrum-port> <electrum-ip>:<electrum-port>
-
-# LND REST Hidden Service
-HiddenServiceDir /data/lnd-rest
-HiddenServicePort <lnd-rest-port> <lnd-ip>:<lnd-rest-port>
-
-# LND gRPC Hidden Service
-HiddenServiceDir /data/lnd-grpc
-HiddenServicePort <lnd-grpc-port> <lnd-ip>:<lnd-grpc-port>

@@ -71,7 +71,7 @@ if [[ "$command" = "set" ]]; then
   repo_url="${2-}"
 
   if [[ -z "${repo_url}" ]]; then
-    >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/apps.git"
+    >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/umbrel-apps.git"
     exit 1
   fi
 

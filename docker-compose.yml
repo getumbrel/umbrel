@@ -27,37 +27,6 @@ services:
                 networks:
                     default:
                         ipv4_address: $NGINX_IP
-        bitcoin:
-                container_name: bitcoin
-                image: lncm/bitcoind:v22.0@sha256:37a1adb29b3abc9f972f0d981f45e41e5fca2e22816a023faa9fdc0084aa4507
-                depends_on: [ tor_proxy, manager, nginx ]
-                volumes:
-                        - ${PWD}/bitcoin:/data/.bitcoin
-                restart: on-failure
-                stop_grace_period: 15m30s
-                ports:
-                    - "$BITCOIN_P2P_PORT:$BITCOIN_P2P_PORT"
-                networks:
-                    default:
-                        ipv4_address: $BITCOIN_IP
-        lnd:
-                container_name: lnd
-                image: lightninglabs/lnd:v0.14.2-beta@sha256:8318a24a3ad7319e424253eb56efcbf38e820ebc6d6b6edeec6a8a4e3e9314a0
-                user: 1000:1000
-                depends_on: [ tor_proxy, manager ]
-                volumes:
-                        - ${PWD}/lnd:/data/.lnd
-                environment:
-                  HOME: /data
-                restart: on-failure
-                stop_grace_period: 5m30s
-                ports:
-                    - "9735:9735"
-                    - "$LND_REST_PORT:$LND_REST_PORT"
-                    - "$LND_GRPC_PORT:$LND_GRPC_PORT"
-                networks:
-                    default:
-                        ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
                 image: getumbrel/dashboard:v0.3.32@sha256:545d0253653bb6e48b39b09caf34a1ef55484a6dd8644e5f5e8f164977a7af18
@@ -128,7 +97,7 @@ services:
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.15@sha256:b8a64ba65c314be6288decef6c87086f04a371b1a82c07599b98b67a7422f9fa
-                depends_on: [ manager, bitcoin, lnd ]
+                depends_on: [ manager ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
                 volumes:
@@ -166,37 +135,6 @@ services:
                 networks:
                     default:
                         ipv4_address: $AUTH_IP
-        neutrino-switcher:
-                container_name: neutrino-switcher
-                image: getumbrel/neutrino-switcher:v1.3.0@sha256:399ccea7f39129ff16c9c408f9e68a01dd4671f428273f3c3f401a8a0d2f7ddc
-                depends_on: [ bitcoin, lnd ]
-                restart: on-failure
-                volumes:
-                    - ${PWD}/lnd:/lnd
-                    - ${PWD}/statuses:/statuses
-                    - /var/run/docker.sock:/var/run/docker.sock
-                environment:
-                    JSONRPCURL: "http://${BITCOIN_IP}:${BITCOIN_RPC_PORT}"
-                    RPCUSER: $BITCOIN_RPC_USER
-                    RPCPASS: $BITCOIN_RPC_PASS
-                    LND_CONTAINER_NAME: lnd
-                    SLEEPTIME: 3600
-                networks:
-                    default:
-                        ipv4_address: $NEUTRINO_SWITCHER_IP
-        electrs:
-              container_name: electrs
-              image: getumbrel/electrs:v0.9.4@sha256:b1590ac6cfb0e5b481c6a7af7f0626d76cbb91c63702b0f5c47e2829e9c37997
-              volumes:
-                - ${PWD}/bitcoin:/data/.bitcoin:ro
-                - ${PWD}/electrs:/data
-              restart: on-failure
-              stop_grace_period: 5m
-              ports:
-                  - "$ELECTRUM_PORT:$ELECTRUM_PORT"
-              networks:
-                  default:
-                      ipv4_address: $ELECTRUM_IP
 networks:
     default:
       name: umbrel_main_network
