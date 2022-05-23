@@ -84,14 +84,20 @@ source_app() {
 
   # Set env using all installed apps exports.sh
   # Do this first so that no app exports can
-  # Override any exports defined below
+  # Override any app specific exports defined below
   EXPORTS_TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
 
-  ALL_APPS="${UMBREL_ROOT}/app-data/*"
-  for EXPORTS_APP_DIR in $ALL_APPS; do
-    # Provide some context to the export script
-    # That will be sourced in below
-    EXPORTS_APP_ID=$(basename "${EXPORTS_APP_DIR}")
+  APPS_TO_SOURCE="$(list_installed_apps)"
+
+  # $app might not be in the 'installed apps list' yet
+  # i.e. If it is currently being installed
+  # So we'll add it to the list of apps that will be 'sourced'
+  if ! echo "${APPS_TO_SOURCE}" | grep --quiet "^${app}$"; then
+    APPS_TO_SOURCE="${APPS_TO_SOURCE}"$'\n'"${app}"
+  fi
+
+  for EXPORTS_APP_ID in $APPS_TO_SOURCE; do
+    EXPORTS_APP_DIR="${UMBREL_ROOT}/app-data/${EXPORTS_APP_ID}"
     EXPORTS_APP_FILE="${EXPORTS_APP_DIR}/exports.sh"
     EXPORTS_APP_DATA_DIR="${EXPORTS_APP_DIR}/data"
 

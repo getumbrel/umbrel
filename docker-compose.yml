@@ -48,7 +48,6 @@ services:
                         - ${PWD}/events/signals:/signals
                         - ${PWD}/app-data:/app-data
                         - ${PWD}/repos:/repos
-                        - ${PWD}/lnd:/lnd:ro
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
@@ -101,7 +100,6 @@ services:
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
                 volumes:
-                        - ${PWD}/lnd:/lnd
                         - jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
