@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   jam:
-    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.5-clientserver-v0.9.5@sha256:5fbbc766b25449e87f5fffb689d236b0a0c9b6332c1cb75478bcbc7225d04ad9
+    image: ghcr.io/joinmarket-webui/joinmarket-webui-standalone:v0.0.6-clientserver-v0.9.6@sha256:a4b9a40125585d09f61539085d85846bf26a9fde5755627b163d1a29bf8bf61c
     restart: on-failure
     stop_grace_period: 1m
     init: true
