@@ -339,17 +339,6 @@ echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
-# Killing background services
-echo "Killing background services"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 75, "description": "Killing background services", "updateTo": "$RELEASE"}
-EOF
-ps -Af | \
-  grep '\./karen\|\./scripts/status-monitor\|\./scripts/memory-monitor\|\./scripts/backup/\|umbrel/scripts\|fswatch' \
-  | grep -v '\-run.sh\|update' \
-  | awk '{print $2}' \
-  | xargs sudo kill || true
-
 # Start updated containers
 echo "Starting new containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
