@@ -243,7 +243,18 @@ rsync --archive \
     "$UMBREL_ROOT"/
 
 # Migrate 'apps' structure to using app repos
-"${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT"
+"${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT" || {
+  # If the apps migration fails, revert the update to avoid leaving the user in a broken state
+  echo "App migration failed, reverting update!"
+  echo "Error running app migration" > "${UMBREL_ROOT}/statuses/update-failure"
+  rsync -av \
+    --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
+    --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
+    "$UMBREL_ROOT"/.umbrel-backup/ \
+    "$UMBREL_ROOT"/
+  ./scripts/start
+  false
+}
 
 # Remove legacy electrs dir
 legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
