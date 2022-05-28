@@ -23,7 +23,21 @@ check_dependencies openssl tar gpg shuf curl
 # Deterministically derives 128 bits of cryptographically secure entropy
 derive_entropy () {
   identifier="${1}"
-  umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed") || true
+
+  # Attempt to get new app seed
+  {
+    seed_length=$(jq -r '.seed | length' "${UMBREL_ROOT}/app-data/lightning/data/lightning/state.json")
+    if [[ "${seed_length}" = "24" ]]; then
+      umbrel_seed=$(jq -r '.seed | join(" ")' "${UMBREL_ROOT}/app-data/lightning/data/lightning/state.json")
+    else
+      umbrel_seed=""
+    fi
+  } 2>/dev/null || true
+
+  # Else fall back to umbrel seed
+  if [[ -z "$umbrel_seed" ]]; then
+    umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed" 2>/dev/null) || true
+  fi
 
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     >&2 echo "Missing derivation parameter, this is unsafe, exiting."
