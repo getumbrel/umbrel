@@ -38,7 +38,7 @@ echo "Adding default Umbrel app repo: ${DEFAULT_UMBREL_APP_REPO_URL}"
 LOCAL_REPO_PATH=$($UMBREL_ROOT/scripts/repo path)
 if [[ ! -f "${LOCAL_REPO_PATH}/README.md" ]]; then
   echo "Failed to clone remote app repo: ${DEFAULT_UMBREL_APP_REPO_URL}"
-  exit
+  exit 1
 fi
 
 # 4. Update all apps using the app repo as source of truth
