@@ -59,7 +59,7 @@ fi
 BITCOIN_NETWORK=${BITCOIN_NETWORK:-mainnet}
 
 # Monitor LND channel.backup
-monitor_file "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" &
+monitor_file "${UMBREL_ROOT}/app-data/lightning/data/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" &
 
 # Monitor db/user.json
 # We want to back up user settings too, however we currently store the encrypted
