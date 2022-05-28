@@ -243,7 +243,7 @@ rsync --archive \
     "$UMBREL_ROOT"/
 
 # Migrate 'apps' structure to using app repos
-$UMBREL_ROOT/scripts/update/steps/migrate-to-repo.sh "$RELEASE" "$UMBREL_ROOT"
+"${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT"
 
 # Remove legacy electrs dir
 legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
