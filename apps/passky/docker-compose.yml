@@ -1,0 +1,65 @@
+version: "3.7"
+
+services:
+  passky-database:
+    container_name: passky-database
+    image: 'rabbitcompany/passky-database:6.2.0'
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      # Database
+      - MYSQL_DATABASE: "passky"
+      - MYSQL_USER: "passky"
+      - MYSQL_PASSWORD: $APP_PASSWORD
+      - MYSQL_ROOT_PASSWORD: $APP_PASSWORD
+      # Backup
+      - BACKUP_ENABLED: false
+    volumes:
+      - ${APP_DATA_DIR}/data:/var/lib/mysql
+    networks:
+      - passky
+  passky-api:
+    container_name: passky-api
+    image: 'rabbitcompany/passky-api:6.2.0'
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      # Location
+      - SERVER_LOCATION: "US"
+      # Database
+      - MYSQL_HOST: "passky-database"
+      - MYSQL_USER: "passky"
+      - MYSQL_PASSWORD: $APP_PASSWORD
+      # Mail
+      - MAIL_ENABLED: false
+      # Account
+      - ACCOUNT_MAX: 100
+      - ACCOUNT_MAX_PASSWORDS: 1000
+      # YUBICO
+      - YUBI_CLOUD: "https://api.yubico.com/wsapi/2.0/verify"
+      - YUBI_ID: 67857
+      # Limiter
+      - LIMITER_ENABLED: true
+      - LIMITER_GET_STATS: 1
+      - LIMITER_GET_TOKEN: 3
+      - LIMITER_GET_PASSWORDS: 2
+      - LIMITER_SAVE_PASSWORD: 2
+      - LIMITER_EDIT_PASSWORD: 2
+      - LIMITER_DELETE_PASSWORD: 2
+      - LIMITER_CREATE_ACCOUNT: 10
+      - LIMITER_DELETE_ACCOUNT: 10
+      - LIMITER_IMPORT_PASSWORDS: 10
+      - LIMITER_FORGOT_USERNAME: 60
+      - LIMITER_ENABLE_2FA: 10
+      - LIMITER_DISABLE_2FA: 10
+      - LIMITER_ADD_YUBIKEY: 10
+      - LIMITER_REMOVE_YUBIKEY: 10
+    networks:
+      - passky
+    ports:
+      - ${APP_PASSKY_PORT}:80
+    depends_on:
+      - passky-database
+networks:
+  passky:
+    driver: bridge
