@@ -24,7 +24,7 @@ services:
         ipv4_address: $APP_BTCPAY_SERVER_NBXPLORER_IP
 
   web:
-    image: btcpayserver/btcpayserver:1.4.9@sha256:3310ef8c5fecb3a1c66507b97ebc84a3475fc77e63cd3bd29ab8b76474214566
+    image: btcpayserver/btcpayserver:1.5.2@sha256:dbf128e058609edbfb399730fc2dd6ea38ea20ef3076b7ba2e4aa80a417086b3
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
