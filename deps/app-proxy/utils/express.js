@@ -1,11 +1,15 @@
 function removeCookie(req, cookieName) {
-	const allCookies = {...req.cookies, ...req.signedCookies};
+	const allCookies = req.headers.cookie || "";
 
-	delete(allCookies[cookieName]);
+	// Split on '; ' (where space is optional)
+	// More details re http cookie delimter:
+	// https://www.rfc-editor.org/rfc/rfc6265#section-4.2.1
+	const cookiePairs = allCookies.split(/; */g).filter(pair => pair.length > 0);
 
-	return Object.keys(allCookies).map((key) => {
-		return `${key}=${allCookies[key]}`
-	}).join("; ");
+	// Filter out cookie and re-join
+	// to build http cookie string
+	// (using cookie delimiter)
+	return cookiePairs.filter(pair => ! pair.startsWith(`${cookieName}=`)).join("; ");
 }
 
 module.exports = {

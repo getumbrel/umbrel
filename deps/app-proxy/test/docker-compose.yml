@@ -16,7 +16,7 @@ services:
             - ./fixtures/tor/data:/var/lib/tor:ro
             - ./data:/app-data:ro
         environment:
-            LOG_LEVEL: info
+            LOG_LEVEL: debug
             PROXY_PORT: 4000
             PROXY_AUTH_ADD: "true"
             PROXY_AUTH_WHITELIST: 
