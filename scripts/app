@@ -78,6 +78,8 @@ source_app() {
   # e.g. $TOR_PROXY_IP, $TOR_PROXY_PORT
   [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
 
+  export NETWORK_IP="${NETWORK_IP}"
+
   # Set other useful vars. used in exports
   export DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "umbrel")"
   export DEVICE_DOMAIN_NAME="${DEVICE_HOSTNAME}.local"
