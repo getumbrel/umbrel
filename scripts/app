@@ -281,11 +281,13 @@ wait_for_tor_hs() {
   # and there is no existing tor hs hostname
   # Let's allow 10 seconds to generate it and then start the app
   if [[ -f "${app_torrc_file}" ]] && [[ ! -f "${app_hidden_service_file}" ]]; then
-    echo "Generating hidden services..."
-    # We need to also boot the app proxy, otherwise I get this weird error:
-    # Failed to parse/validate config: Unknown option 's6-setuidgid'.  Failing.
-    # I can only imagine because the app proxy hostname must be resolvable
-    # In order to generate HS hostnames...
+    echo "Generating hidden services for ${app}..."
+    # We must first start the App Proxy
+    # So that it's hostname is resolvable by Tor
+    # More details here: https://github.com/torproject/tor/blob/01bda6c23f58947ad1e20ea6367a5c260f53dfab/src/feature/hs/hs_common.c#L743
+    # And here: https://github.com/torproject/tor/blob/22552ad88e1e95ef9d2c6655c7602b7b25836075/src/lib/net/resolve.c#L297
+    # Otherwise Tor will throw this error:
+    # Unparseable address in hidden service port configuration.
     compose "${app}" up --detach app_proxy
     compose "${app}" up --detach tor_server
 

@@ -2,10 +2,10 @@ version: "3.7"
 
 services:
   tor_server:
-    image: getumbrel/tor-server:0.4.6.8@sha256:a81797e4a6b0c4709dd6f7c5543ab99e318af329bdf728c5b267f412c51b9a31
+    image: lncm/tor:0.4.7.7@sha256:3c4ae833d2fefbea7d960f833a1e89fc9b2069a6e5f360109b5ddc9334ac0227
     restart: on-failure
     volumes:
-      - ${APP_DATA_DIR}/torrc:/torrc:ro
+      - ${APP_DATA_DIR}/torrc:/etc/tor/torrc:ro
       - ${TOR_DATA_DIR}:/data
     environment:
-      HS_PER_PROCESS: "10"
+      HOME: "/tmp"

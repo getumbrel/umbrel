@@ -3,12 +3,14 @@ version: '3.7'
 services:
         tor_proxy:
                 container_name: tor
-                image: lncm/tor:0.4.6.9@sha256:ae1a136822d82571309074adc227fe8a1317873ba6e9cdb93bf2f9ad3a8d07d3
+                image: lncm/tor:0.4.7.7@sha256:3c4ae833d2fefbea7d960f833a1e89fc9b2069a6e5f360109b5ddc9334ac0227
                 user: toruser
                 restart: on-failure
                 volumes:
                     - ${PWD}/tor/torrc-proxy:/etc/tor/torrc:ro
                     - ${PWD}/tor/data:/data
+                environment:
+                    HOME: "/tmp"
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
