@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: bitcoinscala/wallet-server-ui:1.9.1-18d1a8cd-SNAPSHOT
+    image: bitcoinscala/wallet-server-ui:1.9.1-390a1f77-SNAPSHOT
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -26,7 +26,7 @@ services:
     depends_on: 
       - walletserver
   walletserver:
-    image: bitcoinscala/bitcoin-s-server:1.9.1-54-d60d984a-SNAPSHOT
+    image: bitcoinscala/bitcoin-s-server:1.9.1-71-72fef5a2-SNAPSHOT
     user: "1000:1000"
     restart: on-failure
     volumes:
