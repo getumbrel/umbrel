@@ -244,6 +244,9 @@ template_app() {
     # Output filename is the same as input with .template stripped off
     APP_TEMPLATE_OUTPUT_FILE="${APP_TEMPLATE_INPUT_FILE%.*}"
 
+    # First we'll copy the file so we ensure the output
+    # has the same fs permissions as the input
+    cp --archive "${APP_TEMPLATE_INPUT_FILE}" "${APP_TEMPLATE_OUTPUT_FILE}"
     cat "${APP_TEMPLATE_INPUT_FILE}" | envsubst > "${APP_TEMPLATE_OUTPUT_FILE}"
   done
 }

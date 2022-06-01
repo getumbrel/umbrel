@@ -104,6 +104,10 @@ if [[ "$command" = "update" ]]; then
     timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
   fi
 
+  # Make sure app repo doesn't end up being owned by root or some apps will fail
+  # with fs permission errors
+  chown -R "1000:1000" "${LOCAL_REPO_PATH}"
+
   exit
 fi
 
