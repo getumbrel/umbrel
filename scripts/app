@@ -180,7 +180,7 @@ compose() {
   source_app "${app}"
 
   # Define support compose files
-  local -r proxy_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.app_proxy.yml"
+  local -r app_proxy_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.app_proxy.yml"
   local -r tor_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.tor.yml"
   local -r common_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.common.yml"
 
@@ -192,7 +192,15 @@ compose() {
   # We need to use the proxy compose file first
   # To allow vars. in the app's compose file to override variables
   compose_files=()
-  compose_files+=( "--file" "${proxy_compose_file}" )
+
+  # Detect if the 'app_proxy' service has been defined
+  # In the app's docker-compose file
+  APP_COMPOSE_SERVICES=$(cat "${app_compose_file}" | yq '.services | keys | .[]')
+  APP_PROXY_SERVICE_NAME="app_proxy"
+
+  if echo "${APP_COMPOSE_SERVICES}" | grep --quiet "^${APP_PROXY_SERVICE_NAME}$"; then
+    compose_files+=( "--file" "${app_proxy_compose_file}" )
+  fi
   
   # If an app has a torrc file
   # Then include a compose file for Tor
