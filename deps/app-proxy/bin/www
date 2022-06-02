@@ -26,14 +26,28 @@ const middleware = proxy.apply(app);
 // Once the app's port is open
 console.log(`Waiting for ${CONSTANTS.APP_HOST}:${CONSTANTS.APP_PORT} to open...`);
 
-waitPort({
-	host: CONSTANTS.APP_HOST,
-	port: CONSTANTS.APP_PORT,
-	output: "silent",
-	// Wait indefinitely for the app to start
-	timeout: 0
-})
-.then(() => {
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+(async () => {
+	while(true) {
+		try {
+			await waitPort({
+				host: CONSTANTS.APP_HOST,
+				port: CONSTANTS.APP_PORT,
+				output: "silent",
+				// Wait indefinitely for the app to start
+				timeout: 0
+			});
+			// Exit loop on success
+			break;
+		} catch (error) {
+			console.log(`Error wating for port: "${error.message}"`);
+			// Wait before retrying
+			await delay(100);
+			console.log('Retrying...');
+		}
+	}
+
 	console.log(`${CONSTANTS.APP.name} is now ready...`);
 
 	const server = app.listen(CONSTANTS.PROXY_PORT, () => {
@@ -42,7 +56,4 @@ waitPort({
 
 	// This allows it to proxy WebSockets without the initial http request
 	server.on('upgrade', middleware.upgrade);
-})
-.catch((err) => {
-	console.error('An unknown error occured while waiting for the port', err);
-});
+})();
