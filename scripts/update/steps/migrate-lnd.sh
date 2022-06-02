@@ -40,7 +40,7 @@ EOF
 
 # Set some default state for the app
 cat <<EOF > "${LIGHTNING_APP_DATA_FOLDER}/state.json"
-{"acceptedTerms": true, "seed": [], "seedMigrated": false}
+{"onboarding": false, "seed": [], "seedMigrated": false}
 EOF
 
 # Migate Tor HSs
