@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+user=$1
+version=$2
+
+tag=""${user}/auth-server:${version}""
+
+# Get gnu sed
+gnureadlink=readlink
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v greadlink >/dev/null 2>&1; then
+    echo "Error: This script requires gnu-readlink!"
+    echo "Install it with:"
+    echo "  brew install gnu-readlink"
+    exit 1
+  fi
+  gnureadlink=greadlink
+fi
+
+UMBREL_ROOT="$(dirname $($gnureadlink -f "${BASH_SOURCE[0]}"))/.."
+
+echo "Building ${tag}..."
+
+sleep 5
+
+docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    --tag "${tag}" \
+    --push "${UMBREL_ROOT}/deps/app-auth"
