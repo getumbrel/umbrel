@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   web:
-    image: ghcr.io/bitfeed-project/bitfeed-client:v2.2.0@sha256:050c4e7c7744a856fbd49758db046c4dfead40d39a0719f35b3918e9f778b074
+    image: ghcr.io/bitfeed-project/bitfeed-client:v2.2.1@sha256:70c89d49d20ba3da21c648c259f45a4b89e06bfe1d97374a092dce6f891d03c6
     restart: on-failure
     stop_grace_period: 1m
     depends_on:
@@ -18,7 +18,7 @@ services:
         ipv4_address: $APP_BITFEED_IP
 
   api:
-    image: ghcr.io/bitfeed-project/bitfeed-server:v2.2.0@sha256:b04d9ef4f2c56bd25cd1cb6b33261a8716d6710d71c7e3c0388d12f2cc236e11
+    image: ghcr.io/bitfeed-project/bitfeed-server:v2.2.1@sha256:60eae8109d3d6a377aec8a954f93b6be9ee48de717c9ab5810c2a5afcf688554
     user: "1000:1000"
     restart: on-failure
     stop_grace_period: 1m
@@ -31,6 +31,9 @@ services:
       BITCOIN_RPC_PORT: "$BITCOIN_RPC_PORT"
       BITCOIN_RPC_USER: "$BITCOIN_RPC_USER"
       BITCOIN_RPC_PASS: "$BITCOIN_RPC_PASS"
+      RPC_POOLS: "1"
+      RPC_POOL_SIZE: "16"
+      LOG_LEVEL: "info"
     volumes:
       - ${APP_DATA_DIR}/data:/app/data
     networks:

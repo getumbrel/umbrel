@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   db:
-    image: louneskmt/dojo-db:1.3.0-low-mem@sha256:76dd4bc0bd3386195adc4564dc6a712c50af9b8400707c4e6ffcb0a859f76c71
+    image: louneskmt/dojo-db:1.5.0-low-mem@sha256:e82c23699196bcaf37fe021ca47eef1c53d18ba8a10290ae8dcfe7cb24dbb5e6
     init: true
     restart: on-failure
     stop_grace_period: 5m
@@ -19,7 +19,7 @@ services:
         ipv4_address: $APP_SAMOURAI_SERVER_DB_IP
 
   node:
-    image: louneskmt/dojo-nodejs:1.13.0@sha256:81f0846d4ec139f0a6bf99d925cb6d39e3afb8288cab826a38d304fd1565be27
+    image: louneskmt/dojo-nodejs:1.15.0@sha256:84be2d82bb51c7702e1ea0630a7dd206ed6284dc4061c0e6e213b58fad361ef2
     init: true
     restart: on-failure
     command: "/home/node/app/wait-for-it.sh ${APP_SAMOURAI_SERVER_DB_IP}:3306 --timeout=720 --strict -- /home/node/app/restart.sh"
@@ -27,7 +27,7 @@ services:
     environment:
       # GLOBAL
       COMMON_BTC_NETWORK: $BITCOIN_NETWORK
-      DOJO_NODEJS_VERSION_TAG: 1.13.0
+      DOJO_VERSION_TAG: 1.15.0
       NET_DOJO_TOR_IPV4: $TOR_PROXY_IP
       TOR_SOCKS_PORT: $TOR_PROXY_PORT
       NET_DOJO_MYSQL_IPV4: $APP_SAMOURAI_SERVER_DB_IP
@@ -75,6 +75,7 @@ services:
       # INDEXER
       INDEXER_IP: $ELECTRUM_IP
       INDEXER_RPC_PORT: $ELECTRUM_PORT
+      INDEXER_PROTOCOL: tcp
       INDEXER_BATCH_SUPPORT: inactive # 'active' for ElectrumX, 'inactive' otherwise
     depends_on:
       - db
