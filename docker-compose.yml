@@ -118,9 +118,9 @@ services:
                         ipv4_address: $MIDDLEWARE_IP
         auth:
                 container_name: auth
-                image: getumbrel/app-auth
+                image: cookiemonster123/auth-server:v0.1.0
                 user: "1000:1000"
-                build: ./deps/app-auth
+                #build: ./deps/app-auth
                 restart: on-failure
                 environment:
                     PORT: $AUTH_PORT

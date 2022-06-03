@@ -2,8 +2,8 @@ version: '3.7'
 
 services:
     app_proxy:
-        image: getumbrel/app-proxy
-        build: ../../deps/app-proxy
+        image: cookiemonster123/app-proxy:v0.1.0
+        #build: ../../deps/app-proxy
         user: "1000:1000"
         restart: on-failure
         hostname: $APP_PROXY_HOSTNAME
