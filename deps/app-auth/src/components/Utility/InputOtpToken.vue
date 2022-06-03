@@ -5,12 +5,12 @@
       'error': error,
       'success': success
   }">
-    <b-input v-model="digit1" ref="digitOneInput" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" :autofocus="autofocus" />
-    <b-input v-model="digit2" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
-    <b-input v-model="digit3" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
-    <b-input v-model="digit4" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
-    <b-input v-model="digit5" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
-    <b-input v-model="digit6" class="neu-input otp-input" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
+    <b-input v-model="digit1" ref="digitOneInput" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" :autofocus="autofocus" />
+    <b-input v-model="digit2" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
+    <b-input v-model="digit3" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
+    <b-input v-model="digit4" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
+    <b-input v-model="digit5" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
+    <b-input v-model="digit6" class="otp-input" :class="inputClass" type="text" inputmode="numeric" placeholder="•" @keyup="keyup" :disabled="disabled" />
   </div>
 </template>
 
@@ -29,6 +29,10 @@ export default {
     };
   },
   props: {
+    inputClass: {
+      type: String,
+      default: 'neu-input'
+    },
     error: {
       type: Boolean,
       default: false
@@ -131,7 +135,6 @@ export default {
     height: 50px;
     text-align: center;
     transition: background-color 0.3s, color 0.3s;
-    cursor: default;
     margin: 0;
     margin-top: 10px;
     margin-right: 2.5%;

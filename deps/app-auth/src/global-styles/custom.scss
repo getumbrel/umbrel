@@ -1,10 +1,202 @@
-//Custom Variables (outside Bootstrap's scope)
 body {
-    background-color: #F7F9FB;
-    max-width: 1920px;
-    margin-left: auto;
-    margin-right: auto;
+
+  // CSS variables for switching between dark and light mode
+
+  --logo-fill-color: rgba(255, 255, 255, 1);
+
+  --heading-on-wallpaper-color: rgba(255, 255, 255, 1);
+  --text-on-wallpaper-color: rgba(255, 255, 255, 1);
+
+  --app-suggestions-container-background-color: rgba(255, 255, 255, 0.75);
+
+  --content-background-color: rgba(255, 255, 255, 0.85);
+  --content-close-button-background-color: rgba(0, 0, 0, 0.3);
+
+  --card-header-text-color: rgba(108, 117, 125, 0.5);
+  --card-background-color: rgba(255, 255, 255, 1);
+  --card-box-shadow-color: rgba(0, 0, 0, 0.05);
+  --card-hover-box-shadow-color: rgba(0, 0, 0, 0.06);
+
+  --card-glass-background-color: rgba(175, 175, 175, 0.1);
+
+  --text-color: #141821;
+  --text-muted-color: rgba(108, 117, 125, 1);
+  --text-title-color: #343a40;
+
+  --primary-link-color: #5351FB;
+  --primary-link-hover-color: #0906f9;
+
+  --app-store-arrow-icon-color: #C3C6D1;
+  --app-store-app-border-color: #edf0f7;
+  --app-store-app-icon-border-color: #e1e6ea;
+  --app-store-app-gallery-image-box-shadow-color: rgba(0, 0, 0, 0.14);
+
+  --dock-background-color: rgba(217, 217, 217, 0.4);
+  --dock-border-color: rgba(0, 0, 0, 0.1);
+  --dock-divider-color: rgba(0, 0, 0, 0.1);
+
+  --wallpaper-brightness: 1;
+  --wallpaper-container-background-color: rgba(255, 255, 255, 0.4);
+  --wallpaper-container-border-color: rgba(255, 255, 255, 0.1);
+  --wallpaper-heading-color: rgba(0, 0, 0, 0.7);
+  --wallpaper-close-button-icon-color: rgba(255, 255, 255, 1);
+  --wallpaper-close-button-background-color: rgba(0, 0, 0, 0.3);
+
+  --toggle-switch-off-background-color: #fafcfa;
+
+  --neu-input-background-color: #f3f7f7;
+  --neu-input-text-color: rgba(0, 0, 0, 0.8);
+  --neu-input-icon-color: rgba(0, 0, 0, 0.4);
+
+  --glass-button-background-color: rgba(255, 255, 255, 0.05);
+  --glass-button-border-color: rgba(255, 255, 255, 0.1);
+  --glass-button-text-color: rgba(255, 255, 255, 1);
+
+  --modal-glass-background: rgba(255, 255, 255, 0.8);
+
+  --glass-alert-text-color: rgba(0, 0, 0, 0.6);
+  --glass-alert-background-color: rgba(255, 255, 255, 0.6);
+  --glass-alert-border-color: rgba(0, 0, 0, 0.05);
+  --glass-alert-button-background-color: rgba(0, 0, 0, 0.4);
+  --glass-alert-button-text-color: rgba(255, 255, 255, 1);
+  --glass-alert-button-hover-background-color: rgba(0, 0, 0, 0.8);
+  --glass-alert-button-hover-text-color: rgba(255, 255, 255, 1);
+
+  --input-copy-border-color: rgba(0, 0, 0, 0.2);
+
+  --toast-text-color: #000000b3;
 }
+
+body.dark-mode {
+  --logo-fill-color: rgba(255, 255, 255, 1);
+
+  --heading-on-wallpaper-color: rgba(255, 255, 255, 1);
+  --text-on-wallpaper-color: rgba(255, 255, 255, 1);
+
+  --app-suggestions-container-background-color: rgba(0, 0, 0, 0.75);
+
+  --content-background-color: rgba(0, 0, 0, 0.66);
+  --content-close-button-background-color: rgba(255, 255, 255, 0.25);
+
+  --card-header-text-color: rgba(255, 255, 255, 0.3);
+  --card-background-color: #2A2B2C;
+  --card-box-shadow-color: rgba(0, 0, 0, 0.1);
+  --card-hover-box-shadow-color: rgba(0, 0, 0, 0.15);
+
+  --card-glass-background-color: rgba(175, 175, 175, 0.1);
+
+  --text-color: rgba(255, 255, 255, 0.95);
+  --text-muted-color: rgba(255, 255, 255, 0.4);
+  --text-title-color: rgba(255, 255, 255, 0.92);
+
+  --primary-link-color: #9796ff;
+  --primary-link-hover-color: #8685fb;
+
+  --app-store-arrow-icon-color: #7F8183;
+  --app-store-app-border-color: rgba(255, 255, 255, 0.06);
+  --app-store-app-icon-border-color: 0000001c;
+  --app-store-app-gallery-image-box-shadow-color: rgba(0, 0, 0, 0.5);
+
+  --dock-background-color: rgba(69, 69, 69, 0.4);
+  --dock-border-color: rgba(255, 255, 255, 0.1);
+  --dock-divider-color: rgba(255, 255, 255, 0.1);
+
+  --wallpaper-brightness: 0.4;
+  --wallpaper-container-background-color: rgba(0, 0, 0, 0.4);
+  --wallpaper-container-border-color: rgba(255, 255, 255, 0.05);
+  --wallpaper-heading-color: rgba(255, 255, 255, 0.7);
+  --wallpaper-close-button-icon-color: rgba(255, 255, 255, 1);
+  --wallpaper-close-button-background-color: rgba(255, 255, 255, 0.2);
+
+  --toggle-switch-off-background-color: #515453;
+
+  --neu-input-background-color: #515453;
+  --neu-input-text-color: rgba(255, 255, 255, 0.8);
+  --neu-input-icon-color: rgba(255, 255, 255, 0.4);
+
+  --glass-button-background-color: rgba(0, 0, 0, 0.05);
+  --glass-button-border-color: rgba(255, 255, 255, 0.05);
+  --glass-button-text-color: rgba(255, 255, 255, 1);
+
+  --modal-glass-background: rgba(0, 0, 0, 0.7);
+
+  --glass-alert-text-color: rgba(255, 255, 255, 0.9);
+  --glass-alert-background-color: rgba(0, 0, 0, 0.5);
+  --glass-alert-border-color: rgba(255, 255, 255, 0.05);
+  --glass-alert-button-background-color: rgba(255, 255, 255, 0.7);
+  --glass-alert-button-text-color: rgba(0, 0, 0, 1);
+  --glass-alert-button-hover-background-color: rgba(255, 255, 255, 1);
+  --glass-alert-button-hover-text-color: rgba(0, 0, 0, 1);
+
+  --input-copy-border-color: rgba(255, 255, 255, 0.2);
+
+  --toast-text-color: #ffffffcf;
+}
+
+// replace glassmorphic styles with solid
+// colors for browsers that don't support
+// backdrop-filter (like Firefox and Tor Browser)
+@supports not (backdrop-filter: blur(10px)) {
+  body {
+    --content-background-color: rgb(247, 245, 245);
+
+    --dock-background-color: rgb(237, 238, 240);
+
+    --card-glass-background-color: rgba(106, 105, 105, 0.18);
+
+    --wallpaper-brightness: 1;
+    --wallpaper-container-background-color: rgba(253, 253, 253, 1);
+    --wallpaper-container-border-color: rgba(255, 255, 255, 0.5);
+    --wallpaper-close-button-background-color: rgba(0, 0, 0, 0.3);
+
+    --glass-button-background-color: rgba(255, 255, 255, 0.2);
+  }
+  body.dark-mode {
+    --content-background-color: rgb(26, 26, 28);
+
+    --dock-background-color: rgba(69, 69, 69, 1);
+
+    --card-glass-background-color: rgba(106, 105, 105, 0.18);
+
+    --wallpaper-brightness: 0.4;
+    --wallpaper-container-background-color: rgb(26, 26, 28);
+    --wallpaper-container-border-color: rgba(255, 255, 255, 0.1);
+
+    --glass-button-background-color: rgba(0, 0, 0, 0.05);
+    --glass-button-border-color: rgba(255, 255, 255, 0.05);
+    --glass-button-text-color: rgba(255, 255, 255, 1);
+  }
+}
+
+
+body {
+  color: var(--text-color);
+  background-color: #111111;
+}
+.text-title {
+  color: var(--text-title-color);
+}
+.text-title-color {
+  color: var(--text-title-color);
+}
+.text-muted {
+  color: var(--text-muted-color) !important;
+}
+.primary-link {
+  color: var(--primary-link-color);
+  transition: color 0.2s ease;
+  svg, path {
+    fill: var(--primary-link-color);
+    transition: fill 0.2s ease;
+  }
+  &:hover {
+    color: var(--primary-link-hover-color);
+    svg, path {
+      fill: var(--primary-link-hover-color);
+    }
+  }
+}
+
 // to fill svgs, eg. circle in status component
 .fill- {
     &primary {
@@ -42,6 +234,8 @@ a {
     border: none !important;
     text-transform: uppercase;
     box-shadow: none !important;
+    font-weight: 500;
+    letter-spacing: 0.3px;
     &.btn-danger,&.btn-warning {
         color: #fff;
     }
@@ -50,11 +244,21 @@ a {
             color: #fff !important;
         }
     }
-    
+    &.btn-outline-primary {
+        color: var(--primary-link-color);
+        &:hover,&:active {
+          color: #fff;
+          // background-color: var(--primary-link-clor) !important;
+        }
+    }
 }
 
 .cursor-wait {
     cursor: wait;
+}
+
+.progress {
+  background: rgb(146 154 154 / 25%) !important;
 }
 
 .progress-bar {
@@ -62,11 +266,12 @@ a {
 }
 
 .card {
-    background: #ffffff;
-    box-shadow: 0px 10px 30px rgba(209, 213, 223, 0.5);
+    background-color: var(--card-background-color);
+    box-shadow: 0px 10px 30px var(--card-box-shadow-color);
     border-radius: 1rem;
+    // transition: background-color 0.6s, box-shadow 0.6s ease;
     &:hover {
-        box-shadow: 0px 10px 40px rgba(209, 213, 223, 0.6);
+        box-shadow: 0px 10px 40px var(--card-hover-box-shadow-color);
     }
     border: none !important;
     outline: 0 !important;
@@ -77,20 +282,30 @@ a {
     -webkit-transform: translate3d(0, 0, 0);
     -moz-transform: translate3d(0, 0, 0);
     transform: translate3d(0, 0, 0);
+    .card-header-text {
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--card-header-text-color);
+      // transition: color 0.6s ease;
+      font-weight: 500;
+    }
 }
 
 .neu-input {
-    background: linear-gradient(346.78deg, #f7fcfc 0%, #fafcfa 100%);
+    background-color: var(--neu-input-background-color);
     border: 1px solid rgba(0, 0, 0, 0.02);
     box-shadow: inset 0px 5px 10px rgba(0, 0, 0, 0.08);
-    color: rgba(0, 0, 0, 0.8);
+    color: var(--neu-input-text-color);
     transition: box-shadow 0.3s ease;
     &:focus {
+        background-color: var(--neu-input-background-color);
+        color: var(--neu-input-text-color);
         border: 1px solid rgba(0, 0, 0, 0.02);
         box-shadow: inset 0px 5px 15px rgba(0, 0, 0, 0.2);
     }
     &:disabled {
-        color: rgba(0, 0, 0, 0.5);
+        background-color: var(--neu-input-background-color);
+        opacity: 0.6;
         cursor: not-allowed;
     }
 }
@@ -117,7 +332,7 @@ a {
     }
     .input-group-append > .btn {
         background: none !important;
-        color: #616877;
+        color: var(--neu-input-icon-color);
         border: none !important;    
         outline: none !important;
         box-shadow: none !important;
@@ -125,6 +340,9 @@ a {
         top: 50%;
         transform: translateY(-50%);
         right: 0.5rem;
+        &:active, &:focus {
+          color: var(--neu-input-icon-color);
+        }
     }
 }
   
@@ -180,11 +398,6 @@ a {
     overflow-y: scroll;
 }
 
-
-#confetti-canvas {
-    z-index: 99999;
-}
-
 .card-custom {
     overflow-x: hidden;
     position: relative;
@@ -193,7 +406,7 @@ a {
     position: absolute;
     top: 0;
     height: 4px;
-    background-color: #c3c6d1;
+    background-color: #a3a4a865;
     display: block;
     border-radius: 1px;
     width: 100%;
@@ -248,53 +461,38 @@ a {
 
   .b-toast {
     .toast {
+        border-radius: 0.75rem;
         outline: none !important;
+        backdrop-filter: blur(16px) saturate(150%);
         .toast-header {
-            color: rgba(0,0,0,0.5);
+            padding: 1rem 1rem 0 1.25rem;
+            background: none;
+            color: var(--toast-text-color);
             .close {
                 text-shadow: none;
-                opacity: 0.3;
+                color: var(--toast-text-color);
             }
         }
         .toast-body {
-            padding-top: 0;
+            padding: 1rem 1.25rem 1.25rem 1.25rem;
+            background: none;
+            color: var(--toast-text-color);
         }
     }
 
     &.b-toast-success {
         .toast {
-            .toast-header {
-                color: #fff;
-                background: $green;
-            }
-            .toast-body {
-                color: #fff;
-                background: $green;
-            }
+            background: #07d48285;
         }
     }
     &.b-toast-warning {
         .toast {
-            .toast-header {
-                color: #fff;
-                background: $yellow;
-            }
-            .toast-body {
-                color: #fff;
-                background: $yellow;
-            }
+            background: #f6cc00b3;
         }
     }
     &.b-toast-danger {
         .toast {
-            .toast-header {
-                color: #fff;
-                background: $red;
-            }
-            .toast-body {
-                color: #fff;
-                background: $red;
-            }
+            background: #f22c2c94;
         }
     }
   }
@@ -360,22 +558,89 @@ svg.icon-clock {
   }
 
 
-// blur background content on modal open
-.modal-backdrop {
-    opacity: 0.3;
-}
-body {
-    #app {
-        transition: filter 0.2s ease;
+  //wallet 
+  .wallet-content {
+    height: 22rem;
+  }
+  .wallet-buttons {
+      height: 3.5rem;
+  }
+  .wallet-error {
+      position: relative;
+      height: 1rem;
+      .error {
+          position: absolute;
+          top: 0;
+          left: 0;
+      }
+  }
+  //transactions container
+  //Transactions
+.wallet-transactions-container {
+    position: relative;
+
+    .transactions {
+        height: 22rem;
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch; //momentum scroll on iOS
+      }
+  
+    //bottom fade
+    &:before {
+      //nice faded white so the discarded blocks don't abruptly cut off
+      content: "";
+      position: absolute;
+      height: 2rem;
+      width: 100%;
+      bottom: 0;
+      left: 0;
+      z-index: 2;
+      background-image: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 1)
+      );
     }
-    &.modal-open {
-        overflow: hidden !important;
-        #app {
-            filter: blur(2px);
+  
+    //top fade
+    &:after {
+      //nice faded white so the discarded blocks don't abruptly cut off
+      content: "";
+      position: absolute;
+      height: 2rem;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      background-image: linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 1)
+      );
+    }
+  }
+  
+  
+  .zero-wallet-transactions-container {
+    height: 20rem;
+  }
+
+  .tooltip {
+    .tooltip-inner {
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.18);
+    }
+  }
+
+  //increase max-width from 500px to 600px primarily to fit the seed in view seed modal on smaller screens
+  @media (min-width: 456px) {
+    #seed-modal {
+        .modal-dialog {
+            max-width: 600px;
+            margin: 1.75rem auto;
         }
     }
-    
-}
+  }
+
 
 // Helper class to support text with "\n" newline characters
 .text-newlines {
@@ -416,4 +681,494 @@ body {
     50% {
         opacity: 0.3;
     }
+}
+
+.app-icon {
+  height: 82px;
+  width: 82px;
+  border-radius: 20px;
+  border: solid 1px var(--app-store-app-icon-border-color);
+  object-fit: contain;
+  align-items: flex-start;
+  &.app-icon-xs {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+  }
+}
+
+.app-list-app {
+  border-bottom: solid 1px var(--app-store-app-border-color);
+  &:first-child {
+    padding-top: 0 !important;
+  }
+  &:last-child {
+    border-bottom: none;
+  }
+  .icon-arrow-container {
+    transform: translate3d(0, 0, 0);
+    transition: 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    .icon-arrow {
+      width: 10px;
+      height: 17.86px;
+      path {
+        fill: var(--app-store-arrow-icon-color);
+      }
+    }
+  }
+  &:hover {
+    .icon-arrow-container {
+      transform: translate3d(6px, 0, 0);
+    }
+  }
+}
+
+.app-gallery {
+  display: flex;
+  overflow-x: scroll;
+  -webkit-overflow-scrolling: touch;
+  margin-left: calc(-25px - 1.5rem);
+  margin-right: calc(-25px - 1.5rem);
+
+  // hide scrollbar
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  .app-gallery-image-container {
+    height: 350px;
+    width: 560px;
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    box-shadow: 0px 10px 30px var(--app-store-app-gallery-image-box-shadow-color);
+    border-radius: 10px;
+    overflow: hidden;
+    -webkit-mask-image: -webkit-radial-gradient(white, black); // Safari doesn't account for border-radius + overflow without it: https://gist.github.com/ayamflow/b602ab436ac9f05660d9c15190f4fd7b
+    .app-gallery-image {
+      height: 100%;
+      width: 100%;
+      display: block;
+      object-fit: contain;
+      border-radius: 10px;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      &.loading {
+        opacity: 0;
+      }
+    }
+    .app-gallery-image-preloader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(70px) saturate(2);
+      z-index: -1;
+      border-radius: 5px;
+      animation: app-gallery-image-preloader linear infinite 5s;
+    }
+    &:nth-child(1) {
+      .app-gallery-image-preloader {
+        animation-delay: 0s;
+      }
+    }
+    &:nth-child(2) {
+      .app-gallery-image-preloader {
+        animation-delay: -1s;
+      }
+    }
+    &:nth-child(2) {
+      .app-gallery-image-preloader {
+        animation-delay: -2s;
+      }
+    }
+    &:nth-child(3) {
+      .app-gallery-image-preloader {
+        animation-delay: -3s;
+      }
+    }
+    &:nth-child(4) {
+      .app-gallery-image-preloader {
+        animation-delay: -4s;
+      }
+    }
+    &:nth-child(5) {
+      .app-gallery-image-preloader {
+        animation-delay: -5s;
+      }
+    }
+  }
+}
+
+@keyframes app-gallery-image-preloader {
+  0%, 100% {
+    transform: scale3d(2, 2, 2) translate3d(-25%, -25%, 0);
+  }
+  25% {
+    transform: scale3d(2, 2, 2) translate3d(-25%, 25%, 0);
+  }
+  50% {
+    transform: scale3d(2, 2, 2) translate3d(25%, -25%, 0);
+  }
+  75% {
+    transform: scale3d(2, 2, 2) translate3d(25%, 25%, 0)
+  }
+}
+
+
+// use custom classes to toggle
+// view usage / hide usage text
+
+.collapsed > .when-open,
+.not-collapsed > .when-closed {
+  display: none;
+}
+
+// storage / ram usage list of apps
+.app-stat-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 14.2rem;
+    overflow-y: scroll;
+    .app-stat-list-item {
+        .app-stat-list-item-icon {
+            height: 40px;
+            width: 40px;
+            border-radius: 8px;
+        }
+    }
+}
+
+// Toggle switch (sats to btc, temperature)
+
+.toggle {
+  border-radius: 54px;
+  width: 120px;
+  height: 36px;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  background: var(--toggle-switch-off-background-color);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0px 5px 10px rgba(0, 0, 0, 0.1);
+  .toggle-switch {
+    margin: 2px;
+    height: 30px;
+    width: 60px;
+    border-radius: 30px;
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    font-size: 1rem;
+    font-weight: 600;
+    background: #fff;
+    //   color: #fff;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    &.toggle-left {
+      transform: translateX(0);
+    }
+    &.toggle-right {
+      transform: translateX(54px);
+    }
+  }
+  &:hover {
+    .toggle-switch {
+      box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.2);
+    }
+  }
+  .toggle-bg-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    span {
+      width: 60px;
+      border-radius: 30px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #b4b7b9;
+    }
+  }
+  &.toggle-sm {
+    width: 80px;
+    height: 26px;
+    border-radius: 30px;
+    box-shadow: inset 0px 2px 6px rgba(0, 0, 0, 0.1);
+    .toggle-bg-text {
+      span {
+        font-size: 0.75rem;
+        color: #9c9c9c;
+      }
+    }
+    .toggle-switch {
+      margin: 2px;
+      height: 20px;
+      width: 40px;
+      font-size: 0.75rem;
+      border-radius: 30px;
+      &.toggle-left {
+        transform: translateX(0);
+      }
+      &.toggle-right {
+        transform: translateX(34px);
+      }
+    }
+    &:hover {
+      .toggle-switch {
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+}
+
+
+// glassmorphic styles
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.card-glass {
+  box-shadow: 4px 4px 60px rgba(0, 0, 0, 0.15);
+  border-radius: 1rem;
+  background: var(--card-glass-background-color);
+  box-shadow: 4px 4px 60px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(40px) saturate(120%);
+  border-radius: 30px;
+  border: solid 2px rgba(255, 255, 255, 0.1);
+}
+
+.glass-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover {
+    color: inherit;
+    text-decoration: underline;
+    opacity: 0.8;
+  }
+}
+
+.opacity-80 {
+  opacity: 80%;
+}
+
+.glass-input {
+  position: relative;
+  -webkit-appearance: none; //iOS messes up forms - See: https://stackoverflow.com/questions/10757146/iphone-ios-will-not-display-box-shadow-properly
+  border-radius: 0.6rem;
+  height: calc(2em + 1rem + 2px);
+  padding: 0.5rem 1.5rem;
+  outline: 0 !important;
+  background: rgba(249, 249, 249, 0.2);
+  color: #FFFFFF !important;
+  transition: box-shadow 0.3s ease;
+  border: solid 1px rgba(255, 255, 255, 0.1);
+  &:hover,
+  &:focus,
+  &:active {
+    box-shadow: inset 0px 0px 40px rgba(0, 0, 0, 0.05);
+    background: rgba(249, 249, 249, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  &:disabled {
+    opacity: 0.6;
+    background: rgba(249, 249, 249, 0.2);
+    pointer-events: none;
+  }
+}
+
+input.glass-input::placeholder, input.glass-input::-webkit-input-placeholder, input.glass-input::-moz-placeholder, input.glass-input:-moz-placeholder, input.glass-input:-ms-input-placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+  opacity: 1 !important;
+}
+
+.glass-input-group {
+  .glass-input {
+      padding-right: 3rem;
+  }
+  .input-group-append > .btn {
+      background: none !important;
+      color: #fff;
+      border: none !important;    
+      outline: none !important;
+      box-shadow: none !important;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      right: 0.5rem;
+  }
+}
+
+.btn-glass {
+  background-color: var(--glass-button-background-color) !important;
+  border: solid 2px var(--glass-button-border-color) !important;
+  backdrop-filter: blur(10px);
+  color: var(--glass-button-text-color);
+  transition: background-color 0.2s, color 0.2s ease;
+
+  // to make sure hover state doesn't get
+  // applied on mobile devices on tap
+  @media (hover: hover) {
+    &:hover {
+      color: rgba(0, 0, 0, 0.9) !important;
+      background-color: rgba(255, 255, 255, 1) !important;
+    }
+  }
+}
+
+.alert-glass {
+  color: var(--glass-alert-text-color);
+  background: var(--glass-alert-background-color);
+  border-color: var(--glass-alert-border-color);
+  backdrop-filter: blur(10px) saturate(180%);
+  border-radius: 0.25rem;
+  &.alert-sm {
+    max-width: 500px;
+    padding: 0.25rem 1.25rem;
+  }
+  &.alert-pill {
+    border-radius: 2rem;
+  }
+  .btn-alert-glass {
+    background-color: var(--glass-alert-button-background-color);
+    color: var(--glass-alert-button-text-color);
+    &:hover {
+      color: var(--glass-alert-button-hover-text-color);
+      background-color: var(--glass-alert-button-hover-background-color);
+    }
+  }
+  &.alert-dismissible .close {
+    padding: 0rem;
+    background: rgba(0, 0, 0, 0);
+    opacity: 1;
+    border-radius: 50%;
+    height: 1.8rem;
+    width: 1.8rem;
+    top: 0.25rem;
+    right: 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    svg {
+      height: 0.75rem;
+      width: 0.75rem;
+      path {
+        fill: var(--glass-alert-button-background-color);
+      }
+    }
+    &:hover {
+      svg {
+        path {
+          fill: --glass-alert-button-hover-background-color;
+        }
+      }
+    }
+  }
+}
+
+.modal-content {
+  background-color: var(--card-background-color);
+}
+
+// Enable glassmorphic modals in Safari-only
+// because backdrop-filter interferes in Chromium
+// https://bugs.chromium.org/p/chromium/issues/detail?id=1194050
+@media not all and (min-resolution: .001dpcm) { 
+  @supports (-webkit-appearance: none) {
+    .modal-content {
+      background-color: var(--modal-glass-background);
+      backdrop-filter: blur(60px) saturate(200%);
+    }
+  }
+}
+
+// Boostrap carousel for app drawer
+
+.carousel-indicators li {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.carousel-indicators li {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.carousel-control-prev, .carousel-control-next {
+  height: 80px;
+  width: 80px;
+  border-radius: 50%;
+  background-color: var(--glass-button-background-color);
+  border: 1px solid var(--glass-button-border-color);
+  backdrop-filter: blur(4px);
+  opacity: 1;
+  top: 50%;
+  transform: translate3d(0, calc(-50% - 28px), 0);
+  transition: transform 0.4s ease;
+}
+
+.carousel-control-prev {
+  left: -110px;
+  &:hover {
+    transform: translate3d(-5px, calc(-50% - 28px), 0);
+    opacity: 1;
+  }
+}
+
+.carousel-control-next {
+  right: -110px;
+  &:hover {
+    transform: translate3d(5px, calc(-50% - 28px), 0);
+    opacity: 1;
+  }
+}
+
+.carousel-control-prev-icon {
+  background-image: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='iso-8859-1'%3F%3E%3C!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0) --%3E%3Csvg version='1.1' id='Layer_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 330 330' style='enable-background:new 0 0 330 330;' xml:space='preserve'%3E%3Cpath id='XMLID_222_' d='M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001 c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213 C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606 C255,161.018,253.42,157.202,250.606,154.389z' fill='%23ffffff'/%3E%3C/svg%3E%0A");
+  transform: rotate3d(0, 0, 1, 180deg);
+}
+
+.carousel-control-next-icon {
+  background-image: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='iso-8859-1'%3F%3E%3C!-- Generator: Adobe Illustrator 19.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0) --%3E%3Csvg version='1.1' id='Layer_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' viewBox='0 0 330 330' style='enable-background:new 0 0 330 330;' xml:space='preserve'%3E%3Cpath id='XMLID_222_' d='M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001 c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213 C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606 C255,161.018,253.42,157.202,250.606,154.389z' fill='%23ffffff'/%3E%3C/svg%3E%0A");
+}
+
+.carousel-caption {
+  padding: 0;
+  position: static;
+}
+
+.carousel-item img.img-fluid {
+  position: absolute;
+  display: none;
+}
+.carousel-indicators {
+  bottom: -40px;
+}
+
+.grow-transition-enter-active,
+.grow-transition-leave-active {
+  transition: transform 0.4s, opacity 0.4s ease;
+}
+.grow-transition-enter {
+  transform: scale3d(0, 0, 0);
+  opacity: 0;
+}
+.grow-transition-enter-to {
+  transform: scale3d(1, 1, 1);
+  opacity: 1;
+}
+.grow-transition-leave {
+  transform: scale3d(1, 1, 1);
+  opacity: 1;
+}
+
+.grow-transition-leave-to {
+  transform: scale3d(0, 0, 0);
+  opacity: 0;
 }

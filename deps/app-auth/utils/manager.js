@@ -22,6 +22,9 @@ const account = {
 				token
 			}
 		});
+	},
+	wallpaper: async function(token) {
+		return axiosInstance.get('/v1/account/wallpaper');
 	}
 };
 

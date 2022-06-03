@@ -2,35 +2,27 @@ const url = require('url');
 
 const hmacUtils = require('../utils/hmac.js');
 const tokenUtils = require('../utils/token.js');
+const expressUtils = require('../utils/express.js');
+const appUtils = require("../utils/app.js");
 const hostResolution = require('../utils/host_resolution.js');
 const CONSTANTS = require('../utils/const.js');
 
 const APP_PROXY_AUTH_TOKEN_PATH = "/umbrel_/api/v1/auth/token";
 
-function getQueryParam(req, key) {
-	const value = req.query[key];
-
-	if(typeof(value) !== "string" || value.trim().length == 0) {
-		throw new Error(`'${key}' is missing`);
-	}
-
-	return value;
-}
-
 async function redirectState(token, req) {
-	const app = getQueryParam(req, "app");
-	const origin = getQueryParam(req, "origin");
-	const path = getQueryParam(req, "path");
+	const app = expressUtils.getQueryParam(req, "app");
+	const origin = expressUtils.getQueryParam(req, "origin");
+	const path = expressUtils.getQueryParam(req, "path");
 
 	// app ids are only allowed alpha-numeric characters
 	// plus the hyphen (-)
-	const appSanitised = app.replace(/[^a-zA-Z0-9-]/gm, "");
+	const appIdSanitised = appUtils.sanitiseId(app);
 
 	// This builds up a url as to where
 	// We're going to redirect/POST to
 	const redirectUrl = url.format({
 		protocol: req.protocol,
-		host: await hostResolution.host(req, appSanitised, origin),
+		host: await hostResolution.host(req, appIdSanitised, origin),
 		pathname: APP_PROXY_AUTH_TOKEN_PATH
 	});
 

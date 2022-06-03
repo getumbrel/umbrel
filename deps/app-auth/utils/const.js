@@ -23,5 +23,8 @@ module.exports = Object.freeze({
 	APP_DATA_PATH: process.env.APP_DATA_PATH || "/app-data",
 
 	MANAGER_IP: readFromEnvOrTerminate("MANAGER_IP"),
-	MANAGER_PORT: parseInt(readFromEnvOrTerminate("MANAGER_PORT")) || 3006,
+	MANAGER_PORT: parseInt(readFromEnvOrTerminate("MANAGER_PORT")),
+
+	DASHBOARD_IP: readFromEnvOrTerminate("DASHBOARD_IP"),
+	DASHBOARD_PORT: parseInt(readFromEnvOrTerminate("DASHBOARD_PORT")),
 });

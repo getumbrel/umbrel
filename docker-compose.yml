@@ -127,6 +127,8 @@ services:
                     UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
                     MANAGER_IP: $MANAGER_IP
                     MANAGER_PORT: 3006
+                    DASHBOARD_IP: $DASHBOARD_IP
+                    DASHBOARD_PORT: 3004
                 volumes:
                         - ${PWD}/tor/data:/var/lib/tor:ro
                         - ${PWD}/app-data:/app-data:ro

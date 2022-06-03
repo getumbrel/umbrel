@@ -41,44 +41,6 @@ axios.interceptors.response.use(
       await timeout(5000);
       return Promise.reject(error);
     }
-
-    // Logout user if token refresh didn't work
-    if (
-      error.config.url ===
-      `${process.env.VUE_APP_MANAGER_API_URL}/v1/account/refresh`
-    ) {
-      await timeout(5000);
-      store.dispatch("user/logout");
-      return Promise.reject(error);
-    }
-
-    // Try request again with new token if error is due to invalid JWT
-
-    if (error.response.data === "Invalid JWT") {
-      try {
-        await store.dispatch("user/refreshJWT");
-      } catch (error) {
-        await timeout(5000);
-        return Promise.reject(error);
-      }
-
-      // New request with new token
-      const config = error.config;
-      config.headers["Authorization"] = `JWT ${store.state.user.jwt}`;
-
-      return new Promise((resolve, reject) => {
-        axios
-          .request(config)
-          .then(response => {
-            resolve(response);
-          })
-          .catch(error => {
-            setTimeout(() => {
-              reject(error);
-            }, 5000)
-          });
-      });
-    }
   }
 );
 

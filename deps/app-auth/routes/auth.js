@@ -1,9 +1,13 @@
 const express = require('express');
+const axios = require('axios');
 const { StatusCodes } = require('http-status-codes');
 
 const CONSTANTS = require('../utils/const.js');
 const manager = require("../utils/manager.js");
+const dashboard = require("../utils/dashboard.js");
 const safeHandler = require("../utils/safe_handler.js");
+const expressUtils = require('../utils/express.js');
+const appUtils = require("../utils/app.js");
 const validateToken = require("../middleware/validate_token.js");
 
 const router = express.Router();
@@ -42,10 +46,26 @@ router.post("/v1/account/login", safeHandler(async (req, res) => {
 			sameSite: "lax"
 		}).json(await validateToken.redirectState(token, req));
 	} else {
-		// This case shold never happen as an error is thrown
+		// This case should never happen as an error is thrown
 		// if the credentials are bad and is handled above (catch block)
 		res.status(StatusCodes.UNAUTHORIZED).send("Failed to authenticate");
 	}
+}));
+
+// Get wallpaper (public)
+router.get('/v1/account/wallpaper', safeHandler(async (req, res) => {
+	res.send((await manager.account.wallpaper()).data);
+}));
+
+// Get basic info for an app
+router.get('/v1/apps', safeHandler(async (req, res) => {
+	const appIdSanitised = appUtils.sanitiseId(expressUtils.getQueryParam(req, "app"));
+	res.send(await appUtils.getBasicInfo(appIdSanitised));
+}));
+
+router.get('/wallpapers/:filename(\\d+[.]\\w+)', safeHandler(async(req, res) => {
+	const response = await dashboard.wallpaper.get(req.params.filename);
+	response.data.pipe(res);
 }));
 
 module.exports = router;
