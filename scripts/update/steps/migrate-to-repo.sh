@@ -43,7 +43,7 @@ fi
 
 # 4. Update all apps using the app repo as source of truth
 for app in $("${UMBREL_ROOT}/scripts/app" ls-installed); do
-  if [[ "${app}" != "" ]]; then
+  if [[ "${app}" != "" ]] && [[ "${app}" != "electrumx" ]]; then # skip electrumx becuase we don't yet have a working app
     # We typically want to stop and start during an app update
     # However here we don't want this. Apps need to be updated avoiding 
     # the 'stop' to avoid missing env errors
