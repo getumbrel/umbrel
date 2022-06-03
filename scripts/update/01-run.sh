@@ -242,6 +242,27 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Update Docker for Umbrel OS users. Some old installs may be running outdated versions of Docker
+# that have missing Docker DNS features that we now rely on.
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+  echo "Updating Docker..."
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 69, "description": "Updating Docker", "updateTo": "$RELEASE"}
+EOF
+  "${UMBREL_ROOT}/scripts/update/steps/get-docker.sh" || {
+    # If the docker update fails, revert the update to avoid leaving the user in a broken state
+    echo "Updating Docker failed, reverting update!"
+    echo "Error updating Docker" > "${UMBREL_ROOT}/statuses/update-failure"
+    rsync -av \
+      --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
+      --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
+      "$UMBREL_ROOT"/.umbrel-backup/ \
+      "$UMBREL_ROOT"/
+    ./scripts/start
+    false
+  }
+fi
+
 # Migrate 'apps' structure to using app repos
 "${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT" || {
   # If the apps migration fails, revert the update to avoid leaving the user in a broken state
