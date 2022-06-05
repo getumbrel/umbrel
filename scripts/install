@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Default options
+BOOTSTRAPPED="false"
+PRINT_DOCKER_WARNING="true"
+UPDATE_APT="true"
+INSTALL_APT_DEPS="true"
+INSTALL_AVAHI="true"
+INSTALL_YQ="true"
+INSTALL_DOCKER="true"
+INSTALL_DOCKER_COMPOSE="true"
+INSTALL_START_SCRIPT="true"
+INSTALL_UMBREL="true"
+UMBREL_VERSION="release"
+UMBREL_REPO="getumbrel/umbrel"
+UMBREL_INSTALL_PATH="$HOME/umbrel"
+
+# Parse arguments
+arguments=${@:-}
+
+if [[ "${arguments}" = *"--bootstrapped"* ]]
+then
+  BOOTSTRAPPED="true"
+fi
+
+if [[ "${arguments}" = *"--no-docker-warning"* ]]
+then
+  PRINT_DOCKER_WARNING="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-avahi"* ]]
+then
+  INSTALL_AVAHI="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-yq"* ]]
+then
+  INSTALL_YQ="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-docker"* ]]
+then
+  INSTALL_DOCKER="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-compose"* ]]
+then
+  INSTALL_DOCKER_COMPOSE="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-start-script"* ]]
+then
+  INSTALL_START_SCRIPT="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-umbrel"* ]]
+then
+  INSTALL_UMBREL="false"
+fi
+
+if [[ "${arguments}" = *"--no-install-deps"* ]]
+then
+  UPDATE_APT="false"
+  INSTALL_APT_DEPS="false"
+  INSTALL_AVAHI="false"
+  INSTALL_YQ="false"
+  INSTALL_DOCKER="false"
+  INSTALL_DOCKER_COMPOSE="false"
+  INSTALL_UMBREL="true"
+fi
+
+if [[ "${arguments}" = *"--version"* ]]
+then
+  UMBREL_VERSION="$(echo "${arguments}" | sed 's/.*--version \([^ ]*\).*/\1/')"
+fi
+
+if [[ "${arguments}" = *"--install-path"* ]]
+then
+  UMBREL_INSTALL_PATH="$(echo "${arguments}" | sed 's/.*--install-path \([^ ]*\).*/\1/')"
+fi
+
+get_umbrel_version() {
+  version="${UMBREL_VERSION}"
+  if [[ "${version}" = "release" ]]
+  then
+    version=$(curl --silent https://api.github.com/repos/${UMBREL_REPO}/releases/latest | sed -n 's/.*"tag_name": "\([^"]*\).*/\1/p')
+  fi
+
+  echo $version
+}
+
+bootstrap() {
+  version=$(get_umbrel_version)
+  curl --location --silent "https://raw.githubusercontent.com/${UMBREL_REPO}/${version}/scripts/install" | \
+    bash -s -- --bootstrapped $arguments
+}
+
+update_apt() {
+  sudo apt-get update --yes
+}
+
+install_apt_deps() {
+  sudo apt-get install --yes fswatch jq rsync curl git gettext-base python3 gnupg
+}
+
+install_avahi() {
+  sudo apt-get install --yes avahi-daemon avahi-discover libnss-mdns
+}
+
+install_yq() {
+  # Define checksums for yq (4.24.5)
+  declare -A yq_sha256
+  yq_sha256["arm64"]="8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9"
+  yq_sha256["amd64"]="c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760"
+
+  yq_version="v4.24.5"
+  system_arch=$(dpkg --print-architecture)
+  yq_binary="yq_linux_${system_arch}"
+
+  # Download yq from GitHub
+  yq_temp_file="/tmp/yq"
+  curl -L "https://github.com/mikefarah/yq/releases/download/${yq_version}/${yq_binary}" -o "${yq_temp_file}"
+
+  # Check file matches checksum
+  if [[ "$(sha256sum "${yq_temp_file}" | awk '{ print $1 }')" == "${yq_sha256[$system_arch]}" ]]; then
+    sudo mv "${yq_temp_file}" /usr/bin/yq
+    sudo chmod +x /usr/bin/yq
+
+    echo "yq installed successfully..."
+  else
+    echo "yq install failed. sha256sum mismatch"
+    exit 1
+  fi
+}
+
+install_docker() {
+  # Install Docker
+   curl -fsSL https://get.docker.com | sudo sh
+}
+
+install_docker_compose() {
+  sudo apt-get install --yes python3-pip libffi-dev
+  # We need to upgrade pip (via itself) because old pip versions in some OS repos fail to install deps.
+  python3 -m pip install --upgrade pip
+  sudo python3 -m pip install docker-compose
+}
+
+install_umbrel() {
+  version=$(get_umbrel_version)
+  curl --location "https://api.github.com/repos/${UMBREL_REPO}/tarball/${version}" | \
+    tar --extract --gzip --strip-components=1 --directory="${UMBREL_INSTALL_PATH}"
+}
+
+install_systemd_service() {
+echo "
+[Unit]
+Wants=network-online.target
+After=network-online.target
+Wants=docker.service
+After=docker.service
+
+# This prevents us hitting restart rate limits and ensures we keep restarting
+# indefinitely.
+StartLimitInterval=0
+
+[Service]
+Type=forking
+TimeoutStartSec=infinity
+TimeoutStopSec=16min
+ExecStart=${UMBREL_INSTALL_PATH}/scripts/start
+ExecStop=${UMBREL_INSTALL_PATH}/scripts/stop
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=umbrel startup
+RemainAfterExit=yes
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target" | sudo tee "/etc/systemd/system/umbrel-startup.service"
+  sudo chmod 644 "/etc/systemd/system/umbrel-startup.service"
+  sudo systemctl enable "umbrel-startup.service"
+}
+
+main() {
+  if [[ "${BOOTSTRAPPED}" = "false" ]]
+  then
+    bootstrap
+    exit
+  fi
+
+  if [[ "${PRINT_DOCKER_WARNING}" = "true" ]] && [[ "${INSTALL_DOCKER}" = "true" ]] && command -v docker >/dev/null 2>&1
+  then
+
+cat << 'EOF'
+It looks like you already have Docker installed. Umbrel requires a modern version of Docker so this script will update them with the official Docker install script.
+
+If you would like to disable this behaviour you can abort this install and run again with --no-install-docker or --no-install-compose.
+
+You can pass flags to the installer like this:
+
+  curl -L https://umbrel.sh | bash -s -- --no-install-docker --no-install-compose
+
+Sleeping for 30 seconds...
+
+You may press Ctrl+C now to abort the install.
+
+EOF
+    sleep 30
+  fi
+
+  if [[ "${INSTALL_UMBREL}" = "true" ]]
+  then
+    mkdir -p "${UMBREL_INSTALL_PATH}"
+    if [[ "$(ls --almost-all "${UMBREL_INSTALL_PATH}")" ]]
+    then
+      echo "Error: Umbrel install path \"${UMBREL_INSTALL_PATH}\" already contains files"
+      echo "You can install Umbrel in a custom location with:"
+      echo
+      echo "  curl -L https://umbrel.sh | bash -s -- --install-path /some/path"
+      exit 1
+    fi
+  fi
+
+  if [[ "${UPDATE_APT}" = "true" ]]
+  then
+    update_apt
+  fi
+
+  if [[ "${INSTALL_APT_DEPS}" = "true" ]]
+  then
+    install_apt_deps
+  fi
+
+  if [[ "${INSTALL_AVAHI}" = "true" ]]
+  then
+    install_avahi
+  fi
+
+  if [[ "${INSTALL_YQ}" = "true" ]]
+  then
+    install_yq
+  fi
+
+  if [[ "${INSTALL_DOCKER}" = "true" ]]
+  then
+    install_docker
+  fi
+
+  if [[ "${INSTALL_DOCKER_COMPOSE}" = "true" ]]
+  then
+    install_docker_compose
+  fi
+
+  if [[ "${INSTALL_UMBREL}" = "true" ]]
+  then
+    install_umbrel
+
+    if [[ "${INSTALL_START_SCRIPT}" = "true" ]]
+    then
+      install_systemd_service
+    fi
+
+    # Do the initial start outside of systemd so we get logs
+    sudo ${UMBREL_INSTALL_PATH}/scripts/start
+
+    if [[ "${INSTALL_START_SCRIPT}" = "true" ]]
+    then
+      # Kick off the systemd service again so it's in sync
+      sudo systemctl start "umbrel-startup.service"
+    fi
+
+  echo
+  echo "Umbrel has been sucessfully installed!"
+  fi
+}
+
+main
