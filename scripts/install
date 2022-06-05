@@ -192,6 +192,20 @@ main() {
     exit
   fi
 
+  if [[ "${INSTALL_UMBREL}" = "true" ]]
+  then
+    echo "About to install Umbrel in \"${UMBREL_INSTALL_PATH}\"."
+    echo "If you would like to install somewhere else you can specify a custom location with:"
+    echo
+    echo "  curl -L https://umbrel.sh | bash -s -- --install-path /some/path"
+    echo
+    echo "Waiting for 10 seconds..."
+    echo
+    echo "You may press Ctrl+C now to abort the install."
+    echo
+    sleep 10
+  fi
+
   if [[ "${PRINT_DOCKER_WARNING}" = "true" ]] && [[ "${INSTALL_DOCKER}" = "true" ]] && command -v docker >/dev/null 2>&1
   then
 
@@ -204,7 +218,7 @@ You can pass flags to the installer like this:
 
   curl -L https://umbrel.sh | bash -s -- --no-install-docker --no-install-compose
 
-Sleeping for 30 seconds...
+Waiting for 30 seconds...
 
 You may press Ctrl+C now to abort the install.
 
