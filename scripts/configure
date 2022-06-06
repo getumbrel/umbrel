@@ -543,23 +543,11 @@ for template in "${NGINX_CONF_FILE}" "${BITCOIN_CONF_FILE}" "${LND_CONF_FILE}" "
 done
 
 ##########################################################
-############## Override main config files ################
+############## Override tor config files ################
 ##########################################################
 
-mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
-mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
 mv -f "$TOR_SERVER_CONF_FILE" "./tor/torrc-server"
 mv -f "$TOR_PROXY_CONF_FILE" "./tor/torrc-proxy"
-mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
-mv -f "$ENV_FILE" "./.env"
-
-# Only write LND config if one doesn't already exist to preserve any user changes.
-if [[ -f "./lnd/lnd.conf" ]]; then
-  echo "Skipping lnd.conf update to preserve user changes..."
-  rm "$LND_CONF_FILE"
-else
-  mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
-fi
 
 ##########################################################
 ######### Generate hidden services on first run ##########
@@ -582,6 +570,35 @@ if [[ ! -f "${STATUS_DIR}/configured" ]]; then
     ((wait_for_tor--))
   done
   docker-compose down
+fi
+
+##########################################################
+############ Configure Bitcoin tor address ###############
+##########################################################
+
+BITCOIN_P2P_ADDRESS=""
+
+if os.path.isfile('${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname'):
+  BITCOIN_P2P_ADDRESS= open('${UMBREL_ROOT}/tor/data/bitcoin-p2p/hostname').read()
+  
+sed -i "s/<bitcoin-external-ip>/${BITCOIN_P2P_ADDRESS}/g" "${ENV_FILE}"
+sed -i "s/<bitcoin-external-ip>/${BITCOIN_P2P_ADDRESS}/g" "${BITCOIN_CONF_FILE}"  
+   
+##########################################################
+############## Override main config files ################
+##########################################################
+
+mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
+mv -f "$BITCOIN_CONF_FILE" "./bitcoin/bitcoin.conf"
+mv -f "$ELECTRS_CONF_FILE" "./electrs/electrs.toml"
+mv -f "$ENV_FILE" "./.env"
+
+# Only write LND config if one doesn't already exist to preserve any user changes.
+if [[ -f "./lnd/lnd.conf" ]]; then
+  echo "Skipping lnd.conf update to preserve user changes..."
+  rm "$LND_CONF_FILE"
+else
+  mv -f "$LND_CONF_FILE" "./lnd/lnd.conf"
 fi
 
 ##########################################################
