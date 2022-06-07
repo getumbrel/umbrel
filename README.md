@@ -22,16 +22,7 @@ Alternatively you can install Umbrel on an Ubuntu or Debian based system with:
 curl -L https://umbrel.sh | bash
 ```
 
-
 ---
-
-## ⚡️ Don't be too reckless
-
-Umbrel is still in beta development and should not be considered secure. [Read our writeup of security tradeoffs](https://github.com/getumbrel/umbrel/blob/master/SECURITY.md) that exist today.
-
-It's recommended that you note down your 24 secret words (seed phrase) with a pen and paper, and secure it safely. If you forget your dashboard's password, or in case something goes wrong with your Umbrel, you will need these 24 words to recover your funds in the Bitcoin wallet of your Umbrel.
-
-You're also recommended to download a backup of your payment channels regularly as it'll be required to recover your funds in the Lightning wallet of your Umbrel in case something goes wrong. You should also always download the latest backup file before installing an update.
 
 ## ❤️ Contributing
 
