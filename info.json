@@ -1,6 +1,6 @@
 {
-    "version": "0.4.18",
-    "name": "Umbrel v0.4.18",
-    "requires": ">=0.2.1",
-    "notes": "This update brings two brand new apps to the Umbrel App Store — Elements Core (Liquid Network full node) and IPFS Podcasting, along with updated apps and bugfixes.\n\nIf you face any difficulties while updating, please message us on Telegram: https://t.me/getumbrel"
+    "version": "0.5.0",
+    "name": "Umbrel v0.5.0",
+    "requires": ">=0.4.18",
+    "notes": "Introducing Umbrel 0.5. A whole new look. Realtime app updates. App permissions, dependencies, and authentication. Official Bitcoin & Lightning node apps. Oh, and dark mode.\n\nOur biggest update to Umbrel yet. Read the full announcement: link.umbrel.com/surprise\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
 }
