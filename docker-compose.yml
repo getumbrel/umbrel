@@ -92,6 +92,7 @@ services:
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                     IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
+                    UMBREL_APP_REPO_URL: "https://github.com/getumbrel/umbrel-apps.git"
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
