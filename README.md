@@ -14,7 +14,7 @@ Run a personal server in your home, self-host open source apps like Nextcloud an
 
 ## 🚀 Getting started
 
-The easiest way to get started is running [Umbrel OS](https:/download/umbrel.com/umbrel-os.zip) on a Raspberry Pi. We reccomend a Pi with atleast 8GB RAM.
+The easiest way to get started is running [Umbrel OS](https:/download/umbrel.com/umbrel-os.zip) on a Raspberry Pi. We reccomend a Pi with atleast 8GB RAM. [Learn more](https://umbrel.com/#start)
 
 Alternatively you can install Umbrel on an Ubuntu or Debian based system with:
 
