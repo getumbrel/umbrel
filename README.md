@@ -1,3 +1,5 @@
+[![Umbrel](media/hero.png)](https://getumbrel.com)
+
 [![Version](https://img.shields.io/github/v/release/getumbrel/umbrel?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel/releases)
 [![Community Chat](https://img.shields.io/badge/community%20chat-telegram-%235351FB)](https://t.me/getumbrel)
 [![Developer Chat](https://img.shields.io/badge/dev%20chat-keybase-%235351FB)](https://keybase.io/team/getumbrel)
@@ -7,8 +9,6 @@
 
 # ☂️ Umbrel — A beautiful personal server OS for self-hosting
 > ⚠️ Umbrel is currently in beta and is not considered secure. Please see [SECURITY.md](SECURITY.md) for more details.
-
-[![Umbrel](media/hero.png)](https://getumbrel.com)
 
 Run a personal server in your home, self-host open source apps like Nextcloud and Bitcoin node, break away from big tech, and take full control of your data. For free.
 
