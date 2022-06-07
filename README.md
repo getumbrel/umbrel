@@ -1,4 +1,4 @@
-[![Umbrel](https://i.imgur.com/NqIF9J5.png)](https://getumbrel.com)
+[![Umbrel](https://i.imgur.com/NqIF9J5.png)](https://umbrel.com)
 
 [![Version](https://img.shields.io/github/v/release/getumbrel/umbrel?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel/releases)
 [![Community Chat](https://img.shields.io/badge/community%20chat-telegram-%235351FB)](https://t.me/getumbrel)
@@ -14,7 +14,7 @@ Run a personal server in your home, self-host open source apps like Nextcloud an
 
 ## 🚀 Getting started
 
-The easiest way to get started is running [Umbrel OS](https:/download/umbrel.com/umbrel-os.zip) on a Raspberry Pi. We reccomend a Pi with atleast 8GB RAM. [Learn more](https://umbrel.com/#start)
+The easiest way to get started is running [Umbrel OS](https://download.umbrel.com/umbrel-os.zip) on a Raspberry Pi. We reccomend a Pi with atleast 8GB RAM. [[Learn More]](https://umbrel.com/#start)
 
 Alternatively you can install Umbrel on an Ubuntu or Debian based system with:
 
@@ -47,4 +47,4 @@ Umbrel is licensed under the PolyForm Noncommercial 1.0.0 license. TL;DR — You
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE.md)
 
-[getumbrel.com](https://getumbrel.com)
+[umbrel.com](https://umbrel.com)
