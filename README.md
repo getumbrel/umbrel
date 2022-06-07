@@ -1,4 +1,4 @@
-[![Umbrel](media/hero.png)](https://getumbrel.com)
+[![Umbrel](https://i.imgur.com/NqIF9J5.png)](https://getumbrel.com)
 
 [![Version](https://img.shields.io/github/v/release/getumbrel/umbrel?color=%235351FB&label=version)](https://github.com/getumbrel/umbrel/releases)
 [![Community Chat](https://img.shields.io/badge/community%20chat-telegram-%235351FB)](https://t.me/getumbrel)
