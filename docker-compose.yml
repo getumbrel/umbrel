@@ -119,7 +119,7 @@ services:
                         ipv4_address: $MIDDLEWARE_IP
         auth:
                 container_name: auth
-                image: cookiemonster123/auth-server:v0.1.0
+                image: getumbrel/auth-server:v0.1.0@sha256:f9453d45f59d281681d807d946b2ad4643ddbc67a877a68aab06a4910d9c984c
                 user: "1000:1000"
                 #build: ./deps/app-auth
                 restart: on-failure

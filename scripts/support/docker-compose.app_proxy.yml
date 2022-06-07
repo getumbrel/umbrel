@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
     app_proxy:
-        image: cookiemonster123/app-proxy:v0.1.0
+        image: getumbrel/app-proxy:v0.1.0@sha256:65ed21ca4aa5d68be83e56b8eee628b6d211f3863b7a87e8c00e80b2a7d6f68e
         #build: ../../deps/app-proxy
         user: "1000:1000"
         restart: on-failure
