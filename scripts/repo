@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+DEFAULT_UMBREL_APP_REPO_URL="https://github.com/getumbrel/umbrel-apps.git"
+
+show_help() {
+  cat << EOF
+repo 0.0.1
+
+CLI for managing local Umbrel App Repos
+
+Usage: repo <command> <arguments...>
+
+Commands:
+  id                          Get id of active app repo
+  path                        Get path of active app repo
+  set                         Set remote app repo url
+  update                      Update local app repo
+  default-repo                Get default remote app repo url
+    
+EOF
+}
+
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      exit 1
+    fi
+  done
+}
+
+# Check dependencies
+check_dependencies git jq timeout
+
+if [ -z ${1+x} ]; then
+  command=""
+else
+  command="$1"
+fi
+
+# If the 'user.json' doesn't exist or the 'appRepo' property is empty
+# Then we use the default app repo url
+USER_JSON=$(cat "${USER_FILE}" 2> /dev/null || echo "null")
+APP_REPO_URL=$(echo "${USER_JSON}" | jq -r "if (has(\"appRepo\") and (.appRepo | length > 0)) then .appRepo else \"${DEFAULT_UMBREL_APP_REPO_URL}\" end")
+
+function repo_id() {
+  echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
+}
+
+function repo_path() {
+  REPO=$(repo_id)
+  echo "${UMBREL_ROOT}/repos/${REPO}"
+}
+
+# Prints out repo ID
+if [[ "$command" = "id" ]]; then
+  repo_id
+  exit
+fi
+
+if [[ "$command" = "path" ]]; then
+  repo_path
+  exit
+fi
+
+# Sets the active repo
+if [[ "$command" = "set" ]]; then
+  repo_url="${2-}"
+
+  if [[ -z "${repo_url}" ]]; then
+    >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/umbrel-apps.git"
+    exit 1
+  fi
+
+  echo "Setting app repo to: ${repo_url}"
+
+  jq ".appRepo = \"${repo_url}\"" "${USER_FILE}" > /tmp/user.json
+  mv /tmp/user.json "${USER_FILE}"
+
+  exit
+fi
+
+# Update local copies of repos from remote
+if [[ "$command" = "update" ]]; then
+  repo=$(repo_id)
+
+  if [[ -z "${repo}" ]]; then
+    >&2 echo "Error, can't update app repo when no repo is set."
+    exit 1
+  fi
+
+  LOCAL_REPO_PATH=$(repo_path)
+  if [[ -d "${LOCAL_REPO_PATH}" ]]; then
+    REPO_BRANCH=$(git -C "${LOCAL_REPO_PATH}" rev-parse --abbrev-ref HEAD)
+    echo "Updating repo: ${repo} (${REPO_BRANCH})"
+
+    timeout --foreground 30 git -C "${LOCAL_REPO_PATH}" pull
+  else
+    echo "Cloning repo: ${repo} from: ${APP_REPO_URL}"
+
+    timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
+  fi
+
+  # Make sure app repo doesn't end up being owned by root or some apps will fail
+  # with fs permission errors
+  chown -R "1000:1000" "${LOCAL_REPO_PATH}"
+
+  exit
+fi
+
+if [[ "$command" = "default-repo" ]]; then
+  echo "${DEFAULT_UMBREL_APP_REPO_URL}"
+  exit
+fi
+
+# If we get here it means no valid command was supplied
+# Show help and exit
+show_help
+exit 1

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Redirecting...</title>
+</head>
+<body onload="document.forms[0].submit();">
+	<form method="POST" action="<%- url %>">
+	<% for (var key in params ) { %>
+		<input type="hidden" name="<%- key %>" value="<%- params[key] %>">
+	<% } %>
+	</form>
+</body>
+</html>

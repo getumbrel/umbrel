@@ -1,0 +1,7 @@
+Dockerfile
+node_modules
+.git
+.github
+test
+dist
+*.log

@@ -1,0 +1,3 @@
+# $APP_ID Hidden Service
+HiddenServiceDir /data/app-$APP_ID
+HiddenServicePort 80 $APP_PROXY_HOSTNAME:$APP_PROXY_PORT

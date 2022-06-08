@@ -4,10 +4,15 @@ set -euo pipefail
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 
-result=$(docker-compose \
-  --file "${UMBREL_ROOT}/docker-compose.yml" \
-  --env-file "${UMBREL_ROOT}/.env" \
-  exec lnd lncli "$@")
+echo
+echo "  *** Deprecation notice ***"
+echo "  In a future version of Umbrel, 'lncli' will be removed."
+echo
+echo "  Please instead use:"
+echo "  ./scripts/app compose lightning exec lnd lncli <sub-command>"
+echo
+
+result=$("${UMBREL_ROOT}/scripts/app" compose lightning exec lnd lncli "$@")
 
 # We need to echo with quotes to preserve output formatting
 echo "$result"

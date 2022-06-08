@@ -23,7 +23,21 @@ check_dependencies openssl tar gpg shuf curl
 # Deterministically derives 128 bits of cryptographically secure entropy
 derive_entropy () {
   identifier="${1}"
-  umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed") || true
+
+  # Attempt to get new app seed
+  {
+    seed_length=$(jq -r '.seed | length' "${UMBREL_ROOT}/app-data/lightning/data/lightning/state.json")
+    if [[ "${seed_length}" = "24" ]]; then
+      umbrel_seed=$(jq -r '.seed | join(" ")' "${UMBREL_ROOT}/app-data/lightning/data/lightning/state.json")
+    else
+      umbrel_seed=""
+    fi
+  } 2>/dev/null || true
+
+  # Else fall back to umbrel seed
+  if [[ -z "$umbrel_seed" ]]; then
+    umbrel_seed=$(cat "${UMBREL_ROOT}/db/umbrel-seed/seed" 2>/dev/null) || true
+  fi
 
   if [[ -z "$umbrel_seed" ]] || [[ -z "$identifier" ]]; then
     >&2 echo "Missing derivation parameter, this is unsafe, exiting."
@@ -44,14 +58,13 @@ encryption_key=$(derive_entropy "umbrel_backup_encryption_key")
 
 echo "Creating backup..."
 
-if [[ ! -f "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" ]]; then
-    echo "No channel.backup file found, skipping backup..."
-    exit 1
-fi
-
 mkdir -p "${BACKUP_FOLDER_PATH}"
 
-cp --archive "${UMBREL_ROOT}/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup" "${BACKUP_FOLDER_PATH}/channel.backup"
+CHANNEL_BACKUP_FILE="${UMBREL_ROOT}/app-data/lightning/data/lnd/data/chain/bitcoin/${BITCOIN_NETWORK}/channel.backup"
+
+if [[ -f "${CHANNEL_BACKUP_FILE}" ]]; then
+  cp --archive "${CHANNEL_BACKUP_FILE}" "${BACKUP_FOLDER_PATH}/channel.backup"
+fi
 
 # We want to back up user settings too, however we currently store the encrypted
 # mnemonic in this file which is not safe to backup remotely.

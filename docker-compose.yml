@@ -3,28 +3,19 @@ version: '3.7'
 services:
         tor_proxy:
                 container_name: tor
-                image: lncm/tor:0.4.5.7@sha256:a83e0d9fd1a35adf025f2f34237ec1810e2a59765988dce1dfb222ca8ef6583c
+                image: lncm/tor:0.4.7.7@sha256:3c4ae833d2fefbea7d960f833a1e89fc9b2069a6e5f360109b5ddc9334ac0227
                 user: toruser
                 restart: on-failure
                 volumes:
-                    - ${PWD}/tor/torrc-proxy:/etc/tor/torrc
-                    - ${PWD}/tor/data:/var/lib/tor/
+                    - ${PWD}/tor/torrc-proxy:/etc/tor/torrc:ro
+                    - ${PWD}/tor/data:/data
+                environment:
+                    HOME: "/tmp"
                 ports:
                   - "127.0.0.1:$TOR_PROXY_PORT:$TOR_PROXY_PORT"
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
-        tor_server:
-                image: getumbrel/tor-server:0.4.6.8@sha256:a81797e4a6b0c4709dd6f7c5543ab99e318af329bdf728c5b267f412c51b9a31
-                restart: on-failure
-                volumes:
-                    - ${PWD}/tor/torrc-server:/torrc
-                    - ${PWD}/tor/data:/data
-                environment:
-                    HS_PER_PROCESS: "10"
-                networks:
-                    default:
-                        ipv4_address: $TOR_SERVER_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
@@ -38,40 +29,9 @@ services:
                 networks:
                     default:
                         ipv4_address: $NGINX_IP
-        bitcoin:
-                container_name: bitcoin
-                image: lncm/bitcoind:v22.0@sha256:37a1adb29b3abc9f972f0d981f45e41e5fca2e22816a023faa9fdc0084aa4507
-                depends_on: [ tor_proxy, manager, nginx ]
-                volumes:
-                        - ${PWD}/bitcoin:/data/.bitcoin
-                restart: on-failure
-                stop_grace_period: 15m30s
-                ports:
-                    - "$BITCOIN_P2P_PORT:$BITCOIN_P2P_PORT"
-                networks:
-                    default:
-                        ipv4_address: $BITCOIN_IP
-        lnd:
-                container_name: lnd
-                image: lightninglabs/lnd:v0.14.2-beta@sha256:8318a24a3ad7319e424253eb56efcbf38e820ebc6d6b6edeec6a8a4e3e9314a0
-                user: 1000:1000
-                depends_on: [ tor_proxy, manager ]
-                volumes:
-                        - ${PWD}/lnd:/data/.lnd
-                environment:
-                  HOME: /data
-                restart: on-failure
-                stop_grace_period: 5m30s
-                ports:
-                    - "9735:9735"
-                    - "$LND_REST_PORT:$LND_REST_PORT"
-                    - "$LND_GRPC_PORT:$LND_GRPC_PORT"
-                networks:
-                    default:
-                        ipv4_address: $LND_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.3.32@sha256:545d0253653bb6e48b39b09caf34a1ef55484a6dd8644e5f5e8f164977a7af18
+                image: getumbrel/dashboard:v0.5.2@sha256:dd2727c9cca31558a26e1726c22996c3c0f2a29b3841e035fd36ff8608211778
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
@@ -79,7 +39,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.2.19@sha256:d94327034d99ec8121d42b61bbec89f2e1797148c56ef60b7cec17486e6a399d
+                image: getumbrel/manager:v0.5.0@sha256:c780ffb2619ba32e392ed9343d0336867ad3b2e9f3f08b8b0c7f9083e2c44a26
                 depends_on: [ tor_proxy ]
                 restart: on-failure
                 stop_grace_period: 5m30s
@@ -88,8 +48,8 @@ services:
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
                         - ${PWD}/events/signals:/signals
-                        - ${PWD}/apps:/apps
-                        - ${PWD}/lnd:/lnd:ro
+                        - ${PWD}/app-data:/app-data
+                        - ${PWD}/repos:/repos
                         - ${PWD}/statuses:/statuses
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
@@ -108,6 +68,7 @@ services:
                     MIDDLEWARE_API_URL: "http://$MIDDLEWARE_IP"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
+                    UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
                     BITCOIN_P2P_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-p2p/hostname"
                     BITCOIN_P2P_PORT: $BITCOIN_P2P_PORT
                     BITCOIN_RPC_HIDDEN_SERVICE_FILE: "/var/lib/tor/bitcoin-rpc/hostname"
@@ -131,17 +92,17 @@ services:
                     TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                     IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
+                    UMBREL_APP_REPO_URL: "https://github.com/getumbrel/umbrel-apps.git"
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
         middleware:
                 container_name: middleware
                 image: getumbrel/middleware:v0.1.15@sha256:b8a64ba65c314be6288decef6c87086f04a371b1a82c07599b98b67a7422f9fa
-                depends_on: [ manager, bitcoin, lnd ]
+                depends_on: [ manager ]
                 command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
                 restart: on-failure
                 volumes:
-                        - ${PWD}/lnd:/lnd
                         - jwt-public-key:/jwt-public-key
                 environment:
                     PORT: "3005"
@@ -156,44 +117,34 @@ services:
                 networks:
                     default:
                         ipv4_address: $MIDDLEWARE_IP
-        neutrino-switcher:
-                container_name: neutrino-switcher
-                image: getumbrel/neutrino-switcher:v1.3.0@sha256:399ccea7f39129ff16c9c408f9e68a01dd4671f428273f3c3f401a8a0d2f7ddc
-                depends_on: [ bitcoin, lnd ]
+        auth:
+                container_name: auth
+                image: getumbrel/auth-server:v0.1.0@sha256:f9453d45f59d281681d807d946b2ad4643ddbc67a877a68aab06a4910d9c984c
+                user: "1000:1000"
+                #build: ./deps/app-auth
                 restart: on-failure
-                volumes:
-                    - ${PWD}/lnd:/lnd
-                    - ${PWD}/statuses:/statuses
-                    - /var/run/docker.sock:/var/run/docker.sock
                 environment:
-                    JSONRPCURL: "http://${BITCOIN_IP}:${BITCOIN_RPC_PORT}"
-                    RPCUSER: $BITCOIN_RPC_USER
-                    RPCPASS: $BITCOIN_RPC_PASS
-                    LND_CONTAINER_NAME: lnd
-                    SLEEPTIME: 3600
+                    PORT: $AUTH_PORT
+                    UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
+                    MANAGER_IP: $MANAGER_IP
+                    MANAGER_PORT: 3006
+                    DASHBOARD_IP: $DASHBOARD_IP
+                    DASHBOARD_PORT: 3004
+                volumes:
+                        - ${PWD}/tor/data:/var/lib/tor:ro
+                        - ${PWD}/app-data:/app-data:ro
+                ports:
+                    - "${AUTH_PORT}:${AUTH_PORT}"
                 networks:
                     default:
-                        ipv4_address: $NEUTRINO_SWITCHER_IP
-        electrs:
-              container_name: electrs
-              image: getumbrel/electrs:v0.9.4@sha256:b1590ac6cfb0e5b481c6a7af7f0626d76cbb91c63702b0f5c47e2829e9c37997
-              volumes:
-                - ${PWD}/bitcoin:/data/.bitcoin:ro
-                - ${PWD}/electrs:/data
-              restart: on-failure
-              stop_grace_period: 5m
-              ports:
-                  - "$ELECTRUM_PORT:$ELECTRUM_PORT"
-              networks:
-                  default:
-                      ipv4_address: $ELECTRUM_IP
+                        ipv4_address: $AUTH_IP
 networks:
     default:
       name: umbrel_main_network
       ipam:
           driver: default
           config:
-              - subnet: "$NETWORK_IP/24"
+              - subnet: "$NETWORK_IP/16"
 
 volumes:
     jwt-public-key:

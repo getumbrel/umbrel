@@ -528,7 +528,7 @@
         "id": "btcpay-server",
         "category": "Finance",
         "name": "BTCPay Server",
-        "version": "1.4.2",
+        "version": "1.4.9",
         "tagline": "Accept Bitcoin payments with 0 fees & no 3rd party",
         "description": "BTCPay Server is a payment processor that allows you to receive payments in Bitcoin (and altcoins) directly, with no fees, transaction cost or a middleman. It is a non-custodial invoicing system which eliminates the involvement of a third-party.\n\nPayments with BTCPay Server go directly to your wallet, which increases the privacy and security. Your private keys are never uploaded to your Umbrel. There is no address re-use, since each invoice generates a new address deriving from your xpubkey.\n\nYou can not only to attach an unlimited number of stores and use the Lightning Network but also become a payment processor for others. Thanks to the apps built on top of it, you can use BTCPay to receive donations, start a crowdfunding campaign or have an in-store Point of Sale.\n\nPlease note: Due to your BTCPay instance running on your local network connecting remote applications, such as Shopify or WordPress for example, will fail to connect.",
         "developer": "BTCPay Server Foundation",
@@ -602,7 +602,7 @@
         "id": "suredbits-wallet",
         "category": "Finance",
         "name": "Suredbits Wallet",
-        "version": "1.9.0-59-faac871d",
+        "version": "1.9.0-93-4b964074",
         "tagline": "A universal DLC wallet",
         "description": "The Suredbits Wallet is your one stop shop for building Discreet Log Contracts. With our wallet you can create prop bets like Trump vs Biden in the 2020 US Presidential election or complicated financial derivatives such as contracts for difference that can be used to hedge risk or engage in speculation.\n\nWARNING: This is an Alpha software, don't put too much money in.",
         "developer": "Suredbits",
@@ -627,7 +627,7 @@
         "id": "krystal-bull",
         "category": "Finance",
         "name": "Krystal Bull",
-        "version": "1.9.0-59-faac871d",
+        "version": "1.9.0-91-ddabc912",
         "tagline": "Become an oracle and create Bitcoin bets",
         "description": "Krystal Bull allows you to become a Bitcoin oracle. An oracle allows information from the real world (financial markets, sporting events, elections, etc) to be used to create and settle Bitcoin bets.\n\nThe oracle is a crucial component for Discreet Log Contracts (DLC). Without a trustworthy oracle, you cannot create a bet on Bitcoin using DLCs. Trustworthy oracles are a building block to realizing Bitcoin DeFi.\n\nTo see some example oracles, please visit oracle.suredbits.com.\n\nWARNING: This version of Krystal Bull is an early alpha release for testing. It's not secure, please don't use it for anything serious.",
         "developer": "SuredBits",
@@ -671,7 +671,7 @@
         "id": "tallycoin-connect",
         "category": "Finance",
         "name": "Tallycoin Connect",
-        "version": "v1.7.0",
+        "version": "v1.7.3",
         "tagline": "Connect Tallycoin with your Umbrel node",
         "description": "Tallycoin is a crowdfunding platform built on top of the Bitcoin blockchain. Every satoshi donated to you, belongs to you. Tallycoin takes no cut. You can receive Tallycoin Lightning payouts directly to your own node by pairing the Tallycoin Connect Umbrel app to your Tallycoin account.",
         "developer": "djbooth007",
@@ -688,7 +688,7 @@
             "3.jpg"
         ],
         "path": "",
-        "defaultPassword": ""
+        "deterministicPassword": true
     },
     {
         "id": "syncthing",
@@ -927,7 +927,7 @@
         "id": "tailscale",
         "category": "Networking",
         "name": "Tailscale",
-        "version": "1.20.2",
+        "version": "1.22.1",
         "tagline": "Zero config VPN to access your Umbrel from anywhere",
         "description": "Tailscale is zero config VPN that creates a secure network between your Umbrel and your other devices. Even when separated by firewalls or subnets, Tailscale just works.\n\nTailscale will assign your Umbrel a stable IP and an auto-assigned domain that stays consistent, no matter what network your Umbrel is connected to. It’s like a local network that works everywhere.\n\nTailscale builds on top of WireGuard®’s Noise protocol encryption, a peer-reviewed and trusted standard.",
         "developer": "Tailscale Inc.",
@@ -1029,6 +1029,55 @@
         "repo": "https://github.com/samotari/bleskomat-server",
         "support": "https://t.me/bleskomat",
         "port": 3333,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "",
+        "deterministicPassword": true,
+        "torOnly": false
+    },
+    {
+        "id": "agora",
+        "category": "Files",
+        "name": "Agora",
+        "version": "v0.1.2",
+        "tagline": "Sell your files for Bitcoin",
+        "description": "Agora is a project that allows anyone to sell files on the web for bitcoin using the Lightning Network.\n\nAgora serves the contents of a local directory, providing file listings and downloads over HTTP. For example, you can point it at a directory full of PDFs, allowing users to browse and view the PDFs in their web browser. If agora is connected to an LND node, it can be configured to require Lightning Network payments for downloads.",
+        "developer": "Casey Rodarmor & Sönke Hahn",
+        "website": "https://agora-org.github.io/agora/",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/agora-org/agora",
+        "support": "https://t.me/agoradiscussion",
+        "port": 12080,
+        "gallery": [
+            "1.jpg",
+            "2.jpg",
+            "3.jpg"
+        ],
+        "path": "/admin/",
+        "deterministicPassword": true,
+        "defaultUsername": "umbrel",
+        "torOnly": false
+    },
+    {
+        "id": "sparkkiosk",
+        "category": "Finance",
+        "name": "Sparkkiosk",
+        "version": "v1.0.0",
+        "tagline": "Minimal LNURL kiosk",
+        "description": "Use sparkkiosk to enable lightning payments from printed QR codes in selfservice kiosks / cafés or other places where POS interaction is not needed or an option.\n\nLog into the dashboard, create a new LNURL, set currency and amount and download QR to print. Monitor latest invoices.",
+        "developer": "Jens Gertsen",
+        "website": "https://github.com/jensgertsen/sparkkiosk",
+        "dependencies": [
+            "lnd"
+        ],
+        "repo": "https://github.com/jensgertsen/sparkkiosk",
+        "support": "https://github.com/jensgertsen/sparkkiosk/discussions",
+        "port": 21214,
         "gallery": [
             "1.jpg",
             "2.jpg",

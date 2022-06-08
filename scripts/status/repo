@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+$UMBREL_ROOT/scripts/repo update

@@ -1,0 +1,61 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      - APP_HOST=web
+      - APP_PORT=80
+
+  db:
+    image: mariadb:10.5.12@sha256:dfcba5641bdbfd7cbf5b07eeed707e6a3672f46823695a0d3aba2e49bbd9b1dd
+    user: "1000:1000"
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: on-failure
+    volumes:
+      - ./apps/nextcloud/data/db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=moneyprintergobrrr
+      - MYSQL_PASSWORD=moneyprintergobrrr
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+
+  redis:
+    image: redis:6.2.2-buster@sha256:e10f55f92478715698a2cef97c2bbdc48df2a05081edd884938903aa60df6396
+    user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - "./apps/nextcloud/data/redis:/data"
+
+  web:
+    image: nextcloud:22.1.1-apache@sha256:99d94124b2024c9f7f38dc12144a92bc0d68d110bcfd374169ebb7e8df0adf8e
+    # Currently needs to be run as root, if we run as uid 1000 this fails
+    # https://github.com/nextcloud/docker/blob/05026b029d37fc5cd488d4a4a2a79480e39841ba/21.0/apache/entrypoint.sh#L53-L77
+    # user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - ./apps/nextcloud/data/nextcloud:/var/www/html
+    environment:
+      - MYSQL_HOST=db
+      - REDIS_HOST=redis
+      - MYSQL_PASSWORD=moneyprintergobrrr
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - NEXTCLOUD_ADMIN_USER=umbrel
+      - NEXTCLOUD_ADMIN_PASSWORD=${APP_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${APP_DOMAIN}:${APP_PORT}
+    depends_on:
+      - db
+      - redis
+
+  cron:
+    image: nextcloud:22.0.0-apache@sha256:55de721417c16ff110720217406778e16f1b63154d2e8d42fc7913c37dbe6d50
+    # Currently needs to be run as root, if we run as uid 1000 this fails
+    # https://github.com/nextcloud/docker/blob/05026b029d37fc5cd488d4a4a2a79480e39841ba/21.0/apache/entrypoint.sh#L53-L77
+    # user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - ./apps/nextcloud/data/nextcloud:/var/www/html
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis

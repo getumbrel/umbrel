@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+    app_proxy:
+        environment:
+            APP_HOST: frontend
+            APP_PORT: 8888
+    frontend:
+        image: mendhak/http-https-echo
+        environment:
+            HTTP_PORT: 8888

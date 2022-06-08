@@ -17,6 +17,10 @@ echo "=========== Stage: Install ============"
 echo "======================================="
 echo
 
+versionToInt () {
+  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+}
+
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
 
 # Make Umbrel OS specific updates
@@ -26,6 +30,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "Installing on Umbrel OS $UMBREL_OS"
     echo "============================================="
     echo
+
+    # Update status file
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 30, "description": "Updating Umbrel OS", "updateTo": "$RELEASE"}
+EOF
 
     # In Umbrel OS v0.1.2, we need to bind Avahi to only
     # eth0,wlan0 interfaces to prevent hostname cycling
@@ -68,6 +77,16 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
       apt-get install --yes --only-upgrade policykit-1
     fi
 
+    # Patch raspberry pi kernel (to fix Dirtypipe vuln.)
+    # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-0847
+    active_kernel_version=$(uname -r)
+    if [[ $(versionToInt "${active_kernel_version}") -lt $(versionToInt "5.10.103") ]]; then
+      apt-get update
+      apt-get install --yes --only-upgrade raspberrypi-kernel
+
+      touch "/tmp/umbrel-update-reboot-required"
+    fi
+
     # Make sure dhcpd ignores virtual network interfaces
     dhcpd_conf="/etc/dhcpcd.conf"
     dhcpd_rule="denyinterfaces veth*"
@@ -85,9 +104,32 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     done
 fi
 
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 33, "description": "Configuring settings", "updateTo": "$RELEASE"}
-EOF
+if ! command -v "yq" >/dev/null 2>&1; then
+  >&2 echo "'yq' is missing. Installing now..."
+
+  # Define checksums for yq (4.24.5)
+  declare -A yq_sha256
+  yq_sha256["arm64"]="8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9"
+  yq_sha256["amd64"]="c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760"
+
+  yq_version="v4.24.5"
+  system_arch=$(dpkg --print-architecture)
+  yq_binary="yq_linux_${system_arch}"
+
+  # Download yq from github
+  yq_temp_file="/tmp/yq"
+  curl -L "https://github.com/mikefarah/yq/releases/download/${yq_version}/${yq_binary}" -o "${yq_temp_file}"
+
+  # Check file matches checksum
+  if [[ "$(sha256sum "${yq_temp_file}" | awk '{ print $1 }')" == "${yq_sha256[$system_arch]}" ]]; then
+    mv "${yq_temp_file}" /usr/bin/yq
+    chmod +x /usr/bin/yq
+
+    echo "yq installed successfully..."
+  else
+    echo "yq install failed. sha256sum mismatch"
+  fi
+fi
 
 # Checkout to the new release
 cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
@@ -110,37 +152,19 @@ cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 EOF
 docker-compose pull
 
-echo "Updating installed apps"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 60, "description": "Updating installed apps", "updateTo": "$RELEASE"}
-EOF
-# We can just loop over this once everyone has the latest app script
-# "$UMBREL_ROOT/scripts/app" ls-installed
-# but for now we need to implement it here manually
-USER_FILE="${UMBREL_ROOT}/db/user.json"
-list_installed_apps() {
-  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
-}
-for app in $(list_installed_apps); do
-  if [[ "${app}" != "" ]]; then
-    echo "${app}..."
-    scripts/app compose "${app}" pull &
-  fi
-done
-wait
-
 # Stop existing containers
 echo "Stopping existing containers"
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 70, "description": "Removing old containers", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 60, "description": "Removing old containers", "updateTo": "$RELEASE"}
 EOF
+
 cd "$UMBREL_ROOT"
 ./scripts/stop || {
   # If Docker fails to stop containers we're most likely hitting this Docker bug: https://github.com/moby/moby/issues/17217
   # Restarting the Docker service seems to fix it
   echo "Attempting to autofix Docker failure"
   cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 70, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 65, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
 EOF
   sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
@@ -179,7 +203,7 @@ EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
 if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
   echo "Attempting to move Docker to external storage..."
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 72, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
+{"state": "installing", "progress": 68, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
 EOF
 
   echo "Stopping Docker service..."
@@ -217,6 +241,41 @@ rsync --archive \
     --delete \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
+
+# Update Docker for Umbrel OS users. Some old installs may be running outdated versions of Docker
+# that have missing Docker DNS features that we now rely on.
+if [[ ! -z "${UMBREL_OS:-}" ]]; then
+  echo "Updating Docker..."
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 69, "description": "Updating Docker", "updateTo": "$RELEASE"}
+EOF
+  "${UMBREL_ROOT}/scripts/update/steps/get-docker.sh" || {
+    # If the docker update fails, revert the update to avoid leaving the user in a broken state
+    echo "Updating Docker failed, reverting update!"
+    echo "Error updating Docker" > "${UMBREL_ROOT}/statuses/update-failure"
+    rsync -av \
+      --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
+      --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
+      "$UMBREL_ROOT"/.umbrel-backup/ \
+      "$UMBREL_ROOT"/
+    ./scripts/start
+    false
+  }
+fi
+
+# Migrate 'apps' structure to using app repos
+"${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT" || {
+  # If the apps migration fails, revert the update to avoid leaving the user in a broken state
+  echo "App migration failed, reverting update!"
+  echo "Error running app migration" > "${UMBREL_ROOT}/statuses/update-failure"
+  rsync -av \
+    --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
+    --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
+    "$UMBREL_ROOT"/.umbrel-backup/ \
+    "$UMBREL_ROOT"/
+  ./scripts/start
+  false
+}
 
 # Remove legacy electrs dir
 legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
@@ -300,13 +359,6 @@ fi
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
 chmod -R 700 "$UMBREL_ROOT"/tor/data/*
-
-# Killing karen
-echo "Killing background daemon"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 75, "description": "Killing background daemon", "updateTo": "$RELEASE"}
-EOF
-pkill -f "\./karen"
 
 # Start updated containers
 echo "Starting new containers"

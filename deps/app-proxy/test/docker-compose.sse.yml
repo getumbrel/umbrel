@@ -1,0 +1,10 @@
+version: '3.7'
+
+services:
+    app_proxy:
+        environment:
+            APP_HOST: sse_server
+            APP_PORT: 80
+    sse_server:
+        image: getumbrel/sse-test-server
+        build: ./test/sse-test-server

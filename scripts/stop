@@ -32,3 +32,11 @@ echo
 echo "Stopping Docker services..."
 echo
 docker-compose down
+
+# TODO: Transition to pidfiles so we can reliably kill these processes
+echo "Killing background services"
+ps -Af \
+  | grep '\./karen\|\./scripts/status-monitor\|\./scripts/memory-monitor\|\./scripts/backup/\|umbrel/scripts\|fswatch' \
+  | grep -v '\-run.sh\|update' \
+  | awk '{print $2}' \
+  | xargs sudo kill 2> /dev/null || true

@@ -1,0 +1,6 @@
+version: "3.7"
+
+networks:
+  default:
+    external:
+      name: umbrel_main_network

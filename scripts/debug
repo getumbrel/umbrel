@@ -128,31 +128,13 @@ echo
 echo "Umbrel logs"
 echo "-----------"
 echo
-docker-compose logs --tail=30 manager middleware
-
-echo
-echo "Bitcoin Core logs"
-echo "-----------------"
-echo
-docker-compose logs --tail=30 bitcoin
-
-echo
-echo "LND logs"
-echo "--------"
-echo
-docker-compose logs --tail=30 lnd
-
-echo
-echo "electrs logs"
-echo "--------"
-echo
-docker-compose logs --tail=30 electrs
+docker-compose logs --tail=30 manager
 
 echo
 echo "Tor logs"
 echo "--------"
 echo
-docker-compose logs --tail=10 tor_proxy tor_server
+docker-compose logs --tail=10 tor_proxy
 
 installed_apps=$(./scripts/app ls-installed)
 if [[ ! -z "${installed_apps:-}" ]]; then

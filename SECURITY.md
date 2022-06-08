@@ -2,7 +2,7 @@
 
 **Umbrel is currently in beta and is not considered secure.**
 
-We are trying to iterate rapidly and build out our vision and only have so many hours in the day. Due to this, we've decided to make the following trade-offs to allow us to ship a working beta with critical features, such as over-the-air (OTA) updates and easy log access, as soon as possible.
+We've decided to make the following trade-offs while Umbrel is in beta to help us ship critical features like over-the-air (OTA) updates.
 
 **No signature verification on OTA updates or when pulling Docker images.**
 
@@ -27,7 +27,5 @@ Currently we are being quite liberal with filesystem permissions and root usage.
 **No Network Level Sandboxing**
 
 Apps already have process level sandboxing and filesystem level sandboxing but not network level sandboxing. We plan to implement network level sandboxing so one app will not be able to interact with another app over the network. Apps will also not be able to interact with other physical devices on the local network without explicitly asking the user for permission.
-
-Umbrel, in its current state, is intended to demonstrate what we have in mind, show the community what we are building, and to get early feedback. It's in a state that it can be used, but should not be considered secure. Thus, **you should not put more funds on your Umbrel than you're prepared to lose.**
 
 The issues raised above will all be resolved before we do a stable release of Umbrel.
