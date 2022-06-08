@@ -38,7 +38,7 @@
 > Umbrel is currently in beta and not considered secure. Please see [SECURITY.md](SECURITY.md) for more details.
 
 
-The easiest way to get started is by running [Umbrel OS](https://download.umbrel.com/umbrel-os.zip) on a Raspberry Pi 4. Step-by-step installation intructions can be found [here](https://umbrel#start).
+The easiest way to get started is by running [Umbrel OS](https://download.umbrel.com/umbrel-os.zip) on a Raspberry Pi 4. Step-by-step installation intructions can be found [here](https://umbrel.com/#start).
 
 Alternatively you can install Umbrel on any Ubuntu or Debian based system with:
 
