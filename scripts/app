@@ -18,6 +18,7 @@ Commands:
     uninstall                  Removes images and destroys all data for an app
     stop                       Stops an installed app
     start                      Starts an installed app
+    restart                    Restarts an installed app
     compose                    Passes all arguments to docker-compose
     ls-installed               Lists installed apps
 EOF
@@ -416,6 +417,16 @@ if [[ "$command" = "start" ]]; then
 
   echo "Starting app ${app}..."
   start_app "${app}"
+
+  exit
+fi
+
+# Restarts an installed app
+if [[ "$command" = "restart" ]]; then
+
+  "${0}" "stop" "${app}"
+
+  "${0}" "start" "${app}"
 
   exit
 fi
