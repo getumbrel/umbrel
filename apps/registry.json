@@ -989,6 +989,9 @@
             "2.jpg",
             "3.jpg"
         ],
+        "path": "",
+        "deterministicPassword": false,
+        "torOnly": false,
         "defaultUsername": "admin",
         "defaultPassword": "admin"
       },
@@ -1010,7 +1013,7 @@
             "2.jpg",
             "3.jpg"
         ],
-        "path": ""
+        "path": "",
         "deterministicPassword": false,
         "torOnly": false
     },
