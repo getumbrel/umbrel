@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   server:
-    image: homeassistant/home-assistant:2022.6.4@e96a01479012e637fbe0729adf3448f673b53252508130cac320e0d2dc2f89e6
+    image: homeassistant/home-assistant:2022.6.4@sha256:e96a01479012e637fbe0729adf3448f673b53252508130cac320e0d2dc2f89e6
     ports:
       - "${APP_HOME_ASSISTANT_PORT}:8123"
     volumes:
