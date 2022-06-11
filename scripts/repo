@@ -45,9 +45,14 @@ fi
 # Then we use the default app repo url
 USER_JSON=$(cat "${USER_FILE}" 2> /dev/null || echo "null")
 APP_REPO_URL=$(echo "${USER_JSON}" | jq -r "if (has(\"appRepo\") and (.appRepo | length > 0)) then .appRepo else \"${DEFAULT_UMBREL_APP_REPO_URL}\" end")
+APP_REPO_BRANCH=$(echo "${USER_JSON}" | jq -r "if (has(\"appRepoBranch\") and (.appRepoBranch | length > 0)) then .appRepoBranch else \"\"  end")
 
 function repo_id() {
-  echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
+  if [[ -n ${APP_REPO_BRANCH} ]]; then
+    echo "${APP_REPO_URL}-${APP_REPO_BRANCH}" | sed 's/[^a-zA-Z0-9]/-/g'
+  else
+    echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
+  fi
 }
 
 function repo_path() {
@@ -69,6 +74,7 @@ fi
 # Sets the active repo
 if [[ "$command" = "set" ]]; then
   repo_url="${2-}"
+  repo_branch="${3-}"
 
   if [[ -z "${repo_url}" ]]; then
     >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/umbrel-apps.git"
@@ -78,6 +84,14 @@ if [[ "$command" = "set" ]]; then
   echo "Setting app repo to: ${repo_url}"
 
   jq ".appRepo = \"${repo_url}\"" "${USER_FILE}" > /tmp/user.json
+  mv /tmp/user.json "${USER_FILE}"
+
+  if [[ -n "${repo_branch}" ]]; then
+    echo "Setting app repo branch to: ${repo_branch}"
+    jq ".appRepoBranch = \"${repo_branch}\"" "${USER_FILE}" > /tmp/user.json
+  else
+    jq "del(.appRepoBranch)" "${USER_FILE}" > /tmp/user.json
+  fi
   mv /tmp/user.json "${USER_FILE}"
 
   exit
@@ -99,9 +113,13 @@ if [[ "$command" = "update" ]]; then
 
     timeout --foreground 30 git -C "${LOCAL_REPO_PATH}" pull
   else
-    echo "Cloning repo: ${repo} from: ${APP_REPO_URL}"
-
-    timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
+    if [[ -z "${APP_REPO_BRANCH}" ]]; then
+      echo "Cloning repo: ${repo} from: ${APP_REPO_URL}"
+      timeout --foreground 30 git clone --depth 1 ${APP_REPO_URL} "${LOCAL_REPO_PATH}"
+    else
+      echo "Cloning repo: ${repo} from: ${APP_REPO_URL}:${APP_REPO_BRANCH}"
+      timeout --foreground 30 git clone --depth 1 --branch "${APP_REPO_BRANCH}" "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
+    fi
   fi
 
   # Make sure app repo doesn't end up being owned by root or some apps will fail
