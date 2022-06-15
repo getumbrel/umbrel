@@ -8,6 +8,7 @@ UPDATE_APT="true"
 INSTALL_APT_DEPS="true"
 INSTALL_AVAHI="true"
 INSTALL_YQ="true"
+if which yq >/dev/null 2>&1 ; then INSTALL_YQ="false" ; fi
 INSTALL_DOCKER="true"
 INSTALL_DOCKER_COMPOSE="true"
 INSTALL_START_SCRIPT="true"
