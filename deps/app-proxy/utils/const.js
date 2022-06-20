@@ -45,7 +45,7 @@ module.exports = Object.freeze({
 	LOG_LEVEL: process.env.LOG_LEVEL || "info",
 
 	PROXY_PORT: parseInt(process.env.PROXY_PORT) || 4000,
-	PROXY_TIMEOUT: parseInt(process.env.PROXY_TIMEOUT) || 30 * 1000, // milliseconds
+	PROXY_TIMEOUT: parseInt(process.env.PROXY_TIMEOUT) || 0, // milliseconds or 0 for disabled
 	PROXY_AUTH_ADD: (typeof(process.env.PROXY_AUTH_ADD) === "string") ? (process.env.PROXY_AUTH_ADD === "true") : true,
 	PROXY_AUTH_WHITELIST: cleanHttpPaths(process.env.PROXY_AUTH_WHITELIST || ""),
 	PROXY_AUTH_BLACKLIST: cleanHttpPaths(process.env.PROXY_AUTH_BLACKLIST || ""),
