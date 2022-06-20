@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+    web:
+        image: mendhak/http-https-echo
+        environment:
+            HTTP_PORT: 8888
+
+    tor:
+        image: getumbrel/tor
+        build: ..
+        user: 1000:1000
+        environment:
+            HOME: /tmp
+        volumes:
+            - ./torrc:/etc/tor/torrc
+            - ./data:/data
