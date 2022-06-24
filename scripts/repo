@@ -7,7 +7,7 @@ DEFAULT_UMBREL_APP_REPO_URL="https://github.com/getumbrel/umbrel-apps.git"
 
 show_help() {
   cat << EOF
-repo 0.0.1
+repo 0.0.2
 
 CLI for managing local Umbrel App Repos
 
@@ -18,6 +18,8 @@ Commands:
   path                        Get path of active app repo
   set                         Set remote app repo url
   update                      Update local app repo
+  branch                      Set the branch for the local app repo
+  checkout                    Checkout a remote app repo (branch is optional) e.g. https://github.com/coolapp/umbrel-apps.git#staging
   default-repo                Get default remote app repo url
     
 EOF
@@ -107,6 +109,81 @@ if [[ "$command" = "update" ]]; then
   # Make sure app repo doesn't end up being owned by root or some apps will fail
   # with fs permission errors
   chown -R "1000:1000" "${LOCAL_REPO_PATH}"
+
+  exit
+fi
+
+if [[ "$command" = "branch" ]]; then
+  branch="${2-}"
+
+  if [[ -z "${branch}" ]]; then
+    >&2 echo "A valid branch name must be given. e.g. staging"
+    exit 1
+  fi
+
+  LOCAL_REPO_PATH=$(repo_path)
+
+  if [[ ! -d "${LOCAL_REPO_PATH}" ]]; then
+    >&2 echo "App repo does not yet exist locally"
+    >&2 echo "Please use the 'update' subcommand"
+    exit 1
+  fi
+
+  # Check whether it's only fetching for master
+  GIT_CONFIG_FILE="${LOCAL_REPO_PATH}/.git/config"
+  if grep -q "refs/heads/master:refs/remotes/origin/master" "${GIT_CONFIG_FILE}"; then
+    sed -i "s/refs\/heads\/master:refs\/remotes\/origin\/master/refs\/heads\/*:refs\/remotes\/origin\/*/g;" "${GIT_CONFIG_FILE}"
+  fi
+
+  # Fetch remote commits, files, and refs
+  git -C "${LOCAL_REPO_PATH}" fetch
+
+  # Checkout branch
+  git -C "${LOCAL_REPO_PATH}" checkout "${branch}"
+
+  # Update local repo
+  "${0}" "update"
+
+  exit
+fi
+
+if [[ "$command" = "checkout" ]]; then
+  descriptor="${2-}"
+
+  if [[ -z "${descriptor}" ]]; then
+    >&2 echo "A valid remote git repo descriptor must be given. e.g. coolapp/umbrel-apps"
+    exit 1
+  fi
+
+  # These are all valid repo descriptors
+  # - http://github.com/coolapp/umbrel-apps
+  # - coolapp/umbrel-apps (will use github.com via https)
+  # - coolapp/umbrel-apps#staging
+
+  # Note: using the .git extension is optional
+
+  # Check whether a base url is in the descriptor
+  # And if not, default to github https
+  if [[ "${descriptor}" != http* ]] && [[ "${descriptor}" != git@ ]]; then
+    descriptor="https://github.com/${descriptor}"
+  fi
+
+  repo="${descriptor%%#*}"
+
+  if [[ "${repo}" != *.git ]]; then
+    repo="${repo}.git"
+  fi
+
+  "${0}" "set" "${repo}"
+
+  "${0}" "update"
+
+  if [[ "${descriptor}" == *"#"* ]]; then
+    branch="${descriptor#*#}"
+
+    echo
+    "${0}" "branch" "${branch}"
+  fi
 
   exit
 fi
