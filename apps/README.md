@@ -39,7 +39,7 @@ RUN apt-get update
 RUN apt-get install -y git python3 build-essential
 RUN npm ci --production
 
-FROM node:12-buster-slim
+FROM gcr.io/distroless/nodejs:12
 
 USER 1000
 WORKDIR /build
