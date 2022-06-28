@@ -83,6 +83,7 @@ if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
     hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/web/hostname")
     DEVICE_HOSTS="${DEVICE_HOSTS},http://${hidden_service_url}"
 fi
+export DEVICE_IP=$DEVICE_IP
 export DEVICE_HOSTS=$DEVICE_HOSTS
 export DEVICE_HOSTNAME="${DEVICE_HOSTNAME}.local"
 

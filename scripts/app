@@ -81,6 +81,7 @@ source_app() {
   export NETWORK_IP="${NETWORK_IP}"
 
   # Set other useful vars. used in exports
+  export DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
   export DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "umbrel")"
   export DEVICE_DOMAIN_NAME="${DEVICE_HOSTNAME}.local"
 
