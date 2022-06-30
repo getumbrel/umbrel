@@ -1,5 +1,6 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const { StatusCodes } = require('http-status-codes');
+const url = require('url');
 
 const expressUtils = require('../utils/express.js');
 const tokenUtils = require('../utils/token.js');
@@ -88,10 +89,19 @@ function apply(app) {
 			if(typeof(token) !== "string" || ! await tokenUtils.validate(token)) {
 				const origin = req.hostname.endsWith(".onion") ? "tor" : "host";
 
+				// Get the raw query string
+				// This could be null if there is no query string
+				let query = url.parse(req.url).query;
+				if(typeof(query) == "string") {
+					query = `?${query}`
+				} else {
+					query = '';
+				}
+
 				const searchParams = new URLSearchParams({
 					origin: origin,
 					app: CONSTANTS.APP.id,
-					path: req.path
+					path: `${req.path}${query}`
 				});
 
 				// If request came over Tor
