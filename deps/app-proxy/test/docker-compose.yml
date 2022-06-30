@@ -24,10 +24,10 @@ services:
             APP_HOST: 
             APP_PORT: 
             APP_MANIFEST_FILE: "/extra/umbrel-app.yml"
-            UMBREL_AUTH_PORT: 2000
-            UMBREL_AUTH_SECRET: umbrel
+            UMBREL_AUTH_PORT: "${AUTH_PORT}"
+            UMBREL_AUTH_SECRET: "${UMBREL_AUTH_SECRET}"
             UMBREL_AUTH_HIDDEN_SERVICE_FILE: "/var/lib/tor/auth/hostname"
-            MANAGER_IP: $MANAGER_IP
+            MANAGER_IP: "${MANAGER_IP}"
             MANAGER_PORT: 3006
 
 networks:

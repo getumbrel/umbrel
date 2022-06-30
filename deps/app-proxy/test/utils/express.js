@@ -46,4 +46,34 @@ describe('express', () => {
 
     assert.equal("another_cookie=some_value; csrf=a_value.das384jfdjsi4r2hf29f", cookieHeader);
   });
+
+  it('should remove the cookie when that 1 cookie exists in the request header', () => {
+    const req = httpMocks.createRequest({
+      method: 'GET',
+      protocol: "http",
+      headers: {
+        host: "bitcoin.org:4444",
+        cookie: "session=abc123"
+      }
+    });
+
+    const cookieHeader = express.removeCookie(req, "session");
+
+    assert.equal("", cookieHeader);
+  });
+
+  it('should remove the cookie when that 1 cookie exists with delimiter in the request header', () => {
+    const req = httpMocks.createRequest({
+      method: 'GET',
+      protocol: "http",
+      headers: {
+        host: "bitcoin.org:4444",
+        cookie: "session=abc123; "
+      }
+    });
+
+    const cookieHeader = express.removeCookie(req, "session");
+
+    assert.equal("", cookieHeader);
+  });
 });

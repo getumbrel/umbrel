@@ -1,0 +1,59 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: web
+      APP_PORT: 3002
+
+  web:
+    image: bitcoinscala/wallet-server-ui:1.9.1@sha256:3eb479b106811d523c4e0cfde244949f6c76a27c7d1fe59be9b8b51ba2372649
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ./apps/suredbits/data/wallet:/home/bitcoin-s/.bitcoin-s
+      - ./apps/suredbits/data/log:/log
+    environment:
+      LOG_PATH: "/log/"
+      BITCOIN_S_HOME: "/home/bitcoin-s/.bitcoin-s/"
+      MEMPOOL_API_URL: "http://umbrel.local:3004/api"
+      WALLET_SERVER_API_URL: "http://walletserver:9999/"
+      WALLET_SERVER_WS: "ws://walletserver:19999/events"
+      TOR_PROXY: socks5://localhost:5555
+      DEFAULT_UI_PASSWORD: "password123"
+      BITCOIN_S_SERVER_RPC_PASSWORD: "password123"
+    depends_on: 
+      - walletserver
+  
+  walletserver:
+    image: bitcoinscala/bitcoin-s-server:1.9.1-34-3dc70938-SNAPSHOT@sha256:1cd82d19059382f740f7b8acbc2d3aaeaf0c1fd7c662bdbc3ef7b97a27ee181f
+    user: "1000:1000"
+    restart: on-failure
+    volumes:
+      - ./apps/suredbits/data/wallet:/home/bitcoin-s/.bitcoin-s
+    environment:
+      BITCOIN_S_NODE_MODE: "bitcoind"
+      BITCOIN_S_NETWORK: "regtest"
+      BITCOIN_S_KEYMANAGER_ENTROPY: "a75a58071bd4c65a1e87c1b970e9d736d9185a427a4f3110d250ea3945d9108d"
+      BITCOIN_S_PROXY_ENABLED: "false"
+      BITCOIN_S_TOR_ENABLED: "false"
+      BITCOIN_S_TOR_PROVIDED: "true"
+      BITCOIN_S_DLCNODE_PROXY_ENABLED: "true"
+      BITCOIN_S_DLCNODE_PROXY_SOCKS5: "localhost:5555"
+      BITCOIN_S_DLCNODE_EXTERNAL_IP: "hiddenservice.onion"
+      BITCOIN_S_BITCOIND_HOST: "bitcoind"
+      BITCOIN_S_BITCOIND_PORT: "18443"
+      BITCOIN_S_BITCOIND_USER: "umbrel"
+      BITCOIN_S_BITCOIND_PASSWORD: "bitcoinbitcoin"
+      BITCOIN_S_SERVER_RPC_PASSWORD: "password123"
+    ports:
+      - "2862:2862"
+
+  bitcoind:
+    image: lncm/bitcoind:v22.0@sha256:37a1adb29b3abc9f972f0d981f45e41e5fca2e22816a023faa9fdc0084aa4507
+    command: "${APP_BITCOIN_COMMAND}"
+    restart: on-failure
+    stop_grace_period: 15m30s
+    volumes:
+      - ./apps/suredbits/data/bitcoin:/data/.bitcoin

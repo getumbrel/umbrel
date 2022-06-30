@@ -9,7 +9,14 @@ const safeHandler = require("../utils/safe_handler.js");
 
 function onProxyReq(proxyReq, req, res, config) {
 	// Remove umbrel session cookie from proxied request
-	proxyReq.setHeader('cookie', expressUtils.removeCookie(req, CONSTANTS.UMBREL_COOKIE_NAME));
+	const cookies = expressUtils.removeCookie(req, CONSTANTS.UMBREL_COOKIE_NAME);
+	if(cookies.trim().length === 0) {
+		// "the user agent sends a Cookie request header to the origin server if it has cookies"
+		// More info: https://datatracker.ietf.org/doc/html/rfc2109#section-4.3.4
+		proxyReq.removeHeader('cookie');
+	} else {
+		proxyReq.setHeader('cookie', cookies);
+	}	
 }
 
 function onError(err, req, res, target) {
