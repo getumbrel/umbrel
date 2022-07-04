@@ -1,0 +1,29 @@
+version: "3.7"
+
+services:
+  web:
+    image: getumbrel/btc-rpc-explorer:v2.0.2
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - 3002:3002
+    environment:
+      # Bitcoin Core connection details
+      BTCEXP_BITCOIND_HOST: $BITCOIN_IP
+      BTCEXP_BITCOIND_PORT: $BITCOIN_RPC_PORT
+      BTCEXP_BITCOIND_USER: $BITCOIN_RPC_USER
+      BTCEXP_BITCOIND_PASS: $BITCOIN_RPC_PASS
+
+      # Electrum connection details
+      BTCEXP_ELECTRUMX_SERVERS: "tcp://$ELECTRUM_IP:$ELECTRUM_PORT"
+
+      # App Config
+      BTCEXP_HOST: 0.0.0.0
+      DEBUG: "btcexp:*,electrumClient"
+      BTCEXP_ADDRESS_API: electrumx
+      BTCEXP_SLOW_DEVICE_MODE: "true"
+      BTCEXP_NO_INMEMORY_RPC_CACHE: "true"
+      BTCEXP_PRIVACY_MODE: "true"
+      BTCEXP_NO_RATES: "true"
+      BTCEXP_RPC_ALLOWALL: "false"
+      BTCEXP_BASIC_AUTH_PASSWORD: ""      
