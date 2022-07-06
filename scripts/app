@@ -196,10 +196,10 @@ compose() {
 
   # Detect if the 'app_proxy' service has been defined
   # In the app's docker-compose file
-  APP_COMPOSE_SERVICES=$(cat "${app_compose_file}" | yq '.services | keys | .[]')
   APP_PROXY_SERVICE_NAME="app_proxy"
+  HAS_APP_PROXY_SERVICE=$(cat "${app_compose_file}" | yq ".services | has(\"${APP_PROXY_SERVICE_NAME}\")")
 
-  if echo "${APP_COMPOSE_SERVICES}" | grep --quiet "^${APP_PROXY_SERVICE_NAME}$"; then
+  if [[ "${HAS_APP_PROXY_SERVICE}" == "true" ]]; then
     compose_files+=( "--file" "${app_proxy_compose_file}" )
   fi
   
