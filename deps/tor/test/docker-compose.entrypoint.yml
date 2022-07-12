@@ -1,0 +1,22 @@
+version: '3.7'
+
+services:
+    web:
+        image: mendhak/http-https-echo
+        environment:
+            HTTP_PORT: 8888
+
+    tor:
+        image: getumbrel/tor
+        build: ..
+        user: 1000:1000
+        environment:
+            HOME: /tmp
+            HS_DIR: "web2"
+            HS_VIRTUAL_PORT: "80"
+            HS_HOST: "web"
+            HS_PORT: "8888"
+        entrypoint: /umbrel/entrypoint.sh
+        volumes:
+            - ./data:/data
+            - ./entrypoint.sh:/umbrel/entrypoint.sh
