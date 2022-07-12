@@ -146,6 +146,20 @@ fi
 "${UMBREL_ROOT}/scripts/app" start installed
 echo
 
+# If a backup of resolv.conf exists
+# (that got created during the Umbrel update process)
+# then we'll now restore this after Umbrel
+# and the apps have started
+# That way if e.g. a Docker image is still missing,
+# we would use public DNS servers
+RESOLV_CONF_FILE="/etc/resolv.conf"
+RESOLV_CONF_BACKUP_FILE="/tmp/resolv.conf"
+if [[ -f "${RESOLV_CONF_BACKUP_FILE}" ]]; then
+  cat "${RESOLV_CONF_BACKUP_FILE}" > "${RESOLV_CONF_FILE}" || true
+
+  rm --force "${RESOLV_CONF_BACKUP_FILE}" || true
+fi
+
 echo "Umbrel is now accessible at"
 echo "  http://${DEVICE_HOSTNAME}"
 echo "  http://${DEVICE_IP}"

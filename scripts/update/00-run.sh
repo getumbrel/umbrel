@@ -23,6 +23,25 @@ fi
 
 echo "Installing Umbrel $RELEASE at $UMBREL_ROOT"
 
+# A user could have Pihole installed (via Umbrel)
+# and use this for their network's DNS (ie they set
+# this in their router's DHCP settings)
+# During an update, all apps get stopped (including Pihole), 
+# which will break DNS for the Umbrel server (ie itself)
+# as it cannot resolve DNS queries and therefore
+# the update process cannot e.g. pull new Docker images...
+# From here onwards, we'll use public DNS servers
+# and restore their DNS config. after the update
+
+# Create a backup of the current /etc/resolv.conf
+RESOLV_CONF_FILE="/etc/resolv.conf"
+RESOLV_CONF_BACKUP_FILE="/tmp/resolv.conf"
+cat "${RESOLV_CONF_FILE}" > "${RESOLV_CONF_BACKUP_FILE}"
+
+# Use Cloudflare and Google public DNS servers for update
+echo "nameserver 1.1.1.1" > "${RESOLV_CONF_FILE}"
+echo "nameserver 8.8.8.8" >> "${RESOLV_CONF_FILE}"
+
 # Update status file
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Backing up", "updateTo": "$RELEASE"}
