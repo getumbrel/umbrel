@@ -1,0 +1,21 @@
+version: '3.7'
+
+services:
+    caddy:
+        image: caddy:2.5.1
+        volumes:
+            - "./test/Caddyfile-https:/etc/caddy/Caddyfile"
+        ports:
+            - "4007:4007"
+
+    app_proxy:
+        environment:
+            APP_HOST: frontend
+            APP_PORT: 8888
+            PROXY_AUTH_WHITELIST: "*"
+            PROXY_TRUST_UPSTREAM: "true"
+    
+    frontend:
+        image: mendhak/http-https-echo
+        environment:
+            HTTP_PORT: 8888

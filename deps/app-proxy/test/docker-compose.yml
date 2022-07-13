@@ -4,7 +4,7 @@ services:
     app_proxy:
         image: getumbrel/app-proxy
         build:
-            context: .
+            context: ..
             dockerfile: Dockerfile.dev
         user: "1000:1000"
         restart: on-failure
@@ -21,6 +21,7 @@ services:
             PROXY_AUTH_ADD: "true"
             PROXY_AUTH_WHITELIST: 
             PROXY_AUTH_BLACKLIST: 
+            PROXY_TRUST_UPSTREAM: 
             APP_HOST: 
             APP_PORT: 
             APP_MANIFEST_FILE: "/extra/umbrel-app.yml"

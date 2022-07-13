@@ -49,6 +49,7 @@ module.exports = Object.freeze({
 	PROXY_AUTH_ADD: (typeof(process.env.PROXY_AUTH_ADD) === "string") ? (process.env.PROXY_AUTH_ADD === "true") : true,
 	PROXY_AUTH_WHITELIST: cleanHttpPaths(process.env.PROXY_AUTH_WHITELIST || ""),
 	PROXY_AUTH_BLACKLIST: cleanHttpPaths(process.env.PROXY_AUTH_BLACKLIST || ""),
+	PROXY_TRUST_UPSTREAM: (typeof(process.env.PROXY_TRUST_UPSTREAM) === "string") ? (process.env.PROXY_TRUST_UPSTREAM === "true") : false,
 
 	APP: readUmbrelAppManifest(),
 	APP_PROTOCOL: process.env.APP_PROTOCOL || "http",

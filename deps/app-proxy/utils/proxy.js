@@ -9,6 +9,15 @@ const CONSTANTS = require('../utils/const.js');
 const safeHandler = require("../utils/safe_handler.js");
 
 function onProxyReq(proxyReq, req, res, config) {
+	// If we don't trust the upstream, we'll set the x-forwarded headers
+	// Upstream could be a proxy and therefore trusted
+	// So we'll accept the incoming x-forwarded headers
+	if(! CONSTANTS.PROXY_TRUST_UPSTREAM) {
+		proxyReq.setHeader("x-forwarded-proto", req.protocol);
+		proxyReq.setHeader("x-forwarded-host", req.headers.host);
+		proxyReq.setHeader("x-forwarded-for", req.socket.remoteAddress);
+	}
+
 	// Remove umbrel session cookie from proxied request
 	const cookies = expressUtils.removeCookie(req, CONSTANTS.UMBREL_COOKIE_NAME);
 	if(cookies.trim().length === 0) {
@@ -17,7 +26,7 @@ function onProxyReq(proxyReq, req, res, config) {
 		proxyReq.removeHeader('cookie');
 	} else {
 		proxyReq.setHeader('cookie', cookies);
-	}	
+	}
 }
 
 function onError(err, req, res, target) {
@@ -43,8 +52,9 @@ function proxy() {
 		// Add websocket support, but this option assumes that 
 		// an initial http request is made before the websocket connection
 		ws: true,
-		// Add x-forward headers (e.g. X-Forwarded-For)
-		xfwd: true,
+		// If this is true, this will chain the x-forwarded header values
+		// Many applications don't handle multiple header values (e.g. BTC Pay Server)
+		xfwd: false,
 		logLevel: CONSTANTS.LOG_LEVEL,
 		proxyTimeout: CONSTANTS.PROXY_TIMEOUT,
 		// The proxy shouldn't follow redirect
