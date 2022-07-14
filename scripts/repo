@@ -95,6 +95,24 @@ if [[ "$command" = "update" ]]; then
   fi
 
   LOCAL_REPO_PATH=$(repo_path)
+
+  # Check integrity of local app repo
+  if [[ -d "${LOCAL_REPO_PATH}" ]]; then
+    set +e
+    OUT=$(git -C "${LOCAL_REPO_PATH}" status 2>&1)
+    # 1 = network error (and other errors)
+    # 128 = git repo bad/corrupt/incomplete
+    EXIT_CODE=$?
+    set -e
+    if [[ "${EXIT_CODE}" == "128" ]]; then
+      echo "${OUT}"
+      echo
+      echo "Bad local app repo detected. Removing..."
+      
+      rm -rf "${LOCAL_REPO_PATH}"
+    fi
+  fi
+
   if [[ -d "${LOCAL_REPO_PATH}" ]]; then
     REPO_BRANCH=$(git -C "${LOCAL_REPO_PATH}" rev-parse --abbrev-ref HEAD)
     echo "Updating repo: ${repo} (${REPO_BRANCH})"
