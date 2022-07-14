@@ -111,6 +111,13 @@ cd "$UMBREL_ROOT"
   }
 }
 
+# Restart Docker to resolve:
+# - This error could happen when pulling new images:
+#   ERROR: Get "https://registry-1.docker.io/v2/": net/http: TLS handshake timeout
+echo "Restarting Docker"
+systemctl restart docker || true # Soft fail on environments that don't use systemd
+sleep 1
+
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync --archive \
