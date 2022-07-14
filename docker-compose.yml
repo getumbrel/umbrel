@@ -65,7 +65,6 @@ services:
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
                     DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-""}
-                    MIDDLEWARE_API_URL: "http://$MIDDLEWARE_IP"
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
@@ -96,27 +95,6 @@ services:
                 networks:
                     default:
                         ipv4_address: $MANAGER_IP
-        middleware:
-                container_name: middleware
-                image: getumbrel/middleware:v0.1.15@sha256:b8a64ba65c314be6288decef6c87086f04a371b1a82c07599b98b67a7422f9fa
-                depends_on: [ manager ]
-                command: ["./wait-for-node-manager.sh", $MANAGER_IP, "npm", "start"]
-                restart: on-failure
-                volumes:
-                        - jwt-public-key:/jwt-public-key
-                environment:
-                    PORT: "3005"
-                    BITCOIN_HOST: $BITCOIN_IP
-                    RPC_PORT: $BITCOIN_RPC_PORT
-                    RPC_USER: $BITCOIN_RPC_USER
-                    RPC_PASSWORD: $BITCOIN_RPC_PASS
-                    LND_NETWORK: $BITCOIN_NETWORK
-                    LND_HOST: "${LND_IP}"
-                    JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
-                networks:
-                    default:
-                        ipv4_address: $MIDDLEWARE_IP
         auth:
                 container_name: auth
                 image: getumbrel/auth-server:v0.1.0@sha256:f9453d45f59d281681d807d946b2ad4643ddbc67a877a68aab06a4910d9c984c
