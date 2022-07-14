@@ -17,8 +17,14 @@ echo "=========== Stage: Install ============"
 echo "======================================="
 echo
 
-versionToInt () {
-  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }';
+updateStatus() {
+  local -r state="installing"
+  local -r progress="${1}"
+  local -r description="${2}"
+
+  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "${state}", "progress": ${progress}, "description": "${description}", "updateTo": "${RELEASE}"}
+EOF
 }
 
 [[ -f "/etc/default/umbrel" ]] && source "/etc/default/umbrel"
@@ -31,20 +37,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     echo "============================================="
     echo
 
-    # Update status file
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 30, "description": "Updating Umbrel OS", "updateTo": "$RELEASE"}
-EOF
-
-    # In Umbrel OS v0.1.2, we need to bind Avahi to only
-    # eth0,wlan0 interfaces to prevent hostname cycling
-    # https://github.com/getumbrel/umbrel-os/issues/76
-    # This patch can be safely removed from Umbrel v0.3.x+
-    if [[ $UMBREL_OS == "v0.1.2" ]] && [[ -f "/etc/avahi/avahi-daemon.conf" ]]; then
-        echo "Binding Avahi to eth0 and wlan0"
-        sed -i "s/#allow-interfaces=eth0/allow-interfaces=eth0,wlan0/g;" "/etc/avahi/avahi-daemon.conf"
-        systemctl restart avahi-daemon.service
-    fi
+    updateStatus 30 "Updating Umbrel OS"
 
     # Update SD card installation
     if  [[ -f "${SD_CARD_UMBREL_ROOT}/.umbrel" ]]; then
@@ -64,37 +57,6 @@ EOF
         echo "Skipping updating on SD Card..."
     fi
 
-    # Install unattended-updates for automatic security updates
-    # The binary is unattended-upgrade, the package is unattended-upgrades
-    if ! command -v unattended-upgrade &> /dev/null; then
-        DEBIAN_FRONTEND=noninteractive apt-get install unattended-upgrades -y
-    fi
-
-    # Patch PwnKit
-    # https://security-tracker.debian.org/tracker/CVE-2021-4034
-    policykit_version=$(dpkg -s policykit-1 | grep '^Version:')
-    if [[ "$policykit_version" != "Version: 0.105-25+rpt1+deb10u1" ]]; then
-      apt-get install --yes --only-upgrade policykit-1
-    fi
-
-    # Patch raspberry pi kernel (to fix Dirtypipe vuln.)
-    # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-0847
-    active_kernel_version=$(uname -r)
-    if [[ $(versionToInt "${active_kernel_version}") -lt $(versionToInt "5.10.103") ]]; then
-      apt-get update
-      apt-get install --yes --only-upgrade raspberrypi-kernel
-
-      touch "/tmp/umbrel-update-reboot-required"
-    fi
-
-    # Make sure dhcpd ignores virtual network interfaces
-    dhcpd_conf="/etc/dhcpcd.conf"
-    dhcpd_rule="denyinterfaces veth*"
-    if [[ -f "${dhcpd_conf}" ]] && ! cat "${dhcpd_conf}" | grep --quiet "${dhcpd_rule}"; then
-      echo "${dhcpd_rule}" | tee -a "${dhcpd_conf}"
-      systemctl restart dhcpcd
-    fi
-
     # This makes sure systemd services are always updated (and new ones are enabled).
     UMBREL_SYSTEMD_SERVICES="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services/*.service"
     for service_path in $UMBREL_SYSTEMD_SERVICES; do
@@ -104,68 +66,40 @@ EOF
     done
 fi
 
-if ! command -v "yq" >/dev/null 2>&1; then
-  >&2 echo "'yq' is missing. Installing now..."
-
-  # Define checksums for yq (4.24.5)
-  declare -A yq_sha256
-  yq_sha256["arm64"]="8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9"
-  yq_sha256["amd64"]="c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760"
-
-  yq_version="v4.24.5"
-  system_arch=$(dpkg --print-architecture)
-  yq_binary="yq_linux_${system_arch}"
-
-  # Download yq from github
-  yq_temp_file="/tmp/yq"
-  curl -L "https://github.com/mikefarah/yq/releases/download/${yq_version}/${yq_binary}" -o "${yq_temp_file}"
-
-  # Check file matches checksum
-  if [[ "$(sha256sum "${yq_temp_file}" | awk '{ print $1 }')" == "${yq_sha256[$system_arch]}" ]]; then
-    mv "${yq_temp_file}" /usr/bin/yq
-    chmod +x /usr/bin/yq
-
-    echo "yq installed successfully..."
-  else
-    echo "yq install failed. sha256sum mismatch"
-  fi
-fi
-
-# Checkout to the new release
+# Checkout the new release...
+# To run the updated configure script
+# And pull updated Umbrel docker images
 cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 
 # Configure new install
 echo "Configuring new release"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 40, "description": "Configuring new release", "updateTo": "$RELEASE"}
-EOF
+updateStatus 40 "Configuring new release"
 
 PREV_ENV_FILE="$UMBREL_ROOT/.env"
-BITCOIN_NETWORK="mainnet"
-[[ -f "${PREV_ENV_FILE}" ]] && source "${PREV_ENV_FILE}"
-PREV_ENV_FILE="${PREV_ENV_FILE}" NETWORK=$BITCOIN_NETWORK ./scripts/configure
+PREV_ENV_FILE="${PREV_ENV_FILE}" ./scripts/configure
 
 # Pulling new containers
 echo "Pulling new containers"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 50, "description": "Pulling new containers", "updateTo": "$RELEASE"}
-EOF
+updateStatus 50 "Pulling new containers"
+
 docker-compose pull
+
+# Change back to main install dir
+cd "$UMBREL_ROOT"
 
 # Stop existing containers
 echo "Stopping existing containers"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 60, "description": "Removing old containers", "updateTo": "$RELEASE"}
-EOF
+updateStatus 60 "Stopping existing containers"
 
 cd "$UMBREL_ROOT"
 ./scripts/stop || {
-  # If Docker fails to stop containers we're most likely hitting this Docker bug: https://github.com/moby/moby/issues/17217
+  # If Docker fails to stop containers we're most likely 
+  # hitting the 'network has active endponts' Docker bug
+  # More info here: https://github.com/moby/moby/issues/17217
   # Restarting the Docker service seems to fix it
   echo "Attempting to autofix Docker failure"
-  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 65, "description": "Attempting to autofix Docker failure", "updateTo": "$RELEASE"}
-EOF
+  updateStatus 65 "Attempting to autofix Docker failure"
+
   sudo systemctl restart docker || true # Soft fail on environments that don't use systemd
   sleep 1
   ./scripts/stop || {
@@ -177,61 +111,6 @@ EOF
   }
 }
 
-# Fix broken Nextcloud installs from Umbrel v0.4.0 to be accessible from both
-# <hostname>.local and Tor
-current_umbrel_version=$(cat "${UMBREL_ROOT}/info.json" | jq -r .version)
-nextcloud_config_file="${UMBREL_ROOT}/app-data/nextcloud/data/nextcloud/config/config.php"
-nextcloud_tor_file="${UMBREL_ROOT}/tor/data/app-nextcloud/hostname"
-if [[ "${current_umbrel_version}" = "0.4.0" ]] && [[ -f "${nextcloud_config_file}" ]] && [[ -f "${nextcloud_tor_file}" ]]; then
-  echo
-  echo "Fixing broken Umbrel v0.4.0 Nextcloud install..."
-  nextcloud_hs=$(cat "${nextcloud_tor_file}")
-  nextcloud_local_url="$(hostname -s 2>/dev/null || echo "umbrel").local:8081"
-  sed \
-    -e '/trusted_domains\x27 => $/,/)/!b' \
-    -e '/)/!d;a\  \x27trusted_domains\x27 => array ( 0 => \x27localhost\x27, 1 => \x27'$nextcloud_local_url'\x27, 2 => \x27'$nextcloud_hs'\x27),' \
-    -e 'd' \
-    -i "${nextcloud_config_file}"
-  echo
-fi
-
-# Move Docker data dir to external storage now if this is an old install.
-# This is only needed temporarily until all users have transitioned Docker to SSD.
-DOCKER_DIR="/var/lib/docker"
-MOUNT_POINT="/mnt/data"
-EXTERNAL_DOCKER_DIR="${MOUNT_POINT}/docker"
-if [[ ! -z "${UMBREL_OS:-}" ]] && [[ ! -d "${EXTERNAL_DOCKER_DIR}" ]]; then
-  echo "Attempting to move Docker to external storage..."
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 68, "description": "Migrating Docker install to external storage", "updateTo": "$RELEASE"}
-EOF
-
-  echo "Stopping Docker service..."
-  systemctl stop docker
-
-  # Copy Docker data dir to external storage
-  copy_docker_to_external_storage () {
-    mkdir -p "${EXTERNAL_DOCKER_DIR}"
-    cp  --recursive \
-        --archive \
-        --no-target-directory \
-        "${DOCKER_DIR}" "${EXTERNAL_DOCKER_DIR}"
-  }
-
-  echo "Copying Docker data directory to external storage..."
-  copy_docker_to_external_storage
-
-  echo "Bind mounting external storage over local Docker data dir..."
-  mount --bind "${EXTERNAL_DOCKER_DIR}" "${DOCKER_DIR}"
-
-  # Ensure fs changes are registered
-  sync
-  sleep 1
-
-  echo "Starting Docker service..."
-  systemctl start docker
-fi
-
 # Overlay home dir structure with new dir tree
 echo "Overlaying $UMBREL_ROOT/ with new directory tree"
 rsync --archive \
@@ -242,119 +121,6 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
-# Update Docker for Umbrel OS users. Some old installs may be running outdated versions of Docker
-# that have missing Docker DNS features that we now rely on.
-if [[ ! -z "${UMBREL_OS:-}" ]]; then
-  echo "Updating Docker..."
-  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 69, "description": "Updating Docker", "updateTo": "$RELEASE"}
-EOF
-  "${UMBREL_ROOT}/scripts/update/steps/get-docker.sh" || {
-    # If the docker update fails, revert the update to avoid leaving the user in a broken state
-    echo "Updating Docker failed, reverting update!"
-    echo "Error updating Docker" > "${UMBREL_ROOT}/statuses/update-failure"
-    rsync -av \
-      --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
-      --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
-      "$UMBREL_ROOT"/.umbrel-backup/ \
-      "$UMBREL_ROOT"/
-    ./scripts/start
-    false
-  }
-fi
-
-# Migrate 'apps' structure to using app repos
-"${UMBREL_ROOT}/scripts/update/steps/migrate-to-repo.sh" "$RELEASE" "$UMBREL_ROOT" || {
-  # If the apps migration fails, revert the update to avoid leaving the user in a broken state
-  echo "App migration failed, reverting update!"
-  echo "Error running app migration" > "${UMBREL_ROOT}/statuses/update-failure"
-  rsync -av \
-    --include-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateinclude" \
-    --exclude-from="$UMBREL_ROOT/.umbrel-backup/scripts/update/.updateignore" \
-    "$UMBREL_ROOT"/.umbrel-backup/ \
-    "$UMBREL_ROOT"/
-  ./scripts/start
-  false
-}
-
-# Remove legacy electrs dir
-legacy_electrs_dir="${UMBREL_ROOT}/electrs/db/mainnet"
-if [[ -d "${legacy_electrs_dir}" ]]; then
-  echo "Found legacy electrs dir, removing it..."
-  rm --recursive --force "${legacy_electrs_dir}"
-fi
-
-# Handle updating static assets for samourai-server app
-samourai_app_dir="${UMBREL_ROOT}/apps/samourai-server/nginx"
-samourai_data_dir="${UMBREL_ROOT}/app-data/samourai-server/nginx"
-if [[ -d "${samourai_app_dir}" ]] && [[ -d "${samourai_data_dir}" ]]; then
-  echo "Found samourai-server install, attempting to update static assets and nginx configuration..."
-  rsync --archive --verbose "${samourai_app_dir}/" "${samourai_data_dir}"
-fi
-
-# Handle hidden service migration for samourai-server app
-samourai_app_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server"
-samourai_app_new_dojo_tor_dir="${UMBREL_ROOT}/tor/data/app-samourai-server-dojo"
-if [[ -d "${samourai_app_dojo_tor_dir}" ]] && [[ ! -d "${samourai_app_new_dojo_tor_dir}" ]]; then
-  echo "Found samourai-server install, attempting to migrate dojo hidden service directory..."
-  mv "${samourai_app_dojo_tor_dir}/" "${samourai_app_new_dojo_tor_dir}"
-fi
-
-# Handle updating entrypoint for ride-the-lightning app
-rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
-rtl_data_entrypoint="${rtl_data_dir}/rtl/entrypoint.sh"
-rtl_app_entrypoint="${UMBREL_ROOT}/apps/ride-the-lightning/rtl/entrypoint.sh"
-if [[ -d "${rtl_data_dir}" ]]; then
-  echo "Found ride-the-lightning install, attempting to update entrypoint..."
-  cp "${rtl_app_entrypoint}" "${rtl_data_entrypoint}"
-fi
-
-# Handle new boltz container for ride-the-lightning app
-rtl_data_dir="${UMBREL_ROOT}/app-data/ride-the-lightning"
-rtl_boltz_data_dir="${rtl_data_dir}/boltz"
-if [[ -d "${rtl_data_dir}" ]] && [[ ! -d "${rtl_boltz_data_dir}" ]]; then
-  echo "Found ride-the-lightning install without boltz data dir, attempting to create it..."
-  mkdir "${rtl_boltz_data_dir}"
-  chown 1000:1000 "${rtl_boltz_data_dir}"
-fi
-
-# Handle updating entrypoint for thunderhub app
-thunderhub_data_dir="${UMBREL_ROOT}/app-data/thunderhub"
-thunderhub_data_entrypoint="${thunderhub_data_dir}/data/entrypoint.sh"
-thunderhub_app_entrypoint="${UMBREL_ROOT}/apps/thunderhub/data/entrypoint.sh"
-if [[ -d "${thunderhub_data_dir}" ]]; then
-  echo "Found thunderhub install, attempting to update entrypoint..."
-  cp "${thunderhub_app_entrypoint}" "${thunderhub_data_entrypoint}"
-fi
-
-# Handle stripping hardcoded password for lightning-terminal app
-lightning_terminal_conf="${UMBREL_ROOT}/app-data/lightning-terminal/data/.lit/lit.conf"
-if [[ -f "${lightning_terminal_conf}" ]]; then
-  echo "Found lightning-terminal install, attempting to strip hardcoded password..."
-  sed -i 's/uipassword=moneyprintergobrrr//' "${lightning_terminal_conf}"
-fi
-
-# Handle new logs dir for krystal-bull app
-krystal_bull_data_dir="${UMBREL_ROOT}/app-data/krystal-bull"
-krystal_bull_logs_data_dir="${krystal_bull_data_dir}/data/log"
-if [[ -d "${krystal_bull_data_dir}" ]] && [[ ! -d "${krystal_bull_logs_data_dir}" ]]; then
-  echo "Found krystal-bull install without log data dir, attempting to create it..."
-  mkdir "${krystal_bull_logs_data_dir}"
-  chown 1000:1000 "${krystal_bull_logs_data_dir}"
-fi
-
-# Handle new data dirs for kollider app
-kollider_data_dir="${UMBREL_ROOT}/app-data/kollider"
-kollider_logs_data_dir="${kollider_data_dir}/data/logs"
-kollider_image_cache_data_dir="${kollider_data_dir}/data/cache/images"
-if [[ -d "${kollider_data_dir}" ]] && [[ ! -d "${kollider_logs_data_dir}" ]]; then
-  echo "Found kollider install without data dirs, attempting to create them..."
-  mkdir -p "${kollider_logs_data_dir}"
-  chown 1000:1000 "${kollider_logs_data_dir}"
-  mkdir -p "${kollider_image_cache_data_dir}"
-  chown 1000:1000 "${kollider_image_cache_data_dir}"
-fi
-
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
@@ -362,59 +128,17 @@ chmod -R 700 "$UMBREL_ROOT"/tor/data/*
 
 # Start updated containers
 echo "Starting new containers"
-cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 80, "description": "Starting new containers", "updateTo": "$RELEASE"}
-EOF
+updateStatus 80 "Starting new containers"
+
 cd "$UMBREL_ROOT"
 ./scripts/start
-
-# Delete obselete backup lock file
-# https://github.com/getumbrel/umbrel/pull/213
-# Remove this in the next breaking update
-[[ -f "${UMBREL_ROOT}/statuses/backup-in-progress" ]] && rm -f "${UMBREL_ROOT}/statuses/backup-in-progress"
 
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
 
   # Delete unused Docker images on Umbrel OS
   echo "Deleting previous images"
-  cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 90, "description": "Deleting previous images", "updateTo": "$RELEASE"}
-EOF
+  updateStatus 90 "Deleting previous images"
+
   docker image prune --all --force
-
-  # Uninstall dphys-swapfile since we now use our own swapfile logic
-  # Remove this in the next breaking update
-  if command -v dphys-swapfile >/dev/null 2>&1; then
-    echo "Removing unused dependency \"dphys-swapfile\""
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 95, "description": "Removing unused dependencies", "updateTo": "$RELEASE"}
-EOF
-    apt-get remove -y dphys-swapfile
-  fi
-
-  # Setup swap if it doesn't already exist
-  # Remove this in the next breaking update
-  MOUNT_POINT="/mnt/data"
-  SWAP_DIR="/swap"
-  SWAP_FILE="${SWAP_DIR}/swapfile"
-  if ! df -h "${SWAP_DIR}" 2> /dev/null | grep --quiet '/dev/sd'; then
-    cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 97, "description": "Setting up swap", "updateTo": "$RELEASE"}
-EOF
-
-    echo "Bind mounting external storage to ${SWAP_DIR}"
-    mkdir -p "${MOUNT_POINT}/swap" "${SWAP_DIR}"
-    mount --bind "${MOUNT_POINT}/swap" "${SWAP_DIR}"
-
-    echo "Checking ${SWAP_DIR} is now on external storage..."
-    df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
-
-    echo "Setting up swapfile"
-    rm "${SWAP_FILE}" || true
-    fallocate -l 4G "${SWAP_FILE}"
-    chmod 600 "${SWAP_FILE}"
-    mkswap "${SWAP_FILE}"
-    swapon "${SWAP_FILE}"
-  fi
 fi

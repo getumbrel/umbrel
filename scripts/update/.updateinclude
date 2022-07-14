@@ -1,6 +1,2 @@
-.gitignore
-.env
-bitcoin/bitcoin.conf
-tor/torrc-server
-tor/torrc-proxy
-electrs/electrs.toml
+/.env
+/tor/torrc-proxy

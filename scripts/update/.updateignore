@@ -1,11 +1,8 @@
 /.*
-bitcoin/*
 /db/*
-lnd/*
-statuses
-tor/*
-electrs/*
-events/signals
-logs/*
-app-data/*
-repos/*
+/statuses
+/tor/*
+/events/signals
+/logs/*
+/app-data/*
+/repos/*

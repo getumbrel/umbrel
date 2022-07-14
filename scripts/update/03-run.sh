@@ -26,7 +26,7 @@ if [[ -f "${REBOOT_REQUIRED_FILE}" ]]; then
 	cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 97, "description": "Rebooting your Umbrel"}
 EOF
-	rm "${REBOOT_REQUIRED_FILE}"
+	rm -f "${REBOOT_REQUIRED_FILE}"
 	
 	# Remove update lockfile so the next OTA update doesn't fail
 	rm -f "${UMBREL_ROOT}/statuses/update-in-progress"
