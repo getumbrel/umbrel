@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
     app_proxy:
-        image: getumbrel/app-proxy:v0.1.0@sha256:65ed21ca4aa5d68be83e56b8eee628b6d211f3863b7a87e8c00e80b2a7d6f68e
+        image: getumbrel/app-proxy:v0.5.1@sha256:f7e5f2d8a2d42bb39a8c8337b499c458372d19ec75fe810f7cd0f525ce1ed92d
         #build: ../../deps/app-proxy
         user: "1000:1000"
         restart: on-failure
