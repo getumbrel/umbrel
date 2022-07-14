@@ -96,6 +96,11 @@ if [[ "$command" = "update" ]]; then
 
   LOCAL_REPO_PATH=$(repo_path)
 
+  # Check the local app repo is marked as safe by Git
+  if ! git config --global --get safe.directory | grep --quiet "^${LOCAL_REPO_PATH}$"; then
+    git config --global --add safe.directory "${LOCAL_REPO_PATH}"
+  fi
+
   # Check integrity of local app repo
   if [[ -d "${LOCAL_REPO_PATH}" ]]; then
     set +e
@@ -181,7 +186,7 @@ if [[ "$command" = "checkout" ]]; then
   # Note: using the .git extension is optional
 
   # Check whether a base url is in the descriptor
-  # And if not, default to github https
+  # And if not, default to github.com via https
   if [[ "${descriptor}" != http* ]] && [[ "${descriptor}" != git@ ]]; then
     descriptor="https://github.com/${descriptor}"
   fi
