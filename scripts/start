@@ -104,10 +104,10 @@ pkill -f ./scripts/status-monitor || true
 ./scripts/status-monitor temperature 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
 ./scripts/status-monitor uptime 15 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
-# Automatically update app repo every 15 minutes
+# Automatically update app repo every 5 minutes
 # If the app repo has not yet been cloned (ie it's a fresh Umbrel install)
 # Then this will do the intial pull/initialisation
-./scripts/status-monitor repo 900 &>> "${UMBREL_LOGS}/status-monitor.log" &
+./scripts/status-monitor repo 300 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
 echo "Starting memory monitor..."
 echo
