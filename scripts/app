@@ -187,7 +187,6 @@ compose() {
 
   local -r umbrel_env_file="${UMBREL_ROOT}/.env"
   local -r app_compose_file="${app_data_dir}/docker-compose.yml"
-  
   local -r app_compose_override_file="${app_data_dir}/docker-compose.override.yml"
 
   export TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
@@ -196,11 +195,6 @@ compose() {
   # To allow vars. in the app's compose file to override variables
   compose_files=()
   
-  # Detect if a docker override file exists for the app
-  if [[ -f "${app_compose_override_file}" ]]; then
-    compose_files+=( "--file" "${app_compose_override_file}" )
-  fi
-
   # Detect if the 'app_proxy' service has been defined
   # In the app's docker-compose file
   APP_PROXY_SERVICE_NAME="app_proxy"
@@ -220,6 +214,11 @@ compose() {
   # Any of the other compose files
   compose_files+=( "--file" "${common_compose_file}" )
   compose_files+=( "--file" "${app_compose_file}" )
+  
+  # Detect if a docker override file exists for the app
+  if [[ -f "${app_compose_override_file}" ]]; then
+    compose_files+=( "--file" "${app_compose_override_file}" )
+  fi
 
   # Merge compose files and args. passed into 'compose'
   compose_args=("${compose_files[@]}" "${@}")
