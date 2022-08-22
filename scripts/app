@@ -187,12 +187,19 @@ compose() {
 
   local -r umbrel_env_file="${UMBREL_ROOT}/.env"
   local -r app_compose_file="${app_data_dir}/docker-compose.yml"
+  
+  local -r app_compose_override_file="${app_data_dir}/docker-compose.override.yml"
 
   export TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
 
   # We need to use the proxy compose file first
   # To allow vars. in the app's compose file to override variables
   compose_files=()
+  
+  # Detect if a docker override file exists for the app
+  if [[ -f "${app_compose_override_file}" ]]; then
+    compose_files+=( "--file" "${app_compose_override_file}" )
+  fi
 
   # Detect if the 'app_proxy' service has been defined
   # In the app's docker-compose file
