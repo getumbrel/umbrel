@@ -187,7 +187,7 @@ if [[ "$command" = "checkout" ]]; then
 
   # Check whether a base url is in the descriptor
   # And if not, default to github.com via https
-  if [[ "${descriptor}" != http* ]] && [[ "${descriptor}" != git@ ]]; then
+  if [[ "${descriptor}" != http* ]] && [[ "${descriptor}" != git@* ]]; then
     descriptor="https://github.com/${descriptor}"
   fi
 
