@@ -6,6 +6,7 @@ import time
 import subprocess
 import io
 import qrcode
+import pybitblock
 
 umbrel_ascii = '''
               ,;###GGGGGGGGGGl#Sp
