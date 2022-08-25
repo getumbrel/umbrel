@@ -145,8 +145,8 @@ if [[ ! -z "${installed_apps:-}" ]]; then
     echo
     echo "${app}"
     echo
-    # Double tail because we want 30 lines total not per container
-    ./scripts/app compose $app logs --tail 30 | grep -v 'tor_server_1 ' | tail -n 30
+    # 10 lines from each container
+    ./scripts/app compose $app logs --tail 10 | grep -v 'tor_server_1 '
   done
 fi
 
