@@ -449,6 +449,10 @@ if [[ "$command" = "update" ]]; then
 
   must_exist_in_app_repo_guard
 
+  # Save current images to clean up later
+  app_compose_file="${app_data_dir}/docker-compose.yml"
+  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
+
   echo "Updating app ${app}..."
 
   if [[ "$*" != *"--skip-stop"* ]]; then
@@ -484,6 +488,8 @@ if [[ "$command" = "update" ]]; then
     "${0}" "start" "${app}"
   fi
 
+  # Remove any old images we don't need anymore
+  docker rmi $app_old_images
   exit
 fi
 
