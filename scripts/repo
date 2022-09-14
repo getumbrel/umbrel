@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERSION="0.0.2"
+
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 DEFAULT_UMBREL_APP_REPO_URL="https://github.com/getumbrel/umbrel-apps.git"
 
 show_help() {
   cat << EOF
-repo 0.0.2
-
-CLI for managing local Umbrel App Repos
+CLI (v${VERSION}) for managing local Umbrel App Repos
 
 Usage: repo <command> <arguments...>
 
@@ -213,6 +213,7 @@ fi
 
 if [[ "$command" = "default-repo" ]]; then
   echo "${DEFAULT_UMBREL_APP_REPO_URL}"
+
   exit
 fi
 

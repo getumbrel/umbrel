@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERSION="0.0.3"
+
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 ACTIVE_APP_REPO_PATH=$($UMBREL_ROOT/scripts/repo path)
 
 show_help() {
   cat << EOF
-app 0.0.2
-
-CLI for managing Umbrel apps
+CLI (v${VERSION}) for managing Umbrel apps
 
 Usage: app <command> <app> [<arguments>]
 
 Commands:
     install                    Pulls down images for an app and starts it
     uninstall                  Removes images and destroys all data for an app
+    reinstall                  Calls 'uninstall', followed by 'install' for an app
     stop                       Stops an installed app
     start                      Starts an installed app
     restart                    Restarts an installed app
@@ -406,6 +407,16 @@ if [[ "$command" = "stop" ]]; then
 
   echo "Stopping app ${app}..."
   compose "${app}" rm --force --stop
+
+  exit
+fi
+
+if [[ "$command" = "reinstall" ]]; then
+
+  "${0}" "uninstall" "${app}"
+
+  echo
+  "${0}" "install" "${app}"
 
   exit
 fi
