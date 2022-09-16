@@ -5,21 +5,19 @@ RELEASE=$1
 UMBREL_ROOT=$2
 first_run=$3
 
-# We add a 200MB offset becuase the 2GB Pi actually only has ~1.9GB of RAM
-MIN_RAM=2000000
-OFFSET=200000
-LIMIT=$((MIN_RAM-OFFSET))
+# 500MB of RAM is the minimum needed to run Umbrel
+MIN_RAM=500000
 
 # Abort on low memory devices
 memory="$(awk '/MemTotal/{printf "%d\n", $2}' /proc/meminfo)"
-if ((memory<LIMIT)); then
+if ((memory<MIN_RAM)); then
   if [[ "${first_run}" == "firstrun" ]]; then
     cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "installing", "progress": 20, "description": "Checking device memory", "updateTo": "${RELEASE}"}
 EOF
     # Sleep for a few seconds so the user has been redirected to the update screen
     sleep 10
-    memory_error="Sorry, this update isn't compatible with your device, it requires at least $((MIN_RAM/1000000))GB RAM."
+    memory_error="Sorry, this update isn't compatible with your device, it requires at least $((MIN_RAM/1000))MB RAM."
     echo "${memory_error}"
     cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
 {"state": "failed", "progress": 100, "description": "${memory_error}", "updateTo": "${RELEASE}"}
