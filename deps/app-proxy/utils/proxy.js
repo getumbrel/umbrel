@@ -9,6 +9,12 @@ const CONSTANTS = require('../utils/const.js');
 const safeHandler = require("../utils/safe_handler.js");
 
 function onProxyReq(proxyReq, req, res, config) {
+	// "Value may be undefined if the socket is destroyed (for example, if the client disconnected)."
+	// More details here: https://nodejs.org/api/net.html#socketremoteaddress
+	if(req.socket.remoteAddress === undefined) {
+		return res.end();
+	}
+
 	// If we don't trust the upstream, we'll set the x-forwarded headers
 	// Upstream could be a proxy and therefore trusted
 	// So we'll accept the incoming x-forwarded headers
