@@ -87,6 +87,13 @@ docker-compose pull
 # Change back to main install dir
 cd "$UMBREL_ROOT"
 
+# Save current images to clean up later
+echo "Saving current Umbrel Docker images to clean up later"
+compose_file="${UMBREL_ROOT}/docker-compose.yml"
+echo "Reading file: ${compose_file}"
+old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${compose_file}")
+echo "${old_images}"
+
 # Stop existing containers
 echo "Stopping existing containers"
 updateStatus 60 "Stopping existing containers"
@@ -139,6 +146,10 @@ updateStatus 80 "Starting new containers"
 
 cd "$UMBREL_ROOT"
 ./scripts/start
+
+# Remove any old images we don't need anymore
+echo "Cleaning up old Docker images..."
+docker rmi $old_images
 
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then
