@@ -41,4 +41,4 @@ Umbrel, in its current state, is intended to demonstrate what we have in mind, s
 
 -----
 
-**👆 The issues raised above will all be resolved before we do a stable release of Umbrel.**
+** The issues raised above will be resolved before we do a stable release of Umbrel.**
