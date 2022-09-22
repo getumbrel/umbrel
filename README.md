@@ -42,7 +42,7 @@ At Umbrel, we believe that everyone should be able to enjoy the convenience and 
 </p>
 
 <p align="center">
-To achieve our vision, we're building a new kind of operating system for running a personal server. So instead of paying ransoms for storing your own data on someone else's computer and having it auctioned off to advertisers — you can now easily spin up your own server and self-host all of your data and services yourself.
+To achieve our vision, we're building a new kind of personal server OS. Instead of paying ransoms for storing your data on someone else's computer while they auction it off to advertisers — you can now easily spin up a server and self-host your data and services at home.
 </p>
 
 <p align="center">
