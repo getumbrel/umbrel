@@ -38,7 +38,7 @@
 <br />
 
 <p align="center">
-At Umbrel, we believe that everyone should be able to enjoy the convenience and benefits of the cloud, without giving up the ownership and control of their data.
+At Umbrel, we believe that everyone should be able to enjoy the convenience and benefits of the cloud, without giving up ownership and control of their data.
 </p>
 
 <p align="center">
@@ -65,7 +65,6 @@ Alternatively you can install Umbrel on any Ubuntu or Debian system (both x86 an
 ```bash
 curl -L https://umbrel.sh | bash
 ```
-<br />
 
 ## Umbrel App Store
 
@@ -73,7 +72,7 @@ https://user-images.githubusercontent.com/10330103/191728195-f512ff5e-556a-4c61-
 
 <br />
 
-Here are some of the apps available in the Umbrel App Store. For the complete list of apps, please see the [umbrel-apps]() repository.
+Here are some of the apps available in the Umbrel App Store. For the complete list of apps, please see the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) repository.
 
 - [Bitcoin Node](https://github.com/getumbrel/umbrel-bitcoin) — Run your personal node powered by Bitcoin Core
 - [Bitfeed](https://github.com/bitfeed-project/bitfeed) — A beautiful mempool visualizer and block explorer
@@ -116,13 +115,17 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Vaultwarden](https://github.com/dani-garcia/vaultwarden) — Unofficial Bitwarden® compatible server
 - [Whoogle Search](https://github.com/benbusby/whoogle-search) — A self-hosted, ad-free, privacy-respecting metasearch engine
 
+> If an app you're looking for isn't available on our app store yet, feel free to open an issue on the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) respository to request it.
+
 ## Building apps for Umbrel
 
-If you're interested in packaging or building Umbrel apps, please refer to our documentation [here](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
+If you're interested in building an Umbrel app or packaging an existing one, please refer to the [Umbrel App Framework documentation](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
+
 
 ## Setting up a development environment
 
 With the release of Umbrel 0.5, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
+
 
 ## Contributing
 
@@ -131,6 +134,7 @@ We welcome and appreciate new contributions.
 If you're a developer looking to help but not sure where to begin, check out [these issues](https://github.com/getumbrel/umbrel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) that have specifically been marked as being friendly to new contributors.
 
 If you're looking for a bigger challenge, before opening a pull request please [create an issue](https://github.com/getumbrel/umbrel/issues/new/choose) or [join our community chat](https://t.me/getumbrel) to get feedback, discuss the best way to tackle the challenge, and to ensure that there's no duplication of work.
+
 
 ## License
 
