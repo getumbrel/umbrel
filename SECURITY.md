@@ -28,4 +28,7 @@ Currently we are being quite liberal with filesystem permissions and root usage.
 
 Apps already have process level sandboxing and filesystem level sandboxing but not network level sandboxing. We plan to implement network level sandboxing so one app will not be able to interact with another app over the network. Apps will also not be able to interact with other physical devices on the local network without explicitly asking the user for permission.
 
-The issues raised above will all be resolved before we do a stable release of Umbrel.
+
+-----
+
+** The issues raised above will be resolved before we do a stable release of Umbrel.**
