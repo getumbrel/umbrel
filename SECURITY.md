@@ -31,4 +31,4 @@ Apps already have process level sandboxing and filesystem level sandboxing but n
 
 -----
 
-** The issues raised above will be resolved before we do a stable release of Umbrel.**
+**The issues raised above will be resolved before we do a stable release of Umbrel.**
