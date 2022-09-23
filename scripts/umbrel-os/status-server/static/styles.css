@@ -49,7 +49,8 @@ span, p {
 [data-error="docker-failed"] .error-text.docker-failed,
 [data-error="no-block-device"] .error-text.no-block-device,
 [data-error="multiple-block-devices"] .error-text.multiple-block-devices,
-[data-error="rebinding-failed"] .error-text.rebinding-failed {
+[data-error="rebinding-failed"] .error-text.rebinding-failed,
+[data-error="mount-failed"] .error-text.mount-failed {
   display: flex;
 }
 
