@@ -149,7 +149,7 @@ cd "$UMBREL_ROOT"
 
 # Remove any old images we don't need anymore
 echo "Cleaning up old Docker images..."
-docker rmi $old_images
+docker rmi $old_images || true
 
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then

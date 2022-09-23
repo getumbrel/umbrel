@@ -489,7 +489,7 @@ if [[ "$command" = "update" ]]; then
   fi
 
   # Remove any old images we don't need anymore
-  docker rmi $app_old_images
+  docker rmi $app_old_images || true
   exit
 fi
 
