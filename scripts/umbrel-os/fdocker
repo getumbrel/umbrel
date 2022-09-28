@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DOCKER_ROOT="/var/lib/docker"
+
+if [[ "$EUID" -ne 0 ]]; then
+  echo "Please run as root"
+  exit
+fi
+
+show_help() {
+  cat << EOF
+fdocker 0.0.1
+
+CLI for managing Docker
+
+Usage: docker <command> <arguments...>
+
+Commands:
+  clean            Cleanup containers using 'containers' as argument
+    
+EOF
+}
+
+if [ -z ${2+x} ]; then
+  command=""
+else
+  command="${1}"
+fi
+
+function delete_mount() {
+  id_path="${1}"
+
+  overlay_path="${DOCKER_ROOT}/overlay2"
+
+  if [[ -f "${id_path}" ]]; then
+    overlay_id=$(cat "${id_path}")
+
+    overlay_path="${overlay_path}/${overlay_id}"
+
+    if [[ -d "${overlay_path}" ]]; then
+      echo "Deleting: ${overlay_path}"
+
+      rm -rf "${overlay_path}"
+    fi
+
+    rm -rf "${id_path}"
+  fi
+}
+
+function cleanup_containers() {
+  echo "Cleaning up containers..."
+
+  containers_path="${DOCKER_ROOT}/containers"
+  mounts_path="${DOCKER_ROOT}/image/overlay2/layerdb/mounts"
+
+  # Loop through all the containers
+  containers="${containers_path}/*"
+  for dir in $containers; do
+    container_id=$(basename "${dir}")
+
+    if [[ ! -d "${dir}" ]]; then
+      continue
+    fi
+    
+    echo "Removing container: ${container_id}"
+
+    # Determine the overlay IDs from the mounts
+    delete_mount "${mounts_path}/${container_id}/init-id"
+    delete_mount "${mounts_path}/${container_id}/mount-id"
+
+    # Delete the container folder
+    rm -rf "${dir}"
+
+    echo
+  done
+
+  echo "Done"
+}
+
+if [[ "${command}" == "clean" ]]; then
+  resource="${2}"
+
+  if [[ "${resource}" == "containers" ]]; then
+    cleanup_containers
+  else
+    echo "Cannot cleanup: ${resource}"
+    
+    exit 1
+  fi
+
+  exit
+fi
+
+# If we get here it means no valid command was supplied
+# Show help and exit
+show_help
+exit 1
