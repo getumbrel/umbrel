@@ -16,6 +16,13 @@ services:
                 networks:
                     default:
                         ipv4_address: $TOR_PROXY_IP
+        i2pd:
+                container_name: i2pd
+                image: purplei2p/i2pd:release-2.43.0
+                restart: on-failure
+                networks:
+                    default:
+                        ipv4_address: $I2P_PROXY_IP
         nginx:
                 container_name: nginx
                 image: nginx:1.17.8@sha256:380eb808e2a3b0dd954f92c1cae2f845e6558a15037efefcabc5b4e03d666d03
