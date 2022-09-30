@@ -109,6 +109,11 @@ pkill -f ./scripts/status-monitor || true
 # Then this will do the intial pull/initialisation
 ./scripts/status-monitor repo 300 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
+if [[ "${IS_UMBREL_OS}" == "true" ]]; then
+  # Check the SD card health every 7 days
+  ./scripts/status-monitor sd-card-health 604800 &>> "${UMBREL_LOGS}/status-monitor.log" &
+fi
+
 echo "Starting memory monitor..."
 echo
 ./scripts/memory-monitor &>> "${UMBREL_LOGS}/memory-monitor.log" &

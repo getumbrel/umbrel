@@ -64,6 +64,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
       install -m 644 "${service_path}" "/etc/systemd/system/${service_name}"
       systemctl enable "${service_name}"
     done
+
+    # Install fio which is used to check for SD card health
+    if ! command -v fio &> /dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get install fio -y
+    fi
 fi
 
 # Checkout the new release...

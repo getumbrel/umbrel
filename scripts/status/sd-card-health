@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+# The Raspberry Pi Foundation recommends using Class A1 SD cards
+# Link here: https://www.raspberrypi.com/news/sd-card-speed-test/
+
+# According to the standard, defined here: https://www.sdcard.org/developers/sd-standard-overview/application-performance-class/
+# A Class A1 SD card, we should be able to achieve the following performance metrics:
+# Seq. write BW         10000 KB/sec
+# Rand. write           500 IOPS
+# Rand. read            1500 IOPS
+
+# Run twice, the first run is a warmup, the second is the test
+for i in 1 2
+do
+    RES=$(fio --output-format=terse --max-jobs=4 "${UMBREL_ROOT}/scripts/umbrel-os/sd-card-health/sd_bench.fio" | cut -f 3,7,8,48,49 -d";" -)
+
+    rm -f /var/tmp/sd.test.file
+done
+
+swri=$(echo "$RES" | head -n 2 | tail -n 1 | cut -d ";" -f 4)
+rwri=$(echo "$RES" | head -n 3 | tail -n 1 | cut -d ";" -f 5)
+rrea=$(echo "$RES" | head -n 4 | tail -n 1 | cut -d ";" -f 3)
+
+# echo "${swri} ${rwri} ${rrea}"
+
+# Check if any metric fails the threshold:
+if [[ "$swri" -lt 10000 ]] || [[ "$rwri" -lt 500 ]] || [[ "$rrea" -lt 1500 ]]; then
+    echo "true"
+else
+    echo "false"
+fi
