@@ -17,11 +17,10 @@ echo
 # Make sure any previous backup doesn't exist
 if [[ -d "$UMBREL_ROOT"/.umbrel-backup ]]; then
     backup_error="Cannot install update. A previous backup already exists at $UMBREL_ROOT/.umbrel-backup"
-    backup_error="$backup_error
-This can only happen if the previous update installation wasn't successful"
+    backup_error="$backup_error . This can only happen if the previous update installation wasn't successful."
     echo "${backup_error}"
     cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "failed", "progress": 100, "description": "backup_error", "updateTo": "${RELEASE}"}
+{"state": "failed", "progress": 100, "description": "${backup_error}", "updateTo": "${RELEASE}"}
 EOF
     exit 1
 fi
