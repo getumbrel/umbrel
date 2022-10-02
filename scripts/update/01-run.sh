@@ -58,8 +58,9 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 
     # This makes sure systemd services are always updated (and new ones are enabled).
-    UMBREL_SYSTEMD_SERVICES="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services/*.service"
-    for service_path in $UMBREL_SYSTEMD_SERVICES; do
+    UMBREL_SYSTEMD_SERVICES_ROOT="${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/umbrel-os/services"
+    UMBREL_SYSTEMD_SERVICES="*.service"
+    for service_path in "$UMBREL_SYSTEMD_SERVICES_ROOT"/$UMBREL_SYSTEMD_SERVICES ; do
       service_name=$(basename "${service_path}")
       install -m 644 "${service_path}" "/etc/systemd/system/${service_name}"
       systemctl enable "${service_name}"
