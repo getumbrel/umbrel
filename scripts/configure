@@ -67,17 +67,20 @@ echo
 # Store paths to intermediary config files
 NGINX_CONF_FILE="./templates/nginx.conf"
 TOR_PROXY_CONF_FILE="./templates/torrc-proxy"
+TOR_SERVER_CONF_FILE="./templates/torrc-server"
 ENV_FILE="./templates/.env"
 
 # Remove intermediary files if they exist from any
 # previous unclean configuration run
 [[ -f "$NGINX_CONF_FILE" ]] && rm -f "$NGINX_CONF_FILE"
 [[ -f "$TOR_PROXY_CONF_FILE" ]] && rm -f "$TOR_PROXY_CONF_FILE"
+[[ -f "$TOR_SERVER_CONF_FILE" ]] && rm -f "$TOR_SERVER_CONF_FILE"
 [[ -f "$ENV_FILE" ]] && rm -f "$ENV_FILE"
 
 # Copy template configs to intermediary configs
 [[ -f "./templates/nginx-sample.conf" ]] && cp "./templates/nginx-sample.conf" "$NGINX_CONF_FILE"
 [[ -f "./templates/torrc-proxy-sample" ]] && cp "./templates/torrc-proxy-sample" "$TOR_PROXY_CONF_FILE"
+[[ -f "./templates/torrc-server-sample" ]] && cp "./templates/torrc-server-sample" "$TOR_SERVER_CONF_FILE"
 [[ -f "./templates/.env-sample" ]] && cp "./templates/.env-sample" "$ENV_FILE"
 
 
@@ -134,9 +137,8 @@ if [[ -z ${TOR_PASSWORD+x} ]] || [[ -z ${TOR_HASHED_PASSWORD+x} ]]; then
   echo "Generating Tor password"
   echo
   TOR_PASSWORD=$("./scripts/rpcauth.py" "itdoesntmatter" | tail -1)
-  TOR_HASHED_PASSWORD=$(docker run --rm lncm/tor:0.4.7.7@sha256:3c4ae833d2fefbea7d960f833a1e89fc9b2069a6e5f360109b5ddc9334ac0227  --quiet --hash-password "$TOR_PASSWORD")
+  TOR_HASHED_PASSWORD=$(docker run --rm getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a --quiet --hash-password "$TOR_PASSWORD")
 fi
-
 
 ##########################################################
 ### Update config files with configuration variables #####
@@ -166,7 +168,7 @@ DOCKER_BINARY=$(readlink -f "$(which docker)")
 sed -i "s#DOCKER_BINARY=<path>#DOCKER_BINARY=$DOCKER_BINARY#g;" "$ENV_FILE"
 
 # TODO: Update all the above code to use this simpler logic
-for template in "${NGINX_CONF_FILE}" "${TOR_PROXY_CONF_FILE}" "${ENV_FILE}"; do
+for template in "${NGINX_CONF_FILE}" "${TOR_PROXY_CONF_FILE}" "${TOR_SERVER_CONF_FILE}" "${ENV_FILE}"; do
   # Umbrel
   sed -i "s/<network-ip>/${NETWORK_IP}/g" "${template}"
   sed -i "s/<gateway-ip>/${GATEWAY_IP}/g" "${template}"
@@ -201,30 +203,8 @@ done
 
 mv -f "$NGINX_CONF_FILE" "./nginx/nginx.conf"
 mv -f "$TOR_PROXY_CONF_FILE" "./tor/torrc-proxy"
+mv -f "$TOR_SERVER_CONF_FILE" "./tor/torrc-server"
 mv -f "$ENV_FILE" "./.env"
-
-##########################################################
-######### Generate hidden services on first run ##########
-##########################################################
-
-# Prevents CORS issue if dashboard's hidden service
-# doesn't exist on the first run
-if [[ ! -f "${STATUS_DIR}/configured" ]]; then
-  echo "Generating hidden services..."
-  echo
-  docker-compose up --detach tor_proxy
-  wait_for_tor=10
-  while [[ ! -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; do
-    if [[ "${wait_for_tor}" == 0 ]]; then
-      echo "Dashboard's hidden service file wasn't created..."
-      echo
-      break
-    fi
-    sleep 1
-    ((wait_for_tor--))
-  done
-  docker-compose down
-fi
 
 ##########################################################
 ################ Configuration complete ##################

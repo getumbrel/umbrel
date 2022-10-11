@@ -2,8 +2,12 @@
 # modifications you make can break the functionality of your umbrel. These files
 # are automatically reset with every Umbrel update.
 
-# Bind only to "<tor-proxy-ip>" which is the tor IP within the container
-SocksPort   <tor-proxy-ip>:<tor-proxy-port>
-ControlPort <tor-proxy-ip>:29051
+# Umbrel
 
-HashedControlPassword <password>
+# Dashboard Hidden Service
+HiddenServiceDir /data/web
+HiddenServicePort 80 <nginx-ip>:80
+
+# Auth Hidden Service
+HiddenServiceDir /data/auth
+HiddenServicePort 80 <auth-ip>:<auth-port>

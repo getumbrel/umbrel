@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+        tor_server:
+                container_name: tor_server
+                image: getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a
+                user: "1000:1000"
+                # build: ./deps/tor
+                restart: on-failure
+                volumes:
+                    - ${PWD}/tor/torrc-server:/etc/tor/torrc:ro
+                    - ${PWD}/tor/data:/data
+                environment:
+                    HOME: "/tmp"

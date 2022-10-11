@@ -11,6 +11,12 @@ if [[ $UID != 0 ]]; then
 fi
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+
+REMOTE_TOR_ACCESS="false"
+if [[ -f "${USER_FILE}" ]]; then
+  REMOTE_TOR_ACCESS=$(cat "${USER_FILE}" | jq 'has("remoteTorAccess") and .remoteTorAccess')
+fi
 
 if [[ ! -d "$UMBREL_ROOT" ]]; then
   echo "Root dir does not exist '$UMBREL_ROOT'"
@@ -29,9 +35,22 @@ echo
 "${UMBREL_ROOT}/scripts/app" stop installed
 echo
 
+compose_files=()
+
+if [[ "${REMOTE_TOR_ACCESS}" == "true" ]]; then
+  compose_files+=( "--file" "docker-compose.tor.yml" )
+fi
+
+compose_files+=( "--file" "docker-compose.yml" )
+
+UMBREL_DEV_OVERRIDE="${UMBREL_ROOT}/docker-compose.override.yml"
+if [[ -f "${UMBREL_DEV_OVERRIDE}" ]]; then
+  compose_files+=( "--file" "${UMBREL_DEV_OVERRIDE}" )
+fi
+
 echo "Stopping Docker services..."
 echo
-docker-compose down
+docker-compose "${compose_files[@]}" down
 
 # TODO: Transition to pidfiles so we can reliably kill these processes
 echo "Killing background services"

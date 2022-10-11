@@ -30,6 +30,12 @@ check_dependencies rsync jq curl
 
 UMBREL_ROOT="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))/.."
 UMBREL_LOGS="${UMBREL_ROOT}/logs"
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+
+REMOTE_TOR_ACCESS="false"
+if [[ -f "${USER_FILE}" ]]; then
+  REMOTE_TOR_ACCESS=$(cat "${USER_FILE}" | jq 'has("remoteTorAccess") and .remoteTorAccess')
+fi
 
 set_status="${UMBREL_ROOT}/scripts/umbrel-os/status-server/set-status"
 
@@ -75,17 +81,6 @@ else
   export IS_UMBREL_OS="true"
 fi
 
-# Whitelist device IP, hostname and hidden service for CORS
-DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
-DEVICE_HOSTNAME="$(hostname)"
-DEVICE_HOSTS="http://${DEVICE_IP},http://${DEVICE_HOSTNAME}.local,https://${DEVICE_HOSTNAME}.local,http://${DEVICE_HOSTNAME},https://${DEVICE_HOSTNAME}"
-if [[ -f "${UMBREL_ROOT}/tor/data/web/hostname" ]]; then
-    hidden_service_url=$(cat "${UMBREL_ROOT}/tor/data/web/hostname")
-    DEVICE_HOSTS="${DEVICE_HOSTS},http://${hidden_service_url}"
-fi
-export DEVICE_HOSTS=$DEVICE_HOSTS
-export DEVICE_HOSTNAME="${DEVICE_HOSTNAME}.local"
-
 # Increase default Docker and Compose timeouts to 240s
 # as bitcoin can take a long while to respond
 export DOCKER_CLIENT_TIMEOUT=240
@@ -126,10 +121,23 @@ echo "Starting decoy backup trigger..."
 echo
 ./scripts/backup/decoy-trigger &>> "${UMBREL_LOGS}/backup-decoy-trigger.log" &
 
+compose_files=()
+
+if [[ "${REMOTE_TOR_ACCESS}" == "true" ]]; then
+  compose_files+=( "--file" "docker-compose.tor.yml" )
+fi
+
+compose_files+=( "--file" "docker-compose.yml" )
+
+UMBREL_DEV_OVERRIDE="${UMBREL_ROOT}/docker-compose.override.yml"
+if [[ -f "${UMBREL_DEV_OVERRIDE}" ]]; then
+  compose_files+=( "--file" "${UMBREL_DEV_OVERRIDE}" )
+fi
+
 echo
 echo "Starting Docker services..."
 echo
-docker-compose up --detach --build --remove-orphans || {
+docker-compose "${compose_files[@]}" up --detach --build --remove-orphans || {
   echo "Failed to start containers"
   $set_status umbrel errored docker-failed
   exit 1
@@ -165,11 +173,15 @@ if [[ -f "${RESOLV_CONF_BACKUP_FILE}" ]]; then
   rm --force "${RESOLV_CONF_BACKUP_FILE}" || true
 fi
 
+DEVICE_HOSTNAME="$(hostname).local"
+DEVICE_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
+TOR_HS_WEB_HOSTNAME_FILE="${UMBREL_ROOT}/tor/data/web/hostname"
+
 echo "Umbrel is now accessible at"
 echo "  http://${DEVICE_HOSTNAME}"
 echo "  http://${DEVICE_IP}"
-if [[ ! -z "${hidden_service_url:-}" ]]; then
-    echo "  http://${hidden_service_url}"
+if [[ "${REMOTE_TOR_ACCESS}" == "true" ]] && [[ -f "${TOR_HS_WEB_HOSTNAME_FILE}" ]]; then
+    echo "  http://$(cat "${TOR_HS_WEB_HOSTNAME_FILE}")"
 fi
 
 $set_status umbrel completed

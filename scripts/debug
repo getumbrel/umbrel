@@ -131,7 +131,7 @@ echo
 docker-compose logs --tail=30 manager
 
 echo
-echo "Tor logs"
+echo "Tor Proxy logs"
 echo "--------"
 echo
 docker-compose logs --tail=10 tor_proxy

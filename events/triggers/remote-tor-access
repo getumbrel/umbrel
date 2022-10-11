@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+USER_FILE="${UMBREL_ROOT}/db/user.json"
+STATUS_FILE="${UMBREL_ROOT}/statuses/remote-tor-access-status.json"
+SIGNAL_FILE="${UMBREL_ROOT}/events/signals/remote-tor-access"
+
+updateStatus() {
+  local -r state="${1}"
+  local -r progress="${2}"
+
+  cat <<EOF > "${STATUS_FILE}"
+{"state": "${state}", "progress": ${progress}}
+EOF
+}
+
+if [[ ! -f "${SIGNAL_FILE}" ]]; then
+  exit
+fi
+
+enabled=$(cat "${SIGNAL_FILE}")
+rm -f "${SIGNAL_FILE}"
+
+if [[ -f "${STATUS_FILE}" ]]; then
+  state=$(cat "${STATUS_FILE}" 2> /dev/null | jq -r 'if has("state") then .state else "" end' || true)
+
+  if [[ "${state}" == "running" ]]; then
+    >&2 echo "Error: Already running!"
+    exit 1
+  fi
+fi
+
+updateStatus "running" "20"
+
+echo "Stopping Umbrel..."
+"${UMBREL_ROOT}/scripts/stop" || true
+
+updateStatus "running" "50"
+
+echo
+echo "Saving 'remoteTorAccess' setting..."
+
+while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+  echo "Waiting for JSON lock to be released for ${app} update..."
+  sleep 1
+done
+# This will cause the lock-file to be deleted in case of a
+# premature exit.
+trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+
+jq ".remoteTorAccess = ${enabled}" "${USER_FILE}" > /tmp/user.json
+mv /tmp/user.json "${USER_FILE}"
+
+rm -f "${USER_FILE}.lock"
+
+echo
+echo "Starting Umbrel..."
+"${UMBREL_ROOT}/scripts/start"
+
+updateStatus "complete" "100"

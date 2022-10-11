@@ -2,9 +2,9 @@ version: '3.7'
 
 services:
         tor_proxy:
-                container_name: tor
-                image: lncm/tor:0.4.7.7@sha256:3c4ae833d2fefbea7d960f833a1e89fc9b2069a6e5f360109b5ddc9334ac0227
-                user: toruser
+                container_name: tor_proxy
+                image: getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a
+                user: "1000:1000"
                 restart: on-failure
                 volumes:
                     - ${PWD}/tor/torrc-proxy:/etc/tor/torrc:ro
@@ -40,7 +40,6 @@ services:
         manager:
                 container_name: manager
                 image: getumbrel/manager:v0.5.0@sha256:c780ffb2619ba32e392ed9343d0336867ad3b2e9f3f08b8b0c7f9083e2c44a26
-                depends_on: [ tor_proxy ]
                 restart: on-failure
                 stop_grace_period: 5m30s
                 volumes:
@@ -63,8 +62,6 @@ services:
                     JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
-                    DEVICE_HOSTS: ${DEVICE_HOSTS:-"http://umbrel.local"}
-                    DEVICE_HOSTNAME: ${DEVICE_HOSTNAME:-""}
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
                     UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
@@ -87,8 +84,6 @@ services:
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                     DEBUG_STATUS_FILE: "/statuses/debug-status.json"
-                    TOR_PROXY_IP: "${TOR_PROXY_IP}"
-                    TOR_PROXY_PORT: "${TOR_PROXY_PORT}"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                     IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
                     UMBREL_APP_REPO_URL: "https://github.com/getumbrel/umbrel-apps.git"
