@@ -141,7 +141,8 @@ rsync --archive \
     "$UMBREL_ROOT"/
 
 # Add user setting to enable/disable remote tor access
-"${UMBREL_ROOT}/scripts/update/steps/add-remote-tor-access.sh" "$RELEASE" "$UMBREL_ROOT"
+# TODO: Remove this on next Umbrel update and update required ota version to avoid repeatedly updating apps.
+"${UMBREL_ROOT}/scripts/update/steps/support-remote-tor-access.sh" "$RELEASE" "$UMBREL_ROOT"
 
 # Fix permissions
 echo "Fixing permissions"
