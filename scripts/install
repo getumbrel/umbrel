@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Suppress blocking prompts when installing dependencies
-export NEEDRESTART_SUSPEND=true
 export DEBIAN_FRONTEND=noninteractive
+needrestart_conf_dir="/etc/needrestart/conf.d" 
+needrestart_conf_file="${needrestart_conf_dir}/temp-disable-for-umbrel-install.conf"
+sudo mkdir -p "${needrestart_conf_dir}"
+echo "# Restart services (l)ist only, (i)nteractive or (a)utomatically.
+\$nrconf{restart} = 'l';
+# Disable hints on pending kernel upgrades.
+\$nrconf{kernelhints} = 0; " | sudo tee "${needrestart_conf_file}" > /dev/null
+trap "sudo rm -f ${needrestart_conf_file}" EXIT
 
 # Default options
 BOOTSTRAPPED="false"
