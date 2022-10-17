@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Suppress blocking prompts when installing dependencies
+export NEEDRESTART_MODE=a
+export DEBIAN_FRONTEND=noninteractive
+
 # Default options
 BOOTSTRAPPED="false"
 PRINT_DOCKER_WARNING="true"
