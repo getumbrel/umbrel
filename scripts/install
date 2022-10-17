@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Suppress blocking prompts when installing dependencies
-export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=true
 export DEBIAN_FRONTEND=noninteractive
 
 # Default options
