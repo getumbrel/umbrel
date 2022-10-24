@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+
+updateStatus() {
+  local -r state="${1}"
+  local -r description="${2}"
+  local -r url="${3}"
+
+  cat <<EOF > "$UMBREL_ROOT"/statuses/repo-update-status.json
+{"state": "${state}", "description": "${description}", "url": "${url}"}
+EOF
+}
+
+signal="${1}"
+command=${signal%%"-"*}
+signal_file="${UMBREL_ROOT}/events/signals/repo-${command}"
+if [[ ! -f "${signal_file}" ]]; then
+	exit
+fi
+
+url=$(cat "${signal_file}")
+rm -f "${signal_file}"
+
+updateStatus "running" "Updating local app repos" "${url}"
+
+"${UMBREL_ROOT}/scripts/repo" "${command}" "${url}"
+
+if [[ "${command}" == "add" ]]; then
+	"${UMBREL_ROOT}/scripts/repo" "update" "${url}"
+
+	# Check that the repo was cloned
+	repo_path=$("${UMBREL_ROOT}/scripts/repo" path "${url}")
+	if [[ -d "${repo_path}" ]]; then
+		updateStatus "success" "Successfully added: ${url}" "${url}"
+	else
+		updateStatus "error" "Failed to add: ${url}" "${url}"
+	fi
+elif [[ "${command}" == "remove" ]]; then
+	updateStatus "success" "Successfully removed: ${url}" "${url}"
+else
+	updateStatus "success" "" "${url}"
+fi

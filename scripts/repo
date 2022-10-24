@@ -14,13 +14,12 @@ CLI (v${VERSION}) for managing local Umbrel App Repos
 Usage: repo <command> <arguments...>
 
 Commands:
-  id                          Get id of active app repo
-  path                        Get path of active app repo
-  set                         Set remote app repo url
-  update                      Update local app repo
-  branch                      Set the branch for the local app repo
-  checkout                    Checkout a remote app repo (branch is optional) e.g. https://github.com/coolapp/umbrel-apps.git#staging
-  default-repo                Get default remote app repo url
+  add                         Add app repo
+  remove                      Remove app repo
+  update                      Update local app repos
+  branch                      Set the branch for a given local app repo
+  checkout                    Checkout an app repo (branch is optional) e.g. https://github.com/coolapp/umbrel-apps.git#staging
+  path                        Get the absolute path for a given local app repo
     
 EOF
 }
@@ -43,129 +42,256 @@ else
   command="$1"
 fi
 
-# If the 'user.json' doesn't exist or the 'appRepo' property is empty
-# Then we use the default app repo url
 USER_JSON=$(cat "${USER_FILE}" 2> /dev/null || echo "null")
-APP_REPO_URL=$(echo "${USER_JSON}" | jq -r "if (has(\"appRepo\") and (.appRepo | length > 0)) then .appRepo else \"${DEFAULT_UMBREL_APP_REPO_URL}\" end")
 
-function repo_id() {
-  echo "${APP_REPO_URL}" | sed 's/[^a-zA-Z0-9]/-/g'
+function repo_slug() {
+  echo "${1}" | sed 's/[^a-zA-Z0-9]/-/g'
 }
 
 function repo_path() {
-  REPO=$(repo_id)
-  echo "${UMBREL_ROOT}/repos/${REPO}"
+  path=$(repo_slug "${1}")
+  echo "${UMBREL_ROOT}/repos/${path}"
 }
 
-# Prints out repo ID
-if [[ "$command" = "id" ]]; then
-  repo_id
-  exit
-fi
+function list_repos() {
+  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("repos") then .repos else [] end | join("\n")' || true
+}
 
-if [[ "$command" = "path" ]]; then
-  repo_path
-  exit
-fi
+function parse_repo_url() {
+  local -r descriptor="${1}"
 
-# Sets the active repo
-if [[ "$command" = "set" ]]; then
-  repo_url="${2-}"
+  # Return the string before the # character
+  repo_url="${descriptor%%#*}"
 
-  if [[ -z "${repo_url}" ]]; then
-    >&2 echo "A valid remote repo url must be set. e.g. https://github.com/getumbrel/umbrel-apps.git"
+  # Check whether this looks like a url searching for '://' or '@'
+  if [[ "${repo_url}" == *://* ]] || [[ "${repo_url}" == *@* ]]; then
+    echo "${repo_url}"
+    exit
+  fi
+
+  # And if not, default to github.com via HTTPS
+  echo "https://github.com/${repo_url}"
+}
+
+function list_repo_ids() {
+  local -r ignore_repo_url="${1}"
+
+  # Check if a repo already exists with this id
+  all_repo_urls=$(list_repos)
+
+  # Through existing repos
+  for repo_url in $all_repo_urls; do
+    # Ignore a given repo url
+    if [[ "${repo_url}" != "${ignore_repo_url}" ]]; then
+      local_repo_path=$(repo_path "${repo_url}")
+      repo_manifest_file="${local_repo_path}/umbrel-app-store.yml"
+
+      # Check a manifest file exists
+      if [[ -f "${repo_manifest_file}" ]]; then
+        local_repo_id=$(cat "${repo_manifest_file}" | yq '.id')
+
+        echo "${local_repo_id}"
+      fi
+    fi
+  done
+}
+
+# Add a new app repo
+if [[ "$command" = "add" ]]; then
+  descriptor="${2-}"
+
+  if [[ -z "${descriptor}" ]]; then
+    >&2 echo "A valid remote repo url must be set. e.g. ${DEFAULT_UMBREL_APP_REPO_URL}"
     exit 1
   fi
 
-  echo "Setting app repo to: ${repo_url}"
+  repo_url=$(parse_repo_url "${descriptor}")
 
-  jq ".appRepo = \"${repo_url}\"" "${USER_FILE}" > /tmp/user.json
-  mv /tmp/user.json "${USER_FILE}"
+  has_repo=$(cat "${USER_FILE}" | jq ".repos | any(. == \"${repo_url}\")")
+
+  if [[ "${has_repo}" == "true" ]]; then
+    >&2 echo "Repo: ${repo_url} already exists."
+    exit
+  fi
+
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "Waiting for JSON lock to be released for ${app} update..."
+    sleep 1
+  done
+  # This will cause the lock-file to be deleted in case of a
+  # premature exit.
+  trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+
+  updated_json=$(cat "${USER_FILE}" | jq ".repos |= (. + [\"${repo_url}\"] | unique)")
+  echo "${updated_json}" > "${USER_FILE}"
+
+  rm -f "${USER_FILE}.lock"
+
+  echo "Added: ${repo_url}"
+
+  exit
+fi
+
+# Remove an app repo
+if [[ "$command" = "remove" ]]; then
+  repo_url="${2-}"
+
+  if [[ -z "${repo_url}" ]]; then
+    >&2 echo "A valid remote repo url must be set. e.g. ${DEFAULT_UMBREL_APP_REPO_URL}"
+    exit 1
+  fi
+
+  has_repo=$(cat "${USER_FILE}" | jq ".repos | any(. == \"${repo_url}\")")
+
+  if [[ "${has_repo}" == "false" ]]; then
+    >&2 echo "Repo: ${repo_url} does not exist locally."
+    exit
+  fi
+
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "Waiting for JSON lock to be released for ${app} update..."
+    sleep 1
+  done
+  # This will cause the lock-file to be deleted in case of a
+  # premature exit.
+  trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+
+  updated_json=$(cat "${USER_FILE}" | jq ".repos |= (. - [\"${repo_url}\"] | unique)")
+  echo "${updated_json}" > "${USER_FILE}"
+
+  rm -f "${USER_FILE}.lock"
+
+  local_repo_path=$(repo_path "${repo_url}")
+  rm -rf "${local_repo_path}"
+
+  echo "Removed: ${repo_url}"
 
   exit
 fi
 
 # Update local copies of repos from remote
 if [[ "$command" = "update" ]]; then
-  repo=$(repo_id)
-
-  if [[ -z "${repo}" ]]; then
-    >&2 echo "Error, can't update app repo when no repo is set."
-    exit 1
-  fi
-
-  LOCAL_REPO_PATH=$(repo_path)
-
-  # Check the local app repo is marked as safe by Git
-  if ! git config --global --get safe.directory | grep --quiet "^${LOCAL_REPO_PATH}$"; then
-    git config --global --add safe.directory "${LOCAL_REPO_PATH}"
-  fi
-
-  # Check integrity of local app repo
-  if [[ -d "${LOCAL_REPO_PATH}" ]]; then
-    set +e
-    OUT=$(git -C "${LOCAL_REPO_PATH}" status 2>&1)
-    # 1 = network error (and other errors)
-    # 128 = git repo bad/corrupt/incomplete
-    EXIT_CODE=$?
-    set -e
-    if [[ "${EXIT_CODE}" == "128" ]]; then
-      echo "${OUT}"
-      echo
-      echo "Bad local app repo detected. Removing..."
-      
-      rm -rf "${LOCAL_REPO_PATH}"
-    fi
-  fi
-
-  if [[ -d "${LOCAL_REPO_PATH}" ]]; then
-    REPO_BRANCH=$(git -C "${LOCAL_REPO_PATH}" rev-parse --abbrev-ref HEAD)
-    echo "Updating repo: ${repo} (${REPO_BRANCH})"
-
-    timeout --foreground 30 git -C "${LOCAL_REPO_PATH}" pull
+  # Check if an argument exists to 
+  # only update a specific repo
+  repo_url="${2-}"
+  if [[ ! -z "${repo_url}" ]]; then
+    all_repo_urls="${repo_url}"
   else
-    echo "Cloning repo: ${repo} from: ${APP_REPO_URL}"
-
-    timeout --foreground 30 git clone --depth 1 "${APP_REPO_URL}" "${LOCAL_REPO_PATH}"
+    all_repo_urls=$(list_repos)
   fi
 
-  # Make sure app repo doesn't end up being owned by root or some apps will fail
-  # with fs permission errors
-  chown -R "1000:1000" "${LOCAL_REPO_PATH}"
+  for repo_url in $all_repo_urls; do
+    echo "Processing: ${repo_url}"
+
+    local_repo_path=$(repo_path "${repo_url}")
+
+    # Check the local app repo is marked as safe by Git
+    if ! git config --global --get safe.directory | grep --quiet "^${local_repo_path}$"; then
+      git config --global --add safe.directory "${local_repo_path}"
+    fi
+
+    # Check integrity of local app repo
+    if [[ -d "${local_repo_path}" ]]; then
+      set +e
+      out=$(git -C "${local_repo_path}" status 2>&1)
+      # 1 = network error (and other errors)
+      # 128 = git repo bad/corrupt/incomplete
+      exit_code=$?
+      set -e
+      if [[ "${exit_code}" == "128" ]]; then
+        echo "${out}"
+        echo
+        echo "Bad local app repo detected. Removing..."
+        
+        rm -rf "${local_repo_path}"
+      fi
+    fi
+
+    # Ignore exit code just in case 1 repo is bad
+    # Which would then prevent other repos getting updated
+    {
+      if [[ -d "${local_repo_path}" ]]; then
+        repo_branch=$(git -C "${local_repo_path}" rev-parse --abbrev-ref HEAD)
+        echo "Updating repo: ${repo_url} (${repo_branch})"
+
+        timeout --foreground 30 git -C "${local_repo_path}" pull
+      else
+        echo "Cloning repo: ${repo_url}"
+
+        timeout --foreground 30 git clone "${repo_url}" "${local_repo_path}"
+
+        # Check we have a valid app repo
+        if [[ "${repo_url}" != "${DEFAULT_UMBREL_APP_REPO_URL}" ]]; then
+          repo_manifest_file="${local_repo_path}/umbrel-app-store.yml"
+
+          if [[ -f "${repo_manifest_file}" ]]; then
+            local_repo_id=$(cat "${repo_manifest_file}" | yq '.id')
+
+            ids=$(list_repo_ids "${repo_url}")
+            if echo "${ids}" | grep --quiet "^${local_repo_id}$"; then
+              echo
+              echo "Error: Repo (${local_repo_id}) already exists"
+              echo
+              "${0}" "remove" "${repo_url}"
+            fi
+          else
+            echo
+            echo "Error: Repo (${repo_url}) missing umbrel-app-store.yml"
+            echo
+            "${0}" "remove" "${repo_url}"
+          fi
+        fi
+      fi
+    } || true
+
+    # Make sure app repo doesn't end up being owned by root or some apps will fail
+    # with fs permission errors
+    if [[ -d "${local_repo_path}" ]]; then
+      chown -R "1000:1000" "${local_repo_path}"
+    fi
+    
+    echo
+  done
 
   exit
 fi
 
 if [[ "$command" = "branch" ]]; then
-  branch="${2-}"
+  repo="${2-}"
+  branch="${3-}"
+
+  if [[ -z "${repo}" ]]; then
+    >&2 echo "A valid repo must be given. e.g. ${DEFAULT_UMBREL_APP_REPO_URL}"
+    exit 1
+  fi
 
   if [[ -z "${branch}" ]]; then
     >&2 echo "A valid branch name must be given. e.g. staging"
     exit 1
   fi
 
-  LOCAL_REPO_PATH=$(repo_path)
+  local_repo_path=$(repo_path "${repo}")
 
-  if [[ ! -d "${LOCAL_REPO_PATH}" ]]; then
+  if [[ ! -d "${local_repo_path}" ]]; then
     >&2 echo "App repo does not yet exist locally"
     >&2 echo "Please use the 'update' subcommand"
     exit 1
   fi
 
   # Check whether it's only fetching for master
-  GIT_CONFIG_FILE="${LOCAL_REPO_PATH}/.git/config"
-  if grep -q "refs/heads/master:refs/remotes/origin/master" "${GIT_CONFIG_FILE}"; then
-    sed -i "s/refs\/heads\/master:refs\/remotes\/origin\/master/refs\/heads\/*:refs\/remotes\/origin\/*/g;" "${GIT_CONFIG_FILE}"
+  git_config_file="${local_repo_path}/.git/config"
+  if grep -q "refs/heads/master:refs/remotes/origin/master" "${git_config_file}"; then
+    sed -i "s/refs\/heads\/master:refs\/remotes\/origin\/master/refs\/heads\/*:refs\/remotes\/origin\/*/g;" "${git_config_file}"
   fi
 
   # Fetch remote commits, files, and refs
-  git -C "${LOCAL_REPO_PATH}" fetch
+  git -C "${local_repo_path}" fetch
 
   # Checkout branch
-  git -C "${LOCAL_REPO_PATH}" checkout "${branch}"
+  git -C "${local_repo_path}" checkout "${branch}"
 
   # Update local repo
-  "${0}" "update"
+  "${0}" "update" "${repo}"
 
   exit
 fi
@@ -174,7 +300,7 @@ if [[ "$command" = "checkout" ]]; then
   descriptor="${2-}"
 
   if [[ -z "${descriptor}" ]]; then
-    >&2 echo "A valid remote git repo descriptor must be given. e.g. coolapp/umbrel-apps"
+    >&2 echo "Error: A valid remote git repo descriptor must be given. e.g. coolapp/umbrel-apps"
     exit 1
   fi
 
@@ -184,35 +310,57 @@ if [[ "$command" = "checkout" ]]; then
   # - coolapp/umbrel-apps#staging
 
   # Note: using the .git extension is optional
+  repo=$(parse_repo_url "${descriptor}")
 
-  # Check whether a base url is in the descriptor
-  # And if not, default to github.com via https
-  if [[ "${descriptor}" != http* ]] && [[ "${descriptor}" != git@* ]]; then
-    descriptor="https://github.com/${descriptor}"
-  fi
-
-  repo="${descriptor%%#*}"
-
-  if [[ "${repo}" != *.git ]]; then
-    repo="${repo}.git"
-  fi
-
-  "${0}" "set" "${repo}"
-
-  "${0}" "update"
-
+  branch="master"
   if [[ "${descriptor}" == *"#"* ]]; then
     branch="${descriptor#*#}"
-
-    echo
-    "${0}" "branch" "${branch}"
   fi
+
+  default_repo_path=$(repo_path "${DEFAULT_UMBREL_APP_REPO_URL}")
+
+  if [[ ! -d "${default_repo_path}" ]]; then
+    >&2 echo "Error: The default Umbrel app repo must be setup first."
+    exit 1
+  fi
+
+  if [[ "${repo}" == "${DEFAULT_UMBREL_APP_REPO_URL}" ]]; then
+    origin_name="origin"
+  else
+    origin_name=$(printf "%s" "${repo}" | openssl dgst -sha256 | sed 's/^.* //')
+  fi
+
+  if ! git -C "${default_repo_path}" remote | grep "${origin_name}" > /dev/null; then
+    git -C "${default_repo_path}" remote add "${origin_name}" "${repo}"
+  fi  
+
+  git -C "${default_repo_path}" fetch "${origin_name}" "${branch}"
+
+  git -C "${default_repo_path}" checkout "${origin_name}/${branch}"
 
   exit
 fi
 
-if [[ "$command" = "default-repo" ]]; then
-  echo "${DEFAULT_UMBREL_APP_REPO_URL}"
+if [[ "$command" = "path" ]]; then
+  repo_url="${2-}"
+
+  repo_path "${repo_url}"
+
+  exit
+fi
+
+if [[ "$command" = "locate" ]]; then
+  app="${2-}"
+
+  all_repo_urls=$(list_repos)
+  for repo_url in $all_repo_urls; do
+    local_repo_path=$(repo_path "${repo_url}")
+
+    if [[ -d "${local_repo_path}/${app}" ]]; then
+      echo "${repo_url}"
+      exit
+    fi
+  done
 
   exit
 fi

@@ -30,6 +30,15 @@ cd "$UMBREL_ROOT"
 export DOCKER_CLIENT_TIMEOUT=240
 export COMPOSE_HTTP_TIMEOUT=240
 
+# TODO: Transition to pidfiles so we can reliably kill these processes
+# Run this before Docker, as Docker can fail to stop cleanly
+echo "Killing background services"
+ps -Af \
+  | grep '\./karen\|\./scripts/status-monitor\|\./scripts/memory-monitor\|\./scripts/backup/\|umbrel/scripts\|fswatch' \
+  | grep -v '\-run.sh\|update' \
+  | awk '{print $2}' \
+  | xargs sudo kill 2> /dev/null || true
+
 echo "Stopping installed apps..."
 echo
 "${UMBREL_ROOT}/scripts/app" stop installed
@@ -51,11 +60,3 @@ fi
 echo "Stopping Docker services..."
 echo
 docker-compose "${compose_files[@]}" down
-
-# TODO: Transition to pidfiles so we can reliably kill these processes
-echo "Killing background services"
-ps -Af \
-  | grep '\./karen\|\./scripts/status-monitor\|\./scripts/memory-monitor\|\./scripts/backup/\|umbrel/scripts\|fswatch' \
-  | grep -v '\-run.sh\|update' \
-  | awk '{print $2}' \
-  | xargs sudo kill 2> /dev/null || true

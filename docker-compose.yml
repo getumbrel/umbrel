@@ -84,6 +84,7 @@ services:
                     UPDATE_LOCK_FILE: "/statuses/update-in-progress"
                     BACKUP_STATUS_FILE: "/statuses/backup-status.json"
                     DEBUG_STATUS_FILE: "/statuses/debug-status.json"
+                    REPO_UPDATE_STATUS_FILE: "/statuses/repo-update-status.json"
                     TOR_HIDDEN_SERVICE_DIR: "/var/lib/tor"
                     IS_UMBREL_OS: ${IS_UMBREL_OS:-"false"}
                     UMBREL_APP_REPO_URL: "https://github.com/getumbrel/umbrel-apps.git"

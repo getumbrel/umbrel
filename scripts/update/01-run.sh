@@ -80,8 +80,7 @@ cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 echo "Configuring new release"
 updateStatus 40 "Configuring new release"
 
-PREV_ENV_FILE="$UMBREL_ROOT/.env"
-PREV_ENV_FILE="${PREV_ENV_FILE}" ./scripts/configure
+PREV_ENV_FILE="${UMBREL_ROOT}/.env" ./scripts/configure
 
 # Pulling new containers
 echo "Pulling new containers"
@@ -140,8 +139,10 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Migrate current apps to support third party app repos
+"${UMBREL_ROOT}/scripts/update/steps/migrate-third-party-repos.sh" "$RELEASE" "$UMBREL_ROOT"
+
 # Add user setting to enable/disable remote tor access
-# TODO: Remove this on next Umbrel update and update required ota version to avoid repeatedly updating apps.
 "${UMBREL_ROOT}/scripts/update/steps/support-remote-tor-access.sh" "$RELEASE" "$UMBREL_ROOT"
 
 # Fix permissions

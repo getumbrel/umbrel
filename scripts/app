@@ -5,7 +5,6 @@ VERSION="0.0.3"
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
-ACTIVE_APP_REPO_PATH=$($UMBREL_ROOT/scripts/repo path)
 
 APP_PROXY_SERVICE_NAME="app_proxy"
 REMOTE_TOR_ACCESS="false"
@@ -161,7 +160,10 @@ if [ -z ${2+x} ]; then
   exit 1
 else
   app="$2"
-  app_repo_dir="${ACTIVE_APP_REPO_PATH}/${app}"
+
+  repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
+  repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+  app_repo_dir="${repo_path}/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
   
   app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
@@ -252,6 +254,7 @@ compose() {
 update_installed_apps() {
   local -r action="${1}"
   local -r app="${2}"
+  local -r repo="${3:-null}"
 
   while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
     echo "Waiting for JSON lock to be released for ${app} update..."
@@ -263,6 +266,13 @@ update_installed_apps() {
 
   [[ "${action}" == "add" ]] && operator="+" || operator="-"
   updated_json=$(cat "${USER_FILE}" | jq ".installedApps |= (. ${operator} [\"${app}\"] | unique)")
+  echo "${updated_json}" > "${USER_FILE}"
+
+  if [[ "${action}" == "add" ]]; then
+    updated_json=$(cat "${USER_FILE}" | jq ".appOrigin |= (. ${operator} {\"${app}\":\"${repo}\"})")
+  else
+    updated_json=$(cat "${USER_FILE}" | jq "del(.appOrigin.\"${app}\")")
+  fi
   echo "${updated_json}" > "${USER_FILE}"
 
   rm -f "${USER_FILE}.lock"
@@ -377,18 +387,20 @@ must_be_installed_guard() {
   fi
 }
 
-# Check that the app exists in the local app repo
-must_exist_in_app_repo_guard() {
-  if [[ ! -d "${app_repo_dir}" ]]; then
-    >&2 echo "Error: \"${app}\" not found in app repo"
-    exit 1
-  fi
-}
-
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
-  
-  must_exist_in_app_repo_guard
+
+  repo=$("${UMBREL_ROOT}/scripts/repo" "locate" "${app}")
+
+  if [[ -z "${repo}" ]]; then
+    >&2 echo "Error: \"${app}\" not found in any local app repo"
+    exit 1
+  fi
+
+  app_repo_dir=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+  app_repo_dir="${app_repo_dir}/${app}"
+
+  echo "Installing '${app}' from: ${repo}"
 
   echo "Setting up data dir for app ${app}..."
   mkdir -p "${app_data_dir}"
@@ -413,7 +425,7 @@ if [[ "$command" = "install" ]]; then
   fi
 
   echo "Saving app ${app} in DB..."
-  update_installed_apps add "${app}"
+  update_installed_apps add "${app}" "${repo}"
 
   execute_hook "${app}" "post-install"
 
@@ -466,6 +478,8 @@ fi
 # Stops an installed app
 if [[ "$command" = "stop" ]]; then
 
+  must_be_installed_guard
+
   execute_hook "${app}" "pre-stop"
 
   echo "Stopping app ${app}..."
@@ -512,13 +526,17 @@ if [[ "$command" = "update" ]]; then
 
   must_be_installed_guard
 
-  must_exist_in_app_repo_guard
+  # Check that the app folder still exists
+  # Within the associated local app repo
+  if [[ ! -d "${app_repo_dir}" ]]; then
+    >&2 echo "Error: Local app repo no longer exists for ${app}"
+    exit 1
+  fi
 
+  echo "Updating '${app}' from: ${repo}"
   # Save current images to clean up later
   app_compose_file="${app_data_dir}/docker-compose.yml"
   app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
-
-  echo "Updating app ${app}..."
 
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
