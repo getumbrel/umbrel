@@ -568,10 +568,9 @@ if [[ "$command" = "update" ]]; then
 
   if [[ "$*" != *"--skip-start"* ]]; then
     "${0}" "start" "${app}"
+    # Remove any old images we don't need anymore
+    docker rmi $app_old_images || true
   fi
-
-  # Remove any old images we don't need anymore
-  docker rmi $app_old_images || true
 
   execute_hook "${app}" "post-update"
 
