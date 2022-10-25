@@ -31,7 +31,7 @@ services:
                         ipv4_address: $NGINX_IP
         dashboard:
                 container_name: dashboard
-                image: getumbrel/dashboard:v0.5.4@sha256:413fa34aac4ab5cab1ccdf6fecacb6f69f6cbd774e35bee92ff4f2170783fee9
+                image: getumbrel/dashboard:v0.5.5@sha256:af5328c5a9c414d4348a90a20f00771fdf4ab6ea0fa2e19e8599bc5dde30c329
                 restart: on-failure
                 stop_grace_period: 1m30s
                 networks:
