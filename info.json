@@ -1,6 +1,6 @@
 {
-    "version": "0.5.1",
-    "name": "Umbrel v0.5.1",
+    "version": "0.5.2",
+    "name": "Umbrel v0.5.2",
     "requires": ">=0.5.0",
     "notes": "This update brings several bugfixes, performance improvements, and the ability to see what’s changed in new app updates before installing them.\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
 }
