@@ -1,0 +1,19 @@
+# Umbrel Docker Cleanup
+# Installed at /etc/systemd/system/umbrel-docker-cleanup.service
+
+[Unit]
+Description=Umbrel Docker Cleanup
+After=umbrel-external-storage.service
+Before=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/fdocker clean containers
+User=root
+Group=root
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=umbrel docker cleanup
+
+[Install]
+WantedBy=multi-user.target

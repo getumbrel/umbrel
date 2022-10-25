@@ -131,7 +131,7 @@ echo
 docker-compose logs --tail=30 manager
 
 echo
-echo "Tor logs"
+echo "Tor Proxy logs"
 echo "--------"
 echo
 docker-compose logs --tail=10 tor_proxy
@@ -145,8 +145,8 @@ if [[ ! -z "${installed_apps:-}" ]]; then
     echo
     echo "${app}"
     echo
-    # Double tail because we want 30 lines total not per container
-    ./scripts/app compose $app logs --tail 30 | tail -n 30;
+    # 10 lines from each container
+    ./scripts/app compose $app logs --tail 10 | grep -v 'tor_server_1 '
   done
 fi
 

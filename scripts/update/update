@@ -14,6 +14,12 @@ check_dependencies () {
   done
 }
 
+check_semver_range () {
+  local range="${1}"
+  local version="${2}"
+  "${UMBREL_ROOT}/scripts/umbrel-os/semver" -r "${range}" "${version}" | grep --quiet "^${version}$"
+}
+
 check_dependencies jq curl rsync
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
@@ -60,6 +66,18 @@ fi
 if [[ "${update_type}" == "path" ]] && [[ ! -f "${update_path}/.umbrel" ]]; then
   echo "Update path doesn't seem to be an Umbrel install."
   exit 1
+fi
+  
+# This will cover only --repo and --path usage
+if [[ "${update_type}" == "path" ]] && [[ "$*" != *"--skip-version-check"* ]]; then
+  current_version=$(cat "${UMBREL_ROOT}/info.json" | jq --raw-output '.version')
+  update_requires=$(cat "${update_path}/info.json" | jq --raw-output '.requires')
+
+  if ! check_semver_range "${update_requires}" "${current_version}"; then
+    echo "Error: Your Umbrel must first satisify this version: ${update_requires}"
+    echo "       Your Umbrel version is: ${current_version}"
+    exit 1
+  fi
 fi
 
 if [[ "${update_type}" == "ota" ]]; then

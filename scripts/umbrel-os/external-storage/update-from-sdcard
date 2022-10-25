@@ -56,6 +56,11 @@ main () {
     exit 0
   fi
 
+  # As the system just booted, there cannot be an update in progress...
+  # We'll delete the update lock (update-in-progress)
+  # to avoid the update (from the SD card) aborting
+  rm --force "${UMBREL_ROOT}/statuses/update-in-progress" || true
+
   echo "Yes, it does, attempting an automatic update..."
   "${UMBREL_ROOT}/scripts/update/update" --path "${SD_UMBREL_ROOT}"
   $set_status sdcard-update completed

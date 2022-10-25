@@ -64,6 +64,11 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
       install -m 644 "${service_path}" "/etc/systemd/system/${service_name}"
       systemctl enable "${service_name}"
     done
+
+    # Install fio which is used to check for SD card health
+    if ! command -v fio &> /dev/null; then
+        DEBIAN_FRONTEND=noninteractive apt-get install fio -y
+    fi
 fi
 
 # Checkout the new release...
@@ -75,8 +80,7 @@ cd "$UMBREL_ROOT"/.umbrel-"$RELEASE"
 echo "Configuring new release"
 updateStatus 40 "Configuring new release"
 
-PREV_ENV_FILE="$UMBREL_ROOT/.env"
-PREV_ENV_FILE="${PREV_ENV_FILE}" ./scripts/configure
+PREV_ENV_FILE="${UMBREL_ROOT}/.env" ./scripts/configure
 
 # Pulling new containers
 echo "Pulling new containers"
@@ -86,6 +90,13 @@ docker-compose pull
 
 # Change back to main install dir
 cd "$UMBREL_ROOT"
+
+# Save current images to clean up later
+echo "Saving current Umbrel Docker images to clean up later"
+compose_file="${UMBREL_ROOT}/docker-compose.yml"
+echo "Reading file: ${compose_file}"
+old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${compose_file}")
+echo "${old_images}"
 
 # Stop existing containers
 echo "Stopping existing containers"
@@ -128,10 +139,18 @@ rsync --archive \
     "$UMBREL_ROOT"/.umbrel-"$RELEASE"/ \
     "$UMBREL_ROOT"/
 
+# Migrate current apps to support third party app repos
+"${UMBREL_ROOT}/scripts/update/steps/migrate-third-party-repos.sh" "$RELEASE" "$UMBREL_ROOT"
+
+# Add user setting to enable/disable remote tor access
+"${UMBREL_ROOT}/scripts/update/steps/support-remote-tor-access.sh" "$RELEASE" "$UMBREL_ROOT"
+
 # Fix permissions
 echo "Fixing permissions"
 find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} +
-chmod -R 700 "$UMBREL_ROOT"/tor/data/*
+if [[ -d "${UMBREL_ROOT}/tor/data" ]]; then
+  chmod -R 700 "$UMBREL_ROOT"/tor/data/* || true
+fi
 
 # Start updated containers
 echo "Starting new containers"
@@ -139,6 +158,10 @@ updateStatus 80 "Starting new containers"
 
 cd "$UMBREL_ROOT"
 ./scripts/start
+
+# Remove any old images we don't need anymore
+echo "Cleaning up old Docker images..."
+docker rmi $old_images || true
 
 # Make Umbrel OS specific post-update changes
 if [[ ! -z "${UMBREL_OS:-}" ]]; then

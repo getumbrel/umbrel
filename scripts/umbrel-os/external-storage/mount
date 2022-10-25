@@ -209,7 +209,18 @@ main () {
 
   if is_partition_ext4 "${partition_path}" ; then
     echo "Yes, it is ext4"
-    mount_partition "${partition_path}"
+
+    echo "Checking filesystem for corruption..."
+    # Swallow non-zero exit because successful recovery returns 1 and
+    # we still want to attempt a best effort boot on a failed recovery.
+    fsck.ext4 -y "${partition_path}" || true
+
+    echo "Mounting partition..."
+    mount_partition "${partition_path}" || {
+      echo "Error mounting partition"
+      $set_status mount errored mount-failed
+      exit 1
+    }
 
     echo "Checking if device contains an Umbrel install..."
 

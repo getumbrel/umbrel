@@ -2,10 +2,14 @@ version: "3.7"
 
 services:
   tor_server:
-    image: lncm/tor:0.4.7.8@sha256:aab30ebb496aa25934d6096951d8b200347c3c3ce5db3493695229efa2601f7b
+    image: getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a
+    user: "1000:1000"
     restart: on-failure
     volumes:
-      - ${APP_DATA_DIR}/torrc:/etc/tor/torrc:ro
+      - ${TOR_ENTRYPOINT_SCRIPT}:/umbrel/entrypoint.sh
       - ${TOR_DATA_DIR}:/data
     environment:
       HOME: "/tmp"
+      HS_DIR: "${TOR_HS_APP_DIR}"
+      HS_PORTS: "${TOR_HS_PORTS}"
+    entrypoint: "/umbrel/entrypoint.sh"

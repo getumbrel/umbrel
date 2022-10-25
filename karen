@@ -62,6 +62,13 @@ fswatch -0 --event=PlatformSpecific $signal_dir | while read -d "" event; do
     trigger="$trigger_dir/app"
     args="${signal#$app_prefix}"
   fi
+  
+  app_prefix="repo-"
+  if [[ "$signal" == "$app_prefix"* ]]; then
+    # This is an repo signal, let the repo trigger handle it
+    trigger="$trigger_dir/repo"
+    args="${signal#$app_prefix}"
+  fi
 
   if test -x "$trigger"; then
     echo "karen is getting triggered!"

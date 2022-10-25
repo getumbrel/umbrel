@@ -39,13 +39,6 @@ main() {
 
   local total_container_memory=0
 
-  # Core services memory use
-  for service in bitcoin lnd electrs tor; do
-    local service_memory=$(get_container_memory_use "${service}")
-    total_container_memory=$(awk "BEGIN {print ${total_container_memory}+${service_memory}}")
-    echo "${service}: ${service_memory}%"
-  done
-
   # Installed app memory use
   for app in $("${UMBREL_ROOT}/scripts/app" ls-installed); do
     local app_memory=$(get_app_memory_use "${app}")

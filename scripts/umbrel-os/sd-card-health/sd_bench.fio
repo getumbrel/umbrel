@@ -1,0 +1,39 @@
+# Full credits: https://github.com/raspberrypi-ui/agnostics
+
+# Use FIO to emulate the Apps Class A1 performance test.
+# This isn't an exact benchmark as the card isn't in the state required by the
+# specification, but is good enough as a sniff test.
+#
+[global]
+ioengine=libaio
+iodepth=4
+size=64m
+direct=1
+end_fsync=1
+directory=/var/tmp
+filename=sd.test.file
+
+[prepare-file]
+rw=write
+bs=512k
+stonewall
+
+[seq-write]
+rw=write
+bs=512k
+stonewall
+
+[rand-4k-write]
+rw=randwrite
+bs=4k
+runtime=10
+stonewall
+
+[rand-4k-read]
+rw=randread
+bs=4k
+runtime=10
+stonewall
+
+# execute with command $ fio --output-format=terse sd_bench.fio | cut -f 3,7,8,48,49 -d";" -
+# testname, read bandwidth, read iops, write bandwidth, write iops
