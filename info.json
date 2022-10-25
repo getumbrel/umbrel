@@ -1,6 +1,6 @@
 {
-    "version": "0.5.1",
-    "name": "Umbrel v0.5.1",
+    "version": "0.5.2",
+    "name": "Umbrel v0.5.2",
     "requires": ">=0.5.0",
-    "notes": "This update brings several bugfixes, performance improvements, and the ability to see what’s changed in new app updates before installing them.\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
+    "notes": "Introducing Umbrel 0.5.2 with Community App Stores, the ability to enable/disable remote Tor access, new live search in the app store, bugfixes and performance improvements.\n\nAnyone can create a community app store for Umbrel and distribute their apps for others or personal use. Docs: github.com/getumbrel/umbrel-community-app-store\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
 }
