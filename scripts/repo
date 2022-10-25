@@ -54,7 +54,9 @@ function repo_path() {
 }
 
 function list_repos() {
-  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("repos") then .repos else [] end | join("\n")' || true
+  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("repos") then .repos else [] end | join("\n")' || {
+    echo "${DEFAULT_UMBREL_APP_REPO_URL}"
+  }
 }
 
 function parse_repo_url() {
