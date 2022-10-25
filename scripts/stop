@@ -35,7 +35,7 @@ export COMPOSE_HTTP_TIMEOUT=240
 echo "Killing background services"
 ps -Af \
   | grep '\./karen\|\./scripts/status-monitor\|\./scripts/memory-monitor\|\./scripts/backup/\|umbrel/scripts\|fswatch' \
-  | grep -v '\-run.sh\|update' \
+  | grep -v '\-run.sh\|update\|stop' \
   | awk '{print $2}' \
   | xargs sudo kill 2> /dev/null || true
 
