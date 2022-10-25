@@ -33,26 +33,30 @@ fi
 
 updateStatus "running" "20"
 
-echo "Stopping Umbrel..."
-"${UMBREL_ROOT}/scripts/stop" || true
+# We wrap all logic after stopping in a block that swallows errors because no matter
+# what fails here we need to make sure we restart the web UI so the user isn't left without access.
+{
+  echo "Stopping Umbrel..."
+  "${UMBREL_ROOT}/scripts/stop"
 
-updateStatus "running" "50"
+  updateStatus "running" "50"
 
-echo
-echo "Saving 'remoteTorAccess' setting..."
+  echo
+  echo "Saving 'remoteTorAccess' setting..."
 
-while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
-  echo "Waiting for JSON lock to be released for ${app} update..."
-  sleep 1
-done
-# This will cause the lock-file to be deleted in case of a
-# premature exit.
-trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
+  while ! (set -o noclobber; echo "$$" > "${USER_FILE}.lock") 2> /dev/null; do
+    echo "Waiting for JSON lock to be released for ${app} update..."
+    sleep 1
+  done
+  # This will cause the lock-file to be deleted in case of a
+  # premature exit.
+  trap "rm -f "${USER_FILE}.lock"; exit $?" INT TERM EXIT
 
-jq ".remoteTorAccess = ${enabled}" "${USER_FILE}" > /tmp/user.json
-mv /tmp/user.json "${USER_FILE}"
+  jq ".remoteTorAccess = ${enabled}" "${USER_FILE}" > /tmp/user.json
+  mv /tmp/user.json "${USER_FILE}"
 
-rm -f "${USER_FILE}.lock"
+  rm -f "${USER_FILE}.lock"
+} || true
 
 echo
 echo "Starting Umbrel..."
