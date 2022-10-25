@@ -39,7 +39,7 @@ services:
                         ipv4_address: $DASHBOARD_IP
         manager:
                 container_name: manager
-                image: getumbrel/manager:v0.5.1@sha256:1500fe65aca5e440f1cc4b681a4e1d66d15c8613a97eed2d078a7bb7e5e86bb0
+                image: getumbrel/manager:v0.5.2@sha256:084d9491a787a02136ba55b1cbb663a7c9294aa10aaff2a0ad53198db175a2c8
                 restart: on-failure
                 stop_grace_period: 5m30s
                 volumes:
