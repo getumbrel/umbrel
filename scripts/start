@@ -105,8 +105,11 @@ pkill -f ./scripts/status-monitor || true
 ./scripts/status-monitor repo 300 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
 if [[ "${IS_UMBREL_OS}" == "true" ]]; then
+  # Set a default value for the SD card health (healthy)
+  echo "false" > "${UMBREL_ROOT}/statuses/sd-card-health-status.json"
+  
   # Check the SD card health every 7 days
-  ./scripts/status-monitor sd-card-health 604800 &>> "${UMBREL_LOGS}/status-monitor.log" &
+  # ./scripts/status-monitor sd-card-health 604800 &>> "${UMBREL_LOGS}/status-monitor.log" &
 fi
 
 echo "Starting memory monitor..."
