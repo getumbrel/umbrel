@@ -71,7 +71,9 @@ logging.debug("Final Avgs - %f %f %f" % (sequential_write_mean, random_write_mea
 
 # print(sequential_write_mean, random_write_mean, random_read_mean)
 
-if sequential_write_mean < SEQ_WRITE_TARGET or random_write_mean < RAND_WRITE_TARGET or random_read_mean < RAND_READ_TARGET:
-    print("true")
-else:
-    print("false")
+print("false")
+
+# if sequential_write_mean < SEQ_WRITE_TARGET or random_write_mean < RAND_WRITE_TARGET or random_read_mean < RAND_READ_TARGET:
+#     print("true")
+# else:
+#     print("false")
