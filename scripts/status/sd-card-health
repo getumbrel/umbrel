@@ -1,6 +1,13 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S python3 -u
+import subprocess
+import logging
+import time
+import os
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
+UMBREL_ROOT = "%s/../.." % os.path.dirname(os.path.realpath(__file__))
+UMBREL_SD_CARD_HEALTH_LOG_FILE = "%s/logs/sd-card-health.log" % UMBREL_ROOT
+
+logging.basicConfig(filename=UMBREL_SD_CARD_HEALTH_LOG_FILE, level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 # The Raspberry Pi Foundation recommends using Class A1 SD cards
 # Link here: https://www.raspberrypi.com/news/sd-card-speed-test/
@@ -11,23 +18,60 @@ UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/../..)"
 # Rand. write           500 IOPS
 # Rand. read            1500 IOPS
 
-# Run twice, the first run is a warmup, the second is the test
-for i in 1 2
-do
-    RES=$(fio --output-format=terse --max-jobs=4 "${UMBREL_ROOT}/scripts/umbrel-os/sd-card-health/sd_bench.fio" | cut -f 3,7,8,48,49 -d";" -)
+# This script runs a fio test 5 times with a 60 second break between each
+# Removes the worst and best results to try to remove outliers
+# Takes the averages of the remaining results
+# And then compares the values against our performance target
+# Which is 50% lower than what the SD card is rated for
 
-    rm -f /var/tmp/sd.test.file
-done
+SEQ_WRITE_TARGET = 5000
+RAND_WRITE_TARGET = 250
+RAND_READ_TARGET = 750
 
-swri=$(echo "$RES" | head -n 2 | tail -n 1 | cut -d ";" -f 4)
-rwri=$(echo "$RES" | head -n 3 | tail -n 1 | cut -d ";" -f 5)
-rrea=$(echo "$RES" | head -n 4 | tail -n 1 | cut -d ";" -f 3)
+CMD = 'fio --output-format=terse --max-jobs=4 "%s/scripts/umbrel-os/sd-card-health/sd_bench.fio" | cut -f 3,7,8,48,49 -d";" -' % UMBREL_ROOT
 
-# echo "${swri} ${rwri} ${rrea}"
+sequential_write_all = []
+random_write_all = []
+random_read_all = []
 
-# Check if any metric fails the threshold:
-if [[ "$swri" -lt 10000 ]] || [[ "$rwri" -lt 500 ]] || [[ "$rrea" -lt 1500 ]]; then
-    echo "true"
-else
-    echo "false"
-fi
+for i in range(5):
+    result = subprocess.check_output(CMD, shell=True, text=True)
+
+    data = list(map(lambda row: row.split(';'), result.splitlines()))
+
+    sequential_write = float(data[1][3])
+    random_write = float(data[2][4])
+    random_read = float(data[3][2])
+
+    sequential_write_all.append(sequential_write)
+    random_write_all.append(random_write)
+    random_read_all.append(random_read)
+
+    logging.debug("Run %i - %f %f %f" % (i, sequential_write, random_write, random_read))
+
+    # print(sequential_write, random_write, random_read)
+
+    time.sleep(60);
+
+# print(sequential_write_all, random_write_all, random_read_all)
+
+# Remove the worst and best values from the tests
+sequential_write_all.remove(max(sequential_write_all))
+sequential_write_all.remove(min(sequential_write_all))
+random_write_all.remove(max(random_write_all))
+random_write_all.remove(min(random_write_all))
+random_read_all.remove(max(random_read_all))
+random_read_all.remove(min(random_read_all))
+
+sequential_write_mean = sum(sequential_write_all) / len(sequential_write_all)
+random_write_mean = sum(random_write_all) / len(random_write_all)
+random_read_mean = sum(random_read_all) / len(random_read_all)
+
+logging.debug("Final Avgs - %f %f %f" % (sequential_write_mean, random_write_mean, random_read_mean))
+
+# print(sequential_write_mean, random_write_mean, random_read_mean)
+
+if sequential_write_mean < SEQ_WRITE_TARGET or random_write_mean < RAND_WRITE_TARGET or random_read_mean < RAND_READ_TARGET:
+    print("true")
+else:
+    print("false")

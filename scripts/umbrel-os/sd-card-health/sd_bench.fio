@@ -21,18 +21,19 @@ stonewall
 [seq-write]
 rw=write
 bs=512k
+runtime=30
 stonewall
 
 [rand-4k-write]
 rw=randwrite
 bs=4k
-runtime=10
+runtime=30
 stonewall
 
 [rand-4k-read]
 rw=randread
 bs=4k
-runtime=10
+runtime=30
 stonewall
 
 # execute with command $ fio --output-format=terse sd_bench.fio | cut -f 3,7,8,48,49 -d";" -

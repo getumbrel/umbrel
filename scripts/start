@@ -104,14 +104,6 @@ pkill -f ./scripts/status-monitor || true
 # Then this will do the intial pull/initialisation
 ./scripts/status-monitor repo 300 &>> "${UMBREL_LOGS}/status-monitor.log" &
 
-if [[ "${IS_UMBREL_OS}" == "true" ]]; then
-  # Set a default value for the SD card health (healthy)
-  echo "false" > "${UMBREL_ROOT}/statuses/sd-card-health-status.json"
-  
-  # Check the SD card health every 7 days
-  # ./scripts/status-monitor sd-card-health 604800 &>> "${UMBREL_LOGS}/status-monitor.log" &
-fi
-
 echo "Starting memory monitor..."
 echo
 ./scripts/memory-monitor &>> "${UMBREL_LOGS}/memory-monitor.log" &
@@ -161,6 +153,19 @@ if [[ -f "${UMBREL_ROOT}/db/user.json.lock" ]]; then
 fi
 "${UMBREL_ROOT}/scripts/app" start installed
 echo
+
+if [[ "${IS_UMBREL_OS}" == "true" ]]; then
+  # After everything has started
+  # Set a default value for the SD card health (healthy)
+  echo "false" > "${UMBREL_ROOT}/statuses/sd-card-health-status.json"
+
+  # We'll check the SD card health every 7 days
+  # Starting in 15 minutes when everything has settled down
+  # bash -c "sleep 900 && ./scripts/status-monitor sd-card-health 604800 &>> \"${UMBREL_LOGS}/status-monitor.log\"" &
+
+  # For testing, we'll run this every 2 hours to collect some metrics
+  bash -c "sleep 900 && ./scripts/status-monitor sd-card-health 7200 &>> \"${UMBREL_LOGS}/status-monitor.log\"" &
+fi
 
 # If a backup of resolv.conf exists
 # (that got created during the Umbrel update process)
