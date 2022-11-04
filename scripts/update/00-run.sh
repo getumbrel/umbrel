@@ -39,8 +39,9 @@ RESOLV_CONF_BACKUP_FILE="/tmp/resolv.conf"
 cat "${RESOLV_CONF_FILE}" > "${RESOLV_CONF_BACKUP_FILE}"
 
 # Use Cloudflare and Google public DNS servers for update
-echo "nameserver 1.1.1.1" > "${RESOLV_CONF_FILE}"
+echo "nameserver 1.1.1.1" >> "${RESOLV_CONF_FILE}"
 echo "nameserver 8.8.8.8" >> "${RESOLV_CONF_FILE}"
+echo "options timeout:1" >> "${RESOLV_CONF_FILE}"
 
 # Update status file
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
