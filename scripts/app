@@ -101,7 +101,7 @@ source_app() {
     EXPORTS_APP_FILE="${EXPORTS_APP_DIR}/exports.sh"
     EXPORTS_APP_DATA_DIR="${EXPORTS_APP_DIR}/data"
 
-    [[ -f "${EXPORTS_APP_FILE}" ]] && . "${EXPORTS_APP_FILE}"
+    [[ -f "${EXPORTS_APP_FILE}" ]] && . "${EXPORTS_APP_FILE}" || true
   done
 
   # App specific exports
