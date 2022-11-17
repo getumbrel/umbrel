@@ -39,10 +39,14 @@ function onError(err, req, res, target) {
 	// ENOTFOUND = The proxy could not reach the target (check APP_HOST and APP_PORT)
 	// ETIMEDOUT = The proxy could reach the target, but the target was too slow to respond (potentially PROXY_TIMEOUT is too low)
 
-	res.status(StatusCodes.BAD_GATEWAY).render('pages/error', {
-		app: CONSTANTS.APP,
-		err
-	});
+	console.error(`Proxy error: ${err.message}`);
+
+	if(typeof res.status === 'function') {
+		res.status(StatusCodes.BAD_GATEWAY).render('pages/error', {
+			app: CONSTANTS.APP,
+			err
+		});
+	}
 }
 
 function proxy() {
