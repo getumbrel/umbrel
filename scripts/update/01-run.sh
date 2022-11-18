@@ -122,6 +122,9 @@ cd "$UMBREL_ROOT"
   }
 }
 
+# Add default logging configuration to Docker daemon
+"${UMBREL_ROOT}/.umbrel-${RELEASE}/scripts/update/steps/docker-add-logging-config.sh"
+
 # Restart Docker to resolve:
 # - This error could happen when pulling new images:
 #   ERROR: Get "https://registry-1.docker.io/v2/": net/http: TLS handshake timeout
