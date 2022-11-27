@@ -31,7 +31,7 @@ get_app_memory_use() {
 
   local app_memory=0
 
-  local app_containers=$("${UMBREL_ROOT}/scripts/app" compose "${app}" ps | awk '{print $1}' | grep -v 'Name\|-----')
+  local app_containers=$("${UMBREL_ROOT}/scripts/app" compose "${app}" ps | grep -vE '^\s' | awk '{print $1}' | grep -v 'Name\|-----')
   for container in $app_containers; do
     local container_memory=$(get_container_memory_use "${container}")
     app_memory=$(awk "BEGIN {print ${app_memory}+${container_memory}}")
