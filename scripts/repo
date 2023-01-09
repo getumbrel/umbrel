@@ -340,6 +340,12 @@ if [[ "$command" = "checkout" ]]; then
 
   git -C "${default_repo_path}" checkout "${origin_name}/${branch}"
 
+  # Make sure app repo doesn't end up being owned by root or some apps will fail
+  # with fs permission errors
+  if [[ -d "${default_repo_path}" ]]; then
+    chown -R "1000:1000" "${default_repo_path}"
+  fi
+
   exit
 fi
 
