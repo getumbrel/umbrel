@@ -554,7 +554,7 @@ if [[ "$command" = "update" ]]; then
 
   copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
 
-  # Copy remaining files in the event of error or success
+  # Ensure remaining files are copied in case of unexpected exit
   trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
 
   # Source env. after new exports.sh is copied (done above via 'copy_app_files')
@@ -565,6 +565,9 @@ if [[ "$command" = "update" ]]; then
 
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
+
+  # Copy remaining files to mark update as complete
+  copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
   if [[ "$*" != *"--skip-start"* ]]; then
     "${0}" "start" "${app}"
