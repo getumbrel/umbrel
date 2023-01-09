@@ -213,6 +213,23 @@ if [[ "$command" = "update" ]]; then
     # Which would then prevent other repos getting updated
     {
       if [[ -d "${local_repo_path}" ]]; then
+        # Git can leave behind write locks if something fails
+        # These locks should only exist for milliseconds
+        # We'll delete any lock  older than 10 seconds
+        # Otherwise git will not proceed
+        epoch_ts=$(date +%s)
+        for file in "${local_repo_path}/.git"/*.lock; do
+          [[ ! -f "${file}" ]] && continue
+
+          age_of_lock=$(stat -c '%X' "${file}")
+          age_seconds=$((epoch_ts-age_of_lock))
+
+          if [[ "${age_seconds}" -gt "10" ]]; then
+            echo "Deleting old lock: ${file}"
+            rm -rf "${file}"
+          fi
+        done
+
         repo_branch=$(git -C "${local_repo_path}" rev-parse --abbrev-ref HEAD)
         echo "Updating repo: ${repo_url} (${repo_branch})"
 
