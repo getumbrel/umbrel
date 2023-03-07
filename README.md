@@ -66,6 +66,16 @@ Alternatively you can install Umbrel on any Ubuntu or Debian system (both x86 an
 curl -L https://umbrel.sh | bash
 ```
 
+Install Umbrel on Arch Linux
+
+```
+sudo pacman -S inetutils yq which python3 rsync jq curl 
+yay -S fswatch
+git clone git@github.com:getumbrel/umbrel.git
+cd umbrel
+sudo ./script/start
+```
+
 ## Umbrel App Store
 
 https://user-images.githubusercontent.com/10330103/191728195-f512ff5e-556a-4c61-b13c-8c079806bba2.mp4
