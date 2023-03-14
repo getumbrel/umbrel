@@ -60,3 +60,6 @@ fi
 echo "Stopping Docker services..."
 echo
 docker-compose "${compose_files[@]}" down
+
+# Required for SYSTEMD
+exit 0
