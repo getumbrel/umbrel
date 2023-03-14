@@ -188,3 +188,6 @@ if [[ "${REMOTE_TOR_ACCESS}" == "true" ]] && [[ -f "${TOR_HS_WEB_HOSTNAME_FILE}"
 fi
 
 $set_status umbrel completed
+
+# Required for SYSTEMD
+exit 0
