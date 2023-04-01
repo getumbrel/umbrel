@@ -41,7 +41,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 			// Exit loop on success
 			break;
 		} catch (error) {
-			console.log(`Error wating for port: "${error.message}"`);
+			console.log(`Error waiting for port: "${error.message}"`);
 			// Wait before retrying
 			await delay(100);
 			console.log('Retrying...');
