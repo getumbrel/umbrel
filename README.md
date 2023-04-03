@@ -72,7 +72,7 @@ https://user-images.githubusercontent.com/10330103/191728195-f512ff5e-556a-4c61-
 
 <br />
 
-Here are some of the apps available in the Umbrel App Store. For the complete list of apps, please see the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) repository.
+Here are some of the apps available in the Umbrel App Store. For the complete list of apps, please see the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) repository or visit [apps.umbrel.com](https://apps.umbrel.com/).
 
 - [Bitcoin Node](https://github.com/getumbrel/umbrel-bitcoin) — Run your personal node powered by Bitcoin Core
 - [Bitfeed](https://github.com/bitfeed-project/bitfeed) — A beautiful mempool visualizer and block explorer
