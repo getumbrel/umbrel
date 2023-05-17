@@ -118,7 +118,7 @@ networks:
       ipam:
           driver: default
           config:
-              - subnet: "$NETWORK_IP/16"
+              - subnet: "${NETWORK_IP}/16"
 
 volumes:
     jwt-public-key:
