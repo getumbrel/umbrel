@@ -187,4 +187,4 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     fi
 fi
 
-echo "The debug script did not automatically detect any issues with your Umbrel."
+echo "==== END ====="
