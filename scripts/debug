@@ -186,3 +186,5 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
         exit 0
     fi
 fi
+
+echo "==== END ====="
