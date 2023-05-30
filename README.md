@@ -2,15 +2,15 @@
   <a href="https://umbrel.com">
     <img src="https://i.imgur.com/b8IeGru.jpeg" alt="Logo">
   </a>
-  <h1 align="center">Umbrel</h1>
+  <h1 align="center">umbrelOS</h1>
   <p align="center">
-    A beautiful personal server OS for self-hosting
+    A beautiful home server OS for self-hosting
     <br />
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
     <br />
-    Install on
+    Pre order an <a href="https://umbrel.com">Umbrel Home</a> or install on:
     <br />
     <a href="https://umbrel.com/#start">Raspberry Pi</a>
     ·
@@ -55,12 +55,12 @@ https://user-images.githubusercontent.com/10330103/191728171-67b7a8b1-d2b0-45f3-
 
 <br />
 
-## Installing Umbrel
-> Umbrel is currently in beta and should not be considered secure. See [SECURITY.md](SECURITY.md) for more details.
+## Installing umbrelOS
+> umbrelOS is currently in beta and should not be considered secure. See [SECURITY.md](SECURITY.md) for more details.
 
-The easiest way to get started is by running [Umbrel OS](https://download.umbrel.com/umbrel-os.zip) on a Raspberry Pi 4. Step-by-step installation intructions can be found [here](https://umbrel.com/#start).
+The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 4](https://download.umbrel.com/umbrel-os.zip). Step-by-step installation intructions can be found [here](https://umbrel.com/#start).
 
-Alternatively you can install Umbrel on any Ubuntu or Debian system (both x86 and arm64) with:
+Alternatively you can install umbrelOS on any Ubuntu or Debian system (both x86 and arm64) with:
 
 ```bash
 curl -L https://umbrel.sh | bash
@@ -72,7 +72,7 @@ https://user-images.githubusercontent.com/10330103/191728195-f512ff5e-556a-4c61-
 
 <br />
 
-Here are some of the apps available in the Umbrel App Store. For the complete list of apps, please see the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) repository or visit [apps.umbrel.com](https://apps.umbrel.com/).
+Here are some of the apps available in the Umbrel App Store. For the complete list of apps, visit [apps.umbrel.com](https://apps.umbrel.com/).
 
 #### Bitcoin & Finance
 - [Bitcoin Node](https://apps.umbrel.com/app/bitcoin) — Run your personal node powered by Bitcoin Core
@@ -134,14 +134,14 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 
 > If an app you're looking for isn't available on our app store yet, feel free to open an issue on the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) respository to request it.
 
-## Building apps for Umbrel
+## Building apps for umbrelOS
 
-If you're interested in building an Umbrel app or packaging an existing one, please refer to the [Umbrel App Framework documentation](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
+If you're interested in building an app for umbrelOS or packaging an existing one, please refer to the [Umbrel App Framework documentation](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
 
 
 ## Setting up a development environment
 
-With the release of Umbrel 0.5, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
+With the release of umbrelOS 0.5, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
 
 
 ## Contributing
@@ -155,7 +155,7 @@ If you're looking for a bigger challenge, before opening a pull request please [
 
 ## License
 
-Umbrel is licensed under the PolyForm Noncommercial 1.0.0 license. TL;DR — You're free to use, fork, modify, and redistribute Umbrel for personal and nonprofit use under the same license. If you're interested in using Umbrel for commercial purposes, such as selling plug-and-play home servers with Umbrel, etc — please reach out to us at partner@umbrel.com.
+umbrelOS is licensed under the PolyForm Noncommercial 1.0.0 license. TL;DR — You're free to use, fork, modify, and redistribute Umbrel for personal and nonprofit use under the same license. If you're interested in using umbrelOS for commercial purposes, such as selling plug-and-play home servers with umbrelOS, etc — please reach out to us at partner@umbrel.com.
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-%235351FB)](https://github.com/getumbrel/umbrel/blob/master/LICENSE.md)
 
