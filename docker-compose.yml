@@ -53,13 +53,11 @@ services:
                         - ${PWD}/tor/data:/var/lib/tor/
                         - /var/run/docker.sock:/var/run/docker.sock
                         - ${DOCKER_BINARY:-/usr/bin/docker}:/usr/bin/docker
-                        - jwt-public-key:/jwt-public-key
-                        - jwt-private-key:/jwt-private-key
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
-                    JWT_PUBLIC_KEY_FILE: "/jwt-public-key/jwt.pem"
-                    JWT_PRIVATE_KEY_FILE: "/jwt-private-key/jwt.key"
+                    JWT_PUBLIC_KEY_FILE: "/db/jwt.pem"
+                    JWT_PRIVATE_KEY_FILE: "/db/jwt.key"
                     JWT_EXPIRATION: "3600"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
@@ -119,7 +117,3 @@ networks:
           driver: default
           config:
               - subnet: "$NETWORK_IP/16"
-
-volumes:
-    jwt-public-key:
-    jwt-private-key:

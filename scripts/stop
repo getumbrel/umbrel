@@ -39,6 +39,10 @@ ps -Af \
   | awk '{print $2}' \
   | xargs sudo kill 2> /dev/null || true
 
+if [[ "${@}" != *"--no-stop-server"* ]]; then
+ pkill --full 'caxa.*umbreld' || true
+fi
+
 echo "Stopping installed apps..."
 echo
 "${UMBREL_ROOT}/scripts/app" stop installed

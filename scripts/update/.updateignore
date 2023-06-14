@@ -1,9 +1,0 @@
-/.*
-/db/*
-/statuses
-/tor/*
-/events/signals
-/logs/*
-/app-data/*
-/repos/*
-/data/*

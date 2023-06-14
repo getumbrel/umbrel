@@ -124,6 +124,13 @@ echo "Starting decoy backup trigger..."
 echo
 ./scripts/backup/decoy-trigger &>> "${UMBREL_LOGS}/backup-decoy-trigger.log" &
 
+if [[ "${@}" != *"--no-start-server"* ]]; then
+ echo "Starting umbreld..."
+  echo
+  pkill --full 'caxa.*umbreld' || true
+  ./bin/umbreld --data-directory "${UMBREL_ROOT}" &>> "${UMBREL_LOGS}/umbreld.log" &
+fi
+
 compose_files=()
 
 if [[ "${REMOTE_TOR_ACCESS}" == "true" ]]; then
