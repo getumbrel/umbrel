@@ -58,7 +58,7 @@ services:
                     USER_PASSWORD_FILE: "/db/user.json"
                     JWT_PUBLIC_KEY_FILE: "/db/jwt.pem"
                     JWT_PRIVATE_KEY_FILE: "/db/jwt.key"
-                    JWT_EXPIRATION: "3600"
+                    JWT_EXPIRATION: "604800"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"
                     UMBREL_DASHBOARD_HIDDEN_SERVICE_FILE: "/var/lib/tor/web/hostname"
