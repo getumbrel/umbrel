@@ -239,7 +239,7 @@ const actions = {
   async getMigrateStatus({ commit, state }) {
     if (state.stopMigrationPolling) return;
 
-    const status = await API.get(`${process.env.VUE_APP_UMBRELD_API_URL}/migration-status`);
+    const status = await API.get(`${API.umbreldUrl}/migration-status`);
     
     if (state.migrateStatus.progress < 100 && status?.progress === 100) {
       commit("setStopMigrationPolling", true);
@@ -357,7 +357,7 @@ const actions = {
     commit("setIsUmbrelOS", !!isUmbrelOS);
   },
   async getIsUmbrelHome({ commit }) {
-    const isUmbrelHome = await API.umbreldGet(`${process.env.VUE_APP_UMBRELD_API_URL}/is-umbrel-home`);
+    const isUmbrelHome = await API.umbreldGet(`${API.umbreldUrl}/is-umbrel-home`);
     commit("setIsUmbrelHome", !!isUmbrelHome);
   },
   async getIsSdCardFailing({ commit }) {

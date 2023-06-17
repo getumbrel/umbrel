@@ -1106,7 +1106,7 @@ export default {
       this.migrationCheckFailed = false;
 
       try {
-        const response = await API.umbreldGet(`${process.env.VUE_APP_UMBRELD_API_URL}/can-migrate`);
+        const response = await API.umbreldGet(`${API.umbreldUrl}/can-migrate`);
         console.log(response);
         if (response.success) {
           this.migrationState.migrationStep = "migrate";
@@ -1130,7 +1130,7 @@ export default {
       this.migrationState.migrationError = null;
 
       try {
-        await API.post(`${process.env.VUE_APP_UMBRELD_API_URL}/migrate`);
+        await API.post(`${API.umbreldUrl}/migrate`);
 
         // poll migrate status every second until migration is running (checking regularly to transition quickly)
         // because after it's running, the loading view will take over
