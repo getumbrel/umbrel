@@ -58,6 +58,8 @@ export default async function update({updateRoot, umbrelRoot}) {
     'scripts/start',
     'scripts/stop',
     'docker-compose.yml',
+    'docker-compose.dev.yml',
+    'packages',
   ]
 
   for (const file of filesToUpdate) {
