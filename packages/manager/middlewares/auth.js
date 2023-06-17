@@ -33,7 +33,11 @@ async function generateJWTKeys() {
 }
 
 async function createJwtOptions() {
-  await generateJWTKeys();
+  try {
+    await diskLogic.readJWTPublicKeyFile()
+  } catch (error) {
+    await generateJWTKeys();
+  }
   const pubKey = await diskLogic.readJWTPublicKeyFile();
 
   return {
