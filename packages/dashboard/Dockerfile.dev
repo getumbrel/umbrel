@@ -1,0 +1,18 @@
+FROM node:12-buster-slim
+
+# make the 'app' folder the current working directory
+WORKDIR /app
+
+# This is required to pick up filesystem changes in the VirtualBox
+# shared folder for hot module reload
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=1000
+
+# We need to make sure we build with production URLS so the NGINX proxy
+# in umbrel-dev routes them properly
+ENV VUE_APP_MIDDLEWARE_API_URL=/api
+ENV VUE_APP_MANAGER_API_URL=/manager-api
+
+EXPOSE 3004
+ENTRYPOINT ["bash"]
+CMD ["-c", "yarn && yarn vue-cli-service serve --port 3004 --skip-plugins eslint"]

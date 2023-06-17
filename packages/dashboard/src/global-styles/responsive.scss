@@ -1,0 +1,180 @@
+@include media-breakpoint-down(sm) {
+    h1 {
+        font-size: $font-size-base * 3;
+        line-height: $font-size-base * 3;
+    }
+}
+
+.community-app-store-card-columns {
+    column-count: 1;
+    @include media-breakpoint-up(md) {
+        column-count: 2;
+    }
+    column-gap: 30px;
+}
+
+.app-store-card-columns {
+    column-count: 1;
+    @include media-breakpoint-up(md) {
+        column-count: 2;
+    }
+    @include media-breakpoint-up(lg) {
+        column-count: 3;
+    }
+    column-gap: 0px;
+}
+
+.settings-card-columns {
+    column-count: 1;
+    @include media-breakpoint-up(md) {
+        column-count: 2;
+    }
+    @include media-breakpoint-up(lg) {
+        column-count: 3;
+    }
+    column-gap: 30px;
+}
+
+.card-app-list {
+    // https://stackoverflow.com/a/34115300
+    box-shadow: 0 1px 10px var(--card-box-shadow-color),
+      0 1px 2px rgba(209, 213, 223, 0) !important;
+    // transition: background-color 0.6s, box-shadow 0.6s ease;
+    margin-top: 16px !important;
+    margin-bottom: 16px !important;
+    display: inline-block;
+    width: 100%;
+  }
+
+.app-name {
+    @include media-breakpoint-down(md) {
+        font-size: 1.4rem;
+    }
+    @include media-breakpoint-only(lg) {
+        font-size: 1.6rem;
+    }
+}
+
+@include media-breakpoint-only(xs) {
+    .umbrel-logo {
+        max-width: 80px !important;
+    }
+    .text-greeting {
+        font-size: 1.4rem !important;
+        font-weight: 400 !important;
+    }
+    .btn-wallpaper {
+        right: 10px !important;
+    }
+    .wallpaper-container {
+        min-width: 200px !important;
+        width: 60vw !important;
+        .wallpaper-heading {
+            font-size: 1.4rem !important;
+        }
+        .wallpaper-list {
+          column-gap: 20px !important;
+          row-gap: 20px !important;
+          .wallpaper-selector {
+              width: 100% !important;
+          }
+        }
+    }
+    .content-container {
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+        .header {
+            .btn-close-page {
+                top: 10px !important;
+                right: 10px !important;
+            }
+        }
+        .content {
+            padding-bottom: 40px !important;
+        }
+    }
+    .app-icon, .installed-app-icon-container {
+        height: 66px !important;
+        width: 66px !important;
+        border-radius: 16px !important;
+        &.app-icon-xs {
+            width: 46px !important;
+            height: 46px !important;
+            border-radius: 10px !important;
+        }
+    }
+    .installed-app {
+        // width: 110px !important;
+        height: 110px !important;
+        .installed-app-title {
+            font-size: 80%;
+        }
+        .btn-uninstall {
+            right: 23px !important;
+        }
+    }
+    .w-xs-100 {
+        width: 100%;
+    }
+    .app-gallery {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        .app-gallery-image-container {
+            height: 62.5vw;
+            width: 100vw;
+        }
+    }
+    .app-suggestions-container {
+        width: 100% !important;
+    }
+}
+
+@include media-breakpoint-only(sm) {
+    .app-gallery {
+        .app-gallery-image-container {
+            height: 280px;
+            width: 448px;
+        }
+    }
+}
+
+@include media-breakpoint-only(md) {
+    .app-icon, .installed-app-icon-container {
+        height: 80px;
+        width: 80px;
+        border-radius: 16px;
+    }
+    .app-gallery {
+        .app-gallery-image-container {
+            height: 300px;
+            width: 480px;
+        }
+    }
+}
+
+@include media-breakpoint-up(sm) {
+    .modal-sm {
+        max-width: 400px;
+    }
+}
+
+@include media-breakpoint-only(lg) {
+    .app-icon, .installed-app-icon-container {
+        height: 80px;
+        width: 80px;
+        border-radius: 16px;
+    }
+}
+
+@include media-breakpoint-up(lg) {
+    .app-icon.app-icon-lg {
+        height: 140px;
+        width: 140px;
+        border-radius: 28px;
+    }
+    .app-suggestions-container {
+        max-width: 1330px !important;
+    }
+}

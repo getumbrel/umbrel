@@ -1,0 +1,53 @@
+name: Docker build on push
+env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+
+on: push
+
+jobs:
+        build:
+                runs-on: ubuntu-18.04
+                name: Build and push dashboard image
+                steps:
+                        - name: Set env variables
+                          run: echo "BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+                        - name: Show set env variables
+                          run: |
+                                  printf "    BRANCH: %s\n"  "$BRANCH"                                
+                        - name: Login to Docker Hub
+                          run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+                        - name: Checkout project
+                          uses: actions/checkout@v2
+                        - name: Setup Docker buildx action
+                          uses: crazy-max/ghaction-docker-buildx@v1
+                          id: buildx
+                          with:
+                                  buildx-version: latest
+                                  qemu-version: latest
+                        - name: Show available buildx platforms
+                          run: echo ${{ steps.buildx.outputs.platforms }}
+                        - name: Cache Docker layers
+                          uses: actions/cache@v2
+                          id: cache
+                          with:
+                            path: /tmp/.buildx-cache
+                            key: ${{ runner.os }}-buildx-${{ github.sha }}
+                            restore-keys: |
+                              ${{ runner.os }}-buildx-
+                        - name: Run Docker buildx
+                          run: |
+                                  docker buildx build \
+                                  --cache-from "type=local,src=/tmp/.buildx-cache" \
+                                  --cache-to "type=local,dest=/tmp/.buildx-cache" \
+                                  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+                                  --tag ${{ secrets.DOCKER_HUB_USER }}/dashboard:$BRANCH \
+                                  --output "type=registry" ./
+                        - name: Run Docker buildx against stage
+                          run: |
+                                docker buildx build \
+                                --cache-from "type=local,src=/tmp/.buildx-cache" \
+                                --cache-to "type=local,dest=/tmp/.buildx-cache" \
+                                --platform linux/amd64 \
+                                --build-arg STAGING_DEPLOYMENT=true \
+                                --tag ${{ secrets.DOCKER_HUB_USER }}/dashboard:stage-$BRANCH \
+                                --output "type=registry" ./
