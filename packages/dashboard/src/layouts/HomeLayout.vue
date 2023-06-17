@@ -180,6 +180,7 @@ export default {
       this.$store.dispatch("system/getAvailableUpdate");
       this.$store.dispatch("system/getRam");
       this.$store.dispatch("system/getStorage");
+      this.$store.dispatch("apps/getAppStore");
       if (this.isUmbrelOS) {
         this.$store.dispatch("system/getIsSdCardFailing");
         this.$store.dispatch("system/getCpuTemperature");
