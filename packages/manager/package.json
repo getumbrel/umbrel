@@ -1,0 +1,70 @@
+{
+  "name": "umbrel-manager",
+  "version": "0.5.3",
+  "description": "Manager for Umbrel Node",
+  "author": "Umbrel",
+  "scripts": {
+    "lint": "eslint",
+    "start": "node ./bin/www",
+    "test": "mocha --file test.setup 'test/**/*.js'",
+    "coverage": "nyc --all mocha --file test.setup 'test/**/*.js'",
+    "postcoverage": "codecov"
+  },
+  "dependencies": {
+    "aezeed": "^0.0.4",
+    "axios": "^0.19.2",
+    "bcrypt": "^5.0.0",
+    "big.js": "^5.2.2",
+    "body-parser": "^1.18.2",
+    "camelize-keys": "^1.0.0",
+    "continuation-local-storage": "^3.2.1",
+    "cookie-parser": "^1.4.6",
+    "debug": "^4.1.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.16.3",
+    "fs-extra": "^9.0.0",
+    "iocane": "^4.0.0",
+    "lndconnect": "^0.2.10",
+    "module-alias": "^2.1.0",
+    "morgan": "^1.9.0",
+    "node-rsa": "^1.0.8",
+    "notp": "^2.0.3",
+    "npm": "^6.14.6",
+    "passport": "^0.4.0",
+    "passport-http": "^0.3.0",
+    "passport-jwt": "^4.0.0",
+    "request-promise": "^4.2.2",
+    "semver": "^7.3.2",
+    "socks-proxy-agent": "^5.0.0",
+    "thirty-two": "^1.0.2",
+    "uuid": "^8.0.0",
+    "validator": "^13.0.0",
+    "winston": "^3.0.0-rc5",
+    "winston-daily-rotate-file": "^4.4.2",
+    "yaml": "^1.10.2"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.1.0",
+    "chai": "^4.1.2",
+    "chai-http": "^4.2.0",
+    "codecov": "^3.7.1",
+    "eslint": "^7.0.0",
+    "mocha": "^7.1.2",
+    "nodemon": "^2.0.4",
+    "nyc": "15.0.1",
+    "proxyquire": "^2.0.1",
+    "sinon": "^9.0.2"
+  },
+  "nyc": {
+    "exclude": [
+      "test",
+      "test.setup.js"
+    ],
+    "sourceMap": false,
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ],
+    "cache": "false"
+  }
+}

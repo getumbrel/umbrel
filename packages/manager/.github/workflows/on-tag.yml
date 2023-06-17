@@ -1,0 +1,66 @@
+name: Docker build on tag
+env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+        TAG_FMT: '^refs/tags/(((.?[0-9]+){3,4}))$'
+
+on:
+        push:
+                tags:
+                  - v[0-9]+.[0-9]+.[0-9]+
+                  - v[0-9]+.[0-9]+.[0-9]+-*
+
+jobs:
+        build:
+                runs-on: ubuntu-18.04
+                name: Build and push manager image
+                steps:
+                        - name: Set env variables
+                          run: echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+
+                        - name: Show set environment variables
+                          run: |
+                                  printf "    TAG: %s\n"  "$TAG"
+                             
+                        - name: Login to Docker for building
+                          run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+                        - name: Checkout project
+                          uses: actions/checkout@v2
+
+                        - name: Set up QEMU
+                          uses: docker/setup-qemu-action@v1
+                          id: qemu
+
+                        - name: Setup Docker buildx action
+                          uses: docker/setup-buildx-action@v1
+                          id: buildx
+
+                        - name: Available platforms
+                          run: echo ${{ steps.buildx.outputs.platforms }}
+
+                        - name: Cache Docker layers
+                          uses: actions/cache@v2
+                          id: cache
+                          with:
+                            path: /tmp/.buildx-cache
+                            key: ${{ runner.os }}-buildx-${{ github.sha }}
+                            restore-keys: |
+                              ${{ runner.os }}-buildx-
+
+                        - name: Run Docker buildx against tag
+                          run: |
+                                  docker buildx build \
+                                  --cache-from "type=local,src=/tmp/.buildx-cache" \
+                                  --cache-to "type=local,dest=/tmp/.buildx-cache" \
+                                  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+                                  --tag ${{ secrets.DOCKER_HUB_USER }}/manager:$TAG \
+                                  --output "type=registry" ./
+
+                        - name: Run Docker buildx against latest
+                          run: |
+                                  docker buildx build \
+                                  --cache-from "type=local,src=/tmp/.buildx-cache" \
+                                  --cache-to "type=local,dest=/tmp/.buildx-cache" \
+                                  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+                                  --tag ${{ secrets.DOCKER_HUB_USER }}/manager:latest \
+                                  --output "type=registry" ./
