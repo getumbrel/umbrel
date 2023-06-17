@@ -69,7 +69,9 @@ export default async function update({updateRoot, umbrelRoot}) {
   if (await isUmbrelHome()) {
     console.log('Running Umbrel Home specific migrations...')
 
-    await updateNetworkManager()
+    await pRetry(() => updateNetworkManager(), {
+      retries: 3,
+    })
 
     await pRetry(() => activatePowerButtonRecovery({updateRoot}), {
         retries: 3,
