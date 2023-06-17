@@ -46,6 +46,7 @@ services:
                         - ${PWD}:${PWD}
                         - ${PWD}/info.json:/info.json
                         - ${PWD}/db:/db
+                        - ${PWD}/jwt:/jwt
                         - ${PWD}/events/signals:/signals
                         - ${PWD}/app-data:/app-data
                         - ${PWD}/repos:/repos
@@ -56,8 +57,8 @@ services:
                 environment:
                     PORT: "3006"
                     USER_PASSWORD_FILE: "/db/user.json"
-                    JWT_PUBLIC_KEY_FILE: "/db/jwt.pem"
-                    JWT_PRIVATE_KEY_FILE: "/db/jwt.key"
+                    JWT_PUBLIC_KEY_FILE: "/jwt/jwt.pem"
+                    JWT_PRIVATE_KEY_FILE: "/jwt/jwt.key"
                     JWT_EXPIRATION: "604800"
                     DOCKER_COMPOSE_DIRECTORY: $PWD
                     UMBREL_SEED_FILE: "/db/umbrel-seed/seed"

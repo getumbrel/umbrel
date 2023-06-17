@@ -20,7 +20,7 @@ app.use(cors((request, callback) => callback(null, {origin: true, credentials: t
 
 // Validate manager jwt
 app.use(expressjwt({
-  secret: () => fse.readFile(`${app.get('UMBREL_ROOT')}/db/jwt.key`),
+  secret: () => fse.readFile(`${app.get('UMBREL_ROOT')}/jwt/jwt.key`),
   algorithms: ['RS256'],
   getToken: request => request.headers.authorization.split(' ')[1],
 }))
