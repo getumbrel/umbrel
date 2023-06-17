@@ -139,13 +139,9 @@ fi
 
 compose_files+=( "--file" "docker-compose.yml" )
 
-UMBREL_DEV_OVERRIDE="${UMBREL_ROOT}/docker-compose.dev.yml"
-UMBREL_DEV="false"
-if [[ -f "${USER_FILE}" ]]; then
-  UMBREL_DEV=$(cat "${USER_FILE}" | jq 'has("dev") and .dev')
-fi
-if [[ "${UMBREL_DEV}" == "true" ]]; then
-  compose_files+=( "--file" "${UMBREL_DEV_OVERRIDE}" )
+UMBREL_DEV_FILE="${UMBREL_ROOT}/.umbrel-dev"
+if [[ -f "${UMBREL_DEV_FILE}" ]]; then
+  compose_files+=( "--file" "${UMBREL_ROOT}/docker-compose.dev.yml" )
 fi
 
 echo

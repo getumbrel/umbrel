@@ -1,13 +1,13 @@
 version: '3.7'
 
 services:
-        # dashboard:
-        #         image: getumbrel/dashboard
-        #         build:
-        #           context: ../umbrel-dashboard
-        #           dockerfile: Dockerfile.dev
-        #         volumes:
-        #           - ../umbrel-dashboard:/app
+        dashboard:
+                image: getumbrel/dashboard
+                build:
+                  context: packages/dashboard
+                  dockerfile: Dockerfile.dev
+                volumes:
+                  - ${PWD}/packages/dashboard:/app
         manager:
                 image: getumbrel/manager
                 build: packages/manager

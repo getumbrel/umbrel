@@ -1,1 +1,6 @@
-{}
+{
+    "scripts": {
+        "dev": "touch .umbrel-dev && multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:umbrel && multipass exec umbrel-dev -- scripts/install --bootstrapped --no-install-umbrel && npm run dev:shell",
+        "dev:shell": "multipass shell umbrel-dev"
+    }
+}

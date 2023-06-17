@@ -47,3 +47,4 @@ data/
 !logs/.gitkeep
 !tor/data/.gitkeep
 !tor/run/.gitkeep
+.umbrel-dev

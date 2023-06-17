@@ -212,7 +212,11 @@ mv -f "$ENV_FILE" "./.env"
 
 echo "Configuring permissions..."
 echo
-find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} + || true
+
+UMBREL_DEV_FILE="${UMBREL_ROOT}/.umbrel-dev"
+if [[ ! -f "${UMBREL_DEV_FILE}" ]]; then
+  find "$UMBREL_ROOT" -path "$UMBREL_ROOT/app-data" -prune -o -exec chown 1000:1000 {} + || true
+fi
 
 # Create configured status
 touch "${STATUS_DIR}/configured"
