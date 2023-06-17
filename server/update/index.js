@@ -1,7 +1,13 @@
 import fse from 'fs-extra'
 import {$} from 'execa'
+import pRetry from 'p-retry'
 
 import isUmbrelHome from '../utilities/is-umbrel-home.js'
+
+async function copyFromOverlay({updateRoot, path}) {
+  const overlayRoot = `${updateRoot}/server/update/umbrel-os-overlay`
+  return fse.copy(`${overlayRoot}${path}`, path)
+}
 
 async function updateNetworkManager() {
   console.log('Patching network-manager to use dhclient...')
@@ -23,6 +29,22 @@ managed=false
   await fse.writeFile(configPath, configContents)
   console.log('Restarting network-manager...')
   await $`systemctl restart NetworkManager`
+}
+
+async function activatePowerButtonRecovery({updateRoot}) {
+  console.log('Activating power button recovery...')
+
+  console.log('Registering acpi event handlers...')
+  await copyFromOverlay({updateRoot, path: '/etc/acpi/events/power-button'})
+  await copyFromOverlay({updateRoot, path: '/etc/acpi/power-button.sh'})
+  console.log('Installing acpid...')
+  await $`apt-get update --yes`
+  await $`apt-get install --yes acpid`
+  await $`systemctl restart acpid`
+
+  console.log('Telling logind to ignore power button presses...')
+  await copyFromOverlay({updateRoot, path: '/etc/systemd/logind.conf.d/power-button.conf'})
+  await $`systemctl restart systemd-logind`
 }
 
 export default async function update({updateRoot, umbrelRoot}) {
@@ -48,5 +70,9 @@ export default async function update({updateRoot, umbrelRoot}) {
     console.log('Running Umbrel Home specific migrations...')
 
     await updateNetworkManager()
+
+    await pRetry(() => activatePowerButtonRecovery({updateRoot}), {
+        retries: 3,
+    })
   }
 }
