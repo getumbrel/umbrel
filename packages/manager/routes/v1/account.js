@@ -37,7 +37,6 @@ router.post('/change-password', auth.convertReqBodyToBasicAuth, auth.basic, inco
 
     try {
         validator.isString(currentPassword);
-        validator.isMinPasswordLength(currentPassword);
         validator.isString(newPassword);
         validator.isMinPasswordLength(newPassword);
         if (newPassword === currentPassword) {
