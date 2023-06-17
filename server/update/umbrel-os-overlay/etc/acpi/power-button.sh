@@ -39,7 +39,6 @@ reset_umbrel_password() {
 
 # Function to handle power button presses
 handle_press() {
-  echo "Power button pressed!"
   # Append the current timestamp to the state file
   echo "$(date +%s)" >> "${STATE_FILE}"
 
@@ -50,7 +49,7 @@ handle_press() {
   last_timestamp=$(echo "${last_timestamps}" | tail -n 1)
   total_allowed_duration=$((LISTEN_TIME * RECOVERY_SEQUENCE_COUNT))
   if [[ "${num_entries}" -ge "${RECOVERY_SEQUENCE_COUNT}" ]] && [[ $((last_timestamp - first_timestamp)) -lt "${total_allowed_duration}" ]]; then
-    echo "Recovery sequence detected. Initiating factory reset."
+    echo "Power button pressed! Recovery sequence detected. Initiating factory reset."
     # This flag indicates that a password reset has been initiated so the previous button presses
     # don't also initiate a reset
     touch "${PASSWORD_RESET_FLAG}"
@@ -64,24 +63,23 @@ handle_press() {
   fi
 
   # Listen for additional button presses
-  echo "Listening for additional button presses for ${LISTEN_TIME} seconds..."
+  echo "Power button pressed! Listening for additional button presses for ${LISTEN_TIME} seconds..."
   sleep "${LISTEN_TIME}"
 
   # Read the latest timestamp
   latest_timestamp=$(tail -n 1 "${STATE_FILE}")
 
-  if [[ "${latest_timestamp}" -ne "${last_timestamp}" ]] || [[ -e "${PASSWORD_RESET_FLAG}" ]]; then
+  new_num_entries=$(wc -l < "${STATE_FILE}")
+  if [[ "${num_entries}" != "${new_num_entries}" ]] || [[ -e "${PASSWORD_RESET_FLAG}" ]]; then
     # Another button press has been registered or a recovery has just been initiated.
     # Exit this handler.
     exit
   fi
-
-  echo "Nothing else happened."
 }
 
 # Check if we should do any special handling and exit early if we do.
 handle_press
 
 # If we get here no special handling is needed and we should trigger a shutdown.
-echo "Shutting down the system."
+echo "Nothing else happened. Shutting down the system."
 poweroff
