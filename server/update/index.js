@@ -34,10 +34,6 @@ managed=false
 async function activatePowerButtonRecovery({updateRoot}) {
   console.log('Activating power button recovery...')
 
-  if (await fse.pathExists('/etc/systemd/logind.conf.d/power-button.conf')) {
-    return console.log(`Skipping because migration has already run`)
-  }
-
   console.log('Registering acpi event handlers...')
   await copyFromOverlay({updateRoot, path: '/etc/acpi/events/power-button'})
   await copyFromOverlay({updateRoot, path: '/etc/acpi/power-button.sh'})
