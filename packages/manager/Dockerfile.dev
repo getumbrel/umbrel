@@ -1,0 +1,13 @@
+FROM node:12-buster-slim
+
+# Install tools
+RUN apt-get update && apt-get install -y build-essential libffi-dev libssl-dev python3
+
+# Create app directory
+WORKDIR /app
+
+EXPOSE 3006
+ENTRYPOINT ["bash"]
+
+# Use --legacy-watch as changes to files in mounted volumes are not detected when using multipass
+CMD ["-c", "yarn && yarn nodemon --legacy-watch ./bin/www"]
