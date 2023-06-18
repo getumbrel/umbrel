@@ -156,10 +156,30 @@ install_docker_compose() {
   sudo python3 -m pip install docker-compose
 }
 
+get_arch() {
+  machine_arch="$(uname --machine)"
+  if [[ "${machine_arch}" = "x86_64" ]]
+  then
+    binary_arch="amd64"
+  elif [[ "${machine_arch}" = "aarch64" ]]
+  then
+    binary_arch="arm64"
+  else
+    echo "Unsupported architecture: ${machine_arch}"
+    exit 1
+  fi
+
+  echo "${binary_arch}"
+}
+
 install_umbrel() {
   version=$(get_umbrel_version)
+  arch=$(get_arch)
   curl --location "https://api.github.com/repos/${UMBREL_REPO}/tarball/${version}" | \
     tar --extract --gzip --strip-components=1 --directory="${UMBREL_INSTALL_PATH}"
+
+  binary_url="https://github.com/${UMBREL_REPO}/releases/download/${version}/umbreld-${version}-${binary_arch}.tar.gz"
+  curl --fail --location "${binary_url}" | tar --extract --gzip --directory="${UMBREL_INSTALL_PATH}/bin"
 }
 
 install_systemd_service() {
