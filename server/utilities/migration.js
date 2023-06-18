@@ -186,14 +186,6 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
         // Wait for rsync to finish
         await rsync
 
-        // Preserve new installation password
-        const temporaryInfoJson = await fse.readJson(`${temporaryData}/db/user.json`)
-        const { password: currentInstallPasword } = await fse.readJson(`${currentInstall}/db/user.json`)
-        await fse.writeJson(`${temporaryData}/db/user.json`, {
-            ...temporaryInfoJson,
-            password: currentInstallPasword
-        }, { spaces: 2 })
-
         // Stop apps / umbrel
         updateMigrationStatus({ progress: 80, description: 'Stopping Umbrel' })
         await execa('./scripts/stop', ['--no-stop-server'], { cwd: currentInstall })
