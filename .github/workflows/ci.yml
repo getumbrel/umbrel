@@ -1,0 +1,26 @@
+name: Create release on tag
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - run: docker buildx create --use
+      - run: npm ci
+      - run: npm run build # Just to speed up builds for testing
+      # TODO Clean this up
+      - run: cd build && mv umbreld-amd64 umbreld && tar -czvf umbreld-${{ github.ref_name }}-amd64.tar.gz umbreld && rm umbreld
+      - run: cd build && mv umbreld-arm64 umbreld && tar -czvf umbreld-${{ github.ref_name }}-arm64.tar.gz umbreld && rm umbreld
+      # TODO Generate release notes
+      - uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          name: umbrelOS ${{ github.ref_name }}
+          files: server/build/*
