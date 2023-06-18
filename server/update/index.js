@@ -50,12 +50,14 @@ async function activatePowerButtonRecovery({updateRoot}) {
 export default async function update({updateRoot, umbrelRoot}) {
   console.log(`Running migrations from "${updateRoot}" on "${umbrelRoot}"`)
 
+  // We don't want to overwrite the Umbrel Home patches so we only update a whitelist of files
   const filesToUpdate = [
     'scripts/start',
     'scripts/stop',
     'docker-compose.yml',
     'docker-compose.dev.yml',
     'packages',
+    'info.json',
   ]
 
   for (const file of filesToUpdate) {
