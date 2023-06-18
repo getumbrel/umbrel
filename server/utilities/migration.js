@@ -228,7 +228,7 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
         retries: 5,
     })
 
-    updateMigrationStatus({ running: false, progress: 0, description: '' })
+    updateMigrationStatus({ running: false, progress: 100, description: '' })
 
     // Cleanup mounted drives
     await unmountExternalDrives()
