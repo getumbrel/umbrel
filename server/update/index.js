@@ -50,7 +50,22 @@ async function activatePowerButtonRecovery({updateRoot}) {
 export default async function update({updateRoot, umbrelRoot}) {
   console.log(`Running migrations from "${updateRoot}" on "${umbrelRoot}"`)
 
-  // We don't want to overwrite the Umbrel Home patches so we only update a whitelist of files
+  // Umbrel Home specific updates
+  if (await isUmbrelHome()) {
+    console.log('Running Umbrel Home specific migrations...')
+
+    await pRetry(() => updateNetworkManager(), {
+      retries: 3,
+    })
+
+    await pRetry(() => activatePowerButtonRecovery({updateRoot}), {
+        retries: 3,
+    })
+  }
+
+  // We don't want to overwrite the Umbrel Home patches so we only update a whitelist of files.
+  // We do the Umbrel install update last so if any of the above migrations fail, the user will
+  // still be on the old version of Umbrel and can try the update again.
   const filesToUpdate = [
     'scripts/start',
     'scripts/stop',
@@ -67,18 +82,5 @@ export default async function update({updateRoot, umbrelRoot}) {
     console.log(`Updating "${umbrelPath}"...`)
 
     await fse.copy(updatePath, umbrelPath)
-  }
-
-  // Umbrel Home specific updates
-  if (await isUmbrelHome()) {
-    console.log('Running Umbrel Home specific migrations...')
-
-    await pRetry(() => updateNetworkManager(), {
-      retries: 3,
-    })
-
-    await pRetry(() => activatePowerButtonRecovery({updateRoot}), {
-        retries: 3,
-    })
   }
 }
