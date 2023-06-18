@@ -32,25 +32,24 @@ binary_source_location="${UPDATE_ROOT}/server/build/umbreld-${binary_arch}"
 binary_destination_location="${UMBREL_ROOT}/bin/umbreld"
 
 # Download umbreld release binary if we don't have a local dev build
+echo "Installing umbreld to \"${binary_destination_location}\""
+echo '{"state": "installing", "progress": 25, "description": "Installing umbreld", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+
 if [[ -f "${binary_source_location}" ]]
 then
   echo "Using local development binary at \"${binary_source_location}\""
+  cp "${binary_source_location}" "${binary_destination_location}-new"
+  mv "${binary_destination_location}-new" "${binary_destination_location}"
 else
   # TODO: Ideally this would do a lookup to download.umbrel.com which would return a redirect to
   # the GitHub release asset. That way we have freedom to change the repo or not use GitHub releases
   # at all in the future.
-  binary_url="https://github.com/getumbrel/umbrel/releases/download/v${RELEASE}/umbreld-${binary_arch}"
+  binary_url="https://github.com/getumbrel/umbrel/releases/download/${RELEASE}/umbreld-${RELEASE}-${binary_arch}.tar.gz"
   echo "Downloading umbreld from \"${binary_url}\""
-  mkdir -p "${binary_source_location%/*}"
-  # TODO: Test this code actually works
-  curl --fail --output "${binary_source_location}" "${binary_url}"
+  binary_containing_directory="${binary_destination_location%/*}"
+  mkdir -p "${binary_containing_directory}"
+  curl --fail --location "${binary_url}" | tar --extract --gzip --directory="${binary_containing_directory}"
 fi
-
-
-echo "Installing umbreld to \"${binary_destination_location}\""
-echo '{"state": "installing", "progress": 25, "description": "Installing umbreld", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
-cp "${binary_source_location}" "${binary_destination_location}-new"
-mv "${binary_destination_location}-new" "${binary_destination_location}"
 
 echo "Running \"umbreld --update\""
 echo '{"state": "installing", "progress": 50, "description": "Running Umbrel migrations", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
