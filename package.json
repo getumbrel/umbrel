@@ -1,6 +1,9 @@
 {
     "scripts": {
-        "dev": "touch .umbrel-dev && multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:umbrel && multipass exec umbrel-dev -- scripts/install --bootstrapped --no-install-umbrel && npm run dev:shell",
+        "dev": "touch .umbrel-dev && multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:umbrel && multipass exec umbrel-dev -- scripts/install --bootstrapped --no-install-umbrel && npm run dev:start",
+        "dev:start": "multipass exec umbrel-dev -- sudo scripts/start && echo && echo You may see NGINX errors for a few seconds while the dashboard dev server builds.",
+        "dev:stop": "multipass exec umbrel-dev -- sudo scripts/stop",
+        "dev:restart": "npm run dev:stop && npm run dev:start",
         "dev:shell": "multipass shell umbrel-dev"
     }
 }

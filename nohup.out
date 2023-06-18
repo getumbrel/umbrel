@@ -1,0 +1,322 @@
+Skipping status update when not on Umbrel OS
+
+======================================
+============= STARTING ===============
+============== UMBREL ================
+======================================
+
+Setting environment variables...
+
+Starting karen...
+
+Starting status monitors...
+Starting memory monitor...
+
+Starting backup monitor...
+
+Starting decoy backup trigger...
+
+Starting umbreld...
+
+
+Starting Docker services...
+
+Building manager
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 698B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load .dockerignore
+#2 transferring context: 223B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 1.0s
+
+#4 [umbrel-manager-builder 1/6] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.66kB 0.0s done
+#5 DONE 0.0s
+
+#6 [umbrel-manager 2/3] COPY --from=umbrel-manager-builder /app /app
+#6 CACHED
+
+#7 [umbrel-manager-builder 2/6] RUN apt-get update && apt-get install -y build-essential libffi-dev libssl-dev python3
+#7 CACHED
+
+#8 [umbrel-manager-builder 3/6] WORKDIR /app
+#8 CACHED
+
+#9 [umbrel-manager-builder 4/6] COPY yarn.lock package.json ./
+#9 CACHED
+
+#10 [umbrel-manager-builder 5/6] RUN yarn install --production
+#10 CACHED
+
+#11 [umbrel-manager-builder 6/6] COPY . .
+#11 CACHED
+
+#12 [umbrel-manager 3/3] WORKDIR /app
+#12 CACHED
+
+#13 exporting to image
+#13 exporting layers done
+#13 writing image sha256:92ff859eb25105c8621558f589ac9b9109a46c64e74d555715655f967a901683 done
+#13 naming to docker.io/getumbrel/manager done
+#13 DONE 0.0s
+Building dashboard
+#1 [internal] load .dockerignore
+#1 transferring context: 77B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile.dev
+#2 transferring dockerfile: 601B 0.1s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 0.4s
+
+#4 [1/2] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [2/2] WORKDIR /app
+#5 CACHED
+
+#6 exporting to image
+#6 exporting layers done
+#6 writing image sha256:d7bb662a7db06e508c7f52b417524fd098ab1d1d8cd33789021da1a3292536eb done
+#6 naming to docker.io/getumbrel/dashboard done
+#6 DONE 0.0s
+manager is up-to-date
+tor_proxy is up-to-date
+dashboard is up-to-date
+auth is up-to-date
+nginx is up-to-date
+
+Removing status server iptables entry...
+Exiting iptables setup when not on Umbrel OS
+
+Starting installed apps...
+
+
+Umbrel is now accessible at
+  http://umbrel-dev.local
+  http://192.168.64.22
+Skipping status update when not on Umbrel OS
+Skipping status update when not on Umbrel OS
+
+======================================
+============= STARTING ===============
+============== UMBREL ================
+======================================
+
+Setting environment variables...
+
+Starting karen...
+
+Starting status monitors...
+Starting memory monitor...
+
+Starting backup monitor...
+
+Starting decoy backup trigger...
+
+Starting umbreld...
+
+
+Starting Docker services...
+
+Building dashboard
+#1 [internal] load .dockerignore
+#1 transferring context: 77B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile.dev
+#2 transferring dockerfile: 601B 0.1s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 0.9s
+
+#4 [1/2] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [2/2] WORKDIR /app
+#5 CACHED
+
+#6 exporting to image
+#6 exporting layers done
+#6 writing image sha256:d7bb662a7db06e508c7f52b417524fd098ab1d1d8cd33789021da1a3292536eb done
+#6 naming to docker.io/getumbrel/dashboard done
+#6 DONE 0.0s
+Building manager
+#1 [internal] load .dockerignore
+#1 transferring context: 223B 0.0s done
+#1 DONE 0.1s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 698B 0.0s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 0.4s
+
+#4 [umbrel-manager-builder 1/6] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.66kB done
+#5 DONE 0.0s
+
+#6 [umbrel-manager 2/3] COPY --from=umbrel-manager-builder /app /app
+#6 CACHED
+
+#7 [umbrel-manager-builder 4/6] COPY yarn.lock package.json ./
+#7 CACHED
+
+#8 [umbrel-manager-builder 5/6] RUN yarn install --production
+#8 CACHED
+
+#9 [umbrel-manager-builder 3/6] WORKDIR /app
+#9 CACHED
+
+#10 [umbrel-manager-builder 6/6] COPY . .
+#10 CACHED
+
+#11 [umbrel-manager-builder 2/6] RUN apt-get update && apt-get install -y build-essential libffi-dev libssl-dev python3
+#11 CACHED
+
+#12 [umbrel-manager 3/3] WORKDIR /app
+#12 CACHED
+
+#13 exporting to image
+#13 exporting layers done
+#13 writing image sha256:92ff859eb25105c8621558f589ac9b9109a46c64e74d555715655f967a901683 done
+#13 naming to docker.io/getumbrel/manager done
+#13 DONE 0.0s
+dashboard is up-to-date
+auth is up-to-date
+manager is up-to-date
+tor_proxy is up-to-date
+nginx is up-to-date
+
+Removing status server iptables entry...
+Exiting iptables setup when not on Umbrel OS
+
+Starting installed apps...
+
+
+Umbrel is now accessible at
+  http://umbrel-dev.local
+  http://192.168.64.22
+Skipping status update when not on Umbrel OS
+Skipping status update when not on Umbrel OS
+
+======================================
+============= STARTING ===============
+============== UMBREL ================
+======================================
+
+Setting environment variables...
+
+Starting karen...
+
+Starting status monitors...
+Starting memory monitor...
+
+Starting backup monitor...
+
+Starting decoy backup trigger...
+
+Starting umbreld...
+
+
+Starting Docker services...
+
+Building dashboard
+#1 [internal] load build definition from Dockerfile.dev
+#1 transferring dockerfile: 601B 0.1s done
+#1 DONE 0.1s
+
+#2 [internal] load .dockerignore
+#2 transferring context: 77B 0.1s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 2.0s
+
+#4 [1/2] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [2/2] WORKDIR /app
+#5 CACHED
+
+#6 exporting to image
+#6 exporting layers done
+#6 writing image sha256:d7bb662a7db06e508c7f52b417524fd098ab1d1d8cd33789021da1a3292536eb done
+#6 naming to docker.io/getumbrel/dashboard
+#6 naming to docker.io/getumbrel/dashboard done
+#6 DONE 0.0s
+Building manager
+#1 [internal] load .dockerignore
+#1 transferring context: 223B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 698B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:12-buster-slim
+#3 DONE 0.5s
+
+#4 [umbrel-manager 1/3] FROM docker.io/library/node:12-buster-slim@sha256:680bdb99eb94b7bf4329247557da66db03cf584bb6f273a8de823ff1b588c3b6
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.66kB done
+#5 DONE 0.0s
+
+#6 [umbrel-manager-builder 2/6] RUN apt-get update && apt-get install -y build-essential libffi-dev libssl-dev python3
+#6 CACHED
+
+#7 [umbrel-manager-builder 3/6] WORKDIR /app
+#7 CACHED
+
+#8 [umbrel-manager-builder 5/6] RUN yarn install --production
+#8 CACHED
+
+#9 [umbrel-manager-builder 6/6] COPY . .
+#9 CACHED
+
+#10 [umbrel-manager 2/3] COPY --from=umbrel-manager-builder /app /app
+#10 CACHED
+
+#11 [umbrel-manager-builder 4/6] COPY yarn.lock package.json ./
+#11 CACHED
+
+#12 [umbrel-manager 3/3] WORKDIR /app
+#12 CACHED
+
+#13 exporting to image
+#13 exporting layers done
+#13 writing image sha256:92ff859eb25105c8621558f589ac9b9109a46c64e74d555715655f967a901683 done
+#13 naming to docker.io/getumbrel/manager done
+#13 DONE 0.0s
+auth is up-to-date
+manager is up-to-date
+dashboard is up-to-date
+tor_proxy is up-to-date
+nginx is up-to-date
+
+Removing status server iptables entry...
+Exiting iptables setup when not on Umbrel OS
+
+Starting installed apps...
+
+
+Umbrel is now accessible at
+  http://umbrel-dev.local
+  http://192.168.64.22
+Skipping status update when not on Umbrel OS

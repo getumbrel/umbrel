@@ -49,3 +49,4 @@ data/
 !tor/run/.gitkeep
 .umbrel-dev
 jwt
+bin
