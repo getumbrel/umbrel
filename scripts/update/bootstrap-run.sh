@@ -14,6 +14,13 @@ function show_error {
 }
 trap show_error ERR
 
+# Save current images to clean up later
+echo "Saving current Umbrel Docker images to clean up later"
+compose_file="${UMBREL_ROOT}/docker-compose.yml"
+echo "Reading file: ${compose_file}"
+old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${compose_file}")
+echo "${old_images}"
+
 # Map uname architecture to umbreld architecture
 machine_arch="$(uname --machine)"
 if [[ "${machine_arch}" = "x86_64" ]]
@@ -58,6 +65,11 @@ echo '{"state": "installing", "progress": 50, "description": "Running Umbrel mig
 echo "Starting \"umbreld\""
 echo '{"state": "installing", "progress": 75, "description": "Starting new services", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
 "${UMBREL_ROOT}/scripts/start"
+
+# Remove any old images we don't need anymore
+echo "Deleting previous images"
+echo '{"state": "success", "progress": 90, "description": "Deleting previous images", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+docker rmi $old_images || true
 
 echo "Successfully installed Umbrel $RELEASE"
 echo '{"state": "success", "progress": 100, "description": "Successfully installed Umbrel '$RELEASE'", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
