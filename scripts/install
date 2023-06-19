@@ -174,7 +174,7 @@ get_arch() {
 
 install_umbrel() {
   version=$(get_umbrel_version)
-  arch=$(get_arch)
+  binary_arch=$(get_arch)
   curl --location "https://api.github.com/repos/${UMBREL_REPO}/tarball/${version}" | \
     tar --extract --gzip --strip-components=1 --directory="${UMBREL_INSTALL_PATH}"
 
