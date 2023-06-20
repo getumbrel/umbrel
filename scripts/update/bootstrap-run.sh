@@ -54,8 +54,11 @@ else
   binary_url="https://github.com/getumbrel/umbrel/releases/download/${RELEASE}/umbreld-${RELEASE}-${binary_arch}.tar.gz"
   echo "Downloading umbreld from \"${binary_url}\""
   binary_containing_directory="${binary_destination_location%/*}"
-  mkdir -p "${binary_containing_directory}"
-  curl --fail --location "${binary_url}" | tar --extract --gzip --directory="${binary_containing_directory}"
+  tmp_binary_containing_directory="${binary_containing_directory}/tmp"
+  mkdir -p "${tmp_binary_containing_directory}"
+  curl --fail --location "${binary_url}" | tar --extract --gzip --directory="${tmp_binary_containing_directory}"
+  mv "${tmp_binary_containing_directory}/umbreld" "${binary_destination_location}"
+  rm -rf "${tmp_binary_containing_directory}"
 fi
 
 echo "Running \"umbreld --update\""
