@@ -25,7 +25,7 @@
           
           <!-- Umbrel update notification -->
           <transition name="notification-transition" appear>
-            <notification v-if="availableUpdate.version" :text="`Umbrel ${availableUpdate.version} is now available`">
+            <notification v-if="availableUpdate.version" :text="`umbrelOS ${availableUpdate.version} is now available`">
               <b-button @click.prevent="confirmUpdate" variant="alert-glass" size="sm" class="px-2 px-sm-3 mr-2 mr-sm-3" pill>View</b-button>
             </notification>
           </transition>

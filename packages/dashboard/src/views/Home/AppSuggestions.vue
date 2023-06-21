@@ -125,6 +125,7 @@ export default {
 .card-app-list {
   max-width: 400px;
   .app-name {
+    font-weight: 600;
     height: 1.75rem;
     overflow: hidden;
     text-overflow: ellipsis;

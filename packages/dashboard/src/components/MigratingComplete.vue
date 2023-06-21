@@ -2,7 +2,7 @@
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
     <logo compact class="mb-1 logo-loading" />
     <h2 v-if="error" class="text-white text-center">Migration failed</h2>
-    <h2 v-else class="text-white text-center">Migration successful!</h2>
+    <h2 v-else class="text-white text-center">Migration complete</h2>
 
     <div class="text-center">
       <div v-if="error">
@@ -19,7 +19,7 @@
       class="mt-4 px-4 login-button bg-white font-weight-bold"
       pill
       @click="resetMigrationState"
-      >Continue to log in</b-button
+      >Login</b-button
       >
     </div>
   </div>

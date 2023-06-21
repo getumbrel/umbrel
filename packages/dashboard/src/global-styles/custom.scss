@@ -71,6 +71,9 @@ body {
   --glass-dropdown-hover-text-color: rgba(0, 0, 0, 0.8);
   --glass-dropdown-hover-background-color: rgba(0, 0, 0, 0.1);
 
+  --glass-badge-color: rgba(0, 0, 0, 0.9);
+  --glass-badge-border-color: rgba(0, 0, 0, 0.2);
+
   --input-copy-border-color: rgba(0, 0, 0, 0.2);
 
   --app-store-tab-button-background-color: rgba(255, 255, 255, 0);
@@ -151,6 +154,9 @@ body.dark-mode {
   --glass-dropdown-border-color: rgba(255, 255, 255, 0.05);
   --glass-dropdown-hover-text-color: rgba(255, 255, 255, 1);
   --glass-dropdown-hover-background-color: rgba(255, 255, 255, 0.1);
+
+  --glass-badge-color: rgba(255, 255, 255, 0.9);
+  --glass-badge-border-color: rgba(255, 255, 255, 0.2);
 
   --input-copy-border-color: rgba(255, 255, 255, 0.2);
 
@@ -1171,6 +1177,21 @@ input.glass-input::placeholder, input.glass-input::-webkit-input-placeholder, in
 
 .modal-content {
   background-color: var(--card-background-color);
+}
+
+.badge-glass {
+  color: var(--glass-badge-color);
+  border: solid 1px var(--glass-badge-border-color);
+  font-weight: 500;
+}
+
+.optimized-for-umbrel-home-icon {
+  height: 1.2rem;
+  width: 1.2rem;
+  vertical-align: middle;
+  path {
+    stroke: var(--glass-badge-color);
+  }
 }
 
 // Enable glassmorphic modals in Safari-only

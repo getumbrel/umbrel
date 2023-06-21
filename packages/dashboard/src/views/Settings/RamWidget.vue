@@ -47,7 +47,7 @@
           </div>
 
           <b-alert v-if="isRunningLowOnRam" :variant="isRamFull ? 'danger' : 'warning'" class="mt-3" show>
-            <small>Consider uninstalling some apps or upgrading your Umbrel's hardware.</small>
+            <small>Consider uninstalling some apps.</small>
           </b-alert>
         </div>
         <div class="pt-1">

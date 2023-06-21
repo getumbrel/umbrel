@@ -352,7 +352,7 @@
           <div class="d-flex w-100 justify-content-between px-3 px-xl-4 mb-4">
             <div>
               <span class="d-block">Migration Assistant</span>
-              <small class="d-block" style="opacity: 0.4">Transfer your data to Umbrel Home</small>
+              <small class="d-block" style="opacity: 0.4">Transfer data from Raspberry Pi to your Umbrel Home</small>
             </div>
             <b-button variant="outline-primary" size="sm" @click="openMigrationModal">Migrate</b-button>
 
@@ -362,7 +362,7 @@
                 <div class="px-2 px-sm-3 pt-2 d-flex justify-content-between w-100">
                   <div>
                     <h3 class="mb-1">Migration Assistant</h3>
-                    <p class="text-muted mb-0">Transfer your umbrelOS from a Pi-based device to Umbrel Home in 3 steps</p>
+                    <p class="text-muted mb-0">Transfer all your apps and data from a Raspberry Pi-based umbrelOS server to your Umbrel Home in 3 steps</p>
                   </div>
                   <!-- Emulate built in modal header close button action -->
                   <a href="#" class="" @click.stop.prevent="close">
@@ -370,19 +370,19 @@
                   </a>
                 </div>
               </template>
-              <div class="px-3 pb-2">
+              <div class="px-3 pb-3">
                 <div class="py-2">
                   <div class="d-flex align-items-center mb-3">
                     <div class="migration-icon-container-sm">
                       <img :src="require(`@/assets/migration-assistant/icon-power-btn.svg`)" />
                     </div>
-                    <p class="mb-0 ml-2">Shut down Raspberry Pi Umbrel</p>
+                    <p class="mb-0 ml-2">Poweroff your Raspberry Pi-based Umbrel</p>
                   </div>
                   <div class="d-flex align-items-center mb-3">
                     <div class="migration-icon-container-sm">
                       <img :src="require(`@/assets/migration-assistant/icon-usb.svg`)" />
                     </div>
-                    <p class="mb-0 ml-2">Connect its SSD to Umbrel Home via USB</p>
+                    <p class="mb-0 ml-2">Connect its SSD to your Umbrel Home via USB</p>
                   </div>
                   <div class="d-flex align-items-center mb-3">
                     <div class="migration-icon-container-sm">
@@ -404,7 +404,7 @@
                     <div class="d-flex align-items-center">
                       <p class="mb-0">
                         <img :src="require(`@/assets/migration-assistant/icon-warning.svg`)" />
-                        The data in Umbrel Home, if any, will be permanently deleted</p>
+                        The data on your Umbrel Home, if any, will be permanently deleted</p>
                     </div>
                   </b-alert>
                 </div>
@@ -417,7 +417,7 @@
                 <div class="px-2 px-sm-3 pt-2 d-flex justify-content-between w-100">
                   <div>
                     <h3 class="mb-1">You're all set to migrate!</h3>
-                    <p class="text-muted mb-0">umbrelOS is ready to be migrated to Umbrel Home</p>
+                    <p class="text-muted mb-0">Your apps and data are ready to be transferred to your Umbrel Home</p>
                   </div>
                   <!-- Emulate built in modal header close button action -->
                   <a href="#" class="" @click.stop.prevent="close">
@@ -425,15 +425,15 @@
                   </a>
                 </div>
               </template>
-              <div class="px-3 pb-2">
+              <div class="px-3 pb-3">
                 <div class="py-2">
                   <div class="d-flex align-items-center mb-3">
                     <div class="migration-icon-container-lg">
                       <img :src="require(`@/assets/migration-assistant/icon-password.svg`)" />
                     </div>
                     <div class="ml-2">
-                      <p class="mb-0">Use the same password</p>
-                      <p class="text-muted mb-0">Remember to use the password from your Raspberry Pi Umbrel to unlock your Umbrel Home</p>
+                      <p class="mb-0">Use your previous password</p>
+                      <p class="text-muted mb-0">Remember to use the password from your Raspberry Pi-based Umbrel to unlock your Umbrel Home</p>
                     </div>
                   </div>
                   <div class="d-flex align-items-center mb-3">
@@ -441,8 +441,8 @@
                       <img :src="require(`@/assets/migration-assistant/icon-power-btn-red.svg`)" />
                     </div>
                     <div class="ml-2">
-                      <p class="mb-0">Keep your Raspberry Pi off after the update</p>
-                      <p class="text-muted mb-0">This helps prevent issues with apps such as Lightning Node</p>
+                      <p class="mb-0">Keep your Raspberry Pi-based Umbrel turned off after the migration</p>
+                      <p class="text-muted mb-0">This helps prevent issues with certain apps, such as Lightning Node. After migration, you can format your existing drive and use it for various purposes, including running a fresh umbrelOS server on your Raspberry Pi.</p>
                     </div>
                   </div>
                 </div>
@@ -459,7 +459,7 @@
                     <div class="d-flex align-items-center">
                       <p class="mb-0">
                         <img :src="require(`@/assets/migration-assistant/icon-warning.svg`)" />
-                        The data in Umbrel Home, if any, will be permanently deleted.</p>
+                        The data on your Umbrel Home, if any, will be permanently deleted.</p>
                     </div>
                   </b-alert>
                 </div>
@@ -507,20 +507,20 @@
         </div>
         <div class="px-3 px-xl-4 pb-4">
           <div class="w-100 d-flex justify-content-between mb-1">
-            <span class="align-self-end">Umbrel Version</span>
+            <span class="align-self-end">umbrelOS Version</span>
             <span class="font-weight-normal mb-0">{{ version }}</span>
           </div>
           <div v-show="!isCheckingForUpdate">
             <span v-show="!availableUpdate.version">
               <b-icon icon="check-circle-fill" variant="success"></b-icon>
-              <small class="ml-1" style="opacity: 0.4">Your Umbrel is on the latest version</small>
+              <small class="ml-1" style="opacity: 0.4">You are on the latest version</small>
             </span>
             <div v-show="availableUpdate.version">
               <span class="d-block">
                 <b-icon icon="bell-fill" variant="success"></b-icon>
                 <small
                   class="text-muted ml-1"
-                >Umbrel {{availableUpdate.version}} is now available to install</small>
+                >umbrelOS {{availableUpdate.version}} is now available to install</small>
               </span>
               <b-button
                 class="mt-2"
