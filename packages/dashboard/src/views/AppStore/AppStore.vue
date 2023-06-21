@@ -40,7 +40,7 @@
             </div>
 
             <!-- Updates button  -->
-            <div class="position-relative mr-3 ml-auto ml-md-0" v-if="appsWithUpdate.length && !communityAppStoreId || true">
+            <div class="position-relative mr-3 ml-auto ml-md-0" v-if="appsWithUpdate.length && !communityAppStoreId">
               <b-button pill variant="primary" class="px-3" v-b-modal.app-updates-modal>
                 {{ `Update${appsWithUpdate.length > 1 ? 's' : ''}` }}
               </b-button>
@@ -56,7 +56,7 @@
               toggle-class="text-decoration-none p-0"
               no-caret
               right
-              :class="{'ml-auto ml-md-0': !appsWithUpdate.length && false}"
+              :class="{'ml-auto ml-md-0': !appsWithUpdate.length}"
             >
               <template v-slot:button-content>
                 <svg
