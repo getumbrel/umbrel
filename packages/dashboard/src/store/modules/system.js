@@ -343,9 +343,15 @@ const actions = {
       commit("setStorage", storage);
     }
   },
-  async getRam({ commit }) {
+  async getRam({ commit, state }) {
     const ram = await API.get(`${process.env.VUE_APP_MANAGER_API_URL}/v1/system/memory`);
     if (ram && ram.total) {
+      // Set RAM size to 16GB so it doesn't show 
+      // up as 16.6GB for Umbrel Home (isUmbrelHome)
+      // Todo: fix this on the calculation level 
+      if (state.isUmbrelHome) {
+        ram.total = 16000000000;
+      }
       ram.breakdown.sort((app1, app2) => app2.used - app1.used);
       commit("setRam", ram);
     }
