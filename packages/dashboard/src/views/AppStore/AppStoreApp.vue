@@ -4,7 +4,7 @@
       <a
         href="#"
         @click.prevent="goBack"
-        class="card-link primary-link d-inline-block mb-4"
+        class="card-link primary-link d-inline-block mb-3 mb-sm-4"
         ><svg
           width="7"
           height="13"
@@ -23,6 +23,9 @@
       <div
         class="d-flex flex-column flex-sm-row justify-content-between align-items-center"
       >
+        <!-- Optimized for Umbrel Home badge for mobile  -->
+        <optimized-for-umbrel-home-badge v-if="app.optimizedForUmbrelHome" class="d-sm-none mb-1" />
+
         <div class="d-flex w-xs-100 justify-content-start pr-2 mb-2 mb-sm-0">
           <div class="d-block">
             <img
@@ -32,8 +35,10 @@
             />
           </div>
           <div>
-            <b-badge  v-if="communityAppStoreId" pill class="mb-2 mb-sm-1" variant="primary">Community App Store</b-badge>
-            <h3 class="d-block font-weight-bold mt-sm-1 mb-0 mb-sm-1">
+            <!-- Optimized for Umbrel Home badge for > mobile  -->
+            <optimized-for-umbrel-home-badge v-if="app.optimizedForUmbrelHome" class="d-none d-sm-inline-block" />
+
+            <h3 class="d-block app-name mt-sm-1 mb-0 mb-sm-1">
               {{ app.name }}
             </h3>
             <p class="text-muted mb-2" style="line-height: 1.3; font-size: 90%;">{{ app.tagline }}</p>
@@ -390,6 +395,7 @@ import InputCopy from "@/components/Utility/InputCopy";
 import AppStoreAppGalleryImage from "@/views/AppStore/AppStoreAppGalleryImage";
 import ReleaseNotes from "@/views/AppStore/ReleaseNotes";
 import AppStoreAppsCard from "@/views/AppStore/AppStoreAppsCard";
+import OptimizedForUmbrelHomeBadge from "@/views/AppStore/OptimizedForUmbrelHomeBadge";
 
 export default {
   directives: {
@@ -541,11 +547,15 @@ export default {
     AppStoreAppGalleryImage,
     ReleaseNotes,
     AppStoreAppsCard,
+    OptimizedForUmbrelHomeBadge,
   },
 };
 </script>
 
 <style lang="scss" scoped>
+.app-name {
+  font-weight: 600;
+}
 .release-notes-container {
   border-top: solid 1px var(--app-store-app-border-color);
 }

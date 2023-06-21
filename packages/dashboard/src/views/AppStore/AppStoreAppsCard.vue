@@ -29,6 +29,11 @@
             <div class="d-flex flex-column">
               <h4 class="app-name text-title-color mt-1 mb-0">
                 {{ app.name }}
+                <span v-if="app.optimizedForUmbrelHome" v-b-tooltip.hover title="Optimized for Umbrel Home" style="vertical-align: text-bottom;">
+                  <svg class="optimized-for-umbrel-home-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.5 6.5L10 4M10.5 10.5L5 5M6.5 12.5L4 10M9 15L13 13L15 9L17 13L21 15L17 17L15 21L13 17L9 15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
               </h4>
               <p class="app-tagline text-muted mb-0">
                 {{ app.tagline }}
