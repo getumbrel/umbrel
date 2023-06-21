@@ -70,7 +70,7 @@ axios.interceptors.response.use(
 // Helper methods for making API requests
 const API = {
   umbreldUrl: `${window.location.origin}:81`,
-  async get(url, data = {}, auth = true) {
+  async get(url, data = {}, auth = true, throwErrors = false) {
     let response;
 
     if (responsePending[url] === undefined || responsePending[url] === false) {
@@ -101,48 +101,12 @@ const API = {
           console.error(error);
         }
 
-        response = false;
-      } finally {
-        responsePending[url] = false; // eslint-disable-line require-atomic-updates
-      }
-    }
-
-    return response;
-  },
-
-  // re-throw error in catch block instead of returning false to properly handle errors from umbreld server
-  async umbreldGet(url, data = {}, auth = true) {
-    let response;
-
-    if (responsePending[url] === undefined || responsePending[url] === false) {
-      responsePending[url] = true;
-
-      try {
-        const startTime = new Date();
-
-        const requestOptions = {
-          method: "get",
-          url
-        };
-
-        if (auth && store.state.user.jwt) {
-          requestOptions.headers = {
-            Authorization: `JWT ${store.state.user.jwt}`
-          };
+        if (throwErrors) {
+          // re-throw error in catch block instead of returning false to properly handle errors from umbreld server
+          throw error;
+        } else {
+          response = false;
         }
-
-        response = (await axios(requestOptions, data)).data;
-        const endTime = new Date();
-
-        responseTime[url] = (endTime.getTime() - startTime.getTime()) / 1000;
-      } catch (error) {
-        // Only display error messages in the browser console
-        if (process.browser) {
-          console.error(error);
-        }
-
-        // response = false;
-        throw error;
       } finally {
         responsePending[url] = false; // eslint-disable-line require-atomic-updates
       }

@@ -1,34 +1,18 @@
 <template>
-  <div v-if="complete" class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
-    <logo compact class="mb-1 logo-loading" />
-    <h2 class="text-white text-center">Migration successful!</h2>
-
-    <div class="text-center">
-      <small class="text-white d-block">All your apps, app data, and account details have been migrated to your Umbrel Home.</small>
-      <b-button
-      variant="default"
-      type="submit"
-      class="mt-4 px-4 login-button bg-white font-weight-bold"
-      pill
-      @click="redirectToLogin"
-      >Continue to log in</b-button
-      >
-    </div>
-  </div>
-  <div v-else class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
+  <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
     <div class="d-flex flex-column align-items-center justify-content-center">
       <logo compact class="mb-1 logo-loading" />
       <h2 class="text-white text-center mb-4">Migration Assistant</h2>
       
       <b-progress
-      :value="status.progress"
+      :value="statusForComponent.progress"
       class="mb-2 w-25 loading-progress"
       variant="light"
       :style="{ height: '4px' }"
       ></b-progress>
       
       <div class="text-center">
-        <small class="text-white d-block">{{`${status.description}...`}}</small>
+        <small class="text-white d-block">{{`${statusForComponent.description}...`}}</small>
         <b-alert class="alert-system" variant="glass" show>
           <div class="d-flex align-items-center">
             <small>⚠️ Do not turn off your Umbrel Home until the migration is complete</small>
@@ -41,18 +25,72 @@
 
 <script>
 import Logo from '@/components/Logo.vue';
+import { mapState } from "vuex";
+import delay from "@/helpers/delay";
 
 export default {
   data() {
-    return {};
+    return {
+      statusForComponent: {
+        running: false,
+        progress: 0,
+        description: "",
+        error: false
+      },
+      hasJokeSquenceRun: false,
+      stopMigrationSequence: false
+    };
   },
-  props: { status: Object, complete: Boolean },
-  created() {},
+  props: {},
+  computed: {
+    ...mapState({
+      migrateStatus: state => state.system.migrateStatus
+    })
+  },
+  created() {
+    this.runMigrationSequence();
+  },
   methods: {
-    redirectToLogin() {
-      // reload page to reset state
-      // alternatively, we could just reset all migrationState here
-      window.location.reload();
+    async runMigrationSequence() {
+      while (!this.stopMigrationSequence) {
+        this.statusForComponent = this.migrateStatus;
+
+        if (this.migrateStatus.error) {
+          this.$store.commit("system/setShowMigrationError", true);
+        }
+
+        // occurs even if there is a migration error
+        if (this.migrateStatus.progress === 100) {
+          this.stopMigrationSequence = true;
+          this.statusForComponent.description = "Almost done";
+          await delay(2000);
+          if (!this.migrateStatus.error) {
+            // only log out if migration was successful. If there is an error during migration the password has not been changed, so logging out would be additional frustration for the user attempting to try again.
+            await this.$store.dispatch("user/logout");
+          }
+          this.$store.commit("system/setShowMigrationComplete", true);
+        }
+
+        if (!this.hasJokeSquenceRun && this.migrateStatus.description === 'Copying data') {
+          this.hasJokeSquenceRun = true;
+          await this.runJokeSequence();
+        }
+
+        await delay(2000);
+      }
+    },
+    async runJokeSequence() {
+      this.statusForComponent.description = "Transferring data";
+      this.statusForComponent.progress = 0;
+      await delay(3000);
+      this.statusForComponent.description = "to Google";
+      await delay(1500);
+      this.statusForComponent.description = "wait, what?";
+      await delay(2000);
+      this.statusForComponent.description = "just kidding";
+      await delay(2000);
+      this.statusForComponent.description = "okay, actually transferring data";
+      await delay(2000);
     }
   },
   components: {

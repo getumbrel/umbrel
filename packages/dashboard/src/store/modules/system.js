@@ -1,5 +1,4 @@
 import API from "@/helpers/api";
-import delay from "@/helpers/delay";
 
 // Initial state
 const state = () => ({
@@ -20,13 +19,13 @@ const state = () => ({
   },
   migrateStatus: {
     running: false, //true, false
-    progress: 100, //set to 100 as default
+    progress: 0,
     description: "",
     error: false //false or message string
   },
+  showMigrationProgress: false,
   showMigrationComplete: false, // true when migrateStatus.progress is 100 (occurs even if there is an error)
   showMigrationError: false,
-  stopMigrationPolling: false,
   debugResult: {
     status: "", //success, processing
     result: ""
@@ -112,14 +111,14 @@ const mutations = {
   setMigrateStatus(state, status) {
     state.migrateStatus = status;
   },
+  setShowMigrationProgress(state, show) {
+    state.showMigrationProgress = show;
+  },
   setShowMigrationComplete(state, show) {
     state.showMigrationComplete = show;
   },
   setShowMigrationError(state, show) {
     state.showMigrationError = show;
-  },
-  setStopMigrationPolling(state, stop) {
-    state.stopMigrationPolling = stop;
   },
   setDebugResult(state, result) {
     state.debugResult = result;
@@ -236,23 +235,22 @@ const actions = {
       commit("setBackupStatus", status);
     }
   },
-  async getMigrateStatus({ commit, state }) {
-    if (state.stopMigrationPolling) return;
-
+  async getMigrateStatus({ commit }) {
     const status = await API.get(`${API.umbreldUrl}/migration-status`);
-    
-    if (state.migrateStatus.progress < 100 && status?.progress === 100) {
-      commit("setStopMigrationPolling", true);
-      commit("setMigrateStatus", { ...state.migrateStatus, progress: status.progress });
-      await delay(5000);
-      commit("setShowMigrationComplete", true);
-    } else if (status && !state.showMigrationComplete) {
+    if (status) {
       commit("setMigrateStatus", status);
-  
-      if (status.error && status.running) {
-        commit("setShowMigrationError", true);
-      }
     }
+  },
+  resetMigrationState({ commit }) {
+    commit("setMigrateStatus", {
+      running: false,
+      progress: 0,
+      description: "",
+      error: false
+    });
+    commit("setShowMigrationProgress", false);
+    commit("setShowMigrationComplete", false);
+    commit("setShowMigrationError", false);
   },
   async getDebugResult({ commit }) {
     const result = await API.get(`${process.env.VUE_APP_MANAGER_API_URL}/v1/system/debug-result`);
@@ -357,7 +355,9 @@ const actions = {
     commit("setIsUmbrelOS", !!isUmbrelOS);
   },
   async getIsUmbrelHome({ commit }) {
-    const isUmbrelHome = await API.umbreldGet(`${API.umbreldUrl}/is-umbrel-home`);
+    const auth = true;
+    const throwErrors = true;
+    const isUmbrelHome = await API.get(`${API.umbreldUrl}/is-umbrel-home`, {}, auth, throwErrors);
     commit("setIsUmbrelHome", !!isUmbrelHome);
   },
   async getIsSdCardFailing({ commit }) {

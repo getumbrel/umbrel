@@ -38,8 +38,8 @@
           </b-alert>
         </div>
       </shutdown>
-      <migrating-failure v-else-if="showMigrationComplete && showMigrationError"></migrating-failure>
-      <migrating v-else-if="migrateStatus.running || showMigrationComplete" :status="migrateStatus" :complete="showMigrationComplete"></migrating>
+      <migrating-complete v-else-if="showMigrationComplete" :error="showMigrationError"></migrating-complete>
+      <migrating v-else-if="showMigrationProgress"></migrating>
       <loading v-else-if="loading" :progress="loadingProgress"></loading>
       <!-- component matched by the route will render here -->
       <router-view v-else></router-view>
@@ -60,7 +60,7 @@ import delay from "@/helpers/delay";
 import Shutdown from "@/components/Shutdown";
 import Loading from "@/components/Loading";
 import Migrating from "@/components/Migrating";
-import MigratingFailure from "@/components/MigratingFailure";
+import MigratingComplete from "@/components/MigratingComplete";
 import Logo from '@/components/Logo.vue';
 
 export default {
@@ -83,6 +83,7 @@ export default {
       isApiOperational: state => state.system.api.operational,
       updateStatus: state => state.system.updateStatus,
       migrateStatus: state => state.system.migrateStatus,
+      showMigrationProgress: state => state.system.showMigrationProgress,
       showMigrationError: state => state.system.showMigrationError,
       showMigrationComplete: state => state.system.showMigrationComplete,
       jwt: state => state.user.jwt
@@ -98,7 +99,7 @@ export default {
       if (!window.CSS.supports('backdrop-filter', 'blur(0)')) {
         classList.push("wallpaper-no-backdrop-blur");
       }
-      if (this.loading || this.isIframe || this.shuttingDown || this.rebooting || this.updating || this.hasShutdown || this.migrating  || this.showMigrationComplete || this.showMigrationError) {
+      if (this.loading || this.isIframe || this.shuttingDown || this.rebooting || this.updating || this.hasShutdown || this.showMigrationProgress  || this.showMigrationComplete || this.showMigrationError) {
         classList.push("wallpaper-blur wallpaper-slight-dim wallpaper-zoom-in");
         return classList;
       }
@@ -118,7 +119,7 @@ export default {
     },
     async getLoadingStatus() {
       // Skip if previous poll in progress or if system is updating or undergoing migration
-      if (this.loadingPollInProgress || this.updating || this.migrating || this.showMigrationComplete || this.showMigrationError) {
+      if (this.loadingPollInProgress || this.updating || this.migrating || this.showMigrationProgress || this.showMigrationComplete || this.showMigrationError) {
         return;
       }
 
@@ -235,9 +236,10 @@ export default {
     },
     migrating: {
       handler: function(isMigrating) {
-        if(this.migrateStatusInterval) {
+        if (this.migrateStatusInterval) {
           window.clearInterval(this.migrateStatusInterval);
         }
+
         // check every 2 seconds if migration is running, but every minute if it's not
         this.migrateStatusInterval = window.setInterval(() => {
           this.$store.dispatch("system/getMigrateStatus");
@@ -255,7 +257,7 @@ export default {
     Loading,
     Shutdown,
     Migrating,
-    MigratingFailure,
+    MigratingComplete,
     Logo,
   }
 };
