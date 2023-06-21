@@ -139,7 +139,7 @@ export async function runPreMigrationChecks(currentInstall, externalUmbrelInstal
     const { version: currentVersion } = await fse.readJson(`${currentInstall}/info.json`)
     // TODO: We might want to loosen this check to a wider range in future updates.
     if (previousVersion !== currentVersion) {
-        throw new Error(`umbrelOS versions do not match. Cannot migrate umbrelOS ${previousVersion} data in to an umbrelOS ${currentVersion} install`)
+        throw new Error(`umbrelOS versions do not match. Cannot migrate umbrelOS ${previousVersion} data into an umbrelOS ${currentVersion} install`)
     }
 
     // Check enough storage is available
