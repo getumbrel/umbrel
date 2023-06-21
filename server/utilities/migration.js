@@ -131,7 +131,7 @@ export async function runPreMigrationChecks(currentInstall, externalUmbrelInstal
 
     // Check we have an Umbrel install on an external SSD
     if (!externalUmbrelInstall) {
-        throw new Error('No external Umbrel install found')
+        throw new Error('No drive found with an umbrelOS install')
     }
 
     // Check versions match
@@ -139,7 +139,7 @@ export async function runPreMigrationChecks(currentInstall, externalUmbrelInstal
     const { version: currentVersion } = await fse.readJson(`${currentInstall}/info.json`)
     // TODO: We might want to loosen this check to a wider range in future updates.
     if (previousVersion !== currentVersion) {
-        throw new Error(`Umbrel versions do not match. Cannot migrate Umbrel ${previousVersion} data in to an Umbrel ${currentVersion} install`)
+        throw new Error(`umbrelOS versions do not match. Cannot migrate umbrelOS ${previousVersion} data in to an umbrelOS ${currentVersion} install`)
     }
 
     // Check enough storage is available
