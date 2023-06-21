@@ -23,6 +23,7 @@
         "systeminformation": "^5.17.16"
     },
     "devDependencies": {
-        "caxa": "^3.0.1"
+        "caxa": "^3.0.1",
+        "opentimestamps": "^0.4.9"
     }
 }
