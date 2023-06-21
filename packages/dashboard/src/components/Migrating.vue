@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
     <div class="d-flex flex-column align-items-center justify-content-center">
-      <logo compact class="mb-1 logo-loading" />
+      <logo class="mb-1" />
       <h2 class="text-white text-center mb-4">Migration Assistant</h2>
       
       <b-progress
@@ -100,11 +100,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.logo-loading {
-  height: 6.5vh;
-  max-height: 200px;
-  width: auto;
-}
 .progress {
   background-color: rgba(255, 255, 255, 0.4) !important; 
 }

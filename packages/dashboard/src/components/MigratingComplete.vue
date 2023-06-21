@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
-    <logo compact class="mb-1 logo-loading" />
+    <logo class="mb-1" />
     <h2 v-if="error" class="text-white text-center">Migration failed</h2>
     <h2 v-else class="text-white text-center">Migration complete</h2>
 
@@ -52,12 +52,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.logo-loading {
-  height: 6.5vh;
-  max-height: 200px;
-  width: auto;
-}
-
 .alert-system {
   position: absolute;
   bottom: 20px;

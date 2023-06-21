@@ -8,7 +8,7 @@
     <transition name="loading" mode>
       <div v-if="isIframe">
         <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
-          <logo class="mb-5 logo" />
+          <logo class="mb-5" />
           <span class="text-muted w-75 text-center">
             <small>For security reasons umbrelOS cannot be embedded in an iframe.</small>
           </span>

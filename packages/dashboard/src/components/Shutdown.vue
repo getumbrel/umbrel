@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
     <logo
-      class="mb-5 logo"
+      class="logo-shutdown mb-5"
       :class="hasShutdown ? 'logo-gray' : ''"
      />
     <span class="text-white w-75 text-center">
@@ -40,10 +40,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.logo {
-  height: 20vh;
-  max-height: 200px;
-  width: auto;
+.logo-shutdown {
   transition: filter 0.3s ease;
   &.logo-gray {
     filter: grayscale(100%);

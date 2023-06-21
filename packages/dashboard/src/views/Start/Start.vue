@@ -3,7 +3,7 @@
 
     <div v-if="step === 0" class="d-flex flex-column align-items-center justify-content-center p-2 min-vh100">
       <div class="w-75 d-flex flex-column align-items-center justify-content-center">
-        <logo class="mb-3 logo" />
+        <logo class="mb-4" />
         <h1 class="text-center text-white text-lowercase mb-2">Welcome to Umbrel</h1>
         <p class="text-center text-white">Your personal server is now ready to setup.</p>
         <transition name="slide-up" appear>
@@ -17,8 +17,6 @@
     </div>
     
     <div v-else class="d-flex flex-column align-items-center justify-content-center min-vh100">
-      <logo class="ml-3 mt-3 logo logo-small d-none d-sm-block" />
-      <logo class="logo logo-xs d-sm-none" />
         <div v-if="step === 1" :key="1" class="card-glass px-3 px-sm-4 pt-5 pb-5 mt-5 mt-sm-0 mx-2">
           <h3 class="text-center text-white mb-2">Create your account</h3>
           <p class="text-center text-white mb-2">Your account information is stored only on your Umbrel. Please make sure to backup your password safely as there is no way to reset it.</p>
@@ -231,25 +229,6 @@ export default {
 .btn-start:not(:disabled):not(.disabled):active {
   background: rgba(255, 255, 255, 0.9);
   color: rgba(47, 47, 47, 0.8);
-}
-
-.logo {
-  height: 20vh;
-  max-height: 200px;
-  width: auto;
-    &.logo-small {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 10vh;
-      max-height: 100px;
-    }
-    &.logo-xs {
-      position: absolute;
-      top: 40px;
-      height: 10vh;
-      max-height: 100px;
-  }
 }
 
 .form-container {

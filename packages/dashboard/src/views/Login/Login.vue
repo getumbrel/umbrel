@@ -1,6 +1,6 @@
 <template>
   <div v-if="!loading" class="d-flex flex-column align-items-center justify-content-center min-vh100 login-container p-2">
-    <logo class="mb-3 logo" />
+    <logo class="mb-3" />
     <h1 class="text-center text-white text-lowercase mb-1">Welcome back</h1>
     <p v-if="!showOtpInput" class="text-white w-75 text-center">Enter the password to login to your Umbrel</p>
     <p v-else class="text-white w-75 text-center">Enter your two-factor authentication code</p>
@@ -182,11 +182,6 @@ export default {
 </script>
 
 <style lang="scss">
-.logo {
-  height: 18vh;
-  max-height: 200px;
-  width: auto;
-}
 .form-container {
   max-width: 400px;
 }

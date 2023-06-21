@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
-    <logo class="mb-5 logo-loading" />
+    <logo class="mb-5" />
 
     <!-- <b-spinner class="my-4" variant="primary"></b-spinner> -->
     <b-progress
@@ -30,11 +30,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.logo-loading {
-  height: 18vh;
-  max-height: 200px;
-  width: auto;
-}
 .progress {
   background-color: rgba(255, 255, 255, 0.4) !important; 
 }
