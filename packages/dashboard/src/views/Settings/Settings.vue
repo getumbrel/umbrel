@@ -352,7 +352,7 @@
           <div class="d-flex w-100 justify-content-between px-3 px-xl-4 mb-4">
             <div>
               <span class="d-block">Migration Assistant</span>
-              <small class="d-block" style="opacity: 0.4">Transfer data from Raspberry Pi to your Umbrel Home</small>
+              <small class="d-block" style="opacity: 0.4">Transfer data from your Raspberry Pi to your Umbrel Home</small>
             </div>
             <b-button variant="outline-primary" size="sm" @click="openMigrationModal">Migrate</b-button>
 
@@ -442,7 +442,7 @@
                     </div>
                     <div class="ml-2">
                       <p class="mb-0">Keep your Raspberry Pi-based Umbrel turned off after the migration</p>
-                      <p class="text-muted mb-0">This helps prevent issues with certain apps, such as Lightning Node. After migration, you can format your existing drive and use it for various purposes, including running a fresh umbrelOS server on your Raspberry Pi.</p>
+                      <p class="text-muted mb-0">This helps prevent issues with certain apps, such as Lightning Node. After migration you can wipe your old drive.</p>
                     </div>
                   </div>
                 </div>
