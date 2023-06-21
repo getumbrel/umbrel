@@ -4,7 +4,9 @@ import checkDiskSpace from 'check-disk-space'
 import drivelist from 'drivelist'
 import fse from 'fs-extra'
 import { execa } from 'execa'
-import pRetry from 'p-retry';
+import pRetry from 'p-retry'
+import {globby} from 'globby'
+import yaml from 'js-yaml'
 
 import isUmbrelHome from './is-umbrel-home.js'
 
@@ -177,8 +179,8 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
             const progressUpdate = chunk.toString().match(/.* ([0-9]*)% .*/)
             if (progressUpdate) {
                 const percent = parseInt(progressUpdate[1], 10)
-                // Show file copy percentage as 75% of total migration progress
-                const progress = parseInt(0.75 * percent, 10)
+                // Show file copy percentage as 60% of total migration progress
+                const progress = parseInt(0.6 * percent, 10)
                 if (progress > migrationStatus.progress) updateMigrationStatus({ progress })
             }
         })
@@ -186,8 +188,39 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
         // Wait for rsync to finish
         await rsync
 
+        // Pull app images
+        try {
+            let progress = migrationStatus.progress
+            updateMigrationStatus({ description: 'Downloading apps' })
+            const files = await globby(`${temporaryData}/app-data/*/docker-compose.yml`)
+            const pulls = []
+            const dockerPull = async image => {
+                await execa('docker', ['pull', image])
+                // Show docker pull progress as (60%-90%) of total migration progress
+                progress += 30 / pulls.length
+                updateMigrationStatus({ progress: parseInt(progress, 10) })
+            }
+
+            for (const file of files) {
+                const data = await fse.readFile(file, 'utf8')
+                const compose = yaml.load(data)
+
+                for (const {image} of Object.values(compose.services)) {
+                    if (image) {
+                        pulls.push(dockerPull(image))
+                    }
+                }
+            }
+
+            await Promise.allSettled(pulls)
+        } catch (error) {
+            // We don't care about handling this, everything will be pulled in the start script.
+            // This just gives us nicer progress reporting.
+            console.error('Error processing docker-compose files:', error)
+        }
+
         // Stop apps / umbrel
-        updateMigrationStatus({ progress: 80, description: 'Stopping Umbrel' })
+        updateMigrationStatus({ progress: 90, description: 'Stopping Umbrel' })
         await execa('./scripts/stop', ['--no-stop-server'], { cwd: currentInstall })
 
         // Move data from temp dir to current install
@@ -196,7 +229,7 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
         // as the Umbrel install, so we can do this risky step with a quick rename operation (fse.move) which just updates a
         // pointer and doesn't actually move any data. This means this operation is very fast, reducing the chance of leaving the install
         // in a broken state.
-        updateMigrationStatus({ progress: 85, description: 'Linking new data' })
+        updateMigrationStatus({ progress: 92, description: 'Linking new data' })
         for (const path of statePaths) {
             const temporaryPath = `${temporaryData}/${path}`
             if (await fse.pathExists(temporaryPath)) {
@@ -210,7 +243,7 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
 
     // Clean up temp dir
     try {
-        updateMigrationStatus({ progress: 90, description: 'Cleaning up' })
+        updateMigrationStatus({ progress: 93, description: 'Cleaning up' })
         await fse.remove(temporaryData)   
     } catch (error) {}
 
