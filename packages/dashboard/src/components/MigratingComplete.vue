@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
-    <logo class="mb-1" />
+    <logo class="mb-3" />
     <h2 v-if="error" class="text-white text-center">Migration failed</h2>
     <h2 v-else class="text-white text-center">Migration complete</h2>
 

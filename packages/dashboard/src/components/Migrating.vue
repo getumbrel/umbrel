@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex flex-column align-items-center justify-content-center min-vh100 p-2">
     <div class="d-flex flex-column align-items-center justify-content-center">
-      <logo class="mb-1" />
+      <logo class="mb-3" />
       <h2 class="text-white text-center mb-4">Migration Assistant</h2>
       
       <b-progress
