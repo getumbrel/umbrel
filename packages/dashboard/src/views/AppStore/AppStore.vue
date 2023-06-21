@@ -3,25 +3,16 @@
     <div class="mt-3">
       <div class="">
         <!--Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 class="text-lowercase">App Store</h1>
+        <div class="d-md-flex justify-content-between align-items-center mb-3 mb-md-4">
+          <div class="mb-3 mb-md-0">
+            <h1 class="text-lowercase mb-1">App Store</h1>
             <p class="text-muted mb-0">Add super powers to your Umbrel with amazing self-hosted applications</p>
           </div>
 
           <div class="d-flex">
-            <!-- Todo Fix -->
-            <div class="position-relative mr-3" v-if="appsWithUpdate.length && !communityAppStoreId || true">
-              <b-button pill variant="primary" class="px-3" v-b-modal.app-updates-modal>
-                {{ `Update${appsWithUpdate.length > 1 ? 's' : ''}` }}
-              </b-button>
-              <transition name="grow-transition" appear>
-                <span class="updates-badge text-white text-center mr-1">{{ appsWithUpdate.length }}</span>
-              </transition>
-            </div>
+
             <!-- Search  -->
-            <div
-              class="search-input-container d-flex align-items-center"
+            <div class="search-input-container d-flex align-items-center"
               :class="{'active': appStoreSearchQuery}"
             >
               <svg class="search-input-icon" width="18" height="21" viewBox="0 0 18 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -33,6 +24,7 @@
                 class="search-input"
                 type="text"
                 placeholder="Search"
+                autocomplete="off"
                 v-model="appStoreSearchQuery"
                 @input="onTypeAppStoreSearchQuery"
               ></b-input>
@@ -46,6 +38,17 @@
                 </svg>
               </b-button>
             </div>
+
+            <!-- Updates button  -->
+            <div class="position-relative mr-3 ml-auto ml-md-0" v-if="appsWithUpdate.length && !communityAppStoreId || true">
+              <b-button pill variant="primary" class="px-3" v-b-modal.app-updates-modal>
+                {{ `Update${appsWithUpdate.length > 1 ? 's' : ''}` }}
+              </b-button>
+              <transition name="grow-transition" appear>
+                <span class="updates-badge text-white text-center mr-1">{{ appsWithUpdate.length }}</span>
+              </transition>
+            </div>
+
             <!-- Menu  -->
             <b-dropdown
               v-if="!communityAppStoreId"
@@ -53,6 +56,7 @@
               toggle-class="text-decoration-none p-0"
               no-caret
               right
+              :class="{'ml-auto ml-md-0': !appsWithUpdate.length && false}"
             >
               <template v-slot:button-content>
                 <svg
@@ -123,49 +127,47 @@
       </div>
     </div>
 
-    <b-tabs  v-if="!appStoreSearchQuery" class="app-store-tabs" pills>
+    <b-tabs v-if="!appStoreSearchQuery" @activate-tab="onTabChange" :value="appStoreActiveTabIndex" class="app-store-tabs" pills>
+
+      <!-- Discover tab  -->
       <b-tab title-link-class="btn-app-store-tab mr-2" title="Discover">
-        <div class="overwrite-banner-gallery app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 px-1 px-sm-2 px-md-4" v-dragscroll>
+
+        <!-- Banners  -->
+        <div v-if="appStoreDiscoverBanners.length" class="overwrite-banner-gallery app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 px-1 px-sm-4" v-dragscroll>
+          <!-- Include banners only for apps that exist locally -->
           <router-link
-            v-for='(app) in [{id: "chatpad-ai",banner: 1,},{id: "penpot",banner: 2,},{id: "nostr-relay",banner: 3,},{id: "plex",banner: 4,},{id: "photoprism",banner: 5,}]'
+            v-for='app in appStoreDiscoverBanners.filter((bannerApp) => appStore.some((appStoreApp) => bannerApp.id === appStoreApp.id))'
             :key="`${app.id}`"
             :to="{name: 'app-store-app', params: {id: app.id}}"
           >
             <app-store-app-gallery-image
-              :preloaderImage="`https://apps.umbrel.com/images/banner-${app.banner}.jpg`"
-              :galleryImage="`https://apps.umbrel.com/images/banner-${app.banner}.jpg`"
+              :preloaderImage="`https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`"
+              :galleryImage="app.image"
             />
           </router-link>
           <div class="d-block" style="padding: 1px"></div>
         </div>
 
-        <app-store-apps-card
-          :apps="newApps"
-          title="Fresh from the oven"
-          subtitle="New apps"
-          class="pb-2"
-        ></app-store-apps-card>
+        <div v-if="appStoreDiscoverSections.length">
+          <div v-for="(section, index) in appStoreDiscoverSections" :key="`${section.type}-${index}`">
+            <app-store-apps-card
+              v-if="section.type === 'list'"
+              :apps="getAppObjectsFromAppIds(section.apps)"
+              :title="section.heading"
+              :subtitle="section.subheading"
+              class="pb-2"
+            ></app-store-apps-card>
+          </div>
+        </div>
 
-        <app-store-apps-card
-          :apps="mostInstalledApps"
-          title="In popular demand"
-          subtitle="Most installs"
-          class="pb-2"
-        ></app-store-apps-card>
-
-        <app-store-apps-card
-          :apps="curatedApps"
-          title="Curated for you"
-          subtitle="Staff picks"
-          class="pb-2"
-        ></app-store-apps-card>
-
-        <app-store-apps-card
-          :apps="recentlyUpdatedApps"
-          title="Recently updated"
-          subtitle="New updates"
-          class="pb-2"
-        ></app-store-apps-card>
+        <div v-else>
+          <div class="overwrite-banner-gallery app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 px-1 px-sm-4" v-dragscroll>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <div class="d-block" style="padding: 1px"></div>
+          </div>
+        </div>
       </b-tab>
 
       <b-tab lazy title-link-class="btn-app-store-tab mr-2" title="All apps">
@@ -256,6 +258,7 @@
 
 <script>
 import { mapState } from "vuex";
+import { dragscroll } from 'vue-dragscroll';
 
 import delay from "@/helpers/delay";
 
@@ -265,6 +268,9 @@ import AppStoreAppsCard from "@/views/AppStore/AppStoreAppsCard";
 import AppStoreAppGalleryImage from "@/views/AppStore/AppStoreAppGalleryImage";
 
 export default {
+  directives: {
+    dragscroll
+  },
   data() {
     return {
       isTypingAppStoreSearchQuery: false,
@@ -279,12 +285,11 @@ export default {
       updating: (state) => state.apps.updating,
       appStoreSearchIndex: (state) => state.apps.searchIndex,
       appStoreSearchResults: (state) => state.apps.searchResults,
+      appStoreActiveTabIndex: (state) => state.apps.appStoreActiveTabIndex,
       communityAppStores: (state) => state.user.communityAppStores,
       communityAppStoreApps: (state) => state.apps.communityAppStoreApps,
-      mostInstalledApps: (state) => state.apps.store.filter((app) => ["bitcoin","nextcloud","lightning","nostr-relay","plex","home-assistant","pi-hole","jellyfin","mempool"].includes(app.id)),
-      curatedApps: (state) => state.apps.store.filter((app) => ["tailscale","uptime-kuma","electrs","transmission","bitfeed","sonarr","robosats","immich"].includes(app.id)),
-      newApps: (state) => state.apps.store.filter((app) => ["bazarr","librespeed","overseerr","mealie","homebridge","penpot","chatpad-ai","qbittorrent","tdex"].includes(app.id)),
-      recentlyUpdatedApps: (state) => state.apps.store.filter((app) => ["woofbot-lnd","urbit","nitter","whoogle-search","audiobookshelf","lightning-terminal","lightning","bitcoin","torq"].includes(app.id)),
+      appStoreDiscoverBanners: (state) => state.apps.appStoreDiscoverData.banners,
+      appStoreDiscoverSections: (state) => state.apps.appStoreDiscoverData.sections,
     }),
     // for v-model to work with global state
     appStoreSearchQuery: {
@@ -320,6 +325,17 @@ export default {
       // update scroll position
       this.$store.dispatch("apps/updateAppStoreScrollTop", event.target.scrollTop);
     },
+    onTabChange: function(newTabIndex) {
+      this.$store.dispatch("apps/updateAppStoreActiveTabIndex", newTabIndex);
+    },
+    getAppObjectsFromAppIds: function(appIds) {
+      const apps = [];
+      for (const appId of appIds) {
+        const app = this.appStore.find(app => app.id === appId);
+        if (app) apps.push(app);
+      }
+      return apps;
+    },
     onTypeAppStoreSearchQuery: async function() {
       this.isTypingAppStoreSearchQuery = true;
       const appStoreSearchQuery = this.appStoreSearchQuery;
@@ -349,6 +365,7 @@ export default {
       this.$store.dispatch("apps/getCommunityAppStoreApps", this.communityAppStoreId);
     } else {
       this.$store.dispatch("apps/getAppStore");
+      this.$store.dispatch("apps/getAppStoreDiscoverData");
     }
 
     // https://stackoverflow.com/a/63485725
@@ -380,11 +397,11 @@ export default {
 <style lang="scss">
 .app-store-tabs {
   .nav {
-    margin-left: -3rem;
-    margin-right: -3rem;
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding: 0 3rem 1rem 3rem;
+    padding: 0 1rem 1rem 1rem;
     // hide scrollbar
     scrollbar-width: none;
     &::-webkit-scrollbar {

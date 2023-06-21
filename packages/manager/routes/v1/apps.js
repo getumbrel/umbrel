@@ -39,4 +39,10 @@ router.post('/:id/uninstall', auth.jwt, safeHandler(async (req, res) => {
     return res.status(constants.STATUS_CODES.OK).json(result);
 }));
 
+router.get('/discover', safeHandler(async (req, res) => {
+    const discoverData = await appsLogic.fetchDiscoverData();
+
+    return res.status(constants.STATUS_CODES.OK).json(discoverData);
+}));
+
 module.exports = router;

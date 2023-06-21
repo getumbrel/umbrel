@@ -14,14 +14,17 @@
 }
 
 .app-store-card-columns {
-    column-count: 1;
-    @include media-breakpoint-up(md) {
-        column-count: 2;
+    display: flex;
+    flex-wrap: wrap;
+    .app-store-app-link {
+        flex-basis: 100%;
+        @include media-breakpoint-up(md) {
+            flex-basis: 50%;
+        }
+        @include media-breakpoint-up(lg) {
+            flex-basis: 33.3333%;
+        }
     }
-    @include media-breakpoint-up(lg) {
-        column-count: 3;
-    }
-    column-gap: 0px;
 }
 
 .settings-card-columns {
@@ -125,9 +128,25 @@
             height: 62.5vw;
             width: 100vw;
         }
+
+        &.overwrite-banner-gallery {
+            .app-gallery-image-container {
+                height: 50vw;
+                width: 100vw;
+            }
+        }
     }
     .app-suggestions-container {
         width: 100% !important;
+    }
+    .title-card {
+        font-size: 2rem !important;
+    }
+    .app-store-tabs {
+        .nav {
+          margin-left: -1rem !important;
+          margin-right: -1rem !important;
+        }
     }
 }
 
@@ -176,5 +195,21 @@
     }
     .app-suggestions-container {
         max-width: 1330px !important;
+    }
+}
+
+@include media-breakpoint-up(xl) {
+    .app-gallery.overwrite-banner-gallery {
+        margin-left: calc(-1.5rem - 25px);
+        margin-right: calc(-1.5rem - 25px);
+        .app-gallery-image-container {
+            height: 350px;
+            width: 700px;
+        }
+    }
+    .app-store-tabs .nav {
+        margin-left: -3rem !important;
+        margin-right: -3rem !important;
+        padding: 0 3rem 1rem 3rem !important;
     }
 }

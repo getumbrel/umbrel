@@ -4,6 +4,7 @@ import API from "@/helpers/api";
 // Initial state
 const state = () => ({
   appStoreScrollTop: 0, // to preserve app store scroll position when user switches back-and-forth between app listings
+  appStoreActiveTabIndex: 0, // to preserve app store tab index when user switches back-and-forth between app listings
   installed: [],
   store: [],
   installing: [],
@@ -14,12 +15,19 @@ const state = () => ({
   searchQuery: "",
   searchResults: [],
   communityAppStoreApps: [],
+  appStoreDiscoverData: { // fetched from https://apps.umbrel.com/api/v1/umbrel-os/app-store/discover
+    banners: [],
+    sections: [],
+  },
 });
 
 // Functions to update the state directly
 const mutations = {
   setAppStoreScrollTop(state, appStoreScrollTop) {
     state.appStoreScrollTop = appStoreScrollTop;
+  },
+  setAppStoreActiveTabIndex(state, appStoreActiveTabIndex) {
+    state.appStoreActiveTabIndex = appStoreActiveTabIndex;
   },
   setInstalledApps(state, apps) {
     const alphabeticallySortedApps = apps.sort((a, b) => a.name.localeCompare(b.name));
@@ -91,6 +99,9 @@ const mutations = {
   },
   setCommunityAppStoreApps(state, apps) {
     state.communityAppStoreApps = apps;
+  },
+  setAppStoreDiscoverData(state, { banners, sections }) {
+    state.appStoreDiscoverData = { banners, sections };
   }
 };
 
@@ -98,6 +109,9 @@ const mutations = {
 const actions = {
   updateAppStoreScrollTop({ commit }, scrollTop) {
     commit("setAppStoreScrollTop", scrollTop);
+  },
+  updateAppStoreActiveTabIndex({ commit }, activeTabIndex) {
+    commit("setAppStoreActiveTabIndex", activeTabIndex);
   },
   async getInstalledApps({ commit }) {
     const installedApps = await API.get(`${process.env.VUE_APP_MANAGER_API_URL}/v1/apps?installed=1`);
@@ -208,6 +222,12 @@ const actions = {
         window.clearInterval(poll);
       }
     }, 5000);
+  },
+  async getAppStoreDiscoverData({ commit }) {
+    const { banners, sections } = await API.get(`${process.env.VUE_APP_MANAGER_API_URL}/v1/apps/discover`);
+    if (banners && sections) {
+      commit("setAppStoreDiscoverData", { banners, sections });
+    }
   }
 };
 

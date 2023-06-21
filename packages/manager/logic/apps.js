@@ -6,6 +6,7 @@ const deriveEntropy = require('modules/derive-entropy');
 const constants = require('utils/const.js');
 const semver = require('semver');
 const path = require('path');
+const axios = require('axios');
 
 const APP_MANIFEST_FILENAME = "umbrel-app.yml";
 const APP_MANIFEST_SUPPORTED_VERSION = '1.1';
@@ -237,10 +238,24 @@ async function uninstall(id) {
   }
 };
 
+async function fetchDiscoverData() {
+  const url = 'https://apps.umbrel.com/api/v1/umbrel-os/app-store/discover';
+  const response = await axios.get(url);
+
+  if (response.data && response.data.data && response.data.data.sections && response.data.data.banners) {
+    const {sections, banners} = response.data.data;
+
+    return {sections, banners};
+  } else {
+    throw new NodeError('Invalid response from the Public App Store API');
+  }
+}
+
 module.exports = {
   get,
   install,
   uninstall,
   update,
-  getInstalled
+  getInstalled,
+  fetchDiscoverData,
 };

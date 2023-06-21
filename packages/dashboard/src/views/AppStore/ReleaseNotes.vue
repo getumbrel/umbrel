@@ -35,15 +35,15 @@ export default {
 <style lang="scss" scoped>
 .release-notes {
   .release-notes-text {
-    height: 3rem;
+    max-height: 16rem;
     transition: height 0.4s ease;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 10;
     &.release-notes-text-open {
-      height: auto;
+      max-height: 100%;
       -webkit-line-clamp: inherit;
     }
   }

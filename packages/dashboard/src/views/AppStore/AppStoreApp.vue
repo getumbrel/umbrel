@@ -32,11 +32,11 @@
             />
           </div>
           <div>
-            <b-badge  v-if="communityAppStoreId" pill class="mb-2" variant="primary">Community App Store</b-badge>
-            <h3 class="d-block font-weight-bold mb-1">
+            <b-badge  v-if="communityAppStoreId" pill class="mb-2 mb-sm-1" variant="primary">Community App Store</b-badge>
+            <h3 class="d-block font-weight-bold mt-sm-1 mb-0 mb-sm-1">
               {{ app.name }}
             </h3>
-            <p class="text-muted mb-2">{{ app.tagline }}</p>
+            <p class="text-muted mb-2" style="line-height: 1.3; font-size: 90%;">{{ app.tagline }}</p>
             <p class="d-none d-sm-block">
               <small>{{ app.developer }}</small>
             </p>
@@ -51,6 +51,7 @@
             variant="success"
             class="px-4 fade-in-out cursor-wait"
             disabled
+            pill
             >Starting...</b-button
           >
           <b-button
@@ -60,6 +61,7 @@
             :href="url"
             target="_blank"
             v-on:click="openApp($event)"
+            pill
             >Open</b-button
           >
           <div class="mt-2 text-center d-flex justify-content-center" v-if="installedApp.defaultPassword">
@@ -91,6 +93,7 @@
             variant="success"
             class="px-4 fade-in-out cursor-wait"
             disabled
+            pill
             >Installing...</b-button
           >
           <b-button
@@ -98,6 +101,7 @@
             variant="warning"
             class="px-4 fade-in-out cursor-wait"
             disabled
+            pill
             >Uninstalling...</b-button
           >
           <b-button
@@ -105,6 +109,7 @@
             variant="primary"
             class="px-4"
             v-b-modal.community-app-store-warning-modal
+            pill
             >Install</b-button
           >
           <b-button
@@ -112,6 +117,7 @@
             variant="success"
             class="px-4"
             @click="installApp({confirmedPermissions: false})"
+            pill
             >Install</b-button
           >
           <small
@@ -142,7 +148,7 @@
         </div>
       </div>
     </div>
-    <div class="app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 mb-sm-3 px-1 px-sm-2 px-md-4" v-dragscroll>
+    <div class="app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 mb-sm-3 px-1 px-sm-4" v-dragscroll>
       <app-store-app-gallery-image
         v-for="(image, index) in app.gallery"
         :key="`${image}${index}`"
@@ -156,11 +162,11 @@
         <card-widget header="About this app">
           <div class="px-3 px-lg-4 pb-4">
             <p class="text-newlines">{{ app.description }}</p>
-            <div v-if="app.releaseNotes" class="release-notes-container mt-4 pt-3">
+            <!-- <div v-if="app.releaseNotes" class="release-notes-container mt-4 pt-3">
               <h3 class="mb-1">What's new</h3>
               <span class="text-muted d-block mb-3">Version {{ app.version }}</span>
               <release-notes :text="app.releaseNotes" />
-            </div>
+            </div> -->
           </div>
         </card-widget>
       </b-col>
@@ -171,9 +177,10 @@
               <span class="text-muted">Version</span>
               <span>{{ app.version }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-3" v-if="app.repo">
+            <div class="d-flex justify-content-between mb-3">
               <span class="text-muted">Source Code</span>
-              <a class="primary-link" :href="app.repo" target="_blank">Public</a>
+              <a v-if="app.repo" class="primary-link" :href="app.repo" target="_blank">Public</a>
+              <span v-else>Private</span>
             </div>
             <div class="d-flex justify-content-between mb-3">
               <span class="text-muted">Developer</span>
@@ -236,6 +243,19 @@
         </card-widget>
       </b-col>
     </b-row>
+
+    <card-widget v-if="app.releaseNotes" header="What's new">
+      <div class="px-3 px-lg-4 pb-4">
+        <h3 class="mb-1">Version {{ app.version }}</h3>
+        <release-notes :text="app.releaseNotes" />
+      </div>
+    </card-widget>
+
+    <app-store-apps-card
+      :apps="similarApps"
+      title="You might also like"
+      class="pb-2"
+    ></app-store-apps-card>
 
     <b-modal v-if="communityAppStoreId" id="community-app-store-warning-modal" body-class="" size="sm" centered hide-footer>
       <template v-slot:modal-header="{ close }">
@@ -369,6 +389,7 @@ import CardWidget from "@/components/CardWidget";
 import InputCopy from "@/components/Utility/InputCopy";
 import AppStoreAppGalleryImage from "@/views/AppStore/AppStoreAppGalleryImage";
 import ReleaseNotes from "@/views/AppStore/ReleaseNotes";
+import AppStoreAppsCard from "@/views/AppStore/AppStoreAppsCard";
 
 export default {
   directives: {
@@ -389,6 +410,13 @@ export default {
       communityAppStores: (state) => state.user.communityAppStores,
       communityAppStoreApps: (state) => state.apps.communityAppStoreApps,
     }),
+    similarApps: function () {
+      // Returns the list of 6 random apps from an app's category
+      return this.appStore
+            .filter((app) => app.category === this.app.category && app.id !== this.app.id)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 6);
+    },
     communityAppStoreId: function() {
       return this.$router.currentRoute.params.communityAppStoreId || "";
     },
@@ -512,6 +540,7 @@ export default {
     InputCopy,
     AppStoreAppGalleryImage,
     ReleaseNotes,
+    AppStoreAppsCard,
   },
 };
 </script>
