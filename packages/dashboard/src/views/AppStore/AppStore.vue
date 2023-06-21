@@ -148,6 +148,15 @@
           <div class="d-block" style="padding: 1px"></div>
         </div>
 
+        <div v-else>
+          <div class="overwrite-banner-gallery app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 px-1 px-sm-4" v-dragscroll>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
+            <div class="d-block" style="padding: 1px"></div>
+          </div>
+        </div>
+
         <div v-if="appStoreDiscoverSections.length">
           <div v-for="(section, index) in appStoreDiscoverSections" :key="`${section.type}-${index}`">
             <app-store-apps-card
@@ -157,15 +166,6 @@
               :subtitle="section.subheading"
               class="pb-2"
             ></app-store-apps-card>
-          </div>
-        </div>
-
-        <div v-else>
-          <div class="overwrite-banner-gallery app-gallery pt-1 pb-3 pt-sm-3 pb-sm-4 mb-2 px-1 px-sm-4" v-dragscroll>
-            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
-            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
-            <app-store-app-gallery-image :preloaderImage="require('@/assets/dock/home.png')"/>
-            <div class="d-block" style="padding: 1px"></div>
           </div>
         </div>
       </b-tab>
@@ -179,15 +179,15 @@
       </b-tab>
 
       <b-tab
-        v-for="category in Object.keys(categorizedAppStore)"
-        :key="category"
+        v-for="category in appStoreCategories"
+        :key="category.id"
         lazy
         title-link-class="btn-app-store-tab mr-2"
-        :title="category"
+        :title="category.name"
       >
         <app-store-apps-card
-          :apps="categorizedAppStore[category]"
-          :title="category"
+          :apps="categorizedAppStore[category.id]"
+          :title="category.name"
           class="pb-2 pt-3"
         ></app-store-apps-card>
       </b-tab>
@@ -291,6 +291,56 @@ export default {
       appStoreDiscoverBanners: (state) => state.apps.appStoreDiscoverData.banners,
       appStoreDiscoverSections: (state) => state.apps.appStoreDiscoverData.sections,
     }),
+    appStoreCategories: function() {
+      const categoriesInLocalAppStore = Object.keys(this.categorizedAppStore);
+      const categories = [
+        {
+          id: 'files',
+          name: 'Files & Productivity',
+        },
+        {
+          id: 'bitcoin',
+          name: 'Bitcoin',
+        },
+        {
+          id: 'finance',
+          name: 'Finance',
+        },
+        {
+          id: 'media',
+          name: 'Media',
+        },
+        {
+          id: 'networking',
+          name: 'Networking',
+        },
+        {
+          id: 'social',
+          name: 'Social',
+        },
+        {
+          id: 'automation',
+          name: 'Home & Automation',
+        },
+        {
+          id: 'ai',
+          name: 'AI',
+        },
+        {
+          id: 'developer',
+          name: 'Developer Tools',
+        },
+      ];
+      for (let category of categoriesInLocalAppStore) {
+        if (!categories.find(({id}) => id === category)) {
+          categories.push({
+            id: category,
+            name: category.charAt(0).toUpperCase() + category.slice(1),
+          });
+        }
+      }
+      return categories;
+    },
     // for v-model to work with global state
     appStoreSearchQuery: {
       get () {
