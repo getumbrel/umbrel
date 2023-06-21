@@ -1,6 +1,6 @@
 {
-    "version": "0.5.3",
-    "name": "Umbrel v0.5.3",
-    "requires": ">=0.5.0",
-    "notes": "This update fixes any missing app icons in storage and RAM usage statistics in the settings, and disables microSD card health check for Raspberry Pi users.\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
+    "version": "0.5.4",
+    "name": "umbrelOS 0.5.4",
+    "requires": ">=0.5.3",
+    "notes": "This update introduces a completely reimagined App Store, crafted to provide a sleek and intuitive experience as you discover the latest self-hosted apps for your Umbrel. The new Migration Assistant feature enables seamless transfer of data and apps from a Raspberry Pi-based Umbrel to the new Umbrel Home in one click. Complementing these enhancements are various performance improvements, bug fixes, and subtle refinements, such as the option to update your display name directly from the settings.\n\nIf you face any issues while updating, please message us on Telegram: https://t.me/getumbrel"
 }
