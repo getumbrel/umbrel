@@ -34,7 +34,7 @@
     "passport-http": "^0.3.0",
     "passport-jwt": "^4.0.0",
     "request-promise": "^4.2.2",
-    "semver": "^7.3.2",
+    "semver": "^7.5.2",
     "socks-proxy-agent": "^5.0.0",
     "thirty-two": "^1.0.2",
     "uuid": "^8.0.0",
