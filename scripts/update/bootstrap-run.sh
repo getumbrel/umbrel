@@ -35,7 +35,7 @@ else
 fi
 echo "Detected architecture: ${binary_arch}"
 
-binary_source_location="${UPDATE_ROOT}/server/build/umbreld-${binary_arch}"
+binary_source_location="${UPDATE_ROOT}/server/build/linux_${binary_arch}/umbreld"
 binary_destination_location="${UMBREL_ROOT}/bin/umbreld"
 
 # Download umbreld release binary if we don't have a local dev build

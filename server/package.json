@@ -6,6 +6,9 @@
     "bin": "./index.js",
     "scripts": {
         "start": "node index.js",
+        "prepare-release": "node prepare-release.js",
+        "timestamp-release": "ots-cli.js stamp release/SHA256SUMS",
+        "generate-release-notes": "node generate-release-notes.js",
         "build": "node build.js"
     },
     "dependencies": {
@@ -24,6 +27,7 @@
     },
     "devDependencies": {
         "caxa": "^3.0.1",
+        "got": "^13.0.0",
         "opentimestamps": "^0.4.9"
     }
 }

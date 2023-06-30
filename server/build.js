@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import path from 'node:path'
-import os from 'node:os'
 
 import caxa from 'caxa'
 import fse from 'fs-extra'
@@ -11,28 +10,19 @@ const $$ = $({stdio: 'inherit'})
 const BUILD_DIRECTORY = 'build'
 
 async function runMultiArchDockerBuilds(architectures) {
+  let buildDirectory = BUILD_DIRECTORY
+  if (architectures.length === 1) buildDirectory += `/linux_${architectures[0]}`
   const platforms = architectures.map(architecture => `linux/${architecture}`).join(',')
-  await $$`docker buildx build --platform ${platforms} --output ${BUILD_DIRECTORY} .`
-  // Clean up Docker's platform-specific build directories
-  for (const buildSubDirectory of await fse.readdir(BUILD_DIRECTORY)) {
-    const platformBuildPath = `${BUILD_DIRECTORY}/${buildSubDirectory}`
-    const isPlatformBuild = buildSubDirectory.startsWith('linux_') && (await fse.stat(platformBuildPath)).isDirectory()
-    if (!isPlatformBuild) continue
-    for (const file of await fse.readdir(platformBuildPath)) {
-      await fse.move(`${platformBuildPath}/${file}`, `${BUILD_DIRECTORY}/${file}`, { overwrite: true })
-    }
-    await fse.remove(platformBuildPath)
-  }
+  await $$`docker buildx build --platform ${platforms} --output ${buildDirectory} .`
 }
 
 async function buildBinary() {
   const {bin} = await fse.readJson('package.json')
   const entrypoint = path.join('{{caxa}}', bin)
-  const architecture = os.arch() === 'x64' ? 'amd64' : os.arch()
   await caxa({
     input: '.',
     exclude: [BUILD_DIRECTORY],
-    output: `${BUILD_DIRECTORY}/umbreld-${architecture}`,
+    output: `${BUILD_DIRECTORY}/umbreld`,
     command: [
       "{{caxa}}/node_modules/.bin/node",
       entrypoint,
