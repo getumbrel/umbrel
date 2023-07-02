@@ -1,0 +1,5 @@
+node_modules
+coverage
+test/data
+.DS_Store
+data

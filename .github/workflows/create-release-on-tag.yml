@@ -1,0 +1,48 @@
+name: Create release on tag
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./server
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          # We need this to get all commit history and tags to generate release notes
+          fetch-depth: 0
+
+      - name: Setup Docker buildx
+        run: docker buildx create --use
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release
+        run: npm run build
+
+      - name: Prepare release assets
+        run: npm run prepare-release -- ${{ github.ref_name }}
+
+      - name: Timestamp release
+        continue-on-error: true
+        run: npm run timestamp-release
+
+      - name: Generate release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run generate-release-notes
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          draft: true
+          name: umbrelOS ${{ github.ref_name }}
+          files: server/release/*
+          body_path: server/release-notes.md
