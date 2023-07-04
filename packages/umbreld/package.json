@@ -55,6 +55,7 @@
 		"p-queue": "^7.3.0",
 		"pify": "^6.1.0",
 		"read-pkg-up": "^9.1.0",
-		"session-file-store": "^1.5.0"
+		"session-file-store": "^1.5.0",
+		"systeminformation": "^5.17.8"
 	}
 }

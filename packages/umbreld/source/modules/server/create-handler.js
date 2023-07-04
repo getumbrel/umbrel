@@ -1,6 +1,7 @@
 import express from 'express'
 
 import * as authHandlers from './handlers/auth.js'
+import * as systemHandlers from './handlers/system.js'
 import errorHandler from './middleware/error-handler.js'
 import session from './middleware/session.js'
 import log from './middleware/log.js'
@@ -33,6 +34,13 @@ const createHandler = ({umbreld, sessionsPath, sessionSecret, logger}) => {
 	api.public.post('/login', authHandlers.login)
 	api.post('/renew-session', authHandlers.renewSession)
 	api.post('/logout', authHandlers.logout)
+
+	// System routes
+	api.get('/cpu-temperature', systemHandlers.cpuTemperature)
+	api.get('/disk-usage', systemHandlers.diskUsage)
+	api.get('/memory-usage', systemHandlers.memoryUsage)
+	api.post('/restart', systemHandlers.restart)
+	api.post('/shutdown', systemHandlers.shutdown)
 
 	// Handle errors
 	app.use(errorHandler(logger))
