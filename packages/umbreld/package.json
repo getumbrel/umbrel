@@ -20,7 +20,12 @@
 		"test-everything": "npm run format && npm run test && npm run coverage && npm run lint",
 		"watch": "nodemon --ignore data --ignore test/data --exec npm run",
 		"watch:test": "npm run watch -- test-everything",
-		"dev": "npm run watch -- start -- -- --data-directory ./data --port 3000 --log-level verbose"
+		"dev": "npm run watch -- start -- -- --data-directory ./data --port 3000 --log-level verbose",
+		"build": "node scripts/build.js",
+		"prepare-release": "node scripts/prepare-release.js",
+		"timestamp-release": "ots-cli.js stamp release/SHA256SUMS",
+		"generate-release-notes": "node scripts/generate-release-notes.js",
+		"todo": "git grep --line-number TODO -- ':!package.json'"
 	},
 	"prettier": {
 		"printWidth": 120,
@@ -30,12 +35,21 @@
 		"singleQuote": true,
 		"bracketSpacing": false
 	},
+	"xo": {
+		"rules": {
+			"unicorn/no-array-push-push": "off",
+			"no-warning-comments": "off",
+			"no-await-in-loop": "off"
+		}
+	},
 	"devDependencies": {
 		"ava": "^5.1.0",
 		"c8": "^7.12.0",
+		"caxa": "^3.0.1",
 		"got": "^12.5.3",
 		"mockdate": "^3.0.5",
 		"nodemon": "^2.0.20",
+		"opentimestamps": "^0.4.9",
 		"prettier": "^2.8.1",
 		"tough-cookie": "^4.1.2",
 		"xo": "^0.53.1"
@@ -45,17 +59,25 @@
 		"bcryptjs": "^2.4.3",
 		"camelcase-keys": "^8.0.2",
 		"chalk-template": "^0.5.0",
+		"check-disk-space": "^3.4.0",
+		"cors": "^2.8.5",
 		"dot-prop": "^7.2.0",
+		"drivelist": "^11.1.0",
+		"execa": "^7.1.1",
 		"express": "^4.18.2",
+		"express-async-handler": "^1.2.0",
+		"express-jwt": "^8.4.1",
 		"express-session": "^1.17.3",
-		"fs-extra": "^11.1.0",
+		"fs-extra": "^11.1.1",
+		"globby": "^13.2.1",
 		"js-yaml": "^4.1.0",
 		"ms": "^2.1.3",
 		"ow": "^1.1.1",
 		"p-queue": "^7.3.0",
+		"p-retry": "^5.1.2",
 		"pify": "^6.1.0",
 		"read-pkg-up": "^9.1.0",
 		"session-file-store": "^1.5.0",
-		"systeminformation": "^5.17.8"
+		"systeminformation": "^5.18.6"
 	}
 }

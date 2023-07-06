@@ -1,4 +1,4 @@
-import UmbrelModule from '../umbrel-module.js'
+import UmbrelModule from '../umbrel-service.js'
 import * as systemMonitor from '../../utilities/system-monitor.js'
 import * as systemCommands from '../../utilities/system-commands.js'
 

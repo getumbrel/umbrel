@@ -6,6 +6,7 @@ import errorHandler from './middleware/error-handler.js'
 import session from './middleware/session.js'
 import log from './middleware/log.js'
 import Router from './router.js'
+import migrationRouter from './routes/migration.js'
 
 const createHandler = ({umbreld, sessionsPath, sessionSecret, logger}) => {
 	const app = express()
@@ -44,6 +45,9 @@ const createHandler = ({umbreld, sessionsPath, sessionSecret, logger}) => {
 
 	// Handle errors
 	app.use(errorHandler(logger))
+
+	// Migration routes
+	app.use('/migration', migrationRouter)
 
 	return app
 }

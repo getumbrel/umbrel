@@ -22,7 +22,7 @@ const createUmbreld = async () => {
 }
 
 const getAddress = (umbreld, endpoint) => {
-	const port = umbreld.modules.server.port
+	const port = umbreld.services.server.port
 
 	return `http://localhost:${port}${endpoint}`
 }

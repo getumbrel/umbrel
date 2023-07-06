@@ -69,7 +69,7 @@ axios.interceptors.response.use(
 
 // Helper methods for making API requests
 const API = {
-  umbreldUrl: `${window.location.origin}:81`,
+  umbreldUrl: `${window.location.origin}:81/migration`,
   async get(url, data = {}, auth = true, throwErrors = false) {
     let response;
 

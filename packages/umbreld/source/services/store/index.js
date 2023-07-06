@@ -4,9 +4,9 @@ import fse from 'fs-extra'
 
 import FileStore from '../../utilities/file-store.js'
 
-import UmbrelModule from '../../modules/umbrel-module.js'
+import UmbrelService from '../../services/umbrel-service.js'
 
-class Store extends UmbrelModule {
+class Store extends UmbrelService {
 	#store
 
 	constructor(options) {

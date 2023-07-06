@@ -128,7 +128,7 @@ if [[ "${@}" != *"--no-start-server"* ]]; then
  echo "Starting umbreld..."
   echo
   pkill --full 'caxa.*umbreld' || true
-  ./bin/umbreld --data-directory "${UMBREL_ROOT}" &>> "${UMBREL_LOGS}/umbreld.log" &
+  ./bin/umbreld --port 81 --data-directory "${UMBREL_ROOT}" &>> "${UMBREL_LOGS}/umbreld.log" &
 fi
 
 compose_files=()

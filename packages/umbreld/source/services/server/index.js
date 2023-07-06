@@ -5,11 +5,11 @@ import {promisify} from 'node:util'
 import getOrCreateFile from '../../utilities/get-or-create-file.js'
 import randomToken from '../../utilities/random-token.js'
 
-import UmbrelModule from '../../modules/umbrel-module.js'
+import UmbrelService from '../../services/umbrel-service.js'
 
 import createHandler from './create-handler.js'
 
-class Server extends UmbrelModule {
+class Server extends UmbrelService {
 	async start() {
 		// Create the handler
 		const {dataDirectory} = this.umbreld

@@ -46,7 +46,7 @@ class Router {
 						response,
 						next,
 						umbreld,
-						...umbreld.modules,
+						...umbreld.services,
 						logger,
 					})
 				} catch (error) {

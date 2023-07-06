@@ -4,7 +4,21 @@ import process from 'node:process'
 import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
+import update from './migrations/index.js'
 import Umbreld from './index.js'
+
+// In the future migrations will run on start and we'll run through
+// all required migrations for the version range we've jumped between.
+// However during the transition phase we need to run migrations manually
+// during the OTA update process because we need to update scripts before
+// starting umbrel again.
+if (process.argv.includes('--update')) {
+	const updateIndex = process.argv.indexOf('--update')
+	const updateRoot = process.argv[updateIndex + 1]
+	const umbrelRoot = process.argv[updateIndex + 2]
+	await update({updateRoot, umbrelRoot})
+	process.exit(0)
+}
 
 const showHelp = () =>
 	console.log(`
