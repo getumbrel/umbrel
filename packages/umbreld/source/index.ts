@@ -1,14 +1,30 @@
 import ms from 'ms'
 
-import getPackageJson from './utilities/get-package-json.js'
+import packageJson from '../package.json' assert {type: 'json'}
+
 import createLogger from './utilities/logger.js'
 
+import {type ServiceConstructor} from './services/umbrel-service.js'
+import type UmbrelService from './services/umbrel-service.js'
 import * as services from './services/index.js'
 
 const {Store, Server} = services
 
+type UmbreldOptions = {
+	dataDirectory: string
+	port?: number
+	logLevel?: string
+}
+
 export default class Umbreld {
-	constructor({dataDirectory, port = 80, logLevel = 'normal'}) {
+	version = packageJson.version
+	dataDirectory: string
+	port: number
+	logLevel: string
+	logger: ReturnType<typeof createLogger>
+	services: Record<string, UmbrelService>
+
+	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
 		this.dataDirectory = dataDirectory
 		this.port = port
 		this.logLevel = logLevel
@@ -17,12 +33,7 @@ export default class Umbreld {
 	}
 
 	async start() {
-		// TODO: Check this still works when built into
-		// a self contained binary
-		const {version} = await getPackageJson(import.meta)
-		this.version = version
-
-		this.logger.log(`☂️  Starting Umbrel v${version}`)
+		this.logger.log(`☂️  Starting Umbrel v${this.version}`)
 		this.logger.log()
 		this.logger.log(`dataDirectory: ${this.dataDirectory}`)
 		this.logger.log(`port:          ${this.port}`)
@@ -43,7 +54,7 @@ export default class Umbreld {
 		await this.loadService(Server)
 	}
 
-	async loadService(UmbrelService) {
+	async loadService(UmbrelService: ServiceConstructor) {
 		const start = Date.now()
 		const {name} = UmbrelService
 		this.logger.verbose(`Loading service: ${name}`)

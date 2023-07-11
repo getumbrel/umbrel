@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env ts-node
 import process from 'node:process'
 
 import fse from 'fs-extra'

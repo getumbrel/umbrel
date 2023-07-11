@@ -4,12 +4,12 @@ import fse from 'fs-extra'
 
 import FileStore from '../../utilities/file-store.js'
 
-import UmbrelService from '../../services/umbrel-service.js'
+import UmbrelService, {type ServiceOptions} from '../../services/umbrel-service.js'
 
 class Store extends UmbrelService {
 	#store
 
-	constructor(options) {
+	constructor(options: ServiceOptions) {
 		super(options)
 
 		this.#store = new FileStore({filePath: path.join(this.umbreld.dataDirectory, 'umbrel.yaml')})
@@ -23,6 +23,8 @@ class Store extends UmbrelService {
 		// for now lets just write the version to check
 		// read/write permissions are ok.
 		await this.set('version', this.umbreld.version)
+
+		return this
 	}
 
 	async get(property) {

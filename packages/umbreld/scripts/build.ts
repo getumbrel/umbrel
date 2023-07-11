@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env ts-node
 import process from 'node:process'
 import path from 'node:path'
 
@@ -24,7 +24,7 @@ async function buildBinary() {
 		input: '.',
 		exclude: [BUILD_DIRECTORY],
 		output: `${BUILD_DIRECTORY}/umbreld`,
-		command: ['{{caxa}}/node_modules/.bin/node', entrypoint],
+		command: ['env', 'PATH={{caxa}}/node_modules/.bin/:$PATH', '{{caxa}}/node_modules/.bin/ts-node', entrypoint],
 	})
 }
 

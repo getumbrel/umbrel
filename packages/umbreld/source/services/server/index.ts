@@ -29,6 +29,8 @@ class Server extends UmbrelService {
 		await listen(this.umbreld.port)
 		this.port = server.address().port
 		this.logger.log(`Listening on port ${this.port}`)
+
+		return this
 	}
 }
 

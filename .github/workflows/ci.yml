@@ -28,6 +28,17 @@ jobs:
           node-version: 18
       - run: npm clean-install
       - run: npm run lint
+  
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm clean-install
+      - run: npm run typecheck || true # We have not fully migrated to TypeScript yet so allow this to fail
 
   test-unit:
     runs-on: ubuntu-latest
