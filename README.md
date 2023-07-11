@@ -77,7 +77,7 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 #### Bitcoin & Finance
 - [Bitcoin Node](https://apps.umbrel.com/app/bitcoin) — Run your personal node powered by Bitcoin Core
 - [Electrs](https://apps.umbrel.com/app/electrs) — A simple and efficient Electrum Server
-- [Mempool](https://apps.umbrel.com/app/mempool) — A self-hosted explorer for the Bitcoin community
+- [Mempool](https://apps.umbrel.com/app/mempool) — Explore the full Bitcoin ecosystem
 - [Bitfeed](https://apps.umbrel.com/app/bitfeed) — A beautiful mempool visualizer and block explorer
 - [BTCPay Server](https://apps.umbrel.com/app/btcpay-server) — Accept Bitcoin payments with zero fees & no 3rd party
 - [RoboSats](https://apps.umbrel.com/app/robosats) — Simple and Private Bitcoin P2P Exchange
