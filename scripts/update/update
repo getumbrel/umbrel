@@ -83,7 +83,7 @@ fi
 if [[ "${update_type}" == "ota" ]]; then
   RELEASE=$(cat "$UMBREL_ROOT"/statuses/update-status.json | jq .updateTo -r)
 elif [[ "${update_type}" == "path" ]]; then
-  RELEASE=$(cat "$update_path"/info.json | jq .version -r)
+  RELEASE=v$(cat "$update_path"/info.json | jq .version -r)
 fi
 
 echo
