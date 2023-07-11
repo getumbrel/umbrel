@@ -65,6 +65,7 @@
 		]
 	},
 	"devDependencies": {
+		"@types/fs-extra": "^11.0.1",
 		"@types/ms": "^0.7.31",
 		"ava": "^5.1.0",
 		"c8": "^7.12.0",

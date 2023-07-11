@@ -41,11 +41,13 @@ class Router {
 					const umbreld = request.app.get('umbreld')
 					const {logger} = this
 					request.session = pify(request.session)
+					const {store} = umbreld
 					return await umbrelHandler({
 						request,
 						response,
 						next,
 						umbreld,
+						store,
 						...umbreld.services,
 						logger,
 					})
