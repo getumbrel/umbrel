@@ -1,4 +1,7 @@
 import API from "@/helpers/api";
+import {trpc} from "@/helpers/trpc";
+
+window.trpc = trpc
 
 // Initial state
 const state = () => ({
@@ -236,7 +239,7 @@ const actions = {
     }
   },
   async getMigrateStatus({ commit }) {
-    const status = await API.get(`${API.umbreldUrl}/migration-status`);
+    const status = await trpc.migration.migrationStatus.query()
     if (status) {
       commit("setMigrateStatus", status);
     }
@@ -361,9 +364,7 @@ const actions = {
     commit("setIsUmbrelOS", !!isUmbrelOS);
   },
   async getIsUmbrelHome({ commit }) {
-    const auth = true;
-    const throwErrors = true;
-    const isUmbrelHome = await API.get(`${API.umbreldUrl}/is-umbrel-home`, {}, auth, throwErrors);
+    const isUmbrelHome = await trpc.migration.isUmbrelHome.query();
     commit("setIsUmbrelHome", !!isUmbrelHome);
   },
   async getIsSdCardFailing({ commit }) {

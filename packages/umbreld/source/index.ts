@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import ms from 'ms'
 import fse from 'fs-extra'
 
@@ -28,7 +30,7 @@ export default class Umbreld {
 	store: FileStore
 
 	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
-		this.dataDirectory = dataDirectory
+		this.dataDirectory = path.resolve(dataDirectory)
 		this.port = port
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)

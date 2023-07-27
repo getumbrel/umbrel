@@ -24,7 +24,12 @@ async function buildBinary() {
 		input: '.',
 		exclude: [BUILD_DIRECTORY],
 		output: `${BUILD_DIRECTORY}/umbreld`,
-		command: ['env', 'PATH={{caxa}}/node_modules/.bin/:$PATH', '{{caxa}}/node_modules/.bin/ts-node', entrypoint],
+		command: [
+			'env',
+			`PATH={{caxa}}/node_modules/.bin/:${process.env.PATH}`, // Temporary workaround to fix the path, migrate to AppImage
+			'{{caxa}}/node_modules/.bin/ts-node',
+			entrypoint,
+		],
 	})
 }
 

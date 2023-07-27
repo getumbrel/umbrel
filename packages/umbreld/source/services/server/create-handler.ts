@@ -1,15 +1,24 @@
 import express from 'express'
+import cors from 'cors'
 
+import {trpcHandler} from '../../modules/trpc/index.js'
 import * as authHandlers from './handlers/auth.js'
-import * as systemHandlers from './handlers/system.js'
 import errorHandler from './middleware/error-handler.js'
 import session from './middleware/session.js'
 import log from './middleware/log.js'
 import Router from './router.js'
-import migrationRouter from './routes/migration.js'
 
 const createHandler = ({umbreld, sessionsPath, sessionSecret, logger}) => {
 	const app = express()
+
+	// We need CORS so the dashboard can make requests to the umbreld server. We can't lock
+	// down to explicit domains because we don't know all potential domains ahead of time.
+	// This is safe to enable for now because everything is behind JWT auth and the JWT
+	// is stored in localstorage not a cookie so it won't be included in cross site
+	// requests. However this is only for the transition period from the legacy codebase
+	// to umbreld. We should migrate to serving everything from umbreld, then remove CORS
+	// and transmit the JWT in a cookie.
+	app.use(cors((request, callback) => callback(null, {origin: true, credentials: true})))
 
 	// TODO: Security hardening, helmet etc.
 
@@ -36,18 +45,11 @@ const createHandler = ({umbreld, sessionsPath, sessionSecret, logger}) => {
 	api.post('/renew-session', authHandlers.renewSession)
 	api.post('/logout', authHandlers.logout)
 
-	// System routes
-	api.get('/cpu-temperature', systemHandlers.cpuTemperature)
-	api.get('/disk-usage', systemHandlers.diskUsage)
-	api.get('/memory-usage', systemHandlers.memoryUsage)
-	api.post('/restart', systemHandlers.restart)
-	api.post('/shutdown', systemHandlers.shutdown)
-
 	// Handle errors
 	app.use(errorHandler(logger))
 
-	// Migration routes
-	app.use('/migration', migrationRouter)
+	// Add tRPC routes
+	app.use('/trpc', trpcHandler)
 
 	return app
 }

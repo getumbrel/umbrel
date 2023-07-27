@@ -1,4 +1,4 @@
-FROM node:12-buster-slim AS umbrel-dashboard-builder
+FROM node:14-buster-slim AS umbrel-dashboard-builder
 
 ARG STAGING_DEPLOYMENT=false
 
@@ -20,8 +20,7 @@ COPY . .
 # build app for production
 RUN yarn build
 
-
-FROM node:12-buster-slim AS umbrel-dashboard
+FROM node:14-buster-slim AS umbrel-dashboard
 
 RUN yarn global add serve@13
 

@@ -553,6 +553,7 @@ import moment from "moment";
 import { mapState } from "vuex";
 
 import API from "@/helpers/api";
+import {trpc} from "@/helpers/trpc";
 import delay from "@/helpers/delay";
 
 import CardWidget from "@/components/CardWidget";
@@ -982,8 +983,8 @@ export default {
       try {
         const auth = true;
         const throwErrors = true;
-        const response = await API.get(`${API.umbreldUrl}/can-migrate`, {}, auth, throwErrors);
-        if (response.success) {
+        const canMigrate = await trpc.migration.canMigrate.query();
+        if (canMigrate) {
           this.migrationState.migrationStep = "migrate";
         } else {
           this.migrationState.migrationError = {title: "Unable to begin migration", description: "Something went wrong. Please try again later."};
@@ -991,7 +992,7 @@ export default {
           this.migrationState.migrationStep = "try-again";
         }
       } catch (error) {
-        const errorMessage = error.response && error.response.data.error ? error.response.data.error : "Something went wrong. Please try again later.";
+        const errorMessage = error.message || "Something went wrong. Please try again later.";
         this.migrationState.migrationError = {title: "Unable to begin migration", description: errorMessage};
         this.migrationCheckFailed = true;
         this.migrationState.migrationStep = "try-again";
@@ -1005,7 +1006,7 @@ export default {
       this.resetMigrationError();
 
       try {
-        await API.post(`${API.umbreldUrl}/migrate`);
+        await trpc.migration.migrate.mutate()
 
         // poll migrate status every second until migration is running (checking regularly to transition quickly)
         // because after it's running, the loading view will take over
@@ -1017,7 +1018,7 @@ export default {
           }
         }, 1 * 1000);
       } catch (error) {
-        const errorMessage = error.response && error.response.data.error ? error.response.data.error : "Something went wrong. Please try again later.";
+        const errorMessage = error.message || "Something went wrong. Please try again later.";
         this.migrationState.migrationError = {title: "Unable to begin migration", description: errorMessage}
         this.migrationState.migrationStep = "try-again";
       } finally {

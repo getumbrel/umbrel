@@ -1,4 +1,4 @@
-FROM node:12-buster-slim
+FROM node:14-buster-slim
 
 # make the 'app' folder the current working directory
 WORKDIR /app

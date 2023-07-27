@@ -16,7 +16,23 @@ module.exports = {
       poll: true,
     },
   },
+  transpileDependencies: [
+    '@trpc/client',
+    '@trpc/server',
+  ],
   chainWebpack: config => {
+    config.module
+      .rule('mjs')
+      .test(/\.mjs$/)
+      .include.add(/node_modules/)
+      .end()
+      .use('babel')
+      .loader('babel-loader')
+      .options({
+        presets: ['@vue/cli-plugin-babel/preset'],
+        plugins: ['@babel/plugin-proposal-optional-chaining'],
+      });
+
     config.plugin("html").tap(args => {
       args[0].template =
         process.env.STAGING_DEPLOYMENT === "true"

@@ -4,6 +4,8 @@ import process from 'node:process'
 import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
+import {cliClient} from './modules/cli-client.js'
+
 import update from './migrations/index.js'
 import Umbreld from './index.js'
 
@@ -17,6 +19,16 @@ if (process.argv.includes('--update')) {
 	const updateRoot = process.argv[updateIndex + 1]
 	const umbrelRoot = process.argv[updateIndex + 2]
 	await update({updateRoot, umbrelRoot})
+	process.exit(0)
+}
+
+// Quick trpc client for testing
+if (process.argv.includes('client')) {
+	const clientIndex = process.argv.indexOf('client')
+	const query = process.argv[clientIndex + 1]
+	const args = process.argv.slice(clientIndex + 2)
+
+	await cliClient({query, args})
 	process.exit(0)
 }
 

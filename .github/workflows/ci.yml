@@ -25,5 +25,3 @@ jobs:
           node-version: 18
       - run: npm clean-install
       - run: npm run ${{ matrix.task }}
-      - if: startsWith(matrix.task, 'test')
-        run: npm run coverage

@@ -8,6 +8,8 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@trpc/client": "^10.34.0",
+    "@trpc/server": "^10.34.0",
     "animate.css": "^3.7.2",
     "axios": "^0.19.2",
     "bignumber.js": "^9.0.0",
@@ -25,6 +27,7 @@
     "vuex": "^3.1.2"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@vue/cli-plugin-babel": "^4.1.0",
     "@vue/cli-plugin-eslint": "^4.1.0",
     "@vue/cli-plugin-router": "^4.1.0",
