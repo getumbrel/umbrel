@@ -5,6 +5,7 @@ import system from './system.js'
 
 const context = {
 	umbreld: {dataDirectory: '/tmp'},
+	logger: {error() {}},
 }
 
 const router = system.createCaller({

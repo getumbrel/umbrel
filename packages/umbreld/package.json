@@ -40,6 +40,7 @@
 		"rules": {
 			"unicorn/no-array-push-push": "off",
 			"unicorn/prefer-type-error": "off",
+			"unicorn/better-regex": "off",
 			"no-warning-comments": "off",
 			"no-await-in-loop": "off",
 			"@typescript-eslint/no-floating-promises": "off",
@@ -59,27 +60,17 @@
 			"n/file-extension-in-import": "off"
 		}
 	},
-	"ava": {
-		"extensions": {
-			"ts": "module"
-		},
-		"nodeArguments": [
-			"--loader=ts-node/esm"
-		]
-	},
 	"devDependencies": {
+		"@types/bcryptjs": "^2.4.2",
+		"@types/cors": "^2.8.13",
+		"@types/express": "^4.17.17",
 		"@types/fs-extra": "^11.0.1",
 		"@types/ms": "^0.7.31",
 		"@vitest/coverage-v8": "^0.33.0",
-		"ava": "^5.1.0",
-		"c8": "^7.12.0",
 		"caxa": "^3.0.1",
-		"got": "^12.5.3",
-		"mockdate": "^3.0.5",
 		"nodemon": "^2.0.20",
 		"opentimestamps": "^0.4.9",
 		"prettier": "^2.8.1",
-		"tough-cookie": "^4.1.2",
 		"vitest": "^0.33.0",
 		"xo": "^0.53.1"
 	},
@@ -91,7 +82,6 @@
 		"camelcase-keys": "^8.0.2",
 		"chalk-template": "^0.5.0",
 		"check-disk-space": "^3.4.0",
-		"cors": "^2.8.5",
 		"dot-prop": "^7.2.0",
 		"drivelist": "^11.1.0",
 		"execa": "^7.1.1",
