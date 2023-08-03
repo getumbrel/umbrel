@@ -1,7 +1,7 @@
 import path from 'node:path'
 import {describe, beforeAll, afterAll, expect, test} from 'vitest'
 
-import temporaryDirectory from '../../test/helpers/temporary-directory.js'
+import temporaryDirectory from './temporary-directory.js'
 
 import FileStore from './file-store.js'
 

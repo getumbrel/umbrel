@@ -4,7 +4,7 @@ import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
 import Umbreld from '../../../../source/index.js'
 import type {AppRouter} from '../index.js'
 
-import temporaryDirectory from '../../../../test/helpers/temporary-directory.js'
+import temporaryDirectory from '../../../utilities/temporary-directory.js'
 
 const directory = temporaryDirectory('auth')
 
