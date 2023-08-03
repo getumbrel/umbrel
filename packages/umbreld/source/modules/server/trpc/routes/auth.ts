@@ -1,7 +1,7 @@
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 import bcrypt from 'bcryptjs'
-import * as jwt from '../../jwt.js'
+import * as jwt from '../../../jwt.js'
 
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
 

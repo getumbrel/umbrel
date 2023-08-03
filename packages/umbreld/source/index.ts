@@ -1,18 +1,13 @@
 import path from 'node:path'
 
-import ms from 'ms'
 import fse from 'fs-extra'
 
 import packageJson from '../package.json' assert {type: 'json'}
 
-import createLogger from './utilities/logger.js'
-import FileStore from './utilities/file-store.js'
+import createLogger from './modules/utilities/logger.js'
+import FileStore from './modules/utilities/file-store.js'
 
-import {type ServiceConstructor} from './services/umbrel-service.js'
-import type UmbrelService from './services/umbrel-service.js'
-import * as services from './services/index.js'
-
-const {Server} = services
+import Server from './modules/server/index.js'
 
 type UmbreldOptions = {
 	dataDirectory: string
@@ -26,16 +21,16 @@ export default class Umbreld {
 	port: number
 	logLevel: string
 	logger: ReturnType<typeof createLogger>
-	services: Record<string, UmbrelService>
 	store: FileStore
+	server: Server
 
 	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
 		this.dataDirectory = path.resolve(dataDirectory)
 		this.port = port
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)
-		this.services = {}
 		this.store = new FileStore({filePath: `${dataDirectory}/umbrel.yaml`})
+		this.server = new Server({umbreld: this})
 	}
 
 	async start() {
@@ -52,32 +47,7 @@ export default class Umbreld {
 		// In the future we'll handle migrations here, for now lets just write the version to check read/write permissions are ok.
 		await this.store.set('version', this.version)
 
-		// Load all services apart from Store and Server
-		await Promise.all(
-			Object.values(services)
-				.filter((Service) => ![Server].includes(Service))
-				.map((Service) => this.loadService(Service)),
-		)
-
-		// Load the server service once all other services are loaded
-		await this.loadService(Server)
-	}
-
-	async loadService(UmbrelService: ServiceConstructor) {
-		const start = Date.now()
-		const {name} = UmbrelService
-		this.logger.verbose(`Loading service: ${name}`)
-		// Create a new instance of the service
-		const service = new UmbrelService({umbreld: this})
-
-		// Wait for it to start
-		await service.start()
-		const loadTime = ms(Date.now() - start)
-		this.logger.verbose(`Loaded service ${name} in ${loadTime}`)
-
-		// Expose it on the umbreld instance via it's identifier
-		this.services[name.toLowerCase()] = service
-
-		return service
+		// Start the server
+		await this.server.start()
 	}
 }

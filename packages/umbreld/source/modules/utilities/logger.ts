@@ -4,7 +4,7 @@ const value = (logLevel) => ['silent', 'normal', 'verbose'].indexOf(logLevel)
 
 let longestScope = 0
 
-const createLogger = (scope, globalLogLevel = 'normal') => {
+function createLogger(scope: string, globalLogLevel = 'normal') {
 	if (scope.length > longestScope) longestScope = scope.length
 	const log = (message = '', logLevel = 'normal') => {
 		if (value(globalLogLevel) >= value(logLevel)) {
@@ -14,12 +14,13 @@ const createLogger = (scope, globalLogLevel = 'normal') => {
 		}
 	}
 
-	log.verbose = (message) => log(message, 'verbose')
-
 	return {
 		log,
-		verbose: (message) => log(chalkTemplate`{grey ${message}}`, 'verbose'),
-		error: (message) => log(chalkTemplate`{red [error]} ${message}`),
+		verbose: (message: string) => log(chalkTemplate`{grey ${message}}`, 'verbose'),
+		error: (message: string) => log(chalkTemplate`{red [error]} ${message}`),
+		createChildLogger(scope: string) {
+			return createLogger(scope, globalLogLevel)
+		},
 	}
 }
 

@@ -1,6 +1,6 @@
 import {router, privateProcedure} from '../trpc.js'
 
-import {getCpuTemperature, getDiskUsage, getMemoryUsage, shutdown, reboot} from '../../../modules/system.js'
+import {getCpuTemperature, getDiskUsage, getMemoryUsage, shutdown, reboot} from '../../../system.js'
 
 export default router({
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),

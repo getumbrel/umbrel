@@ -1,7 +1,7 @@
 import {expect, afterAll, test} from 'vitest'
 import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
 
-import Umbreld from '../../../../source/index.js'
+import Umbreld from '../../../../index.js'
 import type {AppRouter} from '../index.js'
 
 import temporaryDirectory from '../../../utilities/temporary-directory.js'
@@ -23,7 +23,7 @@ await umbreld.start()
 const client = createTRPCProxyClient<AppRouter>({
 	links: [
 		httpBatchLink({
-			url: `http://localhost:${umbreld.services.server.port}/trpc`,
+			url: `http://localhost:${umbreld.server.port}/trpc`,
 			headers: async () => ({
 				Authorization: `Bearer ${jwt}`,
 			}),

@@ -6,8 +6,8 @@ import {
 	migrateData,
 	getMigrationStatus,
 	unmountExternalDrives,
-} from '../../../modules/migration.js'
-import isUmbrelHome from '../../../modules/is-umbrel-home.js'
+} from '../../../migration.js'
+import isUmbrelHome from '../../../is-umbrel-home.js'
 
 export default router({
 	isUmbrelHome: privateProcedure.query(() => isUmbrelHome()),

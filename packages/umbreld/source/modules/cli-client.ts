@@ -1,4 +1,4 @@
-import {trpc} from './trpc/client.js'
+import {trpc} from './server/trpc/client.js'
 
 function parseValue(value: string): any {
 	// Check if the value can be parsed as JSON

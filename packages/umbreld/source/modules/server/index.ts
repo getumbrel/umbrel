@@ -3,16 +3,25 @@ import {promisify} from 'node:util'
 
 import express from 'express'
 
-import getOrCreateFile from '../../utilities/get-or-create-file.js'
-import randomToken from '../../utilities/random-token.js'
+import getOrCreateFile from '../utilities/get-or-create-file.js'
+import randomToken from '../utilities/random-token.js'
 
-import UmbrelService from '../../services/umbrel-service.js'
+import type Umbreld from '../../index.js'
+import * as jwt from '../jwt.js'
+import {trpcHandler} from './trpc/index.js'
 
-import {trpcHandler} from '../../modules/trpc/index.js'
-import * as jwt from '../../modules/jwt.js'
+export type ServerOptions = {umbreld: Umbreld}
 
-class Server extends UmbrelService {
+class Server {
+	umbreld: Umbreld
+	logger: Umbreld['logger']
 	port: number | undefined
+
+	constructor({umbreld}: ServerOptions) {
+		this.umbreld = umbreld
+		const {name} = this.constructor
+		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+	}
 
 	async getJwtSecret() {
 		const jwtSecretPath = `${this.umbreld.dataDirectory}/secrets/jwt`
@@ -61,7 +70,7 @@ class Server extends UmbrelService {
 		const server = http.createServer(app)
 		const listen = promisify(server.listen.bind(server))
 		await listen(this.umbreld.port)
-		this.port = server.address().port
+		this.port = (server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)
 
 		return this

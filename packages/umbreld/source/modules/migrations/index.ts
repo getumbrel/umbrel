@@ -2,10 +2,10 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import pRetry from 'p-retry'
 
-import isUmbrelHome from '../modules/is-umbrel-home.js'
+import isUmbrelHome from '../is-umbrel-home.js'
 
 async function copyFromOverlay({updateRoot, path}) {
-	const overlayRoot = `${updateRoot}/packages/umbreld/source/migrations/umbrel-os-overlay`
+	const overlayRoot = `${updateRoot}/packages/umbreld/source/modules/migrations/umbrel-os-overlay`
 	return fse.copy(`${overlayRoot}${path}`, path)
 }
 

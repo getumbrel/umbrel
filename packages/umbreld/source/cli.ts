@@ -6,7 +6,7 @@ import camelcaseKeys from 'camelcase-keys'
 
 import {cliClient} from './modules/cli-client.js'
 
-import update from './migrations/index.js'
+import update from './modules/migrations/index.js'
 import Umbreld from './index.js'
 
 // In the future migrations will run on start and we'll run through
