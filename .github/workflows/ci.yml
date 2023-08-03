@@ -13,11 +13,11 @@ jobs:
       fail-fast: false
       matrix:
         task:
-          - format-check
+          - format:check
           - lint
           - typecheck:ci
-          - test:unit
-          - test:integration
+          - test:unit -- --coverage
+          - test:integration -- --coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
