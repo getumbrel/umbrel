@@ -9,6 +9,12 @@ import FileStore from './modules/utilities/file-store.js'
 
 import Server from './modules/server/index.js'
 
+type StoreSchema = {
+	version: string
+	username: string
+	hashedPassssword: string
+}
+
 type UmbreldOptions = {
 	dataDirectory: string
 	port?: number
@@ -21,7 +27,7 @@ export default class Umbreld {
 	port: number
 	logLevel: string
 	logger: ReturnType<typeof createLogger>
-	store: FileStore
+	store: FileStore<StoreSchema>
 	server: Server
 
 	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
@@ -29,7 +35,7 @@ export default class Umbreld {
 		this.port = port
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)
-		this.store = new FileStore({filePath: `${dataDirectory}/umbrel.yaml`})
+		this.store = new FileStore<StoreSchema>({filePath: `${dataDirectory}/umbrel.yaml`})
 		this.server = new Server({umbreld: this})
 	}
 

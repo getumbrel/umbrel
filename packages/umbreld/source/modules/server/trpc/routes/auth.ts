@@ -14,7 +14,7 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Check the user hasn't already signed up
-			const {name: existingUser} = await ctx.umbreld.store.get()
+			const existingUser = await ctx.umbreld.store.get('username')
 			if (existingUser !== undefined) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Attempted to register when user is already registered'})
 			}
@@ -26,8 +26,8 @@ export default router({
 			const hashedPassword = await bcrypt.hash(input.password, saltRounds)
 
 			// Save the user
-			await ctx.umbreld.store.set('name', input.username)
-			await ctx.umbreld.store.set('password', hashedPassword)
+			await ctx.umbreld.store.set('username', input.username)
+			await ctx.umbreld.store.set('hashedPassword', hashedPassword)
 
 			return true
 		}),
@@ -40,7 +40,7 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Get hashed password
-			const {password: hashedPassword} = await ctx.umbreld.store.get()
+			const hashedPassword = await ctx.umbreld.store.get('hashedPassword')
 
 			// Validate credentials
 			const validPassword = hashedPassword && (await bcrypt.compare(input.password, hashedPassword))

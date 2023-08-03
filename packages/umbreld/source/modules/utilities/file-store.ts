@@ -7,12 +7,24 @@ import PQueue from 'p-queue'
 
 import getOrCreateFile from './get-or-create-file.js'
 
-export default class FileStore {
+type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
+	? K extends keyof T
+		? DotProp<T[K], R>
+		: never
+	: P extends keyof T
+	? T[P]
+	: never
+
+type StorePath<T, P extends string> = DotProp<T, P> extends never ? 'The provided path does not exist in the store' : P
+
+export default class FileStore<T> {
+	filePath: string
+
 	#parser
 	#writes = 0
 	#writeQueue
 
-	constructor({filePath}) {
+	constructor({filePath}: {filePath: string}) {
 		this.filePath = filePath
 
 		// TODO: Allow configuring
@@ -27,12 +39,12 @@ export default class FileStore {
 	async #read() {
 		const rawData = await getOrCreateFile(this.filePath, this.#parser.encode({}))
 
-		const store = this.#parser.decode(rawData)
+		const store = this.#parser.decode(rawData) as T
 
 		return store
 	}
 
-	async #write(store) {
+	async #write(store: T): Promise<boolean> {
 		const rawData = this.#parser.encode(store)
 
 		// Write atomically
@@ -44,27 +56,27 @@ export default class FileStore {
 		return true
 	}
 
-	async #set(property, value) {
+	async #set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>) {
 		const store = await this.#read()
-		setProperty(store, property, value)
+		setProperty(store as any, property as string, value)
 
 		return this.#write(store)
 	}
 
-	async #delete(property) {
+	async #delete<P extends string>(property: StorePath<T, P>): Promise<boolean> {
 		const store = await this.#read()
-		deleteProperty(store, property)
+		deleteProperty(store as any, property as string)
 
 		return this.#write(store)
 	}
 
-	async get(property) {
+	async get<P extends string>(property?: StorePath<T, P>) {
 		const store = await this.#read()
 
-		return getProperty(store, property)
+		return getProperty(store, property as string) as DotProp<T, P>
 	}
 
-	async set(property, value) {
+	async set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>): Promise<boolean> {
 		if (typeof property !== 'string' || typeof value === 'undefined') {
 			throw new TypeError('Invalid argument')
 		}
@@ -73,14 +85,20 @@ export default class FileStore {
 		return this.#writeQueue.add(async () => this.#set(property, value))
 	}
 
-	async delete(property) {
+	async delete<P extends string>(property: StorePath<T, P>): Promise<boolean> {
 		if (typeof property !== 'string') throw new TypeError('Invalid argument')
 
 		// Add this write job to the queue
 		return this.#writeQueue.add(async () => this.#delete(property))
 	}
 
-	async getWriteLock(job) {
+	async getWriteLock(
+		job: (methods: {
+			get: typeof FileStore.prototype.get
+			set: typeof FileStore.prototype.set
+			delete: typeof FileStore.prototype.delete
+		}) => Promise<void>,
+	): Promise<void> {
 		const nonLockedMethods = {
 			get: this.get.bind(this),
 			set: this.#set.bind(this),

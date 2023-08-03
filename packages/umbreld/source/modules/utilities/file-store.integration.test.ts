@@ -12,7 +12,10 @@ afterAll(directory.destroyRoot)
 
 const createStore = async () => {
 	const filePath = path.join(await directory.create(), 'store.yaml')
-	const store = new FileStore({filePath})
+	// Define a loose schema that will allow any key or value so
+	// we don't need to define all the test store schemas
+	type LooseSchema = Record<string, any>
+	const store = new FileStore<LooseSchema>({filePath})
 
 	return store
 }
