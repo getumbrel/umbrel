@@ -1,4 +1,26 @@
-import {trpc} from './server/trpc/client.js'
+import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
+import fse from 'fs-extra'
+
+import * as jwt from './jwt.js'
+
+import type {AppRouter} from './server/trpc/index'
+
+async function signJwt() {
+	const secret = await fse.readFile(`./data/secrets/jwt`, {encoding: 'utf8'})
+	const token = jwt.sign(secret)
+	return token
+}
+
+const trpc = createTRPCProxyClient<AppRouter>({
+	links: [
+		httpBatchLink({
+			url: 'http://localhost:3000/trpc',
+			headers: async () => ({
+				Authorization: `Bearer ${await signJwt()}`,
+			}),
+		}),
+	],
+})
 
 function parseValue(value: string): any {
 	// Check if the value can be parsed as JSON
