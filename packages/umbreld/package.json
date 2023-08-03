@@ -11,7 +11,7 @@
 		"prettier": "prettier --ignore-path .gitignore",
 		"format": "npm run prettier -- --write .",
 		"format-check": "npm run prettier -- --check .",
-		"lint": "xo --prettier",
+		"lint": "xo",
 		"typecheck": "tsc --noEmit",
 		"typecheck:ci": "npm run typecheck || true",
 		"test": "vitest --coverage",
@@ -37,6 +37,7 @@
 		"bracketSpacing": false
 	},
 	"xo": {
+		"prettier": true,
 		"rules": {
 			"unicorn/no-array-push-push": "off",
 			"unicorn/prefer-type-error": "off",
