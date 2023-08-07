@@ -11,8 +11,11 @@ import Server from './modules/server/index.js'
 
 type StoreSchema = {
 	version: string
-	username: string
-	hashedPassssword: string
+	user: {
+		name: string
+		hashedPassword: string
+		totpUri?: string
+	}
 }
 
 type UmbreldOptions = {
