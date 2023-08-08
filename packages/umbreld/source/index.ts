@@ -15,6 +15,7 @@ type StoreSchema = {
 		name: string
 		hashedPassword: string
 		totpUri?: string
+		wallpaper?: string
 	}
 }
 

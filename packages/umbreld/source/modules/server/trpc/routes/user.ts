@@ -36,6 +36,14 @@ export default router({
 			return true
 		}),
 
+	// Public method to check if a user exists
+	exists: publicProcedure.query(async ({ctx}) => {
+		const user = await ctx.umbreld.store.get('user')
+		const userExists = user !== undefined
+
+		return userExists
+	}),
+
 	// Given valid credentials returns a token for a user
 	login: publicProcedure
 		.input(
@@ -74,6 +82,32 @@ export default router({
 
 	// Returns a new token for a user
 	renewToken: privateProcedure.mutation(async ({ctx}) => ctx.server.signToken()),
+
+	// Change the user's password
+	changePassword: privateProcedure
+		.input(
+			z.object({
+				oldPassword: z.string(),
+				newPassword: z.string().min(6, 'Password must be atleast 6 characters'),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			// Validate old password
+			const oldHashedPassword = await ctx.umbreld.store.get('user.hashedPassword')
+			const validPassword = oldHashedPassword && (await bcrypt.compare(input.oldPassword, oldHashedPassword))
+			if (!validPassword) {
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
+			}
+
+			// Hash the password with the current recommended default
+			// of 10 bcrypt rounds
+			// https://security.stackexchange.com/a/83382
+			const saltRounds = 10
+			const hashedPassword = await bcrypt.hash(input.newPassword, saltRounds)
+			await ctx.umbreld.store.set('user.hashedPassword', hashedPassword)
+
+			return true
+		}),
 
 	// Generates a new random 2FA TOTP URI
 	generateTotpUri: privateProcedure.query(async () => totp.generateUri('Umbrel', 'getumbrel.com')),
@@ -125,6 +159,34 @@ export default router({
 
 			// Delete the URI
 			await ctx.umbreld.store.delete('user.totpUri')
+
+			return true
+		}),
+
+	// Returns the current user
+	get: privateProcedure.query(async ({ctx}) => {
+		const user = await ctx.umbreld.store.get('user')
+
+		// Only return non sensitive data
+		return {
+			name: user.name,
+			wallpaper: user.wallpaper,
+		}
+	}),
+
+	// Sets whitelisted properties on the user object
+	set: privateProcedure
+		.input(
+			z
+				.object({
+					name: z.string().optional(),
+					wallpaper: z.string().optional(),
+				})
+				.strict(),
+		)
+		.mutation(async ({ctx, input}) => {
+			if (input.name) await ctx.umbreld.store.set('user.name', input.name)
+			if (input.wallpaper) await ctx.umbreld.store.set('user.wallpaper', input.wallpaper)
 
 			return true
 		}),
