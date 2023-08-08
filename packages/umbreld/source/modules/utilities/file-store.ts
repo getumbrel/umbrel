@@ -94,9 +94,9 @@ export default class FileStore<T> {
 
 	async getWriteLock(
 		job: (methods: {
-			get: typeof FileStore.prototype.get
-			set: typeof FileStore.prototype.set
-			delete: typeof FileStore.prototype.delete
+			get: FileStore<T>['get']
+			set: FileStore<T>['set']
+			delete: FileStore<T>['delete']
 		}) => Promise<void>,
 	): Promise<void> {
 		const nonLockedMethods = {
