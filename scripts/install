@@ -12,7 +12,6 @@ echo "# Restart services (l)ist only, (i)nteractive or (a)utomatically.
 trap "sudo rm -f ${needrestart_conf_file}" EXIT
 
 # Default options
-BOOTSTRAPPED="false"
 PRINT_DOCKER_WARNING="true"
 UPDATE_APT="true"
 INSTALL_APT_DEPS="true"
@@ -28,11 +27,6 @@ UMBREL_INSTALL_PATH="$HOME/umbrel"
 
 # Parse arguments
 arguments=${@:-}
-
-if [[ "${arguments}" = *"--bootstrapped"* ]]
-then
-  BOOTSTRAPPED="true"
-fi
 
 if [[ "${arguments}" = *"--no-docker-warning"* ]]
 then
@@ -100,12 +94,6 @@ get_umbrel_version() {
   echo $version
 }
 
-bootstrap() {
-  version=$(get_umbrel_version)
-  curl --location --silent "https://raw.githubusercontent.com/${UMBREL_REPO}/${version}/scripts/install" | \
-    bash -s -- --bootstrapped $arguments
-}
-
 update_apt() {
   sudo apt-get update --yes
 }
@@ -146,14 +134,11 @@ install_yq() {
 
 install_docker() {
   # Install Docker
-   curl -fsSL https://get.docker.com | sudo sh
+  sudo apt-get install --yes docker.io
 }
 
 install_docker_compose() {
-  sudo apt-get install --yes python3-pip libffi-dev
-  # We need to upgrade pip (via itself) because old pip versions in some OS repos fail to install deps.
-  python3 -m pip install --upgrade pip
-  sudo python3 -m pip install docker-compose
+  sudo apt-get install --yes docker-compose
 }
 
 get_arch() {
@@ -216,12 +201,6 @@ WantedBy=multi-user.target" | sudo tee "/etc/systemd/system/umbrel-startup.servi
 }
 
 main() {
-  if [[ "${BOOTSTRAPPED}" = "false" ]]
-  then
-    bootstrap
-    exit
-  fi
-
   if [[ "${INSTALL_UMBREL}" = "true" ]]
   then
     echo "About to install Umbrel in \"${UMBREL_INSTALL_PATH}\"."
@@ -240,7 +219,7 @@ main() {
   then
 
 cat << 'EOF'
-It looks like you already have Docker installed. Umbrel requires a modern version of Docker so this script will update them with the official Docker install script.
+It looks like you already have Docker installed. Umbrel requires a predictable version of Docker so this script will install Docker via apt.
 
 If you would like to disable this behaviour you can abort this install and run again with --no-install-docker or --no-install-compose.
 
