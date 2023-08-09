@@ -134,7 +134,7 @@ install_yq() {
 
 install_docker() {
   # Install Docker
-  curl -fsSL https://get.docker.com | sudo sh
+  sudo apt-get install --yes docker.io
 }
 
 install_docker_compose() {
