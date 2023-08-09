@@ -201,12 +201,6 @@ WantedBy=multi-user.target" | sudo tee "/etc/systemd/system/umbrel-startup.servi
 }
 
 main() {
-  if [[ "${BOOTSTRAPPED}" = "false" ]]
-  then
-    bootstrap
-    exit
-  fi
-
   if [[ "${INSTALL_UMBREL}" = "true" ]]
   then
     echo "About to install Umbrel in \"${UMBREL_INSTALL_PATH}\"."
