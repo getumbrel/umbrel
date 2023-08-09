@@ -219,7 +219,7 @@ main() {
   then
 
 cat << 'EOF'
-It looks like you already have Docker installed. Umbrel requires a modern version of Docker so this script will update them with the official Docker install script.
+It looks like you already have Docker installed. Umbrel requires a predictable version of Docker so this script will install Docker via apt.
 
 If you would like to disable this behaviour you can abort this install and run again with --no-install-docker or --no-install-compose.
 
