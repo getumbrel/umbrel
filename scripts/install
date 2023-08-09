@@ -134,7 +134,7 @@ install_yq() {
 
 install_docker() {
   # Install Docker
-  curl -fsSL https://get.docker.com | sudo sh -s -- --version 20.10
+  curl -fsSL https://get.docker.com | sudo sh
 }
 
 install_docker_compose() {
