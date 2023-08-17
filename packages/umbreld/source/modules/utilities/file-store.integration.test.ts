@@ -5,7 +5,7 @@ import temporaryDirectory from './temporary-directory.js'
 
 import FileStore from './file-store.js'
 
-const directory = temporaryDirectory('store')
+const directory = temporaryDirectory()
 
 beforeAll(directory.createRoot)
 afterAll(directory.destroyRoot)
@@ -94,10 +94,13 @@ describe('store.set()', () => {
 	test('throws on missing or invalid arguments', async () => {
 		const store = await createStore()
 
+		// @ts-expect-error Testing invalid arguments
 		expect(store.set()).rejects.toThrow('Invalid argument')
 
+		// @ts-expect-error Testing invalid arguments
 		expect(store.set('key')).rejects.toThrow('Invalid argument')
 
+		// @ts-expect-error Testing invalid arguments
 		expect(store.set(undefined, 'value')).rejects.toThrow('Invalid argument')
 	})
 })

@@ -10,7 +10,7 @@ const $$ = $({stdio: 'inherit'})
 
 const BUILD_DIRECTORY = 'build'
 
-async function runMultiArchDockerBuilds(architectures) {
+async function runMultiArchDockerBuilds(architectures: string[]) {
 	let buildDirectory = BUILD_DIRECTORY
 	if (architectures.length === 1) buildDirectory += `/linux_${architectures[0]}`
 	const platforms = architectures.map((architecture) => `linux/${architecture}`).join(',')

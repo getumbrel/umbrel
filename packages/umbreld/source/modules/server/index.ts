@@ -61,14 +61,15 @@ class Server {
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
 		// them here and log them.
-		app.use((error, request, response, next) => {
+		app.use((error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
 			this.logger.error(`${request.method} ${request.path} ${error.message}`)
-			if (!response.headersSent) response.status(500).json({error: true})
+			if (response.headersSent) return next(error)
+			response.status(500).json({error: true})
 		})
 
 		// Start the server
 		const server = http.createServer(app)
-		const listen = promisify(server.listen.bind(server))
+		const listen = promisify(server.listen.bind(server)) as (port: number) => Promise<void>
 		await listen(this.umbreld.port)
 		this.port = (server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)

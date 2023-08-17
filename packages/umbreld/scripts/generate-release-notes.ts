@@ -3,19 +3,20 @@ import process from 'node:process'
 
 import {$} from 'execa'
 import fse from 'fs-extra'
+// @ts-expect-error no types found (not sure why because got is written in TypeScript)
 import got from 'got'
 
-const githubUsernames = {
+const githubUsernames: Record<string, string> = {
 	'Luke Childs <lukechilds123@gmail.com>': '@lukechilds',
 	'Nathan Fretz <nmfretz@gmail.com>': '@nmfretz',
 	'Mayank Chhabra <mayankchhabra9@gmail.com>': '@mayankchhabra',
 }
 
-async function lookupUsername(author) {
+async function lookupUsername(author: string) {
 	// If the username starts with @ we probably already have a GitHub username
 	if (author.startsWith('@')) return author.split(' ')[0]
 
-	// If we already havfe the username cached, return it
+	// If we already have the username cached, return it
 	if (githubUsernames[author]) return githubUsernames[author]
 
 	// Attempt to lookup the GitHub username from the commit details
@@ -34,7 +35,7 @@ async function lookupUsername(author) {
 			return githubUsernames[author]
 		}
 	} catch (error) {
-		console.log(error.message)
+		console.log((error as Error).message)
 		// If anything goes wrong just fall back to commit credentials
 	}
 

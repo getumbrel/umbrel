@@ -7,7 +7,7 @@ import * as totp from '../../../utilities/totp.js'
 
 import temporaryDirectory from '../../../utilities/temporary-directory.js'
 
-const directory = temporaryDirectory('auth')
+const directory = temporaryDirectory()
 
 await directory.createRoot()
 
@@ -56,7 +56,7 @@ test('register() throws error if username is not supplied', async () => {
 	await expect(
 		client.user.register.mutate({
 			password: testUserCredentials.password,
-		}),
+		} as any),
 	).rejects.toThrow(/invalid_type.*name/s)
 })
 
@@ -64,7 +64,7 @@ test('register() throws error if password is not supplied', async () => {
 	await expect(
 		client.user.register.mutate({
 			name: testUserCredentials.name,
-		}),
+		} as any),
 	).rejects.toThrow(/invalid_type.*password/s)
 })
 
@@ -96,7 +96,7 @@ test('login() throws an error for invalid credentials', async () => {
 })
 
 test('login() throws an error if password is not supplied', async () => {
-	await expect(client.user.login.mutate({})).rejects.toThrow(/invalid_type.*password/s)
+	await expect(client.user.login.mutate({} as any)).rejects.toThrow(/invalid_type.*password/s)
 })
 
 test("renewToken() throws if we're not logged in", async () => {
@@ -198,6 +198,7 @@ test("set() sets the user's wallpaper", async () => {
 })
 
 test('set() throws on unknown property', async () => {
+	// @ts-expect-error Testing invalid arguments
 	await expect(client.user.set.mutate({foo: 'bar'})).rejects.toThrow('unrecognized_keys')
 })
 

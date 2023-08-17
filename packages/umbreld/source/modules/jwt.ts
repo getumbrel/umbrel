@@ -7,6 +7,10 @@ const ONE_WEEK = 7 * ONE_DAY
 
 const JWT_ALGORITHM = 'HS256'
 
+type jwtPayload = {
+	loggedIn: boolean
+}
+
 const validateSecret = (secret: string) => {
 	const hexRegex = /^[0-9a-fA-F]+$/
 	if (secret.length !== 64 || !hexRegex.test(secret)) {
@@ -18,7 +22,7 @@ const validateSecret = (secret: string) => {
 
 export async function sign(secret: string) {
 	validateSecret(secret)
-	const payload = {loggedIn: true}
+	const payload: jwtPayload = {loggedIn: true}
 	const token = jwt.sign(payload, secret, {expiresIn: ONE_WEEK, algorithm: JWT_ALGORITHM})
 
 	return token
@@ -26,7 +30,7 @@ export async function sign(secret: string) {
 
 export async function verify(token: string, secret: string) {
 	validateSecret(secret)
-	const payload = jwt.verify(token, secret, {algorithms: [JWT_ALGORITHM]})
+	const payload = jwt.verify(token, secret, {algorithms: [JWT_ALGORITHM]}) as jwtPayload
 
 	if (payload.loggedIn !== true) throw new Error('Invalid JWT')
 

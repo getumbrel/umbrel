@@ -17,7 +17,7 @@ export const isAuthenticated = async ({ctx, next}: IsAuthenticatedOptions) => {
 		if (token === undefined) throw new Error('Missing token')
 		await ctx.server.verifyToken(token)
 	} catch (error) {
-		ctx.logger.error(error.message)
+		ctx.logger.error((error as Error).message)
 		throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid token'})
 	}
 

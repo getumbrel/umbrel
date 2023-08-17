@@ -15,7 +15,7 @@ jobs:
         task:
           - format:check
           - lint
-          - typecheck:ci
+          - typecheck
           - test:unit -- --coverage
           - test:integration -- --coverage
     steps:

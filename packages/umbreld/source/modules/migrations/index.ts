@@ -4,7 +4,7 @@ import pRetry from 'p-retry'
 
 import isUmbrelHome from '../is-umbrel-home.js'
 
-async function copyFromOverlay({updateRoot, path}) {
+async function copyFromOverlay({updateRoot, path}: {updateRoot: string; path: string}) {
 	const overlayRoot = `${updateRoot}/packages/umbreld/source/modules/migrations/umbrel-os-overlay`
 	return fse.copy(`${overlayRoot}${path}`, path)
 }
@@ -34,7 +34,7 @@ managed=false
 	await $`systemctl restart NetworkManager`
 }
 
-async function activatePowerButtonRecovery({updateRoot}) {
+async function activatePowerButtonRecovery({updateRoot}: {updateRoot: string}) {
 	console.log('Activating power button recovery...')
 
 	console.log('Registering acpi event handlers...')
@@ -50,7 +50,7 @@ async function activatePowerButtonRecovery({updateRoot}) {
 	await $`systemctl restart systemd-logind`
 }
 
-export default async function update({updateRoot, umbrelRoot}) {
+export default async function update({updateRoot, umbrelRoot}: {updateRoot: string; umbrelRoot: string}) {
 	console.log(`Running migrations from "${updateRoot}" on "${umbrelRoot}"`)
 
 	// Umbrel Home specific updates

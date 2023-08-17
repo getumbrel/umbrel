@@ -1,6 +1,6 @@
 import fse from 'fs-extra'
 
-const getOrCreateFile = async (filePath, defaultValue) => {
+async function getOrCreateFile(filePath: string, defaultValue: string) {
 	let contents
 	try {
 		contents = await fse.readFile(filePath, 'utf8')

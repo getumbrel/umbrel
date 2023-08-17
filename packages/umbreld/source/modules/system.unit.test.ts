@@ -15,12 +15,12 @@ afterEach(() => {
 
 describe('getCpuTemperature', () => {
 	test('should return main cpu temperature when system supports it', async () => {
-		systemInformation.cpuTemperature.mockResolvedValue({main: 69})
+		vi.mocked(systemInformation.cpuTemperature).mockResolvedValue({main: 69} as any)
 		expect(await getCpuTemperature()).toBe(69)
 	})
 
 	test('should throw error when system does not support cpu temperature', async () => {
-		systemInformation.cpuTemperature.mockResolvedValue({main: null})
+		vi.mocked(systemInformation.cpuTemperature).mockResolvedValue({main: null} as any)
 		expect(getCpuTemperature()).rejects.toThrow('Could not get CPU temperature')
 	})
 })
@@ -48,7 +48,7 @@ describe('getDiskUsage', () => {
 	]
 
 	test('should return disk usage for specified path', async () => {
-		systemInformation.fsSize.mockResolvedValue(mockData)
+		vi.mocked(systemInformation.fsSize).mockResolvedValue(mockData as any)
 		expect(await getDiskUsage('/home/umbrel/umbrel')).toStrictEqual({
 			size: 10_308_186_112,
 			used: 3_557_232_640,
@@ -57,24 +57,25 @@ describe('getDiskUsage', () => {
 	})
 
 	test('should throw error when no matching filesystems are found', async () => {
-		systemInformation.fsSize.mockResolvedValue([])
+		vi.mocked(systemInformation.fsSize).mockResolvedValue([])
 		expect(getDiskUsage('/home/umbrel/umbrel')).rejects.toThrow(
 			'Could not find file system containing Umbreld data directory',
 		)
 	})
 
 	test('should throw error when umbreldDataDir is an empty string', async () => {
-		systemInformation.fsSize.mockResolvedValue(mockData)
+		vi.mocked(systemInformation.fsSize).mockResolvedValue(mockData as any)
 		expect(getDiskUsage('')).rejects.toThrow('umbreldDataDir must be a non-empty string')
 	})
 
 	test('should throw error when umbreldDataDir is undefined', async () => {
-		systemInformation.fsSize.mockResolvedValue(mockData)
+		vi.mocked(systemInformation.fsSize).mockResolvedValue(mockData as any)
+		// @ts-expect-error Testing invalid arguments
 		expect(getDiskUsage()).rejects.toThrow('umbreldDataDir must be a non-empty string')
 	})
 
 	test('should return disk usage for the most specific mount point', async () => {
-		systemInformation.fsSize.mockResolvedValue([
+		vi.mocked(systemInformation.fsSize).mockResolvedValue([
 			{
 				size: 10_308_186_112,
 				used: 3_557_232_640,
@@ -87,7 +88,7 @@ describe('getDiskUsage', () => {
 				available: 166_707_200,
 				mount: '/home/umbrel/umbrel',
 			},
-		])
+		] as any)
 		expect(await getDiskUsage('/home/umbrel/umbrel')).toStrictEqual({
 			size: 209_489_920,
 			used: 42_782_720,
@@ -98,11 +99,11 @@ describe('getDiskUsage', () => {
 
 describe('getMemoryUsage', () => {
 	test('should return memory usage', async () => {
-		systemInformation.mem.mockResolvedValue({
+		vi.mocked(systemInformation.mem).mockResolvedValue({
 			total: 69_420,
 			active: 420,
 			available: 69_000,
-		})
+		} as any)
 		expect(await getMemoryUsage()).toStrictEqual({
 			size: 69_420,
 			used: 420,
@@ -119,7 +120,7 @@ describe('shutdown', () => {
 	})
 
 	test('should throw error when "poweroff" command fails', async () => {
-		execa.$.mockRejectedValue(new Error('Failed'))
+		vi.mocked(execa.$).mockRejectedValue(new Error('Failed'))
 		await expect(shutdown()).rejects.toThrow()
 	})
 })
@@ -131,7 +132,7 @@ describe('reboot', () => {
 	})
 
 	test('should throw error when "shutdown" command fails', async () => {
-		execa.$.mockRejectedValue(new Error('Failed'))
+		vi.mocked(execa.$).mockRejectedValue(new Error('Failed'))
 		await expect(reboot()).rejects.toThrow()
 	})
 })

@@ -4,7 +4,7 @@ import fse from 'fs-extra'
 
 import packageJson from '../package.json' assert {type: 'json'}
 
-import createLogger from './modules/utilities/logger.js'
+import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
 
 import Server from './modules/server/index.js'
@@ -20,17 +20,17 @@ type StoreSchema = {
 	}
 }
 
-type UmbreldOptions = {
+export type UmbreldOptions = {
 	dataDirectory: string
 	port?: number
-	logLevel?: string
+	logLevel?: LogLevel
 }
 
 export default class Umbreld {
 	version = packageJson.version
 	dataDirectory: string
 	port: number
-	logLevel: string
+	logLevel: LogLevel
 	logger: ReturnType<typeof createLogger>
 	store: FileStore<StoreSchema>
 	server: Server

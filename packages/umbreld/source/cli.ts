@@ -7,7 +7,7 @@ import camelcaseKeys from 'camelcase-keys'
 import {cliClient} from './modules/cli-client.js'
 
 import update from './modules/migrations/index.js'
-import Umbreld from './index.js'
+import Umbreld, {type UmbreldOptions} from './index.js'
 
 // In the future migrations will run on start and we'll run through
 // all required migrations for the version range we've jumped between.
@@ -61,11 +61,12 @@ if (args.help) {
 	process.exit(0)
 }
 
-const umbreld = new Umbreld(args)
+// TODO: Validate these args are valid
+const umbreld = new Umbreld(args as UmbreldOptions)
 
 try {
 	await umbreld.start()
 } catch (error) {
-	console.error(process.env.NODE_ENV === 'production' ? error.message : error)
+	console.error(process.env.NODE_ENV === 'production' ? (error as Error).message : error)
 	process.exit(1)
 }

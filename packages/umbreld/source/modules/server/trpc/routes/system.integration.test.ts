@@ -11,8 +11,8 @@ const context = {
 const router = system.createCaller({
 	...context,
 	dangerouslyBypassAuthentication: true,
-})
-const unAuthedRouter = system.createCaller(context)
+} as any)
+const unAuthedRouter = system.createCaller(context as any)
 
 describe('cpuTemperature', async () => {
 	const {main} = await systeminformation.cpuTemperature()

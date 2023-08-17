@@ -1,5 +1,6 @@
 import path from 'node:path'
 
+import {type Compose} from 'compose-spec-schema'
 import checkDiskSpace from 'check-disk-space'
 import drivelist from 'drivelist'
 import fse from 'fs-extra'
@@ -10,10 +11,22 @@ import yaml from 'js-yaml'
 
 import isUmbrelHome from './is-umbrel-home.js'
 
-let migrationStatus = {running: false, progress: 0, description: '', error: false}
+type migrationStatusProperties = {
+	running: boolean
+	progress: number
+	description: string
+	error: boolean | string
+}
+
+let migrationStatus: migrationStatusProperties = {
+	running: false,
+	progress: 0,
+	description: '',
+	error: false,
+}
 
 // Update the migrationStatus global
-function updateMigrationStatus(properties) {
+function updateMigrationStatus(properties: Partial<migrationStatusProperties>) {
 	migrationStatus = {...migrationStatus, ...properties}
 	console.log(migrationStatus)
 }
@@ -24,12 +37,12 @@ export function getMigrationStatus() {
 }
 
 // Convert bytes integer to GB float
-function bytesToGB(bytes) {
+function bytesToGB(bytes: number) {
 	return (bytes / 1024 / 1024 / 1024).toFixed(1)
 }
 
 // Get a directory size in bytes
-async function getDirectorySize(directoryPath) {
+async function getDirectorySize(directoryPath: string) {
 	let totalSize = 0
 	const files = await fse.readdir(directoryPath, {withFileTypes: true})
 
@@ -66,7 +79,7 @@ export async function findExternalUmbrelInstall() {
 				try {
 					await fse.ensureDir(mountPoint)
 					await execa('mount', ['--read-only', device, mountPoint])
-					drive.mountpoints.push({path: mountPoint})
+					drive.mountpoints.push({path: mountPoint} as drivelist.Mountpoint)
 				} catch (error) {
 					// If there's an error don't bail, keep trying the rest of the drives
 					console.error(`Error mounting drive: ${error}`)
@@ -117,7 +130,7 @@ export async function unmountExternalDrives() {
 }
 
 // Run a series of checks and throw a descriptive error if any of them fail
-export async function runPreMigrationChecks(currentInstall, externalUmbrelInstall) {
+export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string) {
 	// Check we're running on Umbrel Home hardware
 	if (!(await isUmbrelHome())) {
 		throw new Error('This feature is only supported on Umbrel Home hardware')
@@ -157,7 +170,7 @@ export async function runPreMigrationChecks(currentInstall, externalUmbrelInstal
 }
 
 // Safely migrate data from an external Umbrel install to the current one
-export async function migrateData(currentInstall, externalUmbrelInstall) {
+export async function migrateData(currentInstall: string, externalUmbrelInstall: string) {
 	updateMigrationStatus({running: false, progress: 0, description: '', error: false})
 
 	const temporaryData = `${currentInstall}/.temporary-migration`
@@ -184,11 +197,14 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
 		])
 
 		// Update migration status with rsync progress
-		rsync.stdout.on('data', (chunk) => {
+		rsync.stdout!.on('data', (chunk) => {
 			const progressUpdate = chunk.toString().match(/.* (\d*)% .*/)
 			if (progressUpdate) {
 				const percent = Number.parseInt(progressUpdate[1], 10)
 				// Show file copy percentage as 60% of total migration progress
+				// @ts-expect-error Technically this should probably be Math.round
+				// to avoid the type error but it works fine and I don't want to
+				// update this and retest so ignore for now.
 				const progress = Number.parseInt(0.6 * percent, 10)
 				if (progress > migrationStatus.progress) updateMigrationStatus({progress})
 			}
@@ -203,18 +219,19 @@ export async function migrateData(currentInstall, externalUmbrelInstall) {
 			updateMigrationStatus({description: 'Downloading apps'})
 			const files = await globby(`${temporaryData}/app-data/*/docker-compose.yml`)
 			const pulls = []
-			const dockerPull = async (image) => {
+			const dockerPull = async (image: string) => {
 				await execa('docker', ['pull', image])
 				// Show docker pull progress as (60%-90%) of total migration progress
 				progress += 30 / pulls.length
+				// @ts-expect-error Ignore type error with parseInt expecting string (as above)
 				updateMigrationStatus({progress: Number.parseInt(progress, 10)})
 			}
 
 			for (const file of files) {
 				const data = await fse.readFile(file, 'utf8')
-				const compose = yaml.load(data)
+				const compose = yaml.load(data) as Compose
 
-				for (const {image} of Object.values(compose.services)) {
+				for (const {image} of Object.values(compose.services!)) {
 					if (image) {
 						pulls.push(dockerPull(image))
 					}
