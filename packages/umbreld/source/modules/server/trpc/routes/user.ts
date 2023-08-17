@@ -1,6 +1,5 @@
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
-import bcrypt from 'bcryptjs'
 
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
 import * as totp from '../../../utilities/totp.js'
@@ -16,33 +15,16 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Check the user hasn't already signed up
-			const existingUser = await ctx.umbreld.store.get('user')
-			if (existingUser !== undefined) {
+			if (await ctx.user.exists()) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Attempted to register when user is already registered'})
 			}
 
-			// Hash the password with the current recommended default
-			// of 10 bcrypt rounds
-			// https://security.stackexchange.com/a/83382
-			const saltRounds = 10
-			const hashedPassword = await bcrypt.hash(input.password, saltRounds)
-
-			// Save the user
-			await ctx.umbreld.store.set('user', {
-				name: input.name,
-				hashedPassword,
-			})
-
-			return true
+			// Register new user
+			return ctx.user.register(input.name, input.password)
 		}),
 
 	// Public method to check if a user exists
-	exists: publicProcedure.query(async ({ctx}) => {
-		const user = await ctx.umbreld.store.get('user')
-		const userExists = user !== undefined
-
-		return userExists
-	}),
+	exists: publicProcedure.query(async ({ctx}) => ctx.user.exists()),
 
 	// Given valid credentials returns a token for a user
 	login: publicProcedure
@@ -53,25 +35,19 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			// Get hashed password
-			const hashedPassword = await ctx.umbreld.store.get('user.hashedPassword')
-
-			// Validate credentials
-			const validPassword = hashedPassword && (await bcrypt.compare(input.password, hashedPassword))
-			if (!validPassword) {
+			if (!(await ctx.user.validatePassword(input.password))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
 			}
 
 			// 2FA
-			const totpUri = await ctx.umbreld.store.get('user.totpUri')
-			if (totpUri) {
+			if (await ctx.user.is2faEnabled()) {
 				// Check we have a token
 				if (!input.totpToken) {
 					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Missing 2FA token'})
 				}
 
 				// Verify the token
-				if (!totp.verify(totpUri, input.totpToken)) {
+				if (!(await ctx.user.validate2faToken(input.totpToken))) {
 					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
 				}
 			}
@@ -93,20 +69,11 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Validate old password
-			const oldHashedPassword = await ctx.umbreld.store.get('user.hashedPassword')
-			const validPassword = oldHashedPassword && (await bcrypt.compare(input.oldPassword, oldHashedPassword))
-			if (!validPassword) {
+			if (!(await ctx.user.validatePassword(input.oldPassword))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
 			}
 
-			// Hash the password with the current recommended default
-			// of 10 bcrypt rounds
-			// https://security.stackexchange.com/a/83382
-			const saltRounds = 10
-			const hashedPassword = await bcrypt.hash(input.newPassword, saltRounds)
-			await ctx.umbreld.store.set('user.hashedPassword', hashedPassword)
-
-			return true
+			return ctx.user.setPassword(input.newPassword)
 		}),
 
 	// Generates a new random 2FA TOTP URI
@@ -122,8 +89,7 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Check if 2FA is already enabled
-			const totpUri = await ctx.umbreld.store.get('user.totpUri')
-			if (totpUri) {
+			if (await ctx.user.is2faEnabled()) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: '2FA is already enabled'})
 			}
 
@@ -132,10 +98,8 @@ export default router({
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
 			}
 
-			// Save the URI
-			await ctx.umbreld.store.set('user.totpUri', input.totpUri)
-
-			return true
+			// Save URI
+			return ctx.user.enable2fa(input.totpUri)
 		}),
 
 	// Disables 2FA
@@ -147,25 +111,22 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			// Check if 2FA is already enabled
-			const totpUri = await ctx.umbreld.store.get('user.totpUri')
-			if (!totpUri) {
+			if (!(await ctx.user.is2faEnabled())) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: '2FA is not enabled'})
 			}
 
 			// Verify the token
-			if (!totp.verify(totpUri, input.totpToken)) {
+			if (!(await ctx.user.validate2faToken(input.totpToken))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
 			}
 
 			// Delete the URI
-			await ctx.umbreld.store.delete('user.totpUri')
-
-			return true
+			return ctx.user.disable2fa()
 		}),
 
 	// Returns the current user
 	get: privateProcedure.query(async ({ctx}) => {
-		const user = await ctx.umbreld.store.get('user')
+		const user = await ctx.user.get()
 
 		// Only return non sensitive data
 		return {
@@ -185,8 +146,8 @@ export default router({
 				.strict(),
 		)
 		.mutation(async ({ctx, input}) => {
-			if (input.name) await ctx.umbreld.store.set('user.name', input.name)
-			if (input.wallpaper) await ctx.umbreld.store.set('user.wallpaper', input.wallpaper)
+			if (input.name) await ctx.user.setName(input.name)
+			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
 
 			return true
 		}),

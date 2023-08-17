@@ -8,6 +8,7 @@ import createLogger from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
 
 import Server from './modules/server/index.js'
+import User from './modules/user.js'
 
 type StoreSchema = {
 	version: string
@@ -33,6 +34,7 @@ export default class Umbreld {
 	logger: ReturnType<typeof createLogger>
 	store: FileStore<StoreSchema>
 	server: Server
+	user: User
 
 	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
 		this.dataDirectory = path.resolve(dataDirectory)
@@ -41,6 +43,7 @@ export default class Umbreld {
 		this.logger = createLogger('umbreld', this.logLevel)
 		this.store = new FileStore<StoreSchema>({filePath: `${dataDirectory}/umbrel.yaml`})
 		this.server = new Server({umbreld: this})
+		this.user = new User(this)
 	}
 
 	async start() {
