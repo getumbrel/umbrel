@@ -11,6 +11,7 @@ Wants=network-online.target
 After=network-online.target
 Wants=docker.service
 After=docker.service
+BindsTo=docker.service
 
 # This prevents us hitting restart rate limits and ensures we keep restarting
 # indefinitely.
