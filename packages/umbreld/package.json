@@ -57,6 +57,7 @@
 			"@typescript-eslint/return-await": "off",
 			"@typescript-eslint/default-param-last": "off",
 			"@typescript-eslint/no-unnecessary-boolean-literal-compare": "off",
+			"@typescript-eslint/parameter-properties": "off",
 			"n/file-extension-in-import": "off"
 		}
 	},
@@ -71,11 +72,14 @@
 		"@vitest/coverage-v8": "^0.33.0",
 		"caxa": "^3.0.1",
 		"compose-spec-schema": "^1.0.0",
+		"get-port": "^7.0.0",
 		"got": "^13.0.0",
+		"node-git-server": "^1.0.0",
 		"nodemon": "^2.0.20",
 		"opentimestamps": "^0.4.9",
 		"prettier": "^2.8.1",
 		"vitest": "^0.33.0",
+		"wait-port": "^1.0.4",
 		"xo": "^0.53.1"
 	},
 	"dependencies": {
@@ -95,6 +99,7 @@
 		"express-session": "^1.17.3",
 		"fs-extra": "^11.1.1",
 		"globby": "^13.2.1",
+		"isomorphic-git": "^1.24.5",
 		"js-yaml": "^4.1.0",
 		"jsonwebtoken": "^9.0.1",
 		"ms": "^2.1.3",
