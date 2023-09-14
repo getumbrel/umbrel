@@ -10,7 +10,7 @@
     <br />
     <br />
     <br />
-    Pre-order an <a href="https://umbrel.com">Umbrel Home</a> or install on:
+    Buy an <a href="https://umbrel.com">Umbrel Home</a> or install on:
     <br />
     <a href="https://umbrel.com/#start">Raspberry Pi</a>
     ·
