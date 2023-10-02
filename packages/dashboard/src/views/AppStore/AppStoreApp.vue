@@ -466,6 +466,11 @@ export default {
       }
     },
     appDependencies() {
+
+      if (!this.app.dependencies) {
+        return [];
+      }
+
       return this.app.dependencies.map(id => ({
         ...this.appStore.find(app => app.id === id),
         isInstalled: this.installedApps.some(app => app.id === id),
