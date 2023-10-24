@@ -79,6 +79,10 @@ test("renewToken() throws if we're not logged in", async () => {
 	await expect(umbreld.client.user.renewToken.mutate()).rejects.toThrow('Invalid token')
 })
 
+test("isLoggedIn() returns false if we're not logged in", async () => {
+	await expect(umbreld.client.user.isLoggedIn.query()).resolves.toBe(false)
+})
+
 test('login() returns a token', async () => {
 	const token = await umbreld.client.user.login.mutate(testUserCredentials)
 	expect(typeof token).toBe('string')
@@ -89,6 +93,10 @@ test("renewToken() returns a new token when we're logged in", async () => {
 	const token = await umbreld.client.user.renewToken.mutate()
 	expect(typeof token).toBe('string')
 	umbreld.setJwt(token)
+})
+
+test("isLoggedIn() returns true when we're logged in", async () => {
+	await expect(umbreld.client.user.isLoggedIn.query()).resolves.toBe(true)
 })
 
 test('generateTotpUri() returns a 2FA URI', async () => {

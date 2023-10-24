@@ -56,6 +56,17 @@ export default router({
 			return ctx.server.signToken()
 		}),
 
+	// Checks if the request has a valid token
+	isLoggedIn: publicProcedure.query(async ({ctx}) => {
+		try {
+			const token = ctx.request.headers.authorization?.split(' ')[1]
+			await ctx.server.verifyToken(token!)
+			return true
+		} catch {
+			return false
+		}
+	}),
+
 	// Returns a new token for a user
 	renewToken: privateProcedure.mutation(async ({ctx}) => ctx.server.signToken()),
 
