@@ -97,6 +97,10 @@ export default class AppStore {
 	}
 
 	async removeRepository(url: string) {
+		if (this.defaultAppStoreRepo === url) {
+			throw new Error(`Cannot remove default repository`)
+		}
+
 		// Check if repo exists
 		const existingRepositories = await this.getRepositories()
 		if (!existingRepositories.some((existingRepo) => existingRepo.url === url)) {

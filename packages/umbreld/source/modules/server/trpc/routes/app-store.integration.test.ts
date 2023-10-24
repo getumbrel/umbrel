@@ -211,3 +211,9 @@ test('removeRepository() throws removing a reposoitory that does not exist', asy
 		'does not exist',
 	)
 })
+
+test('removeRepository() throws removing the default reposoitory', async () => {
+	await expect(
+		umbreld.client.appStore.removeRepository.mutate({url: umbreld.instance.appStore.defaultAppStoreRepo}),
+	).rejects.toThrow('Cannot remove default repository')
+})
