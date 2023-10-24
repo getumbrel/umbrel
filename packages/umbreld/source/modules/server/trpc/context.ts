@@ -6,12 +6,14 @@ export const createContext = ({req, res}: CreateExpressContextOptions) => {
 	const logger = req.app.get('logger') as Umbreld['logger']
 	const server = umbreld.server
 	const user = umbreld.user
+	const appStore = umbreld.appStore
 	return {
 		request: req,
 		response: res,
 		umbreld,
 		server,
 		user,
+		appStore,
 		logger,
 		dangerouslyBypassAuthentication: false,
 	}

@@ -9,9 +9,11 @@ import FileStore from './modules/utilities/file-store.js'
 
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
+import AppStore from './modules/apps/app-store.js'
 
 type StoreSchema = {
 	version: string
+	appRepositories: string[]
 	user: {
 		name: string
 		hashedPassword: string
@@ -24,6 +26,7 @@ export type UmbreldOptions = {
 	dataDirectory: string
 	port?: number
 	logLevel?: LogLevel
+	defaultAppStoreRepo?: string
 }
 
 export default class Umbreld {
@@ -35,8 +38,14 @@ export default class Umbreld {
 	store: FileStore<StoreSchema>
 	server: Server
 	user: User
+	appStore: AppStore
 
-	constructor({dataDirectory, port = 80, logLevel = 'normal'}: UmbreldOptions) {
+	constructor({
+		dataDirectory,
+		port = 80,
+		logLevel = 'normal',
+		defaultAppStoreRepo = 'https://github.com/getumbrel/umbrel-apps.git',
+	}: UmbreldOptions) {
 		this.dataDirectory = path.resolve(dataDirectory)
 		this.port = port
 		this.logLevel = logLevel
@@ -44,6 +53,7 @@ export default class Umbreld {
 		this.store = new FileStore<StoreSchema>({filePath: `${dataDirectory}/umbrel.yaml`})
 		this.server = new Server({umbreld: this})
 		this.user = new User(this)
+		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 	}
 
 	async start() {
@@ -60,7 +70,7 @@ export default class Umbreld {
 		// In the future we'll handle migrations here, for now lets just write the version to check read/write permissions are ok.
 		await this.store.set('version', this.version)
 
-		// Start the server
-		await this.server.start()
+		// Initialise modules
+		await Promise.all([this.appStore.start(), this.server.start()])
 	}
 }

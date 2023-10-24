@@ -1,0 +1,4 @@
+# Due to the invalid manifest it shouldn't show up in registry output
+manifestVersion: 1
+id: app-with-invalid-manifest
+ name: Invalid space here

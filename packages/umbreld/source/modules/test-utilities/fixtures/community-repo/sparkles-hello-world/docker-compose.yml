@@ -1,0 +1,12 @@
+version: '3.7'
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: sparkles-hello-world_server_1
+      APP_PORT: 3000
+
+  server:
+    image: getumbrel/community-app-store-hello-world:latest
+    user: '1000:1000'
+    init: true

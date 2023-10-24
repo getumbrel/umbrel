@@ -1,0 +1,11 @@
+# .gitignore contents
+node_modules
+coverage
+.DS_Store
+data
+build
+release
+release-notes.md
+
+# Prevent prettier erroring on intentionally invalid YAML test case
+source/modules/test-utilities/fixtures/community-repo/app-with-invalid-manifest/umbrel-app.yml

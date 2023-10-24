@@ -8,9 +8,8 @@
 	"private": true,
 	"scripts": {
 		"start": "umbreld",
-		"prettier": "prettier --ignore-path .gitignore",
-		"format": "npm run prettier -- --write .",
-		"format:check": "npm run prettier -- --check .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"lint": "xo",
 		"typecheck": "tsc --noEmit",
 		"typecheck:ci": "npm run typecheck || true",
