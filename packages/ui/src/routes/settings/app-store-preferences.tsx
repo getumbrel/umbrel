@@ -38,51 +38,53 @@ export function AppStorePreferencesDialog() {
 		<DialogMounter>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogPortal>
-					<DialogContent className='px-5'>
-						<DialogHeader>
-							<DialogTitle>App store</DialogTitle>
-						</DialogHeader>
-						<div className={listClass}>
-							<label className={listItemClass}>
-								<span>Allow a specific function</span>
-								<Switch />
-							</label>
-							<div className={listItemClass}>
-								Single value selector
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button size='sm'>
-											Value label
-											<ChevronDown />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent>
-										<DropdownMenuCheckboxItem checked>English</DropdownMenuCheckboxItem>
-										<DropdownMenuCheckboxItem>French</DropdownMenuCheckboxItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+					<DialogContent className='p-0'>
+						<div className='umbrel-dialog-fade-scroller space-y-6 overflow-y-auto px-5 py-6'>
+							<DialogHeader>
+								<DialogTitle>App store</DialogTitle>
+							</DialogHeader>
+							<div className={listClass}>
+								<label className={listItemClass}>
+									<span>Allow a specific function</span>
+									<Switch />
+								</label>
+								<div className={listItemClass}>
+									Single value selector
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button size='sm'>
+												Value label
+												<ChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent>
+											<DropdownMenuCheckboxItem checked>English</DropdownMenuCheckboxItem>
+											<DropdownMenuCheckboxItem>French</DropdownMenuCheckboxItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</div>
+								<label className={listItemClass}>
+									Multi-level setting
+									<TbChevronRight />
+								</label>
 							</div>
-							<label className={listItemClass}>
-								Multi-level setting
-								<TbChevronRight />
-							</label>
-						</div>
-						<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
-						<div className={listClass}>
-							<label className={listItemClass}>Auto-update all apps</label>
-						</div>
-						<div className={listClass}>
-							<div className={listItemClass}>
-								<span>Lighting node</span>
-								<Button size='sm' className='text-destructive2-lightest'>
-									Uninstall
-								</Button>
+							<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
+							<div className={listClass}>
+								<label className={listItemClass}>Auto-update all apps</label>
 							</div>
-							<div className={listItemClass}>
-								<span>Lighting node</span>
-								<Button size='sm' className='text-destructive2-lightest'>
-									Uninstall
-								</Button>
+							<div className={listClass}>
+								<div className={listItemClass}>
+									<span>Lighting node</span>
+									<Button size='sm' className='text-destructive2-lightest'>
+										Uninstall
+									</Button>
+								</div>
+								<div className={listItemClass}>
+									<span>Lighting node</span>
+									<Button size='sm' className='text-destructive2-lightest'>
+										Uninstall
+									</Button>
+								</div>
 							</div>
 						</div>
 					</DialogContent>
