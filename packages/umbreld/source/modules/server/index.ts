@@ -1,7 +1,9 @@
 import http from 'node:http'
+import process from 'node:process'
 import {promisify} from 'node:util'
 
 import express from 'express'
+import cors from 'cors'
 
 import getOrCreateFile from '../utilities/get-or-create-file.js'
 import randomToken from '../utilities/random-token.js'
@@ -42,6 +44,16 @@ class Server {
 
 		// Create the handler
 		const app = express()
+
+		// Enable CORS in development
+		if (process.env.NODE_ENV === 'development') {
+			app.use(
+				cors({
+					origin: ['http://localhost:3000', 'http://localhost:4000'],
+				}),
+			)
+		}
+
 		app.disable('x-powered-by')
 
 		// TODO: Security hardening, helmet etc.

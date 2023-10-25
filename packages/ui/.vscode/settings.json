@@ -1,0 +1,18 @@
+{
+	"tailwindCSS.experimental.classRegex": [
+		"className\\: '([^']*)'",
+		"tw`([^`]*)`",
+		["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+		["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+		["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+	],
+	"files.associations": {
+		"*.css": "tailwindcss"
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"pnpm-lock.json": true
+	},
+	"i18n-ally.localesPaths": ["public/locales"],
+	"i18n-ally.keystyle": "flat"
+}

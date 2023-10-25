@@ -1,0 +1,10 @@
+{
+	"hello": "Hello",
+	"desktop.greeting.morning": "Good morning, {{name}}",
+	"desktop.greeting.afternoon": "Good afternoon, {{name}}",
+	"desktop.greeting.evening": "Good evening, {{name}}",
+	"search": "Search",
+	"settings": "Settings",
+	"app-store": "App Store",
+	"explore-all-the-apps": "Explore all the apps!"
+}

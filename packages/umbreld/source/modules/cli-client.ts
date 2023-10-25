@@ -14,7 +14,7 @@ async function signJwt() {
 const trpc = createTRPCProxyClient<AppRouter>({
 	links: [
 		httpBatchLink({
-			url: 'http://localhost:3000/trpc',
+			url: 'http://localhost:3001/trpc',
 			headers: async () => ({
 				Authorization: `Bearer ${await signJwt()}`,
 			}),

@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.1s;
+}
+
+:root {
+	--font-inter: Inter;
+}
+
+html,
+body {
+	color: white;
+	background: black;
+	/* To match Figma weight */
+	text-rendering: geometricPrecision;
+}
+
+input,
+button {
+	text-rendering: inherit;
+}
+
+/* https://stackoverflow.com/a/45050338 */
+input,
+textarea,
+button,
+select,
+a {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.umbrel-hide-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.umbrel-hide-scrollbar {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+/* Scroller */
+
+.umbrel-fade-scroller-x,
+.umbrel-fade-scroller-y {
+	animation-name: scroll-reveal;
+	animation-duration: 1ms; /* Firefox requires this to apply the animation */
+	animation-timeline: --scroll-timeline;
+}
+
+.umbrel-fade-scroller-y {
+	scroll-timeline: --scroll-timeline y;
+	/* Firefox supports the older "vertical" syntax */
+	scroll-timeline: --scroll-timeline vertical;
+	-webkit-mask-image: linear-gradient(
+		to bottom,
+		transparent,
+		red var(--distance1) calc(100% - var(--distance2)),
+		transparent
+	);
+}
+
+.umbrel-wallpaper-fade-scroller {
+	-webkit-mask-image: linear-gradient(to right, transparent, red 16px calc(100% - 16px), transparent);
+}
+
+.umbrel-dialog-fade-scroller {
+	-webkit-mask-image: linear-gradient(to bottom, transparent, red 32px calc(100% - 32px), transparent);
+}
+
+.umbrel-fade-scroller-x {
+	scroll-timeline: --scroll-timeline x;
+	/* Firefox supports the older "vertical" syntax */
+	scroll-timeline: --scroll-timeline horizontal;
+	-webkit-mask-image: linear-gradient(
+		to right,
+		transparent,
+		red var(--distance1) calc(100% - var(--distance2)),
+		transparent
+	);
+}
+
+.umbrel-divide-y > * {
+	@apply relative;
+}
+.umbrel-divide-y > * + *::before {
+	content: '';
+	@apply absolute inset-x-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-white/5 to-transparent;
+}
+
+@keyframes scroll-reveal {
+	0% {
+		--distance1: 0px;
+		--distance2: 50px;
+	}
+	0.1% {
+		--distance1: 50px;
+	}
+	99.9% {
+		--distance2: 50px;
+	}
+	100% {
+		--distance1: 50px;
+		--distance2: 0px;
+	}
+}
+
+@keyframes blink-caret {
+	50% {
+		background: transparent;
+	}
+}
+
+@keyframes pulse-border {
+	50% {
+		border-color: var(--segment-color);
+		box-shadow: var(--segment-color) 0 0 0 1px;
+	}
+}
+
+/* Don't cross-fade dock between page transitions */
+::view-transition-old(dock),
+::view-transition-new(dock) {
+	animation-duration: 0s;
+}
+
+@keyframes slide-down {
+	to {
+		transform: translateY(100px);
+	}
+}
+
+@keyframes fade-out {
+	to {
+		opacity: 0;
+	}
+}

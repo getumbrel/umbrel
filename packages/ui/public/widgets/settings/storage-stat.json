@@ -1,0 +1,8 @@
+{
+	"appId": "settings",
+	"type": "stat-with-progress",
+	"title": "Storage",
+	"value": "256 GB",
+	"progressLabel": "1.75 TB left",
+	"progress": 0.25
+}

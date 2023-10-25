@@ -1,0 +1,14 @@
+{
+	"recommendations": [
+		"dbaeumer.vscode-eslint",
+		"eamodio.gitlens",
+		"esbenp.prettier-vscode",
+		"yoavbls.pretty-ts-errors",
+		"bradlc.vscode-tailwindcss",
+		"mikestead.dotenv",
+		"naumovs.color-highlight",
+		"steoates.autoimport",
+		"formulahendry.auto-rename-tag",
+		"lokalise.i18n-ally"
+	]
+}

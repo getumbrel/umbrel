@@ -1,0 +1,9 @@
+{
+	"appId": "settings",
+	"type": "stat-with-progress",
+	"title": "Memory",
+	"value": "5.8 GB",
+	"valueSub": "/ 16 GB",
+	"progressLabel": "11.4 GB left",
+	"progress": 0.3625
+}

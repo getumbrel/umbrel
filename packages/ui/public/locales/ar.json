@@ -1,0 +1,10 @@
+{
+	"desktop.greeting.morning": "صباح الخير {{name}}",
+	"desktop.greeting.afternoon": "مساء الخير، {{name}}",
+	"desktop.greeting.evening": "مساء الخير {{name}}",
+	"search": "يبحث",
+	"settings": "إعدادات",
+	"app-store": "متجر التطبيقات",
+	"explore-all-the-apps": "استكشاف جميع التطبيقات!",
+	"hello": "مرحبًا"
+}

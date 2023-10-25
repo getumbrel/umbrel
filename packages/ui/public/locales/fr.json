@@ -1,0 +1,10 @@
+{
+	"desktop.greeting.morning": "Bonjour, {{name}}",
+	"desktop.greeting.afternoon": "Bon après-midi, {{name}}",
+	"desktop.greeting.evening": "Bonsoir, {{name}}",
+	"search": "Recherche",
+	"settings": "Paramètres",
+	"app-store": "Magasin d'applications",
+	"explore-all-the-apps": "Explorez toutes les applications !",
+	"hello": "Bonjour"
+}
