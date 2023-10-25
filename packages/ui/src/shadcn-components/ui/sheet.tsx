@@ -1,7 +1,7 @@
 import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
-import {X} from 'lucide-react'
 import * as React from 'react'
+import {RiCloseCircleFill} from 'react-icons/ri'
 
 import {cn} from '@/shadcn-lib/utils'
 
@@ -64,8 +64,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 			{/* <SheetOverlay /> */}
 			<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 				{children}
-				<SheetPrimitive.Close className='absolute right-4 top-4 z-50 rounded-full bg-white/30 p-0.5 text-black opacity-70 ring-offset-neutral-950 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-neutral-300 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-neutral-800'>
-					<X className='h-4 w-4' />
+				<SheetPrimitive.Close className='absolute right-2.5 top-2.5 z-50 rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
+					<RiCloseCircleFill className='h-6 w-6' />
 					<span className='sr-only'>Close</span>
 				</SheetPrimitive.Close>
 			</SheetPrimitive.Content>
