@@ -1,0 +1,4 @@
+node_modules
+dist
+dist-ssr
+public/generated-tabler-icons
