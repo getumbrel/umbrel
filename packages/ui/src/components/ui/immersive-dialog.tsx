@@ -52,7 +52,11 @@ export function ImmersiveDialogSplit({
 					<ImmersiveDialogOverlay />
 					{/* shell */}
 					<DialogContent
-						className={cn(dialogContentClass, immersiveContentSizeClass, 'flex justify-between gap-0 bg-black/40 p-0')}
+						className={cn(
+							dialogContentClass,
+							immersiveContentSizeClass,
+							'flex flex-row justify-between gap-0 bg-black/40 p-0',
+						)}
 					>
 						<div className='hidden w-[210px] flex-col items-center justify-center md:flex'>{leftChildren}</div>
 						<div className='flex-1 rounded-20 bg-dialog-content/70 px-4 md:rounded-l-none md:rounded-r-20'>
