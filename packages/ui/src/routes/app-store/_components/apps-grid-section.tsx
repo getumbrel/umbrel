@@ -2,14 +2,14 @@ import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {AppT} from '@/hooks/use-available-apps'
+import {RegistryApp} from '@/trpc/trpc'
 
 import {cardClass, SectionTitle} from './shared'
 
 export type AppsSectionProps = {
 	overline: string
 	title: string
-	apps: AppT[]
+	apps: RegistryApp[]
 }
 export const AppsGridSection: React.FC<AppsSectionProps> = ({overline, title, apps}) => {
 	return (

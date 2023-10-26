@@ -17,6 +17,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {trpcReact} from '@/trpc/trpc'
 
 import {Apps3UpSection} from './_components/apps-3-up-section'
 import {AppsGallerySection} from './_components/apps-gallery-section'
@@ -28,8 +29,14 @@ export function AppStore() {
 	const title = t('app-store.title')
 	useUmbrelTitle(title)
 
+	const appsQ = trpcReact.appStore.registry.useQuery()
+
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
+
+	if (appsQ.isLoading) {
+		return <p>Loading...</p>
+	}
 
 	return (
 		<AvailableAppsProvider>

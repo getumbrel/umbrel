@@ -4,11 +4,11 @@ import {Link} from 'react-router-dom'
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
 import {Dock, DockBottomPositioner, DockSpacer} from '@/components/desktop/dock'
-import {EnsureLoggedIn} from '@/components/ensure-logged-in'
 import {LinkButton} from '@/components/ui/link-button'
 import {Wallpaper} from '@/components/wallpaper-context'
-import {AppT, AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
+import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {RegistryApp} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
 const cardClass = tw`rounded-20 backdrop-blur-2xl bg-blend-soft-light bg-gradient-to-b from-black/50 via-black/50 to-black px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
@@ -29,7 +29,7 @@ function PageInner() {
 	useUmbrelTitle(title)
 
 	return (
-		<EnsureLoggedIn>
+		<>
 			<Wallpaper />
 			<div className='relative z-10 flex min-h-[100dvh] flex-col items-center'>
 				<div className='pt-14' />
@@ -61,7 +61,7 @@ function PageInner() {
 			<DockBottomPositioner>
 				<Dock />
 			</DockBottomPositioner>
-		</EnsureLoggedIn>
+		</>
 	)
 }
 
@@ -133,7 +133,7 @@ function SkeletonApp() {
 	return <App id='' icon='' appName='' appDescription='' />
 }
 
-function AppApp({app}: {app: AppT}) {
+function AppApp({app}: {app: RegistryApp}) {
 	return <App id={app.id} icon={app.icon} appName={app.name} appDescription={app.tagline} />
 }
 

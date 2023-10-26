@@ -2,15 +2,15 @@ import {useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {AppT} from '@/hooks/use-available-apps'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
+import {RegistryApp} from '@/trpc/trpc'
 
 import {cardClass, SectionTitle} from './shared'
 
 export type Apps3UpSectionProps = {
-	apps: AppT[]
+	apps: RegistryApp[]
 	overline: string
 	title: string
 	description: string
@@ -48,7 +48,7 @@ export const Apps3UpSection: React.FC<Apps3UpSectionProps> = ({
 	)
 }
 
-function ColorApp({app, className}: {app: AppT; className?: string}) {
+function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 	const iconRef = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(iconRef)
 

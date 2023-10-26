@@ -4,12 +4,13 @@ import {useNavigate} from 'react-router-dom'
 import {AppIcon} from '@/components/app-icon'
 import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
-import {AppT, useAvailableApps} from '@/hooks/use-available-apps'
+import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
+import {RegistryApp} from '@/trpc/trpc'
 
 export function UpdatesDialog() {
 	const title = 'Updates'
@@ -54,7 +55,7 @@ export function UpdatesDialog() {
 	)
 }
 
-function AppItem({app}: {app: AppT}) {
+function AppItem({app}: {app: RegistryApp}) {
 	const [showAll, setShowAll] = useState(false)
 	return (
 		<div>

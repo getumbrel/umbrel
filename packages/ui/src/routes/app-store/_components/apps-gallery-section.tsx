@@ -1,8 +1,8 @@
 import {Link} from 'react-router-dom'
 
-import {AppT} from '@/hooks/use-available-apps'
+import {RegistryApp} from '@/trpc/trpc'
 
-export const AppsGallerySection: React.FC<{apps: AppT[]}> = ({apps}) => {
+export const AppsGallerySection: React.FC<{apps: RegistryApp[]}> = ({apps}) => {
 	return (
 		<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar flex gap-5 overflow-x-auto'>
 			{apps.slice(0, 3).map((app) => (

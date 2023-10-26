@@ -2,8 +2,8 @@ import {useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {AppT} from '@/hooks/use-available-apps'
 import {useColorThief} from '@/hooks/use-color-thief'
+import {RegistryApp} from '@/trpc/trpc'
 
 import {AppsSectionProps} from './apps-grid-section'
 import {SectionTitle} from './shared'
@@ -23,7 +23,7 @@ export const AppsRowSection: React.FC<AppsSectionProps> = ({overline, title, app
 	)
 }
 
-function App({app}: {app: AppT}) {
+function App({app}: {app: RegistryApp}) {
 	const iconRef = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(iconRef)
 
