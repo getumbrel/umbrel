@@ -3,7 +3,7 @@
 import {useMotionValue} from 'framer-motion'
 import {Globe, User} from 'lucide-react'
 import {useState} from 'react'
-import {RiRefreshLine, RiSettings2Line} from 'react-icons/ri'
+import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {AppGrid} from '@/components/desktop/app-grid/app-grid'
@@ -20,11 +20,11 @@ import {
 	ThreeUpWidget,
 } from '@/components/desktop/widgets'
 import {TablerIcon} from '@/components/desktop/widgets/tabler-icon'
-import {Icon} from '@/components/ui/icon'
+import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {InstalledAppsProvider, useInstalledApps} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {H1, H2} from '@/layouts/stories'
+import {H1, H2, H3} from '@/layouts/stories'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -73,9 +73,8 @@ export function Stories() {
 	useUmbrelTitle('Stories Home')
 
 	return (
-		<>
+		<div className='flex flex-col gap-4 bg-white/20 p-4'>
 			<H1>Stories</H1>
-			<hr />
 			<H2>Buttons</H2>
 			<Buttons />
 			<H2>Alert Dialog</H2>
@@ -101,7 +100,7 @@ export function Stories() {
 				<AppGridExamples />
 				<AppsDump />
 			</InstalledAppsProvider>
-		</>
+		</div>
 	)
 }
 
@@ -228,43 +227,44 @@ function ContextMenuExample() {
 function Buttons() {
 	return (
 		<div className='flex flex-col gap-2'>
-			<div className='flex gap-2'>
-				<IconButton icon={RiSettings2Line}>Settings</IconButton>
-				<Button>
-					<Icon component={RiSettings2Line} />
-					Settings
-				</Button>
-				<Button size='icon'>
-					<Icon component={RiSettings2Line} />
-				</Button>
-				<IconButton variant='primary' icon={Globe}>
-					Settings
-					<ChevronDown />
-				</IconButton>
-				<Button variant='destructive'>
-					<Globe className='h-4 w-4' />
-					English
-					<ChevronDown />
-				</Button>
-			</div>
-			<div className='flex gap-2'>
-				<IconButton size='xl' icon={RiSettings2Line}>
-					Settings
-				</IconButton>
-				<Button size='xl'>
-					<Icon component={RiSettings2Line} size='xl' />
-					Settings
-				</Button>
-				<Button size='xl' variant='default'>
-					<Icon component={RiRefreshLine} size='xl' />
-					Settings
-				</Button>
-				<Button size='xl' variant='primary'>
-					Settings
-				</Button>
-				<Button size='xl' variant='destructive'>
-					Settings
-				</Button>
+			<div>
+				<H3>Sizes</H3>
+				<div className='flex gap-2'>
+					{objectKeys(sizeMap).map((size) => (
+						<div key={size} className='flex flex-col gap-2'>
+							<div>{size}</div>
+							<Button size={size}>Settings</Button>
+							<Button variant='primary' size={size}>
+								Settings
+							</Button>
+							<Button variant='secondary' size={size}>
+								Settings
+							</Button>
+							<Button variant='destructive' size={size}>
+								Settings
+							</Button>
+						</div>
+					))}
+				</div>
+				<div className='flex gap-2'>
+					{objectKeys(sizeMap).map((size) => (
+						<div key={size} className='flex flex-col gap-2'>
+							<div>{size}</div>
+							<IconButton size={size} icon={Globe}>
+								Settings
+							</IconButton>
+							<IconButton variant='primary' size={size} icon={Globe}>
+								Settings
+							</IconButton>
+							<IconButton variant='secondary' size={size} icon={Globe}>
+								Settings
+							</IconButton>
+							<IconButton variant='destructive' size={size} icon={Globe}>
+								Settings
+							</IconButton>
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	)

@@ -14,12 +14,14 @@ type IconProps = {
 	size?: SizeVariant
 } & Omit<React.ComponentPropsWithoutRef<'svg'>, 'size'>
 
-const sizeMap = {
+export const sizeMap = {
+	sm: '12px',
 	default: '14px',
+	lg: '17px',
+	xl: '13px',
+	//
 	dialog: '14px',
-	none: '14px',
 	icon: '14px',
-	lg: '19px',
 } as const satisfies Record<Size, string>
 
 export function Icon({component, size = 'default', style, className, ...props}: IconProps) {
