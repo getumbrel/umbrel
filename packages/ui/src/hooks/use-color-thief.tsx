@@ -1,4 +1,4 @@
-import ColorThief from 'colorthief'
+import ColorThief, {RGBColor} from 'colorthief'
 import {useEffect, useState} from 'react'
 
 const colorThief = new ColorThief()
@@ -25,8 +25,9 @@ export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 	return colors
 }
 
-function processColors(colors: number[][]) {
+function processColors(colors: RGBColor[] | null) {
 	// TODO: consider pulling out hues and always set saturation to 100% and lightness to 50%
+	if (!colors) return undefined
 	return colors
 		.filter((c) => !isNeutralBright(c) && !isNeutralDark(c))
 		.map((c) => {
