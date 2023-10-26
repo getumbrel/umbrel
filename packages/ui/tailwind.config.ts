@@ -60,7 +60,7 @@ export default {
 				'sheet-shadow': '2px 2px 2px 0px rgba(255, 255, 255, 0.05) inset',
 				dropdown:
 					'0px 60px 24px -40px rgba(0, 0, 0, 0.25), 1px 1px 0px 0px rgba(255, 255, 255, 0.08) inset, -1px -1px 1px 0px rgba(0, 0, 0, 0.20) inset',
-				dialog: '0px 20px 36px 0px rgba(0, 0, 0, 0.25), 1px 1px 1px 0px rgba(255, 255, 255, 0.05) inset',
+				dialog: '0px 20px 36px 0px rgba(0, 0, 0, 0.25), 0px 1px 1px 0px rgba(255, 255, 255, 0.1) inset',
 			},
 			dropShadow: {
 				'desktop-label': '0px 2px 4px rgba(0, 0, 0, 0.60)',
@@ -76,6 +76,7 @@ export default {
 				13: '13px',
 				14: '14px',
 				15: '15px',
+				16: '16px',
 				17: '17px',
 				19: '19px',
 				24: '24px',

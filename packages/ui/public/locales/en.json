@@ -5,6 +5,6 @@
 	"desktop.greeting.evening": "Good evening, {{name}}",
 	"search": "Search",
 	"settings": "Settings",
-	"app-store": "App Store",
-	"explore-all-the-apps": "Explore all the apps!"
+	"app-store.title": "App Store",
+	"app-store.tagline": "Browse the ever-growing collection of self-hosted apps on Umbrel"
 }

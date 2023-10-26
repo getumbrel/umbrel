@@ -15,6 +15,7 @@ export function StoriesLayout() {
 					<Link to='/stories'>Stories</Link>
 					<Link to='/stories/trpc'>tRPC</Link>
 					<Link to='/stories/input'>Input</Link>
+					<Link to='/stories/colorthief'>Color Thief</Link>
 				</div>
 				<div className='flex flex-col gap-6'>
 					<Outlet />

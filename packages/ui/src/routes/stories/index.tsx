@@ -248,21 +248,21 @@ function Buttons() {
 				</Button>
 			</div>
 			<div className='flex gap-2'>
-				<IconButton size='lg' icon={RiSettings2Line}>
+				<IconButton size='xl' icon={RiSettings2Line}>
 					Settings
 				</IconButton>
-				<Button size='lg'>
-					<Icon component={RiSettings2Line} size='lg' />
+				<Button size='xl'>
+					<Icon component={RiSettings2Line} size='xl' />
 					Settings
 				</Button>
-				<Button size='lg' variant='default'>
-					<Icon component={RiRefreshLine} size='lg' />
+				<Button size='xl' variant='default'>
+					<Icon component={RiRefreshLine} size='xl' />
 					Settings
 				</Button>
-				<Button size='lg' variant='primary'>
+				<Button size='xl' variant='primary'>
 					Settings
 				</Button>
-				<Button size='lg' variant='destructive'>
+				<Button size='xl' variant='destructive'>
 					Settings
 				</Button>
 			</div>

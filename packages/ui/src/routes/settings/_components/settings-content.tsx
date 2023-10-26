@@ -70,16 +70,16 @@ export function SettingsContent() {
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
-						<IconLinkButton to='/settings/troubleshoot' size='lg' icon={RiToolsLine}>
+						<IconLinkButton to='/settings/troubleshoot' size='xl' icon={RiToolsLine}>
 							Troubleshoot
 						</IconLinkButton>
-						<IconLinkButton size='lg' icon={RiRestartLine} to='/settings/restart' preventScrollReset={true}>
+						<IconLinkButton size='xl' icon={RiRestartLine} to='/settings/restart' preventScrollReset={true}>
 							Restart
 						</IconLinkButton>
 						<IconLinkButton
 							to='/settings/shutdown'
 							preventScrollReset={true}
-							size='lg'
+							size='xl'
 							text='destructive'
 							icon={RiShutDownLine}
 						>

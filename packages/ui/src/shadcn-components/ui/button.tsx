@@ -5,13 +5,14 @@ import * as React from 'react'
 import {cn} from '@/shadcn-lib/utils'
 
 const buttonVariants = cva(
-	'inline-flex items-center justify-center font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1 focus:outline-none focus:ring-3',
+	'inline-flex items-center justify-center font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1 focus:outline-none focus:ring-3 shrink-0',
 	{
 		variants: {
 			variant: {
 				default:
-					'bg-white/3 active:bg-white/3 hover:bg-white/10 border-[0.5px] border-white/10 ring-white/5 data-[state=open]:bg-white/10',
+					'bg-white/6 active:bg-white/3 hover:bg-white/10 border-[0.5px] border-white/6 ring-white/5 data-[state=open]:bg-white/10',
 				primary: 'bg-brand hover:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter',
+				secondary: 'bg-white/80 hover:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
 				destructive:
 					'bg-destructive2 hover:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter',
 				link: 'underline-offset-4 hover:underline text-brand-lighter font-normal',
@@ -19,8 +20,9 @@ const buttonVariants = cva(
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
-				dialog: 'rounded-full h-[30px] text-12 min-w-[80px] px-4 font-medium text-13',
-				lg: 'rounded-10 h-[50px] px-[15px] text-13',
+				dialog: 'rounded-full h-[30px] min-w-[80px] px-4 font-medium text-13',
+				lg: 'rounded-full h-[40px] px-[15px] text-17',
+				xl: 'rounded-10 h-[50px] px-[15px] text-13',
 				icon: 'rounded-full h-[30px] w-[30px]',
 				none: '',
 			},

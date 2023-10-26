@@ -8,7 +8,9 @@ import {SettingsLayout} from './layouts/settings'
 import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {AppStore} from './routes/app-store'
+import {AddCommunityStoreDialog} from './routes/app-store/add-community-store'
 import {AppPage} from './routes/app-store/app-page'
+import {UpdatesDialog} from './routes/app-store/updates'
 import {One} from './routes/demo/one'
 import {Two} from './routes/demo/two'
 import {EditWidgetsPage} from './routes/edit-widgets'
@@ -31,6 +33,7 @@ import {RestartDialog} from './routes/settings/restart'
 import {ShutdownDialog} from './routes/settings/shutdown'
 import {TroubleshootDialog} from './routes/settings/troubleshoot'
 import {Stories} from './routes/stories'
+import {ColorThiefExample} from './routes/stories/color-thief'
 import {InputExamples} from './routes/stories/input'
 import {Trpc} from './routes/stories/trpc'
 
@@ -54,6 +57,20 @@ export const router = createBrowserRouter([
 				children: [
 					{
 						path: 'app-store',
+						Component: AppStore,
+						children: [
+							{
+								path: 'updates',
+								Component: UpdatesDialog,
+							},
+							{
+								path: 'add-community-store',
+								Component: AddCommunityStoreDialog,
+							},
+						],
+					},
+					{
+						path: 'app-store/category/:categoryId',
 						Component: AppStore,
 					},
 					{
@@ -192,6 +209,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/input',
 				Component: InputExamples,
+			},
+			{
+				path: 'stories/color-thief',
+				Component: ColorThiefExample,
 			},
 		],
 	},

@@ -4,7 +4,8 @@
 	"desktop.greeting.evening": "مساء الخير {{name}}",
 	"search": "يبحث",
 	"settings": "إعدادات",
-	"app-store": "متجر التطبيقات",
 	"explore-all-the-apps": "استكشاف جميع التطبيقات!",
-	"hello": "مرحبًا"
+	"hello": "مرحبًا",
+	"app-store.title": "متجر التطبيقات",
+	"app-store.tagline": "تصفح المجموعة المتزايدة باستمرار من التطبيقات ذاتية الاستضافة على Umbrel"
 }

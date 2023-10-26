@@ -2,6 +2,7 @@ import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
+import {AppIcon} from '@/components/app-icon'
 import {Dock, DockBottomPositioner, DockSpacer} from '@/components/desktop/dock'
 import {EnsureLoggedIn} from '@/components/ensure-logged-in'
 import {LinkButton} from '@/components/ui/link-button'
@@ -152,26 +153,11 @@ function App({
 			to={`/app-store/${id}`}
 			className='flex w-full items-center gap-2.5 rounded-20 p-2 duration-300 hover:bg-white/4'
 		>
-			<AppIcon src={icon} />
+			<AppIcon src={icon} size={50} className='rounded-15' />
 			<div className='flex min-w-0 flex-1 flex-col'>
 				<h3 className='text-15 font-semibold -tracking-3'>{appName}</h3>
 				<p className='w-full min-w-0 truncate text-13 opacity-50'>{appDescription}</p>
 			</div>
 		</Link>
-	)
-}
-
-function AppIcon({src}: {src: string}) {
-	const defaultIcon = '/icons/app-icon-placeholder.svg'
-
-	return (
-		<img
-			src={src || defaultIcon}
-			alt=''
-			className='h-[50px] w-[50px] shrink-0 rounded-15 bg-white/10 bg-cover bg-center'
-			style={{
-				backgroundImage: `url(${defaultIcon})`,
-			}}
-		/>
 	)
 }

@@ -4,7 +4,8 @@
 	"desktop.greeting.evening": "Bonsoir, {{name}}",
 	"search": "Recherche",
 	"settings": "Paramètres",
-	"app-store": "Magasin d'applications",
 	"explore-all-the-apps": "Explorez toutes les applications !",
-	"hello": "Bonjour"
+	"hello": "Bonjour",
+	"app-store.title": "Magasin d'applications",
+	"app-store.tagline": "Parcourez la collection toujours croissante d'applications auto-hébergées sur Umbrel"
 }

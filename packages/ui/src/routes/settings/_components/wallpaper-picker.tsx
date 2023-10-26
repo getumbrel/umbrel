@@ -1,4 +1,5 @@
 import {forwardRef, useEffect, useRef} from 'react'
+import {useTimeout} from 'react-use'
 
 import {useWallpaper, wallpapers} from '@/components/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
@@ -47,6 +48,7 @@ const WallpaperItem = forwardRef(
 
 WallpaperItem.displayName = 'WallpaperItem'
 
+// TODO: delay mounting for performance
 export function WallpaperPicker() {
 	const {wallpaper, setWallpaperId} = useWallpaper()
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -54,7 +56,12 @@ export function WallpaperPicker() {
 	const itemsRef = useRef<HTMLDivElement>(null)
 	const selectedItemRef = useRef<HTMLButtonElement>(null)
 
+	const [show] = useTimeout(400)
+
+	const canShow = show()
+
 	useEffect(() => {
+		if (!canShow) return
 		if (!containerRef.current || !selectedItemRef.current || !itemsRef.current || !scrollerRef.current) {
 			return
 		}
@@ -66,11 +73,13 @@ export function WallpaperPicker() {
 			behavior: 'smooth',
 			left: index * (ITEM_W + GAP) - containerW / 2 + (ITEM_W * ACTIVE_SCALE) / 2,
 		})
-	}, [wallpaper.id])
+	}, [wallpaper.id, canShow])
+
+	if (!canShow) return null
 
 	return (
-		// h-8 so we don't affect height of parent, but make gap work when wrapping
-		<div ref={containerRef} className='flex-grow-1 flex h-8 max-w-full items-center'>
+		// h-7 so we don't affect height of parent, but make gap work when wrapping
+		<div ref={containerRef} className='flex-grow-1 flex h-7 max-w-full items-center animate-in fade-in'>
 			<div
 				className='umbrel-hide-scrollbar umbrel-wallpaper-fade-scroller w-full items-center overflow-x-auto bg-red-500/0 py-3 md:max-w-[350px]'
 				ref={scrollerRef}
