@@ -1,7 +1,6 @@
 # custom
-/public/generated-tabler-icons
+public/generated-tabler-icons
 todo.md
-src/app
 
 # Logs
 logs
