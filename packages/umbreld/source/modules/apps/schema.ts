@@ -1,7 +1,11 @@
+import {categories} from './data'
+
 export type AppRepositoryMeta = {
 	id: string
 	name: string
 }
+
+export type Category = typeof categories[number]
 
 // TODO: just added this to quickly get types, come back to this and
 // add strciter validation. We might also want to describe this with
@@ -13,7 +17,7 @@ export type AppManifest = {
 	name: string
 	tagline: string
 	icon: string
-	category: string
+	category: Category
 	version: string
 	port: number
 	description: string

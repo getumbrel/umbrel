@@ -1,10 +1,9 @@
 import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
@@ -15,11 +14,8 @@ import {RegistryApp} from '@/trpc/trpc'
 export function UpdatesDialog() {
 	const title = 'Updates'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
 
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/app-store', {preventScrollReset: true}))
+	const {params, removeParam} = useQueryParams()
 
 	const {isLoading, apps} = useAvailableApps()
 
@@ -29,7 +25,7 @@ export function UpdatesDialog() {
 
 	return (
 		<DialogMounter>
-			<Dialog open={open} onOpenChange={setOpen}>
+			<Dialog open={params.get('dialog') === 'updates'} onOpenChange={(open) => !open && removeParam('dialog')}>
 				<DialogPortal>
 					<DialogContent className='p-0'>
 						<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>

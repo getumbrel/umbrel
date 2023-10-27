@@ -1,16 +1,16 @@
 import {createBrowserRouter} from 'react-router-dom'
 
 import {EnsureLoggedIn} from './components/ensure-logged-in'
+import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
 import {Desktop} from './layouts/desktop'
 import {SettingsLayout} from './layouts/settings'
 import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
-import {AppStore} from './routes/app-store'
-import {AddCommunityStoreDialog} from './routes/app-store/add-community-store'
 import {AppPage} from './routes/app-store/app-page'
-import {UpdatesDialog} from './routes/app-store/updates'
+import {CategoryPage} from './routes/app-store/category-page'
+import {Discover} from './routes/app-store/discover'
 import {One} from './routes/demo/one'
 import {Two} from './routes/demo/two'
 import {EditWidgetsPage} from './routes/edit-widgets'
@@ -57,21 +57,17 @@ export const router = createBrowserRouter([
 				children: [
 					{
 						path: 'app-store',
-						Component: AppStore,
+						Component: AppStoreLayout,
 						children: [
 							{
-								path: 'updates',
-								Component: UpdatesDialog,
+								index: true,
+								Component: Discover,
 							},
 							{
-								path: 'add-community-store',
-								Component: AddCommunityStoreDialog,
+								path: 'category/:categoryId',
+								Component: CategoryPage,
 							},
 						],
-					},
-					{
-						path: 'app-store/category/:categoryId',
-						Component: AppStore,
 					},
 					{
 						path: 'app-store/:appId',

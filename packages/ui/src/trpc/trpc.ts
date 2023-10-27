@@ -3,6 +3,10 @@ import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
 
+export type {Category} from '../../../../packages/umbreld/source/modules/apps/schema'
+
+export {categories} from '../../../../packages/umbreld/source/modules/apps/data'
+
 export const trpcReact = createTRPCReact<AppRouter>()
 
 // Types ----------------------------

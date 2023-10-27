@@ -1,9 +1,7 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
-import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
 
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -19,15 +17,15 @@ import {Input} from '@/shadcn-components/ui/input'
 export function AddCommunityStoreDialog() {
 	const title = 'Add community store'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
 
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/app-store', {preventScrollReset: true}))
+	const {params, removeParam} = useQueryParams()
 
 	return (
 		<DialogMounter>
-			<Dialog open={open} onOpenChange={setOpen}>
+			<Dialog
+				open={params.get('dialog') === 'add-community-store'}
+				onOpenChange={(open) => !open && removeParam('dialog')}
+			>
 				<DialogPortal>
 					<DialogContent className='p-0'>
 						<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-3 overflow-y-auto px-5 py-6'>
