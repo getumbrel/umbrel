@@ -1,4 +1,8 @@
+import {keyBy} from 'lodash-es'
+
 import {Category} from '@/trpc/trpc'
+
+export type Categoryish = Category | 'all' | 'discover'
 
 export const categoryDescriptions = [
 	{id: 'discover', label: 'Discover'},
@@ -12,4 +16,10 @@ export const categoryDescriptions = [
 	{id: 'finance', label: 'Finance'},
 	{id: 'ai', label: 'AI'},
 	{id: 'developer', label: 'Developer'},
-] as const satisfies readonly {id: Category | 'all' | 'discover'; label: string}[]
+] as const satisfies readonly {id: Categoryish; label: string}[]
+
+type CategoryDescription = (typeof categoryDescriptions)[number]
+
+export const categoryDescriptionsKeyed = keyBy(categoryDescriptions, 'id') as {
+	[K in Categoryish]: CategoryDescription
+}
