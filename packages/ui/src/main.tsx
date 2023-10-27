@@ -11,11 +11,11 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import Backend from 'i18next-http-backend'
 import {initReactI18next} from 'react-i18next'
 
-import {EnsureBackendAvailable} from './components/ensure-backend-available'
+import {EnsureBackendAvailable} from './modules/auth/ensure-backend-available'
 import {WallpaperProvider} from './modules/desktop/wallpaper-context'
 import {router} from './router'
 import {TooltipProvider} from './shadcn-components/ui/tooltip'
-import {TrpcProvider} from './trpc/TrpcProvider'
+import {TrpcProvider} from './trpc/trpc-provider'
 
 i18n
 	.use(initReactI18next) // passes i18n down to react-i18next

@@ -19,7 +19,6 @@ import {Link, useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
 import {ChevronDown} from '@/assets/chevron-down'
-import {linkClass} from '@/components/element-classes'
 import {Card} from '@/components/ui/card'
 import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
@@ -34,6 +33,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
+import {linkClass} from '@/utils/element-classes'
 import {fixmeHandler} from '@/utils/misc'
 
 import {CardProgressStat, CardTempStat} from './cards'

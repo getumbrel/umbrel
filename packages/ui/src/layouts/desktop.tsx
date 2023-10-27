@@ -1,9 +1,9 @@
 import {useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 
-import {EnsureLoggedIn} from '@/components/ensure-logged-in'
 import {InstalledAppsProvider} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-misc'
 import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'

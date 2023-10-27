@@ -2,7 +2,6 @@ import {useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {ErrorAlert} from '@/components/ui/alert'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -17,6 +16,7 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {PasswordInput} from '@/shadcn-components/ui/input'
+import {useAfterDelayedClose} from '@/utils/dialog'
 
 export function ChangePasswordDialog() {
 	const title = 'Change password'

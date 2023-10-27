@@ -3,7 +3,6 @@ import {TbChevronRight} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {ChevronDown} from '@/assets/chevron-down'
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -16,6 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
+import {useAfterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
 export function AppStorePreferencesDialog() {

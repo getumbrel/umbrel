@@ -3,7 +3,7 @@ import {useLocation, useNavigate} from 'react-router-dom'
 import {trpcReact} from '@/trpc/trpc'
 import {sleep} from '@/utils/misc'
 
-import {CoverMessage} from './ui/cover-message'
+import {CoverMessage} from '../../components/ui/cover-message'
 
 /** Don't show children unless logged in */
 export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {

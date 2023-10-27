@@ -2,9 +2,9 @@ import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
-import {afterDelayedClose} from '@/components/client-layout'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {WidgetConfig} from '@/modules/desktop/widgets'
+import {afterDelayedClose} from '@/utils/dialog'
 
 import {WidgetSelector} from './widget-selector'
 

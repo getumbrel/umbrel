@@ -1,7 +1,6 @@
 import {RiRestartLine} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
-import {afterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
@@ -13,6 +12,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
+import {afterDelayedClose} from '@/utils/dialog'
 
 export function RestartDialog() {
 	useUmbrelTitle('Restart')

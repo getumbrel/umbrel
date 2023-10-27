@@ -5,7 +5,6 @@ import QRCode from 'react-qr-code'
 import {useNavigate} from 'react-router-dom'
 import {useCopyToClipboard} from 'react-use'
 
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {PinInput} from '@/components/ui/pin-input'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -19,6 +18,7 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {useAfterDelayedClose} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
 export function TwoFactorDialog() {

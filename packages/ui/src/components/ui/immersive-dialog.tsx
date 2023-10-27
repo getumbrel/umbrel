@@ -6,7 +6,7 @@ import {dialogContentClass, dialogOverlayClass} from '@/shadcn-components/ui/sha
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-import {afterDelayedClose} from '../client-layout'
+import {afterDelayedClose} from '../../utils/dialog'
 import {DialogMounter} from '../dialog-mounter'
 
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`

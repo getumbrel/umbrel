@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
-import {useAfterDelayedClose} from '@/components/client-layout'
 import {DialogMounter} from '@/components/dialog-mounter'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
@@ -16,6 +15,7 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
+import {useAfterDelayedClose} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
 export function ChangeNameDialog() {

@@ -2,7 +2,6 @@ import {RiLogoutCircleRLine} from 'react-icons/ri'
 import {Link} from 'react-router-dom'
 
 import {DialogMounter} from '@/components/dialog-mounter'
-import {linkClass} from '@/components/element-classes'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {
 	AlertDialog,
@@ -14,6 +13,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
+import {linkClass} from '@/utils/element-classes'
 
 export function LogoutDialog() {
 	const {params, removeParam} = useQueryParams()
