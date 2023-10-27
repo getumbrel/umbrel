@@ -3,7 +3,7 @@ import {useTranslation} from 'react-i18next'
 import {Link, useLocation} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
-import {useWallpaper} from '@/components/wallpaper-context'
+import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'

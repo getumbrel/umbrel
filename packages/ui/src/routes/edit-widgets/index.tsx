@@ -3,8 +3,8 @@ import {useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
 import {afterDelayedClose} from '@/components/client-layout'
-import {WidgetConfig} from '@/components/desktop/widgets'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {WidgetConfig} from '@/modules/desktop/widgets'
 
 import {WidgetSelector} from './widget-selector'
 

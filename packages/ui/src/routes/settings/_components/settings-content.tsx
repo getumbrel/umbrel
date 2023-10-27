@@ -19,13 +19,13 @@ import {Link, useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
 import {ChevronDown} from '@/assets/chevron-down'
-import {DesktopPreview, DesktopPreviewFrame} from '@/components/desktop/desktop-preview'
 import {linkClass} from '@/components/element-classes'
 import {Card} from '@/components/ui/card'
 import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {links} from '@/links'
+import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	DropdownMenu,

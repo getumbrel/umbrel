@@ -2,8 +2,8 @@ import {useState} from 'react'
 import {Outlet, ScrollRestoration, useNavigate} from 'react-router-dom'
 
 import {useAfterDelayedClose} from '@/components/client-layout'
-import {DockSpacer} from '@/components/desktop/dock'
 import {DialogMounter} from '@/components/dialog-mounter'
+import {DockSpacer} from '@/modules/desktop/dock'
 import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 
 export function SheetLayout() {

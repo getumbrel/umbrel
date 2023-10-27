@@ -1,11 +1,11 @@
 import {ReactNode} from 'react'
 import {useNavigate} from 'react-router-dom'
 
-import {StatText} from '@/components/desktop/widgets'
 import {Card} from '@/components/ui/card'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {useInstalledApps} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {StatText} from '@/modules/desktop/widgets'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'

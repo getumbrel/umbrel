@@ -1,7 +1,7 @@
 import {forwardRef, useEffect, useRef} from 'react'
 import {useTimeout} from 'react-use'
 
-import {useWallpaper, wallpapers} from '@/components/wallpaper-context'
+import {useWallpaper, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
 
 const ITEM_W = 40

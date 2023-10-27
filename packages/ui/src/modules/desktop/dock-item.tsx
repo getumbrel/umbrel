@@ -2,9 +2,9 @@ import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTrans
 import {useEffect, useRef, useState} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
+import {NotificationBadge} from '@/components/ui/notification-badge'
 import {cn} from '@/shadcn-lib/utils'
 
-import {NotificationBadge} from '../ui/notification-badge'
 import {ICON_SIDE, ICON_SIDE_ZOOMED} from './dock'
 
 type HTMLDivProps = HTMLMotionProps<'div'>

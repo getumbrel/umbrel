@@ -3,19 +3,7 @@ import {useParams} from 'react-router-dom'
 import {LinkButton} from '@/components/ui/link-button'
 import {Category} from '@/trpc/trpc'
 
-const categoryDescriptions = [
-	{id: 'discover', label: 'Discover'},
-	{id: 'all', label: 'All'},
-	{id: 'files', label: 'Files'},
-	{id: 'bitcoin', label: 'Bitcoin'},
-	{id: 'media', label: 'Media'},
-	{id: 'networking', label: 'Networking'},
-	{id: 'social', label: 'Social'},
-	{id: 'automation', label: 'Automation'},
-	{id: 'finance', label: 'Finance'},
-	{id: 'ai', label: 'AI'},
-	{id: 'developer', label: 'Developer'},
-] as const satisfies readonly {id: Category | 'all' | 'discover'; label: string}[]
+import {categoryDescriptions} from './data'
 
 export function AppStoreNav() {
 	const {categoryId} = useParams<{categoryId: Category}>()

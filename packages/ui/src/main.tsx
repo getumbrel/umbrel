@@ -12,7 +12,7 @@ import Backend from 'i18next-http-backend'
 import {initReactI18next} from 'react-i18next'
 
 import {EnsureBackendAvailable} from './components/ensure-backend-available'
-import {WallpaperProvider} from './components/wallpaper-context'
+import {WallpaperProvider} from './modules/desktop/wallpaper-context'
 import {router} from './router'
 import {TooltipProvider} from './shadcn-components/ui/tooltip'
 import {TrpcProvider} from './trpc/TrpcProvider'

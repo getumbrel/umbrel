@@ -3,9 +3,9 @@ import {uniq} from 'lodash-es'
 import {ReactNode, useState} from 'react'
 import {useTimeout} from 'react-use'
 
-import {DockSpacer} from '@/components/desktop/dock'
-import {BackdropBlurVariantContext, WidgetConfig, widgetConfigToWidget} from '@/components/desktop/widgets'
 import {useInstalledApps} from '@/hooks/use-installed-apps'
+import {DockSpacer} from '@/modules/desktop/dock'
+import {BackdropBlurVariantContext, WidgetConfig, widgetConfigToWidget} from '@/modules/desktop/widgets'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 

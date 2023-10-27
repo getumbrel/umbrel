@@ -1,6 +1,6 @@
 import {Outlet} from 'react-router-dom'
 
-import {Wallpaper} from '@/components/wallpaper-context'
+import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 
 export function BareLayout() {
 	return (

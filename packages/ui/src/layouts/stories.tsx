@@ -1,8 +1,8 @@
 import {ReactNode} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
-import {WallpaperProvider} from '@/components/wallpaper-context'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {WallpaperProvider} from '@/modules/desktop/wallpaper-context'
 
 export function StoriesLayout() {
 	useUmbrelTitle('Stories')

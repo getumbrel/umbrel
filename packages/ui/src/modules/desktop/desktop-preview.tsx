@@ -1,8 +1,8 @@
 import {useEffect, useState} from 'react'
 import {useLocalStorage} from 'react-use'
 
-import {useWallpaper} from '@/components/wallpaper-context'
 import {useInstalledApps} from '@/hooks/use-installed-apps'
+import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'

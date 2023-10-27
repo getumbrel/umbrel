@@ -3,11 +3,11 @@ import {Link} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
-import {Dock, DockBottomPositioner, DockSpacer} from '@/components/desktop/dock'
 import {LinkButton} from '@/components/ui/link-button'
-import {Wallpaper} from '@/components/wallpaper-context'
 import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {Dock, DockBottomPositioner, DockSpacer} from '@/modules/desktop/dock'
+import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 import {RegistryApp} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 

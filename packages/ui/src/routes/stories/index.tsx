@@ -6,10 +6,15 @@ import {useState} from 'react'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
-import {AppGrid} from '@/components/desktop/app-grid/app-grid'
-import {AppIcon} from '@/components/desktop/app-icon'
-import {DesktopPreview} from '@/components/desktop/desktop-preview'
-import {DockItem} from '@/components/desktop/dock-item'
+import {sizeMap} from '@/components/ui/icon'
+import {IconButton} from '@/components/ui/icon-button'
+import {InstalledAppsProvider, useInstalledApps} from '@/hooks/use-installed-apps'
+import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {H1, H2, H3} from '@/layouts/stories'
+import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
+import {AppIcon} from '@/modules/desktop/app-icon'
+import {DesktopPreview} from '@/modules/desktop/desktop-preview'
+import {DockItem} from '@/modules/desktop/dock-item'
 import {
 	ActionsWidget,
 	BackdropBlurVariantContext,
@@ -18,13 +23,8 @@ import {
 	ProgressWidget,
 	StatWithButtonsWidget,
 	ThreeUpWidget,
-} from '@/components/desktop/widgets'
-import {TablerIcon} from '@/components/desktop/widgets/tabler-icon'
-import {sizeMap} from '@/components/ui/icon'
-import {IconButton} from '@/components/ui/icon-button'
-import {InstalledAppsProvider, useInstalledApps} from '@/hooks/use-installed-apps'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {H1, H2, H3} from '@/layouts/stories'
+} from '@/modules/desktop/widgets'
+import {TablerIcon} from '@/modules/desktop/widgets/tabler-icon'
 import {
 	AlertDialog,
 	AlertDialogAction,

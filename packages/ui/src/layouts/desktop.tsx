@@ -1,13 +1,13 @@
 import {useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 
-import {DesktopContent} from '@/components/desktop/desktop-content'
-import {DesktopContextMenu} from '@/components/desktop/desktop-misc'
-import {Dock, DockBottomPositioner} from '@/components/desktop/dock'
 import {EnsureLoggedIn} from '@/components/ensure-logged-in'
-import {Wallpaper} from '@/components/wallpaper-context'
 import {InstalledAppsProvider} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {DesktopContent} from '@/modules/desktop/desktop-content'
+import {DesktopContextMenu} from '@/modules/desktop/desktop-misc'
+import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
+import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 
 export function Desktop() {
 	useUmbrelTitle('Desktop')
