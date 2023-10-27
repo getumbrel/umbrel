@@ -13,7 +13,16 @@ const AppsContext = createContext<AppsContextT | null>(null)
 
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
-	const apps = appsQ.data?.find((repo) => repo?.meta.id === 'umbrel-app-store')?.apps
+	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === 'umbrel-app-store')?.apps
+
+	const apps = appsWithoutImages?.map((app) => {
+		const icon = `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`
+		// FIXME: This is a hack to get the gallery images, but not all will have 5 images
+		const gallery: RegistryApp['gallery'] = [1, 2, 3, 4, 5].map(
+			(n) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${n}.jpg`,
+		)
+		return {...app, icon, gallery}
+	})
 
 	const appsKeyed = keyBy(apps, 'id')
 	const appsKeyedByCategory = keyBy(apps, 'category')
