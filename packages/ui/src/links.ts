@@ -1,4 +1,3 @@
-// FIXME: move out of /data folder
 export const links = {
 	support: 'https://umbrel.com/support',
 	legal: {
