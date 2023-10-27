@@ -2,7 +2,6 @@ import {matchSorter} from 'match-sorter'
 import {memo, useDeferredValue, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
-import {JSONTree} from 'react-json-tree'
 import {Link, Outlet} from 'react-router-dom'
 
 import {LinkButton} from '@/components/ui/link-button'
@@ -10,6 +9,8 @@ import {NotificationBadge} from '@/components/ui/notification-badge'
 import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
+import {appsGridClass, cardFaintClass, sectionTitleClass, slideInFromBottomClass} from '@/modules/app-store/shared'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -17,6 +18,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {cn} from '@/shadcn-lib/utils'
 
 import {AddCommunityStoreDialog} from './add-community-store-dialog'
 import {UpdatesDialog} from './updates-dialog'
@@ -88,7 +90,8 @@ function CommunityAppsDropdown() {
 	return (
 		<>
 			<DropdownMenu>
-				<DropdownMenuTrigger>
+				{/* tabIndex={-1} because we want user to be able to tab to results */}
+				<DropdownMenuTrigger tabIndex={-1}>
 					<TbDots className='h-5 w-5' />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align='end'>
@@ -109,14 +112,31 @@ function SearchResults({query}: {query: string}) {
 		return <p>Loading...</p>
 	}
 
-	const results = matchSorter(apps, query, {
-		keys: ['name', 'tagline', 'description', 'developer', 'website'],
+	const appResults = matchSorter(apps, query, {
+		keys: ['name', 'tagline', 'developer', 'website', 'description'],
+		threshold: matchSorter.rankings.WORD_STARTS_WITH,
 	})
 
+	const title = (
+		<span>
+			<span className='opacity-60'>Results for</span> {query}
+		</span>
+	)
+
 	return (
-		<div>
-			Results for {query}
-			<JSONTree data={results} shouldExpandNodeInitially={() => true} />
+		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
+			<h3 className={sectionTitleClass}>{title}</h3>
+			<div className={appsGridClass}>
+				{appResults?.map((app) => (
+					<AppWithDescription
+						key={app.id}
+						id={app.id}
+						icon={app.icon}
+						appName={app.name}
+						appDescription={app.tagline}
+					/>
+				))}
+			</div>
 		</div>
 	)
 }

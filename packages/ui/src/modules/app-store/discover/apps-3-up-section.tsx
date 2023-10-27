@@ -3,11 +3,10 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
+import {cardClass, SectionTitle} from '@/modules/app-store/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
-
-import {cardClass, SectionTitle} from './shared'
 
 export type Apps3UpSectionProps = {
 	apps: RegistryApp[]

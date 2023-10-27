@@ -64,7 +64,7 @@ export const router = createBrowserRouter([
 								Component: Discover,
 							},
 							{
-								path: 'category/:categoryId',
+								path: 'category/:categoryishId',
 								Component: CategoryPage,
 							},
 						],

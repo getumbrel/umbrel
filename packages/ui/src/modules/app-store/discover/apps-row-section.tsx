@@ -3,12 +3,10 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
+import {SectionTitle} from '@/modules/app-store/shared'
 import {RegistryApp} from '@/trpc/trpc'
 
-import {AppsSectionProps} from './apps-grid-section'
-import {SectionTitle} from './shared'
-
-export const AppsRowSection: React.FC<AppsSectionProps> = ({overline, title, apps}) => {
+export const AppsRowSection = ({overline, title, apps}: {overline: string; title: string; apps: RegistryApp[]}) => {
 	return (
 		<div>
 			<div className='px-[30px]'>
@@ -47,7 +45,7 @@ function App({app}: {app: RegistryApp}) {
 				}}
 			>
 				<h3 className='truncate text-[28px] font-semibold -tracking-3'>{app.name}</h3>
-				<p className='text-16 line-clamp-2 -tracking-4 opacity-70'>{app.tagline}</p>
+				<p className='line-clamp-2 text-16 -tracking-4 opacity-70'>{app.tagline}</p>
 			</div>
 		</Link>
 	)

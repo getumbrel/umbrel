@@ -3,22 +3,23 @@ import {useParams} from 'react-router-dom'
 import {LinkButton} from '@/components/ui/link-button'
 import {Category} from '@/trpc/trpc'
 
-import {categoryDescriptions} from './data'
+import {categoryishDescriptions} from './data'
 
 export function AppStoreNav() {
-	const {categoryId} = useParams<{categoryId: Category}>()
+	const {categoryishId} = useParams<{categoryishId: Category}>()
 
-	const activeId = categoryId || categoryDescriptions[0].id
+	const activeId = categoryishId || categoryishDescriptions[0].id
 
 	return (
 		<>
 			<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x -my-2 flex gap-[5px] overflow-x-auto py-2'>
-				{categoryDescriptions.map((category) => (
+				{categoryishDescriptions.map((category) => (
 					<LinkButton
 						key={category.id}
 						to={categoryIdToPath(category.id)}
 						variant={category.id === activeId ? 'primary' : 'default'}
 						size='lg'
+						unstable_viewTransition
 					>
 						{category.label}
 					</LinkButton>
