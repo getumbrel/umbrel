@@ -1,4 +1,4 @@
-import {categories} from './data'
+import type {categories} from './data'
 
 export type AppRepositoryMeta = {
 	id: string
