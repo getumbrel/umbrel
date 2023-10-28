@@ -33,34 +33,32 @@ export function AppStoreLayout() {
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 
 	return (
-		<AvailableAppsProvider>
-			<div className='flex flex-col gap-8'>
-				<SheetHeader className='gap-5'>
-					<div className='flex flex-wrap-reverse items-center gap-y-2'>
-						<SheetTitle className='text-48 leading-none'>{title}</SheetTitle>
-						<div className='flex-1' />
-						<div className='flex items-center gap-3'>
-							<LinkButton
-								to={{search: addLinkSearchParams({dialog: 'updates'})}}
-								variant='default'
-								size='dialog'
-								className='relative h-[33px]'
-							>
-								Updates
-								<NotificationBadge count={2} />
-							</LinkButton>
-							<UpdatesDialog />
-							<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
-						</div>
+		<div className='flex flex-col gap-8'>
+			<SheetHeader className='gap-5'>
+				<div className='flex flex-wrap-reverse items-center gap-y-2'>
+					<SheetTitle className='text-48 leading-none'>{title}</SheetTitle>
+					<div className='flex-1' />
+					<div className='flex items-center gap-3'>
+						<LinkButton
+							to={{search: addLinkSearchParams({dialog: 'updates'})}}
+							variant='default'
+							size='dialog'
+							className='relative h-[33px]'
+						>
+							Updates
+							<NotificationBadge count={2} />
+						</LinkButton>
+						<UpdatesDialog />
+						<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
 					</div>
-					<SheetDescription className='flex items-baseline justify-between text-left text-17 font-medium -tracking-2 text-white/75'>
-						{t('app-store.tagline')}
-						<CommunityAppsDropdown />
-					</SheetDescription>
-				</SheetHeader>
-				{deferredSearchQuery ? <SearchResultsMemoized query={deferredSearchQuery} /> : <Outlet />}
-			</div>
-		</AvailableAppsProvider>
+				</div>
+				<SheetDescription className='flex items-baseline justify-between text-left text-17 font-medium -tracking-2 text-white/75'>
+					{t('app-store.tagline')}
+					<CommunityAppsDropdown />
+				</SheetDescription>
+			</SheetHeader>
+			{deferredSearchQuery ? <SearchResultsMemoized query={deferredSearchQuery} /> : <Outlet />}
+		</div>
 	)
 }
 

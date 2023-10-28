@@ -40,3 +40,15 @@ export function useAvailableApps() {
 
 	return ctx
 }
+
+export function useAvailableApp(id?: string) {
+	const ctx = useContext(AppsContext)
+	if (!ctx) throw new Error('useApp must be used within AppsProvider')
+
+	if (!id) return {isLoading: false, app: undefined}
+
+	return {
+		isLoading: ctx.isLoading,
+		app: ctx.appsKeyed[id],
+	}
+}

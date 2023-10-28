@@ -1,5 +1,6 @@
 import {createBrowserRouter} from 'react-router-dom'
 
+import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -37,6 +38,7 @@ import {ColorThiefExample} from './routes/stories/color-thief'
 import {InputExamples} from './routes/stories/input'
 import {Trpc} from './routes/stories/trpc'
 
+// NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
 	{
 		path: 'install-first-app',
@@ -57,7 +59,11 @@ export const router = createBrowserRouter([
 				children: [
 					{
 						path: 'app-store',
-						Component: AppStoreLayout,
+						element: (
+							<AvailableAppsProvider>
+								<AppStoreLayout />
+							</AvailableAppsProvider>
+						),
 						children: [
 							{
 								index: true,
@@ -71,7 +77,11 @@ export const router = createBrowserRouter([
 					},
 					{
 						path: 'app-store/:appId',
-						Component: AppPage,
+						element: (
+							<AvailableAppsProvider>
+								<AppPage />
+							</AvailableAppsProvider>
+						),
 					},
 					{
 						path: 'settings',
