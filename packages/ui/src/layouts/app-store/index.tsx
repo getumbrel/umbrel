@@ -6,7 +6,7 @@ import {Link, Outlet} from 'react-router-dom'
 
 import {LinkButton} from '@/components/ui/link-button'
 import {NotificationBadge} from '@/components/ui/notification-badge'
-import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
+import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
