@@ -2,13 +2,13 @@ import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal} from '@
 import {ForwardedRef, forwardRef} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
-import {Button} from '@/shadcn-components/ui/button'
 import {dialogContentClass, dialogOverlayClass} from '@/shadcn-components/ui/shared/dialog'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {afterDelayedClose} from '../../utils/dialog'
 import {DialogMounter} from '../dialog-mounter'
+import {IconButton} from './icon-button'
 
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`
 export const immersiveDialogDescriptionClass = tw`text-15 font-normal leading-tight -tracking-2 text-white/40`
@@ -86,15 +86,13 @@ function ImmersiveDialogClose() {
 		<div className='absolute left-1/2 top-full mt-5 -translate-x-1/2'>
 			{/* Note, because this parent has a backdrop, this button won't have a backdrop */}
 			<DialogClose asChild>
-				<Button
-					size='icon'
+				<IconButton
+					icon={RiCloseLine}
 					className='dialog-shadow h-[36px] w-[36px] border-none bg-dialog-content backdrop-blur-2xl hover:bg-dialog-content active:bg-dialog-content'
 					style={{
 						boxShadow: '0px 32px 32px 0px rgba(0, 0, 0, 0.32), 1px 1px 1px 0px rgba(255, 255, 255, 0.08) inset',
 					}}
-				>
-					<RiCloseLine className='h-4 w-4' />
-				</Button>
+				/>
 			</DialogClose>
 		</div>
 	)
