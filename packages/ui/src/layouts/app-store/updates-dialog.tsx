@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
 import {DialogMounter} from '@/components/dialog-mounter'
@@ -38,10 +38,10 @@ export function UpdatesDialog() {
 								</DialogTitle>
 							</DialogHeader>
 							{apps.slice(0, 7).map((app, i) => (
-								<>
+								<Fragment key={app.id}>
 									{i === 0 ? <Separator className='my-2.5' /> : <Separator className='my-1' />}
 									<AppItem app={app} />
-								</>
+								</Fragment>
 							))}
 						</div>
 					</DialogContent>

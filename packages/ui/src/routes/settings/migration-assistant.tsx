@@ -194,6 +194,7 @@ function MigrationBody({
 			<motion.div className='w-full space-y-2.5'>
 				{Children.map(children, (child, i) => (
 					<motion.div
+						key={i}
 						initial={{opacity: 0, translateY: 10}}
 						animate={{opacity: 1, translateY: 0}}
 						transition={{delay: i * 0.2 + 0.1}}
