@@ -22,7 +22,7 @@ const buttonVariants = cva(
 				dialog: 'rounded-full h-[30px] min-w-[80px] px-4 font-medium text-13',
 				lg: 'rounded-full h-[40px] px-[15px] text-17',
 				xl: 'rounded-10 h-[50px] px-[15px] text-13',
-				icon: 'rounded-full h-[30px] w-[30px]',
+				'icon-only': 'rounded-full h-[30px] w-[30px]',
 			},
 			text: {
 				default: 'text-white',
@@ -47,7 +47,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 		const Comp = asChild ? Slot : 'button'
 
 		// No children for icon-only buttons
-		const children2 = size === 'icon' ? null : children
+		const children2 = size === 'icon-only' ? null : children
 
 		return (
 			<Comp className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...props}>

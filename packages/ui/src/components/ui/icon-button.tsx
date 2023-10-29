@@ -17,7 +17,7 @@ export interface ButtonProps
 const IconButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
 	({className, variant, text, size, icon, children, ...props}, ref) => {
 		// No children for icon-only buttons
-		const children2 = size === 'icon' ? null : children
+		const children2 = size === 'icon-only' ? null : children
 
 		return (
 			<button className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...props}>

@@ -21,7 +21,7 @@ export const sizeMap = {
 	xl: '13px',
 	//
 	dialog: '14px',
-	icon: '14px',
+	'icon-only': '14px',
 } as const satisfies Record<Size, string>
 
 export function Icon({component, size = 'default', style, className, ...props}: IconProps) {
