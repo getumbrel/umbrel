@@ -1,4 +1,5 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal} from '@radix-ui/react-dialog'
+import {ForwardedRef, forwardRef} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
 import {Button} from '@/shadcn-components/ui/button'
@@ -74,9 +75,11 @@ export function ImmersiveDialogSplit({
 
 const immersiveContentSizeClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
 
-export function ImmersiveDialogOverlay() {
-	return <DialogOverlay className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl')} />
+function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
+	return <DialogOverlay ref={ref} className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl')} />
 }
+
+const ImmersiveDialogOverlay = forwardRef(ForwardedImmersiveDialogOverlay)
 
 function ImmersiveDialogClose() {
 	return (
