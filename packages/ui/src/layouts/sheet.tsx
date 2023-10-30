@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {Outlet, ScrollRestoration, useNavigate} from 'react-router-dom'
+import {Outlet, useNavigate} from 'react-router-dom'
 
 import {DialogMounter} from '@/components/dialog-mounter'
 import {DockSpacer} from '@/modules/desktop/dock'
@@ -30,7 +30,6 @@ export function SheetLayout() {
 						onContextMenu={(e) => e.preventDefault()}
 						onInteractOutside={(e) => e.preventDefault()}
 					>
-						<ScrollRestoration />
 						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'>
 							<Outlet />
 							<DockSpacer className='mt-4' />
