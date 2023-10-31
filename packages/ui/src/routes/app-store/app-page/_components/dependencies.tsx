@@ -1,6 +1,7 @@
 import {TbCircleCheckFilled} from 'react-icons/tb'
 
 import {AppIcon} from '@/components/app-icon'
+import {Loading} from '@/components/ui/loading'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {RegistryApp} from '@/trpc/trpc'
 
@@ -9,7 +10,7 @@ import {cardClass, cardTitleClass} from './shared'
 export const DependenciesSection = ({app}: {app: RegistryApp}) => {
 	const {appsKeyed, isLoading} = useAvailableApps()
 
-	if (isLoading) return <div>Loading...</div>
+	if (isLoading) return <Loading />
 
 	return (
 		<div className={cardClass}>

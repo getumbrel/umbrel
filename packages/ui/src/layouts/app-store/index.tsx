@@ -5,6 +5,7 @@ import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
 import {LinkButton} from '@/components/ui/link-button'
+import {Loading} from '@/components/ui/loading'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -107,7 +108,7 @@ function SearchResults({query}: {query: string}) {
 	const {isLoading, apps} = useAvailableApps()
 
 	if (isLoading) {
-		return <p>Loading...</p>
+		return <Loading />
 	}
 
 	const appResults = matchSorter(apps, query, {

@@ -1,6 +1,7 @@
 import {TbArrowLeft} from 'react-icons/tb'
 import {Link, useParams} from 'react-router-dom'
 
+import {Loading} from '@/components/ui/loading'
 import {useAvailableApp} from '@/hooks/use-available-apps'
 import {AppGallerySection} from '@/modules/app-store/gallery-section'
 
@@ -15,7 +16,7 @@ export function AppPage() {
 	const {appId} = useParams()
 	const {app, isLoading} = useAvailableApp(appId)
 
-	if (isLoading) return <div>Loading...</div>
+	if (isLoading) return <Loading />
 	if (!app) return <div>App not found</div>
 
 	return (

@@ -19,8 +19,9 @@ export function UpdatesDialog() {
 
 	const {isLoading, apps} = useAvailableApps()
 
+	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume
 	if (isLoading) {
-		return <p>Loading...</p>
+		return null
 	}
 
 	return (

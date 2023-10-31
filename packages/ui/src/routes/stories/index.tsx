@@ -8,6 +8,7 @@ import {objectKeys} from 'ts-extras'
 import {ChevronDown} from '@/assets/chevron-down'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
+import {Loading} from '@/components/ui/loading'
 import {InstalledAppsProvider, useInstalledApps} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
@@ -79,6 +80,8 @@ export function Stories() {
 			<Buttons />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
+			<H2>Loading</H2>
+			<Loading />
 			<H2>Tooltip</H2>
 			<TooltipExample />
 			<H2>Switch</H2>

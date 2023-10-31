@@ -1,3 +1,4 @@
+import {Loading} from '@/components/ui/loading'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {Apps3UpSection} from '@/modules/app-store/discover/apps-3-up-section'
@@ -10,7 +11,7 @@ export function Discover() {
 	const {isLoading, apps, appsKeyed} = useAvailableApps()
 
 	if (isLoading) {
-		return <p>Loading...</p>
+		return <Loading />
 	}
 
 	return (

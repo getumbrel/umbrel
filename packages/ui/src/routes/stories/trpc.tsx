@@ -1,5 +1,6 @@
 import {JSONTree} from 'react-json-tree'
 
+import {Loading} from '@/components/ui/loading'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -14,7 +15,7 @@ export function Trpc() {
 	const getQuery = trpcReact.user.get.useQuery()
 
 	if (res.isLoading) {
-		return <div>Loading...</div>
+		return <Loading />
 	}
 
 	if (res.error) {
