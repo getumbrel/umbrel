@@ -33,8 +33,10 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
+import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 import {fixmeHandler} from '@/utils/misc'
+import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {CardProgressStat, CardTempStat} from './cards'
 import {ListRow} from './list-row'
@@ -42,6 +44,13 @@ import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
 	const navigate = useNavigate()
+	const userQ = trpcReact.user.get.useQuery()
+	const diskQ = trpcReact.system.diskUsage.useQuery()
+	const memoryQ = trpcReact.system.memoryUsage.useQuery()
+
+	if (!userQ.data) {
+		return null
+	}
 
 	return (
 		<motion.div
@@ -59,14 +68,14 @@ export function SettingsContent() {
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
 					<div>
 						<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
-							Satoshi’s <span className='opacity-40'>Umbrel</span>
+							{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
 						</h2>
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 							<dt className='opacity-40'>Running on</dt>
-							<dd>Raspberry Pi 4</dd>
+							<dd>DEBUG 4</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
-							<dd>0.5.4 </dd>
+							<dd>0.0.0 </dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -91,18 +100,18 @@ export function SettingsContent() {
 					<Card>
 						<CardProgressStat
 							title='Storage'
-							value='256 GB'
-							valueSub='/ 2 TB'
-							secondaryValue='1.75 TB left'
+							value={maybePrettyBytes(null)}
+							valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
+							secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
 							progress={0.75}
 						/>
 					</Card>
 					<Card>
 						<CardProgressStat
 							title='Memory'
-							value='5.4 GB'
-							valueSub='/ 16 GB'
-							secondaryValue='11.4 GB left'
+							value={maybePrettyBytes(memoryQ.data?.used)}
+							valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
+							secondaryValue={`${maybePrettyBytes(memoryQ.data?.available)} left`}
 							progress={0.75}
 						/>
 					</Card>
