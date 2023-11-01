@@ -38,13 +38,15 @@ import {linkClass} from '@/utils/element-classes'
 import {fixmeHandler} from '@/utils/misc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
-import {CardProgressStat, CardTempStat} from './cards'
 import {ListRow} from './list-row'
+import {CardProgressStat} from './shared'
+import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
+	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 	const memoryQ = trpcReact.system.memoryUsage.useQuery()
 
@@ -116,7 +118,7 @@ export function SettingsContent() {
 						/>
 					</Card>
 					<Card>
-						<CardTempStat />
+						<TempStatCardContent tempInCelcius={cpuTempQ.data} />
 					</Card>
 					<div className='mx-auto'>
 						<IconLinkButton icon={RiPulseLine} to='/settings/live-usage' preventScrollReset={true}>

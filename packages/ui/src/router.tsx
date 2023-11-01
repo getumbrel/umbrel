@@ -37,6 +37,7 @@ import {Stories} from './routes/stories'
 import {AppStoreStory} from './routes/stories/app-store'
 import {ColorThiefExample} from './routes/stories/color-thief'
 import {InputExamples} from './routes/stories/input'
+import {SettingsStory} from './routes/stories/settings'
 import {Trpc} from './routes/stories/trpc'
 
 // NOTE: consider extracting certain providers into react-router loaders
@@ -216,6 +217,10 @@ export const router = createBrowserRouter([
 						<AppStoreStory />
 					</AvailableAppsProvider>
 				),
+			},
+			{
+				path: 'stories/settings',
+				Component: SettingsStory,
 			},
 			{
 				path: 'stories/trpc',

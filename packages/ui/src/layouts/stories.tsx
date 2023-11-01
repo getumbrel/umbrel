@@ -14,6 +14,7 @@ export function StoriesLayout() {
 					<Link to='/'>🏠 Home</Link>
 					<Link to='/stories'>Stories</Link>
 					<Link to='/stories/app-store'>App Store</Link>
+					<Link to='/stories/settings'>Settings</Link>
 					<Link to='/stories/trpc'>tRPC</Link>
 					<Link to='/stories/input'>Input</Link>
 					<Link to='/stories/colorthief'>Color Thief</Link>
