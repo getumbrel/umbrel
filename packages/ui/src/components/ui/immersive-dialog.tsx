@@ -4,9 +4,9 @@ import {RiCloseLine} from 'react-icons/ri'
 
 import {dialogContentClass, dialogOverlayClass} from '@/shadcn-components/ui/shared/dialog'
 import {cn} from '@/shadcn-lib/utils'
+import {afterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
-import {afterDelayedClose} from '../../utils/dialog'
 import {DialogMounter} from '../dialog-mounter'
 import {IconButton} from './icon-button'
 

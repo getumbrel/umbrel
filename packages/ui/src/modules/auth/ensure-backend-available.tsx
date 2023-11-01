@@ -1,6 +1,5 @@
+import {CoverMessage} from '@/components/ui/cover-message'
 import {trpcReact} from '@/trpc/trpc'
-
-import {CoverMessage} from '../../components/ui/cover-message'
 
 export function EnsureBackendAvailable({children}: {children: React.ReactNode}) {
 	// TODO: probably want a straightforward `fetch` call here instead of using trpc
