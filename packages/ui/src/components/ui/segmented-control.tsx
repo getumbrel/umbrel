@@ -3,22 +3,22 @@ import {useId} from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
-type Tab = {id: string; label: string}
+type Tab<T extends string> = {id: T; label: string}
 
 // Based on:
 // https://buildui.com/recipes/animated-tabs
-export function SegmentedControl({
+export function SegmentedControl<T extends string>({
 	value,
 	onValueChange,
 	size = 'default',
 	variant = 'default',
 	tabs,
 }: {
-	value: string
-	onValueChange: (value: string) => void
+	value: T
+	onValueChange: (value: T) => void
 	size?: 'default' | 'lg'
 	variant?: 'default' | 'primary'
-	tabs: Tab[]
+	tabs: readonly Tab<T>[]
 }) {
 	const id = useId()
 	return (
