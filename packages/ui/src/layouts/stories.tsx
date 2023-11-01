@@ -13,6 +13,7 @@ export function StoriesLayout() {
 				<div className='flex gap-2 bg-neutral-900 p-3'>
 					<Link to='/'>🏠 Home</Link>
 					<Link to='/stories'>Stories</Link>
+					<Link to='/stories/app-store'>App Store</Link>
 					<Link to='/stories/trpc'>tRPC</Link>
 					<Link to='/stories/input'>Input</Link>
 					<Link to='/stories/colorthief'>Color Thief</Link>

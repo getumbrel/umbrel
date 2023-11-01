@@ -34,6 +34,7 @@ import {RestartDialog} from './routes/settings/restart'
 import {ShutdownDialog} from './routes/settings/shutdown'
 import {TroubleshootDialog} from './routes/settings/troubleshoot'
 import {Stories} from './routes/stories'
+import {AppStoreStory} from './routes/stories/app-store'
 import {ColorThiefExample} from './routes/stories/color-thief'
 import {InputExamples} from './routes/stories/input'
 import {Trpc} from './routes/stories/trpc'
@@ -207,6 +208,14 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories',
 				Component: Stories,
+			},
+			{
+				path: 'stories/app-store',
+				element: (
+					<AvailableAppsProvider>
+						<AppStoreStory />
+					</AvailableAppsProvider>
+				),
 			},
 			{
 				path: 'stories/trpc',
