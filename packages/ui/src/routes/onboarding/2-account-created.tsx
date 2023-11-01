@@ -1,9 +1,9 @@
 import {useEffect, useRef} from 'react'
 import {Link} from 'react-router-dom'
 
+import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, Layout} from '@/layouts/bare/shared'
-import {links} from '@/links'
 
 export function AccountCreated() {
 	useUmbrelTitle('Account created')

@@ -23,7 +23,7 @@ import {Card} from '@/components/ui/card'
 import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {links} from '@/links'
+import {links} from '@/constants/links'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {Button} from '@/shadcn-components/ui/button'
 import {

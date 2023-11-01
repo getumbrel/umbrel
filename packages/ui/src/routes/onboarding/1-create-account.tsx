@@ -1,8 +1,8 @@
 import {Link, useNavigate} from 'react-router-dom'
 
+import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
-import {links} from '@/links'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
 
 export function CreateAccount() {
