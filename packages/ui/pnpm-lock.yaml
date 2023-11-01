@@ -80,6 +80,9 @@ dependencies:
   match-sorter:
     specifier: 6.3.1
     version: 6.3.1
+  pretty-bytes:
+    specifier: ^6.1.1
+    version: 6.1.1
   rci:
     specifier: 0.1.0
     version: 0.1.0(react-dom@18.2.0)(react@18.2.0)
@@ -3814,6 +3817,11 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
     dev: true
+
+  /pretty-bytes@6.1.1:
+    resolution: {integrity: sha512-mQUvGU6aUFQ+rNvTIAcZuWGRT9a6f6Yrg9bHs4ImKF+HZCEK+plBvnAZYSIQztknZF2qnzNtr6F8s0+IuptdlQ==}
+    engines: {node: ^14.13.1 || >=16.0.0}
+    dev: false
 
   /prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
