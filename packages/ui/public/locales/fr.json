@@ -1,11 +1,12 @@
 {
-	"desktop.greeting.morning": "Bonjour, {{name}}",
-	"desktop.greeting.afternoon": "Bon après-midi, {{name}}",
-	"desktop.greeting.evening": "Bonsoir, {{name}}",
-	"search": "Recherche",
-	"settings": "Paramètres",
-	"explore-all-the-apps": "Explorez toutes les applications !",
-	"hello": "Bonjour",
-	"app-store.title": "Magasin d'applications",
-	"app-store.tagline": "Parcourez la collection toujours croissante d'applications auto-hébergées sur Umbrel"
+  "desktop.greeting.morning": "Bonjour, {{name}}",
+  "desktop.greeting.afternoon": "Bon après-midi, {{name}}",
+  "desktop.greeting.evening": "Bonsoir, {{name}}",
+  "search": "Recherche",
+  "settings": "Paramètres",
+  "explore-all-the-apps": "Explorez toutes les applications !",
+  "hello": "Bonjour",
+  "app-store.title": "Magasin d'applications",
+  "app-store.tagline": "Parcourez la collection toujours croissante d'applications auto-hébergées sur Umbrel",
+  "unknown": "Inconnu"
 }

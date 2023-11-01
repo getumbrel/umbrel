@@ -6,5 +6,6 @@
 	"search": "Search",
 	"settings": "Settings",
 	"app-store.title": "App Store",
-	"app-store.tagline": "Browse the ever-growing collection of self-hosted apps on Umbrel"
+	"app-store.tagline": "Browse the ever-growing collection of self-hosted apps on Umbrel",
+	"unknown": "Unknown"
 }
