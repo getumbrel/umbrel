@@ -3,7 +3,7 @@ import {useParams} from 'react-router-dom'
 import {LinkButton} from '@/components/ui/link-button'
 import {Category} from '@/trpc/trpc'
 
-import {categoryishDescriptions} from './data'
+import {categoryishDescriptions} from './constants'
 
 export function AppStoreNav() {
 	const {categoryishId} = useParams<{categoryishId: Category}>()

@@ -2,7 +2,7 @@ import {useParams} from 'react-router-dom'
 
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
-import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/data'
+import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
 
 export function CategoryPage() {
