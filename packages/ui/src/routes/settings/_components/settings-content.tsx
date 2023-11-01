@@ -39,7 +39,7 @@ import {fixmeHandler} from '@/utils/misc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {ListRow} from './list-row'
-import {CardProgressStat} from './shared'
+import {ProgressStatCardContent} from './progress-card-content'
 import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
@@ -100,7 +100,7 @@ export function SettingsContent() {
 				</Card>
 				<div className='flex flex-col gap-3'>
 					<Card>
-						<CardProgressStat
+						<ProgressStatCardContent
 							title='Storage'
 							value={maybePrettyBytes(null)}
 							valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
@@ -109,7 +109,7 @@ export function SettingsContent() {
 						/>
 					</Card>
 					<Card>
-						<CardProgressStat
+						<ProgressStatCardContent
 							title='Memory'
 							value={maybePrettyBytes(memoryQ.data?.used)}
 							valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
