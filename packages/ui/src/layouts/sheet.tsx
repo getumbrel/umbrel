@@ -1,5 +1,5 @@
-import {useState} from 'react'
-import {Outlet, useNavigate} from 'react-router-dom'
+import {useEffect, useRef, useState} from 'react'
+import {Outlet, useLocation, useNavigate} from 'react-router-dom'
 
 import {DialogMounter} from '@/components/dialog-mounter'
 import {DockSpacer} from '@/modules/desktop/dock'
@@ -7,8 +7,16 @@ import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
 export function SheetLayout() {
+	const location = useLocation()
 	const navigate = useNavigate()
 	const [open, setOpen] = useState(true)
+
+	const scrollRef = useRef<HTMLDivElement>(null)
+
+	// TODO: Do scroll restoration at some point
+	// Probably use this after it's merged:
+	// https://github.com/remix-run/react-router/pull/10468
+	useEffect(() => scrollRef.current?.scrollTo(0, 0), [location.pathname])
 
 	useAfterDelayedClose(open, () => navigate('/'))
 
@@ -30,7 +38,10 @@ export function SheetLayout() {
 						onContextMenu={(e) => e.preventDefault()}
 						onInteractOutside={(e) => e.preventDefault()}
 					>
-						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'>
+						<div
+							className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'
+							ref={scrollRef}
+						>
 							<Outlet />
 							<DockSpacer className='mt-4' />
 						</div>
