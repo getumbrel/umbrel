@@ -16,10 +16,11 @@ export function CategoryPage() {
 
 function CategoryContent() {
 	const {categoryishId} = useParams<{categoryishId: Categoryish}>()
-	const {appsGroupedByCategory, apps} = useAvailableApps()
+	const {appsGroupedByCategory, apps, isLoading} = useAvailableApps()
 
 	// Probably invalid url param
 	if (!categoryishId) return null
+	if (isLoading) return null
 
 	const categoryId = categoryishId === 'discover' || categoryishId === 'all' ? null : categoryishId
 
