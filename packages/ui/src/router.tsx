@@ -1,5 +1,7 @@
-import {createBrowserRouter} from 'react-router-dom'
+import {useErrorBoundary} from 'react-error-boundary'
+import {createBrowserRouter, useRouteError} from 'react-router-dom'
 
+import {CoverMessage} from './components/ui/cover-message'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
@@ -36,21 +38,25 @@ import {TroubleshootDialog} from './routes/settings/troubleshoot'
 import {Stories} from './routes/stories'
 import {AppStoreStory} from './routes/stories/app-store'
 import {ColorThiefExample} from './routes/stories/color-thief'
+import {ErrorStory} from './routes/stories/error'
 import {InputExamples} from './routes/stories/input'
 import {SettingsStory} from './routes/stories/settings'
 import {Trpc} from './routes/stories/trpc'
+import {Button} from './shadcn-components/ui/button'
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
 	{
 		path: 'install-first-app',
 		Component: InstallFirstApp,
+		errorElement: <ErrorBoundary />,
 	},
 
 	// desktop
 	{
 		path: '/',
 		Component: Desktop,
+		errorElement: <ErrorBoundary />,
 		children: [
 			{
 				path: 'edit-widgets',
@@ -139,6 +145,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: BareLayout,
+		errorElement: <ErrorBoundary />,
 		children: [
 			{
 				path: 'login',
@@ -187,6 +194,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: Demo,
+		errorElement: <ErrorBoundary />,
 		children: [
 			{
 				path: 'one',
@@ -205,6 +213,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: StoriesLayout,
+		errorElement: <ErrorBoundary />,
 		children: [
 			{
 				path: 'stories',
@@ -234,6 +243,27 @@ export const router = createBrowserRouter([
 				path: 'stories/color-thief',
 				Component: ColorThiefExample,
 			},
+			{
+				path: 'stories/error',
+				Component: ErrorStory,
+			},
 		],
 	},
 ])
+
+function ErrorBoundary() {
+	const error = useRouteError()
+	const {resetBoundary} = useErrorBoundary()
+	// console.error(error)
+	return (
+		<CoverMessage>
+			<div className=''>
+				<h1 className='font-semibold text-destructive2-lightest'>⚠ Dang!</h1>
+				<p className='max-w-sm text-13'>{error instanceof Error ? error.message : 'Unexpected error'}</p>
+				<Button variant='secondary' size='sm' className='mt-2' onClick={resetBoundary}>
+					Try Again
+				</Button>
+			</div>
+		</CoverMessage>
+	)
+}
