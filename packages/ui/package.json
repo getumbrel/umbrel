@@ -54,7 +54,6 @@
 		"react-router-dom": "6.17.0",
 		"react-use": "17.4.0",
 		"remeda": "^1.28.0",
-		"remove": "^0.1.5",
 		"tailwind-merge": "1.14.0",
 		"tailwindcss-animate": "1.0.7",
 		"ts-extras": "^0.11.0",
