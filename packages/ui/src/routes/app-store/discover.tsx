@@ -7,20 +7,40 @@ import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {Button} from '@/shadcn-components/ui/button'
 
-export function Discover() {
-	const {isLoading, apps, appsKeyed} = useAvailableApps()
+import {useDiscoverQuery} from './use-discover-query'
 
-	if (isLoading) {
+export function Discover() {
+	const availableApps = useAvailableApps()
+
+	const discoverQ = useDiscoverQuery()
+
+	if (availableApps.isLoading || discoverQ.isLoading) {
 		return <Loading />
 	}
+
+	const {apps, appsKeyed} = availableApps
+
+	if (!discoverQ.data) {
+		throw new Error('No data')
+	}
+
+	const {banners, sections} = discoverQ.data
 
 	return (
 		<>
 			<AppStoreNav />
-			<AppsGallerySection apps={apps.slice(0, 5)} />
-			<AppsGridSection overline='Most installs' title='By popular demand' apps={apps.slice(0, 9)} />
+			<AppsGallerySection banners={banners} />
+			{sections.map((section) => (
+				<AppsGridSection
+					key={section.heading + section.subheading}
+					title={section.heading}
+					overline={section.subheading}
+					apps={apps.filter((app) => section.apps.includes(app.id))}
+				/>
+			))}
+			{/* <AppsGridSection overline='Most installs' title='By popular demand' apps={apps.slice(0, 9)} /> */}
 			<AppsRowSection overline='Staff picks' title='Curated for you' apps={apps.slice(0, 5)} />
-			<AppsGridSection overline='Recently published' title='Fresh from the oven' apps={apps.slice(0, 9)} />
+			{/* <AppsGridSection overline='Recently published' title='Fresh from the oven' apps={apps.slice(0, 9)} /> */}
 			<Apps3UpSection
 				apps={[appsKeyed['bitcoin'], appsKeyed['lightning'], appsKeyed['electrs']]}
 				overline='Bitcoin'
@@ -31,7 +51,7 @@ export function Discover() {
 					Browse Bitcoin apps
 				</Button>
 			</Apps3UpSection>
-			<AppsGridSection overline='Must haves' title='Essentials for your Umbrel' apps={apps.slice(0, 9)} />
+			{/* <AppsGridSection overline='Must haves' title='Essentials for your Umbrel' apps={apps.slice(0, 9)} /> */}
 			<Apps3UpSection
 				apps={[appsKeyed['immich'], appsKeyed['nextcloud'], appsKeyed['photoprism']]}
 				overline='Files & productivity'
@@ -44,7 +64,7 @@ export function Discover() {
 					Browse productivity apps
 				</Button>
 			</Apps3UpSection>
-			<AppsGridSection overline='Under the radar' title='Hidden gems' apps={apps.slice(0, 9)} />
+			{/* <AppsGridSection overline='Under the radar' title='Hidden gems' apps={apps.slice(0, 9)} /> */}
 			<Apps3UpSection
 				apps={[appsKeyed['jellyfin'], appsKeyed['plex'], appsKeyed['sonarr']]}
 				overline='Bitcoin'

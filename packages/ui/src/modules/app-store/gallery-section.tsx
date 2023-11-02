@@ -1,19 +1,19 @@
 import {Link} from 'react-router-dom'
 
+import {Banner} from '@/routes/app-store/use-discover-query'
 import {cn} from '@/shadcn-lib/utils'
-import {RegistryApp} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
-export const AppsGallerySection: React.FC<{apps: RegistryApp[]}> = ({apps}) => {
+export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => {
 	return (
 		<div className={galleryRootClass}>
-			{apps.slice(0, 3).map((app) => (
+			{banners.map((banner) => (
 				<Link
-					key={app.id}
-					to={`/app-store/${app.id}`}
+					key={banner.id}
+					to={`/app-store/${banner.id}`}
 					className={cn(galleryItemClass, 'h-[316px] w-[712px]')}
 					style={{
-						backgroundImage: `url(${app.gallery[0]})`,
+						backgroundImage: `url(${banner.image})`,
 					}}
 				/>
 			))}
