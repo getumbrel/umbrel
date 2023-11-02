@@ -12,7 +12,7 @@
 		"postinstall": "node copy-tabler-icons.js",
 		"prebuild": "node copy-tabler-icons.js",
 		"build": "vite build",
-		"lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+		"lint": "eslint .",
 		"preview": "vite preview --port 4000",
 		"format": "prettier . --write",
 		"tsc": "tsc --noEmit"
@@ -62,6 +62,7 @@
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "4.1.1",
 		"@tabler/icons": "2.39.0",
+		"@tanstack/eslint-plugin-query": "^5.0.5",
 		"@types/node": "20.8.7",
 		"@types/react": "^18.2.15",
 		"@types/react-dom": "^18.2.7",
@@ -71,6 +72,7 @@
 		"@vitejs/plugin-react-swc": "3.4.0",
 		"autoprefixer": "10.4.16",
 		"eslint": "^8.45.0",
+		"eslint-plugin-react": "^7.33.2",
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"eslint-plugin-react-refresh": "^0.4.3",
 		"postcss": "8.4.31",

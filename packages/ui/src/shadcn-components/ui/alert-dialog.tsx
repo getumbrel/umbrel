@@ -2,6 +2,7 @@ import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import {LucideIcon} from 'lucide-react'
 import * as React from 'react'
 import {IconType} from 'react-icons'
+import {omit} from 'remeda'
 
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
@@ -20,8 +21,12 @@ AlertDialogPortal.displayName = AlertDialogPrimitive.Portal.displayName
 const AlertDialogOverlay = React.forwardRef<
 	React.ElementRef<typeof AlertDialogPrimitive.Overlay>,
 	React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
->(({className, children, ...props}, ref) => (
-	<AlertDialogPrimitive.Overlay className={cn(dialogOverlayClass, className)} {...props} ref={ref} />
+>(({className, ...props}, ref) => (
+	<AlertDialogPrimitive.Overlay
+		className={cn(dialogOverlayClass, className)}
+		{...omit(props, ['children'])}
+		ref={ref}
+	/>
 ))
 AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 
