@@ -58,32 +58,22 @@ a {
 	scroll-timeline: --scroll-timeline y;
 	/* Firefox supports the older "vertical" syntax */
 	scroll-timeline: --scroll-timeline vertical;
-	-webkit-mask-image: linear-gradient(
-		to bottom,
-		transparent,
-		red var(--distance1) calc(100% - var(--distance2)),
-		transparent
-	);
+	mask-image: linear-gradient(to bottom, transparent, red var(--distance1) calc(100% - var(--distance2)), transparent);
 }
 
 .umbrel-wallpaper-fade-scroller {
-	-webkit-mask-image: linear-gradient(to right, transparent, red 16px calc(100% - 16px), transparent);
+	mask-image: linear-gradient(to right, transparent, red 16px calc(100% - 16px), transparent);
 }
 
 .umbrel-dialog-fade-scroller {
-	-webkit-mask-image: linear-gradient(to bottom, transparent, red 32px calc(100% - 32px), transparent);
+	mask-image: linear-gradient(to bottom, transparent, red 32px calc(100% - 32px), transparent);
 }
 
 .umbrel-fade-scroller-x {
 	scroll-timeline: --scroll-timeline x;
 	/* Firefox supports the older "vertical" syntax */
 	scroll-timeline: --scroll-timeline horizontal;
-	-webkit-mask-image: linear-gradient(
-		to right,
-		transparent,
-		red var(--distance1) calc(100% - var(--distance2)),
-		transparent
-	);
+	mask-image: linear-gradient(to right, transparent, red var(--distance1) calc(100% - var(--distance2)), transparent);
 }
 
 .umbrel-divide-y > * {
