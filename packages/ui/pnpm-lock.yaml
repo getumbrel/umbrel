@@ -71,9 +71,6 @@ dependencies:
   inter-ui:
     specifier: 3.19.3
     version: 3.19.3
-  lodash-es:
-    specifier: 4.17.21
-    version: 4.17.21
   lucide-react:
     specifier: 0.288.0
     version: 0.288.0(react@18.2.0)
@@ -110,6 +107,9 @@ dependencies:
   react-use:
     specifier: 17.4.0
     version: 17.4.0(react-dom@18.2.0)(react@18.2.0)
+  remeda:
+    specifier: ^1.28.0
+    version: 1.28.0
   remove:
     specifier: ^0.1.5
     version: 0.1.5
@@ -133,9 +133,6 @@ devDependencies:
   '@tabler/icons':
     specifier: 2.39.0
     version: 2.39.0
-  '@types/lodash-es':
-    specifier: 4.17.10
-    version: 4.17.10
   '@types/node':
     specifier: 20.8.7
     version: 20.8.7
@@ -1814,14 +1811,9 @@ packages:
     resolution: {integrity: sha512-U3PUjAudAdJBeC2pgN8uTIKgxrb4nlDF3SF0++EldXQvQBGkpFZMSnwQiIoDU77tv45VgNkl/L4ouD+rEomujw==}
     dev: true
 
-  /@types/lodash-es@4.17.10:
-    resolution: {integrity: sha512-YJP+w/2khSBwbUSFdGsSqmDvmnN3cCKoPOL7Zjle6s30ZtemkkqhjVfFqGwPN7ASil5VyjE2GtyU/yqYY6mC0A==}
-    dependencies:
-      '@types/lodash': 4.14.200
-    dev: true
-
   /@types/lodash@4.14.200:
     resolution: {integrity: sha512-YI/M/4HRImtNf3pJgbF+W6FrXovqj+T+/HpENLTooK9PnkacBsDpeP3IpHab40CClUfhNmdM2WTNP2sa2dni5Q==}
+    dev: false
 
   /@types/node@20.8.7:
     resolution: {integrity: sha512-21TKHHh3eUHIi2MloeptJWALuCu5H7HQTdTrWIFReA8ad+aggoX+lRes3ex7/FtpC+sVUpFMQ+QTfYr74mruiQ==}
@@ -3294,10 +3286,6 @@ packages:
       p-locate: 5.0.0
     dev: true
 
-  /lodash-es@4.17.21:
-    resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
-    dev: false
-
   /lodash.curry@4.1.1:
     resolution: {integrity: sha512-/u14pXGviLaweY5JI0IUzgzF2J6Ne8INyzAZjImcryjgkZ+ebruBxy2/JaOOkTqScddcYtakjhSaeemV8lR0tA==}
     dev: false
@@ -4111,6 +4099,10 @@ packages:
     dependencies:
       rc: 1.2.8
     dev: true
+
+  /remeda@1.28.0:
+    resolution: {integrity: sha512-QANcfxsEiRCdiN8PQ7LsPQvW1qVFAO2x4dXEpuWbZKPrzzRG2BA0SXReDnhppD2YZKgLWA/bLpHq0ANenXea1w==}
+    dev: false
 
   /remove-accents@0.4.2:
     resolution: {integrity: sha512-7pXIJqJOq5tFgG1A2Zxti3Ht8jJF337m4sowbuHsW30ZnkQFnDzy9qBNhgzX8ZLW4+UBcXiiR7SwR6pokHsxiA==}

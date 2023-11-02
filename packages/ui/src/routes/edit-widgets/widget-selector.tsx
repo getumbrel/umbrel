@@ -1,7 +1,7 @@
 import {AnimatePresence, motion} from 'framer-motion'
-import {uniq} from 'lodash-es'
 import {ReactNode, useState} from 'react'
 import {useTimeout} from 'react-use'
+import {uniq} from 'remeda'
 
 import {useInstalledApps} from '@/hooks/use-installed-apps'
 import {DockSpacer} from '@/modules/desktop/dock'

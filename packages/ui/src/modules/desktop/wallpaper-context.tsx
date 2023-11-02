@@ -1,7 +1,7 @@
-import {keyBy} from 'lodash-es'
 import {createContext, useContext, useLayoutEffect} from 'react'
 
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {keyBy} from '@/utils/misc'
 
 type WallpaperT = {
 	id: string
@@ -91,11 +91,8 @@ export const wallpapers = [
 	},
 ] as const satisfies readonly WallpaperT[]
 
-export const wallpapersKeyed = keyBy(wallpapers, 'id') as {
-	[K in (typeof wallpapers)[number]['id']]: WallpaperT
-}
-
 type WallpaperId = (typeof wallpapers)[number]['id']
+export const wallpapersKeyed = keyBy(wallpapers, 'id')
 
 // ---
 

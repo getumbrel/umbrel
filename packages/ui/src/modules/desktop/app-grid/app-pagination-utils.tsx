@@ -1,6 +1,6 @@
-import {chunk} from 'lodash-es'
 import {ReactNode, Ref, useLayoutEffect} from 'react'
 import {createBreakpoint, useMeasure} from 'react-use'
+import {chunk} from 'remeda'
 
 const useBreakpoint = createBreakpoint({S: 0, M: 600})
 
@@ -123,7 +123,7 @@ export function usePager({apps, widgets}: PageT): {
 		const maxAppsPerPage = appsPerRow * appsPerCol
 		// Get the apps not used in widget pages
 		const restApps = apps.slice(appsPerPageWithWidgetRow * widgetsChunked.length)
-		const appsForPagesWithoutWidgetsChunked = chunk(restApps, maxAppsPerPage)
+		const appsForPagesWithoutWidgetsChunked = maxAppsPerPage === 0 ? [] : chunk(restApps, maxAppsPerPage)
 		const nonWidgetPages = appsForPagesWithoutWidgetsChunked.map((apps) => {
 			return {
 				widgets: [],

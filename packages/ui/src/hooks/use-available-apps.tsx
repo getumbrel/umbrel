@@ -1,12 +1,13 @@
-import {groupBy, keyBy} from 'lodash-es'
 import {createContext, useContext} from 'react'
+import {groupBy} from 'remeda'
 
 import {Category, RegistryApp, trpcReact} from '@/trpc/trpc'
+import {keyBy} from '@/utils/misc'
 
 type AppsContextT = {
 	apps: RegistryApp[]
 	appsKeyed: Record<string, RegistryApp>
-	appsGroupedByCategory: {[key in Category]: RegistryApp[]}
+	appsGroupedByCategory: Record<Category, RegistryApp[]>
 	isLoading: boolean
 }
 const AppsContext = createContext<AppsContextT | null>(null)
@@ -25,7 +26,7 @@ export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	})
 
 	const appsKeyed = keyBy(apps, 'id')
-	const appsGroupedByCategory = groupBy<RegistryApp>(apps, 'category') as {[key in Category]: RegistryApp[]}
+	const appsGroupedByCategory = groupBy(apps, (a) => a.category)
 
 	return (
 		<AppsContext.Provider value={{apps: apps || [], appsGroupedByCategory, appsKeyed, isLoading: appsQ.isLoading}}>

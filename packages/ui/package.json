@@ -40,7 +40,6 @@
 		"i18next-browser-languagedetector": "7.1.0",
 		"i18next-http-backend": "2.2.2",
 		"inter-ui": "3.19.3",
-		"lodash-es": "4.17.21",
 		"lucide-react": "0.288.0",
 		"match-sorter": "6.3.1",
 		"pretty-bytes": "^6.1.1",
@@ -53,6 +52,7 @@
 		"react-qr-code": "2.0.12",
 		"react-router-dom": "6.17.0",
 		"react-use": "17.4.0",
+		"remeda": "^1.28.0",
 		"remove": "^0.1.5",
 		"tailwind-merge": "1.14.0",
 		"tailwindcss-animate": "1.0.7",
@@ -62,7 +62,6 @@
 	"devDependencies": {
 		"@ianvs/prettier-plugin-sort-imports": "4.1.1",
 		"@tabler/icons": "2.39.0",
-		"@types/lodash-es": "4.17.10",
 		"@types/node": "20.8.7",
 		"@types/react": "^18.2.15",
 		"@types/react-dom": "^18.2.7",

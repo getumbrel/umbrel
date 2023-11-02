@@ -1,4 +1,4 @@
-import {range} from 'lodash-es'
+import {range} from 'remeda'
 
 import {Card} from '@/components/ui/card'
 import {Separator} from '@/shadcn-components/ui/separator'
@@ -19,9 +19,9 @@ export function SettingsStory() {
 			</Card>
 			<Separator />
 			<div className='flex flex-row flex-wrap gap-2'>
-				{range(-30, 110, 10).map((temp) => (
+				{range(-3, 11).map((temp) => (
 					<Card key={temp}>
-						<TempStatCardContent tempInCelcius={temp} defaultUnit='c' />
+						<TempStatCardContent tempInCelcius={temp * 10} defaultUnit='c' />
 					</Card>
 				))}
 			</div>

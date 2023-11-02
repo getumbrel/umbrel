@@ -1,5 +1,7 @@
-import {keyBy, pick} from 'lodash-es'
 import {createContext, useContext, useEffect, useState} from 'react'
+import {pick} from 'remeda'
+
+import {keyBy} from '@/utils/misc'
 
 type AppT = {
 	id: string
@@ -30,9 +32,7 @@ export const systemApps = [
 	},
 ] as const satisfies readonly AppT[]
 
-export const systemAppsKeyed = keyBy(systemApps, 'id') as {
-	[K in (typeof systemApps)[number]['id']]: AppT
-}
+export const systemAppsKeyed = keyBy(systemApps, 'id')
 
 type DemoAppsContextT = {
 	installedApps: AppT[]

@@ -5,7 +5,7 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
 import {cardTitleClass} from '@/routes/app-store/app-page/_components/shared'
 import {cn} from '@/shadcn-lib/utils'
-import {isNormalNumber} from '@/utils/misc'
+import {isNormalNumber, keyBy} from '@/utils/misc'
 
 import {cardSecondaryValueClass, cardValueClass} from './shared'
 
@@ -73,10 +73,7 @@ const tempDescriptions = [
 
 type TempUnit = (typeof tempDescriptions)[number]['id']
 
-const tempDescriptionsKeyed = Object.fromEntries(tempDescriptions.map((t) => [t.id, t])) as Record<
-	TempUnit,
-	(typeof tempDescriptions)[number]
->
+const tempDescriptionsKeyed = keyBy(tempDescriptions, 'id')
 
 // --- Helpers ---
 
