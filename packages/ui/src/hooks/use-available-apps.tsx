@@ -4,19 +4,34 @@ import {groupBy} from 'remeda'
 import {Category, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
-type AppsContextT = {
-	apps: RegistryApp[]
-	appsKeyed: Record<string, RegistryApp>
-	appsGroupedByCategory: Record<Category, RegistryApp[]>
-	isLoading: boolean
-}
+type AppsContextT =
+	| {
+			apps: undefined
+			appsKeyed: undefined
+			appsGroupedByCategory: undefined
+			isLoading: true
+	  }
+	| {
+			apps: RegistryApp[]
+			appsKeyed: Record<string, RegistryApp>
+			appsGroupedByCategory: Record<Category, RegistryApp[]>
+			isLoading: false
+	  }
+
 const AppsContext = createContext<AppsContextT | null>(null)
 
+// TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
-	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === 'umbrel-app-store')?.apps || []
+	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === 'umbrel-app-store')?.apps
 
-	const apps: RegistryApp[] = appsWithoutImages?.map((app) => {
+	if (appsQ.isLoading) return null
+
+	if (appsQ.isError || !appsQ.data || !appsWithoutImages) {
+		throw new Error('Failed to fetch apps.')
+	}
+
+	const apps: RegistryApp[] | undefined = appsWithoutImages?.map((app) => {
 		const icon = `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`
 		// FIXME: This is a hack to get the gallery images, but not all will have 5 images
 		const gallery: RegistryApp['gallery'] = [1, 2, 3, 4, 5].map(
@@ -28,11 +43,11 @@ export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsKeyed = keyBy(apps, 'id')
 	const appsGroupedByCategory = groupBy(apps, (a) => a.category)
 
-	return (
-		<AppsContext.Provider value={{apps: apps || [], appsGroupedByCategory, appsKeyed, isLoading: appsQ.isLoading}}>
-			{children}
-		</AppsContext.Provider>
-	)
+	const providerProps: AppsContextT = appsQ.isLoading
+		? {apps: undefined, appsKeyed: undefined, appsGroupedByCategory: undefined, isLoading: true}
+		: {apps, appsKeyed, appsGroupedByCategory, isLoading: false}
+
+	return <AppsContext.Provider value={providerProps}>{children}</AppsContext.Provider>
 }
 
 export function useAvailableApps() {
@@ -47,9 +62,10 @@ export function useAvailableApp(id?: string) {
 	if (!ctx) throw new Error('useApp must be used within AppsProvider')
 
 	if (!id) return {isLoading: false, app: undefined}
+	if (ctx.isLoading) return {isLoading: true}
 
 	return {
-		isLoading: ctx.isLoading,
+		isLoading: false,
 		app: ctx.appsKeyed[id],
 	}
 }
