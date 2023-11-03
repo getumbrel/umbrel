@@ -20,35 +20,33 @@ export function AppPage() {
 	if (!app) return <div>App not found</div>
 
 	return (
-		<>
-			<div className='flex flex-col gap-[40px]'>
-				<div className='space-y-5'>
-					<Link to='/app-store' className='inline-block'>
-						<TbArrowLeft className='h-5 w-5' />
-					</Link>
-					<TopHeader app={app} />
-				</div>
-				<AppGallerySection gallery={app.gallery} />
-				{/* NOTE: consider conditionally rendering */}
-				<div className='hidden flex-row gap-5 lg:flex'>
-					<div className='flex flex-1 flex-col gap-2.5'>
-						<AboutSection app={app} />
-						<ReleaseNotesSection app={app} />
-					</div>
-					<div className='flex w-80 flex-col gap-2.5'>
-						<InfoSection app={app} />
-						<DependenciesSection app={app} />
-						<RecommendationsSection />
-					</div>
-				</div>
-				<div className='space-y-2.5 lg:hidden'>
+		<div className='flex flex-col gap-[40px]'>
+			<div className='space-y-5'>
+				<Link to='/app-store' className='inline-block'>
+					<TbArrowLeft className='h-5 w-5' />
+				</Link>
+				<TopHeader app={app} />
+			</div>
+			<AppGallerySection gallery={app.gallery} />
+			{/* NOTE: consider conditionally rendering */}
+			<div className='hidden flex-row gap-5 lg:flex'>
+				<div className='flex flex-1 flex-col gap-2.5'>
 					<AboutSection app={app} />
+					<ReleaseNotesSection app={app} />
+				</div>
+				<div className='flex w-80 flex-col gap-2.5'>
 					<InfoSection app={app} />
 					<DependenciesSection app={app} />
-					<ReleaseNotesSection app={app} />
 					<RecommendationsSection />
 				</div>
 			</div>
-		</>
+			<div className='space-y-2.5 lg:hidden'>
+				<AboutSection app={app} />
+				<InfoSection app={app} />
+				<DependenciesSection app={app} />
+				<ReleaseNotesSection app={app} />
+				<RecommendationsSection />
+			</div>
+		</div>
 	)
 }
