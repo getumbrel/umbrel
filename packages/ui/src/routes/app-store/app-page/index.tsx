@@ -1,5 +1,5 @@
 import {TbArrowLeft} from 'react-icons/tb'
-import {Link, useParams} from 'react-router-dom'
+import {Link, useNavigate, useParams} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {useAvailableApp} from '@/hooks/use-available-apps'
@@ -13,6 +13,7 @@ import {ReleaseNotesSection} from './_components/release-notes-section'
 import {TopHeader} from './_components/top-header'
 
 export function AppPage() {
+	const navigate = useNavigate()
 	const {appId} = useParams()
 	const {app, isLoading} = useAvailableApp(appId)
 
@@ -22,9 +23,9 @@ export function AppPage() {
 	return (
 		<div className='flex flex-col gap-[40px]'>
 			<div className='space-y-5'>
-				<Link to='/app-store' className='inline-block'>
+				<button onClick={() => navigate(-1)} className='inline-block'>
 					<TbArrowLeft className='h-5 w-5' />
-				</Link>
+				</button>
 				<TopHeader app={app} />
 			</div>
 			<AppGallerySection gallery={app.gallery} />
