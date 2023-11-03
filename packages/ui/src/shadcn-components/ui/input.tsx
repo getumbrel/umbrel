@@ -1,6 +1,8 @@
 import {cva, VariantProps} from 'class-variance-authority'
+import {AnimatePresence, motion} from 'framer-motion'
 import * as React from 'react'
 import {TbAlertCircle, TbEye, TbEyeOff} from 'react-icons/tb'
+import {usePreviousDistinct} from 'react-use'
 
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
@@ -42,15 +44,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 )
 Input.displayName = 'Input'
 
-export function InputError({children}: {children: React.ReactNode}) {
-	return (
-		<div className='flex items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lighter'>
-			<TbAlertCircle className='h-4 w-4' />
-			{children}
-		</div>
-	)
-}
-
 // NOTE: If too many props start getting added to this, best to convert to something like this:
 // https://www.radix-ui.com/primitives/docs/components/form
 export function PasswordInput({
@@ -69,7 +62,7 @@ export function PasswordInput({
 }) {
 	const [showPassword, setShowPassword] = React.useState(false)
 	return (
-		<div className='space-y-1'>
+		<div>
 			<div className={cn(iconRightClasses.root)}>
 				<Input
 					variant={error ? 'destructive' : undefined}
@@ -90,7 +83,52 @@ export function PasswordInput({
 					{showPassword ? <TbEyeOff className={iconRightClasses.icon} /> : <TbEye className={iconRightClasses.icon} />}
 				</button>
 			</div>
-			{error && <InputError>{error}</InputError>}
+			<AnimatedInputError>{error}</AnimatedInputError>
+		</div>
+	)
+}
+
+export function AnimatedInputError({children}: {children: React.ReactNode}) {
+	const [showShake, setShowShake] = React.useState(false)
+	const prev = usePreviousDistinct(children)
+	React.useEffect(() => {
+		if (prev !== children) {
+			setShowShake(true)
+			setTimeout(() => setShowShake(false), 500)
+		}
+	}, [children])
+
+	return (
+		<AnimatePresence>
+			{children && (
+				<motion.div
+					className={showShake ? 'animate-shake' : undefined}
+					initial={{
+						height: 0,
+						opacity: 0,
+					}}
+					animate={{
+						height: 'auto',
+						className: 'mt-1',
+						opacity: 1,
+					}}
+					exit={{
+						height: 0,
+						opacity: 0,
+					}}
+				>
+					<InputError>{children}</InputError>
+				</motion.div>
+			)}
+		</AnimatePresence>
+	)
+}
+
+export function InputError({children}: {children: React.ReactNode}) {
+	return (
+		<div className='flex items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest'>
+			<TbAlertCircle className='h-4 w-4' />
+			{children}
 		</div>
 	)
 }
