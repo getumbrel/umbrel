@@ -13,7 +13,7 @@ const inputVariants = cva(
 		variants: {
 			variant: {
 				default: '',
-				destructive: 'text-destructive2-lighter border-destructive2-lighter',
+				destructive: 'text-destructive2-lightest border-destructive2-lightest',
 			},
 		},
 		defaultVariants: {
