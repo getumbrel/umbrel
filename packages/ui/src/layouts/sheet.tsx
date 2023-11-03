@@ -21,33 +21,31 @@ export function SheetLayout() {
 	useAfterDelayedClose(open, () => navigate('/'))
 
 	return (
-		<>
-			<DialogMounter>
-				<Sheet open={open} onOpenChange={setOpen} modal={false}>
-					<SheetContent
-						className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
-						backdrop={
-							open && (
-								<div
-									data-state={open ? 'open' : 'closed'}
-									className='bg-background/80 fixed inset-0 z-30 backdrop-blur-xl'
-									onClick={() => setOpen(false)}
-								/>
-							)
-						}
-						onContextMenu={(e) => e.preventDefault()}
-						onInteractOutside={(e) => e.preventDefault()}
+		<DialogMounter>
+			<Sheet open={open} onOpenChange={setOpen} modal={false}>
+				<SheetContent
+					className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
+					backdrop={
+						open && (
+							<div
+								data-state={open ? 'open' : 'closed'}
+								className='fixed inset-0 z-30 backdrop-blur-xl contrast-more:bg-neutral-600 contrast-more:backdrop-blur-none'
+								onClick={() => setOpen(false)}
+							/>
+						)
+					}
+					onContextMenu={(e) => e.preventDefault()}
+					onInteractOutside={(e) => e.preventDefault()}
+				>
+					<div
+						className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'
+						ref={scrollRef}
 					>
-						<div
-							className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'
-							ref={scrollRef}
-						>
-							<Outlet />
-							<DockSpacer className='mt-4' />
-						</div>
-					</SheetContent>
-				</Sheet>
-			</DialogMounter>
-		</>
+						<Outlet />
+						<DockSpacer className='mt-4' />
+					</div>
+				</SheetContent>
+			</Sheet>
+		</DialogMounter>
 	)
 }

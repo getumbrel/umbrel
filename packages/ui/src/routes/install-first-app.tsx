@@ -11,7 +11,7 @@ import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 import {RegistryApp} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
-const cardClass = tw`rounded-20 backdrop-blur-2xl bg-blend-soft-light bg-gradient-to-b from-black/50 via-black/50 to-black px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
+const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-none bg-blend-soft-light bg-gradient-to-b from-black/50 via-black/50 to-black contrast-more:bg-neutral-800 px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
 
 const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2`
 

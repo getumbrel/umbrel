@@ -76,7 +76,7 @@ function AppListRow({icon, title, value}: {icon: string; title: string; value: s
 				alt={title}
 				width={25}
 				height={25}
-				className='h-[25px] w-[25px] rounded-5 bg-white/10 bg-cover bg-center shadow-md backdrop-blur-sm'
+				className='h-[25px] w-[25px] rounded-5 bg-white/10 bg-cover bg-center shadow-md'
 				style={{
 					backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 				}}

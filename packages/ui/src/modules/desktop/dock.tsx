@@ -4,6 +4,7 @@ import {useLocation} from 'react-router-dom'
 import {systemAppsKeyed} from '@/hooks/use-installed-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/shadcn-lib/utils'
+import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
 import {LogoutDialog} from './logout-dialog'
@@ -89,7 +90,7 @@ export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	)
 }
 
-const dockClass = `mx-auto flex items-end gap-4 rounded-2xl bg-black/10 backdrop-blur-2xl px-3 shadow-dock shrink-0`
+const dockClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0`
 
 const DockDivider = () => (
 	<div className='br grid w-1 place-items-center' style={{height: ICON_SIDE}}>

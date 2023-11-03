@@ -76,7 +76,12 @@ export function ImmersiveDialogSplit({
 const immersiveContentSizeClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
 
 function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
-	return <DialogOverlay ref={ref} className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl')} />
+	return (
+		<DialogOverlay
+			ref={ref}
+			className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
+		/>
+	)
 }
 
 const ImmersiveDialogOverlay = forwardRef(ForwardedImmersiveDialogOverlay)
@@ -88,7 +93,7 @@ function ImmersiveDialogClose() {
 			<DialogClose asChild>
 				<IconButton
 					icon={RiCloseLine}
-					className='dialog-shadow h-[36px] w-[36px] border-none bg-dialog-content backdrop-blur-2xl hover:bg-dialog-content active:bg-dialog-content'
+					className='dialog-shadow h-[36px] w-[36px] border-none bg-dialog-content hover:bg-dialog-content active:bg-dialog-content'
 					style={{
 						boxShadow: '0px 32px 32px 0px rgba(0, 0, 0, 0.32), 1px 1px 1px 0px rgba(255, 255, 255, 0.08) inset',
 					}}

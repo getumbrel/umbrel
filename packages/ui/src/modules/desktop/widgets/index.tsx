@@ -41,10 +41,12 @@ export const BackdropBlurVariantContext = createContext<Variant>('with-backdrop-
 
 export function WidgetWrapper({label, children}: {label: string; children?: ReactNode}) {
 	return (
-		<div className={cn('w-[var(--widget-w)]', label && 'h-[var(--widget-h)]')}>
+		<div
+			className={cn('flex w-[var(--widget-w)] flex-col items-center justify-between', label && 'h-[var(--widget-h)]')}
+		>
 			{children}
 			{label && (
-				<div className='desktop relative z-0 mt-2.5 max-w-full truncate text-center text-13 leading-normal drop-shadow-desktop-label'>
+				<div className='desktop relative z-0 max-w-full truncate text-center text-13 leading-normal drop-shadow-desktop-label contrast-more:bg-black contrast-more:px-1'>
 					{label}
 				</div>
 			)}

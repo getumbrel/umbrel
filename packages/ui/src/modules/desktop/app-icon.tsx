@@ -13,13 +13,13 @@ export function AppIcon({appId, label, src}: {appId: string; label: string; src:
 						alt={label}
 						width={64}
 						height={64}
-						className='h-16 w-16 rounded-15 bg-white/50 bg-cover bg-center ring-white/25 backdrop-blur-sm group-data-[state=open]:ring-6'
+						className='h-16 w-16 rounded-15 bg-white/50 bg-cover bg-center ring-white/25 group-data-[state=open]:ring-6'
 						style={{
 							backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 						}}
 					/>
 					<div className='max-w-full text-13 leading-normal drop-shadow-desktop-label'>
-						<div className='truncate'>{label}</div>
+						<div className='truncate contrast-more:bg-black contrast-more:px-1'>{label}</div>
 					</div>
 				</div>
 			</ContextMenuTrigger>
