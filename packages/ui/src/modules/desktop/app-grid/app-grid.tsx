@@ -3,7 +3,15 @@ import {ReactNode} from 'react'
 import {usePager} from './app-pagination-utils'
 import {ArrowButton, Page, PaginatorPills, usePaginator} from './paginator'
 
-export function AppGrid({apps = [], widgets = []}: {apps?: ReactNode[]; widgets?: ReactNode[]}) {
+export function AppGrid({
+	apps = [],
+	widgets = [],
+	onlyFirstPage = false,
+}: {
+	apps?: ReactNode[]
+	widgets?: ReactNode[]
+	onlyFirstPage?: boolean
+}) {
 	const {pageInnerRef, pages} = usePager({apps, widgets})
 	const pageCount = pages.length
 
@@ -24,14 +32,15 @@ export function AppGrid({apps = [], widgets = []}: {apps?: ReactNode[]; widgets?
 							{pages[0]?.apps}
 						</PageInner>
 					</Page>
-					{pages.slice(1).map(({apps, widgets}, i) => (
-						<Page key={i} index={i + 1}>
-							<PageInner>
-								{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
-								{apps}
-							</PageInner>
-						</Page>
-					))}
+					{!onlyFirstPage &&
+						pages.slice(1).map(({apps, widgets}, i) => (
+							<Page key={i} index={i + 1}>
+								<PageInner>
+									{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
+									{apps}
+								</PageInner>
+							</Page>
+						))}
 				</div>
 				{pageCount > 1 && (
 					<>

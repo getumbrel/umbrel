@@ -85,6 +85,7 @@ function DesktopContent() {
 			<div className='pt-12' />
 			<div className='flex w-full flex-grow overflow-hidden'>
 				<AppGrid
+					onlyFirstPage
 					widgets={selectedWidgets?.map((widget) => (
 						<WidgetWrapper
 							key={widget.endpoint}
