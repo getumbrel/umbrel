@@ -18,8 +18,9 @@ export function DesktopContent() {
 
 	if (isLoading) return
 
-	type DesktopVariant = 'edit-widgets' | 'default'
-	const variant: DesktopVariant = pathname.startsWith('/edit-widgets') ? 'edit-widgets' : 'default'
+	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
+	const variant: DesktopVariant =
+		pathname === '/' ? 'default' : pathname.startsWith('/edit-widgets') ? 'edit-widgets' : 'overlayed'
 
 	const variants: Record<DesktopVariant, Variant> = {
 		default: {
@@ -29,6 +30,13 @@ export function DesktopContent() {
 			translateY: -20,
 			opacity: 0,
 		},
+		overlayed: {
+			translateY: 0,
+			opacity: 0,
+			transition: {
+				duration: 0,
+			},
+		},
 	}
 
 	return (
@@ -37,9 +45,7 @@ export function DesktopContent() {
 				className='flex h-full w-full select-none flex-col items-center justify-between'
 				variants={variants}
 				animate={variant}
-				initial={{
-					opacity: 0,
-				}}
+				initial={{opacity: 0}}
 				transition={{duration: 0.15, ease: 'easeOut'}}
 			>
 				<div className='pt-6 md:pt-12' />
@@ -50,7 +56,7 @@ export function DesktopContent() {
 					initial={{opacity: 0, scale: 1}}
 					animate={{opacity: 1, scale: 1}}
 					exit={{opacity: 0, scale: 1}}
-					transition={{duration: 0.2, ease: 'easeOut', delay: 0.2}}
+					transition={variant === 'overlayed' ? {duration: 0} : {duration: 0.2, ease: 'easeOut', delay: 0.2}}
 				>
 					<AppGrid
 						widgets={selectedWidgets?.map((widget) => (
