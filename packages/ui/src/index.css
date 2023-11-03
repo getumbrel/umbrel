@@ -114,12 +114,6 @@ a {
 	}
 }
 
-/* Don't cross-fade dock between page transitions */
-::view-transition-old(dock),
-::view-transition-new(dock) {
-	animation-duration: 0s;
-}
-
 @keyframes slide-down {
 	to {
 		transform: translateY(100px);

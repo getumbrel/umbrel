@@ -31,7 +31,6 @@ export function Dock() {
 				onPointerLeave={() => mouseX.set(Infinity)}
 				className={dockClass}
 				style={{
-					viewTransitionName: 'dock',
 					height: DOCK_HEIGHT,
 					paddingBottom: PADDING,
 				}}
@@ -84,13 +83,13 @@ export function DockSpacer({className}: {className?: string}) {
 
 export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	return (
-		<div className='fixed bottom-0 left-1/2 z-30 -translate-x-1/2' style={{paddingBottom: FROM_BOTTOM}}>
+		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: FROM_BOTTOM}}>
 			{children}
 		</div>
 	)
 }
 
-const dockClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0`
+const dockClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu`
 
 const DockDivider = () => (
 	<div className='br grid w-1 place-items-center' style={{height: ICON_SIDE}}>
