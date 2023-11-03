@@ -78,7 +78,7 @@ export function DockItem({
 		<motion.div ref={ref} className='relative aspect-square' style={{width}}>
 			{/* icon glow */}
 			<div
-				className='absolute h-full w-full bg-cover opacity-30'
+				className='absolute hidden h-full w-full bg-cover opacity-30 md:block'
 				style={{
 					backgroundImage: `url(${bg})`,
 					filter: 'blur(16px)',
