@@ -31,3 +31,19 @@ const navDescriptions = [
 
 const navDescriptionsKeyed = keyBy(navDescriptions, 'id')
 ```
+
+## Adding view transition support to elements
+
+EX:
+
+```tsx
+<div
+	style={{
+		viewTransitionName: 'box',
+	}}
+>
+	Box
+</div>
+```
+
+You can then search the repo for `viewTransitionName` to find them all
