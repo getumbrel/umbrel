@@ -26,7 +26,7 @@ export function Dock() {
 				initial={{y: 90}}
 				animate={{y: 0}}
 				exit={{y: 90}}
-				transition={{delay: 0.3}}
+				transition={{delay: 0.8}}
 				onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.pageX)}
 				onPointerLeave={() => mouseX.set(Infinity)}
 				className={dockClass}
