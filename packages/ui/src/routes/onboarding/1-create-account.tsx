@@ -2,7 +2,7 @@ import {Link, useNavigate} from 'react-router-dom'
 
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
 
 export function CreateAccount() {
@@ -23,7 +23,7 @@ export function CreateAccount() {
 			subTitle='Your account info is stored only on your Umbrel. Make sure to back up your password safely as there is no way to reset it.'
 			subTitleMaxWidth={630}
 			footer={
-				<Link to={links.support} target='_blank'>
+				<Link to={links.support} target='_blank' className={footerLinkClass}>
 					Contact support
 				</Link>
 			}
