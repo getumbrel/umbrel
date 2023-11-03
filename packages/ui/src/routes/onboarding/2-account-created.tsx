@@ -4,18 +4,27 @@ import {Link} from 'react-router-dom'
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
+import {trpcReact} from '@/trpc/trpc'
 
 export function AccountCreated() {
 	useUmbrelTitle('Account created')
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 
+	const getQuery = trpcReact.user.get.useQuery()
+
+	const name = getQuery.data?.name
+
 	useEffect(() => {
 		continueLinkRef.current?.focus()
 	}, [])
 
+	if (!name) {
+		return null
+	}
+
 	return (
 		<Layout
-			title='You’re all set, Mayank.'
+			title={`You’re all set, ${name}.`}
 			subTitle='By clicking Launch below, we take it that you agree to our privacy policy and term of service.'
 			subTitleMaxWidth={470}
 			footer={
