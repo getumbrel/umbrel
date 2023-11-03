@@ -1,5 +1,6 @@
 import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
+import {useCss} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {
@@ -62,8 +63,26 @@ export function AppWithDescription({
 	appName: ReactNode
 	appDescription: ReactNode
 }) {
+	const linkClass = useCss({
+		'&:hover': {
+			img: {
+				viewTransitionName: 'app-icon-' + id,
+			},
+			h3: {
+				viewTransitionName: 'app-name-' + id,
+			},
+			p: {
+				viewTransitionName: 'app-tagline-' + id,
+			},
+		},
+	})
+
 	return (
-		<Link to={`/app-store/${id}`} className='group flex w-full items-center gap-2.5 duration-300'>
+		<Link
+			to={`/app-store/${id}`}
+			className={cn('group flex w-full items-center gap-2.5', linkClass)}
+			unstable_viewTransition
+		>
 			<AppIcon src={icon} size={55} className='rounded-10' />
 			<div className='flex min-w-0 flex-1 flex-col'>
 				<h3 className='truncate text-15 font-bold -tracking-3'>{appName}</h3>

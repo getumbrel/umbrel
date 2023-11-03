@@ -30,7 +30,7 @@ export function AppPage() {
 			</div>
 			<AppGallerySection gallery={app.gallery} />
 			{/* NOTE: consider conditionally rendering */}
-			<div className='hidden flex-row gap-5 lg:flex'>
+			<div className='hidden flex-row gap-5 delay-200 animate-in fade-in slide-in-from-bottom-10 fill-mode-both lg:flex'>
 				<div className='flex flex-1 flex-col gap-2.5'>
 					<AboutSection app={app} />
 					<ReleaseNotesSection app={app} />
