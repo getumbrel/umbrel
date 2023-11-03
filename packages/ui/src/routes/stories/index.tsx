@@ -2,6 +2,7 @@
 
 import {Globe, User} from 'lucide-react'
 import {useState} from 'react'
+import {toast, Toaster} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -66,6 +67,8 @@ export function Stories() {
 			<DropdownExample />
 			<H2>Context Menu</H2>
 			<ContextMenuExample />
+			<H2>Toast</H2>
+			<ToastExample />
 		</div>
 	)
 }
@@ -232,6 +235,18 @@ function Buttons() {
 					))}
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function ToastExample() {
+	return (
+		<div>
+			<Toaster position='bottom-center' richColors />
+			<Button onClick={() => toast('My first toast')}>Give me a toast</Button>
+			<Button onClick={() => toast.success('My first toast')}>Give me a success toast</Button>
+			<Button onClick={() => toast.warning('My first toast')}>Give me a warning toast</Button>
+			<Button onClick={() => toast.error('My first toast')}>Give me a error toast</Button>
 		</div>
 	)
 }
