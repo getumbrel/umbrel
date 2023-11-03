@@ -1,5 +1,6 @@
 import ColorThief, {RGBColor} from 'colorthief'
 import {useEffect, useState} from 'react'
+import {useIntersection} from 'react-use'
 
 const colorThief = new ColorThief()
 const colorCount = 3
@@ -7,9 +8,20 @@ const colorCount = 3
 export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 	const [colors, setColors] = useState<string[] | undefined>()
 
+	const intersection = useIntersection(ref, {
+		root: null,
+		rootMargin: '0px',
+		threshold: 1,
+	})
+
 	useEffect(() => {
 		if (!ref.current) return
+		if (!intersection) return
+		if (intersection.intersectionRatio < 0.1) return
+
 		const img = ref.current
+
+		console.log('img.complete')
 
 		if (img.complete) {
 			const rgbArr = colorThief.getPalette(img, colorCount)
@@ -20,7 +32,7 @@ export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 				setColors(processColors(rgbArr))
 			})
 		}
-	}, [ref])
+	}, [intersection, ref])
 
 	return colors
 }
