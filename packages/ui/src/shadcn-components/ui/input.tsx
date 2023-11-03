@@ -127,7 +127,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 export function InputError({children}: {children: React.ReactNode}) {
 	return (
 		<div className='flex items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest'>
-			<TbAlertCircle className='h-4 w-4' />
+			<TbAlertCircle className='h-4 w-4 shrink-0' />
 			{children}
 		</div>
 	)
