@@ -56,7 +56,7 @@ export function WallpaperPicker() {
 	const itemsRef = useRef<HTMLDivElement>(null)
 	const selectedItemRef = useRef<HTMLButtonElement>(null)
 
-	const [show] = useTimeout(400)
+	const [show] = useTimeout(600)
 
 	const canShow = show()
 
