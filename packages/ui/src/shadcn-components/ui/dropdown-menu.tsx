@@ -57,7 +57,7 @@ const DropdownMenuContent = React.forwardRef<
 		<DropdownMenuPrimitive.Content
 			ref={ref}
 			sideOffset={sideOffset}
-			className={cn(dropdownClasses.content, 'rounded-15 p-2.5', className)}
+			className={cn(dropdownClasses.content, className)}
 			{...props}
 		/>
 	</DropdownMenuPrimitive.Portal>
