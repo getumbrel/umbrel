@@ -38,6 +38,7 @@ import {TroubleshootDialog} from './routes/settings/troubleshoot'
 import {Stories} from './routes/stories'
 import {AppStoreStory} from './routes/stories/app-store'
 import {ColorThiefExample} from './routes/stories/color-thief'
+import {DesktopStory} from './routes/stories/desktop'
 import {ErrorStory} from './routes/stories/error'
 import {InputExamples} from './routes/stories/input'
 import {SettingsStory} from './routes/stories/settings'
@@ -246,6 +247,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/error',
 				Component: ErrorStory,
+			},
+			{
+				path: 'stories/desktop',
+				Component: DesktopStory,
 			},
 		],
 	},
