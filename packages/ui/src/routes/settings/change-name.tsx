@@ -56,7 +56,7 @@ export function ChangeNameDialog() {
 										This appears in the homescreen, and will be your device name too.
 									</DialogDescription>
 								</DialogHeader>
-								<Input placeholder='Name' value={name} onChange={(e) => setName(e.target.value)} />
+								<Input placeholder='Name' value={name} onValueChange={setName} />
 								<DialogFooter>
 									<Button type='submit' size='dialog' variant='primary'>
 										{setMut.isLoading ? 'Saving changes...' : 'Save changes'}

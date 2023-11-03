@@ -95,7 +95,7 @@ function WidgetExamples() {
 	return (
 		<div>
 			<div className='p-6'>
-				<Input value={iconName} onChange={(e) => setIconName(e.target.value)} />
+				<Input value={iconName} onValueChange={setIconName} />
 				<TablerIcon iconName={iconName} />
 			</div>
 			<BackdropBlurVariantContext.Provider value='default'>

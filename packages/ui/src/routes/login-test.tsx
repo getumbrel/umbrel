@@ -29,7 +29,7 @@ export function LoginTest() {
 	return (
 		<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmit}>
 			<div>
-				<Input placeholder='Password' autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
+				<Input placeholder='Password' autoFocus value={password} onValueChange={setPassword} />
 			</div>
 			<button type='submit'>Log in</button>
 			<button
