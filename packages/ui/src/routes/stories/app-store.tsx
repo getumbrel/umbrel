@@ -1,17 +1,23 @@
 import {Loading} from '@/components/ui/loading'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
+import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 
 export function AppStoreStory() {
-	const {isLoading, apps} = useAvailableApps()
+	const discoverQ = useDiscoverQuery()
 
-	if (isLoading) {
+	if (discoverQ.isLoading) {
 		return <Loading />
 	}
+
+	if (!discoverQ.data) {
+		throw new Error('No data')
+	}
+
+	const {banners} = discoverQ.data
+
 	return (
 		<div>
-			Hello
-			<AppsGallerySection apps={apps.slice(0, 5)} />
+			<AppsGallerySection banners={banners} />
 		</div>
 	)
 }
