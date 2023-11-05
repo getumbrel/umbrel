@@ -10,7 +10,7 @@ export default router({
 		.input(
 			z.object({
 				name: z.string(),
-				password: z.string().min(6, 'Password must be atleast 6 characters'),
+				password: z.string().min(6, 'Password must be at least 6 characters'),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
@@ -75,7 +75,7 @@ export default router({
 		.input(
 			z.object({
 				oldPassword: z.string(),
-				newPassword: z.string().min(6, 'Password must be atleast 6 characters'),
+				newPassword: z.string().min(6, 'Password must be at least 6 characters'),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {

@@ -50,7 +50,7 @@ test('register() throws error if password is below min length', async () => {
 			name: testUserCredentials.name,
 			password: 'rekt',
 		}),
-	).rejects.toThrow('Password must be atleast 6 characters')
+	).rejects.toThrow('Password must be at least 6 characters')
 })
 
 test('register() creates a user', async () => {
