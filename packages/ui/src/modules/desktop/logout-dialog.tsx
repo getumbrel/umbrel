@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom'
 
 import {DialogMounter} from '@/components/dialog-mounter'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useAuth} from '@/modules/auth/use-auth'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,12 +18,7 @@ import {linkClass} from '@/utils/element-classes'
 
 export function LogoutDialog() {
 	const {params, removeParam} = useQueryParams()
-
-	const handleLogout = () => {
-		window.localStorage.removeItem('jwt')
-		// Hard navigate to `/login` to force all parent layouts to re-render
-		window.location.href = '/login'
-	}
+	const {logout} = useAuth()
 
 	return (
 		<DialogMounter>
@@ -39,7 +35,7 @@ export function LogoutDialog() {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' className='px-6' onClick={handleLogout}>
+						<AlertDialogAction variant='destructive' className='px-6' onClick={logout}>
 							Log out <span className='text-11 opacity-40'>↵</span>
 						</AlertDialogAction>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>

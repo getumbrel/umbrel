@@ -4,22 +4,22 @@ import {Link, useNavigate} from 'react-router-dom'
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {useJwt} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 
 export function CreateAccount() {
 	useUmbrelTitle('Create account')
+
 	const navigate = useNavigate()
+
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [localError, setLocalError] = useState('')
 
-	const loginMut = trpcReact.user.login.useMutation({
-		onSuccess: (jwt) => {
-			window.localStorage.setItem('jwt', jwt)
-		},
-	})
+	const {setJwt} = useJwt()
+	const loginMut = trpcReact.user.login.useMutation({onSuccess: setJwt})
 
 	const ctx = trpcReact.useContext()
 

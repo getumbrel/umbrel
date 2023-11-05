@@ -3,9 +3,13 @@ import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 import {httpBatchLink, loggerLink} from '@trpc/client'
 import {useState} from 'react'
 
+import {useAuth} from '@/modules/auth/use-auth'
+
 import {trpcReact} from './trpc'
 
 export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+	const {jwt} = useAuth()
+
 	// https://tanstack.com/query/latest/docs/react/guides/important-defaults
 	// Adding long staleTime to avoid unnecessary re-fetching
 	const [queryClient] = useState(
@@ -24,7 +28,7 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 				httpBatchLink({
 					url: `http://localhost:3001/trpc`,
 					headers: async () => ({
-						Authorization: `Bearer ${window.localStorage.getItem('jwt')}`,
+						Authorization: `Bearer ${jwt}`,
 					}),
 				}),
 			],

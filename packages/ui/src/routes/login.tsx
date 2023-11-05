@@ -4,18 +4,17 @@ import {Link} from 'react-router-dom'
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 
 export function Login() {
 	useUmbrelTitle('Login')
 
+	const {loginWithJwt} = useAuth()
+
 	const loginMut = trpcReact.user.login.useMutation({
-		onSuccess: (jwt) => {
-			window.localStorage.setItem('jwt', jwt)
-			// Hard navigate to `/` to force all parent layouts to re-render
-			window.location.href = '/'
-		},
+		onSuccess: loginWithJwt,
 	})
 
 	const [password, setPassword] = useState('')
