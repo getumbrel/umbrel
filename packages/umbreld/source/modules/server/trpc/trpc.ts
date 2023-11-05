@@ -6,8 +6,8 @@ import {isAuthenticated} from './is-authenticated.js'
 
 export const t = initTRPC.context<Context>().create({
 	// https://trpc.io/docs/server/error-formatting#adding-custom-formatting
-	errorFormatter(opts) {
-		const {shape, error} = opts
+	errorFormatter(options) {
+		const {shape, error} = options
 		return {
 			...shape,
 			data: {
