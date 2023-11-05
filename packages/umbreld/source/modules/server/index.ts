@@ -43,15 +43,12 @@ class Server {
 		await this.getJwtSecret()
 
 		// Create the handler
+
 		const app = express()
 
 		// Enable CORS in development
 		if (process.env.NODE_ENV === 'development') {
-			app.use(
-				cors({
-					origin: ['http://localhost:3000', 'http://localhost:4000'],
-				}),
-			)
+			app.use(cors({origin: '*'}))
 		}
 
 		app.disable('x-powered-by')
@@ -83,6 +80,7 @@ class Server {
 		const server = http.createServer(app)
 		const listen = promisify(server.listen.bind(server)) as (port: number) => Promise<void>
 		await listen(this.umbreld.port)
+		console.log('address', server.address())
 		this.port = (server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)
 

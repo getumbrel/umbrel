@@ -26,7 +26,7 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 					enabled: () => true,
 				}),
 				httpBatchLink({
-					url: `http://localhost:3001/trpc`,
+					url: `http://${location.hostname}:3001/trpc`,
 					headers: async () => ({
 						Authorization: `Bearer ${jwt}`,
 					}),

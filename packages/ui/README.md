@@ -7,6 +7,43 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
+# Testing on mobile / sharing semi-publicly
+
+```sh
+pnpm run dev --host
+```
+
+Above will give an address you can usually access on another device on the same network.
+
+## Testing prod
+
+```
+pnpm run build && pnpm run preview --host
+```
+
+## Sharing semi-publicly (on Mac)
+
+1. [Get the CLI](https://tailscale.com/kb/1080/cli/#using-the-cli)
+2. Add this to your `.zshrc` or `.bashrc`:
+
+```sh
+alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+```
+
+3. Run `tailscale serve`:
+
+```sh
+tailscale serve http:3000 / http://127.0.0.1:3000
+```
+
+4. For production:
+
+```sh
+tailscale serve http:4000 / http://127.0.0.1:4000
+```
+
+Running on HTTP for now. HTTPS would be a bit more complicated. The prod build is especially important for getting a true sense of performance on mobile since the dev build will have extra cruft.
+
 # Decisions / common patterns
 
 ## `keyBy`
