@@ -37,13 +37,13 @@ export function Dock() {
 			>
 				<DockItem open={pathname === '/'} bg={systemAppsKeyed['home'].icon} mouseX={mouseX} to='/' />
 				<DockItem
-					open={pathname === '/app-store'}
+					open={pathname.startsWith('/app-store')}
 					bg={systemAppsKeyed['app-store'].icon}
 					mouseX={mouseX}
 					to='/app-store'
 				/>
 				<DockItem
-					open={pathname === '/settings'}
+					open={pathname.startsWith('/settings')}
 					bg={systemAppsKeyed['settings'].icon}
 					mouseX={mouseX}
 					to='/settings'
