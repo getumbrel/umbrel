@@ -175,7 +175,9 @@ function ContextMenuExample() {
 		<div className='grid place-items-center bg-white/5 p-4'>
 			<ContextMenu modal={false}>
 				<ContextMenuTrigger asChild>
-					<div className='grid h-36 w-full max-w-sm place-items-center border border-dashed'>Right click</div>
+					<div className='grid h-36 w-full max-w-sm select-none place-items-center border border-dashed'>
+						Right click
+					</div>
 				</ContextMenuTrigger>
 				<ContextMenuContent>
 					<ContextMenuItem>Edit Widgets</ContextMenuItem>
