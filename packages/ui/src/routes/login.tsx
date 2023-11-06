@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
@@ -29,7 +29,7 @@ export function Login() {
 			title='Welcome back'
 			subTitle='Enter your Umbrel password to log in'
 			footer={
-				<Link to={links.support} target='_blank'>
+				<Link to={links.support} target='_blank' className={footerLinkClass}>
 					Contact support
 				</Link>
 			}
