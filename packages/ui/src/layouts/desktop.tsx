@@ -1,6 +1,7 @@
 import {useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 
+import {CmdkMenu} from '@/components/cmdk'
 import {InstalledAppsProvider} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
@@ -38,6 +39,7 @@ export function Desktop() {
 				<DockBottomPositioner>
 					<Dock />
 				</DockBottomPositioner>
+				<CmdkMenu />
 			</InstalledAppsProvider>
 		</EnsureLoggedIn>
 	)

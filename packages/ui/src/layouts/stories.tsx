@@ -33,6 +33,10 @@ const storyLinks = [
 		name: 'Error',
 		path: '/stories/error',
 	},
+	{
+		name: 'CMDK',
+		path: '/stories/cmdk',
+	},
 ]
 
 export function StoriesLayout() {
