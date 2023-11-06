@@ -1,4 +1,5 @@
 import {CmdkMenu} from '@/components/cmdk'
+import {InstalledAppsProvider} from '@/hooks/use-installed-apps'
 import {H1} from '@/layouts/stories'
 import {Search} from '@/modules/desktop/desktop-misc'
 import {Wallpaper} from '@/modules/desktop/wallpaper-context'
@@ -11,7 +12,9 @@ export function CmdkStory() {
 				<H1>CMDK</H1>
 				<Search />
 			</div>
-			<CmdkMenu />
+			<InstalledAppsProvider>
+				<CmdkMenu />
+			</InstalledAppsProvider>
 		</div>
 	)
 }

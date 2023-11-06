@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react'
 import {RiCloseCircleFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
+import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -12,10 +13,16 @@ import {
 	CommandList,
 } from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
+import {fixmeHandler} from '@/utils/misc'
+
+import {Loading} from './ui/loading'
 
 export function CmdkMenu() {
 	const navigate = useNavigate()
 	const {open, setOpen} = useCmdkOpen()
+	const {installedApps, isLoading} = useInstalledApps()
+
+	if (isLoading) return null
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
@@ -28,6 +35,7 @@ export function CmdkMenu() {
 				<CommandEmpty>No results found.</CommandEmpty>
 				<CommandGroup>
 					<CommandItem
+						icon={systemAppsKeyed['settings'].icon}
 						onSelect={() => {
 							navigate('/settings/restart')
 							setOpen(false)
@@ -36,6 +44,7 @@ export function CmdkMenu() {
 						Restart Umbrel
 					</CommandItem>
 					<CommandItem
+						icon={systemAppsKeyed['app-store'].icon}
 						onSelect={() => {
 							navigate('/app-store?dialog=updates')
 							setOpen(false)
@@ -44,6 +53,7 @@ export function CmdkMenu() {
 						Update all apps
 					</CommandItem>
 					<CommandItem
+						icon={systemAppsKeyed['settings'].icon}
 						onSelect={() => {
 							navigate('/settings')
 							setOpen(false)
@@ -52,6 +62,7 @@ export function CmdkMenu() {
 						Change wallpaper
 					</CommandItem>
 					<CommandItem
+						icon={systemAppsKeyed['home'].icon}
 						onSelect={() => {
 							navigate('/edit-widgets')
 							setOpen(false)
@@ -59,6 +70,17 @@ export function CmdkMenu() {
 					>
 						Add widgets
 					</CommandItem>
+				</CommandGroup>
+				<CommandGroup heading='Apps'>
+					{isLoading ? (
+						<Loading />
+					) : (
+						installedApps.map((app) => (
+							<CommandItem icon={app.icon} key={app.id} onSelect={fixmeHandler}>
+								{app.name}
+							</CommandItem>
+						))
+					)}
 				</CommandGroup>
 			</CommandList>
 		</CommandDialog>
