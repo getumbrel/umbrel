@@ -17,6 +17,7 @@ export function AppIcon({appId, label, src}: {appId: string; label: string; src:
 						style={{
 							backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 						}}
+						draggable={false}
 					/>
 					<div className='max-w-full text-13 leading-normal drop-shadow-desktop-label'>
 						<div className='truncate contrast-more:bg-black contrast-more:px-1'>{label}</div>
