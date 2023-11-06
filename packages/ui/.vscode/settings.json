@@ -11,7 +11,8 @@
 	},
 	"search.exclude": {
 		"**/node_modules": true,
-		"pnpm-lock.json": true
+		"pnpm-lock.json": true,
+		"pnpm-lock.yaml": true
 	},
 	"i18n-ally.localesPaths": ["public/locales"],
 	"i18n-ally.keystyle": "flat"
