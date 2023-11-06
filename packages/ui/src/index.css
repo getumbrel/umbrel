@@ -13,7 +13,6 @@
 
 html,
 body {
-	background: black;
 	/* To match Figma weight */
 	text-rendering: geometricPrecision;
 	@apply -tracking-3 text-white/90;
