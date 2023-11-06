@@ -3,6 +3,7 @@ import {DialogProps} from '@radix-ui/react-dialog'
 import {Command as CommandPrimitive} from 'cmdk'
 import * as React from 'react'
 
+import {AppIcon} from '@/components/app-icon'
 import {Dialog} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
 
@@ -29,7 +30,7 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 				)}
 			>
-				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5'>
+				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2'>
 					{children}
 				</Command>
 			</DialogPrimitive.Content>
@@ -61,7 +62,7 @@ const CommandList = React.forwardRef<
 >(({className, ...props}, ref) => (
 	<CommandPrimitive.List
 		ref={ref}
-		className={cn('max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
+		className={cn('umbrel-fade-scroller-y max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
 		{...props}
 	/>
 ))
@@ -101,16 +102,19 @@ CommandSeparator.displayName = CommandPrimitive.Separator.displayName
 
 const CommandItem = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Item>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({className, ...props}, ref) => (
+	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {icon?: string}
+>(({className, icon, children, ...props}, ref) => (
 	<CommandPrimitive.Item
 		ref={ref}
 		className={cn(
-			'relative flex cursor-default select-none items-center rounded-8 px-2 text-15 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+			'relative flex cursor-default select-none items-center gap-3 rounded-8 p-2 text-15 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
 			className,
 		)}
 		{...props}
-	/>
+	>
+		{icon && <AppIcon src={icon} size={36} className='rounded-8' />}
+		{children}
+	</CommandPrimitive.Item>
 ))
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
