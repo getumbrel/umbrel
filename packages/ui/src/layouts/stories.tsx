@@ -44,7 +44,7 @@ export function StoriesLayout() {
 
 	return (
 		<WallpaperProvider>
-			<div className='sticky top-0 z-50 flex items-center bg-neutral-900 shadow-dropdown'>
+			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'>
 				<NavLink to='/'>👈 Home</NavLink>
 				<span className='px-2'>|</span>
 				<NavLink to='/stories'>Stories</NavLink>
@@ -62,7 +62,7 @@ export function StoriesLayout() {
 }
 
 const NavLink = ({to, children}: {to: string; children: ReactNode}) => (
-	<Link to={to} className='p-2 hover:bg-white/10'>
+	<Link to={to} className='shrink-0 p-2 hover:bg-white/10'>
 		{children}
 	</Link>
 )
