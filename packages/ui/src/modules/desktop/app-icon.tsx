@@ -13,7 +13,7 @@ export function AppIcon({appId, label, src}: {appId: string; label: string; src:
 						alt={label}
 						width={64}
 						height={64}
-						className='h-16 w-16 rounded-15 bg-white/50 bg-cover bg-center ring-white/25 group-data-[state=open]:ring-6'
+						className='h-16 w-16 rounded-15 bg-white/10 bg-cover bg-center ring-white/25 group-data-[state=open]:ring-6'
 						style={{
 							backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 						}}
