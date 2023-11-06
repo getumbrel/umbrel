@@ -1,4 +1,6 @@
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {useEffect, useState} from 'react'
+import {RiCloseCircleFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
 import {
@@ -9,6 +11,7 @@ import {
 	CommandItem,
 	CommandList,
 } from '@/shadcn-components/ui/command'
+import {Separator} from '@/shadcn-components/ui/separator'
 
 export function CmdkMenu() {
 	const navigate = useNavigate()
@@ -16,7 +19,11 @@ export function CmdkMenu() {
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder='Search for apps, settings or actions' />
+			<div className='flex items-center justify-between'>
+				<CommandInput placeholder='Search for apps, settings or actions' />
+				<CommandCloseButton />
+			</div>
+			<Separator />
 			<CommandList>
 				<CommandEmpty>No results found.</CommandEmpty>
 				<CommandGroup>
@@ -57,6 +64,13 @@ export function CmdkMenu() {
 		</CommandDialog>
 	)
 }
+
+const CommandCloseButton = () => (
+	<DialogPrimitive.Close className='rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
+		<RiCloseCircleFill className='h-5 w-5' />
+		<span className='sr-only'>Close</span>
+	</DialogPrimitive.Close>
+)
 
 export function useCmdkOpen() {
 	const [open, setOpen] = useState(false)

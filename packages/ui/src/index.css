@@ -124,3 +124,10 @@ a {
 		opacity: 0;
 	}
 }
+
+[cmdk-list] {
+	height: var(--cmdk-list-height);
+	/* min-height: 300px; */
+	/* max-height: 500px; */
+	transition: height 100ms ease;
+}
