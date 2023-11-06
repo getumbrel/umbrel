@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {DialogProps} from '@radix-ui/react-dialog'
 import {Command as CommandPrimitive} from 'cmdk'
 import * as React from 'react'
+import {RiCloseCircleFill} from 'react-icons/ri'
 
 import {AppIcon} from '@/components/app-icon'
 import {Dialog} from '@/shadcn-components/ui/dialog'
@@ -30,7 +31,7 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 				)}
 			>
-				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2'>
+				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'>
 					{children}
 				</Command>
 			</DialogPrimitive.Content>
@@ -51,6 +52,7 @@ const CommandInput = React.forwardRef<
 			)}
 			{...props}
 		/>
+		<CommandCloseButton />
 	</div>
 ))
 
@@ -83,7 +85,7 @@ const CommandGroup = React.forwardRef<
 	<CommandPrimitive.Group
 		ref={ref}
 		className={cn(
-			'overflow-hidden p-1 text-neutral-50 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-400',
+			'overflow-hidden text-neutral-50 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-400',
 			className,
 		)}
 		{...props}
@@ -107,20 +109,21 @@ const CommandItem = React.forwardRef<
 	<CommandPrimitive.Item
 		ref={ref}
 		className={cn(
-			'relative flex cursor-default select-none items-center gap-3 rounded-8 p-2 text-15 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+			'group relative flex cursor-default select-none items-center gap-3 rounded-8 p-2 text-15 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
 			className,
 		)}
 		{...props}
 	>
 		{icon && <AppIcon src={icon} size={36} className='rounded-8' />}
 		{children}
+		<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
 	</CommandPrimitive.Item>
 ))
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
 
 const CommandShortcut = ({className, ...props}: React.HTMLAttributes<HTMLSpanElement>) => {
-	return <span className={cn('ml-auto text-xs tracking-widest text-neutral-400', className)} {...props} />
+	return <span className={cn('ml-auto text-xs tracking-widest text-white/30', className)} {...props} />
 }
 CommandShortcut.displayName = 'CommandShortcut'
 
@@ -146,3 +149,10 @@ function ForwardedBlurOverlay(props: unknown, ref: React.ForwardedRef<HTMLDivEle
 }
 
 const BlurOverlay = React.forwardRef(ForwardedBlurOverlay)
+
+const CommandCloseButton = () => (
+	<DialogPrimitive.Close className='rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
+		<RiCloseCircleFill className='h-5 w-5' />
+		<span className='sr-only'>Close</span>
+	</DialogPrimitive.Close>
+)

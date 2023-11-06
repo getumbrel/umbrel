@@ -1,6 +1,4 @@
-import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {useEffect, useState} from 'react'
-import {RiCloseCircleFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
 import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
@@ -26,10 +24,7 @@ export function CmdkMenu() {
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<div className='flex items-center justify-between'>
-				<CommandInput placeholder='Search for apps, settings or actions' />
-				<CommandCloseButton />
-			</div>
+			<CommandInput placeholder='Search for apps, settings or actions' />
 			<Separator />
 			<CommandList>
 				<CommandEmpty>No results found.</CommandEmpty>
@@ -78,6 +73,7 @@ export function CmdkMenu() {
 						installedApps.map((app) => (
 							<CommandItem icon={app.icon} key={app.id} onSelect={fixmeHandler}>
 								{app.name}
+								{/* <span className='text-white/50'>Open app</span> */}
 							</CommandItem>
 						))
 					)}
@@ -86,13 +82,6 @@ export function CmdkMenu() {
 		</CommandDialog>
 	)
 }
-
-const CommandCloseButton = () => (
-	<DialogPrimitive.Close className='rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
-		<RiCloseCircleFill className='h-5 w-5' />
-		<span className='sr-only'>Close</span>
-	</DialogPrimitive.Close>
-)
 
 export function useCmdkOpen() {
 	const [open, setOpen] = useState(false)
