@@ -37,6 +37,7 @@ import {ShutdownDialog} from './routes/settings/shutdown'
 import {TroubleshootDialog} from './routes/settings/troubleshoot'
 import {Stories} from './routes/stories'
 import {AppStoreStory} from './routes/stories/app-store'
+import {CmdkStory} from './routes/stories/cmdk'
 import {ColorThiefExample} from './routes/stories/color-thief'
 import {DesktopStory} from './routes/stories/desktop'
 import {ErrorStory} from './routes/stories/error'
@@ -251,6 +252,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/desktop',
 				Component: DesktopStory,
+			},
+			{
+				path: 'stories/cmdk',
+				Component: CmdkStory,
 			},
 		],
 	},
