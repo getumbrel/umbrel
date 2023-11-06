@@ -5,7 +5,7 @@ import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 
 export function AppIcon({appId, label, src}: {appId: string; label: string; src: string}) {
 	return (
-		<ContextMenu modal={false}>
+		<ContextMenu>
 			<ContextMenuTrigger className='group'>
 				<div className='flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3'>
 					<img
