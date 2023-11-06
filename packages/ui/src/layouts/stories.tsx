@@ -4,30 +4,64 @@ import {Link, Outlet} from 'react-router-dom'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {WallpaperProvider} from '@/modules/desktop/wallpaper-context'
 
+const storyLinks = [
+	{
+		name: 'Desktop',
+		path: '/stories/desktop',
+	},
+	{
+		name: 'App Store',
+		path: '/stories/app-store',
+	},
+	{
+		name: 'Settings',
+		path: '/stories/settings',
+	},
+	{
+		name: 'tRPC',
+		path: '/stories/trpc',
+	},
+	{
+		name: 'Input',
+		path: '/stories/input',
+	},
+	{
+		name: 'Color Thief',
+		path: '/stories/color-thief',
+	},
+	{
+		name: 'Error',
+		path: '/stories/error',
+	},
+]
+
 export function StoriesLayout() {
 	useUmbrelTitle('Stories')
 
 	return (
 		<WallpaperProvider>
-			<div className='h-full overflow-y-auto'>
-				<div className='flex gap-2 bg-neutral-900 p-3'>
-					<Link to='/'>🏠 Home</Link>
-					<Link to='/stories'>Stories</Link>
-					<Link to='/stories/desktop'>Desktop</Link>
-					<Link to='/stories/app-store'>App Store</Link>
-					<Link to='/stories/settings'>Settings</Link>
-					<Link to='/stories/trpc'>tRPC</Link>
-					<Link to='/stories/input'>Input</Link>
-					<Link to='/stories/color-thief'>Color Thief</Link>
-					<Link to='/stories/error'>Error</Link>
-				</div>
-				<div className='flex flex-col gap-6'>
-					<Outlet />
-				</div>
+			<div className='sticky top-0 z-50 flex items-center bg-neutral-900 shadow-dropdown'>
+				<NavLink to='/'>👈 Home</NavLink>
+				<span className='px-2'>|</span>
+				<NavLink to='/stories'>Stories</NavLink>
+				{storyLinks.map(({name, path}) => (
+					<NavLink key={path} to={path}>
+						{name}
+					</NavLink>
+				))}
+			</div>
+			<div className='flex flex-col gap-6'>
+				<Outlet />
 			</div>
 		</WallpaperProvider>
 	)
 }
+
+const NavLink = ({to, children}: {to: string; children: ReactNode}) => (
+	<Link to={to} className='p-2 hover:bg-white/10'>
+		{children}
+	</Link>
+)
 
 export const H1 = ({children}: {children: ReactNode}) => <h1 className='text-3xl font-bold'>{children}</h1>
 export const H2 = ({children}: {children: ReactNode}) => (
