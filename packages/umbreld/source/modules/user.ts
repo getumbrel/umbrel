@@ -32,6 +32,10 @@ export default class User {
 		return this.#store.set('user.wallpaper', wallpaper)
 	}
 
+	async setOpenedApp(appId: string) {
+		return this.#store.set('user.lastAppId', appId)
+	}
+
 	// Set the users password
 	async setPassword(password: string) {
 		// Hash the password with the current recommended default

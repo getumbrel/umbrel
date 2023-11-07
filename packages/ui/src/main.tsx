@@ -8,6 +8,7 @@ import './utils/i18n'
 import './index.css'
 
 import {ErrorBoundary} from 'react-error-boundary'
+import {Toaster} from 'sonner'
 
 import {CoverMessage} from './components/ui/cover-message'
 import {EnsureBackendAvailable} from './modules/auth/ensure-backend-available'
@@ -28,6 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 					</WallpaperProvider>
 				</EnsureBackendAvailable>
 			</TrpcProvider>
+			<Toaster position='top-center' richColors />
 		</ErrorBoundary>
 	</React.StrictMode>,
 )

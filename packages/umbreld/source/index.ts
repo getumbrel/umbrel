@@ -19,6 +19,7 @@ type StoreSchema = {
 		hashedPassword: string
 		totpUri?: string
 		wallpaper?: string
+		lastAppId?: string
 	}
 }
 

@@ -143,6 +143,7 @@ export default router({
 		return {
 			name: user.name,
 			wallpaper: user.wallpaper,
+			lastAppId: user.lastAppId,
 		}
 	}),
 
@@ -153,12 +154,14 @@ export default router({
 				.object({
 					name: z.string().optional(),
 					wallpaper: z.string().optional(),
+					openedApp: z.string().optional(),
 				})
 				.strict(),
 		)
 		.mutation(async ({ctx, input}) => {
 			if (input.name) await ctx.user.setName(input.name)
 			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
+			if (input.openedApp) await ctx.user.setOpenedApp(input.openedApp)
 
 			return true
 		}),
