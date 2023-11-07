@@ -1,5 +1,5 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, useEffect, useState} from 'react'
+import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
@@ -12,14 +12,18 @@ export function CmdkMenu() {
 	const navigate = useNavigate()
 	const {open, setOpen} = useCmdkOpen()
 	const {installedApps, isLoading} = useInstalledApps()
+	const scrollRef = useRef<HTMLDivElement>(null)
 
 	if (isLoading) return null
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder='Search for apps, settings or actions' />
+			<CommandInput
+				placeholder='Search for apps, settings or actions'
+				onKeyDown={() => scrollRef.current?.scrollTo(0, 0)}
+			/>
 			<Separator />
-			<CommandList>
+			<CommandList ref={scrollRef}>
 				<CommandEmpty>No results found.</CommandEmpty>
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
