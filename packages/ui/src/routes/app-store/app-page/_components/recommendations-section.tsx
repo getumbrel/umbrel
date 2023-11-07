@@ -1,22 +1,41 @@
 import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
+import {shuffle} from 'remeda'
 
 import {AppIcon} from '@/components/app-icon'
+import {useAvailableApps} from '@/hooks/use-available-apps'
 
 import {cardClass, cardTitleClass} from './shared'
 
-export const RecommendationsSection = () => (
-	<div className={cardClass}>
-		<h2 className={cardTitleClass}>You might also like</h2>
-		<AppWithDescriptionSmall id={'TEST_ID'} icon='' appName='App name' appDescription='App description' />
-		<AppWithDescriptionSmall
-			id={'TEST_ID'}
-			icon=''
-			appName='App name'
-			appDescription='Mollit ex anim adipisicing velit quis ullamco reprehenderit fugiat in labore.'
-		/>
-	</div>
-)
+export const RecommendationsSection = ({forAppId}: {forAppId: string}) => {
+	const {appsGroupedByCategory, appsKeyed, isLoading} = useAvailableApps()
+
+	if (isLoading) return null
+	if (!appsGroupedByCategory) return null
+
+	const category = appsKeyed[forAppId].category
+	const categoryApps = appsGroupedByCategory[category]
+
+	const recommendedApps = shuffle(categoryApps)
+		// exclude the app itself
+		.filter((app) => app.id !== forAppId)
+		.slice(0, 6)
+
+	return (
+		<div className={cardClass}>
+			<h2 className={cardTitleClass}>You might also like</h2>
+			{recommendedApps.map((app) => (
+				<AppWithDescriptionSmall
+					key={app.id}
+					id={app.id}
+					icon={app.icon}
+					appName={app.name}
+					appDescription={app.tagline}
+				/>
+			))}
+		</div>
+	)
+}
 
 function AppWithDescriptionSmall({
 	id,

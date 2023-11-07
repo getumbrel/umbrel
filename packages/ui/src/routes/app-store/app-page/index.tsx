@@ -38,7 +38,7 @@ export function AppPage() {
 				<div className='flex w-80 flex-col gap-2.5'>
 					<InfoSection app={app} />
 					<DependenciesSection app={app} />
-					<RecommendationsSection />
+					<RecommendationsSection forAppId={app.id} />
 				</div>
 			</div>
 			<div className='space-y-2.5 lg:hidden'>
@@ -46,7 +46,7 @@ export function AppPage() {
 				<InfoSection app={app} />
 				<DependenciesSection app={app} />
 				<ReleaseNotesSection app={app} />
-				<RecommendationsSection />
+				<RecommendationsSection forAppId={app.id} />
 			</div>
 		</div>
 	)
