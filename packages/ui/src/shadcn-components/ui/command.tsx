@@ -29,6 +29,7 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 					dialogContentClass,
 					'top-[20%] translate-y-0 overflow-hidden p-[30px]',
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
+					'z-[999]',
 				)}
 			>
 				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'>
@@ -143,7 +144,7 @@ function ForwardedBlurOverlay(props: unknown, ref: React.ForwardedRef<HTMLDivEle
 	return (
 		<DialogPrimitive.DialogOverlay
 			ref={ref}
-			className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
+			className={cn(dialogOverlayClass, 'z-[999] bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
 		/>
 	)
 }
