@@ -80,6 +80,9 @@ dependencies:
   match-sorter:
     specifier: 6.3.1
     version: 6.3.1
+  photoswipe:
+    specifier: ^5.4.2
+    version: 5.4.2
   pretty-bytes:
     specifier: ^6.1.1
     version: 6.1.1
@@ -4386,6 +4389,11 @@ packages:
 
   /performance-now@2.1.0:
     resolution: {integrity: sha512-7EAHlyLHI56VEIdK57uwHdHKIaAGbnXPiw0yWbarQZOKaKpvUIgW0jWRVLiatnM+XXlSwsanIBH/hzGMJulMow==}
+    dev: false
+
+  /photoswipe@5.4.2:
+    resolution: {integrity: sha512-z5hr36nAIPOZbHJPbCJ/mQ3+ZlizttF9za5gKXKH/us1k4KNHaRbC63K1Px5sVVKUtGb/2+ixHpKqtwl0WAwvA==}
+    engines: {node: '>= 0.12.0'}
     dev: false
 
   /picocolors@0.2.1:

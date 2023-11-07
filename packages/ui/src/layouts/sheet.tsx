@@ -36,6 +36,7 @@ export function SheetLayout() {
 					}
 					onContextMenu={(e) => e.preventDefault()}
 					onInteractOutside={(e) => e.preventDefault()}
+					onEscapeKeyDown={(e) => e.preventDefault()}
 				>
 					<div
 						className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'

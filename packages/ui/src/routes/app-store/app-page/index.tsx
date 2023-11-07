@@ -28,7 +28,7 @@ export function AppPage() {
 				</button>
 				<TopHeader app={app} />
 			</div>
-			<AppGallerySection gallery={app.gallery} />
+			<AppGallerySection galleryId={'gallery-' + app.id} gallery={app.gallery} />
 			{/* NOTE: consider conditionally rendering */}
 			<div className='hidden flex-row gap-5 delay-200 animate-in fade-in slide-in-from-bottom-10 fill-mode-both lg:flex'>
 				<div className='flex flex-1 flex-col gap-2.5'>

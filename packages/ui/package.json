@@ -43,6 +43,7 @@
 		"inter-ui": "3.19.3",
 		"lucide-react": "0.288.0",
 		"match-sorter": "6.3.1",
+		"photoswipe": "^5.4.2",
 		"pretty-bytes": "^6.1.1",
 		"rci": "0.1.0",
 		"react": "^18.2.0",
