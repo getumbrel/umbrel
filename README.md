@@ -91,6 +91,11 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [ThunderHub](https://apps.umbrel.com/app/thunderhub) — Take full control of your Lightning node
 - [Invoice Ninja](https://apps.umbrel.com/app/invoice-ninja) - We'll help with the invoicing
 
+#### AI
+- [LlamaGPT](https://apps.umbrel.com/app/llama-gpt) - Self-hosted, offline ChatGPT-like chatbot powered by Llama 2
+- [ChatBot UI](https://apps.umbrel.com/app/chatbot-ui) - ChatGPT but better
+- [Chatpad AI](https://apps.umbrel.com/app/chatpad-ai) - Premium quality UI for ChatGPT
+
 #### Files & Productivity
 - [Calibre Web](https://apps.umbrel.com/app/calibre-web) — A clean web app for your eBooks
 - [Nextcloud](https://apps.umbrel.com/app/nextcloud) — Productivity platform that keeps you in control
