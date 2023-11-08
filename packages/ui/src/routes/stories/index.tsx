@@ -2,7 +2,7 @@
 
 import {Globe, User} from 'lucide-react'
 import {useState} from 'react'
-import {toast, Toaster} from 'sonner'
+import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -244,7 +244,7 @@ function Buttons() {
 function ToastExample() {
 	return (
 		<div>
-			<Toaster position='bottom-center' richColors />
+			{/* <Toaster /> should be in main or some layout file */}
 			<Button onClick={() => toast('My first toast')}>Give me a toast</Button>
 			<Button onClick={() => toast.success('My first toast')}>Give me a success toast</Button>
 			<Button onClick={() => toast.warning('My first toast')}>Give me a warning toast</Button>
