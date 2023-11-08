@@ -16,9 +16,8 @@ export function isNormalNumber(value: number | null | undefined): value is numbe
 }
 
 /**
- * Does what lodash's keyBy does, but returns with proper types
+ * Does what lodash's keyBy does, but returns with better types
  */
-export function keyBy<T>(array: ReadonlyArray<T>, key: keyof T) {
-	if (array.length === 0) return {}
+export function keyBy<T, U extends keyof T>(array: ReadonlyArray<T>, key: U): Record<T[U] & string, T> {
 	return indexBy(array, (el) => el[key])
 }
