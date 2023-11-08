@@ -3,10 +3,10 @@ import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
-import {useTrackAppOpen} from '@/hooks/use-track-app-open'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcClient, trpcReact} from '@/trpc/trpc'
+import {trackAppOpen} from '@/utils/track-app-open'
 
 import {AppIcon} from './app-icon'
 
@@ -16,7 +16,6 @@ export function CmdkMenu() {
 	const {installedApps, isLoading} = useInstalledApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
-	const {trackOpen} = useTrackAppOpen()
 
 	if (isLoading) return null
 	if (userQ.isLoading) return null
@@ -68,7 +67,7 @@ export function CmdkMenu() {
 					Add widgets
 				</CommandItem>
 				{installedApps.map((app) => (
-					<SubItem value={app.name} icon={app.icon} key={app.id} onSelect={() => trackOpen(app.id)}>
+					<SubItem value={app.name} icon={app.icon} key={app.id} onSelect={() => trackAppOpen(app.id)}>
 						{app.name}
 					</SubItem>
 				))}
@@ -126,13 +125,12 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 
 function FrequentApp({appId}: {appId: string}) {
 	const {installedAppsKeyed, isLoading} = useInstalledApps()
-	const {trackOpen} = useTrackAppOpen()
 	if (isLoading) return null
 
 	return (
 		<button
 			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
-			onClick={() => trackOpen(appId)}
+			onClick={() => trackAppOpen(appId)}
 		>
 			<AppIcon src={installedAppsKeyed[appId].icon} size={64} className='rounded-15' />
 			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{installedAppsKeyed[appId].name}</div>

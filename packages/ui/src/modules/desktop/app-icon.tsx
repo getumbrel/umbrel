@@ -1,18 +1,16 @@
 import {Link} from 'react-router-dom'
 
-import {useTrackAppOpen} from '@/hooks/use-track-app-open'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
+import {trackAppOpen} from '@/utils/track-app-open'
 
 export function AppIcon({appId, label, src}: {appId: string; label: string; src: string}) {
-	const {trackOpen} = useTrackAppOpen()
-
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger className='group'>
 				<button
 					className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3'
-					onClick={() => trackOpen(appId)}
+					onClick={() => trackAppOpen(appId)}
 				>
 					<img
 						src={src}
