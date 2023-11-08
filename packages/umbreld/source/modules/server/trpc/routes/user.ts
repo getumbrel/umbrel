@@ -143,7 +143,6 @@ export default router({
 		return {
 			name: user.name,
 			wallpaper: user.wallpaper,
-			lastAppId: user.lastAppId,
 			lastOpenedApps: user.lastOpenedApps,
 		}
 	}),
