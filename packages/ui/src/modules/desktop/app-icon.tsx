@@ -1,27 +1,18 @@
 import {Link} from 'react-router-dom'
-import {toast} from 'sonner'
 
+import {useTrackAppOpen} from '@/hooks/use-track-app-open'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
-import {trpcReact} from '@/trpc/trpc'
 
 export function AppIcon({appId, label, src}: {appId: string; label: string; src: string}) {
-	const ctx = trpcReact.useContext()
-	const userMut = trpcReact.user.set.useMutation({
-		onSuccess: () => ctx.user.get.invalidate(),
-	})
+	const {trackOpen} = useTrackAppOpen()
 
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger className='group'>
 				<button
 					className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3'
-					onClick={() => {
-						userMut.mutate({
-							openedApp: appId,
-						})
-						toast(`${appId} opened`)
-					}}
+					onClick={() => trackOpen(appId)}
 				>
 					<img
 						src={src}

@@ -20,6 +20,7 @@ type StoreSchema = {
 		totpUri?: string
 		wallpaper?: string
 		lastAppId?: string
+		lastOpenedApps?: string[]
 	}
 }
 

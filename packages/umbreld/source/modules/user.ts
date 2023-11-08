@@ -32,8 +32,11 @@ export default class User {
 		return this.#store.set('user.wallpaper', wallpaper)
 	}
 
-	async setOpenedApp(appId: string) {
-		return this.#store.set('user.lastAppId', appId)
+	// Tracks the user's last opened app
+	async trackAppOpen(appId: string) {
+		const apps = (await this.#store.get('user.lastOpenedApps')) ?? []
+		const newApps = [appId, ...apps].slice(0, 50)
+		return this.#store.set('user.lastOpenedApps', newApps)
 	}
 
 	// Set the users password
