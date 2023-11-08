@@ -35,19 +35,24 @@ export function Dock() {
 					paddingBottom: PADDING,
 				}}
 			>
-				<DockItem open={pathname === '/'} bg={systemAppsKeyed['home'].icon} mouseX={mouseX} to='/' />
 				<DockItem
-					open={pathname.startsWith('/app-store')}
-					bg={systemAppsKeyed['app-store'].icon}
+					to={systemAppsKeyed['home'].systemAppTo}
+					open={pathname === '/'}
+					bg={systemAppsKeyed['home'].icon}
 					mouseX={mouseX}
-					to='/app-store'
 				/>
 				<DockItem
-					open={pathname.startsWith('/settings')}
-					bg={systemAppsKeyed['settings'].icon}
+					to={systemAppsKeyed['app-store'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['app-store'].systemAppTo)}
+					bg={systemAppsKeyed['app-store'].icon}
 					mouseX={mouseX}
-					to='/settings'
+				/>
+				<DockItem
+					to={systemAppsKeyed['settings'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['settings'].systemAppTo)}
+					bg={systemAppsKeyed['settings'].icon}
 					notificationCount={2}
+					mouseX={mouseX}
 				/>
 				<DockDivider />
 				<DockItem to={{search: addLinkSearchParams({dialog: 'logout'})}} bg='/dock/exit.png' mouseX={mouseX} />

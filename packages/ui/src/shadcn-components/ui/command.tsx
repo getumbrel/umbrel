@@ -32,7 +32,10 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 					'z-[999]',
 				)}
 			>
-				<Command className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'>
+				<Command
+					loop
+					className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'
+				>
 					{children}
 				</Command>
 			</DialogPrimitive.Content>

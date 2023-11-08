@@ -3,6 +3,7 @@ import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcClient, trpcReact} from '@/trpc/trpc'
@@ -12,6 +13,7 @@ import {AppIcon} from './app-icon'
 
 export function CmdkMenu() {
 	const navigate = useNavigate()
+	const {addLinkSearchParams} = useQueryParams()
 	const {open, setOpen} = useCmdkOpen()
 	const {installedApps, isLoading} = useInstalledApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
@@ -71,6 +73,46 @@ export function CmdkMenu() {
 						{app.name}
 					</SubItem>
 				))}
+				<SubItem
+					value={systemAppsKeyed['home'].name}
+					icon={systemAppsKeyed['home'].icon}
+					onSelect={() => {
+						navigate(systemAppsKeyed['home'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['home'].name}
+				</SubItem>
+				<SubItem
+					value={systemAppsKeyed['app-store'].name}
+					icon={systemAppsKeyed['app-store'].icon}
+					onSelect={() => {
+						navigate(systemAppsKeyed['app-store'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['app-store'].name}
+				</SubItem>
+				<SubItem
+					value={systemAppsKeyed['settings'].name}
+					icon={systemAppsKeyed['settings'].icon}
+					onSelect={() => {
+						navigate(systemAppsKeyed['settings'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['settings'].name}
+				</SubItem>
+				<SubItem
+					value={systemAppsKeyed['exit'].name}
+					icon={systemAppsKeyed['exit'].icon}
+					onSelect={() => {
+						navigate({search: addLinkSearchParams({dialog: 'logout'})})
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['exit'].name}
+				</SubItem>
 			</CommandList>
 		</CommandDialog>
 	)

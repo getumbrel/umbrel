@@ -1,4 +1,5 @@
 import {createContext, useContext, useEffect, useState} from 'react'
+import {LinkProps} from 'react-router-dom'
 import {pick} from 'remeda'
 
 import {keyBy} from '@/utils/misc'
@@ -7,6 +8,8 @@ type AppT = {
 	id: string
 	name: string
 	icon: string
+	systemApp?: boolean
+	systemAppTo?: LinkProps['to']
 }
 
 export const systemApps = [
@@ -14,21 +17,30 @@ export const systemApps = [
 		id: 'home',
 		name: 'Home',
 		icon: '/dock/home.png',
+		systemApp: true,
+		systemAppTo: '/',
 	},
 	{
 		id: 'app-store',
 		name: 'App Store',
 		icon: '/dock/shop.png',
+		systemApp: true,
+		systemAppTo: '/app-store',
 	},
 	{
 		id: 'settings',
 		name: 'Settings',
 		icon: '/dock/settings.png',
+		systemApp: true,
+		systemAppTo: '/settings',
 	},
 	{
 		id: 'exit',
 		name: 'Logout',
 		icon: '/dock/exit.png',
+		systemApp: true,
+		// Instead use search param: {dialog: 'logout'}
+		systemAppTo: '',
 	},
 ] as const satisfies readonly AppT[]
 
