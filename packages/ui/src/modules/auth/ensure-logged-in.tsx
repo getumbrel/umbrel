@@ -9,7 +9,7 @@ export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
 	const location = useLocation()
 	const navigate = useNavigate()
 
-	const getQuery = trpcReact.debug.private.useQuery(undefined, {
+	const getQuery = trpcReact.user.isLoggedIn.useQuery(undefined, {
 		retry: false,
 	})
 
@@ -24,7 +24,7 @@ export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
 		}
 	}
 
-	if (getQuery?.data !== 'hi') {
+	if (!getQuery?.data) {
 		if (location.pathname.startsWith('/login')) {
 			sleep(500).then(() => navigate('/'))
 			return <CoverMessage>Redirecting to home...</CoverMessage>
