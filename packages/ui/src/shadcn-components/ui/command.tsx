@@ -27,7 +27,7 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 			<DialogPrimitive.Content
 				className={cn(
 					dialogContentClass,
-					'top-[20%] translate-y-0 overflow-hidden p-[30px]',
+					'top-4 translate-y-0 overflow-hidden p-[30px] lg:top-[10%]',
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 					'z-[999]',
 				)}
