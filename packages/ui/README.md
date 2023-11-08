@@ -84,3 +84,7 @@ EX:
 ```
 
 You can then search the repo for `viewTransitionName` to find them all
+
+## Event handler naming in React components
+
+Use `onFooBarClick` rather than `onClickFooBar`

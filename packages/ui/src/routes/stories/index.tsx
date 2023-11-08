@@ -1,11 +1,12 @@
 'use client'
 
 import {Globe, User} from 'lucide-react'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
+import {InstallButton} from '@/components/install-button'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
@@ -46,6 +47,7 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {trackAppOpen} from '@/utils/track-app-open'
 
 export function Stories() {
 	useUmbrelTitle('Stories Home')
@@ -198,6 +200,7 @@ function ContextMenuExample() {
 function Buttons() {
 	return (
 		<div className='flex flex-col gap-2'>
+			<ProgressButton />
 			<div>
 				<H3>Sizes</H3>
 				<div className='flex gap-2'>
@@ -237,6 +240,44 @@ function Buttons() {
 					))}
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function ProgressButton() {
+	const [progress, setProgress] = useState(0)
+	// Separate from `progress` so we can keep `installing` state for a bit after reaching 100
+	const [state, setState] = useState<'initial' | 'installing' | 'installed'>('initial')
+
+	useEffect(() => {
+		if (state === 'installing') {
+			const interval = setInterval(() => {
+				setProgress((prev) => Math.min(prev + 1, 100))
+			}, 50)
+
+			if (progress == 100) {
+				// Wait after install so you can see the 100%
+				setTimeout(() => {
+					setState('installed')
+					setProgress(100)
+					clearInterval(interval)
+				}, 200)
+			}
+
+			return () => clearInterval(interval)
+		}
+	}, [state, progress])
+
+	return (
+		<div>
+			<H3>Install Button</H3>
+			<InstallButton
+				installSize='1.5GB'
+				progress={progress}
+				state={state}
+				onInstallClick={() => setState('installing')}
+				onOpenClick={() => trackAppOpen('foobar')}
+			/>
 		</div>
 	)
 }

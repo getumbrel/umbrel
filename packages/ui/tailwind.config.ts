@@ -61,6 +61,7 @@ export default {
 				dropdown:
 					'0px 60px 24px -40px rgba(0, 0, 0, 0.25), 1px 1px 0px 0px rgba(255, 255, 255, 0.08) inset, -1px -1px 1px 0px rgba(0, 0, 0, 0.20) inset',
 				dialog: '0px 20px 36px 0px rgba(0, 0, 0, 0.25), 0px 1px 1px 0px rgba(255, 255, 255, 0.1) inset',
+				'button-highlight': '0px 1px 0px 0px rgba(255, 255, 255, 0.25) inset',
 			},
 			dropShadow: {
 				'desktop-label': '0px 2px 4px rgba(0, 0, 0, 0.60)',
