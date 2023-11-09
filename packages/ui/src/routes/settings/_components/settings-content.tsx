@@ -52,6 +52,7 @@ export function SettingsContent() {
 	const memoryQ = trpcReact.system.memoryUsage.useQuery()
 	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	const isUmbrelHome = !!isUmbrelHomeQ.data
+	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 
 	if (!userQ.data) {
 		return null
@@ -159,7 +160,12 @@ export function SettingsContent() {
 						</div>
 					</ListRow>
 					<ListRow title='Two-factor authentication' description='Add a layer of security to login' isLabel>
-						<Switch onCheckedChange={() => navigate('/settings/2fa', {preventScrollReset: true})} />
+						<Switch
+							checked={is2faEnabledQ.data}
+							onCheckedChange={(checked) =>
+								navigate(checked ? '/settings/2fa-enable' : '/settings/2fa-disable', {preventScrollReset: true})
+							}
+						/>
 					</ListRow>
 					<ListRow title='Remote Tor access' description='Access Umbrel from anywhere using a Tor browser' isLabel>
 						<Switch onCheckedChange={fixmeHandler} />

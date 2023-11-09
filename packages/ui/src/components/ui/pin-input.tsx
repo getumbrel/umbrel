@@ -8,29 +8,24 @@ import {useIsFocused} from 'use-is-focused'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-const checkCodeApiMock = (code: string, expected: string): Promise<boolean> => {
-	return new Promise<boolean>((r) => setTimeout(r, 350, code === expected))
-}
-
 // ---
 
 const dotClass = tw`absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#D9D9D9]/10`
 
 // ---
 
-type CodeState = 'input' | 'loading' | 'error' | 'success'
+export type CodeState = 'input' | 'loading' | 'error' | 'success'
 type PinInputProps = {
-	expected: string
+	length: number
 	autoFocus?: boolean
-	onSuccess?: () => void
+	onCodeCheck: (code: string) => Promise<boolean>
 }
 
-export const PinInput = ({expected, autoFocus, onSuccess}: PinInputProps) => {
+export const PinInput = ({length, onCodeCheck, autoFocus}: PinInputProps) => {
 	const [state, setState] = useState<CodeState>('input')
 	const inputRef = useRef<HTMLInputElement>(null)
 	const focused = useIsFocused(inputRef)
 
-	const length = expected.length
 	const padding = '12px'
 	const width = getSegmentCssWidth(padding)
 	const isError = state === 'error'
@@ -58,19 +53,19 @@ export const PinInput = ({expected, autoFocus, onSuccess}: PinInputProps) => {
 				// auto submit on input fill
 				if (input.value.length === length) {
 					setState('loading')
-					checkCodeApiMock(input.value, expected).then((success) => {
-						if (success) {
+					onCodeCheck(input.value)
+						.then(() => {
 							setState('success')
-							return setTimeout(() => onSuccess?.(), 500)
-						}
-						setState('error')
-						setTimeout(() => {
-							setState('input')
-							input.value = ''
-							input.dispatchEvent(new Event('input'))
-							input.focus()
-						}, 500)
-					})
+						})
+						.catch(() => {
+							setState('error')
+							setTimeout(() => {
+								setState('input')
+								input.value = ''
+								input.dispatchEvent(new Event('input'))
+								input.focus()
+							}, 500)
+						})
 				}
 			}}
 			renderSegment={(segment) => {

@@ -113,6 +113,8 @@ export default router({
 			return ctx.user.enable2fa(input.totpUri)
 		}),
 
+	is2faEnabled: privateProcedure.query(async ({ctx}) => ctx.user.is2faEnabled()),
+
 	// Disables 2FA
 	disable2fa: privateProcedure
 		.input(

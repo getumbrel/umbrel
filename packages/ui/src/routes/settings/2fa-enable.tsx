@@ -1,7 +1,8 @@
 import {motion} from 'framer-motion'
-import {ReactNode, useState} from 'react'
+import {ReactNode, useEffect, useState} from 'react'
 import QRCode from 'react-qr-code'
 import {useNavigate} from 'react-router-dom'
+import {toast} from 'sonner'
 
 import {DialogMounter} from '@/components/dialog-mounter'
 import {CopyableField} from '@/components/ui/copyable-field'
@@ -16,9 +17,10 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {Separator} from '@/shadcn-components/ui/separator'
+import {trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
-export function TwoFactorDialog() {
+export function TwoFactorEnableDialog() {
 	const title = 'Enable two-factor authentication'
 	useUmbrelTitle(title)
 	const [open, setOpen] = useState(true)
@@ -26,7 +28,31 @@ export function TwoFactorDialog() {
 
 	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
 
-	const code = '4d33838f0a3f76510d8f24e259c5c3da8c4e245bd468afdd0eabfe86a4f7813e'
+	const ctx = trpcReact.useContext()
+
+	const [totpUri, setCode] = useState('')
+	useEffect(() => {
+		ctx.user.generateTotpUri.fetch().then((res) => setCode(res))
+	}, [ctx])
+
+	const enable2faMut = trpcReact.user.enable2fa.useMutation()
+
+	const checkCode = async (totpToken: string) => {
+		return enable2faMut.mutateAsync(
+			{totpToken, totpUri},
+			{
+				onSuccess: () => {
+					setTimeout(() => {
+						ctx.user.is2faEnabled.invalidate()
+						toast.success('Two-factor authentication enabled')
+						setOpen(false)
+					}, 500)
+				},
+			},
+		)
+	}
+
+	if (!totpUri) return null
 
 	return (
 		<DialogMounter>
@@ -43,19 +69,20 @@ export function TwoFactorDialog() {
 							<QRCode
 								size={256}
 								style={{height: 'auto', maxWidth: '100%', width: '100%'}}
-								value={code}
+								value={totpUri}
 								viewBox={`0 0 256 256`}
 							/>
 						</AnimateInQr>
 						<div className='w-full space-y-2 text-center'>
 							<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
-							<CopyableField code={code} />
+							<CopyableField code={totpUri} />
 						</div>
 						<Separator />
 						<p className='text-17 font-normal leading-none -tracking-2'>
 							Enter the code displayed in your authenticator app
 						</p>
-						<PinInput autoFocus expected={'123123'} onSuccess={() => setOpen(false)} />
+
+						<PinInput autoFocus length={6} onCodeCheck={checkCode} />
 					</DialogContent>
 				</DialogPortal>
 			</Dialog>

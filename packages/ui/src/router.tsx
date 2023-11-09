@@ -26,7 +26,8 @@ import {MigrateSuccess} from './routes/migrate/migrate-success'
 import {OnboardingStart} from './routes/onboarding'
 import {CreateAccount} from './routes/onboarding/1-create-account'
 import {AccountCreated} from './routes/onboarding/2-account-created'
-import {TwoFactorDialog} from './routes/settings/2fa'
+import {TwoFactorDisableDialog} from './routes/settings/2fa-disable'
+import {TwoFactorEnableDialog} from './routes/settings/2fa-enable'
 import {AppStorePreferencesDialog} from './routes/settings/app-store-preferences'
 import {ChangeNameDialog} from './routes/settings/change-name'
 import {ChangePasswordDialog} from './routes/settings/change-password'
@@ -125,8 +126,12 @@ export const router = createBrowserRouter([
 								Component: ChangePasswordDialog,
 							},
 							{
-								path: '2fa',
-								Component: TwoFactorDialog,
+								path: '2fa-enable',
+								Component: TwoFactorEnableDialog,
+							},
+							{
+								path: '2fa-disable',
+								Component: TwoFactorDisableDialog,
 							},
 							{
 								path: 'migration-assistant',
