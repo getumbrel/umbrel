@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useRef, useState} from 'react'
 import {MdContentCopy} from 'react-icons/md'
 import {useCopyToClipboard} from 'react-use'
 
@@ -6,12 +6,15 @@ import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/to
 import {sleep} from '@/utils/misc'
 
 export function CopyableField({code}: {code: string}) {
+	const codeRef = useRef<HTMLDivElement>(null)
 	const [, copyToClipboard] = useCopyToClipboard()
 	const [showCopied, setShowCopied] = useState(false)
 
 	return (
 		<div className='flex max-w-full items-center gap-2 overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 px-2.5 py-1.5 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40'>
-			<code className='block truncate'>{code}</code>
+			<code ref={codeRef} className='block truncate' onClick={() => selectText(codeRef.current)}>
+				{code}
+			</code>
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
@@ -30,4 +33,13 @@ export function CopyableField({code}: {code: string}) {
 			</Tooltip>
 		</div>
 	)
+}
+
+function selectText(el: HTMLElement | null) {
+	if (!el) return
+	const range = document.createRange()
+	range.selectNodeContents(el)
+	const sel = window.getSelection()
+	sel?.removeAllRanges()
+	sel?.addRange(range)
 }
