@@ -32,6 +32,7 @@
 		"@trpc/client": "10.34.0",
 		"@trpc/react-query": "10.34.0",
 		"@trpc/server": "10.34.0",
+		"bignumber.js": "^9.1.2",
 		"class-variance-authority": "0.7.0",
 		"clsx": "2.0.0",
 		"cmdk": "^0.2.0",
