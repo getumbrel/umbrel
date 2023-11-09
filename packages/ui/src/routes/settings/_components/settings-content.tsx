@@ -49,6 +49,8 @@ export function SettingsContent() {
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 	const memoryQ = trpcReact.system.memoryUsage.useQuery()
+	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
+	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	if (!userQ.data) {
 		return null
@@ -157,19 +159,21 @@ export function SettingsContent() {
 					<ListRow title='Remote Tor access' description='Access Umbrel from anywhere using a Tor browser' isLabel>
 						<Switch onCheckedChange={fixmeHandler} />
 					</ListRow>
-					<ListRow title='Migration Assistant' description='Move your data from Raspberry Pi to Umbrel Home' isLabel>
-						{/* We could use an IconLinkButton but then the `isLabel` from `ListRow` wouldn't work */}
-						<IconButton
-							icon={RiExpandRightFill}
-							onClick={() =>
-								navigate('/settings/migration-assistant', {
-									preventScrollReset: true,
-								})
-							}
-						>
-							Migrate
-						</IconButton>
-					</ListRow>
+					{isUmbrelHome && (
+						<ListRow title='Migration Assistant' description='Move your data from Raspberry Pi to Umbrel Home' isLabel>
+							{/* We could use an IconLinkButton but then the `isLabel` from `ListRow` wouldn't work */}
+							<IconButton
+								icon={RiExpandRightFill}
+								onClick={() =>
+									navigate('/settings/migration-assistant', {
+										preventScrollReset: true,
+									})
+								}
+							>
+								Migrate
+							</IconButton>
+						</ListRow>
+					)}
 					{/* TODO: make clicking trigger the dropdown */}
 					<ListRow title='Language' description='Select preferred language '>
 						<LanguageDropdown />
