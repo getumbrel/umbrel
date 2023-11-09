@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js'
 import {motion} from 'framer-motion'
 import {Globe} from 'lucide-react'
 import {useState} from 'react'
@@ -104,10 +105,12 @@ export function SettingsContent() {
 					<Card>
 						<ProgressStatCardContent
 							title='Storage'
-							value={maybePrettyBytes(null)}
+							value={maybePrettyBytes(diskQ.data?.used)}
 							valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
 							secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
-							progress={0.75}
+							progress={BigNumber(diskQ.data?.used ?? 0 * 100)
+								.dividedBy(diskQ.data?.size ?? 0)
+								.toNumber()}
 						/>
 					</Card>
 					<Card>
@@ -116,7 +119,9 @@ export function SettingsContent() {
 							value={maybePrettyBytes(memoryQ.data?.used)}
 							valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
 							secondaryValue={`${maybePrettyBytes(memoryQ.data?.available)} left`}
-							progress={0.75}
+							progress={BigNumber(memoryQ.data?.used ?? 0 * 100)
+								.dividedBy(memoryQ.data?.size ?? 0)
+								.toNumber()}
 						/>
 					</Card>
 					<Card>
