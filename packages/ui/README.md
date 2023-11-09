@@ -88,3 +88,7 @@ You can then search the repo for `viewTransitionName` to find them all
 ## Event handler naming in React components
 
 Use `onFooBarClick` rather than `onClickFooBar`
+
+## tRPC
+
+Prefer `trpcReact` over `trpcClient` because it lets you manage error and loading state, caching, and invalidation. More info here: https://trpc.io/docs/client/vanilla#when-not-to-use-the-vanilla-client
