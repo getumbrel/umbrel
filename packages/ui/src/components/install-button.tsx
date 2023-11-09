@@ -1,7 +1,9 @@
-import {useEffect, useRef} from 'react'
+import {CSSProperties, useEffect, useRef} from 'react'
 
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
+
+import {AnimatedNumber} from './ui/animated-number'
 
 export function InstallButton({
 	installSize,
@@ -39,19 +41,26 @@ export function InstallButton({
 		}
 	}, [state, progress])
 
+	const style: CSSProperties = {
+		// Adding transitions so hover and other transitions work
+		transition:
+			state === 'installing' ? '--progress 0.2s, opacity 0.2s, width 0.2s, background-color 0.2s' : 'width 0.2s',
+		// TODO: fix hover not working when done installing
+		['--progress' as string]: `${progress}%`,
+		backgroundImage:
+			state === 'installing'
+				? `linear-gradient(to right, hsl(var(--color-brand)) var(--progress), transparent var(--progress))`
+				: undefined,
+	}
+
 	return (
 		<button
 			ref={ref}
 			className={cn(
 				buttonVariants({size: 'lg', variant: 'primary'}),
-				'shadow-button-highlight select-none text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100',
+				'select-none text-15 font-semibold -tracking-3 shadow-button-highlight disabled:bg-brand/60 disabled:opacity-100',
 			)}
-			style={{
-				// Adding transitions so hover and other transitions work
-				transition: 'opacity 0.2s, width 0.2s, background-color 0.2s',
-				// TODO: fix hover not working when done installing
-				backgroundImage: `linear-gradient(to right, hsl(var(--color-brand)) ${progress}%, transparent ${progress}%)`,
-			}}
+			style={state === 'initial' ? undefined : style}
 			onClick={() => {
 				if (state === 'initial') {
 					onInstallClick()
@@ -69,7 +78,10 @@ export function InstallButton({
 			{state === 'installing' && (
 				<>
 					{/* 4ch to fit "100%", tabular-nums so each char is the same width */}
-					Installing <span className='w-[4ch] text-right tabular-nums -tracking-[0.08em] opacity-40'>{progress}%</span>
+					Installing{' '}
+					<span className='w-[4ch] text-right tabular-nums -tracking-[0.08em] opacity-40'>
+						<AnimatedNumber to={progress} />%
+					</span>
 				</>
 			)}
 			{state === 'installed' && 'Open'}

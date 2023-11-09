@@ -131,3 +131,9 @@ a {
 	/* max-height: 500px; */
 	transition: height 100ms ease;
 }
+
+@property --progress {
+	syntax: '<percentage>';
+	inherits: false;
+	initial-value: 0%;
+}

@@ -12,9 +12,12 @@ export const TopHeader = ({app}: {app: RegistryApp}) => {
 
 	useEffect(() => {
 		if (state === 'installing') {
-			const interval = setInterval(() => {
-				setProgress((prev) => Math.min(prev + 1, 100))
-			}, 50)
+			const interval = setInterval(
+				() => {
+					setProgress((prev) => Math.min(prev + Math.round(Math.random() * 30), 100))
+				},
+				Math.round(Math.random() * 500),
+			)
 
 			if (progress == 100) {
 				// Wait after install so you can see the 100%
@@ -22,7 +25,7 @@ export const TopHeader = ({app}: {app: RegistryApp}) => {
 					setState('installed')
 					setProgress(100)
 					clearInterval(interval)
-				}, 200)
+				}, 500)
 			}
 
 			return () => clearInterval(interval)
