@@ -45,7 +45,7 @@ export function DesktopStory() {
 function AppsDump() {
 	const {installedApps, isLoading} = useInstalledApps()
 
-	if (isLoading) return
+	if (isLoading || !installedApps) return
 
 	return (
 		<div className='flex flex-col gap-4 p-4'>
@@ -147,6 +147,8 @@ function WidgetExamples() {
 
 function AppGridExamples() {
 	const {installedApps} = useInstalledApps()
+	if (!installedApps) return null
+
 	return (
 		<>
 			<div>No apps</div>
@@ -157,7 +159,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={installedApps.slice(0, 1).map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} />
+						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
 			</AppGridWrapper>
@@ -165,7 +167,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={installedApps.slice(0, 3).map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} />
+						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
 			</AppGridWrapper>
@@ -173,7 +175,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={installedApps.map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} />
+						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
 			</AppGridWrapper>

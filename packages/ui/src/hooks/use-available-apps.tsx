@@ -52,14 +52,14 @@ export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 
 export function useAvailableApps() {
 	const ctx = useContext(AppsContext)
-	if (!ctx) throw new Error('useApps must be used within AppsProvider')
+	if (!ctx) throw new Error('useAvailableApps must be used within AvailableAppsProvider')
 
 	return ctx
 }
 
 export function useAvailableApp(id?: string) {
 	const ctx = useContext(AppsContext)
-	if (!ctx) throw new Error('useApp must be used within AppsProvider')
+	if (!ctx) throw new Error('useAvailableApp must be used within AvailableAppsProvider')
 
 	if (!id) return {isLoading: false, app: undefined}
 	if (ctx.isLoading) return {isLoading: true}

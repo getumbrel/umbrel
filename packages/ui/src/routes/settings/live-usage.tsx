@@ -33,6 +33,8 @@ export function LiveUsageDialog() {
 function StorageStats() {
 	const {installedApps} = useInstalledApps()
 
+	if (!installedApps) return null
+
 	return (
 		<>
 			<ProgressCard
@@ -53,6 +55,8 @@ function StorageStats() {
 
 function MemoryStats() {
 	const {installedApps} = useInstalledApps()
+
+	if (!installedApps) return null
 
 	return (
 		<>

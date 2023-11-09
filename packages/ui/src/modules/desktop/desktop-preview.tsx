@@ -76,7 +76,8 @@ function DesktopContent() {
 	const {allAppsKeyed, installedApps, isLoading} = useInstalledApps()
 	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
 
-	if (isLoading) return
+	if (isLoading) return null
+	if (!installedApps) return null
 
 	return (
 		<>
@@ -97,7 +98,7 @@ function DesktopContent() {
 						</WidgetWrapper>
 					))}
 					apps={installedApps.map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} />
+						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
 			</div>

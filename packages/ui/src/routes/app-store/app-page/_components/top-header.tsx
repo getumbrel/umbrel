@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react'
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
 import {RegistryApp} from '@/trpc/trpc'
+import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
 export const TopHeader = ({app}: {app: RegistryApp}) => {
@@ -68,7 +69,10 @@ export const TopHeader = ({app}: {app: RegistryApp}) => {
 				progress={progress}
 				state={state}
 				onInstallClick={() => setState('installing')}
-				onOpenClick={() => trackAppOpen(app.id)}
+				onOpenClick={() => {
+					trackAppOpen(app.id)
+					window.open(portToUrl(app.port), '_blank')?.focus()
+				}}
 			/>
 		</div>
 	)

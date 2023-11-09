@@ -1,8 +1,10 @@
-import {createContext, useContext, useEffect, useState} from 'react'
+import {createContext, useContext} from 'react'
 import {LinkProps} from 'react-router-dom'
-import {pick} from 'remeda'
 
+import {RegistryApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
+
+import {useAvailableApps} from './use-available-apps'
 
 type AppT = {
 	id: string
@@ -47,8 +49,8 @@ export const systemApps = [
 export const systemAppsKeyed = keyBy(systemApps, 'id')
 
 type DemoAppsContextT = {
-	installedApps: AppT[]
-	installedAppsKeyed: Record<string, AppT>
+	installedApps?: RegistryApp[]
+	installedAppsKeyed?: Record<string, RegistryApp>
 	// needs to be explicitly readonly so typescript doesn't complain, though all other props are technically readonly too
 	systemApps: readonly AppT[]
 	systemAppsKeyed: typeof systemAppsKeyed
@@ -60,21 +62,9 @@ const InstalledAppsContext = createContext<DemoAppsContextT | null>(null)
 
 /** Simulate installed apps */
 export function InstalledAppsProvider({children}: {children: React.ReactNode}) {
-	const [installedApps, setInstalledApps] = useState<AppT[]>([])
-	const [isLoading, setIsLoading] = useState(true)
+	const {isLoading, apps: installedApps, appsKeyed: installedAppsKeyed} = useAvailableApps()
 
-	useEffect(() => {
-		fetch('https://apps.umbrel.com/api/v1/apps/tmp-dump')
-			.then((res) => res.json())
-			.then((data) => {
-				setInstalledApps(data.data.map((app: AppT) => pick(app, ['id', 'name', 'icon'])))
-				setIsLoading(false)
-			})
-	}, [])
-
-	const installedAppsKeyed = keyBy(installedApps, 'id')
-
-	const allApps = [...installedApps, ...systemApps]
+	const allApps = [...(installedApps ?? []), ...systemApps]
 	const allAppsKeyed = keyBy(allApps, 'id')
 
 	return (
@@ -97,7 +87,7 @@ export function InstalledAppsProvider({children}: {children: React.ReactNode}) {
 /** Simulate installed apps */
 export function useInstalledApps() {
 	const ctx = useContext(InstalledAppsContext)
-	if (!ctx) throw new Error('useApps must be used within AppsProvider')
+	if (!ctx) throw new Error('useInstalledApps must be used within InstalledAppsProvider')
 
 	return ctx
 }

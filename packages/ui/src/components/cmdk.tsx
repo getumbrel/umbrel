@@ -7,6 +7,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcClient, trpcReact} from '@/trpc/trpc'
+import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
 import {AppIcon} from './app-icon'
@@ -20,6 +21,7 @@ export function CmdkMenu() {
 	const userQ = trpcReact.user.get.useQuery()
 
 	if (isLoading) return null
+	if (!installedApps) return null
 	if (userQ.isLoading) return null
 
 	return (
@@ -69,7 +71,16 @@ export function CmdkMenu() {
 					Add widgets
 				</CommandItem>
 				{installedApps.map((app) => (
-					<SubItem value={app.name} icon={app.icon} key={app.id} onSelect={() => trackAppOpen(app.id)}>
+					<SubItem
+						value={app.name}
+						icon={app.icon}
+						key={app.id}
+						onSelect={() => {
+							trackAppOpen(app.id)
+							window.open(portToUrl(app.port), '_blank')?.focus()
+							setOpen(false)
+						}}
+					>
 						{app.name}
 					</SubItem>
 				))}
@@ -123,11 +134,13 @@ function FrequentApps() {
 	useEffect(() => {
 		trpcClient.user.get.query().then((data) => setLastOpenedApps(data.lastOpenedApps ?? []))
 	}, [])
+	const {installedAppsKeyed} = useInstalledApps()
 
 	const search = useCommandState((state) => state.search)
 
 	// If there's a search query, don't show frequent apps
 	if (search) return null
+	if (!installedAppsKeyed) return null
 	if (!lastOpenedApps) return null
 
 	return (
@@ -137,7 +150,7 @@ function FrequentApps() {
 				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
 					{/* <JSONTree data={appsByFrequency(lastOpenedApps, 6)} /> */}
 					{appsByFrequency(lastOpenedApps, 6).map((appId) => (
-						<FrequentApp key={appId} appId={appId} />
+						<FrequentApp key={appId} appId={appId} port={installedAppsKeyed[appId]?.port} />
 					))}
 				</div>
 			</div>
@@ -165,17 +178,22 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 	return sortedAppIds
 }
 
-function FrequentApp({appId}: {appId: string}) {
+function FrequentApp({appId, port}: {appId: string; port: number}) {
 	const {installedAppsKeyed, isLoading} = useInstalledApps()
-	if (isLoading) return null
+	if (isLoading || !installedAppsKeyed) return null
 
 	return (
 		<button
 			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
-			onClick={() => trackAppOpen(appId)}
+			onClick={() => {
+				trackAppOpen(appId)
+				window.open(portToUrl(port), '_blank')?.focus()
+			}}
 		>
-			<AppIcon src={installedAppsKeyed[appId].icon} size={64} className='rounded-15' />
-			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{installedAppsKeyed[appId].name}</div>
+			<AppIcon src={installedAppsKeyed[appId]?.icon} size={64} className='rounded-15' />
+			<div className='w-full truncate text-13 -tracking-2 text-white/75'>
+				{installedAppsKeyed[appId]?.name ?? appId}
+			</div>
 		</button>
 	)
 }

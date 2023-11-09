@@ -2,15 +2,18 @@ import {Link} from 'react-router-dom'
 
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
+import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
-export function AppIcon({appId, label, src}: {appId: string; label: string; src: string}) {
+export function AppIcon({appId, label, src, port}: {appId: string; label: string; src: string; port: number}) {
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger className='group'>
-				<button
+				<a
 					className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3'
 					onClick={() => trackAppOpen(appId)}
+					href={portToUrl(port)}
+					target='_blank'
 				>
 					<img
 						src={src}
@@ -26,7 +29,7 @@ export function AppIcon({appId, label, src}: {appId: string; label: string; src:
 					<div className='max-w-full text-13 leading-normal drop-shadow-desktop-label'>
 						<div className='truncate contrast-more:bg-black contrast-more:px-1'>{label}</div>
 					</div>
-				</button>
+				</a>
 			</ContextMenuTrigger>
 			<ContextMenuContent>
 				<ContextMenuItem asChild>

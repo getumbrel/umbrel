@@ -17,6 +17,7 @@ export function DesktopContent() {
 	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
 
 	if (isLoading) return
+	if (!installedApps) return null
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 	const variant: DesktopVariant =
@@ -70,7 +71,7 @@ export function DesktopContent() {
 							</WidgetWrapper>
 						))}
 						apps={installedApps.map((app) => (
-							<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} />
+							<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 						))}
 					/>
 				</motion.div>

@@ -21,3 +21,7 @@ export function isNormalNumber(value: number | null | undefined): value is numbe
 export function keyBy<T, U extends keyof T>(array: ReadonlyArray<T>, key: U): Record<T[U] & string, T> {
 	return indexBy(array, (el) => el[key])
 }
+
+export function portToUrl(port: number) {
+	return `${location.protocol}//${location.hostname}:${port}`
+}

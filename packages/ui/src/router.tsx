@@ -58,7 +58,11 @@ export const router = createBrowserRouter([
 	// desktop
 	{
 		path: '/',
-		Component: Desktop,
+		element: (
+			<AvailableAppsProvider>
+				<Desktop />
+			</AvailableAppsProvider>
+		),
 		errorElement: <ErrorBoundary />,
 		children: [
 			{
@@ -256,11 +260,20 @@ export const router = createBrowserRouter([
 			},
 			{
 				path: 'stories/desktop',
-				Component: DesktopStory,
+				// Component: DesktopStory,
+				element: (
+					<AvailableAppsProvider>
+						<DesktopStory />
+					</AvailableAppsProvider>
+				),
 			},
 			{
 				path: 'stories/cmdk',
-				Component: CmdkStory,
+				element: (
+					<AvailableAppsProvider>
+						<CmdkStory />
+					</AvailableAppsProvider>
+				),
 			},
 		],
 	},
