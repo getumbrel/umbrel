@@ -18,17 +18,17 @@ export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
 	})
 
 	if (isLoading) {
-		return <CoverMessage>Checking backend for user...</CoverMessage>
+		return <CoverMessage delayed>Checking backend for user...</CoverMessage>
 	}
 
 	if (isError) {
-		return <CoverMessage>Error checking authentication status.</CoverMessage>
+		return <CoverMessage delayed>Error checking authentication status.</CoverMessage>
 	}
 
 	if (isLoggedIn) {
 		if (location.pathname.startsWith('/login')) {
 			sleep(500).then(() => navigate('/'))
-			return <CoverMessage>Redirecting to home...</CoverMessage>
+			return <CoverMessage delayed>Redirecting to home...</CoverMessage>
 		}
 	} else {
 		if (!location.pathname.startsWith('/login')) {

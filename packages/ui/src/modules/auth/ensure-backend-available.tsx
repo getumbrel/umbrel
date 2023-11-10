@@ -8,7 +8,7 @@ export function EnsureBackendAvailable({children}: {children: React.ReactNode}) 
 	})
 
 	if (getQuery.isLoading) {
-		return <CoverMessage>Checking backend...</CoverMessage>
+		return <CoverMessage delayed>Checking backend...</CoverMessage>
 	}
 
 	if (getQuery.error) {
