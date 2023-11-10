@@ -275,6 +275,10 @@ export const router = createBrowserRouter([
 					</AvailableAppsProvider>
 				),
 			},
+			{
+				path: 'stories/sheet',
+				element: <SheetStory />,
+			},
 		],
 	},
 ])

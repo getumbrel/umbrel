@@ -37,6 +37,10 @@ const storyLinks = [
 		name: 'CMDK',
 		path: '/stories/cmdk',
 	},
+	{
+		name: 'Sheet',
+		path: '/stories/sheet',
+	},
 ]
 
 export function StoriesLayout() {
