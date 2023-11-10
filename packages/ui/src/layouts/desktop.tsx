@@ -22,25 +22,23 @@ export function Desktop() {
 	}, [])
 
 	return (
-		<EnsureLoggedIn>
-			<InstalledAppsProvider>
-				<DesktopContextMenu>
-					<Wallpaper />
-					<div
-						className={
-							// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
-							'relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden'
-						}
-					>
-						<DesktopContent />
-						<Outlet />
-					</div>
-				</DesktopContextMenu>
-				<DockBottomPositioner>
-					<Dock />
-				</DockBottomPositioner>
-				<CmdkMenu />
-			</InstalledAppsProvider>
-		</EnsureLoggedIn>
+		<>
+			<DesktopContextMenu>
+				<Wallpaper />
+				<div
+					className={
+						// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
+						'relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden'
+					}
+				>
+					<DesktopContent />
+					<Outlet />
+				</div>
+			</DesktopContextMenu>
+			<DockBottomPositioner>
+				<Dock />
+			</DockBottomPositioner>
+			<CmdkMenu />
+		</>
 	)
 }

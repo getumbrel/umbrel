@@ -3,6 +3,7 @@ import {createBrowserRouter, useRouteError} from 'react-router-dom'
 
 import {CoverMessage} from './components/ui/cover-message'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
+import {InstalledAppsProvider} from './hooks/use-installed-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -44,6 +45,7 @@ import {DesktopStory} from './routes/stories/desktop'
 import {ErrorStory} from './routes/stories/error'
 import {InputExamples} from './routes/stories/input'
 import {SettingsStory} from './routes/stories/settings'
+import {SheetStory} from './routes/stories/sheet'
 import {Trpc} from './routes/stories/trpc'
 import {Button} from './shadcn-components/ui/button'
 
@@ -59,9 +61,13 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		element: (
-			<AvailableAppsProvider>
-				<Desktop />
-			</AvailableAppsProvider>
+			<EnsureLoggedIn>
+				<AvailableAppsProvider>
+					<InstalledAppsProvider>
+						<Desktop />
+					</InstalledAppsProvider>
+				</AvailableAppsProvider>
+			</EnsureLoggedIn>
 		),
 		errorElement: <ErrorBoundary />,
 		children: [
