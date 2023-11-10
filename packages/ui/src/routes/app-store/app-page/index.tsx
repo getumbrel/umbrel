@@ -3,6 +3,7 @@ import {useNavigate, useParams} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {useAvailableApp} from '@/hooks/use-available-apps'
+import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppGallerySection} from '@/modules/app-store/gallery-section'
 
 import {AboutSection} from './_components/about-section'
@@ -16,6 +17,7 @@ export function AppPage() {
 	const navigate = useNavigate()
 	const {appId} = useParams()
 	const {app, isLoading} = useAvailableApp(appId)
+	useUmbrelTitle(app?.name || 'Unknown App')
 
 	if (isLoading) return <Loading />
 	if (!app) return <div>App not found</div>
