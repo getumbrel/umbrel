@@ -57,7 +57,7 @@ export function Layout({
 	subTitle: React.ReactNode
 	subTitleMaxWidth?: number
 	children: React.ReactNode
-	footer: React.ReactNode
+	footer?: React.ReactNode
 }) {
 	return (
 		<>
