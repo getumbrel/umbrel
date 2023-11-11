@@ -22,3 +22,5 @@ export const categoryishDescriptions = [
 ] as const satisfies readonly {id: Categoryish; label: string}[]
 
 export const categoryDescriptionsKeyed = keyBy(categoryishDescriptions, 'id')
+
+export const UMBREL_APP_STORE_ID = 'umbrel-app-store'

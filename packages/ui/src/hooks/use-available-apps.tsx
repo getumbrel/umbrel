@@ -1,6 +1,7 @@
 import {createContext, useContext} from 'react'
 import {groupBy} from 'remeda'
 
+import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Category, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
@@ -23,7 +24,7 @@ const AppsContext = createContext<AppsContextT | null>(null)
 // TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
-	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === 'umbrel-app-store')?.apps
+	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === UMBREL_APP_STORE_ID)?.apps
 
 	if (appsQ.isLoading) return null
 
