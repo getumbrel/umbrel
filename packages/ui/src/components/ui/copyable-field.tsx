@@ -12,7 +12,7 @@ export function CopyableField({value}: {value: string}) {
 
 	return (
 		<div className='flex max-w-full items-center gap-2 overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 px-2.5 py-1.5 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40'>
-			<code ref={ref} className='block truncate' onClick={() => selectText(ref.current)}>
+			<code ref={ref} className='block flex-1 truncate' onClick={() => selectText(ref.current)}>
 				{value}
 			</code>
 			<Tooltip open={showCopied}>
