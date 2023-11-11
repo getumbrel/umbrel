@@ -75,7 +75,7 @@ export function TwoFactorEnableDialog() {
 						</AnimateInQr>
 						<div className='w-full space-y-2 text-center'>
 							<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
-							<CopyableField code={totpUri} />
+							<CopyableField value={totpUri} />
 						</div>
 						<Separator />
 						<p className='text-17 font-normal leading-none -tracking-2'>
