@@ -1,10 +1,15 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
+import {set} from 'remeda'
 import {toast} from 'sonner'
 
 import {DialogMounter} from '@/components/dialog-mounter'
+import {Card} from '@/components/ui/card'
+import {CopyableField} from '@/components/ui/copyable-field'
+import {LinkButton} from '@/components/ui/link-button'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -15,6 +20,7 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
+import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
 
 export function CommunityAppStoreDialog() {
@@ -27,12 +33,31 @@ export function CommunityAppStoreDialog() {
 	const [url, setUrl] = useState('')
 	const [localError, setLocalError] = useState('')
 
+	// queries
+
+	const appStoresQ = trpcReact.appStore.registry.useQuery()
+
 	// mutations
 
 	const addAppStoreMut = trpcReact.appStore.addRepository.useMutation({
 		onSuccess: () => {
 			toast.success('Added community app store')
-			removeParam('dialog')
+			setUrl('')
+			setLocalError('')
+			appStoresQ.refetch()
+		},
+		onError: (err) => {
+			toast.error(err.message)
+		},
+	})
+
+	const removeAppStoreMut = trpcReact.appStore.removeRepository.useMutation({
+		onSuccess: () => {
+			toast.success('Removed community app store')
+			appStoresQ.refetch()
+		},
+		onError: (err) => {
+			toast.error(err.message)
 		},
 	})
 
@@ -51,6 +76,11 @@ export function CommunityAppStoreDialog() {
 
 	const remoteFormError = !addAppStoreMut.error?.data?.zodError && addAppStoreMut.error?.message
 	const formError = localError || remoteFormError
+
+	const nonUmbrelAppStores = (appStoresQ.data ?? [])
+		.filter((store) => store?.meta.id !== UMBREL_APP_STORE_ID)
+		.filter((store) => store !== null)
+		.map((store) => store!)
 
 	return (
 		<DialogMounter>
@@ -99,6 +129,24 @@ export function CommunityAppStoreDialog() {
 									</DialogFooter>
 								</fieldset>
 							</form>
+							<Separator />
+							{nonUmbrelAppStores.length === 0 && (
+								<div className='text-center text-14 text-white/60'>No community app stores added</div>
+							)}
+							{nonUmbrelAppStores.map(({url, meta}) => (
+								<Card key={meta.id} className='space-y-3'>
+									<b>{meta.name}</b>
+									{url && <CopyableField value={url} />}
+									<div className='flex items-center justify-between'>
+										<Button variant='destructive' size='dialog' onClick={() => removeAppStoreMut.mutate({url})}>
+											Remove
+										</Button>
+										<LinkButton size='dialog' className='ml-2' to={`/community-app-store/${meta.id}`}>
+											Open
+										</LinkButton>
+									</div>
+								</Card>
+							))}
 						</div>
 					</DialogContent>
 				</DialogPortal>
