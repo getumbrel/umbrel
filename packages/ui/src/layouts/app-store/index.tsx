@@ -21,7 +21,7 @@ import {
 import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 
-import {AddCommunityStoreDialog} from './add-community-store-dialog'
+import {CommunityAppStoreDialog} from './community-app-store-dialog'
 import {UpdatesDialog} from './updates-dialog'
 
 export function AppStoreLayout() {
@@ -99,7 +99,7 @@ function CommunityAppsDropdown() {
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<AddCommunityStoreDialog />
+			<CommunityAppStoreDialog />
 		</>
 	)
 }

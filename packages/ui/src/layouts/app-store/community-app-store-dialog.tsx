@@ -14,7 +14,7 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {Input} from '@/shadcn-components/ui/input'
 
-export function AddCommunityStoreDialog() {
+export function CommunityAppStoreDialog() {
 	const title = 'Add community store'
 	useUmbrelTitle(title)
 
