@@ -1,6 +1,5 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
-import {set} from 'remeda'
 import {toast} from 'sonner'
 
 import {DialogMounter} from '@/components/dialog-mounter'
