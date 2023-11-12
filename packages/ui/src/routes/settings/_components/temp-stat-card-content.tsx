@@ -3,7 +3,7 @@ import {useState} from 'react'
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
-import {cardTitleClass} from '@/routes/app-store/app-page/_components/shared'
+import {cardTitleClass} from '@/modules/app-store/app-page/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {isNormalNumber, keyBy} from '@/utils/misc'
 
