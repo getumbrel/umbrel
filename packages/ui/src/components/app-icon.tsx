@@ -12,7 +12,6 @@ function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps,
 			src={src || defaultIcon}
 			alt=''
 			ref={ref}
-			crossOrigin='anonymous'
 			className={cn('shrink-0 bg-white/10 bg-cover bg-center', className)}
 			style={{
 				...style,
