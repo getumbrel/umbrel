@@ -33,10 +33,10 @@ export function AppsGridSection({overline, title, apps}: {overline: string; titl
 	)
 }
 
-export function AppsGridFaintSection({title, apps}: {title: ReactNode; apps?: RegistryApp[]}) {
+export function AppsGridFaintSection({title, apps}: {title?: ReactNode; apps?: RegistryApp[]}) {
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
-			<h3 className={sectionTitleClass}>{title}</h3>
+			{title && <h3 className={sectionTitleClass}>{title}</h3>}
 			<div className={appsGridClass}>
 				{apps?.map((app) => (
 					<AppWithDescription
@@ -54,11 +54,13 @@ export function AppsGridFaintSection({title, apps}: {title: ReactNode; apps?: Re
 
 export function AppWithDescription({
 	id,
+	to,
 	icon,
 	appName,
 	appDescription,
 }: {
 	id?: string
+	to?: string
 	icon: string
 	appName: ReactNode
 	appDescription: ReactNode
@@ -79,7 +81,7 @@ export function AppWithDescription({
 
 	return (
 		<Link
-			to={`/app-store/${id}`}
+			to={to ? to : `/app-store/${id}`}
 			className={cn('group flex w-full items-center gap-2.5', linkClass)}
 			unstable_viewTransition
 		>
