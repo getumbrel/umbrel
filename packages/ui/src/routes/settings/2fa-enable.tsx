@@ -4,7 +4,6 @@ import QRCode from 'react-qr-code'
 import {useNavigate} from 'react-router-dom'
 import {toast} from 'sonner'
 
-import {DialogMounter} from '@/components/dialog-mounter'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {PinInput} from '@/components/ui/pin-input'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -55,38 +54,36 @@ export function TwoFactorEnableDialog() {
 	if (!totpUri) return null
 
 	return (
-		<DialogMounter>
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogPortal>
-					<DialogContent className='flex flex-col items-center gap-5'>
-						<DialogHeader>
-							<DialogTitle>{title}</DialogTitle>
-							<DialogDescription>
-								Scan this QR code using an authenticator app like Google Authenticator or Authy
-							</DialogDescription>
-						</DialogHeader>
-						<AnimateInQr>
-							<QRCode
-								size={256}
-								style={{height: 'auto', maxWidth: '100%', width: '100%'}}
-								value={totpUri}
-								viewBox={`0 0 256 256`}
-							/>
-						</AnimateInQr>
-						<div className='w-full space-y-2 text-center'>
-							<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
-							<CopyableField value={totpUri} />
-						</div>
-						<Separator />
-						<p className='text-17 font-normal leading-none -tracking-2'>
-							Enter the code displayed in your authenticator app
-						</p>
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogPortal>
+				<DialogContent className='flex flex-col items-center gap-5'>
+					<DialogHeader>
+						<DialogTitle>{title}</DialogTitle>
+						<DialogDescription>
+							Scan this QR code using an authenticator app like Google Authenticator or Authy
+						</DialogDescription>
+					</DialogHeader>
+					<AnimateInQr>
+						<QRCode
+							size={256}
+							style={{height: 'auto', maxWidth: '100%', width: '100%'}}
+							value={totpUri}
+							viewBox={`0 0 256 256`}
+						/>
+					</AnimateInQr>
+					<div className='w-full space-y-2 text-center'>
+						<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
+						<CopyableField value={totpUri} />
+					</div>
+					<Separator />
+					<p className='text-17 font-normal leading-none -tracking-2'>
+						Enter the code displayed in your authenticator app
+					</p>
 
-						<PinInput autoFocus length={6} onCodeCheck={checkCode} />
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+					<PinInput autoFocus length={6} onCodeCheck={checkCode} />
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }
 

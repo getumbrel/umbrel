@@ -7,7 +7,6 @@ import {cn} from '@/shadcn-lib/utils'
 import {afterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
-import {DialogMounter} from '../dialog-mounter'
 import {IconButton} from './icon-button'
 
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`
@@ -19,20 +18,18 @@ export function ImmersiveDialogSeparator() {
 
 export function ImmersiveDialog({children, onClose}: {children: React.ReactNode; onClose?: () => void}) {
 	return (
-		<DialogMounter>
-			<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
-				<DialogPortal>
-					<ImmersiveDialogOverlay />
-					{/* shell */}
-					<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0 px-4')}>
-						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
-							{children}
-						</div>
-						<ImmersiveDialogClose />
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+		<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				{/* shell */}
+				<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0 px-4')}>
+					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
+						{children}
+					</div>
+					<ImmersiveDialogClose />
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }
 
@@ -47,29 +44,27 @@ export function ImmersiveDialogSplit({
 	onClose?: () => void
 }) {
 	return (
-		<DialogMounter>
-			<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
-				<DialogPortal>
-					<ImmersiveDialogOverlay />
-					{/* shell */}
-					<DialogContent
-						className={cn(
-							dialogContentClass,
-							immersiveContentSizeClass,
-							'flex flex-row justify-between gap-0 bg-black/40 p-0',
-						)}
-					>
-						<div className='hidden w-[210px] flex-col items-center justify-center md:flex'>{leftChildren}</div>
-						<div className='flex-1 rounded-20 bg-dialog-content/70 px-4 md:rounded-l-none md:rounded-r-20'>
-							<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
-								{children}
-							</div>
+		<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				{/* shell */}
+				<DialogContent
+					className={cn(
+						dialogContentClass,
+						immersiveContentSizeClass,
+						'flex flex-row justify-between gap-0 bg-black/40 p-0',
+					)}
+				>
+					<div className='hidden w-[210px] flex-col items-center justify-center md:flex'>{leftChildren}</div>
+					<div className='flex-1 rounded-20 bg-dialog-content/70 px-4 md:rounded-l-none md:rounded-r-20'>
+						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
+							{children}
 						</div>
-						<ImmersiveDialogClose />
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+					</div>
+					<ImmersiveDialogClose />
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }
 

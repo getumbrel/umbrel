@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
-import {DialogMounter} from '@/components/dialog-mounter'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -44,32 +43,28 @@ export function ChangeNameDialog() {
 	}
 
 	return (
-		<DialogMounter>
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogPortal>
-					<DialogContent>
-						<form onSubmit={handleSubmit}>
-							<fieldset disabled={setMut.isLoading} className='flex flex-col gap-5'>
-								<DialogHeader>
-									<DialogTitle>{title}</DialogTitle>
-									<DialogDescription>
-										This appears in the homescreen, and will be your device name too.
-									</DialogDescription>
-								</DialogHeader>
-								<Input placeholder='Name' value={name} onValueChange={setName} />
-								<DialogFooter>
-									<Button type='submit' size='dialog' variant='primary'>
-										{setMut.isLoading ? 'Saving changes...' : 'Save changes'}
-									</Button>
-									<Button type='button' size='dialog' onClick={() => setOpen(false)}>
-										Cancel
-									</Button>
-								</DialogFooter>
-							</fieldset>
-						</form>
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogPortal>
+				<DialogContent>
+					<form onSubmit={handleSubmit}>
+						<fieldset disabled={setMut.isLoading} className='flex flex-col gap-5'>
+							<DialogHeader>
+								<DialogTitle>{title}</DialogTitle>
+								<DialogDescription>This appears in the homescreen, and will be your device name too.</DialogDescription>
+							</DialogHeader>
+							<Input placeholder='Name' value={name} onValueChange={setName} />
+							<DialogFooter>
+								<Button type='submit' size='dialog' variant='primary'>
+									{setMut.isLoading ? 'Saving changes...' : 'Save changes'}
+								</Button>
+								<Button type='button' size='dialog' onClick={() => setOpen(false)}>
+									Cancel
+								</Button>
+							</DialogFooter>
+						</fieldset>
+					</form>
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }

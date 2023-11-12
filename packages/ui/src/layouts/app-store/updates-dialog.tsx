@@ -1,7 +1,6 @@
 import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {DialogMounter} from '@/components/dialog-mounter'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -25,30 +24,28 @@ export function UpdatesDialog() {
 	}
 
 	return (
-		<DialogMounter>
-			<Dialog open={params.get('dialog') === 'updates'} onOpenChange={(open) => !open && removeParam('dialog')}>
-				<DialogPortal>
-					<DialogContent className='p-0'>
-						<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>
-							<DialogHeader>
-								<DialogTitle className='flex flex-row items-center justify-between'>
-									5 updates available{' '}
-									<Button size='dialog' variant='primary'>
-										Update all
-									</Button>
-								</DialogTitle>
-							</DialogHeader>
-							{apps.slice(0, 7).map((app, i) => (
-								<Fragment key={app.id}>
-									{i === 0 ? <Separator className='my-2.5' /> : <Separator className='my-1' />}
-									<AppItem app={app} />
-								</Fragment>
-							))}
-						</div>
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+		<Dialog open={params.get('dialog') === 'updates'} onOpenChange={(open) => !open && removeParam('dialog')}>
+			<DialogPortal>
+				<DialogContent className='p-0'>
+					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>
+						<DialogHeader>
+							<DialogTitle className='flex flex-row items-center justify-between'>
+								5 updates available{' '}
+								<Button size='dialog' variant='primary'>
+									Update all
+								</Button>
+							</DialogTitle>
+						</DialogHeader>
+						{apps.slice(0, 7).map((app, i) => (
+							<Fragment key={app.id}>
+								{i === 0 ? <Separator className='my-2.5' /> : <Separator className='my-1' />}
+								<AppItem app={app} />
+							</Fragment>
+						))}
+					</div>
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }
 

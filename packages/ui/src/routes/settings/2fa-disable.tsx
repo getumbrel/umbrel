@@ -2,7 +2,6 @@ import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {toast} from 'sonner'
 
-import {DialogMounter} from '@/components/dialog-mounter'
 import {PinInput} from '@/components/ui/pin-input'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
@@ -37,22 +36,20 @@ export function TwoFactorDisableDialog() {
 	}
 
 	return (
-		<DialogMounter>
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogPortal>
-					<DialogContent className='flex flex-col items-center gap-5'>
-						<DialogHeader>
-							<DialogTitle>{title}</DialogTitle>
-						</DialogHeader>
-						<Separator />
-						<p className='text-17 font-normal leading-none -tracking-2'>
-							Enter the code displayed in your authenticator app
-						</p>
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogPortal>
+				<DialogContent className='flex flex-col items-center gap-5'>
+					<DialogHeader>
+						<DialogTitle>{title}</DialogTitle>
+					</DialogHeader>
+					<Separator />
+					<p className='text-17 font-normal leading-none -tracking-2'>
+						Enter the code displayed in your authenticator app
+					</p>
 
-						<PinInput autoFocus length={6} onCodeCheck={checkCode} />
-					</DialogContent>
-				</DialogPortal>
-			</Dialog>
-		</DialogMounter>
+					<PinInput autoFocus length={6} onCodeCheck={checkCode} />
+				</DialogContent>
+			</DialogPortal>
+		</Dialog>
 	)
 }
