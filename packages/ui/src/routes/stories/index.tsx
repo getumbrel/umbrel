@@ -293,7 +293,6 @@ function Badges() {
 		<div className='space-x-1'>
 			<Badge variant='default'>Default</Badge>
 			<Badge variant='primary'>Primary</Badge>
-			<Badge variant='secondary'>Secondary</Badge>
 			<Badge variant='outline'>Outline</Badge>
 			<Badge variant='destructive'>Destructive</Badge>
 		</div>
