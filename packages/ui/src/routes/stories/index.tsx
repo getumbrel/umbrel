@@ -23,6 +23,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from '@/shadcn-components/ui/alert-dialog'
+import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	ContextMenu,
@@ -57,6 +58,8 @@ export function Stories() {
 			<H1>Stories</H1>
 			<H2>Buttons</H2>
 			<Buttons />
+			<H2>Badge</H2>
+			<Badges />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
 			<H2>Loading</H2>
@@ -281,6 +284,18 @@ function ProgressButton() {
 				onInstallClick={() => setState('installing')}
 				onOpenClick={() => trackAppOpen('foobar')}
 			/>
+		</div>
+	)
+}
+
+function Badges() {
+	return (
+		<div className='space-x-1'>
+			<Badge variant='default'>Default</Badge>
+			<Badge variant='primary'>Primary</Badge>
+			<Badge variant='secondary'>Secondary</Badge>
+			<Badge variant='outline'>Outline</Badge>
+			<Badge variant='destructive'>Destructive</Badge>
 		</div>
 	)
 }
