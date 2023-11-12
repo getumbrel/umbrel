@@ -10,11 +10,12 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					'bg-white/6 active:bg-white/3 hover:bg-white/10 border-[0.5px] border-white/6 ring-white/20 data-[state=open]:bg-white/10',
-				primary: 'bg-brand hover:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter',
+					'bg-white/6 active:bg-white/3 hover:bg-white/10 border-[0.5px] border-white/6 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx',
+				primary:
+					'bg-brand hover:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
 				secondary: 'bg-white/80 hover:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
 				destructive:
-					'bg-destructive2 hover:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter',
+					'bg-destructive2 hover:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
 			},
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
@@ -29,6 +30,13 @@ const buttonVariants = cva(
 				destructive: 'text-destructive/90',
 			},
 		},
+		compoundVariants: [
+			{
+				variant: 'primary',
+				size: 'lg',
+				class: 'shadow-button-highlight',
+			},
+		],
 		defaultVariants: {
 			variant: 'default',
 			size: 'default',

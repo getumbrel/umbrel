@@ -58,7 +58,7 @@ export function InstallButton({
 			ref={ref}
 			className={cn(
 				buttonVariants({size: 'lg', variant: 'primary'}),
-				'select-none text-15 font-semibold -tracking-3 shadow-button-highlight disabled:bg-brand/60 disabled:opacity-100',
+				'select-none text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100',
 			)}
 			style={state === 'initial' ? undefined : style}
 			onClick={() => {
