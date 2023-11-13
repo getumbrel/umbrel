@@ -12,7 +12,7 @@ import {
 	DialogPortal,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
-import {Input} from '@/shadcn-components/ui/input'
+import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
@@ -26,6 +26,7 @@ export function ChangeNameDialog() {
 	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
 
 	const [name, setName] = useState('')
+	const [localError, setLocalError] = useState('')
 
 	const ctx = trpcReact.useContext()
 
@@ -39,13 +40,26 @@ export function ChangeNameDialog() {
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
+
+		// Reset errors
+		setMut.reset()
+		setLocalError('')
+
+		if (!name) {
+			setLocalError('Name is required')
+			return
+		}
+
 		setMut.mutate({name})
 	}
+
+	const remoteFormError = !setMut.error?.data?.zodError && setMut.error?.message
+	const formError = localError || remoteFormError
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogPortal>
-				<DialogContent>
+				<DialogContent asChild>
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={setMut.isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
@@ -53,9 +67,12 @@ export function ChangeNameDialog() {
 								<DialogDescription>This appears in the homescreen, and will be your device name too.</DialogDescription>
 							</DialogHeader>
 							<Input placeholder='Name' value={name} onValueChange={setName} />
+							<div className='-my-2.5'>
+								<AnimatedInputError>{formError}</AnimatedInputError>
+							</div>
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
-									{setMut.isLoading ? 'Saving changes...' : 'Save changes'}
+									Save changes
 								</Button>
 								<Button type='button' size='dialog' onClick={() => setOpen(false)}>
 									Cancel
