@@ -31,6 +31,7 @@ function lineClampStyles(lines: number): CSSProperties {
 	}
 }
 
+export const appPageWrapperClass = tw`flex flex-col gap-[40px]`
 export const cardClass = cn(cardFaintClass, tw`rounded-12 flex flex-col gap-5`)
 export const cardTitleClass = tw`text-12 opacity-50 uppercase leading-tight font-semibold tracking-normal`
 export const cardTextClass = tw`text-15 leading-snug whitespace-pre-wrap`

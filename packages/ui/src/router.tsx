@@ -15,6 +15,8 @@ import {EnsureLoggedIn} from './modules/auth/ensure-logged-in'
 import {AppPage} from './routes/app-store/app-page'
 import {CategoryPage} from './routes/app-store/category-page'
 import {Discover} from './routes/app-store/discover'
+import {CommunityAppStoreHome} from './routes/community-app-store'
+import {CommunityAppPage} from './routes/community-app-store/app-page'
 import {One} from './routes/demo/one'
 import {Two} from './routes/demo/two'
 import {EditWidgetsPage} from './routes/edit-widgets'
@@ -103,6 +105,19 @@ export const router = createBrowserRouter([
 								<AppPage />
 							</AvailableAppsProvider>
 						),
+					},
+					{
+						path: 'community-app-store/:appStoreId',
+						children: [
+							{
+								index: true,
+								Component: CommunityAppStoreHome,
+							},
+							{
+								path: ':appId',
+								Component: CommunityAppPage,
+							},
+						],
 					},
 					{
 						path: 'settings',

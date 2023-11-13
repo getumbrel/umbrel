@@ -11,14 +11,19 @@ import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
-import {appsGridClass, cardFaintClass, sectionTitleClass, slideInFromBottomClass} from '@/modules/app-store/shared'
+import {
+	appsGridClass,
+	AppStoreSheetInner,
+	cardFaintClass,
+	sectionTitleClass,
+	slideInFromBottomClass,
+} from '@/modules/app-store/shared'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
-import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 
 import {CommunityAppStoreDialog} from './community-app-store-dialog'
@@ -34,32 +39,32 @@ export function AppStoreLayout() {
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 
 	return (
-		<div className='flex flex-col gap-8'>
-			<SheetHeader className='gap-5'>
-				<div className='flex flex-wrap-reverse items-center gap-y-2'>
-					<SheetTitle className='text-48 leading-none'>{title}</SheetTitle>
-					<div className='flex-1' />
-					<div className='flex items-center gap-3'>
-						<LinkButton
-							to={{search: addLinkSearchParams({dialog: 'updates'})}}
-							variant='default'
-							size='dialog'
-							className='relative h-[33px]'
-						>
-							Updates
-							<NotificationBadge count={2} />
-						</LinkButton>
-						<UpdatesDialog />
-						<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
-					</div>
-				</div>
-				<SheetDescription className='flex items-baseline justify-between text-left text-17 font-medium -tracking-2 text-white/75'>
+		<AppStoreSheetInner
+			title={title}
+			description={
+				<>
 					{t('app-store.tagline')}
 					<CommunityAppsDropdown />
-				</SheetDescription>
-			</SheetHeader>
+				</>
+			}
+			titleRightChildren={
+				<div className='flex items-center gap-3'>
+					<LinkButton
+						to={{search: addLinkSearchParams({dialog: 'updates'})}}
+						variant='default'
+						size='dialog'
+						className='relative h-[33px]'
+					>
+						Updates
+						<NotificationBadge count={2} />
+					</LinkButton>
+					<UpdatesDialog />
+					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
+				</div>
+			}
+		>
 			{deferredSearchQuery ? <SearchResultsMemoized query={deferredSearchQuery} /> : <Outlet />}
-		</div>
+		</AppStoreSheetInner>
 	)
 }
 
