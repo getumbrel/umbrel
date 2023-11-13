@@ -31,6 +31,7 @@ function App({app}: {app: RegistryApp}) {
 				ref={iconRef}
 				size={100}
 				src={app.icon}
+				crossOrigin='anonymous'
 				className='relative z-10 -mb-[50px] ml-[27px] rounded-24'
 				style={{
 					filter: 'drop-shadow(0px 18px 24px rgba(0, 0, 0, 0.12))',

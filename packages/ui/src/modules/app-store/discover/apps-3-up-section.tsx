@@ -85,6 +85,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 				<AppIcon
 					ref={iconRef}
 					src={app.icon}
+					crossOrigin='anonymous'
 					size={128}
 					className='shrink-0 self-center rounded-24'
 					style={{
