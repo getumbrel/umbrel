@@ -4,7 +4,7 @@ import {Outlet} from 'react-router-dom'
 import {CmdkMenu} from '@/components/cmdk'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
-import {DesktopContextMenu} from '@/modules/desktop/desktop-misc'
+import {AppGridGradientMasking, DesktopContextMenu} from '@/modules/desktop/desktop-misc'
 import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
 import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 
@@ -33,6 +33,11 @@ export function Desktop() {
 					<Outlet />
 				</div>
 			</DesktopContextMenu>
+			{/* NOTE:
+        Keep `AppGridGradientMasking` here rather than deeper down in component heirarchy to avoid being animated up and down when widget selector opens and closes.
+      */}
+			<AppGridGradientMasking />
+			<BlurBelowDock />
 			<DockBottomPositioner>
 				<Dock />
 			</DockBottomPositioner>
@@ -40,3 +45,13 @@ export function Desktop() {
 		</>
 	)
 }
+
+const BlurBelowDock = () => (
+	<div
+		className='pointer-events-none fixed inset-0 top-0 backdrop-blur-2xl'
+		style={{
+			background: '#000000aa',
+			WebkitMaskImage: 'linear-gradient(transparent calc(100% - 200px), black calc(100% - 30px))',
+		}}
+	/>
+)
