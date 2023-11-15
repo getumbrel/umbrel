@@ -4,6 +4,7 @@ import {useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
+import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
@@ -56,31 +57,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 }
 
 export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
-	const [progress, setProgress] = useState(0)
-	// Separate from `progress` so we can keep `installing` state for a bit after reaching 100
-	const [state, setState] = useState<'initial' | 'installing' | 'installed'>('initial')
-
-	useEffect(() => {
-		if (state === 'installing') {
-			const interval = setInterval(
-				() => {
-					setProgress((prev) => Math.min(prev + Math.round(Math.random() * 30), 100))
-				},
-				Math.round(Math.random() * 500),
-			)
-
-			if (progress == 100) {
-				// Wait after install so you can see the 100%
-				setTimeout(() => {
-					setState('installed')
-					setProgress(100)
-					clearInterval(interval)
-				}, 500)
-			}
-
-			return () => clearInterval(interval)
-		}
-	}, [state, progress])
+	const {progress, state, install} = useDemoInstallProgress()
 
 	return (
 		<TopHeader
@@ -90,7 +67,7 @@ export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 					installSize='XGB'
 					progress={progress}
 					state={state}
-					onInstallClick={() => setState('installing')}
+					onInstallClick={install}
 					onOpenClick={() => {
 						trackAppOpen(app.id)
 						window.open(portToUrl(app.port), '_blank')?.focus()

@@ -17,6 +17,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
+import {trpcReact} from '@/trpc/trpc'
 
 const title = 'Migration Assistant'
 
@@ -139,6 +140,10 @@ function MigrationAssistantErrors() {
 function MigrationAssistantReady() {
 	const navigate = useNavigate()
 
+	const migrateMut = trpcReact.migration.migrate.useMutation({
+		onSuccess: () => navigate('/migrate'),
+	})
+
 	return (
 		<MigrationBody
 			title='You’re all set to migrate!'
@@ -146,7 +151,7 @@ function MigrationAssistantReady() {
 			bodyText='Things to keep in mind'
 			footer={
 				<>
-					<Button variant='primary' size='dialog' className='w-full md:w-auto' onClick={() => navigate('/migrate')}>
+					<Button variant='primary' size='dialog' className='w-full md:w-auto' onClick={() => migrateMut.mutate()}>
 						Continue migration
 					</Button>
 				</>

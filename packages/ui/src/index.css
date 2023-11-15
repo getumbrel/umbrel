@@ -125,6 +125,22 @@ a {
 	}
 }
 
+@keyframes bounce-gradient {
+	0%,
+	100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
+
+.umbrel-bouncing-gradient {
+	background: linear-gradient(to right, transparent, white, transparent);
+	background-size: 200% 100%;
+	animation: bounce-gradient 2s ease infinite;
+}
+
 [cmdk-list] {
 	height: var(--cmdk-list-height);
 	/* min-height: 300px; */

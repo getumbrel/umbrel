@@ -41,6 +41,10 @@ const storyLinks = [
 		name: 'Sheet',
 		path: '/stories/sheet',
 	},
+	{
+		name: 'Migrate',
+		path: '/stories/migrate',
+	},
 ]
 
 export function StoriesLayout() {

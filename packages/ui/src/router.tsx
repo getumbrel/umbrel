@@ -46,6 +46,7 @@ import {ColorThiefExample} from './routes/stories/color-thief'
 import {DesktopStory} from './routes/stories/desktop'
 import {ErrorStory} from './routes/stories/error'
 import {InputExamples} from './routes/stories/input'
+import {MigrateStory} from './routes/stories/migrate'
 import {SettingsStory} from './routes/stories/settings'
 import {SheetStory} from './routes/stories/sheet'
 import {Trpc} from './routes/stories/trpc'
@@ -299,6 +300,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/sheet',
 				element: <SheetStory />,
+			},
+			{
+				path: 'stories/migrate',
+				Component: MigrateStory,
 			},
 		],
 	},

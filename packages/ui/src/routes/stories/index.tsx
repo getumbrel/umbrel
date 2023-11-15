@@ -1,7 +1,7 @@
 'use client'
 
 import {Globe, User} from 'lucide-react'
-import {useEffect, useState} from 'react'
+import {useState} from 'react'
 import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
@@ -10,6 +10,7 @@ import {InstallButton} from '@/components/install-button'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
+import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
 import {
@@ -248,31 +249,7 @@ function Buttons() {
 }
 
 function ProgressButton() {
-	const [progress, setProgress] = useState(0)
-	// Separate from `progress` so we can keep `installing` state for a bit after reaching 100
-	const [state, setState] = useState<'initial' | 'installing' | 'installed'>('initial')
-
-	useEffect(() => {
-		if (state === 'installing') {
-			const interval = setInterval(
-				() => {
-					setProgress((prev) => Math.min(prev + Math.round(Math.random() * 30), 100))
-				},
-				Math.round(Math.random() * 500),
-			)
-
-			if (progress == 100) {
-				// Wait after install so you can see the 100%
-				setTimeout(() => {
-					setState('installed')
-					setProgress(100)
-					clearInterval(interval)
-				}, 500)
-			}
-
-			return () => clearInterval(interval)
-		}
-	}, [state, progress])
+	const {progress, state, install} = useDemoInstallProgress()
 
 	return (
 		<div>
@@ -281,7 +258,7 @@ function ProgressButton() {
 				installSize='1.5GB'
 				progress={progress}
 				state={state}
-				onInstallClick={() => setState('installing')}
+				onInstallClick={install}
 				onOpenClick={() => trackAppOpen('foobar')}
 			/>
 		</div>
