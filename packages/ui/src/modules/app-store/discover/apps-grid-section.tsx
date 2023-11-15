@@ -11,6 +11,7 @@ import {
 	sectionTitleClass,
 	slideInFromBottomClass,
 } from '@/modules/app-store/shared'
+import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 
@@ -52,6 +53,7 @@ export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
 			to={to ? to : `/app-store/${app.id}`}
 			className={cn('group flex w-full items-center gap-2.5', linkClass)}
 			unstable_viewTransition
+			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 		>
 			<AppIcon src={app.icon} size={55} className='rounded-10' />
 			<div className='flex min-w-0 flex-1 flex-col'>

@@ -4,6 +4,7 @@ import {Link} from 'react-router-dom'
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {SectionTitle} from '@/modules/app-store/shared'
+import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {RegistryApp} from '@/trpc/trpc'
 
 export const AppsRowSection = ({overline, title, apps}: {overline: string; title: string; apps: RegistryApp[]}) => {
@@ -26,7 +27,7 @@ function App({app}: {app: RegistryApp}) {
 	const colors = useColorThief(iconRef)
 
 	return (
-		<Link to={`/app-store/${app.id}`}>
+		<Link to={`/app-store/${app.id}`} onMouseEnter={() => preloadFirstFewGalleryImages(app)}>
 			<AppIcon
 				ref={iconRef}
 				size={100}

@@ -25,3 +25,8 @@ export function keyBy<T, U extends keyof T>(array: ReadonlyArray<T>, key: U): Re
 export function portToUrl(port: number) {
 	return `${location.protocol}//${location.hostname}:${port}`
 }
+
+export function preloadImage(url: string) {
+	const img = new Image()
+	img.src = url
+}

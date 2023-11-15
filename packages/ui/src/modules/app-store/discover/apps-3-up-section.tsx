@@ -5,6 +5,7 @@ import {useCss} from 'react-use'
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {cardClass, SectionTitle} from '@/modules/app-store/shared'
+import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
@@ -81,6 +82,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 						: 'linear-gradient(to bottom, #24242499, #18181899',
 				}}
 				unstable_viewTransition
+				onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 			>
 				<AppIcon
 					ref={iconRef}
