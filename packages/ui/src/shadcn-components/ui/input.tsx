@@ -96,7 +96,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 			setShowShake(true)
 			setTimeout(() => setShowShake(false), 500)
 		}
-	}, [children])
+	}, [children, prev])
 
 	return (
 		<AnimatePresence>
