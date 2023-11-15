@@ -54,12 +54,15 @@ function getPartofDay() {
 	}
 }
 
-export function Search() {
+export function Search({onClick}: {onClick?: () => void}) {
 	const {t} = useTranslation()
 	return (
-		<div className='select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg'>
+		<button
+			className='select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors hover:bg-neutral-600/30 active:bg-neutral-600/10'
+			onClick={onClick}
+		>
 			{t('search')} <span className='text-white/20'>⌘K</span>
-		</div>
+		</button>
 	)
 }
 

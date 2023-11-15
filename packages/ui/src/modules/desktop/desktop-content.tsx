@@ -10,7 +10,7 @@ import {Header, Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {WidgetConfig, widgetConfigToWidget, WidgetWrapper} from './widgets'
 
-export function DesktopContent() {
+export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
 
 	const {allAppsKeyed, installedApps, isLoading} = useInstalledApps()
@@ -74,7 +74,7 @@ export function DesktopContent() {
 					))}
 				/>
 			</motion.div>
-			<Search />
+			<Search onClick={onSearchClick} />
 			<div className='pt-6' />
 			<DockSpacer />
 		</motion.div>

@@ -1,7 +1,7 @@
 import {useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 
-import {CmdkMenu} from '@/components/cmdk'
+import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {AppGridGradientMasking, DesktopContextMenu} from '@/modules/desktop/desktop-misc'
@@ -10,6 +10,7 @@ import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 
 export function Desktop() {
 	useUmbrelTitle('Desktop')
+	const {open, setOpen} = useCmdkOpen()
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect
 	useEffect(() => {
@@ -29,7 +30,7 @@ export function Desktop() {
 						'relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden'
 					}
 				>
-					<DesktopContent />
+					<DesktopContent onSearchClick={() => setOpen(true)} />
 					<Outlet />
 				</div>
 			</DesktopContextMenu>
@@ -41,7 +42,7 @@ export function Desktop() {
 			<DockBottomPositioner>
 				<Dock />
 			</DockBottomPositioner>
-			<CmdkMenu />
+			<CmdkMenu open={open} setOpen={setOpen} />
 		</>
 	)
 }

@@ -12,10 +12,9 @@ import {trackAppOpen} from '@/utils/track-app-open'
 
 import {AppIcon} from './app-icon'
 
-export function CmdkMenu() {
+export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
-	const {open, setOpen} = useCmdkOpen()
 	const {installedApps, isLoading} = useInstalledApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
