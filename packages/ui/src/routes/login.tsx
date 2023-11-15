@@ -7,6 +7,7 @@ import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
+import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
 
@@ -29,7 +30,7 @@ export function Login() {
 
 	const handleSubmitPassword = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
-		document.startViewTransition(() => {
+		transitionViewIfSupported(() => {
 			flushSync(() => {
 				loginMut.mutate({password})
 			})

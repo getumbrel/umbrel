@@ -30,3 +30,11 @@ export function preloadImage(url: string) {
 	const img = new Image()
 	img.src = url
 }
+
+export function transitionViewIfSupported(cb: () => void) {
+	if (document.startViewTransition) {
+		document.startViewTransition(cb)
+	} else {
+		cb()
+	}
+}
