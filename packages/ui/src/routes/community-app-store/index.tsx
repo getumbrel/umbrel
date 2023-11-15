@@ -53,14 +53,7 @@ export function CommunityAppStoreHome() {
 					<h3 className={cn(sectionOverlineClass, 'mb-8')}>{category}</h3>
 					<div className={appsGridClass}>
 						{appsGroupedByCategory[category].map((app) => (
-							<AppWithDescription
-								key={app.id}
-								to={`/community-app-store/${appStoreId}/${app.id}`}
-								id={app.id}
-								icon={app.icon}
-								appName={app.name}
-								appDescription={app.tagline}
-							/>
+							<AppWithDescription key={app.id} app={app} to={`/community-app-store/${appStoreId}/${app.id}`} />
 						))}
 					</div>
 				</div>

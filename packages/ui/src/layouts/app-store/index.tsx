@@ -130,17 +130,7 @@ function SearchResults({query}: {query: string}) {
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
 			<h3 className={sectionTitleClass}>{title}</h3>
-			<div className={appsGridClass}>
-				{appResults?.map((app) => (
-					<AppWithDescription
-						key={app.id}
-						id={app.id}
-						icon={app.icon}
-						appName={app.name}
-						appDescription={app.tagline}
-					/>
-				))}
-			</div>
+			<div className={appsGridClass}>{appResults?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
 	)
 }

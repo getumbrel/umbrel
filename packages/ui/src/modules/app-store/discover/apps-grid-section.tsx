@@ -18,17 +18,7 @@ export function AppsGridSection({overline, title, apps}: {overline: string; titl
 	return (
 		<div className={cardClass}>
 			<SectionTitle overline={overline} title={title} />
-			<div className={appsGridClass}>
-				{apps?.map((app) => (
-					<AppWithDescription
-						key={app.id}
-						id={app.id}
-						icon={app.icon}
-						appName={app.name}
-						appDescription={app.tagline}
-					/>
-				))}
-			</div>
+			<div className={appsGridClass}>{apps?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
 	)
 }
@@ -37,58 +27,36 @@ export function AppsGridFaintSection({title, apps}: {title?: ReactNode; apps?: R
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
 			{title && <h3 className={sectionTitleClass}>{title}</h3>}
-			<div className={appsGridClass}>
-				{apps?.map((app) => (
-					<AppWithDescription
-						key={app.id}
-						id={app.id}
-						icon={app.icon}
-						appName={app.name}
-						appDescription={app.tagline}
-					/>
-				))}
-			</div>
+			<div className={appsGridClass}>{apps?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
 	)
 }
 
-export function AppWithDescription({
-	id,
-	to,
-	icon,
-	appName,
-	appDescription,
-}: {
-	id?: string
-	to?: string
-	icon: string
-	appName: ReactNode
-	appDescription: ReactNode
-}) {
+export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
 	const linkClass = useCss({
 		'&:hover': {
 			img: {
-				viewTransitionName: 'app-icon-' + id,
+				viewTransitionName: 'app-icon-' + app.id,
 			},
 			h3: {
-				viewTransitionName: 'app-name-' + id,
+				viewTransitionName: 'app-name-' + app.id,
 			},
 			p: {
-				viewTransitionName: 'app-tagline-' + id,
+				viewTransitionName: 'app-tagline-' + app.id,
 			},
 		},
 	})
 
 	return (
 		<Link
-			to={to ? to : `/app-store/${id}`}
+			to={to ? to : `/app-store/${app.id}`}
 			className={cn('group flex w-full items-center gap-2.5', linkClass)}
 			unstable_viewTransition
 		>
-			<AppIcon src={icon} size={55} className='rounded-10' />
+			<AppIcon src={app.icon} size={55} className='rounded-10' />
 			<div className='flex min-w-0 flex-1 flex-col'>
-				<h3 className='truncate text-15 font-bold -tracking-3'>{appName}</h3>
-				<p className='line-clamp-2 w-full min-w-0 text-13 leading-tight opacity-40'>{appDescription}</p>
+				<h3 className='truncate text-15 font-bold -tracking-3'>{app.name}</h3>
+				<p className='line-clamp-2 w-full min-w-0 text-13 leading-tight opacity-40'>{app.tagline}</p>
 			</div>
 		</Link>
 	)
