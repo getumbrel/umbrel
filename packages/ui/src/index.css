@@ -7,15 +7,21 @@
 	animation-duration: 0.1s;
 }
 
-:root {
-	--font-inter: Inter;
-}
-
 html,
 body {
 	/* To match Figma weight */
 	text-rendering: geometricPrecision;
 	@apply -tracking-3 text-white/90;
+}
+
+html {
+	--font-inter: 'Inter';
+}
+
+@supports (font-variation-settings: normal) {
+	html {
+		--font-inter: 'Inter var';
+	}
 }
 
 input,
@@ -66,6 +72,10 @@ a {
 
 .umbrel-dialog-fade-scroller {
 	mask-image: linear-gradient(to bottom, transparent, red 32px calc(100% - 32px), transparent);
+}
+
+.umbrel-cmdk-fade-scroller {
+	mask-image: linear-gradient(to bottom, transparent, red 20px calc(100% - 20px), transparent);
 }
 
 .umbrel-fade-scroller-x {
@@ -142,10 +152,16 @@ a {
 }
 
 [cmdk-list] {
-	height: var(--cmdk-list-height);
-	/* min-height: 300px; */
-	/* max-height: 500px; */
+	/* height: var(--cmdk-list-height); */
+	/* min-height: 200px; */
+	max-height: 500px;
 	transition: height 100ms ease;
+	/* scroll-padding-block-start: 20px; */
+	/* scroll-padding-block-end: 20px; */
+}
+
+[cmdk-item] + [cmdk-item] {
+	@apply mt-2.5;
 }
 
 @property --progress {
