@@ -1,6 +1,7 @@
 import {useCommandState} from 'cmdk'
 import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
+import {range} from 'remeda'
 
 import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -25,13 +26,12 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput
-				placeholder='Search for apps, settings or actions'
-				onKeyUp={() => scrollRef.current?.scrollTo(0, 0)}
-			/>
+			<CommandInput placeholder='Search for apps, settings or actions' />
 			<Separator />
-			<FrequentApps />
 			<CommandList ref={scrollRef}>
+				<div className='mb-5 flex flex-col gap-5'>
+					<FrequentApps />
+				</div>
 				<CommandEmpty>No results found.</CommandEmpty>
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
@@ -147,12 +147,21 @@ function FrequentApps() {
 			<div>
 				<h3 className='mb-5 text-15 font-semibold leading-tight -tracking-2'>Frequent apps</h3>
 				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
-					{/* <JSONTree data={appsByFrequency(lastOpenedApps, 6)} /> */}
+					{/* Show skeleton by default to prevent layout shift */}
+					{!lastOpenedApps.length &&
+						range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
 					{appsByFrequency(lastOpenedApps, 6).map((appId) => (
-						<FrequentApp key={appId} appId={appId} port={installedAppsKeyed[appId]?.port} />
+						<FrequentApp
+							key={appId}
+							appId={appId}
+							port={installedAppsKeyed[appId]?.port}
+							icon={installedAppsKeyed[appId]?.icon}
+							name={installedAppsKeyed[appId]?.name}
+						/>
 					))}
 				</div>
 			</div>
+
 			<Separator />
 		</>
 	)
@@ -177,10 +186,7 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 	return sortedAppIds
 }
 
-function FrequentApp({appId, port}: {appId: string; port: number}) {
-	const {installedAppsKeyed, isLoading} = useInstalledApps()
-	if (isLoading || !installedAppsKeyed) return null
-
+function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; name: string; port: number}) {
 	return (
 		<button
 			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
@@ -189,10 +195,8 @@ function FrequentApp({appId, port}: {appId: string; port: number}) {
 				window.open(portToUrl(port), '_blank')?.focus()
 			}}
 		>
-			<AppIcon src={installedAppsKeyed[appId]?.icon} size={64} className='rounded-15' />
-			<div className='w-full truncate text-13 -tracking-2 text-white/75'>
-				{installedAppsKeyed[appId]?.name ?? appId}
-			</div>
+			<AppIcon src={icon} size={64} className='rounded-15' />
+			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{name ?? appId}</div>
 		</button>
 	)
 }
