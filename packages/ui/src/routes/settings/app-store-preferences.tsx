@@ -17,7 +17,7 @@ import {Switch} from '@/shadcn-components/ui/switch'
 import {useAfterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
-export function AppStorePreferencesDialog() {
+export default function AppStorePreferencesDialog() {
 	const title = 'App Store Preferences'
 	useUmbrelTitle(title)
 	const navigate = useNavigate()

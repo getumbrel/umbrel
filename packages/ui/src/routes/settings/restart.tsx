@@ -16,7 +16,7 @@ import {
 import {trpcReact} from '@/trpc/trpc'
 import {afterDelayedClose} from '@/utils/dialog'
 
-export function RestartDialog() {
+export default function RestartDialog() {
 	useUmbrelTitle('Restart')
 	const navigate = useNavigate()
 

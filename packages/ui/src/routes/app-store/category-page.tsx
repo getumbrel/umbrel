@@ -6,7 +6,7 @@ import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
 
-export function CategoryPage() {
+export default function CategoryPage() {
 	return (
 		<>
 			<AppStoreNav />

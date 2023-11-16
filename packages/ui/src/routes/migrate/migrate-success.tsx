@@ -7,7 +7,7 @@ import {cn} from '@/shadcn-lib/utils'
 
 import {migrateContainerClass, migrateTextClass, migrateTitleClass} from './_shared'
 
-export function MigrateSuccess() {
+export default function MigrateSuccess() {
 	useUmbrelTitle('Migration successful')
 
 	return (

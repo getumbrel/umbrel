@@ -1,3 +1,4 @@
+import React from 'react'
 import {useErrorBoundary} from 'react-error-boundary'
 import {createBrowserRouter, useRouteError} from 'react-router-dom'
 
@@ -12,45 +13,46 @@ import {SettingsLayout} from './layouts/settings'
 import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn} from './modules/auth/ensure-logged-in'
-import {AppPage} from './routes/app-store/app-page'
-import {CategoryPage} from './routes/app-store/category-page'
-import {Discover} from './routes/app-store/discover'
-import {CommunityAppStoreHome} from './routes/community-app-store'
-import {CommunityAppPage} from './routes/community-app-store/app-page'
-import {One} from './routes/demo/one'
-import {Two} from './routes/demo/two'
-import {EditWidgetsPage} from './routes/edit-widgets'
-import {InstallFirstApp} from './routes/install-first-app'
-import {Login} from './routes/login'
-import {LoginTest} from './routes/login-test'
-import {Migrate} from './routes/migrate'
-import {MigrateFailed} from './routes/migrate/migrate-failed'
-import {MigrateSuccess} from './routes/migrate/migrate-success'
-import {OnboardingStart} from './routes/onboarding'
-import {CreateAccount} from './routes/onboarding/1-create-account'
-import {AccountCreated} from './routes/onboarding/2-account-created'
-import {TwoFactorDisableDialog} from './routes/settings/2fa-disable'
-import {TwoFactorEnableDialog} from './routes/settings/2fa-enable'
-import {AppStorePreferencesDialog} from './routes/settings/app-store-preferences'
-import {ChangeNameDialog} from './routes/settings/change-name'
-import {ChangePasswordDialog} from './routes/settings/change-password'
-import {LiveUsageDialog} from './routes/settings/live-usage'
-import {MigrationAssistantDialog} from './routes/settings/migration-assistant'
-import {RestartDialog} from './routes/settings/restart'
-import {ShutdownDialog} from './routes/settings/shutdown'
-import {TroubleshootDialog} from './routes/settings/troubleshoot'
-import {Stories} from './routes/stories'
-import {AppStoreStory} from './routes/stories/app-store'
-import {CmdkStory} from './routes/stories/cmdk'
-import {ColorThiefExample} from './routes/stories/color-thief'
-import {DesktopStory} from './routes/stories/desktop'
-import {ErrorStory} from './routes/stories/error'
-import {InputExamples} from './routes/stories/input'
-import {MigrateStory} from './routes/stories/migrate'
-import {SettingsStory} from './routes/stories/settings'
-import {SheetStory} from './routes/stories/sheet'
-import {Trpc} from './routes/stories/trpc'
 import {Button} from './shadcn-components/ui/button'
+
+const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
+const CategoryPage = React.lazy(() => import('./routes/app-store/category-page'))
+const Discover = React.lazy(() => import('./routes/app-store/discover'))
+const CommunityAppStoreHome = React.lazy(() => import('./routes/community-app-store'))
+const CommunityAppPage = React.lazy(() => import('./routes/community-app-store/app-page'))
+const One = React.lazy(() => import('./routes/demo/one'))
+const Two = React.lazy(() => import('./routes/demo/two'))
+const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
+const InstallFirstApp = React.lazy(() => import('./routes/install-first-app'))
+const Login = React.lazy(() => import('./routes/login'))
+const LoginTest = React.lazy(() => import('./routes/login-test'))
+const Migrate = React.lazy(() => import('./routes/migrate'))
+const MigrateFailed = React.lazy(() => import('./routes/migrate/migrate-failed'))
+const MigrateSuccess = React.lazy(() => import('./routes/migrate/migrate-success'))
+const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
+const CreateAccount = React.lazy(() => import('./routes/onboarding/1-create-account'))
+const AccountCreated = React.lazy(() => import('./routes/onboarding/2-account-created'))
+const TwoFactorDisableDialog = React.lazy(() => import('./routes/settings/2fa-disable'))
+const TwoFactorEnableDialog = React.lazy(() => import('./routes/settings/2fa-enable'))
+const AppStorePreferencesDialog = React.lazy(() => import('./routes/settings/app-store-preferences'))
+const ChangeNameDialog = React.lazy(() => import('./routes/settings/change-name'))
+const ChangePasswordDialog = React.lazy(() => import('./routes/settings/change-password'))
+const LiveUsageDialog = React.lazy(() => import('./routes/settings/live-usage'))
+const MigrationAssistantDialog = React.lazy(() => import('./routes/settings/migration-assistant'))
+const RestartDialog = React.lazy(() => import('./routes/settings/restart'))
+const ShutdownDialog = React.lazy(() => import('./routes/settings/shutdown'))
+const TroubleshootDialog = React.lazy(() => import('./routes/settings/troubleshoot'))
+const Stories = React.lazy(() => import('./routes/stories'))
+const AppStoreStory = React.lazy(() => import('./routes/stories/app-store'))
+const CmdkStory = React.lazy(() => import('./routes/stories/cmdk'))
+const ColorThiefExample = React.lazy(() => import('./routes/stories/color-thief'))
+const DesktopStory = React.lazy(() => import('./routes/stories/desktop'))
+const ErrorStory = React.lazy(() => import('./routes/stories/error'))
+const InputExamples = React.lazy(() => import('./routes/stories/input'))
+const MigrateStory = React.lazy(() => import('./routes/stories/migrate'))
+const SettingsStory = React.lazy(() => import('./routes/stories/settings'))
+const SheetStory = React.lazy(() => import('./routes/stories/sheet'))
+const Trpc = React.lazy(() => import('./routes/stories/trpc'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([

@@ -11,7 +11,7 @@ import {CommunityBadge} from '@/modules/community-app-store/community-badge'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 
-export function CommunityAppStoreHome() {
+export default function CommunityAppStoreHome() {
 	const navigate = useNavigate()
 	const {appStoreId} = useParams<{appStoreId: string}>()
 

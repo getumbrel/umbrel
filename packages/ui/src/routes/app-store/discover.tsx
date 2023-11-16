@@ -9,7 +9,7 @@ import {Button} from '@/shadcn-components/ui/button'
 
 import {useDiscoverQuery} from './use-discover-query'
 
-export function Discover() {
+export default function Discover() {
 	const availableApps = useAvailableApps()
 
 	const discoverQ = useDiscoverQuery()

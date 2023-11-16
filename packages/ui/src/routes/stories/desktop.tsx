@@ -20,7 +20,7 @@ import {
 import {TablerIcon} from '@/modules/desktop/widgets/tabler-icon'
 import {Input} from '@/shadcn-components/ui/input'
 
-export function DesktopStory() {
+export default function DesktopStory() {
 	useUmbrelTitle('Desktop')
 
 	return (

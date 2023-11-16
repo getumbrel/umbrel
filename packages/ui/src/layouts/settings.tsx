@@ -1,3 +1,4 @@
+import {Suspense} from 'react'
 import {useTranslation} from 'react-i18next'
 import {Outlet} from 'react-router-dom'
 
@@ -17,7 +18,9 @@ export function SettingsLayout() {
 			</SheetHeader>
 			<SettingsContent />
 			{/* TODO: don't show children until after settings dialog is done animating in. Maybe use framer-motion animation staggering */}
-			<Outlet />
+			<Suspense>
+				<Outlet />
+			</Suspense>
 		</>
 	)
 }

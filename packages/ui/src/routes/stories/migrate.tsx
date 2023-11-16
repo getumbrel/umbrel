@@ -4,7 +4,7 @@ import {useDemoMigrateProgress} from '@/hooks/use-demo-progress'
 
 import {MigrateInner} from '../migrate'
 
-export function MigrateStory() {
+export default function MigrateStory() {
 	return (
 		<>
 			<MigrateStory1 />

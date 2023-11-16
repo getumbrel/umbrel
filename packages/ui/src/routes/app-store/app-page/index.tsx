@@ -8,7 +8,7 @@ import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommenda
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
 import {TopHeaderWithDummyInstall} from '@/modules/app-store/app-page/top-header'
 
-export function AppPage() {
+export default function AppPage() {
 	const {appId} = useParams()
 	const {apps, isLoading: isLoadingApps} = useAvailableApps()
 	const {app, isLoading} = useAvailableApp(appId)

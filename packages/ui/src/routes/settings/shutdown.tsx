@@ -16,7 +16,7 @@ import {
 import {trpcReact} from '@/trpc/trpc'
 import {afterDelayedClose} from '@/utils/dialog'
 
-export function ShutdownDialog() {
+export default function ShutdownDialog() {
 	useUmbrelTitle('Shut down')
 	const navigate = useNavigate()
 

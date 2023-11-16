@@ -17,7 +17,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
-export function ChangeNameDialog() {
+export default function ChangeNameDialog() {
 	const title = 'Change name'
 	useUmbrelTitle(title)
 	const navigate = useNavigate()

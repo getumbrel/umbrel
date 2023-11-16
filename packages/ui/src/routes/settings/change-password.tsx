@@ -19,7 +19,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
-export function ChangePasswordDialog() {
+export default function ChangePasswordDialog() {
 	const title = 'Change password'
 	useUmbrelTitle(title)
 

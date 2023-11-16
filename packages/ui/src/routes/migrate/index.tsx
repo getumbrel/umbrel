@@ -12,7 +12,7 @@ import {trpcReact} from '@/trpc/trpc'
 
 import {migrateContainerClass, migrateTitleClass} from './_shared'
 
-export function Migrate() {
+export default function Migrate() {
 	const navigate = useNavigate()
 
 	const migrationStatusQ = trpcReact.migration.migrationStatus.useQuery()

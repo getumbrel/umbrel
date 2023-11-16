@@ -6,7 +6,7 @@ import {useColorThief} from '@/hooks/use-color-thief'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
 
-export function ColorThiefExample() {
+export default function ColorThiefExample() {
 	const title = 'Color Thief'
 	useUmbrelTitle(title)
 	// const [colors, setColors] = useState<[][] | undefined>()

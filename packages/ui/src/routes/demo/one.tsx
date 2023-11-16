@@ -13,7 +13,7 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
 
-export function One() {
+export default function One() {
 	return (
 		<>
 			<h1 className='text-3xl font-bold text-red-500 underline'>Hello world!</h1>

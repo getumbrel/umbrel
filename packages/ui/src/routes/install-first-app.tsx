@@ -16,7 +16,7 @@ const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-no
 const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2`
 
 // TODO: this view should just be in '/'
-export function InstallFirstApp() {
+export default function InstallFirstApp() {
 	return (
 		<AvailableAppsProvider>
 			<PageInner />

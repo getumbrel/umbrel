@@ -5,7 +5,7 @@ import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
 
-export function OnboardingStart() {
+export default function OnboardingStart() {
 	const title = 'Welcome to umbrelOS'
 	useUmbrelTitle(title)
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)

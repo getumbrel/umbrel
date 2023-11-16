@@ -8,7 +8,7 @@ import {useJwt} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 
-export function CreateAccount() {
+export default function CreateAccount() {
 	useUmbrelTitle('Create account')
 
 	const navigate = useNavigate()

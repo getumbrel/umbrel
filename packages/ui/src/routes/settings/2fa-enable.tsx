@@ -19,7 +19,7 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
-export function TwoFactorEnableDialog() {
+export default function TwoFactorEnableDialog() {
 	const title = 'Enable two-factor authentication'
 	useUmbrelTitle(title)
 	const [open, setOpen] = useState(true)

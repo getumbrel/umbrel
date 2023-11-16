@@ -8,7 +8,7 @@ import {afterDelayedClose} from '@/utils/dialog'
 
 import {WidgetSelector} from './widget-selector'
 
-export function EditWidgetsPage() {
+export default function EditWidgetsPage() {
 	useUmbrelTitle('Edit widgets')
 	const navigate = useNavigate()
 	const [open, setOpen] = useState(true)

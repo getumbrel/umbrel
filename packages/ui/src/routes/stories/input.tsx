@@ -3,7 +3,7 @@ import {H1, H2} from '@/layouts/stories'
 import {Input, InputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {tw} from '@/utils/tw'
 
-export function InputExamples() {
+export default function InputExamples() {
 	useUmbrelTitle('Input')
 
 	return (

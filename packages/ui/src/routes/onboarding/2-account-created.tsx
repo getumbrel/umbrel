@@ -6,7 +6,7 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
 import {trpcReact} from '@/trpc/trpc'
 
-export function AccountCreated() {
+export default function AccountCreated() {
 	useUmbrelTitle('Account created')
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 

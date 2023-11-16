@@ -21,7 +21,7 @@ import {trpcReact} from '@/trpc/trpc'
 
 const title = 'Migration Assistant'
 
-export function MigrationAssistantDialog() {
+export default function MigrationAssistantDialog() {
 	useUmbrelTitle(title)
 	const navigate = useNavigate()
 	const {params} = useQueryParams()

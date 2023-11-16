@@ -11,7 +11,7 @@ import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
 
-export function Login() {
+export default function Login() {
 	useUmbrelTitle('Login')
 
 	const [password, setPassword] = useState('')

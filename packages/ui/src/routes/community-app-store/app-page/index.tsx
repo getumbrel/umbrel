@@ -22,7 +22,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
-export function CommunityAppPage() {
+export default function CommunityAppPage() {
 	const {appStoreId, appId} = useParams<{appStoreId: string; appId: string}>()
 
 	const registryQ = trpcReact.appStore.registry.useQuery()

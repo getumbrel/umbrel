@@ -1,6 +1,6 @@
 import {Link} from 'react-router-dom'
 
-export function Two() {
+export default function Two() {
 	return (
 		<div>
 			<h1 className='text-3xl font-bold text-blue-500 underline'>Two</h1>

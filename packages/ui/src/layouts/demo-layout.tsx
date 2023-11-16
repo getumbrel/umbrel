@@ -1,3 +1,4 @@
+import {Suspense} from 'react'
 import {useTranslation} from 'react-i18next'
 import {JSONTree} from 'react-json-tree'
 import {Outlet} from 'react-router-dom'
@@ -8,7 +9,9 @@ import {trpcReact} from '@/trpc/trpc'
 export function Demo() {
 	return (
 		<>
-			<Outlet />
+			<Suspense>
+				<Outlet />
+			</Suspense>
 			<Trpc />
 			<I18n />
 		</>

@@ -7,7 +7,7 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 
-export function TroubleshootDialog() {
+export default function TroubleshootDialog() {
 	const title = 'Troubleshoot'
 	useUmbrelTitle(title)
 	const navigate = useNavigate()

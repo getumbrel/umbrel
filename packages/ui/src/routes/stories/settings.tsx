@@ -5,7 +5,7 @@ import {Separator} from '@/shadcn-components/ui/separator'
 
 import {TempStatCardContent} from '../settings/_components/temp-stat-card-content'
 
-export function SettingsStory() {
+export default function SettingsStory() {
 	return (
 		<div className='flex flex-col flex-wrap items-start gap-8 bg-white/10 p-8'>
 			<Card>

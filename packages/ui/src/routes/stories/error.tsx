@@ -2,7 +2,7 @@ import {useErrorBoundary} from 'react-error-boundary'
 
 import {Button} from '@/shadcn-components/ui/button'
 
-export function ErrorStory() {
+export default function ErrorStory() {
 	const {showBoundary} = useErrorBoundary()
 
 	return (

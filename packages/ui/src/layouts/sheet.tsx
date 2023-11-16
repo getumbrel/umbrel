@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react'
+import {Suspense, useEffect, useRef, useState} from 'react'
 import {Outlet, useLocation, useNavigate} from 'react-router-dom'
 
 import {DockSpacer} from '@/modules/desktop/dock'
@@ -40,7 +40,9 @@ export function SheetLayout() {
 					className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'
 					ref={scrollRef}
 				>
-					<Outlet />
+					<Suspense>
+						<Outlet />
+					</Suspense>
 					<DockSpacer className='mt-4' />
 				</div>
 			</SheetContent>

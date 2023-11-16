@@ -5,7 +5,7 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 
-export function LoginTest() {
+export default function LoginTest() {
 	const {loginWithJwt} = useAuth()
 	const loginMut = trpcReact.user.login.useMutation({
 		onSuccess: loginWithJwt,

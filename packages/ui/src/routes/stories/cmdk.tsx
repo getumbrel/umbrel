@@ -4,7 +4,7 @@ import {H1} from '@/layouts/stories'
 import {Search} from '@/modules/desktop/desktop-misc'
 import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 
-export function CmdkStory() {
+export default function CmdkStory() {
 	const {open, setOpen} = useCmdkOpen()
 
 	return (

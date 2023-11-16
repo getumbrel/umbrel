@@ -2,7 +2,7 @@ import {Loading} from '@/components/ui/loading'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 
-export function AppStoreStory() {
+export default function AppStoreStory() {
 	const discoverQ = useDiscoverQuery()
 
 	if (discoverQ.isLoading) {

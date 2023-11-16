@@ -1,5 +1,3 @@
-'use client'
-
 import {Globe, User} from 'lucide-react'
 import {useState} from 'react'
 import {toast} from 'sonner'
@@ -51,7 +49,7 @@ import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {trackAppOpen} from '@/utils/track-app-open'
 
-export function Stories() {
+export default function Stories() {
 	useUmbrelTitle('Stories Home')
 
 	return (

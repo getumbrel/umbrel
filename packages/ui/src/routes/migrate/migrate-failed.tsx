@@ -6,7 +6,7 @@ import {cn} from '@/shadcn-lib/utils'
 
 import {migrateContainerClass, migrateTextClass, migrateTitleClass} from './_shared'
 
-export function MigrateFailed() {
+export default function MigrateFailed() {
 	useUmbrelTitle('Migration failed')
 
 	return (

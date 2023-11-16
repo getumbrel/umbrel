@@ -1,4 +1,4 @@
-import {ReactNode} from 'react'
+import {ReactNode, Suspense} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -63,7 +63,9 @@ export function StoriesLayout() {
 				))}
 			</div>
 			<div className='flex flex-col gap-6'>
-				<Outlet />
+				<Suspense>
+					<Outlet />
+				</Suspense>
 			</div>
 		</WallpaperProvider>
 	)

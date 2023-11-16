@@ -10,7 +10,7 @@ import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-export function LiveUsageDialog() {
+export default function LiveUsageDialog() {
 	const title = 'Live Usage'
 	useUmbrelTitle(title)
 	const navigate = useNavigate()

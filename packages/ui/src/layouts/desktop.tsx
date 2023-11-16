@@ -1,4 +1,4 @@
-import {useEffect} from 'react'
+import {Suspense, useEffect} from 'react'
 import {Outlet} from 'react-router-dom'
 
 import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
@@ -27,11 +27,13 @@ export function Desktop() {
 				<div
 					className={
 						// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
-						'relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden'
+						'relative flex h-[100dvh] w-full flex-col items-center justify-between'
 					}
 				>
 					<DesktopContent onSearchClick={() => setOpen(true)} />
-					<Outlet />
+					<Suspense>
+						<Outlet />
+					</Suspense>
 				</div>
 			</DesktopContextMenu>
 			{/* NOTE:
