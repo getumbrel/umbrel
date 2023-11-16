@@ -130,7 +130,7 @@ function ThreeUpItem({iconName, title, value}: {iconName: string; title?: string
 	return (
 		<div className='flex flex-col items-center justify-center rounded-full bg-white/5'>
 			{/* `[&>svg]` to select child svg */}
-			<TablerIcon iconName={iconName} className='[&>svg]:h-5 [&>svg]:w-5' />
+			<TablerIcon iconName={iconName} className='h-5 w-5 [&>svg]:h-5 [&>svg]:w-5' />
 			<p className={widgetTextCva({opacity: 'secondary', className: 'mt-4'})}>{title}</p>
 			<p className={widgetTextCva()}>{value}</p>
 		</div>
