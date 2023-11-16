@@ -1,4 +1,3 @@
-import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {Link, useLocation} from 'react-router-dom'
 
@@ -7,7 +6,6 @@ import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {sleep} from '@/utils/misc'
 
 export function Header() {
 	const {t} = useTranslation()
@@ -68,22 +66,10 @@ export function Search({onClick}: {onClick?: () => void}) {
 
 export function AppGridGradientMasking() {
 	const {pathname} = useLocation()
-	const [showGradient, setShowGradient] = useState(false)
-
-	// Delay because sometimes wallpaper tears on first render
-	useEffect(() => {
-		if (pathname !== '/') {
-			setShowGradient(false)
-			return
-		}
-		sleep(1000).then(() => setShowGradient(true))
-	}, [pathname])
 
 	// Only show gradient on home page
 	// Also, when transitioning between pages, this gradient can get in the way, so we hide it without animating it
 	if (pathname !== '/') return null
-
-	if (!showGradient) return null
 
 	return (
 		<>
@@ -100,10 +86,15 @@ function GradientMaskSide({side}: {side: 'left' | 'right'}) {
 		<div
 			// Ideally, we'd match the `block` visibility to the arrow buttons, but that would require a lot of work.
 			// Ideally we'd use a breakpoint based on the CSS var --app-max-w, but that's not possible
-			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center md:block'
+			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 md:block'
 			style={{
 				// For debugging:
 				// backgroundColor: "red",
+				// Alternatively, transition in the gradient mask after apps have rendered
+				animationDelay: '1s',
+				animationFillMode: 'both',
+				animationName: 'fade-in',
+				animationDuration: '0s',
 				backgroundImage: `url(${wallpaper.url})`,
 				backgroundAttachment: 'fixed',
 				WebkitMaskImage: `linear-gradient(to ${side}, transparent, black)`,
