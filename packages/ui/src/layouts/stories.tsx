@@ -2,7 +2,6 @@ import {ReactNode, Suspense} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {WallpaperProvider} from '@/modules/desktop/wallpaper-context'
 
 const storyLinks = [
 	{
@@ -51,7 +50,7 @@ export function StoriesLayout() {
 	useUmbrelTitle('Stories')
 
 	return (
-		<WallpaperProvider>
+		<>
 			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'>
 				<NavLink to='/'>👈 Home</NavLink>
 				<span className='px-2'>|</span>
@@ -67,7 +66,7 @@ export function StoriesLayout() {
 					<Outlet />
 				</Suspense>
 			</div>
-		</WallpaperProvider>
+		</>
 	)
 }
 

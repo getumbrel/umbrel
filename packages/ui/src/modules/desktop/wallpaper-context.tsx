@@ -1,6 +1,7 @@
-import {createContext, useContext, useLayoutEffect} from 'react'
+import {useLayoutEffect} from 'react'
+import {arrayIncludes} from 'ts-extras'
 
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 type WallpaperT = {
@@ -92,16 +93,10 @@ export const wallpapers = [
 ] as const satisfies readonly WallpaperT[]
 
 type WallpaperId = (typeof wallpapers)[number]['id']
+const wallpaperIds = wallpapers.map((w) => w.id)
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 
 // ---
-
-type WallpaperContextT = {
-	wallpaper: WallpaperT
-	setWallpaperId: (wallpaperId: WallpaperId) => void
-}
-
-const WallpaperContext = createContext<WallpaperContextT | null>(null)
 
 const nullWallpaper = {
 	id: 'none',
@@ -111,10 +106,21 @@ const nullWallpaper = {
 	brandColorLighterHsl: '0 0 0',
 }
 
-export function WallpaperProvider({children}: {children: React.ReactNode}) {
-	const [wallpaperId, setWallpaperId] = useLocalStorage2<WallpaperId>('wallpaperId', 'water-dark')
+const DEFAULT_WALLPAPER_ID: WallpaperId = 'water-dark'
 
-	const wallpaper = wallpaperId ? wallpapersKeyed[wallpaperId] : nullWallpaper
+export const useWallpaper = () => {
+	const userQ = trpcReact.user.get.useQuery()
+	const wallpaperQId = userQ.data?.wallpaper
+	const wallpaperId = arrayIncludes(wallpaperIds, wallpaperQId) ? wallpaperQId : DEFAULT_WALLPAPER_ID
+
+	// // trpc
+	const ctx = trpcReact.useContext()
+	const userMut = trpcReact.user.set.useMutation({onSuccess: () => ctx.user.get.invalidate()})
+	const setWallpaperId = (id: WallpaperId) => userMut.mutate({wallpaper: id})
+
+	const hasData = userQ.data && !userQ.isError
+	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
+	// const wallpaper = nullWallpaper
 
 	useLayoutEffect(() => {
 		const el = document.documentElement
@@ -123,30 +129,13 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 		el.style.setProperty('--color-brand-lighter', wallpaper.brandColorLighterHsl)
 	}, [wallpaper.brandColorHsl, wallpaper.brandColorLighterHsl])
 
-	if (!wallpaperId) return
-
-	return (
-		<WallpaperContext.Provider
-			value={{
-				wallpaper,
-				setWallpaperId: (id: WallpaperId) => setWallpaperId(id),
-			}}
-		>
-			{children}
-		</WallpaperContext.Provider>
-	)
-}
-
-export const useWallpaper = () => {
-	const ctx = useContext(WallpaperContext)
-	if (ctx === null) {
-		throw new Error('useWallpaper must be used inside WallpaperProvider')
-	}
-	return ctx
+	return {wallpaper, setWallpaperId}
 }
 
 export function Wallpaper() {
 	const {wallpaper} = useWallpaper()
+
+	if (!wallpaper.url) return null
 
 	return (
 		<div
