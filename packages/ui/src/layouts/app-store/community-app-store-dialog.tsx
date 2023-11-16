@@ -5,8 +5,8 @@ import {toast} from 'sonner'
 import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {LinkButton} from '@/components/ui/link-button'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -22,8 +22,7 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
 
 export function CommunityAppStoreDialog() {
-	const title = 'Add community store'
-	useUmbrelTitle(title)
+	const title = 'Community app stores'
 	const {params, removeParam} = useQueryParams()
 
 	// state
@@ -89,7 +88,8 @@ export function CommunityAppStoreDialog() {
 				<DialogContent className='p-0'>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-3 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
-							<DialogTitle>Community app stores</DialogTitle>
+							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+							<DialogTitle>{title}</DialogTitle>
 							<DialogDescription className='text-13 text-white/50'>
 								Community App Stores allow you to install apps on your Umbrel that may not be available in the official
 								Umbrel App Store. They also make it easy to test beta versions of Umbrel apps, then provide valuable

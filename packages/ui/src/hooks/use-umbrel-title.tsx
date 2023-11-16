@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
 
-export function useUmbrelTitle(title: string) {
+export function useUmbrelTitle(title?: string | false) {
 	useEffect(() => {
 		// Allow hook to do nothing if no title provided
 		if (!title) return
