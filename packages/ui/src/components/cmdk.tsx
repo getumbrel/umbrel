@@ -127,7 +127,9 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 }
 
 function FrequentApps() {
-	const lastAppsQ = trpcReact.user.get.useQuery()
+	const lastAppsQ = trpcReact.user.get.useQuery(undefined, {
+		retry: false,
+	})
 	const lastApps = lastAppsQ.data?.lastOpenedApps ?? []
 	const {installedAppsKeyed} = useInstalledApps()
 
