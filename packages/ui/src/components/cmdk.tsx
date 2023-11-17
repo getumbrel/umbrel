@@ -7,7 +7,7 @@ import {systemAppsKeyed, useInstalledApps} from '@/hooks/use-installed-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {trpcClient, trpcReact} from '@/trpc/trpc'
+import {trpcReact} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
@@ -29,9 +29,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 			<CommandInput placeholder='Search for apps, settings or actions' />
 			<Separator />
 			<CommandList ref={scrollRef}>
-				<div className='mb-5 flex flex-col gap-5'>
-					<FrequentApps />
-				</div>
+				<FrequentApps />
 				<CommandEmpty>No results found.</CommandEmpty>
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
@@ -129,10 +127,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 }
 
 function FrequentApps() {
-	const [lastOpenedApps, setLastOpenedApps] = useState<string[]>([])
-	useEffect(() => {
-		trpcClient.user.get.query().then((data) => setLastOpenedApps(data.lastOpenedApps ?? []))
-	}, [])
+	const lastAppsQ = trpcReact.user.get.useQuery()
+	const lastApps = lastAppsQ.data?.lastOpenedApps ?? []
 	const {installedAppsKeyed} = useInstalledApps()
 
 	const search = useCommandState((state) => state.search)
@@ -140,17 +136,17 @@ function FrequentApps() {
 	// If there's a search query, don't show frequent apps
 	if (search) return null
 	if (!installedAppsKeyed) return null
-	if (!lastOpenedApps) return null
+	if (!lastApps) return null
+	if (lastApps.length === 0) return null
 
 	return (
-		<>
+		<div className='mb-5 flex flex-col gap-5'>
 			<div>
 				<h3 className='mb-5 text-15 font-semibold leading-tight -tracking-2'>Frequent apps</h3>
 				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
-					{!lastOpenedApps.length &&
-						range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
-					{appsByFrequency(lastOpenedApps, 6).map((appId) => (
+					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
+					{appsByFrequency(lastApps, 6).map((appId) => (
 						<FrequentApp
 							key={appId}
 							appId={appId}
@@ -163,7 +159,7 @@ function FrequentApps() {
 			</div>
 
 			<Separator />
-		</>
+		</div>
 	)
 }
 
