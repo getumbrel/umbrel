@@ -1,41 +1,53 @@
-import {useLocation, useNavigate} from 'react-router-dom'
-
 import {CoverMessage} from '@/components/ui/cover-message'
 import {trpcReact} from '@/trpc/trpc'
-import {sleep} from '@/utils/misc'
+
+import {RedirectHome, RedirectLogin} from './redirects'
+
+export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
+	return (
+		<EnsureLoggedInState loggedIn otherwise={<RedirectLogin />}>
+			{children}
+		</EnsureLoggedInState>
+	)
+}
+
+export function EnsureLoggedOut({children}: {children?: React.ReactNode}) {
+	return (
+		<EnsureLoggedInState loggedIn={false} otherwise={<RedirectHome />}>
+			{children}
+		</EnsureLoggedInState>
+	)
+}
 
 /** Don't show children unless logged in */
-export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
-	const location = useLocation()
-	const navigate = useNavigate()
-
-	const {
-		data: isLoggedIn,
-		isLoading,
-		isError,
-	} = trpcReact.user.isLoggedIn.useQuery(undefined, {
+function EnsureLoggedInState({
+	loggedIn,
+	otherwise,
+	children,
+}: {
+	loggedIn: boolean
+	otherwise: React.ReactNode
+	children?: React.ReactNode
+}) {
+	const isLoggedInQ = trpcReact.user.isLoggedIn.useQuery(undefined, {
 		retry: false,
 	})
+	const isLoggedIn = isLoggedInQ.data ?? false
+	const wantsLoggedIn = loggedIn
 
-	if (isLoading) {
+	// ---
+
+	if (isLoggedInQ.isLoading) {
 		return <CoverMessage delayed>Checking backend for user...</CoverMessage>
 	}
 
-	if (isError) {
-		return <CoverMessage delayed>Error checking authentication status.</CoverMessage>
+	if (isLoggedInQ.isError) {
+		return <CoverMessage>Failed to check if user is logged in.</CoverMessage>
 	}
 
-	if (isLoggedIn) {
-		if (location.pathname.startsWith('/login')) {
-			sleep(500).then(() => navigate('/'))
-			return <CoverMessage delayed>Redirecting to home...</CoverMessage>
-		}
+	if (isLoggedIn === wantsLoggedIn) {
+		return children
 	} else {
-		if (!location.pathname.startsWith('/login')) {
-			sleep(500).then(() => navigate('/login'))
-			return <CoverMessage delayed>Redirecting to login...</CoverMessage>
-		}
+		return otherwise
 	}
-
-	return children
 }

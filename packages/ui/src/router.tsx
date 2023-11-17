@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {Suspense} from 'react'
 import {useErrorBoundary} from 'react-error-boundary'
 import {createBrowserRouter, useRouteError} from 'react-router-dom'
 
@@ -12,7 +12,8 @@ import {Desktop} from './layouts/desktop'
 import {SettingsLayout} from './layouts/settings'
 import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
-import {EnsureLoggedIn} from './modules/auth/ensure-logged-in'
+import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
+import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {Button} from './shadcn-components/ui/button'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
@@ -58,7 +59,11 @@ const Trpc = React.lazy(() => import('./routes/stories/trpc'))
 export const router = createBrowserRouter([
 	{
 		path: 'install-first-app',
-		Component: InstallFirstApp,
+		element: (
+			<Suspense>
+				<InstallFirstApp />
+			</Suspense>
+		),
 		errorElement: <ErrorBoundary />,
 	},
 
@@ -184,19 +189,42 @@ export const router = createBrowserRouter([
 		children: [
 			{
 				path: 'login',
-				Component: Login,
+				element: (
+					<EnsureUserExists>
+						<EnsureLoggedOut>
+							<Login />
+						</EnsureLoggedOut>
+					</EnsureUserExists>
+				),
 			},
 			{
 				path: 'onboarding',
-				Component: OnboardingStart,
-			},
-			{
-				path: 'onboarding/1-create-account',
-				Component: CreateAccount,
-			},
-			{
-				path: 'onboarding/2-account-created',
-				Component: AccountCreated,
+				children: [
+					{
+						index: true,
+						element: (
+							<EnsureUserDoesntExist>
+								<OnboardingStart />
+							</EnsureUserDoesntExist>
+						),
+					},
+					{
+						path: '1-create-account',
+						element: (
+							<EnsureUserDoesntExist>
+								<CreateAccount />
+							</EnsureUserDoesntExist>
+						),
+					},
+					{
+						path: '2-account-created',
+						element: (
+							<EnsureLoggedIn>
+								<AccountCreated />
+							</EnsureLoggedIn>
+						),
+					},
+				],
 			},
 			{
 				path: 'migrate',

@@ -4,8 +4,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import {RouterProvider} from 'react-router-dom'
 
-import './utils/i18n'
 import './index.css'
+import './utils/i18n'
 
 import {ErrorBoundary} from 'react-error-boundary'
 import {Toaster} from 'sonner'

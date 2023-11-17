@@ -1,40 +1,34 @@
 import {useState} from 'react'
-import {Link, useNavigate} from 'react-router-dom'
+import {Link} from 'react-router-dom'
 
+import {Loading} from '@/components/ui/loading'
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
-import {useJwt} from '@/modules/auth/use-auth'
+import {useAuth} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 
 export default function CreateAccount() {
-	useUmbrelTitle('Create account')
-
-	const navigate = useNavigate()
+	const title = 'Create account'
+	useUmbrelTitle(title)
+	const auth = useAuth()
 
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [localError, setLocalError] = useState('')
+	const [isNavigating, setIsNavigating] = useState(false)
 
-	const {setJwt} = useJwt()
-	const loginMut = trpcReact.user.login.useMutation({onSuccess: setJwt})
-
-	const ctx = trpcReact.useContext()
+	const loginMut = trpcReact.user.login.useMutation({
+		onSuccess: async (jwt) => {
+			setIsNavigating(true)
+			auth.signUpWithJwt(jwt)
+		},
+	})
 
 	const registerMut = trpcReact.user.register.useMutation({
-		onSuccess: async () => {
-			await loginMut.mutate({password, totpToken: ''})
-
-			// Doing just invalidate() or just prefetch() doesn't work for the next page that requires user data to already exist to avoid `undefined` appearing
-			// Consider setting a query param in the next page.
-			await ctx.user.get.invalidate()
-			await ctx.user.get.prefetch()
-			navigate('/onboarding/2-account-created', {
-				unstable_viewTransition: true,
-			})
-		},
+		onSuccess: async () => loginMut.mutate({password, totpToken: ''}),
 	})
 
 	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -59,10 +53,11 @@ export default function CreateAccount() {
 
 	const remoteFormError = !registerMut.error?.data?.zodError && registerMut.error?.message
 	const formError = localError || remoteFormError
+	const isLoading = registerMut.isLoading || loginMut.isLoading || isNavigating
 
 	return (
 		<Layout
-			title='Create account'
+			title={title}
 			transitionTitle={false}
 			subTitle='Your account info is stored only on your Umbrel. Make sure to back up your password safely as there is no way to reset it.'
 			subTitleMaxWidth={630}
@@ -73,7 +68,7 @@ export default function CreateAccount() {
 			}
 		>
 			<form onSubmit={onSubmit} className='w-full'>
-				<fieldset className='flex flex-col items-center gap-5'>
+				<fieldset disabled={isLoading} className='flex flex-col items-center gap-5'>
 					<div className={formGroupClass}>
 						<Input placeholder='Name' autoFocus value={name} onValueChange={setName} />
 						<PasswordInput
@@ -89,7 +84,7 @@ export default function CreateAccount() {
 						<AnimatedInputError>{formError}</AnimatedInputError>
 					</div>
 					<button type='submit' className={buttonClass}>
-						Create
+						{isLoading ? <Loading>Creating</Loading> : 'Create'}
 					</button>
 				</fieldset>
 			</form>

@@ -1,3 +1,6 @@
+/**
+ * Make sure to hard reload page after updating this because trpc client is created on page load and it's only possible to update it on page load.
+ */
 export function useJwt() {
 	const jwt = window.localStorage.getItem('jwt')
 
@@ -26,6 +29,10 @@ export function useAuth() {
 			setJwt(jwt)
 			// Hard navigate to `/` to force all parent layouts to re-render
 			window.location.href = '/'
+		},
+		signUpWithJwt(jwt: string) {
+			setJwt(jwt)
+			window.location.href = '/onboarding/2-account-created'
 		},
 	}
 }
