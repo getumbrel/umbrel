@@ -15,7 +15,8 @@
 		"lint": "eslint .",
 		"preview": "vite preview --port 4000",
 		"format": "prettier . --write",
-		"tsc": "tsc --noEmit"
+		"tsc": "tsc --noEmit",
+		"size": "vite-bundle-visualizer"
 	},
 	"dependencies": {
 		"@radix-ui/react-alert-dialog": "1.0.4",
@@ -88,6 +89,7 @@
 		"serve": "14.2.1",
 		"tailwindcss": "3.3.3",
 		"typescript": "5.2.2",
-		"vite": "^4.4.5"
+		"vite": "^4.4.5",
+		"vite-bundle-visualizer": "^0.11.0"
 	}
 }
