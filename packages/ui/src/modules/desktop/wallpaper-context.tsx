@@ -109,7 +109,10 @@ const nullWallpaper = {
 const DEFAULT_WALLPAPER_ID: WallpaperId = 'water-dark'
 
 export const useWallpaper = () => {
-	const userQ = trpcReact.user.get.useQuery()
+	const userQ = trpcReact.user.get.useQuery(undefined, {
+		// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
+		retry: false,
+	})
 	const wallpaperQId = userQ.data?.wallpaper
 	const wallpaperId = arrayIncludes(wallpaperIds, wallpaperQId) ? wallpaperQId : DEFAULT_WALLPAPER_ID
 
