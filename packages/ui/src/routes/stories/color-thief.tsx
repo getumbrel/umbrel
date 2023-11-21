@@ -22,7 +22,12 @@ export default function ColorThiefExample() {
 				crossOrigin='anonymous'
 				ref={ref}
 			/> */}
-			<AppIcon src={'https://getumbrel.github.io/umbrel-apps-gallery/bitfeed/icon.svg'} size={128} ref={ref} />
+			<AppIcon
+				src={'https://getumbrel.github.io/umbrel-apps-gallery/bitfeed/icon.svg'}
+				crossOrigin='anonymous'
+				size={128}
+				ref={ref}
+			/>
 			<div
 				className='h-10 w-10 bg-white'
 				style={{
