@@ -43,7 +43,7 @@ export function Settings() {
 
 	return (
 		<>
-			<SheetHeader>
+			<SheetHeader className='px-2.5'>
 				<SheetTitle className='leading-none'>{t('settings')}</SheetTitle>
 			</SheetHeader>
 			<SettingsContent />
