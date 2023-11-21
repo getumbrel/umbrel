@@ -25,6 +25,7 @@ import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {links} from '@/constants/links'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -45,6 +46,7 @@ import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
+	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
@@ -85,15 +87,16 @@ export function SettingsContent() {
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
-						<IconLinkButton to='/settings/troubleshoot' size='xl' icon={RiToolsLine}>
+						<IconLinkButton to={{search: addLinkSearchParams({dialog: 'troubleshoot'})}} size='xl' icon={RiToolsLine}>
 							Troubleshoot
 						</IconLinkButton>
-						<IconLinkButton size='xl' icon={RiRestartLine} to='/settings/restart' preventScrollReset={true}>
+						<IconLinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='xl' icon={RiRestartLine}>
 							Restart
 						</IconLinkButton>
 						<IconLinkButton
-							to='/settings/shutdown'
-							preventScrollReset={true}
+							to={{
+								search: addLinkSearchParams({dialog: 'shutdown'}),
+							}}
 							size='xl'
 							text='destructive'
 							icon={RiShutDownLine}
@@ -129,7 +132,12 @@ export function SettingsContent() {
 						<TempStatCardContent tempInCelcius={cpuTempQ.data} />
 					</Card>
 					<div className='mx-auto'>
-						<IconLinkButton icon={RiPulseLine} to='/settings/live-usage' preventScrollReset={true}>
+						<IconLinkButton
+							icon={RiPulseLine}
+							to={{
+								search: addLinkSearchParams({dialog: 'live-usage'}),
+							}}
+						>
 							Open Live Usage
 						</IconLinkButton>
 					</div>
@@ -144,10 +152,10 @@ export function SettingsContent() {
 				<Card className='umbrel-divide-y overflow-hidden py-2'>
 					<ListRow title='Account' description='Your display name & Umbrel password'>
 						<div className='flex flex-wrap gap-2'>
-							<IconLinkButton to='/settings/change-name' preventScrollReset={true} icon={RiUserLine}>
+							<IconLinkButton to={{search: addLinkSearchParams({dialog: 'change-name'})}} icon={RiUserLine}>
 								Change name
 							</IconLinkButton>
-							<IconLinkButton to='/settings/change-password' preventScrollReset={true} icon={RiKeyLine}>
+							<IconLinkButton to={{search: addLinkSearchParams({dialog: 'change-password'})}} icon={RiKeyLine}>
 								Change password
 							</IconLinkButton>
 						</div>
@@ -163,7 +171,9 @@ export function SettingsContent() {
 						<Switch
 							checked={is2faEnabledQ.data}
 							onCheckedChange={(checked) =>
-								navigate(checked ? '/settings/2fa-enable' : '/settings/2fa-disable', {preventScrollReset: true})
+								navigate({
+									search: addLinkSearchParams({dialog: checked ? '2fa-enable' : '2fa-disable'}),
+								})
 							}
 						/>
 					</ListRow>
@@ -176,8 +186,8 @@ export function SettingsContent() {
 							<IconButton
 								icon={RiExpandRightFill}
 								onClick={() =>
-									navigate('/settings/migration-assistant', {
-										preventScrollReset: true,
+									navigate({
+										search: addLinkSearchParams({dialog: 'migration-assistant'}),
 									})
 								}
 							>
@@ -193,8 +203,8 @@ export function SettingsContent() {
 						<IconButton
 							icon={RiEqualizerLine}
 							onClick={() =>
-								navigate('/settings/app-store-preferences', {
-									preventScrollReset: true,
+								navigate({
+									search: addLinkSearchParams({dialog: 'app-store-preferences'}),
 								})
 							}
 						>

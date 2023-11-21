@@ -1,21 +1,19 @@
-import {Suspense, useEffect, useRef, useState} from 'react'
-import {Outlet, useLocation, useNavigate} from 'react-router-dom'
+import {Suspense, useRef, useState} from 'react'
+import {Outlet, useNavigate} from 'react-router-dom'
 
+import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
 export function SheetLayout() {
-	const location = useLocation()
 	const navigate = useNavigate()
+
 	const [open, setOpen] = useState(true)
 
 	const scrollRef = useRef<HTMLDivElement>(null)
 
-	// TODO: Do scroll restoration at some point
-	// Probably use this after it's merged:
-	// https://github.com/remix-run/react-router/pull/10468
-	useEffect(() => scrollRef.current?.scrollTo(0, 0), [location.pathname])
+	useScrollRestoration(scrollRef)
 
 	useAfterDelayedClose(open, () => navigate('/'))
 

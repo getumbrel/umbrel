@@ -9,11 +9,11 @@ import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
 import {Desktop} from './layouts/desktop'
-import {SettingsLayout} from './layouts/settings'
 import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
+import {Settings} from './routes/settings'
 import {Button} from './shadcn-components/ui/button'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
@@ -33,16 +33,6 @@ const MigrateSuccess = React.lazy(() => import('./routes/migrate/migrate-success
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/1-create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/2-account-created'))
-const TwoFactorDisableDialog = React.lazy(() => import('./routes/settings/2fa-disable'))
-const TwoFactorEnableDialog = React.lazy(() => import('./routes/settings/2fa-enable'))
-const AppStorePreferencesDialog = React.lazy(() => import('./routes/settings/app-store-preferences'))
-const ChangeNameDialog = React.lazy(() => import('./routes/settings/change-name'))
-const ChangePasswordDialog = React.lazy(() => import('./routes/settings/change-password'))
-const LiveUsageDialog = React.lazy(() => import('./routes/settings/live-usage'))
-const MigrationAssistantDialog = React.lazy(() => import('./routes/settings/migration-assistant'))
-const RestartDialog = React.lazy(() => import('./routes/settings/restart'))
-const ShutdownDialog = React.lazy(() => import('./routes/settings/shutdown'))
-const TroubleshootDialog = React.lazy(() => import('./routes/settings/troubleshoot'))
 const Stories = React.lazy(() => import('./routes/stories'))
 const AppStoreStory = React.lazy(() => import('./routes/stories/app-store'))
 const CmdkStory = React.lazy(() => import('./routes/stories/cmdk'))
@@ -129,52 +119,7 @@ export const router = createBrowserRouter([
 					},
 					{
 						path: 'settings',
-						Component: SettingsLayout,
-						children: [
-							// top section
-							{
-								path: 'troubleshoot',
-								Component: TroubleshootDialog,
-							},
-							{
-								path: 'restart',
-								Component: RestartDialog,
-							},
-							{
-								path: 'shutdown',
-								Component: ShutdownDialog,
-							},
-							// left
-							{
-								path: 'live-usage',
-								Component: LiveUsageDialog,
-							},
-							// right
-							{
-								path: 'change-name',
-								Component: ChangeNameDialog,
-							},
-							{
-								path: 'change-password',
-								Component: ChangePasswordDialog,
-							},
-							{
-								path: '2fa-enable',
-								Component: TwoFactorEnableDialog,
-							},
-							{
-								path: '2fa-disable',
-								Component: TwoFactorDisableDialog,
-							},
-							{
-								path: 'migration-assistant',
-								Component: MigrationAssistantDialog,
-							},
-							{
-								path: 'app-store-preferences',
-								Component: AppStorePreferencesDialog,
-							},
-						],
+						Component: Settings,
 					},
 				],
 			},
