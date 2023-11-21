@@ -34,7 +34,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
-						navigate('/settings/restart')
+						navigate({pathname: '/settings', search: addLinkSearchParams({dialog: 'restart'})})
 						setOpen(false)
 					}}
 				>
