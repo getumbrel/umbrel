@@ -1,5 +1,4 @@
 import BigNumber from 'bignumber.js'
-import {motion} from 'framer-motion'
 import {Globe} from 'lucide-react'
 import {useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -62,12 +61,7 @@ export function SettingsContent() {
 	}
 
 	return (
-		<motion.div
-			className='animate-in fade-in'
-			// initial={{ opacity: 0 }}
-			// animate={{ opacity: 1 }}
-			// transition={{ duration: 0.3, ease: "easeOut", delay: 1 }}
-		>
+		<div className='animate-in fade-in'>
 			<div className='grid w-full gap-x-[30px] gap-y-[20px] lg:grid-cols-[280px_auto]'>
 				<div className='flex items-center justify-center'>
 					<DesktopPreviewFrame>
@@ -227,7 +221,7 @@ export function SettingsContent() {
 					<SoftwareUpdateListRow />
 				</Card>
 			</div>
-		</motion.div>
+		</div>
 	)
 }
 function SoftwareUpdateListRow() {
