@@ -41,14 +41,10 @@ export function AppStoreLayout() {
 	return (
 		<AppStoreSheetInner
 			title={title}
-			description={
-				<>
-					{t('app-store.tagline')}
-					<CommunityAppsDropdown />
-				</>
-			}
+			description={<>{t('app-store.tagline')}</>}
 			titleRightChildren={
-				<div className='flex items-center gap-3'>
+				<div className='flex flex-1 flex-row-reverse items-center gap-3'>
+					<CommunityAppsDropdown />
 					<LinkButton
 						to={{search: addLinkSearchParams({dialog: 'updates'})}}
 						variant='default'
@@ -59,6 +55,7 @@ export function AppStoreLayout() {
 						<NotificationBadge count={2} />
 					</LinkButton>
 					<UpdatesDialog />
+					<div className='flex-1 md:hidden' />
 					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
 				</div>
 			}

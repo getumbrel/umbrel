@@ -32,7 +32,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-	'fixed z-30 gap-4 px-10 bg-black/70 contrast-more:bg-black overflow-hidden shadow-lg transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 backdrop-blur-4xl contrast-more:backdrop-blur-none sheet-shadow outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
+	'fixed z-30 gap-4 px-3 md:px-10 bg-black/70 contrast-more:bg-black overflow-hidden shadow-lg transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 backdrop-blur-4xl contrast-more:backdrop-blur-none sheet-shadow outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
 	{
 		variants: {
 			side: {
@@ -76,7 +76,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn('flex flex-col gap-2 text-center sm:text-left', className)} {...props} />
+	<div className={cn('flex flex-col gap-2', className)} {...props} />
 )
 SheetHeader.displayName = 'SheetHeader'
 
@@ -89,7 +89,11 @@ const SheetTitle = React.forwardRef<
 	React.ElementRef<typeof SheetPrimitive.Title>,
 	React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
 >(({className, ...props}, ref) => (
-	<SheetPrimitive.Title ref={ref} className={cn('text-32 font-bold -tracking-3 text-white/75', className)} {...props} />
+	<SheetPrimitive.Title
+		ref={ref}
+		className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48', className)}
+		{...props}
+	/>
 ))
 SheetTitle.displayName = SheetPrimitive.Title.displayName
 

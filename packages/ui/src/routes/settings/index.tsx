@@ -44,7 +44,7 @@ export function Settings() {
 	return (
 		<>
 			<SheetHeader>
-				<SheetTitle className='text-48 leading-none'>{t('settings')}</SheetTitle>
+				<SheetTitle className='leading-none'>{t('settings')}</SheetTitle>
 			</SheetHeader>
 			<SettingsContent />
 			<Suspense>

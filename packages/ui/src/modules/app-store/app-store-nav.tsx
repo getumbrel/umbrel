@@ -2,11 +2,14 @@ import {useParams} from 'react-router-dom'
 
 import {LinkButton} from '@/components/ui/link-button'
 import {Category} from '@/trpc/trpc'
+import {useBreakpoint} from '@/utils/tw'
 
 import {categoryishDescriptions} from './constants'
 
 export function AppStoreNav() {
 	const {categoryishId} = useParams<{categoryishId: Category}>()
+	const breakpoint = useBreakpoint()
+	const size = breakpoint === 'sm' ? 'default' : 'lg'
 
 	const activeId = categoryishId || categoryishDescriptions[0].id
 
@@ -18,7 +21,7 @@ export function AppStoreNav() {
 						key={category.id}
 						to={categoryIdToPath(category.id)}
 						variant={category.id === activeId ? 'primary' : 'default'}
-						size='lg'
+						size={size}
 						unstable_viewTransition
 					>
 						{category.label}

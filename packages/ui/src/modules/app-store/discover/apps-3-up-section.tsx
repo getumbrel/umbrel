@@ -4,7 +4,7 @@ import {useCss} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
-import {cardClass, SectionTitle} from '@/modules/app-store/shared'
+import {cardClass, sectionOverlineClass, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
@@ -31,16 +31,22 @@ export const Apps3UpSection: React.FC<Apps3UpSectionProps> = ({
 		<div
 			className={cn(
 				cardClass,
-				'flex flex-wrap items-center justify-center gap-x-16 gap-y-8 overflow-hidden text-center xl:flex-nowrap xl:justify-start xl:text-left',
+				'flex flex-wrap justify-center gap-x-16 gap-y-8 overflow-hidden p-4 text-center xl:flex-nowrap xl:justify-start xl:text-left',
 			)}
 		>
-			<div className={cn('flex flex-col items-center xl:items-start', textLocation === 'right' && 'order-2')}>
-				<SectionTitle overline={overline} title={title} />
-				<p className='mt-2.5 max-w-md text-14 opacity-60'>{description}</p>
+			<div
+				className={cn(
+					'flex w-full flex-col items-center justify-center md:w-auto xl:items-start',
+					textLocation === 'right' && 'order-2',
+				)}
+			>
+				<p className={sectionOverlineClass}>{overline}</p>
+				<h3 className={sectionTitleClass}>{title}</h3>
+				<p className='max-w-md text-14 opacity-60'>{description}</p>
 				<div className='pt-5' />
 				{children}
 			</div>
-			<div className='flex gap-5'>
+			<div className='flex justify-center gap-5 md:w-auto'>
 				<ColorApp app={apps[0]} />
 				<ColorApp app={apps[1]} />
 				<ColorApp app={apps[2]} />

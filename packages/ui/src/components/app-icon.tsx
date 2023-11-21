@@ -2,7 +2,7 @@ import {forwardRef, HTMLProps} from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
-type AppIconProps = {src: string; size: number} & HTMLProps<HTMLImageElement>
+type AppIconProps = {src: string; size?: number} & HTMLProps<HTMLImageElement>
 
 function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps, ref: React.Ref<HTMLImageElement>) {
 	const defaultIcon = '/icons/app-icon-placeholder.svg'

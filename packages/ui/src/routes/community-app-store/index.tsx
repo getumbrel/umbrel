@@ -50,7 +50,7 @@ export default function CommunityAppStoreHome() {
 		>
 			{objectKeys(appsGroupedByCategory).map((category) => (
 				<div key={category} className={cardFaintClass}>
-					<h3 className={cn(sectionOverlineClass, 'mb-8')}>{category}</h3>
+					<h3 className={cn(sectionOverlineClass, 'mb-8 p-2.5')}>{category}</h3>
 					<div className={appsGridClass}>
 						{appsGroupedByCategory[category].map((app) => (
 							<AppWithDescription key={app.id} app={app} to={`/community-app-store/${appStoreId}/${app.id}`} />

@@ -35,7 +35,7 @@ export function SheetLayout() {
 				onEscapeKeyDown={(e) => e.preventDefault()}
 			>
 				<div
-					className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-12 md:px-8'
+					className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto pt-6 md:px-8 md:pt-12'
 					ref={scrollRef}
 				>
 					<Suspense>

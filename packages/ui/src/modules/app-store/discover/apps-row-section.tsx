@@ -10,10 +10,8 @@ import {RegistryApp} from '@/trpc/trpc'
 export const AppsRowSection = ({overline, title, apps}: {overline: string; title: string; apps: RegistryApp[]}) => {
 	return (
 		<div>
-			<div className='px-[30px]'>
-				<SectionTitle overline={overline} title={title} />
-			</div>
-			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar mt-[30px] flex flex-row gap-[40px] overflow-x-auto pl-[30px]'>
+			<SectionTitle overline={overline} title={title} />
+			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar mt-3 flex flex-row gap-3 overflow-x-auto md:gap-[40px]'>
 				{apps.map((app) => (
 					<App key={app.id} app={app} />
 				))}
@@ -30,24 +28,24 @@ function App({app}: {app: RegistryApp}) {
 		<Link to={`/app-store/${app.id}`} onMouseEnter={() => preloadFirstFewGalleryImages(app)}>
 			<AppIcon
 				ref={iconRef}
-				size={100}
+				// size={100}
 				src={app.icon}
 				crossOrigin='anonymous'
-				className='relative z-10 -mb-[50px] ml-[27px] rounded-24'
+				className='relative z-10 -mb-[20px] ml-[27px] w-[60px] rounded-12 md:mb-[-50px] md:w-[100px] md:rounded-24'
 				style={{
 					filter: 'drop-shadow(0px 18px 24px rgba(0, 0, 0, 0.12))',
 				}}
 			/>
 			<div
-				className='relative flex h-[188px] w-[345px] flex-col justify-end rounded-20 p-[27px]'
+				className='relative flex h-[150px] w-[267px] flex-col justify-center rounded-20 p-[27px] md:h-[188px] md:w-[345px] md:justify-end'
 				style={{
 					background: `linear-gradient(123deg, ${colors ? colors[0] : '#24242499'}, ${
 						colors ? colors[1] : '#18181899'
 					})`,
 				}}
 			>
-				<h3 className='truncate text-[28px] font-semibold -tracking-3'>{app.name}</h3>
-				<p className='line-clamp-2 text-16 -tracking-4 opacity-70'>{app.tagline}</p>
+				<h3 className='truncate text-24 font-semibold -tracking-3 md:text-[28px]'>{app.name}</h3>
+				<p className='line-clamp-2 text-12 -tracking-4 opacity-70 md:text-16'>{app.tagline}</p>
 			</div>
 		</Link>
 	)
