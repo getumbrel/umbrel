@@ -23,7 +23,7 @@ export function AppGrid({
 			<div className='relative flex w-full flex-grow justify-center overflow-hidden'>
 				<div
 					ref={scrollContainer}
-					className='umbrel-hide-scrollbar flex h-full w-full max-w-[var(--apps-max-w)] snap-x snap-mandatory overflow-hidden overflow-x-auto'
+					className='umbrel-hide-scrollbar flex h-full w-full snap-x snap-mandatory overflow-hidden overflow-x-auto md:max-w-[var(--apps-max-w)]'
 				>
 					{/* Default page for calculating size */}
 					<Page index={0}>
