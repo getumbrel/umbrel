@@ -1,3 +1,4 @@
+import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
 
 /** @type {import('tailwindcss').Config} */
@@ -105,6 +106,10 @@ export default {
 				3: '3px',
 				6: '6px',
 			},
+			aspectRatio: {
+				'2.25': '225 / 100',
+				'1.6': '160 / 100',
+			},
 			keyframes: {
 				'accordion-down': {
 					from: {height: '0px'},
@@ -138,5 +143,5 @@ export default {
 			},
 		},
 	},
-	plugins: [import('tailwindcss-animate')],
+	plugins: [tailwindCssAnimate],
 }
