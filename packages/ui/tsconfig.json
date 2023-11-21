@@ -26,7 +26,7 @@
 			"@/*": ["./src/*"]
 		}
 	},
-	"include": ["src"],
+	"include": ["src", "tailwind.config.ts"],
 	/* Exclude parent */
 	// "exclude": ["../"],
 	"references": [{"path": "./tsconfig.node.json"}]

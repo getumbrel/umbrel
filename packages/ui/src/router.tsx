@@ -14,6 +14,7 @@ import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {Settings} from './routes/settings'
+import TailwindStory from './routes/stories/tailwind'
 import {Button} from './shadcn-components/ui/button'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
@@ -279,6 +280,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/migrate',
 				Component: MigrateStory,
+			},
+			{
+				path: 'stories/tailwind',
+				Component: TailwindStory,
 			},
 		],
 	},

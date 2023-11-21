@@ -44,6 +44,10 @@ const storyLinks = [
 		name: 'Migrate',
 		path: '/stories/migrate',
 	},
+	{
+		name: 'Tailwind',
+		path: '/stories/tailwind',
+	},
 ]
 
 export function StoriesLayout() {
