@@ -125,6 +125,7 @@ export const useWallpaper = () => {
 	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
 	// const wallpaper = nullWallpaper
 
+	// TODO: consider putting this in WallpaperProvider
 	useLayoutEffect(() => {
 		const el = document.documentElement
 		if (!el) return

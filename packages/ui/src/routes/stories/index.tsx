@@ -11,6 +11,7 @@ import {Loading} from '@/components/ui/loading'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
+import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -51,6 +52,9 @@ import {trackAppOpen} from '@/utils/track-app-open'
 
 export default function Stories() {
 	useUmbrelTitle('Stories Home')
+
+	// Set brand color based on wallpaper
+	useWallpaper()
 
 	return (
 		<div className='flex flex-col gap-4 bg-white/20 p-4'>
