@@ -9,13 +9,14 @@ import {
 	RiEqualizerLine,
 	RiExpandRightFill,
 	RiKeyLine,
+	RiLogoutCircleRLine,
 	RiPulseLine,
 	RiRefreshLine,
 	RiRestartLine,
 	RiShutDownLine,
-	RiToolsLine,
 	RiUserLine,
 } from 'react-icons/ri'
+import {TbTool} from 'react-icons/tb'
 import {Link, useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
@@ -87,8 +88,8 @@ export function SettingsContent() {
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
-						<IconLinkButton to={{search: addLinkSearchParams({dialog: 'troubleshoot'})}} size='xl' icon={RiToolsLine}>
-							Troubleshoot
+						<IconLinkButton to={{search: addLinkSearchParams({dialog: 'logout'})}} size='xl' icon={RiLogoutCircleRLine}>
+							Log out
 						</IconLinkButton>
 						<IconLinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='xl' icon={RiRestartLine}>
 							Restart
@@ -209,6 +210,18 @@ export function SettingsContent() {
 							}
 						>
 							Preferences
+						</IconButton>
+					</ListRow>
+					<ListRow title='Troubleshoot' description='View logs for troubleshooting' isLabel>
+						<IconButton
+							icon={TbTool}
+							onClick={() =>
+								navigate({
+									search: addLinkSearchParams({dialog: 'app-store-preferences'}),
+								})
+							}
+						>
+							Troubleshoot
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow />
