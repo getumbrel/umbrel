@@ -25,6 +25,7 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
+import {Checkbox} from '@/shadcn-components/ui/checkbox'
 import {
 	ContextMenu,
 	ContextMenuCheckboxItem,
@@ -63,6 +64,8 @@ export default function Stories() {
 			<Buttons />
 			<H2>Badge</H2>
 			<Badges />
+			<H2>Checkbox</H2>
+			<CheckboxExamples />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
 			<H2>Loading</H2>
@@ -275,6 +278,23 @@ function Badges() {
 			<Badge variant='outline'>Outline</Badge>
 			<Badge variant='destructive'>Destructive</Badge>
 		</div>
+	)
+}
+
+function CheckboxExamples() {
+	return (
+		<>
+			<Checkbox />
+			<div className='flex items-center space-x-2'>
+				<Checkbox id='terms2' />
+				<label
+					htmlFor='terms2'
+					className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+				>
+					Accept terms and conditions
+				</label>
+			</div>
+		</>
 	)
 }
 
