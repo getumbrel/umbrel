@@ -211,7 +211,7 @@ export function SettingsContent() {
 							icon={TbTool}
 							onClick={() =>
 								navigate({
-									search: addLinkSearchParams({dialog: 'app-store-preferences'}),
+									search: addLinkSearchParams({dialog: 'troubleshoot'}),
 								})
 							}
 						>
