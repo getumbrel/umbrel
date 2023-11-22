@@ -113,6 +113,11 @@ export function WidgetSelector({
 						selectedTooMany && 'animate-shake',
 					)}
 				>
+					{selectedWidgets.length === 0 && (
+						<div className='absolute grid h-[var(--widget-h)] place-items-center whitespace-nowrap'>
+							No widgets selected
+						</div>
+					)}
 					<AnimatePresence>
 						{selectedWidgets.map((widget) => {
 							return (
