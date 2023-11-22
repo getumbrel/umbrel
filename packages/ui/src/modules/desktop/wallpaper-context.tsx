@@ -42,13 +42,6 @@ export const wallpapers = [
 		brandColorLighterHsl: '48 100% 26%',
 	},
 	{
-		id: 'abstract-purple',
-		label: 'Abstract purple',
-		url: '/wallpapers/abstract-purple.jpg',
-		brandColorHsl: '300 100% 50%',
-		brandColorLighterHsl: '300 100% 63%',
-	},
-	{
 		id: 'desert-mountains',
 		label: 'Desert mountains',
 		url: '/wallpapers/desert-mountains.jpg',
