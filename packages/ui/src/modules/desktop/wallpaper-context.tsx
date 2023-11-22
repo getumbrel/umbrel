@@ -10,6 +10,8 @@ type WallpaperT = {
 	url: string
 	brandColorHsl: string
 	brandColorLighterHsl: string
+	source?: string
+	photographer?: string
 }
 
 export const wallpapers = [
@@ -19,6 +21,8 @@ export const wallpapers = [
 		url: '/wallpapers/water-dark.jpg',
 		brandColorHsl: '204 100% 41%',
 		brandColorLighterHsl: '204 83% 50%',
+		source: 'https://unsplash.com/photos/body-of-water-during-daytime-hRemch0ZDwI',
+		photographer: 'Conor Sexton',
 	},
 	{
 		id: 'mountain-sunset',
@@ -26,6 +30,8 @@ export const wallpapers = [
 		url: '/wallpapers/mountain-sunset.jpg',
 		brandColorHsl: '259 100% 59%',
 		brandColorLighterHsl: '259 100% 64%',
+		source: 'https://unsplash.com/photos/silhouette-of-trees-during-sunset-JUFuI-kBtas',
+		photographer: 'Federico Bottos',
 	},
 	{
 		id: 'purple-mountain-range',
@@ -33,6 +39,8 @@ export const wallpapers = [
 		url: '/wallpapers/purple-mountain-range.jpg',
 		brandColorHsl: '236 100% 60%',
 		brandColorLighterHsl: '236 100% 70%',
+		source: 'https://unsplash.com/photos/mountain-range-rnKqWvO80Y4',
+		photographer: 'Michael D',
 	},
 	{
 		id: 'top-green-road',
@@ -40,6 +48,8 @@ export const wallpapers = [
 		url: '/wallpapers/top-green-road.jpg',
 		brandColorHsl: '48 100% 36%',
 		brandColorLighterHsl: '48 100% 26%',
+		source: 'https://www.pexels.com/photo/aerial-photo-of-empty-meandering-road-in-between-forest-2876511/',
+		photographer: 'kellymlacy',
 	},
 	{
 		id: 'desert-mountains',
@@ -47,6 +57,8 @@ export const wallpapers = [
 		url: '/wallpapers/desert-mountains.jpg',
 		brandColorHsl: '189 100% 35%',
 		brandColorLighterHsl: '189 100% 40%',
+		source: 'https://unsplash.com/photos/an-aerial-view-of-a-desert-at-sunset-YeLs9lJDx9M',
+		photographer: 'NEOM',
 	},
 	{
 		id: 'gradient-neutral',
