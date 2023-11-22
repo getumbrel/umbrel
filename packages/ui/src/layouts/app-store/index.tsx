@@ -70,7 +70,7 @@ function SearchInput({value, onValueChange}: {value: string; onValueChange: (que
 		<div className='flex items-center'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
 			<input
-				className='w-[] bg-transparent p-1 text-15 outline-none'
+				className='bg-transparent p-1 text-15 outline-none'
 				placeholder='Search apps'
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
