@@ -97,10 +97,13 @@ export function WidgetSelector({
 	return (
 		<>
 			{open && (
+				// Don't make this take up full width because clicking outside should close the widget selector
 				<motion.div
 					initial={{
 						opacity: 0,
 						y: 40,
+						left: '50%',
+						x: '-50%',
 					}}
 					animate={{
 						opacity: 1,
@@ -111,7 +114,7 @@ export function WidgetSelector({
 						ease: 'easeOut',
 					}}
 					className={cn(
-						'absolute z-50 flex items-center justify-center gap-[var(--app-x-gap)]',
+						'absolute top-0 z-50 flex items-center gap-[var(--app-x-gap)]',
 						selectedTooMany && 'animate-shake',
 					)}
 					style={{height: selectedH}}
@@ -204,7 +207,6 @@ function WidgetSheet({
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
 				<SheetContent
 					className='mx-auto max-w-[1040px]'
-					onContextMenu={(e) => e.preventDefault()}
 					onInteractOutside={(e) => e.preventDefault()}
 					style={{
 						height: `calc(100dvh - ${selectedCssHeight})`,

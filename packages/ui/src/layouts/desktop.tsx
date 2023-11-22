@@ -31,11 +31,11 @@ export function Desktop() {
 					}
 				>
 					<DesktopContent onSearchClick={() => setOpen(true)} />
-					<Suspense>
-						<Outlet />
-					</Suspense>
 				</div>
 			</DesktopContextMenu>
+			<Suspense>
+				<Outlet />
+			</Suspense>
 			{/* NOTE:
         Keep `AppGridGradientMasking` here rather than deeper down in component heirarchy to avoid being animated up and down when widget selector opens and closes.
       */}

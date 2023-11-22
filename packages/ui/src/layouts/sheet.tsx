@@ -30,7 +30,6 @@ export function SheetLayout() {
 						/>
 					)
 				}
-				onContextMenu={(e) => e.preventDefault()}
 				onInteractOutside={(e) => e.preventDefault()}
 				onEscapeKeyDown={(e) => e.preventDefault()}
 			>
