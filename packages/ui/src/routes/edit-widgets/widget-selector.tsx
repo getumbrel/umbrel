@@ -193,7 +193,7 @@ function WidgetSheet({
 		<BackdropBlurVariantContext.Provider value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
 				<SheetContent
-					className='mx-auto h-[calc(100dvh-var(--widget-h)-50px)] max-w-[1040px]'
+					className='mx-auto h-[calc(100dvh-var(--widget-labeled-h)-50px)] max-w-[1040px]'
 					onContextMenu={(e) => e.preventDefault()}
 					onInteractOutside={(e) => e.preventDefault()}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}

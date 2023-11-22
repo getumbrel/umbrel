@@ -31,7 +31,8 @@ export function usePager({apps, widgets}: PageT): {
 	const pageW = pageSize.width
 	const pageH = pageSize.height
 
-	const widgetH = 150 + 26 // widget rect + label
+	const widgetH = 150
+	const widgetLabeledH = widgetH + 26 // widget rect + label
 
 	const responsive = (sizes: number | number[]) => {
 		if (typeof sizes === 'number') {
@@ -66,6 +67,7 @@ export function usePager({apps, widgets}: PageT): {
 		el.style.setProperty('--apps-padding-x', `${paddingX}px`)
 		el.style.setProperty('--widget-w', `${widgetW}px`)
 		el.style.setProperty('--widget-h', `${widgetH}px`)
+		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
 		// All values depend on the breakpoint
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [breakpoint, pageW])

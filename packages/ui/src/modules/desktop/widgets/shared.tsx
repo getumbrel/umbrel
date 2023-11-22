@@ -3,7 +3,7 @@ import {cva} from 'class-variance-authority'
 import {tw} from '@/utils/tw'
 
 export const widgetContainerCva = cva(
-	tw`bg-neutral-800/60 rounded-20 p-5 w-[var(--widget-w)] h-[150px] shrink-0 flex flex-col gap-2 cursor-default`,
+	tw`bg-neutral-800/60 rounded-20 p-5 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default`,
 	// ^-- Using `tw` to force vscode to recognize the tailwind classes
 	{
 		variants: {
