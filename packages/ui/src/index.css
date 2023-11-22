@@ -24,6 +24,10 @@ html {
 	}
 }
 
+::selection {
+	@apply bg-white/70 text-black;
+}
+
 input,
 button {
 	font-size: inherit;
