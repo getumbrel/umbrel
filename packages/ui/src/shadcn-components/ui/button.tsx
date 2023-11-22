@@ -20,7 +20,7 @@ const buttonVariants = cva(
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
-				dialog: 'rounded-full h-[30px] min-w-[80px] px-4 font-medium text-13',
+				dialog: 'rounded-full h-[42px] md:h-[30px] min-w-[80px] px-4 font-semibold md:font-medium text-13',
 				lg: 'rounded-full h-[40px] px-[15px] text-17',
 				xl: 'rounded-10 h-[50px] px-[15px] text-13',
 				'icon-only': 'rounded-full h-[30px] w-[30px]',
