@@ -92,6 +92,8 @@ export function WidgetSelector({
 	if (isLoading) return null
 	if (!isReady()) return null
 
+	const selectedH = `calc(var(--widget-h) + 8vh)`
+
 	return (
 		<>
 			{open && (
@@ -109,9 +111,10 @@ export function WidgetSelector({
 						ease: 'easeOut',
 					}}
 					className={cn(
-						'absolute top-[50px] z-50 flex justify-center gap-[var(--app-x-gap)]',
+						'absolute z-50 flex items-center justify-center gap-[var(--app-x-gap)]',
 						selectedTooMany && 'animate-shake',
 					)}
+					style={{height: selectedH}}
 				>
 					{selectedWidgets.length === 0 && (
 						<div className='absolute grid h-[var(--widget-h)] place-items-center whitespace-nowrap'>
@@ -149,7 +152,7 @@ export function WidgetSelector({
 					</AnimatePresence>
 				</motion.div>
 			)}
-			<WidgetSheet open={open} onOpenChange={onOpenChange}>
+			<WidgetSheet open={open} onOpenChange={onOpenChange} selectedCssHeight={selectedH}>
 				{widgetConfigs.map(({appId, widgets}) => {
 					return (
 						<WidgetSection key={appId} iconSrc={allAppsKeyed[appId].icon} title={allAppsKeyed[appId].name}>
@@ -189,23 +192,28 @@ function WidgetSheet({
 	open,
 	onOpenChange,
 	children,
+	selectedCssHeight,
 }: {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	children: ReactNode
+	selectedCssHeight: string
 }) {
 	return (
 		<BackdropBlurVariantContext.Provider value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
 				<SheetContent
-					className='mx-auto h-[calc(100dvh-var(--widget-labeled-h)-50px)] max-w-[1040px]'
+					className='mx-auto max-w-[1040px]'
 					onContextMenu={(e) => e.preventDefault()}
 					onInteractOutside={(e) => e.preventDefault()}
+					style={{
+						height: `calc(100dvh - ${selectedCssHeight})`,
+					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
 				>
 					<div
 						className={cn(
-							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-[50px] overflow-y-auto px-10 pt-16 opacity-0',
+							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-5 overflow-y-auto pt-6 opacity-0 md:gap-[50px] md:px-8 md:pt-12',
 							'opacity-100 duration-100 animate-in fade-in',
 						)}
 					>
@@ -228,7 +236,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 				<img alt='icon' src={iconSrc} width={36} height={36} className='rounded-8' />
 				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
 			</div>
-			<div className='flex flex-row flex-wrap gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)]'>{children}</div>
+			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>
 		</>
 	)
 }
