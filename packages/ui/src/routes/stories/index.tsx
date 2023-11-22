@@ -286,10 +286,10 @@ function CheckboxExamples() {
 		<>
 			<Checkbox />
 			<div className='flex items-center space-x-2'>
-				<Checkbox id='terms2' />
+				<Checkbox defaultChecked id='terms2' />
 				<label
 					htmlFor='terms2'
-					className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+					className='select-none text-15 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50'
 				>
 					Accept terms and conditions
 				</label>
