@@ -27,7 +27,7 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 			<DialogPrimitive.Content
 				className={cn(
 					dialogContentClass,
-					'top-4 translate-y-0 overflow-hidden p-[30px] lg:top-[10%]',
+					'top-4 translate-y-0 overflow-hidden p-[30px] data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0 lg:top-[10%]',
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 					'z-[999]',
 				)}
@@ -68,7 +68,7 @@ const CommandList = React.forwardRef<
 >(({className, ...props}, ref) => (
 	<CommandPrimitive.List
 		ref={ref}
-		className={cn('umbrel-fade-scroller-y max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
+		className={cn('umbrel-fade-scroller-y overflow-y-auto overflow-x-hidden', className)}
 		{...props}
 	/>
 ))
@@ -86,14 +86,7 @@ const CommandGroup = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Group>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
 >(({className, ...props}, ref) => (
-	<CommandPrimitive.Group
-		ref={ref}
-		className={cn(
-			'overflow-hidden text-neutral-50 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-400',
-			className,
-		)}
-		{...props}
-	/>
+	<CommandPrimitive.Group ref={ref} className={cn('overflow-hidden text-neutral-50', className)} {...props} />
 ))
 
 CommandGroup.displayName = CommandPrimitive.Group.displayName
