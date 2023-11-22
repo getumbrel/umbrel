@@ -38,7 +38,12 @@ export function RedirectLogin() {
 
 	if (location.pathname.startsWith(path)) return null
 
-	sleep(SLEEP_TIME).then(() => navigate(path))
+	sleep(SLEEP_TIME).then(() =>
+		navigate({
+			pathname: path,
+			search: redirect.createRedirectSearch(),
+		}),
+	)
 	return <CoverMessage>Redirecting to login...</CoverMessage>
 }
 
@@ -52,4 +57,14 @@ export function RedirectHome() {
 
 	sleep(SLEEP_TIME).then(() => navigate(path))
 	return <CoverMessage>Redirecting to home...</CoverMessage>
+}
+
+// Keep redirect after login stuff here because url stuff is stringly typed
+export const redirect = {
+	createRedirectSearch() {
+		return `?redirect=${encodeURIComponent(location.pathname)}`
+	},
+	getRedirectPath() {
+		return new URLSearchParams(window.location.search).get('redirect') || '/'
+	},
 }
