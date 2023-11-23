@@ -3,6 +3,7 @@ import * as React from 'react'
 import {TbCheck} from 'react-icons/tb'
 
 import {cn} from '@/shadcn-lib/utils'
+import {tw} from '@/utils/tw'
 
 const Checkbox = React.forwardRef<
 	React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -28,4 +29,7 @@ const Checkbox = React.forwardRef<
 ))
 Checkbox.displayName = CheckboxPrimitive.Root.displayName
 
-export {Checkbox}
+const checkboxContainerClass = tw`flex items-center space-x-2`
+const checkboxLabelClass = tw`select-none text-15 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50`
+
+export {Checkbox, checkboxContainerClass, checkboxLabelClass}

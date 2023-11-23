@@ -1,5 +1,5 @@
 import {Globe, User} from 'lucide-react'
-import {useState} from 'react'
+import {useId, useState} from 'react'
 import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
@@ -25,7 +25,7 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
-import {Checkbox} from '@/shadcn-components/ui/checkbox'
+import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
 import {
 	ContextMenu,
 	ContextMenuCheckboxItem,
@@ -282,15 +282,14 @@ function Badges() {
 }
 
 function CheckboxExamples() {
+	const id = useId()
+
 	return (
 		<>
 			<Checkbox />
-			<div className='flex items-center space-x-2'>
-				<Checkbox defaultChecked id='terms2' />
-				<label
-					htmlFor='terms2'
-					className='select-none text-15 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-50'
-				>
+			<div className={checkboxContainerClass}>
+				<Checkbox defaultChecked id={id} />
+				<label htmlFor={id} className={checkboxLabelClass}>
 					Accept terms and conditions
 				</label>
 			</div>
