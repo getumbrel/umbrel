@@ -92,68 +92,63 @@ export function WidgetSelector({
 	if (isLoading) return null
 	if (!isReady()) return null
 
-	const selectedH = `calc(var(--widget-h) + 8vh)`
+	const selectedH = selectedWidgets.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
 
 	return (
 		<>
 			{open && (
 				// Don't make this take up full width because clicking outside should close the widget selector
-				<motion.div
-					initial={{
-						opacity: 0,
-						y: 40,
-						left: '50%',
-						x: '-50%',
-					}}
-					animate={{
-						opacity: 1,
-						y: 0,
-					}}
-					transition={{
-						duration: 0.2,
-						ease: 'easeOut',
-					}}
-					className={cn(
-						'absolute top-0 z-50 flex items-center gap-[var(--app-x-gap)]',
-						selectedTooMany && 'animate-shake',
-					)}
-					style={{height: selectedH}}
-				>
-					{selectedWidgets.length === 0 && (
-						<div className='absolute grid h-[var(--widget-h)] place-items-center whitespace-nowrap'>
-							No widgets selected
-						</div>
-					)}
-					<AnimatePresence>
-						{selectedWidgets.map((widget) => {
-							return (
-								<motion.div
-									key={widget.endpoint}
-									layout
-									initial={{
-										opacity: 1,
-										y: -20,
-									}}
-									animate={{
-										opacity: 1,
-										y: 0,
-									}}
-									exit={{
-										opacity: 0,
-										y: 20,
-									}}
-									transition={{
-										type: 'spring',
-										stiffness: 500,
-										damping: 30,
-									}}
-								>
-									{widgetConfigToWidget(widget)}
-								</motion.div>
-							)
-						})}
-					</AnimatePresence>
-				</motion.div>
+				<div className='absolute left-1/2 top-0 z-50 -translate-x-1/2'>
+					{/* <div className='absoulte top-0 grid h-[var(--widget-h)] w-full place-items-center whitespace-nowrap'>
+						No widgets selected
+					</div> */}
+					<motion.div
+						initial={{
+							opacity: 0,
+							y: 40,
+						}}
+						animate={{
+							opacity: 1,
+							y: 0,
+						}}
+						transition={{
+							duration: 0.2,
+							ease: 'easeOut',
+						}}
+						className={cn('flex items-center gap-[var(--app-x-gap)]', selectedTooMany && 'animate-shake')}
+						style={{height: selectedH}}
+					>
+						<AnimatePresence>
+							{selectedWidgets.map((widget) => {
+								return (
+									<motion.div
+										key={widget.endpoint}
+										layout
+										initial={{
+											opacity: 1,
+											y: -20,
+										}}
+										animate={{
+											opacity: 1,
+											y: 0,
+										}}
+										exit={{
+											opacity: 0,
+											y: 20,
+										}}
+										transition={{
+											type: 'spring',
+											stiffness: 500,
+											damping: 30,
+										}}
+									>
+										{widgetConfigToWidget(widget)}
+									</motion.div>
+								)
+							})}
+						</AnimatePresence>
+					</motion.div>
+				</div>
 			)}
 			<WidgetSheet open={open} onOpenChange={onOpenChange} selectedCssHeight={selectedH}>
 				{widgetConfigs.map(({appId, widgets}) => {
@@ -206,7 +201,7 @@ function WidgetSheet({
 		<BackdropBlurVariantContext.Provider value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
 				<SheetContent
-					className='mx-auto max-w-[1040px]'
+					className='mx-auto max-w-[1040px] transition-[height]'
 					onInteractOutside={(e) => e.preventDefault()}
 					style={{
 						height: `calc(100dvh - ${selectedCssHeight})`,
