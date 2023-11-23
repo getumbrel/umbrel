@@ -3,6 +3,7 @@ import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 import {RiCloseCircleFill} from 'react-icons/ri'
 
+import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
 
 const Sheet = SheetPrimitive.Root
@@ -68,18 +69,34 @@ interface SheetContentProps
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-	({side = 'bottom', className, children, backdrop, showClose = true, ...props}, ref) => (
-		// <SheetPortal container={document.getElementById("container")}>
-		<>
-			{backdrop}
-			{/* <SheetOverlay /> */}
-			<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
-				{children}
-				{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
-			</SheetPrimitive.Content>
-		</>
-		// </SheetPortal>
-	),
+	({side = 'bottom', className, children, backdrop, showClose = true, ...props}, ref) => {
+		const {wallpaper} = useWallpaper()
+
+		return (
+			// <SheetPortal container={document.getElementById("container")}>
+			<>
+				{backdrop}
+				{/* <SheetOverlay /> */}
+				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
+					<div className='absolute inset-0 bg-black contrast-more:hidden'>
+						<div
+							className='absolute inset-0'
+							style={{
+								backgroundImage: `url(${wallpaper.url})`,
+								backgroundSize: 'cover',
+								backgroundPosition: 'center',
+								transform: 'scale(1.2) rotate(180deg)',
+							}}
+						/>
+						<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
+					</div>
+					{children}
+					{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
+				</SheetPrimitive.Content>
+			</>
+			// </SheetPortal>
+		)
+	},
 )
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
