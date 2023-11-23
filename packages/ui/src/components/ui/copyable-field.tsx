@@ -11,14 +11,14 @@ export function CopyableField({value}: {value: string}) {
 	const [showCopied, setShowCopied] = useState(false)
 
 	return (
-		<div className='flex max-w-full items-center gap-2 overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 px-2.5 py-1.5 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40'>
-			<code ref={ref} className='block flex-1 truncate' onClick={() => selectText(ref.current)}>
+		<div className='flex max-w-full items-center gap-2 overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40'>
+			<code ref={ref} className='block flex-1 truncate px-2.5 py-1.5' onClick={() => selectText(ref.current)}>
 				{value}
 			</code>
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
-						className='transition-colors hover:text-white/50'
+						className='rounded-4 p-1.5 ring-inset transition-colors hover:text-white/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
 						onClick={async () => {
 							copyToClipboard(value)
 							setShowCopied(true)
