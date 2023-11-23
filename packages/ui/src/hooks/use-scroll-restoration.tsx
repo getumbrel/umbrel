@@ -11,7 +11,10 @@ import {useLocation, useNavigation} from 'react-router-dom'
  */
 export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 	const location = useLocation()
-	const keyPart = `scroll-position-${location.pathname}`
+	// Checking against settings for now because settings pages doesn't have subpages and app store does.
+	// Settings page only has dialogs for now, but because they add to the history, each page transition automatically causes
+	// a scroll to top. This is a workaround for that.
+	const keyPart = location.pathname === '/settings' ? location.pathname : location.key
 	const key = `scroll-position-${keyPart}`
 	const {state} = useNavigation()
 
