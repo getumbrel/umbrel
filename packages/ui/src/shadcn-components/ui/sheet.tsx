@@ -9,8 +9,6 @@ const Sheet = SheetPrimitive.Root
 
 const SheetTrigger = SheetPrimitive.Trigger
 
-const SheetClose = SheetPrimitive.Close
-
 const SheetPortal = ({className, ...props}: SheetPrimitive.DialogPortalProps) => (
 	<SheetPrimitive.Portal className={cn(className)} {...props} />
 )
@@ -32,7 +30,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-	'fixed z-30 gap-4 px-3 md:px-10 bg-black/70 contrast-more:bg-black overflow-hidden shadow-lg transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 backdrop-blur-4xl contrast-more:backdrop-blur-none sheet-shadow outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
+	'fixed z-30 gap-4 px-3 md:px-10 bg-black/70 contrast-more:bg-black overflow-hidden shadow-sheet-shadow transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
 	{
 		variants: {
 			side: {
@@ -50,24 +48,34 @@ const sheetVariants = cva(
 	},
 )
 
+const SheetClose = ({className}: {className?: React.ReactNode}) => (
+	<SheetPrimitive.Close
+		className={cn(
+			'rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2',
+			className,
+		)}
+	>
+		<RiCloseCircleFill className='h-6 w-6' />
+		<span className='sr-only'>Close</span>
+	</SheetPrimitive.Close>
+)
+
 interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
 		VariantProps<typeof sheetVariants> {
 	backdrop?: React.ReactNode
+	showClose?: boolean
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-	({side = 'bottom', className, children, backdrop, ...props}, ref) => (
+	({side = 'bottom', className, children, backdrop, showClose = true, ...props}, ref) => (
 		// <SheetPortal container={document.getElementById("container")}>
 		<>
 			{backdrop}
 			{/* <SheetOverlay /> */}
 			<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 				{children}
-				<SheetPrimitive.Close className='absolute right-2.5 top-2.5 z-50 rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
-					<RiCloseCircleFill className='h-6 w-6' />
-					<span className='sr-only'>Close</span>
-				</SheetPrimitive.Close>
+				{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
 			</SheetPrimitive.Content>
 		</>
 		// </SheetPortal>
