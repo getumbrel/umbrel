@@ -58,7 +58,7 @@ export function useAvailableApps() {
 	return ctx
 }
 
-export function useAvailableApp(id?: string) {
+export function useAvailableApp(id?: string | null) {
 	const ctx = useContext(AppsContext)
 	if (!ctx) throw new Error('useAvailableApp must be used within AvailableAppsProvider')
 

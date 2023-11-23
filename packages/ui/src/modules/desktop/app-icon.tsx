@@ -1,5 +1,6 @@
 import {Link, useLocation} from 'react-router-dom'
 
+import {useQueryParams} from '@/hooks/use-query-params'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {portToUrl} from '@/utils/misc'
@@ -7,6 +8,7 @@ import {trackAppOpen} from '@/utils/track-app-open'
 
 export function AppIcon({appId, label, src, port}: {appId: string; label: string; src: string; port: number}) {
 	const {pathname} = useLocation()
+	const {addLinkSearchParams} = useQueryParams()
 
 	// Don't show context menu one desktop by default because it causes dialog enter animation to usually stutter if a page load opens a dialog
 	const allowContextMenu = pathname === '/'
@@ -43,6 +45,11 @@ export function AppIcon({appId, label, src, port}: {appId: string; label: string
 			<ContextMenuContent>
 				<ContextMenuItem asChild>
 					<Link to={`/app-store/${appId}`}>Go to store page</Link>
+				</ContextMenuItem>
+				<ContextMenuItem asChild>
+					<Link to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}>
+						Show default credentials
+					</Link>
 				</ContextMenuItem>
 				<ContextMenuItem>Restart</ContextMenuItem>
 				<ContextMenuItem className={contextMenuClasses.item.rootDestructive}>Uninstall</ContextMenuItem>

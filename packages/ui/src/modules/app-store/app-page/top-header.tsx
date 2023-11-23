@@ -1,6 +1,6 @@
-import {ReactNode} from 'react'
+import {ReactNode, useEffect} from 'react'
 import {TbArrowLeft} from 'react-icons/tb'
-import {Link, To} from 'react-router-dom'
+import {Link, To, useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
@@ -55,6 +55,15 @@ export const TopHeader = ({app, backTo, childrenRight}: {app: RegistryApp; backT
 
 export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 	const {progress, state, install} = useDemoInstallProgress()
+	const navigate = useNavigate()
+
+	useEffect(() => {
+		if (state === 'installing') {
+			navigate({
+				search: '?dialog=default-credentials',
+			})
+		}
+	}, [state, navigate])
 
 	return (
 		<TopHeader

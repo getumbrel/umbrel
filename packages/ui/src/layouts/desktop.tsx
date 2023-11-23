@@ -3,6 +3,7 @@ import {Outlet} from 'react-router-dom'
 
 import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {AppGridGradientMasking, DesktopContextMenu} from '@/modules/desktop/desktop-misc'
 import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
@@ -45,6 +46,7 @@ export function Desktop() {
 				<Dock />
 			</DockBottomPositioner>
 			<CmdkMenu open={open} setOpen={setOpen} />
+			<DefaultCredentialsDialog />
 		</>
 	)
 }
