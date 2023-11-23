@@ -287,6 +287,10 @@ export const router = createBrowserRouter([
 			},
 		],
 	},
+	{
+		path: '*',
+		element: <CoverMessage>404 | Not Found</CoverMessage>,
+	},
 ])
 
 function ErrorBoundary() {
