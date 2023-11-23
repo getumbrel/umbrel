@@ -54,7 +54,7 @@ export function DefaultCredentialsDialog() {
 									Don’t show this again
 								</label>
 							</div>
-							<Button variant='primary' size='dialog'>
+							<Button variant='primary' size='dialog' onClick={() => removeParam('dialog')}>
 								Got it
 							</Button>
 						</div>
