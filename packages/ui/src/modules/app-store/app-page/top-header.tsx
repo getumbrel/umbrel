@@ -1,6 +1,6 @@
 import {ReactNode} from 'react'
 import {TbArrowLeft} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
+import {Link, To} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
@@ -9,14 +9,12 @@ import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
-export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
-	const navigate = useNavigate()
-
+export const TopHeader = ({app, backTo, childrenRight}: {app: RegistryApp; backTo: To; childrenRight: ReactNode}) => {
 	return (
 		<div className='space-y-5'>
-			<button onClick={() => navigate(-1)}>
+			<Link to={backTo}>
 				<TbArrowLeft className='h-5 w-5' />
-			</button>
+			</Link>
 
 			<div className='flex flex-row items-center gap-5'>
 				<AppIcon
@@ -60,6 +58,7 @@ export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 
 	return (
 		<TopHeader
+			backTo='../'
 			app={app}
 			childrenRight={
 				<InstallButton
