@@ -38,11 +38,7 @@ export default function CommunityAppPage() {
 	return (
 		<div className={appPageWrapperClass}>
 			<CommunityBadge className='self-start' />
-			<TopHeader
-				backTo='../'
-				app={app}
-				childrenRight={<InstallButton appName={app.name} appId={app.id} port={app.port} />}
-			/>
+			<TopHeader app={app} childrenRight={<InstallButton appName={app.name} appId={app.id} port={app.port} />} />
 			<AppContent app={app} />
 		</div>
 	)

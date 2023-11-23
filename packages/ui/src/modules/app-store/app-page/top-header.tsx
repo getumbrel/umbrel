@@ -9,12 +9,10 @@ import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
-export const TopHeader = ({app, backTo, childrenRight}: {app: RegistryApp; backTo: To; childrenRight: ReactNode}) => {
+export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
 	return (
 		<div className='space-y-5'>
-			<Link to={backTo}>
-				<TbArrowLeft className='h-5 w-5' />
-			</Link>
+			<BackButton />
 
 			<div className='flex flex-row items-center gap-5'>
 				<AppIcon
@@ -53,6 +51,16 @@ export const TopHeader = ({app, backTo, childrenRight}: {app: RegistryApp; backT
 	)
 }
 
+function BackButton() {
+	const navigate = useNavigate()
+
+	return (
+		<button onClick={() => navigate(-1)}>
+			<TbArrowLeft className='h-5 w-5' />
+		</button>
+	)
+}
+
 export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 	const {progress, state, install} = useDemoInstallProgress()
 	const navigate = useNavigate()
@@ -67,7 +75,6 @@ export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 
 	return (
 		<TopHeader
-			backTo='../'
 			app={app}
 			childrenRight={
 				<InstallButton
