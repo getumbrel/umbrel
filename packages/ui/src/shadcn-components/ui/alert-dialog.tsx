@@ -55,7 +55,7 @@ const AlertDialogHeader = ({
 }) => {
 	const IconComponent = icon
 	return (
-		<div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props}>
+		<div className={cn('flex flex-col space-y-2 text-center', className)} {...props}>
 			{IconComponent && <IconComponent className='mx-auto h-7 w-7 rounded-full bg-white/10 p-1' />}
 			{children}
 		</div>
