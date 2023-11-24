@@ -67,10 +67,10 @@ export function AppStoreLayout() {
 
 function SearchInput({value, onValueChange}: {value: string; onValueChange: (query: string) => void}) {
 	return (
-		<div className='flex items-center'>
+		<div className='-ml-2 flex items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
 			<input
-				className='bg-transparent p-1 text-15 outline-none'
+				className='bg-transparent p-1 text-15 outline-none max-md:w-[160px]'
 				placeholder='Search apps'
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
@@ -126,7 +126,7 @@ function SearchResults({query}: {query: string}) {
 
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
-			<h3 className={sectionTitleClass}>{title}</h3>
+			<h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>
 			<div className={appsGridClass}>{appResults?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
 	)
