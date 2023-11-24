@@ -50,7 +50,7 @@ list_block_devices () {
   #
   # sed 's!.*/!!' is to return the device path so we get sda
   # instead of /sys/block/sda
-  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+  (ls -d /sys/block/nvme* /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
 }
 
 # Returns the vendor and model name of a block device
