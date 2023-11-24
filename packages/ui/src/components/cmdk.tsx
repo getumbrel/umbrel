@@ -192,6 +192,14 @@ function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; na
 				trackAppOpen(appId)
 				window.open(portToUrl(port), '_blank')?.focus()
 			}}
+			onKeyDown={(e) => {
+				if (e.key === 'Enter') {
+					// Prevent triggering first selected cmdk item
+					e.preventDefault()
+					trackAppOpen(appId)
+					window.open(portToUrl(port), '_blank')?.focus()
+				}
+			}}
 		>
 			<AppIcon src={icon} size={64} className='rounded-15' />
 			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{name ?? appId}</div>
