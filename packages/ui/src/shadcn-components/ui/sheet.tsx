@@ -80,8 +80,9 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						<div
-							className='absolute inset-0'
+							className='absolute inset-0 opacity-0 delay-100 duration-200 ease-out fill-mode-both'
 							style={{
+								animationName: 'fade-in',
 								backgroundImage: `url(${wallpaper.url})`,
 								backgroundSize: 'cover',
 								backgroundPosition: 'center',
