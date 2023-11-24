@@ -96,7 +96,7 @@ export function ProgressWidget({
 }) {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={widgetContainerCva({variant})}>
+		<div className={cn(widgetContainerCva({variant}), 'p-2 md:p-5')}>
 			<StatText title={title} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
 			{/* TODO: use shadcn progress component */}
@@ -108,9 +108,9 @@ export function ProgressWidget({
 
 export function StatText({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
 	return (
-		<div className='flex flex-col gap-2'>
+		<div className='flex flex-col gap-1 md:gap-2'>
 			{title && <div className={widgetTextCva({opacity: 'secondary'})}>{title}</div>}
-			<div className='truncate text-24 font-semibold leading-none -tracking-3 opacity-80'>
+			<div className='truncate text-12 font-semibold leading-none -tracking-3 opacity-80 md:text-24'>
 				{value}
 				<span className='ml-1 text-13 font-bold opacity-[45%]'>{valueSub}</span>
 			</div>
@@ -121,7 +121,12 @@ export function StatText({title, value, valueSub}: {title?: string; value?: stri
 export function ThreeUpWidget() {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={cn(widgetContainerCva({variant}), 'grid grid-cols-3 justify-stretch gap-2 px-4 py-3')}>
+		<div
+			className={cn(
+				widgetContainerCva({variant}),
+				'grid justify-stretch gap-1.5 p-1.5 md:grid-cols-3 md:gap-2 md:px-4 md:py-3',
+			)}
+		>
 			<ThreeUpItem iconName='settings' title='Optimal' value='56°C' />
 			<ThreeUpItem iconName='settings' title='Free' value='1.75 TB' />
 			<ThreeUpItem iconName='settings' title='Memory' value='5.8 GB' />
@@ -131,10 +136,10 @@ export function ThreeUpWidget() {
 
 function ThreeUpItem({iconName, title, value}: {iconName: string; title?: string; value?: string}) {
 	return (
-		<div className='flex flex-col items-center justify-center rounded-full bg-white/5'>
+		<div className='flex items-center rounded-5 bg-white/5 max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
 			<TablerIcon iconName={iconName} className='h-5 w-5 [&>svg]:h-5 [&>svg]:w-5' />
-			<p className={widgetTextCva({opacity: 'secondary', className: 'mt-4'})}>{title}</p>
+			<p className={widgetTextCva({opacity: 'secondary', className: 'max-sm:hidden md:mt-4'})}>{title}</p>
 			<p className={widgetTextCva()}>{value}</p>
 		</div>
 	)
@@ -187,10 +192,10 @@ export function StatWithButtonsWidget({
 }) {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={widgetContainerCva({variant})}>
+		<div className={cn(widgetContainerCva({variant}), 'gap-0 p-2 md:p-5')}>
 			<StatText title={title} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
-			<div className='grid grid-cols-2 gap-1'>
+			<div className='grid gap-1 md:grid-cols-2'>
 				{buttons?.map((button) => (
 					// Not using endpoint for `key` in case user wants two buttons to link to the same endpoint for some reason
 					<WidgetButtonLink key={button.title} href={button.endpoint}>
@@ -207,7 +212,7 @@ function WidgetButtonLink({href, children}: {href: string; children: ReactNode})
 	return (
 		<a
 			href={href}
-			className='flex h-[30px] cursor-pointer select-none items-center justify-center rounded-full bg-white/5 px-2.5 text-12 font-medium transition-colors hover:bg-white/10 active:bg-white/5'
+			className='flex h-[24px] cursor-pointer select-none items-center justify-center rounded-5 bg-white/5 px-2.5 text-12 font-medium transition-colors hover:bg-white/10 active:bg-white/5 md:h-[30px] md:rounded-full'
 		>
 			{children}
 		</a>
@@ -217,7 +222,9 @@ function WidgetButtonLink({href, children}: {href: string; children: ReactNode})
 export function FourUpWidget() {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={cn(widgetContainerCva({variant}), 'grid grid-cols-2 grid-rows-2 p-2.5')}>
+		<div
+			className={cn(widgetContainerCva({variant}), 'grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5')}
+		>
 			<FourUpItem title='Connections' value='10' valueSub='peers' />
 			<FourUpItem title='Mempool' value='35' valueSub='MB' />
 			<FourUpItem title='Hashrate' value='366' valueSub='EH/s' />
@@ -228,13 +235,13 @@ export function FourUpWidget() {
 
 function FourUpItem({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
 	return (
-		<div className='flex flex-col justify-center rounded-12 bg-white/5 px-5'>
+		<div className='flex flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>
 			<p
 				className={cn(
 					widgetTextCva({
 						opacity: 'secondary',
 					}),
-					'text-11',
+					'text-[8px] md:text-11',
 				)}
 				title={value}
 			>
@@ -250,7 +257,7 @@ function FourUpItem({title, value, valueSub}: {title?: string; value?: string; v
 export function ActionsWidget() {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={cn(widgetContainerCva({variant}), 'relative pb-2.5')}>
+		<div className={cn(widgetContainerCva({variant}), 'relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5')}>
 			<ActionItem emoji='🔒' title='Change password' />
 			<div className='origin-left scale-90 opacity-60'>
 				<ActionItem emoji='🔒' title='Change password' />
@@ -278,7 +285,7 @@ function ActionItem({emoji, title}: {emoji: string; title?: string}) {
 export function NotificationsWidget() {
 	const variant = useContext(BackdropBlurVariantContext)
 	return (
-		<div className={cn(widgetContainerCva({variant}), 'justify-between p-4')}>
+		<div className={cn(widgetContainerCva({variant}), 'justify-between p-2 max-sm:gap-0 md:p-4')}>
 			<NotificationItem />
 			<hr className='border-white/5' />
 			<NotificationItem />
@@ -290,7 +297,7 @@ function NotificationItem() {
 	return (
 		<div className='text-12 leading-tight'>
 			<div className='opacity-20'>12:34 pm · Sep 9</div>
-			<p className='line-clamp-2 opacity-80'>
+			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>
 				✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel
 				with public relays, and back up past & future Nostr activity, even if the connection between your client & your
 				private relay goes down

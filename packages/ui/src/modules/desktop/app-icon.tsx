@@ -23,15 +23,13 @@ export function AppIcon({appId, label, src, port}: {appId: string; label: string
 			<img
 				src={src}
 				alt={label}
-				width={64}
-				height={64}
-				className='h-16 w-16 rounded-15 bg-white/10 bg-cover bg-center ring-white/25 transition-all group-hover:scale-110 group-active:scale-95 group-data-[state=open]:ring-6'
+				className='aspect-square w-12 rounded-10 bg-white/10 bg-cover bg-center ring-white/25 transition-all group-hover:scale-110 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15'
 				style={{
 					backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 				}}
 				draggable={false}
 			/>
-			<div className='max-w-full text-13 leading-normal drop-shadow-desktop-label'>
+			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>{label}</div>
 			</div>
 		</a>
