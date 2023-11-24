@@ -56,7 +56,8 @@ list_block_devices () {
 # Returns the vendor and model name of a block device
 get_block_device_model () {
   device="${1}"
-  vendor=$(cat "/sys/block/${device}/device/vendor")
+  vendor_path="/sys/block/${device}/device/vendor"
+  vendor=$(test -f "${vendor_path}" && cat "${vendor_path}" || echo "Unknown")
   model=$(cat "/sys/block/${device}/device/model")
 
   # We echo in a subshell without quotes to strip surrounding whitespace
