@@ -95,7 +95,13 @@ is_partition_ext4 () {
 format_block_device () {
   device="${1}"
   device_path="/dev/${device}"
-  partition_path="${device_path}1"
+
+  if [ grep -q '^sd' <<< "${device}" ]; then
+    partition_path="${device_path}1"
+  else
+    partition_path="${device_path}p1"
+  fi
+
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
   parted --script "${device_path}" mkpart primary ext4 0% 100%
@@ -184,7 +190,13 @@ main () {
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
   block_device_path="/dev/${block_device}"
-  partition_path="${block_device_path}1"
+
+  if [ grep -q '^sd' <<< "${block_device}" ]; then
+    partition_path="${device_path}1"
+  else
+    partition_path="${device_path}p1"
+  fi
+
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
