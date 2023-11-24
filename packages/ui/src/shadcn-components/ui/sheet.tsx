@@ -79,6 +79,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				{/* <SheetOverlay /> */}
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
+						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
 							className='absolute inset-0 opacity-0 delay-100 duration-200 ease-out fill-mode-both'
 							style={{

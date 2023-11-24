@@ -18,7 +18,7 @@ export function ProgressStatCardContent({
 	return (
 		<div className='flex flex-col gap-4'>
 			<div className={cardTitleClass}>{title}</div>
-			<div className='flex items-end justify-between'>
+			<div className='flex items-end justify-between gap-4'>
 				<div className='leading-inter-trimmed'>
 					<span className={cardValueClass}>{value}</span> <span className={cardValueSubClass}>{valueSub}</span>
 				</div>

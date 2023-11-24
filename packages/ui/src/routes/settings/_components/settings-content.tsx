@@ -16,7 +16,7 @@ import {
 	RiUserLine,
 } from 'react-icons/ri'
 import {TbTool} from 'react-icons/tb'
-import {Link, useNavigate} from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -24,7 +24,6 @@ import {Card} from '@/components/ui/card'
 import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {links} from '@/constants/links'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {Button} from '@/shadcn-components/ui/button'
@@ -36,12 +35,12 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
-import {linkClass} from '@/utils/element-classes'
 import {fixmeHandler} from '@/utils/misc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {ListRow} from './list-row'
 import {ProgressStatCardContent} from './progress-card-content'
+import {ContactSupportLink} from './shared'
 import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
@@ -56,7 +55,7 @@ export function SettingsContent() {
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 
-	if (!userQ.data) {
+	if (userQ.isLoading || diskQ.isLoading || memoryQ.isLoading) {
 		return null
 	}
 
@@ -71,7 +70,7 @@ export function SettingsContent() {
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
 					<div>
 						<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
-							{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
+							{userQ.data?.name || 'Unknown'}’s <span className='opacity-40'>Umbrel</span>
 						</h2>
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
@@ -137,12 +136,7 @@ export function SettingsContent() {
 						</IconLinkButton>
 					</div>
 					<div className='flex-1' />
-					<div className='mx-auto text-12 font-normal text-white/70'>
-						Need help?{' '}
-						<Link className={linkClass} to={links.support}>
-							Contact support.
-						</Link>
-					</div>
+					<ContactSupportLink className='max-lg:hidden' />
 				</div>
 				<Card className='umbrel-divide-y overflow-hidden py-2'>
 					<ListRow title='Account' description='Your display name & Umbrel password'>
@@ -220,6 +214,7 @@ export function SettingsContent() {
 					</ListRow>
 					<SoftwareUpdateListRow />
 				</Card>
+				<ContactSupportLink className='lg:hidden' />
 			</div>
 		</div>
 	)

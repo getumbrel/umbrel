@@ -4,8 +4,15 @@ import {useTranslation} from 'react-i18next'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {useBreakpoint} from '@/utils/tw'
 
-import {SettingsContent} from './_components/settings-content'
+// import {SettingsContent} from './_components/settings-content'
+const SettingsContent = React.lazy(() =>
+	import('./_components/settings-content').then((m) => ({default: m.SettingsContent})),
+)
+const SettingsContentMobile = React.lazy(() =>
+	import('./_components/settings-content-mobile').then((m) => ({default: m.SettingsContentMobile})),
+)
 
 const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
 const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-enable'))
@@ -41,12 +48,15 @@ export function Settings() {
 	const has = (dialog ?? '') in routeToDialog
 	const Dialog = has && dialog ? routeToDialog[dialog] : () => null
 
+	const breakpoint = useBreakpoint()
+
 	return (
 		<>
 			<SheetHeader className='px-2.5'>
 				<SheetTitle className='leading-none'>{t('settings')}</SheetTitle>
 			</SheetHeader>
-			<SettingsContent />
+			{breakpoint === 'sm' && <SettingsContentMobile />}
+			{breakpoint !== 'sm' && <SettingsContent />}
 			<Suspense>
 				<Dialog />
 			</Suspense>
