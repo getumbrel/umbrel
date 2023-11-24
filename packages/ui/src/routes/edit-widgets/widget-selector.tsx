@@ -98,7 +98,7 @@ export function WidgetSelector({
 		<>
 			{open && (
 				// Don't make this take up full width because clicking outside should close the widget selector
-				<div className='absolute left-1/2 top-0 z-50 -translate-x-1/2'>
+				<div className='absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
 					{/* <div className='absoulte top-0 grid h-[var(--widget-h)] w-full place-items-center whitespace-nowrap'>
 						No widgets selected
 					</div> */}
@@ -252,7 +252,7 @@ function WidgetChecker({
 			{children}
 			{checked && (
 				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3'>
-					<img src='/check.svg' />
+					<img src='/check.svg' className='max-sm:w-6' />
 					{/* <div className="w-10 h-10 bg-brand rounded-full" /> */}
 				</div>
 			)}
