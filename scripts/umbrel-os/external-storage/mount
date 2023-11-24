@@ -96,7 +96,7 @@ format_block_device () {
   device="${1}"
   device_path="/dev/${device}"
 
-  if [ grep -q '^sd' <<< "${device}" ]; then
+  if grep -q '^sd' <<< "${device}"; then
     partition_path="${device_path}1"
   else
     partition_path="${device_path}p1"
@@ -191,10 +191,10 @@ main () {
   block_device=$(list_block_devices)
   block_device_path="/dev/${block_device}"
 
-  if [ grep -q '^sd' <<< "${block_device}" ]; then
-    partition_path="${device_path}1"
+  if grep -q '^sd' <<< "${block_device}"; then
+    partition_path="${block_device_path}1"
   else
-    partition_path="${device_path}p1"
+    partition_path="${block_device_path}p1"
   fi
 
   block_device_model=$(get_block_device_model $block_device)
@@ -273,13 +273,13 @@ main () {
   echo "Checking Umbrel root is now on external storage..."
   sync
   sleep 1
-  df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
+  df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Checking ${DOCKER_DIR} is now on external storage..."
-  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd'
+  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Checking ${SWAP_DIR} is now on external storage..."
-  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Setting up swapfile"
   rm "${SWAP_FILE}" || true
