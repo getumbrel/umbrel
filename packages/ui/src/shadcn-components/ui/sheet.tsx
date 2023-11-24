@@ -81,7 +81,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
-							className='absolute inset-0 opacity-0 delay-100 duration-200 ease-out fill-mode-both'
+							className='absolute inset-0 opacity-0 delay-200 duration-700 ease-out fill-mode-both'
 							style={{
 								animationName: 'fade-in',
 								backgroundImage: `url(${wallpaper.url})`,
