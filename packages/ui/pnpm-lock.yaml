@@ -38,6 +38,9 @@ dependencies:
   '@radix-ui/react-tooltip':
     specifier: 1.0.7
     version: 1.0.7(@types/react-dom@18.2.14)(@types/react@18.2.31)(react-dom@18.2.0)(react@18.2.0)
+  '@tailwindcss/container-queries':
+    specifier: ^0.1.1
+    version: 0.1.1(tailwindcss@3.3.3)
   '@tanstack/react-query':
     specifier: 4.36.1
     version: 4.36.1(react-dom@18.2.0)(react@18.2.0)
@@ -1937,6 +1940,14 @@ packages:
   /@tabler/icons@2.39.0:
     resolution: {integrity: sha512-iK3j2jIEGIUaJcbYYg5iwyG1Y/m4lzUxAUbxRpvgeXCWP29jvZaH5hajZmU3KaSealddHuJg7PSQislPHpCsoQ==}
     dev: true
+
+  /@tailwindcss/container-queries@0.1.1(tailwindcss@3.3.3):
+    resolution: {integrity: sha512-p18dswChx6WnTSaJCSGx6lTmrGzNNvm2FtXmiO6AuA1V4U5REyoqwmT6kgAsIMdjo07QdAfYXHJ4hnMtfHzWgA==}
+    peerDependencies:
+      tailwindcss: '>=3.2.0'
+    dependencies:
+      tailwindcss: 3.3.3
+    dev: false
 
   /@tanstack/eslint-plugin-query@5.0.5(eslint@8.52.0)(typescript@5.2.2):
     resolution: {integrity: sha512-kYbh5Cboz1BzN6LeUWnI1B0BCikXMYQjxaEO7cV+0rycllU0qZqSEkd2LdgWIZhuLTc4WBt0li1s+O6RhM5Cog==}

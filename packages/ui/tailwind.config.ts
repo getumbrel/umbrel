@@ -1,3 +1,4 @@
+import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
 
@@ -27,6 +28,7 @@ export default {
 				3: '3px',
 				4: '4px',
 				5: '5px',
+				6: '6px',
 				8: '8px',
 				10: '10px',
 				12: '12px',
@@ -143,5 +145,5 @@ export default {
 			},
 		},
 	},
-	plugins: [tailwindCssAnimate],
+	plugins: [tailwindCssAnimate, tailwindContainerQueries],
 }
