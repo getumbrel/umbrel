@@ -78,6 +78,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				{backdrop}
 				{/* <SheetOverlay /> */}
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
+					{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
+					{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
@@ -93,7 +95,6 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 						<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
 					</div>
 					{children}
-					{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
 				</SheetPrimitive.Content>
 			</>
 			// </SheetPortal>
