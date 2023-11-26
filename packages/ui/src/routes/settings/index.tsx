@@ -40,7 +40,8 @@ const routeToDialog: Record<string, React.ComponentType> = {
 
 export function Settings() {
 	const {t} = useTranslation()
-	useUmbrelTitle(t('settings'))
+	const title = t('settings')
+	useUmbrelTitle(title)
 
 	const {params} = useQueryParams()
 	const dialog = params.get('dialog')
@@ -53,7 +54,7 @@ export function Settings() {
 	return (
 		<>
 			<SheetHeader className='px-2.5'>
-				<SheetTitle className='leading-none'>{t('settings')}</SheetTitle>
+				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
 			{breakpoint === 'sm' && <SettingsContentMobile />}
 			{breakpoint !== 'sm' && <SettingsContent />}
