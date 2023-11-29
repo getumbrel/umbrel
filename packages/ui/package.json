@@ -65,6 +65,7 @@
 		"tailwind-merge": "1.14.0",
 		"tailwindcss-animate": "1.0.7",
 		"ts-extras": "^0.11.0",
+		"url-join": "^5.0.0",
 		"use-is-focused": "0.0.1"
 	},
 	"devDependencies": {
