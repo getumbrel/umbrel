@@ -7,6 +7,8 @@ export type {Category} from '../../../../packages/umbreld/source/modules/apps/sc
 
 export {categories} from '../../../../packages/umbreld/source/modules/apps/data'
 
+export const trpcUrl = `http://${location.hostname}:3001/trpc`
+
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
 const jwt = localStorage.getItem('jwt')
 export const links = [
@@ -14,7 +16,7 @@ export const links = [
 		enabled: () => true,
 	}),
 	httpBatchLink({
-		url: `http://${location.hostname}:3001/trpc`,
+		url: trpcUrl,
 		headers: async () => ({
 			Authorization: `Bearer ${jwt}`,
 		}),
