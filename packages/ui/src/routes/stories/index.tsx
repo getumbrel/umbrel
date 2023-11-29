@@ -47,6 +47,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
+import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {trackAppOpen} from '@/utils/track-app-open'
@@ -80,6 +81,15 @@ export default function Stories() {
 			<ContextMenuExample />
 			<H2>Toast</H2>
 			<ToastExample />
+			<H2>Scroll Area</H2>
+			<ScrollArea className='h-[200px] w-[350px] rounded-4 bg-white/4'>
+				<div className='p-3'>
+					Jokester began sneaking into the castle in the middle of the night and leaving jokes all over the place: under
+					the king's pillow, in his soup, even in the royal toilet. The king was furious, but he couldn't seem to stop
+					Jokester. And then, one day, the people of the kingdom discovered that the jokes left by Jokester were so
+					funny that they couldn't help but laugh. And once they started laughing, they couldn't stop.
+				</div>
+			</ScrollArea>
 		</div>
 	)
 }
