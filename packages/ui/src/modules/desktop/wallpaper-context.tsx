@@ -130,7 +130,13 @@ export const useWallpaper = () => {
 	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
 	// const wallpaper = nullWallpaper
 
-	// TODO: consider putting this in WallpaperProvider
+	return {wallpaper, setWallpaperId}
+}
+
+// Not a standard provider because using trpc for getting the actual data
+export function WallpaperProvider({children}: {children: React.ReactNode}) {
+	const {wallpaper} = useWallpaper()
+
 	useLayoutEffect(() => {
 		const el = document.documentElement
 		if (!el) return
@@ -138,7 +144,7 @@ export const useWallpaper = () => {
 		el.style.setProperty('--color-brand-lighter', wallpaper.brandColorLighterHsl)
 	}, [wallpaper.brandColorHsl, wallpaper.brandColorLighterHsl])
 
-	return {wallpaper, setWallpaperId}
+	return children
 }
 
 export function Wallpaper() {
