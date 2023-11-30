@@ -15,7 +15,7 @@ export function AppIcon({appId, label, src, port}: {appId: string; label: string
 
 	const inner = (
 		<a
-			className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3'
+			className='group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none'
 			onClick={() => trackAppOpen(appId)}
 			href={portToUrl(port)}
 			target='_blank'
@@ -23,7 +23,7 @@ export function AppIcon({appId, label, src, port}: {appId: string; label: string
 			<img
 				src={src}
 				alt={label}
-				className='aspect-square w-12 rounded-10 bg-white/10 bg-cover bg-center ring-white/25 transition-all group-hover:scale-110 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15'
+				className='aspect-square w-12 rounded-10 bg-white/10 bg-cover bg-center ring-white/25 transition-all group-hover:scale-110 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15'
 				style={{
 					backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
 				}}
