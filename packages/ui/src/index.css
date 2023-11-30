@@ -25,7 +25,7 @@ html {
 }
 
 ::selection {
-	@apply bg-white/70 text-black;
+	@apply bg-brand text-white;
 }
 
 input,
