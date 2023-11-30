@@ -6,6 +6,7 @@ import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {cmdOrCtrl, platform} from '@/utils/misc'
 
 export function Header() {
 	const {t} = useTranslation()
@@ -55,12 +56,14 @@ function getPartofDay() {
 
 export function Search({onClick}: {onClick?: () => void}) {
 	const {t} = useTranslation()
+
 	return (
 		<button
 			className='select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors hover:bg-neutral-600/30 active:bg-neutral-600/10'
 			onClick={onClick}
 		>
-			{t('search')} <span className='text-white/20'>⌘K</span>
+			{/* TODO: ideally, centralize shortcut preview and shortcut event listener so always in sync */}
+			{t('search')} {platform() !== 'other' && <span className='text-white/20'>{cmdOrCtrl()}K</span>}
 		</button>
 	)
 }

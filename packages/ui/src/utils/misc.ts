@@ -38,3 +38,26 @@ export function transitionViewIfSupported(cb: () => void) {
 		cb()
 	}
 }
+
+export function isWindows() {
+	return /Win/i.test(navigator.userAgent)
+}
+
+export function isLinux() {
+	return /Linux/i.test(navigator.userAgent)
+}
+
+export function isMac() {
+	return /Mac/i.test(navigator.userAgent)
+}
+
+export function platform() {
+	if (isWindows()) return 'windows'
+	if (isLinux()) return 'linux'
+	if (isMac()) return 'mac'
+	return 'other'
+}
+
+export function cmdOrCtrl() {
+	return isMac() ? '⌘' : 'Ctrl+'
+}
