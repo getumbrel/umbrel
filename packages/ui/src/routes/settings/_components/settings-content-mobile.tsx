@@ -49,36 +49,38 @@ export function SettingsContentMobile() {
 				</DesktopPreviewFrame>
 			</div>
 
-			<div className='flex items-center gap-[5px] px-2 pb-2.5'>
-				<LinkButton to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
-					Log out
-				</LinkButton>
-				<LinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
-					Restart
-				</LinkButton>
-				<LinkButton
-					to={{
-						search: addLinkSearchParams({dialog: 'shutdown'}),
-					}}
-					size='md-squared'
-					text='destructive'
-					className='flex-grow'
-				>
-					Shut down
-				</LinkButton>
-			</div>
+			<div className='grid-cols-2 md:grid'>
+				<div className='flex items-center gap-[5px] px-2 pb-2.5 md:order-last'>
+					<LinkButton to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
+						Log out
+					</LinkButton>
+					<LinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
+						Restart
+					</LinkButton>
+					<LinkButton
+						to={{
+							search: addLinkSearchParams({dialog: 'shutdown'}),
+						}}
+						size='md-squared'
+						text='destructive'
+						className='flex-grow'
+					>
+						Shut down
+					</LinkButton>
+				</div>
 
-			<div>
-				<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
-					{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
-				</h2>
-				<div className='pt-5' />
-				<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-					<dt className='opacity-40'>Running on</dt>
-					<dd>DEBUG 4</dd>
-					<dt className='opacity-40'>umbrelOS version</dt>
-					<dd>0.0.0 </dd>
-				</dl>
+				<div>
+					<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
+						{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
+					</h2>
+					<div className='pt-5' />
+					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
+						<dt className='opacity-40'>Running on</dt>
+						<dd>DEBUG 4</dd>
+						<dt className='opacity-40'>umbrelOS version</dt>
+						<dd>0.0.0 </dd>
+					</dl>
+				</div>
 			</div>
 
 			{/* --- */}

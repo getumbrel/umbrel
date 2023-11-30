@@ -56,8 +56,8 @@ export function Settings() {
 			<SheetHeader className='px-2.5'>
 				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
-			{breakpoint === 'sm' && <SettingsContentMobile />}
-			{breakpoint !== 'sm' && <SettingsContent />}
+			{(breakpoint === 'sm' || breakpoint === 'md') && <SettingsContentMobile />}
+			{breakpoint !== 'sm' && breakpoint !== 'md' && <SettingsContent />}
 			<Suspense>
 				<Dialog />
 			</Suspense>
