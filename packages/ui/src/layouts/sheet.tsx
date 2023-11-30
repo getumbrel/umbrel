@@ -54,11 +54,7 @@ export function SheetLayout() {
 				className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] pb-6 lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
 				backdrop={
 					open && (
-						<div
-							data-state={open ? 'open' : 'closed'}
-							className='fixed inset-0 z-30 backdrop-blur-xl contrast-more:bg-neutral-600 contrast-more:backdrop-blur-none'
-							onClick={() => setOpen(false)}
-						/>
+						<div data-state={open ? 'open' : 'closed'} className='fixed inset-0 z-30' onClick={() => setOpen(false)} />
 					)
 				}
 				showClose={!showStickyHeader}
