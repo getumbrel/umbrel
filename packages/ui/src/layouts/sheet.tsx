@@ -51,7 +51,7 @@ export function SheetLayout() {
 	return (
 		<Sheet open={open} onOpenChange={setOpen} modal={false}>
 			<SheetContent
-				className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] pb-6 lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
+				className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] pb-6 md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
 				backdrop={
 					open && (
 						<div data-state={open ? 'open' : 'closed'} className='fixed inset-0 z-30' onClick={() => setOpen(false)} />
