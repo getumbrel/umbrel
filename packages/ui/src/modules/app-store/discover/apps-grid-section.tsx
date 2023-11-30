@@ -1,6 +1,5 @@
 import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
-import {useCss} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {
@@ -34,24 +33,10 @@ export function AppsGridFaintSection({title, apps}: {title?: ReactNode; apps?: R
 }
 
 export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
-	const linkClass = useCss({
-		'&:hover': {
-			img: {
-				viewTransitionName: 'app-icon-' + app.id,
-			},
-			h3: {
-				viewTransitionName: 'app-name-' + app.id,
-			},
-			p: {
-				viewTransitionName: 'app-tagline-' + app.id,
-			},
-		},
-	})
-
 	return (
 		<Link
 			to={to ? to : `/app-store/${app.id}`}
-			className={cn('group flex w-full items-center gap-2.5 rounded-20 p-2.5 duration-300 hover:bg-white/4', linkClass)}
+			className='group flex w-full items-center gap-2.5 rounded-20 p-2.5 duration-300 hover:bg-white/4'
 			unstable_viewTransition
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 		>

@@ -1,6 +1,5 @@
 import {useRef} from 'react'
 import {Link} from 'react-router-dom'
-import {useCss} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
@@ -59,20 +58,6 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 	const iconRef = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(iconRef)
 
-	const linkClass = useCss({
-		'&:hover': {
-			img: {
-				viewTransitionName: 'app-icon-' + app.id,
-			},
-			h3: {
-				viewTransitionName: 'app-name-' + app.id,
-			},
-			p: {
-				viewTransitionName: 'app-tagline-' + app.id,
-			},
-		},
-	})
-
 	return (
 		<div
 			className={cn(
@@ -83,11 +68,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 		>
 			<Link
 				to={`/app-store/${app.id}`}
-				className={cn(
-					'flex h-[268px] w-40 flex-col justify-stretch rounded-24 bg-white/10 px-3 py-4',
-					linkClass,
-					className,
-				)}
+				className={cn('flex h-[268px] w-40 flex-col justify-stretch rounded-24 bg-white/10 px-3 py-4', className)}
 				style={{
 					backgroundImage: colors
 						? `linear-gradient(to bottom, ${colors.join(', ')})`
