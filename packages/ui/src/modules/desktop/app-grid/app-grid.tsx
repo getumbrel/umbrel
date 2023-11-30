@@ -82,7 +82,7 @@ export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?
 		<div className='flex h-full w-full items-stretch justify-center'>
 			<div
 				ref={innerRef}
-				className='flex w-full max-w-[var(--apps-max-w)] flex-wrap content-start justify-center gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'
+				className='flex w-full max-w-[var(--apps-max-w)] flex-wrap content-start gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'
 			>
 				{children}
 			</div>
