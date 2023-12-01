@@ -14,6 +14,7 @@ import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {Settings} from './routes/settings'
+import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
 import {Button} from './shadcn-components/ui/button'
 
@@ -284,6 +285,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/tailwind',
 				Component: TailwindStory,
+			},
+			{
+				path: 'stories/misc',
+				Component: MiscStory,
 			},
 		],
 	},

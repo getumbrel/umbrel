@@ -48,6 +48,10 @@ const storyLinks = [
 		name: 'Tailwind',
 		path: '/stories/tailwind',
 	},
+	{
+		name: 'Misc',
+		path: '/stories/misc',
+	},
 ]
 
 export function StoriesLayout() {
