@@ -49,7 +49,7 @@ const WallpaperItem = forwardRef(
 WallpaperItem.displayName = 'WallpaperItem'
 
 // TODO: delay mounting for performance
-export function WallpaperPicker() {
+export function WallpaperPicker({delayed, maxW}: {delayed?: boolean; maxW?: number}) {
 	const {wallpaper, setWallpaperId} = useWallpaper()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const scrollerRef = useRef<HTMLDivElement>(null)
@@ -58,7 +58,7 @@ export function WallpaperPicker() {
 
 	const [show] = useTimeout(600)
 
-	const canShow = show()
+	const canShow = delayed ? show() : true
 
 	useEffect(() => {
 		if (!canShow) return
@@ -81,8 +81,14 @@ export function WallpaperPicker() {
 		// h-7 so we don't affect height of parent, but make gap work when wrapping
 		<div ref={containerRef} className='flex-grow-1 flex h-7 max-w-full items-center animate-in fade-in'>
 			<div
-				className='umbrel-hide-scrollbar umbrel-wallpaper-fade-scroller w-full items-center overflow-x-auto bg-red-500/0 py-3 md:max-w-[350px]'
+				className={cn(
+					'umbrel-hide-scrollbar umbrel-wallpaper-fade-scroller w-full items-center overflow-x-auto bg-red-500/0 py-3',
+					!maxW && 'md:max-w-[350px]',
+				)}
 				ref={scrollerRef}
+				style={{
+					maxWidth: maxW,
+				}}
 			>
 				{/* NOTE: doing `items-center` here would cause the spacer items collapse because of a flex bug */}
 				<div ref={itemsRef} className='flex' style={{gap: GAP}}>

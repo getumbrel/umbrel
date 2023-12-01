@@ -1,9 +1,8 @@
 import {useTranslation} from 'react-i18next'
-import {Link, useLocation} from 'react-router-dom'
+import {useLocation} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {cmdOrCtrl, platform} from '@/utils/misc'
@@ -90,7 +89,7 @@ function GradientMaskSide({side}: {side: 'left' | 'right'}) {
 		<div
 			// Ideally, we'd match the `block` visibility to the arrow buttons, but that would require a lot of work.
 			// Ideally we'd use a breakpoint based on the CSS var --app-max-w, but that's not possible
-			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 md:block'
+			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 duration-700 animate-in fade-in zoom-in-110 md:block'
 			style={{
 				// For debugging:
 				// backgroundColor: "red",
@@ -106,21 +105,5 @@ function GradientMaskSide({side}: {side: 'left' | 'right'}) {
 				width: 'var(--apps-padding-x)',
 			}}
 		/>
-	)
-}
-
-export function DesktopContextMenu({children}: {children: React.ReactNode}) {
-	return (
-		<ContextMenu modal={false}>
-			<ContextMenuTrigger>{children}</ContextMenuTrigger>
-			<ContextMenuContent>
-				<ContextMenuItem asChild>
-					<Link to='/edit-widgets'>Edit widgets</Link>
-				</ContextMenuItem>
-				<ContextMenuItem asChild>
-					<Link to='/settings'>Change wallpaper</Link>
-				</ContextMenuItem>
-			</ContextMenuContent>
-		</ContextMenu>
 	)
 }

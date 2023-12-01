@@ -153,7 +153,7 @@ export function SettingsContent() {
 						{/* -mx-2 so that when last item is active, it right aligns with other list row buttons, and first item aligns on mobile when picker wrapped down */}
 						{/* w-full to prevent overflow issues */}
 						<div className='-mx-2 max-w-full'>
-							<WallpaperPicker />
+							<WallpaperPicker delayed />
 						</div>
 					</ListRow>
 					<ListRow title='Two-factor authentication' description='Add a layer of security to login' isLabel>
