@@ -28,7 +28,7 @@ export function CopyableField({
 		<div
 			className={cn(
 				// 'items-stretch' to make sure button is the same height as the field
-				'flex max-w-full items-stretch overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 font-mono text-14 leading-none text-white/40 outline-none focus-visible:border-white/40',
+				'flex max-w-full items-stretch overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40',
 				className,
 			)}
 		>
@@ -37,12 +37,13 @@ export function CopyableField({
 				ref={ref}
 				onClick={() => setTimeout(() => ref.current?.select())}
 				className={cn(
-					'block flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 outline-none',
-					narrow && 'py-1',
+					'block flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 font-mono outline-none',
+					narrow && 'py-0.5',
 				)}
 				type={isPassword && !focused ? 'password' : 'text'}
 				value={value}
 			/>
+
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
@@ -57,17 +58,9 @@ export function CopyableField({
 						<MdContentCopy className='shrink-0' />
 					</button>
 				</TooltipTrigger>
+				{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
 				<TooltipContent>Copied</TooltipContent>
 			</Tooltip>
 		</div>
 	)
-}
-
-function selectText(el: HTMLElement | null) {
-	if (!el) return
-	const range = document.createRange()
-	range.selectNodeContents(el)
-	const sel = window.getSelection()
-	sel?.removeAllRanges()
-	sel?.addRange(range)
 }
