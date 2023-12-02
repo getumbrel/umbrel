@@ -8,25 +8,39 @@ import {ReleaseNotesSection} from '@/modules/app-store/app-page/release-notes-se
 import {AppGallerySection} from '@/modules/app-store/gallery-section'
 import {slideInFromBottomDelayedClass} from '@/modules/app-store/shared'
 import {cn} from '@/shadcn-lib/utils'
-import {RegistryApp} from '@/trpc/trpc'
+import {InstalledApp, RegistryApp} from '@/trpc/trpc'
 
-export function AppContent({app, recommendedApps = []}: {app: RegistryApp; recommendedApps?: RegistryApp[]}) {
+import {SettingsSection} from './settings-section'
+
+export function AppContent({
+	app,
+	installedApp,
+	recommendedApps = [],
+}: {
+	app: RegistryApp
+	installedApp?: InstalledApp
+	recommendedApps?: RegistryApp[]
+}) {
 	return (
 		<>
 			<AppGallerySection galleryId={'gallery-' + app.id} gallery={app.gallery} />
 			{/* NOTE: consider conditionally rendering */}
+			{/* Desktop */}
 			<div className={cn(slideInFromBottomDelayedClass, 'hidden flex-row gap-5 lg:flex')}>
 				<div className='flex flex-1 flex-col gap-2.5'>
 					<AboutSection app={app} />
 					<ReleaseNotesSection app={app} />
 				</div>
 				<div className='flex w-80 flex-col gap-2.5'>
+					{installedApp && <SettingsSection installedApp={installedApp} />}
 					<InfoSection app={app} />
 					<DependenciesSection app={app} />
 					{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
 				</div>
 			</div>
+			{/* Mobile */}
 			<div className='space-y-2.5 lg:hidden'>
+				{installedApp && <SettingsSection installedApp={installedApp} />}
 				<AboutSection app={app} />
 				<InfoSection app={app} />
 				<DependenciesSection app={app} />

@@ -7,6 +7,7 @@ import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommendations'
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
 import {TopHeaderWithDummyInstall} from '@/modules/app-store/app-page/top-header'
+import {defaultInstalledApp} from '@/trpc/trpc'
 
 export default function AppPage() {
 	const {appId} = useParams()
@@ -22,7 +23,7 @@ export default function AppPage() {
 	return (
 		<div className={appPageWrapperClass}>
 			<TopHeaderWithDummyInstall app={app} />
-			<AppContent app={app} recommendedApps={recommendedApps} />
+			<AppContent app={app} installedApp={defaultInstalledApp} recommendedApps={recommendedApps} />
 		</div>
 	)
 }

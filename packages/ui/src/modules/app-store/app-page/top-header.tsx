@@ -6,15 +6,12 @@ import {useTimeout} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
-import {CopyableField} from '@/components/ui/copyable-field'
 import {SHEET_HEADER_ID} from '@/constants'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {SheetClose} from '@/shadcn-components/ui/sheet'
-import {Switch} from '@/shadcn-components/ui/switch'
 import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
-import {tw} from '@/utils/tw'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
 	// Make sure header portal is mounted before showing it (render on the next tick)
@@ -77,38 +74,11 @@ function BackButton() {
 export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 	const {progress, state, install} = useDemoInstallProgress()
 
-	// useEffect(() => {
-	// 	if (state === 'installing') {
-	// 		navigate({
-	// 			search: '?dialog=default-credentials',
-	// 		})
-	// 	}
-	// }, [state, navigate])
-
-	const defaultUsername = 'umbrel'
-	const defaultPassword = 'beef38f0a3f76510d8f24e259c5c3da8c4e245bd468afdd0eabfe86a4f7813e'
-
 	return (
 		<TopHeader
 			app={app}
 			childrenRight={
 				<div className='flex items-center gap-5'>
-					{state === 'installed' && (
-						<>
-							<div>
-								<label className={textClass}>Default username</label>
-								<CopyableField className='w-[120px]' narrow value={defaultUsername} />
-							</div>
-							<div>
-								<label className={textClass}>Default password</label>
-								<CopyableField narrow className='w-[120px]' value={defaultPassword} isPassword />
-							</div>
-							<label className='flex items-center gap-1.5 whitespace-nowrap text-15 font-medium'>
-								<Switch />
-								Auto-update
-							</label>
-						</>
-					)}
 					<InstallButton
 						installSize='XGB'
 						progress={progress}
@@ -124,5 +94,3 @@ export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
 		/>
 	)
 }
-
-const textClass = tw`text-12 font-normal leading-tight text-white/40 pr-6 whitespace-nowrap`
