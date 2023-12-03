@@ -1,10 +1,13 @@
 import {Globe, User} from 'lucide-react'
 import {useId, useState} from 'react'
+import {RiAlarmWarningFill} from 'react-icons/ri'
+import {TbAlertOctagonFilled, TbAlertTriangleFilled, TbCircleCheckFilled, TbInfoCircleFilled} from 'react-icons/tb'
 import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {InstallButton} from '@/components/install-button'
+import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
@@ -75,6 +78,8 @@ export default function Stories() {
 			<DropdownExample />
 			<H2>Context Menu</H2>
 			<ContextMenuExample />
+			<H2>Alert</H2>
+			<AlertExample />
 			<H2>Toast</H2>
 			<ToastExample />
 			<H2>Scroll Area</H2>
@@ -300,6 +305,29 @@ function CheckboxExamples() {
 				</label>
 			</div>
 		</>
+	)
+}
+
+function AlertExample() {
+	return (
+		<div className='flex flex-col items-start gap-2'>
+			<Alert variant='default' icon={TbInfoCircleFilled}>
+				Informational alert that’s helpful & friendly
+			</Alert>
+			<Alert variant='warning' icon={TbAlertTriangleFilled}>
+				Warning message but we’ll let it slide
+			</Alert>
+			<Alert variant='destructive' icon={TbAlertOctagonFilled}>
+				Error message usually for red flags
+			</Alert>
+			<Alert variant='success' icon={TbCircleCheckFilled}>
+				Success message for all smiles
+			</Alert>
+			<ErrorAlert
+				icon={RiAlarmWarningFill}
+				description='If you lose your password, you won’t be able to log in to your Umbrel for eternity.'
+			/>
+		</div>
 	)
 }
 
