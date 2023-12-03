@@ -44,11 +44,11 @@ function StorageStats() {
 				progress={0.875}
 				rightChildren={<StorageIndicator />}
 			/>
-			<Card className={appListClass}>
+			<div className={appListClass}>
 				{installedApps.slice(0, 9).map((app) => (
 					<AppListRow icon={app.icon} title={app.name} key={app.id} value='632.8 GB' />
 				))}
-			</Card>
+			</div>
 		</>
 	)
 }
@@ -61,16 +61,16 @@ function MemoryStats() {
 	return (
 		<>
 			<ProgressCard value='5.4 GB' valueSub='/ 16 GB' progressLabel='11.4 GB left' progress={0.4} />
-			<Card className={appListClass}>
+			<div className={appListClass}>
 				{installedApps.slice(0, 5).map((app) => (
 					<AppListRow icon={app.icon} title={app.name} key={app.id} value='632.8 GB' />
 				))}
-			</Card>
+			</div>
 		</>
 	)
 }
 
-const appListClass = tw`divide-y divide-white/6 p-0`
+const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
 
 function AppListRow({icon, title, value}: {icon: string; title: string; value: string}) {
 	return (
