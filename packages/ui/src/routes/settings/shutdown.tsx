@@ -1,7 +1,7 @@
 import {RiShutDownLine} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
-import {CoverMessage} from '@/components/ui/cover-message'
+import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
@@ -22,14 +22,18 @@ export default function ShutdownDialog() {
 
 	const shutdownMut = trpcReact.system.shutdown.useMutation()
 
-	if (shutdownMut.isLoading) {
+	if (shutdownMut.isLoading || shutdownMut.isError) {
 		return (
 			<CoverMessage>
 				<Loading>Shutting down</Loading>
+				<CoverMessageParagraph>
+					Please do not refresh this page or turn off your Umbrel while it is shutting down.
+				</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
 
+	// TODO: consider just doing throw here
 	if (shutdownMut.isError) {
 		return <CoverMessage>Failed to shut down.</CoverMessage>
 	}
