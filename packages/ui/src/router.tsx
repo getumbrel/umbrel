@@ -1,9 +1,9 @@
 import React, {Suspense} from 'react'
-import {useErrorBoundary} from 'react-error-boundary'
 import {TbArrowRight} from 'react-icons/tb'
-import {createBrowserRouter, useRouteError} from 'react-router-dom'
+import {createBrowserRouter} from 'react-router-dom'
 
 import {CoverMessage} from './components/ui/cover-message'
+import {ErrorBoundary} from './components/ui/error-boundary'
 import {LinkButton} from './components/ui/link-button'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {InstalledAppsProvider} from './hooks/use-installed-apps'
@@ -18,7 +18,6 @@ import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-use
 import {Settings} from './routes/settings'
 import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
-import {Button} from './shadcn-components/ui/button'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
 const CategoryPage = React.lazy(() => import('./routes/app-store/category-page'))
@@ -306,20 +305,3 @@ export const router = createBrowserRouter([
 		),
 	},
 ])
-
-function ErrorBoundary() {
-	const error = useRouteError()
-	const {resetBoundary} = useErrorBoundary()
-	// console.error(error)
-	return (
-		<CoverMessage>
-			<div className=''>
-				<h1 className='font-semibold text-destructive2-lightest'>⚠ Dang!</h1>
-				<p className='max-w-sm text-13'>{error instanceof Error ? error.message : 'Unexpected error'}</p>
-				<Button variant='secondary' size='sm' className='mt-2' onClick={resetBoundary}>
-					Try Again
-				</Button>
-			</div>
-		</CoverMessage>
-	)
-}
