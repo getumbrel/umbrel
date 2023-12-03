@@ -1,8 +1,10 @@
 import React, {Suspense} from 'react'
 import {useErrorBoundary} from 'react-error-boundary'
+import {TbArrowRight} from 'react-icons/tb'
 import {createBrowserRouter, useRouteError} from 'react-router-dom'
 
 import {CoverMessage} from './components/ui/cover-message'
+import {LinkButton} from './components/ui/link-button'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {InstalledAppsProvider} from './hooks/use-installed-apps'
 import {AppStoreLayout} from './layouts/app-store'
@@ -294,7 +296,14 @@ export const router = createBrowserRouter([
 	},
 	{
 		path: '*',
-		element: <CoverMessage>404 | Not Found</CoverMessage>,
+		element: (
+			<CoverMessage>
+				404 | Not Found{' '}
+				<LinkButton to='/' size='sm' variant='default' className='mt-1'>
+					Go Home <TbArrowRight className='inline-block' />
+				</LinkButton>
+			</CoverMessage>
+		),
 	},
 ])
 
