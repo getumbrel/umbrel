@@ -174,7 +174,7 @@ if [[ ! -z "${UMBREL_OS:-}" ]]; then
     if [[ $no_of_block_devices -lt 1 ]]; then
         echo "You have either no external drive connected to your Raspberry Pi or the drive is not being detected."
         echo "Please shutdown your Raspberry Pi ('sudo shutdown'), then plug the SSD into the other USB3 port."
-        echo "After you've finished that, boot your Raspberry Pi back up. If it still still doesn't work,"
+        echo "After you've finished that, boot your Raspberry Pi back up. If it still doesn't work,"
         echo "you can contact us on Telegram (t.me/getumbrel) and share the output of this script."
         exit 0
     fi
