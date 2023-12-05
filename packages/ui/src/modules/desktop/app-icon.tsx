@@ -1,3 +1,4 @@
+import {useState} from 'react'
 import {Link, useLocation} from 'react-router-dom'
 
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -6,9 +7,12 @@ import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
+const FALLBACK_SRC = '/icons/app-icon-placeholder.svg'
+
 export function AppIcon({appId, label, src, port}: {appId: string; label: string; src: string; port: number}) {
 	const {pathname} = useLocation()
 	const {addLinkSearchParams} = useQueryParams()
+	const [url, setUrl] = useState(src)
 
 	// Don't show context menu one desktop by default because it causes dialog enter animation to usually stutter if a page load opens a dialog
 	const allowContextMenu = pathname === '/'
@@ -21,12 +25,10 @@ export function AppIcon({appId, label, src, port}: {appId: string; label: string
 			target='_blank'
 		>
 			<img
-				src={src}
+				src={url || FALLBACK_SRC}
 				alt={label}
+				onError={() => setUrl(FALLBACK_SRC)}
 				className='aspect-square w-12 rounded-10 bg-white/10 bg-cover bg-center ring-white/25 transition-all group-hover:scale-110 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15'
-				style={{
-					backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
-				}}
 				draggable={false}
 			/>
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
