@@ -304,6 +304,7 @@ function CheckboxExamples() {
 					Accept terms and conditions
 				</label>
 			</div>
+			<Checkbox checked='indeterminate' />
 		</>
 	)
 }
