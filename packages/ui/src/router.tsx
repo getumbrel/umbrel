@@ -15,6 +15,7 @@ import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
+import {ReplaceSdCard} from './routes/replace-sd-card'
 import {Settings} from './routes/settings'
 import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
@@ -293,6 +294,16 @@ export const router = createBrowserRouter([
 			},
 		],
 	},
+
+	{
+		path: 'replace-sd-card',
+		element: (
+			<CoverMessage>
+				<ReplaceSdCard />
+			</CoverMessage>
+		),
+	},
+
 	{
 		path: '*',
 		element: (
