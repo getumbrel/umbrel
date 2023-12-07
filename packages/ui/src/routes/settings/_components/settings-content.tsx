@@ -25,6 +25,7 @@ import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -35,7 +36,6 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
-import {fixmeHandler} from '@/utils/misc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {ListRow} from './list-row'
@@ -54,6 +54,7 @@ export function SettingsContent() {
 	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+	const tor = useTorEnabled()
 
 	if (userQ.isLoading || diskQ.isLoading || memoryQ.isLoading) {
 		return null
@@ -167,7 +168,16 @@ export function SettingsContent() {
 						/>
 					</ListRow>
 					<ListRow title='Remote Tor access' description='Access Umbrel from anywhere using a Tor browser' isLabel>
-						<Switch onCheckedChange={fixmeHandler} />
+						<Switch
+							checked={tor.enabled}
+							onCheckedChange={(checked) =>
+								checked
+									? navigate({
+											search: addLinkSearchParams({dialog: 'confirm-enable-tor'}),
+									  })
+									: tor.setEnabled(false)
+							}
+						/>
 					</ListRow>
 					{isUmbrelHome && (
 						<ListRow title='Migration Assistant' description='Move your data from Raspberry Pi to Umbrel Home' isLabel>

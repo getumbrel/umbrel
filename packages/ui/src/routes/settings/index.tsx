@@ -6,6 +6,8 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {useBreakpoint} from '@/utils/tw'
 
+import ConfirmEnableTorDialog from './confirm-enable-tor'
+
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
 	import('./_components/settings-content').then((m) => ({default: m.SettingsContent})),
@@ -33,6 +35,7 @@ const routeToDialog: Record<string, React.ComponentType> = {
 	'change-password': ChangePasswordDialog,
 	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
+	'confirm-enable-tor': ConfirmEnableTorDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,

@@ -93,4 +93,8 @@ export default class User {
 	async disable2fa() {
 		return this.#store.delete('user.totpUri')
 	}
+
+	async setTorEnabled(torEnabled: boolean) {
+		return this.#store.set('user.torEnabled', torEnabled)
+	}
 }

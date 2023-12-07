@@ -1,10 +1,18 @@
 import {Globe, User} from 'lucide-react'
 import {useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
-import {TbAlertOctagonFilled, TbAlertTriangleFilled, TbCircleCheckFilled, TbInfoCircleFilled} from 'react-icons/tb'
+import {
+	TbAlertOctagonFilled,
+	TbAlertTriangleFilled,
+	TbCircle,
+	TbCircleCheckFilled,
+	TbInfoCircleFilled,
+} from 'react-icons/tb'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
+import {TorIcon} from '@/assets/tor-icon'
+import {TorIcon2} from '@/assets/tor-icon2'
 import {InstallButton} from '@/components/install-button'
 import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
@@ -64,6 +72,16 @@ export default function Stories() {
 			<H1>Stories</H1>
 			<H2>Buttons</H2>
 			<Buttons />
+			<H2>Icons</H2>
+			<p>
+				Make sure these have the same size and same stroke width. Settings icons is from the Tabler Icons. The Tor icon
+				is custom.
+			</p>
+			<div className='flex items-center gap-2'>
+				<TbCircle className='h-10 w-10 bg-white/10 text-brand [&>*]:stroke-1' />
+				<TorIcon2 className='h-10 w-10 bg-white/10 text-brand [&>*]:stroke-1' />
+				<TorIcon className='h-10 w-10 bg-white/10 text-brand [&>*]:stroke-1' />
+			</div>
 			<H2>Badge</H2>
 			<Badges />
 			<H2>Checkbox</H2>

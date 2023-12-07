@@ -4,7 +4,6 @@ import {
 	Tb2Fa,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
-	TbCircleMinus,
 	TbLanguage,
 	TbPhoto,
 	TbShoppingBag,
@@ -13,6 +12,7 @@ import {
 } from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
+import {TorIcon2} from '@/assets/tor-icon2'
 import {Card} from '@/components/ui/card'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {LinkButton} from '@/components/ui/link-button'
@@ -126,11 +126,7 @@ export function SettingsContentMobile() {
 				<ListRowMobile icon={TbUser} title='Account' description='Your display name & Umbrel password' />
 				<ListRowMobile icon={TbPhoto} title='Wallpaper' description='Choose your Umbrel wallpaper' />
 				<ListRowMobile icon={Tb2Fa} title='Two-factor authentication' description='Add a layer of security to login' />
-				<ListRowMobile
-					icon={TbCircleMinus}
-					title='Remote Tor access'
-					description='Access Umbrel from anywhere using Tor'
-				/>
+				<ListRowMobile icon={TorIcon2} title='Remote Tor access' description='Access Umbrel from anywhere using Tor' />
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
 					title='Migration Assistant'

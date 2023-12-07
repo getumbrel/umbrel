@@ -145,6 +145,7 @@ export default router({
 		return {
 			name: user.name,
 			wallpaper: user.wallpaper,
+			torEnabled: user.torEnabled,
 			lastOpenedApps: user.lastOpenedApps,
 		}
 	}),
@@ -156,12 +157,14 @@ export default router({
 				.object({
 					name: z.string().optional(),
 					wallpaper: z.string().optional(),
+					torEnabled: z.boolean().optional(),
 				})
 				.strict(),
 		)
 		.mutation(async ({ctx, input}) => {
 			if (input.name) await ctx.user.setName(input.name)
 			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
+			if (input.torEnabled !== undefined) await ctx.user.setTorEnabled(input.torEnabled)
 
 			return true
 		}),
