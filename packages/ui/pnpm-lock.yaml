@@ -138,8 +138,8 @@ dependencies:
     specifier: ^1.28.0
     version: 1.28.0
   sonner:
-    specifier: ^1.1.0
-    version: 1.1.0(react-dom@18.2.0)(react@18.2.0)
+    specifier: github:markmiro/sonner#fix-unstyled-umbrel
+    version: github.com/markmiro/sonner/98552e2532aff67fdedd66a85315a02d6aa7c56c(react-dom@18.2.0)(react@18.2.0)
   tailwind-merge:
     specifier: 1.14.0
     version: 1.14.0
@@ -5415,16 +5415,6 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /sonner@1.1.0(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-pqc5yd1ekS6dBXLKljRogqatiGJSxCaX8mspnqKjLg5Rzw6eiAUgsG1SS8RuQzOjQq8/MlgFao6sIw9doqAkNg==}
-    peerDependencies:
-      react: ^18.0.0
-      react-dom: ^18.0.0
-    dependencies:
-      react: 18.2.0
-      react-dom: 18.2.0(react@18.2.0)
-    dev: false
-
   /source-map-js@1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}
     engines: {node: '>=0.10.0'}
@@ -6141,3 +6131,16 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  github.com/markmiro/sonner/98552e2532aff67fdedd66a85315a02d6aa7c56c(react-dom@18.2.0)(react@18.2.0):
+    resolution: {tarball: https://codeload.github.com/markmiro/sonner/tar.gz/98552e2532aff67fdedd66a85315a02d6aa7c56c}
+    id: github.com/markmiro/sonner/98552e2532aff67fdedd66a85315a02d6aa7c56c
+    name: sonner
+    version: 1.2.3
+    peerDependencies:
+      react: ^18.0.0
+      react-dom: ^18.0.0
+    dependencies:
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+    dev: false

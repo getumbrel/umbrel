@@ -2,7 +2,6 @@ import {Globe, User} from 'lucide-react'
 import {useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {TbAlertOctagonFilled, TbAlertTriangleFilled, TbCircleCheckFilled, TbInfoCircleFilled} from 'react-icons/tb'
-import {toast} from 'sonner'
 import {objectKeys} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -11,6 +10,7 @@ import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
+import {toast} from '@/components/ui/toast'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
@@ -52,7 +52,9 @@ import {
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {fixmeHandler} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
+import {tw} from '@/utils/tw'
 
 export default function Stories() {
 	useUmbrelTitle('Stories Home')
@@ -337,9 +339,27 @@ function ToastExample() {
 		<div>
 			{/* <Toaster /> should be in main or some layout file */}
 			<Button onClick={() => toast('My first toast')}>Give me a toast</Button>
-			<Button onClick={() => toast.success('My first toast')}>Give me a success toast</Button>
-			<Button onClick={() => toast.warning('My first toast')}>Give me a warning toast</Button>
-			<Button onClick={() => toast.error('My first toast')}>Give me a error toast</Button>
+			<Button onClick={() => toast.success('My first toast')}>Success</Button>
+			<Button onClick={() => toast.info('My first toast')}>Give me an info toast</Button>
+			<Button onClick={() => toast.warning('My first toast')}>Warning</Button>
+			<Button onClick={() => toast.error('My first toast')}>Error</Button>
+			<Button onClick={() => toast.custom(() => <div className='bg-red-400'>Hello</div>)}>Custom</Button>
+			<Button
+				onClick={() =>
+					toast('Event has been created', {
+						description: 'Monday, January 3rd at 6:00pm',
+						action: {
+							label: 'Action',
+							onClick: fixmeHandler,
+						},
+						classNames: {
+							actionButton: tw`rounded-full bg-red-500`,
+						},
+					})
+				}
+			>
+				Action
+			</Button>
 		</div>
 	)
 }
