@@ -24,22 +24,13 @@ const AppsContext = createContext<AppsContextT | null>(null)
 // TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
-	const appsWithoutImages = appsQ.data?.find((repo) => repo?.meta.id === UMBREL_APP_STORE_ID)?.apps
+	const apps = appsQ.data?.find((repo) => repo?.meta.id === UMBREL_APP_STORE_ID)?.apps
 
 	if (appsQ.isLoading) return null
 
-	if (appsQ.isError || !appsQ.data || !appsWithoutImages) {
+	if (appsQ.isError || !appsQ.data || !apps) {
 		throw new Error('Failed to fetch apps.')
 	}
-
-	const apps: RegistryApp[] | undefined = appsWithoutImages?.map((app) => {
-		const icon = `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`
-		// FIXME: This is a hack to get the gallery images, but not all will have 5 images
-		const gallery: RegistryApp['gallery'] = [1, 2, 3, 4, 5].map(
-			(n) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${n}.jpg`,
-		)
-		return {...app, icon, gallery}
-	})
 
 	const appsKeyed = keyBy(apps, 'id')
 	const appsGroupedByCategory = groupBy(apps, (a) => a.category)

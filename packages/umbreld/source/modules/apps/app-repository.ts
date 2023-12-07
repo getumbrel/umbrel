@@ -158,6 +158,15 @@ export default class AppRepository {
 		apps = apps
 			// Filter out invalid manifests
 			.filter((app) => app !== undefined)
+			// Add icons
+			.map((app) => ({
+				...app,
+				gallery:
+					meta.id === 'umbrel-app-store'
+						? app.gallery.map((file) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${file}`)
+						: app.gallery,
+				icon: app.icon ? app.icon : `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
+			}))
 			// Sort apps alphabetically
 			.sort((a: any, b: any) => a.id.localeCompare(b.id))
 
