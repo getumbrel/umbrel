@@ -14,6 +14,7 @@
 		"build": "vite build",
 		"lint": "eslint .",
 		"preview": "vite preview --port 4000",
+		"build-remote": "ssh root@mark-dev './pull.sh'",
 		"format": "prettier . --write",
 		"tsc": "tsc --noEmit",
 		"size": "vite-bundle-visualizer"
