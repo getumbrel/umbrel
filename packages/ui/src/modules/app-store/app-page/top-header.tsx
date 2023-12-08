@@ -1,6 +1,6 @@
 import {Portal} from '@radix-ui/react-portal'
 import {ReactNode} from 'react'
-import {TbArrowLeft} from 'react-icons/tb'
+import {TbArrowLeft, TbComet} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 import {useTimeout} from 'react-use'
 
@@ -8,6 +8,7 @@ import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
 import {SHEET_HEADER_ID} from '@/constants'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
+import {Badge} from '@/shadcn-components/ui/badge'
 import {SheetClose} from '@/shadcn-components/ui/sheet'
 import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
@@ -45,7 +46,12 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 
 				<div className='flex flex-row items-center gap-5'>
 					<AppIcon src={app.icon} className='w-[50px] rounded-12 md:w-[100px] md:rounded-20' />
-					<div className='flex flex-col gap-1 py-1 md:gap-2'>
+					<div className='flex flex-col items-start gap-1 py-1 md:gap-2'>
+						{app.optimizedForUmbrelHome && (
+							<Badge variant='outline' icon={TbComet}>
+								Optimized for Umbrel Home
+							</Badge>
+						)}
 						<h1 className='text-16 font-semibold leading-inter-trimmed md:text-24'>{app.name}</h1>
 						<p className='text-12 leading-tight opacity-50 md:text-16'>{app.tagline}</p>
 						<div className='flex-1' />
