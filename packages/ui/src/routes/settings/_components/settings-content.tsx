@@ -1,16 +1,13 @@
 import BigNumber from 'bignumber.js'
 import {Globe} from 'lucide-react'
-import {useEffect, useState} from 'react'
+import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 import {
-	RiArrowUpCircleFill,
-	RiCheckboxCircleFill,
 	RiEqualizerLine,
 	RiExpandRightFill,
 	RiKeyLine,
 	RiLogoutCircleRLine,
 	RiPulseLine,
-	RiRefreshLine,
 	RiRestartLine,
 	RiShutDownLine,
 	RiUserLine,
@@ -21,14 +18,12 @@ import {useLocalStorage} from 'react-use'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {Card} from '@/components/ui/card'
-import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
-import {Button} from '@/shadcn-components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -43,6 +38,7 @@ import {isDiskFull, isDiskLow, isMemoryLow} from '@/utils/system'
 import {ListRow} from './list-row'
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass, ContactSupportLink} from './shared'
+import {SoftwareUpdateListRow} from './software-update-list-row'
 import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
@@ -51,18 +47,21 @@ export function SettingsContent() {
 	const navigate = useNavigate()
 	const tor = useTorEnabled()
 
-	const [userQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
+	const [userQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.cpuTemperature(),
 		t.system.diskUsage(),
 		t.system.memoryUsage(),
 		t.migration.isUmbrelHome(),
 		t.user.is2faEnabled(),
+		t.system.osVersion(),
 	])
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
-	const isLoading = userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || is2faEnabledQ.isLoading
+	// TODO: also wanna check CPU temp
+	const isLoading =
+		userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
 
 	// Scroll to hash
 	useEffect(() => {
@@ -97,7 +96,7 @@ export function SettingsContent() {
 							<dt className='opacity-40'>Running on</dt>
 							<dd>DEBUG 4</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
-							<dd>0.0.0</dd>
+							<dd>{osVersionQ.data}</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -258,44 +257,6 @@ export function SettingsContent() {
 		</div>
 	)
 }
-function SoftwareUpdateListRow() {
-	const [checking, setChecking] = useState(false)
-
-	const currentVersion = '0.5.4'
-	const latestVersion = '1.2'
-
-	const atLatest = (
-		<span className='flex items-center gap-1'>
-			<Icon component={RiCheckboxCircleFill} className='text-success' />
-			You are on the latest version
-		</span>
-	)
-
-	const updateAvailable = (
-		<span className='flex items-center gap-1'>
-			<Icon component={RiArrowUpCircleFill} className='text-brand' />
-			New version {latestVersion} is available
-		</span>
-	)
-
-	return (
-		<>
-			<ListRow title={`umbrelOS ${currentVersion}`} description={atLatest} isLabel>
-				<Button onClick={() => setChecking((c) => !c)}>
-					<Icon component={RiRefreshLine} className={checking ? 'animate-spin' : undefined} />
-					Check for updates
-				</Button>
-			</ListRow>
-			<ListRow title={`umbrelOS ${currentVersion}`} description={updateAvailable} isLabel>
-				<Button variant='primary' onClick={() => setChecking((c) => !c)}>
-					<Icon component={RiRefreshLine} className={checking ? 'animate-spin' : undefined} />
-					Update now
-				</Button>
-			</ListRow>
-		</>
-	)
-}
-
 const languages = [
 	{name: 'English', code: 'en'},
 	{name: 'Français', code: 'fr'},
