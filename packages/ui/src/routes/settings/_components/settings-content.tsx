@@ -58,8 +58,7 @@ export function SettingsContent() {
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 	const tor = useTorEnabled()
 
-	const isLoading =
-		userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || cpuTempQ.isLoading || is2faEnabledQ.isLoading
+	const isLoading = userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || is2faEnabledQ.isLoading
 
 	// Scroll to hash
 	useEffect(() => {
