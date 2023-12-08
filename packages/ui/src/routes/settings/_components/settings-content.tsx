@@ -167,7 +167,7 @@ export function SettingsContent() {
 					<div className='flex-1' />
 					<ContactSupportLink className='max-lg:hidden' />
 				</div>
-				<Card className='umbrel-divide-y overflow-hidden py-2'>
+				<Card className='umbrel-divide-y overflow-hidden !py-2'>
 					<ListRow title='Account' description='Your display name & Umbrel password'>
 						<div className='flex flex-wrap gap-2'>
 							<IconLinkButton to={{search: addLinkSearchParams({dialog: 'change-name'})}} icon={RiUserLine}>
