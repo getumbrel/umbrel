@@ -10,8 +10,7 @@ import './utils/i18n'
 import {ErrorBoundary} from 'react-error-boundary'
 
 import {IframeChecker} from './components/iframe-checker'
-import {CoverMessage, CoverMessageParagraph} from './components/ui/cover-message'
-import {Loading} from './components/ui/loading'
+import {CoverMessage} from './components/ui/cover-message'
 import {Toaster} from './components/ui/toast'
 import {EnsureBackendAvailable} from './modules/auth/ensure-backend-available'
 import {WallpaperProvider} from './modules/desktop/wallpaper-context'
@@ -35,19 +34,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 				</TrpcProvider>
 				<Toaster />
 			</ErrorBoundary>
-			{/* </UpdatingCover> */}
 		</IframeChecker>
 	</React.StrictMode>,
 )
-
-// UI to show while updating umbrelOS
-function UpdatingCover({children}: {children: React.ReactNode}) {
-	return (
-		<CoverMessage>
-			<Loading>Updating umbrelOS</Loading>
-			<CoverMessageParagraph>
-				Please do not refresh this page or turn off your Umbrel while the update is in progress
-			</CoverMessageParagraph>
-		</CoverMessage>
-	)
-}

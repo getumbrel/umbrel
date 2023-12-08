@@ -1,7 +1,7 @@
 import {useState} from 'react'
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiRefreshLine} from 'react-icons/ri'
 
-import {CoverMessage} from '@/components/ui/cover-message'
+import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Icon} from '@/components/ui/icon'
 import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
@@ -54,6 +54,9 @@ export function SoftwareUpdateListRow() {
 		return (
 			<CoverMessage>
 				<Loading>Updating to umbrelOS {latestVersion}</Loading>
+				<CoverMessageParagraph>
+					Please do not refresh this page or turn off your Umbrel while the update is in progress
+				</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}

@@ -1,7 +1,7 @@
 import {setTimeout} from 'node:timers/promises'
-import {router, privateProcedure, publicProcedure} from '../trpc.js'
+import {privateProcedure, router} from '../trpc.js'
 
-import {getCpuTemperature, getDiskUsage, getMemoryUsage, shutdown, reboot} from '../../../system.js'
+import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
 
 export default router({
 	osVersion: privateProcedure.query(() => {
@@ -10,12 +10,12 @@ export default router({
 	}),
 	getLatestVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
-		await setTimeout(500)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	updateOs: privateProcedure.mutation(async () => {
 		// TODO: do this for real
-		await setTimeout(500)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	//
