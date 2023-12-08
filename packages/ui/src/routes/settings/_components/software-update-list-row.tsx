@@ -97,7 +97,7 @@ export function SoftwareUpdateListRow() {
 					)}
 				</span>
 			}
-			isLabel
+			isLabel={state !== 'at-latest'}
 		>
 			{state !== 'at-latest' && (
 				<Button onClick={checkLatest}>
