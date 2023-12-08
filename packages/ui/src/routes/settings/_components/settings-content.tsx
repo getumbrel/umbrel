@@ -49,14 +49,18 @@ import {WallpaperPicker} from './wallpaper-picker'
 export function SettingsContent() {
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
-	const userQ = trpcReact.user.get.useQuery()
-	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-	const memoryQ = trpcReact.system.memoryUsage.useQuery()
-	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
-	const isUmbrelHome = !!isUmbrelHomeQ.data
-	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 	const tor = useTorEnabled()
+
+	const [userQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
+		t.user.get(),
+		t.system.cpuTemperature(),
+		t.system.diskUsage(),
+		t.system.memoryUsage(),
+		t.migration.isUmbrelHome(),
+		t.user.is2faEnabled(),
+	])
+
+	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	const isLoading = userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || is2faEnabledQ.isLoading
 
@@ -93,7 +97,7 @@ export function SettingsContent() {
 							<dt className='opacity-40'>Running on</dt>
 							<dd>DEBUG 4</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
-							<dd>0.0.0 </dd>
+							<dd>0.0.0</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
