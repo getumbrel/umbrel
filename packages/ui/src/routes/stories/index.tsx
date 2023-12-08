@@ -7,6 +7,7 @@ import {
 	TbCircle,
 	TbCircleCheckFilled,
 	TbInfoCircleFilled,
+	TbSettings,
 } from 'react-icons/tb'
 import {objectKeys} from 'ts-extras'
 
@@ -303,12 +304,28 @@ function ProgressButton() {
 
 function Badges() {
 	return (
-		<div className='space-x-1'>
-			<Badge variant='default'>Default</Badge>
-			<Badge variant='primary'>Primary</Badge>
-			<Badge variant='outline'>Outline</Badge>
-			<Badge variant='destructive'>Destructive</Badge>
-		</div>
+		<>
+			<div className='space-x-1'>
+				<Badge variant='default'>Default</Badge>
+				<Badge variant='primary'>Primary</Badge>
+				<Badge variant='outline'>Outline</Badge>
+				<Badge variant='destructive'>Destructive</Badge>
+			</div>
+			<div className='space-x-1'>
+				<Badge icon={TbSettings} variant='default'>
+					Default
+				</Badge>
+				<Badge icon={TbSettings} variant='primary'>
+					Primary
+				</Badge>
+				<Badge icon={TbSettings} variant='outline'>
+					Outline
+				</Badge>
+				<Badge icon={TbSettings} variant='destructive'>
+					Destructive
+				</Badge>
+			</div>
+		</>
 	)
 }
 

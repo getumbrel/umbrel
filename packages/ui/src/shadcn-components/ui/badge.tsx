@@ -1,5 +1,7 @@
 import {cva, type VariantProps} from 'class-variance-authority'
+import {LucideIcon} from 'lucide-react'
 import * as React from 'react'
+import {IconType} from 'react-icons'
 
 import {cn} from '@/shadcn-lib/utils'
 
@@ -20,10 +22,18 @@ const badgeVariants = cva(
 	},
 )
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {
+	icon?: IconType | LucideIcon
+}
 
-function Badge({className, variant, ...props}: BadgeProps) {
-	return <div className={cn(badgeVariants({variant}), className)} {...props} />
+function Badge({className, variant, icon, children, ...props}: BadgeProps) {
+	const Icon = icon
+	return (
+		<div className={cn(badgeVariants({variant}), className)} {...props}>
+			{Icon && <Icon className='-ml-1 mr-0.5' />}
+			{children}
+		</div>
+	)
 }
 
 export {Badge, badgeVariants}
