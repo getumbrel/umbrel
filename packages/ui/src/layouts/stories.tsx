@@ -2,6 +2,7 @@ import {ReactNode, Suspense} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {tw} from '@/utils/tw'
 
 const storyLinks = [
 	{
@@ -68,6 +69,9 @@ export function StoriesLayout() {
 						{name}
 					</NavLink>
 				))}
+				<a href='/iframe-test.html' className={navLinkClass}>
+					iframe-test.html
+				</a>
 			</div>
 			<div className='flex flex-col gap-6'>
 				<Suspense>
@@ -79,10 +83,12 @@ export function StoriesLayout() {
 }
 
 const NavLink = ({to, children}: {to: string; children: ReactNode}) => (
-	<Link to={to} className='shrink-0 p-2 hover:bg-white/10'>
+	<Link to={to} className={navLinkClass}>
 		{children}
 	</Link>
 )
+
+const navLinkClass = tw`'shrink-0 p-2 hover:bg-white/10'`
 
 export const H1 = ({children}: {children: ReactNode}) => <h1 className='text-3xl font-bold'>{children}</h1>
 export const H2 = ({children}: {children: ReactNode}) => (
