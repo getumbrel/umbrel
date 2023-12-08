@@ -102,7 +102,7 @@ export function SoftwareUpdateListRow() {
 			{state !== 'at-latest' && (
 				<Button onClick={checkLatest}>
 					<Icon component={RiRefreshLine} className={state === 'checking' ? 'animate-spin' : undefined} />
-					Check for updates
+					{state === 'checking' ? 'Checking for updates...' : 'Check for updates'}
 				</Button>
 			)}
 		</ListRow>
