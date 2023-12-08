@@ -27,7 +27,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 					<BackButton />
 					<div className='flex flex-1 items-center gap-2.5'>
 						<AppIcon src={app.icon} className='w-[32px] rounded-8' />
-						<span className='text-19 font-semibold -tracking-4'>{app.name}</span>
+						<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
 					</div>
 					{childrenRight}
 					<SheetClose />
