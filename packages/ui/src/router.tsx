@@ -2,6 +2,7 @@ import React, {Suspense} from 'react'
 import {TbArrowRight} from 'react-icons/tb'
 import {createBrowserRouter} from 'react-router-dom'
 
+import {Notifications} from './components/notifications'
 import {CoverMessage} from './components/ui/cover-message'
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {LinkButton} from './components/ui/link-button'
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
 		path: '/',
 		element: (
 			<EnsureLoggedIn>
+				<Notifications />
 				<AvailableAppsProvider>
 					<InstalledAppsProvider>
 						<Desktop />

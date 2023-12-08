@@ -1,6 +1,7 @@
 import {motion, useMotionValue} from 'framer-motion'
 import {useLocation} from 'react-router-dom'
 
+import {useSettingsNotificationCount} from '@/components/notifications'
 import {systemAppsKeyed} from '@/hooks/use-installed-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/shadcn-lib/utils'
@@ -19,6 +20,7 @@ export function Dock() {
 	const {addLinkSearchParams} = useQueryParams()
 	const {pathname} = useLocation()
 	const mouseX = useMotionValue(Infinity)
+	const settingsNotificationCount = useSettingsNotificationCount()
 
 	return (
 		<>
@@ -51,7 +53,7 @@ export function Dock() {
 					to={systemAppsKeyed['settings'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['settings'].systemAppTo)}
 					bg={systemAppsKeyed['settings'].icon}
-					notificationCount={2}
+					notificationCount={settingsNotificationCount}
 					mouseX={mouseX}
 				/>
 				<DockDivider />

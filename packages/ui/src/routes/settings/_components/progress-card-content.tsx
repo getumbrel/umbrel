@@ -8,12 +8,14 @@ export function ProgressStatCardContent({
 	valueSub,
 	secondaryValue,
 	progress,
+	afterChildren,
 }: {
 	title?: string
 	value?: string
 	valueSub?: string
 	secondaryValue?: string
 	progress: number
+	afterChildren?: React.ReactNode
 }) {
 	return (
 		<div className='flex flex-col gap-4'>
@@ -25,6 +27,7 @@ export function ProgressStatCardContent({
 				<span className={cardSecondaryValueClass}>{secondaryValue}</span>
 			</div>
 			<Progress value={progress * 100} size='thicker' />
+			{afterChildren}
 		</div>
 	)
 }

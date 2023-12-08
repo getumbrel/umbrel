@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js'
 import {Globe} from 'lucide-react'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {
 	RiArrowUpCircleFill,
@@ -24,6 +24,7 @@ import {Card} from '@/components/ui/card'
 import {Icon} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
+import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -37,10 +38,11 @@ import {
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
+import {isDiskFull, isDiskLow, isMemoryLow} from '@/utils/system'
 
 import {ListRow} from './list-row'
 import {ProgressStatCardContent} from './progress-card-content'
-import {ContactSupportLink} from './shared'
+import {cardErrorClass, ContactSupportLink} from './shared'
 import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
@@ -56,10 +58,24 @@ export function SettingsContent() {
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 	const tor = useTorEnabled()
 
-	if (userQ.isLoading || diskQ.isLoading || memoryQ.isLoading) {
+	const isLoading =
+		userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || cpuTempQ.isLoading || is2faEnabledQ.isLoading
+
+	// Scroll to hash
+	useEffect(() => {
+		if (isLoading) return
+
+		if (location.hash) {
+			const el = document.querySelector(location.hash)
+			if (el) {
+				el.scrollIntoView({behavior: 'instant', block: 'center'})
+			}
+		}
+	}, [isLoading])
+
+	if (isLoading) {
 		return null
 	}
-
 	return (
 		<div className='animate-in fade-in'>
 			<div className='grid w-full gap-x-[30px] gap-y-[20px] lg:grid-cols-[280px_auto]'>
@@ -110,9 +126,16 @@ export function SettingsContent() {
 							progress={BigNumber(diskQ.data?.used ?? 0 * 100)
 								.dividedBy(diskQ.data?.size ?? 0)
 								.toNumber()}
+							afterChildren={
+								<>
+									{isDiskLow(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is low.</span>}
+									{isDiskFull(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is full.</span>}
+								</>
+							}
 						/>
 					</Card>
-					<Card>
+					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
+					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 						<ProgressStatCardContent
 							title='Memory'
 							value={maybePrettyBytes(memoryQ.data?.used)}
@@ -121,6 +144,9 @@ export function SettingsContent() {
 							progress={BigNumber(memoryQ.data?.used ?? 0 * 100)
 								.dividedBy(memoryQ.data?.size ?? 0)
 								.toNumber()}
+							afterChildren={
+								memoryQ.data && isMemoryLow(memoryQ.data) && <span className={cardErrorClass}>Memory is low.</span>
+							}
 						/>
 					</Card>
 					<Card>

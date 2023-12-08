@@ -6,8 +6,9 @@ import {UNKNOWN} from '@/constants'
 import {cardTitleClass} from '@/modules/app-store/app-page/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {keyBy} from '@/utils/misc'
+import {isCpuTooHot} from '@/utils/system'
 
-import {cardSecondaryValueClass, cardValueClass} from './shared'
+import {cardErrorClass, cardSecondaryValueClass, cardValueClass} from './shared'
 
 export function TempStatCardContent({
 	tempInCelcius,
@@ -50,10 +51,8 @@ export function TempStatCardContent({
 				</div>
 				<SegmentedControl variant='primary' tabs={tempDescriptions} value={unit} onValueChange={setUnit} />
 			</div>
-			{(tempInCelcius ?? 0) > 80 && (
-				<span className={cn(cardSecondaryValueClass, 'animate-pulse leading-tight text-destructive2-lightest')}>
-					Consider using a heatsink, fan or a cooling case.
-				</span>
+			{isCpuTooHot(tempInCelcius ?? 0) && (
+				<span className={cardErrorClass}>Consider using a heatsink, fan or a cooling case.</span>
 			)}
 		</div>
 	)
