@@ -1,4 +1,4 @@
-import {TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
+import {TbAlertCircle, TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
 import * as SonnerPrimitive from 'sonner'
 
 import {buttonVariants} from '@/shadcn-components/ui/button'
@@ -34,5 +34,5 @@ export const toast = Object.assign(toastFunction, {
 	warning: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
 		SonnerPrimitive.toast.warning(message, {...opts, icon: <TbAlertTriangle className='h-6 w-6' />}),
 	error: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
-		SonnerPrimitive.toast.error(message, {...opts, icon: <TbInfoCircle className='h-6 w-6' />}),
+		SonnerPrimitive.toast.error(message, {...opts, icon: <TbAlertCircle className='h-6 w-6' />}),
 })
