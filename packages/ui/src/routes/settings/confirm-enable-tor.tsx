@@ -29,7 +29,7 @@ export default function ConfirmEnableTorDialog() {
 		<AlertDialog defaultOpen onOpenChange={afterDelayedClose(() => navigate('/settings', {preventScrollReset: true}))}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={TorIcon2}>
-					<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+					<AlertDialogTitle>Enable Tor for remote access</AlertDialogTitle>
 					<AlertDialogDescription>This will restart your Umbrel and it may take a few minutes.</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
@@ -41,7 +41,7 @@ export default function ConfirmEnableTorDialog() {
 							setEnabled(true)
 						}}
 					>
-						Restart <span className='text-11 opacity-40'>↵</span>
+						Restart & enable Tor <span className='text-11 opacity-40'>↵</span>
 					</AlertDialogAction>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>
