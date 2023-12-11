@@ -19,6 +19,7 @@ import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
+import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {toast} from '@/components/ui/toast'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -83,6 +84,16 @@ export default function Stories() {
 				<TorIcon2 className='h-10 w-10 bg-white/10 text-brand [&>*]:stroke-1' />
 				<TorIcon className='h-10 w-10 bg-white/10 text-brand [&>*]:stroke-1' />
 			</div>
+			<H2>Lists</H2>
+			<NumberedList>
+				<NumberedListItem>
+					Lorem ipsum dolor sit amet consectetur adipisicing elit. Tempora tempore illum labore explicabo perspiciatis
+					debitis?
+				</NumberedListItem>
+				<NumberedListItem>
+					Porro illo placeat quos eveniet accusamus maxime. Ipsam temporibus itaque ea, iusto voluptas dicta nihil.
+				</NumberedListItem>
+			</NumberedList>
 			<H2>Badge</H2>
 			<Badges />
 			<H2>Checkbox</H2>

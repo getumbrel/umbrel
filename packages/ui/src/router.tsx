@@ -201,6 +201,10 @@ export const router = createBrowserRouter([
 					</EnsureLoggedIn>
 				),
 			},
+			{
+				path: 'replace-sd-card',
+				element: <ReplaceSdCard />,
+			},
 		],
 	},
 
@@ -295,15 +299,6 @@ export const router = createBrowserRouter([
 				Component: MiscStory,
 			},
 		],
-	},
-
-	{
-		path: 'replace-sd-card',
-		element: (
-			<CoverMessage>
-				<ReplaceSdCard />
-			</CoverMessage>
-		),
 	},
 
 	{
