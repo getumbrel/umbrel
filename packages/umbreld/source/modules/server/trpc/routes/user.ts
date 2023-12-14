@@ -3,8 +3,12 @@ import {z} from 'zod'
 
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
 import * as totp from '../../../utilities/totp.js'
+import apps from './user-apps.js'
 
 export default router({
+	// Apps subrouter
+	apps,
+
 	// Registers a new user
 	register: publicProcedure
 		.input(
@@ -165,20 +169,6 @@ export default router({
 			if (input.name) await ctx.user.setName(input.name)
 			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
 			if (input.torEnabled !== undefined) await ctx.user.setTorEnabled(input.torEnabled)
-
-			return true
-		}),
-
-	trackAppOpen: privateProcedure
-		.input(
-			z
-				.object({
-					appId: z.string(),
-				})
-				.strict(),
-		)
-		.mutation(async ({ctx, input}) => {
-			await ctx.user.trackAppOpen(input.appId)
 
 			return true
 		}),

@@ -4,6 +4,7 @@ import {privateProcedure, router} from '../trpc.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
 
 export default router({
+	// TODO: have consistent naming for these
 	osVersion: privateProcedure.query(() => {
 		// TODO: do this for real
 		return '1.0.0'

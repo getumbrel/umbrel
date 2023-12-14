@@ -3,8 +3,8 @@ import {useNavigate} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
-import {useInstalledApps} from '@/hooks/use-installed-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {useUserApps} from '@/hooks/use-user-apps'
 import {StatText} from '@/modules/desktop/widgets'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
@@ -31,9 +31,11 @@ export default function LiveUsageDialog() {
 }
 
 function StorageStats() {
-	const {installedApps} = useInstalledApps()
+	const {userApps} = useUserApps()
 
-	if (!installedApps) return null
+	if (!userApps) return null
+
+	const installedApps = userApps.filter((app) => app.state === 'installed')
 
 	return (
 		<>
@@ -54,9 +56,11 @@ function StorageStats() {
 }
 
 function MemoryStats() {
-	const {installedApps} = useInstalledApps()
+	const {userApps} = useUserApps()
 
-	if (!installedApps) return null
+	if (!userApps) return null
+
+	const installedApps = userApps.filter((app) => app.state === 'installed')
 
 	return (
 		<>

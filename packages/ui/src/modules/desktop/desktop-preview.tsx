@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {useLocalStorage} from 'react-use'
 
-import {useInstalledApps} from '@/hooks/use-installed-apps'
+import {useUserApps} from '@/hooks/use-user-apps'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 
 import {AppGrid} from './app-grid/app-grid'
@@ -73,11 +73,11 @@ export function DesktopPreview() {
 }
 
 function DesktopContent() {
-	const {allAppsKeyed, installedApps, isLoading} = useInstalledApps()
+	const {allAppsKeyed, userApps, isLoading} = useUserApps()
 	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
 
 	if (isLoading) return null
-	if (!installedApps) return null
+	if (!userApps) return null
 
 	return (
 		<>
@@ -97,7 +97,7 @@ function DesktopContent() {
 							{widgetConfigToWidget(widget)}
 						</WidgetWrapper>
 					))}
-					apps={installedApps.map((app) => (
+					apps={userApps.map((app) => (
 						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>

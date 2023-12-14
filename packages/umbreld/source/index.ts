@@ -10,6 +10,8 @@ import FileStore from './modules/utilities/file-store.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
+import {YamlApp} from './modules/apps/schema.js'
+import UserApps from './modules/user-apps.js'
 
 type StoreSchema = {
 	version: string
@@ -21,6 +23,7 @@ type StoreSchema = {
 		wallpaper?: string
 		torEnabled?: boolean
 		lastOpenedApps?: string[]
+		apps: YamlApp[]
 	}
 }
 
@@ -40,6 +43,7 @@ export default class Umbreld {
 	store: FileStore<StoreSchema>
 	server: Server
 	user: User
+	userApps: UserApps
 	appStore: AppStore
 
 	constructor({
@@ -55,6 +59,7 @@ export default class Umbreld {
 		this.store = new FileStore<StoreSchema>({filePath: `${dataDirectory}/umbrel.yaml`})
 		this.server = new Server({umbreld: this})
 		this.user = new User(this)
+		this.userApps = new UserApps(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 	}
 

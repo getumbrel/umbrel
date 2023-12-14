@@ -3,7 +3,7 @@ import {ReactNode, useState} from 'react'
 import {useTimeout} from 'react-use'
 import {uniq} from 'remeda'
 
-import {useInstalledApps} from '@/hooks/use-installed-apps'
+import {useUserApps} from '@/hooks/use-user-apps'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {BackdropBlurVariantContext, WidgetConfig, widgetConfigToWidget} from '@/modules/desktop/widgets'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
@@ -85,7 +85,7 @@ export function WidgetSelector({
 	onSelectedWidgetsChange?: (widgets: WidgetConfig[]) => void
 }) {
 	const [selectedTooMany, setSelectedTooMany] = useState(false)
-	const {allAppsKeyed, isLoading} = useInstalledApps()
+	const {allAppsKeyed, isLoading} = useUserApps()
 
 	// Delay until after `usePager` has injected CSS vars
 	const [isReady] = useTimeout(300)

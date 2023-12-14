@@ -1,7 +1,10 @@
 import {CSSProperties, useEffect, useRef} from 'react'
+import {arrayIncludes} from 'ts-extras'
 
+import {UNKNOWN} from '@/constants'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
+import {AppState} from '@/trpc/trpc'
 
 import {AnimatedNumber} from './ui/animated-number'
 
@@ -12,11 +15,11 @@ export function InstallButton({
 	onInstallClick,
 	onOpenClick,
 }: {
-	installSize: string
-	progress: number
-	state: 'initial' | 'installing' | 'installed'
-	onInstallClick: () => void
-	onOpenClick: () => void
+	installSize?: string
+	progress?: number
+	state: 'loading' | 'uninstalled' | AppState
+	onInstallClick?: () => void
+	onOpenClick?: () => void
 }) {
 	const ref = useRef<HTMLButtonElement>(null)
 
@@ -24,7 +27,7 @@ export function InstallButton({
 		if (!ref.current) return
 
 		switch (state) {
-			case 'initial': {
+			case 'uninstalled': {
 				const width = ref.current?.offsetWidth
 				ref.current.style.width = width + 'px'
 				break
@@ -33,10 +36,13 @@ export function InstallButton({
 				ref.current.style.width = '135px'
 				break
 			}
-			case 'installed': {
+			case 'ready': {
 				// Size of "Open" state
 				ref.current.style.width = '68px'
 				break
+			}
+			default: {
+				ref.current.style.width = ''
 			}
 		}
 	}, [state, progress])
@@ -56,21 +62,19 @@ export function InstallButton({
 	return (
 		<button
 			ref={ref}
-			className={cn(
-				buttonVariants({size: 'lg', variant: 'primary'}),
-				'select-none text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100',
-			)}
-			style={state === 'initial' ? undefined : style}
+			// Make invisible when loading, but reserve space
+			className={cn(installButtonClass, state === 'loading' && 'invisible')}
+			style={state === 'uninstalled' ? undefined : style}
 			onClick={() => {
-				if (state === 'initial') {
-					onInstallClick()
-				} else if (state === 'installed') {
-					onOpenClick()
+				if (state === 'uninstalled') {
+					onInstallClick?.()
+				} else if (state === 'ready') {
+					onOpenClick?.()
 				}
 			}}
-			disabled={state === 'installing'}
+			disabled={!arrayIncludes(['uninstalled', 'ready'], state)}
 		>
-			{state === 'initial' && (
+			{state === 'uninstalled' && (
 				<>
 					Install <span className='whitespace-nowrap -tracking-normal opacity-40'>{installSize}</span>
 				</>
@@ -80,11 +84,19 @@ export function InstallButton({
 					{/* 4ch to fit "100%", tabular-nums so each char is the same width */}
 					Installing{' '}
 					<span className='w-[4ch] text-right tabular-nums -tracking-[0.08em] opacity-40'>
-						<AnimatedNumber to={progress} />%
+						{progress === undefined ? UNKNOWN() : <AnimatedNumber to={progress} />}%
 					</span>
 				</>
 			)}
-			{state === 'installed' && 'Open'}
+			{state === 'ready' && 'Open'}
+			{state === 'offline' && 'Offline'}
+			{state === 'loading' && '–'}
+			{state === 'uninstalling' && 'Uninstalling...'}
 		</button>
 	)
 }
+
+export const installButtonClass = cn(
+	buttonVariants({size: 'lg', variant: 'primary'}),
+	'select-none text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100',
+)

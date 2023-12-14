@@ -1,3 +1,4 @@
+import {AnimatePresence} from 'framer-motion'
 import {ReactNode} from 'react'
 
 import {usePager} from './app-pagination-utils'
@@ -28,16 +29,20 @@ export function AppGrid({
 					{/* Default page for calculating size */}
 					<Page index={0}>
 						<PageInner innerRef={pageInnerRef}>
-							{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
-							{pages[0]?.apps}
+							<AnimatePresence>
+								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
+								{pages[0]?.apps}
+							</AnimatePresence>
 						</PageInner>
 					</Page>
 					{!onlyFirstPage &&
 						pages.slice(1).map(({apps, widgets}, i) => (
 							<Page key={i} index={i + 1}>
 								<PageInner>
-									{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
-									{apps}
+									<AnimatePresence>
+										{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
+										{apps}
+									</AnimatePresence>
 								</PageInner>
 							</Page>
 						))}

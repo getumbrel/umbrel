@@ -1,23 +1,25 @@
 import {motion, Variant} from 'framer-motion'
-import {useLocation} from 'react-router-dom'
+import {useLocation, useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
-import {useInstalledApps} from '@/hooks/use-installed-apps'
+import {useUserApps} from '@/hooks/use-user-apps'
 
 import {AppGrid} from './app-grid/app-grid'
-import {AppIcon} from './app-icon'
+import {AppIconConnected} from './app-icon'
 import {Header, Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {WidgetConfig, widgetConfigToWidget, WidgetWrapper} from './widgets'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
+	const navigate = useNavigate()
 
-	const {allAppsKeyed, installedApps, isLoading} = useInstalledApps()
+	const {allAppsKeyed, userApps, isLoading} = useUserApps()
 	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
 
-	if (isLoading) return
-	if (!installedApps) return null
+	if (isLoading) return null
+	if (!userApps) return null
+	if (userApps.length === 0 && pathname === '/') navigate('/install-first-app')
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 	const variant: DesktopVariant =
@@ -69,8 +71,30 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 							{widgetConfigToWidget(widget)}
 						</WidgetWrapper>
 					))}
-					apps={installedApps.map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
+					apps={userApps.map((app) => (
+						// <motion.div
+						// 	key={app.id}
+						// 	layout
+						// 	initial={{
+						// 		opacity: 1,
+						// 		scale: 0.8,
+						// 	}}
+						// 	animate={{
+						// 		opacity: 1,
+						// 		scale: 1,
+						// 	}}
+						// 	exit={{
+						// 		opacity: 0,
+						// 		scale: 0.5,
+						// 	}}
+						// 	transition={{
+						// 		type: 'spring',
+						// 		stiffness: 500,
+						// 		damping: 30,
+						// 	}}
+						// >
+						<AppIconConnected key={app.id} appId={app.id} />
+						// </motion.div>
 					))}
 				/>
 			</motion.div>

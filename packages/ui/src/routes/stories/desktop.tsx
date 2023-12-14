@@ -1,8 +1,13 @@
 import {useMotionValue} from 'framer-motion'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
+import {JSONTree} from 'react-json-tree'
+import {arrayIncludes} from 'ts-extras'
 
-import {InstalledAppsProvider, useInstalledApps} from '@/hooks/use-installed-apps'
+import {InstallButton} from '@/components/install-button'
+import {useAppInstall} from '@/hooks/use-app-install'
+import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UserAppsProvider, useUserApps} from '@/hooks/use-user-apps'
 import {H2} from '@/layouts/stories'
 import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
 import {AppIcon} from '@/modules/desktop/app-icon'
@@ -18,40 +23,90 @@ import {
 	ThreeUpWidget,
 } from '@/modules/desktop/widgets'
 import {TablerIcon} from '@/modules/desktop/widgets/tabler-icon'
+import {Button} from '@/shadcn-components/ui/button'
 import {Input} from '@/shadcn-components/ui/input'
+import {AppState, RouterOutput, trpcClient, trpcReact} from '@/trpc/trpc'
+import {sleep} from '@/utils/misc'
 
 export default function DesktopStory() {
 	useUmbrelTitle('Desktop')
 
 	return (
 		<>
+			<H2>Install Example</H2>
+			<InstallExample />
+			<H2>App Icon</H2>
+			<AppIconExamples />
 			<H2>Desktop Preview</H2>
-			<InstalledAppsProvider>
+			<UserAppsProvider>
 				<DesktopPreview />
-			</InstalledAppsProvider>
+			</UserAppsProvider>
 			<H2>Dock</H2>
 			<DockExample />
 			<H2>Widgets</H2>
 			<WidgetExamples />
 			<H2>App Grid</H2>
-			<InstalledAppsProvider>
+			<UserAppsProvider>
 				<AppGridExamples />
 				<AppsDump />
-			</InstalledAppsProvider>
+			</UserAppsProvider>
 		</>
 	)
 }
 
-function AppsDump() {
-	const {installedApps, isLoading} = useInstalledApps()
+function InstallExample() {
+	const {install, uninstall, uninstallAll, state, progress} = useAppInstall('agora')
 
-	if (isLoading || !installedApps) return
+	return (
+		<div>
+			<Button onClick={install}>Install Agora</Button>
+			<Button onClick={uninstall}>Uninstall Agora</Button>
+			<Button onClick={uninstallAll}>Uninstall All</Button>
+			<div>
+				<InstallButton
+					onInstallClick={install}
+					onOpenClick={() => alert('open agora')}
+					state={state}
+					progress={progress}
+				/>
+			</div>
+			<div>
+				Install status:
+				{/* <JSONTree data={installStatusQ.data} /> */}
+				<JSONTree data={{state, progress}} />
+			</div>
+		</div>
+	)
+}
+
+function AppIconExamples() {
+	// const availableApps = useAvailableApps()
+	// const iconSrc = availableApps.apps?.[0].icon
+	// if (!iconSrc) return null
+
+	const iconSrc = 'https://picsum.photos/200/200'
+
+	return (
+		<div className='flex flex-wrap gap-2'>
+			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='ready' />
+			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='installing' />
+			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='offline' />
+			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='uninstalling' />
+			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='updating' />
+		</div>
+	)
+}
+
+function AppsDump() {
+	const {apps, isLoading} = useAvailableApps()
+
+	if (isLoading || !apps) return
 
 	return (
 		<div className='flex flex-col gap-4 p-4'>
 			<H2>Apps dump</H2>
 			<div className='flex flex-wrap items-center'>
-				{installedApps.map((app) => (
+				{apps.map((app) => (
 					<div key={app.id} className='flex h-28 w-28 flex-col items-center gap-2.5 p-3 pb-0'>
 						<img alt={app.name} src={app.icon} width={64} height={64} className='rounded-15' />
 						<span className='max-w-full truncate text-13'>{app.name}</span>
@@ -146,8 +201,8 @@ function WidgetExamples() {
 }
 
 function AppGridExamples() {
-	const {installedApps} = useInstalledApps()
-	if (!installedApps) return null
+	const {userApps} = useUserApps()
+	if (!userApps) return null
 
 	return (
 		<>
@@ -158,7 +213,7 @@ function AppGridExamples() {
 			<div>1 app</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={installedApps.slice(0, 1).map((app) => (
+					apps={userApps.slice(0, 1).map((app) => (
 						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
@@ -166,7 +221,7 @@ function AppGridExamples() {
 			<div>3 apps</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={installedApps.slice(0, 3).map((app) => (
+					apps={userApps.slice(0, 3).map((app) => (
 						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>
@@ -174,7 +229,7 @@ function AppGridExamples() {
 			<div>All apps</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={installedApps.map((app) => (
+					apps={userApps.map((app) => (
 						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
 					))}
 				/>

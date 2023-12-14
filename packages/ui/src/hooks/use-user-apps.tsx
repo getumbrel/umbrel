@@ -1,10 +1,9 @@
-import {createContext, useContext} from 'react'
+import {createContext, useContext, useEffect, useRef} from 'react'
 import {LinkProps} from 'react-router-dom'
+import {arrayIncludes} from 'ts-extras'
 
-import {RegistryApp} from '@/trpc/trpc'
+import {trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
-
-import {useAvailableApps} from './use-available-apps'
 
 type AppT = {
 	id: string
@@ -49,8 +48,8 @@ export const systemApps = [
 export const systemAppsKeyed = keyBy(systemApps, 'id')
 
 type DemoAppsContextT = {
-	installedApps?: RegistryApp[]
-	installedAppsKeyed?: Record<string, RegistryApp>
+	userApps?: UserApp[]
+	userAppsKeyed?: Record<string, UserApp>
 	// needs to be explicitly readonly so typescript doesn't complain, though all other props are technically readonly too
 	systemApps: readonly AppT[]
 	systemAppsKeyed: typeof systemAppsKeyed
@@ -58,36 +57,50 @@ type DemoAppsContextT = {
 	allAppsKeyed: Record<string, AppT>
 	isLoading: boolean
 }
-const InstalledAppsContext = createContext<DemoAppsContextT | null>(null)
+const UserAppsContext = createContext<DemoAppsContextT | null>(null)
 
-/** Simulate installed apps */
-export function InstalledAppsProvider({children}: {children: React.ReactNode}) {
-	const {isLoading, apps: installedApps, appsKeyed: installedAppsKeyed} = useAvailableApps()
+export function UserAppsProvider({children}: {children: React.ReactNode}) {
+	const userAppsQ = trpcReact.user.apps.getAll.useQuery()
 
-	const allApps = [...(installedApps ?? []), ...systemApps]
+	const userApps = userAppsQ.data ?? []
+	const userAppsKeyed = keyBy(userApps, 'id')
+
+	const allApps = [...userApps, ...systemApps]
 	const allAppsKeyed = keyBy(allApps, 'id')
 
 	return (
-		<InstalledAppsContext.Provider
+		<UserAppsContext.Provider
 			value={{
-				installedApps,
-				installedAppsKeyed,
+				userApps,
+				userAppsKeyed,
 				systemApps,
 				systemAppsKeyed,
 				allApps,
 				allAppsKeyed,
-				isLoading,
+				isLoading: userAppsQ.isLoading,
 			}}
 		>
 			{children}
-		</InstalledAppsContext.Provider>
+		</UserAppsContext.Provider>
 	)
 }
 
-/** Simulate installed apps */
-export function useInstalledApps() {
-	const ctx = useContext(InstalledAppsContext)
-	if (!ctx) throw new Error('useInstalledApps must be used within InstalledAppsProvider')
+export function useUserApps() {
+	const ctx = useContext(UserAppsContext)
+	if (!ctx) throw new Error('useUserApps must be used within UserAppsProvider')
 
 	return ctx
+}
+
+export function useUserApp(id?: string | null) {
+	const ctx = useContext(UserAppsContext)
+	if (!ctx) throw new Error('useUserApp must be used within UserAppsProvider')
+
+	if (!id) return {isLoading: false, app: undefined}
+	if (ctx.isLoading) return {isLoading: true}
+
+	return {
+		isLoading: false,
+		app: ctx.userAppsKeyed?.[id],
+	}
 }

@@ -8,17 +8,18 @@ import {ReleaseNotesSection} from '@/modules/app-store/app-page/release-notes-se
 import {AppGallerySection} from '@/modules/app-store/gallery-section'
 import {slideInFromBottomDelayedClass} from '@/modules/app-store/shared'
 import {cn} from '@/shadcn-lib/utils'
-import {InstalledApp, RegistryApp} from '@/trpc/trpc'
+import {RegistryApp, UserApp} from '@/trpc/trpc'
 
 import {SettingsSection} from './settings-section'
 
 export function AppContent({
 	app,
-	installedApp,
+	userApp,
 	recommendedApps = [],
 }: {
 	app: RegistryApp
-	installedApp?: InstalledApp
+	/** When the user initiates an install, we now have a user app, even before install */
+	userApp?: UserApp
 	recommendedApps?: RegistryApp[]
 }) {
 	return (
@@ -32,7 +33,7 @@ export function AppContent({
 					<ReleaseNotesSection app={app} />
 				</div>
 				<div className='flex w-80 flex-col gap-2.5'>
-					{installedApp && <SettingsSection installedApp={installedApp} />}
+					{userApp && <SettingsSection userApp={userApp} />}
 					<InfoSection app={app} />
 					<DependenciesSection app={app} />
 					{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
@@ -40,7 +41,7 @@ export function AppContent({
 			</div>
 			{/* Mobile */}
 			<div className='space-y-2.5 lg:hidden'>
-				{installedApp && <SettingsSection installedApp={installedApp} />}
+				{userApp && <SettingsSection userApp={userApp} />}
 				<AboutSection app={app} />
 				<InfoSection app={app} />
 				<DependenciesSection app={app} />

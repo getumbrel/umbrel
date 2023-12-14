@@ -165,6 +165,7 @@ export default class AppRepository {
 					meta.id === 'umbrel-app-store'
 						? app.gallery.map((file) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${file}`)
 						: app.gallery,
+				// TODO: make this work for custom repos
 				icon: app.icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
 			}))
 			// Sort apps alphabetically

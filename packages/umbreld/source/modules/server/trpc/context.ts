@@ -6,6 +6,7 @@ export const createContext = ({req, res}: CreateExpressContextOptions) => {
 	const logger = req.app.get('logger') as Umbreld['logger']
 	const server = umbreld.server
 	const user = umbreld.user
+	const userApps = umbreld.userApps
 	const appStore = umbreld.appStore
 	return {
 		request: req,
@@ -13,6 +14,7 @@ export const createContext = ({req, res}: CreateExpressContextOptions) => {
 		umbreld,
 		server,
 		user,
+		userApps,
 		appStore,
 		logger,
 		dangerouslyBypassAuthentication: false,

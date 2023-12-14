@@ -7,7 +7,7 @@ import {CoverMessage} from './components/ui/cover-message'
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {LinkButton} from './components/ui/link-button'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
-import {InstalledAppsProvider} from './hooks/use-installed-apps'
+import {UserAppsProvider} from './hooks/use-user-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -69,9 +69,9 @@ export const router = createBrowserRouter([
 			<EnsureLoggedIn>
 				<Notifications />
 				<AvailableAppsProvider>
-					<InstalledAppsProvider>
+					<UserAppsProvider>
 						<Desktop />
-					</InstalledAppsProvider>
+					</UserAppsProvider>
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
 		),

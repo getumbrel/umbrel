@@ -2,11 +2,11 @@ import {ReactNode} from 'react'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {Switch} from '@/shadcn-components/ui/switch'
-import {InstalledApp} from '@/trpc/trpc'
+import {UserApp} from '@/trpc/trpc'
 
 import {cardClass, cardTitleClass} from './shared'
 
-export function SettingsSection({installedApp}: {installedApp: InstalledApp}) {
+export function SettingsSection({userApp}: {userApp: UserApp}) {
 	const defaultUsername = 'umbrel'
 	const defaultPassword = 'beef38f0a3f76510d8f24e259c5c3da8c4e245bd468afdd0eabfe86a4f7813e'
 
@@ -14,10 +14,10 @@ export function SettingsSection({installedApp}: {installedApp: InstalledApp}) {
 		<div className={cardClass}>
 			<h2 className={cardTitleClass}>App Settings</h2>
 			<label>
-				<KV k='Auto-update' v={<Switch checked={installedApp.autoUpdate} />} />
+				<KV k='Auto-update' v={<Switch checked={userApp.autoUpdate} />} />
 			</label>
 			<label>
-				<KV k='Notifications' v={<Switch checked={installedApp.showNotifications} />} />
+				<KV k='Notifications' v={<Switch checked={userApp.showNotifications} />} />
 			</label>
 			<KV k='Default username' v={<CopyableField className='w-[120px]' narrow value={defaultUsername} />} />
 			<KV k='Default password' v={<CopyableField narrow className='w-[120px]' value={defaultPassword} isPassword />} />

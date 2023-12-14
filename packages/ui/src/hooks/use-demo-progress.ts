@@ -6,7 +6,7 @@ function incrementProgress(progress: number) {
 }
 
 export function useDemoInstallProgress() {
-	const [state, setState] = useState<'initial' | 'installing' | 'installed'>('initial')
+	const [state, setState] = useState<'initial' | 'installing' | 'ready'>('initial')
 	const [progress, setProgress] = useState(0)
 
 	useEffect(() => {
@@ -16,7 +16,7 @@ export function useDemoInstallProgress() {
 			if (progress == 100) {
 				// Wait after install so you can see the 100%
 				setTimeout(() => {
-					setState('installed')
+					setState('ready')
 					setProgress(100)
 					clearInterval(interval)
 				}, 500)
