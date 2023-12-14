@@ -68,9 +68,7 @@ export type UserApp = YamlApp &
 			defaultPassword: string
 		}
 		// ---
-		// TODO: state should probably not be stored in the yaml
 		state: AppState
-		// TODO: installProgress should probably not be stored in the yaml
 		// TODO: if state is installing, this should be 0-100, otherwise undefined
 		/** From 0 to 100 */
 		installProgress?: number
