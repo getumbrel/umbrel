@@ -114,7 +114,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 	}
 
 	if (appInstall.state === 'uninstalled') {
-		return <AppIcon appId={appId} label='' src='' port={0} state='ready' />
+		return <AppIcon appId={appId} label={userApp.app.name} src={userApp.app.icon} port={0} state='ready' />
 	}
 
 	if (appInstall.state !== 'ready') {
