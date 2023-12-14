@@ -52,7 +52,7 @@ export type YamlApp = Pick<AppManifest, 'id'> & {
 	registryId: string
 	showNotifications: boolean
 	autoUpdate: boolean
-	// should always be true unless set to `false`
+	// Should always be true unless set to `false`
 	// If no deterministic password, we don't show this
 	showCredentialsBeforeOpen: boolean
 }

@@ -1,9 +1,9 @@
 import {z} from 'zod'
+import {indexBy, pick} from 'remeda'
 
 import {privateProcedure, router} from '../trpc.js'
-import {indexBy, pick} from 'remeda'
-import {UserApp} from '../../../apps/schema.js'
 import {appStatuses} from '../../../user-apps.js'
+import type {UserApp} from '../../../apps/schema.js'
 
 export default router({
 	install: privateProcedure
@@ -26,8 +26,8 @@ export default router({
 	// Returns the current user
 	getAll: privateProcedure.query(async ({ctx}): Promise<UserApp[]> => {
 		const registry = await ctx.appStore.registry()
-		const registryApps = registry.flatMap((el) => el?.apps)
-		const registryAppsKeyed = indexBy(registryApps, (el) => el?.id)
+		const registryApps = registry.flatMap((element) => element?.apps)
+		const registryAppsKeyed = indexBy(registryApps, (element) => element?.id)
 
 		const yamlApps = await ctx.userApps.getApps()
 
@@ -47,6 +47,7 @@ export default router({
 
 		return apps
 
+		// TODO: remove this
 		// return [
 		// 	...apps,
 		// 	{

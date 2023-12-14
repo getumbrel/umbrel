@@ -1,11 +1,12 @@
 import type Umbreld from '../index.js'
+import type {AppState, YamlApp} from './apps/schema.js'
 
-import {AppState, YamlApp} from './apps/schema.js'
-
-// TODO: get install status from a real place
+// TODO: Get install status from a real place
+// Ignoring because it's demo code
+// eslint-disable-next-line import/no-mutable-exports
 export let appStatuses: Record<string, {installProgress: number; state: AppState}> = {}
-// TODO: this should be in the store
-export let userAppsDemoStore: YamlApp[] = []
+// TODO: This should be in the store
+let userAppsDemoStore: YamlApp[] = []
 
 export default class UserApps {
 	#store: Umbreld['store']
@@ -21,21 +22,20 @@ export default class UserApps {
 		return this.#store.set('user.lastOpenedApps', newApps)
 	}
 
-	async installApp(appId: string, registryId: string = 'umbrel-app-store') {
-		// const apps = (await this.#store.get('user.apps')) ?? []
+	async installApp(appId: string, registryId = 'umbrel-app-store') {
 		const newAppEntry: YamlApp = {
 			id: appId,
 			registryId,
 			showNotifications: true,
 			autoUpdate: true,
-			// if deterministic password is not set, we'll generate a random one
+			// If deterministic password is not set, we'll generate a random one
 			showCredentialsBeforeOpen: true,
 		}
 		const appExists = userAppsDemoStore.find((app) => app.id === appId)
 		if (appExists) {
 			throw new Error('App already installed')
 		}
-		// const newApps = [...apps, newAppEntry]
+
 		appStatuses[appId] = {
 			state: 'installing',
 			installProgress: 0,
@@ -49,8 +49,6 @@ export default class UserApps {
 				clearInterval(interval)
 			}
 		}, 200)
-		// const res = this.#store.set('user.apps', newApps)
-		// return res
 		userAppsDemoStore.push(newAppEntry)
 		return newAppEntry
 	}
@@ -67,12 +65,13 @@ export default class UserApps {
 	}
 
 	async uninstallApp(appId: string) {
-		// await this.#store.set(`user.apps.${appId}`, null)
 		appStatuses[appId] = {
 			state: 'uninstalling',
 			installProgress: 100,
 		}
 		setTimeout(() => {
+			// Ignoring because it's demo code
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 			delete appStatuses[appId]
 			userAppsDemoStore = userAppsDemoStore.filter((app) => app.id !== appId)
 		}, 1000)
@@ -115,8 +114,6 @@ export default class UserApps {
 	async updateAll() {}
 
 	async getApps() {
-		// const apps = await this.#store.get('user.apps')
-		// return apps ?? []
 		return userAppsDemoStore
 	}
 }

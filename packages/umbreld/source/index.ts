@@ -10,7 +10,7 @@ import FileStore from './modules/utilities/file-store.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
-import {YamlApp} from './modules/apps/schema.js'
+import type {YamlApp} from './modules/apps/schema.js'
 import UserApps from './modules/user-apps.js'
 
 type StoreSchema = {
