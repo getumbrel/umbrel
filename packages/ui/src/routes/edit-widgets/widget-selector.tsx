@@ -94,6 +94,8 @@ export function WidgetSelector({
 
 	const selectedH = selectedWidgets.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
 
+	const installedAppsWidgetConfigs = widgetConfigs.filter(({appId}) => appId in allAppsKeyed)
+
 	return (
 		<>
 			{open && (
@@ -151,7 +153,7 @@ export function WidgetSelector({
 				</div>
 			)}
 			<WidgetSheet open={open} onOpenChange={onOpenChange} selectedCssHeight={selectedH}>
-				{widgetConfigs.map(({appId, widgets}) => {
+				{installedAppsWidgetConfigs.map(({appId, widgets}) => {
 					return (
 						<WidgetSection key={appId} iconSrc={allAppsKeyed[appId].icon} title={allAppsKeyed[appId].name}>
 							{widgets.map((widget) => {
