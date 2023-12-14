@@ -76,6 +76,7 @@ export default class UserApps {
 			userAppsDemoStore = userAppsDemoStore.filter((app) => app.id !== appId)
 		}, 1000)
 		// TODO: Remove from last opened apps
+		// TODO: decide if we wanna remove widget data or if we want to keep it in case user re-installs the app
 		return true
 	}
 
