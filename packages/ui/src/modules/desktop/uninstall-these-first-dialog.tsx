@@ -44,7 +44,9 @@ export function UninstallTheseFirstDialog({
 						<AppWithName key={app.id} icon={app.icon} appName={app.name} />
 					))}
 				</div>
-				<DialogDescription>Uninstall these first to uninstall {appName}.</DialogDescription>
+				<DialogDescription>
+					Uninstall {toUninstallApps.length > 1 ? 'these apps' : toUninstallApps[0].name} first to uninstall {appName}.
+				</DialogDescription>
 				<DialogFooter>
 					<Close asChild>
 						<Button variant='primary' size='dialog'>
