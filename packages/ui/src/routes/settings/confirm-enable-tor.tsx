@@ -36,7 +36,7 @@ export default function ConfirmEnableTorDialog() {
 					<AlertDialogAction
 						variant='destructive'
 						className='px-6'
-						onClick={(e) => {
+						onClick={() => {
 							// Prevent closing by default
 							setEnabled(true)
 						}}
