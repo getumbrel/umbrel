@@ -1,5 +1,7 @@
+import {JSONTree} from 'react-json-tree'
 import {isEmpty} from 'remeda'
 
+import {DebugOnly} from '@/components/ui/debug-only'
 import {AboutSection} from '@/modules/app-store/app-page/about-section'
 import {DependenciesSection} from '@/modules/app-store/app-page/dependencies'
 import {InfoSection} from '@/modules/app-store/app-page/info-section'
@@ -22,6 +24,7 @@ export function AppContent({
 	userApp?: UserApp
 	recommendedApps?: RegistryApp[]
 }) {
+	const hasDependencies = app.dependencies && app.dependencies.length > 0
 	return (
 		<>
 			<AppGallerySection galleryId={'gallery-' + app.id} gallery={app.gallery} />
@@ -35,7 +38,7 @@ export function AppContent({
 				<div className='flex w-80 flex-col gap-2.5'>
 					{userApp && <SettingsSection userApp={userApp} />}
 					<InfoSection app={app} />
-					<DependenciesSection app={app} />
+					{hasDependencies && <DependenciesSection app={app} />}
 					{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
 				</div>
 			</div>
@@ -44,10 +47,13 @@ export function AppContent({
 				{userApp && <SettingsSection userApp={userApp} />}
 				<AboutSection app={app} />
 				<InfoSection app={app} />
-				<DependenciesSection app={app} />
+				{hasDependencies && <DependenciesSection app={app} />}
 				<ReleaseNotesSection app={app} />
 				{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
 			</div>
+			<DebugOnly>
+				<JSONTree data={app} />
+			</DebugOnly>
 		</>
 	)
 }

@@ -74,7 +74,7 @@ export default class UserApps {
 			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
 			delete appStatuses[appId]
 			userAppsDemoStore = userAppsDemoStore.filter((app) => app.id !== appId)
-		}, 1000)
+		}, 500)
 		// TODO: Remove from last opened apps
 		// TODO: decide if we wanna remove widget data or if we want to keep it in case user re-installs the app
 		return true

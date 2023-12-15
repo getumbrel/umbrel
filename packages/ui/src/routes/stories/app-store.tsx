@@ -1,6 +1,10 @@
+import {useState} from 'react'
+
 import {Loading} from '@/components/ui/loading'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
+import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
+import {Button} from '@/shadcn-components/ui/button'
 
 export default function AppStoreStory() {
 	const discoverQ = useDiscoverQuery()
@@ -17,6 +21,7 @@ export default function AppStoreStory() {
 
 	return (
 		<div>
+			<InstallFirstExample />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
 				galleryId='immich'
@@ -27,5 +32,15 @@ export default function AppStoreStory() {
 				]}
 			/>
 		</div>
+	)
+}
+
+function InstallFirstExample() {
+	const [open, setOpen] = useState(false)
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Install Lightning App</Button>
+			<InstallTheseFirstDialog appId='lightning' toInstallFirstIds={['bitcoin']} open={open} onOpenChange={setOpen} />
+		</>
 	)
 }

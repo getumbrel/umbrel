@@ -12,6 +12,8 @@ import {AppState} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
+import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
+
 const PLACEHOLDER_SRC = '/icons/app-icon-placeholder.svg'
 
 export function AppIcon({
@@ -106,6 +108,16 @@ export function AppIconConnected({appId}: {appId: string}) {
 	const {addLinkSearchParams} = useQueryParams()
 	const userApp = useUserApp(appId)
 	const appInstall = useAppInstall(appId)
+	const [openDepsDialog, setOpenDepsDialog] = useState(false)
+	const [toUninstallFirstIds, setToUninstallFirstIds] = useState<string[]>([])
+
+	const uninstall = async () => {
+		const res = await appInstall.uninstall()
+		if (res?.uninstallTheseFirst) {
+			setToUninstallFirstIds(res.uninstallTheseFirst)
+			setOpenDepsDialog(true)
+		}
+	}
 
 	if (!userApp || !userApp.app) return <AppIcon appId={appId} label='' src='' port={0} />
 
@@ -131,30 +143,40 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	// If app is installed, show context menu
 	return (
-		<ContextMenu>
-			<ContextMenuTrigger className='group'>
-				<AppIcon
+		<>
+			<ContextMenu>
+				<ContextMenuTrigger className='group'>
+					<AppIcon
+						appId={appId}
+						label={userApp.app.name}
+						src={userApp.app.icon}
+						port={userApp.app.port}
+						state={appInstall.state}
+					/>
+				</ContextMenuTrigger>
+				<ContextMenuContent>
+					<ContextMenuItem asChild>
+						<Link to={`/app-store/${appId}`}>Go to store page</Link>
+					</ContextMenuItem>
+					<ContextMenuItem asChild>
+						<Link to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}>
+							Show default credentials
+						</Link>
+					</ContextMenuItem>
+					<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
+					<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstall}>
+						Uninstall
+					</ContextMenuItem>
+				</ContextMenuContent>
+			</ContextMenu>
+			{toUninstallFirstIds.length > 0 && (
+				<UninstallTheseFirstDialog
 					appId={appId}
-					label={userApp.app.name}
-					src={userApp.app.icon}
-					port={userApp.app.port}
-					state={appInstall.state}
+					toUninstallFirstIds={toUninstallFirstIds}
+					open={openDepsDialog}
+					onOpenChange={setOpenDepsDialog}
 				/>
-			</ContextMenuTrigger>
-			<ContextMenuContent>
-				<ContextMenuItem asChild>
-					<Link to={`/app-store/${appId}`}>Go to store page</Link>
-				</ContextMenuItem>
-				<ContextMenuItem asChild>
-					<Link to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}>
-						Show default credentials
-					</Link>
-				</ContextMenuItem>
-				<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
-				<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={appInstall.uninstall}>
-					Uninstall
-				</ContextMenuItem>
-			</ContextMenuContent>
-		</ContextMenu>
+			)}
+		</>
 	)
 }

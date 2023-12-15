@@ -1,7 +1,6 @@
 import {useMotionValue} from 'framer-motion'
-import {useEffect, useState} from 'react'
+import {useState} from 'react'
 import {JSONTree} from 'react-json-tree'
-import {arrayIncludes} from 'ts-extras'
 
 import {InstallButton} from '@/components/install-button'
 import {useAppInstall} from '@/hooks/use-app-install'
@@ -13,6 +12,7 @@ import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
 import {AppIcon} from '@/modules/desktop/app-icon'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview'
 import {DockItem} from '@/modules/desktop/dock-item'
+import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
 import {
 	ActionsWidget,
 	BackdropBlurVariantContext,
@@ -25,8 +25,6 @@ import {
 import {TablerIcon} from '@/modules/desktop/widgets/tabler-icon'
 import {Button} from '@/shadcn-components/ui/button'
 import {Input} from '@/shadcn-components/ui/input'
-import {AppState, RouterOutput, trpcClient, trpcReact} from '@/trpc/trpc'
-import {sleep} from '@/utils/misc'
 
 export default function DesktopStory() {
 	useUmbrelTitle('Desktop')
@@ -35,6 +33,8 @@ export default function DesktopStory() {
 		<>
 			<H2>Install Example</H2>
 			<InstallExample />
+			<H2>Uninstall Example</H2>
+			<UninstallExample />
 			<H2>App Icon</H2>
 			<AppIconExamples />
 			<H2>Desktop Preview</H2>
@@ -76,6 +76,21 @@ function InstallExample() {
 				<JSONTree data={{state, progress}} />
 			</div>
 		</div>
+	)
+}
+
+function UninstallExample() {
+	const [open, setOpen] = useState(false)
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Uninstall Bitcoin App</Button>
+			<UninstallTheseFirstDialog
+				appId='bitcoin'
+				toUninstallFirstIds={['lightning', 'mempool']}
+				open={open}
+				onOpenChange={setOpen}
+			/>
+		</>
 	)
 }
 
