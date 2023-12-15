@@ -6,7 +6,7 @@ function incrementProgress(progress: number) {
 }
 
 export function useDemoInstallProgress() {
-	const [state, setState] = useState<'initial' | 'installing' | 'ready'>('initial')
+	const [state, setState] = useState<'uninstalled' | 'installing' | 'ready'>('uninstalled')
 	const [progress, setProgress] = useState(0)
 
 	useEffect(() => {

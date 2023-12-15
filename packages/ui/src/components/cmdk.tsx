@@ -24,7 +24,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	if (!userApps) return null
 	if (userQ.isLoading) return null
 
-	const installedApps = userApps.filter((app) => app.state === 'installed')
+	const installedApps = userApps.filter((app) => app.state === 'ready')
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>

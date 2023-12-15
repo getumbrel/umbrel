@@ -35,7 +35,7 @@ function StorageStats() {
 
 	if (!userApps) return null
 
-	const installedApps = userApps.filter((app) => app.state === 'installed')
+	const installedApps = userApps.filter((app) => app.state === 'ready')
 
 	return (
 		<>
@@ -60,7 +60,7 @@ function MemoryStats() {
 
 	if (!userApps) return null
 
-	const installedApps = userApps.filter((app) => app.state === 'installed')
+	const installedApps = userApps.filter((app) => app.state === 'ready')
 
 	return (
 		<>
