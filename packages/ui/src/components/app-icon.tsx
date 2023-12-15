@@ -12,7 +12,7 @@ function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps,
 			src={src || defaultIcon}
 			alt=''
 			ref={ref}
-			className={cn('shrink-0 bg-white/10 bg-cover bg-center', className)}
+			className={cn('aspect-square shrink-0 bg-white/10 bg-cover bg-center', className)}
 			style={{
 				...style,
 				width: size,
