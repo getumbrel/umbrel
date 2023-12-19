@@ -12,6 +12,7 @@ import {AppState} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
+import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
 
 const PLACEHOLDER_SRC = '/icons/app-icon-placeholder.svg'
@@ -110,12 +111,23 @@ export function AppIconConnected({appId}: {appId: string}) {
 	const appInstall = useAppInstall(appId)
 	const [openDepsDialog, setOpenDepsDialog] = useState(false)
 	const [toUninstallFirstIds, setToUninstallFirstIds] = useState<string[]>([])
+	const [showUninstallDialog, setShowUninstallDialog] = useState(false)
 
 	const uninstall = async () => {
 		const res = await appInstall.uninstall()
 		if (res?.uninstallTheseFirst) {
 			setToUninstallFirstIds(res.uninstallTheseFirst)
 			setOpenDepsDialog(true)
+		}
+	}
+
+	const uninstallPrecheck = async () => {
+		const apps = await appInstall.getAppsToUninstallFirst()
+		if (apps.length > 0) {
+			setToUninstallFirstIds(apps)
+			setOpenDepsDialog(true)
+		} else {
+			setShowUninstallDialog(true)
 		}
 	}
 
@@ -164,7 +176,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 						</Link>
 					</ContextMenuItem>
 					<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
-					<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstall}>
+					<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
 						Uninstall
 					</ContextMenuItem>
 				</ContextMenuContent>
@@ -175,6 +187,14 @@ export function AppIconConnected({appId}: {appId: string}) {
 					toUninstallFirstIds={toUninstallFirstIds}
 					open={openDepsDialog}
 					onOpenChange={setOpenDepsDialog}
+				/>
+			)}
+			{showUninstallDialog && (
+				<UninstallConfirmationDialog
+					appId={appId}
+					open={showUninstallDialog}
+					onOpenChange={setShowUninstallDialog}
+					onConfirm={uninstall}
 				/>
 			)}
 		</>

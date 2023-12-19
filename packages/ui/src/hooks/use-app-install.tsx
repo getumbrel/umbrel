@@ -41,12 +41,19 @@ export function useAppInstall(id: string) {
 	}, [appState, installStatusQ, invalidateInstallDependencies])
 
 	const install = async () => installMut.mutate({appId: id})
-	const uninstall = async () => {
+	const getAppsToUninstallFirst = async () => {
 		const appsToUninstallFirst = await getRequiredBy(id)
 		// We expect to have an array, even if it's empty
 		if (!appsToUninstallFirst) throw new Error('Failed to get required apps')
 		if (appsToUninstallFirst.length > 0) {
-			return {uninstallTheseFirst: appsToUninstallFirst.map((app) => app.id)}
+			return appsToUninstallFirst.map((app) => app.id)
+		}
+		return []
+	}
+	const uninstall = async () => {
+		const uninstallTheseFirst = await getAppsToUninstallFirst()
+		if (uninstallTheseFirst.length > 0) {
+			return {uninstallTheseFirst}
 		}
 		uninstallMut.mutate({appId: id})
 	}
@@ -59,6 +66,7 @@ export function useAppInstall(id: string) {
 	return {
 		restart,
 		install,
+		getAppsToUninstallFirst,
 		uninstall,
 		uninstallAll,
 		progress,
