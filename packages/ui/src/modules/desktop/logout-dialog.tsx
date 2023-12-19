@@ -34,7 +34,7 @@ export function LogoutDialog() {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction variant='destructive' className='px-6' onClick={logout}>
-						Log out <span className='text-11 opacity-40'>↵</span>
+						Log out
 					</AlertDialogAction>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>

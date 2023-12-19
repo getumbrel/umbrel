@@ -53,7 +53,7 @@ export default function RestartDialog() {
 							restartMut.mutate()
 						}}
 					>
-						Restart <span className='text-11 opacity-40'>↵</span>
+						Restart
 					</AlertDialogAction>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>

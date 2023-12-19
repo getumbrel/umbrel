@@ -53,7 +53,7 @@ export default function ShutdownDialog() {
 							shutdownMut.mutate()
 						}}
 					>
-						Shut down <span className='text-11 opacity-40'>↵</span>
+						Shut down
 					</AlertDialogAction>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>

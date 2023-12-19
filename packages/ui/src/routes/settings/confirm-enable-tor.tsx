@@ -41,7 +41,7 @@ export default function ConfirmEnableTorDialog() {
 							setEnabled(true)
 						}}
 					>
-						Restart & enable Tor <span className='text-11 opacity-40'>↵</span>
+						Restart & enable Tor
 					</AlertDialogAction>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>

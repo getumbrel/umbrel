@@ -38,7 +38,7 @@ const AlertDialogContent = React.forwardRef<
 		<AlertDialogOverlay />
 		<AlertDialogPrimitive.Content
 			ref={ref}
-			className={cn(dialogContentClass, 'w-full max-w-[calc(100%-40px)] sm:w-auto', className)}
+			className={cn(dialogContentClass, 'w-full max-w-[calc(100%-40px)] sm:w-auto md:max-w-md', className)}
 			{...props}
 		/>
 	</AlertDialogPortal>
@@ -97,12 +97,15 @@ const AlertDialogAction = React.forwardRef<
 	React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {
 		variant?: 'primary' | 'destructive'
 	}
->(({className, variant, ...props}, ref) => (
+>(({className, variant, children, ...props}, ref) => (
 	<AlertDialogPrimitive.Action
 		ref={ref}
 		className={cn(buttonVariants({size: 'dialog', variant: variant ?? 'primary'}), className)}
 		{...props}
-	/>
+	>
+		{children}
+		<span className='text-11 opacity-40'>↵</span>
+	</AlertDialogPrimitive.Action>
 ))
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 
