@@ -10,7 +10,8 @@ import {
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
+
+// import {useNavigate} from 'react-router-dom'
 
 import {TorIcon2} from '@/assets/tor-icon2'
 import {Card} from '@/components/ui/card'
@@ -28,14 +29,14 @@ import {TempStatCardContent} from './temp-stat-card-content'
 
 export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
-	const navigate = useNavigate()
+	// const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 	const memoryQ = trpcReact.system.memoryUsage.useQuery()
-	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
-	const isUmbrelHome = !!isUmbrelHomeQ.data
-	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
+	// const isUmbrelHome = !!isUmbrelHomeQ.data
+	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 
 	if (!userQ.data) {
 		return null
