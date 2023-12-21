@@ -184,6 +184,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 			{toUninstallFirstIds.length > 0 && (
 				<UninstallTheseFirstDialog
 					appId={appId}
+					registryId={userApp.app.registryId}
 					toUninstallFirstIds={toUninstallFirstIds}
 					open={openDepsDialog}
 					onOpenChange={setOpenDepsDialog}
@@ -192,6 +193,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 			{showUninstallDialog && (
 				<UninstallConfirmationDialog
 					appId={appId}
+					registryId={userApp.app.registryId}
 					open={showUninstallDialog}
 					onOpenChange={setShowUninstallDialog}
 					onConfirm={uninstall}

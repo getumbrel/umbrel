@@ -3,7 +3,6 @@ import {ReactNode} from 'react'
 import {Link, To} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -13,22 +12,30 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
+import {trpcReact} from '@/trpc/trpc'
+import {keyBy} from '@/utils/misc'
+
+import {UMBREL_APP_STORE_ID} from './constants'
 
 export function InstallTheseFirstDialog({
 	open,
 	onOpenChange,
 	appId,
+	registryId = UMBREL_APP_STORE_ID,
 	toInstallFirstIds,
 }: {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	appId: string
+	registryId?: string
 	toInstallFirstIds: string[]
 }) {
-	const {appsKeyed, isLoading} = useAvailableApps()
-	const app = appsKeyed?.[appId]
+	const appsQ = trpcReact.appStore.registry.useQuery()
+	const apps = appsQ.data?.find((repo) => repo?.meta.id === registryId)?.apps ?? []
+	const appsKeyed = keyBy(apps, 'id')
+	const app = apps?.find((app) => app.id === appId)
 
-	if (isLoading) return null
+	if (appsQ.isLoading) return null
 	if (!app) throw new Error('App not found')
 
 	const appName = app?.name

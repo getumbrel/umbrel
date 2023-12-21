@@ -14,14 +14,16 @@ export function UninstallConfirmationDialog({
 	open,
 	onOpenChange,
 	appId,
+	registryId,
 	onConfirm,
 }: {
 	appId: string
+	registryId?: string
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void
 }) {
-	const {appsKeyed, isLoading} = useAvailableApps()
+	const {appsKeyed, isLoading} = useAvailableApps(registryId)
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null

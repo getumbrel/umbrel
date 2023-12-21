@@ -17,14 +17,16 @@ export function UninstallTheseFirstDialog({
 	open,
 	onOpenChange,
 	appId,
+	registryId,
 	toUninstallFirstIds: toInstallFirstIds,
 }: {
 	appId: string
+	registryId?: string
 	toUninstallFirstIds: string[]
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }) {
-	const {appsKeyed, isLoading} = useAvailableApps()
+	const {appsKeyed, isLoading} = useAvailableApps(registryId)
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null

@@ -16,6 +16,7 @@ export function UpdatesDialog() {
 
 	const title = 'Updates'
 
+	// TODO: determine if we want community apps here
 	const {isLoading, apps} = useAvailableApps()
 
 	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume

@@ -1,22 +1,19 @@
 import {createContext, useContext} from 'react'
-import {groupBy} from 'remeda'
+import {groupBy, indexBy, mapValues} from 'remeda'
 
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
-import {Category, RegistryApp, trpcReact} from '@/trpc/trpc'
+import {Category, RegistryApp, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 type AppsContextT =
 	| {
-			apps: undefined
-			appsKeyed: undefined
-			appsGroupedByCategory: undefined
 			isLoading: true
 	  }
 	| {
-			apps: RegistryApp[]
-			appsKeyed: Record<string, RegistryApp>
-			appsGroupedByCategory: Record<Category, RegistryApp[]>
 			isLoading: false
+			repos: RouterOutput['appStore']['registry']
+			repoAppsKeyed: Record<string, Record<string, RegistryApp>>
+			repoAppsGroupedByCategory: Record<string, Record<Category, RegistryApp[]>>
 	  }
 
 const AppsContext = createContext<AppsContextT | null>(null)
@@ -24,40 +21,53 @@ const AppsContext = createContext<AppsContextT | null>(null)
 // TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
-	const apps = appsQ.data?.find((repo) => repo?.meta.id === UMBREL_APP_STORE_ID)?.apps
+	const repos = appsQ.data ?? []
 
 	if (appsQ.isLoading) return null
 
-	if (appsQ.isError || !appsQ.data || !apps) {
+	if (appsQ.isError || !appsQ.data) {
 		throw new Error('Failed to fetch apps.')
 	}
 
-	const appsKeyed = keyBy(apps, 'id')
-	const appsGroupedByCategory = groupBy(apps, (a) => a.category)
+	const reposKeyed = indexBy(repos, (repo) => repo?.meta.id)
+	const repoAppsKeyed = mapValues(reposKeyed, (repo) => keyBy(repo?.apps ?? [], 'id'))
+	const repoAppsGroupedByCategory = mapValues(reposKeyed, (repo) => groupBy(repo?.apps ?? [], (app) => app.category))
 
 	const providerProps: AppsContextT = appsQ.isLoading
-		? {apps: undefined, appsKeyed: undefined, appsGroupedByCategory: undefined, isLoading: true}
-		: {apps, appsKeyed, appsGroupedByCategory, isLoading: false}
+		? {isLoading: true}
+		: {repos, repoAppsKeyed, repoAppsGroupedByCategory, isLoading: false}
 
 	return <AppsContext.Provider value={providerProps}>{children}</AppsContext.Provider>
 }
 
-export function useAvailableApps() {
+export function useAvailableApps(registryId: string = UMBREL_APP_STORE_ID) {
 	const ctx = useContext(AppsContext)
 	if (!ctx) throw new Error('useAvailableApps must be used within AvailableAppsProvider')
 
-	return ctx
-}
+	if (ctx.isLoading) return {isLoading: true} as const
 
-export function useAvailableApp(id?: string | null) {
-	const ctx = useContext(AppsContext)
-	if (!ctx) throw new Error('useAvailableApp must be used within AvailableAppsProvider')
-
-	if (!id) return {isLoading: false, app: undefined}
-	if (ctx.isLoading) return {isLoading: true}
+	const appsKeyed = ctx.repoAppsKeyed[registryId]
+	const apps = ctx.repos.find((repo) => repo?.meta.id === registryId)?.apps ?? []
+	const appsGroupedByCategory = ctx.repoAppsGroupedByCategory[registryId]
 
 	return {
 		isLoading: false,
-		app: ctx.appsKeyed[id],
-	}
+		apps,
+		appsKeyed,
+		appsGroupedByCategory,
+	} as const
+}
+
+// Allow querying for nullish app to allow the `id` to be dynamic
+export function useAvailableApp(id?: string | null, registryId: string = UMBREL_APP_STORE_ID) {
+	const {appsKeyed, isLoading} = useAvailableApps(registryId)
+
+	if (!id) return {isLoading: false, app: undefined} as const
+	if (isLoading) return {isLoading: true} as const
+	if (!appsKeyed) return {isLoading: false, app: undefined} as const
+
+	return {
+		isLoading: false,
+		app: appsKeyed[id],
+	} as const
 }
