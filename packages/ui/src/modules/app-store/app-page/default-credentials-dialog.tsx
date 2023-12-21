@@ -43,7 +43,7 @@ export function DefaultCredentialsDialog() {
 						</div>
 						<div>
 							<label className={textClass}>Default password</label>
-							<CopyableField value={defaultPassword} />
+							<CopyableField isPassword value={defaultPassword} />
 						</div>
 						<p className={textClass}>You can access the default credentials of any app from its store page.</p>
 						<Separator />
