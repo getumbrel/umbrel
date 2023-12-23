@@ -105,6 +105,9 @@ function tempToMessage(tempInCelcius?: number) {
 	if (temp > 75) {
 		return 'Hot'
 	}
+	if (temp === 69) {
+		return 'Nice'
+	}
 	if (temp > 40) {
 		return 'Warm'
 	}

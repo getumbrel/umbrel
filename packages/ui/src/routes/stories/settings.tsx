@@ -21,6 +21,10 @@ export default function SettingsStory() {
 			<Card>
 				<TempStatCardContent tempInCelcius={Infinity} defaultUnit='c' />
 			</Card>
+			<H3>69</H3>
+			<Card>
+				<TempStatCardContent tempInCelcius={69} defaultUnit='c' />
+			</Card>
 			<Separator />
 			<div className='flex flex-row flex-wrap gap-2'>
 				{range(-3, 11).map((temp) => (
