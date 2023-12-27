@@ -1,3 +1,4 @@
+import {z} from 'zod'
 import type {categories} from './data'
 
 export type AppRepositoryMeta = {
@@ -6,6 +7,14 @@ export type AppRepositoryMeta = {
 }
 
 export type Category = typeof categories[number]
+
+export const widgetSchema = z.object({
+	type: z.enum(['stat-with-progress', 'stat-with-buttons', 'three-up', 'four-up', 'actions', 'notifications']),
+	endpoint: z.string(),
+})
+
+export type Widget = z.infer<typeof widgetSchema>
+export type WidgetType = Widget['type']
 
 // TODO: just added this to quickly get types, come back to this and
 // add strciter validation. We might also want to describe this with
@@ -39,6 +48,7 @@ export type AppManifest = {
 	torOnly?: boolean
 	// TODO: add install size to API response for apps that have it
 	installSize?: number
+	widgets?: Widget[]
 }
 
 /** There's a 'ready' state instead of an 'installed' state because if an app is installed but updating, we don't want the user to do anything with that app. If an app is a UserApp (initiated install) */

@@ -2,24 +2,12 @@ import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
 
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
+import {Widget} from '@/trpc/trpc'
 
 import {widgetContainerCva, widgetTextCva} from './shared'
 import {TablerIcon} from './tabler-icon'
 
-export type WidgetType =
-	| 'stat-with-progress'
-	| 'stat-with-buttons'
-	| 'three-up'
-	| 'four-up'
-	| 'actions'
-	| 'notifications'
-
-export type WidgetConfig = {
-	type: WidgetType
-	endpoint: string
-}
-
-export function widgetConfigToWidget(widgetConfig: WidgetConfig) {
+export function widgetConfigToWidget(widgetConfig: Widget) {
 	switch (widgetConfig.type) {
 		case 'stat-with-progress':
 			return <ConnectedProgressWidget endpoint={widgetConfig.endpoint} />

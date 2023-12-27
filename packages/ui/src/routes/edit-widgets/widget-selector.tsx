@@ -1,100 +1,24 @@
 import {AnimatePresence, motion} from 'framer-motion'
-import {ReactNode, useState} from 'react'
+import {ReactNode} from 'react'
 import {useTimeout} from 'react-use'
-import {uniq} from 'remeda'
 
-import {useUserApps} from '@/hooks/use-user-apps'
+import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {BackdropBlurVariantContext, WidgetConfig, widgetConfigToWidget} from '@/modules/desktop/widgets'
+import {BackdropBlurVariantContext, widgetConfigToWidget} from '@/modules/desktop/widgets'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 
-const widgetConfigs = [
-	{
-		appId: 'settings',
-		widgets: [
-			{
-				type: 'stat-with-progress',
-				endpoint: '/widgets/settings/storage-stat.json',
-			},
-			{
-				type: 'stat-with-progress',
-				endpoint: '/widgets/settings/memory-stat.json',
-			},
-			{
-				type: 'three-up',
-				endpoint: '/widgets/settings/system-stats.json',
-			},
-		],
-	},
-	{
-		appId: 'bitcoin',
-		widgets: [
-			{
-				type: 'stat-with-progress',
-				endpoint: '/widgets/bitcoin/sync.json',
-			},
-			{
-				type: 'stat-with-buttons',
-				endpoint: '/widgets/bitcoin/balance-and-transact.json',
-			},
-			{
-				type: 'four-up',
-				endpoint: '/widgets/bitcoin/stats.json',
-			},
-		],
-	},
-	{
-		appId: 'lightning',
-		widgets: [
-			{
-				type: 'stat-with-buttons',
-				endpoint: '/widgets/lightning/balance-and-transact.json',
-			},
-		],
-	},
-	{
-		appId: 'nostr-relay',
-		widgets: [
-			{
-				type: 'actions',
-				endpoint: '/widgets/nostr-relay/actions.json',
-			},
-			{
-				type: 'notifications',
-				endpoint: '/widgets/nostr-relay/notifications.json',
-			},
-		],
-	},
-] as const satisfies readonly {
-	appId: string
-	widgets: readonly WidgetConfig[]
-}[]
-
-const MAX_WIDGETS = 3
-
-export function WidgetSelector({
-	open,
-	onOpenChange,
-	selectedWidgets = [],
-	onSelectedWidgetsChange,
-}: {
-	open: boolean
-	onOpenChange: (open: boolean) => void
-	selectedWidgets?: WidgetConfig[]
-	onSelectedWidgetsChange?: (widgets: WidgetConfig[]) => void
-}) {
-	const [selectedTooMany, setSelectedTooMany] = useState(false)
-	const {allAppsKeyed, isLoading} = useUserApps()
-
+export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
 	// Delay until after `usePager` has injected CSS vars
 	const [isReady] = useTimeout(300)
-	if (isLoading) return null
+
+	const widgets = useWidgets()
+
 	if (!isReady()) return null
 
-	const selectedH = selectedWidgets.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
+	const {availableWidgets, toggleSelected, selected, selectedTooMany} = widgets
 
-	const installedAppsWidgetConfigs = widgetConfigs.filter(({appId}) => appId in allAppsKeyed)
+	const selectedH = selected.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
 
 	return (
 		<>
@@ -121,7 +45,7 @@ export function WidgetSelector({
 						style={{height: selectedH}}
 					>
 						<AnimatePresence>
-							{selectedWidgets.map((widget) => {
+							{selected.map((widget) => {
 								return (
 									<motion.div
 										key={widget.endpoint}
@@ -153,28 +77,15 @@ export function WidgetSelector({
 				</div>
 			)}
 			<WidgetSheet open={open} onOpenChange={onOpenChange} selectedCssHeight={selectedH}>
-				{installedAppsWidgetConfigs.map(({appId, widgets}) => {
+				{availableWidgets.map(({appId, icon, name, widgets}) => {
 					return (
-						<WidgetSection key={appId} iconSrc={allAppsKeyed[appId].icon} title={allAppsKeyed[appId].name}>
-							{widgets.map((widget) => {
+						<WidgetSection key={appId} iconSrc={icon} title={name}>
+							{widgets?.map((widget) => {
 								return (
 									<WidgetChecker
 										key={widget.endpoint}
-										checked={selectedWidgets.map((w) => w.endpoint).includes(widget.endpoint)}
-										onCheckedChange={(c) => {
-											if (selectedWidgets.length >= MAX_WIDGETS && c) {
-												setSelectedTooMany(true)
-												setTimeout(() => setSelectedTooMany(false), 500)
-												return
-											}
-											setSelectedTooMany(false)
-											if (selectedWidgets.map((w) => w.endpoint).includes(widget.endpoint)) {
-												onSelectedWidgetsChange?.(selectedWidgets.filter((w) => w.endpoint !== widget.endpoint))
-											} else {
-												onSelectedWidgetsChange?.(uniq([...selectedWidgets, widget]))
-											}
-											console.log(widget.endpoint)
-										}}
+										checked={selected.map((w) => w.endpoint).includes(widget.endpoint)}
+										onCheckedChange={(checked) => toggleSelected(widget, checked)}
 									>
 										{widgetConfigToWidget(widget)}
 									</WidgetChecker>

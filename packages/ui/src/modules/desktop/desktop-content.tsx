@@ -1,21 +1,21 @@
 import {motion, Variant} from 'framer-motion'
 import {useLocation, useNavigate} from 'react-router-dom'
-import {useLocalStorage} from 'react-use'
 
 import {useUserApps} from '@/hooks/use-user-apps'
+import {useWidgets} from '@/hooks/use-widgets'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'
 import {Header, Search} from './desktop-misc'
 import {DockSpacer} from './dock'
-import {WidgetConfig, widgetConfigToWidget, WidgetWrapper} from './widgets'
+import {widgetConfigToWidget, WidgetWrapper} from './widgets'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
 	const navigate = useNavigate()
 
 	const {allAppsKeyed, userApps, isLoading} = useUserApps()
-	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
+	const widgets = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -61,7 +61,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 				transition={variant === 'overlayed' ? {duration: 0} : {duration: 0.2, ease: 'easeOut', delay: 0.2}}
 			>
 				<AppGrid
-					widgets={selectedWidgets?.map((widget) => (
+					widgets={widgets.selected.map((widget) => (
 						<WidgetWrapper
 							key={widget.endpoint}
 							// Get the app name from the endpoint

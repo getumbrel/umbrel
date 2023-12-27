@@ -8,6 +8,8 @@ export type {
 	AppState,
 	AppManifest as RegistryApp,
 	UserApp,
+	Widget,
+	WidgetType,
 } from '../../../../packages/umbreld/source/modules/apps/schema'
 
 export {categories} from '../../../../packages/umbreld/source/modules/apps/data'

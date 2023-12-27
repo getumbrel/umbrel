@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import type Umbreld from '../index.js'
 
 import * as totp from './utilities/totp.js'
+import {Widget} from './apps/schema.js'
 
 export default class User {
 	#store: Umbreld['store']
@@ -30,6 +31,11 @@ export default class User {
 	// Set the users wallpaper
 	async setWallpaper(wallpaper: string) {
 		return this.#store.set('user.wallpaper', wallpaper)
+	}
+
+	// Set the users wallpaper
+	async setWidgets(widgets: Widget[]) {
+		return this.#store.set('user.widgets', widgets)
 	}
 
 	// Set the users password

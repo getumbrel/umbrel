@@ -3,12 +3,13 @@ import {useLocalStorage} from 'react-use'
 
 import {useUserApps} from '@/hooks/use-user-apps'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
+import {Widget} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'
 import {Header} from './desktop-misc'
 import {DockPreview} from './dock'
-import {WidgetConfig, widgetConfigToWidget, WidgetWrapper} from './widgets'
+import {widgetConfigToWidget, WidgetWrapper} from './widgets'
 
 export function DesktopPreview() {
 	const W = 1440
@@ -74,7 +75,7 @@ export function DesktopPreview() {
 
 function DesktopContent() {
 	const {allAppsKeyed, userApps, isLoading} = useUserApps()
-	const [selectedWidgets] = useLocalStorage<WidgetConfig[]>('selected-widgets', [])
+	const [selectedWidgets] = useLocalStorage<Widget[]>('selected-widgets', [])
 
 	if (isLoading) return null
 	if (!userApps) return null
