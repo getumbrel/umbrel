@@ -1,9 +1,8 @@
 import {useEffect, useState} from 'react'
-import {useLocalStorage} from 'react-use'
 
 import {useUserApps} from '@/hooks/use-user-apps'
+import {useWidgets} from '@/hooks/use-widgets'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
-import {Widget} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'
@@ -75,7 +74,7 @@ export function DesktopPreview() {
 
 function DesktopContent() {
 	const {allAppsKeyed, userApps, isLoading} = useUserApps()
-	const [selectedWidgets] = useLocalStorage<Widget[]>('selected-widgets', [])
+	const {selected} = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -88,7 +87,7 @@ function DesktopContent() {
 			<div className='flex w-full flex-grow overflow-hidden'>
 				<AppGrid
 					onlyFirstPage
-					widgets={selectedWidgets?.map((widget) => (
+					widgets={selected?.map((widget) => (
 						<WidgetWrapper
 							key={widget.endpoint}
 							// Get the app name from the endpoint
