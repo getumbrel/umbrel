@@ -1,11 +1,8 @@
 import React, {Suspense} from 'react'
-import {TbArrowRight} from 'react-icons/tb'
 import {createBrowserRouter} from 'react-router-dom'
 
 import {Notifications} from './components/notifications'
-import {CoverMessage} from './components/ui/cover-message'
 import {ErrorBoundary} from './components/ui/error-boundary'
-import {LinkButton} from './components/ui/link-button'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {UserAppsProvider} from './hooks/use-user-apps'
 import {AppStoreLayout} from './layouts/app-store'
@@ -16,6 +13,7 @@ import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
+import {NotFound} from './routes/not-found'
 import {ReplaceSdCard} from './routes/replace-sd-card'
 import {Settings} from './routes/settings'
 import MiscStory from './routes/stories/misc'
@@ -303,13 +301,6 @@ export const router = createBrowserRouter([
 
 	{
 		path: '*',
-		element: (
-			<CoverMessage>
-				404 | Not Found{' '}
-				<LinkButton to='/' size='sm' variant='default' className='mt-1'>
-					Go Home <TbArrowRight className='inline-block' />
-				</LinkButton>
-			</CoverMessage>
-		),
+		Component: NotFound,
 	},
 ])
