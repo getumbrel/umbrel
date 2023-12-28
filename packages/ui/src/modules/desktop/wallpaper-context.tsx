@@ -1,6 +1,7 @@
-import {useLayoutEffect} from 'react'
+import {useEffect, useLayoutEffect} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
+import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
@@ -113,6 +114,9 @@ const nullWallpaper = {
 
 const DEFAULT_WALLPAPER_ID: WallpaperId = 'water-dark'
 
+/**
+ * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
+ */
 export const useWallpaper = () => {
 	const userQ = trpcReact.user.get.useQuery(undefined, {
 		// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
@@ -121,7 +125,7 @@ export const useWallpaper = () => {
 	const wallpaperQId = userQ.data?.wallpaper
 	const wallpaperId = arrayIncludes(wallpaperIds, wallpaperQId) ? wallpaperQId : DEFAULT_WALLPAPER_ID
 
-	// // trpc
+	// trpc
 	const ctx = trpcReact.useContext()
 	const userMut = trpcReact.user.set.useMutation({onSuccess: () => ctx.user.get.invalidate()})
 	const setWallpaperId = (id: WallpaperId) => userMut.mutate({wallpaper: id})
@@ -130,7 +134,14 @@ export const useWallpaper = () => {
 	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
 	// const wallpaper = nullWallpaper
 
-	return {wallpaper, setWallpaperId}
+	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2('wallpaperId', wallpaperId)
+	const localWallpaper = localWallpaperId ? wallpapersKeyed[localWallpaperId] : wallpaper
+
+	useEffect(() => {
+		hasData && setLocalWallpaperId(wallpaperId)
+	}, [hasData, setLocalWallpaperId, wallpaperId])
+
+	return {wallpaper, localWallpaper, setWallpaperId}
 }
 
 // Not a standard provider because using trpc for getting the actual data
@@ -148,15 +159,13 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 }
 
 export function Wallpaper() {
-	const {wallpaper} = useWallpaper()
-
-	if (!wallpaper.url) return null
+	const {wallpaper, localWallpaper} = useWallpaper()
 
 	return (
 		<div
 			className='pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-in fade-in zoom-in-110'
 			style={{
-				backgroundImage: `url(${wallpaper.url})`,
+				backgroundImage: `url(${wallpaper.url || localWallpaper.url})`,
 			}}
 		/>
 	)
