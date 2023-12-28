@@ -39,7 +39,7 @@ export function Dock() {
 			>
 				<DockItem
 					to={systemAppsKeyed['home'].systemAppTo}
-					open={pathname === '/'}
+					open={pathname === '/' || pathname === '/install-first-app'}
 					bg={systemAppsKeyed['home'].icon}
 					mouseX={mouseX}
 				/>
