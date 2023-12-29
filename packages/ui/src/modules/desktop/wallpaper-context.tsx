@@ -144,18 +144,18 @@ export const useWallpaper = () => {
 	return {wallpaper, localWallpaper, setWallpaperId}
 }
 
-// Not a standard provider because using trpc for getting the actual data
-export function WallpaperProvider({children}: {children: React.ReactNode}) {
-	const {wallpaper} = useWallpaper()
+export function WallpaperInjector() {
+	const {wallpaper, localWallpaper} = useWallpaper()
+
+	const w = (wallpaper !== nullWallpaper && wallpaper) || localWallpaper || DEFAULT_WALLPAPER_ID
 
 	useLayoutEffect(() => {
 		const el = document.documentElement
-		if (!el) return
-		el.style.setProperty('--color-brand', wallpaper.brandColorHsl)
-		el.style.setProperty('--color-brand-lighter', wallpaper.brandColorLighterHsl)
-	}, [wallpaper.brandColorHsl, wallpaper.brandColorLighterHsl])
+		el.style.setProperty('--color-brand', w.brandColorHsl)
+		el.style.setProperty('--color-brand-lighter', w.brandColorLighterHsl)
+	}, [w.brandColorHsl, w.brandColorLighterHsl])
 
-	return children
+	return null
 }
 
 export function Wallpaper() {

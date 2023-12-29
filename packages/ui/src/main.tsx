@@ -13,7 +13,7 @@ import {IframeChecker} from './components/iframe-checker'
 import {CoverMessage} from './components/ui/cover-message'
 import {Toaster} from './components/ui/toast'
 import {EnsureBackendAvailable} from './modules/auth/ensure-backend-available'
-import {WallpaperProvider} from './modules/desktop/wallpaper-context'
+import {WallpaperInjector} from './modules/desktop/wallpaper-context'
 import {router} from './router'
 import {TooltipProvider} from './shadcn-components/ui/tooltip'
 import {TrpcProvider} from './trpc/trpc-provider'
@@ -24,12 +24,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 			{/* <UpdatingCover> */}
 			<ErrorBoundary fallback={<CoverMessage>Something went wrong</CoverMessage>}>
 				<TrpcProvider>
+					<WallpaperInjector />
 					<EnsureBackendAvailable>
-						<WallpaperProvider>
-							<TooltipProvider>
-								<RouterProvider router={router} />
-							</TooltipProvider>
-						</WallpaperProvider>
+						<TooltipProvider>
+							<RouterProvider router={router} />
+						</TooltipProvider>
 					</EnsureBackendAvailable>
 				</TrpcProvider>
 				<Toaster />
