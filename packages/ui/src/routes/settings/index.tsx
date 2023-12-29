@@ -10,9 +10,6 @@ import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {trpcReact} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
-import ConfirmEnableTorDialog from './confirm-enable-tor'
-import DeviceInfoDialog from './device-info'
-
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
 	import('./_components/settings-content').then((m) => ({default: m.SettingsContent})),
@@ -31,6 +28,8 @@ const MigrationAssistantDialog = React.lazy(() => import('@/routes/settings/migr
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
+const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/confirm-enable-tor'))
+const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 
 const routeToDialog: Record<string, React.ComponentType> = {
 	'2fa-disable': TwoFactorDisableDialog,
