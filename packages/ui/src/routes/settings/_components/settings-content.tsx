@@ -20,7 +20,7 @@ import {ChevronDown} from '@/assets/chevron-down'
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
+import {deviceMap, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -47,21 +47,29 @@ export function SettingsContent() {
 	const navigate = useNavigate()
 	const tor = useTorEnabled()
 
-	const [userQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
-		t.user.get(),
-		t.system.cpuTemperature(),
-		t.system.diskUsage(),
-		t.system.memoryUsage(),
-		t.migration.isUmbrelHome(),
-		t.user.is2faEnabled(),
-		t.system.osVersion(),
-	])
+	const [userQ, deviceInfoQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries(
+		(t) => [
+			t.user.get(),
+			t.system.deviceInfo(),
+			t.system.cpuTemperature(),
+			t.system.diskUsage(),
+			t.system.memoryUsage(),
+			t.migration.isUmbrelHome(),
+			t.user.is2faEnabled(),
+			t.system.osVersion(),
+		],
+	)
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// TODO: also wanna check CPU temp
 	const isLoading =
-		userQ.isLoading || diskQ.isLoading || memoryQ.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
+		userQ.isLoading ||
+		deviceInfoQ.isLoading ||
+		diskQ.isLoading ||
+		memoryQ.isLoading ||
+		is2faEnabledQ.isLoading ||
+		osVersionQ.isLoading
 
 	// Scroll to hash
 	useEffect(() => {
@@ -94,7 +102,7 @@ export function SettingsContent() {
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 							<dt className='opacity-40'>Running on</dt>
-							<dd>DEBUG 4</dd>
+							<dd>{deviceInfoQ.data?.device ? deviceMap[deviceInfoQ.data?.device].title : UNKNOWN()}</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
 							<dd>{osVersionQ.data}</dd>
 						</dl>

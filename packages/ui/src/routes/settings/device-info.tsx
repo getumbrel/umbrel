@@ -3,28 +3,13 @@ import {useNavigate} from 'react-router-dom'
 
 import {CopyButton} from '@/components/ui/copy-button'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
-import {UNKNOWN} from '@/constants'
+import {deviceMap, UNKNOWN} from '@/constants'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
 import {Device, trpcReact} from '@/trpc/trpc'
 import {useAfterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
-
-const deviceMap = {
-	'umbrel-home': {
-		title: 'Umbrel Home',
-		icon: '/figma-exports/umbrel-home.svg',
-	},
-	'raspberry-pi': {
-		title: 'Raspberry Pi',
-		icon: '/figma-exports/pi.svg',
-	},
-	linux: {
-		title: 'Linux',
-		icon: '/figma-exports/tux.svg',
-	},
-} satisfies Record<Device, {title: string; icon: string}>
 
 export default function DeviceInfoDialog() {
 	const title = 'Device Information'
