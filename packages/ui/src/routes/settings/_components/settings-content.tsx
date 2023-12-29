@@ -12,7 +12,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbServer, TbTool} from 'react-icons/tb'
+import {TbRotate2, TbServer, TbTool} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
@@ -263,6 +263,19 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow />
+					<ListRow title='Factory Reset' description='Delete all data, and reset your device completely' isLabel>
+						<IconButton
+							text='destructive'
+							icon={TbRotate2}
+							onClick={() =>
+								navigate({
+									search: addLinkSearchParams({dialog: 'factory-reset'}),
+								})
+							}
+						>
+							Reset
+						</IconButton>
+					</ListRow>
 				</Card>
 				<ContactSupportLink className='lg:hidden' />
 			</div>
