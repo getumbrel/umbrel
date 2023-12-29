@@ -11,6 +11,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
 import ConfirmEnableTorDialog from './confirm-enable-tor'
+import DeviceInfoDialog from './device-info'
 
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
@@ -40,6 +41,7 @@ const routeToDialog: Record<string, React.ComponentType> = {
 	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
 	'confirm-enable-tor': ConfirmEnableTorDialog,
+	'device-info': DeviceInfoDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,

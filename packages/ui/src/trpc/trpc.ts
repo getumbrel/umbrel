@@ -41,3 +41,7 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({links})
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
+
+//
+
+export type Device = RouterOutput['system']['deviceInfo']['device']

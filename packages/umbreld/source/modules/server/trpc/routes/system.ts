@@ -3,6 +3,8 @@ import {privateProcedure, router} from '../trpc.js'
 
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
 
+type Device = 'umbrel-home' | 'raspberry-pi' | 'linux'
+
 export default router({
 	// TODO: have consistent naming for these
 	osVersion: privateProcedure.query(() => {
@@ -19,6 +21,13 @@ export default router({
 		await setTimeout(1000)
 		return '1.0.1'
 	}),
+	//
+	deviceInfo: privateProcedure.query(() => ({
+		// Maybe rename `device` to `container` or `osContainer`?
+		device: 'umbrel-home' as Device,
+		modelNumber: 'U130121',
+		serialNumber: 'U230300078',
+	})),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld.dataDirectory)),

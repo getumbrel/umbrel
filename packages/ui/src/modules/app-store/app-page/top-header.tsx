@@ -6,10 +6,10 @@ import {useTimeout} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {InstallButton} from '@/components/install-button'
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {SHEET_HEADER_ID} from '@/constants'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {Badge} from '@/shadcn-components/ui/badge'
-import {SheetClose} from '@/shadcn-components/ui/sheet'
 import {RegistryApp} from '@/trpc/trpc'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
@@ -31,7 +31,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 						<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
 					</div>
 					{childrenRight}
-					<SheetClose />
+					<DialogCloseButton />
 				</Portal>
 			)}
 

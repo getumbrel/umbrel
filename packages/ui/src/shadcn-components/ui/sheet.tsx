@@ -1,8 +1,8 @@
 import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
-import {RiCloseCircleFill} from 'react-icons/ri'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
 
@@ -49,18 +49,6 @@ const sheetVariants = cva(
 	},
 )
 
-const SheetClose = ({className}: {className?: React.ReactNode}) => (
-	<SheetPrimitive.Close
-		className={cn(
-			'rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2',
-			className,
-		)}
-	>
-		<RiCloseCircleFill className='h-6 w-6' />
-		<span className='sr-only'>Close</span>
-	</SheetPrimitive.Close>
-)
-
 interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
 		VariantProps<typeof sheetVariants> {
@@ -79,7 +67,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				{/* <SheetOverlay /> */}
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 					{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
-					{showClose && <SheetClose className='absolute right-2.5 top-2.5 z-50' />}
+					{showClose && <DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
@@ -133,4 +121,4 @@ const SheetDescription = React.forwardRef<
 ))
 SheetDescription.displayName = SheetPrimitive.Description.displayName
 
-export {Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger}
+export {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger}

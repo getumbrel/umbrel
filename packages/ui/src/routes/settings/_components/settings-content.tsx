@@ -12,7 +12,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbTool} from 'react-icons/tb'
+import {TbServer, TbTool} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 import {useLocalStorage} from 'react-use'
 
@@ -248,6 +248,18 @@ export function SettingsContent() {
 							}
 						>
 							Troubleshoot
+						</IconButton>
+					</ListRow>
+					<ListRow title='Device Information' description='View logs for troubleshooting umbrelOS or an app' isLabel>
+						<IconButton
+							icon={TbServer}
+							onClick={() =>
+								navigate({
+									search: addLinkSearchParams({dialog: 'device-info'}),
+								})
+							}
+						>
+							View Info
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow />
