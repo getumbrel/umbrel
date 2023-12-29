@@ -50,8 +50,9 @@ export function InstallButton({
 	const style: CSSProperties = {
 		// Adding transitions so hover and other transitions work
 		transition:
-			state === 'installing' ? '--progress 0.2s, opacity 0.2s, width 0.2s, background-color 0.2s' : 'width 0.2s',
-		// TODO: fix hover not working when done installing
+			state === 'installing'
+				? '--progress 0.2s, opacity 0.2s, width 0.2s, background-color 0.2s'
+				: 'width 0.2s, background-color 0.2s',
 		['--progress' as string]: `${progress}%`,
 		backgroundImage:
 			state === 'installing'
