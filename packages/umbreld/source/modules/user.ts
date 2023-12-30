@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import type Umbreld from '../index.js'
 
 import * as totp from './utilities/totp.js'
-import {Widget} from './apps/schema.js'
+import type {Widget} from './apps/schema.js'
 
 export default class User {
 	#store: Umbreld['store']

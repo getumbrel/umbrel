@@ -1,5 +1,5 @@
 import {indexBy} from 'remeda'
-import {Widget} from './schema'
+import {Widget} from './schema.js'
 
 export const categories = [
 	'files',
@@ -58,4 +58,4 @@ export const demoWidgetConfigs = [
 	widgets: Widget[]
 }[]
 
-export const demoWidgetConfigsKeyed = indexBy(demoWidgetConfigs, (e) => e.appId)
+export const demoWidgetConfigsKeyed = indexBy(demoWidgetConfigs, (widget) => widget.appId)

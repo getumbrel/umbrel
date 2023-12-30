@@ -57,6 +57,7 @@
 			"@typescript-eslint/default-param-last": "off",
 			"@typescript-eslint/no-unnecessary-boolean-literal-compare": "off",
 			"@typescript-eslint/parameter-properties": "off",
+			"@typescript-eslint/array-type": "off",
 			"n/file-extension-in-import": "off"
 		}
 	},
