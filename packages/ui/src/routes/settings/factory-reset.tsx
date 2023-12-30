@@ -2,6 +2,7 @@ import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {LinkButton} from '@/components/ui/link-button'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -38,9 +39,9 @@ export default function FactoryResetDialog() {
 					</DialogHeader>
 					<Input placeholder='Device name' />
 					<DialogFooter>
-						<Button size='dialog' variant='primary'>
+						<LinkButton to='/factory-reset' size='dialog' variant='primary'>
 							Proceed
-						</Button>
+						</LinkButton>
 						<Button size='dialog'>Not now</Button>
 					</DialogFooter>
 				</DialogContent>

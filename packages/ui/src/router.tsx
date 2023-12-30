@@ -46,6 +46,7 @@ const MigrateStory = React.lazy(() => import('./routes/stories/migrate'))
 const SettingsStory = React.lazy(() => import('./routes/stories/settings'))
 const SheetStory = React.lazy(() => import('./routes/stories/sheet'))
 const Trpc = React.lazy(() => import('./routes/stories/trpc'))
+const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -195,6 +196,14 @@ export const router = createBrowserRouter([
 				element: (
 					<EnsureLoggedIn>
 						<MigrateFailed />
+					</EnsureLoggedIn>
+				),
+			},
+			{
+				path: 'factory-reset',
+				element: (
+					<EnsureLoggedIn>
+						<FactoryReset />
 					</EnsureLoggedIn>
 				),
 			},

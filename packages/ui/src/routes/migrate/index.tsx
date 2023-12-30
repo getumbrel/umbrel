@@ -1,16 +1,13 @@
-import * as ProgressPrimitive from '@radix-ui/react-progress'
 import {motion} from 'framer-motion'
 import {useEffect} from 'react'
-import {TbAlertTriangleFilled} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
-import {isNil} from 'remeda'
 
-import UmbrelLogo from '@/assets/umbrel-logo'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {cn} from '@/shadcn-lib/utils'
+import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
 import {trpcReact} from '@/trpc/trpc'
 
-import {migrateContainerClass, migrateTitleClass} from './_shared'
+import {Alert} from '../../modules/bare/alert'
+import {Progress} from '../../modules/bare/progress'
 
 export default function Migrate() {
 	const navigate = useNavigate()
@@ -79,51 +76,17 @@ export function MigrateInner({
 
 	return (
 		<motion.div
-			className={migrateContainerClass}
+			className={bareContainerClass}
 			initial={{opacity: 0}}
 			animate={{opacity: 1}}
 			transition={{duration: 0.4, delay: 0.2}}
 		>
-			<UmbrelLogo />
-			<div className='pt-4' />
-			<h1 className={migrateTitleClass}>Migration Assistant</h1>
-			<div className='pt-[50px]' />
+			<BareLogoTitle>Migration Assistant</BareLogoTitle>
+			<BareSpacer />
 			{/* Show indeterminate value if not running */}
-			<Progress value={isStarting ? undefined : progress} />
-			<div className='pt-5' />
-			<span className='text-15 font-normal leading-none -tracking-2'>{message}</span>
+			<Progress value={isStarting ? undefined : progress}>{message}</Progress>
 			<div className='flex-1 pt-4' />
-			<Alert>Do not turn off your Umbrel Home until the migration is complete</Alert>
+			<Alert>Do not turn off your device until the migration is complete</Alert>
 		</motion.div>
-	)
-}
-
-function Progress({value}: {value?: number}) {
-	return (
-		<ProgressPrimitive.Root
-			className={cn(
-				'relative h-1.5 w-full overflow-hidden rounded-full bg-white/10 sm:w-[80%]',
-				isNil(value) && 'umbrel-bouncing-gradient',
-			)}
-		>
-			<ProgressPrimitive.Indicator
-				className='h-full w-full flex-1 rounded-full bg-white transition-all'
-				style={{transform: `translateX(-${100 - (value || 0)}%)`}}
-			/>
-		</ProgressPrimitive.Root>
-	)
-}
-
-function Alert({children, className}: {children: React.ReactNode; className?: string}) {
-	return (
-		<div
-			className={cn(
-				'text-normal flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-14 -tracking-2',
-				className,
-			)}
-		>
-			<TbAlertTriangleFilled className='h-5 w-5 shrink-0' />
-			<span>{children}</span>
-		</div>
 	)
 }

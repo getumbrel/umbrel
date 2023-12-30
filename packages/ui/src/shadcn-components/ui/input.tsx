@@ -8,16 +8,22 @@ import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 const inputVariants = cva(
-	'flex h-12 w-full rounded-full border-hpx border-white/10 bg-white/4 hover:bg-white/6 px-5 py-2 text-15 font-medium -tracking-1 transition-colors duration-300 placeholder:text-white/30 focus-visible:placeholder:text-white/40 text-white/40 focus-visible:text-white focus-visible:bg-white/10 focus-visible:outline-none focus-visible:border-white/50 disabled:cursor-not-allowed disabled:opacity-40',
+	'flex w-full rounded-full border-hpx border-white/10 bg-white/4 hover:bg-white/6 px-5 py-2 text-15 font-medium -tracking-1 transition-colors duration-300 placeholder:text-white/30 focus-visible:placeholder:text-white/40 text-white/40 focus-visible:text-white focus-visible:bg-white/10 focus-visible:outline-none focus-visible:border-white/50 disabled:cursor-not-allowed disabled:opacity-40',
 	{
 		variants: {
 			variant: {
 				default: '',
 				destructive: 'text-destructive2-lightest border-destructive2-lightest',
 			},
+			// `input` element already has a `size` attribute so we need a different name
+			sizeVariant: {
+				default: 'h-12',
+				short: 'h-9',
+			},
 		},
 		defaultVariants: {
 			variant: 'default',
+			sizeVariant: 'default',
 		},
 	},
 )
@@ -27,11 +33,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement>,
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-	({className, type, variant, onChange, onValueChange, ...props}, ref) => {
+	({className, type, variant, sizeVariant, onChange, onValueChange, ...props}, ref) => {
 		return (
 			<input
 				type={type}
-				className={cn(inputVariants({variant}), className)}
+				className={cn(inputVariants({variant, sizeVariant}), className)}
 				ref={ref}
 				onChange={(e) => {
 					onChange?.(e)
@@ -52,6 +58,7 @@ export function PasswordInput({
 	onValueChange,
 	error,
 	autoFocus,
+	sizeVariant,
 }: {
 	value?: string
 	/** Calling it a label rather than a placeholder */
@@ -59,6 +66,7 @@ export function PasswordInput({
 	onValueChange?: (value: string) => void
 	error?: string
 	autoFocus?: boolean
+	sizeVariant?: VariantProps<typeof inputVariants>['sizeVariant']
 }) {
 	const [showPassword, setShowPassword] = React.useState(false)
 	return (
@@ -69,6 +77,7 @@ export function PasswordInput({
 					placeholder={label}
 					type={showPassword ? 'text' : 'password'}
 					className={iconRightClasses.input}
+					sizeVariant={sizeVariant}
 					value={value}
 					onChange={(e) => onValueChange?.(e.target.value)}
 					autoFocus={autoFocus}

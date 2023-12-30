@@ -37,7 +37,7 @@ export function SubTitle({
 export const footerClass = tw`flex items-center justify-center gap-4`
 export const footerLinkClass = tw`text-13 transition-colors font-normal text-white/60 -tracking-3 hover:text-white/80 focus:outline-none focus-visible:ring-3`
 
-export const buttonClass = tw`flex h-[42px] items-center rounded-full bg-white/80 px-4 text-15 font-semibold -tracking-1 text-black ring-white/40 transition-all duration-300 hover:bg-white focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-white/90 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
+export const buttonClass = tw`flex h-[42px] items-center rounded-full bg-white px-4 text-14 font-medium -tracking-1 text-black ring-white/40 transition-all duration-300 hover:bg-white/80 focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-white/90 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
 
 export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 

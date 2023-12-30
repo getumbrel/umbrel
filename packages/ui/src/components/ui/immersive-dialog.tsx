@@ -1,5 +1,8 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal} from '@radix-ui/react-dialog'
-import {ForwardedRef, forwardRef} from 'react'
+import {motion} from 'framer-motion'
+import {LucideIcon} from 'lucide-react'
+import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
+import type {IconType} from 'react-icons'
 import {RiCloseLine} from 'react-icons/ri'
 
 import {dialogContentClass, dialogOverlayClass} from '@/shadcn-components/ui/shared/dialog'
@@ -94,6 +97,119 @@ function ImmersiveDialogClose() {
 					}}
 				/>
 			</DialogClose>
+		</div>
+	)
+}
+
+export function ImmersiveDialogBody({
+	title,
+	description,
+	bodyText,
+	children,
+	footer,
+}: {
+	title: string
+	description: string
+	bodyText: string
+	children: React.ReactNode
+	footer: React.ReactNode
+}) {
+	return (
+		<div className='flex h-full flex-col items-start gap-5'>
+			<div className='space-y-2'>
+				<h1 className={immersiveDialogTitleClass}>{title}</h1>
+				<p className={immersiveDialogDescriptionClass}>{description}</p>
+			</div>
+			<ImmersiveDialogSeparator />
+			<div className='text-15 font-medium leading-none -tracking-4 text-white/90'>{bodyText}</div>
+			<motion.div className='w-full space-y-2.5'>
+				{Children.map(children, (child, i) => (
+					<motion.div
+						key={i}
+						initial={{opacity: 0, translateY: 10}}
+						animate={{opacity: 1, translateY: 0}}
+						transition={{delay: i * 0.2 + 0.1}}
+					>
+						{child}
+					</motion.div>
+				))}
+			</motion.div>
+			<div className='flex-1' />
+			<div className='flex flex-wrap-reverse items-center gap-2'>{footer}</div>
+		</div>
+	)
+}
+
+export function ImmersiveDialogIconMessage({
+	icon,
+	title,
+	description,
+	className,
+	iconClassName,
+}: {
+	icon: IconType | LucideIcon
+	title: ReactNode
+	description?: ReactNode
+	className?: string
+	iconClassName?: string
+}) {
+	const IconComponent = icon
+
+	return (
+		<div
+			className={cn(
+				'inline-flex w-full items-center gap-2 rounded-10 border border-white/4 bg-white/4 p-2 text-left font-normal',
+				className,
+			)}
+			style={{
+				boxShadow: '0px 40px 60px 0px rgba(0, 0, 0, 0.10)',
+			}}
+		>
+			<div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-8 bg-white/4'>
+				<IconComponent className={cn('h-5 w-5 [&>*]:stroke-1', iconClassName)} />
+			</div>
+			<div className='space-y-1'>
+				<div className='text-13 font-normal leading-tight -tracking-2'>{title}</div>
+				{description && (
+					<div className='text-12 font-normal leading-tight -tracking-2 text-white/50'>{description}</div>
+				)}
+			</div>
+		</div>
+	)
+}
+
+export function ImmersiveDialogIconMessageKeyValue({
+	icon,
+	k,
+	v,
+	className,
+	iconClassName,
+}: {
+	icon: IconType | LucideIcon
+	k: ReactNode
+	v: ReactNode
+	className?: string
+	iconClassName?: string
+}) {
+	const IconComponent = icon
+
+	return (
+		<div
+			className={cn(
+				'inline-flex w-full items-center gap-2 rounded-10 border border-white/4 bg-white/4 px-3 py-2.5 text-left font-normal',
+				className,
+			)}
+			style={{
+				boxShadow: '0px 40px 60px 0px rgba(0, 0, 0, 0.10)',
+			}}
+		>
+			<div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-8 bg-white/4'>
+				<IconComponent className={cn('h-5 w-5', iconClassName)} />
+			</div>
+			<div className='flex flex-1 text-14'>
+				<div className='flex-1 font-normal leading-tight -tracking-2 opacity-60'>{k}</div>
+				<div className='font-medium leading-tight -tracking-2'>{v}</div>
+			</div>
 		</div>
 	)
 }
