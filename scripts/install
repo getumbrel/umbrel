@@ -21,6 +21,7 @@ INSTALL_DOCKER="true"
 INSTALL_DOCKER_COMPOSE="true"
 INSTALL_START_SCRIPT="true"
 INSTALL_UMBREL="true"
+AUTO_START_UMBREL="true"
 UMBREL_VERSION="release"
 UMBREL_REPO="getumbrel/umbrel"
 UMBREL_INSTALL_PATH="$HOME/umbrel"
@@ -61,6 +62,11 @@ fi
 if [[ "${arguments}" = *"--no-install-umbrel"* ]]
 then
   INSTALL_UMBREL="false"
+fi
+
+if [[ "${arguments}" = *"--no-auto-start-umbrel"* ]]
+then
+  AUTO_START_UMBREL="false"
 fi
 
 if [[ "${arguments}" = *"--no-install-deps"* ]]
@@ -293,13 +299,16 @@ EOF
       install_systemd_service
     fi
 
-    # Do the initial start outside of systemd so we get logs
-    sudo ${UMBREL_INSTALL_PATH}/scripts/start
-
-    if [[ "${INSTALL_START_SCRIPT}" = "true" ]]
+    if [[ "${AUTO_START_UMBREL}" = "true" ]]
     then
-      # Kick off the systemd service again so it's in sync
-      sudo systemctl start "umbrel-startup.service"
+        # Do the initial start outside of systemd so we get logs
+        sudo ${UMBREL_INSTALL_PATH}/scripts/start
+
+        if [[ "${INSTALL_START_SCRIPT}" = "true" ]]
+        then
+        # Kick off the systemd service again so it's in sync
+        sudo systemctl start "umbrel-startup.service"
+        fi
     fi
 
   echo
