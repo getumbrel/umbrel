@@ -27,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 					<WallpaperInjector />
 					<EnsureBackendAvailable>
 						<TooltipProvider>
+							{/* TODO: move stories out of main router */}
 							<RouterProvider router={router} />
 						</TooltipProvider>
 					</EnsureBackendAvailable>
