@@ -112,7 +112,7 @@ const nullWallpaper = {
 	brandColorLighterHsl: '0 0 0',
 }
 
-const DEFAULT_WALLPAPER_ID: WallpaperId = 'water-dark'
+const DEFAULT_WALLPAPER_ID: WallpaperId = 'desert-mountains'
 
 /**
  * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
