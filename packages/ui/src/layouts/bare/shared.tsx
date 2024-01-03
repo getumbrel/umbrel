@@ -41,7 +41,6 @@ export const buttonClass = tw`flex h-[42px] items-center rounded-full bg-white p
 
 export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 
-// Not a Next.js layout because it's it takes multuple children.
 // Think of it as a helper component to make it easier to be consistent between pages. It's a brittle abtraction that
 // shouldn't be taken too far.
 export function Layout({
