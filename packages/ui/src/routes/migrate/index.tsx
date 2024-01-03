@@ -1,6 +1,6 @@
 import {motion} from 'framer-motion'
-import {useEffect} from 'react'
 import {useNavigate} from 'react-router-dom'
+import {useInterval} from 'react-use'
 
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
@@ -14,31 +14,22 @@ export default function Migrate() {
 
 	const migrationStatusQ = trpcReact.migration.migrationStatus.useQuery()
 
-	useEffect(() => {
-		const interval = setInterval(() => {
-			migrationStatusQ.refetch()
-		}, 500)
+	useInterval(migrationStatusQ.refetch, 500)
 
-		return () => {
-			clearInterval(interval)
-		}
-	})
+	const {running, progress, error, description} = migrationStatusQ.data ?? {}
 
-	const isRunning = !!migrationStatusQ.data?.running
-	const progress = migrationStatusQ.data?.progress
-
-	const message = (migrationStatusQ.data?.description || 'Connecting') + '...'
+	const message = (description || 'Connecting') + '...'
 	useUmbrelTitle(message)
 
-	if (migrationStatusQ.data?.error) {
+	if (error) {
 		navigate('/migrate/failed')
 	}
 
-	if (!isRunning && progress === 100) {
+	if (!running && progress === 100) {
 		navigate('/migrate/success')
 	}
 
-	return <MigrateInner progress={progress} message={message} isRunning={isRunning} />
+	return <MigrateInner progress={progress} message={message} isRunning={!!running} />
 }
 
 export function MigrateInner({
