@@ -17,7 +17,8 @@
 		"build-remote": "ssh root@mark-dev './pull.sh'",
 		"format": "prettier . --write",
 		"tsc": "tsc --noEmit",
-		"size": "vite-bundle-visualizer"
+		"size": "vite-bundle-visualizer",
+		"playwright": "playwright test"
 	},
 	"dependencies": {
 		"@radix-ui/react-alert-dialog": "1.0.4",
