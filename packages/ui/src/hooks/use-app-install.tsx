@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useRef} from 'react'
+import {useInterval} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppState, trpcClient, trpcReact} from '@/trpc/trpc'
@@ -28,16 +29,12 @@ export function useAppInstall(id: string) {
 	const progress = installStatusQ.data?.installProgress
 
 	// Poll for install status if we're installing or uninstalling
-	const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
+	const shouldPollForStatus = appState && arrayIncludes(progressStates, appState)
+	useInterval(installStatusQ.refetch, shouldPollForStatus ? 500 : null)
 	useEffect(() => {
-		if (!appState) return
-		if (!arrayIncludes(progressStates, appState)) {
-			clearInterval(intervalRef.current)
+		if (appState && !arrayIncludes(progressStates, appState)) {
 			invalidateInstallDependencies()
-			return
 		}
-		intervalRef.current = setInterval(installStatusQ.refetch, 500)
-		return () => clearInterval(intervalRef.current)
 	}, [appState, installStatusQ, invalidateInstallDependencies])
 
 	const install = async () => installMut.mutate({appId: id})
