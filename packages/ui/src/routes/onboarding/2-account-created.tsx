@@ -41,7 +41,13 @@ export default function AccountCreated() {
 				</>
 			}
 		>
-			<Link to='/install-first-app' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
+			<Link
+				data-testid='to-desktop'
+				to='/install-first-app'
+				unstable_viewTransition
+				className={buttonClass}
+				ref={continueLinkRef}
+			>
 				Launch
 			</Link>
 		</Layout>

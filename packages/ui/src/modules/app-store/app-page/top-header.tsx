@@ -44,7 +44,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 				*/}
 				<BackButton />
 
-				<div className='flex flex-row items-center gap-5'>
+				<div data-testid='app-top' className='flex flex-row items-center gap-5'>
 					<AppIcon src={app.icon} className='w-[50px] rounded-12 md:w-[100px] md:rounded-20' />
 					<div className='flex flex-col items-start gap-1 py-1 md:gap-2'>
 						{app.optimizedForUmbrelHome && (

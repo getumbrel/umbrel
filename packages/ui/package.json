@@ -73,6 +73,7 @@
 		"use-is-focused": "0.0.1"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^8.3.1",
 		"@ianvs/prettier-plugin-sort-imports": "4.1.1",
 		"@playwright/test": "^1.40.1",
 		"@tabler/icons": "2.39.0",
