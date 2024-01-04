@@ -77,7 +77,7 @@ export function InstallButton({
 		>
 			{state === 'uninstalled' && (
 				<>
-					Install <span className='whitespace-nowrap -tracking-normal opacity-40'>{installSize}</span>
+					Install <span className='whitespace-nowrap uppercase -tracking-normal opacity-40'>{installSize}</span>
 				</>
 			)}
 			{state === 'installing' && (

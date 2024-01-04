@@ -54,7 +54,7 @@ export type AppManifest = {
 	deterministicPassword?: boolean
 	optimizedForUmbrelHome?: boolean
 	torOnly?: boolean
-	// TODO: add install size to API response for apps that have it
+	/** in bytes */
 	installSize?: number
 	widgets?: Widget[]
 }
