@@ -1,25 +1,33 @@
-# React + Vite
+# Umbrel OS UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Getting Umbrel OS running locally
 
-Currently, two official plugins are available:
+### Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+`npm` and `pnpm` is installed.
 
-# Testing on mobile / sharing semi-publicly
+First install `pnpm`. One way is via `brew install pnpm` on mac, assuming you have homebrew installed.
 
-```sh
-pnpm run dev --host
-```
+### Clone the repo and checkout the `mark` branch
 
-Above will give an address you can usually access on another device on the same network.
+`git clone -b mark git@github.com:getumbrel/private-umbrel.git`
 
-## Testing prod
+### Go into the repo
 
-```
-pnpm run build && pnpm run preview --host
-```
+`cd private-umbrel`
+
+### Get frontend running
+
+1. `cd packages/ui`
+1. `pnpm install`
+1. `pnpm run dev`
+
+### Get backend running
+
+1. Get back to the root of the repo and `cd` into umbreld: `cd packages/umbreld`
+1. Make the dir for the data: `mkdir data`
+1. `npm install`
+1. `npm run dev`
 
 ## Sharing semi-publicly (on Mac)
 
@@ -43,6 +51,8 @@ tailscale serve http:4000 / http://127.0.0.1:4000
 ```
 
 Running on HTTP for now. HTTPS would be a bit more complicated. The prod build is especially important for getting a true sense of performance on mobile since the dev build will have extra cruft.
+
+---
 
 # Decisions / common patterns
 
