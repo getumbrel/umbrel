@@ -4,7 +4,8 @@ import {useTimeout} from 'react-use'
 
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {BackdropBlurVariantContext, widgetConfigToWidget} from '@/modules/desktop/widgets'
+import {widgetConfigToWidget} from '@/modules/widgets'
+import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 

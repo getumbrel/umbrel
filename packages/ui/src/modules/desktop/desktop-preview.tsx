@@ -3,12 +3,13 @@ import {useEffect, useState} from 'react'
 import {useUserApps} from '@/hooks/use-user-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
+import {widgetConfigToWidget} from '@/modules/widgets'
+import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'
 import {Header} from './desktop-misc'
 import {DockPreview} from './dock'
-import {widgetConfigToWidget, WidgetWrapper} from './widgets'
 
 export function DesktopPreview() {
 	const W = 1440

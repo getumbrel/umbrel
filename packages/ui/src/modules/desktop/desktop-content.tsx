@@ -4,11 +4,12 @@ import {useLocation, useNavigate} from 'react-router-dom'
 import {useUserApps} from '@/hooks/use-user-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 
+import {widgetConfigToWidget} from '../widgets'
+import {WidgetWrapper} from '../widgets/shared/widget-wrapper'
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'
 import {Header, Search} from './desktop-misc'
 import {DockSpacer} from './dock'
-import {widgetConfigToWidget, WidgetWrapper} from './widgets'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
