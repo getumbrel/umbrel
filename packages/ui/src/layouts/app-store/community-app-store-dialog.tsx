@@ -120,7 +120,7 @@ export function CommunityAppStoreDialog() {
 									<AnimatedInputError>{formError}</AnimatedInputError>
 								</div>
 								<DialogFooter>
-									<Button variant='primary' size='dialog'>
+									<Button type='submit' variant='primary' size='dialog'>
 										Add
 									</Button>
 								</DialogFooter>
