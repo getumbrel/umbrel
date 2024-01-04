@@ -59,6 +59,7 @@ export function PasswordInput({
 	error,
 	autoFocus,
 	sizeVariant,
+	inputRef,
 }: {
 	value?: string
 	/** Calling it a label rather than a placeholder */
@@ -67,12 +68,14 @@ export function PasswordInput({
 	error?: string
 	autoFocus?: boolean
 	sizeVariant?: VariantProps<typeof inputVariants>['sizeVariant']
+	inputRef?: React.Ref<HTMLInputElement>
 }) {
 	const [showPassword, setShowPassword] = React.useState(false)
 	return (
 		<div>
 			<div className={cn(iconRightClasses.root)}>
 				<Input
+					ref={inputRef}
 					variant={error ? 'destructive' : undefined}
 					placeholder={label}
 					type={showPassword ? 'text' : 'password'}
