@@ -1,8 +1,7 @@
 import {toast} from 'sonner'
 
 import {useDemoMigrateProgress} from '@/hooks/use-demo-progress'
-
-import {MigrateInner} from '../migrate'
+import {MigrateInner} from '@/modules/migrate/migrate-inner'
 
 export default function MigrateStory() {
 	return (
