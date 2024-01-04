@@ -1,7 +1,8 @@
 // import {useErrorBoundary} from 'react-error-boundary'
 import {useRouteError} from 'react-router-dom'
 
-import {Button} from '../../shadcn-components/ui/button'
+import {Button} from '@/shadcn-components/ui/button'
+
 import {CoverMessage} from './cover-message'
 
 export function ErrorBoundary() {

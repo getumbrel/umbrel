@@ -3,9 +3,9 @@ import {useLocation, useNavigate} from 'react-router-dom'
 
 import {useUserApps} from '@/hooks/use-user-apps'
 import {useWidgets} from '@/hooks/use-widgets'
+import {widgetConfigToWidget} from '@/modules/widgets'
+import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 
-import {widgetConfigToWidget} from '../widgets'
-import {WidgetWrapper} from '../widgets/shared/widget-wrapper'
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'
 import {Header, Search} from './desktop-misc'
