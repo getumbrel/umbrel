@@ -75,7 +75,10 @@ export default class UserApps {
 			delete appStatuses[appId]
 			userAppsDemoStore = userAppsDemoStore.filter((app) => app.id !== appId)
 		}, 500)
-		// TODO: Remove from last opened apps
+		// Remove from last opened apps
+		const lastOpened = (await this.#store.get('user.lastOpenedApps')) ?? []
+		const newLastOpened = lastOpened.filter((id) => id !== appId)
+		this.#store.set('user.lastOpenedApps', newLastOpened)
 		// TODO: decide if we wanna remove widget data or if we want to keep it in case user re-installs the app
 		return true
 	}
