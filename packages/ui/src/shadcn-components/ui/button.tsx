@@ -58,8 +58,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 		// No children for icon-only buttons
 		const children2 = size === 'icon-only' ? null : children
 
+		// Prevents ordinary buttons in forms from submitting it
+		const extraPropsIfButton = Comp === 'button' ? {...props, type: props.type ?? 'button'} : props
+
 		return (
-			<Comp className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...props}>
+			<Comp className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...extraPropsIfButton}>
 				{children2}
 			</Comp>
 		)
