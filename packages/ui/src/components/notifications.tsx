@@ -8,6 +8,8 @@ import {isCpuTooHot, isDiskFull, isDiskLow, isMemoryLow} from '@/utils/system'
 
 import {toast} from './ui/toast'
 
+export function useAppsStoreNotificationCount() {}
+
 export function useSettingsNotificationCount() {
 	const [count, setCount] = useState(0)
 	const navigate = useNavigate()
