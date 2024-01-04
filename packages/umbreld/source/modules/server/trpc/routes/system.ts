@@ -1,4 +1,5 @@
 import {TRPCError} from '@trpc/server'
+import os from 'os'
 import {z} from 'zod'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
@@ -9,6 +10,9 @@ import {privateProcedure, publicProcedure, router} from '../trpc.js'
 type Device = 'umbrel-home' | 'raspberry-pi' | 'linux'
 
 export default router({
+	uptime: privateProcedure.query(() => {
+		return os.uptime()
+	}),
 	// TODO: have consistent naming for these
 	osVersion: privateProcedure.query(() => {
 		// TODO: do this for real

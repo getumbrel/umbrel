@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js'
+import {formatDistance} from 'date-fns'
 import {Globe} from 'lucide-react'
 import {useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -47,9 +48,10 @@ export function SettingsContent() {
 	const navigate = useNavigate()
 	const tor = useTorEnabled()
 
-	const [userQ, deviceInfoQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries(
-		(t) => [
+	const [userQ, uptimeQ, deviceInfoQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] =
+		trpcReact.useQueries((t) => [
 			t.user.get(),
+			t.system.uptime(),
 			t.system.deviceInfo(),
 			t.system.cpuTemperature(),
 			t.system.diskUsage(),
@@ -57,14 +59,14 @@ export function SettingsContent() {
 			t.migration.isUmbrelHome(),
 			t.user.is2faEnabled(),
 			t.system.osVersion(),
-		],
-	)
+		])
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// TODO: also wanna check CPU temp
 	const isLoading =
 		userQ.isLoading ||
+		uptimeQ.isLoading ||
 		deviceInfoQ.isLoading ||
 		diskQ.isLoading ||
 		memoryQ.isLoading ||
@@ -105,6 +107,8 @@ export function SettingsContent() {
 							<dd>{deviceInfoQ.data?.device ? deviceMap[deviceInfoQ.data?.device].title : UNKNOWN()}</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
 							<dd>{osVersionQ.data}</dd>
+							<dt className='opacity-40'>Uptime</dt>
+							<dd>{duration(uptimeQ.data)}</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -326,4 +330,9 @@ function LanguageDropdown() {
 			</DropdownMenuContent>
 		</DropdownMenu>
 	)
+}
+
+function duration(seconds?: number) {
+	if (seconds === undefined) return UNKNOWN()
+	return formatDistance(0, seconds * 1000, {includeSeconds: true})
 }

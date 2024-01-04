@@ -45,6 +45,7 @@
 		"clsx": "2.0.0",
 		"cmdk": "^0.2.0",
 		"colorthief": "^2.4.0",
+		"date-fns": "^3.0.6",
 		"framer-motion": "10.16.4",
 		"i18next": "23.6.0",
 		"i18next-browser-languagedetector": "7.1.0",
