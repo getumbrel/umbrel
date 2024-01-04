@@ -10,7 +10,7 @@ import {globby} from 'globby'
 import yaml from 'js-yaml'
 
 import isUmbrelHome from './is-umbrel-home.js'
-import {ProgressStatus} from './apps/schema.js'
+import type {ProgressStatus} from './apps/schema.js'
 
 let migrationStatus: ProgressStatus = {
 	running: false,

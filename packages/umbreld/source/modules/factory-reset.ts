@@ -1,14 +1,18 @@
-import {ProgressStatus} from './apps/schema'
 import {$} from 'execa'
+import type {ProgressStatus} from './apps/schema.js'
+import {sleep} from './utilities/sleep.js'
 
-export let factoryResetState: ProgressStatus | null = null
+// TODO: Get install status from a real place
+// Ignoring because it's demo code
+// eslint-disable-next-line import/no-mutable-exports
+export let factoryResetDemoState: ProgressStatus | undefined
 
 export async function startReset(dataDirectory: string) {
 	return demoReset(dataDirectory)
 }
 
 async function demoReset(dataDirectory: string) {
-	factoryResetState = {
+	factoryResetDemoState = {
 		progress: 0,
 		description: 'Resetting device',
 		running: true,
@@ -16,7 +20,7 @@ async function demoReset(dataDirectory: string) {
 	}
 	await sleep(1000)
 
-	factoryResetState = {
+	factoryResetDemoState = {
 		progress: 50,
 		description: 'Resetting device',
 		running: true,
@@ -26,7 +30,7 @@ async function demoReset(dataDirectory: string) {
 	const maybeFail = Math.random() > 0.5
 
 	if (maybeFail) {
-		factoryResetState = {
+		factoryResetDemoState = {
 			progress: 50,
 			description: 'Resetting device',
 			running: false,
@@ -40,7 +44,7 @@ async function demoReset(dataDirectory: string) {
 	await $`rm -rf ${dataDirectory}`
 	await $`mkdir -p ${dataDirectory}`
 
-	factoryResetState = {
+	factoryResetDemoState = {
 		progress: 100,
 		description: 'Done',
 		running: false,
@@ -49,7 +53,7 @@ async function demoReset(dataDirectory: string) {
 
 	await sleep(1000)
 
-	factoryResetState = {
+	factoryResetDemoState = {
 		progress: 100,
 		description: 'Restarting device...',
 		running: false,
@@ -59,9 +63,5 @@ async function demoReset(dataDirectory: string) {
 
 	// Reset after 5 seconds
 	await sleep(5000)
-	factoryResetState = null
-}
-
-function sleep(milliseconds: number) {
-	return new Promise((resolve) => setTimeout(resolve, milliseconds))
+	factoryResetDemoState = undefined
 }

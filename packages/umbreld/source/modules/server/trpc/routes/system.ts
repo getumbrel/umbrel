@@ -1,11 +1,10 @@
-import {privateProcedure, publicProcedure, router} from '../trpc.js'
-
-import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
-import {z} from 'zod'
 import {TRPCError} from '@trpc/server'
-import {ProgressStatus} from '../../../apps/schema.js'
-import {factoryResetState, startReset} from '../../../factory-reset.js'
-import {$} from 'execa'
+import {z} from 'zod'
+import type {ProgressStatus} from '../../../apps/schema.js'
+import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
+import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
+import {sleep} from '../../../utilities/sleep.js'
+import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
 type Device = 'umbrel-home' | 'raspberry-pi' | 'linux'
 
@@ -17,12 +16,12 @@ export default router({
 	}),
 	getLatestVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
-		await setTimeout(1000)
+		await sleep(1000)
 		return '1.0.1'
 	}),
 	updateOs: privateProcedure.mutation(async () => {
 		// TODO: do this for real
-		await setTimeout(1000)
+		await sleep(1000)
 		return '1.0.1'
 	}),
 	//
@@ -49,12 +48,13 @@ export default router({
 			if (!(await ctx.user.validatePassword(input.password))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
 			}
+
 			const currentInstall = ctx.umbreld.dataDirectory
 			startReset(currentInstall)
-			return factoryResetState
+			return factoryResetDemoState
 		}),
 	// Public because we delete the user too and want to continue to get status updates
-	getFactoryResetStatus: publicProcedure.query((): ProgressStatus | null => {
-		return factoryResetState
+	getFactoryResetStatus: publicProcedure.query((): ProgressStatus | undefined => {
+		return factoryResetDemoState
 	}),
 })
