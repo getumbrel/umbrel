@@ -14,6 +14,7 @@ import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {NotFound} from './routes/not-found'
+import Restart from './routes/restart'
 import {Settings} from './routes/settings'
 import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
@@ -54,7 +55,9 @@ export const router = createBrowserRouter([
 		path: 'install-first-app',
 		element: (
 			<Suspense>
-				<InstallFirstApp />
+				<EnsureLoggedIn>
+					<InstallFirstApp />
+				</EnsureLoggedIn>
 			</Suspense>
 		),
 		errorElement: <ErrorBoundary />,
@@ -200,10 +203,14 @@ export const router = createBrowserRouter([
 				),
 			},
 			{
-				path: 'factory-reset',
+				path: 'factory-reset/*',
+				element: <FactoryReset />,
+			},
+			{
+				path: 'restart',
 				element: (
 					<EnsureLoggedIn>
-						<FactoryReset />
+						<Restart />
 					</EnsureLoggedIn>
 				),
 			},

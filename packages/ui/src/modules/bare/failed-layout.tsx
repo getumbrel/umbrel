@@ -11,11 +11,13 @@ export default function FailedLayout({
 	description,
 	buttonText,
 	to,
+	buttonOnClick,
 }: {
 	title: string
 	description: ReactNode
 	buttonText: string
-	to: To
+	to?: To
+	buttonOnClick?: () => void
 }) {
 	return (
 		<div className={cn(bareContainerClass, 'animate-in slide-in-from-bottom-2')}>
@@ -23,9 +25,16 @@ export default function FailedLayout({
 			<div className='pt-1' />
 			<p className={bareTextClass}>{description}</p>
 			<BareSpacer />
-			<Link to={to} className={buttonClass}>
-				{buttonText}
-			</Link>
+			{to && (
+				<Link to={to} className={buttonClass} onClick={buttonOnClick}>
+					{buttonText}
+				</Link>
+			)}
+			{!to && (
+				<button className={buttonClass} onClick={buttonOnClick}>
+					{buttonText}
+				</button>
+			)}
 		</div>
 	)
 }

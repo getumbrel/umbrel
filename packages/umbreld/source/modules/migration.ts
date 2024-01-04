@@ -10,15 +10,9 @@ import {globby} from 'globby'
 import yaml from 'js-yaml'
 
 import isUmbrelHome from './is-umbrel-home.js'
+import {ProgressStatus} from './apps/schema.js'
 
-type migrationStatusProperties = {
-	running: boolean
-	progress: number
-	description: string
-	error: boolean | string
-}
-
-let migrationStatus: migrationStatusProperties = {
+let migrationStatus: ProgressStatus = {
 	running: false,
 	progress: 0,
 	description: '',
@@ -26,7 +20,7 @@ let migrationStatus: migrationStatusProperties = {
 }
 
 // Update the migrationStatus global
-function updateMigrationStatus(properties: Partial<migrationStatusProperties>) {
+function updateMigrationStatus(properties: Partial<ProgressStatus>) {
 	migrationStatus = {...migrationStatus, ...properties}
 	console.log(migrationStatus)
 }

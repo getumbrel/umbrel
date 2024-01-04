@@ -120,4 +120,31 @@ test('happy path', async ({page, context}) => {
 
 	// Expect to be at `/settings`
 	await expect(page).toHaveURL(/\/settings/)
+
+	// Scroll to Factory reset
+	await page.click('text=Factory reset')
+
+	// Fill Device name
+	await page.getByPlaceholder('Device name').fill(TEST_USER)
+	// Enter
+	await page.keyboard.press('Enter')
+
+	// Await redirect
+	await page.waitForURL(/\/factory-reset/)
+
+	// Press continue
+	// await page.keyboard.press('Enter')
+	await page.click('text=Continue')
+
+	// Await redirect
+	await page.waitForURL(/\/factory-reset\/confirm/)
+
+	// Enter password
+	await page.getByLabel('Enter password').fill(TEST_PASSWORD)
+
+	// Enter
+	await page.keyboard.press('Enter')
+
+	// Await redirect
+	await page.waitForURL(/\/factory-reset\/resetting/)
 })

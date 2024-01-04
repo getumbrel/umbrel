@@ -1,7 +1,11 @@
-import {setTimeout} from 'node:timers/promises'
-import {privateProcedure, router} from '../trpc.js'
+import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
+import {z} from 'zod'
+import {TRPCError} from '@trpc/server'
+import {ProgressStatus} from '../../../apps/schema.js'
+import {factoryResetState, startReset} from '../../../factory-reset.js'
+import {$} from 'execa'
 
 type Device = 'umbrel-home' | 'raspberry-pi' | 'linux'
 
@@ -34,4 +38,23 @@ export default router({
 	memoryUsage: privateProcedure.query(() => getMemoryUsage()),
 	shutdown: privateProcedure.mutation(() => shutdown()),
 	reboot: privateProcedure.mutation(() => reboot()),
+	//
+	factoryReset: privateProcedure
+		.input(
+			z.object({
+				password: z.string(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			if (!(await ctx.user.validatePassword(input.password))) {
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
+			}
+			const currentInstall = ctx.umbreld.dataDirectory
+			startReset(currentInstall)
+			return factoryResetState
+		}),
+	// Public because we delete the user too and want to continue to get status updates
+	getFactoryResetStatus: publicProcedure.query((): ProgressStatus | null => {
+		return factoryResetState
+	}),
 })

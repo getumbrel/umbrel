@@ -1,6 +1,14 @@
 import {z} from 'zod'
 import type {categories} from './data'
 
+export type ProgressStatus = {
+	running: boolean
+	/** From 0 to 100 */
+	progress: number
+	description: string
+	error: boolean | string
+}
+
 export type AppRepositoryMeta = {
 	id: string
 	name: string

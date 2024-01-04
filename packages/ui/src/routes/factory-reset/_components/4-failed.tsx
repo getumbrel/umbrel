@@ -1,22 +1,24 @@
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import FailedLayout from '@/modules/bare/failed-layout'
 
-export default function MigrateFailed() {
-	const title = 'Migration failed'
-	useUmbrelTitle(title)
+import {factoryResetTitle} from './misc'
+
+export function Failed() {
+	const title = 'Reset failed'
+	useUmbrelTitle(factoryResetTitle(title))
 
 	return (
 		<FailedLayout
 			title={title}
 			description={
 				<>
-					There was an error during migration.
+					There was an error during reset.
 					<br />
 					Please try again.
 				</>
 			}
-			buttonText='Retry migration'
-			to='/migrate'
+			buttonText='Retry factory reset'
+			to='/factory-reset'
 		/>
 	)
 }

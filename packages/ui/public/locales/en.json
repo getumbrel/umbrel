@@ -7,5 +7,7 @@
 	"settings": "Settings",
 	"app-store.title": "App Store",
 	"app-store.tagline": "Browse the ever-growing collection of self-hosted apps on Umbrel",
-	"unknown": "Unknown"
+	"unknown": "Unknown",
+	"app_one": "app",
+	"app_other": "apps"
 }

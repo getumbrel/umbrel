@@ -22,6 +22,7 @@ export default function RestartDialog() {
 
 	const restartMut = trpcReact.system.reboot.useMutation()
 
+	// TODO: redirect to `/restart` route instead of showing this cover message
 	if (restartMut.isLoading) {
 		return (
 			<CoverMessage>
