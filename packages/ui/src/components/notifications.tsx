@@ -15,6 +15,7 @@ export function useSettingsNotificationCount() {
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 	const memoryQ = trpcReact.system.memoryUsage.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
+	// TODO: show whether os has updates available
 
 	const isLoading = cpuTempQ.isLoading || diskQ.isLoading || memoryQ.isLoading
 
