@@ -186,6 +186,8 @@ describe('appRepository.readRegistry()', () => {
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
+					installSize: 10000,
+					widgets: undefined,
 					defaultUsername: '',
 					defaultPassword: '',
 				},
