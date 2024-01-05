@@ -128,8 +128,15 @@ function SearchResults({query}: {query: string}) {
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
 			<h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>
 			<div className={appsGridClass}>{appResults?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
+			{(!appResults || appResults.length === 0) && <NoResults />}
 		</div>
 	)
 }
+
+const NoResults = () => (
+	<div className='py-4 text-center'>
+		<span className='opacity-50'>No results</span> 👀
+	</div>
+)
 
 const SearchResultsMemoized = memo(SearchResults)
