@@ -1,6 +1,9 @@
 import {cva} from 'class-variance-authority'
+import {ReactNode, useContext} from 'react'
 
 import {tw} from '@/utils/tw'
+
+import {BackdropBlurVariantContext} from './backdrop-blur-context'
 
 export const widgetContainerCva = cva(
 	tw`bg-neutral-800/60 rounded-12 md:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default`,
@@ -28,3 +31,8 @@ export const widgetTextCva = cva('text-11 md:text-13 leading-snug font-semibold 
 		},
 	},
 })
+
+export const BlankWidget = ({children}: {children?: ReactNode}) => {
+	const variant = useContext(BackdropBlurVariantContext)
+	return <div className={widgetContainerCva({variant})}>{children}</div>
+}
