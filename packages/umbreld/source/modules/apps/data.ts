@@ -22,10 +22,6 @@ export const demoWidgetConfigs = [
 				endpoint: '/widgets/bitcoin/sync.json',
 			},
 			{
-				type: 'stat-with-buttons',
-				endpoint: '/widgets/bitcoin/balance-and-transact.json',
-			},
-			{
 				type: 'four-up',
 				endpoint: '/widgets/bitcoin/stats.json',
 			},
