@@ -1,5 +1,4 @@
 import {RiLogoutCircleRLine} from 'react-icons/ri'
-import {Link} from 'react-router-dom'
 
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useAuth} from '@/modules/auth/use-auth'
