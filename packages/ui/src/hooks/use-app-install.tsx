@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef} from 'react'
+import {useCallback, useEffect} from 'react'
 import {useInterval} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 

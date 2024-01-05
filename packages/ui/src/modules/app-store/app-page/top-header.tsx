@@ -1,6 +1,6 @@
 import {Portal} from '@radix-ui/react-portal'
 import {ReactNode} from 'react'
-import {TbArrowLeft, TbComet} from 'react-icons/tb'
+import {TbArrowLeft} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 import {useTimeout} from 'react-use'
 
