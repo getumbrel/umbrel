@@ -163,7 +163,7 @@ export default class AppRepository {
 			.map((app) => ({
 				...app,
 				// TODO: make this get the real size
-				installSize: 10000,
+				installSize: 10_000,
 				gallery:
 					meta.id === 'umbrel-app-store'
 						? app.gallery.map((file) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${file}`)

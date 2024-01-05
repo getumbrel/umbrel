@@ -1,5 +1,5 @@
+import os from 'node:os'
 import {TRPCError} from '@trpc/server'
-import os from 'os'
 import {z} from 'zod'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'

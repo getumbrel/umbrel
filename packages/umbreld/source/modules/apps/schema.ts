@@ -54,7 +54,7 @@ export type AppManifest = {
 	deterministicPassword?: boolean
 	optimizedForUmbrelHome?: boolean
 	torOnly?: boolean
-	/** in bytes */
+	/** In bytes */
 	installSize?: number
 	widgets?: Widget[]
 }
