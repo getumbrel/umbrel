@@ -1,7 +1,7 @@
 import {motion, Variant} from 'framer-motion'
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {useUserApps} from '@/hooks/use-user-apps'
+import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
@@ -15,7 +15,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
 	const navigate = useNavigate()
 
-	const {allAppsKeyed, userApps, isLoading} = useUserApps()
+	const {allAppsKeyed, userApps, isLoading} = useApps()
 	const widgets = useWidgets()
 
 	if (isLoading) return null

@@ -1,6 +1,6 @@
 import {useLayoutEffect, useState} from 'react'
 
-import {UserAppsProvider} from '@/hooks/use-user-apps'
+import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
 import {Widget} from '@/modules/widgets'
@@ -42,7 +42,7 @@ export default function WidgetsStory() {
 	// }
 
 	return (
-		<UserAppsProvider>
+		<AppsProvider>
 			<div className='bg-white/30'>
 				<H2>Error</H2>
 				<div className={sectionClass}>
@@ -305,7 +305,7 @@ export default function WidgetsStory() {
 					<ActionsWidget />
 				</WidgetWrapper>
 			</div>
-		</UserAppsProvider>
+		</AppsProvider>
 	)
 }
 

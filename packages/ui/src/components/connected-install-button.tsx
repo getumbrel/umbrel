@@ -2,7 +2,7 @@ import prettyBytes from 'pretty-bytes'
 import {useState} from 'react'
 
 import {useAppInstall} from '@/hooks/use-app-install'
-import {useUserApps} from '@/hooks/use-user-apps'
+import {useApps} from '@/hooks/use-apps'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {RegistryApp} from '@/trpc/trpc'
@@ -21,7 +21,7 @@ export function ConnectedInstallButton({
 	const appInstall = useAppInstall(app.id)
 	const state = appInstall.state
 	const [showDepsDialog, setShowDepsDialog] = useState(false)
-	const {userAppsKeyed, isLoading} = useUserApps()
+	const {userAppsKeyed, isLoading} = useApps()
 
 	if (isLoading) return null
 	if (!userAppsKeyed) return null

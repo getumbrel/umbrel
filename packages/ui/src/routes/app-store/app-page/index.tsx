@@ -2,9 +2,9 @@ import {useParams} from 'react-router-dom'
 
 import {ConnectedInstallButton} from '@/components/connected-install-button'
 import {Loading} from '@/components/ui/loading'
+import {useApps} from '@/hooks/use-apps'
 import {useAvailableApp, useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {useUserApps} from '@/hooks/use-user-apps'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommendations'
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
@@ -16,7 +16,7 @@ export default function AppPage() {
 	useUmbrelTitle(app?.name || 'Unknown App')
 
 	const {apps, isLoading: isLoadingApps} = useAvailableApps()
-	const {userAppsKeyed, isLoading: isLoadingUserApps} = useUserApps()
+	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()
 
 	if (isLoading || isLoadingApps || isLoadingUserApps) return <Loading />
 	if (!app) throw new Error('App not found')

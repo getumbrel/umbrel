@@ -3,8 +3,8 @@ import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
+import {systemAppsKeyed, useApps} from '@/hooks/use-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {systemAppsKeyed, useUserApps} from '@/hooks/use-user-apps'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
@@ -16,7 +16,7 @@ import {AppIcon} from './app-icon'
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
-	const {userApps, isLoading} = useUserApps()
+	const {userApps, isLoading} = useApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
 
@@ -133,7 +133,7 @@ function FrequentApps() {
 		retry: false,
 	})
 	const lastApps = lastAppsQ.data?.lastOpenedApps ?? []
-	const {userAppsKeyed} = useUserApps()
+	const {userAppsKeyed} = useApps()
 
 	const search = useCommandState((state) => state.search)
 

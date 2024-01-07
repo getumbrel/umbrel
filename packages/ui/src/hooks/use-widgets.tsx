@@ -3,8 +3,8 @@ import {uniq} from 'remeda'
 
 import {trpcReact, Widget} from '@/trpc/trpc'
 
+import {systemAppsKeyed, useApps} from './use-apps'
 import {useAvailableApps} from './use-available-apps'
-import {systemAppsKeyed, useUserApps} from './use-user-apps'
 
 export const MAX_WIDGETS = 3
 
@@ -27,7 +27,7 @@ export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
 	const [selectedTooMany, setSelectedTooMany] = useState(false)
 	const availableApps = useAvailableApps()
-	const userApps = useUserApps()
+	const userApps = useApps()
 
 	const {selected, setSelected, isLoading: isSelectedLoading} = useSelectedWidgets()
 	const isLoading = availableApps.isLoading || userApps.isLoading || isSelectedLoading

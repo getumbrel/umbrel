@@ -1,6 +1,6 @@
 import { Widget, WidgetConfig } from '@/trpc/trpc'
 
-import { useUserApps } from '@/hooks/use-user-apps'
+import { useApps } from '@/hooks/use-apps'
 import { portToUrl } from '@/utils/misc'
 import urlJoin from 'url-join'
 import { ActionsWidget } from './actions-widget'
@@ -14,7 +14,7 @@ import { ThreeUpWidget } from './three-up-widget'
 
 export function Widget({appId, config}:{appId: string, config: Widget}) {
 	const {widget, error, isLoading} = useWidgetEndpoint(config.endpoint, config.type)
-	const {userAppsKeyed} = useUserApps()
+	const {userAppsKeyed} = useApps()
 
 	const userApp = userAppsKeyed?.[appId]
 

@@ -4,9 +4,9 @@ import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
 import {useAppInstall} from '@/hooks/use-app-install'
+import {AppsProvider, useApps} from '@/hooks/use-apps'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {UserAppsProvider, useUserApps} from '@/hooks/use-user-apps'
 import {H2} from '@/layouts/stories'
 import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
 import {AppIcon} from '@/modules/desktop/app-icon'
@@ -29,7 +29,7 @@ export default function DesktopStory() {
 
 	return (
 		<>
-			<UserAppsProvider>
+			<AppsProvider>
 				<H2>Install Example</H2>
 				<InstallExample />
 				<H2>Uninstall Example</H2>
@@ -43,7 +43,7 @@ export default function DesktopStory() {
 				<H2>App Grid</H2>
 				<AppGridExamples />
 				<AppsDump />
-			</UserAppsProvider>
+			</AppsProvider>
 		</>
 	)
 }
@@ -154,7 +154,7 @@ function DockItemInteractive() {
 }
 
 function AppGridExamples() {
-	const {userApps} = useUserApps()
+	const {userApps} = useApps()
 	if (!userApps) return null
 
 	return (

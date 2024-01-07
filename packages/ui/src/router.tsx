@@ -3,8 +3,8 @@ import {createBrowserRouter} from 'react-router-dom'
 
 import {Notifications} from './components/notifications'
 import {ErrorBoundary} from './components/ui/error-boundary'
+import {AppsProvider} from './hooks/use-apps'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
-import {UserAppsProvider} from './hooks/use-user-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -71,9 +71,9 @@ export const router = createBrowserRouter([
 			<EnsureLoggedIn>
 				<Notifications />
 				<AvailableAppsProvider>
-					<UserAppsProvider>
+					<AppsProvider>
 						<Desktop />
-					</UserAppsProvider>
+					</AppsProvider>
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
 		),

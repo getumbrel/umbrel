@@ -2,8 +2,8 @@ import {motion, useMotionValue} from 'framer-motion'
 import {useLocation} from 'react-router-dom'
 
 import {useSettingsNotificationCount} from '@/components/notifications'
+import {systemAppsKeyed} from '@/hooks/use-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {systemAppsKeyed} from '@/hooks/use-user-apps'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 

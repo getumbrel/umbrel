@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 
-import {useUserApps} from '@/hooks/use-user-apps'
+import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {Widget} from '@/modules/widgets'
@@ -74,7 +74,7 @@ export function DesktopPreview() {
 }
 
 function DesktopContent() {
-	const {allAppsKeyed, userApps, isLoading} = useUserApps()
+	const {allAppsKeyed, userApps, isLoading} = useApps()
 	const {selected, appFromEndpoint} = useWidgets()
 
 	if (isLoading) return null

@@ -46,7 +46,7 @@ export const systemApps = [
 
 export const systemAppsKeyed = keyBy(systemApps, 'id')
 
-type DemoAppsContextT = {
+type AppsContextT = {
 	userApps?: UserApp[]
 	userAppsKeyed?: Record<string, UserApp>
 	// needs to be explicitly readonly so typescript doesn't complain, though all other props are technically readonly too
@@ -56,10 +56,9 @@ type DemoAppsContextT = {
 	allAppsKeyed: Record<string, AppT>
 	isLoading: boolean
 }
-const UserAppsContext = createContext<DemoAppsContextT | null>(null)
+const AppsContext = createContext<AppsContextT | null>(null)
 
-// TODO: rename to AppsProvider
-export function UserAppsProvider({children}: {children: React.ReactNode}) {
+export function AppsProvider({children}: {children: React.ReactNode}) {
 	const userAppsQ = trpcReact.user.apps.getAll.useQuery()
 
 	const userApps = userAppsQ.data ?? []
@@ -69,7 +68,7 @@ export function UserAppsProvider({children}: {children: React.ReactNode}) {
 	const allAppsKeyed = keyBy(allApps, 'id')
 
 	return (
-		<UserAppsContext.Provider
+		<AppsContext.Provider
 			value={{
 				userApps,
 				userAppsKeyed,
@@ -81,21 +80,20 @@ export function UserAppsProvider({children}: {children: React.ReactNode}) {
 			}}
 		>
 			{children}
-		</UserAppsContext.Provider>
+		</AppsContext.Provider>
 	)
 }
 
-// TODO: rename to useApps
-export function useUserApps() {
-	const ctx = useContext(UserAppsContext)
-	if (!ctx) throw new Error('useUserApps must be used within UserAppsProvider')
+export function useApps() {
+	const ctx = useContext(AppsContext)
+	if (!ctx) throw new Error('useApps must be used within AppsProvider')
 
 	return ctx
 }
 
 export function useUserApp(id?: string | null) {
-	const ctx = useContext(UserAppsContext)
-	if (!ctx) throw new Error('useUserApp must be used within UserAppsProvider')
+	const ctx = useContext(AppsContext)
+	if (!ctx) throw new Error('useUserApp must be used within AppsProvider')
 
 	if (!id) return {isLoading: false, app: undefined}
 	if (ctx.isLoading) return {isLoading: true}
