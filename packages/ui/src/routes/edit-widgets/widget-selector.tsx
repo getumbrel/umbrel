@@ -4,7 +4,7 @@ import {useTimeout} from 'react-use'
 
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {widgetConfigToWidget} from '@/modules/widgets'
+import {Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
@@ -69,7 +69,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 											damping: 30,
 										}}
 									>
-										{widgetConfigToWidget(widget)}
+										<Widget appId={widgets.appFromEndpoint(widget.endpoint)?.appId} config={widget} />
 									</motion.div>
 								)
 							})}
@@ -88,7 +88,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 										checked={selected.map((w) => w.endpoint).includes(widget.endpoint)}
 										onCheckedChange={(checked) => toggleSelected(widget, checked)}
 									>
-										{widgetConfigToWidget(widget)}
+										<Widget appId={appId} config={widget} />
 									</WidgetChecker>
 								)
 							})}
@@ -124,7 +124,7 @@ function WidgetSheet({
 				>
 					<div
 						className={cn(
-							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-5 overflow-y-auto pt-6 opacity-0 md:gap-[50px] md:px-8 md:pt-12',
+							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-5 overflow-y-auto px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
 							'opacity-100 duration-100 animate-in fade-in',
 						)}
 					>

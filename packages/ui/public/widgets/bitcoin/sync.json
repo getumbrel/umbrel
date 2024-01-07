@@ -1,6 +1,6 @@
 {
-	"appId": "bitcoin",
 	"type": "stat-with-progress",
+	"link": "/",
 	"title": "Blockchain sync",
 	"value": "86.92%",
 	"progressLabel": "In progress",

@@ -1,29 +1,39 @@
-import {useContext} from 'react'
+import {format} from 'date-fns'
 
-import {cn} from '@/shadcn-lib/utils'
+import {WidgetContainer} from './shared/shared'
 
-import {BackdropBlurVariantContext} from './shared/backdrop-blur-context'
-import {widgetContainerCva} from './shared/shared'
-
-export function NotificationsWidget() {
-	const variant = useContext(BackdropBlurVariantContext)
+export function NotificationsWidget({
+	link,
+	notifications,
+}: {
+	link?: string
+	notifications?: {timestamp: number; description: string}[]
+}) {
 	return (
-		<div className={cn(widgetContainerCva({variant}), 'justify-between p-2 max-sm:gap-0 md:p-4')}>
-			<NotificationItem />
-			<hr className='border-white/5' />
-			<NotificationItem />
-		</div>
+		<WidgetContainer href={link} target='_blank' className='cursor-pointer p-2 md:p-4'>
+			<div
+				className='flex h-full flex-col gap-2 max-sm:gap-0'
+				style={{
+					maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 50px), transparent)',
+				}}
+			>
+				{notifications?.map((notification, i) => (
+					<>
+						{i !== 0 && <hr className='border-white/5' />}
+						<NotificationItem key={i} timestamp={notification.timestamp} description={notification.description} />
+					</>
+				))}
+			</div>
+		</WidgetContainer>
 	)
 }
-function NotificationItem() {
+
+function NotificationItem({timestamp, description}: {timestamp?: number; description?: string}) {
+	const formattedDate = timestamp ? format(timestamp, 'h:mm aaa · MMM d') : undefined
 	return (
 		<div className='text-12 leading-tight'>
-			<div className='opacity-20'>12:34 pm · Sep 9</div>
-			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>
-				✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel
-				with public relays, and back up past & future Nostr activity, even if the connection between your client & your
-				private relay goes down
-			</p>
+			{formattedDate && <div className='truncate opacity-20'>{formattedDate}</div>}
+			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>{description}</p>
 		</div>
 	)
 }

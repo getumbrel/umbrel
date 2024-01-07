@@ -3,7 +3,7 @@ import {useEffect, useState} from 'react'
 import {useUserApps} from '@/hooks/use-user-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
-import {widgetConfigToWidget} from '@/modules/widgets'
+import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 
 import {AppGrid} from './app-grid/app-grid'
@@ -75,7 +75,7 @@ export function DesktopPreview() {
 
 function DesktopContent() {
 	const {allAppsKeyed, userApps, isLoading} = useUserApps()
-	const {selected} = useWidgets()
+	const {selected, appFromEndpoint} = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -95,7 +95,7 @@ function DesktopContent() {
 							// TODO: should get app name from the widget config
 							label={allAppsKeyed[widget.endpoint.split('/')[2]]?.name}
 						>
-							{widgetConfigToWidget(widget)}
+							<Widget appId={appFromEndpoint(widget.endpoint)?.appId} config={widget} />
 						</WidgetWrapper>
 					))}
 					apps={userApps.map((app) => (

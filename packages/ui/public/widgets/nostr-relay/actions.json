@@ -1,0 +1,22 @@
+{
+	"type": "actions",
+	"count": 128,
+	"actions": [
+		{
+			"emoji": "🔒",
+			"title": "Change password"
+		},
+		{
+			"emoji": "🔒",
+			"title": "Change password"
+		},
+		{
+			"emoji": "🔒",
+			"title": "Change password"
+		},
+		{
+			"emoji": "🔒",
+			"title": "Change password"
+		}
+	]
+}

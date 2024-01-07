@@ -12,6 +12,8 @@ export type {
 	WidgetType,
 } from '../../../../packages/umbreld/source/modules/apps/schema'
 
+export type {WidgetConfig} from '../../../../packages/umbreld/source/modules/apps/widget-endpoint-schema'
+
 export {categories} from '../../../../packages/umbreld/source/modules/apps/data'
 
 export const trpcUrl = `http://${location.hostname}:3001/trpc`

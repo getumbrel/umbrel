@@ -1,0 +1,21 @@
+{
+	"type": "three-up",
+	"link": "/settings",
+	"items": [
+		{
+			"icon": "wind",
+			"title": "Optimal",
+			"value": "56℃"
+		},
+		{
+			"icon": "device-floppy",
+			"title": "Free",
+			"value": "1.75 TB"
+		},
+		{
+			"icon": "cpu-2",
+			"title": "Memory",
+			"value": "5.8 GB"
+		}
+	]
+}

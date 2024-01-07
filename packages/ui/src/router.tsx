@@ -45,6 +45,7 @@ const ErrorStory = React.lazy(() => import('./routes/stories/error'))
 const InputExamples = React.lazy(() => import('./routes/stories/input'))
 const MigrateStory = React.lazy(() => import('./routes/stories/migrate'))
 const SettingsStory = React.lazy(() => import('./routes/stories/settings'))
+const WidgetsStory = React.lazy(() => import('./routes/stories/widgets'))
 const SheetStory = React.lazy(() => import('./routes/stories/sheet'))
 const Trpc = React.lazy(() => import('./routes/stories/trpc'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
@@ -253,6 +254,10 @@ export const router = createBrowserRouter([
 						<AppStoreStory />
 					</AvailableAppsProvider>
 				),
+			},
+			{
+				path: 'stories/widgets',
+				Component: WidgetsStory,
 			},
 			{
 				path: 'stories/settings',

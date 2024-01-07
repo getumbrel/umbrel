@@ -8,7 +8,7 @@ import {systemAppsKeyed, useUserApps} from './use-user-apps'
 
 export const MAX_WIDGETS = 3
 
-const settingsWidgets: Widget[] = [
+export const settingsWidgets: Widget[] = [
 	{
 		type: 'stat-with-progress',
 		endpoint: '/widgets/settings/storage-stat.json',
@@ -71,12 +71,17 @@ export function useWidgets() {
 		console.log(widget.endpoint)
 	}
 
+	const appFromEndpoint = (endpoint: string) => {
+		return availableWidgets.find((app) => app.widgets?.find((widget) => widget.endpoint === endpoint))
+	}
+
 	return {
 		availableWidgets,
 		selected,
 		toggleSelected,
 		selectedTooMany,
 		isLoading,
+		appFromEndpoint,
 	}
 }
 

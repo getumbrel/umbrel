@@ -101,5 +101,6 @@ export function useUserApp(id?: string | null) {
 	return {
 		isLoading: false,
 		app: ctx.userAppsKeyed?.[id],
+		anyApp: ctx.allAppsKeyed?.[id],
 	}
 }

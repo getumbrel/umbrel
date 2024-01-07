@@ -1,6 +1,6 @@
 {
-	"appId": "settings",
 	"type": "stat-with-progress",
+	"link": "/settings?dialog=live-usage",
 	"title": "Storage",
 	"value": "256 GB",
 	"progressLabel": "1.75 TB left",

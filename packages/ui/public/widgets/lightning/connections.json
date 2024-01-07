@@ -1,0 +1,10 @@
+{
+	"type": "four-up",
+	"link": "?page=stats",
+	"items": [
+		{"title": "Connections", "value": "11", "valueSub": "peers"},
+		{"title": "Active channels", "value": "1", "valueSub": "channel"},
+		{"title": "Max send", "value": "366", "valueSub": "sats"},
+		{"title": "Max receive", "value": "563", "valueSub": "sats"}
+	]
+}

@@ -1,6 +1,7 @@
 import {cva} from 'class-variance-authority'
-import {ReactNode, useContext} from 'react'
+import {useContext} from 'react'
 
+import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {BackdropBlurVariantContext} from './backdrop-blur-context'
@@ -32,7 +33,21 @@ export const widgetTextCva = cva('text-11 md:text-13 leading-snug font-semibold 
 	},
 })
 
-export const BlankWidget = ({children}: {children?: ReactNode}) => {
+type WidgetContainerLinkProps = React.ComponentPropsWithoutRef<'a'>
+type WidgetContainerDivProps = React.ComponentPropsWithoutRef<'div'>
+type WidgetContainerProps = WidgetContainerLinkProps | WidgetContainerDivProps
+
+/** Make the widget an anchor if we pass a `href` */
+export const WidgetContainer: React.FC<WidgetContainerProps> = ({className, ...props}) => {
 	const variant = useContext(BackdropBlurVariantContext)
-	return <div className={widgetContainerCva({variant})}>{children}</div>
+
+	// Forcing the correct types for `props`
+	// Only allow `href` to do something if it's truthy
+	if ('href' in props && props.href) {
+		const p = props as WidgetContainerLinkProps
+		return <a className={cn(widgetContainerCva({variant}), 'cursor-pointer', className)} {...p} />
+	} else {
+		const p = props as WidgetContainerDivProps
+		return <div className={cn(widgetContainerCva({variant}), className)} {...p} />
+	}
 }

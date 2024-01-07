@@ -1,5 +1,4 @@
 {
-	"appId": "lightning",
 	"type": "stat-with-buttons",
 	"title": "Lightning Wallet",
 	"value": "762,248",
@@ -7,13 +6,13 @@
 	"buttons": [
 		{
 			"title": "Deposit",
-			"icon": "/widgets/lightning/arrow-up-right.svg",
-			"endpoint": "/widgets/lightning/deposit.html"
+			"icon": "arrow-up-right",
+			"link": "?action=deposit"
 		},
 		{
 			"title": "Withdraw",
-			"icon": "/widgets/lightning/arrow-down-right.svg",
-			"endpoint": "/widgets/lightning/withdraw.html"
+			"icon": "arrow-down-right",
+			"link": "?action=withdraw"
 		}
 	]
 }

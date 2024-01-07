@@ -1,23 +1,35 @@
-import {useContext} from 'react'
-
 import {cn} from '@/shadcn-lib/utils'
 
-import {BackdropBlurVariantContext} from './shared/backdrop-blur-context'
-import {widgetContainerCva, widgetTextCva} from './shared/shared'
+import {WidgetContainer, widgetTextCva} from './shared/shared'
 
-export function FourUpWidget() {
-	const variant = useContext(BackdropBlurVariantContext)
+export function FourUpWidget({
+	link,
+	items,
+}: {
+	link?: string
+	items?: {title: string; value: string; valueSub: string}[]
+}) {
 	return (
-		<div
-			className={cn(widgetContainerCva({variant}), 'grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5')}
+		<WidgetContainer
+			href={link}
+			target='_blank'
+			className='grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5'
 		>
-			<FourUpItem title='Connections' value='10' valueSub='peers' />
-			<FourUpItem title='Mempool' value='35' valueSub='MB' />
-			<FourUpItem title='Hashrate' value='366' valueSub='EH/s' />
-			<FourUpItem title='Blockchain size' value='563' valueSub='GB' />
-		</div>
+			{items?.map((item) => (
+				<FourUpItem key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />
+			))}
+			{!items && (
+				<>
+					<FourUpItem title='–' value='–' valueSub='–' />
+					<FourUpItem title='–' value='–' valueSub='–' />
+					<FourUpItem title='–' value='–' valueSub='–' />
+					<FourUpItem title='–' value='–' valueSub='–' />
+				</>
+			)}
+		</WidgetContainer>
 	)
 }
+
 function FourUpItem({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
 	return (
 		<div className='flex flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>

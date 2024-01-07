@@ -1,0 +1,18 @@
+{
+	"type": "notifications",
+	"link": "/foobar",
+	"notifications": [
+		{
+			"timestamp": 1704418307143,
+			"description": "✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel with public relays, and back up past & future Nostr activity, even if the connection between your client & your private relay goes down"
+		},
+		{
+			"timestamp": 1702100000000,
+			"description": "Just a test 2"
+		},
+		{
+			"timestamp": 1700000000000,
+			"description": "Just a test 1"
+		}
+	]
+}

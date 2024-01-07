@@ -1,0 +1,10 @@
+{
+	"type": "four-up",
+	"link": "?page=stats",
+	"items": [
+		{"title": "Connections", "value": "11", "valueSub": "peers"},
+		{"title": "Mempool", "value": "36", "valueSub": "MB"},
+		{"title": "Hashrate", "value": "366", "valueSub": "EH/s"},
+		{"title": "Blockchain size", "value": "563", "valueSub": "GB"}
+	]
+}

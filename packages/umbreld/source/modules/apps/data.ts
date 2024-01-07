@@ -1,5 +1,5 @@
 import {indexBy} from 'remeda'
-import {Widget} from './schema.js'
+import {Widget, WidgetType} from './schema.js'
 
 export const categories = [
 	'files',
@@ -12,6 +12,8 @@ export const categories = [
 	'ai',
 	'developer',
 ] as const
+
+// ------------------------------
 
 export const demoWidgetConfigs = [
 	{
@@ -33,6 +35,10 @@ export const demoWidgetConfigs = [
 			{
 				type: 'stat-with-buttons',
 				endpoint: '/widgets/lightning/balance-and-transact.json',
+			},
+			{
+				type: 'four-up',
+				endpoint: '/widgets/lightning/connections.json',
 			},
 		],
 	},

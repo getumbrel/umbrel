@@ -29,22 +29,18 @@ export default function DesktopStory() {
 
 	return (
 		<>
-			<H2>Install Example</H2>
-			<InstallExample />
-			<H2>Uninstall Example</H2>
-			<UninstallExample />
-			<H2>App Icon</H2>
-			<AppIconExamples />
-			<H2>Desktop Preview</H2>
 			<UserAppsProvider>
+				<H2>Install Example</H2>
+				<InstallExample />
+				<H2>Uninstall Example</H2>
+				<UninstallExample />
+				<H2>App Icon</H2>
+				<AppIconExamples />
+				<H2>Desktop Preview</H2>
 				<DesktopPreview />
-			</UserAppsProvider>
-			<H2>Dock</H2>
-			<DockExample />
-			<H2>Widgets</H2>
-			<WidgetExamples />
-			<H2>App Grid</H2>
-			<UserAppsProvider>
+				<H2>Dock</H2>
+				<DockExample />
+				<H2>App Grid</H2>
 				<AppGridExamples />
 				<AppsDump />
 			</UserAppsProvider>
@@ -155,62 +151,6 @@ function DockItemInteractive() {
 	const mouseX = useMotionValue(-1000)
 
 	return <DockItem bg='/dock/home.png' mouseX={mouseX} open={open} onClick={() => setOpen(true)} />
-}
-
-function WidgetExamples() {
-	const [iconName, setIconName] = useState('cpu')
-
-	return (
-		<div>
-			<div className='p-6'>
-				<Input value={iconName} onValueChange={setIconName} />
-				<TablerIcon iconName={iconName} />
-			</div>
-			<BackdropBlurVariantContext.Provider value='default'>
-				<main className='flex flex-wrap gap-6 overflow-hidden bg-cover bg-center p-6'>
-					{/* <Widget
-          title="Blockchain sync"
-          value="86.92%"
-          progress={0.8692}
-          label="Bitcoin Node"
-          withBackdropBlur
-        />
-        <Widget
-          title="Storage"
-          value="256 GB"
-          valueSub="/ 2 TB"
-          progress={(256 / 1024) * 2}
-          progressLabel="1.75 TB left"
-          label="Settings"
-          withBackdropBlur
-        /> */}
-					<div className='w-full'>Settings</div>
-					<ProgressWidget
-						title='Storage'
-						value='256 GB'
-						valueSub='/ 2 TB'
-						progressLabel='1.75 TB left'
-						progress={0.25}
-					/>
-					<ProgressWidget
-						title='Memory'
-						value='5.8 GB'
-						valueSub='/ 16 GB'
-						progressLabel='11.4 GB left'
-						progress={0.3625}
-					/>
-					<ThreeUpWidget />
-					<div className='w-full'>Bitcoin</div>
-					<ProgressWidget title='Blockchain sync' value='86.92%' progress={0.8692} />
-					<StatWithButtonsWidget title='Bitcoin Wallet' value='1,845,893' valueSub='sats' />
-					<FourUpWidget />
-					<div className='w-full'>Nostr</div>
-					<ActionsWidget />
-					<NotificationsWidget />
-				</main>
-			</BackdropBlurVariantContext.Provider>
-		</div>
-	)
 }
 
 function AppGridExamples() {

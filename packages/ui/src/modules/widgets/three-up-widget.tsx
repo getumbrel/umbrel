@@ -1,33 +1,38 @@
-import {useContext} from 'react'
-
 import {cn} from '@/shadcn-lib/utils'
 
-import {BackdropBlurVariantContext} from './shared/backdrop-blur-context'
-import {widgetContainerCva, widgetTextCva} from './shared/shared'
+import {WidgetContainer, widgetTextCva} from './shared/shared'
 import {TablerIcon} from './shared/tabler-icon'
 
-export function ThreeUpWidget() {
-	const variant = useContext(BackdropBlurVariantContext)
+type ThreeUpItem = {icon: string; title?: string; value?: string}
+
+export function ThreeUpWidget({link, items}: {link?: string; items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]}) {
 	return (
-		<div
-			className={cn(
-				widgetContainerCva({variant}),
-				'grid justify-stretch gap-1.5 p-1.5 md:grid-cols-3 md:gap-2 md:px-4 md:py-3',
-			)}
+		<WidgetContainer
+			href={link}
+			target='_blank'
+			className='flex flex-col justify-stretch gap-1.5 p-1.5 md:flex-row md:gap-2 md:px-4 md:py-3'
 		>
-			<ThreeUpItem iconName='settings' title='Optimal' value='56°C' />
-			<ThreeUpItem iconName='settings' title='Free' value='1.75 TB' />
-			<ThreeUpItem iconName='settings' title='Memory' value='5.8 GB' />
-		</div>
+			{items?.[0] && <ThreeUpItem iconName={items[0].icon} title={items[0].title} value={items[0].value} />}
+			{items?.[1] && <ThreeUpItem iconName={items[1].icon} title={items[1].title} value={items[1].value} />}
+			{items?.[2] && <ThreeUpItem iconName={items[2].icon} title={items[2].title} value={items[2].value} />}
+			{!items && (
+				<>
+					<ThreeUpItem iconName='' title='–' value='–' />
+					<ThreeUpItem iconName='' title='–' value='–' />
+					<ThreeUpItem iconName='' title='–' value='–' />
+				</>
+			)}
+		</WidgetContainer>
 	)
 }
 function ThreeUpItem({iconName, title, value}: {iconName: string; title?: string; value?: string}) {
 	return (
-		<div className='flex items-center rounded-5 bg-white/5 max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
+		// NOTE: consider reducing rounding if we don't have 3 items
+		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
 			<TablerIcon iconName={iconName} className='h-5 w-5 [&>svg]:h-5 [&>svg]:w-5' />
-			<p className={widgetTextCva({opacity: 'secondary', className: 'max-sm:hidden md:mt-4'})}>{title}</p>
-			<p className={widgetTextCva()}>{value}</p>
+			<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate max-sm:hidden md:mt-4')}>{title}</p>
+			<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{value}</p>
 		</div>
 	)
 }

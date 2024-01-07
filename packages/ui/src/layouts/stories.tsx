@@ -10,6 +10,10 @@ const storyLinks = [
 		path: '/stories/desktop',
 	},
 	{
+		name: 'Widgets',
+		path: '/stories/widgets',
+	},
+	{
 		name: 'App Store',
 		path: '/stories/app-store',
 	},
