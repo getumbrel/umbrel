@@ -58,6 +58,7 @@ type DemoAppsContextT = {
 }
 const UserAppsContext = createContext<DemoAppsContextT | null>(null)
 
+// TODO: rename to AppsProvider
 export function UserAppsProvider({children}: {children: React.ReactNode}) {
 	const userAppsQ = trpcReact.user.apps.getAll.useQuery()
 
@@ -84,6 +85,7 @@ export function UserAppsProvider({children}: {children: React.ReactNode}) {
 	)
 }
 
+// TODO: rename to useApps
 export function useUserApps() {
 	const ctx = useContext(UserAppsContext)
 	if (!ctx) throw new Error('useUserApps must be used within UserAppsProvider')
@@ -101,6 +103,5 @@ export function useUserApp(id?: string | null) {
 	return {
 		isLoading: false,
 		app: ctx.userAppsKeyed?.[id],
-		anyApp: ctx.allAppsKeyed?.[id],
 	}
 }
