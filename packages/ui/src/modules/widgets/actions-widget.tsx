@@ -1,5 +1,3 @@
-import {sliceString} from 'remeda'
-
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
 export function ActionsWidget({

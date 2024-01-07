@@ -13,16 +13,7 @@ import {AppIcon} from '@/modules/desktop/app-icon'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview'
 import {DockItem} from '@/modules/desktop/dock-item'
 import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
-import {ActionsWidget} from '@/modules/widgets/actions-widget'
-import {FourUpWidget} from '@/modules/widgets/four-up-widget'
-import {NotificationsWidget} from '@/modules/widgets/notifications-widget'
-import {ProgressWidget} from '@/modules/widgets/progress-widget'
-import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
-import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
-import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
-import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
 import {Button} from '@/shadcn-components/ui/button'
-import {Input} from '@/shadcn-components/ui/input'
 
 export default function DesktopStory() {
 	useUmbrelTitle('Desktop')

@@ -1,5 +1,5 @@
 import {indexBy} from 'remeda'
-import {Widget, WidgetType} from './schema.js'
+import {Widget} from './schema.js'
 
 export const categories = [
 	'files',
