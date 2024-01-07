@@ -1,8 +1,5 @@
-import BigNumber from 'bignumber.js'
 import {formatDistance} from 'date-fns'
-import {Globe} from 'lucide-react'
 import {useEffect} from 'react'
-import {useTranslation} from 'react-i18next'
 import {
 	RiEqualizerLine,
 	RiExpandRightFill,
@@ -15,31 +12,23 @@ import {
 } from 'react-icons/ri'
 import {TbRotate2, TbServer, TbTool} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
-import {useLocalStorage} from 'react-use'
 
-import {ChevronDown} from '@/assets/chevron-down'
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {deviceMap, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
+import {deviceMap, UNKNOWN} from '@/constants'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
-import {maybePrettyBytes} from '@/utils/pretty-bytes'
-import {isDiskFull, isDiskLow, isMemoryLow} from '@/utils/system'
 
+import {LanguageDropdown} from './language-dropdown'
 import {ListRow} from './list-row'
-import {ProgressStatCardContent} from './progress-card-content'
-import {cardErrorClass, ContactSupportLink} from './shared'
+import {MemoryCard} from './memory-card'
+import {ContactSupportLink} from './shared'
 import {SoftwareUpdateListRow} from './software-update-list-row'
+import {StorageCard} from './storage-card'
 import {TempStatCardContent} from './temp-stat-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
@@ -48,30 +37,23 @@ export function SettingsContent() {
 	const navigate = useNavigate()
 	const tor = useTorEnabled()
 
-	const [userQ, uptimeQ, deviceInfoQ, cpuTempQ, diskQ, memoryQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] =
-		trpcReact.useQueries((t) => [
+	const [userQ, uptimeQ, deviceInfoQ, cpuTempQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries(
+		(t) => [
 			t.user.get(),
 			t.system.uptime(),
 			t.system.deviceInfo(),
 			t.system.cpuTemperature(),
-			t.system.diskUsage(),
-			t.system.memoryUsage(),
 			t.migration.isUmbrelHome(),
 			t.user.is2faEnabled(),
 			t.system.osVersion(),
-		])
+		],
+	)
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// TODO: also wanna check CPU temp
 	const isLoading =
-		userQ.isLoading ||
-		uptimeQ.isLoading ||
-		deviceInfoQ.isLoading ||
-		diskQ.isLoading ||
-		memoryQ.isLoading ||
-		is2faEnabledQ.isLoading ||
-		osVersionQ.isLoading
+		userQ.isLoading || uptimeQ.isLoading || deviceInfoQ.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
 
 	// Scroll to hash
 	useEffect(() => {
@@ -131,38 +113,9 @@ export function SettingsContent() {
 					</div>
 				</Card>
 				<div className='flex flex-col gap-3'>
-					<Card>
-						<ProgressStatCardContent
-							title='Storage'
-							value={maybePrettyBytes(diskQ.data?.used)}
-							valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
-							secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
-							progress={BigNumber(diskQ.data?.used ?? 0 * 100)
-								.dividedBy(diskQ.data?.size ?? 0)
-								.toNumber()}
-							afterChildren={
-								<>
-									{isDiskLow(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is low.</span>}
-									{isDiskFull(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is full.</span>}
-								</>
-							}
-						/>
-					</Card>
+					<StorageCard />
 					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
-					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
-						<ProgressStatCardContent
-							title='Memory'
-							value={maybePrettyBytes(memoryQ.data?.used)}
-							valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
-							secondaryValue={`${maybePrettyBytes(memoryQ.data?.available)} left`}
-							progress={BigNumber(memoryQ.data?.used ?? 0 * 100)
-								.dividedBy(memoryQ.data?.size ?? 0)
-								.toNumber()}
-							afterChildren={
-								memoryQ.data && isMemoryLow(memoryQ.data) && <span className={cardErrorClass}>Memory is low.</span>
-							}
-						/>
-					</Card>
+					<MemoryCard />
 					<Card>
 						<TempStatCardContent tempInCelcius={cpuTempQ.data} />
 					</Card>
@@ -292,43 +245,6 @@ export function SettingsContent() {
 				<ContactSupportLink className='lg:hidden' />
 			</div>
 		</div>
-	)
-}
-const languages = [
-	{name: 'English', code: 'en'},
-	{name: 'Français', code: 'fr'},
-	{name: 'العربية', code: 'ar'},
-]
-
-function LanguageDropdown() {
-	const {i18n} = useTranslation()
-	const [activeCode, setActiveCode] = useLocalStorage('i18nextLng', 'en', {
-		raw: true,
-	})
-
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<IconButton icon={Globe} id='language'>
-					{languages.find(({code}) => code === activeCode)?.name}
-					<ChevronDown />
-				</IconButton>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align='end'>
-				{languages.map(({code, name}) => (
-					<DropdownMenuCheckboxItem
-						key={code}
-						checked={activeCode === code}
-						onSelect={() => {
-							setActiveCode(code)
-							i18n.changeLanguage(code)
-						}}
-					>
-						{name}
-					</DropdownMenuCheckboxItem>
-				))}
-			</DropdownMenuContent>
-		</DropdownMenu>
 	)
 }
 
