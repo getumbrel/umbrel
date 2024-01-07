@@ -1,4 +1,4 @@
-import {WidgetType} from './schema'
+import type {WidgetType} from './schema.js'
 
 type FourUpItem = {
 	title: string
