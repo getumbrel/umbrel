@@ -96,10 +96,24 @@ export default router({
 		.input(
 			z.object({
 				appId: z.string(),
-				registryId: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
+			const registry = await ctx.appStore.registry()
+
+			// Find widget endpoints
+			const allApps = registry.flatMap((element) => element?.apps)
+			// TODO: what if multiple apps have the same id but different `registryId`?
+			const app = allApps?.find((app) => app?.id === input.appId)
+			const widgetEndpoints = (app?.widgets ?? []).map((widget) => widget.endpoint)
+			console.log({widgetEndpoints})
+
+			// Remove widgets
+			const widgets = (await ctx.user.get()).widgets
+			const newWidgets = widgets.filter((widget) => !widgetEndpoints.includes(widget.endpoint))
+			console.log({newWidgets})
+			await ctx.user.setWidgets(newWidgets)
+
 			await ctx.userApps.uninstallApp(input.appId)
 			return true
 		}),
