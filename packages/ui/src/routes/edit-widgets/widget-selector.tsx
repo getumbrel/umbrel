@@ -69,7 +69,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 											damping: 30,
 										}}
 									>
-										<Widget appId={widgets.appFromEndpoint(widget.endpoint)?.appId} config={widget} />
+										<Widget appId={widget.app.id} config={widget} />
 									</motion.div>
 								)
 							})}

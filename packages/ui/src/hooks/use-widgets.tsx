@@ -27,14 +27,14 @@ export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
 	const [selectedTooMany, setSelectedTooMany] = useState(false)
 	const availableApps = useAvailableApps()
-	const userApps = useApps()
+	const apps = useApps()
 
 	const {selected, setSelected, isLoading: isSelectedLoading} = useSelectedWidgets()
-	const isLoading = availableApps.isLoading || userApps.isLoading || isSelectedLoading
+	const isLoading = availableApps.isLoading || apps.isLoading || isSelectedLoading
 
 	const availableUserAppWidgets =
-		availableApps.appsKeyed && userApps.userApps
-			? userApps.userApps.map((app) => ({
+		availableApps.appsKeyed && apps.userApps
+			? apps.userApps.map((app) => ({
 					appId: app.id,
 					icon: app.icon,
 					name: app.name,
@@ -43,7 +43,7 @@ export function useWidgets() {
 			: []
 
 	const availableWidgets =
-		availableApps.appsKeyed && userApps.userApps
+		availableApps.appsKeyed && apps.userApps
 			? [
 					{
 						appId: 'settings',
@@ -75,9 +75,29 @@ export function useWidgets() {
 		return availableWidgets.find((app) => app.widgets?.find((widget) => widget.endpoint === endpoint))
 	}
 
+	const selectedWithAppInfo = selected
+		.filter((w) => {
+			const app = appFromEndpoint(w.endpoint)
+			return !!app
+		})
+		.map((widget) => {
+			// Expect app to be found because we filtered out widgets without apps
+			const app = appFromEndpoint(widget.endpoint)!
+
+			return {
+				...widget,
+				app: {
+					id: app.appId,
+					icon: app.icon,
+					name: app.name,
+				},
+			}
+		})
+
+	// TODO: return app information like icon, name, and appId with widgets
 	return {
 		availableWidgets,
-		selected,
+		selected: selectedWithAppInfo,
 		toggleSelected,
 		selectedTooMany,
 		isLoading,

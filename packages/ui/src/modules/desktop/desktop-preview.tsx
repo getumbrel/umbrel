@@ -75,7 +75,7 @@ export function DesktopPreview() {
 
 function DesktopContent() {
 	const {allAppsKeyed, userApps, isLoading} = useApps()
-	const {selected, appFromEndpoint} = useWidgets()
+	const {selected} = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -95,7 +95,7 @@ function DesktopContent() {
 							// TODO: should get app name from the widget config
 							label={allAppsKeyed[widget.endpoint.split('/')[2]]?.name}
 						>
-							<Widget appId={appFromEndpoint(widget.endpoint)?.appId} config={widget} />
+							<Widget appId={widget.app.id} config={widget} />
 						</WidgetWrapper>
 					))}
 					apps={userApps.map((app) => (

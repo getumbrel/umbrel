@@ -69,7 +69,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 							// TODO: should get app name from the widget config
 							label={allAppsKeyed[widget.endpoint.split('/')[2]]?.name}
 						>
-							<Widget appId={widgets.appFromEndpoint(widget.endpoint)?.appId} config={widget} />
+							<Widget appId={widget.app.id} config={widget} />
 						</WidgetWrapper>
 					))}
 					apps={userApps.map((app) => (
