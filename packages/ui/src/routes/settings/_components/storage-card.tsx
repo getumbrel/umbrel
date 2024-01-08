@@ -1,37 +1,24 @@
-import BigNumber from 'bignumber.js'
-
 import {Card} from '@/components/ui/card'
-import {trpcReact} from '@/trpc/trpc'
-import {maybePrettyBytes} from '@/utils/pretty-bytes'
-import {isDiskFull, isDiskLow} from '@/utils/system'
+import {useStorageForUi} from '@/hooks/use-storage-for-ui'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function StorageCard() {
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-
-	if (diskQ.isLoading)
-		return (
-			<Card>
-				<ProgressStatCardContent title='Storage' value='–' valueSub='/ –' secondaryValue='– left' progress={0} />
-			</Card>
-		)
+	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useStorageForUi()
 
 	return (
 		<Card>
 			<ProgressStatCardContent
 				title='Storage'
-				value={maybePrettyBytes(diskQ.data?.used)}
-				valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
-				secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
-				progress={BigNumber(diskQ.data?.used ?? 0 * 100)
-					.dividedBy(diskQ.data?.size ?? 0)
-					.toNumber()}
+				value={value}
+				valueSub={valueSub}
+				secondaryValue={secondaryValue}
+				progress={progress}
 				afterChildren={
 					<>
-						{isDiskLow(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is low.</span>}
-						{isDiskFull(diskQ.data?.available ?? 0) && <span className={cardErrorClass}>Disk is full.</span>}
+						{isDiskLow && <span className={cardErrorClass}>Disk is low</span>}
+						{isDiskFull && <span className={cardErrorClass}>Disk is full</span>}
 					</>
 				}
 			/>
