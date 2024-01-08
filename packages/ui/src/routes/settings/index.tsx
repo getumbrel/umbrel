@@ -30,7 +30,6 @@ const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/confirm-enable-tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
-const FactoryResetDialog = React.lazy(() => import('@/routes/settings/factory-reset'))
 
 const routeToDialog: Record<string, React.ComponentType> = {
 	'2fa-disable': TwoFactorDisableDialog,
@@ -45,7 +44,6 @@ const routeToDialog: Record<string, React.ComponentType> = {
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
-	'factory-reset': FactoryResetDialog,
 }
 
 export function Settings() {

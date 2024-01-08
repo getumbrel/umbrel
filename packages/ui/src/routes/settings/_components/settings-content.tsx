@@ -229,15 +229,7 @@ export function SettingsContent() {
 					</ListRow>
 					<SoftwareUpdateListRow />
 					<ListRow title='Factory Reset' description='Delete all data, and reset your device completely' isLabel>
-						<IconButton
-							text='destructive'
-							icon={TbRotate2}
-							onClick={() =>
-								navigate({
-									search: addLinkSearchParams({dialog: 'factory-reset'}),
-								})
-							}
-						>
+						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
 							Reset
 						</IconButton>
 					</ListRow>
