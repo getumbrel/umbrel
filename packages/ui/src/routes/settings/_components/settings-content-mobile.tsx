@@ -5,6 +5,7 @@ import {
 	TbCircleArrowUp,
 	TbLanguage,
 	TbPhoto,
+	TbServer,
 	TbShoppingBag,
 	TbTool,
 	TbUser,
@@ -16,6 +17,7 @@ import {Link} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {Card, cardClass} from '@/components/ui/card'
 import {LinkButton} from '@/components/ui/link-button'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {cn} from '@/shadcn-lib/utils'
@@ -32,6 +34,7 @@ export function SettingsContentMobile() {
 	// const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
+	const deviceInfo = useDeviceInfo()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
@@ -75,9 +78,9 @@ export function SettingsContentMobile() {
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>Running on</dt>
-						<dd>DEBUG 4</dd>
+						<dd>{deviceInfo.device}</dd>
 						<dt className='opacity-40'>umbrelOS version</dt>
-						<dd>0.0.0 </dd>
+						<dd>0.0.0</dd>
 					</dl>
 				</div>
 			</div>
@@ -114,6 +117,11 @@ export function SettingsContentMobile() {
 				<ListRowMobile icon={TbLanguage} title='Language' description='Select preferred language ' />
 				<ListRowMobile icon={TbShoppingBag} title='App store' description='App store settings & app updates' />
 				<ListRowMobile icon={TbTool} title='Troubleshoot' description='View logs for troubleshooting' />
+				<ListRowMobile
+					icon={TbServer}
+					title='Device info'
+					description={`Model ${deviceInfo.modelNumber} · Serial ${deviceInfo.serialNumber}`}
+				/>
 				<ListRowMobile icon={TbCircleArrowUp} title='Software update' description='You are on the latest version' />
 			</div>
 

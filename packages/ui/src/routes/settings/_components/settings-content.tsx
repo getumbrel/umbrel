@@ -16,7 +16,8 @@ import {useNavigate} from 'react-router-dom'
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {deviceMap, UNKNOWN} from '@/constants'
+import {UNKNOWN} from '@/constants'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -36,24 +37,22 @@ export function SettingsContent() {
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const tor = useTorEnabled()
+	const deviceInfo = useDeviceInfo()
 
-	const [userQ, uptimeQ, deviceInfoQ, cpuTempQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries(
-		(t) => [
-			t.user.get(),
-			t.system.uptime(),
-			t.system.deviceInfo(),
-			t.system.cpuTemperature(),
-			t.migration.isUmbrelHome(),
-			t.user.is2faEnabled(),
-			t.system.osVersion(),
-		],
-	)
+	const [userQ, uptimeQ, cpuTempQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+		t.user.get(),
+		t.system.uptime(),
+		t.system.cpuTemperature(),
+		t.migration.isUmbrelHome(),
+		t.user.is2faEnabled(),
+		t.system.osVersion(),
+	])
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// TODO: also wanna check CPU temp
 	const isLoading =
-		userQ.isLoading || uptimeQ.isLoading || deviceInfoQ.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
+		userQ.isLoading || uptimeQ.isLoading || deviceInfo.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
 
 	// Scroll to hash
 	useEffect(() => {
@@ -86,7 +85,7 @@ export function SettingsContent() {
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 							<dt className='opacity-40'>Running on</dt>
-							<dd>{deviceInfoQ.data?.device ? deviceMap[deviceInfoQ.data?.device].title : UNKNOWN()}</dd>
+							<dd>{deviceInfo.device}</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
 							<dd>{osVersionQ.data}</dd>
 							<dt className='opacity-40'>Uptime</dt>
