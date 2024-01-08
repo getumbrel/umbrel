@@ -14,6 +14,13 @@ type AppT = {
 
 export const systemApps = [
 	{
+		id: 'system',
+		name: 'System',
+		icon: '/figma-exports/umbrel-app.svg',
+		systemApp: true,
+		systemAppTo: '/',
+	},
+	{
 		id: 'home',
 		name: 'Home',
 		icon: '/dock/home.png',

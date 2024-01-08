@@ -2,12 +2,16 @@ import {ReactNode} from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
+import {DebugOnly} from '@/components/ui/debug-only'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {useApps} from '@/hooks/use-apps'
+import {useMemoryForUi} from '@/hooks/use-memory-for-ui'
+import {useStorageForUi} from '@/hooks/use-storage-for-ui'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {StatText} from '@/modules/widgets/shared/stat-text'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
+import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
 export default function LiveUsageDialog() {
@@ -18,79 +22,70 @@ export default function LiveUsageDialog() {
 	return (
 		<ImmersiveDialog onClose={() => navigate('/settings', {preventScrollReset: true})}>
 			<h1 className={immersiveDialogTitleClass}>{title}</h1>
-			<div className='grid gap-4 md:grid-cols-2'>
-				<LiveUsageSection title='Storage'>
-					<StorageStats />
-				</LiveUsageSection>
-				<LiveUsageSection title='Memory'>
-					<MemoryStats />
-				</LiveUsageSection>
-			</div>
+			<LiveUsageContent />
 		</ImmersiveDialog>
 	)
 }
 
-function StorageStats() {
-	const {userApps} = useApps()
+function LiveUsageContent() {
+	const {allAppsKeyed} = useApps()
+	const {apps: appStorageUsages} = useStorageForUi({poll: true})
+	const {apps: appMemoryUsages} = useMemoryForUi({poll: true})
 
-	if (!userApps) return null
-
-	const installedApps = userApps.filter((app) => app.state === 'ready')
-
-	return (
-		<>
-			<ProgressCard
-				value='256 GB'
-				valueSub='/ 2 TB'
-				progressLabel='1.75 TB left'
-				progress={0.875}
-				rightChildren={<StorageIndicator />}
-			/>
-			<div className={appListClass}>
-				{installedApps.slice(0, 9).map((app) => (
-					<AppListRow icon={app.icon} title={app.name} key={app.id} value='632.8 GB' />
-				))}
-			</div>
-		</>
-	)
-}
-
-function MemoryStats() {
-	const {userApps} = useApps()
-
-	if (!userApps) return null
-
-	const installedApps = userApps.filter((app) => app.state === 'ready')
+	if (!allAppsKeyed) return null
 
 	return (
-		<>
-			<ProgressCard value='5.4 GB' valueSub='/ 16 GB' progressLabel='11.4 GB left' progress={0.4} />
-			<div className={appListClass}>
-				{installedApps.slice(0, 5).map((app) => (
-					<AppListRow icon={app.icon} title={app.name} key={app.id} value='632.8 GB' />
-				))}
-			</div>
-		</>
+		<div className='grid gap-4 md:grid-cols-2'>
+			<LiveUsageSection title='Storage'>
+				<StorageCard />
+				<div className={appListClass}>
+					{appStorageUsages?.map(({appId, disk}) => (
+						<AppListRow
+							key={appId}
+							icon={allAppsKeyed[appId]?.icon || undefined}
+							title={allAppsKeyed[appId]?.name || 'Unknown app'}
+							value={maybePrettyBytes(disk)}
+						/>
+					))}
+				</div>
+			</LiveUsageSection>
+			<LiveUsageSection title='Memory'>
+				<MemoryCard />
+				<div className={appListClass}>
+					{appMemoryUsages?.map(({appId, memory}) => (
+						<AppListRow
+							key={appId}
+							icon={allAppsKeyed[appId]?.icon || undefined}
+							title={allAppsKeyed[appId]?.name || 'Unknown app'}
+							value={maybePrettyBytes(memory)}
+						/>
+					))}
+				</div>
+			</LiveUsageSection>
+			<DebugOnly>Live usage stubbed out for bitcoin, lightning, and nostr</DebugOnly>
+		</div>
 	)
 }
 
 const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
 
-function AppListRow({icon, title, value}: {icon: string; title: string; value: string}) {
+function AppListRow({icon, title, value}: {icon?: string; title: string; value: string}) {
 	return (
 		<div className='flex items-center gap-2 p-3'>
-			<img
-				src={icon}
-				alt={title}
-				width={25}
-				height={25}
-				className='h-[25px] w-[25px] rounded-5 bg-white/10 bg-cover bg-center shadow-md'
-				style={{
-					backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
-				}}
-			/>
+			{icon && (
+				<img
+					src={icon}
+					alt={title}
+					width={25}
+					height={25}
+					className='h-[25px] w-[25px] rounded-5 bg-white/10 bg-cover bg-center shadow-md'
+					style={{
+						backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
+					}}
+				/>
+			)}
 			<span className='flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
-			<span className='text-15 font-normal -tracking-3'>{value}</span>
+			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
 		</div>
 	)
 }
@@ -103,6 +98,39 @@ function LiveUsageSection({title, children}: {title: string; children: React.Rea
 			<h2 className='text-17 font-semibold -tracking-2 text-white/80'>{title}</h2>
 			{children}
 		</div>
+	)
+}
+
+function StorageCard() {
+	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useStorageForUi({poll: true})
+
+	return (
+		<ProgressCard
+			value={value}
+			valueSub={valueSub}
+			progressLabel={secondaryValue}
+			progress={progress}
+			rightChildren={
+				<>
+					{isDiskLow && <ErrorMessage>Running low on space</ErrorMessage>}
+					{isDiskFull && <ErrorMessage>Disk is full</ErrorMessage>}
+				</>
+			}
+		/>
+	)
+}
+
+function MemoryCard() {
+	const {value, valueSub, secondaryValue, progress, isMemoryLow} = useMemoryForUi({poll: true})
+
+	return (
+		<ProgressCard
+			value={value}
+			valueSub={valueSub}
+			progressLabel={secondaryValue}
+			progress={progress}
+			rightChildren={isMemoryLow && <ErrorMessage>Running low on memory</ErrorMessage>}
+		/>
 	)
 }
 
@@ -133,11 +161,11 @@ function ProgressCard({
 	)
 }
 
-function StorageIndicator() {
+function ErrorMessage({children}: {children?: ReactNode}) {
 	return (
 		<div className='flex items-center gap-2 text-[#F45A5A]'>
 			<div className='h-[5px] w-[5px] animate-pulse rounded-full bg-current ring-3 ring-[#F45A5A]/20'></div>
-			<div className={cn('text-13 font-medium -tracking-2', 'leading-inter-trimmed')}>Running low on space</div>
+			<div className={cn('text-13 font-medium -tracking-2', 'leading-inter-trimmed')}>{children}</div>
 		</div>
 	)
 }

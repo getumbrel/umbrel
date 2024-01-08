@@ -11,7 +11,14 @@ export async function getCpuTemperature(): Promise<number> {
 	return cpuTemperature.main
 }
 
-export async function getDiskUsage(umbreldDataDir: string): Promise<{size: number; used: number; available: number}> {
+type DiskUsage = {
+	appId: string
+	disk: number
+}
+
+export async function getDiskUsage(
+	umbreldDataDir: string,
+): Promise<{size: number; used: number; available: number; apps: DiskUsage[]}> {
 	if (typeof umbreldDataDir !== 'string' || umbreldDataDir === '') {
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
@@ -36,14 +43,37 @@ export async function getDiskUsage(umbreldDataDir: string): Promise<{size: numbe
 		size,
 		used,
 		available,
+		apps: [
+			{
+				appId: 'system',
+				disk: Math.random() * 10000,
+			},
+			{
+				appId: 'bitcoin',
+				disk: Math.random() * 10000,
+			},
+			{
+				appId: 'lightning',
+				disk: Math.random() * 10000,
+			},
+			{
+				appId: 'nostr-relay',
+				disk: Math.random() * 10000,
+			},
+		],
 	}
+}
+
+type MemoryUsage = {
+	appId: string
+	memory: number
 }
 
 export async function getMemoryUsage(): Promise<{
 	size: number
 	used: number
 	available: number
-	apps: Record<string, number>
+	apps: MemoryUsage[]
 }> {
 	const {total: size, active: used, available} = await systemInformation.mem()
 	return {
@@ -52,7 +82,24 @@ export async function getMemoryUsage(): Promise<{
 		available,
 		// TODO: get list of installed apps and their memory usage
 		// to calculate the memory usage of each app
-		apps: {},
+		apps: [
+			{
+				appId: 'system',
+				memory: Math.random() * 10000,
+			},
+			{
+				appId: 'bitcoin',
+				memory: Math.random() * 10000,
+			},
+			{
+				appId: 'lightning',
+				memory: Math.random() * 10000,
+			},
+			{
+				appId: 'nostr-relay',
+				memory: Math.random() * 10000,
+			},
+		],
 	}
 }
 
