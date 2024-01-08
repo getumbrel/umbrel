@@ -108,7 +108,15 @@ export function SettingsContentMobile() {
 				<ListRowMobile icon={TbUser} title='Account' description='Your display name & Umbrel password' />
 				<ListRowMobile icon={TbPhoto} title='Wallpaper' description='Choose your Umbrel wallpaper' />
 				<ListRowMobile icon={Tb2Fa} title='Two-factor authentication' description='Add a layer of security to login' />
-				<ListRowMobile icon={TorIcon2} title='Remote Tor access' description='Access Umbrel from anywhere using Tor' />
+				<ListRowMobile
+					icon={TorIcon2}
+					title={
+						<span className='flex items-center gap-2'>
+							Remote Tor access <TorPulse />
+						</span>
+					}
+					description='Access Umbrel from anywhere using Tor'
+				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
 					title='Migration Assistant'
@@ -129,3 +137,7 @@ export function SettingsContentMobile() {
 		</div>
 	)
 }
+
+const TorPulse = () => (
+	<div className='inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-[#299E16] bg-current ring-3 ring-[#16FF001A]/10' />
+)
