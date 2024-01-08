@@ -58,6 +58,22 @@ export function useAvailableApps(registryId: string = UMBREL_APP_STORE_ID) {
 	} as const
 }
 
+export function useAllAvailableApps() {
+	const ctx = useContext(AppsContext)
+	if (!ctx) throw new Error('useAllAvailableApps must be used within AvailableAppsProvider')
+
+	if (ctx.isLoading) return {isLoading: true} as const
+
+	const apps = ctx.repos.flatMap((repo) => repo?.apps ?? [])
+	const appsKeyed = keyBy(apps, 'id')
+
+	return {
+		isLoading: false,
+		apps,
+		appsKeyed,
+	} as const
+}
+
 // Allow querying for nullish app to allow the `id` to be dynamic
 export function useAvailableApp(id?: string | null, registryId: string = UMBREL_APP_STORE_ID) {
 	const {appsKeyed, isLoading} = useAvailableApps(registryId)

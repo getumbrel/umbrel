@@ -4,9 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
-import {LinkButton} from '@/components/ui/link-button'
 import {Loading} from '@/components/ui/loading'
-import {NotificationBadge} from '@/components/ui/notification-badge'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -27,14 +25,13 @@ import {
 import {cn} from '@/shadcn-lib/utils'
 
 import {CommunityAppStoreDialog} from './community-app-store-dialog'
-import {UpdatesDialog} from './updates-dialog'
+import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
 	const {t} = useTranslation()
 	const title = t('app-store.title')
 	useUmbrelTitle(title)
 
-	const {addLinkSearchParams} = useQueryParams()
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -45,16 +42,7 @@ export function AppStoreLayout() {
 			titleRightChildren={
 				<div className='flex flex-1 flex-row-reverse items-center gap-3'>
 					<CommunityAppsDropdown />
-					<LinkButton
-						to={{search: addLinkSearchParams({dialog: 'updates'})}}
-						variant='default'
-						size='dialog'
-						className='relative h-[33px]'
-					>
-						Updates
-						<NotificationBadge count={2} />
-					</LinkButton>
-					<UpdatesDialog />
+					<UpdatesButton />
 					<div className='flex-1 md:hidden' />
 					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
 				</div>

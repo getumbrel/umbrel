@@ -1,14 +1,42 @@
 import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
+import {LinkButton} from '@/components/ui/link-button'
+import {NotificationBadge} from '@/components/ui/notification-badge'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
-import {RegistryApp} from '@/trpc/trpc'
+import {RegistryApp, trpcReact} from '@/trpc/trpc'
+
+export function UpdatesButton() {
+	const {addLinkSearchParams} = useQueryParams()
+
+	const appsWithUpdates = useAppsWithUpdates()
+
+	// If we link to the updates dialog, show it even if there are no updates
+	if (!appsWithUpdates.length) {
+		return <UpdatesDialog />
+	}
+
+	return (
+		<>
+			<LinkButton
+				to={{search: addLinkSearchParams({dialog: 'updates'})}}
+				variant='default'
+				size='dialog'
+				className='relative h-[33px]'
+			>
+				Updates
+				<NotificationBadge count={appsWithUpdates.length} />
+			</LinkButton>
+			<UpdatesDialog />
+		</>
+	)
+}
 
 export function UpdatesDialog() {
 	const {params, removeParam} = useQueryParams()
@@ -16,29 +44,32 @@ export function UpdatesDialog() {
 
 	const title = 'Updates'
 
-	// TODO: determine if we want community apps here
-	const {isLoading, apps} = useAvailableApps()
+	const appsWithUpdates = useAppsWithUpdates()
 
-	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume
-	if (isLoading) {
-		return null
-	}
+	const updateAllMut = trpcReact.user.apps.updateAll.useMutation()
+
+	const updateAll = () => updateAllMut.mutate()
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && removeParam('dialog')}>
 			<DialogPortal>
-				<DialogContent className='p-0'>
+				<DialogContent className='top-[10%] translate-y-0 p-0 data-[state=closed]:slide-out-to-top-[10%] data-[state=open]:slide-in-from-top-[10%]'>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
 							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 							<DialogTitle className='flex flex-row items-center justify-between'>
-								5 updates available{' '}
-								<Button size='dialog' variant='primary'>
-									Update all
+								{appsWithUpdates.length} updates available{' '}
+								<Button
+									size='dialog'
+									variant='primary'
+									onClick={updateAll}
+									disabled={updateAllMut.isLoading || appsWithUpdates.length === 0}
+								>
+									{updateAllMut.isLoading ? 'Updating...' : 'Update all'}
 								</Button>
 							</DialogTitle>
 						</DialogHeader>
-						{apps.slice(0, 7).map((app, i) => (
+						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
 								{i === 0 ? <Separator className='my-2.5' /> : <Separator className='my-1' />}
 								<AppItem app={app} />
@@ -53,6 +84,9 @@ export function UpdatesDialog() {
 
 function AppItem({app}: {app: RegistryApp}) {
 	const [showAll, setShowAll] = useState(false)
+	const updateMut = trpcReact.user.apps.update.useMutation()
+	const updateApp = () => updateMut.mutate({appId: app.id})
+
 	return (
 		<div>
 			<div className='flex items-center gap-2.5'>
@@ -62,7 +96,9 @@ function AppItem({app}: {app: RegistryApp}) {
 					<p className='text-13 opacity-40'>{app.version}</p>
 				</div>
 				<div className='flex-1' />
-				<Button size='sm'>Update</Button>
+				<Button size='sm' onClick={updateApp} disabled={updateMut.isLoading}>
+					{updateMut.isLoading ? 'Updating...' : 'Update'}
+				</Button>
 			</div>
 			{app.releaseNotes && (
 				<div className='flex items-end'>

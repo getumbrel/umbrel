@@ -3,6 +3,7 @@ import {useLocation} from 'react-router-dom'
 
 import {useSettingsNotificationCount} from '@/components/notifications'
 import {systemAppsKeyed} from '@/hooks/use-apps'
+import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
@@ -21,6 +22,7 @@ export function Dock() {
 	const {pathname} = useLocation()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
+	const updateCount = useAppsWithUpdates().length
 
 	return (
 		<>
@@ -47,6 +49,7 @@ export function Dock() {
 					to={systemAppsKeyed['app-store'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['app-store'].systemAppTo)}
 					bg={systemAppsKeyed['app-store'].icon}
+					notificationCount={updateCount}
 					mouseX={mouseX}
 				/>
 				<DockItem
