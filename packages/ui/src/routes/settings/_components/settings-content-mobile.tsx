@@ -1,4 +1,3 @@
-import BigNumber from 'bignumber.js'
 import {RiPulseLine} from 'react-icons/ri'
 import {
 	Tb2Fa,
@@ -20,11 +19,11 @@ import {LinkButton} from '@/components/ui/link-button'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {trpcReact} from '@/trpc/trpc'
-import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {ListRowMobile} from './list-row'
-import {ProgressStatCardContent} from './progress-card-content'
+import {MemoryCard} from './memory-card'
 import {ContactSupportLink} from './shared'
+import {StorageCard} from './storage-card'
 import {TempStatCardContent} from './temp-stat-card-content'
 
 export function SettingsContentMobile() {
@@ -32,8 +31,6 @@ export function SettingsContentMobile() {
 	// const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-	const memoryQ = trpcReact.system.memoryUsage.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
@@ -86,28 +83,9 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
-				<Card>
-					<ProgressStatCardContent
-						title='Storage'
-						value={maybePrettyBytes(diskQ.data?.used)}
-						valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
-						secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
-						progress={BigNumber(diskQ.data?.used ?? 0 * 100)
-							.dividedBy(diskQ.data?.size ?? 0)
-							.toNumber()}
-					/>
-				</Card>
-				<Card>
-					<ProgressStatCardContent
-						title='Memory'
-						value={maybePrettyBytes(memoryQ.data?.used)}
-						valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
-						secondaryValue={`${maybePrettyBytes(memoryQ.data?.available)} left`}
-						progress={BigNumber(memoryQ.data?.used ?? 0 * 100)
-							.dividedBy(memoryQ.data?.size ?? 0)
-							.toNumber()}
-					/>
-				</Card>
+				{/* TODO: `StorageCard` and `TempStatCardContent` are inconsistent */}
+				<StorageCard />
+				<MemoryCard />
 				<Card>
 					<TempStatCardContent tempInCelcius={cpuTempQ.data} />
 				</Card>
