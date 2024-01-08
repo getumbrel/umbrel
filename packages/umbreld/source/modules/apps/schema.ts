@@ -80,7 +80,7 @@ export type YamlApp = Pick<AppManifest, 'id'> & {
  * Usually pull stuff from app repository for names, etc
  */
 export type UserApp = YamlApp &
-	Pick<AppManifest, 'name' | 'icon' | 'port'> & {
+	Pick<AppManifest, 'name' | 'icon' | 'port' | 'version'> & {
 		credentials: {
 			defaultUsername: string
 			defaultPassword: string

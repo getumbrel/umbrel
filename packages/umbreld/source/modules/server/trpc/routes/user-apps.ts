@@ -35,7 +35,8 @@ export default router({
 			const userApp: UserApp = {
 				...app,
 				// TODO: don't assume registry never removes apps: `registryAppsKeyed[app.id]!`
-				...pick(registryAppsKeyed[app.id]!, ['name', 'icon', 'port']),
+				...pick(registryAppsKeyed[app.id]!, ['name', 'icon', 'port', 'version']),
+				version: '0.1',
 				...appStatuses[app.id],
 				credentials: {
 					defaultUsername: '',
