@@ -1,6 +1,6 @@
-import {RiPulseLine} from 'react-icons/ri'
 import {
 	Tb2Fa,
+	TbActivityHeartbeat,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
 	TbLanguage,
@@ -9,15 +9,16 @@ import {
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
+import {Link} from 'react-router-dom'
 
 // import {useNavigate} from 'react-router-dom'
 
 import {TorIcon2} from '@/assets/tor-icon2'
-import {Card} from '@/components/ui/card'
-import {IconLinkButton} from '@/components/ui/icon-link-button'
+import {Card, cardClass} from '@/components/ui/card'
 import {LinkButton} from '@/components/ui/link-button'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 
 import {ListRowMobile} from './list-row'
@@ -89,16 +90,15 @@ export function SettingsContentMobile() {
 				<Card>
 					<TempStatCardContent tempInCelcius={cpuTempQ.data} />
 				</Card>
-				<Card>
-					<IconLinkButton
-						icon={RiPulseLine}
-						to={{
-							search: addLinkSearchParams({dialog: 'live-usage'}),
-						}}
-					>
-						Open Live Usage
-					</IconLinkButton>
-				</Card>
+				<Link
+					className={cn(cardClass, 'flex flex-col justify-between')}
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage'}),
+					}}
+				>
+					<TbActivityHeartbeat className='h-5 w-5 [&>*]:stroke-[1.5px]' />
+					<span className='text-12 font-medium leading-inter-trimmed'>Open Live Usage</span>
+				</Link>
 			</div>
 
 			<div className='umbrel-divide-y rounded-12 bg-white/5 p-1'>
