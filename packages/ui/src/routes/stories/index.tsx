@@ -421,7 +421,7 @@ function ToastExample() {
 		<div>
 			{/* <Toaster /> should be in main or some layout file */}
 			<Button onClick={() => toast('My first toast')}>Give me a toast</Button>
-			<Button onClick={() => toast.success('My first toast')}>Success</Button>
+			<Button onClick={() => toast.success('My first toast', {duration: Infinity})}>Success</Button>
 			<Button onClick={() => toast.info('My first toast')}>Give me an info toast</Button>
 			<Button onClick={() => toast.warning('My first toast')}>Warning</Button>
 			<Button onClick={() => toast.error('My first toast')}>Error</Button>
