@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useId, useState} from 'react'
 import {TbCheck} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
@@ -20,9 +20,9 @@ export function LanguageDrawer() {
 	const [open, setOpen] = useState(true)
 	const navigate = useNavigate()
 
-	const [activeCode, setActiveCode] = useLanguage()
-
 	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+
+	const [activeCode, setActiveCode] = useLanguage()
 
 	const changeLanguage = async (code: string) => {
 		setActiveCode(code)
@@ -31,9 +31,11 @@ export function LanguageDrawer() {
 		setOpen(false)
 	}
 
+	const radioName = useId()
+
 	return (
 		<Drawer open={open} onOpenChange={setOpen}>
-			<DrawerContent>
+			<DrawerContent fullHeight>
 				<DrawerHeader>
 					<DrawerTitle>Language</DrawerTitle>
 					<DrawerDescription>Select preferred interface language</DrawerDescription>
@@ -41,9 +43,14 @@ export function LanguageDrawer() {
 
 				<div className={listClass}>
 					{languages.map(({code, name}) => (
-						<ListCheckItem key={code} checked={activeCode === code} onSelect={() => changeLanguage(code)}>
+						<ListRadioItem
+							key={code}
+							name={radioName}
+							checked={activeCode === code}
+							onSelect={() => changeLanguage(code)}
+						>
 							{name}
-						</ListCheckItem>
+						</ListRadioItem>
 					))}
 				</div>
 
@@ -56,13 +63,15 @@ export function LanguageDrawer() {
 	)
 }
 
-function ListCheckItem({
+function ListRadioItem({
 	children,
 	checked,
+	name,
 	onSelect,
 }: {
 	children: React.ReactNode
 	checked: boolean
+	name?: string
 	onSelect: () => void
 }) {
 	return (
@@ -70,7 +79,8 @@ function ListCheckItem({
 			{children}
 			{checked && <TbCheck className='h-4 w-4' />}
 			<input
-				type='checkbox'
+				type='radio'
+				name={name}
 				checked={checked}
 				onChange={onSelect}
 				className='absolute inset-0 appearance-none bg-red-500 opacity-0'
