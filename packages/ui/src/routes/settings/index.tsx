@@ -3,12 +3,12 @@ import {useTranslation} from 'react-i18next'
 import {toast} from 'sonner'
 
 import {DebugOnly} from '@/components/ui/debug-only'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {trpcReact} from '@/trpc/trpc'
-import {useBreakpoint} from '@/utils/tw'
 
 import {LanguageDrawer} from './_components/mobile/language-drawer'
 
@@ -61,15 +61,15 @@ export function Settings() {
 	const has = (dialog ?? '') in routeToDialog
 	const Dialog = has && dialog ? routeToDialog[dialog] : () => null
 
-	const breakpoint = useBreakpoint()
+	const isMobile = useIsMobile()
 
 	return (
 		<>
 			<SheetHeader className='px-2.5'>
 				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
-			{(breakpoint === 'sm' || breakpoint === 'md') && <SettingsContentMobile />}
-			{breakpoint !== 'sm' && breakpoint !== 'md' && <SettingsContent />}
+			{isMobile && <SettingsContentMobile />}
+			{!isMobile && <SettingsContent />}
 			<DebugOnly>
 				<ExportOnlyActions />
 			</DebugOnly>
