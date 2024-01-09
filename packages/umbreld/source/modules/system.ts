@@ -46,19 +46,19 @@ export async function getDiskUsage(
 		apps: [
 			{
 				appId: 'system',
-				disk: Math.random() * 10000,
+				disk: Math.random() * 10_000,
 			},
 			{
 				appId: 'bitcoin',
-				disk: Math.random() * 10000,
+				disk: Math.random() * 10_000,
 			},
 			{
 				appId: 'lightning',
-				disk: Math.random() * 10000,
+				disk: Math.random() * 10_000,
 			},
 			{
 				appId: 'nostr-relay',
-				disk: Math.random() * 10000,
+				disk: Math.random() * 10_000,
 			},
 		],
 	}
@@ -85,19 +85,19 @@ export async function getMemoryUsage(): Promise<{
 		apps: [
 			{
 				appId: 'system',
-				memory: Math.random() * 10000,
+				memory: Math.random() * 10_000,
 			},
 			{
 				appId: 'bitcoin',
-				memory: Math.random() * 10000,
+				memory: Math.random() * 10_000,
 			},
 			{
 				appId: 'lightning',
-				memory: Math.random() * 10000,
+				memory: Math.random() * 10_000,
 			},
 			{
 				appId: 'nostr-relay',
-				memory: Math.random() * 10000,
+				memory: Math.random() * 10_000,
 			},
 		],
 	}

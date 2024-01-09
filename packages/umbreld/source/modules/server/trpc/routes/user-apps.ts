@@ -109,7 +109,7 @@ export default router({
 			console.log({widgetEndpoints})
 
 			// Remove widgets
-			const widgets = (await ctx.user.get()).widgets
+			const {widgets} = await ctx.user.get()
 			const newWidgets = widgets.filter((widget) => !widgetEndpoints.includes(widget.endpoint))
 			console.log({newWidgets})
 			await ctx.user.setWidgets(newWidgets)
