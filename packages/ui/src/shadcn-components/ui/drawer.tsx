@@ -30,13 +30,17 @@ const DrawerContent = React.forwardRef<
 		<DrawerOverlay />
 		<DrawerPrimitive.Content
 			ref={ref}
-			className={cn('fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-20 bg-[#0F0F0F]', className)}
+			className={cn(
+				'pt- fixed inset-x-0 bottom-0 z-50 mt-24 flex flex h-auto flex-col flex-col gap-5 rounded-t-20 bg-[#0F0F0F] p-5',
+				className,
+			)}
 			style={{
 				boxShadow: '0px 2px 2px 0px hsla(0, 0%, 100%, 0.05) inset',
 			}}
 			{...props}
 		>
-			<div className='mx-auto mt-6 h-[4px] w-[40px] rounded-full bg-white/10' />
+			{/* -mb-[4px] so height is effectively zero */}
+			<div className='top-6 mx-auto -mb-[4px] h-[4px] w-[40px] rounded-full bg-white/10' />
 			{children}
 		</DrawerPrimitive.Content>
 	</DrawerPortal>
@@ -44,12 +48,12 @@ const DrawerContent = React.forwardRef<
 DrawerContent.displayName = 'DrawerContent'
 
 const DrawerHeader = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn('grid gap-0.5 p-5', className)} {...props} />
+	<div className={cn('grid gap-0.5', className)} {...props} />
 )
 DrawerHeader.displayName = 'DrawerHeader'
 
 const DrawerFooter = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn('mt-auto flex flex-col gap-2.5 p-5 pb-6', className)} {...props} />
+	<div className={cn('mt-auto flex flex-col gap-2.5', className)} {...props} />
 )
 DrawerFooter.displayName = 'DrawerFooter'
 

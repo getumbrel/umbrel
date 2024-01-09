@@ -38,15 +38,15 @@ export function LanguageDrawer() {
 					<DrawerTitle>Language</DrawerTitle>
 					<DrawerDescription>Select preferred interface language</DrawerDescription>
 				</DrawerHeader>
-				<div className='px-5'>
-					<div className={listClass}>
-						{languages.map(({code, name}) => (
-							<ListCheckItem key={code} checked={activeCode === code} onSelect={() => changeLanguage(code)}>
-								{name}
-							</ListCheckItem>
-						))}
-					</div>
+
+				<div className={listClass}>
+					{languages.map(({code, name}) => (
+						<ListCheckItem key={code} checked={activeCode === code} onSelect={() => changeLanguage(code)}>
+							{name}
+						</ListCheckItem>
+					))}
 				</div>
+
 				{/* Spacing to match figma */}
 				<div className='h-[80px]' />
 				{/* empty `DrawerFooter` adding bottom spacing */}
