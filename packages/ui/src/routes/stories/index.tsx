@@ -49,6 +49,16 @@ import {
 	ContextMenuTrigger,
 } from '@/shadcn-components/ui/context-menu'
 import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+	DrawerTrigger,
+} from '@/shadcn-components/ui/drawer'
+import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
@@ -100,6 +110,8 @@ export default function Stories() {
 			<CheckboxExamples />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
+			<H2>Drawer</H2>
+			<DrawerExample />
 			<H2>Loading</H2>
 			<Loading />
 			<H2>Tooltip</H2>
@@ -165,6 +177,26 @@ function AlertDialogExample() {
         </button>
       </div> */}
 		</div>
+	)
+}
+
+function DrawerExample() {
+	return (
+		<Drawer>
+			<DrawerTrigger>Open</DrawerTrigger>
+			<DrawerContent>
+				<DrawerHeader>
+					<DrawerTitle>Are you absolutely sure?</DrawerTitle>
+					<DrawerDescription>This action cannot be undone.</DrawerDescription>
+				</DrawerHeader>
+				<DrawerFooter>
+					<Button>Submit</Button>
+					<DrawerClose>
+						<Button variant='secondary'>Cancel</Button>
+					</DrawerClose>
+				</DrawerFooter>
+			</DrawerContent>
+		</Drawer>
 	)
 }
 
