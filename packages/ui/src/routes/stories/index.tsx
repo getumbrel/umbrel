@@ -186,14 +186,18 @@ function DrawerExample() {
 			<DrawerTrigger>Open</DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader>
-					<DrawerTitle>Are you absolutely sure?</DrawerTitle>
-					<DrawerDescription>This action cannot be undone.</DrawerDescription>
+					<DrawerTitle>Account</DrawerTitle>
+					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
-					<Button>Submit</Button>
 					<DrawerClose>
-						<Button variant='secondary'>Cancel</Button>
+						<Button size='dialog' className='w-full'>
+							Cancel
+						</Button>
 					</DrawerClose>
+					<Button size='dialog' variant='primary'>
+						Submit
+					</Button>
 				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>
