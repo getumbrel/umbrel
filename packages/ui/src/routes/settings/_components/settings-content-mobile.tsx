@@ -35,6 +35,7 @@ export function SettingsContentMobile() {
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const deviceInfo = useDeviceInfo()
+	const osVersionQ = trpcReact.system.osVersion.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
@@ -80,7 +81,7 @@ export function SettingsContentMobile() {
 						<dt className='opacity-40'>Running on</dt>
 						<dd>{deviceInfo.device}</dd>
 						<dt className='opacity-40'>umbrelOS version</dt>
-						<dd>0.0.0</dd>
+						<dd>{osVersionQ.data}</dd>
 					</dl>
 				</div>
 			</div>
