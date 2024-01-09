@@ -38,16 +38,21 @@ export function ListRowMobile({
 	title,
 	description,
 	children,
+	onClick,
 }: {
 	icon: IconType
 	title: React.ReactNode
 	description: React.ReactNode
 	children?: React.ReactNode
+	onClick?: () => void
 }) {
 	const Icon = icon
 
 	return (
-		<button className={cn('flex w-full flex-wrap items-center gap-x-4 gap-y-2.5 px-2.5 py-3 text-left')}>
+		<button
+			className={cn('flex w-full flex-wrap items-center gap-x-4 gap-y-2.5 px-2.5 py-3 text-left')}
+			onClick={onClick}
+		>
 			<div className='flex h-8 w-8 items-center justify-center rounded-6 bg-white/6'>
 				{Icon && <Icon className={cn('h-5 w-5 text-brand [&>*]:stroke-2')} />}
 			</div>

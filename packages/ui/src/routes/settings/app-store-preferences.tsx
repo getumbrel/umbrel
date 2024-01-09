@@ -15,7 +15,7 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {useAfterDelayedClose} from '@/utils/dialog'
-import {tw} from '@/utils/tw'
+import {listClass, listItemClass} from '@/utils/element-classes'
 
 export default function AppStorePreferencesDialog() {
 	const title = 'App Store Preferences'
@@ -90,6 +90,3 @@ export default function AppStorePreferencesDialog() {
 		</Dialog>
 	)
 }
-
-const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6`
-const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`

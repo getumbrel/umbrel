@@ -10,6 +10,8 @@ import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {trpcReact} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
+import {LanguageDrawer} from './_components/mobile/language-drawer'
+
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
 	import('./_components/settings-content').then((m) => ({default: m.SettingsContent})),
@@ -44,6 +46,8 @@ const routeToDialog: Record<string, React.ComponentType> = {
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
+	// drawers
+	language: LanguageDrawer,
 }
 
 export function Settings() {

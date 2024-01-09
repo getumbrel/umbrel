@@ -10,7 +10,7 @@ import {
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
-import {Link} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 
 // import {useNavigate} from 'react-router-dom'
 
@@ -31,7 +31,7 @@ import {TempStatCardContent} from './temp-stat-card-content'
 
 export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
-	// const navigate = useNavigate()
+	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const deviceInfo = useDeviceInfo()
@@ -123,7 +123,16 @@ export function SettingsContentMobile() {
 					title='Migration Assistant'
 					description='Move data from Raspberry Pi to Umbrel Home'
 				/>
-				<ListRowMobile icon={TbLanguage} title='Language' description='Select preferred language ' />
+				<ListRowMobile
+					icon={TbLanguage}
+					title='Language'
+					description='Select preferred language'
+					onClick={() =>
+						navigate({
+							search: addLinkSearchParams({dialog: 'language'}),
+						})
+					}
+				/>
 				<ListRowMobile icon={TbShoppingBag} title='App store' description='App store settings & app updates' />
 				<ListRowMobile icon={TbTool} title='Troubleshoot' description='View logs for troubleshooting' />
 				<ListRowMobile
