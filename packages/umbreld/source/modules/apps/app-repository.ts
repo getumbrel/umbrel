@@ -154,11 +154,15 @@ export default class AppRepository {
 			}),
 		)
 
+		// Wait for all reads to finish
 		let apps = (await Promise.all(parsedManifestsPromises)) as AppManifest[]
 
+		// Process results
 		apps = apps
 			// Filter out invalid manifests
 			.filter((app) => app !== undefined)
+    	// Filter out invalid IDs
+			.filter((app) => meta.id === 'umbrel-app-store' || app.id.startsWith(meta.id))
 			// Add icons
 			.map((app) => ({
 				...app,

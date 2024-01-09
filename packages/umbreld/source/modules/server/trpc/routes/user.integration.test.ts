@@ -1,10 +1,18 @@
-import {expect, afterAll, test, vi} from 'vitest'
+import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 
 import * as totp from '../../../utilities/totp.js'
 
 import createTestUmbreld from '../../../test-utilities/create-test-umbreld.js'
 
-const umbreld = await createTestUmbreld()
+let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
+
+beforeAll(async () => {
+	umbreld = await createTestUmbreld()
+})
+
+afterAll(async () => {
+	await umbreld.cleanup()
+})
 
 const testUserCredentials = {
 	name: 'satoshi',
@@ -13,8 +21,6 @@ const testUserCredentials = {
 
 const testTotpUri =
 	'otpauth://totp/Umbrel?secret=63AU7PMWJX6EQJR6G3KTQFG5RDZ2UE3WVUMP3VFJWHSWJ7MMHTIQ&period=30&digits=6&algorithm=SHA1&issuer=getumbrel.com'
-
-afterAll(umbreld.cleanup)
 
 // The following tests are stateful and must be run in order
 
