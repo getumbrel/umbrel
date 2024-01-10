@@ -41,7 +41,7 @@ const DrawerContent = React.forwardRef<
 			{...props}
 		>
 			{/* -mb-[4px] so height is effectively zero */}
-			<div className='top-6 mx-auto -mb-[4px] h-[4px] w-[40px] rounded-full bg-white/10' />
+			<div className='top-6 mx-auto -mb-[4px] h-[4px] w-[40px] shrink-0 rounded-full bg-white/10' />
 			{children}
 		</DrawerPrimitive.Content>
 	</DrawerPortal>

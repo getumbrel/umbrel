@@ -24,7 +24,7 @@ export function SegmentedControl<T extends string>({
 	return (
 		<div
 			className={cn(
-				'flex gap-0 rounded-full border-[0.5px] border-white/10 bg-white/3 text-12',
+				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/10 bg-white/3 text-12',
 				size === 'default' && 'h-[30px] p-1',
 				size === 'lg' && 'h-[40px] p-[5px]',
 			)}
