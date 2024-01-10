@@ -82,7 +82,8 @@ function ListRadioItem({
 				checked={checked}
 				onChange={onSelect}
 				// Red so it's obvious when opacity is not zero and that it takes the whole space
-				className='absolute inset-0 appearance-none bg-red-500 opacity-0'
+				// Not using inset-0 because it's not supported in mobile Safari
+				className='absolute left-0 top-0 block h-full w-full bg-red-500 opacity-0'
 			/>
 		</div>
 	)
