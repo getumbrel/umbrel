@@ -2,6 +2,7 @@ import {ReactNode} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {
 	appsGridClass,
 	cardClass,
@@ -15,10 +16,16 @@ import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 
 export function AppsGridSection({overline, title, apps}: {overline: string; title: ReactNode; apps?: RegistryApp[]}) {
+	const isMobile = useIsMobile()
+	const appsToShow = isMobile ? (apps ?? []).slice(0, 6) : apps ?? []
 	return (
 		<div className={cardClass}>
 			<SectionTitle overline={overline} title={title} />
-			<div className={appsGridClass}>{apps?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
+			<div className={appsGridClass}>
+				{appsToShow.map((app) => (
+					<AppWithDescription key={app.id} app={app} />
+				))}
+			</div>
 		</div>
 	)
 }
