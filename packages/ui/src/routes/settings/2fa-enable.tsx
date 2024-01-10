@@ -37,9 +37,12 @@ export default function TwoFactorEnableDialog() {
 						<DrawerTitle>{title}</DrawerTitle>
 						<DrawerDescription>Add a layer of security to login</DrawerDescription>
 					</DrawerHeader>
-					<p className={paragraphClass}>{scanThisMessage}</p>
-					<div className='flex flex-col items-center gap-5'>
-						<Inner />
+					<div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>
+						<p className={paragraphClass}>{scanThisMessage}</p>
+						<div className='flex flex-col items-center gap-5'>
+							{/* NOTE: keep this small so that the pin input is visible within the viewport */}
+							<Inner qrCodeSize={150} />
+						</div>
 					</div>
 				</DrawerContent>
 			</Drawer>
@@ -63,7 +66,7 @@ export default function TwoFactorEnableDialog() {
 
 const paragraphClass = tw`text-left text-13 font-normal leading-tight -tracking-2 text-white/40`
 
-function Inner() {
+function Inner({qrCodeSize = 240}: {qrCodeSize?: number}) {
 	const dialogProps = useDialogOpenProps('2fa-enable')
 	const {enable, totpUri, generateTotpUri} = use2fa(() => dialogProps.onOpenChange(false))
 
@@ -73,7 +76,7 @@ function Inner() {
 
 	return (
 		<>
-			<AnimateInQr>
+			<AnimateInQr size={qrCodeSize}>
 				<QRCode
 					size={256}
 					style={{height: 'auto', maxWidth: '100%', width: '100%'}}
@@ -90,15 +93,17 @@ function Inner() {
 				Enter the code displayed in your authenticator app
 			</p>
 			<PinInput autoFocus length={6} onCodeCheck={enable} />
+			<div className='mb-4' />
 		</>
 	)
 }
 
-const AnimateInQr = ({children}: {children: ReactNode}) => (
+const AnimateInQr = ({children, size}: {children: ReactNode; size: number}) => (
 	<div
-		className='relative mx-auto w-[240px]'
+		className='relative mx-auto'
 		style={{
 			perspective: '300px',
+			width: size + 'px',
 		}}
 	>
 		<motion.div
