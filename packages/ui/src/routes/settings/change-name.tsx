@@ -1,5 +1,3 @@
-import {useState} from 'react'
-
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -12,52 +10,25 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
-import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {sleep} from '@/utils/misc'
+
+import {useUserName} from '../../hooks/use-user-name'
 
 export default function ChangeNameDialog() {
 	const title = 'Change name'
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('change-name')
 
-	const [name, setName] = useState('')
-	const [localError, setLocalError] = useState('')
-
-	const ctx = trpcReact.useContext()
-
-	const setMut = trpcReact.user.set.useMutation({
-		onSuccess: async () => {
-			await sleep(500)
-			dialogProps.onOpenChange(false)
-			ctx.user.get.invalidate()
-		},
+	const {name, setName, handleSubmit, formError, isLoading} = useUserName({
+		onSuccess: () => dialogProps.onOpenChange(false),
 	})
-
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault()
-
-		// Reset errors
-		setMut.reset()
-		setLocalError('')
-
-		if (!name) {
-			setLocalError('Name is required')
-			return
-		}
-
-		setMut.mutate({name})
-	}
-
-	const remoteFormError = !setMut.error?.data?.zodError && setMut.error?.message
-	const formError = localError || remoteFormError
 
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent asChild>
 					<form onSubmit={handleSubmit}>
-						<fieldset disabled={setMut.isLoading} className='flex flex-col gap-5'>
+						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
 								<DialogTitle>{title}</DialogTitle>
 								<DialogDescription>This appears in the homescreen, and will be your device name too.</DialogDescription>

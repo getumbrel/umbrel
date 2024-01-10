@@ -1,4 +1,3 @@
-import {useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 
 import {ErrorAlert} from '@/components/ui/alert'
@@ -14,9 +13,10 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
-import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {sleep} from '@/utils/misc'
+
+import {usePassword} from '../../hooks/use-password'
+import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 
 export default function ChangePasswordDialog() {
 	const title = 'Change password'
@@ -24,62 +24,27 @@ export default function ChangePasswordDialog() {
 
 	const dialogProps = useDialogOpenProps('change-password')
 
-	const [password, setPassword] = useState('')
-	const [newPassword, setNewPassword] = useState('')
-	const [newPasswordRepeat, setNewPasswordRepeat] = useState('')
-	const [localError, setLocalError] = useState('')
-
-	const changePasswordMut = trpcReact.user.changePassword.useMutation({
-		onSuccess: async () => {
-			await sleep(500)
-			dialogProps.onOpenChange(false)
-		},
+	const {
+		password,
+		setPassword,
+		newPassword,
+		setNewPassword,
+		newPasswordRepeat,
+		setNewPasswordRepeat,
+		handleSubmit,
+		fieldErrors,
+		formError,
+		isLoading,
+	} = usePassword({
+		onSuccess: () => dialogProps.onOpenChange(false),
 	})
-
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault()
-
-		// Reset errors
-		changePasswordMut.reset()
-		setLocalError('')
-
-		if (!password) {
-			setLocalError('Current password is required')
-			return
-		}
-
-		if (!newPassword) {
-			setLocalError('New password is required')
-			return
-		}
-
-		if (!newPasswordRepeat) {
-			setLocalError('Repeat password is required')
-			return
-		}
-
-		if (newPassword !== newPasswordRepeat) {
-			setLocalError('Passwords do not match')
-			return
-		}
-
-		if (password === newPassword) {
-			setLocalError('New password must be different from current password')
-			return
-		}
-
-		changePasswordMut.mutate({oldPassword: password, newPassword})
-	}
-
-	const remoteFormError = !changePasswordMut.error?.data?.zodError && changePasswordMut.error?.message
-	const formError = localError || remoteFormError
 
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent asChild>
 					<form onSubmit={handleSubmit}>
-						<fieldset disabled={changePasswordMut.isLoading} className='flex flex-col gap-5'>
+						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
 								<DialogTitle>{title}</DialogTitle>
 								<DialogDescription>This is the password you use to unlock your Umbrel.</DialogDescription>
@@ -92,22 +57,19 @@ export default function ChangePasswordDialog() {
 								label='Current password'
 								value={password}
 								onValueChange={setPassword}
-								error={changePasswordMut.error?.data?.zodError?.fieldErrors['oldPassword']?.join('. ')}
+								error={fieldErrors.oldPassword}
 							/>
 							<PasswordInput
 								label='New password'
 								value={newPassword}
 								onValueChange={setNewPassword}
-								error={changePasswordMut.error?.data?.zodError?.fieldErrors['newPassword']?.join('. ')}
+								error={fieldErrors.newPassword}
 							/>
 							<PasswordInput label='Repeat password' value={newPasswordRepeat} onValueChange={setNewPasswordRepeat} />
 							<div className='-my-2.5'>
 								<AnimatedInputError>{formError}</AnimatedInputError>
 							</div>
-							<p className='text-12 font-normal leading-tight -tracking-2 text-white/40'>
-								There is no ‘Forgot password’ button, so make sure you write down your{' '}
-								<span className='text-success-light'>super strong</span> password somewhere.
-							</p>
+							<NoForgotPasswordMessage />
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
 									Change password
