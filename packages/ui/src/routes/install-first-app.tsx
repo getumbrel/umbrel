@@ -4,6 +4,7 @@ import {Link} from 'react-router-dom'
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
 import {LinkButton} from '@/components/ui/link-button'
+import {AppsProvider} from '@/hooks/use-apps'
 import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dock, DockBottomPositioner, DockSpacer} from '@/modules/desktop/dock'
@@ -16,10 +17,13 @@ const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-no
 const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2`
 
 // TODO: this view should just be in '/'
+// TODO: put providers in router file
 export default function InstallFirstApp() {
 	return (
 		<AvailableAppsProvider>
-			<PageInner />
+			<AppsProvider>
+				<PageInner />
+			</AppsProvider>
 		</AvailableAppsProvider>
 	)
 }
