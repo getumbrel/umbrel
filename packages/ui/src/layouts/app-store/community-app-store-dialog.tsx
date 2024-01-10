@@ -6,7 +6,6 @@ import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {LinkButton} from '@/components/ui/link-button'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {useQueryParams} from '@/hooks/use-query-params'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -20,10 +19,11 @@ import {
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export function CommunityAppStoreDialog() {
 	const title = 'Community app stores'
-	const {params, removeParam} = useQueryParams()
+	const dialogProps = useDialogOpenProps('add-community-store')
 
 	// state
 
@@ -80,10 +80,7 @@ export function CommunityAppStoreDialog() {
 		.map((store) => store!)
 
 	return (
-		<Dialog
-			open={params.get('dialog') === 'add-community-store'}
-			onOpenChange={(open) => !open && removeParam('dialog')}
-		>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='p-0'>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-3 overflow-y-auto px-5 py-6'>
@@ -135,10 +132,15 @@ export function CommunityAppStoreDialog() {
 								<b>{meta.name}</b>
 								{url && <CopyableField value={url} />}
 								<div className='flex items-center justify-between'>
-									<Button variant='destructive' size='dialog' onClick={() => removeAppStoreMut.mutate({url})}>
+									<Button
+										variant='destructive'
+										size='dialog'
+										className='w-auto'
+										onClick={() => removeAppStoreMut.mutate({url})}
+									>
 										Remove
 									</Button>
-									<LinkButton size='dialog' className='ml-2' to={`/community-app-store/${meta.id}`}>
+									<LinkButton size='dialog' className='ml-2 w-auto' to={`/community-app-store/${meta.id}`}>
 										Open
 									</LinkButton>
 								</div>

@@ -1,6 +1,5 @@
 import {useState} from 'react'
 import {TbChevronRight} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {SegmentedControl} from '@/components/ui/segmented-control'
@@ -14,13 +13,12 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {listClass, listItemClass} from '@/utils/element-classes'
 
 export default function AppStorePreferencesDialog() {
 	const title = 'App Store Preferences'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
 
 	const tabs = [
 		{id: 'auto-update', label: 'Auto-update'},
@@ -29,12 +27,10 @@ export default function AppStorePreferencesDialog() {
 	]
 	const [activeTab, setActiveTab] = useState(tabs[0].id)
 
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+	const dialogProps = useDialogOpenProps('app-store-preferences')
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='p-0'>
 					<div className='umbrel-dialog-fade-scroller space-y-6 overflow-y-auto px-5 py-6'>

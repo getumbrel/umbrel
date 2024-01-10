@@ -5,16 +5,15 @@ import {LinkButton} from '@/components/ui/link-button'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
-import {useQueryParams} from '@/hooks/use-query-params'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp, trpcReact} from '@/trpc/trpc'
+import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 
 export function UpdatesButton() {
-	const {addLinkSearchParams} = useQueryParams()
-
+	const linkToDialog = useLinkToDialog()
 	const appsWithUpdates = useAppsWithUpdates()
 
 	// If we link to the updates dialog, show it even if there are no updates
@@ -24,12 +23,8 @@ export function UpdatesButton() {
 
 	return (
 		<>
-			<LinkButton
-				to={{search: addLinkSearchParams({dialog: 'updates'})}}
-				variant='default'
-				size='dialog'
-				className='relative h-[33px]'
-			>
+			{/* w-auto because 'dialog' size buttons take up full width on mobile */}
+			<LinkButton to={linkToDialog('updates')} variant='default' size='dialog' className='relative h-[33px] w-auto'>
 				Updates
 				<NotificationBadge count={appsWithUpdates.length} />
 			</LinkButton>
@@ -39,8 +34,7 @@ export function UpdatesButton() {
 }
 
 export function UpdatesDialog() {
-	const {params, removeParam} = useQueryParams()
-	const isOpen = params.get('dialog') === 'updates'
+	const dialogProps = useDialogOpenProps('updates')
 
 	const title = 'Updates'
 
@@ -51,7 +45,7 @@ export function UpdatesDialog() {
 	const updateAll = () => updateAllMut.mutate()
 
 	return (
-		<Dialog open={isOpen} onOpenChange={(open) => !open && removeParam('dialog')}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='top-[10%] translate-y-0 p-0 data-[state=closed]:slide-out-to-top-[10%] data-[state=open]:slide-in-from-top-[10%]'>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>
@@ -63,6 +57,7 @@ export function UpdatesDialog() {
 									size='dialog'
 									variant='primary'
 									onClick={updateAll}
+									className='w-auto'
 									disabled={updateAllMut.isLoading || appsWithUpdates.length === 0}
 								>
 									{updateAllMut.isLoading ? 'Updating...' : 'Update all'}

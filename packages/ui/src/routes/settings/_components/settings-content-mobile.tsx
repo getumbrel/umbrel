@@ -5,6 +5,7 @@ import {
 	TbCircleArrowUp,
 	TbLanguage,
 	TbPhoto,
+	TbRotate2,
 	TbServer,
 	TbShoppingBag,
 	TbTool,
@@ -22,6 +23,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {useLinkToDialog} from '@/utils/dialog'
 
 import {ListRowMobile} from './list-row'
 import {MemoryCard} from './memory-card'
@@ -38,7 +40,9 @@ export function SettingsContentMobile() {
 	const osVersionQ = trpcReact.system.osVersion.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+
+	const linkToDialog = useLinkToDialog()
 
 	if (!userQ.data) {
 		return null
@@ -106,41 +110,76 @@ export function SettingsContentMobile() {
 			</div>
 
 			<div className='umbrel-divide-y rounded-12 bg-white/5 p-1'>
-				<ListRowMobile icon={TbUser} title='Account' description='Your display name & Umbrel password' />
-				<ListRowMobile icon={TbPhoto} title='Wallpaper' description='Choose your Umbrel wallpaper' />
-				<ListRowMobile icon={Tb2Fa} title='Two-factor authentication' description='Add a layer of security to login' />
+				<ListRowMobile
+					icon={TbUser}
+					title='Account'
+					description='Your display name & Umbrel password'
+					onClick={() => navigate(linkToDialog('account'))}
+				/>
+				<ListRowMobile
+					icon={TbPhoto}
+					title='Wallpaper'
+					description='Choose your Umbrel wallpaper'
+					onClick={() => navigate(linkToDialog('wallpaper'))}
+				/>
+				<ListRowMobile
+					icon={Tb2Fa}
+					title='Two-factor authentication'
+					description='Add a layer of security to login'
+					onClick={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
+				/>
 				<ListRowMobile
 					icon={TorIcon2}
 					title={
-						<span className='flex items-center gap-2'>
+						<span className='flex items-center gap-2' onClick={() => navigate(linkToDialog('tor'))}>
 							Remote Tor access <TorPulse />
 						</span>
 					}
 					description='Access Umbrel from anywhere using Tor'
+					onClick={() => navigate(linkToDialog('tor'))}
 				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
 					title='Migration Assistant'
 					description='Move data from Raspberry Pi to Umbrel Home'
+					onClick={() => navigate(linkToDialog('migration-assistant'))}
 				/>
 				<ListRowMobile
 					icon={TbLanguage}
 					title='Language'
 					description='Select preferred language'
-					onClick={() =>
-						navigate({
-							search: addLinkSearchParams({dialog: 'language'}),
-						})
-					}
+					onClick={() => navigate(linkToDialog('language'))}
 				/>
-				<ListRowMobile icon={TbShoppingBag} title='App store' description='App store settings & app updates' />
-				<ListRowMobile icon={TbTool} title='Troubleshoot' description='View logs for troubleshooting' />
+				<ListRowMobile
+					icon={TbShoppingBag}
+					title='App store'
+					description='App store settings & app updates'
+					onClick={() => navigate(linkToDialog('app-store-preferences'))}
+				/>
+				<ListRowMobile
+					icon={TbTool}
+					title='Troubleshoot'
+					description='View logs for troubleshooting'
+					onClick={() => navigate(linkToDialog('troubleshoot'))}
+				/>
 				<ListRowMobile
 					icon={TbServer}
 					title='Device info'
 					description={`Model ${deviceInfo.modelNumber} · Serial ${deviceInfo.serialNumber}`}
+					onClick={() => navigate(linkToDialog('device-info'))}
 				/>
-				<ListRowMobile icon={TbCircleArrowUp} title='Software update' description='You are on the latest version' />
+				<ListRowMobile
+					icon={TbCircleArrowUp}
+					title='Software update'
+					description='You are on the latest version'
+					onClick={() => navigate(linkToDialog('software-update'))}
+				/>
+				<ListRowMobile
+					icon={TbRotate2}
+					title='Factory reset'
+					description='Delete all data, and reset your device completely'
+					onClick={() => navigate('/factory-reset')}
+				/>
 			</div>
 
 			<ContactSupportLink />

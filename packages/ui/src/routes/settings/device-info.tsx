@@ -1,6 +1,3 @@
-import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
-
 import {CopyButton} from '@/components/ui/copy-button'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {deviceMap, UNKNOWN} from '@/constants'
@@ -8,20 +5,16 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
 import {Device, trpcReact} from '@/trpc/trpc'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
 export default function DeviceInfoDialog() {
 	const title = 'Device Information'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('device-info')
 
 	const osQ = trpcReact.system.osVersion.useQuery()
 	const deviceInfoQ = trpcReact.system.deviceInfo.useQuery()
-
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
 
 	const isLoading = osQ.isLoading || deviceInfoQ.isLoading
 	if (isLoading) return null
@@ -30,7 +23,7 @@ export default function DeviceInfoDialog() {
 	if (!device) return null
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='p-0'>
 					<DialogCloseButton className='absolute right-2 top-2 z-50' />

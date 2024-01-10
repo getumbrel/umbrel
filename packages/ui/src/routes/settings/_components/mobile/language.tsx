@@ -1,8 +1,8 @@
-import {useId, useState} from 'react'
+import {useId} from 'react'
 import {TbCheck} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
 
 import {languages, useLanguage} from '@/hooks/use-language'
+import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	Drawer,
 	DrawerContent,
@@ -12,32 +12,30 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {cn} from '@/shadcn-lib/utils'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {listClass, listItemClass} from '@/utils/element-classes'
 import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {
-	const [open, setOpen] = useState(true)
-	const navigate = useNavigate()
-
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
-
+	const title = 'Language'
+	useUmbrelTitle(title)
+	const dialogProps = useDialogOpenProps('language')
 	const [activeCode, setActiveCode] = useLanguage()
 
 	const changeLanguage = async (code: string) => {
 		setActiveCode(code)
 		// Delay so user can see the checkmark
 		await sleep(200)
-		setOpen(false)
+		dialogProps.onOpenChange(false)
 	}
 
 	const radioName = useId()
 
 	return (
-		<Drawer open={open} onOpenChange={setOpen}>
-			<DrawerContent fullHeight>
+		<Drawer {...dialogProps}>
+			<DrawerContent>
 				<DrawerHeader>
-					<DrawerTitle>Language</DrawerTitle>
+					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>Select preferred interface language</DrawerDescription>
 				</DrawerHeader>
 
@@ -83,6 +81,7 @@ function ListRadioItem({
 				name={name}
 				checked={checked}
 				onChange={onSelect}
+				// Red so it's obvious when opacity is not zero and that it takes the whole space
 				className='absolute inset-0 appearance-none bg-red-500 opacity-0'
 			/>
 		</div>

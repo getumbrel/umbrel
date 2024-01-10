@@ -8,18 +8,19 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 const title = 'Migration Assistant'
 
 export default function MigrationAssistantDialog() {
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('migration-assistant')
 	const {params} = useQueryParams()
 	const state = params.get('migration-state')
 
 	return (
 		<ImmersiveDialogSplit
-			onClose={() => navigate('/settings', {preventScrollReset: true})}
+			onClose={() => dialogProps.onOpenChange(false)}
 			leftChildren={
 				<img
 					src='/migration-assistant/migrate-raspberrypi-umbrel-home.png'

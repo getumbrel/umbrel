@@ -1,16 +1,16 @@
 import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
 
-import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialog, ImmersiveDialogFooter, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function TroubleshootDialog() {
 	const title = 'Troubleshoot'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('troubleshoot')
 
 	const tabs = [
 		{id: 'umbrel', label: 'Umbrel logs'},
@@ -21,7 +21,7 @@ export default function TroubleshootDialog() {
 	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
 
 	return (
-		<ImmersiveDialog onClose={() => navigate('/settings', {preventScrollReset: true})}>
+		<ImmersiveDialog onClose={() => dialogProps.onOpenChange(false)}>
 			<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
 				<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{title}</h1>
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
@@ -30,12 +30,12 @@ export default function TroubleshootDialog() {
 						6,
 					)}
 				</div>
-				<div className='flex gap-2'>
+				<ImmersiveDialogFooter>
 					<Button variant='primary' size='dialog'>
 						Download {activeLabel}
 					</Button>
 					<Button size='dialog'>Share with Umbrel Support </Button>
-				</div>
+				</ImmersiveDialogFooter>
 			</div>
 		</ImmersiveDialog>
 	)

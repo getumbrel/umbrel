@@ -1,6 +1,5 @@
 import {RiLogoutCircleRLine} from 'react-icons/ri'
 
-import {useQueryParams} from '@/hooks/use-query-params'
 import {useAuth} from '@/modules/auth/use-auth'
 import {
 	AlertDialog,
@@ -11,13 +10,16 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export function LogoutDialog() {
-	const {params, removeParam} = useQueryParams()
+	// TODO: Enable hook below after this component is only injected as needed rather than all the time
+	// useUmbrelTitle('Log out')
+	const dialogProps = useDialogOpenProps('logout')
 	const {logout} = useAuth()
 
 	return (
-		<AlertDialog open={params.get('dialog') === 'logout'} onOpenChange={(open) => !open && removeParam('dialog')}>
+		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiLogoutCircleRLine}>
 					<AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>

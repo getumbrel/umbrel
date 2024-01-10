@@ -40,7 +40,7 @@ export function AppStoreLayout() {
 			title={title}
 			description={<>{t('app-store.tagline')}</>}
 			titleRightChildren={
-				<div className='flex flex-1 flex-row-reverse items-center gap-3'>
+				<div className='flex max-w-full flex-1 flex-row-reverse items-center gap-3'>
 					<CommunityAppsDropdown />
 					<UpdatesButton />
 					<div className='flex-1 md:hidden' />
@@ -55,7 +55,7 @@ export function AppStoreLayout() {
 
 function SearchInput({value, onValueChange}: {value: string; onValueChange: (query: string) => void}) {
 	return (
-		<div className='-ml-2 flex items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
+		<div className='-ml-2 flex min-w-0 items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
 			<input
 				className='bg-transparent p-1 text-15 outline-none placeholder:text-white/40 max-md:w-[160px]'

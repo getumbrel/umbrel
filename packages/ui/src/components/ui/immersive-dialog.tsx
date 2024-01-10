@@ -25,7 +25,7 @@ export function ImmersiveDialog({children, onClose}: {children: React.ReactNode;
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
 				{/* shell */}
-				<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0 px-4')}>
+				<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0')}>
 					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
 						{children}
 					</div>
@@ -59,7 +59,7 @@ export function ImmersiveDialogSplit({
 					)}
 				>
 					<div className='hidden w-[210px] flex-col items-center justify-center md:flex'>{leftChildren}</div>
-					<div className='flex-1 rounded-20 bg-dialog-content/70 px-4 md:rounded-l-none md:rounded-r-20'>
+					<div className='flex-1 rounded-20 bg-dialog-content/70 md:rounded-l-none md:rounded-r-20 md:px-4'>
 						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
 							{children}
 						</div>
@@ -135,9 +135,13 @@ export function ImmersiveDialogBody({
 				))}
 			</motion.div>
 			<div className='flex-1' />
-			<div className='flex flex-wrap-reverse items-center gap-2'>{footer}</div>
+			<ImmersiveDialogFooter>{footer}</ImmersiveDialogFooter>
 		</div>
 	)
+}
+
+export function ImmersiveDialogFooter({children}: {children: React.ReactNode}) {
+	return <div className='flex w-full flex-wrap-reverse items-center gap-2'>{children}</div>
 }
 
 export function ImmersiveDialogIconMessage({

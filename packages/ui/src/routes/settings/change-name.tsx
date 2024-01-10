@@ -1,5 +1,4 @@
 import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
 
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
@@ -14,16 +13,13 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
 export default function ChangeNameDialog() {
 	const title = 'Change name'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+	const dialogProps = useDialogOpenProps('change-name')
 
 	const [name, setName] = useState('')
 	const [localError, setLocalError] = useState('')
@@ -33,7 +29,7 @@ export default function ChangeNameDialog() {
 	const setMut = trpcReact.user.set.useMutation({
 		onSuccess: async () => {
 			await sleep(500)
-			setOpen(false)
+			dialogProps.onOpenChange(false)
 			ctx.user.get.invalidate()
 		},
 	})
@@ -57,7 +53,7 @@ export default function ChangeNameDialog() {
 	const formError = localError || remoteFormError
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent asChild>
 					<form onSubmit={handleSubmit}>
@@ -74,7 +70,7 @@ export default function ChangeNameDialog() {
 								<Button type='submit' size='dialog' variant='primary'>
 									Save changes
 								</Button>
-								<Button type='button' size='dialog' onClick={() => setOpen(false)}>
+								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
 									Cancel
 								</Button>
 							</DialogFooter>

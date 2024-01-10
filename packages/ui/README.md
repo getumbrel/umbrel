@@ -102,3 +102,11 @@ Use `onFooBarClick` rather than `onClickFooBar`
 ## tRPC
 
 Prefer `trpcReact` over `trpcClient` because it lets you manage error and loading state, caching, and invalidation. More info here: https://trpc.io/docs/client/vanilla#when-not-to-use-the-vanilla-client
+
+---
+
+# TROUBLESHOOTING
+
+## TypeScript errors in code that don't make sense in VSCode
+
+Restarting the TS server via the command palette fixes it. I haven't run into a situation where this doesn't fix it.

@@ -1,24 +1,24 @@
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom'
+import {useSearchParams} from 'react-router-dom'
+import {pickBy} from 'remeda'
 
+// TODO: test by adding and removing `?bla=1` into the URL bar and ensuring that adding and removing param `foo` doesn't modify `bla`
 export function useQueryParams() {
-	const navigate = useNavigate()
-	const location = useLocation()
-	const [searchParams] = useSearchParams()
+	const [searchParams, setSearchParams] = useSearchParams()
 
-	const removeQueryParam = (param: string) => {
-		const currentUrl = new URL(window.location.href)
-		const params = new URLSearchParams(location.search)
+	const add = (param: string, value: string) => {
+		const newParams = Object.fromEntries(searchParams.entries())
+		setSearchParams({...newParams, [param]: value})
+	}
 
-		// Remove the query parameter you want
-		params.delete(param)
-
-		// Navigate to the new URL without the query parameter
-		navigate(`${currentUrl.pathname}?${params.toString()}`, {replace: true})
+	const remove = (param: string) => {
+		const newParams = Object.fromEntries(searchParams.entries())
+		setSearchParams({...pickBy(newParams, (_, k) => k !== param)})
 	}
 
 	return {
-		params: new URLSearchParams(location.search),
-		removeParam: removeQueryParam,
+		params: searchParams,
+		remove,
+		add,
 		/**
 		 * For use in React Router `Link`:
 		 * ```jsx

@@ -1,6 +1,5 @@
 import {useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
-import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -16,17 +15,14 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {sleep} from '@/utils/misc'
 
 export default function ChangePasswordDialog() {
 	const title = 'Change password'
 	useUmbrelTitle(title)
 
-	const navigate = useNavigate()
-	const [open, setOpen] = useState(true)
-
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+	const dialogProps = useDialogOpenProps('change-password')
 
 	const [password, setPassword] = useState('')
 	const [newPassword, setNewPassword] = useState('')
@@ -36,7 +32,7 @@ export default function ChangePasswordDialog() {
 	const changePasswordMut = trpcReact.user.changePassword.useMutation({
 		onSuccess: async () => {
 			await sleep(500)
-			setOpen(false)
+			dialogProps.onOpenChange(false)
 		},
 	})
 
@@ -79,7 +75,7 @@ export default function ChangePasswordDialog() {
 	const formError = localError || remoteFormError
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent asChild>
 					<form onSubmit={handleSubmit}>
@@ -116,7 +112,7 @@ export default function ChangePasswordDialog() {
 								<Button type='submit' size='dialog' variant='primary'>
 									Change password
 								</Button>
-								<Button type='button' size='dialog' onClick={() => setOpen(false)}>
+								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
 									Cancel
 								</Button>
 							</DialogFooter>

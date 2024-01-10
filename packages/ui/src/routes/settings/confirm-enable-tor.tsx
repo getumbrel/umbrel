@@ -1,5 +1,3 @@
-import {useNavigate} from 'react-router-dom'
-
 import {TorIcon2} from '@/assets/tor-icon2'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -13,11 +11,11 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
-import {afterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ConfirmEnableTorDialog() {
 	useUmbrelTitle('Restart')
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('confirm-enable-tor')
 
 	const {setEnabled, isError} = useTorEnabled()
 
@@ -26,7 +24,7 @@ export default function ConfirmEnableTorDialog() {
 	}
 
 	return (
-		<AlertDialog defaultOpen onOpenChange={afterDelayedClose(() => navigate('/settings', {preventScrollReset: true}))}>
+		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={TorIcon2}>
 					<AlertDialogTitle>Enable Tor for remote access</AlertDialogTitle>

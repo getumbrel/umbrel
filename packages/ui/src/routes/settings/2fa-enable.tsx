@@ -1,11 +1,11 @@
 import {motion} from 'framer-motion'
-import {ReactNode, useEffect, useState} from 'react'
+import {ReactNode, useEffect} from 'react'
 import QRCode from 'react-qr-code'
-import {useNavigate} from 'react-router-dom'
-import {toast} from 'sonner'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {PinInput} from '@/components/ui/pin-input'
+import {use2fa} from '@/hooks/use-2fa'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	Dialog,
@@ -15,75 +15,82 @@ import {
 	DialogPortal,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {trpcReact} from '@/trpc/trpc'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
+import {tw} from '@/utils/tw'
 
 export default function TwoFactorEnableDialog() {
 	const title = 'Enable two-factor authentication'
 	useUmbrelTitle(title)
-	const [open, setOpen] = useState(true)
-	const navigate = useNavigate()
+	const isMobile = useIsMobile()
 
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+	const dialogProps = useDialogOpenProps('2fa-enable')
 
-	const ctx = trpcReact.useContext()
+	const scanThisMessage = 'Scan this QR code using an authenticator app like Google Authenticator or Authy'
 
-	const [totpUri, setCode] = useState('')
-	useEffect(() => {
-		ctx.user.generateTotpUri.fetch().then((res) => setCode(res))
-	}, [ctx])
-
-	const enable2faMut = trpcReact.user.enable2fa.useMutation()
-
-	const checkCode = async (totpToken: string) => {
-		return enable2faMut.mutateAsync(
-			{totpToken, totpUri},
-			{
-				onSuccess: () => {
-					setTimeout(() => {
-						ctx.user.is2faEnabled.invalidate()
-						toast.success('Two-factor authentication enabled')
-						setOpen(false)
-					}, 500)
-				},
-			},
+	if (isMobile) {
+		return (
+			<Drawer {...dialogProps}>
+				<DrawerContent fullHeight>
+					<DrawerHeader>
+						<DrawerTitle>{title}</DrawerTitle>
+						<DrawerDescription>Add a layer of security to login</DrawerDescription>
+					</DrawerHeader>
+					<p className={paragraphClass}>{scanThisMessage}</p>
+					<div className='flex flex-col items-center gap-5'>
+						<Inner />
+					</div>
+				</DrawerContent>
+			</Drawer>
 		)
 	}
 
-	if (!totpUri) return null
-
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='flex flex-col items-center gap-5'>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
-						<DialogDescription>
-							Scan this QR code using an authenticator app like Google Authenticator or Authy
-						</DialogDescription>
+						<DialogDescription>{scanThisMessage}</DialogDescription>
 					</DialogHeader>
-					<AnimateInQr>
-						<QRCode
-							size={256}
-							style={{height: 'auto', maxWidth: '100%', width: '100%'}}
-							value={totpUri}
-							viewBox={`0 0 256 256`}
-						/>
-					</AnimateInQr>
-					<div className='w-full space-y-2 text-center'>
-						<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
-						<CopyableField value={totpUri} />
-					</div>
-					<Separator />
-					<p className='text-17 font-normal leading-none -tracking-2'>
-						Enter the code displayed in your authenticator app
-					</p>
-
-					<PinInput autoFocus length={6} onCodeCheck={checkCode} />
+					<Inner />
 				</DialogContent>
 			</DialogPortal>
 		</Dialog>
+	)
+}
+
+const paragraphClass = tw`text-left text-13 font-normal leading-tight -tracking-2 text-white/40`
+
+function Inner() {
+	const dialogProps = useDialogOpenProps('2fa-enable')
+	const {enable, totpUri, generateTotpUri} = use2fa(() => dialogProps.onOpenChange(false))
+
+	useEffect(generateTotpUri, [generateTotpUri])
+
+	if (!totpUri) return null
+
+	return (
+		<>
+			<AnimateInQr>
+				<QRCode
+					size={256}
+					style={{height: 'auto', maxWidth: '100%', width: '100%'}}
+					value={totpUri}
+					viewBox={`0 0 256 256`}
+				/>
+			</AnimateInQr>
+			<div className='w-full space-y-2 text-center'>
+				<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
+				<CopyableField value={totpUri} />
+			</div>
+			<Separator />
+			<p className='text-center text-17 font-normal leading-tight -tracking-2'>
+				Enter the code displayed in your authenticator app
+			</p>
+			<PinInput autoFocus length={6} onCodeCheck={enable} />
+		</>
 	)
 }
 

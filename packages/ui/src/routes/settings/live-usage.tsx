@@ -1,5 +1,4 @@
 import {ReactNode} from 'react'
-import {useNavigate} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
 import {DebugOnly} from '@/components/ui/debug-only'
@@ -11,16 +10,17 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {StatText} from '@/modules/widgets/shared/stat-text'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
+import {useDialogOpenProps} from '@/utils/dialog'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
 export default function LiveUsageDialog() {
 	const title = 'Live Usage'
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('live-usage')
 
 	return (
-		<ImmersiveDialog onClose={() => navigate('/settings', {preventScrollReset: true})}>
+		<ImmersiveDialog onClose={() => dialogProps.onOpenChange(false)}>
 			<h1 className={immersiveDialogTitleClass}>{title}</h1>
 			<LiveUsageContent />
 		</ImmersiveDialog>

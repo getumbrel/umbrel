@@ -1,55 +1,59 @@
-import {useState} from 'react'
-import {useNavigate} from 'react-router-dom'
-import {toast} from 'sonner'
-
 import {PinInput} from '@/components/ui/pin-input'
+import {use2fa} from '@/hooks/use-2fa'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {trpcReact} from '@/trpc/trpc'
-import {useAfterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function TwoFactorDisableDialog() {
 	const title = 'Disable two-factor authentication'
 	useUmbrelTitle(title)
-	const [open, setOpen] = useState(true)
-	const navigate = useNavigate()
 
-	useAfterDelayedClose(open, () => navigate('/settings', {preventScrollReset: true}))
+	const dialogProps = useDialogOpenProps('2fa-disable')
 
-	const ctx = trpcReact.useContext()
-	const disable2faMut = trpcReact.user.disable2fa.useMutation()
+	const isMobile = useIsMobile()
 
-	const checkCode = async (totpToken: string) => {
-		return disable2faMut.mutateAsync(
-			{totpToken},
-			{
-				onSuccess: () => {
-					setTimeout(() => {
-						ctx.user.is2faEnabled.invalidate()
-						toast.success('Two-factor authentication disabled')
-						setOpen(false)
-					}, 500)
-				},
-			},
+	if (isMobile) {
+		return (
+			<Drawer {...dialogProps}>
+				<DrawerContent fullHeight>
+					<DrawerHeader>
+						<DrawerTitle>{title}</DrawerTitle>
+						<DrawerDescription>Remove a layer of security to login</DrawerDescription>
+					</DrawerHeader>
+					<Inner />
+				</DrawerContent>
+			</Drawer>
 		)
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog {...dialogProps}>
 			<DialogPortal>
 				<DialogContent className='flex flex-col items-center gap-5'>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 					</DialogHeader>
-					<Separator />
-					<p className='text-17 font-normal leading-none -tracking-2'>
-						Enter the code displayed in your authenticator app
-					</p>
-
-					<PinInput autoFocus length={6} onCodeCheck={checkCode} />
+					<Inner />
 				</DialogContent>
 			</DialogPortal>
 		</Dialog>
+	)
+}
+
+function Inner() {
+	const dialogProps = useDialogOpenProps('2fa-disable')
+	const {disable} = use2fa(() => dialogProps.onOpenChange(false))
+
+	return (
+		<>
+			<Separator />
+			<p className='text-center text-17 font-normal leading-tight -tracking-2'>
+				Enter the code displayed in your authenticator app
+			</p>
+			<PinInput autoFocus length={6} onCodeCheck={disable} />
+		</>
 	)
 }
