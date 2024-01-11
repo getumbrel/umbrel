@@ -11,6 +11,7 @@ import {
 	DrawerDescription,
 	DrawerFooter,
 	DrawerHeader,
+	DrawerScroller,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
@@ -38,9 +39,11 @@ export function AccountDrawer() {
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
 				</DrawerHeader>
-				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
-				{activeTab === 'change-name' && <ChangeName closeDialog={closeDialog} />}
-				{activeTab === 'change-password' && <ChangePassword closeDialog={closeDialog} />}
+				<DrawerScroller>
+					<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
+					{activeTab === 'change-name' && <ChangeName closeDialog={closeDialog} />}
+					{activeTab === 'change-password' && <ChangePassword closeDialog={closeDialog} />}
+				</DrawerScroller>
 			</DrawerContent>
 		</Drawer>
 	)
@@ -88,7 +91,8 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
-			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
+			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
+				{/* <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'> */}
 				<Labeled label='Current password'>
 					<PasswordInput value={password} onValueChange={setPassword} />
 				</Labeled>
@@ -107,6 +111,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 				<div className='-my-2.5'>
 					<AnimatedInputError>{formError}</AnimatedInputError>
 				</div>
+
 				<DrawerFooter>
 					<Button type='button' size='dialog' onClick={closeDialog}>
 						Cancel
@@ -115,6 +120,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 						Save changes
 					</Button>
 				</DrawerFooter>
+				{/* </div> */}
 			</fieldset>
 		</form>
 	)

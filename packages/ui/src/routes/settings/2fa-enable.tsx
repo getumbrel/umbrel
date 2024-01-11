@@ -15,7 +15,14 @@ import {
 	DialogPortal,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerScroller,
+	DrawerTitle,
+} from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
@@ -37,13 +44,15 @@ export default function TwoFactorEnableDialog() {
 						<DrawerTitle>{title}</DrawerTitle>
 						<DrawerDescription>Add a layer of security to login</DrawerDescription>
 					</DrawerHeader>
-					<div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>
+					<DrawerScroller>
+						{/* <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'> */}
 						<p className={paragraphClass}>{scanThisMessage}</p>
 						<div className='flex flex-col items-center gap-5'>
 							{/* NOTE: keep this small so that the pin input is visible within the viewport */}
 							<Inner qrCodeSize={150} />
 						</div>
-					</div>
+					</DrawerScroller>
+					{/* </div> */}
 				</DrawerContent>
 			</Drawer>
 		)

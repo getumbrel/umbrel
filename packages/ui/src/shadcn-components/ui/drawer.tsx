@@ -24,8 +24,8 @@ DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 const DrawerContent = React.forwardRef<
 	React.ElementRef<typeof DrawerPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {fullHeight?: boolean}
->(({className, children, fullHeight, ...props}, ref) => (
+	React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {fullHeight?: boolean; withScroll?: boolean}
+>(({className, children, fullHeight, withScroll, ...props}, ref) => (
 	<DrawerPortal>
 		<DrawerOverlay />
 		<DrawerPrimitive.Content
@@ -42,7 +42,8 @@ const DrawerContent = React.forwardRef<
 		>
 			{/* -mb-[4px] so height is effectively zero */}
 			<div className='top-6 mx-auto -mb-[4px] h-[4px] w-[40px] shrink-0 rounded-full bg-white/10' />
-			{children}
+			{!withScroll && children}
+			{withScroll && <DrawerScroller>{children}</DrawerScroller>}
 		</DrawerPrimitive.Content>
 	</DrawerPortal>
 ))
@@ -78,6 +79,11 @@ const DrawerDescription = React.forwardRef<
 ))
 DrawerDescription.displayName = DrawerPrimitive.Description.displayName
 
+// Put this in the content of a `Drawer` to make it scrollable. You might need to add `flex-1` to the parent.
+function DrawerScroller({children}: {children: React.ReactNode}) {
+	return <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>{children}</div>
+}
+
 export {
 	Drawer,
 	DrawerPortal,
@@ -89,4 +95,5 @@ export {
 	DrawerFooter,
 	DrawerTitle,
 	DrawerDescription,
+	DrawerScroller,
 }
