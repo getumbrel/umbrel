@@ -49,6 +49,15 @@ import {
 	ContextMenuTrigger,
 } from '@/shadcn-components/ui/context-menu'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from '@/shadcn-components/ui/dialog'
+import {
 	Drawer,
 	DrawerClose,
 	DrawerContent,
@@ -108,6 +117,8 @@ export default function Stories() {
 			<Badges />
 			<H2>Checkbox</H2>
 			<CheckboxExamples />
+			<H2>Dialog</H2>
+			<DialogExample />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
 			<H2>Drawer</H2>
@@ -147,6 +158,33 @@ function TooltipExample() {
 				<p>Add to library</p>
 			</TooltipContent>
 		</Tooltip>
+	)
+}
+
+function DialogExample() {
+	return (
+		<div>
+			<Dialog>
+				<DialogTrigger asChild>
+					<Button variant='destructive'>Delete account</Button>
+				</DialogTrigger>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Are you absolutely sure?</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. This will permanently delete your account and remove your data from our
+							servers.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button size='dialog'>Cancel</Button>
+						<Button size='dialog' variant='primary'>
+							Continue
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
 	)
 }
 
