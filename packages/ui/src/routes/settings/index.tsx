@@ -4,7 +4,6 @@ import {keys} from 'remeda'
 import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
-import {DebugOnly} from '@/components/ui/debug-only'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -132,28 +131,9 @@ export function Settings() {
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
-			<DebugOnly>
-				<ExportOnlyActions />
-			</DebugOnly>
 			<Suspense>
 				<Dialog />
 			</Suspense>
 		</>
-	)
-}
-
-function ExportOnlyActions() {
-	const ctx = trpcReact.useContext()
-	const uinstallAllMut = trpcReact.user.apps.uninstallAll.useMutation({
-		onSuccess: () => {
-			toast.success('All apps uninstalled')
-			ctx.user.apps.invalidate()
-		},
-	})
-
-	return (
-		<div>
-			<Button onClick={() => uinstallAllMut.mutate()}>Uninstall all apps</Button>
-		</div>
 	)
 }
