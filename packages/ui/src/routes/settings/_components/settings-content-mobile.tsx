@@ -188,5 +188,5 @@ export function SettingsContentMobile() {
 }
 
 const TorPulse = () => (
-	<div className='inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-[#299E16] bg-current ring-3 ring-[#16FF001A]/10' />
+	<div className='inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-[#299E16] ring-3 ring-[#16FF001A]/10' />
 )
