@@ -15,7 +15,7 @@ import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ConfirmEnableTorDialog() {
 	useUmbrelTitle('Restart')
-	const dialogProps = useDialogOpenProps('confirm-enable-tor')
+	const dialogProps = useDialogOpenProps('tor')
 
 	const {setEnabled, isError} = useTorEnabled()
 

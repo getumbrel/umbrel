@@ -146,9 +146,7 @@ export function SettingsContent() {
 					<ListRow title='Remote Tor access' description='Access Umbrel from anywhere using a Tor browser' isLabel>
 						<Switch
 							checked={tor.enabled}
-							onCheckedChange={(checked) =>
-								checked ? navigate(linkToDialog('confirm-enable-tor')) : tor.setEnabled(false)
-							}
+							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
 						/>
 					</ListRow>
 					{isUmbrelHome && (

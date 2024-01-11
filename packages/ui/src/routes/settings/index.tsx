@@ -24,7 +24,7 @@ const MigrationAssistantDialog = React.lazy(() => import('@/routes/settings/migr
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
-const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/confirm-enable-tor'))
+const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-enable'))
 const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
@@ -65,7 +65,7 @@ const routeToDialogDesktop = {
 	'change-password': ChangePasswordDialog,
 	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
-	'confirm-enable-tor': ConfirmEnableTorDialog,
+	tor: ConfirmEnableTorDialog,
 	'device-info': DeviceInfoDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
@@ -75,7 +75,6 @@ const routeToDialogDesktop = {
 	'start-migration': StartMigrationDrawer,
 	language: LanguageDrawer,
 	wallpaper: WallpaperDrawer,
-	tor: TorDrawer,
 	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<string, React.ComponentType>
 
@@ -92,7 +91,6 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	'change-password': AccountDrawer,
 	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
-	'confirm-enable-tor': ConfirmEnableTorDialog,
 	'device-info': DeviceInfoDrawer,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
