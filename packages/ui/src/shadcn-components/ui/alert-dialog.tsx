@@ -64,7 +64,7 @@ const AlertDialogHeader = ({
 AlertDialogHeader.displayName = 'AlertDialogHeader'
 
 const AlertDialogFooter = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn(dialogFooterClass, className)} {...props} />
+	<div className={cn(dialogFooterClass, 'md:justify-center', className)} {...props} />
 )
 AlertDialogFooter.displayName = 'AlertDialogFooter'
 
