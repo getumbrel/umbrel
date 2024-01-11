@@ -1,15 +1,12 @@
 import React, {Suspense} from 'react'
 import {useTranslation} from 'react-i18next'
 import {keys} from 'remeda'
-import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
-import {trpcReact} from '@/trpc/trpc'
 
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
