@@ -23,7 +23,7 @@ export default router({
 		await sleep(1000)
 		return '1.0.1'
 	}),
-	updateOs: privateProcedure.mutation(async () => {
+	update: privateProcedure.mutation(async () => {
 		// TODO: do this for real
 		await sleep(1000)
 		return '1.0.1'
