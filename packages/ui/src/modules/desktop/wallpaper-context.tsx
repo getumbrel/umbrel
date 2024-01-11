@@ -98,7 +98,7 @@ export const wallpapers = [
 	},
 ] as const satisfies readonly WallpaperT[]
 
-type WallpaperId = (typeof wallpapers)[number]['id']
+export type WallpaperId = (typeof wallpapers)[number]['id']
 const wallpaperIds = wallpapers.map((w) => w.id)
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 

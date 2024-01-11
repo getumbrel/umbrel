@@ -111,6 +111,7 @@ export default {
 			aspectRatio: {
 				'2.25': '225 / 100',
 				'1.6': '160 / 100',
+				'1.9': '190 / 100',
 			},
 			keyframes: {
 				'accordion-down': {
