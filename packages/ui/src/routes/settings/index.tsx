@@ -29,6 +29,9 @@ const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'
 const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-enable'))
 const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
 // drawers
+const StartMigrationDrawer = React.lazy(() =>
+	import('@/routes/settings/_components/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
+)
 const AccountDrawer = React.lazy(() =>
 	import('@/routes/settings/_components/mobile/account').then((m) => ({default: m.AccountDrawer})),
 )
@@ -69,6 +72,7 @@ const routeToDialogDesktop = {
 	troubleshoot: TroubleshootDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
 	// drawers
+	'start-migration': StartMigrationDrawer,
 	language: LanguageDrawer,
 	wallpaper: WallpaperDrawer,
 	tor: TorDrawer,
@@ -94,6 +98,7 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
 	// drawers
+	'start-migration': StartMigrationDrawer,
 	language: LanguageDrawer,
 	wallpaper: WallpaperDrawer,
 	tor: TorDrawer,

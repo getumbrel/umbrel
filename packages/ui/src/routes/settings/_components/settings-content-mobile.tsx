@@ -18,6 +18,7 @@ import {Link, useNavigate} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {Card, cardClass} from '@/components/ui/card'
 import {LinkButton} from '@/components/ui/link-button'
+import {UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -83,7 +84,7 @@ export function SettingsContentMobile() {
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>Running on</dt>
-						<dd>{deviceInfo.device}</dd>
+						<dd>{deviceInfo.data?.device ?? UNKNOWN()}</dd>
 						<dt className='opacity-40'>umbrelOS version</dt>
 						<dd>{osVersionQ.data}</dd>
 					</dl>
@@ -142,7 +143,7 @@ export function SettingsContentMobile() {
 					icon={TbArrowBigRightLines}
 					title='Migration Assistant'
 					description='Move data from Raspberry Pi to Umbrel Home'
-					onClick={() => navigate(linkToDialog('migration-assistant'))}
+					onClick={() => navigate(linkToDialog('start-migration'))}
 				/>
 				<ListRowMobile
 					icon={TbLanguage}
@@ -165,7 +166,9 @@ export function SettingsContentMobile() {
 				<ListRowMobile
 					icon={TbServer}
 					title='Device info'
-					description={`Model ${deviceInfo.modelNumber} · Serial ${deviceInfo.serialNumber}`}
+					description={`Model ${deviceInfo.data?.modelNumber ?? UNKNOWN()} · Serial ${
+						deviceInfo.data?.serialNumber ?? UNKNOWN()
+					}`}
 					onClick={() => navigate(linkToDialog('device-info'))}
 				/>
 				<ListRowMobile

@@ -1,6 +1,6 @@
 import {useId} from 'react'
-import {TbCheck} from 'react-icons/tb'
 
+import {listClass, ListRadioItem} from '@/components/ui/list'
 import {languages, useLanguage} from '@/hooks/use-language'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
@@ -11,9 +11,7 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {listClass, listItemClass} from '@/utils/element-classes'
 import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {
@@ -58,33 +56,5 @@ export function LanguageDrawer() {
 				<DrawerFooter></DrawerFooter>
 			</DrawerContent>
 		</Drawer>
-	)
-}
-
-function ListRadioItem({
-	children,
-	checked,
-	name,
-	onSelect,
-}: {
-	children: React.ReactNode
-	checked: boolean
-	name?: string
-	onSelect: () => void
-}) {
-	return (
-		<div className={cn(listItemClass, 'relative')}>
-			{children}
-			{checked && <TbCheck className='h-4 w-4' />}
-			<input
-				type='radio'
-				name={name}
-				checked={checked}
-				onChange={onSelect}
-				// Red so it's obvious when opacity is not zero and that it takes the whole space
-				// Not using inset-0 because it's not supported in mobile Safari
-				className='absolute left-0 top-0 block h-full w-full bg-red-500 opacity-0'
-			/>
-		</div>
 	)
 }
