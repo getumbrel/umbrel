@@ -7,7 +7,7 @@ import {omit} from 'remeda'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 
-import {dialogContentClass, dialogOverlayClass} from './shared/dialog'
+import {dialogContentClass, dialogFooterClass, dialogOverlayClass} from './shared/dialog'
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -64,7 +64,7 @@ const AlertDialogHeader = ({
 AlertDialogHeader.displayName = 'AlertDialogHeader'
 
 const AlertDialogFooter = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn('flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-center', className)} {...props} />
+	<div className={cn(dialogFooterClass, className)} {...props} />
 )
 AlertDialogFooter.displayName = 'AlertDialogFooter'
 
