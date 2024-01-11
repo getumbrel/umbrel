@@ -14,11 +14,11 @@ export default router({
 		return os.uptime()
 	}),
 	// TODO: have consistent naming for these
-	osVersion: privateProcedure.query(() => {
+	version: privateProcedure.query(() => {
 		// TODO: do this for real
 		return '1.0.0'
 	}),
-	getLatestVersion: privateProcedure.query(async () => {
+	latestAvailableVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
 		await sleep(1000)
 		return '1.0.1'
