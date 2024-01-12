@@ -1,5 +1,5 @@
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
+import {RiRefreshLine} from 'react-icons/ri'
+
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button, buttonVariants} from '@/shadcn-components/ui/button'
@@ -21,17 +21,6 @@ export function SoftwareUpdateDrawer() {
 
 	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
 
-	if (state === 'upgrading') {
-		return (
-			<CoverMessage>
-				<Loading>Updating to umbrelOS {latestVersion}</Loading>
-				<CoverMessageParagraph>
-					Please do not refresh this page or turn off your Umbrel while the update is in progress
-				</CoverMessageParagraph>
-			</CoverMessage>
-		)
-	}
-
 	return (
 		<Drawer {...dialogProps}>
 			<DrawerContent>
@@ -47,15 +36,13 @@ export function SoftwareUpdateDrawer() {
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>
-					{state === 'at-latest' && (
-						<div className={cn(buttonVariants({size: 'dialog'}), 'pointer-events-none border-none shadow-none')}>
-							You’re on the latest version
-						</div>
-					)}
-					{(state === 'initial' || state === 'checking') && (
+					{state === 'initial' && (
 						<>
-							<Button variant='primary' size='dialog' onClick={checkLatest} disabled={state === 'checking'}>
-								{state === 'checking' ? 'Checking for updates...' : 'Check for updates'}
+							<div className={cn(buttonVariants({size: 'dialog'}), 'pointer-events-none border-none shadow-none')}>
+								You’re on the latest version
+							</div>
+							<Button variant='primary' size='dialog' onClick={checkLatest}>
+								Check for updates
 							</Button>
 						</>
 					)}
@@ -65,6 +52,7 @@ export function SoftwareUpdateDrawer() {
 								New version {latestVersion} is available
 							</div>
 							<Button variant='primary' size='dialog' onClick={upgrade}>
+								<Icon component={RiRefreshLine} />
 								Update now
 							</Button>
 						</>

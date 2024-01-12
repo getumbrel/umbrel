@@ -2,6 +2,7 @@ import {useEffect, useLayoutEffect} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
@@ -158,12 +159,15 @@ export function WallpaperInjector() {
 	return null
 }
 
-export function Wallpaper() {
+export function Wallpaper({className}: {className?: string}) {
 	const {wallpaper, localWallpaper} = useWallpaper()
 
 	return (
 		<div
-			className='pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-in fade-in zoom-in-110'
+			className={cn(
+				'pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-in fade-in zoom-in-110',
+				className,
+			)}
 			style={{
 				backgroundImage: `url(${wallpaper.url || localWallpaper.url})`,
 			}}
