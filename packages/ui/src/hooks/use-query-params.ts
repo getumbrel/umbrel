@@ -15,10 +15,15 @@ export function useQueryParams() {
 		setSearchParams({...pickBy(newParams, (_, k) => k !== param)})
 	}
 
+	const filter = (fn: (item: [key: string, value: string]) => boolean) => {
+		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn))
+	}
+
 	return {
 		params: searchParams,
 		remove,
 		add,
+		filter,
 		/**
 		 * For use in React Router `Link`:
 		 * ```jsx
