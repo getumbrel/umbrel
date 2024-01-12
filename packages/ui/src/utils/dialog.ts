@@ -1,6 +1,6 @@
 // TODO: move to misc.ts
 import {useEffect, useState} from 'react'
-import type {To} from 'react-router-dom'
+import {type To} from 'react-router-dom'
 
 import {useQueryParams} from '@/hooks/use-query-params'
 import {SettingsDialogKey} from '@/routes/settings'
@@ -31,7 +31,7 @@ export function useAfterDelayedClose(open: boolean, cb: () => void) {
 
 /** Allow controlling dialog from query params */
 export function useDialogOpenProps(dialogKey: DialogKey) {
-	const {params, add, remove} = useQueryParams()
+	const {params, add, filter} = useQueryParams()
 	const [open, setOpen] = useState(false)
 
 	// Update open state when url is changed from the outside
@@ -39,10 +39,18 @@ export function useDialogOpenProps(dialogKey: DialogKey) {
 		setOpen(params.get('dialog') === dialogKey)
 	}, [params, dialogKey])
 
-	const addQueryParam = () => add('dialog', dialogKey)
+	const addQueryParam = () => {
+		add('dialog', dialogKey)
+	}
+
 	const removeQueryParam = async () => {
 		await sleep(EXIT_DURATION_MS)
-		remove('dialog')
+		// Remove `dialog` and all `dialogKey` prefixed search params
+		filter(([key]) => {
+			const isDialog = key === 'dialog'
+			const dialogParams = key.startsWith(dialogKey)
+			return !(isDialog || dialogParams)
+		})
 	}
 
 	const onOpenChange = (open: boolean) => {
@@ -61,7 +69,20 @@ export function useDialogOpenProps(dialogKey: DialogKey) {
 /** For react router  */
 export function useLinkToDialog() {
 	const {addLinkSearchParams} = useQueryParams()
-	return (dialogKey: DialogKey): To => ({
-		search: addLinkSearchParams({dialog: dialogKey}),
-	})
+	return (
+		dialogKey: DialogKey,
+		otherParams?: {
+			[key: string]: string
+		},
+	): To => {
+		const otherParamsModified: {[key: string]: string} = {}
+		if (otherParams) {
+			Object.keys(otherParams).forEach((key) => {
+				otherParamsModified[`${dialogKey}-${key}`] = otherParams[key]
+			})
+		}
+		return {
+			search: addLinkSearchParams({dialog: dialogKey, ...otherParamsModified}),
+		}
+	}
 }
