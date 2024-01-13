@@ -339,7 +339,7 @@ if [[ "$command" = "checkout" ]]; then
   default_repo_path=$(repo_path "${DEFAULT_UMBREL_APP_REPO_URL}")
 
   if [[ ! -d "${default_repo_path}" ]]; then
-    >&2 echo "Error: The default Umbrel app repo must be setup first."
+    >&2 echo "Error: The default Umbrel app repo must be set up first."
     exit 1
   fi
 
