@@ -1,13 +1,13 @@
 import os from 'node:os'
+import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
+import systeminfo from 'systeminformation'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
 import {sleep} from '../../../utilities/sleep.js'
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
-
-type Device = 'umbrel-home' | 'raspberry-pi' | 'linux'
 
 export default router({
 	uptime: privateProcedure.query(() => {
@@ -29,12 +29,17 @@ export default router({
 		return '1.0.1'
 	}),
 	//
-	deviceInfo: privateProcedure.query(() => ({
-		// Maybe rename `device` to `container` or `osContainer`?
-		device: 'umbrel-home' as Device,
-		modelNumber: 'U130121',
-		serialNumber: 'U230300078',
-	})),
+	device: privateProcedure.query(async () => {
+		// This file exists in old versions of amd64 Umbrel OS builds due to the Docker build system.
+		// It confuses the systeminfo library and makes it return the model as 'Docker Container'.
+		// TODO: Remove this once we've done a full fs upgrade
+		await fse.remove('/.dockerenv')
+
+		const {manufacturer, model, serial, uuid, sku} = await systeminfo.system()
+
+		// TODO: Allow these to be overidden by env vars or cli flags
+		return {manufacturer, model, serial, uuid, sku}
+	}),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld.dataDirectory)),
