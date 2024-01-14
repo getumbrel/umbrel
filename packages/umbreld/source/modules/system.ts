@@ -42,7 +42,7 @@ export async function getDiskUsage(
 	return {
 		size,
 		totalUsed: used,
-		system: 69_420, // TODO: totalUsed - sumOfAppsAndDownloads,
+		system: 69_420, // TODO: used - sumOfAppsAndDownloads,
 		downloads: 42_690,
 		apps: [
 			{
@@ -62,39 +62,35 @@ export async function getDiskUsage(
 }
 
 type MemoryUsage = {
-	appId: string
-	memory: number
+	id: string
+	used: number
 }
 
 export async function getMemoryUsage(): Promise<{
 	size: number
-	used: number
-	available: number
+	totalUsed: number
+	system: number
 	apps: MemoryUsage[]
 }> {
-	const {total: size, active: used, available} = await systemInformation.mem()
+	const {total: size, active: totalUsed} = await systemInformation.mem()
 	return {
 		size,
-		used,
-		available,
+		totalUsed,
+		system: 69_420, // TODO: totalUsed - sumOfApps,
 		// TODO: get list of installed apps and their memory usage
 		// to calculate the memory usage of each app
 		apps: [
 			{
-				appId: 'system',
-				memory: Math.random() * 10_000,
+				id: 'bitcoin',
+				used: 30_000,
 			},
 			{
-				appId: 'bitcoin',
-				memory: Math.random() * 10_000,
+				id: 'lightning',
+				used: 60_000,
 			},
 			{
-				appId: 'lightning',
-				memory: Math.random() * 10_000,
-			},
-			{
-				appId: 'nostr-relay',
-				memory: Math.random() * 10_000,
+				id: 'nostr-relay',
+				used: 90_000,
 			},
 		],
 	}

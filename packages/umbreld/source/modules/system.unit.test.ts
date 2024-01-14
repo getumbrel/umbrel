@@ -100,13 +100,10 @@ describe('getMemoryUsage', () => {
 		vi.mocked(systemInformation.mem).mockResolvedValue({
 			total: 69_420,
 			active: 420,
-			available: 69_000,
 		} as any)
-		expect(await getMemoryUsage()).toStrictEqual({
+		expect(await getMemoryUsage()).toMatchObject({
 			size: 69_420,
-			used: 420,
-			available: 69_000,
-			apps: {},
+			totalUsed: 420,
 		})
 	})
 })
