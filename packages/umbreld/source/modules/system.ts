@@ -12,13 +12,13 @@ export async function getCpuTemperature(): Promise<number> {
 }
 
 type DiskUsage = {
-	appId: string
-	disk: number
+	id: string
+	used: number
 }
 
 export async function getDiskUsage(
 	umbreldDataDir: string,
-): Promise<{size: number; used: number; available: number; apps: DiskUsage[]}> {
+): Promise<{size: number; totalUsed: number; system: number; downloads: number; apps: DiskUsage[]}> {
 	if (typeof umbreldDataDir !== 'string' || umbreldDataDir === '') {
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
@@ -37,28 +37,25 @@ export async function getDiskUsage(
 		throw new Error('Could not find file system containing Umbreld data directory')
 	}
 
-	const {size, used, available} = dataDirectoryFilesystem
+	const {size, used} = dataDirectoryFilesystem
 
 	return {
 		size,
-		used,
-		available,
+		totalUsed: used,
+		system: 69_420, // TODO: totalUsed - sumOfAppsAndDownloads,
+		downloads: 42_690,
 		apps: [
 			{
-				appId: 'system',
-				disk: Math.random() * 10_000,
+				id: 'bitcoin',
+				used: 30_000,
 			},
 			{
-				appId: 'bitcoin',
-				disk: Math.random() * 10_000,
+				id: 'lightning',
+				used: 60_000,
 			},
 			{
-				appId: 'lightning',
-				disk: Math.random() * 10_000,
-			},
-			{
-				appId: 'nostr-relay',
-				disk: Math.random() * 10_000,
+				id: 'nostr-relay',
+				used: 90_000,
 			},
 		],
 	}

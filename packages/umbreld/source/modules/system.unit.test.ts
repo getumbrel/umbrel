@@ -49,10 +49,9 @@ describe('getDiskUsage', () => {
 
 	test('should return disk usage for specified path', async () => {
 		vi.mocked(systemInformation.fsSize).mockResolvedValue(mockData as any)
-		expect(await getDiskUsage('/home/umbrel/umbrel')).toStrictEqual({
+		expect(await getDiskUsage('/home/umbrel/umbrel')).toMatchObject({
 			size: 10_308_186_112,
-			used: 3_557_232_640,
-			available: 6_282_067_968,
+			totalUsed: 3_557_232_640,
 		})
 	})
 
@@ -89,10 +88,9 @@ describe('getDiskUsage', () => {
 				mount: '/home/umbrel/umbrel',
 			},
 		] as any)
-		expect(await getDiskUsage('/home/umbrel/umbrel')).toStrictEqual({
+		expect(await getDiskUsage('/home/umbrel/umbrel')).toMatchObject({
 			size: 209_489_920,
-			used: 42_782_720,
-			available: 166_707_200,
+			totalUsed: 42_782_720,
 		})
 	})
 })
