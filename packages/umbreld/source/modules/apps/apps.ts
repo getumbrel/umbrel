@@ -3,6 +3,8 @@ import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
 
+import App from './app.js'
+
 export default class Apps {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
@@ -14,6 +16,11 @@ export default class Apps {
 	}
 
 	async start() {
+		// Set apps to empty array on first start
+		if ((await this.#umbreld.store.get('apps')) === undefined) {
+			await this.#umbreld.store.set('apps', [])
+		}
+
 		this.logger.log('Starting apps')
 		// TODO: Start apps
 	}
@@ -21,6 +28,13 @@ export default class Apps {
 	async stop() {
 		this.logger.log('Stopping apps')
 		// TODO: Stop apps
+	}
+
+	async getApps() {
+		const appIds = await this.#umbreld.store.get('apps')
+		const apps = appIds.map((appId) => new App(this.#umbreld, appId))
+
+		return apps
 	}
 
 	async install(appId: string) {
@@ -36,6 +50,8 @@ export default class Apps {
 
 		// We use rsync to copy to preserve permissions
 		await $`rsync --archive --verbose --exclude ".gitkeep" ${appTemplatePath}/. ${appDataDirectory}`
+
+		// TODO
 
 		// execute_hook "${app}" "pre-install"
 
@@ -53,14 +69,20 @@ export default class Apps {
 		//   start_app "${app}"
 		// fi
 
-		// echo "Saving app ${app} in DB..."
-		// update_installed_apps add "${app}" "${repo}"
+		// Save installed app
+		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+			const apps = await get('apps')
+			apps.push(appId)
+			await set('apps', apps)
+		})
+
+		// TODO
 
 		// execute_hook "${app}" "post-install"
 
 		// echo "Successfully installed app ${app}"
 		// exit
 
-		return fse.readdir(appDataDirectory)
+		return true
 	}
 }

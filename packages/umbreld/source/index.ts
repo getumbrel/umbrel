@@ -16,6 +16,7 @@ import UserApps from './modules/user-apps.js'
 
 type StoreSchema = {
 	version: string
+	apps: string[]
 	appRepositories: string[]
 	user: {
 		name: string
@@ -82,6 +83,6 @@ export default class Umbreld {
 		await this.store.set('version', this.version)
 
 		// Initialise modules
-		await Promise.all([this.appStore.start(), this.server.start()])
+		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
 	}
 }
