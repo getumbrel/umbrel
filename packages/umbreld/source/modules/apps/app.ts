@@ -24,4 +24,35 @@ export default class App {
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
 	}
+
+	async start() {
+		// TODO: Implement start
+
+		return true
+	}
+
+	async stop() {
+		// TODO: Implement stop
+
+		return true
+	}
+
+	async restart() {
+		await this.stop()
+		await this.start()
+
+		return true
+	}
+
+	async uninstall() {
+		// TODO: Implement uninstall
+
+		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+			let apps = await get('apps')
+			apps = apps.filter((appId) => appId !== this.id)
+			await set('apps', apps)
+		})
+
+		return true
+	}
 }

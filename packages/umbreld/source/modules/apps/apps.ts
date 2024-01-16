@@ -85,4 +85,38 @@ export default class Apps {
 
 		return true
 	}
+
+	async uninstall(appId: string) {
+		const apps = await this.getApps()
+		const app = apps.find((app) => app.id === appId)
+		if (!app) throw new Error(`App ${appId} not found`)
+
+		return app.uninstall()
+	}
+
+	async restart(appId: string) {
+		const apps = await this.getApps()
+		const app = apps.find((app) => app.id === appId)
+		if (!app) throw new Error(`App ${appId} not found`)
+
+		return app.restart()
+	}
+
+	async update(appId: string) {
+		const apps = await this.getApps()
+		const app = apps.find((app) => app.id === appId)
+		if (!app) throw new Error(`App ${appId} not found`)
+
+		// TODO: Implement update
+		return true
+	}
+
+	async trackOpen(appId: string) {
+		const apps = await this.getApps()
+		const app = apps.find((app) => app.id === appId)
+		if (!app) throw new Error(`App ${appId} not found`)
+
+		// TODO: Implement track open
+		return true
+	}
 }
