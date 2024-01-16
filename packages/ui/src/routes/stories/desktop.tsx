@@ -85,14 +85,15 @@ function AppIconExamples() {
 	// if (!iconSrc) return null
 
 	const iconSrc = 'https://picsum.photos/200/200'
+	const handleClick = () => alert('clicked')
 
 	return (
 		<div className='flex flex-wrap gap-2'>
-			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='ready' />
-			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='installing' />
-			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='offline' />
-			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='uninstalling' />
-			<AppIcon appId='foobar' label={'foobar'} src={iconSrc} port={12345} state='updating' />
+			<AppIcon label={'foobar'} src={iconSrc} state='ready' onClick={handleClick} />
+			<AppIcon label={'foobar'} src={iconSrc} state='installing' onClick={handleClick} />
+			<AppIcon label={'foobar'} src={iconSrc} state='offline' onClick={handleClick} />
+			<AppIcon label={'foobar'} src={iconSrc} state='uninstalling' onClick={handleClick} />
+			<AppIcon label={'foobar'} src={iconSrc} state='updating' onClick={handleClick} />
 		</div>
 	)
 }
@@ -148,6 +149,8 @@ function AppGridExamples() {
 	const {userApps} = useApps()
 	if (!userApps) return null
 
+	const handleClick = () => alert('clicked')
+
 	return (
 		<>
 			<div>No apps</div>
@@ -158,7 +161,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={userApps.slice(0, 1).map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
+						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
 			</AppGridWrapper>
@@ -166,7 +169,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={userApps.slice(0, 3).map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
+						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
 			</AppGridWrapper>
@@ -174,7 +177,7 @@ function AppGridExamples() {
 			<AppGridWrapper>
 				<AppGrid
 					apps={userApps.map((app) => (
-						<AppIcon key={app.id} appId={app.id} src={app.icon} label={app.name} port={app.port} />
+						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
 			</AppGridWrapper>

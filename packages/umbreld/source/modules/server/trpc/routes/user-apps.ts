@@ -2,7 +2,7 @@ import {z} from 'zod'
 import {indexBy, pick} from 'remeda'
 
 import {privateProcedure, router} from '../trpc.js'
-import {appStatuses} from '../../../user-apps.js'
+import {appStatuses, userAppsDemoStore} from '../../../user-apps.js'
 import type {UserApp} from '../../../apps/schema.js'
 
 export default router({
@@ -32,15 +32,18 @@ export default router({
 		const yamlApps = await ctx.userApps.getApps()
 
 		const apps = yamlApps.map((app) => {
+			// Assume demo store apps are always installed
+			const demoStoreApp = userAppsDemoStore.find((a) => a?.id === app.id)!
 			const userApp: UserApp = {
 				...app,
 				// TODO: don't assume registry never removes apps: `registryAppsKeyed[app.id]!`
 				...pick(registryAppsKeyed[app.id]!, ['name', 'icon', 'port', 'version']),
 				version: '0.1',
 				...appStatuses[app.id],
+				...pick(demoStoreApp, ['showNotifications', 'autoUpdate', 'showCredentialsBeforeOpen']),
 				credentials: {
-					defaultUsername: '',
-					defaultPassword: '',
+					defaultUsername: 'sdfsdf',
+					defaultPassword: 'sdfsdf',
 				},
 			}
 			return userApp
@@ -169,6 +172,31 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			await ctx.userApps.trackAppOpen(input.appId)
 
+			return true
+		}),
+
+	set: privateProcedure
+		.input(
+			z
+				.object({
+					appId: z.string(),
+					showCredentialsBeforeOpen: z.boolean().optional(),
+					autoUpdate: z.boolean().optional(),
+					showNotifications: z.boolean().optional(),
+				})
+				.strict(),
+		)
+		.mutation(async ({ctx, input}) => {
+			const demoStoreApp = userAppsDemoStore.find((a) => a?.id === input.appId)!
+			if (input.showCredentialsBeforeOpen !== undefined) {
+				demoStoreApp.showCredentialsBeforeOpen = input.showCredentialsBeforeOpen
+			}
+			if (input.autoUpdate !== undefined) {
+				demoStoreApp.autoUpdate = input.autoUpdate
+			}
+			if (input.showNotifications !== undefined) {
+				demoStoreApp.showNotifications = input.showNotifications
+			}
 			return true
 		}),
 })

@@ -6,7 +6,7 @@ import type {AppState, YamlApp} from './apps/schema.js'
 // eslint-disable-next-line import/no-mutable-exports
 export let appStatuses: Record<string, {installProgress: number; state: AppState}> = {}
 // TODO: This should be in the store
-let userAppsDemoStore: YamlApp[] = []
+export let userAppsDemoStore: YamlApp[] = []
 
 export default class UserApps {
 	#store: Umbreld['store']

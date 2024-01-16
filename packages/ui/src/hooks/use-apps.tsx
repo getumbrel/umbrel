@@ -102,11 +102,11 @@ export function useUserApp(id?: string | null) {
 	const ctx = useContext(AppsContext)
 	if (!ctx) throw new Error('useUserApp must be used within AppsProvider')
 
-	if (!id) return {isLoading: false, app: undefined}
-	if (ctx.isLoading) return {isLoading: true}
+	if (!id) return {isLoading: false, app: undefined} as const
+	if (ctx.isLoading) return {isLoading: true} as const
 
 	return {
 		isLoading: false,
 		app: ctx.userAppsKeyed?.[id],
-	}
+	} as const
 }

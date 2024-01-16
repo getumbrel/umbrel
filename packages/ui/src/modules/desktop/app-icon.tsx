@@ -1,6 +1,6 @@
 import {motion} from 'framer-motion'
 import {useState} from 'react'
-import {Link} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useUserApp} from '@/hooks/use-apps'
@@ -9,6 +9,7 @@ import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} fr
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState} from '@/trpc/trpc'
+import {useLinkToDialog} from '@/utils/dialog'
 import {portToUrl} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
@@ -18,16 +19,14 @@ import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
 const PLACEHOLDER_SRC = '/icons/app-icon-placeholder.svg'
 
 export function AppIcon({
-	appId,
 	label,
 	src,
-	port,
+	onClick,
 	state = 'ready',
 }: {
-	appId: string
 	label: string
 	src: string
-	port: number
+	onClick?: () => void
 	state?: AppState
 }) {
 	const [url, setUrl] = useState(src)
@@ -42,14 +41,9 @@ export function AppIcon({
 
 	const disabled = state !== 'ready'
 
-	const activeProps = {
-		onClick: () => trackAppOpen(appId),
-		href: portToUrl(port),
-		target: '_blank',
-	}
-
 	return (
-		<motion.a
+		<motion.button
+			onClick={disabled ? undefined : onClick}
 			className={cn(
 				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none',
 				disabled && 'disabled',
@@ -72,7 +66,6 @@ export function AppIcon({
 				stiffness: 500,
 				damping: 30,
 			}}
-			{...(!disabled && activeProps)}
 		>
 			<div
 				className={cn(
@@ -101,7 +94,7 @@ export function AppIcon({
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>{finalLabel}</div>
 			</div>
-		</motion.a>
+		</motion.button>
 	)
 }
 
@@ -112,6 +105,9 @@ export function AppIconConnected({appId}: {appId: string}) {
 	const [openDepsDialog, setOpenDepsDialog] = useState(false)
 	const [toUninstallFirstIds, setToUninstallFirstIds] = useState<string[]>([])
 	const [showUninstallDialog, setShowUninstallDialog] = useState(false)
+
+	const navigate = useNavigate()
+	const linkToDialog = useLinkToDialog()
 
 	const uninstall = async () => {
 		const res = await appInstall.uninstall()
@@ -131,74 +127,76 @@ export function AppIconConnected({appId}: {appId: string}) {
 		}
 	}
 
-	if (!userApp || !userApp.app) return <AppIcon appId={appId} label='' src='' port={0} />
+	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
-	if (appInstall.state === 'loading') {
-		return <AppIcon appId={appId} label='' src='' port={0} state='ready' />
+	switch (appInstall.state) {
+		case 'loading':
+			return <AppIcon label='' src={userApp.app.icon} state='ready' />
+		case 'offline':
+		case 'uninstalling':
+		case 'updating':
+			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
+		case 'uninstalled':
+			return <AppIcon label='' src={userApp.app.icon} state='ready' />
+		case 'installing':
+			return <AppIcon label={userApp.app.name} src={userApp.app.icon} state='installing' />
+		case 'ready': {
+			const showCredentials = userApp.app?.showCredentialsBeforeOpen ?? false
+
+			const port = userApp.app.port
+			const handleClick = () => {
+				trackAppOpen(appId)
+				if (showCredentials) {
+					navigate(linkToDialog('default-credentials', {for: appId, direct: 'true'}))
+				} else {
+					window.open(portToUrl(port), '_blank')
+				}
+			}
+
+			// If app is installed, show context menu
+			return (
+				<>
+					<ContextMenu>
+						<ContextMenuTrigger className='group'>
+							<AppIcon label={userApp.app.name} src={userApp.app.icon} onClick={handleClick} state={appInstall.state} />
+						</ContextMenuTrigger>
+						<ContextMenuContent>
+							<ContextMenuItem asChild>
+								<Link to={`/app-store/${appId}`}>Go to store page</Link>
+							</ContextMenuItem>
+							<ContextMenuItem asChild>
+								<Link
+									to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}
+								>
+									Show default credentials
+								</Link>
+							</ContextMenuItem>
+							<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
+							<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
+								Uninstall
+							</ContextMenuItem>
+						</ContextMenuContent>
+					</ContextMenu>
+					{toUninstallFirstIds.length > 0 && (
+						<UninstallTheseFirstDialog
+							appId={appId}
+							registryId={userApp.app.registryId}
+							toUninstallFirstIds={toUninstallFirstIds}
+							open={openDepsDialog}
+							onOpenChange={setOpenDepsDialog}
+						/>
+					)}
+					{showUninstallDialog && (
+						<UninstallConfirmationDialog
+							appId={appId}
+							registryId={userApp.app.registryId}
+							open={showUninstallDialog}
+							onOpenChange={setShowUninstallDialog}
+							onConfirm={uninstall}
+						/>
+					)}
+				</>
+			)
+		}
 	}
-
-	if (appInstall.state === 'uninstalled') {
-		return <AppIcon appId={appId} label={userApp.app.name} src={userApp.app.icon} port={0} state='ready' />
-	}
-
-	if (appInstall.state !== 'ready') {
-		return (
-			<AppIcon
-				appId={appId}
-				label={userApp.app.name}
-				src={userApp.app.icon}
-				port={userApp.app.port}
-				state={appInstall.state}
-			/>
-		)
-	}
-
-	// If app is installed, show context menu
-	return (
-		<>
-			<ContextMenu>
-				<ContextMenuTrigger className='group'>
-					<AppIcon
-						appId={appId}
-						label={userApp.app.name}
-						src={userApp.app.icon}
-						port={userApp.app.port}
-						state={appInstall.state}
-					/>
-				</ContextMenuTrigger>
-				<ContextMenuContent>
-					<ContextMenuItem asChild>
-						<Link to={`/app-store/${appId}`}>Go to store page</Link>
-					</ContextMenuItem>
-					<ContextMenuItem asChild>
-						<Link to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}>
-							Show default credentials
-						</Link>
-					</ContextMenuItem>
-					<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
-					<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
-						Uninstall
-					</ContextMenuItem>
-				</ContextMenuContent>
-			</ContextMenu>
-			{toUninstallFirstIds.length > 0 && (
-				<UninstallTheseFirstDialog
-					appId={appId}
-					registryId={userApp.app.registryId}
-					toUninstallFirstIds={toUninstallFirstIds}
-					open={openDepsDialog}
-					onOpenChange={setOpenDepsDialog}
-				/>
-			)}
-			{showUninstallDialog && (
-				<UninstallConfirmationDialog
-					appId={appId}
-					registryId={userApp.app.registryId}
-					open={showUninstallDialog}
-					onOpenChange={setShowUninstallDialog}
-					onConfirm={uninstall}
-				/>
-			)}
-		</>
-	)
 }
