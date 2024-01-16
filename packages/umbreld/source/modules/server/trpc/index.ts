@@ -7,6 +7,7 @@ import migration from './routes/migration.js'
 import system from './routes/system.js'
 import user from './routes/user.js'
 import appStore from './routes/app-store.js'
+import apps from './routes/apps.js'
 
 const appRouter = router({
 	debug,
@@ -14,6 +15,7 @@ const appRouter = router({
 	system,
 	user,
 	appStore,
+	apps,
 })
 
 export type AppRouter = typeof appRouter
