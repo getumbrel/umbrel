@@ -191,12 +191,15 @@ export default router({
 			if (input.showCredentialsBeforeOpen !== undefined) {
 				demoStoreApp.showCredentialsBeforeOpen = input.showCredentialsBeforeOpen
 			}
+
 			if (input.autoUpdate !== undefined) {
 				demoStoreApp.autoUpdate = input.autoUpdate
 			}
+
 			if (input.showNotifications !== undefined) {
 				demoStoreApp.showNotifications = input.showNotifications
 			}
+
 			return true
 		}),
 })
