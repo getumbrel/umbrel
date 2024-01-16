@@ -37,6 +37,14 @@ export default class Apps {
 		return apps
 	}
 
+	async getApp(appId: string) {
+		const apps = await this.getApps()
+		const app = apps.find((app) => app.id === appId)
+		if (!app) throw new Error(`App ${appId} not found`)
+
+		return app
+	}
+
 	async install(appId: string) {
 		this.logger.log(`Installing app ${appId}`)
 		const appTemplatePath = await this.#umbreld.appStore.getAppTemplateFilePath(appId)
@@ -87,34 +95,26 @@ export default class Apps {
 	}
 
 	async uninstall(appId: string) {
-		const apps = await this.getApps()
-		const app = apps.find((app) => app.id === appId)
-		if (!app) throw new Error(`App ${appId} not found`)
+		const app = await this.getApp(appId)
 
 		return app.uninstall()
 	}
 
 	async restart(appId: string) {
-		const apps = await this.getApps()
-		const app = apps.find((app) => app.id === appId)
-		if (!app) throw new Error(`App ${appId} not found`)
+		const app = await this.getApp(appId)
 
 		return app.restart()
 	}
 
 	async update(appId: string) {
-		const apps = await this.getApps()
-		const app = apps.find((app) => app.id === appId)
-		if (!app) throw new Error(`App ${appId} not found`)
+		const app = await this.getApp(appId)
 
 		// TODO: Implement update
 		return true
 	}
 
 	async trackOpen(appId: string) {
-		const apps = await this.getApps()
-		const app = apps.find((app) => app.id === appId)
-		if (!app) throw new Error(`App ${appId} not found`)
+		const app = await this.getApp(appId)
 
 		// TODO: Implement track open
 		return true
