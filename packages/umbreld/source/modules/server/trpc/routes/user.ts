@@ -4,12 +4,8 @@ import {z} from 'zod'
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
 import {widgetSchema} from '../../../apps/schema.js'
 import * as totp from '../../../utilities/totp.js'
-import apps from './user-apps.js'
 
 export default router({
-	// Apps subrouter
-	apps,
-
 	// Registers a new user
 	register: publicProcedure
 		.input(
@@ -151,7 +147,6 @@ export default router({
 			name: user.name,
 			wallpaper: user.wallpaper,
 			torEnabled: user.torEnabled,
-			lastOpenedApps: user.lastOpenedApps,
 			widgets: user.widgets,
 		}
 	}),
