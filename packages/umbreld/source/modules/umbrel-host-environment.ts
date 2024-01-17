@@ -13,7 +13,7 @@ export default async function umbrelHostEnvironment(): Promise<UmbrelHostEnviron
 	}
 
 	const {raspberry} = await systeminfo.system()
-	if (!!raspberry) {
+	if (raspberry) {
 		return 'raspberry-pi'
 	}
 
