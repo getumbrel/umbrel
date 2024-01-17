@@ -11,14 +11,14 @@ export function useSoftwareUpdate() {
 	const [latestVersion, setLatestVersion] = useState('')
 
 	const ctx = trpcReact.useContext()
-	const osVersionQ = trpcReact.system.osVersion.useQuery()
+	const osVersionQ = trpcReact.system.version.useQuery()
 
 	const currentVersion = osVersionQ.data ?? 'Unknown'
 
 	const checkLatest = async () => {
 		setState('checking')
 		try {
-			const latestVersion = await ctx.system.getLatestVersion.fetch()
+			const latestVersion = await ctx.system.latestAvailableVersion.fetch()
 			if (!latestVersion) {
 				throw new Error('Failed to check for updates')
 			}

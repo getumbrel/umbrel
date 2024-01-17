@@ -38,7 +38,7 @@ export function SettingsContentMobile() {
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
 	const deviceInfo = useDeviceInfo()
-	const osVersionQ = trpcReact.system.osVersion.useQuery()
+	const osVersionQ = trpcReact.system.version.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()

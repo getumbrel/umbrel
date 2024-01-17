@@ -20,15 +20,19 @@ export function useStorageForUi(options: {poll?: boolean} = {}) {
 		}
 	}
 
+	const used = diskQ.data?.totalUsed
+	const size = diskQ.data?.size
+	const available = !size || !used ? undefined : size - used
+
 	return {
-		value: maybePrettyBytes(diskQ.data?.used),
-		valueSub: `/ ${maybePrettyBytes(diskQ.data?.size)}`,
-		secondaryValue: `${maybePrettyBytes(diskQ.data?.available)} left`,
-		progress: BigNumber(diskQ.data?.used ?? 0 * 100)
-			.dividedBy(diskQ.data?.size ?? 0)
+		value: maybePrettyBytes(used),
+		valueSub: `/ ${maybePrettyBytes(size)}`,
+		secondaryValue: `${maybePrettyBytes(available)} left`,
+		progress: BigNumber(used ?? 0 * 100)
+			.dividedBy(size ?? 0)
 			.toNumber(),
-		isDiskLow: diskQ.data && isDiskLow(diskQ.data?.available),
-		isDiskFull: diskQ.data && isDiskFull(diskQ.data.available),
-		apps: sort(diskQ.data?.apps ?? [], (a, b) => b.disk - a.disk),
+		isDiskLow: isDiskLow(available),
+		isDiskFull: isDiskFull(available),
+		apps: sort(diskQ.data?.apps ?? [], (a, b) => b.used - a.used),
 	}
 }

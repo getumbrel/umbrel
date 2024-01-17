@@ -42,10 +42,12 @@ export function SettingsContent() {
 	const [userQ, uptimeQ, cpuTempQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
-		t.system.cpuTemperature(),
+		t.system.cpuTemperature(undefined, {
+			retry: false,
+		}),
 		t.migration.isUmbrelHome(),
 		t.user.is2faEnabled(),
-		t.system.osVersion(),
+		t.system.version(),
 	])
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data

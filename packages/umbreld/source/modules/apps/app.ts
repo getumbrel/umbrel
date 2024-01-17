@@ -2,7 +2,6 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 
 import type Umbreld from '../../index.js'
-import {type AppRepositoryMeta, type AppManifest} from './schema.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

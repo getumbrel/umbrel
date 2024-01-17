@@ -39,12 +39,12 @@ function LiveUsageContent() {
 			<LiveUsageSection title='Storage'>
 				<StorageCard />
 				<div className={appListClass}>
-					{appStorageUsages?.map(({appId, disk}) => (
+					{appStorageUsages?.map(({id, used}) => (
 						<AppListRow
-							key={appId}
-							icon={allAppsKeyed[appId]?.icon || undefined}
-							title={allAppsKeyed[appId]?.name || 'Unknown app'}
-							value={maybePrettyBytes(disk)}
+							key={id}
+							icon={allAppsKeyed[id]?.icon || undefined}
+							title={allAppsKeyed[id]?.name || 'Unknown app'}
+							value={maybePrettyBytes(used)}
 						/>
 					))}
 				</div>
@@ -52,12 +52,12 @@ function LiveUsageContent() {
 			<LiveUsageSection title='Memory'>
 				<MemoryCard />
 				<div className={appListClass}>
-					{appMemoryUsages?.map(({appId, memory}) => (
+					{appMemoryUsages?.map(({id, used}) => (
 						<AppListRow
-							key={appId}
-							icon={allAppsKeyed[appId]?.icon || undefined}
-							title={allAppsKeyed[appId]?.name || 'Unknown app'}
-							value={maybePrettyBytes(memory)}
+							key={id}
+							icon={allAppsKeyed[id]?.icon || undefined}
+							title={allAppsKeyed[id]?.name || 'Unknown app'}
+							value={maybePrettyBytes(used)}
 						/>
 					))}
 				</div>

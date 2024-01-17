@@ -46,4 +46,5 @@ export type RouterOutput = inferRouterOutputs<AppRouter>
 
 //
 
-export type Device = RouterOutput['system']['deviceInfo']['device']
+// Used to be able to get more specific than string
+export type Device = RouterOutput['system']['device']['manufacturer']

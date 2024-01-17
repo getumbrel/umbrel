@@ -20,14 +20,18 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 		}
 	}
 
+	const used = memoryQ.data?.totalUsed
+	const size = memoryQ.data?.size
+	const available = !size || !used ? undefined : size - used
+
 	return {
-		value: maybePrettyBytes(memoryQ.data?.used),
-		valueSub: `/ ${maybePrettyBytes(memoryQ.data?.size)}`,
-		secondaryValue: `${maybePrettyBytes(memoryQ.data?.available)} left`,
-		progress: BigNumber(memoryQ.data?.used ?? 0 * 100)
-			.dividedBy(memoryQ.data?.size ?? 0)
+		value: maybePrettyBytes(used),
+		valueSub: `/ ${maybePrettyBytes(size)}`,
+		secondaryValue: `${maybePrettyBytes(available)} left`,
+		progress: BigNumber(used ?? 0 * 100)
+			.dividedBy(size ?? 0)
 			.toNumber(),
-		isMemoryLow: memoryQ.data && isMemoryLow(memoryQ.data),
-		apps: sort(memoryQ.data?.apps ?? [], (a, b) => b.memory - a.memory),
+		isMemoryLow: isMemoryLow({size, used}),
+		apps: sort(memoryQ.data?.apps ?? [], (a, b) => b.used - a.used),
 	}
 }

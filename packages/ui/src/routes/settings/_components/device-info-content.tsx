@@ -25,7 +25,7 @@ export function DeviceInfoContent({
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>Device</span>
-					<span className='pr-6 font-normal'>{(device && deviceMap[device].title) || UNKNOWN()}</span>
+					<span className='pr-6 font-normal'>{device || UNKNOWN()}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>

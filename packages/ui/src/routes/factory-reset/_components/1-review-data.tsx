@@ -20,7 +20,7 @@ export function ReviewData() {
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 
 	const installedAppCount = userAppsQ.data?.length
-	const used = maybePrettyBytes(diskQ.data?.used)
+	const used = maybePrettyBytes(diskQ.data?.totalUsed)
 
 	const {t} = useTranslation()
 
