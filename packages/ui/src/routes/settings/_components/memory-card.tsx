@@ -1,6 +1,6 @@
 import {Card} from '@/components/ui/card'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
-import {useMemoryForUi} from '@/hooks/use-memory-for-ui'
+import {useMemoryForUi} from '@/hooks/use-memory'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'

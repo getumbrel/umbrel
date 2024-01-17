@@ -3,8 +3,9 @@ import {useNavigate} from 'react-router-dom'
 import {ExternalToast} from 'sonner'
 
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
-import {trpcReact} from '@/trpc/trpc'
-import {isCpuTooHot, isDiskFull, isDiskLow, isMemoryLow} from '@/utils/system'
+import {useCpuTemp} from '@/hooks/use-cpu-temp'
+import {useDisk} from '@/hooks/use-disk'
+import {useMemory} from '@/hooks/use-memory'
 
 import {toast} from './ui/toast'
 
@@ -14,45 +15,39 @@ export function useSettingsNotificationCount() {
 	const [count, setCount] = useState(0)
 	const navigate = useNavigate()
 
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-	const memoryQ = trpcReact.system.memoryUsage.useQuery()
-	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
+	const cpuTemp = useCpuTemp()
+	const memory = useMemory()
+	const disk = useDisk()
 	// TODO: show whether os has updates available
 
-	const isLoading = cpuTempQ.isLoading || diskQ.isLoading || memoryQ.isLoading
-
 	useEffect(() => {
-		if (isLoading) return
 		let count = 0
-		if (cpuTempQ.data && isCpuTooHot(cpuTempQ.data)) {
+
+		if (cpuTemp.isHot) {
 			count++
 		}
 
-		const availableSpace = (diskQ.data?.size ?? 0) - (diskQ.data?.totalUsed ?? 0)
-
-		if (diskQ.data) {
-			if (isDiskFull(availableSpace)) {
-				count++
-			} else if (isDiskLow(availableSpace)) {
-				count++
-			}
+		if (disk.isDiskFull) {
+			count++
+		} else if (disk.isDiskLow) {
+			count++
 		}
-		const size = memoryQ.data?.size
-		const used = memoryQ.data?.totalUsed
-		if (isMemoryLow({size, used})) {
+
+		if (memory.isMemoryLow) {
 			count++
 		}
 		setCount(count)
-	}, [isLoading, cpuTempQ.data, cpuTempQ.error, diskQ.data, diskQ.error, memoryQ.data, memoryQ.error, navigate])
+	}, [cpuTemp.isHot, disk.isDiskFull, disk.isDiskLow, memory.isMemoryLow, navigate])
 
 	return count
 }
 
 export function Notifications() {
 	const navigate = useNavigate()
-	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-	const memoryQ = trpcReact.system.memoryUsage.useQuery()
+
+	const cpuTemp = useCpuTemp()
+	const disk = useDisk()
+	const memory = useMemory()
 
 	useEffect(() => {
 		const toastOptions: ExternalToast = {
@@ -64,25 +59,20 @@ export function Notifications() {
 			},
 		}
 
-		if (cpuTempQ.data && isCpuTooHot(cpuTempQ.data)) {
+		if (cpuTemp.isHot) {
 			toast.error('Too hot!', toastOptions)
 		}
-		if (diskQ.data) {
-			const used = diskQ.data?.totalUsed
-			const size = diskQ.data?.size
-			const available = !size || !used ? undefined : size - used
-			if (isDiskFull(available)) {
-				toast.error('Disk is full!', toastOptions)
-			} else if (isDiskLow(available)) {
-				toast.warning('Low disk space!', toastOptions)
-			}
+
+		if (disk.isDiskFull) {
+			toast.error('Disk is full!', toastOptions)
+		} else if (disk.isDiskLow) {
+			toast.warning('Low disk space!', toastOptions)
 		}
-		if (memoryQ.data) {
-			if (isMemoryLow(memoryQ.data)) {
-				toast.warning('Low RAM!', toastOptions)
-			}
+
+		if (memory.isMemoryLow) {
+			toast.warning('Low RAM!', toastOptions)
 		}
-	}, [cpuTempQ.data, cpuTempQ.error, diskQ.data, diskQ.error, memoryQ.data, memoryQ.error, navigate])
+	}, [cpuTemp.isHot, disk.isDiskFull, disk.isDiskLow, memory.isMemoryLow, navigate])
 
 	return null
 }

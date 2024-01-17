@@ -4,8 +4,8 @@ import {Card} from '@/components/ui/card'
 import {DebugOnly} from '@/components/ui/debug-only'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {useApps} from '@/hooks/use-apps'
-import {useMemoryForUi} from '@/hooks/use-memory-for-ui'
-import {useStorageForUi} from '@/hooks/use-storage-for-ui'
+import {useDiskForUi} from '@/hooks/use-disk'
+import {useMemoryForUi} from '@/hooks/use-memory'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {StatText} from '@/modules/widgets/shared/stat-text'
 import {Progress} from '@/shadcn-components/ui/progress'
@@ -29,7 +29,7 @@ export default function LiveUsageDialog() {
 
 function LiveUsageContent() {
 	const {allAppsKeyed} = useApps()
-	const {apps: appStorageUsages} = useStorageForUi({poll: true})
+	const {apps: appStorageUsages} = useDiskForUi({poll: true})
 	const {apps: appMemoryUsages} = useMemoryForUi({poll: true})
 
 	if (!allAppsKeyed) return null
@@ -102,7 +102,7 @@ function LiveUsageSection({title, children}: {title: string; children: React.Rea
 }
 
 function StorageCard() {
-	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useStorageForUi({poll: true})
+	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useDiskForUi({poll: true})
 
 	return (
 		<ProgressCard

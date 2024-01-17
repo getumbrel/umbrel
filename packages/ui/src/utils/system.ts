@@ -12,7 +12,8 @@ export function isDiskFull(remaining?: number) {
 	return remaining < 100000000
 }
 
-export function isCpuTooHot(cpuTemperature: number) {
+export function isCpuTooHot(cpuTemperature?: number) {
+	if (cpuTemperature === undefined) return false
 	return cpuTemperature > 80
 }
 

@@ -19,6 +19,7 @@ import {TorIcon2} from '@/assets/tor-icon2'
 import {Card, cardClass} from '@/components/ui/card'
 import {LinkButton} from '@/components/ui/link-button'
 import {UNKNOWN} from '@/constants'
+import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -36,7 +37,7 @@ export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
-	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
+	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
@@ -97,7 +98,7 @@ export function SettingsContentMobile() {
 				<StorageCard />
 				<MemoryCard />
 				<Card>
-					<TempStatCardContent tempInCelcius={cpuTempQ.data} />
+					<TempStatCardContent tempInCelcius={cpuTemp.temp} />
 				</Card>
 				<Link
 					className={cn(cardClass, 'flex flex-col justify-between')}

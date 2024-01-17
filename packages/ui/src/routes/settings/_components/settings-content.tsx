@@ -17,6 +17,7 @@ import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconLinkButton} from '@/components/ui/icon-link-button'
 import {UNKNOWN} from '@/constants'
+import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -35,16 +36,15 @@ import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
 	const navigate = useNavigate()
-	const tor = useTorEnabled()
-	const deviceInfo = useDeviceInfo()
 	const linkToDialog = useLinkToDialog()
 
-	const [userQ, uptimeQ, cpuTempQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const tor = useTorEnabled()
+	const deviceInfo = useDeviceInfo()
+	const cpuTemp = useCpuTemp()
+
+	const [userQ, uptimeQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
-		t.system.cpuTemperature(undefined, {
-			retry: false,
-		}),
 		t.migration.isUmbrelHome(),
 		t.user.is2faEnabled(),
 		t.system.version(),
@@ -111,7 +111,7 @@ export function SettingsContent() {
 					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
 					<MemoryCard />
 					<Card>
-						<TempStatCardContent tempInCelcius={cpuTempQ.data} />
+						<TempStatCardContent tempInCelcius={cpuTemp.temp} />
 					</Card>
 					<div className='mx-auto'>
 						<IconLinkButton icon={RiPulseLine} to={linkToDialog('live-usage')}>
