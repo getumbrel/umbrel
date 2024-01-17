@@ -2,6 +2,8 @@ import z from 'zod'
 
 import {router, privateProcedure} from '../trpc.js'
 
+import {type AppState} from '../../../apps/schema.js'
+
 export default router({
 	// List all apps
 	list: privateProcedure.query(async ({ctx}) => {
@@ -9,15 +11,20 @@ export default router({
 
 		// TODO: Handle errors so one bad app doesn't break the whole response
 		const appData = await Promise.all(
-			apps.map(async (app) => ({
-				id: app.id,
-				manifest: await app.readManifest(),
-				status: {
-					state: 'running',
-					progress: 1,
-				},
-				lastOpened: 1_705_477_545_462,
-			})),
+			apps.map(async (app) => {
+				const {name, icon, port} = await app.readManifest()
+				return {
+					id: app.id,
+					name,
+					icon,
+					port,
+					state: 'ready' as AppState,
+					credentials: {
+						defaultUsername: '',
+						defaultPassword: '',
+					},
+				}
+			}),
 		)
 
 		return appData
@@ -31,6 +38,19 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.install(input.appId)),
+
+	// Get state
+	// Temporarily used for polling the state of app mutations until we implement subscriptions
+	state: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+			}),
+		)
+		.query(() => ({
+			state: 'installing' as AppState,
+			progress: 0.5,
+		})),
 
 	// Uninstall an app
 	uninstall: privateProcedure
@@ -66,4 +86,6 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.trackOpen(input.appId)),
+
+	recentlyOpened: privateProcedure.query(() => []),
 })

@@ -24,6 +24,10 @@ test('install() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
 })
 
+test('state() throws invalid error when no user is registered', async () => {
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
+})
+
 test('restart() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.restart.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
 })
@@ -69,36 +73,22 @@ test('install() installs an app', async () => {
 	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 })
 
+test('state() shows app install state', async () => {
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toContain({
+		state: 'installing',
+	})
+	// TODO: Test this more extensively once we've implemented the behaviour
+})
+
 test('list() lists installed apps', async () => {
 	await expect(umbreld.client.apps.list.query()).resolves.toStrictEqual([
 		{
 			id: 'sparkles-hello-world',
-			status: {state: 'running', progress: 1},
-			lastOpened: 1_705_477_545_462,
-			manifest: {
-				manifestVersion: 1,
-				id: 'sparkles-hello-world',
-				name: 'Hello World',
-				tagline: "Replace this tagline with your app's tagline",
-				icon: 'https://svgur.com/i/mvA.svg',
-				category: 'Development',
-				version: '1.0.0',
-				port: 4000,
-				description: "Add your app's description here.\n\nYou can also add newlines!",
-				developer: 'Umbrel',
-				website: 'https://umbrel.com',
-				submitter: 'Umbrel',
-				submission: 'https://github.com/getumbrel/umbrel-hello-world-app',
-				repo: 'https://github.com/getumbrel/umbrel-hello-world-app',
-				support: 'https://github.com/getumbrel/umbrel-hello-world-app/issues',
-				gallery: [
-					'https://i.imgur.com/yyVG0Jb.jpeg',
-					'https://i.imgur.com/yyVG0Jb.jpeg',
-					'https://i.imgur.com/yyVG0Jb.jpeg',
-				],
-				releaseNotes: "Add what's new in the latest version of your app here.",
-				dependencies: [],
-				path: '',
+			name: 'Hello World',
+			icon: 'https://svgur.com/i/mvA.svg',
+			port: 4000,
+			state: 'ready',
+			credentials: {
 				defaultUsername: '',
 				defaultPassword: '',
 			},
