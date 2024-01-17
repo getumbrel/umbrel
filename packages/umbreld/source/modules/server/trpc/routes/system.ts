@@ -8,6 +8,7 @@ import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
 import {sleep} from '../../../utilities/sleep.js'
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
+import umbrelHostEnvironment from '../../../umbrel-host-environment.js'
 
 export default router({
 	uptime: privateProcedure.query(() => {
@@ -30,15 +31,12 @@ export default router({
 	}),
 	//
 	device: privateProcedure.query(async () => {
-		// This file exists in old versions of amd64 Umbrel OS builds due to the Docker build system.
-		// It confuses the systeminfo library and makes it return the model as 'Docker Container'.
-		// TODO: Remove this once we've done a full fs upgrade
-		await fse.remove('/.dockerenv')
+		const {model, serial, uuid, sku} = await systeminfo.system()
 
-		const {manufacturer, model, serial, uuid, sku} = await systeminfo.system()
+		const {platform} = await systeminfo.osInfo()
 
 		// TODO: Allow these to be overidden by env vars or cli flags
-		return {manufacturer, model, serial, uuid, sku}
+		return {umbrelHostEnvironment: await umbrelHostEnvironment(), platform, model, serial, uuid, sku}
 	}),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),

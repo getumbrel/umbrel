@@ -9,7 +9,7 @@ export function useDeviceInfo() {
 		return {isLoading: true} as const
 	}
 
-	const device = deviceInfoQ.data?.manufacturer
+	const umbrelHostEnvironment = deviceInfoQ.data?.umbrelHostEnvironment
 	const modelNumber = deviceInfoQ.data?.model
 	const serialNumber = deviceInfoQ.data?.serial
 	const osVersion = osQ.data
@@ -17,7 +17,7 @@ export function useDeviceInfo() {
 	return {
 		isLoading,
 		data: {
-			device,
+			umbrelHostEnvironment,
 			modelNumber,
 			serialNumber,
 			osVersion,

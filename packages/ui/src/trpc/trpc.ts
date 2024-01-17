@@ -3,9 +3,11 @@ import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
 
+export type {UmbrelHostEnvironment} from '../../../umbreld/source/modules/umbrel-host-environment'
+
 export type {
-	Category,
 	AppState,
+	Category,
 	AppManifest as RegistryApp,
 	UserApp,
 	Widget,
@@ -43,8 +45,3 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({links})
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
-
-//
-
-// Used to be able to get more specific than string
-export type Device = RouterOutput['system']['device']['manufacturer']

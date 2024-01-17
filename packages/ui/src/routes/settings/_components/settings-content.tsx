@@ -87,7 +87,7 @@ export function SettingsContent() {
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 							<dt className='opacity-40'>Running on</dt>
-							<dd>{deviceInfo.data.device}</dd>
+							<dd>{deviceInfo.data.umbrelHostEnvironment}</dd>
 							<dt className='opacity-40'>umbrelOS version</dt>
 							<dd>{osVersionQ.data}</dd>
 							<dt className='opacity-40'>Uptime</dt>

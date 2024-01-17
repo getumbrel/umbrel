@@ -1,18 +1,18 @@
 import {TbQuestionMark} from 'react-icons/tb'
 
 import {CopyButton} from '@/components/ui/copy-button'
-import {deviceMap, UNKNOWN} from '@/constants'
+import {hostEnvironmentMap, UNKNOWN} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
-import {Device} from '@/trpc/trpc'
+import {UmbrelHostEnvironment} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
 export function DeviceInfoContent({
-	device,
+	umbrelHostEnvironment,
 	osVersion,
 	modelNumber,
 	serialNumber,
 }: {
-	device?: Device
+	umbrelHostEnvironment?: UmbrelHostEnvironment
 	osVersion?: string
 	modelNumber?: string
 	serialNumber?: string
@@ -20,12 +20,12 @@ export function DeviceInfoContent({
 	return (
 		<div className='space-y-6'>
 			<div className='flex justify-center py-2'>
-				<DeviceIcon device={device} />
+				<HostEnvironmentIcon environment={umbrelHostEnvironment} />
 			</div>
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>Device</span>
-					<span className='pr-6 font-normal'>{device || UNKNOWN()}</span>
+					<span className='pr-6 font-normal'>{umbrelHostEnvironment || UNKNOWN()}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>
@@ -55,15 +55,15 @@ const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white
 const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`
 const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
 
-export const DeviceIcon = ({device}: {device?: Device}) => {
-	switch (device) {
+export const HostEnvironmentIcon = ({environment}: {environment?: UmbrelHostEnvironment}) => {
+	switch (environment) {
 		case 'umbrel-home':
-			return <img src={deviceMap[device].icon} width={128} height={128} />
+			return <img src={hostEnvironmentMap[environment].icon} width={128} height={128} />
 		case 'raspberry-pi':
 		case 'linux':
 			return (
 				<IconContainer>
-					<img src={deviceMap[device].icon} width={64} height={64} />
+					<img src={hostEnvironmentMap[environment].icon} width={64} height={64} />
 				</IconContainer>
 			)
 		default:

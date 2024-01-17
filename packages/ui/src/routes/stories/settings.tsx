@@ -4,7 +4,7 @@ import {Card} from '@/components/ui/card'
 import {H2, H3} from '@/layouts/stories'
 import {Separator} from '@/shadcn-components/ui/separator'
 
-import {DeviceIcon, DeviceInfoContent} from '../settings/_components/device-info-content'
+import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
 import {TempStatCardContent} from '../settings/_components/temp-stat-card-content'
 
 export default function SettingsStory() {
@@ -12,13 +12,18 @@ export default function SettingsStory() {
 		<div className='flex flex-col flex-wrap items-start gap-8 bg-white/10 p-8'>
 			<H3>Device Icons</H3>
 			<div className='flex gap-4'>
-				<DeviceIcon device='umbrel-home' />
-				<DeviceIcon device='raspberry-pi' />
-				<DeviceIcon device='linux' />
-				<DeviceIcon />
+				<HostEnvironmentIcon environment='umbrel-home' />
+				<HostEnvironmentIcon environment='raspberry-pi' />
+				<HostEnvironmentIcon environment='linux' />
+				<HostEnvironmentIcon />
 			</div>
 			<div className='bg-red-500/10'>
-				<DeviceInfoContent device='umbrel-home' osVersion='v0.4.0' modelNumber='U130121' serialNumber='U230300078' />
+				<DeviceInfoContent
+					umbrelHostEnvironment='umbrel-home'
+					osVersion='v0.4.0'
+					modelNumber='U130121'
+					serialNumber='U230300078'
+				/>
 			</div>
 			<div className='bg-red-500/10'>
 				<DeviceInfoContent />
