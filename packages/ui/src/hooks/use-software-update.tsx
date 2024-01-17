@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useCallback, useState} from 'react'
 
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
@@ -15,7 +15,7 @@ export function useSoftwareUpdate() {
 
 	const currentVersion = osVersionQ.data ?? 'Unknown'
 
-	const checkLatest = async () => {
+	const checkLatest = useCallback(async () => {
 		setState('checking')
 		try {
 			const latestVersion = await ctx.system.latestAvailableVersion.fetch()
@@ -32,16 +32,16 @@ export function useSoftwareUpdate() {
 			setState('initial')
 			toast.error('Failed to check for updates')
 		}
-	}
+	}, [ctx.system.latestAvailableVersion, currentVersion])
 
-	const upgrade = async () => {
+	const upgrade = useCallback(async () => {
 		setState('upgrading')
 		await sleep(1000)
 		// TODO: actually upgrade
 		setState('at-latest')
 		toast.success(`Successfully upgraded to umbrelOS ${latestVersion}`)
 		// toast.error('Failed to upgrade')
-	}
+	}, [latestVersion])
 
 	return {
 		state,
