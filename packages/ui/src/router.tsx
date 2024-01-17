@@ -1,7 +1,6 @@
 import React, {Suspense} from 'react'
 import {createBrowserRouter} from 'react-router-dom'
 
-import {Notifications} from './components/notifications'
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {AppsProvider} from './hooks/use-apps'
 import {AvailableAppsProvider} from './hooks/use-available-apps'
@@ -69,7 +68,6 @@ export const router = createBrowserRouter([
 		path: '/',
 		element: (
 			<EnsureLoggedIn>
-				<Notifications />
 				<AvailableAppsProvider>
 					<AppsProvider>
 						<Desktop />
