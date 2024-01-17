@@ -2,7 +2,7 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 
 import type Umbreld from '../../index.js'
-import {type AppRepositoryMeta, type AppManifest} from './schema.js'
+import {type AppManifest} from './schema.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
@@ -23,6 +23,10 @@ export default class App {
 		this.dataDirectory = `${umbreld.dataDirectory}/app-data/${this.id}`
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+	}
+
+	readManifest() {
+		return readYaml(`${this.dataDirectory}/umbrel-app.yml`) as Promise<AppManifest>
 	}
 
 	async start() {

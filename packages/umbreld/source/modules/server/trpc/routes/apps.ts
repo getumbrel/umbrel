@@ -4,7 +4,24 @@ import {router, privateProcedure} from '../trpc.js'
 
 export default router({
 	// List all apps
-	list: privateProcedure.query(async ({ctx}) => ctx.apps.getApps()),
+	list: privateProcedure.query(async ({ctx}) => {
+		const apps = await ctx.apps.getApps()
+
+		// TODO: Handle errors so one bad app doesn't break the whole response
+		const appData = await Promise.all(
+			apps.map(async (app) => ({
+				id: app.id,
+				manifest: await app.readManifest(),
+				status: {
+					state: 'running',
+					progress: 1,
+				},
+				lastOpened: 1_705_477_545_462,
+			})),
+		)
+
+		return appData
+	}),
 
 	// Install an app
 	install: privateProcedure

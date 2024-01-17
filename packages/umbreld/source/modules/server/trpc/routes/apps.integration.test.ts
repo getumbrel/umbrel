@@ -70,9 +70,40 @@ test('install() installs an app', async () => {
 })
 
 test('list() lists installed apps', async () => {
-	const installedApps = await umbreld.client.apps.list.query()
-	expect(installedApps.length).toStrictEqual(1)
-	expect(installedApps[0].id).toStrictEqual('sparkles-hello-world')
+	await expect(umbreld.client.apps.list.query()).resolves.toStrictEqual([
+		{
+			id: 'sparkles-hello-world',
+			status: {state: 'running', progress: 1},
+			lastOpened: 1_705_477_545_462,
+			manifest: {
+				manifestVersion: 1,
+				id: 'sparkles-hello-world',
+				name: 'Hello World',
+				tagline: "Replace this tagline with your app's tagline",
+				icon: 'https://svgur.com/i/mvA.svg',
+				category: 'Development',
+				version: '1.0.0',
+				port: 4000,
+				description: "Add your app's description here.\n\nYou can also add newlines!",
+				developer: 'Umbrel',
+				website: 'https://umbrel.com',
+				submitter: 'Umbrel',
+				submission: 'https://github.com/getumbrel/umbrel-hello-world-app',
+				repo: 'https://github.com/getumbrel/umbrel-hello-world-app',
+				support: 'https://github.com/getumbrel/umbrel-hello-world-app/issues',
+				gallery: [
+					'https://i.imgur.com/yyVG0Jb.jpeg',
+					'https://i.imgur.com/yyVG0Jb.jpeg',
+					'https://i.imgur.com/yyVG0Jb.jpeg',
+				],
+				releaseNotes: "Add what's new in the latest version of your app here.",
+				dependencies: [],
+				path: '',
+				defaultUsername: '',
+				defaultPassword: '',
+			},
+		},
+	])
 })
 
 test('restart() restarts an installed app', async () => {
