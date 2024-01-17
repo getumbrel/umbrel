@@ -35,8 +35,8 @@ describe('getDiskUsage', () => {
 	test('should return disk usage', async () => {
 		const result = await router.diskUsage()
 		expect(result.size).toBeTypeOf('number')
-		expect(result.used).toBeTypeOf('number')
-		expect(result.available).toBeTypeOf('number')
+		expect(result.totalUsed).toBeTypeOf('number')
+		expect(result.downloads).toBeTypeOf('number')
 	})
 
 	test('should be behind authentication', async () => {
@@ -48,8 +48,7 @@ describe('memoryUsage', () => {
 	test('should return memory usage', async () => {
 		const result = await router.memoryUsage()
 		expect(result.size).toBeTypeOf('number')
-		expect(result.used).toBeTypeOf('number')
-		expect(result.available).toBeTypeOf('number')
+		expect(result.totalUsed).toBeTypeOf('number')
 	})
 
 	test('should be behind authentication', async () => {

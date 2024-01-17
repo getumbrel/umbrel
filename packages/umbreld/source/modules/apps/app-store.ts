@@ -68,8 +68,8 @@ export default class AppStore {
 		)
 		const registry = await Promise.all(registryPromises)
 
-		// Remove failed reads
-		return registry.filter(Boolean)
+		// Remove failed reads and fix type definition to not be maybe null
+		return registry.filter(Boolean) as Array<Awaited<ReturnType<typeof AppRepository.prototype.readRegistry>>>
 	}
 
 	async addRepository(url: string) {
@@ -118,5 +118,28 @@ export default class AppStore {
 
 		this.logger.log(`Removed repository: ${url}`)
 		return true
+	}
+
+	async getAppTemplateFilePath(appId: string) {
+		// Throw on invalid appId
+		if (!/^[a-zA-Z0-9-_]+$/.test(appId)) throw new Error(`Invalid app ID: ${appId}`)
+
+		const registry = await this.registry()
+
+		// Find the app in the registry
+		for (const repo of registry) {
+			const app = repo.apps.find((app) => app.id === appId)
+			if (app) {
+				// Find the repository path
+				const repositories = await this.getRepositories()
+				const repoPath = repositories.find((repository) => repository.url === repo.url)!.path
+
+				if (!repoPath) throw new Error(`Repository path not found for ${repo.url}`)
+
+				return `${repoPath}/${appId}`
+			}
+		}
+
+		throw new Error(`App with ID ${appId} not found in any repository`)
 	}
 }

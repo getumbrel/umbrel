@@ -1,9 +1,14 @@
-import {expect, afterAll, test} from 'vitest'
+import {expect, beforeAll, afterAll, test} from 'vitest'
 
 import createTestUmbreld from '../../../test-utilities/create-test-umbreld.js'
 import runGitServer from '../../../test-utilities/run-git-server.js'
 
-const [umbreld, communityAppStoreGitServer] = await Promise.all([createTestUmbreld(), runGitServer()])
+let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
+let communityAppStoreGitServer: Awaited<ReturnType<typeof runGitServer>>
+
+beforeAll(async () => {
+	;[umbreld, communityAppStoreGitServer] = await Promise.all([createTestUmbreld(), runGitServer()])
+})
 
 afterAll(async () => {
 	await Promise.all([communityAppStoreGitServer.close(), umbreld.cleanup()])

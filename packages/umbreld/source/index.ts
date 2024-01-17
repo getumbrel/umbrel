@@ -10,11 +10,13 @@ import FileStore from './modules/utilities/file-store.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
+import Apps from './modules/apps/apps.js'
 import type {Widget, YamlApp} from './modules/apps/schema.js'
 import UserApps from './modules/user-apps.js'
 
 type StoreSchema = {
 	version: string
+	apps: string[]
 	appRepositories: string[]
 	user: {
 		name: string
@@ -46,6 +48,7 @@ export default class Umbreld {
 	user: User
 	userApps: UserApps
 	appStore: AppStore
+	apps: Apps
 
 	constructor({
 		dataDirectory,
@@ -62,6 +65,7 @@ export default class Umbreld {
 		this.user = new User(this)
 		this.userApps = new UserApps(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
+		this.apps = new Apps(this)
 	}
 
 	async start() {
@@ -79,6 +83,6 @@ export default class Umbreld {
 		await this.store.set('version', this.version)
 
 		// Initialise modules
-		await Promise.all([this.appStore.start(), this.server.start()])
+		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
 	}
 }
