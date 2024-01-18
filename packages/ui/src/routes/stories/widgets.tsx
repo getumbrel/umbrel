@@ -38,6 +38,10 @@ export default function WidgetsStory() {
 	// 	return null
 	// }
 
+	const handleClick = () => {
+		alert('clicked')
+	}
+
 	return (
 		<AppsProvider>
 			<div className='bg-white/30'>
@@ -58,14 +62,14 @@ export default function WidgetsStory() {
 				<div className={sectionClass}>
 					<StatWithButtonsWidget />
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
 						buttons={[{icon: 'send', title: 'Send', link: '/send'}]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
@@ -75,7 +79,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
@@ -86,7 +90,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
 						value='Lorem'
 						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
@@ -99,7 +103,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
 						value='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
@@ -122,7 +126,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
@@ -202,7 +206,7 @@ export default function WidgetsStory() {
 							{title: 'Storage', value: '256', valueSub: 'GB'},
 						]}
 					/>
-					<FourUpWidget link='/settings' items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
+					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
 				</div>
 				<H2>actions</H2>
 				<div className={sectionClass}>
@@ -253,7 +257,7 @@ export default function WidgetsStory() {
 				<div className={sectionClass}>
 					<NotificationsWidget />
 					<NotificationsWidget
-						link=''
+						onClick={handleClick}
 						notifications={[
 							{
 								timestamp: 1620000000000,
@@ -266,7 +270,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<NotificationsWidget
-						link=''
+						onClick={handleClick}
 						notifications={[
 							{
 								timestamp: 1620000000000,

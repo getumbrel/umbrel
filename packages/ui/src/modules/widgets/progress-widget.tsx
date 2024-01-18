@@ -4,22 +4,22 @@ import {WidgetContainer, widgetTextCva} from './shared/shared'
 import {StatText} from './shared/stat-text'
 
 export function ProgressWidget({
-	href,
 	title,
 	value,
 	valueSub,
 	progressLabel,
 	progress = 0,
+	onClick,
 }: {
-	href?: string
 	title?: string
 	value?: string
 	valueSub?: string
 	progressLabel?: string
 	progress?: number
+	onClick?: () => void
 }) {
 	return (
-		<WidgetContainer href={href} target='_blank' className='p-2 md:p-5'>
+		<WidgetContainer className='p-2 md:p-5' onClick={onClick}>
 			<StatText title={title} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
 			{/* TODO: use shadcn progress component */}

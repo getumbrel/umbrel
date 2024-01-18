@@ -80,11 +80,12 @@ export type YamlApp = Pick<AppManifest, 'id'> & {
  * Usually pull stuff from app repository for names, etc
  */
 export type UserApp = YamlApp &
-	Pick<AppManifest, 'name' | 'icon' | 'port' | 'version'> & {
+	Pick<AppManifest, 'name' | 'icon' | 'port' | 'path' | 'version' | 'torOnly'> & {
 		credentials: {
 			defaultUsername: string
 			defaultPassword: string
 		}
+		hiddenService?: string
 		// ---
 		state: AppState
 		// TODO: if state is installing, this should be 0-100, otherwise undefined

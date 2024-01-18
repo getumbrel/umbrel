@@ -1,19 +1,17 @@
 import {ReactNode} from 'react'
 import {take} from 'remeda'
-import urlJoin from 'url-join'
 
 import {WidgetContainer} from './shared/shared'
 import {StatText} from './shared/stat-text'
 import {TablerIcon} from './shared/tabler-icon'
 
 export function StatWithButtonsWidget({
-	appUrl,
 	title,
 	value,
 	valueSub,
 	buttons,
+	onClick,
 }: {
-	appUrl?: string
 	title?: string
 	value?: string
 	valueSub?: string
@@ -22,6 +20,7 @@ export function StatWithButtonsWidget({
 		title: string
 		link: string
 	}[]
+	onClick?: (link: string) => void
 }) {
 	return (
 		<WidgetContainer className='gap-0 p-2 md:p-5'>
@@ -31,24 +30,23 @@ export function StatWithButtonsWidget({
 				{buttons &&
 					take(buttons, 3).map((button) => (
 						// Not using endpoint for `key` in case user wants two buttons to link to the same endpoint for some reason
-						<WidgetButtonLink key={button.title} href={urlJoin(appUrl || '', button.link)}>
+						<WidgetButton key={button.title} onClick={() => onClick?.(button.link)}>
 							<TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />
 							<span className='truncate'>{button.title}</span>
-						</WidgetButtonLink>
+						</WidgetButton>
 					))}
 			</div>
 		</WidgetContainer>
 	)
 }
 
-function WidgetButtonLink({href, children}: {href: string; children: ReactNode}) {
+function WidgetButton({onClick, children}: {onClick: () => void; children: ReactNode}) {
 	return (
-		<a
-			href={href}
-			target='_blank'
+		<button
+			onClick={onClick}
 			className='flex h-[24px] min-w-0 flex-1 cursor-pointer select-none items-center justify-center rounded-5 bg-white/5 px-2.5 text-12 font-medium transition-colors hover:bg-white/10 active:bg-white/5 md:h-[30px] md:rounded-full'
 		>
 			{children}
-		</a>
+		</button>
 	)
 }

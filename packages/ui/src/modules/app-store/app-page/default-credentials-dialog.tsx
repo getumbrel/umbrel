@@ -3,6 +3,7 @@ import {useId} from 'react'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useUserApp} from '@/hooks/use-apps'
+import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
@@ -18,8 +19,6 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 import {tw} from '@/utils/tw'
 
 export function DefaultCredentialsDialog() {
@@ -29,7 +28,7 @@ export function DefaultCredentialsDialog() {
 	const appId = params.params.get('default-credentials-for')
 	const direct = params.params.get('default-credentials-direct') === 'true'
 
-	// const {app} = useAvailableApp(appId)
+	const launchApp = useLaunchApp()
 
 	const title = 'Default Credentials'
 
@@ -44,12 +43,6 @@ export function DefaultCredentialsDialog() {
 	const defaultUsername = app.credentials.defaultUsername
 	const defaultPassword = app.credentials.defaultPassword
 
-	const launchApp = () => {
-		trackAppOpen(app.id)
-		dialogProps.onOpenChange(false)
-		window.open(portToUrl(app.port))
-	}
-
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
@@ -61,7 +54,7 @@ export function DefaultCredentialsDialog() {
 							<DialogTitle className='flex flex-row items-center justify-between'>
 								Credentials for {appName}
 							</DialogTitle>
-							<DialogDescription>Here are credentials you’ll need to access the app once installed.</DialogDescription>
+							<DialogDescription>Here are credentials you’ll need to access the app.</DialogDescription>
 						</DialogHeader>
 						<Separator />
 						<div>
@@ -77,7 +70,12 @@ export function DefaultCredentialsDialog() {
 						<div className='flex items-center justify-between'>
 							{direct && <ShowCredentialsBeforeOpenCheckbox appId={appId} />}
 							{direct ? (
-								<Button variant='primary' size='dialog' className='w-auto' onClick={launchApp}>
+								<Button
+									variant='primary'
+									size='dialog'
+									className='w-auto'
+									onClick={() => launchApp(appId, {direct: true})}
+								>
 									Launch app
 								</Button>
 							) : (

@@ -1,6 +1,7 @@
 import {indexBy} from 'remeda'
+import urlJoin from 'url-join'
 
-import {AppState} from '@/trpc/trpc'
+import {AppState, UserApp} from '@/trpc/trpc'
 
 export function fixmeAlert() {
 	alert('fixme')
@@ -24,8 +25,16 @@ export function keyBy<T, U extends keyof T>(array: ReadonlyArray<T>, key: U): Re
 	return indexBy(array, (el) => el[key])
 }
 
-export function portToUrl(port: number) {
-	return `${location.protocol}//${location.hostname}:${port}`
+export function appToUrl(app: UserApp) {
+	const baseUrl = app.torOnly
+		? `${location.protocol}//${app.hiddenService}:${app.port}`
+		: `${location.protocol}//${location.hostname}:${app.port}`
+
+	return urlJoin(baseUrl, app.path ?? '')
+}
+
+export function isOnionPage() {
+	return window.location.origin.indexOf('.onion') !== -1
 }
 
 export function preloadImage(url: string) {

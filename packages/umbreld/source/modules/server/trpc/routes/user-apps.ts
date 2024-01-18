@@ -37,7 +37,7 @@ export default router({
 			const userApp: UserApp = {
 				...app,
 				// TODO: don't assume registry never removes apps: `registryAppsKeyed[app.id]!`
-				...pick(registryAppsKeyed[app.id]!, ['name', 'icon', 'port', 'version']),
+				...pick(registryAppsKeyed[app.id]!, ['name', 'icon', 'port', 'path', 'version', 'torOnly']),
 				version: '0.1',
 				...appStatuses[app.id],
 				...pick(demoStoreApp, ['showNotifications', 'autoUpdate', 'showCredentialsBeforeOpen']),
@@ -45,6 +45,7 @@ export default router({
 					defaultUsername: 'sdfsdf',
 					defaultPassword: 'sdfsdf',
 				},
+				hiddenService: 'sdfsdf',
 			}
 			return userApp
 		})

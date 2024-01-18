@@ -5,12 +5,17 @@ import {TablerIcon} from './shared/tabler-icon'
 
 type ThreeUpItem = {icon: string; title?: string; value?: string}
 
-export function ThreeUpWidget({link, items}: {link?: string; items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]}) {
+export function ThreeUpWidget({
+	items,
+	onClick,
+}: {
+	items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
+	onClick?: () => void
+}) {
 	return (
 		<WidgetContainer
-			href={link}
-			target='_blank'
-			className='flex flex-col justify-stretch gap-1.5 p-1.5 md:flex-row md:gap-2 md:px-4 md:py-3'
+			onClick={onClick}
+			className='flex flex-col items-stretch justify-stretch gap-1.5 p-1.5 md:flex-row md:gap-2 md:px-4 md:py-3'
 		>
 			{items?.[0] && <ThreeUpItem iconName={items[0].icon} title={items[0].title} value={items[0].value} />}
 			{items?.[1] && <ThreeUpItem iconName={items[1].icon} title={items[1].title} value={items[1].value} />}

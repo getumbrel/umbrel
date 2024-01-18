@@ -7,7 +7,7 @@ import {tw} from '@/utils/tw'
 import {BackdropBlurVariantContext} from './backdrop-blur-context'
 
 export const widgetContainerCva = cva(
-	tw`bg-neutral-800/60 rounded-12 md:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default`,
+	tw`bg-neutral-800/60 rounded-12 md:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
 	// ^-- Using `tw` to force vscode to recognize the tailwind classes
 	{
 		variants: {
@@ -33,19 +33,19 @@ export const widgetTextCva = cva('text-11 md:text-13 leading-snug font-semibold 
 	},
 })
 
-type WidgetContainerLinkProps = React.ComponentPropsWithoutRef<'a'>
+type WidgetContainerButtonProps = React.ComponentPropsWithoutRef<'button'>
 type WidgetContainerDivProps = React.ComponentPropsWithoutRef<'div'>
-type WidgetContainerProps = WidgetContainerLinkProps | WidgetContainerDivProps
+type WidgetContainerProps = WidgetContainerButtonProps | WidgetContainerDivProps
 
-/** Make the widget an anchor if we pass a `href` */
+/** Make the widget a button if we pass an `onClick` */
 export const WidgetContainer: React.FC<WidgetContainerProps> = ({className, ...props}) => {
 	const variant = useContext(BackdropBlurVariantContext)
 
 	// Forcing the correct types for `props`
-	// Only allow `href` to do something if it's truthy
-	if ('href' in props && props.href) {
-		const p = props as WidgetContainerLinkProps
-		return <a className={cn(widgetContainerCva({variant}), 'cursor-pointer', className)} {...p} />
+	// Only allow `onClick` to do something if it's truthy
+	if ('onClick' in props) {
+		const p = props as WidgetContainerButtonProps
+		return <button className={cn(widgetContainerCva({variant}), 'cursor-pointer', className)} {...p} />
 	} else {
 		const p = props as WidgetContainerDivProps
 		return <div className={cn(widgetContainerCva({variant}), className)} {...p} />

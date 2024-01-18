@@ -3,14 +3,14 @@ import {format} from 'date-fns'
 import {WidgetContainer} from './shared/shared'
 
 export function NotificationsWidget({
-	link,
 	notifications,
+	onClick,
 }: {
-	link?: string
 	notifications?: {timestamp: number; description: string}[]
+	onClick?: () => void
 }) {
 	return (
-		<WidgetContainer href={link} target='_blank' className='cursor-pointer p-2 md:p-4'>
+		<WidgetContainer onClick={onClick} className='cursor-pointer p-2 md:p-4'>
 			<div
 				className='flex h-full flex-col gap-2 max-sm:gap-0'
 				style={{

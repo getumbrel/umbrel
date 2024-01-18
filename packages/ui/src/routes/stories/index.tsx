@@ -82,7 +82,6 @@ import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {fixmeHandler} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 import {tw} from '@/utils/tw'
 
 export default function Stories() {
@@ -381,7 +380,7 @@ function ProgressButton() {
 				progress={progress}
 				state={state}
 				onInstallClick={install}
-				onOpenClick={() => trackAppOpen('foobar')}
+				onOpenClick={() => alert('foobar')}
 			/>
 		</div>
 	)

@@ -5,14 +5,10 @@ import {useNavigate} from 'react-router-dom'
 import {useTimeout} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
-import {InstallButton} from '@/components/install-button'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {SHEET_HEADER_ID} from '@/constants'
-import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {RegistryApp} from '@/trpc/trpc'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
 	// Make sure header portal is mounted before showing it (render on the next tick)
@@ -71,29 +67,5 @@ function BackButton() {
 		<button onClick={() => navigate(-1)}>
 			<TbArrowLeft className='h-5 w-5' />
 		</button>
-	)
-}
-
-export const TopHeaderWithDummyInstall = ({app}: {app: RegistryApp}) => {
-	const {progress, state, install} = useDemoInstallProgress()
-
-	return (
-		<TopHeader
-			app={app}
-			childrenRight={
-				<div className='flex items-center gap-5'>
-					<InstallButton
-						installSize='XGB'
-						progress={progress}
-						state={state}
-						onInstallClick={install}
-						onOpenClick={() => {
-							trackAppOpen(app.id)
-							window.open(portToUrl(app.port), '_blank')?.focus()
-						}}
-					/>
-				</div>
-			}
-		/>
 	)
 }

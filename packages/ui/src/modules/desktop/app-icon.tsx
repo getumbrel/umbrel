@@ -1,17 +1,15 @@
 import {motion} from 'framer-motion'
 import {useState} from 'react'
-import {Link, useNavigate} from 'react-router-dom'
+import {Link} from 'react-router-dom'
 
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useUserApp} from '@/hooks/use-apps'
-import {useQueryParams} from '@/hooks/use-query-params'
+import {useLaunchApp} from '@/hooks/use-launch-app'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
@@ -99,14 +97,12 @@ export function AppIcon({
 }
 
 export function AppIconConnected({appId}: {appId: string}) {
-	const {addLinkSearchParams} = useQueryParams()
 	const userApp = useUserApp(appId)
 	const appInstall = useAppInstall(appId)
 	const [openDepsDialog, setOpenDepsDialog] = useState(false)
 	const [toUninstallFirstIds, setToUninstallFirstIds] = useState<string[]>([])
 	const [showUninstallDialog, setShowUninstallDialog] = useState(false)
-
-	const navigate = useNavigate()
+	const launchApp = useLaunchApp()
 	const linkToDialog = useLinkToDialog()
 
 	const uninstall = async () => {
@@ -141,35 +137,23 @@ export function AppIconConnected({appId}: {appId: string}) {
 		case 'installing':
 			return <AppIcon label={userApp.app.name} src={userApp.app.icon} state='installing' />
 		case 'ready': {
-			const showCredentials = userApp.app?.showCredentialsBeforeOpen ?? false
-
-			const port = userApp.app.port
-			const handleClick = () => {
-				trackAppOpen(appId)
-				if (showCredentials) {
-					navigate(linkToDialog('default-credentials', {for: appId, direct: 'true'}))
-				} else {
-					window.open(portToUrl(port), '_blank')
-				}
-			}
-
-			// If app is installed, show context menu
 			return (
 				<>
 					<ContextMenu>
 						<ContextMenuTrigger className='group'>
-							<AppIcon label={userApp.app.name} src={userApp.app.icon} onClick={handleClick} state={appInstall.state} />
+							<AppIcon
+								label={userApp.app.name}
+								src={userApp.app.icon}
+								onClick={() => launchApp(appId)}
+								state={appInstall.state}
+							/>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
 							<ContextMenuItem asChild>
 								<Link to={`/app-store/${appId}`}>Go to store page</Link>
 							</ContextMenuItem>
 							<ContextMenuItem asChild>
-								<Link
-									to={{search: addLinkSearchParams({dialog: 'default-credentials', 'default-credentials-for': appId})}}
-								>
-									Show default credentials
-								</Link>
+								<Link to={linkToDialog('default-credentials', {for: appId})}>Show default credentials</Link>
 							</ContextMenuItem>
 							<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
 							<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>

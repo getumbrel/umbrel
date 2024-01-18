@@ -4,12 +4,11 @@ import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
 import {systemAppsKeyed, useApps} from '@/hooks/use-apps'
+import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 import {AppIcon} from './app-icon'
 
@@ -19,6 +18,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const {userApps, isLoading} = useApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
+	const launchApp = useLaunchApp()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -75,8 +75,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						icon={app.icon}
 						key={app.id}
 						onSelect={() => {
-							trackAppOpen(app.id)
-							window.open(portToUrl(app.port), '_blank')?.focus()
+							launchApp(app.id)
 							setOpen(false)
 						}}
 					>
@@ -187,19 +186,16 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 }
 
 function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; name: string; port: number}) {
+	const launchApp = useLaunchApp()
 	return (
 		<button
 			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
-			onClick={() => {
-				trackAppOpen(appId)
-				window.open(portToUrl(port), '_blank')?.focus()
-			}}
+			onClick={() => launchApp(appId)}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
 					// Prevent triggering first selected cmdk item
 					e.preventDefault()
-					trackAppOpen(appId)
-					window.open(portToUrl(port), '_blank')?.focus()
+					launchApp(appId)
 				}
 			}}
 		>
