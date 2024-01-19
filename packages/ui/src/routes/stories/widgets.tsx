@@ -51,18 +51,46 @@ export default function WidgetsStory() {
 				<div className={sectionClass}>
 					<Widget appId='example' config={{type: 'stat-with-progress', endpoint: '/widgets/example/four-up.json'}} />
 				</div>
-				<H2>Blank</H2>
+				{/* <H2>Blank</H2>
 				<div className={sectionClass}>
-					<ProgressWidget />
-					<StatWithButtonsWidget />
-					<ThreeUpWidget />
-					<FourUpWidget />
-					<ActionsWidget />
-					<NotificationsWidget />
-				</div>
-				<H2>stat-with-buttons</H2>
+					<WidgetWrapper label='stat-with-progress'>
+						<ProgressWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='stat-with-buttons'>
+						<StatWithButtonsWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='three-up'>
+						<ThreeUpWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='four-up'>
+						<FourUpWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='actions'>
+						<ActionsWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='notifications'>
+						<NotificationsWidget />
+					</WidgetWrapper>
+				</div> */}
+				<H2>Widget Types</H2>
+				<H3>stat-with-buttons</H3>
 				<div className={sectionClass}>
 					<StatWithButtonsWidget />
+					<StatWithButtonsWidget
+						onClick={handleClick}
+						title='Bitcoin Wallet'
+						value='1,845,893'
+						valueSub='sats'
+						// @ts-expect-error expecting title
+						buttons={[{link: '/send'}]}
+					/>
+					<StatWithButtonsWidget
+						onClick={handleClick}
+						title='Bitcoin Wallet'
+						value='1,845,893'
+						valueSub='sats'
+						buttons={[{title: 'Send', link: '/send'}]}
+					/>
 					<StatWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
@@ -111,12 +139,12 @@ export default function WidgetsStory() {
 						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						buttons={[
 							{
-								icon: 'send',
+								// icon: 'send',
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/send',
 							},
 							{
-								icon: 'inbox',
+								// icon: 'inbox',
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/receive',
 							},
@@ -127,20 +155,8 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<StatWithButtonsWidget
-						onClick={handleClick}
-						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
-						buttons={[
-							{icon: 'send', title: 'Send', link: '/send'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-						]}
-					/>
 				</div>
-				<H2>stat-with-progress</H2>
+				<H3>stat-with-progress</H3>
 				<div className={sectionClass}>
 					<ProgressWidget />
 					<ProgressWidget
@@ -151,7 +167,7 @@ export default function WidgetsStory() {
 						progress={0.25}
 					/>
 				</div>
-				<H2>two-up-stat-with-progress</H2>
+				<H3>two-up-stat-with-progress</H3>
 				<div className={sectionClass}>
 					<TwoUpWidget />
 					<TwoUpWidget
@@ -235,7 +251,7 @@ export default function WidgetsStory() {
 					<Arc strokeWidth={5} size={65} progress={0.75} />
 					<Arc strokeWidth={5} size={65} progress={1} />
 				</div>
-				<H2>three-up</H2>
+				<H3>three-up</H3>
 				<div className={sectionClass}>
 					<ThreeUpWidget />
 					<ThreeUpWidget
@@ -281,7 +297,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H2>four-up</H2>
+				<H3>four-up</H3>
 				<div className={sectionClass}>
 					<FourUpWidget />
 					<FourUpWidget
@@ -294,7 +310,7 @@ export default function WidgetsStory() {
 					/>
 					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
 				</div>
-				<H2>actions</H2>
+				<H3>actions</H3>
 				<div className={sectionClass}>
 					<ActionsWidget />
 					<ActionsWidget count={1} actions={[{emoji: '😍', title: 'Message heartted'}]} />
@@ -339,7 +355,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H2>notifications</H2>
+				<H3>notifications</H3>
 				<div className={sectionClass}>
 					<NotificationsWidget />
 					<NotificationsWidget
@@ -366,6 +382,11 @@ export default function WidgetsStory() {
 					/>
 				</div>
 				{/* ------------------------------------ */}
+				<H2>With widget wrapper</H2>
+				<WidgetWrapper label='fooo'>
+					<ActionsWidget />
+				</WidgetWrapper>
+				{/* ------------------------------------ */}
 				<H2>Connected</H2>
 				<H3>settings</H3>
 				<div className='flex flex-wrap gap-2'>
@@ -387,9 +408,14 @@ export default function WidgetsStory() {
 						</div>
 					</>
 				))}
-				<H2>With widget wrapper</H2>
-				<WidgetWrapper label='fooo'>
-					<ActionsWidget />
+				<WidgetWrapper label={'two-up-stat-with-progress'}>
+					<Widget
+						appId='settings'
+						config={{
+							type: 'two-up-stat-with-progress',
+							endpoint: '/widgets/example/two-up-example.json',
+						}}
+					/>
 				</WidgetWrapper>
 			</div>
 		</AppsProvider>
