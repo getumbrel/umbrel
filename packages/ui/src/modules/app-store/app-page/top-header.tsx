@@ -1,25 +1,31 @@
 import {ReactNode} from 'react'
-import {TbArrowLeft} from 'react-icons/tb'
+import {TbArrowLeft, TbCircleArrowLeftFilled} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {SheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {Badge} from '@/shadcn-components/ui/badge'
+import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
+import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
+	const isMobile = useIsMobile()
 	return (
 		<>
-			<SheetStickyHeader className='flex h-full w-full items-center gap-2.5'>
-				<BackButton />
-				<div className='flex flex-1 items-center gap-2.5'>
-					<AppIcon src={app.icon} className='w-[32px] rounded-8' />
-					<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
-				</div>
-				{childrenRight}
-				<DialogCloseButton />
-			</SheetStickyHeader>
+			{!isMobile && (
+				<SheetStickyHeader className='flex h-full w-full items-center gap-2.5'>
+					<BackButton />
+					<div className='flex flex-1 items-center gap-2.5'>
+						<AppIcon src={app.icon} className='w-[32px] rounded-8' />
+						<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
+					</div>
+					{childrenRight}
+					<DialogCloseButton />
+				</SheetStickyHeader>
+			)}
 			<div className='space-y-5'>
 				{/*
 				Tricky to get good behavior for this:
@@ -51,6 +57,15 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 
 function BackButton() {
 	const navigate = useNavigate()
+	const isMobile = useIsMobile()
+
+	if (isMobile) {
+		return (
+			<button className={cn(dialogHeaderCircleButtonClass, 'absolute left-2.5 top-2.5 z-50')}>
+				<TbCircleArrowLeftFilled className='h-5 w-5' />
+			</button>
+		)
+	}
 
 	return (
 		<button onClick={() => navigate(-1)}>
