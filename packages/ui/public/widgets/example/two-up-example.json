@@ -1,0 +1,17 @@
+{
+	"type": "two-up-stat-with-progress",
+	"items": [
+		{
+			"title": "Memory",
+			"value": "12.3",
+			"valueSub": "GB",
+			"progress": 0.5
+		},
+		{
+			"title": "CPU",
+			"value": "12.3",
+			"valueSub": "%",
+			"progress": 0.5
+		}
+	]
+}

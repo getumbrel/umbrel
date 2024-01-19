@@ -17,7 +17,15 @@ export type AppRepositoryMeta = {
 export type Category = typeof categories[number]
 
 export const widgetSchema = z.object({
-	type: z.enum(['stat-with-progress', 'stat-with-buttons', 'three-up', 'four-up', 'actions', 'notifications']),
+	type: z.enum([
+		'stat-with-buttons',
+		'stat-with-progress',
+		'two-up-stat-with-progress',
+		'three-up',
+		'four-up',
+		'actions',
+		'notifications',
+	]),
 	endpoint: z.string(),
 })
 

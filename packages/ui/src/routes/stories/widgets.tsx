@@ -1,5 +1,6 @@
 import {useLayoutEffect} from 'react'
 
+import {Arc} from '@/components/ui/arc'
 import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
@@ -11,6 +12,7 @@ import {ProgressWidget} from '@/modules/widgets/progress-widget'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
+import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
 import {tw} from '@/utils/tw'
 
 import {demoWidgetConfigs} from '../../../../umbreld/source/modules/apps/data'
@@ -148,6 +150,90 @@ export default function WidgetsStory() {
 						progressLabel='1.75 TB left'
 						progress={0.25}
 					/>
+				</div>
+				<H2>two-up-stat-with-progress</H2>
+				<div className={sectionClass}>
+					<TwoUpWidget />
+					<TwoUpWidget
+						// @ts-expect-error expecting 2 items
+						items={[
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.25,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								// title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								// title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'CPU',
+								// value: '4.2',
+								// valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'CPU',
+								// value: '4.2',
+								// valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								value: 'Lorem ipsum',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								value: 'Lorem ipsum',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<Arc strokeWidth={5} size={65} progress={0.0} />
+					<Arc strokeWidth={5} size={65} progress={0.25} />
+					<Arc strokeWidth={5} size={65} progress={0.5} />
+					<Arc strokeWidth={5} size={65} progress={0.75} />
+					<Arc strokeWidth={5} size={65} progress={1} />
 				</div>
 				<H2>three-up</H2>
 				<div className={sectionClass}>

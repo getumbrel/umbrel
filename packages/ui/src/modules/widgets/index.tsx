@@ -1,5 +1,6 @@
 import { Widget, WidgetConfig } from '@/trpc/trpc'
 
+import { toast } from '@/components/ui/toast'
 import { useApps } from '@/hooks/use-apps'
 import { useLaunchApp } from '@/hooks/use-launch-app'
 import { useNavigate } from 'react-router-dom'
@@ -11,7 +12,7 @@ import { WidgetContainer } from './shared/shared'
 import { useWidgetEndpoint } from './shared/use-widget-endpoint'
 import { StatWithButtonsWidget } from './stat-with-buttons-widget'
 import { ThreeUpWidget } from './three-up-widget'
-import { toast } from '@/components/ui/toast'
+import { TwoUpWidget } from './two-up-widget'
 
 export function Widget({appId, config}:{appId: string, config: Widget}) {
 	const {userAppsKeyed, systemAppsKeyed} = useApps()
@@ -43,6 +44,10 @@ export function Widget({appId, config}:{appId: string, config: Widget}) {
 		case 'stat-with-progress': {
 			const w = widget as WidgetConfig<'stat-with-progress'>;
 			return <ProgressWidget {...w} onClick={() => handleClick()} />
+		}
+		case 'two-up-stat-with-progress': {
+			const w = widget as WidgetConfig<'two-up-stat-with-progress'>;
+			return <TwoUpWidget {...w} onClick={() => handleClick()} />
 		}
 		case 'three-up': {
 			const w = widget as WidgetConfig<'three-up'>;

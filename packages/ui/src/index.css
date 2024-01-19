@@ -179,3 +179,14 @@ a {
 	inherits: false;
 	initial-value: 0%;
 }
+
+@keyframes animate-arc {
+	from {
+		stroke-dashoffset: var(--full-length);
+		stroke-opacity: 0;
+	}
+	to {
+		stroke-dashoffset: var(--final-offset);
+		stroke-opacity: 1;
+	}
+}

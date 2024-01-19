@@ -2,6 +2,7 @@ import type {WidgetType} from './schema.js'
 
 type FourUpItem = {
 	title: string
+	icon: string
 	value: string
 	valueSub: string
 }
@@ -22,17 +23,36 @@ export type ThreeUpWidget = {
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
 }
 
+// NOTE:
+// The long name feels like it could be just be two-up, but this two-up widget is
+// different from the others because it also has a progress. If we ever add one without a progress,
+// that one would be two-up.
+type TwoUpStatWithProgressItem = {
+	title: string
+	value: string
+	valueSub: string
+	/** Number from 0 to 1 */
+	progress: number
+}
+export type TwoUpStatWithProgressWidget = {
+	type: 'two-up-stat-with-progress'
+	link: string
+	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
+}
+
 export type StatWithProgressWidget = {
 	type: 'stat-with-progress'
 	link: string
 	title: string
 	value: string
 	progressLabel: string
+	/** Number from 0 to 1 */
 	progress: number
 }
 
 export type StatWithButtonsWidget = {
 	type: 'stat-with-buttons'
+	icon: string
 	title: string
 	value: string
 	valueSub: string
@@ -65,6 +85,7 @@ export type ActionsWidget = {
 export type AnyWidgetConfig =
 	| FourUpWidget
 	| ThreeUpWidget
+	| TwoUpStatWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
 	| NotificationsWidget
