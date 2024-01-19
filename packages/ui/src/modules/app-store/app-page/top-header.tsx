@@ -6,6 +6,7 @@ import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {SheetStickyHeader} from '@/modules/sheet-sticky-header'
+import {SheetFixedContent} from '@/modules/sheet-top-fixed'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
@@ -33,7 +34,10 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 				- However, when coming from home page, we want to go back to the app store
 				- After clicking related apps, it's not clear what the back button should do
 				*/}
-				<BackButton />
+
+				<SheetFixedContent>
+					<BackButton />
+				</SheetFixedContent>
 
 				<div data-testid='app-top' className='flex flex-row items-center gap-5'>
 					<AppIcon src={app.icon} className='w-[50px] rounded-12 md:w-[100px] md:rounded-20' />
@@ -61,7 +65,10 @@ function BackButton() {
 
 	if (isMobile) {
 		return (
-			<button className={cn(dialogHeaderCircleButtonClass, 'absolute left-2.5 top-2.5 z-50')}>
+			<button
+				className={cn(dialogHeaderCircleButtonClass, 'absolute left-2.5 top-2.5 z-50')}
+				onClick={() => navigate(-1)}
+			>
 				<TbCircleArrowLeftFilled className='h-5 w-5' />
 			</button>
 		)
