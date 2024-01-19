@@ -8,6 +8,7 @@ import {useAvailableApps} from './use-available-apps'
 
 export const MAX_WIDGETS = 3
 
+// TODO: add previews of widgets here
 export const settingsWidgets: Widget[] = [
 	{
 		type: 'stat-with-progress',

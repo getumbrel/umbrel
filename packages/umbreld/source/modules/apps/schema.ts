@@ -27,6 +27,7 @@ export const widgetSchema = z.object({
 		'notifications',
 	]),
 	endpoint: z.string(),
+	// TODO: add preview
 })
 
 export type Widget = z.infer<typeof widgetSchema>

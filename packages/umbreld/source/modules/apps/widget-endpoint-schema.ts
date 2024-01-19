@@ -1,5 +1,7 @@
 import type {WidgetType} from './schema.js'
 
+// TODO: turn these into zod schema objects to use in the `preview` field in `schema.ts`
+
 type FourUpItem = {
 	title: string
 	icon: string
