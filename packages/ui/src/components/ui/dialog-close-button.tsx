@@ -6,7 +6,7 @@ import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 
 export const DialogCloseButton = ({className}: {className?: React.ReactNode}) => (
 	<DialogPrimitive.Close className={cn(dialogHeaderCircleButtonClass, className)}>
-		<RiCloseCircleFill className='h-5 w-5 md:h-6 md:w-6' />
+		<RiCloseCircleFill className='h-5 w-5 lg:h-6 lg:w-6' />
 		<span className='sr-only'>Close</span>
 	</DialogPrimitive.Close>
 )

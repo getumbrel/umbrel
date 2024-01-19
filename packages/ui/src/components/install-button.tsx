@@ -99,5 +99,5 @@ export function InstallButton({
 
 export const installButtonClass = cn(
 	buttonVariants({size: 'lg', variant: 'primary'}),
-	'select-none text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100',
+	'select-none text-13 md:text-15 font-semibold -tracking-3 disabled:bg-brand/60 disabled:opacity-100 max-md:min-w-full max-md:h-[30px]',
 )
