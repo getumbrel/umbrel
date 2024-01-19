@@ -21,12 +21,12 @@ export function ActionsWidget({
 				</div>
 			)}
 			{actions?.[2] && (
-				<div className='scale-80 origin-left opacity-40'>
+				<div className='origin-left scale-[.8] opacity-40'>
 					<ActionItem emoji={actions?.[2].emoji} title={actions?.[2].title} />
 				</div>
 			)}
 			{actions?.[3] && (
-				<div className='scale-70 origin-left opacity-20'>
+				<div className='origin-left scale-[.7] opacity-20'>
 					<ActionItem emoji={actions?.[3].emoji} title={actions?.[3].title} />
 				</div>
 			)}
