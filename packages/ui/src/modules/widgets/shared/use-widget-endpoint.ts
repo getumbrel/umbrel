@@ -45,15 +45,6 @@ export function useWidgetEndpoint(endpoint: string, type: WidgetType) {
 		}
 	}
 
-	if (widget.type !== type) {
-		return {
-			isLoading: false,
-			isError: true,
-			error: new Error('Widget type mismatch. Expected ' + type + ' got ' + widget.type),
-			widget: undefined,
-		}
-	}
-
 	return {
 		isLoading,
 		isError,

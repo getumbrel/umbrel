@@ -1,5 +1,4 @@
 {
-	"type": "stat-with-progress",
 	"link": "/settings?dialog=live-usage",
 	"title": "Storage",
 	"value": "256 GB",
