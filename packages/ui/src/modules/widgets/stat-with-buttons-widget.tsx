@@ -16,7 +16,7 @@ export function StatWithButtonsWidget({
 	value?: string
 	valueSub?: string
 	buttons?: {
-		icon: string
+		icon?: string
 		title: string
 		link: string
 	}[]
@@ -31,7 +31,7 @@ export function StatWithButtonsWidget({
 					take(buttons, 3).map((button) => (
 						// Not using endpoint for `key` in case user wants two buttons to link to the same endpoint for some reason
 						<WidgetButton key={button.title} onClick={() => onClick?.(button.link)}>
-							<TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />
+							{button.icon && <TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />}
 							<span className='truncate'>{button.title}</span>
 						</WidgetButton>
 					))}
