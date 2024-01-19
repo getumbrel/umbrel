@@ -30,7 +30,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden shadow-sheet-shadow transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
+	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
 	{
 		variants: {
 			side: {
@@ -82,6 +82,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 						<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
 					</div>
 					{children}
+					{/* Sheet inner glow highlight */}
+					<div className='pointer-events-none absolute inset-0 z-50 rounded-t-20 shadow-sheet-shadow' />
 				</SheetPrimitive.Content>
 			</>
 			// </SheetPortal>
