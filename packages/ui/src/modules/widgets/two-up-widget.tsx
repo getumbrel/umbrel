@@ -7,7 +7,7 @@ type TwoUpItem = {title?: string; value?: string; valueSub?: string; progress?: 
 
 export function TwoUpWidget({items, onClick}: {items?: [TwoUpItem, TwoUpItem]; onClick?: () => void}) {
 	return (
-		<WidgetContainer onClick={onClick} className=' flex-row items-center justify-center gap-[30px]'>
+		<WidgetContainer onClick={onClick} className=' flex-row items-center justify-center md:gap-[30px]'>
 			{items?.[0] && (
 				<TwoUpItem
 					title={items[0].title}
@@ -47,11 +47,13 @@ function TwoUpItem({title, value, valueSub, progress}: TwoUpItem) {
 				// Set width so text fits inside the arc
 				style={{width: size - strokeWidth * 2}}
 			>
-				<div className='truncate text-13 font-semibold leading-tight tracking-normal'>
+				<div className='truncate text-[9px] font-semibold leading-tight tracking-normal md:text-13'>
 					{value}
 					{valueSub && <span className='opacity-40'>{valueSub}</span>}
 				</div>
-				{title && <div className='truncate text-12 font-medium leading-tight -tracking-3 opacity-40'>{title}</div>}
+				{title && (
+					<div className='truncate text-[9px] font-medium leading-tight -tracking-3 opacity-40 md:text-12'>{title}</div>
+				)}
 			</div>
 		</div>
 	)
