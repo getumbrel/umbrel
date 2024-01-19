@@ -1,36 +1,25 @@
-import {Portal} from '@radix-ui/react-portal'
 import {ReactNode} from 'react'
 import {TbArrowLeft} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
-import {useTimeout} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
-import {SHEET_HEADER_ID} from '@/constants'
+import {SheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {RegistryApp} from '@/trpc/trpc'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
-	// Make sure header portal is mounted before showing it (render on the next tick)
-	const showPortal = useTimeout(0)
-
 	return (
 		<>
-			{showPortal && (
-				<Portal
-					container={document.getElementById(SHEET_HEADER_ID)}
-					className='flex h-full w-full items-center gap-2.5'
-				>
-					<BackButton />
-					<div className='flex flex-1 items-center gap-2.5'>
-						<AppIcon src={app.icon} className='w-[32px] rounded-8' />
-						<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
-					</div>
-					{childrenRight}
-					<DialogCloseButton />
-				</Portal>
-			)}
-
+			<SheetStickyHeader className='flex h-full w-full items-center gap-2.5'>
+				<BackButton />
+				<div className='flex flex-1 items-center gap-2.5'>
+					<AppIcon src={app.icon} className='w-[32px] rounded-8' />
+					<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
+				</div>
+				{childrenRight}
+				<DialogCloseButton />
+			</SheetStickyHeader>
 			<div className='space-y-5'>
 				{/*
 				Tricky to get good behavior for this:

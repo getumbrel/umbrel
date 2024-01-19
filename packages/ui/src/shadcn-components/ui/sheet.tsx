@@ -2,7 +2,6 @@ import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
 
@@ -53,11 +52,11 @@ interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
 		VariantProps<typeof sheetVariants> {
 	backdrop?: React.ReactNode
-	showClose?: boolean
+	closeButton?: React.ReactNode
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-	({side = 'bottom', className, children, backdrop, showClose = true, ...props}, ref) => {
+	({side = 'bottom', className, children, backdrop, closeButton = true, ...props}, ref) => {
 		const {wallpaper} = useWallpaper()
 
 		return (
@@ -67,7 +66,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				{/* <SheetOverlay /> */}
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 					{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
-					{showClose && <DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
+					{closeButton}
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
