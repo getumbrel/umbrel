@@ -69,7 +69,7 @@ export function SheetStickyHeader(props: ComponentPropsWithoutRef<'div'>) {
 	return <Portal container={document.getElementById(SHEET_HEADER_ID)} {...props} />
 }
 
-export function StickyHeaderTarget() {
+export function SheetStickyHeaderTarget() {
 	const {showStickyHeader} = useSheetStickyHeader()
 
 	return (

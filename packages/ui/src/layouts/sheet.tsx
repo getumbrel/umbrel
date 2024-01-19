@@ -4,7 +4,7 @@ import {Outlet, useNavigate} from 'react-router-dom'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {SheetStickyHeaderProvider, StickyHeaderTarget, useSheetStickyHeader} from '@/modules/sheet-sticky-header'
+import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
@@ -37,7 +37,7 @@ export function SheetLayout() {
 					onInteractOutside={(e) => e.preventDefault()}
 					onEscapeKeyDown={(e) => e.preventDefault()}
 				>
-					<StickyHeaderTarget />
+					<SheetStickyHeaderTarget />
 					<div
 						className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto px-3 pt-6 md:px-[70px] md:pt-12'
 						ref={scrollRef}
