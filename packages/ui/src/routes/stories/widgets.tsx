@@ -1,9 +1,8 @@
-import {useLayoutEffect} from 'react'
-
 import {Arc} from '@/components/ui/arc'
 import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
+import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
 import {ActionsWidget} from '@/modules/widgets/actions-widget'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
@@ -18,27 +17,7 @@ import {tw} from '@/utils/tw'
 import {demoWidgetConfigs} from '../../../../umbreld/source/modules/apps/data'
 
 export default function WidgetsStory() {
-	// TODO: extract the sizes so we can render widgets outside the app grid
-	useLayoutEffect(() => {
-		const el = document.documentElement
-
-		const widgetH = [110, 150][1]
-		const widgetLabeledH = widgetH + 26 // widget rect + label
-
-		const appW = [70, 120][1]
-		// const appH = [90, 120][1]
-		const appXGap = [20, 30][1]
-		const widgetW = appW + appXGap + appW
-
-		el.style.setProperty('--widget-w', `${widgetW}px`)
-		el.style.setProperty('--widget-h', `${widgetH}px`)
-		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
-	}, [])
-
-	// type ThreeUpItem = {icon: string; title?: string; value?: string}
-	// function ThreeUpWidget({link, items}: {link?: string; items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]}) {
-	// 	return null
-	// }
+	const {pageInnerRef} = usePager({apps: [], widgets: []})
 
 	const handleClick = () => {
 		alert('clicked')
@@ -46,7 +25,7 @@ export default function WidgetsStory() {
 
 	return (
 		<AppsProvider>
-			<div className='bg-white/30'>
+			<div className='bg-white/30' ref={pageInnerRef}>
 				<H2>Error</H2>
 				<div className={sectionClass}>
 					<Widget appId='example' config={{type: 'stat-with-progress', endpoint: '/widgets/example/four-up.json'}} />
