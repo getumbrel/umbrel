@@ -11,6 +11,9 @@ export const EXIT_DURATION_MS = 200
 export type GlobalDialogKey = 'logout'
 export type AppStoreDialogKey = 'updates' | 'add-community-store' | 'default-credentials'
 export type DialogKey = GlobalDialogKey | AppStoreDialogKey | SettingsDialogKey
+
+// TODO: make dialog query params typesafe
+
 /**
  * For use with dialogs and other Radix elements with an `onOpenChange` prop.
  */

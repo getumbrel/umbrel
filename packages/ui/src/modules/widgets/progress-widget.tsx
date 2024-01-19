@@ -15,6 +15,7 @@ export function ProgressWidget({
 	value?: string
 	valueSub?: string
 	progressLabel?: string
+	/** Progress from 0 to 1 */
 	progress?: number
 	onClick?: () => void
 }) {
