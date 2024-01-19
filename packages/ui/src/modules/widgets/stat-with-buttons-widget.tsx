@@ -24,7 +24,7 @@ export function StatWithButtonsWidget({
 }) {
 	return (
 		<WidgetContainer className='gap-0 p-2 md:p-5'>
-			<StatText title={title} value={value} valueSub={valueSub} />
+			<StatText title={title ?? '–'} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
 			<div className='flex flex-col gap-1 md:flex-row'>
 				{buttons &&
