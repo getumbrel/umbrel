@@ -24,7 +24,7 @@ export function UpdatesButton() {
 	return (
 		<>
 			{/* w-auto because 'dialog' size buttons take up full width on mobile */}
-			<LinkButton to={linkToDialog('updates')} variant='default' size='dialog' className='relative h-[33px] w-auto'>
+			<LinkButton to={linkToDialog('updates')} size='dialog' className='relative h-[33px] w-auto bg-white/10'>
 				Updates
 				<NotificationBadge count={appsWithUpdates.length} />
 			</LinkButton>
