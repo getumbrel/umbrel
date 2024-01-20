@@ -17,13 +17,6 @@ type ContextT = {
 
 const StickyContext = createContext<ContextT | null>(null)
 
-export function useSheetStickyHeader() {
-	const ctx = useContext(StickyContext)
-	if (!ctx) throw new Error('useStickyHeader must be used within StickyHeaderProvider')
-
-	return ctx
-}
-
 export function SheetStickyHeaderProvider({
 	children,
 	scrollRef,
@@ -57,6 +50,15 @@ export function SheetStickyHeaderProvider({
 		</StickyContext.Provider>
 	)
 }
+
+export function useSheetStickyHeader() {
+	const ctx = useContext(StickyContext)
+	if (!ctx) throw new Error('useSheetStickyHeader must be used within SheetStickyHeaderProvider')
+
+	return ctx
+}
+
+// ---
 
 export function SheetStickyHeader(props: ComponentPropsWithoutRef<'div'>) {
 	const {setHasStickyHeader} = useSheetStickyHeader()
