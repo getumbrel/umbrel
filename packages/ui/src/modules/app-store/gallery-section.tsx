@@ -50,7 +50,7 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 					href={src}
 					data-pswp-width={2880}
 					data-pswp-height={1800}
-					className={cn(galleryItemClass, 'aspect-1.6 h-[140px] md:h-[292px]')}
+					className={cn(galleryItemClass, 'aspect-1.6 h-[200px] md:h-[292px]')}
 					style={{
 						animationDelay: `${i * 0.1}s`,
 					}}

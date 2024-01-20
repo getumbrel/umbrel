@@ -7,7 +7,7 @@ import {tw} from '@/utils/tw'
 export const slideInFromBottomClass = tw`animate-in fade-in slide-in-from-bottom-8`
 export const slideInFromBottomDelayedClass = tw`animate-in fade-in slide-in-from-bottom-8 fill-mode-both delay-200 `
 
-const cardBaseClass = tw`rounded-20 p-1 md:px-[26px] md:py-[36px]`
+const cardBaseClass = tw`rounded-20 md:px-[26px] md:py-[36px]`
 export const cardClass = cn(cardBaseClass, tw`bg-gradient-to-b from-[#24242499] to-[#18181899]`)
 export const cardFaintClass = cn(cardBaseClass, tw`bg-white/4`)
 
