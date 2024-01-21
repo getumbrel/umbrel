@@ -92,6 +92,7 @@ test('list() lists installed apps', async () => {
 				defaultUsername: '',
 				defaultPassword: '',
 			},
+			hiddenService: 'blah.onion',
 		},
 	])
 })
