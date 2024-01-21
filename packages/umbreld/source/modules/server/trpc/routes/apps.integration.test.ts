@@ -40,6 +40,10 @@ test('trackOpen() throws invalid error when no user is registered', async () => 
 	await expect(umbreld.client.apps.trackOpen.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
 })
 
+test('trackOpen() throws invalid error when no user is registered', async () => {
+	await expect(umbreld.client.apps.setTorEnabled.mutate(true)).rejects.toThrow('Invalid token')
+})
+
 test('login', async () => {
 	await expect(umbreld.registerAndLogin()).resolves.toBe(true)
 })
@@ -110,6 +114,13 @@ test('update() updates an installed app', async () => {
 test('trackOpen() tracks an app open', async () => {
 	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked
+})
+
+test('setTorEnabled() toggles the Tor setting', async () => {
+	await expect(umbreld.client.apps.setTorEnabled.mutate(true)).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.getTorEnabled.query()).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.setTorEnabled.mutate(false)).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.getTorEnabled.query()).resolves.toStrictEqual(false)
 })
 
 test('uninstall() uninstalls an app', async () => {

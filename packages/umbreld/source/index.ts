@@ -17,12 +17,12 @@ type StoreSchema = {
 	version: string
 	apps: string[]
 	appRepositories: string[]
+	torEnabled?: boolean
 	user: {
 		name: string
 		hashedPassword: string
 		totpUri?: string
 		wallpaper?: string
-		torEnabled?: boolean
 		lastOpenedApps?: string[]
 		apps: YamlApp[]
 		widgets: Widget[]
