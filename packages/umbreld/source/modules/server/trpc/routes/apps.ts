@@ -23,6 +23,7 @@ export default router({
 						defaultUsername: '',
 						defaultPassword: '',
 					},
+					hiddenService: 'blah.onion',
 				}
 			}),
 		)
