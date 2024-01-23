@@ -2,7 +2,7 @@ import {ReactNode, Ref, useLayoutEffect} from 'react'
 import {createBreakpoint, useMeasure} from 'react-use'
 import {chunk} from 'remeda'
 
-const useBreakpoint = createBreakpoint({S: 0, M: 600})
+const useBreakpoint = createBreakpoint({S: 0, M: 640})
 
 type PageT = {
 	widgets: ReactNode[]
@@ -23,6 +23,7 @@ type PageT = {
 export function usePager({apps, widgets}: PageT): {
 	pages: PageT[]
 	pageInnerRef: Ref<HTMLDivElement>
+	appsPerRow: number
 } {
 	// Using breakpoint instead of measure because max inner page width comes from breakpoint
 	const breakpoint = useBreakpoint()
@@ -72,6 +73,12 @@ export function usePager({apps, widgets}: PageT): {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [breakpoint, pageW])
 
+	function countAppsPerRow({pageW}: {pageW: number}) {
+		return Math.floor((pageW + appXGap) / (appW + appXGap))
+	}
+
+	const appsPerRow = countAppsPerRow({pageW})
+
 	const pages = groupIntoPages({apps, widgets, pageW, pageH})
 
 	function groupIntoPages({
@@ -94,11 +101,8 @@ export function usePager({apps, widgets}: PageT): {
 			return Math.floor((pageH + appYGap) / (appH + appYGap))
 		}
 		function countAppsPerColWhenWidgetRow({pageH}: {pageH: number}) {
-			const restH = pageH - widgetH - appYGap
+			const restH = pageH - widgetLabeledH - appYGap
 			return Math.floor((restH + appYGap) / (appH + appYGap))
-		}
-		function countAppsPerRow({pageW}: {pageW: number}) {
-			return Math.floor((pageW + appXGap) / (appW + appXGap))
 		}
 
 		const widgetsPerPage = countWidgetsPerPage({pageW})
@@ -136,13 +140,14 @@ export function usePager({apps, widgets}: PageT): {
 		return [...widgetPages, ...nonWidgetPages]
 	}
 
-	if (pageH < widgetH || !apps.length || apps.length === 0) {
+	if (pageH < widgetLabeledH || !apps.length || apps.length === 0) {
 		// Don't show any apps or widgets
 		return {
 			pageInnerRef,
 			pages: [{widgets: [], apps: []}],
+			appsPerRow: 0,
 		}
 	}
 
-	return {pageInnerRef, pages}
+	return {pageInnerRef, pages, appsPerRow}
 }
