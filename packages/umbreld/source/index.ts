@@ -17,6 +17,7 @@ type StoreSchema = {
 	version: string
 	apps: string[]
 	appRepositories: string[]
+	widgets: string[]
 	torEnabled?: boolean
 	user: {
 		name: string
@@ -25,7 +26,6 @@ type StoreSchema = {
 		wallpaper?: string
 		lastOpenedApps?: string[]
 		apps: YamlApp[]
-		widgets: Widget[]
 	}
 }
 
