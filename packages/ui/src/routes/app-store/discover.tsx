@@ -47,7 +47,7 @@ export default function Discover() {
 				title='Node of your own, an ode to autonomy.'
 				description='In this decentralized era, running your personal node is a breeze. Run your node, power the new internet, and take the blockchain by the blocks.'
 			>
-				<Button variant='secondary' size='dialog'>
+				<Button variant='primary' size='dialog'>
 					Browse Bitcoin apps
 				</Button>
 			</Apps3UpSection>
@@ -60,7 +60,7 @@ export default function Discover() {
 				Browse apps that lets you truly own & self-host your data.'
 				textLocation='right'
 			>
-				<Button variant='secondary' size='dialog'>
+				<Button variant='primary' size='dialog'>
 					Browse productivity apps
 				</Button>
 			</Apps3UpSection>
@@ -71,7 +71,7 @@ export default function Discover() {
 				title='Node of your own, an ode to autonomy.'
 				description='In this decentralized era, running your personal node is a breeze. Run your node, power the new internet, and take the blockchain by the blocks.'
 			>
-				<Button variant='secondary' size='dialog'>
+				<Button variant='primary' size='dialog'>
 					Browse Bitcoin apps
 				</Button>
 			</Apps3UpSection>
