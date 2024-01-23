@@ -21,6 +21,8 @@ export function AppGrid({
 	const {scrollContainer, page, toPage, nextPage, nextPageDisabled, prevPage, prevPageDisabled} =
 		usePaginator(pageCount)
 
+	const noRoom = apps.length > 0 && pages[0].apps.length === 0 && pages[0].widgets.length === 0
+
 	const appColumnsStyle: React.CSSProperties = {
 		gridTemplateColumns: `repeat(${appsPerRow}, minmax(0, 1fr))`,
 	}
@@ -35,6 +37,7 @@ export function AppGrid({
 					{/* Default page for calculating size */}
 					<Page index={0}>
 						<PageInner innerRef={pageInnerRef}>
+							{noRoom && <div className='w-full text-center'>Not enough room to show anything.</div>}
 							<AnimatePresence>
 								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
 								{pages[0]?.apps && (
