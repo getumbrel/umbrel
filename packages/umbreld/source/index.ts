@@ -11,7 +11,7 @@ import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
-import type {Widget, YamlApp} from './modules/apps/schema.js'
+import type {YamlApp} from './modules/apps/schema.js'
 
 type StoreSchema = {
 	version: string
