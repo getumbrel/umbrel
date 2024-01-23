@@ -45,7 +45,8 @@ export const Apps3UpSection: React.FC<Apps3UpSectionProps> = ({
 				<div className='pt-5' />
 				{children}
 			</div>
-			<div className='flex justify-center gap-5 md:w-auto'>
+			{/* shrink-0 to prevent scrolling at larger sizes */}
+			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar flex gap-5 overflow-x-auto md:w-auto md:shrink-0'>
 				<ColorApp app={apps[0]} />
 				<ColorApp app={apps[1]} />
 				<ColorApp app={apps[2]} />
