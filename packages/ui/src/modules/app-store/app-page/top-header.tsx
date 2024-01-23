@@ -47,7 +47,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 					<div className='flex flex-1 items-center gap-2.5 max-md:px-2.5 md:gap-5'>
 						<AppIcon src={app.icon} className='w-[64px] rounded-15 md:w-[100px] md:rounded-20' />
 						<div className='flex flex-col items-start gap-1.5 py-1 md:gap-2'>
-							<h1 className='flex items-center gap-2 text-16 font-semibold leading-inter-trimmed md:text-24'>
+							<h1 className='flex flex-wrap items-center gap-2 text-16 font-semibold leading-inter-trimmed md:text-24'>
 								{app.name} {app.optimizedForUmbrelHome && <Badge>Optimized for Umbrel Home</Badge>}
 							</h1>
 							<p className='text-12 leading-tight opacity-50 md:text-16'>{app.tagline}</p>
