@@ -1,5 +1,5 @@
 import {motion, Variant} from 'framer-motion'
-import {useLocation, useNavigate} from 'react-router-dom'
+import {useLocation} from 'react-router-dom'
 
 import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
@@ -13,14 +13,12 @@ import {DockSpacer} from './dock'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
-	const navigate = useNavigate()
 
 	const {allAppsKeyed, userApps, isLoading} = useApps()
 	const widgets = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
-	if (userApps.length === 0 && pathname === '/') navigate('/install-first-app')
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 	const variant: DesktopVariant =

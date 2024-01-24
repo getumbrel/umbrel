@@ -1,5 +1,5 @@
 import React, {Suspense} from 'react'
-import {createBrowserRouter} from 'react-router-dom'
+import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {AppsProvider} from './hooks/use-apps'
@@ -12,6 +12,8 @@ import {SheetLayout} from './layouts/sheet'
 import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
+import {Dock, DockBottomPositioner} from './modules/desktop/dock'
+import {Wallpaper} from './modules/desktop/wallpaper-context'
 import {NotFound} from './routes/not-found'
 import Restart from './routes/restart'
 import {Settings} from './routes/settings'
@@ -26,7 +28,6 @@ const CommunityAppPage = React.lazy(() => import('./routes/community-app-store/a
 const One = React.lazy(() => import('./routes/demo/one'))
 const Two = React.lazy(() => import('./routes/demo/two'))
 const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
-const InstallFirstApp = React.lazy(() => import('./routes/install-first-app'))
 const Login = React.lazy(() => import('./routes/login'))
 const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
@@ -52,18 +53,6 @@ const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
-	{
-		path: 'install-first-app',
-		element: (
-			<Suspense>
-				<EnsureLoggedIn>
-					<InstallFirstApp />
-				</EnsureLoggedIn>
-			</Suspense>
-		),
-		errorElement: <ErrorBoundary />,
-	},
-
 	// desktop
 	{
 		path: '/',
@@ -71,7 +60,14 @@ export const router = createBrowserRouter([
 			<EnsureLoggedIn>
 				<AvailableAppsProvider>
 					<AppsProvider>
+						<Wallpaper />
 						<Desktop />
+						<Suspense>
+							<Outlet />
+						</Suspense>
+						<DockBottomPositioner>
+							<Dock />
+						</DockBottomPositioner>
 					</AppsProvider>
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
