@@ -30,6 +30,7 @@ export function ThreeUpWidget({
 		</WidgetContainer>
 	)
 }
+
 function ThreeUpItem({iconName, title, value}: {iconName: string; title?: string; value?: string}) {
 	return (
 		// NOTE: consider reducing rounding if we don't have 3 items

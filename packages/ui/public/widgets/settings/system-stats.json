@@ -2,17 +2,17 @@
 	"link": "/settings",
 	"items": [
 		{
-			"icon": "wind",
+			"icon": "system-widget-temperature",
 			"title": "Optimal",
 			"value": "56℃"
 		},
 		{
-			"icon": "device-floppy",
+			"icon": "system-widget-storage",
 			"title": "Free",
 			"value": "1.75 TB"
 		},
 		{
-			"icon": "cpu-2",
+			"icon": "system-widget-memory",
 			"title": "Memory",
 			"value": "5.8 GB"
 		}
