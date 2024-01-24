@@ -16,8 +16,8 @@ import {Link, useNavigate} from 'react-router-dom'
 // import {useNavigate} from 'react-router-dom'
 
 import {TorIcon2} from '@/assets/tor-icon2'
+import {ButtonLink} from '@/components/ui/button-link'
 import {Card, cardClass} from '@/components/ui/card'
-import {LinkButton} from '@/components/ui/link-button'
 import {UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -60,13 +60,13 @@ export function SettingsContentMobile() {
 
 			<div className='grid-cols-2 md:grid'>
 				<div className='flex items-center gap-[5px] px-2 pb-2.5 md:order-last'>
-					<LinkButton to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
+					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
 						Log out
-					</LinkButton>
-					<LinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
+					</ButtonLink>
+					<ButtonLink to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
 						Restart
-					</LinkButton>
-					<LinkButton
+					</ButtonLink>
+					<ButtonLink
 						to={{
 							search: addLinkSearchParams({dialog: 'shutdown'}),
 						}}
@@ -75,7 +75,7 @@ export function SettingsContentMobile() {
 						className='flex-grow'
 					>
 						Shut down
-					</LinkButton>
+					</ButtonLink>
 				</div>
 
 				<div>

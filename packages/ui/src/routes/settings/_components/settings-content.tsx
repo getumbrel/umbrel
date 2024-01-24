@@ -15,7 +15,7 @@ import {useNavigate} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
-import {IconLinkButton} from '@/components/ui/icon-link-button'
+import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -95,15 +95,15 @@ export function SettingsContent() {
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
-						<IconLinkButton to={linkToDialog('logout')} size='xl' icon={RiLogoutCircleRLine}>
+						<IconButtonLink to={linkToDialog('logout')} size='xl' icon={RiLogoutCircleRLine}>
 							Log out
-						</IconLinkButton>
-						<IconLinkButton to={linkToDialog('restart')} size='xl' icon={RiRestartLine}>
+						</IconButtonLink>
+						<IconButtonLink to={linkToDialog('restart')} size='xl' icon={RiRestartLine}>
 							Restart
-						</IconLinkButton>
-						<IconLinkButton to={linkToDialog('shutdown')} size='xl' text='destructive' icon={RiShutDownLine}>
+						</IconButtonLink>
+						<IconButtonLink to={linkToDialog('shutdown')} size='xl' text='destructive' icon={RiShutDownLine}>
 							Shut down
-						</IconLinkButton>
+						</IconButtonLink>
 					</div>
 				</Card>
 				<div className='flex flex-col gap-3'>
@@ -114,9 +114,9 @@ export function SettingsContent() {
 						<TempStatCardContent tempInCelcius={cpuTemp.temp} />
 					</Card>
 					<div className='mx-auto'>
-						<IconLinkButton icon={RiPulseLine} to={linkToDialog('live-usage')}>
+						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>
 							Open Live Usage
-						</IconLinkButton>
+						</IconButtonLink>
 					</div>
 					<div className='flex-1' />
 					<ContactSupportLink className='max-lg:hidden' />
@@ -124,12 +124,12 @@ export function SettingsContent() {
 				<Card className='umbrel-divide-y overflow-hidden !py-2'>
 					<ListRow title='Account' description='Your display name & Umbrel password'>
 						<div className='flex flex-wrap gap-2'>
-							<IconLinkButton to={linkToDialog('change-name')} icon={RiUserLine}>
+							<IconButtonLink to={linkToDialog('change-name')} icon={RiUserLine}>
 								Change name
-							</IconLinkButton>
-							<IconLinkButton to={linkToDialog('change-password')} icon={RiKeyLine}>
+							</IconButtonLink>
+							<IconButtonLink to={linkToDialog('change-password')} icon={RiKeyLine}>
 								Change password
-							</IconLinkButton>
+							</IconButtonLink>
 						</div>
 					</ListRow>
 					<ListRow title='Wallpaper' description='Choose your Umbrel wallpaper'>
@@ -153,7 +153,7 @@ export function SettingsContent() {
 					</ListRow>
 					{isUmbrelHome && (
 						<ListRow title='Migration Assistant' description='Move your data from Raspberry Pi to Umbrel Home' isLabel>
-							{/* We could use an IconLinkButton but then the `isLabel` from `ListRow` wouldn't work */}
+							{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
 							<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
 								Migrate
 							</IconButton>

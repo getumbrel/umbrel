@@ -17,9 +17,9 @@ type LinkType = ForwardRefExoticComponent<
 		CustomProps
 >
 
-const LinkButton: LinkType = React.forwardRef(({className, variant, text, size, ...props}, ref) => {
+const ButtonLink: LinkType = React.forwardRef(({className, variant, text, size, ...props}, ref) => {
 	return <Link className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...props} />
 })
-LinkButton.displayName = 'LinkButton'
+ButtonLink.displayName = 'ButtonLink'
 
-export {LinkButton}
+export {ButtonLink}

@@ -1,4 +1,4 @@
-import {LinkButton} from '@/components/ui/link-button'
+import {ButtonLink} from '@/components/ui/button-link'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	Drawer,
@@ -34,9 +34,9 @@ export function StartMigrationDrawer() {
 					</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
-					<LinkButton to={linkToDialog('migration-assistant')} variant='primary' size='dialog'>
+					<ButtonLink to={linkToDialog('migration-assistant')} variant='primary' size='dialog'>
 						Start migration
-					</LinkButton>
+					</ButtonLink>
 				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>

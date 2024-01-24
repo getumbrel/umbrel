@@ -2,8 +2,8 @@ import {useTranslation} from 'react-i18next'
 import {TbServer, TbShoppingBag, TbUser} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
+import {ButtonLink} from '@/components/ui/button-link'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/components/ui/immersive-dialog'
-import {LinkButton} from '@/components/ui/link-button'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
@@ -31,9 +31,9 @@ export function ReviewData() {
 			bodyText='Following will be removed completely from your device'
 			footer={
 				<>
-					<LinkButton to='/factory-reset/confirm' variant='destructive' size='dialog' className='min-w-0'>
+					<ButtonLink to='/factory-reset/confirm' variant='destructive' size='dialog' className='min-w-0'>
 						Continue
-					</LinkButton>
+					</ButtonLink>
 					<Button size='dialog' className='min-w-0' onClick={() => navigate(backPath)}>
 						Cancel
 					</Button>

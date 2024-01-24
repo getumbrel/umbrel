@@ -2,9 +2,9 @@ import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {toast} from 'sonner'
 
+import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
-import {LinkButton} from '@/components/ui/link-button'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
@@ -140,9 +140,9 @@ export function CommunityAppStoreDialog() {
 									>
 										Remove
 									</Button>
-									<LinkButton size='dialog' className='ml-2 w-auto' to={`/community-app-store/${meta.id}`}>
+									<ButtonLink size='dialog' className='ml-2 w-auto' to={`/community-app-store/${meta.id}`}>
 										Open
-									</LinkButton>
+									</ButtonLink>
 								</div>
 							</Card>
 						))}

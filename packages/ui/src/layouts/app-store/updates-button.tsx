@@ -1,7 +1,7 @@
 import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {LinkButton} from '@/components/ui/link-button'
+import {ButtonLink} from '@/components/ui/button-link'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
@@ -24,10 +24,10 @@ export function UpdatesButton() {
 	return (
 		<>
 			{/* w-auto because 'dialog' size buttons take up full width on mobile */}
-			<LinkButton to={linkToDialog('updates')} size='dialog' className='relative h-[33px] w-auto bg-white/10'>
+			<ButtonLink to={linkToDialog('updates')} size='dialog' className='relative h-[33px] w-auto bg-white/10'>
 				Updates
 				<NotificationBadge count={appsWithUpdates.length} />
-			</LinkButton>
+			</ButtonLink>
 			<UpdatesDialog />
 		</>
 	)

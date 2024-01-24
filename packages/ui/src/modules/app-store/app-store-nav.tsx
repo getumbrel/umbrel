@@ -1,6 +1,6 @@
 import {useParams} from 'react-router-dom'
 
-import {LinkButton} from '@/components/ui/link-button'
+import {ButtonLink} from '@/components/ui/button-link'
 import {Category} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
@@ -17,7 +17,7 @@ export function AppStoreNav() {
 		<>
 			<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x -my-2 flex gap-[5px] overflow-x-auto py-2'>
 				{categoryishDescriptions.map((category) => (
-					<LinkButton
+					<ButtonLink
 						key={category.id}
 						to={categoryIdToPath(category.id)}
 						variant={category.id === activeId ? 'primary' : 'default'}
@@ -25,7 +25,7 @@ export function AppStoreNav() {
 						unstable_viewTransition
 					>
 						{category.label}
-					</LinkButton>
+					</ButtonLink>
 				))}
 			</div>
 		</>

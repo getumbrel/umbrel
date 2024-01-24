@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
-import {LinkButton} from '@/components/ui/link-button'
+import {ButtonLink} from '@/components/ui/button-link'
 import {AppsProvider} from '@/hooks/use-apps'
 import {AvailableAppsProvider, useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -55,9 +55,9 @@ function PageInner() {
 					</div>
 				</div>
 				<div className='pt-[50px]' />
-				<LinkButton to='/app-store' className='h-[42px] px-5 py-4 text-14 backdrop-blur-md'>
+				<ButtonLink to='/app-store' className='h-[42px] px-5 py-4 text-14 backdrop-blur-md'>
 					Explore in App Store
-				</LinkButton>
+				</ButtonLink>
 				<div className='pt-[50px]' />
 				<div className='flex-grow-[2]' />
 				<DockSpacer />
