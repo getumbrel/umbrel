@@ -51,7 +51,7 @@ export function UpdatesDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogContent className='top-[10%] translate-y-0 p-0 data-[state=closed]:slide-out-to-top-[10%] data-[state=open]:slide-in-from-top-[10%]'>
+				<DialogContent className='top-[10%] max-h-[calc(100vh-20%)] translate-y-0 p-0 data-[state=closed]:slide-out-to-top-[10%] data-[state=open]:slide-in-from-top-[10%]'>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-2.5 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
 							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
