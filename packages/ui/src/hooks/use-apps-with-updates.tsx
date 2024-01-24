@@ -8,7 +8,10 @@ export function useAppsWithUpdates() {
 
 	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume
 	if (apps.isLoading || availableApps.isLoading) {
-		return []
+		return {
+			appsWithUpdates: [],
+			isLoading: true,
+		} as const
 	}
 
 	const appsWithUpdates = (apps.userApps ?? [])
@@ -18,5 +21,5 @@ export function useAppsWithUpdates() {
 		})
 		.map((app) => availableApps.appsKeyed[app.id])
 
-	return appsWithUpdates
+	return {appsWithUpdates, isLoading: apps.isLoading || availableApps.isLoading} as const
 }

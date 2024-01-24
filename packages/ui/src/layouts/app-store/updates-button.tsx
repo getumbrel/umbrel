@@ -14,7 +14,9 @@ import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 
 export function UpdatesButton() {
 	const linkToDialog = useLinkToDialog()
-	const appsWithUpdates = useAppsWithUpdates()
+	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
+
+	if (isLoading) return null
 
 	// If we link to the updates dialog, show it even if there are no updates
 	if (!appsWithUpdates.length) {
@@ -38,11 +40,13 @@ export function UpdatesDialog() {
 
 	const title = 'Updates'
 
-	const appsWithUpdates = useAppsWithUpdates()
+	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
 
 	const updateAllMut = trpcReact.user.apps.updateAll.useMutation()
 
 	const updateAll = () => updateAllMut.mutate()
+
+	if (isLoading) return null
 
 	return (
 		<Dialog {...dialogProps}>
