@@ -28,6 +28,7 @@ const Two = React.lazy(() => import('./routes/demo/two'))
 const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const InstallFirstApp = React.lazy(() => import('./routes/install-first-app'))
 const Login = React.lazy(() => import('./routes/login'))
+const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
 const Migrate = React.lazy(() => import('./routes/migrate'))
 const MigrateFailed = React.lazy(() => import('./routes/migrate/migrate-failed'))
@@ -145,6 +146,18 @@ export const router = createBrowserRouter([
 						<EnsureLoggedOut>
 							<Login />
 						</EnsureLoggedOut>
+					</EnsureUserExists>
+				),
+			},
+			{
+				path: 'login-with-umbrel/:appId',
+				element: (
+					<EnsureUserExists>
+						<AppsProvider>
+							{/* <EnsureLoggedIn> */}
+							<LoginWithUmbrel />
+							{/* </EnsureLoggedIn> */}
+						</AppsProvider>
 					</EnsureUserExists>
 				),
 			},
