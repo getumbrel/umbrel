@@ -47,7 +47,7 @@ export const systemApps = [
 		name: 'Live Usage',
 		icon: '/figma-exports/dock-live-usage.png',
 		systemApp: true,
-		systemAppTo: '/live-usage',
+		systemAppTo: '/settings?dialog=live-usage',
 	},
 	{
 		id: 'widgets',

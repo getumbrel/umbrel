@@ -61,7 +61,16 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					Change wallpaper
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['home'].icon}
+					icon={systemAppsKeyed['live-usage'].icon}
+					onSelect={() => {
+						navigate(systemAppsKeyed['live-usage'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					Live Usage
+				</CommandItem>
+				<CommandItem
+					icon={systemAppsKeyed['widgets'].icon}
 					onSelect={() => {
 						navigate('/edit-widgets')
 						setOpen(false)

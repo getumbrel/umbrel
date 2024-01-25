@@ -63,8 +63,7 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
-					// to={systemAppsKeyed['live-usage'].systemAppTo}
-					to={{pathname: '/settings', search: addLinkSearchParams({dialog: 'live-usage'})}}
+					to={systemAppsKeyed['live-usage'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['live-usage'].systemAppTo)}
 					bg={systemAppsKeyed['live-usage'].icon}
 					mouseX={mouseX}
