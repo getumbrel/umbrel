@@ -24,7 +24,7 @@ export function SheetLayout() {
 		<Sheet open={open} onOpenChange={setOpen} modal={false}>
 			<SheetStickyHeaderProvider scrollRef={scrollRef}>
 				<SheetContent
-					className='mx-auto h-[calc(100dvh-16px)] max-w-[1320px] pb-6 md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
+					className='mx-auto h-[calc(100dvh-var(--sheet-top))] max-w-[1320px] pb-6 md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
 					backdrop={
 						open && (
 							<div

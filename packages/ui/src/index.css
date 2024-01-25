@@ -16,6 +16,8 @@ body {
 
 html {
 	--font-inter: 'Inter';
+	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
+	--sheet-top: 2vh;
 }
 
 @supports (font-variation-settings: normal) {

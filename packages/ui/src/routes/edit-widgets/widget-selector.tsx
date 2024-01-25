@@ -19,7 +19,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 
 	const {availableWidgets, toggleSelected, selected, selectedTooMany} = widgets
 
-	const selectedH = selected.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
+	const selectedH = selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
 
 	return (
 		<>
