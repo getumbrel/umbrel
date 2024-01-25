@@ -22,7 +22,9 @@ export function Dock() {
 	const {pathname} = useLocation()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
-	const updateCount = useAppsWithUpdates().length
+	const {appsWithUpdates} = useAppsWithUpdates()
+
+	const appUpdateCount = appsWithUpdates.length
 
 	return (
 		<>
@@ -49,7 +51,7 @@ export function Dock() {
 					to={systemAppsKeyed['app-store'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['app-store'].systemAppTo)}
 					bg={systemAppsKeyed['app-store'].icon}
-					notificationCount={updateCount}
+					notificationCount={appUpdateCount}
 					mouseX={mouseX}
 				/>
 				<DockItem
