@@ -3,7 +3,6 @@ import {useLocation} from 'react-router-dom'
 
 import {systemAppsKeyed} from '@/hooks/use-apps'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
-import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
@@ -18,7 +17,6 @@ export const DOCK_HEIGHT = ICON_SIDE + PADDING * 2
 export const FROM_BOTTOM = 10
 
 export function Dock() {
-	const {addLinkSearchParams} = useQueryParams()
 	const {pathname} = useLocation()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
