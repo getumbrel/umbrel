@@ -158,12 +158,11 @@ function FrequentApps() {
 				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>Frequent apps</h3>
 				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
-					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
+					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' />)}
 					{appsByFrequency(lastApps, 6).map((appId) => (
 						<FrequentApp
 							key={appId}
 							appId={appId}
-							port={userAppsKeyed[appId]?.port}
 							icon={userAppsKeyed[appId]?.icon}
 							name={userAppsKeyed[appId]?.name}
 						/>
@@ -195,7 +194,7 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 	return sortedAppIds
 }
 
-function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; name: string; port: number}) {
+function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: string}) {
 	const launchApp = useLaunchApp()
 	const isMobile = useIsMobile()
 	return (
