@@ -29,7 +29,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder='Search for apps, settings or actions' />
+			<CommandInput placeholder='Search for apps, settings, or actions' />
 			<Separator />
 			<CommandList ref={scrollRef}>
 				<FrequentApps />
