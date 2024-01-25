@@ -155,7 +155,7 @@ function ProgressCard({
 			</div>
 			<div className='flex flex-col gap-2'>
 				<div className='text-13 font-semibold -tracking-2 opacity-40'>{progressLabel}</div>
-				<Progress value={progress * 100} />
+				<Progress value={progress * 100} variant='primary' />
 			</div>
 		</Card>
 	)
