@@ -26,7 +26,7 @@ export function ImmersiveDialog({children, onClose}: {children: React.ReactNode;
 				<ImmersiveDialogOverlay />
 				{/* shell */}
 				<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0')}>
-					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
+					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto p-6 md:p-[30px]'>
 						{children}
 					</div>
 					<ImmersiveDialogClose />
