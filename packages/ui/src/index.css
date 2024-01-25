@@ -171,7 +171,7 @@ a {
 }
 
 [cmdk-item] + [cmdk-item] {
-	@apply mt-2.5;
+	@apply mt-1 md:mt-2.5;
 }
 
 @property --progress {

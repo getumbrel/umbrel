@@ -5,6 +5,7 @@ import * as React from 'react'
 import {RiCloseCircleFill} from 'react-icons/ri'
 
 import {AppIcon} from '@/components/app-icon'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {Dialog} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
 
@@ -27,14 +28,14 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 			<DialogPrimitive.Content
 				className={cn(
 					dialogContentClass,
-					'top-4 translate-y-0 overflow-hidden p-[30px] data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0 lg:top-[10%]',
+					'top-4 translate-y-0 overflow-hidden p-3 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0 md:p-[30px] lg:top-[10%]',
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 					'z-[999]',
 				)}
 			>
 				<Command
 					loop
-					className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'
+					className='[&_[cmdk-group-heading]]:font-medium[&_[cmdk-group-heading]]:text-neutral-400 flex flex-col gap-3 md:gap-5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0'
 				>
 					{children}
 				</Command>
@@ -47,7 +48,7 @@ const CommandInput = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Input>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({className, ...props}, ref) => (
-	<div className='flex items-center px-3' cmdk-input-wrapper=''>
+	<div className='flex items-center pr-2 md:px-3' cmdk-input-wrapper=''>
 		<CommandPrimitive.Input
 			ref={ref}
 			className={cn(
@@ -102,20 +103,23 @@ CommandSeparator.displayName = CommandPrimitive.Separator.displayName
 const CommandItem = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Item>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {icon?: string}
->(({className, icon, children, ...props}, ref) => (
-	<CommandPrimitive.Item
-		ref={ref}
-		className={cn(
-			'group relative flex cursor-default select-none items-center gap-3 rounded-8 p-2 text-15 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-			className,
-		)}
-		{...props}
-	>
-		{icon && <AppIcon src={icon} size={36} className='rounded-8' />}
-		{children}
-		<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
-	</CommandPrimitive.Item>
-))
+>(({className, icon, children, ...props}, ref) => {
+	const isMobile = useIsMobile()
+	return (
+		<CommandPrimitive.Item
+			ref={ref}
+			className={cn(
+				'group relative flex cursor-default select-none items-center gap-3 rounded-8 p-2 text-13 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 md:text-15',
+				className,
+			)}
+			{...props}
+		>
+			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-8' />}
+			{children}
+			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
+		</CommandPrimitive.Item>
+	)
+})
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
 
@@ -149,7 +153,7 @@ const BlurOverlay = React.forwardRef(ForwardedBlurOverlay)
 
 const CommandCloseButton = () => (
 	<DialogPrimitive.Close className='rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
-		<RiCloseCircleFill className='h-5 w-5' />
+		<RiCloseCircleFill className='h-[18px] w-[18px] md:h-5 md:w-5' />
 		<span className='sr-only'>Close</span>
 	</DialogPrimitive.Close>
 )

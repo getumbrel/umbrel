@@ -4,6 +4,7 @@ import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
 import {systemAppsKeyed, useApps} from '@/hooks/use-apps'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
@@ -152,9 +153,9 @@ function FrequentApps() {
 	if (lastApps.length === 0) return null
 
 	return (
-		<div className='mb-5 flex flex-col gap-5'>
+		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 text-15 font-semibold leading-tight -tracking-2'>Frequent apps</h3>
+				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>Frequent apps</h3>
 				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
 					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
@@ -196,9 +197,10 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 
 function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; name: string; port: number}) {
 	const launchApp = useLaunchApp()
+	const isMobile = useIsMobile()
 	return (
 		<button
-			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
+			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
 			onClick={() => launchApp(appId)}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
@@ -208,8 +210,8 @@ function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; na
 				}
 			}}
 		>
-			<AppIcon src={icon} size={64} className='rounded-15' />
-			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{name ?? appId}</div>
+			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-8 md:rounded-15' />
+			<div className='w-full truncate text-[10px] -tracking-2 text-white/75 md:text-13'>{name ?? appId}</div>
 		</button>
 	)
 }
