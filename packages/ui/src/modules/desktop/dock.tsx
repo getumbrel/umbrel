@@ -72,8 +72,6 @@ export function Dock() {
 					bg={systemAppsKeyed['widgets'].icon}
 					mouseX={mouseX}
 				/>
-				{/* <DockDivider /> */}
-				{/* <DockItem to={{search: addLinkSearchParams({dialog: 'logout'})}} bg='/dock/exit.png' mouseX={mouseX} /> */}
 			</motion.div>
 			<LogoutDialog />
 		</>
