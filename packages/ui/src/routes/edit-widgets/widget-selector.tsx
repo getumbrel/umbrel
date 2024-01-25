@@ -25,7 +25,8 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 		<>
 			{open && (
 				// Don't make this take up full width because clicking outside should close the widget selector
-				<div className='absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
+				// `pointer-events-none` because we want clicking outside the sheet to close the sheet, not interact with the widget
+				<div className='pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
 					{/* <div className='absoulte top-0 grid h-[var(--widget-h)] w-full place-items-center whitespace-nowrap'>
 						No widgets selected
 					</div> */}
