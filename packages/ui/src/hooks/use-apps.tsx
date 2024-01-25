@@ -20,34 +20,41 @@ export const systemApps = [
 		systemApp: true,
 		systemAppTo: '/',
 	},
+	// For the dock...
 	{
 		id: 'home',
 		name: 'Home',
-		icon: '/dock/home.png',
+		icon: '/figma-exports/dock-home.png',
 		systemApp: true,
 		systemAppTo: '/',
 	},
 	{
 		id: 'app-store',
 		name: 'App Store',
-		icon: '/dock/shop.png',
+		icon: '/figma-exports/dock-app-store.png',
 		systemApp: true,
 		systemAppTo: '/app-store',
 	},
 	{
 		id: 'settings',
 		name: 'Settings',
-		icon: '/dock/settings.png',
+		icon: '/figma-exports/dock-settings.png',
 		systemApp: true,
 		systemAppTo: '/settings',
 	},
 	{
-		id: 'exit',
-		name: 'Logout',
-		icon: '/dock/exit.png',
+		id: 'live-usage',
+		name: 'Live Usage',
+		icon: '/figma-exports/dock-live-usage.png',
 		systemApp: true,
-		// Instead use search param: {dialog: 'logout'}
-		systemAppTo: '',
+		systemAppTo: '/live-usage',
+	},
+	{
+		id: 'widgets',
+		name: 'Widgets',
+		icon: '/figma-exports/dock-widgets.png',
+		systemApp: true,
+		systemAppTo: '/edit-widgets',
 	},
 ] as const satisfies readonly AppT[]
 

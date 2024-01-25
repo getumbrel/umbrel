@@ -124,11 +124,11 @@ function DockExample() {
 	return (
 		<>
 			<div className='flex items-center gap-4 rounded-15 bg-neutral-800 p-3'>
-				<DockItem bg='/dock/home.png' mouseX={mouseX} notificationCount={0} />
-				<DockItem bg='/dock/home.png' mouseX={mouseX} notificationCount={1} />
-				<DockItem bg='/dock/home.png' mouseX={mouseX} notificationCount={2} />
-				<DockItem bg='/dock/home.png' mouseX={mouseX} notificationCount={99} />
-				<DockItem bg='/dock/home.png' mouseX={mouseX} notificationCount={999} />
+				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={0} />
+				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={1} />
+				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={2} />
+				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={99} />
+				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={999} />
 				<H2>Interactive:</H2>
 				<DockItemInteractive />
 				<H2>No bg:</H2>
@@ -142,7 +142,7 @@ function DockItemInteractive() {
 	const [open, setOpen] = useState(false)
 	const mouseX = useMotionValue(-1000)
 
-	return <DockItem bg='/dock/home.png' mouseX={mouseX} open={open} onClick={() => setOpen(true)} />
+	return <DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} open={open} onClick={() => setOpen(true)} />
 }
 
 function AppGridExamples() {

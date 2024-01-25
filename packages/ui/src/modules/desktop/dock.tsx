@@ -53,14 +53,28 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
+					// to={{pathname: '/settings', search: addLinkSearchParams({dialog: 'live-usage'})}}
 					to={systemAppsKeyed['settings'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['settings'].systemAppTo)}
 					bg={systemAppsKeyed['settings'].icon}
 					notificationCount={settingsNotificationCount}
 					mouseX={mouseX}
 				/>
-				<DockDivider />
-				<DockItem to={{search: addLinkSearchParams({dialog: 'logout'})}} bg='/dock/exit.png' mouseX={mouseX} />
+				<DockItem
+					// to={systemAppsKeyed['live-usage'].systemAppTo}
+					to={{pathname: '/settings', search: addLinkSearchParams({dialog: 'live-usage'})}}
+					open={pathname.startsWith(systemAppsKeyed['live-usage'].systemAppTo)}
+					bg={systemAppsKeyed['live-usage'].icon}
+					mouseX={mouseX}
+				/>
+				<DockItem
+					to={systemAppsKeyed['widgets'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
+					bg={systemAppsKeyed['widgets'].icon}
+					mouseX={mouseX}
+				/>
+				{/* <DockDivider /> */}
+				{/* <DockItem to={{search: addLinkSearchParams({dialog: 'logout'})}} bg='/dock/exit.png' mouseX={mouseX} /> */}
 			</motion.div>
 			<LogoutDialog />
 		</>
@@ -82,7 +96,8 @@ export function DockPreview() {
 			<DockItem bg={systemAppsKeyed['app-store'].icon} mouseX={mouseX} />
 			<DockItem bg={systemAppsKeyed['settings'].icon} mouseX={mouseX} />
 			<DockDivider />
-			<DockItem bg='/dock/exit.png' mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['live-usage'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['widgets'].icon} mouseX={mouseX} />
 		</div>
 	)
 }
