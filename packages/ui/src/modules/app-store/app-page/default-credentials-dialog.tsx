@@ -46,7 +46,13 @@ export function DefaultCredentialsDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogContent className='p-0'>
+				<DialogContent
+					className='p-0'
+					onOpenAutoFocus={(e) => {
+						// `preventDefault` to prevent focus on first input
+						e.preventDefault()
+					}}
+				>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-4 overflow-y-auto p-7'>
 						{/* <JSONTree data={app} /> */}
 						<DialogHeader>
