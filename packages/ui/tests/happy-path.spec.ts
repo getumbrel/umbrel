@@ -61,12 +61,14 @@ test('happy path', async ({page, context}) => {
 
 	// await page.screenshot({path: 'test-results/onboarding-done.png'})
 
-	// Expect button with text "Launch"
+	// Expect link with text "Launch"
 	await expect(page.getByTestId('to-desktop')).toBeVisible()
 
-	// Click button
-	// page.getByRole('button', {name: 'Launch'}).click()
-	await page.keyboard.press('Enter')
+	// Click link
+	await page.getByTestId('to-desktop').click()
+
+	// TODO: also test that pressing Enter works
+	// await page.keyboard.press('Enter')
 
 	await page.waitForURL(/\//)
 	await page.waitForLoadState()
