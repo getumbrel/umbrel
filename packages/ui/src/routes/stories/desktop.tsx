@@ -149,8 +149,8 @@ function DockItemInteractive() {
 }
 
 function AppGridExamples() {
-	const {userApps} = useApps()
-	if (!userApps) return null
+	const {apps, isLoading} = useAvailableApps()
+	if (!apps || isLoading) return null
 
 	const handleClick = () => alert('clicked')
 
@@ -163,7 +163,7 @@ function AppGridExamples() {
 			<div>1 app</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={userApps.slice(0, 1).map((app) => (
+					apps={apps.slice(0, 1).map((app) => (
 						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
@@ -171,7 +171,7 @@ function AppGridExamples() {
 			<div>3 apps</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={userApps.slice(0, 3).map((app) => (
+					apps={apps.slice(0, 3).map((app) => (
 						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
@@ -179,7 +179,7 @@ function AppGridExamples() {
 			<div>All apps</div>
 			<AppGridWrapper>
 				<AppGrid
-					apps={userApps.map((app) => (
+					apps={apps.map((app) => (
 						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={handleClick} />
 					))}
 				/>
