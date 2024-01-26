@@ -1,9 +1,7 @@
-import {useEffect, useLayoutEffect} from 'react'
-import {arrayIncludes} from 'ts-extras'
+import {createContext, useContext, useLayoutEffect} from 'react'
 
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {cn} from '@/shadcn-lib/utils'
-import {trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 type WallpaperT = {
@@ -121,53 +119,29 @@ export const wallpapers = [
 ] as const satisfies readonly WallpaperT[]
 
 export type WallpaperId = (typeof wallpapers)[number]['id']
-const wallpaperIds = wallpapers.map((w) => w.id)
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 
 // ---
 
-const nullWallpaper = {
-	id: 'none',
-	url: '',
-	brandColorHsl: '0 0 0',
-}
-
 const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
 
-/**
- * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
- */
-export const useWallpaper = () => {
-	const userQ = trpcReact.user.get.useQuery(undefined, {
-		// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
-		retry: false,
-	})
-	const wallpaperQId = userQ.data?.wallpaper
-	const wallpaperId = arrayIncludes(wallpaperIds, wallpaperQId) ? wallpaperQId : DEFAULT_WALLPAPER_ID
-
-	// trpc
-	const ctx = trpcReact.useContext()
-	const userMut = trpcReact.user.set.useMutation({onSuccess: () => ctx.user.get.invalidate()})
-	const setWallpaperId = (id: WallpaperId) => userMut.mutate({wallpaper: id})
-
-	const hasData = userQ.data && !userQ.isError
-	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
-	// const wallpaper = nullWallpaper
-
-	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2('wallpaperId', wallpaperId)
-	const localWallpaper = localWallpaperId ? wallpapersKeyed[localWallpaperId] : wallpaper
-
-	useEffect(() => {
-		hasData && setLocalWallpaperId(wallpaperId)
-	}, [hasData, setLocalWallpaperId, wallpaperId])
-
-	return {wallpaper, localWallpaper, setWallpaperId}
+type WallpaperType = {
+	wallpaper: WallpaperT
+	localWallpaper: WallpaperT
+	setWallpaperId: (id: WallpaperId) => void
 }
 
-export function WallpaperInjector() {
-	const {wallpaper, localWallpaper} = useWallpaper()
+const WallPaperContext = createContext<WallpaperType>(null as any)
 
-	const w = (wallpaper !== nullWallpaper && wallpaper) || localWallpaper || DEFAULT_WALLPAPER_ID
+export function WallpaperProvider({children}: {children: React.ReactNode}) {
+	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2<WallpaperId>('wallpaperId')
+
+	const defaultWallpaper = wallpapersKeyed[DEFAULT_WALLPAPER_ID]
+	const localWallpaper = (localWallpaperId && wallpapersKeyed[localWallpaperId]) || defaultWallpaper
+
+	const w = localWallpaper
+
+	const wallpaper = localWallpaper || wallpapersKeyed[DEFAULT_WALLPAPER_ID]
 
 	useLayoutEffect(() => {
 		const el = document.documentElement
@@ -175,11 +149,24 @@ export function WallpaperInjector() {
 		el.style.setProperty('--color-brand-lighter', brandHslLighter(w.brandColorHsl))
 	}, [w.brandColorHsl])
 
-	return null
+	return (
+		<WallPaperContext.Provider value={{wallpaper, localWallpaper, setWallpaperId: setLocalWallpaperId}}>
+			{children}
+		</WallPaperContext.Provider>
+	)
+}
+
+/**
+ * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
+ */
+export const useWallpaper = () => {
+	const ctx = useContext(WallPaperContext)
+	if (!ctx) throw new Error('useWallpaper must be used within WallpaperProvider')
+	return ctx
 }
 
 export function Wallpaper({className}: {className?: string}) {
-	const {wallpaper, localWallpaper} = useWallpaper()
+	const {wallpaper} = useWallpaper()
 
 	return (
 		<div
@@ -188,7 +175,7 @@ export function Wallpaper({className}: {className?: string}) {
 				className,
 			)}
 			style={{
-				backgroundImage: `url(${wallpaper.url || localWallpaper.url})`,
+				backgroundImage: `url(${wallpaper.url})`,
 			}}
 		/>
 	)
