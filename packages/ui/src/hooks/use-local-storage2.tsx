@@ -7,7 +7,7 @@ import {useLocalStorage} from 'react-use'
  * - Uses an effect to prevent ssr mismatch
  * Why: https://github.com/streamich/react-use/issues/702
  */
-export function useLocalStorage2<TT>(key: string, defaultValue: TT) {
+export function useLocalStorage2<TT>(key: string, defaultValue?: TT) {
 	const [s2, setS2] = useState<TT | undefined>(undefined)
 	const [s, ss] = useLocalStorage('UMBREL_' + key, defaultValue)
 
