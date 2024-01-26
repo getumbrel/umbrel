@@ -13,6 +13,7 @@ import {AppIcon} from '@/modules/desktop/app-icon'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview'
 import {DockItem} from '@/modules/desktop/dock-item'
 import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
+import {brandHslLighter, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {Button} from '@/shadcn-components/ui/button'
 
 export default function DesktopStory() {
@@ -29,6 +30,8 @@ export default function DesktopStory() {
 				<AppIconExamples />
 				<H2>Desktop Preview</H2>
 				<DesktopPreview />
+				<H2>Wallpaper</H2>
+				<WallpaperExamples />
 				<H2>Dock</H2>
 				<DockExample />
 				<H2>App Grid</H2>
@@ -187,4 +190,30 @@ function AppGridExamples() {
 
 function AppGridWrapper({children}: {children: React.ReactNode}) {
 	return <div className='h-[400px] w-full overflow-hidden bg-neutral-900'>{children}</div>
+}
+
+function WallpaperExamples() {
+	return (
+		<div className='flex flex-wrap gap-2'>
+			{wallpapers.map((w) => (
+				<div key={w.id} className='relative'>
+					<img src={w.url} alt={w.id} className='h-32' />
+					<div className='absolute bottom-0 left-0 right-0 flex bg-black/50 p-2 backdrop-blur-md'>
+						<div
+							style={{
+								backgroundColor: `hsl(${w.brandColorHsl})`,
+							}}
+							className='0 h-4 w-4'
+						/>
+						<div
+							style={{
+								backgroundColor: `hsl(${brandHslLighter(w.brandColorHsl)})`,
+							}}
+							className='0 h-4 w-4'
+						/>
+					</div>
+				</div>
+			))}
+		</div>
+	)
 }
