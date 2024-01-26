@@ -18,14 +18,12 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 	const [trpcClient] = useState(() => trpcReact.createClient({links}))
 
 	return (
-		<>
-			<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
-				<QueryClientProvider client={queryClient}>
-					{children}
-					<ReactQueryDevtools />
-					<LoadingIndicator />
-				</QueryClientProvider>
-			</trpcReact.Provider>
-		</>
+		<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
+			<QueryClientProvider client={queryClient}>
+				{children}
+				<ReactQueryDevtools />
+				<LoadingIndicator />
+			</QueryClientProvider>
+		</trpcReact.Provider>
 	)
 }
