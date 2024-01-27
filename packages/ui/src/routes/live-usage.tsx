@@ -20,7 +20,7 @@ export default function LiveUsageDialog() {
 	const dialogProps = useDialogOpenProps('live-usage')
 
 	return (
-		<ImmersiveDialog onClose={() => dialogProps.onOpenChange(false)}>
+		<ImmersiveDialog {...dialogProps}>
 			<h1 className={immersiveDialogTitleClass}>{title}</h1>
 			<LiveUsageContent />
 		</ImmersiveDialog>

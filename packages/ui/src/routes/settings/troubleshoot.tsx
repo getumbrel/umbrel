@@ -21,7 +21,7 @@ export default function TroubleshootDialog() {
 	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
 
 	return (
-		<ImmersiveDialog onClose={() => dialogProps.onOpenChange(false)}>
+		<ImmersiveDialog {...dialogProps}>
 			<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
 				<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{title}</h1>
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />

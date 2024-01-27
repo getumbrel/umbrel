@@ -1,14 +1,18 @@
 import {motion, useMotionValue} from 'framer-motion'
+import React, {Suspense} from 'react'
 import {useLocation} from 'react-router-dom'
 
 import {systemAppsKeyed} from '@/hooks/use-apps'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
+import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
 import {LogoutDialog} from './logout-dialog'
+
+const LiveUsageDialog = React.lazy(() => import('@/routes/live-usage'))
 
 export const ICON_SIDE = 50
 export const ICON_SIDE_ZOOMED = 80
@@ -18,6 +22,7 @@ export const FROM_BOTTOM = 10
 
 export function Dock() {
 	const {pathname} = useLocation()
+	const {addLinkSearchParams} = useQueryParams()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
 	const {appsWithUpdates} = useAppsWithUpdates()
@@ -53,7 +58,6 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
-					// to={{pathname: '/settings', search: addLinkSearchParams({dialog: 'live-usage'})}}
 					to={systemAppsKeyed['settings'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['settings'].systemAppTo)}
 					bg={systemAppsKeyed['settings'].icon}
@@ -61,7 +65,7 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
-					to={systemAppsKeyed['live-usage'].systemAppTo}
+					to={{search: addLinkSearchParams({dialog: 'live-usage'})}}
 					open={pathname.startsWith(systemAppsKeyed['live-usage'].systemAppTo)}
 					bg={systemAppsKeyed['live-usage'].icon}
 					mouseX={mouseX}
@@ -74,6 +78,9 @@ export function Dock() {
 				/>
 			</motion.div>
 			<LogoutDialog />
+			<Suspense>
+				<LiveUsageDialog />
+			</Suspense>
 		</>
 	)
 }

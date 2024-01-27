@@ -19,9 +19,17 @@ export function ImmersiveDialogSeparator() {
 	return <hr className='w-full border-white/10' />
 }
 
-export function ImmersiveDialog({children, onClose}: {children: React.ReactNode; onClose?: () => void}) {
+export function ImmersiveDialog({
+	children,
+	open,
+	onOpenChange,
+}: {
+	children: React.ReactNode
+	open: boolean
+	onOpenChange: (open: boolean) => void
+}) {
 	return (
-		<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
+		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
 				{/* shell */}

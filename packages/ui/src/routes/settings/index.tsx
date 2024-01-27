@@ -19,7 +19,6 @@ const SettingsContentMobile = React.lazy(() =>
 const AppStorePreferencesDialog = React.lazy(() => import('@/routes/settings/app-store-preferences'))
 const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'))
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
-const LiveUsageDialog = React.lazy(() => import('@/routes/settings/live-usage'))
 const MigrationAssistantDialog = React.lazy(() => import('@/routes/settings/migration-assistant'))
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
@@ -63,7 +62,6 @@ const routeToDialogDesktop = {
 	account: AccountDrawer,
 	'change-name': ChangeNameDialog,
 	'change-password': ChangePasswordDialog,
-	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
 	tor: ConfirmEnableTorDialog,
 	'device-info': DeviceInfoDialog,
@@ -89,7 +87,6 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	account: AccountDrawer,
 	'change-name': AccountDrawer,
 	'change-password': AccountDrawer,
-	'live-usage': LiveUsageDialog,
 	'migration-assistant': MigrationAssistantDialog,
 	'device-info': DeviceInfoDrawer,
 	restart: RestartDialog,

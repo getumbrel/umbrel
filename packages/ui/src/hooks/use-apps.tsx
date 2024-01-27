@@ -1,5 +1,4 @@
 import {createContext, useContext} from 'react'
-import {LinkProps} from 'react-router-dom'
 
 import {trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
@@ -9,7 +8,7 @@ type AppT = {
 	name: string
 	icon: string
 	systemApp?: boolean
-	systemAppTo?: LinkProps['to']
+	systemAppTo?: string
 }
 
 export const systemApps = [
@@ -47,7 +46,9 @@ export const systemApps = [
 		name: 'Live Usage',
 		icon: '/figma-exports/dock-live-usage.png',
 		systemApp: true,
-		systemAppTo: '/settings?dialog=live-usage',
+		// NOTE: using this will clear existing search params
+		// In practice, this means cmdk will clear params and clicking dock icon will not
+		systemAppTo: '?dialog=live-usage',
 	},
 	{
 		id: 'widgets',
