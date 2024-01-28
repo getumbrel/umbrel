@@ -4,7 +4,7 @@ import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
 import {useAppInstall} from '@/hooks/use-app-install'
-import {AppsProvider, useApps} from '@/hooks/use-apps'
+import {AppsProvider} from '@/hooks/use-apps'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
