@@ -1,5 +1,6 @@
 import {ReactNode} from 'react'
 
+import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
 import {DebugOnly} from '@/components/ui/debug-only'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
@@ -7,6 +8,7 @@ import {useApps} from '@/hooks/use-apps'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useMemoryForUi} from '@/hooks/use-memory'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {APP_ICON_PLACEHOLDER_SRC} from '@/modules/desktop/app-icon'
 import {StatText} from '@/modules/widgets/shared/stat-text'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
@@ -72,18 +74,7 @@ const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
 function AppListRow({icon, title, value}: {icon?: string; title: string; value: string}) {
 	return (
 		<div className='flex items-center gap-2 p-3'>
-			{icon && (
-				<img
-					src={icon}
-					alt={title}
-					width={25}
-					height={25}
-					className='h-[25px] w-[25px] rounded-5 bg-white/10 bg-cover bg-center shadow-md'
-					style={{
-						backgroundImage: `url(/icons/app-icon-placeholder.svg)`,
-					}}
-				/>
-			)}
+			<AppIcon src={icon} size={25} className='rounded-5 bg-white/5 shadow-md' />
 			<span className='flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
 			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
 		</div>

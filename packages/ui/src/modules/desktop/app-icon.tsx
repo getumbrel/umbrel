@@ -14,7 +14,7 @@ import {useLinkToDialog} from '@/utils/dialog'
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
 
-const PLACEHOLDER_SRC = '/icons/app-icon-placeholder.svg'
+export const APP_ICON_PLACEHOLDER_SRC = '/figma-exports/app-icon-placeholder.svg'
 
 export function AppIcon({
 	label,
@@ -72,7 +72,7 @@ export function AppIcon({
 						'group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
 				)}
 				style={{
-					backgroundImage: state === 'ready' ? `url(${PLACEHOLDER_SRC})` : undefined,
+					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
 				}}
 			>
 				{url && (
