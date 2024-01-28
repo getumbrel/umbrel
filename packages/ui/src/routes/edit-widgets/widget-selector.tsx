@@ -2,6 +2,7 @@ import {AnimatePresence, motion} from 'framer-motion'
 import {ReactNode} from 'react'
 import {useTimeout} from 'react-use'
 
+import {WidgetCheckIcon} from '@/assets/widget-check-icon'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {Widget} from '@/modules/widgets'
@@ -166,9 +167,8 @@ function WidgetChecker({
 		<div className='relative'>
 			{children}
 			{checked && (
-				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3'>
-					<img src='/check.svg' className='max-sm:w-6' />
-					{/* <div className="w-10 h-10 bg-brand rounded-full" /> */}
+				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3 text-brand'>
+					<WidgetCheckIcon className='max-sm:scale-75' />
 				</div>
 			)}
 			<button
