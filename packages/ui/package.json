@@ -72,7 +72,7 @@
 		"ts-extras": "^0.11.0",
 		"url-join": "^5.0.0",
 		"use-is-focused": "0.0.1",
-		"vaul": "^0.8.0"
+		"vaul": "^0.8.9"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^8.3.1",
