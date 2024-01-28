@@ -10,6 +10,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
+import {useLinkToDialog} from '@/utils/dialog'
 
 import {AppIcon} from './app-icon'
 
@@ -20,6 +21,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
+	const isMobile = useIsMobile()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -55,7 +57,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
-						navigate('/settings')
+						navigate(isMobile ? '/settings?dialog=wallpaper' : '/settings')
 						setOpen(false)
 					}}
 				>
