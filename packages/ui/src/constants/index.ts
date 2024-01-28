@@ -8,14 +8,14 @@ export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 export const hostEnvironmentMap = {
 	'umbrel-home': {
 		title: 'Umbrel Home',
-		icon: '/figma-exports/umbrel-home.svg',
+		icon: '/figma-exports/system-umbrel-home.png',
 	},
 	'raspberry-pi': {
 		title: 'Raspberry Pi',
-		icon: '/figma-exports/pi.svg',
+		icon: '/figma-exports/system-pi.svg',
 	},
 	linux: {
 		title: 'Linux',
-		icon: '/figma-exports/tux.svg',
+		icon: '/figma-exports/system-tux.svg',
 	},
 } satisfies Record<UmbrelHostEnvironment, {title: string; icon: string}>
