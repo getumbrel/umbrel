@@ -1,5 +1,6 @@
 import {ButtonLink} from '@/components/ui/button-link'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {
 	Drawer,
 	DrawerContent,
@@ -21,12 +22,7 @@ export function StartMigrationDrawer() {
 			<DrawerContent>
 				<DrawerHeader className='flex flex-col items-center text-center'>
 					<div className='py-5'>
-						<img
-							src='/migration-assistant/migrate-raspberrypi-umbrel-home.png'
-							width={111}
-							height={104}
-							alt='Image displaying migration from Raspberry Pi to Umbrel Home'
-						/>
+						<MigrateImage />
 					</div>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>
