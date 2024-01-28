@@ -1,3 +1,5 @@
+import {useTimeout} from 'react-use'
+
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {useWallpaper, WallpaperId, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {
@@ -25,6 +27,8 @@ export function WallpaperDrawer() {
 		dialogProps.onOpenChange(false)
 	}
 
+	const [isReady] = useTimeout(300)
+
 	return (
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
@@ -33,30 +37,49 @@ export function WallpaperDrawer() {
 					<DrawerDescription>Choose your Umbrel wallpaper</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
-					<div className='grid grid-cols-2 gap-2.5'>
-						{wallpapers.map((w) => (
-							<WallpaperItem
-								key={w.id}
-								bg={w.url}
-								active={w.id === wallpaper.id}
-								onSelect={() => selectWallpaper(w.id)}
-							/>
-						))}
-					</div>
+					{isReady() && (
+						<div className='grid grid-cols-2 gap-2.5'>
+							{wallpapers.map((w, i) => (
+								<WallpaperItem
+									key={w.id}
+									bg={`/public/wallpapers/generated-small/${w.id}.jpg`}
+									active={w.id === wallpaper.id}
+									onSelect={() => selectWallpaper(w.id)}
+									className='animate-in fade-in fill-mode-both'
+									style={{
+										animationDelay: `${i * 20}ms`,
+									}}
+								/>
+							))}
+						</div>
+					)}
 				</DrawerScroller>
 			</DrawerContent>
 		</Drawer>
 	)
 }
 
-function WallpaperItem({active, bg, onSelect}: {active?: boolean; bg: string; onSelect: () => void}) {
+function WallpaperItem({
+	active,
+	bg,
+	onSelect,
+	className,
+	style,
+}: {
+	active?: boolean
+	bg: string
+	onSelect: () => void
+	className?: string
+	style: React.CSSProperties
+}) {
 	return (
 		<button
-			className={'aspect-1.9 relative rounded-10'}
+			className={cn('relative aspect-1.9 rounded-10', className)}
 			style={{
 				backgroundImage: `url(${bg})`,
 				backgroundSize: 'cover',
 				backgroundPosition: 'center',
+				...style,
 			}}
 			onClick={onSelect}
 		>

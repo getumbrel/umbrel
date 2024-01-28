@@ -101,7 +101,7 @@ export function WallpaperPicker({delayed, maxW}: {delayed?: boolean; maxW?: numb
 							onSelect={() => {
 								setWallpaperId(w.id)
 							}}
-							bg={w.url}
+							bg={`/public/wallpapers/generated-thumbs/${w.id}.jpg`}
 						/>
 					))}
 					<div className='w-1 shrink-0' />
