@@ -7,6 +7,7 @@ import {DockSpacer} from '@/modules/desktop/dock'
 import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {SheetFixedTarget} from '@/modules/sheet-top-fixed'
 import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
+import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
 export function SheetLayout() {
@@ -24,7 +25,7 @@ export function SheetLayout() {
 		<Sheet open={open} onOpenChange={setOpen} modal={false}>
 			<SheetStickyHeaderProvider scrollRef={scrollRef}>
 				<SheetContent
-					className='mx-auto h-[calc(100dvh-var(--sheet-top))] max-w-[1320px] pb-6 md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
+					className='mx-auto h-[calc(100dvh-var(--sheet-top))] max-w-[1320px] md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
 					backdrop={
 						open && (
 							<div
@@ -40,15 +41,14 @@ export function SheetLayout() {
 				>
 					<SheetFixedTarget />
 					<SheetStickyHeaderTarget />
-					<div
-						className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto px-3 pt-6 md:px-[70px] md:pt-12'
-						ref={scrollRef}
-					>
-						<Suspense>
-							<Outlet />
-						</Suspense>
-						<DockSpacer className='mt-4' />
-					</div>
+					<ScrollArea className='h-full rounded-t-20' viewportRef={scrollRef}>
+						<div className='flex flex-col gap-5 px-3 pt-6 md:px-[70px] md:pt-12'>
+							<Suspense>
+								<Outlet />
+							</Suspense>
+							<DockSpacer className='mt-4' />
+						</div>
+					</ScrollArea>
 				</SheetContent>
 			</SheetStickyHeaderProvider>
 		</Sheet>
