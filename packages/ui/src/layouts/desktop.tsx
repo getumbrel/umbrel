@@ -58,6 +58,7 @@ function DesktopPage() {
         Keep `AppGridGradientMasking` here rather than deeper down in component heirarchy to avoid being animated up and down when widget selector opens and closes.
       */}
 			<AppGridGradientMasking />
+			{/* Putting `BlurBelowDock` after `AppGridGradientMasking` because  */}
 			<BlurBelowDock />
 			<CmdkMenu open={open} setOpen={setOpen} />
 			<DefaultCredentialsDialog />
@@ -66,11 +67,12 @@ function DesktopPage() {
 }
 
 const BlurBelowDock = () => (
+	// Using 200px because we don't want to intersect the app icons
 	<div
 		className='pointer-events-none fixed inset-0 top-0 backdrop-blur-2xl delay-500 duration-500 animate-in fade-in fill-mode-both'
 		style={{
 			background: '#00000044',
-			WebkitMaskImage: 'linear-gradient(transparent calc(100% - 300px), black calc(100% - 30px))',
+			WebkitMaskImage: 'linear-gradient(transparent calc(100% - 200px), black calc(100% - 30px))',
 		}}
 	/>
 )
