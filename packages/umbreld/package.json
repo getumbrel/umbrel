@@ -110,7 +110,6 @@
 		"p-retry": "^5.1.2",
 		"pify": "^6.1.0",
 		"read-pkg-up": "^9.1.0",
-		"remeda": "^1.29.0",
 		"session-file-store": "^1.5.0",
 		"systeminformation": "^5.18.6",
 		"thirty-two": "^1.0.2",
