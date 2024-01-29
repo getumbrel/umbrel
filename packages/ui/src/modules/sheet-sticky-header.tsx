@@ -31,7 +31,7 @@ export function SheetStickyHeaderProvider({
 		const el = scrollRef.current
 		const scrollHandler = () => {
 			const scrollTop = scrollRef.current?.scrollTop ?? 0
-			console.log('scroll', scrollTop)
+			// console.log('scroll', scrollTop)
 			if (scrollTop > SCROLL_THRESHOLD && hasStickyHeader) {
 				setShowStickyHeader(true)
 			} else {
