@@ -80,7 +80,6 @@ class Server {
 		const server = http.createServer(app)
 		const listen = promisify(server.listen.bind(server)) as (port: number) => Promise<void>
 		await listen(this.umbreld.port)
-		console.log('address', server.address())
 		this.port = (server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)
 
