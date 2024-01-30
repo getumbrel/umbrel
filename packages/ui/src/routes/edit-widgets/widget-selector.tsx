@@ -3,11 +3,14 @@ import {ReactNode} from 'react'
 import {useTimeout} from 'react-use'
 
 import {WidgetCheckIcon} from '@/assets/widget-check-icon'
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useSheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {cn} from '@/shadcn-lib/utils'
 
 export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
@@ -123,19 +126,22 @@ function WidgetSheet({
 						height: `calc(100dvh - ${selectedCssHeight})`,
 					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
+					closeButton={<DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
 				>
-					<div
-						className={cn(
-							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-5 overflow-y-auto px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
-							'opacity-100 duration-100 animate-in fade-in',
-						)}
-					>
-						<SheetHeader>
-							<SheetTitle>Select up to 3 widgets</SheetTitle>
-						</SheetHeader>
-						{children}
-						<DockSpacer />
-					</div>
+					<ScrollArea className='h-full rounded-t-20'>
+						<div
+							className={cn(
+								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
+								'opacity-100 duration-100 animate-in fade-in',
+							)}
+						>
+							<SheetHeader>
+								<SheetTitle>Select up to 3 widgets</SheetTitle>
+							</SheetHeader>
+							{children}
+							<DockSpacer />
+						</div>
+					</ScrollArea>
 				</SheetContent>
 			</Sheet>
 		</BackdropBlurVariantContext.Provider>
