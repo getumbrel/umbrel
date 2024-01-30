@@ -62,33 +62,3 @@ export type AppManifest = {
 
 /** There's a 'ready' state instead of an 'installed' state because if an app is installed but updating, we don't want the user to do anything with that app. If an app is a UserApp (initiated install) */
 export type AppState = 'ready' | 'offline' | 'installing' | 'uninstalling' | 'updating'
-
-/**
- * App to store in yaml.
- * Stuff that can be retrieved from the app repository is not stored here.
- */
-export type YamlApp = Pick<AppManifest, 'id'> & {
-	registryId: string
-	showNotifications: boolean
-	autoUpdate: boolean
-	// Should always be true unless set to `false`
-	// If no deterministic password, we don't show this
-	showCredentialsBeforeOpen: boolean
-}
-
-/**
- * App to return to frontend after installing.
- * Usually pull stuff from app repository for names, etc
- */
-export type UserApp = YamlApp &
-	Pick<AppManifest, 'name' | 'icon' | 'port'> & {
-		credentials: {
-			defaultUsername: string
-			defaultPassword: string
-		}
-		// ---
-		state: AppState
-		// TODO: if state is installing, this should be 0-100, otherwise undefined
-		/** From 0 to 100 */
-		installProgress?: number
-	}

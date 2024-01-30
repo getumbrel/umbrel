@@ -11,7 +11,6 @@ import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
-import type {YamlApp} from './modules/apps/schema.js'
 
 type StoreSchema = {
 	version: string
@@ -24,8 +23,6 @@ type StoreSchema = {
 		hashedPassword: string
 		totpUri?: string
 		wallpaper?: string
-		lastOpenedApps?: string[]
-		apps: YamlApp[]
 	}
 }
 
