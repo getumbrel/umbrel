@@ -100,7 +100,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 				)}
 			>
 				<div className='flex h-0 -translate-y-[56px] gap-5'>
-					<img src='/public/figma-exports/umbrel-ios.png' className='h-[56px] w-[56px]' />
+					<img src='/figma-exports/umbrel-ios.png' className='h-[56px] w-[56px]' />
 					<img src={app.icon} className='h-[56px] w-[56px] rounded-12' />
 				</div>
 				<div className='flex flex-col gap-1'>

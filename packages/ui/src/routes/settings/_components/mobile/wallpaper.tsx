@@ -42,7 +42,7 @@ export function WallpaperDrawer() {
 							{wallpapers.map((w, i) => (
 								<WallpaperItem
 									key={w.id}
-									bg={`/public/wallpapers/generated-small/${w.id}.jpg`}
+									bg={`/wallpapers/generated-small/${w.id}.jpg`}
 									active={w.id === wallpaper.id}
 									onSelect={() => selectWallpaper(w.id)}
 									className='animate-in fade-in fill-mode-both'
