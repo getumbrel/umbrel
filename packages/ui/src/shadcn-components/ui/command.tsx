@@ -3,8 +3,10 @@ import {DialogProps} from '@radix-ui/react-dialog'
 import {Command as CommandPrimitive} from 'cmdk'
 import * as React from 'react'
 import {RiCloseCircleFill} from 'react-icons/ri'
+import {mergeRefs} from 'react-merge-refs'
 
 import {AppIcon} from '@/components/app-icon'
+import {useFadeScroller} from '@/components/fade-scroller'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {Dialog} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
@@ -66,13 +68,16 @@ CommandInput.displayName = CommandPrimitive.Input.displayName
 const CommandList = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.List>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({className, ...props}, ref) => (
-	<CommandPrimitive.List
-		ref={ref}
-		className={cn('umbrel-fade-scroller-y overflow-y-auto overflow-x-hidden', className)}
-		{...props}
-	/>
-))
+>(({className, ...props}, ref) => {
+	const {scrollerClass, ref: localRef} = useFadeScroller('y')
+	return (
+		<CommandPrimitive.List
+			ref={mergeRefs([localRef, ref])}
+			className={cn(scrollerClass, 'overflow-y-auto overflow-x-hidden', className)}
+			{...props}
+		/>
+	)
+})
 
 CommandList.displayName = CommandPrimitive.List.displayName
 

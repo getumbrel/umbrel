@@ -1,6 +1,8 @@
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
 import * as React from 'react'
+import {mergeRefs} from 'react-merge-refs'
 
+import {useFadeScroller} from '@/components/fade-scroller'
 import {cn} from '@/shadcn-lib/utils'
 
 type Props = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
@@ -8,28 +10,31 @@ type Props = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
 }
 
 const ScrollArea = React.forwardRef<React.ElementRef<typeof ScrollAreaPrimitive.Root>, Props>(
-	({className, children, viewportRef, ...props}, ref) => (
-		<ScrollAreaPrimitive.Root
-			ref={ref}
-			className={cn('relative overflow-hidden', className)}
-			scrollHideDelay={0}
-			{...props}
-		>
-			{/*
-			TODO: figure out child issue
-			We need to get a ref to it so we can scroll it programmatically
-			https://github.com/radix-ui/primitives/issues/1666
-			 */}
-			<ScrollAreaPrimitive.Viewport
-				ref={viewportRef}
-				className='umbrel-fade-scroller-y h-full w-full rounded-[inherit] [&>div]:!block'
+	({className, children, viewportRef, ...props}, ref) => {
+		const {scrollerClass, ref: scrollerRef} = useFadeScroller('y')
+		return (
+			<ScrollAreaPrimitive.Root
+				ref={ref}
+				className={cn('relative overflow-hidden', className)}
+				scrollHideDelay={0}
+				{...props}
 			>
-				{children}
-			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar />
-			<ScrollAreaPrimitive.Corner />
-		</ScrollAreaPrimitive.Root>
-	),
+				{/*
+				TODO: figure out child issue
+				We need to get a ref to it so we can scroll it programmatically
+				https://github.com/radix-ui/primitives/issues/1666
+			 */}
+				<ScrollAreaPrimitive.Viewport
+					ref={mergeRefs([viewportRef, scrollerRef])}
+					className={cn(scrollerClass, 'h-full w-full rounded-[inherit] [&>div]:!block')}
+				>
+					{children}
+				</ScrollAreaPrimitive.Viewport>
+				<ScrollBar />
+				<ScrollAreaPrimitive.Corner />
+			</ScrollAreaPrimitive.Root>
+		)
+	},
 )
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 

@@ -10,9 +10,9 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
-import {useLinkToDialog} from '@/utils/dialog'
 
 import {AppIcon} from './app-icon'
+import {FadeScroller} from './fade-scroller'
 
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
@@ -158,7 +158,7 @@ function FrequentApps() {
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
 				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>Frequent apps</h3>
-				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
+				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
 					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' />)}
 					{appsByFrequency(lastApps, 6).map((appId) => (
@@ -169,7 +169,7 @@ function FrequentApps() {
 							name={userAppsKeyed[appId]?.name}
 						/>
 					))}
-				</div>
+				</FadeScroller>
 			</div>
 
 			<Separator />

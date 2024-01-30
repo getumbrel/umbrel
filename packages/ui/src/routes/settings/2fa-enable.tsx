@@ -45,14 +45,12 @@ export default function TwoFactorEnableDialog() {
 						<DrawerDescription>Add a layer of security to login</DrawerDescription>
 					</DrawerHeader>
 					<DrawerScroller>
-						{/* <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'> */}
 						<p className={paragraphClass}>{scanThisMessage}</p>
 						<div className='flex flex-col items-center gap-5'>
 							{/* NOTE: keep this small so that the pin input is visible within the viewport */}
 							<Inner qrCodeSize={150} />
 						</div>
 					</DrawerScroller>
-					{/* </div> */}
 				</DrawerContent>
 			</Drawer>
 		)

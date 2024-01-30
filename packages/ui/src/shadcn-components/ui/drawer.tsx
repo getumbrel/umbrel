@@ -1,6 +1,7 @@
 import * as React from 'react'
 import {Drawer as DrawerPrimitive} from 'vaul'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {cn} from '@/shadcn-lib/utils'
 
 const Drawer = ({shouldScaleBackground = false, ...props}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
@@ -81,7 +82,11 @@ DrawerDescription.displayName = DrawerPrimitive.Description.displayName
 
 // Put this in the content of a `Drawer` to make it scrollable. You might need to add `flex-1` to the parent.
 function DrawerScroller({children}: {children: React.ReactNode}) {
-	return <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>{children}</div>
+	return (
+		<FadeScroller direction='y' className='flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'>
+			{children}
+		</FadeScroller>
+	)
 }
 
 export {

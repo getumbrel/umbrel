@@ -128,6 +128,9 @@ dependencies:
   react-json-tree:
     specifier: 0.18.0
     version: 0.18.0(@types/react@18.2.31)(react@18.2.0)
+  react-merge-refs:
+    specifier: ^2.1.1
+    version: 2.1.1
   react-qr-code:
     specifier: 2.0.12
     version: 2.0.12(react@18.2.0)
@@ -4988,6 +4991,10 @@ packages:
       '@types/react': 18.2.31
       react: 18.2.0
       react-base16-styling: 0.9.1
+    dev: false
+
+  /react-merge-refs@2.1.1:
+    resolution: {integrity: sha512-jLQXJ/URln51zskhgppGJ2ub7b2WFKGq3cl3NYKtlHoTG+dN2q7EzWrn3hN3EgPsTMvpR9tpq5ijdp7YwFZkag==}
     dev: false
 
   /react-qr-code@2.0.12(react@18.2.0):

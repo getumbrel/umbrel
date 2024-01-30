@@ -92,7 +92,6 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
-				{/* <div className='umbrel-fade-scroller-y flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto'> */}
 				<Labeled label='Current password'>
 					<PasswordInput value={password} onValueChange={setPassword} />
 				</Labeled>
@@ -120,7 +119,6 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 						Save changes
 					</Button>
 				</DrawerFooter>
-				{/* </div> */}
 			</fieldset>
 		</form>
 	)
