@@ -17,7 +17,9 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 
 	// TODO: consider re-running this effect when window is resized
 	useEffect(() => {
-		if (supportsScrollTimeline) return
+		// Horizontal scroll in chrome adds fading via scroll-timeline even when it shouldn't. This happens in the 3-up section of the app store
+		// In the future, only want to check if `supportsScrollTimeline` is true.
+		if (supportsScrollTimeline && direction === 'y') return
 		const el = ref!.current
 		if (!el) return
 
