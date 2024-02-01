@@ -58,8 +58,8 @@ export function SettingsContentMobile() {
 				</DesktopPreviewFrame>
 			</div>
 
-			<div className='grid-cols-2 md:grid'>
-				<div className='flex items-center gap-[5px] px-2 pb-2.5 md:order-last'>
+			<div className='grid max-md:gap-5 md:grid-cols-2'>
+				<div className='flex items-center gap-[5px] px-2.5 md:order-last'>
 					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
 						Log out
 					</ButtonLink>
@@ -78,7 +78,7 @@ export function SettingsContentMobile() {
 					</ButtonLink>
 				</div>
 
-				<div>
+				<div className='mx-2.5'>
 					<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
 						{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
 					</h2>
