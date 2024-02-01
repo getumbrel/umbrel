@@ -6,7 +6,6 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
-import {AppGridGradientMasking} from '@/modules/desktop/desktop-misc'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
 
 export function Desktop() {
