@@ -20,7 +20,9 @@ const AppsContext = createContext<AppsContextT | null>(null)
 
 // TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
-	const appsQ = trpcReact.appStore.registry.useQuery()
+	const appsQ = trpcReact.appStore.registry.useQuery(undefined, {
+		staleTime: 10 * 1000 * 60, // 10 minutes
+	})
 	const repos = appsQ.data ?? []
 
 	if (appsQ.isLoading) return null
