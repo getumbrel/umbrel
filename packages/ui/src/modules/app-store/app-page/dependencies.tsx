@@ -3,8 +3,8 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Loading} from '@/components/ui/loading'
-import {useApps} from '@/hooks/use-apps'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useApps} from '@/providers/apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {RegistryApp} from '@/trpc/trpc'
 
 import {cardClass, cardTitleClass} from './shared'

@@ -1,4 +1,4 @@
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {
 	AlertDialog,
 	AlertDialogAction,

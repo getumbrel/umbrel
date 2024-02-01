@@ -1,7 +1,7 @@
 import { Widget, WidgetConfig } from '@/trpc/trpc'
 
 import { toast } from '@/components/ui/toast'
-import { useApps } from '@/hooks/use-apps'
+import { useApps } from '@/providers/apps'
 import { useLaunchApp } from '@/hooks/use-launch-app'
 import { useNavigate } from 'react-router-dom'
 import { ActionsWidget } from './actions-widget'

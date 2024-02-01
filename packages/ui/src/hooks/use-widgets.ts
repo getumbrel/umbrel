@@ -1,10 +1,9 @@
 import {useState} from 'react'
 import {uniq} from 'remeda'
 
+import {systemAppsKeyed, useApps} from '@/providers/apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {trpcReact, Widget} from '@/trpc/trpc'
-
-import {systemAppsKeyed, useApps} from './use-apps'
-import {useAvailableApps} from './use-available-apps'
 
 export const MAX_WIDGETS = 3
 

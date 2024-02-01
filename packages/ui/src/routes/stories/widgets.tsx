@@ -1,5 +1,4 @@
 import {Arc} from '@/components/ui/arc'
-import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
@@ -12,6 +11,7 @@ import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
 import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
+import {AppsProvider} from '@/providers/apps'
 import {tw} from '@/utils/tw'
 
 import {demoWidgetConfigs} from '../../../../umbreld/source/modules/apps/data'

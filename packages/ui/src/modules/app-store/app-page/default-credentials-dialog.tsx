@@ -2,9 +2,9 @@ import {useId} from 'react'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {useUserApp} from '@/hooks/use-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useUserApp} from '@/providers/apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
 import {

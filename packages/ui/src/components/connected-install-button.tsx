@@ -2,10 +2,10 @@ import prettyBytes from 'pretty-bytes'
 import {useState} from 'react'
 
 import {useAppInstall} from '@/hooks/use-app-install'
-import {useApps} from '@/hooks/use-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
+import {useApps} from '@/providers/apps'
 import {RegistryApp} from '@/trpc/trpc'
 
 import {InstallButton, installButtonClass} from './install-button'

@@ -1,10 +1,10 @@
 import {motion, Variant} from 'framer-motion'
 import {useLocation} from 'react-router-dom'
 
-import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
+import {useApps} from '@/providers/apps'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'

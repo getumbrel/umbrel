@@ -1,4 +1,5 @@
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {useUserName} from '@/hooks/use-user-name'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -11,8 +12,6 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {useDialogOpenProps} from '@/utils/dialog'
-
-import {useUserName} from '../../hooks/use-user-name'
 
 export default function ChangeNameDialog() {
 	const title = 'Change name'

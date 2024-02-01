@@ -1,5 +1,5 @@
-import {useApps} from '@/hooks/use-apps'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useApps} from '@/providers/apps'
+import {useAvailableApps} from '@/providers/available-apps'
 
 export function useAppsWithUpdates() {
 	// TODO: determine if we want community apps here

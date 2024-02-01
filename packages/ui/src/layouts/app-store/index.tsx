@@ -6,7 +6,6 @@ import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
@@ -17,6 +16,7 @@ import {
 	sectionTitleClass,
 	slideInFromBottomClass,
 } from '@/modules/app-store/shared'
+import {useAvailableApps} from '@/providers/available-apps'
 import {
 	DropdownMenu,
 	DropdownMenuContent,

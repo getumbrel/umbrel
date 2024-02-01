@@ -1,12 +1,11 @@
 import {useNavigate} from 'react-router-dom'
 import urlJoin from 'url-join'
 
+import {useApps} from '@/providers/apps'
 import {UserApp} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {appToUrl, isOnionPage} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
-
-import {useApps} from './use-apps'
 
 /**
  * There's a strong temptation to make launching an app just a link to the app's URL:

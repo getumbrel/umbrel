@@ -1,12 +1,12 @@
 import {useEffect} from 'react'
 
 import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
-import {useApps} from '@/hooks/use-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
+import {useApps} from '@/providers/apps'
 
 export function Desktop() {
 	const {userApps, isLoading} = useApps()

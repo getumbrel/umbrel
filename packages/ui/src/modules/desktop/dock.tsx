@@ -2,10 +2,10 @@ import {motion, useMotionValue} from 'framer-motion'
 import React, {Suspense} from 'react'
 import {useLocation} from 'react-router-dom'
 
-import {systemAppsKeyed} from '@/hooks/use-apps'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
+import {systemAppsKeyed} from '@/providers/apps'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 

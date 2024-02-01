@@ -2,7 +2,7 @@ import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,

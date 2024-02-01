@@ -1,9 +1,9 @@
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
 
-import {useDeviceInfo} from '../../hooks/use-device-info'
 import {DeviceInfoContent} from './_components/device-info-content'
 
 export default function DeviceInfoDialog() {

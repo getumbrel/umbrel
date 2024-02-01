@@ -1,6 +1,7 @@
 import {RiAlarmWarningFill} from 'react-icons/ri'
 
 import {ErrorAlert} from '@/components/ui/alert'
+import {usePassword} from '@/hooks/use-password'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -15,7 +16,6 @@ import {
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {useDialogOpenProps} from '@/utils/dialog'
 
-import {usePassword} from '../../hooks/use-password'
 import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 
 export default function ChangePasswordDialog() {

@@ -1,10 +1,10 @@
 import {useParams} from 'react-router-dom'
 
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
+import {useAvailableApps} from '@/providers/available-apps'
 
 export default function CategoryPage() {
 	return (

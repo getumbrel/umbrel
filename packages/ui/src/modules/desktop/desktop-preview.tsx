@@ -1,10 +1,10 @@
 import {useEffect, useState} from 'react'
 
-import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
 import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
+import {useApps} from '@/providers/apps'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'

@@ -1,9 +1,9 @@
 import {useState} from 'react'
 
 import {Loading} from '@/components/ui/loading'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
+import {useAvailableApps} from '@/providers/available-apps'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'

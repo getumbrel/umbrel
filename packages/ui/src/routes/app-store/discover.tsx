@@ -1,10 +1,10 @@
 import {Loading} from '@/components/ui/loading'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {Apps3UpSection} from '@/modules/app-store/discover/apps-3-up-section'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
+import {useAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 
 import {useDiscoverQuery} from './use-discover-query'
