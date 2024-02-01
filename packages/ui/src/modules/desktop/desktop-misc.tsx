@@ -91,13 +91,10 @@ function GradientMaskSide({side}: {side: 'left' | 'right'}) {
 		<div
 			// Ideally, we'd match the `block` visibility to the arrow buttons, but that would require a lot of work.
 			// Ideally we'd use a breakpoint based on the CSS var --app-max-w, but that's not possible
-			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 delay-100 duration-700 animate-in fade-in zoom-in-110 md:block'
+			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center md:block'
 			style={{
 				// For debugging:
 				// backgroundColor: 'red',
-				animationFillMode: 'both',
-				animationName: 'fade-in',
-				animationDuration: '0s',
 				backgroundImage: `url(${wallpaper.url})`,
 				backgroundAttachment: 'fixed',
 				WebkitMaskImage: `linear-gradient(to ${side}, transparent, black)`,

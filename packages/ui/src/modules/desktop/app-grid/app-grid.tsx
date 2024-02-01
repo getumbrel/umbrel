@@ -1,8 +1,9 @@
 import {AnimatePresence} from 'framer-motion'
-import {ReactNode} from 'react'
+import {ReactNode, useEffect, useState} from 'react'
 
 import {tw} from '@/utils/tw'
 
+import {AppGridGradientMasking} from '../desktop-misc'
 import {usePager} from './app-pagination-utils'
 import {ArrowButton, Page, PaginatorPills, usePaginator} from './paginator'
 
@@ -16,6 +17,7 @@ export function AppGrid({
 	onlyFirstPage?: boolean
 }) {
 	const {pageInnerRef, pages, appsPerRow} = usePager({apps, widgets})
+	const [showMasking, setShowMasking] = useState(false)
 	const pageCount = pages.length
 
 	const {scrollContainer, page, toPage, nextPage, nextPageDisabled, prevPage, prevPageDisabled} =
@@ -26,6 +28,21 @@ export function AppGrid({
 	const appColumnsStyle: React.CSSProperties = {
 		gridTemplateColumns: `repeat(${appsPerRow}, minmax(0, 1fr))`,
 	}
+
+	// Hide and show gradient masking based on whether we're scrolling
+	useEffect(() => {
+		const el = scrollContainer.current
+		if (!el) return
+		const handleShowMasking = () => setShowMasking(true)
+		const handleHideMasking = () => setShowMasking(false)
+
+		el.addEventListener('scroll', handleShowMasking)
+		el.addEventListener('scrollend', handleHideMasking)
+		return () => {
+			el?.removeEventListener('scroll', handleShowMasking)
+			el?.removeEventListener('scrollend', handleHideMasking)
+		}
+	}, [scrollContainer])
 
 	return (
 		<div className='flex h-full w-full flex-grow flex-col items-center'>
@@ -77,6 +94,7 @@ export function AppGrid({
 					</>
 				)}
 			</div>
+			{showMasking && <AppGridGradientMasking />}
 			{/* NOTE: always leave space for pills to avoid layout thrashing */}
 			{/* Adding margin bottom so pills are clickable */}
 			<div className='mb-6 mt-6'>

@@ -54,10 +54,6 @@ function DesktopPage() {
 					<DesktopContent onSearchClick={() => setOpen(true)} />
 				</div>
 			</DesktopContextMenu>
-			{/* NOTE:
-        Keep `AppGridGradientMasking` here rather than deeper down in component heirarchy to avoid being animated up and down when widget selector opens and closes.
-      */}
-			<AppGridGradientMasking />
 			<CmdkMenu open={open} setOpen={setOpen} />
 			<DefaultCredentialsDialog />
 		</>
