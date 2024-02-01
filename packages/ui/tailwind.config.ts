@@ -58,7 +58,7 @@ export default {
 				'glass-button':
 					'1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1px 0px 0px rgba(255, 255, 255, 0.20) inset, 0px 0.5px 0px 0px rgba(255, 255, 255, 0.10) inset',
 				widget:
-					'0px 24px 36px 0px rgba(0, 0, 0, 0.50), 0 1px 0 0 rgba(255, 255, 255, 0.2) inset, 1px 0 0 0 rgba(255, 255, 255, 0.04) inset, -1px 0 0 0 rgba(255, 255, 255, 0.04) inset',
+					'0px 20px 30px 0px rgba(0, 0, 0, 0.30), 0 1px 0 0 rgba(255, 255, 255, 0.2) inset, 1px 0 0 0 rgba(255, 255, 255, 0.04) inset, -1px 0 0 0 rgba(255, 255, 255, 0.04) inset',
 				'context-menu':
 					'1.05px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1.05px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 0.525px 0px 0px rgba(255, 255, 255, 0.10) inset, 0px 24px 36px 0px rgba(0, 0, 0, 0.50)',
 				'sheet-shadow': '2px 2px 2px 0px rgba(255, 255, 255, 0.05) inset',
