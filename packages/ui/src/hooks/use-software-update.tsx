@@ -2,7 +2,6 @@ import {useCallback, useState} from 'react'
 
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {sleep} from '@/utils/misc'
 
 export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-available' | 'upgrading'
 
@@ -12,6 +11,22 @@ export function useSoftwareUpdate() {
 
 	const ctx = trpcReact.useContext()
 	const osVersionQ = trpcReact.system.version.useQuery()
+	const updateVersionMut = trpcReact.system.update.useMutation({
+		onSuccess: (version) => {
+			if (version === latestVersion) {
+				ctx.system.version.invalidate()
+				setState('at-latest')
+				toast.success(`Successfully upgraded to umbrelOS ${latestVersion}`)
+			} else {
+				setState('initial')
+				toast.error('Failed to upgrade.')
+			}
+		},
+		onError: () => {
+			setState('initial')
+			toast.error('Failed to upgrade.')
+		},
+	})
 
 	const currentVersion = osVersionQ.data ?? 'Unknown'
 
@@ -19,6 +34,7 @@ export function useSoftwareUpdate() {
 		setState('checking')
 		try {
 			const latestVersion = await ctx.system.latestAvailableVersion.fetch()
+
 			if (!latestVersion) {
 				throw new Error('Failed to check for updates')
 			}
@@ -36,12 +52,9 @@ export function useSoftwareUpdate() {
 
 	const upgrade = useCallback(async () => {
 		setState('upgrading')
-		await sleep(1000)
-		// TODO: actually upgrade
-		setState('at-latest')
-		toast.success(`Successfully upgraded to umbrelOS ${latestVersion}`)
+		updateVersionMut.mutate()
 		// toast.error('Failed to upgrade')
-	}, [latestVersion])
+	}, [updateVersionMut])
 
 	return {
 		state,

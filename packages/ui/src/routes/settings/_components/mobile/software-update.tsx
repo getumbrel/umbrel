@@ -3,7 +3,7 @@ import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Loading} from '@/components/ui/loading'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {Button, buttonVariants} from '@/shadcn-components/ui/button'
+import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -12,8 +12,8 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {tw} from '@/utils/tw'
 
 export function SoftwareUpdateDrawer() {
 	const title = 'Software update'
@@ -49,12 +49,16 @@ export function SoftwareUpdateDrawer() {
 				</div>
 				<DrawerFooter>
 					{state === 'at-latest' && (
-						<div className={cn(buttonVariants({size: 'dialog'}), 'pointer-events-none border-none shadow-none')}>
-							You’re on the latest version
-						</div>
+						<>
+							<div className={versionMessageClass}>You’re on the latest version</div>
+							<Button variant='primary' size='dialog' onClick={checkLatest}>
+								Check for updates
+							</Button>
+						</>
 					)}
 					{(state === 'initial' || state === 'checking') && (
 						<>
+							<div className={versionMessageClass}>&nbsp;{/* Spacer */}</div>
 							<Button variant='primary' size='dialog' onClick={checkLatest} disabled={state === 'checking'}>
 								{state === 'checking' ? 'Checking for updates...' : 'Check for updates'}
 							</Button>
@@ -62,7 +66,8 @@ export function SoftwareUpdateDrawer() {
 					)}
 					{state === 'update-available' && (
 						<>
-							<div className={cn(buttonVariants({size: 'dialog'}), 'pointer-events-none border-none shadow-none')}>
+							<div className={versionMessageClass}>
+								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
 								New version {latestVersion} is available
 							</div>
 							<Button variant='primary' size='dialog' onClick={upgrade}>
@@ -75,3 +80,5 @@ export function SoftwareUpdateDrawer() {
 		</Drawer>
 	)
 }
+
+const versionMessageClass = tw`text-center text-14 font-semibold -tracking-2 py-4 leading-inter-trimmed`
