@@ -7,7 +7,13 @@ import {omit} from 'remeda'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 
-import {dialogContentClass, dialogFooterClass, dialogOverlayClass} from './shared/dialog'
+import {
+	dialogContentAnimationClass,
+	dialogContentAnimationSlideClass,
+	dialogContentClass,
+	dialogFooterClass,
+	dialogOverlayClass,
+} from './shared/dialog'
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -38,7 +44,13 @@ const AlertDialogContent = React.forwardRef<
 		<AlertDialogOverlay />
 		<AlertDialogPrimitive.Content
 			ref={ref}
-			className={cn(dialogContentClass, 'w-full max-w-[calc(100%-40px)] sm:w-auto md:max-w-md', className)}
+			className={cn(
+				dialogContentClass,
+				dialogContentAnimationClass,
+				dialogContentAnimationSlideClass,
+				'w-full max-w-[calc(100%-40px)] sm:w-auto md:max-w-md',
+				className,
+			)}
 			{...props}
 		/>
 	</AlertDialogPortal>

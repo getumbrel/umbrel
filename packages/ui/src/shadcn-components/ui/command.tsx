@@ -11,7 +11,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {Dialog} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
 
-import {dialogContentClass, dialogOverlayClass} from './shared/dialog'
+import {dialogContentAnimationClass, dialogContentClass, dialogOverlayClass} from './shared/dialog'
 
 const Command = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive>,
@@ -30,7 +30,9 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 			<DialogPrimitive.Content
 				className={cn(
 					dialogContentClass,
-					'top-4 translate-y-0 overflow-hidden p-3 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0 md:p-[30px] lg:top-[10%]',
+					dialogContentAnimationClass,
+					'data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-top-0',
+					'top-4 translate-y-0 overflow-hidden p-3 md:p-[30px] lg:top-[10%]',
 					'w-full max-w-[calc(100%-40px)] sm:max-w-[700px]',
 					'z-[999]',
 				)}
