@@ -1,4 +1,5 @@
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Loading} from '@/components/ui/loading'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -40,7 +41,7 @@ export function SoftwareUpdateDrawer() {
 					<DrawerDescription>Check for latest software version and upgrade to it</DrawerDescription>
 				</DrawerHeader>
 				<div className='flex flex-col items-center py-8'>
-					<img src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
+					<FadeInImg src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
 					<p className='text-15 -tracking-4'>umbrelOS {currentVersion}</p>
 					<p className='text-12 -tracking-2 opacity-50'>Currently running</p>

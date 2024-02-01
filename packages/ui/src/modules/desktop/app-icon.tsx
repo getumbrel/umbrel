@@ -2,6 +2,7 @@ import {motion} from 'framer-motion'
 import {useState} from 'react'
 import {Link} from 'react-router-dom'
 
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useUserApp} from '@/hooks/use-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
@@ -76,13 +77,13 @@ export function AppIcon({
 				}}
 			>
 				{url && (
-					<img
+					<FadeInImg
 						src={url}
 						alt={label}
 						onError={() => setUrl('')}
 						className={cn(
-							'h-full w-full',
-							state !== 'ready' && 'animate-pulse',
+							'h-full w-full duration-500',
+							state !== 'ready' && 'animate-pulse duration-1000',
 							state === 'ready' && 'animate-in fade-in',
 						)}
 						draggable={false}

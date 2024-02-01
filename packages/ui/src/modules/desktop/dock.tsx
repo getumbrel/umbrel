@@ -32,10 +32,8 @@ export function Dock() {
 	return (
 		<>
 			<motion.div
-				initial={{y: 90}}
-				animate={{y: 0}}
-				exit={{y: 90}}
-				transition={{delay: 0.8}}
+				initial={{y: 0, opacity: 0}}
+				animate={{y: 0, opacity: 1}}
 				onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.pageX)}
 				onPointerLeave={() => mouseX.set(Infinity)}
 				className={dockClass}

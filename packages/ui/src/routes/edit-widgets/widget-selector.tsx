@@ -3,10 +3,10 @@ import {ReactNode} from 'react'
 import {useTimeout} from 'react-use'
 
 import {WidgetCheckIcon} from '@/assets/widget-check-icon'
+import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {useSheetStickyHeader} from '@/modules/sheet-sticky-header'
 import {Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
@@ -152,7 +152,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 	return (
 		<>
 			<div className='flex items-center gap-3'>
-				<img alt='icon' src={iconSrc} width={36} height={36} className='rounded-8' />
+				<AppIcon src={iconSrc} size={36} className='rounded-8' />
 				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
 			</div>
 			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>

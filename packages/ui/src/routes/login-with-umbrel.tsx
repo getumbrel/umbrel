@@ -2,6 +2,7 @@ import {ReactNode, useState} from 'react'
 import {flushSync} from 'react-dom'
 import {useParams} from 'react-router-dom'
 
+import {AppIcon} from '@/components/app-icon'
 import {PinInput} from '@/components/ui/pin-input'
 import {useUserApp} from '@/hooks/use-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -100,8 +101,8 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 				)}
 			>
 				<div className='flex h-0 -translate-y-[56px] gap-5'>
-					<img src='/figma-exports/umbrel-ios.png' className='h-[56px] w-[56px]' />
-					<img src={app.icon} className='h-[56px] w-[56px] rounded-12' />
+					<AppIcon src='/figma-exports/umbrel-ios.png' size={56} className='rounded-12' />
+					<AppIcon src={app.icon} size={56} className='rounded-12' />
 				</div>
 				<div className='flex flex-col gap-1'>
 					<h1 className='truncate text-17 font-semibold leading-tight -tracking-2'>Log in with Umbrel</h1>

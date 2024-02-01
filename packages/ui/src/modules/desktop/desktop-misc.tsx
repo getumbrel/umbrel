@@ -15,7 +15,7 @@ export function Header() {
 
 	// Always rendering the entire component to avoid layout thrashing
 	return (
-		<div className={cn('relative z-10', name ? 'animate-in fade-in' : 'invisible')}>
+		<div className={cn('relative z-10', name ? 'duration-300 animate-in fade-in slide-in-from-bottom-8' : 'invisible')}>
 			<div className='flex flex-col items-center gap-3 px-4 md:gap-4'>
 				<UmbrelLogo
 					className='w-[73px] md:w-auto'
@@ -83,18 +83,18 @@ export function AppGridGradientMasking() {
 }
 
 function GradientMaskSide({side}: {side: 'left' | 'right'}) {
-	const {wallpaper} = useWallpaper()
+	const {wallpaper, wallpaperFullyVisible, isLoading} = useWallpaper()
+
+	if (!wallpaperFullyVisible || isLoading) return null
 
 	return (
 		<div
 			// Ideally, we'd match the `block` visibility to the arrow buttons, but that would require a lot of work.
 			// Ideally we'd use a breakpoint based on the CSS var --app-max-w, but that's not possible
-			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 duration-700 animate-in fade-in zoom-in-110 md:block'
+			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 delay-100 duration-700 animate-in fade-in zoom-in-110 md:block'
 			style={{
 				// For debugging:
-				// backgroundColor: "red",
-				// Alternatively, transition in the gradient mask after apps have rendered
-				animationDelay: '1s',
+				// backgroundColor: 'red',
 				animationFillMode: 'both',
 				animationName: 'fade-in',
 				animationDuration: '0s',

@@ -73,7 +73,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 							className='absolute inset-0 opacity-0 delay-200 duration-700 ease-out fill-mode-both'
 							style={{
 								animationName: 'fade-in',
-								backgroundImage: `url(${wallpaper.url})`,
+								backgroundImage: `url(/wallpapers/generated-thumbs/${wallpaper.id}.jpg)`,
 								backgroundSize: 'cover',
 								backgroundPosition: 'center',
 								transform: 'scale(1.2) rotate(180deg)',

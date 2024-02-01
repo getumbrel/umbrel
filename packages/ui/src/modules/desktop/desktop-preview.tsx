@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 
 import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
-import {useWallpaper} from '@/modules/desktop/wallpaper-context'
+import {Wallpaper} from '@/modules/desktop/wallpaper-context'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 
@@ -15,7 +15,6 @@ export function DesktopPreview() {
 	const W = 1440
 	const H = 850
 	const scale = 0.18
-	const {wallpaper} = useWallpaper()
 
 	// Delay mounting for performace
 	const [show, setShow] = useState(false)
@@ -31,17 +30,17 @@ export function DesktopPreview() {
 
 	return (
 		<div
-			className='relative overflow-hidden rounded-5 bg-cover bg-center duration-100 animate-in fade-in'
+			className='relative overflow-hidden rounded-5 duration-100 animate-in'
 			style={{
 				width: W * scale,
 				height: H * scale,
-				backgroundImage: `url(${wallpaper.url})`,
 			}}
 			// Tell screen readers to ignore this element
 			aria-hidden='true'
 			// Prevent browser from interacting with children
 			ref={(node) => node && node.setAttribute('inert', '')}
 		>
+			<Wallpaper isPreview />
 			<div
 				className='shrink-0 origin-top-left'
 				style={{

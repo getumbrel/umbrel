@@ -40,8 +40,10 @@ export function AppGrid({
 							{noRoom && <div className='w-full text-center'>Not enough room to show anything.</div>}
 							<AnimatePresence>
 								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
-								{pages[0]?.apps && (
+								{pages[0]?.apps && pages[0]?.apps.length > 0 && (
 									<div className={appGridClass} style={appColumnsStyle}>
+										{/* TODO: use `appsPerRow` to split apps into separate rows */}
+										{/* TODO: consider laying apps out manually */}
 										{pages[0].apps}
 									</div>
 								)}

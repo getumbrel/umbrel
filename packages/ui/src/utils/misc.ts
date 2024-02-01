@@ -37,9 +37,16 @@ export function isOnionPage() {
 	return window.location.origin.indexOf('.onion') !== -1
 }
 
-export function preloadImage(url: string) {
-	const img = new Image()
-	img.src = url
+export function preloadImage(url: string): Promise<void> {
+	return new Promise((resolve) => {
+		const img = new Image()
+		const handleLoad = () => {
+			img.removeEventListener('load', handleLoad)
+			resolve()
+		}
+		img.addEventListener('load', handleLoad)
+		img.src = url
+	})
 }
 
 export function transitionViewIfSupported(cb: () => void) {

@@ -70,30 +70,31 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 							<Widget appId={widget.app.id} config={widget} />
 						</WidgetWrapper>
 					))}
-					apps={userApps.map((app) => (
-						// <motion.div
-						// 	key={app.id}
-						// 	layout
-						// 	initial={{
-						// 		opacity: 1,
-						// 		scale: 0.8,
-						// 	}}
-						// 	animate={{
-						// 		opacity: 1,
-						// 		scale: 1,
-						// 	}}
-						// 	exit={{
-						// 		opacity: 0,
-						// 		scale: 0.5,
-						// 	}}
-						// 	transition={{
-						// 		type: 'spring',
-						// 		stiffness: 500,
-						// 		damping: 30,
-						// 	}}
-						// >
-						<AppIconConnected key={app.id} appId={app.id} />
-						// </motion.div>
+					apps={userApps.map((app, i) => (
+						<motion.div
+							key={app.id}
+							layout
+							initial={{
+								opacity: 0,
+								y: 50,
+							}}
+							animate={{
+								opacity: 1,
+								y: 0,
+								// scale: 1,
+							}}
+							exit={{
+								opacity: 0,
+								scale: 0.5,
+							}}
+							transition={{
+								delay: i * 0.02,
+								duration: 0.4,
+								ease: 'easeOut',
+							}}
+						>
+							<AppIconConnected key={app.id} appId={app.id} />
+						</motion.div>
 					))}
 				/>
 			</motion.div>

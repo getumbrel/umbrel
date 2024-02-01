@@ -1,5 +1,6 @@
 import {useTimeout} from 'react-use'
 
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {useWallpaper, WallpaperId, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {
@@ -74,15 +75,13 @@ function WallpaperItem({
 }) {
 	return (
 		<button
-			className={cn('relative aspect-1.9 rounded-10', className)}
+			className={cn('relative aspect-1.9 overflow-hidden rounded-10 bg-white/10', className)}
 			style={{
-				backgroundImage: `url(${bg})`,
-				backgroundSize: 'cover',
-				backgroundPosition: 'center',
 				...style,
 			}}
 			onClick={onSelect}
 		>
+			<FadeInImg src={bg} className='absolute inset-0 h-full w-full rounded-10 object-cover object-center' />
 			{/* Border */}
 			<div
 				className={cn(

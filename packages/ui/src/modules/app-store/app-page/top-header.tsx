@@ -20,7 +20,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 				<SheetStickyHeader className='flex h-full w-full items-center gap-2.5'>
 					<BackButton />
 					<div className='flex flex-1 items-center gap-2.5'>
-						<AppIcon src={app.icon} className='w-[32px] rounded-8' />
+						<AppIcon src={app.icon} size={32} className='rounded-8' />
 						<span className='truncate text-16 font-semibold -tracking-4 md:text-19'>{app.name}</span>
 					</div>
 					{childrenRight}
@@ -45,7 +45,7 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 
 				<div data-testid='app-top' className='flex flex-col items-center items-stretch gap-5 max-md:mt-5 md:flex-row'>
 					<div className='flex flex-1 items-center gap-2.5 max-md:px-2.5 md:gap-5'>
-						<AppIcon src={app.icon} className='w-[64px] rounded-15 md:w-[100px] md:rounded-20' />
+						<AppIcon src={app.icon} size={64} className='rounded-15 md:w-[100px] md:rounded-20' />
 						<div className='flex flex-col items-start gap-1.5 py-1 md:gap-2'>
 							<h1 className='flex flex-wrap items-center gap-2 text-16 font-semibold leading-inter-trimmed md:text-24'>
 								{app.name} {app.optimizedForUmbrelHome && <Badge>Optimized for Umbrel Home</Badge>}

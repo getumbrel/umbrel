@@ -152,3 +152,14 @@ a {
 		stroke-opacity: 1;
 	}
 }
+
+@keyframes animate-unblur {
+	from {
+		filter: blur(50px);
+		scale: 1.25;
+	}
+	to {
+		filter: blur(0);
+		scale: 1;
+	}
+}

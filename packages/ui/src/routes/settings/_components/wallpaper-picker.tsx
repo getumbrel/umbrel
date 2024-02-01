@@ -1,5 +1,4 @@
 import {forwardRef, useEffect, useRef} from 'react'
-import {useTimeout} from 'react-use'
 
 import {useWallpaper, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
@@ -49,19 +48,14 @@ const WallpaperItem = forwardRef(
 WallpaperItem.displayName = 'WallpaperItem'
 
 // TODO: delay mounting for performance
-export function WallpaperPicker({delayed, maxW}: {delayed?: boolean; maxW?: number}) {
+export function WallpaperPicker({maxW}: {maxW?: number}) {
 	const {wallpaper, setWallpaperId} = useWallpaper()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const scrollerRef = useRef<HTMLDivElement>(null)
 	const itemsRef = useRef<HTMLDivElement>(null)
 	const selectedItemRef = useRef<HTMLButtonElement>(null)
 
-	const [show] = useTimeout(600)
-
-	const canShow = delayed ? show() : true
-
 	useEffect(() => {
-		if (!canShow) return
 		if (!containerRef.current || !selectedItemRef.current || !itemsRef.current || !scrollerRef.current) {
 			return
 		}
@@ -73,9 +67,7 @@ export function WallpaperPicker({delayed, maxW}: {delayed?: boolean; maxW?: numb
 			behavior: 'smooth',
 			left: index * (ITEM_W + GAP) - containerW / 2 + (ITEM_W * ACTIVE_SCALE) / 2,
 		})
-	}, [wallpaper.id, canShow])
-
-	if (!canShow) return null
+	}, [wallpaper.id])
 
 	return (
 		// h-7 so we don't affect height of parent, but make gap work when wrapping

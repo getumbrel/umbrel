@@ -6,6 +6,7 @@ import 'photoswipe/style.css'
 import {useEffect} from 'react'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Banner} from '@/routes/app-store/use-discover-query'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
@@ -19,10 +20,11 @@ export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => 
 					to={`/app-store/${banner.id}`}
 					className={cn(galleryItemClass, 'aspect-2.25 h-[140px] md:h-[316px]')}
 					style={{
-						backgroundImage: `url(${banner.image})`,
 						animationDelay: `${i * 0.1}s`,
 					}}
-				/>
+				>
+					<FadeInImg src={banner.image} className='group-focus-visible:opacity-80' alt='' />
+				</Link>
 			))}
 		</FadeScroller>
 	)
@@ -58,7 +60,7 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 					target='_blank'
 					rel='noreferrer'
 				>
-					<img src={src} className='group-focus-visible:opacity-80' alt='' />
+					<FadeInImg src={src} className='group-focus-visible:opacity-80' alt='' />
 				</a>
 			))}
 		</FadeScroller>

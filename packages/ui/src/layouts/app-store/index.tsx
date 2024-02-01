@@ -1,3 +1,4 @@
+import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
 import {memo, useDeferredValue, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -40,12 +41,12 @@ export function AppStoreLayout() {
 			title={title}
 			description={<>{t('app-store.tagline')}</>}
 			titleRightChildren={
-				<div className='flex max-w-full flex-1 flex-row-reverse items-center gap-3'>
+				<motion.div layout className='flex max-w-full flex-1 flex-row-reverse items-center gap-3'>
 					<CommunityAppsDropdown />
 					<UpdatesButton />
 					<div className='flex-1 md:hidden' />
 					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
-				</div>
+				</motion.div>
 			}
 		>
 			{deferredSearchQuery ? <SearchResultsMemoized query={deferredSearchQuery} /> : <Outlet />}

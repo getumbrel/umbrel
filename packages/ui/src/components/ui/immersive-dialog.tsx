@@ -57,7 +57,8 @@ export function ImmersiveDialogSplit({
 	return (
 		<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
 			<DialogPortal>
-				<ImmersiveDialogOverlay />
+				{/* Not using anymore because overlay is added elsewhere */}
+				{/* <ImmersiveDialogOverlay /> */}
 				{/* shell */}
 				<DialogContent
 					className={cn(

@@ -73,7 +73,7 @@ const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
 function AppListRow({icon, title, value}: {icon?: string; title: string; value: string}) {
 	return (
 		<div className='flex items-center gap-2 p-3'>
-			<AppIcon src={icon} size={25} className='rounded-5 bg-white/5 shadow-md' />
+			<AppIcon src={icon} size={25} className='rounded-5 shadow-md' />
 			<span className='flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
 			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
 		</div>

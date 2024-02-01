@@ -1,6 +1,7 @@
 import {TbQuestionMark} from 'react-icons/tb'
 
 import {CopyButton} from '@/components/ui/copy-button'
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UNKNOWN} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
 import {UmbrelHostEnvironment} from '@/trpc/trpc'
@@ -58,12 +59,12 @@ const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
 export const HostEnvironmentIcon = ({environment}: {environment?: UmbrelHostEnvironment}) => {
 	switch (environment) {
 		case 'umbrel-home':
-			return <img src={hostEnvironmentMap[environment].icon} width={128} height={128} />
+			return <FadeInImg src={hostEnvironmentMap[environment].icon} width={128} height={128} />
 		case 'raspberry-pi':
 		case 'linux':
 			return (
 				<IconContainer>
-					<img src={hostEnvironmentMap[environment].icon} width={64} height={64} />
+					<FadeInImg src={hostEnvironmentMap[environment].icon} width={64} height={64} />
 				</IconContainer>
 			)
 		default:

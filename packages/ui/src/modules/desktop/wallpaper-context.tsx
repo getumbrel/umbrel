@@ -1,13 +1,16 @@
-import {createContext, useCallback, useContext, useEffect, useLayoutEffect} from 'react'
+import {createContext, useCallback, useContext, useEffect, useLayoutEffect, useState} from 'react'
+import {usePreviousDistinct} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {keyBy} from '@/utils/misc'
+import {keyBy, preloadImage} from '@/utils/misc'
+import {tw} from '@/utils/tw'
 
 type WallpaperT = {
-	id: string
+	id: string | undefined
 	url: string
 	brandColorHsl: string
 }
@@ -132,13 +135,15 @@ const nullWallpaper = {
 	id: undefined,
 	url: '',
 	brandColorHsl: '0 0% 100%',
-} as const
-
-type NullWallpaperT = typeof nullWallpaper
+} as const satisfies WallpaperT
 
 type WallpaperType = {
-	wallpaper: WallpaperT | NullWallpaperT
+	wallpaper: WallpaperT
+	isLoading: boolean
+	prevWallpaper: WallpaperT | undefined
 	setWallpaperId: (id: WallpaperId) => void
+	wallpaperFullyVisible: boolean
+	setWallpaperFullyVisible: () => void
 }
 
 const WallPaperContext = createContext<WallpaperType>(null as any)
@@ -158,6 +163,8 @@ Scenarios:
 export function WallpaperProvider({children}: {children: React.ReactNode}) {
 	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2<WallpaperId>('wallpaperId')
 	const remote = useRemoteWallpaper(setLocalWallpaperId)
+	const [isLoading, setIsLoading] = useState(true)
+	const [wallpaperFullyVisible, setWallpaperFullyVisible] = useState(false)
 
 	const defaultWallpaper = wallpapersKeyed[DEFAULT_WALLPAPER_ID]
 	const localWallpaper = localWallpaperId && wallpapersKeyed[localWallpaperId]
@@ -171,6 +178,8 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 		? localWallpaper || nullWallpaper
 		: remoteWallpaper || localWallpaper || defaultWallpaper
 
+	const prevId = usePreviousDistinct(wallpaper.id)
+
 	const {brandColorHsl} = wallpaper
 
 	useLayoutEffect(() => {
@@ -179,14 +188,27 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
 	}, [brandColorHsl])
 
+	useLayoutEffect(() => {
+		if (wallpaper.id === prevId) return
+		setWallpaperFullyVisible(false)
+		setIsLoading(true)
+
+		// preload image
+		preloadImage(wallpaper.url).then(() => setIsLoading(false))
+	}, [wallpaper.url, wallpaper.id, prevId])
+
 	return (
 		<WallPaperContext.Provider
 			value={{
 				wallpaper,
+				isLoading,
+				prevWallpaper: (prevId && wallpapersKeyed[prevId]) || undefined,
 				setWallpaperId: (id: WallpaperId) => {
 					setLocalWallpaperId(id)
 					remote.setWallpaperId(id)
 				},
+				wallpaperFullyVisible,
+				setWallpaperFullyVisible: () => setWallpaperFullyVisible(true),
 			}}
 		>
 			{children}
@@ -203,21 +225,61 @@ export const useWallpaper = () => {
 	return ctx
 }
 
-export function Wallpaper({className}: {className?: string}) {
-	const {wallpaper} = useWallpaper()
+export function Wallpaper({
+	className,
+	stayBlurred,
+	isPreview,
+}: {
+	className?: string
+	stayBlurred?: boolean
+	isPreview?: boolean
+}) {
+	const {wallpaper, prevWallpaper, isLoading, wallpaperFullyVisible, setWallpaperFullyVisible} = useWallpaper()
 
 	if (!wallpaper || !wallpaper.id) return null
 
 	return (
-		<div
-			className={cn(
-				'pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-in fade-in zoom-in-110',
-				className,
+		<>
+			<FadeInImg
+				key={wallpaper.url + '-loading'}
+				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
+				className={cn(
+					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-xl',
+					isPreview && 'absolute',
+				)}
+			/>
+			{!isLoading && !stayBlurred && (
+				<FadeInImg
+					key={wallpaper.url}
+					src={wallpaper.url}
+					className={cn(
+						// Using black bg by default because sometimes we want to show the wallpaper before it's loaded, and over other elements
+						tw`pointer-events-none fixed inset-0 h-full w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
+						isPreview && 'absolute',
+						className,
+					)}
+					style={{
+						animation: 'animate-unblur 0.7s',
+					}}
+					onAnimationEnd={setWallpaperFullyVisible}
+				/>
 			)}
-			style={{
-				backgroundImage: `url(${wallpaper.url})`,
-			}}
-		/>
+			{/* Put this last so that we can see it exiting over the new wallpaper */}
+			{prevWallpaper && !wallpaperFullyVisible && (
+				<div
+					key={prevWallpaper.url}
+					className={cn(
+						'pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-out fade-out zoom-out-125 fill-mode-both',
+						isPreview && 'absolute',
+						className,
+					)}
+					style={{
+						backgroundImage: `url(${prevWallpaper.url})`,
+					}}
+				/>
+			)}
+			{/* {isLoading && <div className='fixed left-0 top-0 '>Loading...</div>} */}
+		</>
 	)
 }
 

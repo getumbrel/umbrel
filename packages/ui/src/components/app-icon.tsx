@@ -8,6 +8,8 @@ type AppIconProps = {src?: string; size?: number} & HTMLProps<HTMLImageElement>
 function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps, ref: React.Ref<HTMLImageElement>) {
 	const [loaded, setLoaded] = useState(false)
 
+	// Not using `FadeImg` because we have a placeholder and `FadeImg` doesn't support placeholder images
+	// Also not fading any other way because we want color-thief to work by picking up the color
 	return (
 		<img
 			src={src || APP_ICON_PLACEHOLDER_SRC}
