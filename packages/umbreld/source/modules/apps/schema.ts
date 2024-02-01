@@ -1,15 +1,3 @@
-export const categories = [
-	'files',
-	'bitcoin',
-	'media',
-	'networking',
-	'social',
-	'automation',
-	'finance',
-	'ai',
-	'developer',
-] as const
-
 export type ProgressStatus = {
 	running: boolean
 	/** From 0 to 100 */
@@ -23,8 +11,6 @@ export type AppRepositoryMeta = {
 	name: string
 }
 
-export type Category = typeof categories[number]
-
 // TODO: just added this to quickly get types, come back to this and
 // add strciter validation. We might also want to describe this with
 // zod so we can do runtime valdiation with useful errors like tagline
@@ -35,7 +21,7 @@ export type AppManifest = {
 	name: string
 	tagline: string
 	icon: string
-	category: Category
+	category: string
 	version: string
 	port: number
 	description: string
