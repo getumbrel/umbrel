@@ -244,7 +244,7 @@ export function Wallpaper({
 				key={wallpaper.url + '-loading'}
 				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
 				className={cn(
-					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-xl',
+					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-xl duration-1000',
 					isPreview && 'absolute',
 				)}
 			/>
