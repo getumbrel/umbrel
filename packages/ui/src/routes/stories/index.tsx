@@ -1,5 +1,5 @@
 import {Globe, User} from 'lucide-react'
-import {useId, useState} from 'react'
+import {useEffect, useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {
 	TbAlertOctagonFilled,
@@ -136,6 +136,8 @@ export default function Stories() {
 			<AlertExample />
 			<H2>Toast</H2>
 			<ToastExample />
+			<H2>Prevent double toast</H2>
+			<PreventDoubleToast />
 			<H2>Scroll Area</H2>
 			<ScrollArea className='h-[200px] w-[350px] rounded-4 bg-white/4'>
 				<div className='p-3'>
@@ -145,6 +147,36 @@ export default function Stories() {
 					funny that they couldn't help but laugh. And once they started laughing, they couldn't stop.
 				</div>
 			</ScrollArea>
+		</div>
+	)
+}
+
+function PreventDoubleToast() {
+	const [count, setCount] = useState(0)
+	const [mounted, setMounted] = useState(false)
+
+	useEffect(() => {
+		if (!mounted) return
+		const id = toast.info('count: ' + count)
+
+		return () => {
+			toast.dismiss(id)
+		}
+	}, [count, mounted])
+
+	useEffect(() => {
+		if (!mounted) setMounted(true)
+	}, [mounted])
+
+	return (
+		<div>
+			<p>By default running toast from useEffect in strict mode causes 2 toasts to render. See code.</p>
+			<Button size='xl' onClick={() => setCount((c) => c - 1)}>
+				-1
+			</Button>
+			<Button size='xl' onClick={() => setCount((c) => c + 1)}>
+				+1
+			</Button>
 		</div>
 	)
 }

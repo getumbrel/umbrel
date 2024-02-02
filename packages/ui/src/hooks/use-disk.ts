@@ -3,7 +3,7 @@ import {sort} from 'remeda'
 
 import {trpcReact} from '@/trpc/trpc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
-import {isDiskFull, isDiskLow} from '@/utils/system'
+import {isDiskFull, isDiskLow, trpcDiskToLocal} from '@/utils/system'
 
 export function useDisk(options: {poll?: boolean} = {}) {
 	const diskQ = trpcReact.system.diskUsage.useQuery(undefined, {
@@ -13,20 +13,16 @@ export function useDisk(options: {poll?: boolean} = {}) {
 		refetchInterval: options.poll ? 500 : undefined,
 	})
 
-	const used = diskQ.data?.totalUsed
-	const size = diskQ.data?.size
-	const available = !size || !used ? undefined : size - used
+	const transformed = trpcDiskToLocal(diskQ.data)
 
 	return {
 		data: diskQ.data,
 		isLoading: diskQ.isLoading,
 		//
-		used,
-		size,
-		available,
+		...transformed,
 		apps: sort(diskQ.data?.apps ?? [], (a, b) => b.used - a.used),
-		isDiskLow: isDiskLow(available),
-		isDiskFull: isDiskFull(available),
+		isDiskLow: isDiskLow(transformed?.available),
+		isDiskFull: isDiskFull(transformed?.available),
 	}
 }
 

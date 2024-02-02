@@ -1,3 +1,46 @@
+import {RouterOutput} from '@/trpc/trpc'
+
+export function trpcDiskToLocal(data?: RouterOutput['system']['diskUsage']) {
+	if (data === undefined) return undefined
+
+	const used = data?.totalUsed
+	const size = data?.size
+	const available = !size || !used ? undefined : size - used
+
+	return {
+		used,
+		size,
+		available,
+	}
+}
+
+export function trpcMemoryToLocal(data?: RouterOutput['system']['memoryUsage']) {
+	if (data === undefined) return undefined
+
+	const used = data?.totalUsed
+	const size = data?.size
+	const available = !size || !used ? undefined : size - used
+	return {
+		used,
+		size,
+		available,
+	}
+}
+
+export function isTrpcDiskFull(data?: RouterOutput['system']['diskUsage']) {
+	return isDiskFull(trpcDiskToLocal(data)?.available)
+}
+
+export function isTrpcDiskLow(data?: RouterOutput['system']['diskUsage']) {
+	return isDiskLow(trpcDiskToLocal(data)?.available)
+}
+
+export function isTrpcMemoryLow(data?: RouterOutput['system']['memoryUsage']) {
+	return isMemoryLow({size: data?.size, used: data?.totalUsed})
+}
+
+// ---
+
 export function isDiskLow(remaining?: number) {
 	if (remaining === undefined) return false
 	// Return false because we don't want to show the warning if the disk is full
