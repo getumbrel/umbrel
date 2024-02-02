@@ -12,14 +12,11 @@ export const AppsRowSection = ({overline, title, apps}: {overline: string; title
 	return (
 		<div>
 			<SectionTitle overline={overline} title={title} />
-			<FadeScroller
-				direction='x'
-				className='umbrel-hide-scrollbar mt-3 flex flex-row gap-3 overflow-x-auto md:gap-[40px]'
-			>
+			<div className='umbrel-hide-scrollbar -mx-[70px] mt-3 flex flex-row gap-3 overflow-x-auto px-[70px] md:gap-[40px]'>
 				{apps.map((app, i) => (
 					<App key={app.id} app={app} index={i} />
 				))}
-			</FadeScroller>
+			</div>
 		</div>
 	)
 }
