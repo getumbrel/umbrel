@@ -5,6 +5,7 @@ import {type Context} from './context.js'
 import {isAuthenticated} from './is-authenticated.js'
 
 export const t = initTRPC.context<Context>().create({
+	// TODO: Add more context on why this is needed
 	// https://trpc.io/docs/server/error-formatting#adding-custom-formatting
 	errorFormatter(options) {
 		const {shape, error} = options
