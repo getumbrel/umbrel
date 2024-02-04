@@ -1,3 +1,4 @@
+// TODO: this is used outside of the apps module, move it somewhere more appropriate
 export type ProgressStatus = {
 	running: boolean
 	/** From 0 to 100 */
