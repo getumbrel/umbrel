@@ -10,7 +10,6 @@ import {globby} from 'globby'
 import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {type AppRepositoryMeta, type AppManifest} from './schema.js'
-import {demoWidgetConfigsKeyed} from './data.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
@@ -174,7 +173,6 @@ export default class AppRepository {
 						: app.gallery,
 				// TODO: make this work for custom repos
 				icon: app.icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
-				widgets: demoWidgetConfigsKeyed[app.id]?.widgets,
 			}))
 			// Sort apps alphabetically
 			.sort((a: any, b: any) => a.id.localeCompare(b.id))

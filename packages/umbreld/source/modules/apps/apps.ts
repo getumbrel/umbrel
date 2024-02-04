@@ -119,4 +119,27 @@ export default class Apps {
 		// TODO: Implement track open
 		return true
 	}
+
+	async setTorEnabled(torEnabled: boolean) {
+		const currentTorEnabled = await this.#umbreld.store.get('torEnabled')
+
+		// TODO: check if tor is currently in the process of being enabled/disabled
+
+		// Check if we're applying the current setting
+		if (currentTorEnabled === torEnabled) {
+			throw new Error(`Tor is already ${torEnabled ? 'enabled' : 'disabled'}`)
+		}
+
+		// Toggle Tor
+		await this.stop()
+		await this.#umbreld.store.set('torEnabled', torEnabled)
+		await this.start()
+
+		return true
+	}
+
+	async getTorEnabled() {
+		// TODO: check if tor is currently in the process of being enabled/disabled
+		return this.#umbreld.store.get('torEnabled')
+	}
 }

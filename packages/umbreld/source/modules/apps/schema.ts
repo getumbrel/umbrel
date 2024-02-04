@@ -1,6 +1,4 @@
-import {z} from 'zod'
-import type {categories} from './data'
-
+// TODO: this is used outside of the apps module, move it somewhere more appropriate
 export type ProgressStatus = {
 	running: boolean
 	/** From 0 to 100 */
@@ -14,25 +12,6 @@ export type AppRepositoryMeta = {
 	name: string
 }
 
-export type Category = typeof categories[number]
-
-export const widgetSchema = z.object({
-	type: z.enum([
-		'stat-with-buttons',
-		'stat-with-progress',
-		'two-up-stat-with-progress',
-		'three-up',
-		'four-up',
-		'actions',
-		'notifications',
-	]),
-	endpoint: z.string(),
-	// TODO: add preview
-})
-
-export type Widget = z.infer<typeof widgetSchema>
-export type WidgetType = Widget['type']
-
 // TODO: just added this to quickly get types, come back to this and
 // add strciter validation. We might also want to describe this with
 // zod so we can do runtime valdiation with useful errors like tagline
@@ -43,7 +22,7 @@ export type AppManifest = {
 	name: string
 	tagline: string
 	icon: string
-	category: Category
+	category: string
 	version: string
 	port: number
 	description: string
@@ -65,39 +44,8 @@ export type AppManifest = {
 	torOnly?: boolean
 	/** In bytes */
 	installSize?: number
-	widgets?: Widget[]
+	widgets?: any[] // TODO: Define this type
 }
 
 /** There's a 'ready' state instead of an 'installed' state because if an app is installed but updating, we don't want the user to do anything with that app. If an app is a UserApp (initiated install) */
 export type AppState = 'ready' | 'offline' | 'installing' | 'uninstalling' | 'updating'
-
-/**
- * App to store in yaml.
- * Stuff that can be retrieved from the app repository is not stored here.
- */
-export type YamlApp = Pick<AppManifest, 'id'> & {
-	registryId: string
-	showNotifications: boolean
-	autoUpdate: boolean
-	// Should always be true unless set to `false`
-	// If no deterministic password, we don't show this
-	showCredentialsBeforeOpen: boolean
-}
-
-/**
- * App to return to frontend after installing.
- * Usually pull stuff from app repository for names, etc
- */
-export type UserApp = YamlApp &
-	Pick<AppManifest, 'name' | 'icon' | 'port' | 'path' | 'version' | 'torOnly'> & {
-		credentials: {
-			defaultUsername: string
-			defaultPassword: string
-		}
-		hiddenService?: string
-		// ---
-		state: AppState
-		// TODO: if state is installing, this should be 0-100, otherwise undefined
-		/** From 0 to 100 */
-		installProgress?: number
-	}

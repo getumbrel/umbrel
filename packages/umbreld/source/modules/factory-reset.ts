@@ -1,6 +1,6 @@
+import {setTimeout} from 'node:timers/promises'
 import {$} from 'execa'
 import type {ProgressStatus} from './apps/schema.js'
-import {sleep} from './utilities/sleep.js'
 
 // TODO: Get install status from a real place
 // Ignoring because it's demo code
@@ -18,7 +18,7 @@ async function demoReset(dataDirectory: string) {
 		running: true,
 		error: false,
 	}
-	await sleep(1000)
+	await setTimeout(1000)
 
 	factoryResetDemoState = {
 		progress: 50,
@@ -39,7 +39,7 @@ async function demoReset(dataDirectory: string) {
 		return
 	}
 
-	await sleep(1000)
+	await setTimeout(1000)
 
 	await $`rm -rf ${dataDirectory}`
 	await $`mkdir -p ${dataDirectory}`
@@ -51,7 +51,7 @@ async function demoReset(dataDirectory: string) {
 		error: false,
 	}
 
-	await sleep(1000)
+	await setTimeout(1000)
 
 	factoryResetDemoState = {
 		progress: 100,
@@ -62,6 +62,6 @@ async function demoReset(dataDirectory: string) {
 	await $`reboot`
 
 	// Reset after 5 seconds
-	await sleep(5000)
+	await setTimeout(5000)
 	factoryResetDemoState = undefined
 }
