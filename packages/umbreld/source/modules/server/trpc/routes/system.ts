@@ -1,4 +1,5 @@
 import os from 'node:os'
+import {setTimeout} from 'node:timers/promises'
 import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
@@ -6,7 +7,7 @@ import systeminfo from 'systeminformation'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
-import {sleep} from '../../../utilities/sleep.js'
+
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
 export default router({
@@ -20,12 +21,12 @@ export default router({
 	}),
 	latestAvailableVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
-		await sleep(1000)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	update: privateProcedure.mutation(async () => {
 		// TODO: do this for real
-		await sleep(1000)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	//
