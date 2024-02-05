@@ -1,6 +1,7 @@
 import {ReactNode, Suspense} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {tw} from '@/utils/tw'
 
@@ -64,7 +65,10 @@ export function StoriesLayout() {
 
 	return (
 		<>
-			<div className='umbrel-fade-scroller-x umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'>
+			<FadeScroller
+				direction='x'
+				className='umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'
+			>
 				<NavLink to='/'>👈 Home</NavLink>
 				<span className='px-2'>|</span>
 				<NavLink to='/stories'>Stories</NavLink>
@@ -76,7 +80,7 @@ export function StoriesLayout() {
 				<a href='/iframe-test.html' className={navLinkClass}>
 					iframe-test.html
 				</a>
-			</div>
+			</FadeScroller>
 			<div className='flex flex-col gap-6'>
 				<Suspense>
 					<Outlet />

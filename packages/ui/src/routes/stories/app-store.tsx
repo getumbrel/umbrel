@@ -1,10 +1,12 @@
 import {useState} from 'react'
 
 import {Loading} from '@/components/ui/loading'
+import {useAvailableApps} from '@/hooks/use-available-apps'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
+import {trpcReact} from '@/trpc/trpc'
 
 export default function AppStoreStory() {
 	const discoverQ = useDiscoverQuery()
@@ -21,6 +23,7 @@ export default function AppStoreStory() {
 
 	return (
 		<div>
+			<InstallABunchOfApps />
 			<InstallFirstExample />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
@@ -33,6 +36,21 @@ export default function AppStoreStory() {
 			/>
 		</div>
 	)
+}
+
+function InstallABunchOfApps() {
+	const apps = useAvailableApps()
+
+	const installMut = trpcReact.user.apps.install.useMutation({
+		onSuccess: () => {
+			window.location.reload()
+		},
+	})
+	const handleInstallABunch = () => {
+		const toInstall = apps?.apps?.slice(0, 20) ?? []
+		toInstall.map((app) => installMut.mutate({appId: app.id}))
+	}
+	return <Button onClick={handleInstallABunch}>Install a bunch of apps</Button>
 }
 
 function InstallFirstExample() {

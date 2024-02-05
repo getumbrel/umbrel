@@ -17,5 +17,7 @@ module.exports = {
 		'no-extra-semi': 'off',
 		// shadcn ui sometimes takes an unused `children` prop so it's not spread into an element that shouldn't take children
 		'@typescript-eslint/no-unused-vars': 'warn',
+		// Allow any
+		'@typescript-eslint/no-explicit-any': 'off',
 	},
 }

@@ -49,6 +49,25 @@ import {
 	ContextMenuTrigger,
 } from '@/shadcn-components/ui/context-menu'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from '@/shadcn-components/ui/dialog'
+import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+	DrawerTrigger,
+} from '@/shadcn-components/ui/drawer'
+import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
@@ -63,7 +82,6 @@ import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {fixmeHandler} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 import {tw} from '@/utils/tw'
 
 export default function Stories() {
@@ -98,8 +116,12 @@ export default function Stories() {
 			<Badges />
 			<H2>Checkbox</H2>
 			<CheckboxExamples />
+			<H2>Dialog</H2>
+			<DialogExample />
 			<H2>Alert Dialog</H2>
 			<AlertDialogExample />
+			<H2>Drawer</H2>
+			<DrawerExample />
 			<H2>Loading</H2>
 			<Loading />
 			<H2>Tooltip</H2>
@@ -138,6 +160,33 @@ function TooltipExample() {
 	)
 }
 
+function DialogExample() {
+	return (
+		<div>
+			<Dialog>
+				<DialogTrigger asChild>
+					<Button variant='destructive'>Delete account</Button>
+				</DialogTrigger>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Are you absolutely sure?</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. This will permanently delete your account and remove your data from our
+							servers.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button size='dialog'>Cancel</Button>
+						<Button size='dialog' variant='primary'>
+							Continue
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</div>
+	)
+}
+
 function AlertDialogExample() {
 	return (
 		<div>
@@ -165,6 +214,30 @@ function AlertDialogExample() {
         </button>
       </div> */}
 		</div>
+	)
+}
+
+function DrawerExample() {
+	return (
+		<Drawer>
+			<DrawerTrigger>Open</DrawerTrigger>
+			<DrawerContent>
+				<DrawerHeader>
+					<DrawerTitle>Account</DrawerTitle>
+					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
+				</DrawerHeader>
+				<DrawerFooter>
+					<DrawerClose>
+						<Button size='dialog' className='w-full'>
+							Cancel
+						</Button>
+					</DrawerClose>
+					<Button size='dialog' variant='primary'>
+						Submit
+					</Button>
+				</DrawerFooter>
+			</DrawerContent>
+		</Drawer>
 	)
 }
 
@@ -307,7 +380,7 @@ function ProgressButton() {
 				progress={progress}
 				state={state}
 				onInstallClick={install}
-				onOpenClick={() => trackAppOpen('foobar')}
+				onOpenClick={() => alert('foobar')}
 			/>
 		</div>
 	)
@@ -385,7 +458,7 @@ function ToastExample() {
 		<div>
 			{/* <Toaster /> should be in main or some layout file */}
 			<Button onClick={() => toast('My first toast')}>Give me a toast</Button>
-			<Button onClick={() => toast.success('My first toast')}>Success</Button>
+			<Button onClick={() => toast.success('My first toast', {duration: Infinity})}>Success</Button>
 			<Button onClick={() => toast.info('My first toast')}>Give me an info toast</Button>
 			<Button onClick={() => toast.warning('My first toast')}>Warning</Button>
 			<Button onClick={() => toast.error('My first toast')}>Error</Button>

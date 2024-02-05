@@ -1,22 +1,21 @@
-import {Device} from '@/trpc/trpc'
+import {UmbrelHostEnvironment} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export const UNKNOWN = () => t('unknown')
 
-export const SHEET_HEADER_ID = 'sheet-header-root-id'
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-export const deviceMap = {
+export const hostEnvironmentMap = {
 	'umbrel-home': {
 		title: 'Umbrel Home',
-		icon: '/figma-exports/umbrel-home.svg',
+		icon: '/figma-exports/system-umbrel-home.png',
 	},
 	'raspberry-pi': {
 		title: 'Raspberry Pi',
-		icon: '/figma-exports/pi.svg',
+		icon: '/figma-exports/system-pi.svg',
 	},
 	linux: {
 		title: 'Linux',
-		icon: '/figma-exports/tux.svg',
+		icon: '/figma-exports/system-tux.svg',
 	},
-} satisfies Record<Device, {title: string; icon: string}>
+} satisfies Record<UmbrelHostEnvironment, {title: string; icon: string}>

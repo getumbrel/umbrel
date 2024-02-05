@@ -5,25 +5,28 @@ import 'photoswipe/style.css'
 
 import {useEffect} from 'react'
 
+import {FadeScroller} from '@/components/fade-scroller'
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Banner} from '@/routes/app-store/use-discover-query'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => {
 	return (
-		<div className={galleryRootClass}>
+		<FadeScroller direction='x' className={galleryRootClass}>
 			{banners.map((banner, i) => (
 				<Link
 					key={banner.id}
 					to={`/app-store/${banner.id}`}
 					className={cn(galleryItemClass, 'aspect-2.25 h-[140px] md:h-[316px]')}
 					style={{
-						backgroundImage: `url(${banner.image})`,
 						animationDelay: `${i * 0.1}s`,
 					}}
-				/>
+				>
+					<FadeInImg src={banner.image} className='group-focus-visible:opacity-80' alt='' />
+				</Link>
 			))}
-		</div>
+		</FadeScroller>
 	)
 }
 
@@ -43,27 +46,27 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 	}, [galleryId])
 
 	return (
-		<div className={cn(galleryRootClass, 'pswp-gallery')} id={galleryId}>
+		<FadeScroller direction='x' className={cn(galleryRootClass, 'pswp-gallery')} id={galleryId}>
 			{gallery.map((src, i) => (
 				<a
 					key={src}
 					href={src}
 					data-pswp-width={2880}
 					data-pswp-height={1800}
-					className={cn(galleryItemClass, 'aspect-1.6 h-[140px] md:h-[292px]')}
+					className={cn(galleryItemClass, 'aspect-1.6 h-[200px] md:h-[292px]')}
 					style={{
 						animationDelay: `${i * 0.1}s`,
 					}}
 					target='_blank'
 					rel='noreferrer'
 				>
-					<img src={src} className='group-focus-visible:opacity-80' alt='' />
+					<FadeInImg src={src} className='group-focus-visible:opacity-80' alt='' />
 				</a>
 			))}
-		</div>
+		</FadeScroller>
 	)
 }
 
-export const galleryRootClass = tw`umbrel-fade-scroller-x umbrel-hide-scrollbar flex gap-2 md:gap-5 overflow-x-auto`
+export const galleryRootClass = tw`umbrel-hide-scrollbar flex gap-2 md:gap-5 overflow-x-auto`
 
 export const galleryItemClass = tw`group shrink-0 rounded-10 bg-white/10 bg-cover outline-none ring-inset focus-visible:ring-4 ring-white/80 animate-in fade-in fill-mode-both slide-in-from-right-10 overflow-hidden`

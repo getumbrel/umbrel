@@ -9,7 +9,8 @@ const Switch = React.forwardRef<
 >(({className, ...props}, ref) => (
 	<SwitchPrimitives.Root
 		className={cn(
-			'peer inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-brand data-[state=unchecked]:bg-white/10',
+			// Removing `disabled:cursor-not-allowed` so that we can disable switch while it's going to the server without changing the cursor
+			'peer inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-50 data-[state=checked]:bg-brand data-[state=unchecked]:bg-white/10',
 			className,
 		)}
 		{...props}

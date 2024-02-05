@@ -61,18 +61,20 @@ test('happy path', async ({page, context}) => {
 
 	// await page.screenshot({path: 'test-results/onboarding-done.png'})
 
-	// Expect button with text "Launch"
+	// Expect link with text "Launch"
 	await expect(page.getByTestId('to-desktop')).toBeVisible()
 
-	// Click button
-	// page.getByRole('button', {name: 'Launch'}).click()
-	await page.keyboard.press('Enter')
+	// Click link
+	await page.getByTestId('to-desktop').click()
 
-	await page.waitForURL(/\/install-first-app/)
+	// TODO: also test that pressing Enter works
+	// await page.keyboard.press('Enter')
+
+	await page.waitForURL(/\//)
 	await page.waitForLoadState()
 
-	// Expect to be at `/install-first-app`
-	await expect(page).toHaveURL(/\/install-first-app/)
+	// Expect to be at `/` and the content to be 'install first app'
+	await expect(page).toHaveURL(/\//)
 
 	// Wait for page load
 	await page.getByText('Install your first app')
@@ -100,8 +102,14 @@ test('happy path', async ({page, context}) => {
 	await expect(top.getByRole('button', {name: 'Open'})).toBeVisible({timeout: 20000})
 
 	// Click open
-	const pagePromise = context.waitForEvent('page')
 	await top.getByRole('button', {name: 'Open'}).click()
+
+	// Expect credentials dialog
+	const pagePromise = context.waitForEvent('page')
+
+	await expect(page).toHaveURL(/\?dialog=default-credentials/)
+
+	await page.getByRole('button', {name: 'Launch app'}).click()
 
 	const newPage = await pagePromise
 
@@ -114,6 +122,9 @@ test('happy path', async ({page, context}) => {
 	await expect(newPage).toHaveURL(/chrome-error:\/\/chromewebdata\//)
 	await newPage.close()
 
+	// Close the credentials dialog
+	await page.keyboard.press('Escape')
+
 	// Item in dock
 	// Click on link href that has `/settings`
 	await page.click('a[href*="/settings"]')
@@ -123,11 +134,6 @@ test('happy path', async ({page, context}) => {
 
 	// Scroll to Factory reset
 	await page.click('text=Factory reset')
-
-	// Fill Device name
-	await page.getByPlaceholder('Device name').fill(TEST_USER)
-	// Enter
-	await page.keyboard.press('Enter')
 
 	// Await redirect
 	await page.waitForURL(/\/factory-reset/)

@@ -62,6 +62,7 @@
 		"react-i18next": "13.3.1",
 		"react-icons": "4.11.0",
 		"react-json-tree": "0.18.0",
+		"react-merge-refs": "^2.1.1",
 		"react-qr-code": "2.0.12",
 		"react-router-dom": "6.17.0",
 		"react-use": "17.4.0",
@@ -71,7 +72,8 @@
 		"tailwindcss-animate": "1.0.7",
 		"ts-extras": "^0.11.0",
 		"url-join": "^5.0.0",
-		"use-is-focused": "0.0.1"
+		"use-is-focused": "0.0.1",
+		"vaul": "^0.8.9"
 	},
 	"devDependencies": {
 		"@faker-js/faker": "^8.3.1",

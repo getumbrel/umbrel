@@ -1,6 +1,7 @@
 import {useParams} from 'react-router-dom'
 
-import {LinkButton} from '@/components/ui/link-button'
+import {FadeScroller} from '@/components/fade-scroller'
+import {ButtonLink} from '@/components/ui/button-link'
 import {Category} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
@@ -14,21 +15,19 @@ export function AppStoreNav() {
 	const activeId = categoryishId || categoryishDescriptions[0].id
 
 	return (
-		<>
-			<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x -my-2 flex gap-[5px] overflow-x-auto py-2'>
-				{categoryishDescriptions.map((category) => (
-					<LinkButton
-						key={category.id}
-						to={categoryIdToPath(category.id)}
-						variant={category.id === activeId ? 'primary' : 'default'}
-						size={size}
-						unstable_viewTransition
-					>
-						{category.label}
-					</LinkButton>
-				))}
-			</div>
-		</>
+		<FadeScroller direction='x' className='umbrel-hide-scrollbar -my-2 flex gap-[5px] overflow-x-auto py-2'>
+			{categoryishDescriptions.map((category) => (
+				<ButtonLink
+					key={category.id}
+					to={categoryIdToPath(category.id)}
+					variant={category.id === activeId ? 'primary' : 'default'}
+					size={size}
+					unstable_viewTransition
+				>
+					{category.label}
+				</ButtonLink>
+			))}
+		</FadeScroller>
 	)
 }
 

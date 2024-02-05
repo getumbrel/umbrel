@@ -15,7 +15,7 @@ export function Header() {
 
 	// Always rendering the entire component to avoid layout thrashing
 	return (
-		<div className={cn('relative z-10', name ? 'animate-in fade-in' : 'invisible')}>
+		<div className={cn('relative z-10', name ? 'duration-300 animate-in fade-in slide-in-from-bottom-8' : 'invisible')}>
 			<div className='flex flex-col items-center gap-3 px-4 md:gap-4'>
 				<UmbrelLogo
 					className='w-[73px] md:w-auto'
@@ -58,7 +58,7 @@ export function Search({onClick}: {onClick?: () => void}) {
 
 	return (
 		<button
-			className='select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors hover:bg-neutral-600/30 active:bg-neutral-600/10'
+			className='z-10 select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors delay-500 duration-300 animate-in fade-in fill-mode-both hover:bg-neutral-600/30 active:bg-neutral-600/10'
 			onClick={onClick}
 		>
 			{/* TODO: ideally, centralize shortcut preview and shortcut event listener so always in sync */}
@@ -83,21 +83,18 @@ export function AppGridGradientMasking() {
 }
 
 function GradientMaskSide({side}: {side: 'left' | 'right'}) {
-	const {wallpaper} = useWallpaper()
+	const {wallpaper, wallpaperFullyVisible, isLoading} = useWallpaper()
+
+	if (!wallpaperFullyVisible || isLoading) return null
 
 	return (
 		<div
 			// Ideally, we'd match the `block` visibility to the arrow buttons, but that would require a lot of work.
 			// Ideally we'd use a breakpoint based on the CSS var --app-max-w, but that's not possible
-			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center opacity-0 duration-700 animate-in fade-in zoom-in-110 md:block'
+			className='pointer-events-none fixed top-0 hidden h-full bg-cover bg-center md:block'
 			style={{
 				// For debugging:
-				// backgroundColor: "red",
-				// Alternatively, transition in the gradient mask after apps have rendered
-				animationDelay: '1s',
-				animationFillMode: 'both',
-				animationName: 'fade-in',
-				animationDuration: '0s',
+				// backgroundColor: 'red',
 				backgroundImage: `url(${wallpaper.url})`,
 				backgroundAttachment: 'fixed',
 				WebkitMaskImage: `linear-gradient(to ${side}, transparent, black)`,

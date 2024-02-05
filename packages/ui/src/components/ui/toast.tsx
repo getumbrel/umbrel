@@ -1,3 +1,4 @@
+import type {IconType} from 'react-icons'
 import {TbAlertCircle, TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
 import * as SonnerPrimitive from 'sonner'
 
@@ -28,11 +29,20 @@ const toastFunction = (...args: Parameters<typeof SonnerPrimitive.toast>) => {
 export const toast = Object.assign(toastFunction, {
 	...SonnerPrimitive.toast,
 	success: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
-		SonnerPrimitive.toast.success(message, {...opts, icon: <TbCircleCheck className='h-6 w-6' />}),
+		SonnerPrimitive.toast.success(message, {...opts, icon: <ToastIcon component={TbCircleCheck} hexColor='#00AD79' />}),
 	info: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
-		SonnerPrimitive.toast.info(message, {...opts, icon: <TbInfoCircle className='h-6 w-6' />}),
+		SonnerPrimitive.toast.info(message, {...opts, icon: <ToastIcon component={TbInfoCircle} hexColor='#139EED' />}),
 	warning: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
-		SonnerPrimitive.toast.warning(message, {...opts, icon: <TbAlertTriangle className='h-6 w-6' />}),
+		SonnerPrimitive.toast.warning(message, {
+			...opts,
+			icon: <ToastIcon component={TbAlertTriangle} hexColor='#D7BF44' />,
+		}),
 	error: (message: string, opts?: SonnerPrimitive.ExternalToast) =>
-		SonnerPrimitive.toast.error(message, {...opts, icon: <TbAlertCircle className='h-6 w-6' />}),
+		SonnerPrimitive.toast.error(message, {...opts, icon: <ToastIcon component={TbAlertCircle} hexColor='#F45A5A' />}),
 })
+
+export function ToastIcon({component, hexColor}: {component: IconType; hexColor: string}) {
+	const Comp = component
+	// 88 in filter adds 50% opacity
+	return <Comp className='h-6 w-6' style={{color: hexColor, filter: `drop-shadow(0 0 8px ${hexColor}88)`}} />
+}

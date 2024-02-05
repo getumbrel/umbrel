@@ -2,11 +2,15 @@ import {AnimatePresence, motion} from 'framer-motion'
 import {ReactNode} from 'react'
 import {useTimeout} from 'react-use'
 
+import {WidgetCheckIcon} from '@/assets/widget-check-icon'
+import {AppIcon} from '@/components/app-icon'
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {cn} from '@/shadcn-lib/utils'
 
 export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
@@ -19,13 +23,14 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 
 	const {availableWidgets, toggleSelected, selected, selectedTooMany} = widgets
 
-	const selectedH = selected.length == 0 ? '4vh' : `calc(var(--widget-h) + 8vh)`
+	const selectedH = selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
 
 	return (
 		<>
 			{open && (
 				// Don't make this take up full width because clicking outside should close the widget selector
-				<div className='absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
+				// `pointer-events-none` because we want clicking outside the sheet to close the sheet, not interact with the widget
+				<div className='pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
 					{/* <div className='absoulte top-0 grid h-[var(--widget-h)] w-full place-items-center whitespace-nowrap'>
 						No widgets selected
 					</div> */}
@@ -121,19 +126,22 @@ function WidgetSheet({
 						height: `calc(100dvh - ${selectedCssHeight})`,
 					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
+					closeButton={<DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
 				>
-					<div
-						className={cn(
-							'umbrel-dialog-fade-scroller flex h-full flex-col items-start gap-5 overflow-y-auto px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
-							'opacity-100 duration-100 animate-in fade-in',
-						)}
-					>
-						<SheetHeader>
-							<SheetTitle>Select up to 3 widgets</SheetTitle>
-						</SheetHeader>
-						{children}
-						<DockSpacer />
-					</div>
+					<ScrollArea className='h-full rounded-t-20'>
+						<div
+							className={cn(
+								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
+								'opacity-100 duration-100 animate-in fade-in',
+							)}
+						>
+							<SheetHeader>
+								<SheetTitle>Select up to 3 widgets</SheetTitle>
+							</SheetHeader>
+							{children}
+							<DockSpacer />
+						</div>
+					</ScrollArea>
 				</SheetContent>
 			</Sheet>
 		</BackdropBlurVariantContext.Provider>
@@ -144,7 +152,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 	return (
 		<>
 			<div className='flex items-center gap-3'>
-				<img alt='icon' src={iconSrc} width={36} height={36} className='rounded-8' />
+				<AppIcon src={iconSrc} size={36} className='rounded-8' />
 				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
 			</div>
 			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>
@@ -165,9 +173,8 @@ function WidgetChecker({
 		<div className='relative'>
 			{children}
 			{checked && (
-				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3'>
-					<img src='/check.svg' className='max-sm:w-6' />
-					{/* <div className="w-10 h-10 bg-brand rounded-full" /> */}
+				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3 text-brand'>
+					<WidgetCheckIcon className='max-sm:scale-75' />
 				</div>
 			)}
 			<button

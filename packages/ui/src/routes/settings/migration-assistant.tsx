@@ -6,29 +6,21 @@ import {ErrorAlert} from '@/components/ui/alert'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessage, ImmersiveDialogSplit} from '@/components/ui/immersive-dialog'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 const title = 'Migration Assistant'
 
 export default function MigrationAssistantDialog() {
 	useUmbrelTitle(title)
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('migration-assistant')
 	const {params} = useQueryParams()
 	const state = params.get('migration-state')
 
 	return (
-		<ImmersiveDialogSplit
-			onClose={() => navigate('/settings', {preventScrollReset: true})}
-			leftChildren={
-				<img
-					src='/migration-assistant/migrate-raspberrypi-umbrel-home.png'
-					width={111}
-					height={104}
-					alt='Image displaying migration from Raspberry Pi to Umbrel Home'
-				/>
-			}
-		>
+		<ImmersiveDialogSplit onClose={() => dialogProps.onOpenChange(false)} leftChildren={<MigrateImage />}>
 			{!state && <MigrationAssistantPrep />}
 			{state === 'prep' && <MigrationAssistantPrep />}
 			{state === 'errors' && <MigrationAssistantErrors />}

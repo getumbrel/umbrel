@@ -1,42 +1,50 @@
-import BigNumber from 'bignumber.js'
-import {RiPulseLine} from 'react-icons/ri'
 import {
 	Tb2Fa,
+	TbActivityHeartbeat,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
 	TbLanguage,
 	TbPhoto,
+	TbRotate2,
+	TbServer,
 	TbShoppingBag,
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
+import {Link, useNavigate} from 'react-router-dom'
 
 // import {useNavigate} from 'react-router-dom'
 
 import {TorIcon2} from '@/assets/tor-icon2'
-import {Card} from '@/components/ui/card'
-import {IconLinkButton} from '@/components/ui/icon-link-button'
-import {LinkButton} from '@/components/ui/link-button'
+import {ButtonLink} from '@/components/ui/button-link'
+import {Card, cardClass} from '@/components/ui/card'
+import {UNKNOWN} from '@/constants'
+import {useCpuTemp} from '@/hooks/use-cpu-temp'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {maybePrettyBytes} from '@/utils/pretty-bytes'
+import {useLinkToDialog} from '@/utils/dialog'
 
 import {ListRowMobile} from './list-row'
-import {ProgressStatCardContent} from './progress-card-content'
+import {MemoryCard} from './memory-card'
 import {ContactSupportLink} from './shared'
+import {StorageCard} from './storage-card'
 import {TempStatCardContent} from './temp-stat-card-content'
 
 export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
-	// const navigate = useNavigate()
+	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
-	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery()
-	const diskQ = trpcReact.system.diskUsage.useQuery()
-	const memoryQ = trpcReact.system.memoryUsage.useQuery()
+	const cpuTemp = useCpuTemp()
+	const deviceInfo = useDeviceInfo()
+	const osVersionQ = trpcReact.system.version.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-	// const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
+
+	const linkToDialog = useLinkToDialog()
 
 	if (!userQ.data) {
 		return null
@@ -52,13 +60,13 @@ export function SettingsContentMobile() {
 
 			<div className='grid-cols-2 md:grid'>
 				<div className='flex items-center gap-[5px] px-2 pb-2.5 md:order-last'>
-					<LinkButton to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
+					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
 						Log out
-					</LinkButton>
-					<LinkButton to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
+					</ButtonLink>
+					<ButtonLink to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
 						Restart
-					</LinkButton>
-					<LinkButton
+					</ButtonLink>
+					<ButtonLink
 						to={{
 							search: addLinkSearchParams({dialog: 'shutdown'}),
 						}}
@@ -67,7 +75,7 @@ export function SettingsContentMobile() {
 						className='flex-grow'
 					>
 						Shut down
-					</LinkButton>
+					</ButtonLink>
 				</div>
 
 				<div>
@@ -77,69 +85,112 @@ export function SettingsContentMobile() {
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>Running on</dt>
-						<dd>DEBUG 4</dd>
+						<dd>{deviceInfo.data?.umbrelHostEnvironment ?? UNKNOWN()}</dd>
 						<dt className='opacity-40'>umbrelOS version</dt>
-						<dd>0.0.0 </dd>
+						<dd>{osVersionQ.data}</dd>
 					</dl>
 				</div>
 			</div>
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
+				{/* TODO: `StorageCard` and `TempStatCardContent` are inconsistent */}
+				<StorageCard />
+				<MemoryCard />
 				<Card>
-					<ProgressStatCardContent
-						title='Storage'
-						value={maybePrettyBytes(diskQ.data?.used)}
-						valueSub={`/ ${maybePrettyBytes(diskQ.data?.size)}`}
-						secondaryValue={`${maybePrettyBytes(diskQ.data?.available)} left`}
-						progress={BigNumber(diskQ.data?.used ?? 0 * 100)
-							.dividedBy(diskQ.data?.size ?? 0)
-							.toNumber()}
-					/>
+					<TempStatCardContent tempInCelcius={cpuTemp.temp} />
 				</Card>
-				<Card>
-					<ProgressStatCardContent
-						title='Memory'
-						value={maybePrettyBytes(memoryQ.data?.used)}
-						valueSub={`/ ${maybePrettyBytes(memoryQ.data?.size)}`}
-						secondaryValue={`${maybePrettyBytes(memoryQ.data?.available)} left`}
-						progress={BigNumber(memoryQ.data?.used ?? 0 * 100)
-							.dividedBy(memoryQ.data?.size ?? 0)
-							.toNumber()}
-					/>
-				</Card>
-				<Card>
-					<TempStatCardContent tempInCelcius={cpuTempQ.data} />
-				</Card>
-				<Card>
-					<IconLinkButton
-						icon={RiPulseLine}
-						to={{
-							search: addLinkSearchParams({dialog: 'live-usage'}),
-						}}
-					>
-						Open Live Usage
-					</IconLinkButton>
-				</Card>
+				<Link
+					className={cn(cardClass, 'flex flex-col justify-between')}
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage'}),
+					}}
+				>
+					<TbActivityHeartbeat className='h-5 w-5 [&>*]:stroke-[1.5px]' />
+					<span className='text-12 font-medium leading-inter-trimmed'>Open Live Usage</span>
+				</Link>
 			</div>
 
 			<div className='umbrel-divide-y rounded-12 bg-white/5 p-1'>
-				<ListRowMobile icon={TbUser} title='Account' description='Your display name & Umbrel password' />
-				<ListRowMobile icon={TbPhoto} title='Wallpaper' description='Choose your Umbrel wallpaper' />
-				<ListRowMobile icon={Tb2Fa} title='Two-factor authentication' description='Add a layer of security to login' />
-				<ListRowMobile icon={TorIcon2} title='Remote Tor access' description='Access Umbrel from anywhere using Tor' />
+				<ListRowMobile
+					icon={TbUser}
+					title='Account'
+					description='Your display name & Umbrel password'
+					onClick={() => navigate(linkToDialog('account'))}
+				/>
+				<ListRowMobile
+					icon={TbPhoto}
+					title='Wallpaper'
+					description='Choose your Umbrel wallpaper'
+					onClick={() => navigate(linkToDialog('wallpaper'))}
+				/>
+				<ListRowMobile
+					icon={Tb2Fa}
+					title='Two-factor authentication'
+					description='Add a layer of security to login'
+					onClick={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
+				/>
+				<ListRowMobile
+					icon={TorIcon2}
+					title={
+						<span className='flex items-center gap-2' onClick={() => navigate(linkToDialog('tor'))}>
+							Remote Tor access <TorPulse />
+						</span>
+					}
+					description='Access Umbrel from anywhere using Tor'
+					onClick={() => navigate(linkToDialog('tor'))}
+				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
 					title='Migration Assistant'
 					description='Move data from Raspberry Pi to Umbrel Home'
+					onClick={() => navigate(linkToDialog('start-migration'))}
 				/>
-				<ListRowMobile icon={TbLanguage} title='Language' description='Select preferred language ' />
-				<ListRowMobile icon={TbShoppingBag} title='App store' description='App store settings & app updates' />
-				<ListRowMobile icon={TbTool} title='Troubleshoot' description='View logs for troubleshooting' />
-				<ListRowMobile icon={TbCircleArrowUp} title='Software update' description='You are on the latest version' />
+				<ListRowMobile
+					icon={TbLanguage}
+					title='Language'
+					description='Select preferred language'
+					onClick={() => navigate(linkToDialog('language'))}
+				/>
+				<ListRowMobile
+					icon={TbShoppingBag}
+					title='App store'
+					description='App store settings & app updates'
+					onClick={() => navigate(linkToDialog('app-store-preferences'))}
+				/>
+				<ListRowMobile
+					icon={TbTool}
+					title='Troubleshoot'
+					description='View logs for troubleshooting'
+					onClick={() => navigate(linkToDialog('troubleshoot'))}
+				/>
+				<ListRowMobile
+					icon={TbServer}
+					title='Device info'
+					description={`Model ${deviceInfo.data?.modelNumber ?? UNKNOWN()} · Serial ${
+						deviceInfo.data?.serialNumber ?? UNKNOWN()
+					}`}
+					onClick={() => navigate(linkToDialog('device-info'))}
+				/>
+				<ListRowMobile
+					icon={TbCircleArrowUp}
+					title='Software update'
+					description='You are on the latest version'
+					onClick={() => navigate(linkToDialog('software-update'))}
+				/>
+				<ListRowMobile
+					icon={TbRotate2}
+					title='Factory reset'
+					description='Delete all data, and reset your device completely'
+					onClick={() => navigate('/factory-reset')}
+				/>
 			</div>
 
 			<ContactSupportLink />
 		</div>
 	)
 }
+
+const TorPulse = () => (
+	<div className='inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-[#299E16] ring-3 ring-[#16FF001A]/10' />
+)

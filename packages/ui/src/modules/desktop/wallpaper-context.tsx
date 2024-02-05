@@ -1,172 +1,341 @@
-import {useEffect, useLayoutEffect} from 'react'
+import {createContext, useCallback, useContext, useEffect, useLayoutEffect, useState} from 'react'
+import {usePreviousDistinct} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {keyBy} from '@/utils/misc'
+import {keyBy, preloadImage} from '@/utils/misc'
+import {tw} from '@/utils/tw'
 
 type WallpaperT = {
-	id: string
-	label: string
+	id: string | undefined
 	url: string
 	brandColorHsl: string
-	brandColorLighterHsl: string
-	source?: string
-	photographer?: string
 }
 
 export const wallpapers = [
 	{
-		id: 'water-dark',
-		label: 'Dark water',
-		url: '/wallpapers/water-dark.jpg',
-		brandColorHsl: '204 100% 41%',
-		brandColorLighterHsl: '204 83% 50%',
-		source: 'https://unsplash.com/photos/body-of-water-during-daytime-hRemch0ZDwI',
-		photographer: 'Conor Sexton',
-	},
-	{
-		id: 'mountain-sunset',
-		label: 'Mountain sunset',
-		url: '/wallpapers/mountain-sunset.jpg',
+		id: '1',
+		url: '/wallpapers/1.jpg',
 		brandColorHsl: '259 100% 59%',
-		brandColorLighterHsl: '259 100% 64%',
-		source: 'https://unsplash.com/photos/silhouette-of-trees-during-sunset-JUFuI-kBtas',
-		photographer: 'Federico Bottos',
 	},
 	{
-		id: 'purple-mountain-range',
-		label: 'Purple mountain range',
-		url: '/wallpapers/purple-mountain-range.jpg',
-		brandColorHsl: '236 100% 60%',
-		brandColorLighterHsl: '236 100% 70%',
-		source: 'https://unsplash.com/photos/mountain-range-rnKqWvO80Y4',
-		photographer: 'Michael D',
+		id: '2',
+		url: '/wallpapers/2.jpg',
+		brandColorHsl: '6 56% 54%',
 	},
 	{
-		id: 'top-green-road',
-		label: 'Aerial winding road',
-		url: '/wallpapers/top-green-road.jpg',
-		brandColorHsl: '48 100% 36%',
-		brandColorLighterHsl: '48 100% 26%',
-		source: 'https://www.pexels.com/photo/aerial-photo-of-empty-meandering-road-in-between-forest-2876511/',
-		photographer: 'kellymlacy',
+		id: '3',
+		url: '/wallpapers/3.jpg',
+		brandColorHsl: '22 88% 40%',
 	},
 	{
-		id: 'desert-mountains',
-		label: 'Desert mountains',
-		url: '/wallpapers/desert-mountains.jpg',
-		brandColorHsl: '189 100% 35%',
-		brandColorLighterHsl: '189 100% 40%',
-		source: 'https://unsplash.com/photos/an-aerial-view-of-a-desert-at-sunset-YeLs9lJDx9M',
-		photographer: 'NEOM',
+		id: '4',
+		url: '/wallpapers/4.jpg',
+		brandColorHsl: '198 100% 31%',
 	},
 	{
-		id: 'gradient-neutral',
-		label: 'Neutral Gradient',
-		url: '/wallpapers/gradient-neutral.svg',
-		brandColorHsl: '0 0% 0%',
-		brandColorLighterHsl: '0 0% 0%',
+		id: '5',
+		url: '/wallpapers/5.jpg',
+		brandColorHsl: '202 100% 33%',
 	},
 	{
-		id: 'gradient-blue',
-		label: 'Blue Gradient',
-		url: '/wallpapers/gradient-blue.svg',
-		brandColorHsl: '248 80% 60%',
-		brandColorLighterHsl: '248 80% 63%',
+		id: '6',
+		url: '/wallpapers/6.jpg',
+		brandColorHsl: '160 100% 27%',
 	},
 	{
-		id: 'gradient-green',
-		label: 'Green Gradient',
-		url: '/wallpapers/gradient-green.svg',
-		brandColorHsl: '137 90% 30%',
-		brandColorLighterHsl: '137 100% 63%',
+		id: '7',
+		url: '/wallpapers/7.jpg',
+		brandColorHsl: '79 100% 25%',
 	},
 	{
-		id: 'gradient-red',
-		label: 'Red Gradient',
-		url: '/wallpapers/gradient-red.svg',
-		brandColorHsl: '0 90% 30%',
-		brandColorLighterHsl: '0 100% 63%',
+		id: '8',
+		url: '/wallpapers/8.jpg',
+		brandColorHsl: '185 100% 29%',
 	},
 	{
-		id: 'gradient-fire',
-		label: 'Fire Gradient',
-		url: '/wallpapers/gradient-fire.svg',
-		brandColorHsl: '30 90% 30%',
-		brandColorLighterHsl: '30 100% 63%',
+		id: '9',
+		url: '/wallpapers/9.jpg',
+		brandColorHsl: '359 64% 62%',
+	},
+	{
+		id: '10',
+		url: '/wallpapers/10.jpg',
+		brandColorHsl: '18 75% 52%',
+	},
+	{
+		id: '11',
+		url: '/wallpapers/11.jpg',
+		brandColorHsl: '185 100% 29%',
+	},
+	{
+		id: '12',
+		url: '/wallpapers/12.jpg',
+		brandColorHsl: '332 84% 47%',
+	},
+	{
+		id: '13',
+		url: '/wallpapers/13.jpg',
+		brandColorHsl: '194 81% 39%',
+	},
+	{
+		id: '14',
+		url: '/wallpapers/14.jpg',
+		brandColorHsl: '328 87% 49%',
+	},
+	{
+		id: '15',
+		url: '/wallpapers/15.jpg',
+		brandColorHsl: '32 100% 36%',
+	},
+	{
+		id: '16',
+		url: '/wallpapers/16.jpg',
+		brandColorHsl: '265 100% 42%',
+	},
+	{
+		id: '17',
+		url: '/wallpapers/17.jpg',
+		brandColorHsl: '184 100% 25%',
+	},
+	{
+		id: '18',
+		url: '/wallpapers/18.jpg',
+		brandColorHsl: '259 100% 59%',
+	},
+	{
+		id: '19',
+		url: '/wallpapers/19.jpg',
+		brandColorHsl: '204 100% 41%',
+	},
+	{
+		id: '20',
+		url: '/wallpapers/20.jpg',
+		brandColorHsl: '259 100% 59%',
+	},
+	{
+		id: '21',
+		url: '/wallpapers/21.jpg',
+		brandColorHsl: '12 78% 50%',
 	},
 ] as const satisfies readonly WallpaperT[]
 
-type WallpaperId = (typeof wallpapers)[number]['id']
-const wallpaperIds = wallpapers.map((w) => w.id)
+export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
+const wallpaperIds = wallpapers.map((w) => w.id)
 
 // ---
 
+const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
+
 const nullWallpaper = {
-	id: 'none',
-	label: 'None',
+	id: undefined,
 	url: '',
-	brandColorHsl: '0 0 0',
-	brandColorLighterHsl: '0 0 0',
+	brandColorHsl: '0 0% 100%',
+} as const satisfies WallpaperT
+
+type WallpaperType = {
+	wallpaper: WallpaperT
+	isLoading: boolean
+	prevWallpaper: WallpaperT | undefined
+	setWallpaperId: (id: WallpaperId) => void
+	wallpaperFullyVisible: boolean
+	setWallpaperFullyVisible: () => void
 }
 
-const DEFAULT_WALLPAPER_ID: WallpaperId = 'desert-mountains'
+const WallPaperContext = createContext<WallpaperType>(null as any)
+
+/*
+Scenarios:
+- First load, nothing in localStorage yet
+- Waiting for remote call
+	* Always show either local or null wallpaper
+- Remote and local are different
+	* Always 
+- Logged out vs. logged in
+	* When logged out, use the local storage value
+	* After logged in, use remote value
+*/
+
+export function WallpaperProvider({children}: {children: React.ReactNode}) {
+	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2<WallpaperId>('wallpaperId')
+	const remote = useRemoteWallpaper(setLocalWallpaperId)
+	const [isLoading, setIsLoading] = useState(true)
+	const [wallpaperFullyVisible, setWallpaperFullyVisible] = useState(false)
+
+	const defaultWallpaper = wallpapersKeyed[DEFAULT_WALLPAPER_ID]
+	const localWallpaper = localWallpaperId && wallpapersKeyed[localWallpaperId]
+	const remoteWallpaper = remote.wallpaper
+
+	// We want to avoid showing a wallpaper and then changing it later, unless we already had one cached locally
+	// since that's most likely going to be the right one. But after the remote call returns, we show the remote
+	// one if it returns (usually when user is logged in), and otherwise we show either the local one.
+	// The default one is loaded when nothing is in local storage yet.
+	const wallpaper = remote.isLoading
+		? localWallpaper || nullWallpaper
+		: remoteWallpaper || localWallpaper || defaultWallpaper
+
+	const prevId = usePreviousDistinct(wallpaper.id)
+
+	const {brandColorHsl} = wallpaper
+
+	useLayoutEffect(() => {
+		const el = document.documentElement
+		el.style.setProperty('--color-brand', brandColorHsl)
+		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
+	}, [brandColorHsl])
+
+	useLayoutEffect(() => {
+		if (wallpaper.id === prevId) return
+		setWallpaperFullyVisible(false)
+		setIsLoading(true)
+
+		// preload image
+		preloadImage(wallpaper.url).then(() => setIsLoading(false))
+	}, [wallpaper.url, wallpaper.id, prevId])
+
+	return (
+		<WallPaperContext.Provider
+			value={{
+				wallpaper,
+				isLoading,
+				prevWallpaper: (prevId && wallpapersKeyed[prevId]) || undefined,
+				setWallpaperId: (id: WallpaperId) => {
+					setLocalWallpaperId(id)
+					remote.setWallpaperId(id)
+				},
+				wallpaperFullyVisible,
+				setWallpaperFullyVisible: () => setWallpaperFullyVisible(true),
+			}}
+		>
+			{children}
+		</WallPaperContext.Provider>
+	)
+}
 
 /**
  * Get the wallpaper from the user's settings. However, we want to preserve the wallpaper after logout locally so they see it when they log in again.
  */
 export const useWallpaper = () => {
-	const userQ = trpcReact.user.get.useQuery(undefined, {
-		// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
-		retry: false,
-	})
-	const wallpaperQId = userQ.data?.wallpaper
-	const wallpaperId = arrayIncludes(wallpaperIds, wallpaperQId) ? wallpaperQId : DEFAULT_WALLPAPER_ID
-
-	// trpc
-	const ctx = trpcReact.useContext()
-	const userMut = trpcReact.user.set.useMutation({onSuccess: () => ctx.user.get.invalidate()})
-	const setWallpaperId = (id: WallpaperId) => userMut.mutate({wallpaper: id})
-
-	const hasData = userQ.data && !userQ.isError
-	const wallpaper = hasData ? wallpapersKeyed[wallpaperId] : nullWallpaper
-	// const wallpaper = nullWallpaper
-
-	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2('wallpaperId', wallpaperId)
-	const localWallpaper = localWallpaperId ? wallpapersKeyed[localWallpaperId] : wallpaper
-
-	useEffect(() => {
-		hasData && setLocalWallpaperId(wallpaperId)
-	}, [hasData, setLocalWallpaperId, wallpaperId])
-
-	return {wallpaper, localWallpaper, setWallpaperId}
+	const ctx = useContext(WallPaperContext)
+	if (!ctx) throw new Error('useWallpaper must be used within WallpaperProvider')
+	return ctx
 }
 
-export function WallpaperInjector() {
-	const {wallpaper, localWallpaper} = useWallpaper()
+export function Wallpaper({
+	className,
+	stayBlurred,
+	isPreview,
+}: {
+	className?: string
+	stayBlurred?: boolean
+	isPreview?: boolean
+}) {
+	const {wallpaper, prevWallpaper, isLoading, wallpaperFullyVisible, setWallpaperFullyVisible} = useWallpaper()
 
-	const w = (wallpaper !== nullWallpaper && wallpaper) || localWallpaper || DEFAULT_WALLPAPER_ID
+	if (!wallpaper || !wallpaper.id) return null
 
-	useLayoutEffect(() => {
-		const el = document.documentElement
-		el.style.setProperty('--color-brand', w.brandColorHsl)
-		el.style.setProperty('--color-brand-lighter', w.brandColorLighterHsl)
-	}, [w.brandColorHsl, w.brandColorLighterHsl])
+	return (
+		<>
+			<FadeInImg
+				key={wallpaper.url + '-loading'}
+				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
+				className={cn(
+					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-xl',
+					isPreview && 'absolute',
+				)}
+			/>
+			{!isLoading && !stayBlurred && (
+				<FadeInImg
+					key={wallpaper.url}
+					src={wallpaper.url}
+					className={cn(
+						// Using black bg by default because sometimes we want to show the wallpaper before it's loaded, and over other elements
+						tw`pointer-events-none fixed inset-0 h-full w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
+						isPreview && 'absolute',
+						className,
+					)}
+					style={{
+						animation: 'animate-unblur 0.7s',
+					}}
+					onAnimationEnd={setWallpaperFullyVisible}
+				/>
+			)}
+			{/* Put this last so that we can see it exiting over the new wallpaper */}
+			{prevWallpaper && !wallpaperFullyVisible && (
+				<div
+					key={prevWallpaper.url}
+					className={cn(
+						'pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-out fade-out zoom-out-125 fill-mode-both',
+						isPreview && 'absolute',
+						className,
+					)}
+					style={{
+						backgroundImage: `url(${prevWallpaper.url})`,
+					}}
+				/>
+			)}
+			{/* {isLoading && <div className='fixed left-0 top-0 '>Loading...</div>} */}
+		</>
+	)
+}
+
+function useRemoteWallpaper(onSuccess?: (id: WallpaperId) => void) {
+	// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
+	const userQ = trpcReact.user.get.useQuery(undefined, {
+		retry: false,
+		onSuccess: (data) => {
+			if (arrayIncludes(wallpaperIds, data.wallpaper)) {
+				onSuccess?.(data.wallpaper)
+			}
+		},
+	})
+	const wallpaperQId = userQ.data?.wallpaper
+
+	const ctx = trpcReact.useContext()
+	const userMut = trpcReact.user.set.useMutation({
+		onSuccess: () => ctx.user.get.invalidate(),
+	})
+	const setWallpaperId = useCallback((id: WallpaperId) => userMut.mutate({wallpaper: id}), [userMut])
+
+	return {
+		isLoading: userQ.isLoading,
+		wallpaper: wallpaperQId && arrayIncludes(wallpaperIds, wallpaperQId) ? wallpapersKeyed[wallpaperQId] : undefined,
+		setWallpaperId,
+	}
+}
+
+/**
+ * Updates local storage with the wallpaper id from the backend.
+ *
+ * There's a little dance that needs to happen with wallpapers. When we first load the page, we don't have the TRPC context yet, and we determine the wallpaper from
+ * local storage. Usually, this id will be correct. However, if the user changed the wallpaper on another browser,
+ * the local storage value will be out of date. So we load the old wallpaper and wait until the TRPC context is available to load the correct one.
+ */
+export function RemoteWallpaperInjector() {
+	const remote = useRemoteWallpaper()
+	const {wallpaper, setWallpaperId} = useWallpaper()
+
+	const localId = wallpaper?.id
+	const remoteId = remote.wallpaper?.id
+
+	// Chance of circular dependency here, so it's important to ensure that the dependencies do not invalidate unless absolutely necessary.
+	useEffect(() => {
+		if (remoteId && remoteId !== localId) setWallpaperId(remoteId)
+	}, [remoteId, localId, setWallpaperId])
 
 	return null
 }
 
-export function Wallpaper() {
-	const {wallpaper, localWallpaper} = useWallpaper()
-
-	return (
-		<div
-			className='pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-in fade-in zoom-in-110'
-			style={{
-				backgroundImage: `url(${wallpaper.url || localWallpaper.url})`,
-			}}
-		/>
-	)
+const LIGHTEN_AMOUNT = 8
+export function brandHslLighter(hsl: string) {
+	const tokens = hsl.split(' ')
+	const h = tokens[0]
+	const s = parseFloat(tokens[1])
+	const l = parseFloat(tokens[2].replace('%', ''))
+	const lLighter = l > 100 ? 100 : l + LIGHTEN_AMOUNT
+	return `${h} ${s}% ${lLighter}%`
 }

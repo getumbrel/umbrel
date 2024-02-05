@@ -1,6 +1,6 @@
 import {useLocation, useNavigate} from 'react-router-dom'
 
-import {CoverMessage} from '@/components/ui/cover-message'
+import {BareCoverMessage} from '@/components/ui/cover-message'
 import {sleep} from '@/utils/misc'
 
 const SLEEP_TIME = 600
@@ -27,7 +27,7 @@ export function RedirectOnboarding() {
 	if (location.pathname.startsWith(path)) return null
 
 	sleep(SLEEP_TIME).then(() => navigate(path))
-	return <CoverMessage>Redirecting to onboarding...</CoverMessage>
+	return <BareCoverMessage>Redirecting to onboarding...</BareCoverMessage>
 }
 
 export function RedirectLogin() {
@@ -44,7 +44,7 @@ export function RedirectLogin() {
 			search: redirect.createRedirectSearch(),
 		}),
 	)
-	return <CoverMessage>Redirecting to login...</CoverMessage>
+	return <BareCoverMessage>Redirecting to login...</BareCoverMessage>
 }
 
 export function RedirectHome() {
@@ -56,7 +56,7 @@ export function RedirectHome() {
 	if (location.pathname === path) return null
 
 	sleep(SLEEP_TIME).then(() => navigate(path))
-	return <CoverMessage>Redirecting to home...</CoverMessage>
+	return <BareCoverMessage>Redirecting to home...</BareCoverMessage>
 }
 
 // Keep redirect after login stuff here because url stuff is stringly typed

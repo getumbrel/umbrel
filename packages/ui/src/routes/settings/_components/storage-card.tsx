@@ -1,11 +1,11 @@
 import {Card} from '@/components/ui/card'
-import {useStorageForUi} from '@/hooks/use-storage-for-ui'
+import {useDiskForUi} from '@/hooks/use-disk'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function StorageCard() {
-	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useStorageForUi()
+	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useDiskForUi()
 
 	return (
 		<Card>

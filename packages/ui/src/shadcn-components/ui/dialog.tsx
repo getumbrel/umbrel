@@ -3,7 +3,7 @@ import * as React from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
-import {dialogContentClass, dialogOverlayClass} from './shared/dialog'
+import {dialogContentClass, dialogFooterClass, dialogOverlayClass} from './shared/dialog'
 
 const Dialog = DialogPrimitive.Root
 
@@ -49,7 +49,7 @@ const DialogHeader = ({className, ...props}: React.HTMLAttributes<HTMLDivElement
 DialogHeader.displayName = 'DialogHeader'
 
 const DialogFooter = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
-	<div className={cn('flex flex-col gap-2 sm:flex-row', className)} {...props} />
+	<div className={cn(dialogFooterClass, className)} {...props} />
 )
 DialogFooter.displayName = 'DialogFooter'
 

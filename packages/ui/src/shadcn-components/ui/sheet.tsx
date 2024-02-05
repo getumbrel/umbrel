@@ -2,7 +2,6 @@ import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWallpaper} from '@/modules/desktop/wallpaper-context'
 import {cn} from '@/shadcn-lib/utils'
 
@@ -31,7 +30,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden shadow-sheet-shadow transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
+	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-200 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
 	{
 		variants: {
 			side: {
@@ -53,11 +52,11 @@ interface SheetContentProps
 	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
 		VariantProps<typeof sheetVariants> {
 	backdrop?: React.ReactNode
-	showClose?: boolean
+	closeButton?: React.ReactNode
 }
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-	({side = 'bottom', className, children, backdrop, showClose = true, ...props}, ref) => {
+	({side = 'bottom', className, children, backdrop, closeButton = true, ...props}, ref) => {
 		const {wallpaper} = useWallpaper()
 
 		return (
@@ -67,14 +66,14 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 				{/* <SheetOverlay /> */}
 				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
 					{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
-					{showClose && <DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
+					{closeButton}
 					<div className='absolute inset-0 bg-black contrast-more:hidden'>
 						{/* Fade in sheet background to avoid white flash when sheet opens */}
 						<div
 							className='absolute inset-0 opacity-0 delay-200 duration-700 ease-out fill-mode-both'
 							style={{
 								animationName: 'fade-in',
-								backgroundImage: `url(${wallpaper.url})`,
+								backgroundImage: `url(/wallpapers/generated-thumbs/${wallpaper.id}.jpg)`,
 								backgroundSize: 'cover',
 								backgroundPosition: 'center',
 								transform: 'scale(1.2) rotate(180deg)',
@@ -83,6 +82,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
 						<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
 					</div>
 					{children}
+					{/* Sheet inner glow highlight */}
+					<div className='pointer-events-none absolute inset-0 z-50 rounded-t-20 shadow-sheet-shadow' />
 				</SheetPrimitive.Content>
 			</>
 			// </SheetPortal>

@@ -20,7 +20,9 @@ const AppsContext = createContext<AppsContextT | null>(null)
 
 // TODO: put all of this in a hook because trpc won't make multiple calls to the same query
 export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
-	const appsQ = trpcReact.appStore.registry.useQuery()
+	const appsQ = trpcReact.appStore.registry.useQuery(undefined, {
+		staleTime: 10 * 1000 * 60, // 10 minutes
+	})
 	const repos = appsQ.data ?? []
 
 	if (appsQ.isLoading) return null
@@ -55,6 +57,22 @@ export function useAvailableApps(registryId: string = UMBREL_APP_STORE_ID) {
 		apps,
 		appsKeyed,
 		appsGroupedByCategory,
+	} as const
+}
+
+export function useAllAvailableApps() {
+	const ctx = useContext(AppsContext)
+	if (!ctx) throw new Error('useAllAvailableApps must be used within AvailableAppsProvider')
+
+	if (ctx.isLoading) return {isLoading: true} as const
+
+	const apps = ctx.repos.flatMap((repo) => repo?.apps ?? [])
+	const appsKeyed = keyBy(apps, 'id')
+
+	return {
+		isLoading: false,
+		apps,
+		appsKeyed,
 	} as const
 }
 

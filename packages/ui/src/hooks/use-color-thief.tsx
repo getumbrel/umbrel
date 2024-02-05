@@ -11,7 +11,7 @@ export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 	const intersection = useIntersection(ref, {
 		root: null,
 		rootMargin: '0px',
-		threshold: 1,
+		threshold: 0,
 	})
 
 	useEffect(() => {

@@ -26,7 +26,7 @@ export function ProgressStatCardContent({
 				</div>
 				<span className={cardSecondaryValueClass}>{secondaryValue}</span>
 			</div>
-			<Progress value={progress * 100} size='thicker' />
+			<Progress value={progress * 100} size='thicker' variant='primary' />
 			{afterChildren}
 		</div>
 	)

@@ -1,4 +1,4 @@
-import {CoverMessage} from '@/components/ui/cover-message'
+import {BareCoverMessage} from '@/components/ui/cover-message'
 import {trpcReact} from '@/trpc/trpc'
 
 export function EnsureBackendAvailable({children}: {children: React.ReactNode}) {
@@ -8,11 +8,11 @@ export function EnsureBackendAvailable({children}: {children: React.ReactNode}) 
 	})
 
 	if (getQuery.isLoading) {
-		return <CoverMessage delayed>Checking backend...</CoverMessage>
+		return <BareCoverMessage delayed>Checking backend...</BareCoverMessage>
 	}
 
 	if (getQuery.error) {
-		return <CoverMessage>Backend unavailable.</CoverMessage>
+		return <BareCoverMessage>Backend unavailable.</BareCoverMessage>
 	}
 
 	return children

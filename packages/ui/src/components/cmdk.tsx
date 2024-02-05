@@ -4,14 +4,15 @@ import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
 import {systemAppsKeyed, useApps} from '@/hooks/use-apps'
+import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 import {AppIcon} from './app-icon'
+import {FadeScroller} from './fade-scroller'
 
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
@@ -19,6 +20,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const {userApps, isLoading} = useApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
+	const launchApp = useLaunchApp()
+	const isMobile = useIsMobile()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -28,7 +31,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder='Search for apps, settings or actions' />
+			<CommandInput placeholder='Search for apps, settings, or actions' />
 			<Separator />
 			<CommandList ref={scrollRef}>
 				<FrequentApps />
@@ -54,14 +57,23 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
-						navigate('/settings')
+						navigate(isMobile ? '/settings?dialog=wallpaper' : '/settings')
 						setOpen(false)
 					}}
 				>
 					Change wallpaper
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['home'].icon}
+					icon={systemAppsKeyed['live-usage'].icon}
+					onSelect={() => {
+						navigate(systemAppsKeyed['live-usage'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					Live Usage
+				</CommandItem>
+				<CommandItem
+					icon={systemAppsKeyed['widgets'].icon}
 					onSelect={() => {
 						navigate('/edit-widgets')
 						setOpen(false)
@@ -75,8 +87,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						icon={app.icon}
 						key={app.id}
 						onSelect={() => {
-							trackAppOpen(app.id)
-							window.open(portToUrl(app.port), '_blank')?.focus()
+							launchApp(app.id)
 							setOpen(false)
 						}}
 					>
@@ -114,14 +125,14 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{systemAppsKeyed['settings'].name}
 				</SubItem>
 				<SubItem
-					value={systemAppsKeyed['exit'].name}
-					icon={systemAppsKeyed['exit'].icon}
+					value={systemAppsKeyed['settings'].name}
+					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
 						navigate({search: addLinkSearchParams({dialog: 'logout'})})
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['exit'].name}
+					{systemAppsKeyed['settings'].name}
 				</SubItem>
 			</CommandList>
 		</CommandDialog>
@@ -144,22 +155,21 @@ function FrequentApps() {
 	if (lastApps.length === 0) return null
 
 	return (
-		<div className='mb-5 flex flex-col gap-5'>
+		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 text-15 font-semibold leading-tight -tracking-2'>Frequent apps</h3>
-				<div className='umbrel-hide-scrollbar umbrel-fade-scroller-x overflow-x-auto whitespace-nowrap'>
+				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>Frequent apps</h3>
+				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
-					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' port={0} />)}
+					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' />)}
 					{appsByFrequency(lastApps, 6).map((appId) => (
 						<FrequentApp
 							key={appId}
 							appId={appId}
-							port={userAppsKeyed[appId]?.port}
 							icon={userAppsKeyed[appId]?.icon}
 							name={userAppsKeyed[appId]?.name}
 						/>
 					))}
-				</div>
+				</FadeScroller>
 			</div>
 
 			<Separator />
@@ -186,25 +196,23 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 	return sortedAppIds
 }
 
-function FrequentApp({appId, icon, name, port}: {appId: string; icon: string; name: string; port: number}) {
+function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: string}) {
+	const launchApp = useLaunchApp()
+	const isMobile = useIsMobile()
 	return (
 		<button
-			className='inline-flex w-[100px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-2 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20'
-			onClick={() => {
-				trackAppOpen(appId)
-				window.open(portToUrl(port), '_blank')?.focus()
-			}}
+			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
+			onClick={() => launchApp(appId)}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
 					// Prevent triggering first selected cmdk item
 					e.preventDefault()
-					trackAppOpen(appId)
-					window.open(portToUrl(port), '_blank')?.focus()
+					launchApp(appId)
 				}
 			}}
 		>
-			<AppIcon src={icon} size={64} className='rounded-15' />
-			<div className='w-full truncate text-13 -tracking-2 text-white/75'>{name ?? appId}</div>
+			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-8 md:rounded-15' />
+			<div className='w-full truncate text-[10px] -tracking-2 text-white/75 md:text-13'>{name ?? appId}</div>
 		</button>
 	)
 }

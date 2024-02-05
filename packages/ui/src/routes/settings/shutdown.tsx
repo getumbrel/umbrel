@@ -1,5 +1,4 @@
 import {RiShutDownLine} from 'react-icons/ri'
-import {useNavigate} from 'react-router-dom'
 
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
@@ -14,11 +13,11 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {trpcReact} from '@/trpc/trpc'
-import {afterDelayedClose} from '@/utils/dialog'
+import {useDialogOpenProps} from '@/utils/dialog'
 
 export default function ShutdownDialog() {
 	useUmbrelTitle('Shut down')
-	const navigate = useNavigate()
+	const dialogProps = useDialogOpenProps('shutdown')
 
 	const shutdownMut = trpcReact.system.shutdown.useMutation()
 
@@ -39,7 +38,7 @@ export default function ShutdownDialog() {
 	}
 
 	return (
-		<AlertDialog defaultOpen onOpenChange={afterDelayedClose(() => navigate('/settings', {preventScrollReset: true}))}>
+		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiShutDownLine}>
 					<AlertDialogTitle>Are you sure you want to shut down your Umbrel?</AlertDialogTitle>

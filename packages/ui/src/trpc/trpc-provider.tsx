@@ -2,6 +2,7 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 import {useState} from 'react'
 
+import {LoadingIndicator} from './loading-indicator'
 import {links, trpcReact} from './trpc'
 
 export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
@@ -21,6 +22,7 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 			<QueryClientProvider client={queryClient}>
 				{children}
 				<ReactQueryDevtools />
+				<LoadingIndicator />
 			</QueryClientProvider>
 		</trpcReact.Provider>
 	)

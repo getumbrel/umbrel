@@ -1,6 +1,9 @@
 import {AnimatePresence} from 'framer-motion'
-import {ReactNode} from 'react'
+import {ReactNode, useEffect, useState} from 'react'
 
+import {tw} from '@/utils/tw'
+
+import {AppGridGradientMasking} from '../desktop-misc'
 import {usePager} from './app-pagination-utils'
 import {ArrowButton, Page, PaginatorPills, usePaginator} from './paginator'
 
@@ -13,11 +16,33 @@ export function AppGrid({
 	widgets?: ReactNode[]
 	onlyFirstPage?: boolean
 }) {
-	const {pageInnerRef, pages} = usePager({apps, widgets})
+	const {pageInnerRef, pages, appsPerRow} = usePager({apps, widgets})
+	const [showMasking, setShowMasking] = useState(false)
 	const pageCount = pages.length
 
 	const {scrollContainer, page, toPage, nextPage, nextPageDisabled, prevPage, prevPageDisabled} =
 		usePaginator(pageCount)
+
+	const noRoom = apps.length > 0 && pages[0].apps.length === 0 && pages[0].widgets.length === 0
+
+	const appColumnsStyle: React.CSSProperties = {
+		gridTemplateColumns: `repeat(${appsPerRow}, minmax(0, 1fr))`,
+	}
+
+	// Hide and show gradient masking based on whether we're scrolling
+	useEffect(() => {
+		const el = scrollContainer.current
+		if (!el) return
+		const handleShowMasking = () => setShowMasking(true)
+		const handleHideMasking = () => setShowMasking(false)
+
+		el.addEventListener('scroll', handleShowMasking)
+		el.addEventListener('scrollend', handleHideMasking)
+		return () => {
+			el?.removeEventListener('scroll', handleShowMasking)
+			el?.removeEventListener('scrollend', handleHideMasking)
+		}
+	}, [scrollContainer])
 
 	return (
 		<div className='flex h-full w-full flex-grow flex-col items-center'>
@@ -29,9 +54,16 @@ export function AppGrid({
 					{/* Default page for calculating size */}
 					<Page index={0}>
 						<PageInner innerRef={pageInnerRef}>
+							{noRoom && <div className='w-full text-center'>Not enough room to show anything.</div>}
 							<AnimatePresence>
 								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
-								{pages[0]?.apps}
+								{pages[0]?.apps && pages[0]?.apps.length > 0 && (
+									<div className={appGridClass} style={appColumnsStyle}>
+										{/* TODO: use `appsPerRow` to split apps into separate rows */}
+										{/* TODO: consider laying apps out manually */}
+										{pages[0].apps}
+									</div>
+								)}
 							</AnimatePresence>
 						</PageInner>
 					</Page>
@@ -41,7 +73,11 @@ export function AppGrid({
 								<PageInner>
 									<AnimatePresence>
 										{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
-										{apps}
+										{apps && (
+											<div className={appGridClass} style={appColumnsStyle}>
+												{apps}
+											</div>
+										)}
 									</AnimatePresence>
 								</PageInner>
 							</Page>
@@ -58,6 +94,7 @@ export function AppGrid({
 					</>
 				)}
 			</div>
+			{showMasking && <AppGridGradientMasking />}
 			{/* NOTE: always leave space for pills to avoid layout thrashing */}
 			{/* Adding margin bottom so pills are clickable */}
 			<div className='mb-6 mt-6'>
@@ -87,7 +124,7 @@ export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?
 		<div className='flex h-full w-full items-stretch justify-center'>
 			<div
 				ref={innerRef}
-				className='flex w-full max-w-[var(--apps-max-w)] flex-wrap content-start gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'
+				className='flex w-full max-w-[var(--apps-max-w)] flex-col content-start items-center gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'
 			>
 				{children}
 			</div>
@@ -95,4 +132,5 @@ export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?
 	)
 }
 
-const widgetRowClass = `flex gap-[var(--app-x-gap)] w-full justify-center`
+const widgetRowClass = tw`flex gap-[var(--app-x-gap)] w-full justify-center`
+const appGridClass = tw`gap-x-[var(--app-x-gap)] gap-y-[var(--app-y-gap)] grid content-center justify-center`

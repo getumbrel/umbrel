@@ -1,19 +1,20 @@
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
 export function ActionsWidget({
-	href,
 	actions,
 	count,
+	onClick,
 }: {
-	href?: string
 	actions?: {
 		emoji?: string
 		title: string
 	}[]
 	count?: number
+	onClick?: () => void
 }) {
 	return (
-		<WidgetContainer href={href} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
+		<WidgetContainer onClick={onClick} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
+			{!actions && <ActionItem emoji='' title={'–'} />}
 			{actions?.[0] && <ActionItem emoji={actions?.[0].emoji} title={actions?.[0].title} />}
 			{actions?.[1] && (
 				<div className='origin-left scale-90 opacity-60'>
@@ -21,17 +22,17 @@ export function ActionsWidget({
 				</div>
 			)}
 			{actions?.[2] && (
-				<div className='scale-80 origin-left opacity-40'>
+				<div className='origin-left scale-[.8] opacity-40'>
 					<ActionItem emoji={actions?.[2].emoji} title={actions?.[2].title} />
 				</div>
 			)}
 			{actions?.[3] && (
-				<div className='scale-70 origin-left opacity-20'>
+				<div className='origin-left scale-[.7] opacity-20'>
 					<ActionItem emoji={actions?.[3].emoji} title={actions?.[3].title} />
 				</div>
 			)}
 			<div className='absolute bottom-3 right-3 text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
-				{count && count > 999 ? '999+' : count}
+				{count && count > 999 ? '999+' : count ?? '–'}
 			</div>
 		</WidgetContainer>
 	)

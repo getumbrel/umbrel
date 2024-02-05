@@ -3,11 +3,10 @@ import {useState} from 'react'
 
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useApps} from '@/hooks/use-apps'
+import {useLaunchApp} from '@/hooks/use-launch-app'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {RegistryApp} from '@/trpc/trpc'
-import {portToUrl} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 import {InstallButton, installButtonClass} from './install-button'
 
@@ -22,6 +21,7 @@ export function ConnectedInstallButton({
 	const state = appInstall.state
 	const [showDepsDialog, setShowDepsDialog] = useState(false)
 	const {userAppsKeyed, isLoading} = useApps()
+	const openApp = useLaunchApp()
 
 	if (isLoading) return null
 	if (!userAppsKeyed) return null
@@ -59,10 +59,7 @@ export function ConnectedInstallButton({
 				progress={appInstall.progress}
 				state={appInstall.state}
 				onInstallClick={install}
-				onOpenClick={() => {
-					trackAppOpen(app.id)
-					window.open(portToUrl(app.port), '_blank')?.focus()
-				}}
+				onOpenClick={() => openApp(app.id)}
 			/>
 			<InstallTheseFirstDialog
 				appId={app.id}

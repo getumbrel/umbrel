@@ -5,7 +5,7 @@ import * as React from 'react'
 import {cn} from '@/shadcn-lib/utils'
 
 const buttonVariants = cva(
-	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1 focus:outline-none focus-visible:ring-3 shrink-0 disabled:shadow-none duration-300 active:scale-95',
+	'inline-flex items-center justify-center font-medium transition-[color,background-color,transform,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1 focus:outline-none focus-visible:ring-3 shrink-0 disabled:shadow-none duration-300 active:scale-95',
 	{
 		variants: {
 			variant: {
@@ -21,7 +21,8 @@ const buttonVariants = cva(
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
 				'md-squared': 'rounded-8 h-[36px] px-[10px] text-13 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
-				dialog: 'rounded-full h-[42px] md:h-[30px] min-w-[80px] px-4 font-semibold md:font-medium text-13',
+				dialog:
+					'rounded-full h-[42px] md:h-[30px] min-w-[80px] px-4 font-semibold w-full md:w-auto md:font-medium text-13',
 				lg: 'rounded-full h-[40px] px-[15px] text-15',
 				xl: 'rounded-10 h-[50px] px-[15px] text-13',
 				'icon-only': 'rounded-full h-[30px] w-[30px]',

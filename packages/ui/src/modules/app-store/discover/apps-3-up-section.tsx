@@ -2,6 +2,7 @@ import {useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
+import {FadeScroller} from '@/components/fade-scroller'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {cardClass, sectionOverlineClass, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
@@ -45,11 +46,12 @@ export const Apps3UpSection: React.FC<Apps3UpSectionProps> = ({
 				<div className='pt-5' />
 				{children}
 			</div>
-			<div className='flex justify-center gap-5 md:w-auto'>
+			{/* shrink-0 to prevent scrolling at larger sizes */}
+			<FadeScroller direction='x' className='umbrel-hide-scrollbar flex gap-5 overflow-x-auto md:w-auto md:shrink-0'>
 				<ColorApp app={apps[0]} />
 				<ColorApp app={apps[1]} />
 				<ColorApp app={apps[2]} />
-			</div>
+			</FadeScroller>
 		</div>
 	)
 }

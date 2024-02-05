@@ -1,5 +1,4 @@
 import {createContext, useContext} from 'react'
-import {LinkProps} from 'react-router-dom'
 
 import {trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
@@ -9,7 +8,7 @@ type AppT = {
 	name: string
 	icon: string
 	systemApp?: boolean
-	systemAppTo?: LinkProps['to']
+	systemAppTo?: string
 }
 
 export const systemApps = [
@@ -20,34 +19,43 @@ export const systemApps = [
 		systemApp: true,
 		systemAppTo: '/',
 	},
+	// For the dock...
 	{
 		id: 'home',
 		name: 'Home',
-		icon: '/dock/home.png',
+		icon: '/figma-exports/dock-home.png',
 		systemApp: true,
 		systemAppTo: '/',
 	},
 	{
 		id: 'app-store',
 		name: 'App Store',
-		icon: '/dock/shop.png',
+		icon: '/figma-exports/dock-app-store.png',
 		systemApp: true,
 		systemAppTo: '/app-store',
 	},
 	{
 		id: 'settings',
 		name: 'Settings',
-		icon: '/dock/settings.png',
+		icon: '/figma-exports/dock-settings.png',
 		systemApp: true,
 		systemAppTo: '/settings',
 	},
 	{
-		id: 'exit',
-		name: 'Logout',
-		icon: '/dock/exit.png',
+		id: 'live-usage',
+		name: 'Live Usage',
+		icon: '/figma-exports/dock-live-usage.png',
 		systemApp: true,
-		// Instead use search param: {dialog: 'logout'}
-		systemAppTo: '',
+		// NOTE: using this will clear existing search params
+		// In practice, this means cmdk will clear params and clicking dock icon will not
+		systemAppTo: '?dialog=live-usage',
+	},
+	{
+		id: 'widgets',
+		name: 'Widgets',
+		icon: '/figma-exports/dock-widgets.png',
+		systemApp: true,
+		systemAppTo: '/edit-widgets',
 	},
 ] as const satisfies readonly AppT[]
 
@@ -102,11 +110,11 @@ export function useUserApp(id?: string | null) {
 	const ctx = useContext(AppsContext)
 	if (!ctx) throw new Error('useUserApp must be used within AppsProvider')
 
-	if (!id) return {isLoading: false, app: undefined}
-	if (ctx.isLoading) return {isLoading: true}
+	if (!id) return {isLoading: false, app: undefined} as const
+	if (ctx.isLoading) return {isLoading: true} as const
 
 	return {
 		isLoading: false,
 		app: ctx.userAppsKeyed?.[id],
-	}
+	} as const
 }

@@ -1,9 +1,8 @@
 import {Globe} from 'lucide-react'
-import {useTranslation} from 'react-i18next'
-import {useLocalStorage} from 'react-use'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {IconButton} from '@/components/ui/icon-button'
+import {languages, useLanguage} from '@/hooks/use-language'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -12,10 +11,7 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 
 export function LanguageDropdown() {
-	const {i18n} = useTranslation()
-	const [activeCode, setActiveCode] = useLocalStorage('i18nextLng', 'en', {
-		raw: true,
-	})
+	const [activeCode, setActiveCode] = useLanguage()
 
 	return (
 		<DropdownMenu>
@@ -32,7 +28,6 @@ export function LanguageDropdown() {
 						checked={activeCode === code}
 						onSelect={() => {
 							setActiveCode(code)
-							i18n.changeLanguage(code)
 						}}
 					>
 						{name}
@@ -42,9 +37,3 @@ export function LanguageDropdown() {
 		</DropdownMenu>
 	)
 }
-
-export const languages = [
-	{name: 'English', code: 'en'},
-	{name: 'Français', code: 'fr'},
-	{name: 'العربية', code: 'ar'},
-]

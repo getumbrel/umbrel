@@ -2,15 +2,18 @@ import {useRef, useState} from 'react'
 import {RiCloseCircleFill} from 'react-icons/ri'
 import {Link} from 'react-router-dom'
 
+import {useQueryParams} from '@/hooks/use-query-params'
 import {WallpaperPicker} from '@/routes/settings/_components/wallpaper-picker'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {Popover, PopoverAnchor, PopoverClose, PopoverContent} from '@/shadcn-components/ui/popover'
+import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
 
 export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 	const [show, setShow] = useState(false)
 	const contentRef = useRef<HTMLDivElement>(null)
 	const anchorRef = useRef<HTMLDivElement>(null)
+	const {addLinkSearchParams} = useQueryParams()
 
 	return (
 		<>
@@ -32,6 +35,9 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 						}}
 					>
 						Change wallpaper
+					</ContextMenuItem>
+					<ContextMenuItem asChild className={contextMenuClasses.item.rootDestructive}>
+						<Link to={{search: addLinkSearchParams({dialog: 'logout'})}}>Log out</Link>
 					</ContextMenuItem>
 				</ContextMenuContent>
 			</ContextMenu>

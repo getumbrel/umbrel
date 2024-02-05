@@ -1,14 +1,18 @@
 import {motion, useMotionValue} from 'framer-motion'
+import React, {Suspense} from 'react'
 import {useLocation} from 'react-router-dom'
 
-import {useSettingsNotificationCount} from '@/components/notifications'
 import {systemAppsKeyed} from '@/hooks/use-apps'
+import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
 import {LogoutDialog} from './logout-dialog'
+
+const LiveUsageDialog = React.lazy(() => import('@/routes/live-usage'))
 
 export const ICON_SIDE = 50
 export const ICON_SIDE_ZOOMED = 80
@@ -17,18 +21,19 @@ export const DOCK_HEIGHT = ICON_SIDE + PADDING * 2
 export const FROM_BOTTOM = 10
 
 export function Dock() {
-	const {addLinkSearchParams} = useQueryParams()
 	const {pathname} = useLocation()
+	const {addLinkSearchParams} = useQueryParams()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
+	const {appsWithUpdates} = useAppsWithUpdates()
+
+	const appUpdateCount = appsWithUpdates.length
 
 	return (
 		<>
 			<motion.div
-				initial={{y: 90}}
-				animate={{y: 0}}
-				exit={{y: 90}}
-				transition={{delay: 0.8}}
+				initial={{y: 0, opacity: 0}}
+				animate={{y: 0, opacity: 1}}
 				onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.pageX)}
 				onPointerLeave={() => mouseX.set(Infinity)}
 				className={dockClass}
@@ -47,6 +52,7 @@ export function Dock() {
 					to={systemAppsKeyed['app-store'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['app-store'].systemAppTo)}
 					bg={systemAppsKeyed['app-store'].icon}
+					notificationCount={appUpdateCount}
 					mouseX={mouseX}
 				/>
 				<DockItem
@@ -56,10 +62,23 @@ export function Dock() {
 					notificationCount={settingsNotificationCount}
 					mouseX={mouseX}
 				/>
-				<DockDivider />
-				<DockItem to={{search: addLinkSearchParams({dialog: 'logout'})}} bg='/dock/exit.png' mouseX={mouseX} />
+				<DockItem
+					to={{search: addLinkSearchParams({dialog: 'live-usage'})}}
+					open={pathname.startsWith(systemAppsKeyed['live-usage'].systemAppTo)}
+					bg={systemAppsKeyed['live-usage'].icon}
+					mouseX={mouseX}
+				/>
+				<DockItem
+					to={systemAppsKeyed['widgets'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
+					bg={systemAppsKeyed['widgets'].icon}
+					mouseX={mouseX}
+				/>
 			</motion.div>
 			<LogoutDialog />
+			<Suspense>
+				<LiveUsageDialog />
+			</Suspense>
 		</>
 	)
 }
@@ -79,7 +98,8 @@ export function DockPreview() {
 			<DockItem bg={systemAppsKeyed['app-store'].icon} mouseX={mouseX} />
 			<DockItem bg={systemAppsKeyed['settings'].icon} mouseX={mouseX} />
 			<DockDivider />
-			<DockItem bg='/dock/exit.png' mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['live-usage'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['widgets'].icon} mouseX={mouseX} />
 		</div>
 	)
 }

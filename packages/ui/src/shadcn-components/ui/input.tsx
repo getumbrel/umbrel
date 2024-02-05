@@ -32,6 +32,15 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement>,
 	onValueChange?: (value: string) => void
 }
 
+export function Labeled({children, label}: {children: React.ReactNode; label: string}) {
+	return (
+		<label>
+			<div className='mb-1.5 px-[5px] text-12 -tracking-2 text-white/50'>{label}</div>
+			{children}
+		</label>
+	)
+}
+
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 	({className, type, variant, sizeVariant, onChange, onValueChange, ...props}, ref) => {
 		return (

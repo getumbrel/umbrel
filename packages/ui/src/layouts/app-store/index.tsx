@@ -1,12 +1,11 @@
+import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
 import {memo, useDeferredValue, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
-import {LinkButton} from '@/components/ui/link-button'
 import {Loading} from '@/components/ui/loading'
-import {NotificationBadge} from '@/components/ui/notification-badge'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -27,14 +26,13 @@ import {
 import {cn} from '@/shadcn-lib/utils'
 
 import {CommunityAppStoreDialog} from './community-app-store-dialog'
-import {UpdatesDialog} from './updates-dialog'
+import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
 	const {t} = useTranslation()
 	const title = t('app-store.title')
 	useUmbrelTitle(title)
 
-	const {addLinkSearchParams} = useQueryParams()
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -43,21 +41,12 @@ export function AppStoreLayout() {
 			title={title}
 			description={<>{t('app-store.tagline')}</>}
 			titleRightChildren={
-				<div className='flex flex-1 flex-row-reverse items-center gap-3'>
+				<motion.div layout className='flex max-w-full flex-1 flex-row-reverse items-center gap-3'>
 					<CommunityAppsDropdown />
-					<LinkButton
-						to={{search: addLinkSearchParams({dialog: 'updates'})}}
-						variant='default'
-						size='dialog'
-						className='relative h-[33px]'
-					>
-						Updates
-						<NotificationBadge count={2} />
-					</LinkButton>
-					<UpdatesDialog />
+					<UpdatesButton />
 					<div className='flex-1 md:hidden' />
 					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
-				</div>
+				</motion.div>
 			}
 		>
 			{deferredSearchQuery ? <SearchResultsMemoized query={deferredSearchQuery} /> : <Outlet />}
@@ -67,10 +56,11 @@ export function AppStoreLayout() {
 
 function SearchInput({value, onValueChange}: {value: string; onValueChange: (query: string) => void}) {
 	return (
-		<div className='-ml-2 flex items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
+		<div className='-ml-2 flex min-w-0 items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
+			{/* Set specific input width so it's consistent across browsers */}
 			<input
-				className='bg-transparent p-1 text-15 outline-none placeholder:text-white/40 max-md:w-[160px]'
+				className='w-[160px] bg-transparent p-1 text-15 outline-none placeholder:text-white/40'
 				placeholder='Search apps'
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}

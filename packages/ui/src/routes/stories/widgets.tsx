@@ -1,8 +1,8 @@
-import {useLayoutEffect} from 'react'
-
+import {Arc} from '@/components/ui/arc'
 import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
+import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
 import {ActionsWidget} from '@/modules/widgets/actions-widget'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
@@ -11,61 +11,74 @@ import {ProgressWidget} from '@/modules/widgets/progress-widget'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
+import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
 import {tw} from '@/utils/tw'
 
 import {demoWidgetConfigs} from '../../../../umbreld/source/modules/apps/data'
 
 export default function WidgetsStory() {
-	// TODO: extract the sizes so we can render widgets outside the app grid
-	useLayoutEffect(() => {
-		const el = document.documentElement
+	const {pageInnerRef} = usePager({apps: [], widgets: []})
 
-		const widgetH = [110, 150][1]
-		const widgetLabeledH = widgetH + 26 // widget rect + label
-
-		const appW = [70, 120][1]
-		// const appH = [90, 120][1]
-		const appXGap = [20, 30][1]
-		const widgetW = appW + appXGap + appW
-
-		el.style.setProperty('--widget-w', `${widgetW}px`)
-		el.style.setProperty('--widget-h', `${widgetH}px`)
-		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
-	}, [])
-
-	// type ThreeUpItem = {icon: string; title?: string; value?: string}
-	// function ThreeUpWidget({link, items}: {link?: string; items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]}) {
-	// 	return null
-	// }
+	const handleClick = () => {
+		alert('clicked')
+	}
 
 	return (
 		<AppsProvider>
-			<div className='bg-white/30'>
+			<div className='bg-white/30' ref={pageInnerRef}>
 				<H2>Error</H2>
 				<div className={sectionClass}>
 					<Widget appId='example' config={{type: 'stat-with-progress', endpoint: '/widgets/example/four-up.json'}} />
 				</div>
-				<H2>Blank</H2>
+				{/* <H2>Blank</H2>
 				<div className={sectionClass}>
-					<ProgressWidget />
-					<StatWithButtonsWidget />
-					<ThreeUpWidget />
-					<FourUpWidget />
-					<ActionsWidget />
-					<NotificationsWidget />
-				</div>
-				<H2>stat-with-buttons</H2>
+					<WidgetWrapper label='stat-with-progress'>
+						<ProgressWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='stat-with-buttons'>
+						<StatWithButtonsWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='three-up'>
+						<ThreeUpWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='four-up'>
+						<FourUpWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='actions'>
+						<ActionsWidget />
+					</WidgetWrapper>
+					<WidgetWrapper label='notifications'>
+						<NotificationsWidget />
+					</WidgetWrapper>
+				</div> */}
+				<H2>Widget Types</H2>
+				<H3>stat-with-buttons</H3>
 				<div className={sectionClass}>
 					<StatWithButtonsWidget />
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
+						title='Bitcoin Wallet'
+						value='1,845,893'
+						valueSub='sats'
+						// @ts-expect-error expecting title
+						buttons={[{link: '/send'}]}
+					/>
+					<StatWithButtonsWidget
+						onClick={handleClick}
+						title='Bitcoin Wallet'
+						value='1,845,893'
+						valueSub='sats'
+						buttons={[{title: 'Send', link: '/send'}]}
+					/>
+					<StatWithButtonsWidget
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
 						buttons={[{icon: 'send', title: 'Send', link: '/send'}]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
@@ -75,7 +88,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
@@ -86,7 +99,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
 						value='Lorem'
 						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
@@ -99,18 +112,18 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<StatWithButtonsWidget
-						appUrl='/settings'
+						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
 						value='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						buttons={[
 							{
-								icon: 'send',
+								// icon: 'send',
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/send',
 							},
 							{
-								icon: 'inbox',
+								// icon: 'inbox',
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/receive',
 							},
@@ -121,20 +134,8 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<StatWithButtonsWidget
-						appUrl='/settings'
-						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
-						buttons={[
-							{icon: 'send', title: 'Send', link: '/send'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-						]}
-					/>
 				</div>
-				<H2>stat-with-progress</H2>
+				<H3>stat-with-progress</H3>
 				<div className={sectionClass}>
 					<ProgressWidget />
 					<ProgressWidget
@@ -145,7 +146,91 @@ export default function WidgetsStory() {
 						progress={0.25}
 					/>
 				</div>
-				<H2>three-up</H2>
+				<H3>two-up-stat-with-progress</H3>
+				<div className={sectionClass}>
+					<TwoUpWidget />
+					<TwoUpWidget
+						// @ts-expect-error expecting 2 items
+						items={[
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.25,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								// title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								// title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'CPU',
+								// value: '4.2',
+								// valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'CPU',
+								// value: '4.2',
+								// valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'CPU',
+								value: '4.2',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<TwoUpWidget
+						items={[
+							{
+								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								value: 'Lorem ipsum',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+							{
+								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								value: 'Lorem ipsum',
+								valueSub: 'GHz',
+								progress: 0.75,
+							},
+						]}
+					/>
+					<Arc strokeWidth={5} size={65} progress={0.0} />
+					<Arc strokeWidth={5} size={65} progress={0.25} />
+					<Arc strokeWidth={5} size={65} progress={0.5} />
+					<Arc strokeWidth={5} size={65} progress={0.75} />
+					<Arc strokeWidth={5} size={65} progress={1} />
+				</div>
+				<H3>three-up</H3>
 				<div className={sectionClass}>
 					<ThreeUpWidget />
 					<ThreeUpWidget
@@ -191,7 +276,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H2>four-up</H2>
+				<H3>four-up</H3>
 				<div className={sectionClass}>
 					<FourUpWidget />
 					<FourUpWidget
@@ -202,9 +287,9 @@ export default function WidgetsStory() {
 							{title: 'Storage', value: '256', valueSub: 'GB'},
 						]}
 					/>
-					<FourUpWidget link='/settings' items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
+					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
 				</div>
-				<H2>actions</H2>
+				<H3>actions</H3>
 				<div className={sectionClass}>
 					<ActionsWidget />
 					<ActionsWidget count={1} actions={[{emoji: '😍', title: 'Message heartted'}]} />
@@ -249,11 +334,11 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H2>notifications</H2>
+				<H3>notifications</H3>
 				<div className={sectionClass}>
 					<NotificationsWidget />
 					<NotificationsWidget
-						link=''
+						onClick={handleClick}
 						notifications={[
 							{
 								timestamp: 1620000000000,
@@ -266,7 +351,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<NotificationsWidget
-						link=''
+						onClick={handleClick}
 						notifications={[
 							{
 								timestamp: 1620000000000,
@@ -275,6 +360,11 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
+				{/* ------------------------------------ */}
+				<H2>With widget wrapper</H2>
+				<WidgetWrapper label='fooo'>
+					<ActionsWidget />
+				</WidgetWrapper>
 				{/* ------------------------------------ */}
 				<H2>Connected</H2>
 				<H3>settings</H3>
@@ -297,9 +387,14 @@ export default function WidgetsStory() {
 						</div>
 					</>
 				))}
-				<H2>With widget wrapper</H2>
-				<WidgetWrapper label='fooo'>
-					<ActionsWidget />
+				<WidgetWrapper label={'two-up-stat-with-progress'}>
+					<Widget
+						appId='settings'
+						config={{
+							type: 'two-up-stat-with-progress',
+							endpoint: '/widgets/example/two-up-example.json',
+						}}
+					/>
 				</WidgetWrapper>
 			</div>
 		</AppsProvider>

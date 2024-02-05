@@ -1,5 +1,5 @@
 import {motion, Variant} from 'framer-motion'
-import {useLocation, useNavigate} from 'react-router-dom'
+import {useLocation} from 'react-router-dom'
 
 import {useApps} from '@/hooks/use-apps'
 import {useWidgets} from '@/hooks/use-widgets'
@@ -13,14 +13,12 @@ import {DockSpacer} from './dock'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
-	const navigate = useNavigate()
 
 	const {allAppsKeyed, userApps, isLoading} = useApps()
 	const widgets = useWidgets()
 
 	if (isLoading) return null
 	if (!userApps) return null
-	if (userApps.length === 0 && pathname === '/') navigate('/install-first-app')
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 	const variant: DesktopVariant =
@@ -72,30 +70,31 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 							<Widget appId={widget.app.id} config={widget} />
 						</WidgetWrapper>
 					))}
-					apps={userApps.map((app) => (
-						// <motion.div
-						// 	key={app.id}
-						// 	layout
-						// 	initial={{
-						// 		opacity: 1,
-						// 		scale: 0.8,
-						// 	}}
-						// 	animate={{
-						// 		opacity: 1,
-						// 		scale: 1,
-						// 	}}
-						// 	exit={{
-						// 		opacity: 0,
-						// 		scale: 0.5,
-						// 	}}
-						// 	transition={{
-						// 		type: 'spring',
-						// 		stiffness: 500,
-						// 		damping: 30,
-						// 	}}
-						// >
-						<AppIconConnected key={app.id} appId={app.id} />
-						// </motion.div>
+					apps={userApps.map((app, i) => (
+						<motion.div
+							key={app.id}
+							layout
+							initial={{
+								opacity: 0,
+								y: 50,
+							}}
+							animate={{
+								opacity: 1,
+								y: 0,
+								// scale: 1,
+							}}
+							exit={{
+								opacity: 0,
+								scale: 0.5,
+							}}
+							transition={{
+								delay: i * 0.02,
+								duration: 0.4,
+								ease: 'easeOut',
+							}}
+						>
+							<AppIconConnected key={app.id} appId={app.id} />
+						</motion.div>
 					))}
 				/>
 			</motion.div>
