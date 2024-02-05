@@ -107,7 +107,10 @@ function AppItem({app}: {app: RegistryApp}) {
 			{app.releaseNotes && (
 				<div className='relative mt-2 grid'>
 					<div
-						className={cn('relative text-13 opacity-50 transition-all', !showAll && 'line-clamp-2')}
+						className={cn(
+							'relative whitespace-pre-wrap break-words text-13 opacity-50 transition-all',
+							!showAll && 'line-clamp-2',
+						)}
 						style={{
 							maskImage: showAll ? undefined : 'linear-gradient(-45deg, transparent 30px, white 60px, white)',
 						}}
