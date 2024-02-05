@@ -70,9 +70,9 @@ export default class Umbreld {
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
 
-		// Load the store service before any other services
-		const dataDirExists = await fse.pathExists(this.dataDirectory)
-		if (!dataDirExists) throw new Error('Data directory does not exist')
+		// Ensure data directory exists
+		await fse.ensureDir(this.dataDirectory)
+
 		// In the future we'll handle migrations here, for now lets just write the version to check read/write permissions are ok.
 		await this.store.set('version', this.version)
 
