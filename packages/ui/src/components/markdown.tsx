@@ -8,6 +8,8 @@ import {cn} from '@/shadcn-lib/utils'
 // NEVER ALLOW HTML IN MARKDOWN
 // NEVER ALLOW IMAGES IN MARKDOWN
 export function Markdown({className, ...props}: React.ComponentProps<typeof MarkdownPrimitive>) {
+	// return <div className={cn(className, 'whitespace-pre-line')} {...props} />
+
 	return (
 		<MarkdownPrimitive
 			remarkPlugins={[
@@ -52,10 +54,7 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 			unwrapDisallowed
 			// `skipHtml` still renders contents
 			skipHtml
-			className={cn(
-				'prose prose-neutral prose-invert overflow-x-hidden prose-p:mb-3 prose-p:last:mb-0 prose-p:last:mt-3 prose-ol:pl-[1rem] prose-ul:my-3 prose-ul:pl-[1rem] prose-ul:only:my-0 prose-li:my-1 prose-li:pl-0',
-				className,
-			)}
+			className={cn('prose prose-sm prose-neutral prose-invert overflow-x-hidden', className)}
 			{...props}
 		/>
 	)
