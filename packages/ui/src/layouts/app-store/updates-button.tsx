@@ -1,6 +1,7 @@
 import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
+import {Markdown} from '@/components/markdown'
 import {ButtonLink} from '@/components/ui/button-link'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
@@ -71,7 +72,7 @@ export function UpdatesDialog() {
 							</Button>
 						</DialogTitle>
 					</DialogHeader>
-					<Separator className='mb-1' />
+					<Separator />
 					<ScrollArea className='flex h-[500px] flex-col gap-y-2.5 px-5'>
 						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
@@ -107,18 +108,20 @@ function AppItem({app}: {app: RegistryApp}) {
 			{app.releaseNotes && (
 				<div className='relative mt-2 grid'>
 					<div
-						className={cn(
-							'relative whitespace-pre-wrap break-words text-13 opacity-50 transition-all',
-							!showAll && 'line-clamp-2',
-						)}
+						className={cn('relative overflow-x-auto text-13 opacity-50 transition-all')}
 						style={{
 							maskImage: showAll ? undefined : 'linear-gradient(-45deg, transparent 30px, white 60px, white)',
 						}}
 					>
-						{app.releaseNotes}
+						<Markdown className={cn('text-13 leading-snug -tracking-3', !showAll && 'line-clamp-2')}>
+							{app.releaseNotes}
+						</Markdown>
 					</div>
 					<button
-						className='absolute bottom-0 right-0 text-13 text-brand underline underline-offset-2'
+						className={cn(
+							'justify-self-end text-13 text-brand underline underline-offset-2',
+							!showAll && 'absolute bottom-0 right-0 ',
+						)}
 						onClick={() => setShowAll((s) => !s)}
 					>
 						{showAll ? 'less' : 'more'}

@@ -1,37 +1,29 @@
-import {CSSProperties, ReactNode, useState} from 'react'
+import {useState} from 'react'
 
+import {Markdown} from '@/components/markdown'
 import {cardFaintClass} from '@/modules/app-store/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-export function ReadMoreSection({children, lines = 6}: {children: ReactNode; lines: number}) {
+export function ReadMoreMarkdownSection({children, collapseClassName}: {children: string; collapseClassName: string}) {
 	const [isExpanded, setIsExpanded] = useState(false)
 
 	const toggle = () => setIsExpanded((prev) => !prev)
 
 	return (
 		<>
-			<p className={cn(cardTextClass)} style={isExpanded ? undefined : lineClampStyles(lines)}>
-				{children}
-			</p>
-			<button onClick={toggle} className='self-start text-13 font-medium text-brand-lighter'>
+			<Markdown className={cn(cardTextClass, !isExpanded && collapseClassName)}>{children}</Markdown>
+			<button
+				onClick={toggle}
+				className='self-start text-13 font-medium text-brand-lighter transition-colors hover:text-brand group-hover:text-brand'
+			>
 				{isExpanded ? 'Read less' : 'Read more'}
 			</button>
 		</>
 	)
 }
 
-// Stolen from tailwind EX: `line-clamp-3`
-function lineClampStyles(lines: number): CSSProperties {
-	return {
-		overflow: 'hidden',
-		display: '-webkit-box',
-		WebkitBoxOrient: 'vertical',
-		WebkitLineClamp: lines,
-	}
-}
-
 export const appPageWrapperClass = tw`flex flex-col gap-5 md:gap-[40px]`
 export const cardClass = cn(cardFaintClass, tw`rounded-12 px-[20px] py-[30px] flex flex-col gap-5`)
 export const cardTitleClass = tw`text-12 opacity-50 uppercase leading-tight font-semibold tracking-normal`
-export const cardTextClass = tw`text-15 leading-snug whitespace-pre-wrap`
+export const cardTextClass = tw`text-15 leading-snug`
