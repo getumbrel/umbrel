@@ -52,6 +52,7 @@ console.log('code block')
 links
 - This [link](https://example.com) is the best link.
 - Auto-linking: https://example.com
+- Auto-linking: www.nasa.gov
 - Auto-linking email: contact@example.com
 - Not auto-linking: example.com
 
@@ -66,8 +67,28 @@ ordered list
 1. list
 5. list
 
+nested list
+
+- list
+	- list
+		- list
+		- list
+		- list
+	- list
+		- list
+			- list
+			- list
+			- list
 
 ---- UNSUPPORTED ----
+
+<a href="jAva script:alert('bravo')">delta</a>
+
+[Download Minion](https://octodex.github.com/images/minion.png "download")
+
+<script>
+alert('hello')
+</script>
 
 <em>italic</em>
 <strong>bold</strong>
