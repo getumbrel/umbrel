@@ -18,6 +18,7 @@ import {AvailableAppsProvider} from './providers/available-apps'
 import {NotFound} from './routes/not-found'
 import Restart from './routes/restart'
 import {Settings} from './routes/settings'
+import {MarkdownExample} from './routes/stories/markdown'
 import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
 
@@ -321,6 +322,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/misc',
 				Component: MiscStory,
+			},
+			{
+				path: 'stories/markdown',
+				Component: MarkdownExample,
 			},
 		],
 	},

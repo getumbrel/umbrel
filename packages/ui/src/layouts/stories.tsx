@@ -51,6 +51,10 @@ const storyLinks = [
 		path: '/stories/migrate',
 	},
 	{
+		name: 'Markdown',
+		path: '/stories/markdown',
+	},
+	{
 		name: 'Tailwind',
 		path: '/stories/tailwind',
 	},
@@ -96,7 +100,7 @@ const NavLink = ({to, children}: {to: string; children: ReactNode}) => (
 	</Link>
 )
 
-const navLinkClass = tw`'shrink-0 p-2 hover:bg-white/10'`
+const navLinkClass = tw`'shrink-0 p-2 hover:bg-white/10 whitespace-nowrap`
 
 export const H1 = ({children}: {children: ReactNode}) => <h1 className='text-3xl font-bold'>{children}</h1>
 export const H2 = ({children}: {children: ReactNode}) => (
