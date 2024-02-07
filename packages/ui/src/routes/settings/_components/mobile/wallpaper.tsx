@@ -2,7 +2,7 @@ import {useTimeout} from 'react-use'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {useWallpaper, WallpaperId, wallpapers} from '@/modules/desktop/wallpaper-context'
+import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
 import {
 	Drawer,
 	DrawerContent,

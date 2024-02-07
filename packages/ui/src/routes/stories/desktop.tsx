@@ -11,9 +11,9 @@ import {AppIcon} from '@/modules/desktop/app-icon'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview'
 import {DockItem} from '@/modules/desktop/dock-item'
 import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
-import {brandHslLighter, wallpapers} from '@/modules/desktop/wallpaper-context'
 import {AppsProvider} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
+import {brandHslLighter, wallpapers} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
 
 export default function DesktopStory() {

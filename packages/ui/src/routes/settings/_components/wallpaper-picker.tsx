@@ -1,6 +1,6 @@
 import {forwardRef, useEffect, useRef} from 'react'
 
-import {useWallpaper, wallpapers} from '@/modules/desktop/wallpaper-context'
+import {useWallpaper, wallpapers} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
 
 const ITEM_W = 40

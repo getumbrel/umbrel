@@ -2,7 +2,7 @@ import {useTranslation} from 'react-i18next'
 import {useLocation} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
-import {useWallpaper} from '@/modules/desktop/wallpaper-context'
+import {useWallpaper} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {cmdOrCtrl, platform} from '@/utils/misc'

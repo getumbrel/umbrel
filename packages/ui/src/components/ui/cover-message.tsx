@@ -1,7 +1,7 @@
 import {Portal} from '@radix-ui/react-portal'
 import {useTimeout} from 'react-use'
 
-import {Wallpaper} from '@/modules/desktop/wallpaper-context'
+import {Wallpaper} from '@/providers/wallpaper'
 import {tw} from '@/utils/tw'
 
 /** Cover message without  */
