@@ -76,6 +76,10 @@ export function platform() {
 	return 'other'
 }
 
+export function isDev() {
+	return process.env.NODE_ENV === 'development'
+}
+
 export function cmdOrCtrl() {
 	return isMac() ? '⌘' : 'Ctrl+'
 }

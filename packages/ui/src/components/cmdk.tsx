@@ -3,6 +3,7 @@ import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
+import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -13,6 +14,7 @@ import {trpcReact} from '@/trpc/trpc'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
+import {DebugOnlyBare} from './ui/debug-only'
 
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
@@ -22,6 +24,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const isMobile = useIsMobile()
+	const debugInstallRandomApps = useDebugInstallRandomApps()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -94,6 +97,11 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						{app.name}
 					</SubItem>
 				))}
+				<DebugOnlyBare>
+					<SubItem value={'Install a bunch of random apps'} onSelect={debugInstallRandomApps}>
+						Install a bunch of random apps
+					</SubItem>
+				</DebugOnlyBare>
 				<SubItem
 					value={systemAppsKeyed['home'].name}
 					icon={systemAppsKeyed['home'].icon}
