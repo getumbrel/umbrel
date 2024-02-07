@@ -1,5 +1,18 @@
-import {Category} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
+
+export const categories = [
+	'files',
+	'bitcoin',
+	'media',
+	'networking',
+	'social',
+	'automation',
+	'finance',
+	'ai',
+	'developer',
+] as const
+
+export type Category = (typeof categories)[number]
 
 export type Categoryish = Category | 'all' | 'discover'
 

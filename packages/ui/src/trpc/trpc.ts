@@ -7,7 +7,6 @@ export type {UmbrelHostEnvironment} from '../../../umbreld/source/modules/umbrel
 
 export type {
 	AppState,
-	Category,
 	AppManifest as RegistryApp,
 	UserApp,
 	Widget,
@@ -15,8 +14,6 @@ export type {
 } from '../../../../packages/umbreld/source/modules/apps/schema'
 
 export type {WidgetConfig} from '../../../../packages/umbreld/source/modules/apps/widget-endpoint-schema'
-
-export {categories} from '../../../../packages/umbreld/source/modules/apps/data'
 
 export const trpcUrl = `http://${location.hostname}:3001/trpc`
 
