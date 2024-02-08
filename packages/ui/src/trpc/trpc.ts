@@ -3,8 +3,6 @@ import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
 
-export type {UmbrelHostEnvironment} from '../../../umbreld/source/modules/umbrel-host-environment'
-
 export type {
 	AppState,
 	AppManifest as RegistryApp,

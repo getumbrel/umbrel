@@ -1,9 +1,10 @@
-import {UmbrelHostEnvironment} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export const UNKNOWN = () => t('unknown')
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
+
+export type UmbrelHostEnvironment = 'umbrel-home' | 'raspberry-pi' | 'linux'
 
 export const hostEnvironmentMap = {
 	'umbrel-home': {

@@ -1,3 +1,4 @@
+import {UmbrelHostEnvironment} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
 
 export function useDeviceInfo() {
@@ -9,7 +10,9 @@ export function useDeviceInfo() {
 		return {isLoading: true} as const
 	}
 
-	const umbrelHostEnvironment = deviceInfoQ.data?.umbrelHostEnvironment
+	// TODO: Add umbrel host environment
+	const umbrelHostEnvironment: UmbrelHostEnvironment | undefined = undefined
+
 	const modelNumber = deviceInfoQ.data?.model
 	const serialNumber = deviceInfoQ.data?.serial
 	const osVersion = osQ.data
