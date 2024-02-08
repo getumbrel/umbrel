@@ -1,9 +1,9 @@
 import {useNavigate} from 'react-router-dom'
 
 import {toast} from '@/components/ui/toast'
-import {useApps} from '@/providers/apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {ExampleWidgetConfig, RegistryWidget, WidgetConfig, WidgetType} from '@/modules/widgets/constants'
+import {useApps} from '@/providers/apps'
 
 import {ActionsWidget} from './actions-widget'
 import {FourUpWidget} from './four-up-widget'

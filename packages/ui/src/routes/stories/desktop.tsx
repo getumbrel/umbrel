@@ -3,7 +3,7 @@ import {useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
-import {useAppInstall} from '@/hooks/use-app-install'
+import {useAppInstall, useUninstallAllApps} from '@/hooks/use-app-install'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
 import {AppGrid} from '@/modules/desktop/app-grid/app-grid'

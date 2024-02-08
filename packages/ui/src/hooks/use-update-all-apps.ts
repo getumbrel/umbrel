@@ -1,6 +1,5 @@
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {trpcReact} from '@/trpc/trpc'
-
-import {useAllAvailableApps} from './use-available-apps'
 
 export function useUpdateAllApps() {
 	const allAvailableApps = useAllAvailableApps()

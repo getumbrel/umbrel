@@ -2,7 +2,6 @@ import {useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {FadeScroller} from '@/components/fade-scroller'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {SectionTitle} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
