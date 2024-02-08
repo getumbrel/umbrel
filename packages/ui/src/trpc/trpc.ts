@@ -9,11 +9,7 @@ export type {
 	AppState,
 	AppManifest as RegistryApp,
 	UserApp,
-	Widget,
-	WidgetType,
 } from '../../../../packages/umbreld/source/modules/apps/schema'
-
-export type {WidgetConfig} from '../../../../packages/umbreld/source/modules/apps/widget-endpoint-schema'
 
 export const trpcUrl = `http://${location.hostname}:3001/trpc`
 

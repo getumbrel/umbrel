@@ -1,26 +1,64 @@
 import {useState} from 'react'
-import {uniq} from 'remeda'
 
-import {trpcReact, Widget} from '@/trpc/trpc'
+import {RegistryWidget} from '@/modules/widgets/constants'
+import {trpcReact} from '@/trpc/trpc'
 
 import {systemAppsKeyed, useApps} from './use-apps'
 import {useAvailableApps} from './use-available-apps'
 
 export const MAX_WIDGETS = 3
 
-// TODO: add previews of widgets here
-export const settingsWidgets: Widget[] = [
+export const settingsWidgets: [
+	RegistryWidget<'stat-with-progress'>,
+	RegistryWidget<'stat-with-progress'>,
+	RegistryWidget<'three-up'>,
+] = [
 	{
+		id: 'umbrel:storage',
 		type: 'stat-with-progress',
 		endpoint: '/widgets/settings/storage-stat.json',
+		example: {
+			title: 'Storage',
+			value: '256 GB',
+			progressLabel: '1.75 TB left',
+			progress: 0.25,
+		},
 	},
 	{
+		id: 'umbrel:memory',
 		type: 'stat-with-progress',
 		endpoint: '/widgets/settings/memory-stat.json',
+		example: {
+			title: 'Memory',
+			value: '5.8 GB',
+			valueSub: '/16GB',
+			progressLabel: '11.4 GB left',
+			progress: 0.36,
+		},
 	},
 	{
+		id: 'umbrel:system-stats',
 		type: 'three-up',
 		endpoint: '/widgets/settings/system-stats.json',
+		example: {
+			items: [
+				{
+					icon: 'system-widget-temperature',
+					title: 'Optimal',
+					value: '56℃',
+				},
+				{
+					icon: 'system-widget-storage',
+					title: 'Free',
+					value: '1.75 TB',
+				},
+				{
+					icon: 'system-widget-memory',
+					title: 'Memory',
+					value: '5.8 GB',
+				},
+			],
+		},
 	},
 ]
 
@@ -30,7 +68,7 @@ export function useWidgets() {
 	const availableApps = useAvailableApps()
 	const apps = useApps()
 
-	const {selected, setSelected, isLoading: isSelectedLoading} = useSelectedWidgets()
+	const {selected, enable, disable, isLoading: isSelectedLoading} = useEnableWidgets()
 	const isLoading = availableApps.isLoading || apps.isLoading || isSelectedLoading
 
 	const availableUserAppWidgets =
@@ -39,7 +77,7 @@ export function useWidgets() {
 					appId: app.id,
 					icon: app.icon,
 					name: app.name,
-					widgets: availableApps.appsKeyed[app.id]?.widgets,
+					widgets: availableApps.appsKeyed[app.id]?.widgets as RegistryWidget[] | undefined,
 			  }))
 			: []
 
@@ -57,7 +95,7 @@ export function useWidgets() {
 			: []
 
 	// No need to specify app id because widget endpoints are unique
-	const toggleSelected = (widget: Widget, checked: boolean) => {
+	const toggleSelected = (widget: RegistryWidget, checked: boolean) => {
 		if (selected.length >= MAX_WIDGETS && checked) {
 			setSelectedTooMany(true)
 			setTimeout(() => setSelectedTooMany(false), 500)
@@ -65,9 +103,9 @@ export function useWidgets() {
 		}
 		setSelectedTooMany(false)
 		if (selected.map((w) => w.endpoint).includes(widget.endpoint)) {
-			setSelected?.(selected.filter((w) => w.endpoint !== widget.endpoint))
+			disable(widget.id)
 		} else {
-			setSelected?.(uniq([...selected, widget]))
+			enable(widget.id)
 		}
 		console.log(widget.endpoint)
 	}
@@ -95,7 +133,6 @@ export function useWidgets() {
 			}
 		})
 
-	// TODO: return app information like icon, name, and appId with widgets
 	return {
 		availableWidgets,
 		selected: selectedWithAppInfo,
@@ -106,23 +143,31 @@ export function useWidgets() {
 	}
 }
 
-function useSelectedWidgets() {
+function useEnableWidgets() {
 	const ctx = trpcReact.useContext()
-	const userQ = trpcReact.user.get.useQuery()
-	const userMut = trpcReact.user.set.useMutation({
+	const widgetQ = trpcReact.widget.enabled.useQuery()
+
+	const enableMut = trpcReact.widget.enable.useMutation({
 		onSuccess: () => {
 			ctx.user.invalidate()
 		},
 	})
 
-	const selected = userQ.data?.widgets ?? []
-	const setSelected = (widgets: Widget[]) => userMut.mutate({widgets})
+	const disableMut = trpcReact.widget.disable.useMutation({
+		onSuccess: () => {
+			ctx.user.invalidate()
+		},
+	})
 
-	const isLoading = userQ.isLoading || userMut.isLoading
+	const selected = (widgetQ.data ?? []) as RegistryWidget[]
+	// const setSelected = (widgets: WidgetT[]) => enableMut.mutate({widgets})
+
+	const isLoading = widgetQ.isLoading || enableMut.isLoading
 
 	return {
 		isLoading,
 		selected,
-		setSelected,
+		enable: (widgetId: string) => enableMut.mutate({widgetId}),
+		disable: (widgetId: string) => disableMut.mutate({widgetId}),
 	}
 }
