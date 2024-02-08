@@ -24,6 +24,10 @@ test('install() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
 })
 
+test('state() throws invalid error when no user is registered', async () => {
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
+})
+
 test('restart() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.restart.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
 })
@@ -34,6 +38,10 @@ test('update() throws invalid error when no user is registered', async () => {
 
 test('trackOpen() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.trackOpen.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('Invalid token')
+})
+
+test('trackOpen() throws invalid error when no user is registered', async () => {
+	await expect(umbreld.client.apps.setTorEnabled.mutate(true)).rejects.toThrow('Invalid token')
 })
 
 test('login', async () => {
@@ -69,10 +77,28 @@ test('install() installs an app', async () => {
 	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 })
 
+test('state() shows app install state', async () => {
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toContain({
+		state: 'installing',
+	})
+	// TODO: Test this more extensively once we've implemented the behaviour
+})
+
 test('list() lists installed apps', async () => {
-	const installedApps = await umbreld.client.apps.list.query()
-	expect(installedApps.length).toStrictEqual(1)
-	expect(installedApps[0].id).toStrictEqual('sparkles-hello-world')
+	await expect(umbreld.client.apps.list.query()).resolves.toStrictEqual([
+		{
+			id: 'sparkles-hello-world',
+			name: 'Hello World',
+			icon: 'https://svgur.com/i/mvA.svg',
+			port: 4000,
+			state: 'ready',
+			credentials: {
+				defaultUsername: '',
+				defaultPassword: '',
+			},
+			hiddenService: 'blah.onion',
+		},
+	])
 })
 
 test('restart() restarts an installed app', async () => {
@@ -88,6 +114,13 @@ test('update() updates an installed app', async () => {
 test('trackOpen() tracks an app open', async () => {
 	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked
+})
+
+test('setTorEnabled() toggles the Tor setting', async () => {
+	await expect(umbreld.client.apps.setTorEnabled.mutate(true)).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.getTorEnabled.query()).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.setTorEnabled.mutate(false)).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.getTorEnabled.query()).resolves.toStrictEqual(false)
 })
 
 test('uninstall() uninstalls an app', async () => {

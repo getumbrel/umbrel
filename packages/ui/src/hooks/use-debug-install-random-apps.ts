@@ -6,7 +6,7 @@ import {trpcReact} from '@/trpc/trpc'
 export function useDebugInstallRandomApps() {
 	const apps = useAvailableApps()
 
-	const installMut = trpcReact.user.apps.install.useMutation({
+	const installMut = trpcReact.apps.install.useMutation({
 		onSuccess: () => {
 			window.location.reload()
 		},

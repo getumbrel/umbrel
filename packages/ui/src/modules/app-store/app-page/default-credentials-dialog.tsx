@@ -110,8 +110,9 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 
 	const ctx = trpcReact.useContext()
 
-	const showCredentialsBeforeOpenMut = trpcReact.user.apps.set.useMutation({
-		onSuccess: () => ctx.user.apps.invalidate(),
+	// @ts-expect-error `showCredentialsBeforeOpen`
+	const showCredentialsBeforeOpenMut = trpcReact.apps.showCredentialsBeforeOpen.useMutation({
+		onSuccess: () => ctx.apps.invalidate(),
 	})
 
 	const handleShowCredentialsBeforeOpenChange = (checked: boolean) => {

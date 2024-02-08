@@ -1,4 +1,5 @@
 import os from 'node:os'
+import {setTimeout} from 'node:timers/promises'
 import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
@@ -6,9 +7,8 @@ import systeminfo from 'systeminformation'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
-import {sleep} from '../../../utilities/sleep.js'
+
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
-import umbrelHostEnvironment from '../../../umbrel-host-environment.js'
 
 export default router({
 	uptime: privateProcedure.query(() => {
@@ -21,22 +21,25 @@ export default router({
 	}),
 	latestAvailableVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
-		await sleep(1000)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	update: privateProcedure.mutation(async () => {
 		// TODO: do this for real
-		await sleep(1000)
+		await setTimeout(1000)
 		return '1.0.1'
 	}),
 	//
 	device: privateProcedure.query(async () => {
-		const {model, serial, uuid, sku} = await systeminfo.system()
+		// This file exists in old versions of amd64 Umbrel OS builds due to the Docker build system.
+		// It confuses the systeminfo library and makes it return the model as 'Docker Container'.
+		// TODO: Remove this once we've done a full fs upgrade
+		await fse.remove('/.dockerenv')
 
-		const {platform} = await systeminfo.osInfo()
+		const {manufacturer, model, serial, uuid, sku} = await systeminfo.system()
 
 		// TODO: Allow these to be overidden by env vars or cli flags
-		return {umbrelHostEnvironment: await umbrelHostEnvironment(), platform, model, serial, uuid, sku}
+		return {manufacturer, model, serial, uuid, sku}
 	}),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),

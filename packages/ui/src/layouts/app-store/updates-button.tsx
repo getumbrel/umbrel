@@ -6,6 +6,7 @@ import {ButtonLink} from '@/components/ui/button-link'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
+import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
@@ -44,9 +45,7 @@ export function UpdatesDialog() {
 
 	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
 
-	const updateAllMut = trpcReact.user.apps.updateAll.useMutation()
-
-	const updateAll = () => updateAllMut.mutate()
+	const updateAll = useUpdateAllApps()
 
 	if (isLoading) return null
 
@@ -64,11 +63,11 @@ export function UpdatesDialog() {
 							<Button
 								size='dialog'
 								variant='primary'
-								onClick={updateAll}
+								onClick={updateAll.updateAll}
 								className='w-auto'
-								disabled={updateAllMut.isLoading || appsWithUpdates.length === 0}
+								disabled={updateAll.isLoading || appsWithUpdates.length === 0}
 							>
-								{updateAllMut.isLoading ? 'Updating...' : 'Update all'}
+								{updateAll.isLoading ? 'Updating...' : 'Update all'}
 							</Button>
 						</DialogTitle>
 					</DialogHeader>
@@ -89,7 +88,7 @@ export function UpdatesDialog() {
 
 function AppItem({app}: {app: RegistryApp}) {
 	const [showAll, setShowAll] = useState(false)
-	const updateMut = trpcReact.user.apps.update.useMutation()
+	const updateMut = trpcReact.apps.update.useMutation()
 	const updateApp = () => updateMut.mutate({appId: app.id})
 
 	return (

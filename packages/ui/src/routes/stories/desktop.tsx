@@ -43,7 +43,8 @@ export default function DesktopStory() {
 }
 
 function InstallExample() {
-	const {install, uninstall, uninstallAll, state, progress} = useAppInstall('agora')
+	const {install, uninstall, state, progress} = useAppInstall('agora')
+	const uninstallAll = useUninstallAllApps()
 
 	return (
 		<div>

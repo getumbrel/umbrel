@@ -1,8 +1,8 @@
 import {createContext, useContext} from 'react'
 import {groupBy, indexBy, mapValues} from 'remeda'
 
-import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
-import {Category, RegistryApp, RouterOutput, trpcReact} from '@/trpc/trpc'
+import {Category, UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
+import {RegistryApp, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 type AppsContextT =

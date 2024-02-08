@@ -7,7 +7,7 @@ import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {Widget} from '@/modules/widgets'
+import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
@@ -74,7 +74,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 											damping: 30,
 										}}
 									>
-										<Widget appId={widget.app.id} config={widget} />
+										<ExampleWidget type={widget.type} example={widget.example} />
 									</motion.div>
 								)
 							})}

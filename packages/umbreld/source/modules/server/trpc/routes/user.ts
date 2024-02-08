@@ -2,14 +2,9 @@ import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
-import {widgetSchema} from '../../../apps/schema.js'
 import * as totp from '../../../utilities/totp.js'
-import apps from './user-apps.js'
 
 export default router({
-	// Apps subrouter
-	apps,
-
 	// Registers a new user
 	register: publicProcedure
 		.input(
@@ -150,9 +145,6 @@ export default router({
 		return {
 			name: user.name,
 			wallpaper: user.wallpaper,
-			torEnabled: user.torEnabled,
-			lastOpenedApps: user.lastOpenedApps,
-			widgets: user.widgets,
 		}
 	}),
 
@@ -163,16 +155,12 @@ export default router({
 				.object({
 					name: z.string().optional(),
 					wallpaper: z.string().optional(),
-					torEnabled: z.boolean().optional(),
-					widgets: widgetSchema.array().optional(),
 				})
 				.strict(),
 		)
 		.mutation(async ({ctx, input}) => {
 			if (input.name) await ctx.user.setName(input.name)
 			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
-			if (input.torEnabled !== undefined) await ctx.user.setTorEnabled(input.torEnabled)
-			if (input.widgets) await ctx.user.setWidgets(input.widgets)
 
 			return true
 		}),

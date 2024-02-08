@@ -187,7 +187,6 @@ describe('appRepository.readRegistry()', () => {
 					dependencies: [],
 					path: '',
 					installSize: 10_000,
-					widgets: undefined,
 					defaultUsername: '',
 					defaultPassword: '',
 				},

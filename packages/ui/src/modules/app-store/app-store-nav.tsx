@@ -2,10 +2,9 @@ import {useParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {ButtonLink} from '@/components/ui/button-link'
-import {Category} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
-import {categoryishDescriptions} from './constants'
+import {Category, categoryishDescriptions} from './constants'
 
 export function AppStoreNav() {
 	const {categoryishId} = useParams<{categoryishId: Category}>()

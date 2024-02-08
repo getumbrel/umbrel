@@ -2,9 +2,8 @@ import {TbQuestionMark} from 'react-icons/tb'
 
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {hostEnvironmentMap, UNKNOWN} from '@/constants'
+import {hostEnvironmentMap, UmbrelHostEnvironment, UNKNOWN} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
-import {UmbrelHostEnvironment} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
 export function DeviceInfoContent({
