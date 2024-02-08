@@ -140,10 +140,10 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 }
 
 function FrequentApps() {
-	const lastAppsQ = trpcReact.user.get.useQuery(undefined, {
+	const lastAppsQ = trpcReact.apps.recentlyOpened.useQuery(undefined, {
 		retry: false,
 	})
-	const lastApps = lastAppsQ.data?.lastOpenedApps ?? []
+	const lastApps = lastAppsQ.data ?? []
 	const {userAppsKeyed} = useApps()
 
 	const search = useCommandState((state) => state.search)

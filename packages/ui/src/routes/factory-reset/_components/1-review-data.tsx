@@ -16,7 +16,7 @@ export function ReviewData() {
 	const navigate = useNavigate()
 
 	const userQ = trpcReact.user.get.useQuery()
-	const userAppsQ = trpcReact.user.apps.getAll.useQuery()
+	const userAppsQ = trpcReact.apps.list.useQuery()
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 
 	const installedAppCount = userAppsQ.data?.length

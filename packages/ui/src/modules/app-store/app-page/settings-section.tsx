@@ -1,4 +1,5 @@
 import {ReactNode} from 'react'
+import {toast} from 'sonner'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {Switch} from '@/shadcn-components/ui/switch'
@@ -8,16 +9,27 @@ import {cardClass, cardTitleClass} from './shared'
 
 export function SettingsSection({userApp}: {userApp: UserApp}) {
 	const ctx = trpcReact.useContext()
-	const setMut = trpcReact.user.apps.set.useMutation({
-		onSuccess: () => ctx.user.apps.invalidate(),
+
+	// @ts-expect-error `autoUpdate`
+	const autoUpdateMut = trpcReact.apps.autoUpdate.useMutation({
+		onSuccess: () => ctx.apps.invalidate(),
+	})
+
+	// @ts-expect-error `showNotifications`
+	const showNotificationsMut = trpcReact.apps.showNotifications.useMutation({
+		onSuccess: () => ctx.apps.invalidate(),
 	})
 
 	const handleAutoUpdateChange = (checked: boolean) => {
-		setMut.mutate({appId: userApp.id, autoUpdate: checked})
+		// TODO: use mutation
+		toast(`Auto-update to ${checked} setting is not available yet`)
+		autoUpdateMut.mutate({appId: userApp.id, autoUpdate: checked})
 	}
 
 	const handleShowNotifcationsChange = (checked: boolean) => {
-		setMut.mutate({appId: userApp.id, showNotifications: checked})
+		// TODO: use mutation
+		toast(`Notifications setting to ${checked} is not available yet`)
+		showNotificationsMut.mutate({appId: userApp.id, showNotifications: checked})
 	}
 
 	return (
@@ -27,7 +39,11 @@ export function SettingsSection({userApp}: {userApp: UserApp}) {
 				<KV
 					k='Auto-update'
 					v={
-						<Switch checked={userApp.autoUpdate} onCheckedChange={handleAutoUpdateChange} disabled={setMut.isLoading} />
+						<Switch
+							checked={userApp.autoUpdate}
+							onCheckedChange={handleAutoUpdateChange}
+							disabled={autoUpdateMut.isLoading}
+						/>
 					}
 				/>
 			</label>
@@ -38,7 +54,7 @@ export function SettingsSection({userApp}: {userApp: UserApp}) {
 						<Switch
 							checked={userApp.showNotifications}
 							onCheckedChange={handleShowNotifcationsChange}
-							disabled={setMut.isLoading}
+							disabled={showNotificationsMut.isLoading}
 						/>
 					}
 				/>

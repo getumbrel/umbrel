@@ -3,7 +3,7 @@ import {useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
-import {useAppInstall} from '@/hooks/use-app-install'
+import {useAppInstall, useUninstallAllApps} from '@/hooks/use-app-install'
 import {AppsProvider} from '@/hooks/use-apps'
 import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -43,7 +43,8 @@ export default function DesktopStory() {
 }
 
 function InstallExample() {
-	const {install, uninstall, uninstallAll, state, progress} = useAppInstall('agora')
+	const {install, uninstall, state, progress} = useAppInstall('agora')
+	const uninstallAll = useUninstallAllApps()
 
 	return (
 		<div>

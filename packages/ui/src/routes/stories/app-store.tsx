@@ -41,7 +41,7 @@ export default function AppStoreStory() {
 function InstallABunchOfApps() {
 	const apps = useAvailableApps()
 
-	const installMut = trpcReact.user.apps.install.useMutation({
+	const installMut = trpcReact.apps.install.useMutation({
 		onSuccess: () => {
 			window.location.reload()
 		},
