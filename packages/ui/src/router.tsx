@@ -260,11 +260,7 @@ export const router = createBrowserRouter([
 			},
 			{
 				path: 'stories/app-store',
-				element: (
-					<AvailableAppsProvider>
-						<AppStoreStory />
-					</AvailableAppsProvider>
-				),
+				Component: AppStoreStory,
 			},
 			{
 				path: 'stories/widgets',

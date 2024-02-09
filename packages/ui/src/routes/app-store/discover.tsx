@@ -1,5 +1,5 @@
 import {Loading} from '@/components/ui/loading'
-import {AppStoreNav} from '@/modules/app-store/app-store-nav'
+import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {Apps3UpSection} from '@/modules/app-store/discover/apps-3-up-section'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
@@ -28,7 +28,7 @@ export default function Discover() {
 
 	return (
 		<>
-			<AppStoreNav />
+			<ConnectedAppStoreNav />
 			<AppsGallerySection banners={banners} />
 			{sections.map((section) => (
 				<AppsGridSection
