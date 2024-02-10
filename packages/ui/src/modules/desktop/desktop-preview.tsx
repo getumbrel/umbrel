@@ -34,6 +34,7 @@ export function DesktopPreview() {
 			style={{
 				width: W * scale,
 				height: H * scale,
+				transform: `translateZ(0)`, // Force rounded border clipping in Safari
 			}}
 			// Tell screen readers to ignore this element
 			aria-hidden='true'
