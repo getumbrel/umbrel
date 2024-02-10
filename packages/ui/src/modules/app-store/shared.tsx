@@ -41,7 +41,7 @@ export function AppStoreSheetInner({
 		<div className='flex flex-col gap-5 md:gap-8'>
 			{beforeHeaderChildren}
 			<SheetHeader className='gap-5'>
-				<div className='flex flex-wrap items-center gap-x-5 gap-y-5 px-2.5 md:px-0'>
+				<div className='flex flex-col gap-x-5 gap-y-5 px-2.5 md:flex-row md:items-center md:px-0'>
 					<SheetTitle className='flex-1 whitespace-nowrap capitalize leading-none'>{title}</SheetTitle>
 					{titleRightChildren}
 				</div>
