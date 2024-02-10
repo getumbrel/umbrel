@@ -1,8 +1,10 @@
-import {ComponentPropsWithoutRef, useEffect, useRef} from 'react'
+import {ComponentPropsWithoutRef, ForwardedRef, forwardRef, useEffect, useRef} from 'react'
 
 import './index.css'
 
-type FadeScrollerProps = ComponentPropsWithoutRef<'div'> & {
+import {mergeRefs} from 'react-merge-refs'
+
+export type FadeScrollerProps = ComponentPropsWithoutRef<'div'> & {
 	direction: 'x' | 'y'
 	debug?: boolean
 }
@@ -24,23 +26,32 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 			if (!el) return
 
 			if (debug) {
+				// console.log('scroll', el.scrollLeft, el.scrollWidth, el.clientWidth)
 				// eslint-disable-next-line no-debugger
 				debugger
 			}
 
-			// TODO: don't use fraction, just calculate distance from beginning and end
-			const fractionScrolled =
+			// Round to avoid issues with sub-pixel scrolling
+			// Using `<` and `>` to capture the edge case where the user scrolls past the end of the content (iOS bouncing)
+			const atStart = direction === 'x' ? el.scrollLeft <= 0 : el.scrollTop <= 0
+			const atEnd =
 				direction === 'x'
-					? el.scrollLeft / (el.scrollWidth - el.clientWidth)
-					: el.scrollTop / (el.scrollHeight - el.clientHeight)
+					? Math.round(el.scrollLeft) + el.clientWidth >= el.scrollWidth
+					: Math.round(el.scrollTop) + el.clientHeight >= el.scrollHeight
 
-			if (isNaN(fractionScrolled)) {
+			if (direction === 'x') {
+				console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollLeft), el.scrollWidth - el.clientWidth)
+			} else {
+				console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollTop), el.scrollHeight - el.clientHeight)
+			}
+
+			if (atStart && atEnd) {
 				el.style.setProperty('--distance1', `0px`)
 				el.style.setProperty('--distance2', `0px`)
-			} else if (fractionScrolled <= 0.001) {
+			} else if (atStart) {
 				el.style.setProperty('--distance1', `0px`)
 				el.style.setProperty('--distance2', `50px`)
-			} else if (fractionScrolled >= 0.999) {
+			} else if (atEnd) {
 				el.style.setProperty('--distance1', `50px`)
 				el.style.setProperty('--distance2', `0px`)
 			} else {
@@ -64,8 +75,10 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 	return {scrollerClass, ref}
 }
 
-export function FadeScroller({direction, debug, className, ...props}: FadeScrollerProps) {
-	const {scrollerClass, ref} = useFadeScroller(direction, debug)
+export const FadeScroller = forwardRef(
+	({direction, debug, className, ...props}: FadeScrollerProps, ref: ForwardedRef<HTMLDivElement>) => {
+		const {scrollerClass, ref: scrollerRef} = useFadeScroller(direction, debug)
 
-	return <div ref={ref} className={scrollerClass + ' ' + className} {...props} />
-}
+		return <div ref={mergeRefs([ref, scrollerRef])} className={scrollerClass + ' ' + className} {...props} />
+	},
+)
