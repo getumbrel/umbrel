@@ -1,4 +1,5 @@
-import {useTimeout} from 'react-use'
+import {useRef} from 'react'
+import {useMount, useTimeout} from 'react-use'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -73,8 +74,16 @@ function WallpaperItem({
 	className?: string
 	style: React.CSSProperties
 }) {
+	const ref = useRef<HTMLButtonElement>(null)
+
+	useMount(() => {
+		if (!active) return
+		ref.current?.scrollIntoView({block: 'center'})
+	})
+
 	return (
 		<button
+			ref={ref}
 			className={cn('relative aspect-1.9 overflow-hidden rounded-10 bg-white/10', className)}
 			style={{
 				...style,
