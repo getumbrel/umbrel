@@ -1,6 +1,8 @@
 import fse from 'fs-extra'
 import {$} from 'execa'
 
+import randomToken from '../../modules/utilities/random-token.js'
+
 import type Umbreld from '../../index.js'
 
 import App from './app.js'
@@ -19,6 +21,29 @@ export default class Apps {
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
 			await this.#umbreld.store.set('apps', [])
+		}
+
+		// Create a random umbrel seed on first start if one doesn't exist.
+		// This is only used to determinstically derive app seed, app password
+		// and custom app specific environment variables. It's needed to maintain
+		// compatibility with legacy apps. In the future we'll migrate to apps
+		// storing their own random seed/password/etc inside their own data directory.
+		const umbrelSeedFile = `${this.#umbreld.dataDirectory}/db/umbrel-seed/seed`
+		if (!(await fse.exists(umbrelSeedFile))) {
+			this.logger.verbose('Creating Umbrel seed')
+			await fse.ensureFile(umbrelSeedFile)
+			await fse.writeFile(umbrelSeedFile, randomToken(256))
+		}
+
+		// Create Docker network if not exist
+		const networks = await $`docker network ls --format json`
+		const hasUmbrelNetwork = networks.stdout
+			.split('\n')
+			.map((jsonString) => JSON.parse(jsonString))
+			.some((net) => net.Name === 'umbrel_main_network')
+		if (!hasUmbrelNetwork) {
+			this.logger.verbose('Creating Docker network')
+			await $`docker network create --subnet=10.21.0.0/16 umbrel_main_network`
 		}
 
 		this.logger.log('Starting apps')
@@ -59,24 +84,6 @@ export default class Apps {
 		// We use rsync to copy to preserve permissions
 		await $`rsync --archive --verbose --exclude ".gitkeep" ${appTemplatePath}/. ${appDataDirectory}`
 
-		// TODO
-
-		// execute_hook "${app}" "pre-install"
-
-		// # Source env.
-		// source_app "${app}"
-
-		// # Now apply templates
-		// template_app "${app}"
-
-		// echo "Pulling images for app ${app}..."
-		// compose "${app}" pull
-
-		// if [[ "$*" != *"--skip-start"* ]]; then
-		//   echo "Starting app ${app}..."
-		//   start_app "${app}"
-		// fi
-
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const apps = await get('apps')
@@ -84,12 +91,9 @@ export default class Apps {
 			await set('apps', apps)
 		})
 
-		// TODO
+		const app = new App(this.#umbreld, appId)
 
-		// execute_hook "${app}" "post-install"
-
-		// echo "Successfully installed app ${app}"
-		// exit
+		await app.install()
 
 		return true
 	}

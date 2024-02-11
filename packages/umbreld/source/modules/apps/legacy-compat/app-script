@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# This script is copied in from pre <1.0 Umbrel and modified to work with umbreld.
+# This script is copied in from <1.0 Umbrel and modified to work with umbreld.
 # It provides a compatibility layer so the old app system works reliably.
+
+# TODO: Hardcoding these for now since they used to be read from .env
+# Figure out what other stuff we need from the old .env and how to pass it through.
+export NETWORK_IP='10.21.0.0'
+export GATEWAY_IP='10.21.0.1'
+export AUTH_PORT='2000'
+export UMBREL_AUTH_SECRET='DEADBEEF'
+export MANAGER_IP="10.21.21.4"
 
 VERSION="0.0.3"
 
-UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
+UMBREL_ROOT="${SCRIPT_UMBREL_ROOT}"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 
 APP_PROXY_SERVICE_NAME="app_proxy"
@@ -127,7 +135,7 @@ source_app() {
 
   # Tor specific exports
   export TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
-  export TOR_ENTRYPOINT_SCRIPT="${UMBREL_ROOT}/scripts/support/tor-entrypoint.sh"
+  export TOR_ENTRYPOINT_SCRIPT="${SCRIPT_DOCKER_FRAGMENTS}/tor-entrypoint.sh"
   export TOR_HS_APP_DIR="/data/app-${app}"
   export TOR_HS_PORTS="80:${APP_PROXY_HOSTNAME}:${APP_PROXY_PORT}"
 
@@ -165,8 +173,8 @@ else
   app="$2"
 
   repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
-  repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
-  app_repo_dir="${repo_path}/${app}"
+#   repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+#   app_repo_dir="${repo_path}/${app}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
   
   app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
@@ -215,9 +223,9 @@ compose() {
   source_app "${app}"
 
   # Define support compose files
-  local -r app_proxy_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.app_proxy.yml"
-  local -r tor_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.tor.yml"
-  local -r common_compose_file="${UMBREL_ROOT}/scripts/support/docker-compose.common.yml"
+  local -r app_proxy_compose_file="${SCRIPT_DOCKER_FRAGMENTS}/docker-compose.app_proxy.yml"
+  local -r tor_compose_file="${SCRIPT_DOCKER_FRAGMENTS}/docker-compose.tor.yml"
+  local -r common_compose_file="${SCRIPT_DOCKER_FRAGMENTS}/docker-compose.common.yml"
   local -r app_compose_file="${app_data_dir}/docker-compose.yml"
 
   local -r umbrel_env_file="${UMBREL_ROOT}/.env"
@@ -248,8 +256,9 @@ compose() {
   # Merge compose files and args. passed into 'compose'
   compose_args=("${compose_files[@]}" "${@}")
 
+  # TODO: We removed the .env source, we probs need to add that back in somehow
+  # --env-file "${umbrel_env_file}" \
   docker-compose \
-    --env-file "${umbrel_env_file}" \
     --project-name "${app}" \
     "${compose_args[@]}"
 }
@@ -393,23 +402,23 @@ must_be_installed_guard() {
 # Pulls down images for an app and starts it
 if [[ "$command" = "install" ]]; then
 
-  repo=$("${UMBREL_ROOT}/scripts/repo" "locate" "${app}")
+#   repo=$("${UMBREL_ROOT}/scripts/repo" "locate" "${app}")
 
-  if [[ -z "${repo}" ]]; then
-    >&2 echo "Error: \"${app}\" not found in any local app repo"
-    exit 1
-  fi
+#   if [[ -z "${repo}" ]]; then
+    # >&2 echo "Error: \"${app}\" not found in any local app repo"
+    # exit 1
+#   fi
 
-  app_repo_dir=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
-  app_repo_dir="${app_repo_dir}/${app}"
+#   app_repo_dir=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+#   app_repo_dir="${app_repo_dir}/${app}"
 
-  echo "Installing '${app}' from: ${repo}"
+#   echo "Installing '${app}' from: ${repo}"
 
-  echo "Setting up data dir for app ${app}..."
-  mkdir -p "${app_data_dir}"
+#   echo "Setting up data dir for app ${app}..."
+#   mkdir -p "${app_data_dir}"
 
-  # Copy all app files
-  rsync --archive --verbose --exclude ".gitkeep" "${app_repo_dir}/." "${app_data_dir}"
+#   # Copy all app files
+#   rsync --archive --verbose --exclude ".gitkeep" "${app_repo_dir}/." "${app_data_dir}"
 
   execute_hook "${app}" "pre-install"
 
@@ -422,13 +431,13 @@ if [[ "$command" = "install" ]]; then
   echo "Pulling images for app ${app}..."
   compose "${app}" pull
 
-  if [[ "$*" != *"--skip-start"* ]]; then
-    echo "Starting app ${app}..."
+#   if [[ "$*" != *"--skip-start"* ]]; then
+#     echo "Starting app ${app}..."
     start_app "${app}"
-  fi
+#   fi
 
-  echo "Saving app ${app} in DB..."
-  update_installed_apps add "${app}" "${repo}"
+#   echo "Saving app ${app} in DB..."
+#   update_installed_apps add "${app}" "${repo}"
 
   execute_hook "${app}" "post-install"
 
@@ -481,7 +490,7 @@ fi
 # Stops an installed app
 if [[ "$command" = "stop" ]]; then
 
-  must_be_installed_guard
+#   must_be_installed_guard
 
   execute_hook "${app}" "pre-stop"
 
@@ -506,7 +515,7 @@ fi
 # Starts an installed app
 if [[ "$command" = "start" ]]; then
 
-  must_be_installed_guard
+#   must_be_installed_guard
 
   echo "Starting app ${app}..."
   start_app "${app}"
