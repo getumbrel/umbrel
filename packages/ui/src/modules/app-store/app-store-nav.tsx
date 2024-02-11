@@ -1,3 +1,4 @@
+import {compute} from 'compute-scroll-into-view'
 import {useEffect, useRef} from 'react'
 import {useParams} from 'react-router-dom'
 
@@ -15,18 +16,33 @@ export function ConnectedAppStoreNav() {
 }
 
 export function AppStoreNav({activeId}: {activeId: Categoryish}) {
+	const scrollerRef = useRef<HTMLDivElement>(null)
 	const scrollToRef = useRef<HTMLAnchorElement>(null)
 	const breakpoint = useBreakpoint()
 	const size = breakpoint === 'sm' ? 'default' : 'lg'
 
+	// Alternative to: scrollToRef.current?.scrollIntoView({inline: 'center'})
+	// `overflow: hidden` items in parents are scrolled, which breaks the UI.
+	// Fixing scrolling issue by setting a boundary
 	useEffect(() => {
-		scrollToRef.current?.scrollIntoView({inline: 'center'})
-	}, [])
+		if (!scrollToRef.current) return
+		const node = scrollToRef.current
+		const actions = compute(node, {
+			scrollMode: 'if-needed',
+			inline: 'center',
+			boundary: scrollerRef.current,
+		})
+		actions.forEach(({el, top, left}) => {
+			el.scrollTop = top
+			el.scrollLeft = left
+		})
+	}, [activeId])
 
 	return (
 		<FadeScroller
+			ref={scrollerRef}
 			direction='x'
-			className='umbrel-hide-scrollbar -my-2 flex snap-x snap-mandatory gap-[5px] overflow-x-auto py-2'
+			className='umbrel-hide-scrollbar -my-2 flex gap-[5px] overflow-x-auto py-2'
 		>
 			{categoryishDescriptions.map((category) => (
 				<ButtonLink
@@ -35,7 +51,6 @@ export function AppStoreNav({activeId}: {activeId: Categoryish}) {
 					variant={category.id === activeId ? 'primary' : 'default'}
 					ref={category.id === activeId ? scrollToRef : undefined}
 					size={size}
-					className='snap-center'
 					unstable_viewTransition
 				>
 					{category.label}

@@ -80,6 +80,9 @@ dependencies:
   colorthief:
     specifier: ^2.4.0
     version: 2.4.0
+  compute-scroll-into-view:
+    specifier: ^3.1.0
+    version: 3.1.0
   date-fns:
     specifier: ^3.0.6
     version: 3.0.6
@@ -174,8 +177,8 @@ dependencies:
     specifier: 0.0.1
     version: 0.0.1(react-dom@18.2.0)(react@18.2.0)
   vaul:
-    specifier: ^0.8.9
-    version: 0.8.9(@types/react-dom@18.2.14)(@types/react@18.2.31)(react-dom@18.2.0)(react@18.2.0)
+    specifier: ^0.9.0
+    version: 0.9.0(@types/react-dom@18.2.14)(@types/react@18.2.31)(react-dom@18.2.0)(react@18.2.0)
 
 devDependencies:
   '@faker-js/faker':
@@ -3041,6 +3044,10 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /compute-scroll-into-view@3.1.0:
+    resolution: {integrity: sha512-rj8l8pD4bJ1nx+dAkMhV1xB5RuZEyVysfxJqB1pRchh1KVvwOv9b7CGB8ZfjTImVv2oF+sYMUkMZq6Na5Ftmbg==}
+    dev: false
 
   /concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
@@ -6797,8 +6804,8 @@ packages:
     engines: {node: '>= 0.8'}
     dev: true
 
-  /vaul@0.8.9(@types/react-dom@18.2.14)(@types/react@18.2.31)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-gpmtmZRWDPP6niQh14JfRIFUYZVyfvAWyA/7rUINOfNlO/2K7uEvI5rLXEXkxZIRFyUZj+TPHLFMirkegPHjrw==}
+  /vaul@0.9.0(@types/react-dom@18.2.14)(@types/react@18.2.31)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-bZSySGbAHiTXmZychprnX/dE0EsSige88xtyyL3/MCRbrFotRPQZo7UdydGXZWw+CKbNOw5Ow8gwAo93/nB/Cg==}
     peerDependencies:
       react: ^16.8 || ^17.0 || ^18.0
       react-dom: ^16.8 || ^17.0 || ^18.0
