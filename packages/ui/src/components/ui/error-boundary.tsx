@@ -1,8 +1,7 @@
 // import {useErrorBoundary} from 'react-error-boundary'
 import {useRouteError} from 'react-router-dom'
 
-import {Button} from '@/shadcn-components/ui/button'
-
+import {ReloadPageButton} from '../reload-page-button'
 import {BareCoverMessage} from './cover-message'
 
 export function ErrorBoundary() {
@@ -19,9 +18,7 @@ export function ErrorBoundary() {
 					{/* <Button variant='secondary' size='sm' onClick={resetBoundary}>
 						Try Again
 					</Button> */}
-					<Button variant='secondary' size='sm' onClick={() => window.location.reload()}>
-						Reload Page
-					</Button>
+					<ReloadPageButton />
 				</div>
 			</div>
 		</BareCoverMessage>

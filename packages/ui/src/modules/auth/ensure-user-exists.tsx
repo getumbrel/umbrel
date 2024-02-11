@@ -1,5 +1,7 @@
-import {CoverMessage} from '@/components/ui/cover-message'
+import {ReloadPageButton} from '@/components/reload-page-button'
+import {BareCoverMessage, CoverMessage} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
+import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 
 import {RedirectLogin, RedirectOnboarding} from './redirects'
@@ -38,14 +40,19 @@ function EnsureUser({
 
 	if (userExistsQ.isLoading) {
 		return (
-			<CoverMessage delayed>
+			<BareCoverMessage delayed>
 				<Loading />
-			</CoverMessage>
+			</BareCoverMessage>
 		)
 	}
 
 	if (userExistsQ.isError) {
-		return <CoverMessage>Failed to check if user exists.</CoverMessage>
+		return (
+			<BareCoverMessage>
+				Failed to check if user exists.
+				<ReloadPageButton />
+			</BareCoverMessage>
+		)
 	}
 
 	if (userExists === wantsUserExists) {
