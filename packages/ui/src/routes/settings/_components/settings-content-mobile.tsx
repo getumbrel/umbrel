@@ -79,7 +79,7 @@ export function SettingsContentMobile() {
 				</div>
 
 				<div className='mx-2.5'>
-					<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
+					<h2 className='text-24 font-bold leading-none -tracking-4'>
 						{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
 					</h2>
 					<div className='pt-5' />

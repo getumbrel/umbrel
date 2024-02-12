@@ -81,7 +81,7 @@ export function SettingsContent() {
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
 					<div>
-						<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
+						<h2 className='text-24 font-bold leading-none -tracking-4'>
 							{userQ.data?.name || 'Unknown'}’s <span className='opacity-40'>Umbrel</span>
 						</h2>
 						<div className='pt-5' />
