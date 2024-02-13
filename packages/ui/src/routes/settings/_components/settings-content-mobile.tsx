@@ -182,7 +182,7 @@ export function SettingsContentMobile() {
 				/>
 				<ListRowMobile
 					icon={TbRotate2}
-					title={t('factory-reset.__i18n_ally_root__')}
+					title={t('factory-reset')}
 					description={t('factory-reset.desc')}
 					onClick={() => navigate('/factory-reset')}
 				/>

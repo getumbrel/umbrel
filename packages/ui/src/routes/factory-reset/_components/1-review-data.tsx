@@ -13,7 +13,7 @@ import {backPath, description, factoryResetTitle, title} from './misc'
 
 export function ReviewData() {
 	const {t} = useTranslation()
-	useUmbrelTitle(factoryResetTitle(t('factory-reset.review')))
+	useUmbrelTitle(factoryResetTitle(t('factory-reset.review.title')))
 	const navigate = useNavigate()
 
 	const userQ = trpcReact.user.get.useQuery()

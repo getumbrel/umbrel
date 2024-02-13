@@ -18,6 +18,11 @@ export function useLanguage() {
 
 export const languages = [
 	{name: 'English', code: 'en'},
+	{name: 'Deutsch', code: 'de'},
+	{name: 'Español', code: 'es'},
 	{name: 'Français', code: 'fr'},
-	{name: 'العربية', code: 'ar'},
+	{name: 'Italiano', code: 'it'},
+	{name: 'Nederlands', code: 'nl'},
+	{name: 'Português', code: 'pt'},
+	{name: '日本語', code: 'ja'},
 ]

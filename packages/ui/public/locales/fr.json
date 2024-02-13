@@ -4,7 +4,6 @@
   "desktop.greeting.evening": "Bonsoir, {{name}}",
   "search": "Recherche",
   "settings": "Paramètres",
-  "explore-all-the-apps": "Explorez toutes les applications !",
   "hello": "Bonjour",
   "app-store.title": "Magasin d'applications",
   "app-store.tagline": "Parcourez la collection toujours croissante d'applications auto-hébergées sur Umbrel",
@@ -117,7 +116,6 @@
   "migration-assistant.try-again": "Essayer à nouveau",
   "no-forgot-password-message": "Il n'y a pas de bouton « Mot de passe oublié », alors assurez-vous de noter votre mot de passe <em>super fort</em> quelque part.",
   "no-results-found": "Aucun résultat trouvé.",
-  "not-allowed-in-iframe": "Non autorisé dans l'iframe.",
   "not-found-404": "Introuvable : 404",
   "not-found-404.back": "Dos",
   "not-found-404.home": "Maison",
@@ -241,10 +239,8 @@
   "desktop.install-first.link-to-app-store": "Explorer dans l'App Store",
   "desktop.not-enough-room": "Pas assez de place pour montrer quoi que ce soit.",
   "factory-reset.review.following-will-be-removed": "Les éléments suivants seront complètement supprimés de votre appareil",
-  "factory-reset.review.title": "Examiner les données",
   "migrate.callout": "N'éteignez pas votre appareil tant que la migration n'est pas terminée",
   "onboarding.create-account": "Créer un compte",
-  "select-up-to-3-widgets": "Sélectionnez jusqu'à 3 widgets",
   "widgets.edit.select-up-to-3-widgets": "Sélectionnez jusqu'à 3 widgets",
   "widgets.edit.title": "Modifier les widgets",
   "app-store.menu.community-app-stores": "Boutiques d'applications communautaires",
@@ -302,7 +298,6 @@
   "default-credentials.password": "Mot de passe par défaut",
   "default-credentials.title": "Identifiants pour {{app}}",
   "default-credentials.username": "Nom d'utilisateur par défaut",
-  "optimized-for-umbrel-home": "Optimisé pour Umbrel Home",
   "read-less": "Lire moins",
   "read-more": "En savoir plus",
   "install-first.description": "Installez-les d'abord pour installer {{app}}.",
@@ -338,5 +333,6 @@
   "redirect.to-onboarding": "Redirection vers l'intégration...",
   "trpc.backend-unavailable": "Back-end indisponible.",
   "trpc.checking-backend": "Vérification du backend...",
-  "widgets.install-an-app-before-using-widgets": "Installez une application avant d'utiliser des widgets."
+  "widgets.install-an-app-before-using-widgets": "Installez une application avant d'utiliser des widgets.",
+  "factory-reset.review.title": "Examiner les données"
 }
