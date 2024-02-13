@@ -308,6 +308,9 @@
   "install-first.description": "Installez-les d'abord pour installer {{app}}.",
   "install-first.title": "{{app}} nécessite un accès à",
   "ok": "D'accord",
+  "auth.checking-backend-for-user": "Vérification du backend pour l'utilisateur...",
+  "auth.failed-checking-if-user-logged-in": "Échec de la vérification si l'utilisateur est connecté.",
+  "auth.failed-to-check-if-user-exists": "Échec de la vérification si l'utilisateur existe.",
   "factory-reset.confirm.body": "Confirmez le mot de passe Umbrel pour commencer la réinitialisation",
   "factory-reset.confirm.password-label": "Entrer le mot de passe",
   "factory-reset.confirm.submit": "Effacer tout",
@@ -330,12 +333,10 @@
   "migrate.success.continue-to-log-in": "Continuer à vous connecter",
   "migrate.success.description": "Toutes vos applications, données d'application et détails de compte ont été migrés vers votre accueil Umbrel.",
   "migrate.success.title": "Migration réussie",
-  "auth.checking-backend-for-user": "Vérification du backend pour l'utilisateur...",
-  "auth.failed-checking-if-user-logged-in": "Échec de la vérification si l'utilisateur est connecté.",
-  "auth.failed-to-check-if-user-exists": "Échec de la vérification si l'utilisateur existe.",
   "redirect.to-home": "Redirection vers la maison...",
   "redirect.to-login": "Redirection vers la connexion...",
   "redirect.to-onboarding": "Redirection vers l'intégration...",
   "trpc.backend-unavailable": "Back-end indisponible.",
-  "trpc.checking-backend": "Vérification du backend..."
+  "trpc.checking-backend": "Vérification du backend...",
+  "widgets.install-an-app-before-using-widgets": "Installez une application avant d'utiliser des widgets."
 }
