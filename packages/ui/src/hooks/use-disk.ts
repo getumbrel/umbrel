@@ -35,7 +35,7 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 		return {
 			value: LOADING_DASH,
 			valueSub: '/ ' + LOADING_DASH,
-			secondaryValue: LOADING_DASH + ' left',
+			secondaryValue: LOADING_DASH,
 			progress: 0,
 		}
 	}

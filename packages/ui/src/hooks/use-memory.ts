@@ -3,6 +3,7 @@ import {sort} from 'remeda'
 
 import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {isMemoryLow, trpcMemoryToLocal} from '@/utils/system'
 
@@ -33,7 +34,7 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 		return {
 			value: LOADING_DASH,
 			valueSub: '/ ' + LOADING_DASH,
-			secondaryValue: LOADING_DASH + ' left',
+			secondaryValue: LOADING_DASH,
 			progress: 0,
 		}
 	}
@@ -41,7 +42,7 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 	return {
 		value: maybePrettyBytes(used),
 		valueSub: `/ ${maybePrettyBytes(size)}`,
-		secondaryValue: `${maybePrettyBytes(available)} left`,
+		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
 		progress: BigNumber(used ?? 0 * 100)
 			.dividedBy(size ?? 0)
 			.toNumber(),
