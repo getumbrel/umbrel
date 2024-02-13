@@ -14,10 +14,11 @@ import {
 } from '@/shadcn-components/ui/drawer'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function WallpaperDrawer() {
-	const title = 'Wallpaper'
+	const title = t('wallpaper')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('wallpaper')
 
@@ -36,7 +37,7 @@ export function WallpaperDrawer() {
 			<DrawerContent fullHeight>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Choose your Umbrel wallpaper</DrawerDescription>
+					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					{isReady() && (

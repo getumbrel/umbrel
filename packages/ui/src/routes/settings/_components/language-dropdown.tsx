@@ -27,7 +27,13 @@ export function LanguageDropdown() {
 						key={code}
 						checked={activeCode === code}
 						onSelect={() => {
-							setActiveCode(code)
+							// Wait for the dropdown to close before changing the language
+							setTimeout(() => {
+								setActiveCode(code)
+								// Reload because I don't want to deal with the complexity of changing the language on the fly
+								// Keeping the state in sync with the language would be a pain
+								window.location.reload()
+							}, 200)
 						}}
 					>
 						{name}

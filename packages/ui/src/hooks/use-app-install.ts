@@ -5,6 +5,7 @@ import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppState, trpcClient, trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {progressStates} from '@/utils/misc'
 
 export type InstallState = 'loading' | 'uninstalled' | AppState
@@ -33,7 +34,7 @@ export function useUninstallAllApps() {
 		},
 		{
 			onSuccess: () => {
-				toast('Uninstalled all apps')
+				toast(t('apps.uninstalled-all.success'))
 				ctx.invalidate()
 			},
 		},
@@ -68,7 +69,7 @@ export function useAppInstall(id: string) {
 	const getAppsToUninstallFirst = async () => {
 		const appsToUninstallFirst = await getRequiredBy(id)
 		// We expect to have an array, even if it's empty
-		if (!appsToUninstallFirst) throw new Error('Failed to get required apps')
+		if (!appsToUninstallFirst) throw new Error(t('apps.uninstall.failed-to-get-required-apps'))
 		if (appsToUninstallFirst.length > 0) {
 			return appsToUninstallFirst.map((app) => app.id)
 		}

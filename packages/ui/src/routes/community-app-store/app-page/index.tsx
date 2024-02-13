@@ -8,6 +8,7 @@ import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
 import {TopHeader} from '@/modules/app-store/app-page/top-header'
 import {CommunityBadge} from '@/modules/community-app-store/community-badge'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export default function CommunityAppPage() {
 	const {appStoreId, appId} = useParams<{appStoreId: string; appId: string}>()
@@ -17,7 +18,7 @@ export default function CommunityAppPage() {
 
 	const app = appStore?.apps.find((app) => app.id === appId)
 
-	useUmbrelTitle(app?.name || 'Unknown App')
+	useUmbrelTitle(app?.name || t('unknown-app'))
 
 	if (!appStoreId) throw new Error('App store id expected.') // Putting before isLoading because we don't want to show the is loading state
 	if (registryQ.isLoading) return <Loading />

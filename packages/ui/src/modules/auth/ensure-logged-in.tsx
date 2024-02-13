@@ -1,7 +1,8 @@
-import { BareCoverMessage } from '@/components/ui/cover-message'
-import { trpcReact } from '@/trpc/trpc'
+import {BareCoverMessage} from '@/components/ui/cover-message'
+import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
-import { RedirectHome, RedirectLogin } from './redirects'
+import {RedirectHome, RedirectLogin} from './redirects'
 
 export function EnsureLoggedIn({children}: {children?: React.ReactNode}) {
 	return (
@@ -38,11 +39,11 @@ function EnsureLoggedInState({
 	// ---
 
 	if (isLoggedInQ.isLoading) {
-		return <BareCoverMessage delayed>Checking backend for user...</BareCoverMessage>
+		return <BareCoverMessage delayed>{t('auth.checking-backend-for-user')}</BareCoverMessage>
 	}
 
 	if (isLoggedInQ.isError) {
-		return <BareCoverMessage>Failed to check if user is logged in.</BareCoverMessage>
+		return <BareCoverMessage>{t('auth.failed-checking-if-user-logged-in')}</BareCoverMessage>
 	}
 
 	if (isLoggedIn === wantsLoggedIn) {

@@ -8,6 +8,7 @@ import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {factoryResetTitle} from './misc'
 
@@ -24,7 +25,7 @@ export function Resetting() {
 		onError: (err) => toast.error(err.message),
 	})
 
-	const message = (description ?? 'Connecting') + '...'
+	const message = (description ?? t('factory-reset.resetting.connecting')) + '...'
 	useUmbrelTitle(factoryResetTitle(message))
 
 	useInterval(factoryResetStatusQ.refetch, running ? 500 : null)
@@ -44,11 +45,11 @@ export function Resetting() {
 
 	return (
 		<div className={bareContainerClass}>
-			<BareLogoTitle>Factory Reset</BareLogoTitle>
+			<BareLogoTitle>{t('factory-reset')}</BareLogoTitle>
 			<BareSpacer />
 			<Progress value={progress}>{message}</Progress>
 			<div className='flex-1 pt-4' />
-			<Alert>Do not turn off your device until the reset is complete</Alert>
+			<Alert>{t('factory-reset.resetting.dont-turn-off-device')}</Alert>
 		</div>
 	)
 }

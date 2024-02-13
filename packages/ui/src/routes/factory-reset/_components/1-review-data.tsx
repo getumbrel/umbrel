@@ -12,7 +12,8 @@ import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {backPath, description, factoryResetTitle, title} from './misc'
 
 export function ReviewData() {
-	useUmbrelTitle(factoryResetTitle('Review data'))
+	const {t} = useTranslation()
+	useUmbrelTitle(factoryResetTitle(t('factory-reset.review')))
 	const navigate = useNavigate()
 
 	const userQ = trpcReact.user.get.useQuery()
@@ -22,31 +23,33 @@ export function ReviewData() {
 	const installedAppCount = userAppsQ.data?.length
 	const used = maybePrettyBytes(diskQ.data?.totalUsed)
 
-	const {t} = useTranslation()
-
 	return (
 		<ImmersiveDialogBody
-			title={title}
-			description={description}
-			bodyText='Following will be removed completely from your device'
+			title={title()}
+			description={description()}
+			bodyText={t('factory-reset.review.following-will-be-removed')}
 			footer={
 				<>
 					<ButtonLink to='/factory-reset/confirm' variant='destructive' size='dialog' className='min-w-0'>
-						Continue
+						{t('factory-reset.review.submit')}
 					</ButtonLink>
 					<Button size='dialog' className='min-w-0' onClick={() => navigate(backPath)}>
-						Cancel
+						{t('cancel')}
 					</Button>
 				</>
 			}
 		>
-			<ImmersiveDialogIconMessageKeyValue icon={TbUser} k='Account Info' v={userQ.data?.name} />
+			<ImmersiveDialogIconMessageKeyValue
+				icon={TbUser}
+				k={t('factory-reset.review.account-info')}
+				v={userQ.data?.name}
+			/>
 			<ImmersiveDialogIconMessageKeyValue
 				icon={TbShoppingBag}
-				k='Apps'
-				v={installedAppCount + ' installed ' + t('app', {count: installedAppCount})}
+				k={t('factory-reset.review.apps')}
+				v={t('factory-reset.review.installed-apps', {count: installedAppCount})}
 			/>
-			<ImmersiveDialogIconMessageKeyValue icon={TbServer} k='Total data' v={used} />
+			<ImmersiveDialogIconMessageKeyValue icon={TbServer} k={t('factory-reset.review.total-data')} v={used} />
 		</ImmersiveDialogBody>
 	)
 }

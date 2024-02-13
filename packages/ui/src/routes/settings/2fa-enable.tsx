@@ -25,16 +25,17 @@ import {
 } from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export default function TwoFactorEnableDialog() {
-	const title = 'Enable two-factor authentication'
+	const title = t('2fa.enable.title')
 	useUmbrelTitle(title)
 	const isMobile = useIsMobile()
 
 	const dialogProps = useDialogOpenProps('2fa-enable')
 
-	const scanThisMessage = 'Scan this QR code using an authenticator app like Google Authenticator or Authy'
+	const scanThisMessage = t('2fa.enable.scan-this')
 
 	if (isMobile) {
 		return (
@@ -42,7 +43,7 @@ export default function TwoFactorEnableDialog() {
 				<DrawerContent fullHeight>
 					<DrawerHeader>
 						<DrawerTitle>{title}</DrawerTitle>
-						<DrawerDescription>Add a layer of security to login</DrawerDescription>
+						<DrawerDescription>{t('2fa.enable.description')}</DrawerDescription>
 					</DrawerHeader>
 					<DrawerScroller>
 						<p className={paragraphClass}>{scanThisMessage}</p>
@@ -92,13 +93,11 @@ function Inner({qrCodeSize = 240}: {qrCodeSize?: number}) {
 				/>
 			</AnimateInQr>
 			<div className='w-full space-y-2 text-center'>
-				<p className='text-15 font-normal -tracking-2 opacity-60'>Or paste the following code in the app</p>
+				<p className='text-15 font-normal -tracking-2 opacity-60'>{t('2fa.enable.or-paste')}</p>
 				<CopyableField value={totpUri} />
 			</div>
 			<Separator />
-			<p className='text-center text-17 font-normal leading-tight -tracking-2'>
-				Enter the code displayed in your authenticator app
-			</p>
+			<p className='text-center text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput autoFocus length={6} onCodeCheck={enable} />
 			<div className='mb-4' />
 		</>

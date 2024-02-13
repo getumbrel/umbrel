@@ -1,6 +1,7 @@
 import BigNumber from 'bignumber.js'
 import {sort} from 'remeda'
 
+import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {isMemoryLow, trpcMemoryToLocal} from '@/utils/system'
@@ -30,9 +31,9 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 
 	if (isLoading) {
 		return {
-			value: '–',
-			valueSub: '/ –',
-			secondaryValue: '– left',
+			value: LOADING_DASH,
+			valueSub: '/ ' + LOADING_DASH,
+			secondaryValue: LOADING_DASH + ' left',
 			progress: 0,
 		}
 	}

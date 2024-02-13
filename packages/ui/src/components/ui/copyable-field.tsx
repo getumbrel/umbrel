@@ -5,6 +5,7 @@ import {useIsFocused} from 'use-is-focused'
 
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function CopyableField({
@@ -59,7 +60,7 @@ export function CopyableField({
 					</button>
 				</TooltipTrigger>
 				{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
-				<TooltipContent>Copied</TooltipContent>
+				<TooltipContent>{t('clipboard.copied')}</TooltipContent>
 			</Tooltip>
 		</div>
 	)

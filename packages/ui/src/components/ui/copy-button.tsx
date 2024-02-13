@@ -3,6 +3,7 @@ import {TbCopy} from 'react-icons/tb'
 import {useCopyToClipboard} from 'react-use'
 
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function CopyButton({value}: {value: string}) {
@@ -25,7 +26,7 @@ export function CopyButton({value}: {value: string}) {
 				</button>
 			</TooltipTrigger>
 			{/* TODO: consider putting in portal to avoid inheriting parent's styling */}
-			<TooltipContent>Copied</TooltipContent>
+			<TooltipContent>{t('clipboard.copied')}</TooltipContent>
 		</Tooltip>
 	)
 }

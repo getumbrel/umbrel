@@ -4,6 +4,7 @@ import {RegistryWidget} from '@/modules/widgets/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export const MAX_WIDGETS = 3
 
@@ -17,9 +18,9 @@ export const settingsWidgets: [
 		type: 'stat-with-progress',
 		endpoint: '/widgets/settings/storage-stat.json',
 		example: {
-			title: 'Storage',
+			title: t('storage'),
 			value: '256 GB',
-			progressLabel: '1.75 TB left',
+			progressLabel: t('something-left', {left: '1.75 TB'}),
 			progress: 0.25,
 		},
 	},
@@ -28,10 +29,10 @@ export const settingsWidgets: [
 		type: 'stat-with-progress',
 		endpoint: '/widgets/settings/memory-stat.json',
 		example: {
-			title: 'Memory',
+			title: t('memory'),
 			value: '5.8 GB',
 			valueSub: '/16GB',
-			progressLabel: '11.4 GB left',
+			progressLabel: t('something-left', {left: '11.4 GB'}),
 			progress: 0.36,
 		},
 	},
@@ -43,17 +44,17 @@ export const settingsWidgets: [
 			items: [
 				{
 					icon: 'system-widget-temperature',
-					title: 'Optimal',
+					title: t('temp.normal'),
 					value: '56℃',
 				},
 				{
 					icon: 'system-widget-storage',
-					title: 'Free',
+					title: t('free'),
 					value: '1.75 TB',
 				},
 				{
 					icon: 'system-widget-memory',
-					title: 'Memory',
+					title: t('memory'),
 					value: '5.8 GB',
 				},
 			],

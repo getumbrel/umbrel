@@ -14,9 +14,10 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export default function ShutdownDialog() {
-	useUmbrelTitle('Shut down')
+	useUmbrelTitle(t('shut-down'))
 	const dialogProps = useDialogOpenProps('shutdown')
 
 	const shutdownMut = trpcReact.system.shutdown.useMutation()
@@ -24,24 +25,22 @@ export default function ShutdownDialog() {
 	if (shutdownMut.isLoading || shutdownMut.isError) {
 		return (
 			<CoverMessage>
-				<Loading>Shutting down</Loading>
-				<CoverMessageParagraph>
-					Please do not refresh this page or turn off your Umbrel while it is shutting down.
-				</CoverMessageParagraph>
+				<Loading>{t('shut-down.shutting-down')}</Loading>
+				<CoverMessageParagraph>{t('shut-down.shutting-down-message')}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
 
 	// TODO: consider just doing throw here
 	if (shutdownMut.isError) {
-		return <CoverMessage>Failed to shut down.</CoverMessage>
+		return <CoverMessage>{t('shut-down.failed')}</CoverMessage>
 	}
 
 	return (
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiShutDownLine}>
-					<AlertDialogTitle>Are you sure you want to shut down your Umbrel?</AlertDialogTitle>
+					<AlertDialogTitle>{t('shut-down.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction
@@ -52,9 +51,9 @@ export default function ShutdownDialog() {
 							shutdownMut.mutate()
 						}}
 					>
-						Shut down
+						{t('shut-down.confirm.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

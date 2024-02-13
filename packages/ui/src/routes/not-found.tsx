@@ -11,6 +11,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
+import {t} from '@/utils/i18n'
 
 export function NotFound() {
 	const navigate = useNavigate()
@@ -21,12 +22,12 @@ export function NotFound() {
 			<AlertDialog open={true}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Not Found: 404</AlertDialogTitle>
+						<AlertDialogTitle>{t('not-found-404')}</AlertDialogTitle>
 						<AlertDialogDescription></AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={() => navigate(-1)}>Back</AlertDialogCancel>
-						<AlertDialogAction onClick={() => navigate('/')}>Home</AlertDialogAction>
+						<AlertDialogCancel onClick={() => navigate(-1)}>{t('not-found-404.back')}</AlertDialogCancel>
+						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

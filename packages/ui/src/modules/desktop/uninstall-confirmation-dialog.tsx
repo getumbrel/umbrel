@@ -9,6 +9,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
+import {t} from '@/utils/i18n'
 
 export function UninstallConfirmationDialog({
 	open,
@@ -27,7 +28,7 @@ export function UninstallConfirmationDialog({
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null
-	if (!app) throw new Error('App not found')
+	if (!app) throw new Error(t('app-not-found', {app: appId}))
 
 	const appName = app?.name
 
@@ -35,16 +36,14 @@ export function UninstallConfirmationDialog({
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Uninstall {appName}?</AlertDialogTitle>
-					<AlertDialogDescription>
-						All data associated with {appName} will be permanently deleted. This action cannot be undone.
-					</AlertDialogDescription>
+					<AlertDialogTitle>{t('app.uninstall.confirm.title', {app: appName})}</AlertDialogTitle>
+					<AlertDialogDescription>{t('app.uninstall.confirm.description', {app: appName})}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction variant='destructive' onClick={onConfirm}>
-						Uninstall
+						{t('app.uninstall.confirm.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

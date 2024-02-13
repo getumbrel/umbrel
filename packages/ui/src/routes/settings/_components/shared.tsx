@@ -1,3 +1,4 @@
+import {Trans} from 'react-i18next/TransWithoutContext'
 import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
@@ -13,11 +14,13 @@ export const cardErrorClass = cn(cardSecondaryValueClass, tw`animate-pulse leadi
 
 export function ContactSupportLink({className}: {className?: string}) {
 	return (
-		<div className={cn('mx-auto text-12 font-normal text-white/70', className)}>
-			Need help?{' '}
-			<Link className={linkClass} to={links.support}>
-				Contact support.
-			</Link>
-		</div>
+		<p className={cn('mx-auto text-12 font-normal text-white/70', className)}>
+			<Trans
+				i18nKey='settings.contact-support'
+				components={{
+					linked: <Link to={links.support} className={linkClass} target='_blank' />,
+				}}
+			/>
+		</p>
 	)
 }

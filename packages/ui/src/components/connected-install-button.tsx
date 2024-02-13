@@ -7,6 +7,7 @@ import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {useApps} from '@/providers/apps'
 import {RegistryApp} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {InstallButton, installButtonClass} from './install-button'
 
@@ -43,8 +44,8 @@ export function ConnectedInstallButton({
 	if (state === 'offline' || state === 'uninstalling') {
 		return (
 			<button disabled className={installButtonClass}>
-				{appInstall.state === 'offline' && 'Offline'}
-				{appInstall.state === 'uninstalling' && 'Uninstalling'}
+				{appInstall.state === 'offline' && t('app.offline')}
+				{appInstall.state === 'uninstalling' && t('app.uninstalling')}
 			</button>
 		)
 	}

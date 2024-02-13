@@ -8,11 +8,13 @@ export function ListRow({
 	description,
 	children,
 	isLabel = false,
+	disabled,
 }: {
 	title: string
 	description: React.ReactNode
 	children?: React.ReactNode
 	isLabel?: boolean
+	disabled?: boolean
 }) {
 	const El = isLabel ? 'label' : 'div'
 
@@ -22,6 +24,7 @@ export function ListRow({
 				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 py-4',
 				isLabel &&
 					'cursor-pointer bg-gradient-to-r from-transparent to-transparent hover:via-white/4 active:via-white/3',
+				disabled && 'pointer-events-none opacity-50',
 			)}
 		>
 			<div className='flex flex-col gap-1'>

@@ -8,11 +8,12 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 import {AppStorePreferencesContent} from '../app-store-preferences-content'
 
 export function AppStorePreferencesDrawer() {
-	const title = 'App Store Preferences'
+	const title = t('settings.app-store-preferences.title')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('app-store-preferences')
 
@@ -21,7 +22,7 @@ export function AppStorePreferencesDrawer() {
 			<DrawerContent fullHeight withScroll>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>App store settings & app updates</DrawerDescription>
+					<DrawerDescription>{t('app-store.description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					<div className='flex flex-col gap-5'>

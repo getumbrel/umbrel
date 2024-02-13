@@ -4,6 +4,7 @@ import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment, UNKNOWN} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
+import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function DeviceInfoContent({
@@ -24,12 +25,12 @@ export function DeviceInfoContent({
 			</div>
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
-					<span>Device</span>
-					<span className='pr-6 font-normal'>{umbrelHostEnvironment || UNKNOWN()}</span>
+					<span>{t('device-info.device')}</span>
+					<span className='pr-6 font-normal'>{maybeT(umbrelHostEnvironment)}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>
-						<span>Model number</span>
+						<span>{t('device-info.model-number')}</span>
 						<span className='flex items-center gap-2 font-normal'>
 							{modelNumber} <CopyButton value={modelNumber} />
 						</span>
@@ -37,14 +38,14 @@ export function DeviceInfoContent({
 				)}
 				{serialNumber && (
 					<div className={listItemClassNarrow}>
-						<span>Serial number</span>
+						<span>{t('device-info.serial-number')}</span>
 						<span className='flex items-center gap-2 font-normal'>
 							{serialNumber} <CopyButton value={serialNumber} />
 						</span>
 					</div>
 				)}
 				<div className={listItemClassNarrow}>
-					<span>Software version</span>
+					<span>{t('device-info.software-version')}</span>
 					<span className='pr-6 font-normal'>{osVersion ? `umbrelOS ${osVersion}` : UNKNOWN()}</span>
 				</div>
 			</div>

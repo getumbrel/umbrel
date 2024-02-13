@@ -13,10 +13,11 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function SoftwareUpdateDrawer() {
-	const title = 'Software update'
+	const title = t('software-update.title')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('software-update')
 
@@ -25,10 +26,8 @@ export function SoftwareUpdateDrawer() {
 	if (state === 'upgrading') {
 		return (
 			<CoverMessage>
-				<Loading>Updating to umbrelOS {latestVersion}</Loading>
-				<CoverMessageParagraph>
-					Please do not refresh this page or turn off your Umbrel while the update is in progress
-				</CoverMessageParagraph>
+				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
+				<CoverMessageParagraph>{t('do-not-while', {while: t('update')})}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
@@ -38,21 +37,21 @@ export function SoftwareUpdateDrawer() {
 			<DrawerContent>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Check for latest software version and upgrade to it</DrawerDescription>
+					<DrawerDescription>{t('software-update.description-long')}</DrawerDescription>
 				</DrawerHeader>
 				<div className='flex flex-col items-center py-8'>
 					<FadeInImg src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
 					<p className='text-15 -tracking-4'>umbrelOS {currentVersion}</p>
-					<p className='text-12 -tracking-2 opacity-50'>Currently running</p>
+					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>
 					{state === 'at-latest' && (
 						<>
-							<div className={versionMessageClass}>You’re on the latest version</div>
+							<div className={versionMessageClass}>{t('software-update.on-latest')}</div>
 							<Button variant='primary' size='dialog' onClick={checkLatest}>
-								Check for updates
+								{t('software-update.check-short')}
 							</Button>
 						</>
 					)}
@@ -60,7 +59,7 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>&nbsp;{/* Spacer */}</div>
 							<Button variant='primary' size='dialog' onClick={checkLatest} disabled={state === 'checking'}>
-								{state === 'checking' ? 'Checking for updates...' : 'Check for updates'}
+								{state === 'checking' ? t('software-update.checking') : t('software-update.check-short')}
 							</Button>
 						</>
 					)}
@@ -68,10 +67,10 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>
 								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
-								New version {latestVersion} is available
+								{t('software-update.new-version', {version: latestVersion})}
 							</div>
 							<Button variant='primary' size='dialog' onClick={upgrade}>
-								Update now
+								{t('software-update.update-now')}
 							</Button>
 						</>
 					)}

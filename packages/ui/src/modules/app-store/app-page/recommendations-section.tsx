@@ -3,6 +3,7 @@ import {Link, useLocation} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {RegistryApp} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
@@ -13,7 +14,7 @@ export const RecommendationsSection = ({apps}: {apps: RegistryApp[]}) => {
 
 	return (
 		<div className={cardClass}>
-			<h2 className={cardTitleClass}>You might also like</h2>
+			<h2 className={cardTitleClass}>{t('app-page.section.recommendations.title')}</h2>
 			{apps.map((app) => (
 				<AppWithDescriptionSmall
 					to={`/app-store/${app.id}`}

@@ -1,3 +1,4 @@
+import {t} from '@/utils/i18n'
 import {keyBy} from '@/utils/misc'
 
 export const categories = [
@@ -20,19 +21,19 @@ export type Categoryish = Category | 'all' | 'discover'
 // https://apps.umbrel.com/category/developer
 export const categoryishDescriptions = [
 	// categoryishes
-	{id: 'discover', label: 'Discover'},
-	{id: 'all', label: 'All apps'},
+	{id: 'discover', label: () => t('app-store.category.discover')},
+	{id: 'all', label: () => t('app-store.category.all')},
 	// categories
-	{id: 'files', label: 'Files & productivity'},
-	{id: 'bitcoin', label: 'Bitcoin'},
-	{id: 'finance', label: 'Finance'},
-	{id: 'media', label: 'Media'},
-	{id: 'networking', label: 'Networking'},
-	{id: 'social', label: 'Social'},
-	{id: 'automation', label: 'Home & automation'},
-	{id: 'ai', label: 'AI'},
-	{id: 'developer', label: 'Developer tools'},
-] as const satisfies readonly {id: Categoryish; label: string}[]
+	{id: 'files', label: () => t('app-store.category.files')},
+	{id: 'bitcoin', label: () => t('app-store.category.bitcoin')},
+	{id: 'finance', label: () => t('app-store.category.finance')},
+	{id: 'media', label: () => t('app-store.category.media')},
+	{id: 'networking', label: () => t('app-store.category.networking')},
+	{id: 'social', label: () => t('app-store.category.social')},
+	{id: 'automation', label: () => t('app-store.category.automation')},
+	{id: 'ai', label: () => t('app-store.category.ai')},
+	{id: 'developer', label: () => t('app-store.category.developer')},
+] as const satisfies readonly {id: Categoryish; label: () => string}[]
 
 export const categoryDescriptionsKeyed = keyBy(categoryishDescriptions, 'id')
 

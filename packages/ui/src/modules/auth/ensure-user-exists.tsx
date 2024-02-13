@@ -1,8 +1,8 @@
 import {ReloadPageButton} from '@/components/reload-page-button'
-import {BareCoverMessage, CoverMessage} from '@/components/ui/cover-message'
+import {BareCoverMessage} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {RedirectLogin, RedirectOnboarding} from './redirects'
 
@@ -49,7 +49,7 @@ function EnsureUser({
 	if (userExistsQ.isError) {
 		return (
 			<BareCoverMessage>
-				Failed to check if user exists.
+				{t('auth.failed-to-check-if-user-exists')}
 				<ReloadPageButton />
 			</BareCoverMessage>
 		)

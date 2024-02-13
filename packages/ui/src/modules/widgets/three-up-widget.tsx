@@ -1,3 +1,4 @@
+import {LOADING_DASH} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
@@ -22,9 +23,9 @@ export function ThreeUpWidget({
 			{items?.[2] && <ThreeUpItem iconName={items[2].icon} title={items[2].title} value={items[2].value} />}
 			{!items && (
 				<>
-					<ThreeUpItem iconName='' title='–' value='–' />
-					<ThreeUpItem iconName='' title='–' value='–' />
-					<ThreeUpItem iconName='' title='–' value='–' />
+					<ThreeUpItem iconName='' title={LOADING_DASH} value={LOADING_DASH} />
+					<ThreeUpItem iconName='' title={LOADING_DASH} value={LOADING_DASH} />
+					<ThreeUpItem iconName='' title={LOADING_DASH} value={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>

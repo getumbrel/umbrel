@@ -10,9 +10,10 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export function StartMigrationDrawer() {
-	const title = 'Migration Assistant'
+	const title = t('migration-assistant')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('start-migration')
 	const linkToDialog = useLinkToDialog()
@@ -25,13 +26,11 @@ export function StartMigrationDrawer() {
 						<MigrateImage />
 					</div>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>
-						Move data from Raspberry Pi to Umbrel Home seamlessly and migrate in few steps
-					</DrawerDescription>
+					<DrawerDescription>{t('migration-assistant-description-long')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
 					<ButtonLink to={linkToDialog('migration-assistant')} variant='primary' size='dialog'>
-						Start migration
+						{t('migration-assistant.mobile.start-button')}
 					</ButtonLink>
 				</DrawerFooter>
 			</DrawerContent>

@@ -3,6 +3,7 @@ import {Link, Outlet} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {tw} from '@/utils/tw'
 
 const storyLinks = [
@@ -74,6 +75,7 @@ export function StoriesLayout() {
 				className='umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'
 			>
 				<NavLink to='/'>👈 Home</NavLink>
+				<LanguageDropdown />
 				<span className='px-2'>|</span>
 				<NavLink to='/stories'>Stories</NavLink>
 				{storyLinks.map(({name, path}) => (

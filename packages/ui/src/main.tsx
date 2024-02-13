@@ -17,12 +17,13 @@ import {RemoteWallpaperInjector, WallpaperProvider} from './providers/wallpaper'
 import {router} from './router'
 import {TooltipProvider} from './shadcn-components/ui/tooltip'
 import {TrpcProvider} from './trpc/trpc-provider'
+import {t} from './utils/i18n'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
 	<React.StrictMode>
 		<IframeChecker>
 			{/* <UpdatingCover> */}
-			<ErrorBoundary fallback={<BareCoverMessage>Something went wrong.</BareCoverMessage>}>
+			<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
 				<TrpcProvider>
 					<EnsureBackendAvailable>
 						<WallpaperProvider>

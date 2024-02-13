@@ -11,6 +11,7 @@ import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
@@ -151,14 +152,16 @@ export function AppIconConnected({appId}: {appId: string}) {
 						</ContextMenuTrigger>
 						<ContextMenuContent>
 							<ContextMenuItem asChild>
-								<Link to={`/app-store/${appId}`}>Go to store page</Link>
+								<Link to={`/app-store/${appId}`}>{t('desktop.app.context.go-to-store-page')}</Link>
 							</ContextMenuItem>
 							<ContextMenuItem asChild>
-								<Link to={linkToDialog('default-credentials', {for: appId})}>Show default credentials</Link>
+								<Link to={linkToDialog('default-credentials', {for: appId})}>
+									{t('desktop.app.context.show-default-credentials')}
+								</Link>
 							</ContextMenuItem>
-							<ContextMenuItem onSelect={appInstall.restart}>Restart</ContextMenuItem>
+							<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
 							<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
-								Uninstall
+								{t('desktop.app.context.uninstall')}
 							</ContextMenuItem>
 						</ContextMenuContent>
 					</ContextMenu>

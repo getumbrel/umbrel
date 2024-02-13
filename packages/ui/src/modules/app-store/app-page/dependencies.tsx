@@ -6,6 +6,7 @@ import {Loading} from '@/components/ui/loading'
 import {useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {RegistryApp} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
@@ -17,12 +18,12 @@ export const DependenciesSection = ({app}: {app: RegistryApp}) => {
 
 	return (
 		<div className={cardClass}>
-			<h2 className={cardTitleClass}>Requires</h2>
+			<h2 className={cardTitleClass}>{t('app-page.section.requires')}</h2>
 			{app.dependencies?.map((dep) => (
 				<Dependency key={dep} app={appsKeyed[dep]} installed={!!userApps?.find((app) => app.id === dep)} />
 			))}
 			<a href={app.support} target='_blank' className='self-start font-medium text-brand-lighter'>
-				Get support
+				{t('app-page.section.requires.support')}
 			</a>
 		</div>
 	)
@@ -36,7 +37,7 @@ const Dependency = ({app, installed = false}: {app: RegistryApp; installed: bool
 			<TbCircleCheckFilled className='h-[18px] w-[18px] text-success-light' />
 		) : (
 			<Link to={`/app-store/${app.id}`} className='text-15 font-medium text-brand-lighter'>
-				Install
+				{t('app.install')}
 			</Link>
 		)}
 	</div>

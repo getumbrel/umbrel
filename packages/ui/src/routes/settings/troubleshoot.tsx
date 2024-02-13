@@ -6,15 +6,16 @@ import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export default function TroubleshootDialog() {
-	const title = 'Troubleshoot'
+	const title = t('troubleshoot')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('troubleshoot')
 
 	const tabs = [
-		{id: 'umbrel', label: 'Umbrel logs'},
-		{id: 'dmesg', label: 'DMESG logs'},
+		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
+		{id: 'dmesg', label: t('troubleshoot.dmesg-logs')},
 	]
 	const [activeTab, setActiveTab] = useState(tabs[0].id)
 
@@ -32,9 +33,9 @@ export default function TroubleshootDialog() {
 				</div>
 				<ImmersiveDialogFooter>
 					<Button variant='primary' size='dialog'>
-						Download {activeLabel}
+						{t('troubleshoot.download', {label: activeLabel})}
 					</Button>
-					<Button size='dialog'>Share with Umbrel Support </Button>
+					<Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button>
 				</ImmersiveDialogFooter>
 			</div>
 		</ImmersiveDialog>

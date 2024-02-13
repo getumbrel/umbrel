@@ -15,11 +15,12 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 
 export default function ChangePasswordDialog() {
-	const title = 'Change password'
+	const title = t('change-password')
 	useUmbrelTitle(title)
 
 	const dialogProps = useDialogOpenProps('change-password')
@@ -47,35 +48,36 @@ export default function ChangePasswordDialog() {
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
 								<DialogTitle>{title}</DialogTitle>
-								<DialogDescription>This is the password you use to unlock your Umbrel.</DialogDescription>
+								<DialogDescription>{t('change-password.description')}</DialogDescription>
 							</DialogHeader>
-							<ErrorAlert
-								icon={RiAlarmWarningFill}
-								description='If you lose your password, you won’t be able to log in to your Umbrel for eternity.'
-							/>
+							<ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
 							<PasswordInput
-								label='Current password'
+								label={t('change-password.current-password')}
 								value={password}
 								onValueChange={setPassword}
 								error={fieldErrors.oldPassword}
 							/>
 							<PasswordInput
-								label='New password'
+								label={t('change-password.new-password')}
 								value={newPassword}
 								onValueChange={setNewPassword}
 								error={fieldErrors.newPassword}
 							/>
-							<PasswordInput label='Repeat password' value={newPasswordRepeat} onValueChange={setNewPasswordRepeat} />
+							<PasswordInput
+								label={t('change-password.repeat-password')}
+								value={newPasswordRepeat}
+								onValueChange={setNewPasswordRepeat}
+							/>
 							<div className='-my-2.5'>
 								<AnimatedInputError>{formError}</AnimatedInputError>
 							</div>
 							<NoForgotPasswordMessage />
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
-									Change password
+									{t('change-password.submit')}
 								</Button>
 								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
-									Cancel
+									{t('cancel')}
 								</Button>
 							</DialogFooter>
 						</fieldset>

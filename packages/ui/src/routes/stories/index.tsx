@@ -24,6 +24,7 @@ import {toast} from '@/components/ui/toast'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
+import {NoForgotPasswordMessage} from '@/routes/settings/_components/no-forgot-password-message'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -81,6 +82,7 @@ import {
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {t} from '@/utils/i18n'
 import {fixmeHandler} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
@@ -90,6 +92,8 @@ export default function Stories() {
 	return (
 		<div className='flex flex-col gap-4 bg-white/20 p-4'>
 			<H1>Stories</H1>
+			<H2>i18n</H2>
+			<I18Examples />
 			<H2>Buttons</H2>
 			<Buttons />
 			<H2>Icons</H2>
@@ -147,6 +151,22 @@ export default function Stories() {
 					funny that they couldn't help but laugh. And once they started laughing, they couldn't stop.
 				</div>
 			</ScrollArea>
+		</div>
+	)
+}
+
+export function I18Examples() {
+	return (
+		<div>
+			<H3>Trans component</H3>
+			<NoForgotPasswordMessage />
+			<H3>Plurals</H3>
+			<p>{0 + ' installed ' + t('app', {count: 0})}</p>
+			<p>{1 + ' installed ' + t('app', {count: 1})}</p>
+			<p>{5 + ' installed ' + t('app', {count: 5})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 0})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 1})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 2})}</p>
 		</div>
 	)
 }

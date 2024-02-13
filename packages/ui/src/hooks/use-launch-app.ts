@@ -4,6 +4,7 @@ import urlJoin from 'url-join'
 import {useApps} from '@/providers/apps'
 import {UserApp} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {appToUrl, isOnionPage} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
@@ -37,7 +38,7 @@ export function useLaunchApp() {
 
 		if (!app) {
 			// return linkToDialog('app-not-found', {id: appId})
-			throw new Error(`App not found: ${appId}`)
+			throw new Error(t('app-not-found', {app: appId}))
 		}
 
 		// If we're already in the credentials dialog, don't show the dialog again.
@@ -49,9 +50,7 @@ export function useLaunchApp() {
 					openApp(app, options?.path)
 				} else {
 					// return linkToDialog('tor-error', {id: appId})
-					alert(
-						`${app.name} can only be used over Tor. Please access your Umbrel in a Tor browser on your remote access URL (Settings > Account > Remote access) to open this app.`,
-					)
+					alert(t('app-only-over-tor', {app: app.name}))
 				}
 			} else {
 				openApp(app, options?.path)

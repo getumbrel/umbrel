@@ -1,3 +1,4 @@
+import {LOADING_DASH} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
@@ -16,10 +17,10 @@ export function FourUpWidget({
 			))}
 			{!items && (
 				<>
-					<FourUpItem title='–' value='–' valueSub='–' />
-					<FourUpItem title='–' value='–' valueSub='–' />
-					<FourUpItem title='–' value='–' valueSub='–' />
-					<FourUpItem title='–' value='–' valueSub='–' />
+					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>

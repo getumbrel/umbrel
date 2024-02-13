@@ -1,3 +1,5 @@
+import {LOADING_DASH} from '@/constants'
+
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
 export function ActionsWidget({
@@ -14,7 +16,7 @@ export function ActionsWidget({
 }) {
 	return (
 		<WidgetContainer onClick={onClick} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
-			{!actions && <ActionItem emoji='' title={'–'} />}
+			{!actions && <ActionItem emoji='' title={LOADING_DASH} />}
 			{actions?.[0] && <ActionItem emoji={actions?.[0].emoji} title={actions?.[0].title} />}
 			{actions?.[1] && (
 				<div className='origin-left scale-90 opacity-60'>
@@ -32,7 +34,7 @@ export function ActionsWidget({
 				</div>
 			)}
 			<div className='absolute bottom-3 right-3 text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
-				{count && count > 999 ? '999+' : count ?? '–'}
+				{count && count > 999 ? '999+' : count ?? LOADING_DASH}
 			</div>
 		</WidgetContainer>
 	)

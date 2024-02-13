@@ -9,11 +9,12 @@ import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
 import {TopHeader} from '@/modules/app-store/app-page/top-header'
 import {useApps} from '@/providers/apps'
 import {useAvailableApp, useAvailableApps} from '@/providers/available-apps'
+import {t} from '@/utils/i18n'
 
 export default function AppPage() {
 	const {appId} = useParams()
 	const {app, isLoading} = useAvailableApp(appId)
-	useUmbrelTitle(app?.name || 'Unknown App')
+	useUmbrelTitle(app?.name || t('unknown-app'))
 
 	const {apps, isLoading: isLoadingApps} = useAvailableApps()
 	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()

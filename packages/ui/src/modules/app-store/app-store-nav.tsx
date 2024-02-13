@@ -53,7 +53,7 @@ export function AppStoreNav({activeId}: {activeId: Categoryish}) {
 					size={size}
 					unstable_viewTransition
 				>
-					{category.label}
+					{category.label()}
 				</ButtonLink>
 			))}
 		</FadeScroller>

@@ -5,6 +5,7 @@ import {ExternalToast} from 'sonner'
 import {toast} from '@/components/ui/toast'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {trpcClient} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
 
 export function useSettingsNotificationCount() {
@@ -52,7 +53,7 @@ export function useSettingsNotificationCount() {
 
 			const toastOptions: ExternalToast = {
 				action: {
-					label: 'Open Settings',
+					label: t('notifications.open-settings'),
 					onClick: () => {
 						navigate(`/settings#${SETTINGS_SYSTEM_CARDS_ID}`)
 					},
@@ -63,27 +64,30 @@ export function useSettingsNotificationCount() {
 
 			if (version !== latestAvailableVersion) {
 				currCount++
-				const id = toast.info('New version available!', toastOptions)
+				const id = toast.info(t('notifications.new-version-available'), toastOptions)
 				toastIds.push(id)
 			}
 
 			if (isCpuTooHot(cpuTemp)) {
 				currCount++
-				const id = toast.error('Too hot!', toastOptions)
+				const id = toast.error(t('notifications.cpu.too-hot'), toastOptions)
 				toastIds.push(id)
 			}
 
 			if (isTrpcDiskFull(disk)) {
 				currCount++
-				const id = toast.error('Disk is full!', toastOptions)
+				const id = toast.error(t('notifications.storage.full'), toastOptions)
 				toastIds.push(id)
 			} else if (isTrpcDiskLow(disk)) {
 				currCount++
+				// TODO: show message when disk is low?
+				// const id = toast.error(t('notifications.storage.low'), toastOptions)
+				// toastIds.push(id)
 			}
 
 			if (isTrpcMemoryLow(memory)) {
 				currCount++
-				const id = toast.warning('Low disk space!', toastOptions)
+				const id = toast.warning(t('notifications.memory.low'), toastOptions)
 				toastIds.push(id)
 			}
 

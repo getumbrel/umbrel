@@ -8,6 +8,7 @@ import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} fr
 import {Popover, PopoverAnchor, PopoverClose, PopoverContent} from '@/shadcn-components/ui/popover'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 
 export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 	const [show, setShow] = useState(false)
@@ -21,7 +22,7 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 				<ContextMenuTrigger>{children}</ContextMenuTrigger>
 				<ContextMenuContent ref={contentRef}>
 					<ContextMenuItem asChild>
-						<Link to='/edit-widgets'>Edit widgets</Link>
+						<Link to='/edit-widgets'>{t('desktop.context-menu.edit-widgets')}</Link>
 					</ContextMenuItem>
 					<ContextMenuItem
 						onSelect={() => {
@@ -34,10 +35,10 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 							setTimeout(() => setShow(true), 200)
 						}}
 					>
-						Change wallpaper
+						{t('desktop.context-menu.change-wallpaper')}
 					</ContextMenuItem>
 					<ContextMenuItem asChild className={contextMenuClasses.item.rootDestructive}>
-						<Link to={{search: addLinkSearchParams({dialog: 'logout'})}}>Log out</Link>
+						<Link to={{search: addLinkSearchParams({dialog: 'logout'})}}>{t('desktop.context-menu.logout')}</Link>
 					</ContextMenuItem>
 				</ContextMenuContent>
 			</ContextMenu>
@@ -61,6 +62,6 @@ const CloseButton = ({className}: {className: string}) => (
 		)}
 	>
 		<RiCloseCircleFill className='h-4 w-4' />
-		<span className='sr-only'>Close</span>
+		<span className='sr-only'>{t('close')}</span>
 	</PopoverClose>
 )

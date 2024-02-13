@@ -6,9 +6,10 @@ import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/
 import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export default function TwoFactorDisableDialog() {
-	const title = 'Disable two-factor authentication'
+	const title = t('2fa.disable.title')
 	useUmbrelTitle(title)
 
 	const dialogProps = useDialogOpenProps('2fa-disable')
@@ -21,7 +22,7 @@ export default function TwoFactorDisableDialog() {
 				<DrawerContent fullHeight>
 					<DrawerHeader>
 						<DrawerTitle>{title}</DrawerTitle>
-						<DrawerDescription>Remove a layer of security to login</DrawerDescription>
+						<DrawerDescription>{t('2fa.disable.description')}</DrawerDescription>
 					</DrawerHeader>
 					<Inner />
 				</DrawerContent>
@@ -50,9 +51,7 @@ function Inner() {
 	return (
 		<>
 			<Separator />
-			<p className='text-center text-17 font-normal leading-tight -tracking-2'>
-				Enter the code displayed in your authenticator app
-			</p>
+			<p className='text-center text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput autoFocus length={6} onCodeCheck={disable} />
 		</>
 	)

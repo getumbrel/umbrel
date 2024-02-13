@@ -1,22 +1,30 @@
 import {t} from '@/utils/i18n'
 
 export const UNKNOWN = () => t('unknown')
+// This is an en dash (U+2013)
+export const LOADING_DASH = '–'
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-export type UmbrelHostEnvironment = 'umbrel-home' | 'raspberry-pi' | 'linux'
+const hostEnvironments = ['umbrel-home', 'raspberry-pi', 'linux'] as const
+export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
+
+// NOTE: ensure this is in sync with the `hostEnvironments` array
+;[t('umbrel-home'), t('raspberry-pi'), t('linux')]
 
 export const hostEnvironmentMap = {
 	'umbrel-home': {
-		title: 'Umbrel Home',
 		icon: '/figma-exports/system-umbrel-home.png',
 	},
 	'raspberry-pi': {
-		title: 'Raspberry Pi',
 		icon: '/figma-exports/system-pi.svg',
 	},
 	linux: {
-		title: 'Linux',
 		icon: '/figma-exports/system-tux.svg',
 	},
-} satisfies Record<UmbrelHostEnvironment, {title: string; icon: string}>
+} satisfies Record<
+	UmbrelHostEnvironment,
+	{
+		icon?: string
+	}
+>

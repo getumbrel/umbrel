@@ -8,6 +8,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
@@ -75,7 +76,7 @@ export function Dock() {
 				<DockItem
 					to={hasInstalledApps ? systemAppsKeyed['widgets'].systemAppTo : undefined}
 					onClick={() => {
-						toast.info('Install an app before using widgets.')
+						toast.info(t('widgets.install-an-app-before-using-widgets'))
 					}}
 					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
 					bg={systemAppsKeyed['widgets'].icon}

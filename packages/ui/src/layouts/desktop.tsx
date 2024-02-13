@@ -7,6 +7,7 @@ import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
 import {useApps} from '@/providers/apps'
+import {t} from '@/utils/i18n'
 
 export function Desktop() {
 	const {userApps, isLoading} = useApps()
@@ -23,14 +24,14 @@ export function Desktop() {
 }
 
 function InstallFirstAppPage() {
-	const title = 'Install your first app'
+	const title = t('install-your-first-app')
 	useUmbrelTitle(title)
 
 	return <InstallFirstApp title={title} />
 }
 
 function DesktopPage() {
-	useUmbrelTitle('Desktop')
+	useUmbrelTitle(t('desktop.title'))
 	const {open, setOpen} = useCmdkOpen()
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect

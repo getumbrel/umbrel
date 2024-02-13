@@ -1,7 +1,9 @@
 import BigNumber from 'bignumber.js'
 import {sort} from 'remeda'
 
+import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {isDiskFull, isDiskLow, trpcDiskToLocal} from '@/utils/system'
 
@@ -31,9 +33,9 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 
 	if (isLoading) {
 		return {
-			value: '–',
-			valueSub: '/ –',
-			secondaryValue: '– left',
+			value: LOADING_DASH,
+			valueSub: '/ ' + LOADING_DASH,
+			secondaryValue: LOADING_DASH + ' left',
 			progress: 0,
 		}
 	}
@@ -41,7 +43,7 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 	return {
 		value: maybePrettyBytes(used),
 		valueSub: `/ ${maybePrettyBytes(size)}`,
-		secondaryValue: `${maybePrettyBytes(available)} left`,
+		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
 		progress: BigNumber(used ?? 0 * 100)
 			.dividedBy(size ?? 0)
 			.toNumber(),

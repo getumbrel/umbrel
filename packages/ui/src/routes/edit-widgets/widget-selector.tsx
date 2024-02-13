@@ -12,6 +12,7 @@ import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 
 export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
 	// Delay until after `usePager` has injected CSS vars
@@ -136,7 +137,7 @@ function WidgetSheet({
 							)}
 						>
 							<SheetHeader>
-								<SheetTitle>Select up to 3 widgets</SheetTitle>
+								<SheetTitle>{t('widgets.edit.select-up-to-3-widgets')}</SheetTitle>
 							</SheetHeader>
 							{children}
 							<DockSpacer />

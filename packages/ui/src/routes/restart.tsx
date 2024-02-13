@@ -6,6 +6,7 @@ import {Loading} from '@/components/ui/loading'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export default function Restart() {
 	const navigate = useNavigate()
@@ -23,9 +24,9 @@ export default function Restart() {
 	if (restartMut.isError) {
 		return (
 			<CoverMessage>
-				Failed to restart.
+				{t('restart.failed')}
 				<Button size='sm' className='inline' onClick={() => restartMut.mutate()}>
-					Try Again
+					{t('restart.try-again')}
 				</Button>
 			</CoverMessage>
 		)
@@ -33,10 +34,8 @@ export default function Restart() {
 
 	return (
 		<CoverMessage>
-			<Loading>Restarting</Loading>
-			<CoverMessageParagraph>
-				Please do not refresh this page or turn off your Umbrel while it is restarting.
-			</CoverMessageParagraph>
+			<Loading>{t('restart.restarting')}</Loading>
+			<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
 		</CoverMessage>
 	)
 }

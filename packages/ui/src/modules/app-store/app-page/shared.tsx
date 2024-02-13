@@ -3,6 +3,7 @@ import {useState} from 'react'
 import {Markdown} from '@/components/markdown'
 import {cardFaintClass} from '@/modules/app-store/shared'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function ReadMoreMarkdownSection({children, collapseClassName}: {children: string; collapseClassName: string}) {
@@ -17,7 +18,7 @@ export function ReadMoreMarkdownSection({children, collapseClassName}: {children
 				onClick={toggle}
 				className='self-start text-13 font-medium text-brand-lighter transition-colors hover:text-brand group-hover:text-brand'
 			>
-				{isExpanded ? 'Read less' : 'Read more'}
+				{isExpanded ? t('read-less') : t('read-more')}
 			</button>
 		</>
 	)

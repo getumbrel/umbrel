@@ -10,8 +10,9 @@ import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
-const title = 'Migration Assistant'
+const title = t('migration-assistant')
 
 export default function MigrationAssistantDialog() {
 	useUmbrelTitle(title)
@@ -33,11 +34,13 @@ function MigrationAssistantPrep() {
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
 
+	const buttonStartText = t('migration-assistant.prep.button-start')
+
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description='Transfer your umbrelOS from a Pi-based device to Umbrel Home in 3 steps'
-			bodyText='Prepare for migration'
+			description={t('migration-assistant.description')}
+			bodyText={t('migration-assistant.prep.body')}
 			footer={
 				<>
 					<Button
@@ -52,7 +55,7 @@ function MigrationAssistantPrep() {
 							})
 						}}
 					>
-						Start Migration
+						{buttonStartText}
 					</Button>
 					{/* TODO: consider not extending this component and instead hardcode the alert here */}
 					<ErrorAlert
@@ -61,16 +64,21 @@ function MigrationAssistantPrep() {
 						description={
 							<div className='-my-1 flex items-center items-baseline gap-1'>
 								<RiAlertFill className='h-3 w-3 shrink-0 translate-y-[1.5px]' />
-								The data in Umbrel Home, if any, will be permanently deleted
+								{t('migration-assistant.prep.callout')}
 							</div>
 						}
 					/>
 				</>
 			}
 		>
-			<ImmersiveDialogIconMessage icon={TbPower} title='Shut down Raspberry Pi Umbrel' />
-			<ImmersiveDialogIconMessage icon={TbUsb} title='Connect its SSD to Umbrel Home via USB' />
-			<ImmersiveDialogIconMessage icon={TbArrowBadgeRight} title='Once done, click ‘Continue’ below.' />
+			<ImmersiveDialogIconMessage icon={TbPower} title={t('migration-assistant.prep.shut-down-rpi')} />
+			<ImmersiveDialogIconMessage icon={TbUsb} title={t('migration-assistant.prep.connect-disk-to-home')} />
+			<ImmersiveDialogIconMessage
+				icon={TbArrowBadgeRight}
+				title={t('migration-assistant.prep.prep-done-continue-message', {
+					button: buttonStartText,
+				})}
+			/>
 		</ImmersiveDialogBody>
 	)
 }
@@ -82,8 +90,8 @@ function MigrationAssistantErrors() {
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description='Transfer your umbrelOS from a Pi-based device to Umbrel Home in 3 steps'
-			bodyText='Something’s not right...'
+			description={t('migration-assistant.description')}
+			bodyText={t('migration-assistant.failed')}
 			footer={
 				<>
 					<Button
@@ -98,7 +106,7 @@ function MigrationAssistantErrors() {
 							})
 						}
 					>
-						Try Again
+						{t('migration-assistant.try-again')}
 					</Button>
 				</>
 			}
@@ -106,14 +114,14 @@ function MigrationAssistantErrors() {
 			<ImmersiveDialogIconMessage
 				icon={TbAlertTriangleFilled}
 				iconClassName='text-[#FFC107] [&>*]:stroke-none'
-				title='Couldn’t detect an SSD'
-				description='Make sure you’ve connected Raspberry Pi Umbrel’s SSD to your Umbrel Home'
+				title={t('migration-assistant.failed.ssd-not-detected.title')}
+				description={t('migration-assistant.failed.ssd-not-detected.description')}
 			/>
 			<ImmersiveDialogIconMessage
 				icon={TbAlertTriangleFilled}
 				iconClassName='text-[#FFC107] [&>*]:stroke-none'
-				title='Incorrect SSD'
-				description='Make sure you’ve connected Raspberry Pi Umbrel’s SSD to your Umbrel Home'
+				title={t('migration-assistant.failed.incorrect-ssd.title')}
+				description={t('migration-assistant.failed.incorrect-ssd.description')}
 			/>
 		</ImmersiveDialogBody>
 	)
@@ -128,26 +136,26 @@ function MigrationAssistantReady() {
 
 	return (
 		<ImmersiveDialogBody
-			title='You’re all set to migrate!'
-			description='umbrelOS is ready to be migrated to Umbrel Home'
-			bodyText='Things to keep in mind'
+			title={t('migration-assistant.ready.title')}
+			description={t('migration-assistant.ready.description')}
+			bodyText={t('migration-assistant.ready.hint-header')}
 			footer={
 				<>
 					<Button variant='primary' size='dialog' className='w-full md:w-auto' onClick={() => migrateMut.mutate()}>
-						Continue migration
+						{t('migration-assistant.continue-migration.ready.submit')}
 					</Button>
 				</>
 			}
 		>
 			<ImmersiveDialogIconMessage
 				icon={TbLock}
-				title='Use the same password'
-				description='Remember to use Raspberry Pi Umbrel’s password to unlock your Umbrel Home'
+				title={t('migration-assistant.ready.hint-use-same-password.title')}
+				description={t('migration-assistant.ready.hint-use-same-password.description')}
 			/>
 			<ImmersiveDialogIconMessage
 				icon={TbPower}
-				title='Keep your Raspberry Pi off after the update'
-				description='This helps prevent issues with apps such as Lightning Node'
+				title={t('migration-assistant.ready.hint-keep-pi-off.title')}
+				description={t('migration-assistant.ready.hint-keep-pi-off.description')}
 			/>
 		</ImmersiveDialogBody>
 	)

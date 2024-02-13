@@ -1,8 +1,9 @@
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import FailedLayout from '@/modules/bare/failed-layout'
+import {t} from '@/utils/i18n'
 
 export default function MigrateFailed() {
-	const title = 'Migration failed'
+	const title = t('migrate.failed.title')
 	useUmbrelTitle(title)
 
 	return (
@@ -10,12 +11,12 @@ export default function MigrateFailed() {
 			title={title}
 			description={
 				<>
-					There was an error during migration.
+					{t('migrate.failed.description')}
 					<br />
-					Please try again.
+					{t('migrate.failed.please-try-again')}
 				</>
 			}
-			buttonText='Retry migration'
+			buttonText={t('migrate.failed.retry')}
 			to='/migrate'
 		/>
 	)

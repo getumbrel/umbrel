@@ -1,4 +1,5 @@
 import {Arc} from '@/components/ui/arc'
+import {LOADING_DASH} from '@/constants'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 
 import {WidgetContainer} from './shared/shared'
@@ -26,8 +27,8 @@ export function TwoUpWidget({items, onClick}: {items?: [TwoUpItem, TwoUpItem]; o
 			)}
 			{!items && (
 				<>
-					<TwoUpItem title='–' value='–' />
-					<TwoUpItem title='–' value='–' />
+					<TwoUpItem title={LOADING_DASH} value={LOADING_DASH} />
+					<TwoUpItem title={LOADING_DASH} value={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>

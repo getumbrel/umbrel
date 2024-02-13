@@ -1,10 +1,11 @@
 import {CSSProperties, useEffect, useRef} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
-import {UNKNOWN} from '@/constants'
+import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {AnimatedNumber} from './ui/animated-number'
 
@@ -77,22 +78,23 @@ export function InstallButton({
 		>
 			{state === 'uninstalled' && (
 				<>
-					Install <span className='whitespace-nowrap uppercase -tracking-normal opacity-40'>{installSize}</span>
+					{t('app.install')}{' '}
+					<span className='whitespace-nowrap uppercase -tracking-normal opacity-40'>{installSize}</span>
 				</>
 			)}
 			{state === 'installing' && (
 				<>
 					{/* 4ch to fit "100%", tabular-nums so each char is the same width */}
-					Installing{' '}
+					{t('app.installing')}{' '}
 					<span className='w-[4ch] text-right tabular-nums -tracking-[0.08em] opacity-40'>
 						{progress === undefined ? UNKNOWN() : <AnimatedNumber to={progress} />}%
 					</span>
 				</>
 			)}
-			{state === 'ready' && 'Open'}
-			{state === 'offline' && 'Offline'}
-			{state === 'loading' && '–'}
-			{state === 'uninstalling' && 'Uninstalling...'}
+			{state === 'ready' && t('app.open')}
+			{state === 'offline' && t('app.offline')}
+			{state === 'loading' && LOADING_DASH}
+			{state === 'uninstalling' && t('app.uninstalling') + '...'}
 		</button>
 	)
 }
