@@ -4,6 +4,8 @@ import yaml from 'js-yaml'
 import type Umbreld from '../../index.js'
 import {type AppManifest} from './schema.js'
 
+import appScript from './legacy-compat/app-script.js'
+
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
 }
@@ -29,14 +31,25 @@ export default class App {
 		return readYaml(`${this.dataDirectory}/umbrel-app.yml`) as Promise<AppManifest>
 	}
 
+	async install() {
+		// TODO: Do not allow installing if the app is already installed
+
+		await appScript(this.#umbreld, 'install', this.id)
+
+		return true
+	}
+
 	async start() {
 		// TODO: Implement start
+		await appScript(this.#umbreld, 'start', this.id)
 
 		return true
 	}
 
 	async stop() {
 		// TODO: Implement stop
+
+		await appScript(this.#umbreld, 'stop', this.id)
 
 		return true
 	}
