@@ -9,7 +9,6 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
-    <br />
     Buy an <a href="https://umbrel.com">Umbrel Home</a> or install on:
     <br />
     <a href="https://umbrel.com/#start">Raspberry Pi</a>
@@ -35,6 +34,9 @@
 </p>
 
 <br />
+
+[![Watch the umbrelOS 1.0 reveal](https://github.com/getumbrel/umbrel/assets/10330103/0b99b2b5-f090-464d-a865-a2eddb8d85c9)](https://www.youtube.com/watch?v=B3QtVPhOmNA)
+
 <br />
 
 <p align="center">
@@ -56,7 +58,7 @@ https://user-images.githubusercontent.com/10330103/191728171-67b7a8b1-d2b0-45f3-
 <br />
 
 ## Installing umbrelOS
-> umbrelOS is currently in beta and should not be considered secure. See [SECURITY.md](SECURITY.md) for more details.
+> umbrelOS 0.5 in beta and should not be considered secure. See [SECURITY.md](SECURITY.md) for more details.
 
 The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 4](https://download.umbrel.com/umbrel-os.zip). Step-by-step installation instructions can be found [here](https://umbrel.com/#start).
 
