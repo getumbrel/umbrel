@@ -1,5 +1,6 @@
 import {useRef} from 'react'
 import {useNavigate} from 'react-router-dom'
+import {useMount} from 'react-use'
 
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -23,6 +24,12 @@ export function ConfirmWithPassword({
 	const navigate = useNavigate()
 
 	const passwordRef = useRef<HTMLInputElement>(null)
+
+	// Clear password and errors so we don't see it when we come back to this page
+	useMount(() => {
+		onPasswordChange('')
+		mut.reset()
+	})
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
