@@ -30,9 +30,10 @@ export function AppsGridSection({overline, title, apps}: {overline: string; titl
 	)
 }
 
-export function AppsGridFaintSection({title, apps}: {title?: ReactNode; apps?: RegistryApp[]}) {
+export function AppsGridFaintSection({title, apps}: {title?: string; apps?: RegistryApp[]}) {
 	return (
-		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
+		// Key to run animation each time
+		<div className={cn(cardFaintClass, slideInFromBottomClass)} key={title}>
 			{title && <h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>}
 			<div className={appsGridClass}>{apps?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
