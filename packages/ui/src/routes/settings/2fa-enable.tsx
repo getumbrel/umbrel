@@ -50,6 +50,7 @@ export default function TwoFactorEnableDialog() {
 						<div className='flex flex-col items-center gap-5'>
 							{/* NOTE: keep this small so that the pin input is visible within the viewport */}
 							<Inner qrCodeSize={150} />
+							<div className='mb-4' />
 						</div>
 					</DrawerScroller>
 				</DrawerContent>
@@ -99,7 +100,6 @@ function Inner({qrCodeSize = 240}: {qrCodeSize?: number}) {
 			<Separator />
 			<p className='text-center text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput autoFocus length={6} onCodeCheck={enable} />
-			<div className='mb-4' />
 		</>
 	)
 }
