@@ -25,7 +25,9 @@ export function useUserName({onSuccess}: {onSuccess: () => void}) {
 
 		// Reset errors
 		setMut.reset()
-		setLocalError('')
+
+		// So setLocalError('') is not batched
+		await setLocalError('')
 
 		if (!name) {
 			setLocalError(t('change-name.failed.name-required'))

@@ -22,7 +22,8 @@ export function usePassword({onSuccess}: {onSuccess: () => void}) {
 
 		// Reset errors
 		changePasswordMut.reset()
-		setLocalError('')
+		// So setLocalError('') is not batched
+		await setLocalError('')
 
 		if (!password) {
 			setLocalError(t('change-password.failed.current-required'))

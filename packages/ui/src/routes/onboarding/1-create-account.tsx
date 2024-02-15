@@ -32,12 +32,12 @@ export default function CreateAccount() {
 		onSuccess: async () => loginMut.mutate({password, totpToken: ''}),
 	})
 
-	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
 		// Reset errors
 		registerMut.reset()
-		setLocalError('')
+		await setLocalError('')
 
 		if (!name) {
 			setLocalError(t('onboarding.create-account.failed.name-required'))
