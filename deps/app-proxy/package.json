@@ -19,6 +19,7 @@
     "http-proxy-middleware": "^2.0.4",
     "http-status-codes": "^2.2.0",
     "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
     "wait-port": "^0.2.9"
   },
   "devDependencies": {

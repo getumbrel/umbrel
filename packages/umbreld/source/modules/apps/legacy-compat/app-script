@@ -386,7 +386,7 @@ start_app() {
   execute_hook "${app}" "pre-start"
 
   # Start all the app's containers
-  compose "${app}" up --detach
+  compose "${app}" up --detach --build
 
   execute_hook "${app}" "post-start"
 }

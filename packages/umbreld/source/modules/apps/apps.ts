@@ -5,6 +5,8 @@ import randomToken from '../../modules/utilities/random-token.js'
 
 import type Umbreld from '../../index.js'
 
+import appEnvironment from './legacy-compat/app-environment.js'
+
 import App from './app.js'
 
 export default class Apps {
@@ -35,16 +37,8 @@ export default class Apps {
 			await fse.writeFile(umbrelSeedFile, randomToken(256))
 		}
 
-		// Create Docker network if not exist
-		const networks = await $`docker network ls --format json`
-		const hasUmbrelNetwork = networks.stdout
-			.split('\n')
-			.map((jsonString) => JSON.parse(jsonString))
-			.some((net) => net.Name === 'umbrel_main_network')
-		if (!hasUmbrelNetwork) {
-			this.logger.verbose('Creating Docker network')
-			await $`docker network create --subnet=10.21.0.0/16 umbrel_main_network`
-		}
+		// Start app environment
+		await appEnvironment(this.#umbreld, 'up')
 
 		this.logger.log('Starting apps')
 		// TODO: Start apps

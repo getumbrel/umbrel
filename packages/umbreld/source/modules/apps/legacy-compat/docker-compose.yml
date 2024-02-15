@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  tor_proxy:
+    container_name: tor_proxy
+    image: getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a
+    user: '1000:1000'
+    restart: on-failure
+    volumes:
+      - ${UMBREL_DATA_DIR}/tor/torrc-proxy:/etc/tor/torrc:ro
+      - ${UMBREL_DATA_DIR}/tor/data:/data
+    environment:
+      HOME: '/tmp'
+    networks:
+      default:
+        ipv4_address: $TOR_PROXY_IP
+  auth:
+    container_name: auth
+    # TODO: IMPORTANT build new image and use that here
+    # image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
+    user: '1000:1000'
+    build: ../../../deps/app-auth
+    restart: on-failure
+    environment:
+      PORT: $AUTH_PORT
+      UMBREL_AUTH_SECRET: $UMBREL_AUTH_SECRET
+      MANAGER_IP: $MANAGER_IP
+      MANAGER_PORT: 3006
+      DASHBOARD_IP: $DASHBOARD_IP
+      DASHBOARD_PORT: 3004
+      JWT_SECRET: $JWT_SECRET
+      UMBRELD_RPC_HOST: $UMBRELD_RPC_HOST
+    volumes:
+      - ${UMBREL_DATA_DIR}/tor/data:/var/lib/tor:ro
+      - ${UMBREL_DATA_DIR}/app-data:/app-data:ro
+    ports:
+      - '${AUTH_PORT}:${AUTH_PORT}'
+    networks:
+      default:
+        ipv4_address: $AUTH_IP
+networks:
+  default:
+    name: umbrel_main_network
+    ipam:
+      driver: default
+      config:
+        - subnet: '$NETWORK_IP/16'

@@ -4,6 +4,7 @@ import {promisify} from 'node:util'
 
 import express from 'express'
 import cors from 'cors'
+import {createProxyMiddleware} from 'http-proxy-middleware'
 
 import getOrCreateFile from '../utilities/get-or-create-file.js'
 import randomToken from '../utilities/random-token.js'
@@ -34,6 +35,10 @@ class Server {
 		return jwt.sign(await this.getJwtSecret())
 	}
 
+	async signProxyToken() {
+		return jwt.signProxyToken(await this.getJwtSecret())
+	}
+
 	async verifyToken(token: string) {
 		return jwt.verify(token, await this.getJwtSecret())
 	}
@@ -45,11 +50,6 @@ class Server {
 		// Create the handler
 
 		const app = express()
-
-		// Enable CORS in development
-		if (process.env.NODE_ENV === 'development') {
-			app.use(cors({origin: '*'}))
-		}
 
 		app.disable('x-powered-by')
 
@@ -67,6 +67,24 @@ class Server {
 
 		// Handle tRPC routes
 		app.use('/trpc', trpcHandler)
+
+		// If we have no API route hits then serve the ui at the root
+		// TODO: This should be configurable and only run in development
+		// in produciton we statically serve the built ui
+		app.use(
+			'/',
+			createProxyMiddleware({
+				target: 'http://localhost:3000',
+				ws: true,
+				logProvider: () => ({
+					log: this.logger.verbose,
+					debug: this.logger.verbose,
+					info: this.logger.verbose,
+					warn: this.logger.verbose,
+					error: this.logger.error,
+				}),
+			}),
+		)
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
 		// them here and log them.
