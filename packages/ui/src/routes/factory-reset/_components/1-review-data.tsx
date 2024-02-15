@@ -1,4 +1,3 @@
-import {useTranslation} from 'react-i18next'
 import {TbServer, TbShoppingBag, TbUser} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
@@ -7,12 +6,12 @@ import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/compone
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {backPath, description, factoryResetTitle, title} from './misc'
 
 export function ReviewData() {
-	const {t} = useTranslation()
 	useUmbrelTitle(factoryResetTitle(t('factory-reset.review.title')))
 	const navigate = useNavigate()
 

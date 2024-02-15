@@ -1,5 +1,4 @@
 import React, {Suspense} from 'react'
-import {useTranslation} from 'react-i18next'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
@@ -7,6 +6,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {t} from '@/utils/i18n'
 
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
@@ -115,7 +115,6 @@ function Dialog() {
 }
 
 export function Settings() {
-	const {t} = useTranslation()
 	const title = t('settings')
 	useUmbrelTitle(title)
 

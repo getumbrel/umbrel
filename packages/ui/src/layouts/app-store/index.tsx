@@ -1,7 +1,6 @@
 import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
 import {memo, useDeferredValue, useState} from 'react'
-import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
@@ -30,7 +29,6 @@ import {CommunityAppStoreDialog} from './community-app-store-dialog'
 import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
-	const {t} = useTranslation()
 	const title = t('app-store.title')
 	useUmbrelTitle(title)
 
