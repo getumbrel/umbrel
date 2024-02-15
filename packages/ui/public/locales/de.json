@@ -319,7 +319,7 @@
 	"troubleshoot.umbrel-logs": "Regenschirmprotokolle",
 	"trpc.backend-unavailable": "Backend nicht verfügbar.",
 	"trpc.checking-backend": "Backend wird überprüft...",
-	"umbrel": "Regenschirm",
+  "umbrel": "Umbrel",
 	"umbrel-home": "Regenschirm-Startseite",
 	"umbrelos-version": "umbrelOS-Version",
 	"unexpected-error": "Unerwarteter Fehler",
