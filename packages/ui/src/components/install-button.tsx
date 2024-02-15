@@ -88,6 +88,8 @@ export function InstallButton({
 			layout
 			disabled={!arrayIncludes(['uninstalled', 'ready'], state)}
 		>
+			{/* Child has `layout` too to prevent contenet from being scaled and stretched with the parent */}
+			{/* https://codesandbox.io/p/sandbox/framer-motion-2-scale-correction-z4tgr?file=%2Fsrc%2FApp.js&from-embed= */}
 			<motion.div
 				layout='position'
 				key={state}
