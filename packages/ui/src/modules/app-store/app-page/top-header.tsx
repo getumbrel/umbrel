@@ -45,13 +45,15 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 				)}
 
 				<div data-testid='app-top' className='flex flex-col items-center items-stretch gap-5 max-md:mt-5 md:flex-row'>
-					<div className='flex flex-1 items-center gap-2.5 max-md:px-2.5 md:gap-5'>
+					<div className='flex min-w-0 flex-1 items-center gap-2.5 max-md:px-2.5 md:gap-5'>
 						<AppIcon src={app.icon} size={isMobile ? 64 : 100} className='rounded-12 lg:rounded-20' />
-						<div className='flex flex-col items-start gap-1.5 py-1 md:gap-2'>
+						<div className='flex min-w-0 flex-col items-start gap-1.5 py-1 md:gap-2'>
 							<h1 className='flex flex-wrap items-center gap-2 text-16 font-semibold leading-inter-trimmed md:text-24'>
 								{app.name} {app.optimizedForUmbrelHome && <Badge>{t('app.optimized-for-umbrel-home')}</Badge>}
 							</h1>
-							<p className='text-12 leading-tight opacity-50 md:text-16'>{app.tagline}</p>
+							<p className='line-clamp-2 w-full text-12 leading-tight opacity-50 md:line-clamp-1  md:text-16'>
+								{app.tagline}
+							</p>
 							{!isMobile && (
 								<>
 									<div className='flex-1' />
