@@ -42,6 +42,7 @@ export default {
 				// Extracted from background
 				brand: 'hsl(var(--color-brand) / <alpha-value>)',
 				'brand-lighter': 'hsl(var(--color-brand-lighter) / <alpha-value>)',
+				'brand-lightest': 'hsl(var(--color-brand-lightest) / <alpha-value>)',
 				//
 				destructive: '#E03E3E',
 				destructive2: '#E22C2C',

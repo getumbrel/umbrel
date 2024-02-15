@@ -13,7 +13,7 @@ import {DockItem} from '@/modules/desktop/dock-item'
 import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
 import {AppsProvider} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
-import {brandHslLighter, wallpapers} from '@/providers/wallpaper'
+import {brandHslLighter, brandHslLightest, wallpapers} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
 
 export default function DesktopStory() {
@@ -209,6 +209,12 @@ function WallpaperExamples() {
 						<div
 							style={{
 								backgroundColor: `hsl(${brandHslLighter(w.brandColorHsl)})`,
+							}}
+							className='0 h-4 w-4'
+						/>
+						<div
+							style={{
+								backgroundColor: `hsl(${brandHslLightest(w.brandColorHsl)})`,
 							}}
 							className='0 h-4 w-4'
 						/>

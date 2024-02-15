@@ -186,6 +186,7 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 		const el = document.documentElement
 		el.style.setProperty('--color-brand', brandColorHsl)
 		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
+		el.style.setProperty('--color-brand-lightest', brandHslLightest(brandColorHsl))
 	}, [brandColorHsl])
 
 	useLayoutEffect(() => {
@@ -330,12 +331,19 @@ export function RemoteWallpaperInjector() {
 	return null
 }
 
-const LIGHTEN_AMOUNT = 8
-export function brandHslLighter(hsl: string) {
+export const LIGHTEN_AMOUNT = 8
+function brandHslLighterByAmount(hsl: string, amount: number) {
 	const tokens = hsl.split(' ')
 	const h = tokens[0]
 	const s = parseFloat(tokens[1])
 	const l = parseFloat(tokens[2].replace('%', ''))
-	const lLighter = l > 100 ? 100 : l + LIGHTEN_AMOUNT
+	const lLighter = l > 100 ? 100 : l + amount
 	return `${h} ${s}% ${lLighter}%`
+}
+
+export function brandHslLighter(hsl: string) {
+	return brandHslLighterByAmount(hsl, LIGHTEN_AMOUNT)
+}
+export function brandHslLightest(hsl: string) {
+	return brandHslLighterByAmount(hsl, LIGHTEN_AMOUNT * 2)
 }
