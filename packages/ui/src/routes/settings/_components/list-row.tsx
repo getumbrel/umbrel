@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {MouseEventHandler} from 'react'
 import {IconType} from 'react-icons'
 
 import {cn} from '@/shadcn-lib/utils'
@@ -9,12 +9,14 @@ export function ListRow({
 	children,
 	isLabel = false,
 	disabled,
+	onClick,
 }: {
 	title: string
 	description: React.ReactNode
 	children?: React.ReactNode
 	isLabel?: boolean
 	disabled?: boolean
+	onClick?: MouseEventHandler
 }) {
 	const El = isLabel ? 'label' : 'div'
 
@@ -26,6 +28,7 @@ export function ListRow({
 					'cursor-pointer bg-gradient-to-r from-transparent to-transparent hover:via-white/4 active:via-white/3',
 				disabled && 'pointer-events-none opacity-50',
 			)}
+			onClick={onClick}
 		>
 			<div className='flex flex-col gap-1'>
 				<h3 className='text-14 font-medium leading-none -tracking-2'>{title}</h3>

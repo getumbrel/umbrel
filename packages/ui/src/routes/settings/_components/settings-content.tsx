@@ -1,5 +1,5 @@
 import {formatDistance} from 'date-fns'
-import {useEffect} from 'react'
+import {useEffect, useState} from 'react'
 import {
 	RiEqualizerLine,
 	RiExpandRightFill,
@@ -21,12 +21,13 @@ import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
-import {LanguageDropdown} from './language-dropdown'
+import {LanguageDropdownContent, LanguageDropdownTrigger} from './language-dropdown'
 import {ListRow} from './list-row'
 import {MemoryCard} from './memory-card'
 import {ContactSupportLink} from './shared'
@@ -42,6 +43,8 @@ export function SettingsContent() {
 	const tor = useTorEnabled()
 	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
+
+	const [langOpen, setLangOpen] = useState(false)
 
 	const [userQ, uptimeQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
@@ -74,6 +77,7 @@ export function SettingsContent() {
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
 					<div>
 						<h2 className='text-24 font-bold leading-none -tracking-4'>
+							{/* TODO: interpolate here */}
 							{userQ.data?.name ?? UNKNOWN()}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
@@ -151,9 +155,16 @@ export function SettingsContent() {
 							</IconButton>
 						</ListRow>
 					)}
-					{/* TODO: make clicking trigger the dropdown */}
-					<ListRow title={t('language')} description={t('language-description')}>
-						<LanguageDropdown />
+					<ListRow
+						title={t('language')}
+						description={t('language-description')}
+						isLabel
+						onClick={() => setLangOpen(true)}
+					>
+						<DropdownMenu open={langOpen} onOpenChange={setLangOpen}>
+							<LanguageDropdownTrigger />
+							<LanguageDropdownContent />
+						</DropdownMenu>
 					</ListRow>
 					<ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
