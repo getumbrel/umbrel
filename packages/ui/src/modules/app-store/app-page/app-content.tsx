@@ -35,7 +35,8 @@ export function AppContent({
 					<AboutSection app={app} />
 					<ReleaseNotesSection app={app} />
 				</div>
-				<div className='flex w-80 flex-col gap-2.5'>
+				{/* Since contents can be arbitrarily wide, we wanna limit */}
+				<div className='flex flex-col gap-2.5 md:max-w-sm'>
 					{userApp && <SettingsSection userApp={userApp} />}
 					<InfoSection app={app} />
 					{hasDependencies && <DependenciesSection app={app} />}
