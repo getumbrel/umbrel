@@ -1,4 +1,4 @@
-import {ComponentPropsWithoutRef, ForwardedRef, forwardRef, useEffect, useRef} from 'react'
+import {ComponentPropsWithoutRef, ForwardedRef, forwardRef, useLayoutEffect, useRef} from 'react'
 
 import './index.css'
 
@@ -16,7 +16,8 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 	const ref = useRef<HTMLDivElement>(null)
 
 	// TODO: consider re-running this effect when window is resized
-	useEffect(() => {
+	// NOTE: useLayoutEffect is used to avoid flicker when fading is rendered
+	useLayoutEffect(() => {
 		// Horizontal scroll in chrome adds fading via scroll-timeline even when it shouldn't. This happens in the 3-up section of the app store
 		// Animating in the side fades also doesn't work because the positions of the gradient markers would be based on the scroll position
 		const el = ref!.current
