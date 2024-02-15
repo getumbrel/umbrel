@@ -137,12 +137,6 @@ a {
 	@apply mt-1 md:mt-2.5;
 }
 
-@property --progress {
-	syntax: '<percentage>';
-	inherits: false;
-	initial-value: 0%;
-}
-
 @keyframes animate-arc {
 	from {
 		stroke-dashoffset: var(--full-length);

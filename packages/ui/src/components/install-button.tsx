@@ -1,6 +1,7 @@
 import {motion} from 'framer-motion'
-import {CSSProperties} from 'react'
+import {CSSProperties, useEffect, useState} from 'react'
 import {TbLoader} from 'react-icons/tb'
+import {useFirstMountState} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
 import {UNKNOWN} from '@/constants'
@@ -8,11 +9,23 @@ import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
+// import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {AnimatedNumber} from './ui/animated-number'
 
 type InstallState = 'loading' | 'uninstalled' | AppState
+
+// Check if CSS available
+// https://developer.mozilla.org/en-US/docs/Web/API/CSS/registerProperty
+if (typeof CSS !== 'undefined' && CSS.registerProperty) {
+	CSS.registerProperty({
+		name: '--install-button-progress',
+		syntax: '<percentage>',
+		inherits: false,
+		initialValue: '0%',
+	})
+}
 
 export function InstallButton({
 	installSize,
@@ -27,37 +40,34 @@ export function InstallButton({
 	onInstallClick?: () => void
 	onOpenClick?: () => void
 }) {
-	// if (state === 'loading') {
-	// 	return (
-	// 		<button className={cn(installButtonClass, '!bg-transparent')} disabled>
-	// 			<TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
-	// 		</button>
-	// 	)
-	// }
+	const isFirstRender = useFirstMountState()
+
+	// Stops flicker when installing done
+	const [installToReadyDone, setInstallToReadyDone] = useState(true)
+	useEffect(() => {
+		if (state === 'ready') {
+			setTimeout(() => setInstallToReadyDone(true), 0)
+		} else if (state === 'installing') {
+			setInstallToReadyDone(false)
+		}
+	}, [state])
 
 	const installingStyle: CSSProperties = {
 		// Adding transitions so hover and other transitions work
-		transition:
-			state === ('installing' || 'ready')
-				? '--progress 0.2s, opacity 0.2s, width 0.2s, background-color 0.2s'
-				: 'width 0.2s, background-color 0.2s',
-		['--progress' as string]: `${progress}%`,
+		transition: '--install-button-progress 0.3s',
+		['--install-button-progress' as string]: `${progress}%`,
 		backgroundImage:
-			state === 'installing'
-				? `linear-gradient(to right, hsl(var(--color-brand)) var(--progress), transparent var(--progress))`
-				: undefined,
+			'linear-gradient(to right, hsl(var(--color-brand)) var(--install-button-progress), transparent var(--install-button-progress))',
 	}
 
 	return (
 		<motion.button
 			initial={{
 				borderRadius: 999,
-				opacity: 0,
-				// scale: 1.1,
+				// opacity: 0,
 			}}
 			animate={{
 				opacity: 1,
-				// scale: 1,
 			}}
 			onClick={() => {
 				if (state === 'uninstalled') {
@@ -66,15 +76,27 @@ export function InstallButton({
 					onOpenClick?.()
 				}
 			}}
-			className={cn(installButtonClass)}
-			style={arrayIncludes(['uninstalled', 'installing', 'ready'], state) ? installingStyle : undefined}
+			className={cn(
+				installButtonClass,
+				state === 'loading' && '!bg-white/10',
+				// Disable transition right when installing done for a sec to prevent flicker
+				state === 'ready' && !installToReadyDone && 'transition-none',
+			)}
+			style={{
+				...(state === 'installing' ? installingStyle : undefined),
+			}}
 			layout
 			disabled={!arrayIncludes(['uninstalled', 'ready'], state)}
 		>
 			<motion.div
 				layout='position'
-				initial={{width: 'auto', opacity: 0}}
-				animate={{width: 'auto', opacity: 1, transition: {opacity: {delay: 0}}}}
+				key={state}
+				initial={{opacity: 0}}
+				animate={{
+					opacity: 1,
+					transition: {opacity: {duration: 0.2, delay: state === 'loading' || isFirstRender ? 0 : 0.2}},
+				}}
+				// className='bg-red-500/50'
 			>
 				<ButtonContentForState state={state} installSize={installSize} progress={progress} />
 			</motion.div>
@@ -119,12 +141,13 @@ function ButtonContentForState({
 			return t('app.updating') + '...'
 		case 'loading':
 		default:
-			// return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
-			return t('loading') + '...'
+			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
+		// return t('loading') + '...'
 	}
 }
 
 export const installButtonClass = cn(
 	buttonVariants({size: 'lg', variant: 'primary'}),
-	tw`select-none text-13 md:text-15 max-md:w-full font-semibold -tracking-3 whitespace-nowrap disabled:bg-brand/60 disabled:opacity-100 max-md:h-[30px] rounded-none`,
+	tw`select-none whitespace-nowrap disabled:bg-brand/60 disabled:opacity-100 bg-brand hover:bg-brand-lighter`,
+	tw`max-md:h-[30px] max-md:w-full max-md:text-13`,
 )

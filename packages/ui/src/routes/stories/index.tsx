@@ -377,7 +377,6 @@ function ContextMenuExample() {
 function Buttons() {
 	return (
 		<div className='flex flex-col gap-2'>
-			<ProgressButton />
 			<div>
 				<H3>Sizes</H3>
 				<div className='flex gap-2'>
@@ -417,23 +416,6 @@ function Buttons() {
 					))}
 				</div>
 			</div>
-		</div>
-	)
-}
-
-function ProgressButton() {
-	const {progress, state, install} = useDemoInstallProgress()
-
-	return (
-		<div>
-			<H3>Install Button</H3>
-			<InstallButton
-				installSize='1.5GB'
-				progress={progress}
-				state={state}
-				onInstallClick={install}
-				onOpenClick={() => alert('foobar')}
-			/>
 		</div>
 	)
 }
