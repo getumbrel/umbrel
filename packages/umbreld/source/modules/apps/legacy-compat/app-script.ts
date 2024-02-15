@@ -14,6 +14,7 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 		env: {
 			SCRIPT_UMBREL_ROOT: umbreld.dataDirectory,
 			SCRIPT_DOCKER_FRAGMENTS: currentDirname,
+			JWT_SECRET: await umbreld.server.getJwtSecret(),
 		},
 	})`${scriptPath} ${command} ${arg}`
 }

@@ -36,3 +36,18 @@ export async function verify(token: string, secret: string) {
 
 	return true
 }
+
+// TODO: Only used for legacy auth server verification, we'll want to refactor this.
+// We create a JWT with the same key but a different payload.
+// This token will be stored in a cookie so it can travel across ports/apps.
+// The main login JWT is stored in local storage so it doesn't get leaked to apps
+// on different ports. Since this JWT does not include the loggedIn payload,
+// if it's leaked to an app they can't use it make authenticated API requests.
+// This token only lets you through the app proxy and nothing else.
+export async function signProxyToken(secret: string) {
+	validateSecret(secret)
+	const payload = {proxyToken: true}
+	const token = jwt.sign(payload, secret, {expiresIn: ONE_WEEK, algorithm: JWT_ALGORITHM})
+
+	return token
+}

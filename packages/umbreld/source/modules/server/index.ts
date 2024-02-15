@@ -35,6 +35,10 @@ class Server {
 		return jwt.sign(await this.getJwtSecret())
 	}
 
+	async signProxyToken() {
+		return jwt.signProxyToken(await this.getJwtSecret())
+	}
+
 	async verifyToken(token: string) {
 		return jwt.verify(token, await this.getJwtSecret())
 	}

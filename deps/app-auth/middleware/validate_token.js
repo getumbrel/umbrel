@@ -42,7 +42,7 @@ async function redirect(res, token, req) {
 
 function mw () {
 	return async function (req, res, next) {
-		const token = req.signedCookies[CONSTANTS.UMBREL_COOKIE_NAME];
+		const token = req.cookies.UMBREL_PROXY_TOKEN;
 
 		// If we already have a valid token
 		// Then the user doesn't need to login again

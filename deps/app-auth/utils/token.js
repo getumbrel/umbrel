@@ -1,21 +1,21 @@
-const manager = require('./manager.js');
+const jwt = require("jsonwebtoken");
 
-async function validate(token) {
-	if(typeof(token) !== "string") return false;
+const JWT_ALGORITHM = "HS256";
 
-	console.log(`Validating token: ${token.substr(0, 12)} ...`);
+const secret = process.env.JWT_SECRET;
 
-	try {
-		const info = await manager.account.token(token);
+function validate(token) {
+  if (typeof token !== "string") return false;
 
-		return info.status === 200 && info.data.isValid === true;
-	} catch (e) {
-		console.error(e);
-	}
+  console.log(`Validating token: ${token.substr(0, 12)} ...`);
 
-	return false;
+  const payload = jwt.verify(token, secret, {
+    algorithms: [JWT_ALGORITHM],
+  });
+
+  return payload.proxyToken === true;
 }
 
 module.exports = {
-	validate
+  validate,
 };

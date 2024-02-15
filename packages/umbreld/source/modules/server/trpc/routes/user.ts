@@ -4,6 +4,12 @@ import {z} from 'zod'
 import {router, publicProcedure, privateProcedure} from '../trpc.js'
 import * as totp from '../../../utilities/totp.js'
 
+const ONE_SECOND = 1000
+const ONE_MINUTE = 60 * ONE_SECOND
+const ONE_HOUR = 60 * ONE_MINUTE
+const ONE_DAY = 24 * ONE_HOUR
+const ONE_WEEK = 7 * ONE_DAY
+
 export default router({
 	// Registers a new user
 	register: publicProcedure
@@ -52,7 +58,16 @@ export default router({
 				}
 			}
 
-			// Return token
+			// Set proxy token cookie
+			const proxyToken = await ctx.server.signProxyToken()
+			const expires = new Date(Date.now() + ONE_WEEK)
+			ctx.response.cookie('UMBREL_PROXY_TOKEN', proxyToken, {
+				httpOnly: true,
+				expires,
+				sameSite: 'lax',
+			})
+
+			// Return API token
 			return ctx.server.signToken()
 		}),
 
@@ -68,7 +83,19 @@ export default router({
 	}),
 
 	// Returns a new token for a user
-	renewToken: privateProcedure.mutation(async ({ctx}) => ctx.server.signToken()),
+	renewToken: privateProcedure.mutation(async ({ctx}) => {
+		// Renew proxy token cookie
+		const proxyToken = await ctx.server.signProxyToken()
+		const expires = new Date(Date.now() + ONE_WEEK)
+		ctx.response.cookie('UMBREL_PROXY_TOKEN', proxyToken, {
+			httpOnly: true,
+			expires,
+			sameSite: 'lax',
+		})
+
+		// Return API token
+		return ctx.server.signToken()
+	}),
 
 	// Change the user's password
 	changePassword: privateProcedure

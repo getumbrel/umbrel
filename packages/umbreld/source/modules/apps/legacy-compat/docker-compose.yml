@@ -16,9 +16,10 @@ services:
         ipv4_address: $TOR_PROXY_IP
   auth:
     container_name: auth
-    image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
+    # TODO: IMPORTANT build new image and use that here
+    # image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
     user: '1000:1000'
-    #build: ./deps/app-auth
+    build: ../../../deps/app-auth
     restart: on-failure
     environment:
       PORT: $AUTH_PORT
@@ -27,6 +28,8 @@ services:
       MANAGER_PORT: 3006
       DASHBOARD_IP: $DASHBOARD_IP
       DASHBOARD_PORT: 3004
+      JWT_SECRET: $JWT_SECRET
+      UMBRELD_RPC_HOST: $UMBRELD_RPC_HOST
     volumes:
       - ${UMBREL_DATA_DIR}/tor/data:/var/lib/tor:ro
       - ${UMBREL_DATA_DIR}/app-data:/app-data:ro
