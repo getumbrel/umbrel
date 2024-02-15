@@ -334,5 +334,6 @@
   "widgets.edit.select-up-to-3-widgets": "Selecione até 3 widgets",
   "widgets.edit.title": "Editar widgets",
   "widgets.install-an-app-before-using-widgets": "Instale um aplicativo antes de usar widgets.",
-  "factory-reset.review.title": "Revise os dados"
+  "factory-reset.review.title": "Revise os dados",
+  "app.updating": "Atualizando"
 }

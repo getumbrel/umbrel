@@ -334,5 +334,6 @@
   "widgets.edit.select-up-to-3-widgets": "ウィジェットを 3 つまで選択します",
   "widgets.edit.title": "ウィジェットの編集",
   "widgets.install-an-app-before-using-widgets": "ウィジェットを使用する前にアプリをインストールしてください。",
-  "factory-reset.review.title": "レビューデータ"
+  "factory-reset.review.title": "レビューデータ",
+  "app.updating": "更新中"
 }

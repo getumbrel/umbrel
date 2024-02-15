@@ -81,6 +81,7 @@
 	"app.uninstalling": "Uninstalling",
 	"app.install": "Install",
 	"app.installing": "Installing",
+	"app.updating": "Updating",
 	"app.open": "Open",
 	"reload-page": "Reload Page",
 	"page-title-umbrel": "{{title}} – Umbrel",

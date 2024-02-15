@@ -30,7 +30,7 @@ export const DependenciesSection = ({app}: {app: RegistryApp}) => {
 }
 
 const Dependency = ({app, installed = false}: {app: RegistryApp; installed: boolean}) => (
-	<div className='flex items-center gap-2.5'>
+	<Link className='flex items-center gap-2.5' to={`/app-store/${app.id}`}>
 		<AppIcon src={app.icon} size={36} className='rounded-8' />
 		<div className='flex-1 text-15 font-medium'>{app.name}</div>
 		{installed ? (
@@ -40,5 +40,5 @@ const Dependency = ({app, installed = false}: {app: RegistryApp; installed: bool
 				{t('app.install')}
 			</Link>
 		)}
-	</div>
+	</Link>
 )
