@@ -2,6 +2,7 @@ import {ReactNode} from 'react'
 
 import {UNKNOWN} from '@/constants'
 import {RegistryApp} from '@/trpc/trpc'
+import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
@@ -14,7 +15,7 @@ export const InfoSection = ({app}: {app: RegistryApp}) => (
 			<KV
 				k={t('app-page.section.info.source-code')}
 				v={
-					<a href={app.repo} target='_blank' className='text-brand-lighter'>
+					<a href={app.repo} target='_blank' className={linkClass}>
 						{t('app-page.section.info.source-code.public')}
 					</a>
 				}
@@ -23,7 +24,7 @@ export const InfoSection = ({app}: {app: RegistryApp}) => (
 		<KV
 			k={t('app-page.section.info.developer')}
 			v={
-				<a href={app.website} target='_blank' className='text-brand-lighter'>
+				<a href={app.website} target='_blank' className={linkClass}>
 					{app.developer}
 				</a>
 			}
@@ -32,7 +33,7 @@ export const InfoSection = ({app}: {app: RegistryApp}) => (
 			<KV
 				k={t('app-page.section.info.submitted-by')}
 				v={
-					<a href={app.submission} target='_blank' className='text-brand-lighter'>
+					<a href={app.submission} target='_blank' className={linkClass}>
 						{app.submitter}
 					</a>
 				}
