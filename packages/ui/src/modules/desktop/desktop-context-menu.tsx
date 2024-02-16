@@ -45,7 +45,8 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 
 			<Popover open={show} onOpenChange={(open) => setShow(open)}>
 				<PopoverAnchor className='fixed' ref={anchorRef} />
-				<PopoverContent align='start' className='py-2.5 pl-1.5 pr-5'>
+				{/* `relative` fixes Safari paint bug caused by the `mask-image` property in the `WallpaperPicker` not playing well with the popover `transform: translate()`. On hovering the close button, Safari would jump the wallpaper picker in the wrong spot. */}
+				<PopoverContent align='start' className='relative py-2.5 pl-1.5 pr-5'>
 					<CloseButton className='absolute right-2 top-2' />
 					<WallpaperPicker maxW={300} />
 				</PopoverContent>
