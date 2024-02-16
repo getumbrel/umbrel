@@ -49,7 +49,7 @@ export default router({
 			}),
 		)
 		.query(() => ({
-			state: 'installing' as AppState,
+			state: 'ready' as AppState,
 			progress: 0.5,
 		})),
 
