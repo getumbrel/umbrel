@@ -2,8 +2,6 @@ import z from 'zod'
 
 import {router, privateProcedure} from '../trpc.js'
 
-import {type AppState} from '../../../apps/schema.js'
-
 export default router({
 	// List all apps
 	list: privateProcedure.query(async ({ctx}) => {
@@ -52,10 +50,14 @@ export default router({
 				appId: z.string(),
 			}),
 		)
-		.query(() => ({
-			state: 'ready' as AppState,
-			progress: 0.5,
-		})),
+		.query(async ({ctx, input}) => {
+			const app = ctx.apps.getApp(input.appId)
+
+			return {
+				state: app.state,
+				progress: app.stateProgress,
+			}
+		}),
 
 	// Uninstall an app
 	uninstall: privateProcedure

@@ -65,7 +65,7 @@ export default class Apps {
 		return this.instances.some((app) => app.id === appId)
 	}
 
-	async getApp(appId: string) {
+	getApp(appId: string) {
 		const app = this.instances.find((app) => app.id === appId)
 		if (!app) throw new Error(`App ${appId} not found`)
 
@@ -106,7 +106,7 @@ export default class Apps {
 	}
 
 	async uninstall(appId: string) {
-		const app = await this.getApp(appId)
+		const app = this.getApp(appId)
 
 		await app.uninstall()
 
@@ -117,20 +117,20 @@ export default class Apps {
 	}
 
 	async restart(appId: string) {
-		const app = await this.getApp(appId)
+		const app = this.getApp(appId)
 
 		return app.restart()
 	}
 
 	async update(appId: string) {
-		const app = await this.getApp(appId)
+		const app = this.getApp(appId)
 
 		// TODO: Implement update
 		return true
 	}
 
 	async trackOpen(appId: string) {
-		const app = await this.getApp(appId)
+		const app = this.getApp(appId)
 
 		// TODO: Implement track open
 		return true

@@ -15,11 +15,30 @@ async function writeYaml(path: string, data: any) {
 	return fse.writeFile(path, yaml.dump(data))
 }
 
+type AppState =
+	| 'unknown'
+	| 'installing'
+	| 'starting'
+	| 'running'
+	| 'stopping'
+	| 'stopped'
+	| 'restarting'
+	| 'uninstalling'
+	| 'updating'
+	| 'ready'
+// TODO: Change ready to running.
+// Also note that we don't currently handle failing events to update the app state into a failed state.
+// That should be ok for now since apps rarely fail, but there will be the potential for state bugs here
+// where the app instance state gets out of sync with the actual state of the app.
+// We can handle this much more robustly in the future.
+
 export default class App {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	id: string
 	dataDirectory: string
+	state: AppState = 'unknown'
+	stateProgress = 0
 
 	constructor(umbreld: Umbreld, appId: string) {
 		// Throw on invalid appId
@@ -45,6 +64,7 @@ export default class App {
 	}
 
 	async install() {
+		this.state = 'installing'
 		// Temporary patch to fix contianer names for modern docker-compose installs.
 		// The contianer name scheme used to be <project-name>_<service-name>_1 but
 		// recent versions of docker-compose use <project-name>-<service-name>-1
@@ -60,32 +80,40 @@ export default class App {
 		await this.writeCompose(compose)
 
 		await appScript(this.#umbreld, 'install', this.id)
+		this.state = 'ready'
 
 		return true
 	}
 
 	async start() {
 		this.logger.log(`Starting app ${this.id}`)
+		this.state = 'starting'
 		await appScript(this.#umbreld, 'start', this.id)
+		this.state = 'ready'
 
 		return true
 	}
 
 	async stop() {
+		this.state = 'stopping'
 		await appScript(this.#umbreld, 'stop', this.id)
+		this.state = 'stopped'
 
 		return true
 	}
 
 	async restart() {
-		await this.stop()
-		await this.start()
+		this.state = 'restarting'
+		await appScript(this.#umbreld, 'stop', this.id)
+		await appScript(this.#umbreld, 'start', this.id)
+		this.state = 'ready'
 
 		return true
 	}
 
 	async uninstall() {
-		await this.stop()
+		this.state = 'uninstalling'
+		await appScript(this.#umbreld, 'stop', this.id)
 		await fse.remove(this.dataDirectory)
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {

@@ -46,6 +46,3 @@ export type AppManifest = {
 	installSize?: number
 	widgets?: any[] // TODO: Define this type
 }
-
-/** There's a 'ready' state instead of an 'installed' state because if an app is installed but updating, we don't want the user to do anything with that app. If an app is a UserApp (initiated install) */
-export type AppState = 'ready' | 'offline' | 'installing' | 'uninstalling' | 'updating'
