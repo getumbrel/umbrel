@@ -87,7 +87,10 @@ export function DockItem({
 			/>
 			{/* icon */}
 			<motion.div
-				className={cn('relative origin-top-left bg-cover', className)}
+				className={cn(
+					'has-[:focus-visible]:brightness-125 relative origin-top-left bg-cover transition-[filter]',
+					className,
+				)}
 				style={{
 					width: ICON_SIDE,
 					height: ICON_SIDE,
@@ -106,7 +109,7 @@ export function DockItem({
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0' unstable_viewTransition />
+				<Link to={to || '/'} className='absolute inset-0 outline-none' unstable_viewTransition />
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}
