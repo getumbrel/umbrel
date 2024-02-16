@@ -9,21 +9,25 @@ export default router({
 	list: privateProcedure.query(async ({ctx}) => {
 		const apps = ctx.apps.instances
 
-		// TODO: Handle errors so one bad app doesn't break the whole response
 		const appData = await Promise.all(
 			apps.map(async (app) => {
-				const {name, icon, port} = await app.readManifest()
-				return {
-					id: app.id,
-					name,
-					icon: icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
-					port,
-					state: 'ready' as AppState,
-					credentials: {
-						defaultUsername: '',
-						defaultPassword: '',
-					},
-					hiddenService: 'blah.onion',
+				try {
+					const {name, icon, port} = await app.readManifest()
+					return {
+						id: app.id,
+						name,
+						icon: icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
+						port,
+						state: app.state,
+						credentials: {
+							defaultUsername: '',
+							defaultPassword: '',
+						},
+						hiddenService: 'blah.onion',
+					}
+				} catch (error) {
+					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
+					return {id: app.id, error: (error as Error).message}
 				}
 			}),
 		)
