@@ -32,23 +32,18 @@ export default class App {
 	}
 
 	async install() {
-		// TODO: Do not allow installing if the app is already installed
-
 		await appScript(this.#umbreld, 'install', this.id)
 
 		return true
 	}
 
 	async start() {
-		// TODO: Implement start
 		await appScript(this.#umbreld, 'start', this.id)
 
 		return true
 	}
 
 	async stop() {
-		// TODO: Implement stop
-
 		await appScript(this.#umbreld, 'stop', this.id)
 
 		return true
