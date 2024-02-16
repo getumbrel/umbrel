@@ -16,7 +16,7 @@ export default router({
 				return {
 					id: app.id,
 					name,
-					icon,
+					icon: icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
 					port,
 					state: 'ready' as AppState,
 					credentials: {
