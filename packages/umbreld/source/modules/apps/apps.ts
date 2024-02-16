@@ -56,6 +56,11 @@ export default class Apps {
 		return apps
 	}
 
+	async isInstalled(appId: string) {
+		const apps = await this.getApps()
+		return apps.some((app) => app.id === appId)
+	}
+
 	async getApp(appId: string) {
 		const apps = await this.getApps()
 		const app = apps.find((app) => app.id === appId)
@@ -65,6 +70,8 @@ export default class Apps {
 	}
 
 	async install(appId: string) {
+		if (await this.isInstalled(appId)) throw new Error(`App ${appId} is already installed`)
+
 		this.logger.log(`Installing app ${appId}`)
 		const appTemplatePath = await this.#umbreld.appStore.getAppTemplateFilePath(appId)
 
