@@ -10,16 +10,18 @@ export type {AppState, AppManifest as RegistryApp} from '../../../../packages/um
 export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
-const jwt = localStorage.getItem('jwt')
 export const links = [
 	loggerLink({
 		enabled: () => true,
 	}),
 	httpBatchLink({
 		url: trpcUrl,
-		headers: async () => ({
-			Authorization: `Bearer ${jwt}`,
-		}),
+		headers: async () => {
+			const jwt = localStorage.getItem('jwt')
+			return {
+				Authorization: `Bearer ${jwt}`,
+			}
+		},
 	}),
 ]
 
