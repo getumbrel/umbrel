@@ -97,6 +97,15 @@ export default router({
 		return ctx.server.signToken()
 	}),
 
+	// Deletes the proxy token cookie
+	// The JWT needs to be deleted from the client side
+	logout: privateProcedure.mutation(async ({ctx}) => {
+		ctx.response.clearCookie('UMBREL_PROXY_TOKEN')
+
+		// Return API token
+		return true
+	}),
+
 	// Change the user's password
 	changePassword: privateProcedure
 		.input(

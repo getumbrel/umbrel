@@ -79,6 +79,9 @@ export default class App {
 
 		await this.writeCompose(compose)
 
+		// TODO: Pull images here before the install script and calculate live progress for
+		// this.stateProgress so button animations work
+
 		await appScript(this.#umbreld, 'install', this.id)
 		this.state = 'ready'
 
