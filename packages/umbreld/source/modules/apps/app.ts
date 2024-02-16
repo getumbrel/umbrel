@@ -1,5 +1,6 @@
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
+import {type Compose} from 'compose-spec-schema'
 
 import type Umbreld from '../../index.js'
 import {type AppManifest} from './schema.js'
@@ -8,6 +9,10 @@ import appScript from './legacy-compat/app-script.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
+}
+
+async function writeYaml(path: string, data: any) {
+	return fse.writeFile(path, yaml.dump(data))
 }
 
 export default class App {
@@ -31,7 +36,29 @@ export default class App {
 		return readYaml(`${this.dataDirectory}/umbrel-app.yml`) as Promise<AppManifest>
 	}
 
+	readCompose() {
+		return readYaml(`${this.dataDirectory}/docker-compose.yml`) as Promise<Compose>
+	}
+
+	writeCompose(compose: Compose) {
+		return writeYaml(`${this.dataDirectory}/docker-compose.yml`, compose)
+	}
+
 	async install() {
+		// Temporary patch to fix contianer names for modern docker-compose installs.
+		// The contianer name scheme used to be <project-name>_<service-name>_1 but
+		// recent versions of docker-compose use <project-name>-<service-name>-1
+		// swapping underscores for dashes. This breaks Umbrel in places where the
+		// containers are referenced via name and it also breaks referring to other
+		// containers via DNS since the hostnames are derived with the same method.
+		// We manually force all container names to the old scheme to maintain compatibility.
+		const compose = await this.readCompose()
+		for (const serviceName of Object.keys(compose.services!)) {
+			compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+		}
+
+		await this.writeCompose(compose)
+
 		await appScript(this.#umbreld, 'install', this.id)
 
 		return true
