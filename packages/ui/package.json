@@ -74,7 +74,6 @@
 		"remeda": "^1.28.0",
 		"sonner": "github:markmiro/sonner#fix-unstyled-umbrel",
 		"tailwind-merge": "1.14.0",
-		"tailwindcss-animate": "1.0.7",
 		"ts-extras": "^0.11.0",
 		"url-join": "^5.0.0",
 		"use-is-focused": "0.0.1",
@@ -104,7 +103,8 @@
 		"prettier-plugin-style-order": "0.2.2",
 		"prettier-plugin-tailwindcss": "0.5.6",
 		"serve": "14.2.1",
-		"tailwindcss": "3.3.3",
+		"tailwindcss": "3.4.1",
+		"tailwindcss-animate": "1.0.7",
 		"typescript": "5.2.2",
 		"vite": "^4.4.5",
 		"vite-bundle-visualizer": "^0.11.0"
