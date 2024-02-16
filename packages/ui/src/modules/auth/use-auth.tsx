@@ -1,3 +1,6 @@
+import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
+
 import {redirect} from './redirects'
 
 /**
@@ -19,13 +22,22 @@ export function useJwt() {
 
 export function useAuth() {
 	const {jwt, setJwt, removeJwt} = useJwt()
-
-	return {
-		jwt,
-		logout() {
+	const logoutMut = trpcReact.user.logout.useMutation({
+		onSuccess(didWork) {
+			if (!didWork) throw new Error("Logout didn't work.")
 			removeJwt()
 			// Hard navigate to `/login` to force all parent layouts to re-render
 			window.location.href = '/login'
+		},
+		onError() {
+			alert(t('logout-error-generic'))
+		},
+	})
+
+	return {
+		jwt,
+		async logout() {
+			logoutMut.mutate()
 		},
 		loginWithJwt(jwt: string) {
 			setJwt(jwt)
