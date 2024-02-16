@@ -51,6 +51,13 @@ export default router({
 			}),
 		)
 		.query(async ({ctx, input}) => {
+			if (!(await ctx.apps.isInstalled(input.appId))) {
+				return {
+					state: 'not-installed',
+					progress: 0,
+				}
+			}
+
 			const app = ctx.apps.getApp(input.appId)
 
 			return {
