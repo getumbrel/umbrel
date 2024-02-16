@@ -14,11 +14,7 @@ export default router({
 	uptime: privateProcedure.query(() => {
 		return os.uptime()
 	}),
-	// TODO: have consistent naming for these
-	version: privateProcedure.query(() => {
-		// TODO: do this for real
-		return '1.0.0'
-	}),
+	version: privateProcedure.query(({ctx}) => ctx.umbreld.version),
 	latestAvailableVersion: privateProcedure.query(async () => {
 		// TODO: do this for real
 		await setTimeout(1000)
