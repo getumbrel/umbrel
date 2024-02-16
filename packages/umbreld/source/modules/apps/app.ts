@@ -62,7 +62,8 @@ export default class App {
 	}
 
 	async uninstall() {
-		// TODO: Implement uninstall
+		await this.stop()
+		await fse.remove(this.dataDirectory)
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			let apps = await get('apps')
