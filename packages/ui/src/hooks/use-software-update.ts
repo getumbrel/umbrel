@@ -1,7 +1,7 @@
 import {useCallback, useState} from 'react'
 
 import {toast} from '@/components/ui/toast'
-import {UNKNOWN} from '@/constants'
+import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -30,7 +30,7 @@ export function useSoftwareUpdate() {
 		},
 	})
 
-	const currentVersion = osVersionQ.data ?? UNKNOWN()
+	const currentVersion = osVersionQ.data ?? LOADING_DASH
 
 	const checkLatest = useCallback(async () => {
 		setState('checking')

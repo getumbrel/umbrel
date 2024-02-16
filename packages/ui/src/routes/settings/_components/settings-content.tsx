@@ -85,9 +85,9 @@ export function SettingsContent() {
 							<dt className='opacity-40'>{t('running-on')}</dt>
 							<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
 							<dt className='opacity-40'>{t('umbrelos-version')}</dt>
-							<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
+							<dd>{osVersionQ.isLoading ? LOADING_DASH : osVersionQ.data ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
-							<dd>{duration(uptimeQ.data)}</dd>
+							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data)}</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
