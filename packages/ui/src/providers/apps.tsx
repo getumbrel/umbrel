@@ -74,9 +74,9 @@ type AppsContextT = {
 const AppsContext = createContext<AppsContextT | null>(null)
 
 export function AppsProvider({children}: {children: React.ReactNode}) {
-	const userAppsQ = trpcReact.user.apps.getAll.useQuery()
+	const appsQ = trpcReact.apps.list.useQuery()
 
-	const userApps = userAppsQ.data ?? []
+	const userApps = appsQ.data ?? []
 	const userAppsKeyed = keyBy(userApps, 'id')
 
 	const allApps = [...userApps, ...systemApps]
@@ -85,13 +85,15 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 	return (
 		<AppsContext.Provider
 			value={{
+				// @ts-expect-error `userApps`
 				userApps,
+				// @ts-expect-error `userAppsKeyed`
 				userAppsKeyed,
 				systemApps,
 				systemAppsKeyed,
 				allApps,
 				allAppsKeyed,
-				isLoading: userAppsQ.isLoading,
+				isLoading: appsQ.isLoading,
 			}}
 		>
 			{children}

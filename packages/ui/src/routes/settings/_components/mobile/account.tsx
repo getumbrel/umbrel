@@ -16,6 +16,7 @@ import {
 } from '@/shadcn-components/ui/drawer'
 import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 import {NoForgotPasswordMessage} from '../no-forgot-password-message'
 
@@ -92,13 +93,13 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
-				<Labeled label='Current password'>
+				<Labeled label={t('change-password.current-password')}>
 					<PasswordInput value={password} onValueChange={setPassword} />
 				</Labeled>
-				<Labeled label='New password'>
+				<Labeled label={t('change-password.new-password')}>
 					<PasswordInput value={newPassword} onValueChange={setNewPassword} error={fieldErrors.oldPassword} />
 				</Labeled>
-				<Labeled label='Repeat password'>
+				<Labeled label={t('change-password.repeat-password')}>
 					<PasswordInput
 						value={newPasswordRepeat}
 						onValueChange={setNewPasswordRepeat}
@@ -113,10 +114,10 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 
 				<DrawerFooter>
 					<Button type='button' size='dialog' onClick={closeDialog}>
-						Cancel
+						{t('cancel')}
 					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
-						Save changes
+						{t('save-changes')}
 					</Button>
 				</DrawerFooter>
 			</fieldset>

@@ -1,8 +1,9 @@
 import {useCallback, useState} from 'react'
 
 import {toast} from '@/components/ui/toast'
+import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
-import {sleep} from '@/utils/misc'
+import {t} from '@/utils/i18n'
 
 export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-available' | 'upgrading'
 
@@ -12,15 +13,32 @@ export function useSoftwareUpdate() {
 
 	const ctx = trpcReact.useContext()
 	const osVersionQ = trpcReact.system.version.useQuery()
+	const updateVersionMut = trpcReact.system.update.useMutation({
+		onSuccess: (version) => {
+			if (version === latestVersion) {
+				ctx.system.version.invalidate()
+				setState('at-latest')
+				toast.success(t('software-update.success', {version}))
+			} else {
+				setState('initial')
+				toast.error(t('software-update.failed'))
+			}
+		},
+		onError: () => {
+			setState('initial')
+			toast.error(t('software-update.failed'))
+		},
+	})
 
-	const currentVersion = osVersionQ.data ?? 'Unknown'
+	const currentVersion = osVersionQ.data ?? LOADING_DASH
 
 	const checkLatest = useCallback(async () => {
 		setState('checking')
 		try {
 			const latestVersion = await ctx.system.latestAvailableVersion.fetch()
+
 			if (!latestVersion) {
-				throw new Error('Failed to check for updates')
+				throw new Error(t('software-update.failed-to-check'))
 			}
 			setLatestVersion(latestVersion)
 			if (latestVersion !== currentVersion) {
@@ -30,18 +48,15 @@ export function useSoftwareUpdate() {
 			}
 		} catch (error) {
 			setState('initial')
-			toast.error('Failed to check for updates')
+			toast.error(t('software-update.failed-to-check'))
 		}
 	}, [ctx.system.latestAvailableVersion, currentVersion])
 
 	const upgrade = useCallback(async () => {
 		setState('upgrading')
-		await sleep(1000)
-		// TODO: actually upgrade
-		setState('at-latest')
-		toast.success(`Successfully upgraded to umbrelOS ${latestVersion}`)
+		updateVersionMut.mutate()
 		// toast.error('Failed to upgrade')
-	}, [latestVersion])
+	}, [updateVersionMut])
 
 	return {
 		state,

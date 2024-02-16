@@ -1,6 +1,7 @@
 import {useState} from 'react'
 
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function usePassword({onSuccess}: {onSuccess: () => void}) {
@@ -21,30 +22,31 @@ export function usePassword({onSuccess}: {onSuccess: () => void}) {
 
 		// Reset errors
 		changePasswordMut.reset()
-		setLocalError('')
+		// So setLocalError('') is not batched
+		await setLocalError('')
 
 		if (!password) {
-			setLocalError('Current password is required')
+			setLocalError(t('change-password.failed.current-required'))
 			return
 		}
 
 		if (!newPassword) {
-			setLocalError('New password is required')
+			setLocalError(t('change-password.failed.new-required'))
 			return
 		}
 
 		if (!newPasswordRepeat) {
-			setLocalError('Repeat password is required')
+			setLocalError(t('change-password.failed.repeat-required'))
 			return
 		}
 
 		if (newPassword !== newPasswordRepeat) {
-			setLocalError('Passwords do not match')
+			setLocalError(t('change-password.failed.no-match'))
 			return
 		}
 
 		if (password === newPassword) {
-			setLocalError('New password must be different from current password')
+			setLocalError(t('change-password.failed.must-be-unique'))
 			return
 		}
 

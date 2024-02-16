@@ -8,9 +8,10 @@ import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/ba
 import {useAuth} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export default function CreateAccount() {
-	const title = 'Create account'
+	const title = t('onboarding.create-account')
 	useUmbrelTitle(title)
 	const auth = useAuth()
 
@@ -31,20 +32,20 @@ export default function CreateAccount() {
 		onSuccess: async () => loginMut.mutate({password, totpToken: ''}),
 	})
 
-	const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+	const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
 		// Reset errors
 		registerMut.reset()
-		setLocalError('')
+		await setLocalError('')
 
 		if (!name) {
-			setLocalError('Name is required')
+			setLocalError(t('onboarding.create-account.failed.name-required'))
 			return
 		}
 
 		if (password !== confirmPassword) {
-			setLocalError('Passwords do not match')
+			setLocalError(t('onboarding.create-account.failed.passwords-dont-match'))
 			return
 		}
 
@@ -59,32 +60,45 @@ export default function CreateAccount() {
 		<Layout
 			title={title}
 			transitionTitle={false}
-			subTitle='Your account info is stored only on your Umbrel. Make sure to back up your password safely as there is no way to reset it.'
+			subTitle={t('onboarding.create-account.subtitle')}
 			subTitleMaxWidth={630}
 			footer={
 				<Link to={links.support} target='_blank' className={footerLinkClass}>
-					Contact support
+					{t('contact-support')}
 				</Link>
 			}
 		>
 			<form onSubmit={onSubmit} className='w-full'>
 				<fieldset disabled={isLoading} className='flex flex-col items-center gap-5'>
 					<div className={formGroupClass}>
-						<Input placeholder='Name' autoFocus value={name} onValueChange={setName} />
+						<Input
+							placeholder={t('onboarding.create-account.name.input-placeholder')}
+							autoFocus
+							value={name}
+							onValueChange={setName}
+						/>
 						<PasswordInput
-							label='Password'
+							label={t('onboarding.create-account.password.input-label')}
 							value={password}
 							onValueChange={setPassword}
 							error={registerMut.error?.data?.zodError?.fieldErrors['password']?.join('. ')}
 						/>
-						<PasswordInput label='Confirm password' value={confirmPassword} onValueChange={setConfirmPassword} />
+						<PasswordInput
+							label={t('onboarding.create-account.confirm-password.input-label')}
+							value={confirmPassword}
+							onValueChange={setConfirmPassword}
+						/>
 					</div>
 
 					<div className='-my-2.5'>
 						<AnimatedInputError>{formError}</AnimatedInputError>
 					</div>
 					<button type='submit' className={buttonClass}>
-						{isLoading ? <Loading>Creating</Loading> : 'Create'}
+						{isLoading ? (
+							<Loading>{t('onboarding.create-account.submitting')}</Loading>
+						) : (
+							t('onboarding.create-account.submit')
+						)}
 					</button>
 				</fieldset>
 			</form>

@@ -5,7 +5,12 @@ import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
 import type {IconType} from 'react-icons'
 import {RiCloseLine} from 'react-icons/ri'
 
-import {dialogContentClass, dialogOverlayClass} from '@/shadcn-components/ui/shared/dialog'
+import {
+	dialogContentAnimationClass,
+	dialogContentAnimationSlideClass,
+	dialogContentClass,
+	dialogOverlayClass,
+} from '@/shadcn-components/ui/shared/dialog'
 import {cn} from '@/shadcn-lib/utils'
 import {afterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
@@ -33,7 +38,15 @@ export function ImmersiveDialog({
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
 				{/* shell */}
-				<DialogContent className={cn(dialogContentClass, immersiveContentSizeClass, 'p-0')}>
+				<DialogContent
+					className={cn(
+						dialogContentClass,
+						dialogContentAnimationClass,
+						dialogContentAnimationSlideClass,
+						immersiveContentSizeClass,
+						'p-0',
+					)}
+				>
 					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto p-6 md:p-[30px]'>
 						{children}
 					</div>
@@ -63,6 +76,8 @@ export function ImmersiveDialogSplit({
 				<DialogContent
 					className={cn(
 						dialogContentClass,
+						dialogContentAnimationClass,
+						dialogContentAnimationSlideClass,
 						immersiveContentSizeClass,
 						'flex flex-row justify-between gap-0 bg-black/40 p-0',
 					)}

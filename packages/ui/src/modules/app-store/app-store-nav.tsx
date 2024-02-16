@@ -1,30 +1,59 @@
+import {compute} from 'compute-scroll-into-view'
+import {useEffect, useRef} from 'react'
 import {useParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {ButtonLink} from '@/components/ui/button-link'
-import {Category} from '@/trpc/trpc'
 import {useBreakpoint} from '@/utils/tw'
 
-import {categoryishDescriptions} from './constants'
+import {Category, Categoryish, categoryishDescriptions} from './constants'
 
-export function AppStoreNav() {
+export function ConnectedAppStoreNav() {
 	const {categoryishId} = useParams<{categoryishId: Category}>()
+	const activeId: Categoryish = categoryishId || categoryishDescriptions[0].id
+
+	return <AppStoreNav activeId={activeId} />
+}
+
+export function AppStoreNav({activeId}: {activeId: Categoryish}) {
+	const scrollerRef = useRef<HTMLDivElement>(null)
+	const scrollToRef = useRef<HTMLAnchorElement>(null)
 	const breakpoint = useBreakpoint()
 	const size = breakpoint === 'sm' ? 'default' : 'lg'
 
-	const activeId = categoryishId || categoryishDescriptions[0].id
+	// Alternative to: scrollToRef.current?.scrollIntoView({inline: 'center'})
+	// `overflow: hidden` items in parents are scrolled, which breaks the UI.
+	// Fixing scrolling issue by setting a boundary
+	useEffect(() => {
+		if (!scrollToRef.current) return
+		const node = scrollToRef.current
+		const actions = compute(node, {
+			scrollMode: 'if-needed',
+			inline: 'center',
+			boundary: scrollerRef.current,
+		})
+		actions.forEach(({el, top, left}) => {
+			el.scrollTop = top
+			el.scrollLeft = left
+		})
+	}, [activeId])
 
 	return (
-		<FadeScroller direction='x' className='umbrel-hide-scrollbar -my-2 flex gap-[5px] overflow-x-auto py-2'>
+		<FadeScroller
+			ref={scrollerRef}
+			direction='x'
+			className='umbrel-hide-scrollbar -my-2 flex gap-[5px] overflow-x-auto py-2'
+		>
 			{categoryishDescriptions.map((category) => (
 				<ButtonLink
 					key={category.id}
 					to={categoryIdToPath(category.id)}
 					variant={category.id === activeId ? 'primary' : 'default'}
+					ref={category.id === activeId ? scrollToRef : undefined}
 					size={size}
 					unstable_viewTransition
 				>
-					{category.label}
+					{category.label()}
 				</ButtonLink>
 			))}
 		</FadeScroller>

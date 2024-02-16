@@ -1,10 +1,11 @@
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import FailedLayout from '@/modules/bare/failed-layout'
+import {t} from '@/utils/i18n'
 
 import {factoryResetTitle} from './misc'
 
 export function Failed() {
-	const title = 'Reset failed'
+	const title = t('factory-reset.failed.title')
 	useUmbrelTitle(factoryResetTitle(title))
 
 	return (
@@ -12,12 +13,12 @@ export function Failed() {
 			title={title}
 			description={
 				<>
-					There was an error during reset.
+					{t('factory-reset.failed.message')}
 					<br />
-					Please try again.
+					{t('factory-reset.failed.message.please-try-again')}
 				</>
 			}
-			buttonText='Retry factory reset'
+			buttonText={t('factory-reset.failed.retry')}
 			to='/factory-reset'
 		/>
 	)

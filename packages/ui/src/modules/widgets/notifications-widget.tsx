@@ -1,5 +1,7 @@
 import {format} from 'date-fns'
 
+import {LOADING_DASH} from '@/constants'
+
 import {WidgetContainer} from './shared/shared'
 
 export function NotificationsWidget({
@@ -17,7 +19,7 @@ export function NotificationsWidget({
 					maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 50px), transparent)',
 				}}
 			>
-				{!notifications && <NotificationItem timestamp={undefined} description={'–'} />}
+				{!notifications && <NotificationItem timestamp={undefined} description={LOADING_DASH} />}
 				{notifications?.map((notification, i) => (
 					<>
 						{i !== 0 && <hr className='border-white/5' />}
@@ -33,7 +35,7 @@ function NotificationItem({timestamp, description}: {timestamp?: number; descrip
 	const formattedDate = timestamp ? format(timestamp, 'h:mm aaa · MMM d') : undefined
 	return (
 		<div className='text-12 leading-tight'>
-			<div className='truncate opacity-20'>{formattedDate ?? '–'}</div>
+			<div className='truncate opacity-20'>{formattedDate ?? LOADING_DASH}</div>
 			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>{description}</p>
 		</div>
 	)

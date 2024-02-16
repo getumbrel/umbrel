@@ -62,7 +62,8 @@ export function CommunityAppStoreDialog() {
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		addAppStoreMut.reset()
-		setLocalError('')
+		// So setLocalError('') is not batched
+		await setLocalError('')
 		e.preventDefault()
 		if (!url) {
 			setLocalError('URL is required')

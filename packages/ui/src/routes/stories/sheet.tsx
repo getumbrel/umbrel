@@ -1,4 +1,4 @@
-import {Wallpaper} from '@/modules/desktop/wallpaper-context'
+import {Wallpaper} from '@/providers/wallpaper'
 import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 
 export default function SheetStory() {

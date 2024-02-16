@@ -1,7 +1,7 @@
 import {Suspense} from 'react'
 import {Outlet} from 'react-router-dom'
 
-import {Wallpaper} from '@/modules/desktop/wallpaper-context'
+import {Wallpaper} from '@/providers/wallpaper'
 
 export function BareLayout() {
 	return (

@@ -1,12 +1,10 @@
 import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
 import {memo, useDeferredValue, useState} from 'react'
-import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
@@ -17,6 +15,7 @@ import {
 	sectionTitleClass,
 	slideInFromBottomClass,
 } from '@/modules/app-store/shared'
+import {useAvailableApps} from '@/providers/available-apps'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -24,12 +23,12 @@ import {
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 
 import {CommunityAppStoreDialog} from './community-app-store-dialog'
 import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
-	const {t} = useTranslation()
 	const title = t('app-store.title')
 	useUmbrelTitle(title)
 
@@ -61,7 +60,7 @@ function SearchInput({value, onValueChange}: {value: string; onValueChange: (que
 			{/* Set specific input width so it's consistent across browsers */}
 			<input
 				className='w-[160px] bg-transparent p-1 text-15 outline-none placeholder:text-white/40'
-				placeholder='Search apps'
+				placeholder={t('app-store.search-apps')}
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
 				// Prevent closing modal when pressing Escape
@@ -87,7 +86,9 @@ function CommunityAppsDropdown() {
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align='end'>
 					<DropdownMenuItem asChild>
-						<Link to={{search: addLinkSearchParams({dialog: 'add-community-store'})}}>Community app stores</Link>
+						<Link to={{search: addLinkSearchParams({dialog: 'add-community-store'})}}>
+							{t('app-store.menu.community-app-stores')}
+						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
@@ -110,7 +111,7 @@ function SearchResults({query}: {query: string}) {
 
 	const title = (
 		<span>
-			<span className='opacity-60'>Results for</span> {query}
+			<span className='opacity-60'>{t('app-store.search.results-for')}</span> {query}
 		</span>
 	)
 
@@ -125,7 +126,7 @@ function SearchResults({query}: {query: string}) {
 
 const NoResults = () => (
 	<div className='py-4 text-center'>
-		<span className='opacity-50'>No results</span> 👀
+		<span className='opacity-50'>{t('app-store.search.no-results')}</span> 👀
 	</div>
 )
 

@@ -4,19 +4,20 @@ import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
 import {DebugOnly} from '@/components/ui/debug-only'
 import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
-import {useApps} from '@/hooks/use-apps'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useMemoryForUi} from '@/hooks/use-memory'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {StatText} from '@/modules/widgets/shared/stat-text'
+import {useApps} from '@/providers/apps'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
 export default function LiveUsageDialog() {
-	const title = 'Live Usage'
+	const title = t('live-usage')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('live-usage')
 
@@ -37,27 +38,27 @@ function LiveUsageContent() {
 
 	return (
 		<div className='grid gap-4 md:grid-cols-2'>
-			<LiveUsageSection title='Storage'>
+			<LiveUsageSection title={t('storage')}>
 				<StorageCard />
 				<div className={appListClass}>
 					{appStorageUsages?.map(({id, used}) => (
 						<AppListRow
 							key={id}
 							icon={allAppsKeyed[id]?.icon || undefined}
-							title={allAppsKeyed[id]?.name || 'Unknown app'}
+							title={allAppsKeyed[id]?.name || t('unknown-app')}
 							value={maybePrettyBytes(used)}
 						/>
 					))}
 				</div>
 			</LiveUsageSection>
-			<LiveUsageSection title='Memory'>
+			<LiveUsageSection title={t('memory')}>
 				<MemoryCard />
 				<div className={appListClass}>
 					{appMemoryUsages?.map(({id, used}) => (
 						<AppListRow
 							key={id}
 							icon={allAppsKeyed[id]?.icon || undefined}
-							title={allAppsKeyed[id]?.name || 'Unknown app'}
+							title={allAppsKeyed[id]?.name || t('unknown-app')}
 							value={maybePrettyBytes(used)}
 						/>
 					))}
@@ -102,8 +103,8 @@ function StorageCard() {
 			progress={progress}
 			rightChildren={
 				<>
-					{isDiskLow && <ErrorMessage>Running low on space</ErrorMessage>}
-					{isDiskFull && <ErrorMessage>Disk is full</ErrorMessage>}
+					{isDiskLow && <ErrorMessage>{t('storage.low-long')}</ErrorMessage>}
+					{isDiskFull && <ErrorMessage>{t('storage.full')}</ErrorMessage>}
 				</>
 			}
 		/>
@@ -119,7 +120,7 @@ function MemoryCard() {
 			valueSub={valueSub}
 			progressLabel={secondaryValue}
 			progress={progress}
-			rightChildren={isMemoryLow && <ErrorMessage>Running low on memory</ErrorMessage>}
+			rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low-long')}</ErrorMessage>}
 		/>
 	)
 }

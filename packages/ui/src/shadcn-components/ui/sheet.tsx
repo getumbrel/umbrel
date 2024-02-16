@@ -2,7 +2,7 @@ import * as SheetPrimitive from '@radix-ui/react-dialog'
 import {cva, type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
-import {useWallpaper} from '@/modules/desktop/wallpaper-context'
+import {useWallpaper} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
 
 const Sheet = SheetPrimitive.Root

@@ -3,6 +3,7 @@ import {Link, Outlet} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {tw} from '@/utils/tw'
 
 const storyLinks = [
@@ -51,6 +52,10 @@ const storyLinks = [
 		path: '/stories/migrate',
 	},
 	{
+		name: 'Markdown',
+		path: '/stories/markdown',
+	},
+	{
 		name: 'Tailwind',
 		path: '/stories/tailwind',
 	},
@@ -70,6 +75,7 @@ export function StoriesLayout() {
 				className='umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'
 			>
 				<NavLink to='/'>👈 Home</NavLink>
+				<LanguageDropdown />
 				<span className='px-2'>|</span>
 				<NavLink to='/stories'>Stories</NavLink>
 				{storyLinks.map(({name, path}) => (
@@ -96,7 +102,7 @@ const NavLink = ({to, children}: {to: string; children: ReactNode}) => (
 	</Link>
 )
 
-const navLinkClass = tw`'shrink-0 p-2 hover:bg-white/10'`
+const navLinkClass = tw`'shrink-0 p-2 hover:bg-white/10 whitespace-nowrap`
 
 export const H1 = ({children}: {children: ReactNode}) => <h1 className='text-3xl font-bold'>{children}</h1>
 export const H2 = ({children}: {children: ReactNode}) => (

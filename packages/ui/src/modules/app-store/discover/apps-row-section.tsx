@@ -2,7 +2,6 @@ import {useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
-import {FadeScroller} from '@/components/fade-scroller'
 import {useColorThief} from '@/hooks/use-color-thief'
 import {SectionTitle} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
@@ -12,14 +11,11 @@ export const AppsRowSection = ({overline, title, apps}: {overline: string; title
 	return (
 		<div>
 			<SectionTitle overline={overline} title={title} />
-			<FadeScroller
-				direction='x'
-				className='umbrel-hide-scrollbar mt-3 flex flex-row gap-3 overflow-x-auto md:gap-[40px]'
-			>
+			<div className='umbrel-hide-scrollbar -mx-[70px] mt-3 flex flex-row gap-3 overflow-x-auto px-[70px] md:gap-[40px]'>
 				{apps.map((app, i) => (
 					<App key={app.id} app={app} index={i} />
 				))}
-			</FadeScroller>
+			</div>
 		</div>
 	)
 }

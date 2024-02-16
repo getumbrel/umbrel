@@ -5,7 +5,6 @@ import 'photoswipe/style.css'
 
 import {useEffect} from 'react'
 
-import {FadeScroller} from '@/components/fade-scroller'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Banner} from '@/routes/app-store/use-discover-query'
 import {cn} from '@/shadcn-lib/utils'
@@ -13,7 +12,7 @@ import {tw} from '@/utils/tw'
 
 export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => {
 	return (
-		<FadeScroller direction='x' className={galleryRootClass}>
+		<div className={galleryRootClass}>
 			{banners.map((banner, i) => (
 				<Link
 					key={banner.id}
@@ -26,7 +25,7 @@ export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => 
 					<FadeInImg src={banner.image} className='group-focus-visible:opacity-80' alt='' />
 				</Link>
 			))}
-		</FadeScroller>
+		</div>
 	)
 }
 
@@ -46,7 +45,7 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 	}, [galleryId])
 
 	return (
-		<FadeScroller direction='x' className={cn(galleryRootClass, 'pswp-gallery')} id={galleryId}>
+		<div className={cn(galleryRootClass, 'pswp-gallery')} id={galleryId}>
 			{gallery.map((src, i) => (
 				<a
 					key={src}
@@ -63,10 +62,10 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 					<FadeInImg src={src} className='group-focus-visible:opacity-80' alt='' />
 				</a>
 			))}
-		</FadeScroller>
+		</div>
 	)
 }
 
-export const galleryRootClass = tw`umbrel-hide-scrollbar flex gap-2 md:gap-5 overflow-x-auto`
+export const galleryRootClass = tw`-mx-[70px] px-[70px] umbrel-hide-scrollbar flex gap-2 md:gap-5 overflow-x-auto`
 
 export const galleryItemClass = tw`group shrink-0 rounded-10 bg-white/10 bg-cover outline-none ring-inset focus-visible:ring-4 ring-white/80 animate-in fade-in fill-mode-both slide-in-from-right-10 overflow-hidden`

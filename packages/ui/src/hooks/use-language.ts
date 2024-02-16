@@ -1,23 +1,22 @@
-import {useTranslation} from 'react-i18next'
-import {useLocalStorage} from 'react-use'
+import i18next from 'i18next'
 
 export function useLanguage() {
-	const {i18n} = useTranslation()
-	const [activeCode, setActiveCode] = useLocalStorage('i18nextLng', 'en', {
-		raw: true,
-	})
-
 	const setLanguage = (code: string) => {
-		setActiveCode(code)
-		i18n.changeLanguage(code)
+		localStorage.setItem('i18nextLng', code)
+		window.location.reload()
 	}
 
 	// Return `as const` so it's typed as a tuple
-	return [activeCode, setLanguage] as const
+	return [i18next.language, setLanguage] as const
 }
 
 export const languages = [
 	{name: 'English', code: 'en'},
+	{name: 'Deutsch', code: 'de'},
+	{name: 'Español', code: 'es'},
 	{name: 'Français', code: 'fr'},
-	{name: 'العربية', code: 'ar'},
+	{name: 'Italiano', code: 'it'},
+	{name: 'Nederlands', code: 'nl'},
+	{name: 'Português', code: 'pt'},
+	{name: '日本語', code: 'ja'},
 ]

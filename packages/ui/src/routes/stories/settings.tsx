@@ -12,21 +12,21 @@ export default function SettingsStory() {
 		<div className='flex flex-col flex-wrap items-start gap-8 bg-white/10 p-8'>
 			<H3>Device Icons</H3>
 			<div className='flex gap-4'>
+				<HostEnvironmentIcon />
 				<HostEnvironmentIcon environment='umbrel-home' />
 				<HostEnvironmentIcon environment='raspberry-pi' />
 				<HostEnvironmentIcon environment='linux' />
-				<HostEnvironmentIcon />
 			</div>
-			<div className='bg-red-500/10'>
+			<div className='flex flex-wrap gap-2 bg-red-500/10'>
+				<DeviceInfoContent />
 				<DeviceInfoContent
 					umbrelHostEnvironment='umbrel-home'
 					osVersion='v0.4.0'
 					modelNumber='U130121'
 					serialNumber='U230300078'
 				/>
-			</div>
-			<div className='bg-red-500/10'>
-				<DeviceInfoContent />
+				<DeviceInfoContent umbrelHostEnvironment='raspberry-pi' osVersion='v0.4.0' />
+				<DeviceInfoContent umbrelHostEnvironment='linux' osVersion='v0.4.0' />
 			</div>
 			<H2>Tempurature Card</H2>
 			<H3>undefined</H3>

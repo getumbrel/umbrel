@@ -20,24 +20,42 @@ export function SegmentedControl<T extends string>({
 	variant?: 'default' | 'primary'
 	tabs: readonly Tab<T>[]
 }) {
+	// When layout shifts, we don't want the layout animation to play
 	const id = useId()
+
+	const justTwo = tabs.length === 2
+
 	return (
-		<div
+		<motion.div
+			// `layoutRoot` to prevent it from animating when the layout shifts
+			layoutRoot
 			className={cn(
 				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/10 bg-white/3 text-12',
+				justTwo && 'cursor-pointer',
 				size === 'default' && 'h-[30px] p-1',
 				size === 'lg' && 'h-[40px] p-[5px]',
 			)}
+			onClick={() => {
+				if (justTwo) {
+					if (value === tabs[0].id) {
+						onValueChange(tabs[1].id)
+					} else {
+						onValueChange(tabs[0].id)
+					}
+				}
+			}}
 		>
 			{tabs.map((tab) => (
 				<button
 					key={tab.id}
 					className={cn(
-						'group relative flex-grow rounded-full leading-inter-trimmed outline-none focus-visible:ring-3 focus-visible:ring-brand/40',
+						'group relative flex-grow rounded-full leading-inter-trimmed outline-none transition-[box-shadow,background]',
+						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
+						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
 						size === 'default' && 'px-2.5',
 						size === 'lg' && 'px-[14px]',
 					)}
-					disabled={value === tab.id}
+					disabled={!justTwo ? value === tab.id : undefined}
 					onClick={() => onValueChange(tab.id)}
 				>
 					{value === tab.id && (
@@ -62,6 +80,6 @@ export function SegmentedControl<T extends string>({
 					</span>
 				</button>
 			))}
-		</div>
+		</motion.div>
 	)
 }

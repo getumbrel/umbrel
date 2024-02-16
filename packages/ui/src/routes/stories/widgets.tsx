@@ -1,10 +1,12 @@
+import {indexBy} from 'remeda'
+
 import {Arc} from '@/components/ui/arc'
-import {AppsProvider} from '@/hooks/use-apps'
 import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
 import {ActionsWidget} from '@/modules/widgets/actions-widget'
+import {RegistryWidget, WidgetType} from '@/modules/widgets/constants'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
 import {NotificationsWidget} from '@/modules/widgets/notifications-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
@@ -12,9 +14,61 @@ import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
 import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
+import {AppsProvider} from '@/providers/apps'
 import {tw} from '@/utils/tw'
 
-import {demoWidgetConfigs} from '../../../../umbreld/source/modules/apps/data'
+export const demoWidgetConfigs = [
+	{
+		appId: 'bitcoin',
+		widgets: [
+			{
+				id: 'bitcoin:sync',
+				type: 'stat-with-progress',
+				endpoint: '/widgets/bitcoin/sync.json',
+			},
+			{
+				id: 'bitcoin:stats',
+				type: 'four-up',
+				endpoint: '/widgets/bitcoin/stats.json',
+			},
+		],
+	},
+	{
+		appId: 'lightning',
+		widgets: [
+			{
+				id: 'lightning:balance-and-transact',
+				type: 'stat-with-buttons',
+				endpoint: '/widgets/lightning/balance-and-transact.json',
+			},
+			{
+				id: 'lightning:connections',
+				type: 'four-up',
+				endpoint: '/widgets/lightning/connections.json',
+			},
+		],
+	},
+	{
+		appId: 'nostr-relay',
+		widgets: [
+			{
+				id: 'nostr-relay:stats',
+				type: 'actions',
+				endpoint: '/widgets/nostr-relay/actions.json',
+			},
+			{
+				id: 'nostr-relay:notifications',
+				type: 'notifications',
+				endpoint: '/widgets/nostr-relay/notifications.json',
+			},
+		],
+	},
+] satisfies {
+	appId: string
+	widgets: RegistryWidget<WidgetType>[]
+}[]
+
+export const demoWidgetConfigsKeyed = indexBy(demoWidgetConfigs, (widget) => widget.appId)
 
 export default function WidgetsStory() {
 	const {pageInnerRef} = usePager({apps: [], widgets: []})
@@ -28,7 +82,14 @@ export default function WidgetsStory() {
 			<div className='bg-white/30' ref={pageInnerRef}>
 				<H2>Error</H2>
 				<div className={sectionClass}>
-					<Widget appId='example' config={{type: 'stat-with-progress', endpoint: '/widgets/example/four-up.json'}} />
+					<Widget
+						appId='example'
+						config={{
+							id: 'example:error',
+							type: 'stat-with-progress',
+							endpoint: '/widgets/example/four-up.json',
+						}}
+					/>
 				</div>
 				{/* <H2>Blank</H2>
 				<div className={sectionClass}>
@@ -391,6 +452,7 @@ export default function WidgetsStory() {
 					<Widget
 						appId='settings'
 						config={{
+							id: 'settings:system-stats',
 							type: 'two-up-stat-with-progress',
 							endpoint: '/widgets/example/two-up-example.json',
 						}}

@@ -3,9 +3,7 @@ import {useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
-import {useAppInstall} from '@/hooks/use-app-install'
-import {AppsProvider} from '@/hooks/use-apps'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useAppInstall, useUninstallAllApps} from '@/hooks/use-app-install'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
 import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
@@ -13,7 +11,9 @@ import {AppIcon} from '@/modules/desktop/app-icon'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview'
 import {DockItem} from '@/modules/desktop/dock-item'
 import {UninstallTheseFirstDialog} from '@/modules/desktop/uninstall-these-first-dialog'
-import {brandHslLighter, wallpapers} from '@/modules/desktop/wallpaper-context'
+import {AppsProvider} from '@/providers/apps'
+import {useAvailableApps} from '@/providers/available-apps'
+import {brandHslLighter, brandHslLightest, wallpapers} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
 
 export default function DesktopStory() {
@@ -43,7 +43,8 @@ export default function DesktopStory() {
 }
 
 function InstallExample() {
-	const {install, uninstall, uninstallAll, state, progress} = useAppInstall('agora')
+	const {install, uninstall, state, progress} = useAppInstall('agora')
+	const uninstallAll = useUninstallAllApps()
 
 	return (
 		<div>
@@ -208,6 +209,12 @@ function WallpaperExamples() {
 						<div
 							style={{
 								backgroundColor: `hsl(${brandHslLighter(w.brandColorHsl)})`,
+							}}
+							className='0 h-4 w-4'
+						/>
+						<div
+							style={{
+								backgroundColor: `hsl(${brandHslLightest(w.brandColorHsl)})`,
 							}}
 							className='0 h-4 w-4'
 						/>

@@ -3,16 +3,20 @@ import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
-import {systemAppsKeyed, useApps} from '@/hooks/use-apps'
+import {LOADING_DASH} from '@/constants'
+import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
+import {DebugOnlyBare} from './ui/debug-only'
 
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
@@ -22,6 +26,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const isMobile = useIsMobile()
+	const debugInstallRandomApps = useDebugInstallRandomApps()
 
 	if (isLoading) return null
 	if (!userApps) return null
@@ -31,11 +36,11 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder='Search for apps, settings, or actions' />
+			<CommandInput placeholder={t('cmdk.input-placeholder')} />
 			<Separator />
 			<CommandList ref={scrollRef}>
 				<FrequentApps />
-				<CommandEmpty>No results found.</CommandEmpty>
+				<CommandEmpty>{t('no-results-found')}</CommandEmpty>
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
@@ -43,7 +48,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					Restart Umbrel
+					{t('cmdk.restart-umbrel')}
 				</CommandItem>
 				<CommandItem
 					icon={systemAppsKeyed['app-store'].icon}
@@ -52,7 +57,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					Update all apps
+					{t('cmdk.update-all-apps')}
 				</CommandItem>
 				<CommandItem
 					icon={systemAppsKeyed['settings'].icon}
@@ -61,7 +66,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					Change wallpaper
+					{t('cmdk.change-wallpaper')}
 				</CommandItem>
 				<CommandItem
 					icon={systemAppsKeyed['live-usage'].icon}
@@ -70,7 +75,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					Live Usage
+					{t('cmdk.live-usage')}
 				</CommandItem>
 				<CommandItem
 					icon={systemAppsKeyed['widgets'].icon}
@@ -79,7 +84,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					Add widgets
+					{t('cmdk.add-widgets')}
 				</CommandItem>
 				{installedApps.map((app) => (
 					<SubItem
@@ -94,6 +99,11 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						{app.name}
 					</SubItem>
 				))}
+				<DebugOnlyBare>
+					<SubItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
+						{t('install-a-bunch-of-random-apps')}
+					</SubItem>
+				</DebugOnlyBare>
 				<SubItem
 					value={systemAppsKeyed['home'].name}
 					icon={systemAppsKeyed['home'].icon}
@@ -140,10 +150,10 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 }
 
 function FrequentApps() {
-	const lastAppsQ = trpcReact.user.get.useQuery(undefined, {
+	const lastAppsQ = trpcReact.apps.recentlyOpened.useQuery(undefined, {
 		retry: false,
 	})
-	const lastApps = lastAppsQ.data?.lastOpenedApps ?? []
+	const lastApps = lastAppsQ.data ?? []
 	const {userAppsKeyed} = useApps()
 
 	const search = useCommandState((state) => state.search)
@@ -157,10 +167,13 @@ function FrequentApps() {
 	return (
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>Frequent apps</h3>
+				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>
+					{t('cmdk.frequent-apps')}
+				</h3>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
 					{/* Show skeleton by default to prevent layout shift */}
-					{lastAppsQ.isLoading && range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name='–' />)}
+					{lastAppsQ.isLoading &&
+						range(0, 3).map((i) => <FrequentApp key={i} appId={''} icon='' name={LOADING_DASH} />)}
 					{appsByFrequency(lastApps, 6).map((appId) => (
 						<FrequentApp
 							key={appId}

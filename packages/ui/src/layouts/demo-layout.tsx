@@ -1,10 +1,10 @@
 import {Suspense} from 'react'
-import {useTranslation} from 'react-i18next'
 import {JSONTree} from 'react-json-tree'
 import {Outlet} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export function Demo() {
 	return (
@@ -43,7 +43,5 @@ function Trpc() {
 }
 
 function I18n() {
-	const {t} = useTranslation()
-
 	return <div>{t('hello')}</div>
 }

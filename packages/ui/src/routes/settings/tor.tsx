@@ -12,23 +12,25 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export default function ConfirmEnableTorDialog() {
-	useUmbrelTitle('Restart')
+	const title = t('tor.enable.title')
+	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('tor')
 
 	const {setEnabled, isError} = useTorEnabled()
 
 	if (isError) {
-		throw new Error('Failed to enable.')
+		throw new Error(t('tor.enable.failed'))
 	}
 
 	return (
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={TorIcon2}>
-					<AlertDialogTitle>Enable Tor for remote access</AlertDialogTitle>
-					<AlertDialogDescription>This will restart your Umbrel and it may take a few minutes.</AlertDialogDescription>
+					<AlertDialogTitle>{title}</AlertDialogTitle>
+					<AlertDialogDescription>{t('tor.enable.description')}</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction
@@ -39,9 +41,9 @@ export default function ConfirmEnableTorDialog() {
 							setEnabled(true)
 						}}
 					>
-						Restart & enable Tor
+						{t('tor.enable.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

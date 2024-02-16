@@ -18,7 +18,7 @@ import {Link, useNavigate} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card, cardClass} from '@/components/ui/card'
-import {UNKNOWN} from '@/constants'
+import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -26,6 +26,7 @@ import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-pre
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
+import {maybeT, t} from '@/utils/i18n'
 
 import {ListRowMobile} from './list-row'
 import {MemoryCard} from './memory-card'
@@ -58,13 +59,13 @@ export function SettingsContentMobile() {
 				</DesktopPreviewFrame>
 			</div>
 
-			<div className='grid-cols-2 md:grid'>
-				<div className='flex items-center gap-[5px] px-2 pb-2.5 md:order-last'>
+			<div className='grid max-md:gap-5 md:grid-cols-2'>
+				<div className='flex items-center gap-[5px] px-2.5 md:order-last'>
 					<ButtonLink to={{search: addLinkSearchParams({dialog: 'logout'})}} size='md-squared' className='flex-grow'>
-						Log out
+						{t('logout')}
 					</ButtonLink>
 					<ButtonLink to={{search: addLinkSearchParams({dialog: 'restart'})}} size='md-squared' className='flex-grow'>
-						Restart
+						{t('restart')}
 					</ButtonLink>
 					<ButtonLink
 						to={{
@@ -74,20 +75,20 @@ export function SettingsContentMobile() {
 						text='destructive'
 						className='flex-grow'
 					>
-						Shut down
+						{t('shut-down')}
 					</ButtonLink>
 				</div>
 
-				<div>
-					<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
-						{userQ.data.name}’s <span className='opacity-40'>Umbrel</span>
+				<div className='mx-2.5'>
+					<h2 className='text-24 font-bold leading-none -tracking-4'>
+						{userQ.data.name}’s <span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-						<dt className='opacity-40'>Running on</dt>
-						<dd>{deviceInfo.data?.umbrelHostEnvironment ?? UNKNOWN()}</dd>
-						<dt className='opacity-40'>umbrelOS version</dt>
-						<dd>{osVersionQ.data}</dd>
+						<dt className='opacity-40'>{t('running-on')}</dt>
+						<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
+						<dt className='opacity-40'>{t('umbrelos-version')}</dt>
+						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
 					</dl>
 				</div>
 			</div>
@@ -107,81 +108,82 @@ export function SettingsContentMobile() {
 					}}
 				>
 					<TbActivityHeartbeat className='h-5 w-5 [&>*]:stroke-[1.5px]' />
-					<span className='text-12 font-medium leading-inter-trimmed'>Open Live Usage</span>
+					<span className='text-12 font-medium leading-inter-trimmed'>{t('open-live-usage')}</span>
 				</Link>
 			</div>
 
 			<div className='umbrel-divide-y rounded-12 bg-white/5 p-1'>
 				<ListRowMobile
 					icon={TbUser}
-					title='Account'
-					description='Your display name & Umbrel password'
+					title={t('account')}
+					description={t('account-description')}
 					onClick={() => navigate(linkToDialog('account'))}
 				/>
 				<ListRowMobile
 					icon={TbPhoto}
-					title='Wallpaper'
-					description='Choose your Umbrel wallpaper'
+					title={t('wallpaper')}
+					description={t('wallpaper-description')}
 					onClick={() => navigate(linkToDialog('wallpaper'))}
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}
-					title='Two-factor authentication'
-					description='Add a layer of security to login'
+					title={t('2fa-long')}
+					description={t('2fa-description')}
 					onClick={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
 				/>
 				<ListRowMobile
 					icon={TorIcon2}
 					title={
 						<span className='flex items-center gap-2' onClick={() => navigate(linkToDialog('tor'))}>
-							Remote Tor access <TorPulse />
+							{t('tor-long')} <TorPulse />
 						</span>
 					}
-					description='Access Umbrel from anywhere using Tor'
+					description={t('tor-description')}
 					onClick={() => navigate(linkToDialog('tor'))}
 				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
-					title='Migration Assistant'
-					description='Move data from Raspberry Pi to Umbrel Home'
+					title={t('migration-assistant')}
+					description={t('migration-assistant-description')}
 					onClick={() => navigate(linkToDialog('start-migration'))}
 				/>
 				<ListRowMobile
 					icon={TbLanguage}
-					title='Language'
-					description='Select preferred language'
+					title={t('language')}
+					description={t('language-description')}
 					onClick={() => navigate(linkToDialog('language'))}
 				/>
 				<ListRowMobile
 					icon={TbShoppingBag}
-					title='App store'
-					description='App store settings & app updates'
+					title={t('app-store.title')}
+					description={t('app-store.description')}
 					onClick={() => navigate(linkToDialog('app-store-preferences'))}
 				/>
 				<ListRowMobile
 					icon={TbTool}
-					title='Troubleshoot'
-					description='View logs for troubleshooting'
+					title={t('troubleshoot')}
+					description={t('troubleshoot-description')}
 					onClick={() => navigate(linkToDialog('troubleshoot'))}
 				/>
 				<ListRowMobile
 					icon={TbServer}
-					title='Device info'
-					description={`Model ${deviceInfo.data?.modelNumber ?? UNKNOWN()} · Serial ${
-						deviceInfo.data?.serialNumber ?? UNKNOWN()
-					}`}
+					title={t('device-info-short')}
+					description={t('device-info-detail-description', {
+						model: deviceInfo.data?.modelNumber ?? UNKNOWN(),
+						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
+					})}
 					onClick={() => navigate(linkToDialog('device-info'))}
 				/>
 				<ListRowMobile
 					icon={TbCircleArrowUp}
-					title='Software update'
-					description='You are on the latest version'
+					title={t('software-update.title')}
+					description={t('check-for-latest-version')}
 					onClick={() => navigate(linkToDialog('software-update'))}
 				/>
 				<ListRowMobile
 					icon={TbRotate2}
-					title='Factory reset'
-					description='Delete all data, and reset your device completely'
+					title={t('factory-reset')}
+					description={t('factory-reset.desc')}
 					onClick={() => navigate('/factory-reset')}
 				/>
 			</div>

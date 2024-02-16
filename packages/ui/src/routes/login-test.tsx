@@ -4,6 +4,7 @@ import {ErrorAlert} from '@/components/ui/alert'
 import {useAuth} from '@/modules/auth/use-auth'
 import {Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export default function LoginTest() {
 	const {loginWithJwt} = useAuth()
@@ -27,16 +28,16 @@ export default function LoginTest() {
 	return (
 		<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmit}>
 			<div>
-				<Input placeholder='Password' autoFocus value={password} onValueChange={setPassword} />
+				<Input placeholder={t('login.password-label')} autoFocus value={password} onValueChange={setPassword} />
 			</div>
-			<button type='submit'>Log in</button>
+			<button type='submit'>{t('login.password.submit')}</button>
 			<button
 				type='button'
 				onClick={() => {
 					registerMut.mutate({name: 'umbrel', password: 'umbrel'})
 				}}
 			>
-				Create user
+				{t('create-user')}
 			</button>
 			{loginMut.error && <ErrorAlert description={loginMut.error.message} />}
 		</form>

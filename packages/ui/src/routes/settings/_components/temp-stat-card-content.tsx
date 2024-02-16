@@ -5,6 +5,7 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
 import {cardTitleClass} from '@/modules/app-store/app-page/shared'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 import {keyBy} from '@/utils/misc'
 import {isCpuTooHot} from '@/utils/system'
 
@@ -30,7 +31,7 @@ export function TempStatCardContent({
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<div className={cardTitleClass}>Tempurature</div>
+			<div className={cardTitleClass}>{t('tempurature')}</div>
 			<div className='flex items-center justify-between gap-2'>
 				<div className='flex shrink-0 flex-col gap-2.5'>
 					<div className={cardValueClass}>
@@ -51,9 +52,7 @@ export function TempStatCardContent({
 				</div>
 				<SegmentedControl variant='primary' tabs={tempDescriptions} value={unit} onValueChange={setUnit} />
 			</div>
-			{isCpuTooHot(tempInCelcius ?? 0) && (
-				<span className={cardErrorClass}>Consider using a heatsink, fan or a cooling case.</span>
-			)}
+			{isCpuTooHot(tempInCelcius ?? 0) && <span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>}
 		</div>
 	)
 }
@@ -100,21 +99,21 @@ function tempToMessage(tempInCelcius?: number) {
 	const temp = tempInCelcius
 
 	if (temp > 85) {
-		return 'Dangerously hot'
+		return t('temp.dangerously-hot')
 	}
 	if (temp > 75) {
-		return 'Hot'
+		return t('temp.hot')
 	}
 	if (temp === 69) {
-		return 'Nice'
+		return t('temp.nice')
 	}
 	if (temp > 40) {
-		return 'Warm'
+		return t('temp.warm')
 	}
 	if (temp > 20) {
-		return 'Normal'
+		return t('temp.normal')
 	}
-	if (temp < -20) return 'Too cold'
+	if (temp < -20) return t('temp.too-cold')
 
-	return 'Cool'
+	return t('temp.cool')
 }

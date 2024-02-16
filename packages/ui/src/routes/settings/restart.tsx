@@ -14,9 +14,10 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export default function RestartDialog() {
-	useUmbrelTitle('Restart')
+	useUmbrelTitle(t('restart'))
 	const dialogProps = useDialogOpenProps('restart')
 
 	const restartMut = trpcReact.system.reboot.useMutation()
@@ -25,23 +26,21 @@ export default function RestartDialog() {
 	if (restartMut.isLoading) {
 		return (
 			<CoverMessage>
-				<Loading>Restarting</Loading>
-				<CoverMessageParagraph>
-					Please do not refresh this page or turn off your Umbrel while it is restarting.
-				</CoverMessageParagraph>
+				<Loading>{t('restart.restarting')}</Loading>
+				<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
 
 	if (restartMut.isError) {
-		return <CoverMessage>Failed to restart.</CoverMessage>
+		return <CoverMessage>{t('restart.failed')}</CoverMessage>
 	}
 
 	return (
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiRestartLine}>
-					<AlertDialogTitle>Are you sure you want to restart your Umbrel?</AlertDialogTitle>
+					<AlertDialogTitle>{t('restart.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction
@@ -53,9 +52,9 @@ export default function RestartDialog() {
 							restartMut.mutate()
 						}}
 					>
-						Restart
+						{t('restart.confirm.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

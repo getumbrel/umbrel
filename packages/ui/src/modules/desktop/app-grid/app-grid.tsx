@@ -1,6 +1,7 @@
 import {AnimatePresence} from 'framer-motion'
 import {ReactNode, useEffect, useState} from 'react'
 
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {AppGridGradientMasking} from '../desktop-misc'
@@ -54,7 +55,7 @@ export function AppGrid({
 					{/* Default page for calculating size */}
 					<Page index={0}>
 						<PageInner innerRef={pageInnerRef}>
-							{noRoom && <div className='w-full text-center'>Not enough room to show anything.</div>}
+							{noRoom && <div className='w-full text-center'>{t('desktop.not-enough-room')}</div>}
 							<AnimatePresence>
 								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
 								{pages[0]?.apps && pages[0]?.apps.length > 0 && (

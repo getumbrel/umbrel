@@ -13,6 +13,7 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {keyBy} from '@/utils/misc'
 
 import {UMBREL_APP_STORE_ID} from './constants'
@@ -45,7 +46,7 @@ export function InstallTheseFirstDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>{appName} requires access to</DialogTitle>
+					<DialogTitle>{t('install-first.title', {app: appName})}</DialogTitle>
 				</DialogHeader>
 				<div className='space-y-3'>
 					{toInstallApps.map((app) => (
@@ -58,11 +59,11 @@ export function InstallTheseFirstDialog({
 						/>
 					))}
 				</div>
-				<DialogDescription>Install these first to install {appName}.</DialogDescription>
+				<DialogDescription>{t('install-first.description', {app: appName})}</DialogDescription>
 				<DialogFooter>
 					<Close asChild>
 						<Button variant='primary' size='dialog'>
-							Ok
+							{t('ok')}
 						</Button>
 					</Close>
 				</DialogFooter>
@@ -78,7 +79,7 @@ function AppWithName({icon, appName, to, onClick}: {icon: string; appName: React
 
 			<h3 className='flex-1 truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
 			<Link to={to} className='font-medium text-brand-lighter' onClick={onClick}>
-				Install
+				{t('app.install')}
 			</Link>
 		</div>
 	)

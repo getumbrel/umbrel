@@ -2,9 +2,9 @@ import {useId} from 'react'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {useUserApp} from '@/hooks/use-apps'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useUserApp} from '@/providers/apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
 import {
@@ -19,8 +19,10 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
+// TODO: move out of app-store/app-page since it's used elsewhere
 export function DefaultCredentialsDialog() {
 	const params = useQueryParams()
 	const dialogProps = useDialogOpenProps('default-credentials')
@@ -29,8 +31,6 @@ export function DefaultCredentialsDialog() {
 	const direct = params.params.get('default-credentials-direct') === 'true'
 
 	const launchApp = useLaunchApp()
-
-	const title = 'Default Credentials'
 
 	const {app, isLoading} = useUserApp(appId)
 
@@ -42,6 +42,8 @@ export function DefaultCredentialsDialog() {
 	const appName = app.name
 	const defaultUsername = app.credentials.defaultUsername
 	const defaultPassword = app.credentials.defaultPassword
+
+	const title = t('default-credentials.title', {app: appName})
 
 	return (
 		<Dialog {...dialogProps}>
@@ -57,21 +59,19 @@ export function DefaultCredentialsDialog() {
 						{/* <JSONTree data={app} /> */}
 						<DialogHeader>
 							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
-							<DialogTitle className='flex flex-row items-center justify-between'>
-								Credentials for {appName}
-							</DialogTitle>
-							<DialogDescription>Here are credentials you’ll need to access the app.</DialogDescription>
+							<DialogTitle className='flex flex-row items-center justify-between'>{title}</DialogTitle>
+							<DialogDescription>{t('default-credentials.description')}</DialogDescription>
 						</DialogHeader>
 						<Separator />
 						<div>
-							<label className={textClass}>Default username</label>
+							<label className={textClass}>{t('default-credentials.username')}</label>
 							<CopyableField value={defaultUsername} />
 						</div>
 						<div>
-							<label className={textClass}>Default password</label>
+							<label className={textClass}>{t('default-credentials.password')}</label>
 							<CopyableField isPassword value={defaultPassword} />
 						</div>
-						<p className={textClass}>You can access the default credentials of any app from its store page.</p>
+						<p className={textClass}>{t('default-credentials.message-app-store-page')}</p>
 						<Separator />
 						<div className='flex items-center justify-between'>
 							{direct && <ShowCredentialsBeforeOpenCheckbox appId={appId} />}
@@ -82,7 +82,7 @@ export function DefaultCredentialsDialog() {
 									className='w-auto'
 									onClick={() => launchApp(appId, {direct: true})}
 								>
-									Launch app
+									{t('default-credentials.launch')}
 								</Button>
 							) : (
 								<Button
@@ -91,7 +91,7 @@ export function DefaultCredentialsDialog() {
 									className='w-auto'
 									onClick={() => dialogProps.onOpenChange(false)}
 								>
-									Got it
+									{t('default-credentials.close')}
 								</Button>
 							)}
 						</div>
@@ -110,8 +110,9 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 
 	const ctx = trpcReact.useContext()
 
-	const showCredentialsBeforeOpenMut = trpcReact.user.apps.set.useMutation({
-		onSuccess: () => ctx.user.apps.invalidate(),
+	// @ts-expect-error `showCredentialsBeforeOpen`
+	const showCredentialsBeforeOpenMut = trpcReact.apps.showCredentialsBeforeOpen.useMutation({
+		onSuccess: () => ctx.apps.invalidate(),
 	})
 
 	const handleShowCredentialsBeforeOpenChange = (checked: boolean) => {
@@ -132,7 +133,7 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 				onCheckedChange={(c) => handleShowCredentialsBeforeOpenChange(!!c)}
 			/>
 			<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
-				Don’t show this again
+				{t('default-credentials..dont-show-again')}
 			</label>
 		</div>
 	)

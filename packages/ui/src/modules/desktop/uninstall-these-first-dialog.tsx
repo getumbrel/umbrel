@@ -2,7 +2,7 @@ import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {useAvailableApps} from '@/hooks/use-available-apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -12,6 +12,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
+import {t} from '@/utils/i18n'
 
 export function UninstallTheseFirstDialog({
 	open,
@@ -30,7 +31,7 @@ export function UninstallTheseFirstDialog({
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null
-	if (!app) throw new Error('App not found')
+	if (!app) throw new Error(t('app-not-found', {app: appId}))
 
 	const appName = app?.name
 	const toUninstallApps = toInstallFirstIds.map((id) => appsKeyed?.[id])
@@ -39,7 +40,7 @@ export function UninstallTheseFirstDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>{appName} is used by</DialogTitle>
+					<DialogTitle>{t('app.uninstall.deps.used-by.title', {app: appName})}</DialogTitle>
 				</DialogHeader>
 				<div className='space-y-3'>
 					{toUninstallApps.map((app) => (
@@ -47,12 +48,16 @@ export function UninstallTheseFirstDialog({
 					))}
 				</div>
 				<DialogDescription>
-					Uninstall {toUninstallApps.length > 1 ? 'these apps' : toUninstallApps[0].name} first to uninstall {appName}.
+					{t('app.uninstall.deps.used-by.description', {
+						count: toUninstallApps.length,
+						app: appName,
+						firstAppToUninstall: toUninstallApps[0].name,
+					})}
 				</DialogDescription>
 				<DialogFooter>
 					<Close asChild>
 						<Button variant='primary' size='dialog'>
-							Ok
+							{t('ok')}
 						</Button>
 					</Close>
 				</DialogFooter>

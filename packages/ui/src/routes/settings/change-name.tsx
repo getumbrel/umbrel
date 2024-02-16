@@ -1,4 +1,5 @@
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {useUserName} from '@/hooks/use-user-name'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -11,11 +12,10 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {useDialogOpenProps} from '@/utils/dialog'
-
-import {useUserName} from '../../hooks/use-user-name'
+import {t} from '@/utils/i18n'
 
 export default function ChangeNameDialog() {
-	const title = 'Change name'
+	const title = t('change-name')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('change-name')
 
@@ -31,18 +31,18 @@ export default function ChangeNameDialog() {
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
 								<DialogTitle>{title}</DialogTitle>
-								<DialogDescription>This appears in the homescreen, and will be your device name too.</DialogDescription>
+								<DialogDescription>{t('change-name.description')}</DialogDescription>
 							</DialogHeader>
-							<Input placeholder='Name' value={name} onValueChange={setName} />
+							<Input placeholder={t('change-name.input-placeholder')} value={name} onValueChange={setName} />
 							<div className='-my-2.5'>
 								<AnimatedInputError>{formError}</AnimatedInputError>
 							</div>
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
-									Save changes
+									{t('save-changes')}
 								</Button>
 								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
-									Cancel
+									{t('cancel')}
 								</Button>
 							</DialogFooter>
 						</fieldset>

@@ -1,6 +1,8 @@
-import {CoverMessage} from '@/components/ui/cover-message'
+import {ReloadPageButton} from '@/components/reload-page-button'
+import {BareCoverMessage} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {RedirectLogin, RedirectOnboarding} from './redirects'
 
@@ -38,14 +40,19 @@ function EnsureUser({
 
 	if (userExistsQ.isLoading) {
 		return (
-			<CoverMessage delayed>
+			<BareCoverMessage delayed>
 				<Loading />
-			</CoverMessage>
+			</BareCoverMessage>
 		)
 	}
 
 	if (userExistsQ.isError) {
-		return <CoverMessage>Failed to check if user exists.</CoverMessage>
+		return (
+			<BareCoverMessage>
+				{t('auth.failed-to-check-if-user-exists')}
+				<ReloadPageButton />
+			</BareCoverMessage>
+		)
 	}
 
 	if (userExists === wantsUserExists) {

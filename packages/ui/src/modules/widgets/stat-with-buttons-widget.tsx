@@ -1,6 +1,8 @@
 import {ReactNode} from 'react'
 import {take} from 'remeda'
 
+import {LOADING_DASH} from '@/constants'
+
 import {WidgetContainer} from './shared/shared'
 import {StatText} from './shared/stat-text'
 import {TablerIcon} from './shared/tabler-icon'
@@ -24,7 +26,7 @@ export function StatWithButtonsWidget({
 }) {
 	return (
 		<WidgetContainer className='gap-0 p-2 md:p-5'>
-			<StatText title={title ?? '–'} value={value} valueSub={valueSub} />
+			<StatText title={title ?? LOADING_DASH} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
 			<div className='flex flex-col gap-1 md:flex-row'>
 				{buttons &&

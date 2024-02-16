@@ -4,10 +4,11 @@ import {Link, useLocation} from 'react-router-dom'
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
 import {ButtonLink} from '@/components/ui/button-link'
-import {useAvailableApps} from '@/hooks/use-available-apps'
 import {DockSpacer} from '@/modules/desktop/dock'
+import {useAvailableApps} from '@/providers/available-apps'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function InstallFirstApp({title}: {title: string}) {
@@ -38,7 +39,7 @@ export function InstallFirstApp({title}: {title: string}) {
 			</div>
 			<div className='pt-[50px]' />
 			<ButtonLink to='/app-store' className='h-[42px] px-5 py-4 text-14 backdrop-blur-md'>
-				Explore in App Store
+				{t('desktop.install-first.link-to-app-store')}
 			</ButtonLink>
 			<div className='pt-[50px]' />
 			<div className='flex-grow-[2]' />
@@ -57,21 +58,21 @@ function Cards() {
 	return (
 		<>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the self-hoster</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-self-hoster')}</h2>
 				<AppApp app={appsKeyed['nextcloud']} />
 				<AppApp app={appsKeyed['tailscale']} />
 				<AppApp app={appsKeyed['home-assistant']} />
 				<AppApp app={appsKeyed['pi-hole']} />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the bitcoiner</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
 				<AppApp app={appsKeyed['bitcoin']} />
 				<AppApp app={appsKeyed['lightning']} />
 				<AppApp app={appsKeyed['thunderhub']} />
 				<AppApp app={appsKeyed['mempool']} />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the streamer</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-streamer')}</h2>
 				<AppApp app={appsKeyed['plex']} />
 				<AppApp app={appsKeyed['transmission']} />
 				<AppApp app={appsKeyed['sonarr']} />
@@ -85,15 +86,15 @@ function CardsSkeleton() {
 	return (
 		<>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the self-hoster</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-self-hoster')}</h2>
 				<SkeletonApps />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the bitcoiner</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
 				<SkeletonApps />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>For the streamer</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-streamer')}</h2>
 				<SkeletonApps />
 			</div>
 		</>

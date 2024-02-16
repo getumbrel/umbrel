@@ -18,6 +18,7 @@ html {
 	--font-inter: 'Inter';
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
 	--sheet-top: 2vh;
+	--wallpaper-blur: 50px;
 }
 
 @supports (font-variation-settings: normal) {
@@ -136,12 +137,6 @@ a {
 	@apply mt-1 md:mt-2.5;
 }
 
-@property --progress {
-	syntax: '<percentage>';
-	inherits: false;
-	initial-value: 0%;
-}
-
 @keyframes animate-arc {
 	from {
 		stroke-dashoffset: var(--full-length);
@@ -155,7 +150,7 @@ a {
 
 @keyframes animate-unblur {
 	from {
-		filter: blur(50px);
+		filter: blur(var(--wallpaper-blur));
 		scale: 1.25;
 	}
 	to {

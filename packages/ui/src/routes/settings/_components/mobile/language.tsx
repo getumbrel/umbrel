@@ -12,10 +12,11 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {
-	const title = 'Language'
+	const title = t('language')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('language')
 	const [activeCode, setActiveCode] = useLanguage()
@@ -34,7 +35,7 @@ export function LanguageDrawer() {
 			<DrawerContent>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Select preferred interface language</DrawerDescription>
+					<DrawerDescription>{t('language.select-description')}</DrawerDescription>
 				</DrawerHeader>
 
 				<div className={listClass}>

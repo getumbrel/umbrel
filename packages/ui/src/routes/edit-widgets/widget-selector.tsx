@@ -7,11 +7,12 @@ import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
-import {Widget} from '@/modules/widgets'
+import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 
 export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
 	// Delay until after `usePager` has injected CSS vars
@@ -74,7 +75,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 											damping: 30,
 										}}
 									>
-										<Widget appId={widget.app.id} config={widget} />
+										<ExampleWidget type={widget.type} example={widget.example} />
 									</motion.div>
 								)
 							})}
@@ -136,7 +137,7 @@ function WidgetSheet({
 							)}
 						>
 							<SheetHeader>
-								<SheetTitle>Select up to 3 widgets</SheetTitle>
+								<SheetTitle>{t('widgets.edit.select-up-to-3-widgets')}</SheetTitle>
 							</SheetHeader>
 							{children}
 							<DockSpacer />

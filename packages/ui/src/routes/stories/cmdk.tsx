@@ -1,8 +1,8 @@
 import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
-import {AppsProvider} from '@/hooks/use-apps'
 import {H1} from '@/layouts/stories'
 import {Search} from '@/modules/desktop/desktop-misc'
-import {Wallpaper} from '@/modules/desktop/wallpaper-context'
+import {AppsProvider} from '@/providers/apps'
+import {Wallpaper} from '@/providers/wallpaper'
 
 export default function CmdkStory() {
 	const {open, setOpen} = useCmdkOpen()

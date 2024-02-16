@@ -3,7 +3,13 @@ import * as React from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
-import {dialogContentClass, dialogFooterClass, dialogOverlayClass} from './shared/dialog'
+import {
+	dialogContentAnimationClass,
+	dialogContentAnimationSlideClass,
+	dialogContentClass,
+	dialogFooterClass,
+	dialogOverlayClass,
+} from './shared/dialog'
 
 const Dialog = DialogPrimitive.Root
 
@@ -24,13 +30,19 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({className, children, ...props}, ref) => (
+	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {slide?: boolean}
+>(({className, children, slide = true, ...props}, ref) => (
 	<DialogPortal>
 		<DialogOverlay />
 		<DialogPrimitive.Content
 			ref={ref}
-			className={cn(dialogContentClass, 'w-full max-w-[calc(100%-40px)] sm:max-w-[480px]', className)}
+			className={cn(
+				dialogContentClass,
+				dialogContentAnimationClass,
+				slide && dialogContentAnimationSlideClass,
+				'w-full max-w-[calc(100%-40px)] sm:max-w-[480px]',
+				className,
+			)}
 			{...props}
 		>
 			{children}

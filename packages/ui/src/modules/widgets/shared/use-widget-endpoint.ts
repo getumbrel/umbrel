@@ -1,7 +1,7 @@
 import {useState} from 'react'
 import {useEffectOnce, useInterval} from 'react-use'
 
-import {WidgetConfig, WidgetType} from '@/trpc/trpc'
+import {WidgetConfig, WidgetType} from '../constants'
 
 export function useWidgetEndpoint(endpoint: string, type: WidgetType) {
 	type WidgetT = WidgetConfig<typeof type>

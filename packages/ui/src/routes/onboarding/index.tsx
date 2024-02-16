@@ -4,9 +4,10 @@ import {Link} from 'react-router-dom'
 import {links} from '@/constants/links'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
+import {t} from '@/utils/i18n'
 
 export default function OnboardingStart() {
-	const title = 'Welcome to umbrelOS'
+	const title = t('onboarding.start.title')
 	useUmbrelTitle(title)
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 
@@ -18,16 +19,16 @@ export default function OnboardingStart() {
 		<Layout
 			title={title}
 			transitionTitle={false}
-			subTitle='Your home server is ready to set up.'
+			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
 			footer={
 				<Link to={links.support} target='_blank' className={footerLinkClass}>
-					Contact support
+					{t('contact-support')}
 				</Link>
 			}
 		>
 			<Link to='/onboarding/1-create-account' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
-				Start
+				{t('onboarding.start.continue')}
 			</Link>
 		</Layout>
 	)

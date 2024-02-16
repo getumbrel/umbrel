@@ -1,5 +1,5 @@
 import {formatDistance} from 'date-fns'
-import {useEffect} from 'react'
+import {useEffect, useState} from 'react'
 import {
 	RiEqualizerLine,
 	RiExpandRightFill,
@@ -16,16 +16,18 @@ import {useNavigate} from 'react-router-dom'
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {UNKNOWN} from '@/constants'
+import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
+import {maybeT, t} from '@/utils/i18n'
 
-import {LanguageDropdown} from './language-dropdown'
+import {LanguageDropdownContent, LanguageDropdownTrigger} from './language-dropdown'
 import {ListRow} from './list-row'
 import {MemoryCard} from './memory-card'
 import {ContactSupportLink} from './shared'
@@ -42,6 +44,8 @@ export function SettingsContent() {
 	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
 
+	const [langOpen, setLangOpen] = useState(false)
+
 	const [userQ, uptimeQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
@@ -52,25 +56,16 @@ export function SettingsContent() {
 
 	const isUmbrelHome = !!isUmbrelHomeQ.data
 
-	// TODO: also wanna check CPU temp
-	const isLoading =
-		userQ.isLoading || uptimeQ.isLoading || deviceInfo.isLoading || is2faEnabledQ.isLoading || osVersionQ.isLoading
-
 	// Scroll to hash
 	useEffect(() => {
-		if (isLoading) return
-
 		if (location.hash) {
 			const el = document.querySelector(location.hash)
 			if (el) {
 				el.scrollIntoView({behavior: 'instant', block: 'center'})
 			}
 		}
-	}, [isLoading])
+	}, [])
 
-	if (isLoading) {
-		return null
-	}
 	return (
 		<div className='animate-in fade-in'>
 			<div className='grid w-full gap-x-[30px] gap-y-[20px] lg:grid-cols-[280px_auto]'>
@@ -81,28 +76,29 @@ export function SettingsContent() {
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
 					<div>
-						<h2 className='text-24 font-bold lowercase leading-none -tracking-4'>
-							{userQ.data?.name || 'Unknown'}’s <span className='opacity-40'>Umbrel</span>
+						<h2 className='text-24 font-bold leading-none -tracking-4'>
+							{/* TODO: interpolate here */}
+							{userQ.data?.name ?? UNKNOWN()}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-							<dt className='opacity-40'>Running on</dt>
-							<dd>{deviceInfo.data.umbrelHostEnvironment}</dd>
-							<dt className='opacity-40'>umbrelOS version</dt>
-							<dd>{osVersionQ.data}</dd>
-							<dt className='opacity-40'>Uptime</dt>
-							<dd>{duration(uptimeQ.data)}</dd>
+							<dt className='opacity-40'>{t('running-on')}</dt>
+							<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
+							<dt className='opacity-40'>{t('umbrelos-version')}</dt>
+							<dd>{osVersionQ.isLoading ? LOADING_DASH : osVersionQ.data ?? UNKNOWN()}</dd>
+							<dt className='opacity-40'>{t('uptime')}</dt>
+							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data)}</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
 						<IconButtonLink to={linkToDialog('logout')} size='xl' icon={RiLogoutCircleRLine}>
-							Log out
+							{t('logout')}
 						</IconButtonLink>
 						<IconButtonLink to={linkToDialog('restart')} size='xl' icon={RiRestartLine}>
-							Restart
+							{t('restart')}
 						</IconButtonLink>
 						<IconButtonLink to={linkToDialog('shutdown')} size='xl' text='destructive' icon={RiShutDownLine}>
-							Shut down
+							{t('shut-down')}
 						</IconButtonLink>
 					</div>
 				</Card>
@@ -115,73 +111,80 @@ export function SettingsContent() {
 					</Card>
 					<div className='mx-auto'>
 						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>
-							Open Live Usage
+							{t('open-live-usage')}
 						</IconButtonLink>
 					</div>
 					<div className='flex-1' />
 					<ContactSupportLink className='max-lg:hidden' />
 				</div>
 				<Card className='umbrel-divide-y overflow-hidden !py-2'>
-					<ListRow title='Account' description='Your display name & Umbrel password'>
+					<ListRow title={t('account')} description={t('account-description')}>
 						<div className='flex flex-wrap gap-2'>
 							<IconButtonLink to={linkToDialog('change-name')} icon={RiUserLine}>
-								Change name
+								{t('change-name')}
 							</IconButtonLink>
 							<IconButtonLink to={linkToDialog('change-password')} icon={RiKeyLine}>
-								Change password
+								{t('change-password')}
 							</IconButtonLink>
 						</div>
 					</ListRow>
-					<ListRow title='Wallpaper' description='Choose your Umbrel wallpaper'>
+					<ListRow title={t('wallpaper')} description={t('wallpaper-description')}>
 						{/* -mx-2 so that when last item is active, it right aligns with other list row buttons, and first item aligns on mobile when picker wrapped down */}
 						{/* w-full to prevent overflow issues */}
 						<div className='-mx-2 max-w-full'>
 							<WallpaperPicker />
 						</div>
 					</ListRow>
-					<ListRow title='Two-factor authentication' description='Add a layer of security to login' isLabel>
+					<ListRow title={t('2fa-long')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
 						<Switch
 							checked={is2faEnabledQ.data}
 							onCheckedChange={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
 						/>
 					</ListRow>
-					<ListRow title='Remote Tor access' description='Access Umbrel from anywhere using a Tor browser' isLabel>
+					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel>
 						<Switch
 							checked={tor.enabled}
 							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
 						/>
 					</ListRow>
 					{isUmbrelHome && (
-						<ListRow title='Migration Assistant' description='Move your data from Raspberry Pi to Umbrel Home' isLabel>
+						<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
 							{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
 							<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
-								Migrate
+								{t('migrate')}
 							</IconButton>
 						</ListRow>
 					)}
-					{/* TODO: make clicking trigger the dropdown */}
-					<ListRow title='Language' description='Select preferred language '>
-						<LanguageDropdown />
+					<ListRow
+						title={t('language')}
+						description={t('language-description')}
+						isLabel
+						onClick={() => setLangOpen(true)}
+					>
+						<DropdownMenu open={langOpen} onOpenChange={setLangOpen}>
+							<LanguageDropdownTrigger />
+							<LanguageDropdownContent />
+						</DropdownMenu>
 					</ListRow>
-					<ListRow title='App store' description='App store settings & app updates' isLabel>
+					<ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
-							Preferences
+							{t('preferences')}
 						</IconButton>
 					</ListRow>
-					<ListRow title='Troubleshoot' description='View logs for troubleshooting' isLabel>
+					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
 						<IconButton icon={TbTool} onClick={() => navigate(linkToDialog('troubleshoot'))}>
-							Troubleshoot
+							{t('troubleshoot')}
 						</IconButton>
 					</ListRow>
-					<ListRow title='Device Information' description='View logs for troubleshooting umbrelOS or an app' isLabel>
+					<ListRow title={t('device-info-long')} description={t('device-info-description')} isLabel>
 						<IconButton icon={TbServer} onClick={() => navigate(linkToDialog('device-info'))}>
-							View Info
+							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow />
-					<ListRow title='Factory Reset' description='Delete all data, and reset your device completely' isLabel>
+					<ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
-							Reset
+							{t('factory-reset.reset')}
 						</IconButton>
 					</ListRow>
 				</Card>

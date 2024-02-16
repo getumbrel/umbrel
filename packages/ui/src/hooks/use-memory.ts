@@ -1,9 +1,11 @@
 import BigNumber from 'bignumber.js'
 import {sort} from 'remeda'
 
+import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
-import {isMemoryLow} from '@/utils/system'
+import {isMemoryLow, trpcMemoryToLocal} from '@/utils/system'
 
 export function useMemory(options: {poll?: boolean} = {}) {
 	const memoryQ = trpcReact.system.memoryUsage.useQuery(undefined, {
@@ -13,19 +15,15 @@ export function useMemory(options: {poll?: boolean} = {}) {
 		refetchInterval: options.poll ? 500 : undefined,
 	})
 
-	const used = memoryQ.data?.totalUsed
-	const size = memoryQ.data?.size
-	const available = !size || !used ? undefined : size - used
+	const transformed = trpcMemoryToLocal(memoryQ.data)
 
 	return {
 		data: memoryQ.data,
 		isLoading: memoryQ.isLoading,
 		//
-		used,
-		size,
-		available,
+		...transformed,
 		apps: sort(memoryQ.data?.apps ?? [], (a, b) => b.used - a.used),
-		isMemoryLow: isMemoryLow({size, used}),
+		isMemoryLow: isMemoryLow({size: transformed?.size, used: transformed?.used}),
 	}
 }
 
@@ -34,9 +32,9 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 
 	if (isLoading) {
 		return {
-			value: '–',
-			valueSub: '/ –',
-			secondaryValue: '– left',
+			value: LOADING_DASH,
+			valueSub: '/ ' + LOADING_DASH,
+			secondaryValue: LOADING_DASH,
 			progress: 0,
 		}
 	}
@@ -44,7 +42,7 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 	return {
 		value: maybePrettyBytes(used),
 		valueSub: `/ ${maybePrettyBytes(size)}`,
-		secondaryValue: `${maybePrettyBytes(available)} left`,
+		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
 		progress: BigNumber(used ?? 0 * 100)
 			.dividedBy(size ?? 0)
 			.toNumber(),

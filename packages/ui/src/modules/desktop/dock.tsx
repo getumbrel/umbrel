@@ -2,11 +2,13 @@ import {motion, useMotionValue} from 'framer-motion'
 import React, {Suspense} from 'react'
 import {useLocation} from 'react-router-dom'
 
-import {systemAppsKeyed} from '@/hooks/use-apps'
+import {toast} from '@/components/ui/toast'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
+import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
@@ -21,6 +23,9 @@ export const DOCK_HEIGHT = ICON_SIDE + PADDING * 2
 export const FROM_BOTTOM = 10
 
 export function Dock() {
+	const {userApps, isLoading: isUserAppsLoading} = useApps()
+	const hasInstalledApps = !isUserAppsLoading && (userApps ?? []).length > 0
+
 	const {pathname} = useLocation()
 	const {addLinkSearchParams} = useQueryParams()
 	const mouseX = useMotionValue(Infinity)
@@ -44,7 +49,7 @@ export function Dock() {
 			>
 				<DockItem
 					to={systemAppsKeyed['home'].systemAppTo}
-					open={pathname === '/' || pathname === '/install-first-app'}
+					open={pathname === '/'}
 					bg={systemAppsKeyed['home'].icon}
 					mouseX={mouseX}
 				/>
@@ -69,7 +74,10 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
-					to={systemAppsKeyed['widgets'].systemAppTo}
+					to={hasInstalledApps ? systemAppsKeyed['widgets'].systemAppTo : undefined}
+					onClick={() => {
+						toast.info(t('widgets.install-an-app-before-using-widgets'))
+					}}
 					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
 					bg={systemAppsKeyed['widgets'].icon}
 					mouseX={mouseX}

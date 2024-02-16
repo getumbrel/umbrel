@@ -7,12 +7,13 @@ import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
 
 export default function Login() {
-	useUmbrelTitle('Login')
+	useUmbrelTitle(t('login'))
 
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
@@ -45,11 +46,11 @@ export default function Login() {
 	switch (step) {
 		case 'password': {
 			return (
-				<Layout title='Welcome back' subTitle='Enter your Umbrel password to log in'>
+				<Layout title={t('login.title')} subTitle={t('login.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmitPassword}>
 						<div className={formGroupClass}>
 							<PasswordInput
-								label='Password'
+								label={t('login.password-label')}
 								autoFocus
 								value={password}
 								onValueChange={setPassword}
@@ -57,7 +58,7 @@ export default function Login() {
 							/>
 						</div>
 						<button type='submit' className={buttonClass}>
-							Log in
+							{t('login.password.submit')}
 						</button>
 					</form>
 				</Layout>
@@ -65,7 +66,7 @@ export default function Login() {
 		}
 		case '2fa': {
 			return (
-				<Layout title='Authenticate' subTitle='Enter the code displayed in your authenticator app'>
+				<Layout title={t('login-2fa.title')} subTitle={t('login-2fa.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmitPassword}>
 						<PinInput autoFocus length={6} onCodeCheck={handleSubmit2fa} />
 					</form>

@@ -112,10 +112,10 @@ export function PasswordInput({
 export function AnimatedInputError({children}: {children: React.ReactNode}) {
 	const [showShake, setShowShake] = React.useState(false)
 	const prev = usePreviousDistinct(children)
+
 	React.useEffect(() => {
 		if (prev !== children) {
 			setShowShake(true)
-			setTimeout(() => setShowShake(false), 500)
 		}
 	}, [children, prev])
 
@@ -124,6 +124,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 			{children && (
 				<motion.div
 					className={showShake ? 'animate-shake' : undefined}
+					onAnimationEnd={() => setShowShake(false)}
 					initial={{
 						height: 0,
 						opacity: 0,

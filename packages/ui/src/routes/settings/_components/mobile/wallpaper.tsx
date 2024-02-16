@@ -1,8 +1,9 @@
-import {useTimeout} from 'react-use'
+import {useRef} from 'react'
+import {useMount, useTimeout} from 'react-use'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
-import {useWallpaper, WallpaperId, wallpapers} from '@/modules/desktop/wallpaper-context'
+import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
 import {
 	Drawer,
 	DrawerContent,
@@ -13,10 +14,11 @@ import {
 } from '@/shadcn-components/ui/drawer'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function WallpaperDrawer() {
-	const title = 'Wallpaper'
+	const title = t('wallpaper')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('wallpaper')
 
@@ -35,7 +37,7 @@ export function WallpaperDrawer() {
 			<DrawerContent fullHeight>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Choose your Umbrel wallpaper</DrawerDescription>
+					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					{isReady() && (
@@ -73,8 +75,16 @@ function WallpaperItem({
 	className?: string
 	style: React.CSSProperties
 }) {
+	const ref = useRef<HTMLButtonElement>(null)
+
+	useMount(() => {
+		if (!active) return
+		ref.current?.scrollIntoView({block: 'center'})
+	})
+
 	return (
 		<button
+			ref={ref}
 			className={cn('relative aspect-1.9 overflow-hidden rounded-10 bg-white/10', className)}
 			style={{
 				...style,

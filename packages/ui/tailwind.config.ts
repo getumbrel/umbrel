@@ -1,4 +1,5 @@
 import tailwindContainerQueries from '@tailwindcss/container-queries'
+import tailwindTypography from '@tailwindcss/typography'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
 
@@ -41,6 +42,7 @@ export default {
 				// Extracted from background
 				brand: 'hsl(var(--color-brand) / <alpha-value>)',
 				'brand-lighter': 'hsl(var(--color-brand-lighter) / <alpha-value>)',
+				'brand-lightest': 'hsl(var(--color-brand-lightest) / <alpha-value>)',
 				//
 				destructive: '#E03E3E',
 				destructive2: '#E22C2C',
@@ -99,6 +101,9 @@ export default {
 			lineHeight: {
 				'inter-trimmed': '0.73',
 			},
+			lineClamp: {
+				10: '10',
+			},
 			letterSpacing: {
 				'1': '0.01em',
 				'2': '0.02em',
@@ -143,9 +148,17 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				shake: 'shake 0.82s cubic-bezier(.36,.07,.19,.97) both',
+				shake: 'shake 0.7s ease-out both',
 			},
+			typography: () => ({
+				neutral: {
+					css: {
+						'--tw-prose-invert-bullets': 'rgb(255 255 255 / 50%)',
+						'--tw-prose-invert-pre-bg': 'rgb(255 255 255 / 10%)',
+					},
+				},
+			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries],
+	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography],
 }

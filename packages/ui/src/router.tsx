@@ -2,8 +2,6 @@ import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {ErrorBoundary} from './components/ui/error-boundary'
-import {AppsProvider} from './hooks/use-apps'
-import {AvailableAppsProvider} from './hooks/use-available-apps'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -14,10 +12,13 @@ import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {BlurBelowDock} from './modules/desktop/blur-below-dock'
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
-import {Wallpaper} from './modules/desktop/wallpaper-context'
+import {AppsProvider} from './providers/apps'
+import {AvailableAppsProvider} from './providers/available-apps'
+import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
 import Restart from './routes/restart'
 import {Settings} from './routes/settings'
+import {MarkdownExample} from './routes/stories/markdown'
 import MiscStory from './routes/stories/misc'
 import TailwindStory from './routes/stories/tailwind'
 
@@ -259,11 +260,7 @@ export const router = createBrowserRouter([
 			},
 			{
 				path: 'stories/app-store',
-				element: (
-					<AvailableAppsProvider>
-						<AppStoreStory />
-					</AvailableAppsProvider>
-				),
+				Component: AppStoreStory,
 			},
 			{
 				path: 'stories/widgets',
@@ -321,6 +318,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories/misc',
 				Component: MiscStory,
+			},
+			{
+				path: 'stories/markdown',
+				Component: MarkdownExample,
 			},
 		],
 	},

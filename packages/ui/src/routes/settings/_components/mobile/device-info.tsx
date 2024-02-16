@@ -9,11 +9,12 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from '../device-info-content'
 
 export function DeviceInfoDrawer() {
-	const title = 'Device info'
+	const title = t('device-info-short')
 	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('device-info')
 
@@ -28,7 +29,7 @@ export function DeviceInfoDrawer() {
 			<DrawerContent fullHeight>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Device type and current software version</DrawerDescription>
+					<DrawerDescription>{t('device-info-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					<DeviceInfoContent

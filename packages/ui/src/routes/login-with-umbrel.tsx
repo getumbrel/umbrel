@@ -4,13 +4,14 @@ import {useParams} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {PinInput} from '@/components/ui/pin-input'
-import {useUserApp} from '@/hooks/use-apps'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {useAuth} from '@/modules/auth/use-auth'
+import {useUserApp} from '@/providers/apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
@@ -52,7 +53,7 @@ export default function LoginWithUmbrel() {
 				<LoginWithLayout>
 					<form className='contents' onSubmit={handleSubmitPassword}>
 						<PasswordInput
-							label='Password'
+							label={t('login.password-label')}
 							autoFocus
 							value={password}
 							onValueChange={setPassword}
@@ -60,7 +61,7 @@ export default function LoginWithUmbrel() {
 						/>
 						<div>
 							<Button type='submit' variant={'primary'} size='lg' className='text-13'>
-								Log in
+								{t('login.password.submit')}
 							</Button>
 						</div>
 					</form>
@@ -88,7 +89,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 	}
 
 	if (!app) {
-		throw new Error('App not found.')
+		throw new Error(t('login-with-umbrel.app-not-found'))
 	}
 
 	return (
@@ -105,9 +106,9 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 					<AppIcon src={app.icon} size={56} className='rounded-12' />
 				</div>
 				<div className='flex flex-col gap-1'>
-					<h1 className='truncate text-17 font-semibold leading-tight -tracking-2'>Log in with Umbrel</h1>
+					<h1 className='truncate text-17 font-semibold leading-tight -tracking-2'>{t('login-with-umbrel.title')}</h1>
 					<p className='text-13 leading-tight -tracking-2 text-white/40'>
-						Enter your Umbrel password to open {app.name}
+						{t('login-with-umbrel.description', {app: app.name})}
 					</p>
 				</div>
 				{children}

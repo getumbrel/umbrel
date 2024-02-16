@@ -3,6 +3,7 @@ import {motion} from 'framer-motion'
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
+import {t} from '@/utils/i18n'
 
 export function MigrateInner({
 	// onSuccess,
@@ -44,12 +45,12 @@ export function MigrateInner({
 			animate={{opacity: 1}}
 			transition={{duration: 0.4, delay: 0.2}}
 		>
-			<BareLogoTitle>Migration Assistant</BareLogoTitle>
+			<BareLogoTitle>{t('migration-assistant')}</BareLogoTitle>
 			<BareSpacer />
 			{/* Show indeterminate value if not running */}
 			<Progress value={isStarting ? undefined : progress}>{message}</Progress>
 			<div className='flex-1 pt-4' />
-			<Alert>Do not turn off your device until the migration is complete</Alert>
+			<Alert>{t('migrate.callout')}</Alert>
 		</motion.div>
 	)
 }

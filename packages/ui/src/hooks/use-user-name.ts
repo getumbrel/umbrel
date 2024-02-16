@@ -1,6 +1,7 @@
 import {useState} from 'react'
 
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function useUserName({onSuccess}: {onSuccess: () => void}) {
@@ -24,10 +25,12 @@ export function useUserName({onSuccess}: {onSuccess: () => void}) {
 
 		// Reset errors
 		setMut.reset()
-		setLocalError('')
+
+		// So setLocalError('') is not batched
+		await setLocalError('')
 
 		if (!name) {
-			setLocalError('Name is required')
+			setLocalError(t('change-name.failed.name-required'))
 			return
 		}
 

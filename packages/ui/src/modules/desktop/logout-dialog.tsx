@@ -11,6 +11,7 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export function LogoutDialog() {
 	// TODO: Enable hook below after this component is only injected as needed rather than all the time
@@ -22,13 +23,13 @@ export function LogoutDialog() {
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiLogoutCircleRLine}>
-					<AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+					<AlertDialogTitle>{t('logout.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction variant='destructive' className='px-6' onClick={logout}>
-						Log out
+						{t('logout.confirm.submit')}
 					</AlertDialogAction>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

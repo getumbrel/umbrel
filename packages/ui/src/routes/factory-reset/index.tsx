@@ -6,6 +6,7 @@ import {toast} from 'sonner'
 import {ImmersiveDialogSplit} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 import {ReviewData} from './_components/1-review-data'
 import {ConfirmWithPassword} from './_components/2-confirm-with-password'
@@ -89,8 +90,8 @@ function SplitLeftContent() {
 			>
 				<TbRotate2 className='h-[40px] w-[40px]' />
 			</div>
-			<div className='mt-2.5 text-15 font-medium'>Factory Reset</div>
-			<div className='text-13 opacity-40'>Umbrel</div>
+			<div className='mt-2.5 px-2 text-center text-15 font-medium'>{t('factory-reset')}</div>
+			<div className='text-13 opacity-40'>{t('umbrel')}</div>
 		</div>
 	)
 }

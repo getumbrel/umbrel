@@ -1,5 +1,5 @@
 import {Globe, User} from 'lucide-react'
-import {useId, useState} from 'react'
+import {useEffect, useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {
 	TbAlertOctagonFilled,
@@ -14,16 +14,15 @@ import {objectKeys} from 'ts-extras'
 import {ChevronDown} from '@/assets/chevron-down'
 import {TorIcon} from '@/assets/tor-icon'
 import {TorIcon2} from '@/assets/tor-icon2'
-import {InstallButton} from '@/components/install-button'
 import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {toast} from '@/components/ui/toast'
-import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
+import {NoForgotPasswordMessage} from '@/routes/settings/_components/no-forgot-password-message'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -81,6 +80,7 @@ import {
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {t} from '@/utils/i18n'
 import {fixmeHandler} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
@@ -90,6 +90,8 @@ export default function Stories() {
 	return (
 		<div className='flex flex-col gap-4 bg-white/20 p-4'>
 			<H1>Stories</H1>
+			<H2>i18n</H2>
+			<I18Examples />
 			<H2>Buttons</H2>
 			<Buttons />
 			<H2>Icons</H2>
@@ -136,6 +138,8 @@ export default function Stories() {
 			<AlertExample />
 			<H2>Toast</H2>
 			<ToastExample />
+			<H2>Prevent double toast</H2>
+			<PreventDoubleToast />
 			<H2>Scroll Area</H2>
 			<ScrollArea className='h-[200px] w-[350px] rounded-4 bg-white/4'>
 				<div className='p-3'>
@@ -145,6 +149,52 @@ export default function Stories() {
 					funny that they couldn't help but laugh. And once they started laughing, they couldn't stop.
 				</div>
 			</ScrollArea>
+		</div>
+	)
+}
+
+export function I18Examples() {
+	return (
+		<div>
+			<H3>Trans component</H3>
+			<NoForgotPasswordMessage />
+			<H3>Plurals</H3>
+			<p>{0 + ' installed ' + t('app', {count: 0})}</p>
+			<p>{1 + ' installed ' + t('app', {count: 1})}</p>
+			<p>{5 + ' installed ' + t('app', {count: 5})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 0})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 1})}</p>
+			<p>{t('factory-reset.review.installed-apps', {count: 2})}</p>
+		</div>
+	)
+}
+
+function PreventDoubleToast() {
+	const [count, setCount] = useState(0)
+	const [mounted, setMounted] = useState(false)
+
+	useEffect(() => {
+		if (!mounted) return
+		const id = toast.info('count: ' + count)
+
+		return () => {
+			toast.dismiss(id)
+		}
+	}, [count, mounted])
+
+	useEffect(() => {
+		if (!mounted) setMounted(true)
+	}, [mounted])
+
+	return (
+		<div>
+			<p>By default running toast from useEffect in strict mode causes 2 toasts to render. See code.</p>
+			<Button size='xl' onClick={() => setCount((c) => c - 1)}>
+				-1
+			</Button>
+			<Button size='xl' onClick={() => setCount((c) => c + 1)}>
+				+1
+			</Button>
 		</div>
 	)
 }
@@ -325,7 +375,6 @@ function ContextMenuExample() {
 function Buttons() {
 	return (
 		<div className='flex flex-col gap-2'>
-			<ProgressButton />
 			<div>
 				<H3>Sizes</H3>
 				<div className='flex gap-2'>
@@ -365,23 +414,6 @@ function Buttons() {
 					))}
 				</div>
 			</div>
-		</div>
-	)
-}
-
-function ProgressButton() {
-	const {progress, state, install} = useDemoInstallProgress()
-
-	return (
-		<div>
-			<H3>Install Button</H3>
-			<InstallButton
-				installSize='1.5GB'
-				progress={progress}
-				state={state}
-				onInstallClick={install}
-				onOpenClick={() => alert('foobar')}
-			/>
 		</div>
 	)
 }

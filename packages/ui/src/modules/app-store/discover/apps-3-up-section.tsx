@@ -9,6 +9,7 @@ import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {Button} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export type Apps3UpSectionProps = {
 	apps: RegistryApp[]
@@ -93,7 +94,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 				<h3 className='font-16 truncate font-bold'>{app.name}</h3>
 				<p className='truncate text-13 -tracking-3 opacity-50'>{app.developer}</p>
 				<Button size='sm' variant='secondary' className='mt-2'>
-					Install
+					{t('app.install')}
 				</Button>
 			</Link>
 			{/* <div

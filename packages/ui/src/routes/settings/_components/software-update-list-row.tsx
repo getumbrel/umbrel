@@ -5,6 +5,7 @@ import {Icon} from '@/components/ui/icon'
 import {Loading} from '@/components/ui/loading'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {Button} from '@/shadcn-components/ui/button'
+import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
@@ -14,10 +15,8 @@ export function SoftwareUpdateListRow() {
 	if (state === 'upgrading') {
 		return (
 			<CoverMessage>
-				<Loading>Updating to umbrelOS {latestVersion}</Loading>
-				<CoverMessageParagraph>
-					Please do not refresh this page or turn off your Umbrel while the update is in progress
-				</CoverMessageParagraph>
+				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
+				<CoverMessageParagraph>{t('do-not-while', {while: t('update')})}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
@@ -29,14 +28,14 @@ export function SoftwareUpdateListRow() {
 				description={
 					<span className='flex items-center gap-1'>
 						<Icon component={RiArrowUpCircleFill} className='text-brand' />
-						New version {latestVersion} is available
+						{t('software-update.new-version', {version: latestVersion})}
 					</span>
 				}
 				isLabel
 			>
 				<Button variant='primary' onClick={upgrade}>
 					<Icon component={RiRefreshLine} />
-					Update now
+					{t('software-update.update-now')}
 				</Button>
 			</ListRow>
 		)
@@ -50,12 +49,12 @@ export function SoftwareUpdateListRow() {
 					{state === 'at-latest' ? (
 						<>
 							<Icon component={RiCheckboxCircleFill} className='text-success' />
-							You are on the latest version
+							{t('software-update.on-latest')}
 						</>
 					) : (
 						<>
 							{/* Invisible icon to prevent layout shift */}
-							Check for latest version
+							{t('check-for-latest-version')}
 							<Icon component={RiArrowUpCircleFill} className='invisible' />
 						</>
 					)}
@@ -66,7 +65,7 @@ export function SoftwareUpdateListRow() {
 			{state !== 'at-latest' && (
 				<Button onClick={checkLatest}>
 					<Icon component={RiRefreshLine} className={state === 'checking' ? 'animate-spin' : undefined} />
-					{state === 'checking' ? 'Checking for updates...' : 'Check for updates'}
+					{state === 'checking' ? t('software-update.checking') : t('software-update.check-short')}
 				</Button>
 			)}
 		</ListRow>
