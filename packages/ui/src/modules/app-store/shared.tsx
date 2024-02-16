@@ -4,7 +4,7 @@ import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-export const slideInFromBottomClass = tw`animate-in fade-in slide-in-from-bottom-8`
+export const slideInFromBottomClass = tw`animate-in fade-in slide-in-from-bottom-8 duration-300`
 export const slideInFromBottomDelayedClass = tw`animate-in fade-in slide-in-from-bottom-8 fill-mode-both delay-200 `
 
 const cardBaseClass = tw`rounded-20 md:px-[26px] md:py-[36px]`
