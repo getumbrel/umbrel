@@ -7,7 +7,7 @@ import {type AppState} from '../../../apps/schema.js'
 export default router({
 	// List all apps
 	list: privateProcedure.query(async ({ctx}) => {
-		const apps = await ctx.apps.getApps()
+		const apps = ctx.apps.instances
 
 		// TODO: Handle errors so one bad app doesn't break the whole response
 		const appData = await Promise.all(

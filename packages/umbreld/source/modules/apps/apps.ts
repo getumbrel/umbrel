@@ -12,6 +12,7 @@ import App from './app.js'
 export default class Apps {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
+	instances: App[] = []
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -40,30 +41,32 @@ export default class Apps {
 		// Start app environment
 		await appEnvironment(this.#umbreld, 'up')
 
+		// Start apps
 		this.logger.log('Starting apps')
-		// TODO: Start apps
+		const appIds = await this.#umbreld.store.get('apps')
+		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
+		await Promise.all(
+			this.instances.map((app) =>
+				app.start().catch((error) => {
+					// We handle individual errors here to prevent apps start from throwing
+					// if a dingle app fails.
+					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
+				}),
+			),
+		)
 	}
 
 	async stop() {
 		this.logger.log('Stopping apps')
-		// TODO: Stop apps
-	}
-
-	async getApps() {
-		const appIds = await this.#umbreld.store.get('apps')
-		const apps = appIds.map((appId) => new App(this.#umbreld, appId))
-
-		return apps
+		await Promise.all(this.instances.map((app) => app.stop()))
 	}
 
 	async isInstalled(appId: string) {
-		const apps = await this.getApps()
-		return apps.some((app) => app.id === appId)
+		return this.instances.some((app) => app.id === appId)
 	}
 
 	async getApp(appId: string) {
-		const apps = await this.getApps()
-		const app = apps.find((app) => app.id === appId)
+		const app = this.instances.find((app) => app.id === appId)
 		if (!app) throw new Error(`App ${appId} not found`)
 
 		return app
@@ -94,6 +97,9 @@ export default class Apps {
 
 		const app = new App(this.#umbreld, appId)
 
+		// Save reference to app instance
+		this.instances.push(app)
+
 		await app.install()
 
 		return true
@@ -102,7 +108,12 @@ export default class Apps {
 	async uninstall(appId: string) {
 		const app = await this.getApp(appId)
 
-		return app.uninstall()
+		await app.uninstall()
+
+		// Remove app instance
+		this.instances = this.instances.filter((app) => app.id !== appId)
+
+		return true
 	}
 
 	async restart(appId: string) {

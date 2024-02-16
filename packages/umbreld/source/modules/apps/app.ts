@@ -65,6 +65,7 @@ export default class App {
 	}
 
 	async start() {
+		this.logger.log(`Starting app ${this.id}`)
 		await appScript(this.#umbreld, 'start', this.id)
 
 		return true
