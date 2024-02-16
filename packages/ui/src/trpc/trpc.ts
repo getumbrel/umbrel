@@ -7,7 +7,7 @@ import type {AppRouter} from '../../../../packages/umbreld/source/modules/server
 
 export type {AppState, AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 
-export const trpcUrl = `http://${location.hostname}:3001/trpc`
+export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
 const jwt = localStorage.getItem('jwt')
