@@ -88,6 +88,8 @@ export default class Apps {
 		// We use rsync to copy to preserve permissions
 		await $`rsync --archive --verbose --exclude ".gitkeep" ${appTemplatePath}/. ${appDataDirectory}`
 
+		// TODO: do we need to move this down to after the app is started to avoid broken
+		// installs resulting in apps that can't be started?
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const apps = await get('apps')
