@@ -40,11 +40,11 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 					? Math.round(el.scrollLeft) + el.clientWidth >= el.scrollWidth
 					: Math.round(el.scrollTop) + el.clientHeight >= el.scrollHeight
 
-			if (direction === 'x') {
-				console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollLeft), el.scrollWidth - el.clientWidth)
-			} else {
-				console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollTop), el.scrollHeight - el.clientHeight)
-			}
+			// if (direction === 'x') {
+			// 	console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollLeft), el.scrollWidth - el.clientWidth)
+			// } else {
+			// 	console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollTop), el.scrollHeight - el.clientHeight)
+			// }
 
 			if (atStart && atEnd) {
 				el.style.setProperty('--distance1', `0px`)
