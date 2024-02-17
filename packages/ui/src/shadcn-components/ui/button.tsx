@@ -7,18 +7,18 @@ import './button-styles.css'
 import {cn} from '@/shadcn-lib/utils'
 
 const buttonVariants = cva(
-	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-none focus-visible:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button',
+	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-none focus:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button',
 	{
 		variants: {
 			variant: {
 				default:
-					'bg-white/6 active:bg-white/3 hover:bg-white/10 focus-visible:bg-white/10 border-[0.5px] border-white/6 ring-white/6 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus-visible:border-white/20 focus-visible:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
+					'bg-white/6 active:bg-white/3 hover:bg-white/10 focus:bg-white/10 border-[0.5px] border-white/6 ring-white/6 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
 				primary:
-					'bg-brand hover:bg-brand-lighter focus-visible:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
+					'bg-brand hover:bg-brand-lighter focus:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
 				secondary:
-					'bg-white/80 hover:bg-white focus-visible:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
+					'bg-white/80 hover:bg-white focus:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
 				destructive:
-					'bg-destructive2 hover:bg-destructive2-lighter focus-visible:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
+					'bg-destructive2 hover:bg-destructive2-lighter focus:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
 			},
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
@@ -32,7 +32,7 @@ const buttonVariants = cva(
 			},
 			text: {
 				default: 'text-white',
-				destructive: 'text-destructive/90 hover:text-destructive2-lightest focus-visible:text-destructive2-lightest',
+				destructive: 'text-destructive/90 hover:text-destructive2-lightest focus:text-destructive2-lightest',
 			},
 		},
 		compoundVariants: [
