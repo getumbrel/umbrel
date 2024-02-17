@@ -12,6 +12,7 @@ import {AvailableAppsProvider} from '@/providers/available-apps'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
+import {appStates} from '@/trpc/trpc'
 
 export default function AppStoreStory() {
 	return (
@@ -82,89 +83,20 @@ function InstallButtonExamples() {
 					onOpenClick={() => alert('foobar')}
 				/>
 				<Separator />
-				<div>
-					Loading{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='loading'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Uninstalled{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='uninstalled'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Installing{' '}
-					<InstallButton
-						progress={50}
-						state='installing'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Ready{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='ready'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Offline{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='offline'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Updating{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='updating'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
-				<div>
-					Uninstalling{' '}
-					<InstallButton
-						installSize='1.5GB'
-						progress={50}
-						state='uninstalling'
-						onInstallClick={() => {
-							alert('click')
-						}}
-						onOpenClick={() => alert('foobar')}
-					/>
-				</div>
+				{appStates.map((state) => (
+					<div key={state}>
+						{state}{' '}
+						<InstallButton
+							installSize='1.5GB'
+							progress={50}
+							state={state}
+							onInstallClick={() => {
+								alert('install ' + state)
+							}}
+							onOpenClick={() => alert('open' + state)}
+						/>
+					</div>
+				))}
 			</div>
 		</div>
 	)

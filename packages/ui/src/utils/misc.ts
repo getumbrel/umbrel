@@ -1,7 +1,7 @@
 import {indexBy} from 'remeda'
 import urlJoin from 'url-join'
 
-import {AppState, UserApp} from '@/trpc/trpc'
+import {UserApp} from '@/trpc/trpc'
 
 export function fixmeAlert() {
 	alert('fixme')
@@ -16,6 +16,11 @@ export function sleep(milliseconds: number) {
 export function isNormalNumber(value: number | null | undefined): value is number {
 	if (value === undefined || value === null) return false
 	return value !== Infinity && value !== -Infinity && !isNaN(value)
+}
+
+// https://stackoverflow.com/a/39419171
+export function assertUnreachable(x: never): never {
+	throw new Error("Didn't expect to get here, got " + x)
 }
 
 /**
@@ -83,10 +88,3 @@ export function isDev() {
 export function cmdOrCtrl() {
 	return isMac() ? '⌘' : 'Ctrl+'
 }
-
-export const progressStates = [
-	'installing',
-	'uninstalling',
-	'updating',
-	'offline',
-] as const satisfies readonly AppState[]

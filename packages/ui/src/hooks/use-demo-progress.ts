@@ -1,12 +1,16 @@
 import {useEffect, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
+import {AppState} from '@/trpc/trpc'
+
 function incrementProgress(progress: number) {
 	return Math.min(progress + Math.round(Math.random() * 30), 100)
 }
 
+type UsableState = Extract<AppState, 'not-installed' | 'installing' | 'ready'>
+
 export function useDemoInstallProgress() {
-	const [state, setState] = useState<'uninstalled' | 'installing' | 'ready'>('uninstalled')
+	const [state, setState] = useState<UsableState>('not-installed')
 	const [progress, setProgress] = useState(0)
 
 	useEffect(() => {

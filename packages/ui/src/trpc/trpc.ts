@@ -1,25 +1,26 @@
 import {createTRPCProxyClient, createTRPCReact, httpBatchLink, loggerLink} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
-import {AppState} from '../../../../packages/umbreld/source/modules/apps/schema'
 import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
 
-export type {AppState, AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
+export type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 
 export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
-const jwt = localStorage.getItem('jwt')
 export const links = [
 	loggerLink({
 		enabled: () => true,
 	}),
 	httpBatchLink({
 		url: trpcUrl,
-		headers: async () => ({
-			Authorization: `Bearer ${jwt}`,
-		}),
+		headers: async () => {
+			const jwt = localStorage.getItem('jwt')
+			return {
+				Authorization: `Bearer ${jwt}`,
+			}
+		},
 	}),
 ]
 
@@ -34,6 +35,27 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({links})
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
+
+// ---
+
+export type AppState = RouterOutput['apps']['state']['state']
+export const appStates = [
+	'unknown',
+	'installing',
+	'starting',
+	'running',
+	'stopping',
+	'stopped',
+	'restarting',
+	'uninstalling',
+	'updating',
+	'ready',
+] satisfies AppState[]
+
+// `loading` means the frontend is currently fetching the state from the backend
+export type AppStateOrLoading = 'loading' | AppState
+
+export type UserAppWithoutError = Exclude<RouterOutput['apps']['list'][number], {id: string; error: string}>
 
 // ---
 

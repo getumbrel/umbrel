@@ -9,9 +9,10 @@ import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState} from '@/trpc/trpc'
+import {AppState, AppStateOrLoading} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
+import {assertUnreachable} from '@/utils/misc'
 
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
@@ -30,14 +31,6 @@ export function AppIcon({
 	state?: AppState
 }) {
 	const [url, setUrl] = useState(src)
-
-	const finalLabel = {
-		ready: label,
-		installing: 'Installing...',
-		offline: 'Starting...',
-		uninstalling: 'Uninstalling...',
-		updating: 'Updating...',
-	}[state]
 
 	const disabled = state !== 'ready'
 
@@ -92,10 +85,40 @@ export function AppIcon({
 				)}
 			</div>
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
-				<div className='truncate contrast-more:bg-black contrast-more:px-1'>{finalLabel}</div>
+				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
+					<AppLabel state={state} label={label} />
+				</div>
 			</div>
 		</motion.button>
 	)
+}
+
+function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
+	switch (state) {
+		case 'not-installed':
+			return t('app.installing')
+		case 'installing':
+			return t('app.installing') + '...'
+		case 'ready':
+		case 'running':
+			return label
+		case 'starting':
+			return t('app.starting') + '...'
+		case 'restarting':
+			return t('app.restarting') + '...'
+		case 'stopping':
+			return t('app.stopping') + '...'
+		case 'uninstalling':
+			return t('app.uninstalling') + '...'
+		case 'updating':
+			return t('app.updating') + '...'
+		case 'loading':
+			return t('loading') + '...'
+		case 'stopped':
+		case 'unknown':
+			return t('app.offline')
+	}
+	return assertUnreachable(state)
 }
 
 export function AppIconConnected({appId}: {appId: string}) {
@@ -130,14 +153,19 @@ export function AppIconConnected({appId}: {appId: string}) {
 	switch (appInstall.state) {
 		case 'loading':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
-		case 'offline':
+		case 'restarting':
+		case 'starting':
+		case 'stopping':
+		case 'unknown':
+		case 'stopped':
 		case 'uninstalling':
 		case 'updating':
 			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
-		case 'uninstalled':
+		case 'not-installed':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
 		case 'installing':
 			return <AppIcon label={userApp.app.name} src={userApp.app.icon} state='installing' />
+		case 'running':
 		case 'ready': {
 			return (
 				<>
