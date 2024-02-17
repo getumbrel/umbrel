@@ -10,12 +10,14 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					const {name, icon, port} = await app.readManifest()
+					const {name, version, icon, port, path} = await app.readManifest()
 					return {
 						id: app.id,
 						name,
+						version,
 						icon: icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
 						port,
+						path,
 						state: app.state,
 						credentials: {
 							defaultUsername: '',
