@@ -98,7 +98,9 @@ export default class App {
 		// We manually force all container names to the old scheme to maintain compatibility.
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
-			compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+			if (!compose.services![serviceName].container_name) {
+				compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+			}
 		}
 
 		await this.writeCompose(compose)
