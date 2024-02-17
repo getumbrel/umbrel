@@ -53,7 +53,7 @@ export default router({
 		.query(async ({ctx, input}) => {
 			if (!(await ctx.apps.isInstalled(input.appId))) {
 				return {
-					state: 'not-installed',
+					state: 'not-installed' as const,
 					progress: 0,
 				}
 			}
@@ -63,7 +63,7 @@ export default router({
 			return {
 				state: app.state,
 				progress: app.stateProgress,
-			}
+			} as const
 		}),
 
 	// Uninstall an app
