@@ -1,6 +1,10 @@
+import path from 'node:path'
+
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {type Compose} from 'compose-spec-schema'
+import {$} from 'execa'
+import systemInformation from 'systeminformation'
 
 import type Umbreld from '../../index.js'
 import {type AppManifest} from './schema.js'
@@ -13,6 +17,27 @@ async function readYaml(path: string) {
 
 async function writeYaml(path: string, data: any) {
 	return fse.writeFile(path, yaml.dump(data))
+}
+
+// Get a directory size in bytes
+async function getDirectorySize(directoryPath: string) {
+	let totalSize = 0
+	const files = await fse.readdir(directoryPath, {withFileTypes: true})
+
+	// Traverse entire directory structure and tally up the size of all files
+	for (const file of files) {
+		if (file.isSymbolicLink()) {
+			const lstats = await fse.lstat(path.join(directoryPath, file.name))
+			totalSize += lstats.size
+		} else if (file.isFile()) {
+			const stats = await fse.stat(path.join(directoryPath, file.name))
+			totalSize += stats.size
+		} else if (file.isDirectory()) {
+			totalSize += await getDirectorySize(path.join(directoryPath, file.name))
+		}
+	}
+
+	return totalSize
 }
 
 type AppState =
@@ -63,8 +88,7 @@ export default class App {
 		return writeYaml(`${this.dataDirectory}/docker-compose.yml`, compose)
 	}
 
-	async install() {
-		this.state = 'installing'
+	async patchComposeServices() {
 		// Temporary patch to fix contianer names for modern docker-compose installs.
 		// The contianer name scheme used to be <project-name>_<service-name>_1 but
 		// recent versions of docker-compose use <project-name>-<service-name>-1
@@ -74,15 +98,52 @@ export default class App {
 		// We manually force all container names to the old scheme to maintain compatibility.
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
-			compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+			if (!compose.services![serviceName].container_name) {
+				compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+			}
 		}
 
 		await this.writeCompose(compose)
+	}
+
+	async install() {
+		this.state = 'installing'
+		await this.patchComposeServices()
 
 		// TODO: Pull images here before the install script and calculate live progress for
 		// this.stateProgress so button animations work
 
 		await appScript(this.#umbreld, 'install', this.id)
+		this.state = 'ready'
+
+		return true
+	}
+
+	async update() {
+		this.state = 'updating'
+
+		// TODO: Pull images here before the install script and calculate live progress for
+		// this.stateProgress so button animations work
+
+		this.logger.log(`Updating app ${this.id}`)
+
+		// Get a reference to the old images
+		const compose = await this.readCompose()
+		const oldImages = Object.values(compose.services!)
+			.map((service) => service.image)
+			.filter(Boolean) as string[]
+
+		// Update the app, patching the compose file half way through
+		await appScript(this.#umbreld, 'pre-patch-update', this.id)
+		await this.patchComposeServices()
+		await appScript(this.#umbreld, 'post-patch-update', this.id)
+
+		// Delete the old images if we can. Silently fail on error cos docker
+		// will return an error even if only one image is still needed.
+		try {
+			await $({stdio: 'inherit'})`docker rmi ${oldImages}`
+		} catch {}
+
 		this.state = 'ready'
 
 		return true
@@ -126,5 +187,28 @@ export default class App {
 		})
 
 		return true
+	}
+
+	async getResourceUsage() {
+		const compose = await this.readCompose()
+		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
+		const result = await $`docker stats --no-stream --format json ${containers}`
+		const data = result.stdout.split('\n').map((line) => JSON.parse(line))
+		return data
+	}
+
+	async getMemoryUsage() {
+		const containers = await this.getResourceUsage()
+		let totalMemoryPercentage = 0
+		for (const container of containers) {
+			totalMemoryPercentage += Number.parseFloat(container.MemPerc)
+		}
+
+		const {total} = await systemInformation.mem()
+		return total * (totalMemoryPercentage / 100)
+	}
+
+	async getDiskUsage() {
+		return getDirectorySize(this.dataDirectory)
 	}
 }

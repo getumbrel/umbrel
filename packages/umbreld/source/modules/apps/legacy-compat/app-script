@@ -41,6 +41,13 @@ Commands:
 EOF
 }
 
+# Use GNU cp on macos
+if [[ "$(uname)" = "Darwin" ]]; then
+    cp="gcp"
+else
+    cp="cp"
+fi
+
 check_dependencies () {
   for cmd in "$@"; do
     if ! command -v $cmd >/dev/null 2>&1; then
@@ -172,9 +179,10 @@ if [ -z ${2+x} ]; then
 else
   app="$2"
 
-  repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
+  # repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
 #   repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
 #   app_repo_dir="${repo_path}/${app}"
+  app_repo_dir="${SCRIPT_APP_REPO_DIR}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
   
   app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
@@ -303,7 +311,7 @@ template_app() {
 
     # First we'll copy the file so we ensure the output
     # has the same fs permissions as the input
-    cp --archive "${APP_TEMPLATE_INPUT_FILE}" "${APP_TEMPLATE_OUTPUT_FILE}"
+    $cp --archive "${APP_TEMPLATE_INPUT_FILE}" "${APP_TEMPLATE_OUTPUT_FILE}"
     cat "${APP_TEMPLATE_INPUT_FILE}" | envsubst > "${APP_TEMPLATE_OUTPUT_FILE}"
   done
 }
@@ -316,7 +324,7 @@ copy_app_files() {
 
     for app_file in $APP_FILES; do
       if [[ -f "${app_file}" ]] || [[ -d "${app_file}" ]]; then
-        cp --archive "${app_file}" "${app_data_dir}"
+        $cp --archive "${app_file}" "${app_data_dir}"
       fi
     done
   done
@@ -459,7 +467,7 @@ if [[ "$command" = "uninstall" ]]; then
   if [[ -x "${post_uninstall_app_hook}" ]]; then
     temp_post_uninstall_app_hook="/tmp/${app}-post-uninstall"
 
-    cp --archive "${post_uninstall_app_hook}" "${temp_post_uninstall_app_hook}"
+    $cp --archive "${post_uninstall_app_hook}" "${temp_post_uninstall_app_hook}"
 
     post_uninstall_app_hook="${temp_post_uninstall_app_hook}"
   else
@@ -536,7 +544,7 @@ fi
 # Update an installed app
 if [[ "$command" = "update" ]]; then
 
-  must_be_installed_guard
+  # must_be_installed_guard
 
   # Check that the app folder still exists
   # Within the associated local app repo
@@ -545,7 +553,7 @@ if [[ "$command" = "update" ]]; then
     exit 1
   fi
 
-  echo "Updating '${app}' from: ${repo}"
+  echo "Updating '${app}' from: ${app_repo_dir}"
   # Save current images to clean up later
   app_compose_file="${app_data_dir}/docker-compose.yml"
   app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
@@ -585,6 +593,71 @@ if [[ "$command" = "update" ]]; then
     "${0}" "start" "${app}"
     # Remove any old images we don't need anymore
     docker rmi $app_old_images || true
+  fi
+
+  execute_hook "${app}" "post-update"
+
+  exit
+fi
+
+# Update an installed app
+if [[ "$command" = "pre-patch-update" ]]; then
+
+  # must_be_installed_guard
+
+  # Check that the app folder still exists
+  # Within the associated local app repo
+  if [[ ! -d "${app_repo_dir}" ]]; then
+    >&2 echo "Error: Local app repo no longer exists for ${app}"
+    exit 1
+  fi
+
+  echo "Updating '${app}' from: ${app_repo_dir}"
+  # Save current images to clean up later
+  app_compose_file="${app_data_dir}/docker-compose.yml"
+  app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
+
+  if [[ "$*" != *"--skip-stop"* ]]; then
+    "${0}" "stop" "${app}"
+  fi
+
+  execute_hook "${app}" "pre-update"
+  
+  # App updates will only copy files from this whitelist:
+  UPDATE_FILES_WHITELIST_PRE="docker-compose.yml *.template exports.sh torrc hooks"
+
+  # We copy umbrel-app.yml after the app has started
+  # That way the frontend knows the update has finished
+  # And the app is running again
+  UPDATE_FILES_WHITELIST_POST="umbrel-app.yml"
+
+  copy_app_files "${UPDATE_FILES_WHITELIST_PRE}"
+
+  # Ensure remaining files are copied in case of unexpected exit
+  trap "copy_app_files "${UPDATE_FILES_WHITELIST_POST}"; exit $?" INT TERM EXIT
+
+  # Source env. after new exports.sh is copied (done above via 'copy_app_files')
+  source_app "${app}"
+
+  # Now apply templates
+  template_app "${app}"
+
+  echo "Pulling images for app ${app}..."
+  compose "${app}" pull
+
+  # Copy remaining files to mark update as complete
+  copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
+
+  exit
+fi
+
+# Update an installed app
+if [[ "$command" = "post-patch-update" ]]; then
+
+  if [[ "$*" != *"--skip-start"* ]]; then
+    "${0}" "start" "${app}"
+    # Remove any old images we don't need anymore
+    # docker rmi $app_old_images || true
   fi
 
   execute_hook "${app}" "post-update"

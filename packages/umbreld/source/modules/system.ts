@@ -1,6 +1,8 @@
 import systemInformation from 'systeminformation'
 import {$} from 'execa'
 
+import type Umbreld from '../index.js'
+
 export async function getCpuTemperature(): Promise<number> {
 	const cpuTemperature = await systemInformation.cpuTemperature()
 
@@ -17,9 +19,9 @@ type DiskUsage = {
 }
 
 export async function getDiskUsage(
-	umbreldDataDir: string,
+	umbreld: Umbreld,
 ): Promise<{size: number; totalUsed: number; system: number; downloads: number; apps: DiskUsage[]}> {
-	if (typeof umbreldDataDir !== 'string' || umbreldDataDir === '') {
+	if (typeof umbreld.dataDirectory !== 'string' || umbreld.dataDirectory === '') {
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
 
@@ -30,7 +32,7 @@ export async function getDiskUsage(
 	// Get the disk usage information for the file system containing the Umbreld data dir.
 	// Sort by mount length to get the most specific mount point
 	const dataDirectoryFilesystem = fileSystemSize
-		.filter((fs) => umbreldDataDir.startsWith(fs.mount))
+		.filter((fs) => umbreld.dataDirectory.startsWith(fs.mount))
 		.sort((a, b) => b.mount.length - a.mount.length)[0]
 
 	if (!dataDirectoryFilesystem) {
@@ -39,25 +41,21 @@ export async function getDiskUsage(
 
 	const {size, used} = dataDirectoryFilesystem
 
+	// Get app disk usage
+	const apps = await Promise.all(
+		umbreld.apps.instances.map(async (app) => ({
+			id: app.id,
+			used: await app.getDiskUsage(),
+		})),
+	)
+	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
+
 	return {
 		size,
 		totalUsed: used,
-		system: 69_420, // TODO: used - sumOfAppsAndDownloads,
-		downloads: 42_690,
-		apps: [
-			{
-				id: 'bitcoin',
-				used: 30_000,
-			},
-			{
-				id: 'lightning',
-				used: 60_000,
-			},
-			{
-				id: 'nostr-relay',
-				used: 90_000,
-			},
-		],
+		system: used - appsTotal,
+		downloads: 42_690, // TODO: calculate this and also remove it from system
+		apps,
 	}
 }
 
@@ -66,33 +64,25 @@ type MemoryUsage = {
 	used: number
 }
 
-export async function getMemoryUsage(): Promise<{
+export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	size: number
 	totalUsed: number
 	system: number
 	apps: MemoryUsage[]
 }> {
 	const {total: size, active: totalUsed} = await systemInformation.mem()
+	const apps = await Promise.all(
+		umbreld.apps.instances.map(async (app) => ({
+			id: app.id,
+			used: await app.getMemoryUsage(),
+		})),
+	)
+	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 	return {
 		size,
 		totalUsed,
-		system: 69_420, // TODO: totalUsed - sumOfApps,
-		// TODO: get list of installed apps and their memory usage
-		// to calculate the memory usage of each app
-		apps: [
-			{
-				id: 'bitcoin',
-				used: 30_000,
-			},
-			{
-				id: 'lightning',
-				used: 60_000,
-			},
-			{
-				id: 'nostr-relay',
-				used: 90_000,
-			},
-		],
+		system: totalUsed - appsTotal,
+		apps,
 	}
 }
 

@@ -37,8 +37,8 @@ export default router({
 	}),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
-	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld.dataDirectory)),
-	memoryUsage: privateProcedure.query(() => getMemoryUsage()),
+	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
+	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	shutdown: privateProcedure.mutation(() => shutdown()),
 	reboot: privateProcedure.mutation(() => reboot()),
 	//

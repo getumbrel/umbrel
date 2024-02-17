@@ -88,19 +88,19 @@ export default class Apps {
 		// We use rsync to copy to preserve permissions
 		await $`rsync --archive --verbose --exclude ".gitkeep" ${appTemplatePath}/. ${appDataDirectory}`
 
+		// Save reference to app instance
+		const app = new App(this.#umbreld, appId)
+		this.instances.push(app)
+
+		// Complete the install process via the app script
+		await app.install()
+
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			const apps = await get('apps')
 			apps.push(appId)
 			await set('apps', apps)
 		})
-
-		const app = new App(this.#umbreld, appId)
-
-		// Save reference to app instance
-		this.instances.push(app)
-
-		await app.install()
 
 		return true
 	}
@@ -125,8 +125,7 @@ export default class Apps {
 	async update(appId: string) {
 		const app = this.getApp(appId)
 
-		// TODO: Implement update
-		return true
+		return app.update()
 	}
 
 	async trackOpen(appId: string) {

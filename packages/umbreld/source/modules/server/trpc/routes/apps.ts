@@ -10,18 +10,20 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					const {name, icon, port} = await app.readManifest()
+					const {name, version, icon, port, path} = await app.readManifest()
 					return {
 						id: app.id,
 						name,
+						version,
 						icon: icon ?? `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/icon.svg`,
 						port,
+						path,
 						state: app.state,
 						credentials: {
 							defaultUsername: '',
 							defaultPassword: '',
 						},
-						hiddenService: 'blah.onion',
+						hiddenService: 'blah.onion', // TODO: Get hidden service
 					}
 				} catch (error) {
 					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
@@ -53,7 +55,7 @@ export default router({
 		.query(async ({ctx, input}) => {
 			if (!(await ctx.apps.isInstalled(input.appId))) {
 				return {
-					state: 'not-installed',
+					state: 'not-installed' as const,
 					progress: 0,
 				}
 			}
@@ -63,7 +65,7 @@ export default router({
 			return {
 				state: app.state,
 				progress: app.stateProgress,
-			}
+			} as const
 		}),
 
 	// Uninstall an app
