@@ -3,6 +3,7 @@ import {useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
+import {toast} from '@/components/ui/toast'
 import {useAppInstall, useUninstallAllApps} from '@/hooks/use-app-install'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
@@ -15,6 +16,7 @@ import {AppsProvider} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {brandHslLighter, brandHslLightest, wallpapers} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
+import {appStates} from '@/trpc/trpc'
 
 export default function DesktopStory() {
 	useUmbrelTitle('Desktop')
@@ -89,15 +91,15 @@ function AppIconExamples() {
 	// if (!iconSrc) return null
 
 	const iconSrc = 'https://picsum.photos/200/200'
-	const handleClick = () => alert('clicked')
 
 	return (
 		<div className='flex flex-wrap gap-2'>
-			<AppIcon label={'foobar'} src={iconSrc} state='ready' onClick={handleClick} />
-			<AppIcon label={'foobar'} src={iconSrc} state='installing' onClick={handleClick} />
-			<AppIcon label={'foobar'} src={iconSrc} state='offline' onClick={handleClick} />
-			<AppIcon label={'foobar'} src={iconSrc} state='uninstalling' onClick={handleClick} />
-			<AppIcon label={'foobar'} src={iconSrc} state='updating' onClick={handleClick} />
+			{appStates.map((state) => (
+				<div key={state}>
+					{state}
+					<AppIcon label={'foobar'} src={iconSrc} state={state} onClick={() => toast(state)} />
+				</div>
+			))}
 		</div>
 	)
 }

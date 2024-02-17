@@ -7,14 +7,13 @@ import {arrayIncludes} from 'ts-extras'
 import {UNKNOWN} from '@/constants'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState} from '@/trpc/trpc'
+import {AppStateOrLoading} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
+import {assertUnreachable} from '@/utils/misc'
 // import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {AnimatedNumber} from './ui/animated-number'
-
-type InstallState = 'loading' | 'uninstalled' | AppState
 
 // Check if CSS available
 // https://developer.mozilla.org/en-US/docs/Web/API/CSS/registerProperty
@@ -36,7 +35,7 @@ export function InstallButton({
 }: {
 	installSize?: string
 	progress?: number
-	state: InstallState
+	state: AppStateOrLoading
 	onInstallClick?: () => void
 	onOpenClick?: () => void
 }) {
@@ -70,7 +69,7 @@ export function InstallButton({
 				opacity: 1,
 			}}
 			onClick={() => {
-				if (state === 'uninstalled') {
+				if (state === 'not-installed') {
 					onInstallClick?.()
 				} else if (state === 'ready') {
 					onOpenClick?.()
@@ -86,7 +85,7 @@ export function InstallButton({
 				...(state === 'installing' ? installingStyle : undefined),
 			}}
 			layout
-			disabled={!arrayIncludes(['uninstalled', 'ready'], state)}
+			disabled={!arrayIncludes(['not-installed', 'ready'], state)}
 		>
 			{/* Child has `layout` too to prevent contenet from being scaled and stretched with the parent */}
 			{/* https://codesandbox.io/p/sandbox/framer-motion-2-scale-correction-z4tgr?file=%2Fsrc%2FApp.js&from-embed= */}
@@ -111,12 +110,12 @@ function ButtonContentForState({
 	installSize,
 	progress,
 }: {
-	state: InstallState
+	state: AppStateOrLoading
 	installSize?: string
 	progress?: number
 }) {
 	switch (state) {
-		case 'uninstalled':
+		case 'not-installed':
 			return (
 				<>
 					{t('app.install')}{' '}
@@ -134,18 +133,27 @@ function ButtonContentForState({
 				</>
 			)
 		case 'ready':
+		case 'running':
 			return t('app.open')
-		case 'offline':
-			return t('app.offline')
-		case 'uninstalling':
-			return t('app.uninstalling') + '...'
+		case 'starting':
+			return t('app.restarting') + '...'
+		case 'restarting':
+			return t('app.starting') + '...'
+		case 'stopping':
+			return t('app.stopping') + '...'
 		case 'updating':
 			return t('app.updating') + '...'
+		case 'uninstalling':
+			return t('app.uninstalling') + '...'
+		case 'unknown':
+		case 'stopped':
+			return t('app.offline')
 		case 'loading':
-		default:
+		case undefined:
 			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
 		// return t('loading') + '...'
 	}
+	return assertUnreachable(state)
 }
 
 export const installButtonClass = cn(

@@ -4,11 +4,19 @@ import {useInterval} from 'react-use'
 import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
-import {AppState, trpcClient, trpcReact} from '@/trpc/trpc'
+import {AppState, AppStateOrLoading, trpcClient, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {progressStates} from '@/utils/misc'
 
-export type InstallState = 'loading' | 'uninstalled' | AppState
+// TODO: consider adding `stopped` and `unknown`
+/** States where we want to frequently poll (on the order of seconds) */
+export const pollStates = [
+	'installing',
+	'uninstalling',
+	'updating',
+	'starting',
+	'restarting',
+	'stopping',
+] as const satisfies readonly AppState[]
 
 export function useInvalidateDeps(appId: string) {
 	const ctx = trpcReact.useContext()
@@ -57,10 +65,10 @@ export function useAppInstall(id: string) {
 	const progress = appStateQ.data?.progress
 
 	// Poll for install status if we're installing or uninstalling
-	const shouldPollForStatus = appState && arrayIncludes(progressStates, appState)
+	const shouldPollForStatus = appState && arrayIncludes(pollStates, appState)
 	useInterval(appStateQ.refetch, shouldPollForStatus ? 500 : null)
 	useEffect(() => {
-		if (appState && !arrayIncludes(progressStates, appState)) {
+		if (appState && !arrayIncludes(pollStates, appState)) {
 			invalidateInstallDependencies()
 		}
 	}, [appState, appStateQ, invalidateInstallDependencies])
@@ -85,7 +93,7 @@ export function useAppInstall(id: string) {
 	const restart = async () => restartMut.mutate({appId: id})
 
 	// Ready means the app can be installed
-	const state: InstallState = appStateQ.isLoading ? 'loading' : appState ?? 'uninstalled'
+	const state: AppStateOrLoading = appStateQ.isLoading ? 'loading' : appState ?? 'not-installed'
 
 	return {
 		restart,
@@ -94,7 +102,7 @@ export function useAppInstall(id: string) {
 		uninstall,
 		progress,
 		state,
-	}
+	} as const
 }
 
 async function getRequiredBy(targetAppId: string) {

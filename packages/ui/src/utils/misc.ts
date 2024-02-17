@@ -1,7 +1,7 @@
 import {indexBy} from 'remeda'
 import urlJoin from 'url-join'
 
-import {AppState, UserApp} from '@/trpc/trpc'
+import {UserApp} from '@/trpc/trpc'
 
 export function fixmeAlert() {
 	alert('fixme')
@@ -88,10 +88,3 @@ export function isDev() {
 export function cmdOrCtrl() {
 	return isMac() ? '⌘' : 'Ctrl+'
 }
-
-export const progressStates = [
-	'installing',
-	'uninstalling',
-	'updating',
-	'offline',
-] as const satisfies readonly AppState[]

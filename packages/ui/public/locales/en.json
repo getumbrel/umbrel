@@ -336,5 +336,8 @@
   "redirect.to-login": "Redirecting to login...",
   "redirect.to-home": "Redirecting to home...",
   "widgets.install-an-app-before-using-widgets": "Install an app before using widgets.",
-  "logout-error-generic": "Backend error while logging out!"
+  "logout-error-generic": "Backend error while logging out!",
+  "app.stopping": "Stopping",
+  "app.starting": "Starting",
+  "app.restarting": "Restarting"
 }
