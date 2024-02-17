@@ -11,6 +11,9 @@ export default function TailwindStory() {
 			<H2>
 				BREAKPOINT: <b>{breakpoint}</b>
 			</H2>
+			<div className='bg-red-500/50'>
+				<div className='leading-inter-trimmed text-2xl'>leading-inter-trimmed</div>
+			</div>
 			<H3>screens</H3>
 			<JSONTree data={screens} />
 			<H3>tailwind full config</H3>
