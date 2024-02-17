@@ -39,6 +39,10 @@ export type RouterOutput = inferRouterOutputs<AppRouter>
 
 // ---
 
+export type UserAppWithoutError = Exclude<RouterOutput['apps']['list'][number], {id: string; error: string}>
+
+// ---
+
 /**
  * App to store in yaml.
  * Stuff that can be retrieved from the app repository is not stored here.
