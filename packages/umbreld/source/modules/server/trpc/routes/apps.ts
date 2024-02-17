@@ -23,7 +23,7 @@ export default router({
 							defaultUsername: '',
 							defaultPassword: '',
 						},
-						hiddenService: 'blah.onion',
+						hiddenService: 'blah.onion', // TODO: Get hidden service
 					}
 				} catch (error) {
 					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
