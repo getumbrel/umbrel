@@ -127,8 +127,7 @@ export default class Apps {
 	async update(appId: string) {
 		const app = this.getApp(appId)
 
-		// TODO: Implement update
-		return true
+		return app.update()
 	}
 
 	async trackOpen(appId: string) {

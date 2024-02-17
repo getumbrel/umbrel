@@ -9,12 +9,14 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
 	const scriptPath = join(currentDirname, 'app-script')
+	const SCRIPT_APP_REPO_DIR = await umbreld.appStore.getAppTemplateFilePath(arg)
 	await $({
 		stdio: 'inherit',
 		env: {
 			SCRIPT_UMBREL_ROOT: umbreld.dataDirectory,
 			SCRIPT_DOCKER_FRAGMENTS: currentDirname,
 			JWT_SECRET: await umbreld.server.getJwtSecret(),
+			SCRIPT_APP_REPO_DIR,
 		},
 	})`${scriptPath} ${command} ${arg}`
 }
