@@ -8,6 +8,10 @@ import {tw} from '@/utils/tw'
 
 const storyLinks = [
 	{
+		name: 'Dialogs',
+		path: '/stories/dialogs',
+	},
+	{
 		name: 'Desktop',
 		path: '/stories/desktop',
 	},

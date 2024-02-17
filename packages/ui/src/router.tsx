@@ -40,6 +40,7 @@ const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/1-create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/2-account-created'))
 const Stories = React.lazy(() => import('./routes/stories'))
+const DialogExamples = React.lazy(() => import('./routes/stories/dialogs'))
 const AppStoreStory = React.lazy(() => import('./routes/stories/app-store'))
 const CmdkStory = React.lazy(() => import('./routes/stories/cmdk'))
 const ColorThiefExample = React.lazy(() => import('./routes/stories/color-thief'))
@@ -257,6 +258,10 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories',
 				Component: Stories,
+			},
+			{
+				path: 'stories/dialogs',
+				Component: DialogExamples,
 			},
 			{
 				path: 'stories/app-store',

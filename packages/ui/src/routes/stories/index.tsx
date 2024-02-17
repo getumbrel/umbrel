@@ -24,17 +24,6 @@ import {toast} from '@/components/ui/toast'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
 import {NoForgotPasswordMessage} from '@/routes/settings/_components/no-forgot-password-message'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from '@/shadcn-components/ui/alert-dialog'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
@@ -48,25 +37,6 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from '@/shadcn-components/ui/context-menu'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from '@/shadcn-components/ui/dialog'
-import {
-	Drawer,
-	DrawerClose,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerTrigger,
-} from '@/shadcn-components/ui/drawer'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -121,12 +91,6 @@ export default function Stories() {
 			<Badges />
 			<H2>Checkbox</H2>
 			<CheckboxExamples />
-			<H2>Dialog</H2>
-			<DialogExample />
-			<H2>Alert Dialog</H2>
-			<AlertDialogExample />
-			<H2>Drawer</H2>
-			<DrawerExample />
 			<H2>Loading</H2>
 			<Loading />
 			<H2>Tooltip</H2>
@@ -210,87 +174,6 @@ function TooltipExample() {
 				<p>Add to library</p>
 			</TooltipContent>
 		</Tooltip>
-	)
-}
-
-function DialogExample() {
-	return (
-		<div>
-			<Dialog>
-				<DialogTrigger asChild>
-					<Button variant='destructive'>Delete account</Button>
-				</DialogTrigger>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Are you absolutely sure?</DialogTitle>
-						<DialogDescription>
-							This action cannot be undone. This will permanently delete your account and remove your data from our
-							servers.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button size='dialog'>Cancel</Button>
-						<Button size='dialog' variant='primary'>
-							Continue
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		</div>
-	)
-}
-
-function AlertDialogExample() {
-	return (
-		<div>
-			<AlertDialog>
-				<AlertDialogTrigger asChild>
-					<Button variant='destructive'>Delete account</Button>
-				</AlertDialogTrigger>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This action cannot be undone. This will permanently delete your account and remove your data from our
-							servers.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction>Continue</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-			{/* <div className="fixed bottom-0 left-0 z-[99]">
-        <button className="cursor-pointer" onClick={() => alert("hello")}>
-          Click
-        </button>
-      </div> */}
-		</div>
-	)
-}
-
-function DrawerExample() {
-	return (
-		<Drawer>
-			<DrawerTrigger>Open</DrawerTrigger>
-			<DrawerContent>
-				<DrawerHeader>
-					<DrawerTitle>Account</DrawerTitle>
-					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
-				</DrawerHeader>
-				<DrawerFooter>
-					<DrawerClose>
-						<Button size='dialog' className='w-full'>
-							Cancel
-						</Button>
-					</DrawerClose>
-					<Button size='dialog' variant='primary'>
-						Submit
-					</Button>
-				</DrawerFooter>
-			</DrawerContent>
-		</Drawer>
 	)
 }
 
