@@ -18,6 +18,11 @@ export function isNormalNumber(value: number | null | undefined): value is numbe
 	return value !== Infinity && value !== -Infinity && !isNaN(value)
 }
 
+// https://stackoverflow.com/a/39419171
+export function assertUnreachable(x: never): never {
+	throw new Error("Didn't expect to get here, got " + x)
+}
+
 /**
  * Does what lodash's keyBy does, but returns with better types
  */
