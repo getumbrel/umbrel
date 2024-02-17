@@ -3,6 +3,7 @@ import {useState} from 'react'
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {keyBy} from '@/utils/misc'
@@ -28,6 +29,8 @@ export function TempStatCardContent({
 	const opacity = (60).toString(16)
 	const isUnknown = tempNumber === undefined
 
+	const isMobile = useIsMobile()
+
 	return (
 		<div className='flex flex-col gap-4'>
 			<div className={cardTitleClass}>{t('tempurature')}</div>
@@ -49,7 +52,13 @@ export function TempStatCardContent({
 						<div className={cn(cardSecondaryValueClass, 'leading-inter-trimmed')}>{tempToMessage(tempInCelcius)}</div>
 					</div>
 				</div>
-				<SegmentedControl size='sm' variant='primary' tabs={tempDescriptions} value={unit} onValueChange={setUnit} />
+				<SegmentedControl
+					size={isMobile ? 'sm' : 'default'}
+					variant='primary'
+					tabs={tempDescriptions}
+					value={unit}
+					onValueChange={setUnit}
+				/>
 			</div>
 			{isCpuTooHot(tempInCelcius ?? 0) && <span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>}
 		</div>

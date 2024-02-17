@@ -1,5 +1,5 @@
 import {Globe, User} from 'lucide-react'
-import {useEffect, useId, useState} from 'react'
+import {ComponentProps, useEffect, useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {
 	TbAlertOctagonFilled,
@@ -19,6 +19,7 @@ import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
 import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
+import {SegmentedControl} from '@/components/ui/segmented-control'
 import {toast} from '@/components/ui/toast'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H1, H2, H3} from '@/layouts/stories'
@@ -94,6 +95,8 @@ export default function Stories() {
 			<I18Examples />
 			<H2>Buttons</H2>
 			<Buttons />
+			<H2>Segmented Control</H2>
+			<SegmentedControlExamples />
 			<H2>Icons</H2>
 			<p>
 				Make sure these have the same size and same stroke width. Settings icons is from the Tabler Icons. The Tor icon
@@ -414,6 +417,54 @@ function Buttons() {
 					))}
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function SegmentedControlExamples() {
+	const sizes: ComponentProps<typeof SegmentedControl>['size'][] = ['sm', 'default', 'lg']
+	const variants: ComponentProps<typeof SegmentedControl>['variant'][] = ['default', 'primary']
+
+	const [selectedTab, setSelectedTab] = useState('change-name')
+	const [selectedTab2, setSelectedTab2] = useState('one')
+
+	return (
+		<div className='flex justify-start gap-2'>
+			{sizes.map((size) => (
+				<div key={size} className='flex flex-col gap-2'>
+					{variants.map((variant) => (
+						<SegmentedControl
+							key={`${size}-${variant}`}
+							size={size}
+							variant={variant}
+							tabs={[
+								{id: 'change-name', label: 'Display name'},
+								{id: 'change-password', label: 'Password'},
+							]}
+							value={selectedTab}
+							onValueChange={setSelectedTab}
+						/>
+					))}
+				</div>
+			))}
+			{sizes.map((size) => (
+				<div key={size} className='flex flex-col gap-2'>
+					{variants.map((variant) => (
+						<SegmentedControl
+							key={`${size}-${variant}`}
+							size={size}
+							variant={variant}
+							tabs={[
+								{id: 'one', label: 'One'},
+								{id: 'two', label: 'Two'},
+								{id: 'three', label: 'Three'},
+							]}
+							value={selectedTab2}
+							onValueChange={setSelectedTab2}
+						/>
+					))}
+				</div>
+			))}
 		</div>
 	)
 }

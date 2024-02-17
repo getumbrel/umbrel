@@ -16,7 +16,7 @@ export function SegmentedControl<T extends string>({
 }: {
 	value: T
 	onValueChange: (value: T) => void
-	size?: 'default' | 'lg'
+	size?: 'default' | 'lg' | 'sm'
 	variant?: 'default' | 'primary'
 	tabs: readonly Tab<T>[]
 }) {
@@ -30,10 +30,11 @@ export function SegmentedControl<T extends string>({
 			// `layoutRoot` to prevent it from animating when the layout shifts
 			layoutRoot
 			className={cn(
-				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/10 bg-white/3 text-12',
+				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/6 bg-white/3',
 				justTwo && 'cursor-pointer',
-				size === 'default' && 'h-[30px] p-1',
-				size === 'lg' && 'h-[40px] p-[5px]',
+				size === 'sm' && 'h-[24px] p-1 text-[9px]',
+				size === 'default' && 'h-[30px] p-1 text-12',
+				size === 'lg' && 'h-[40px] p-[5px] text-12',
 			)}
 			onClick={() => {
 				if (justTwo) {
@@ -49,9 +50,10 @@ export function SegmentedControl<T extends string>({
 				<button
 					key={tab.id}
 					className={cn(
-						'group relative flex-grow rounded-full leading-inter-trimmed outline-none transition-[box-shadow,background]',
+						'leading-inter-trimmed group relative flex-grow rounded-full outline-none transition-[box-shadow,background]',
 						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
 						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
+						size === 'sm' && 'px-2',
 						size === 'default' && 'px-2.5',
 						size === 'lg' && 'px-[14px]',
 					)}
