@@ -6,11 +6,12 @@ import {cn} from '@/shadcn-lib/utils'
 import {linkClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
-export const cardTitleClass = tw`text-12 font-semibold leading-none -tracking-2 text-white/40`
-export const cardValueClass = tw`text-17 font-bold leading-inter-trimmed -tracking-4`
-export const cardValueSubClass = tw`text-14 font-bold leading-inter-trimmed -tracking-3 text-white/40`
-export const cardSecondaryValueClass = tw`text-14 hidden md:block font-medium truncate leading-inter-trimmed -tracking-3 text-white/40`
-export const cardErrorClass = cn(cardSecondaryValueClass, tw`animate-pulse leading-tight text-destructive2-lightest`)
+export const cardTitleClass = tw`text-12 font-semibold leading-tight truncate -tracking-2 text-white/40`
+export const cardValueClass = tw`font-bold -tracking-4 truncate text-17 leading-inter-trimmed`
+export const cardValueSubClass = tw`text-14 font-bold truncate leading-inter-trimmed -tracking-3 text-white/40`
+export const cardSecondaryValueBaseClass = tw`text-14 font-medium -tracking-3 text-white/40 leading-inter-trimmed`
+export const cardSecondaryValueClass = cn(cardSecondaryValueBaseClass, tw`truncate flex-shrink-full`)
+export const cardErrorClass = cn(cardSecondaryValueBaseClass, tw`animate-pulse leading-snug text-destructive2-lightest`)
 
 export function ContactSupportLink({className}: {className?: string}) {
 	return (

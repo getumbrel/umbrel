@@ -1,4 +1,5 @@
 import {Progress} from '@/shadcn-components/ui/progress'
+import {cn} from '@/shadcn-lib/utils'
 
 import {cardSecondaryValueClass, cardTitleClass, cardValueClass, cardValueSubClass} from './shared'
 
@@ -20,11 +21,11 @@ export function ProgressStatCardContent({
 	return (
 		<div className='flex flex-col gap-4'>
 			<div className={cardTitleClass}>{title}</div>
-			<div className='flex items-end justify-between gap-4'>
-				<div className='whitespace-nowrap leading-inter-trimmed'>
+			<div className='flex items-baseline justify-between gap-4 truncate text-17 leading-tight'>
+				<div className='flex items-baseline gap-1 truncate '>
 					<span className={cardValueClass}>{value}</span> <span className={cardValueSubClass}>{valueSub}</span>
 				</div>
-				<span className={cardSecondaryValueClass}>{secondaryValue}</span>
+				<span className={cn(cardSecondaryValueClass, 'hidden md:block')}>{secondaryValue}</span>
 			</div>
 			<Progress value={progress * 100} size='thicker' variant='primary' />
 			{afterChildren}

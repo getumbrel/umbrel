@@ -3,13 +3,12 @@ import {useState} from 'react'
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
-import {cardTitleClass} from '@/modules/app-store/app-page/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {keyBy} from '@/utils/misc'
 import {isCpuTooHot} from '@/utils/system'
 
-import {cardErrorClass, cardSecondaryValueClass, cardValueClass} from './shared'
+import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
 
 export function TempStatCardContent({
 	tempInCelcius,
@@ -32,7 +31,7 @@ export function TempStatCardContent({
 	return (
 		<div className='flex flex-col gap-4'>
 			<div className={cardTitleClass}>{t('tempurature')}</div>
-			<div className='flex items-center justify-between gap-2'>
+			<div className='flex flex-wrap-reverse items-center justify-between gap-2'>
 				<div className='flex shrink-0 flex-col gap-2.5'>
 					<div className={cardValueClass}>
 						{isUnknown ? '--' : <AnimatedNumber to={tempNumber} />} {tempUnitLabel}
@@ -50,7 +49,7 @@ export function TempStatCardContent({
 						<div className={cn(cardSecondaryValueClass, 'leading-inter-trimmed')}>{tempToMessage(tempInCelcius)}</div>
 					</div>
 				</div>
-				<SegmentedControl variant='primary' tabs={tempDescriptions} value={unit} onValueChange={setUnit} />
+				<SegmentedControl size='sm' variant='primary' tabs={tempDescriptions} value={unit} onValueChange={setUnit} />
 			</div>
 			{isCpuTooHot(tempInCelcius ?? 0) && <span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>}
 		</div>

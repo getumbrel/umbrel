@@ -24,6 +24,10 @@ export default {
 			},
 		},
 		extend: {
+			flexShrink: {
+				// Used if you want to shrink the item totally if no room
+				full: '9999',
+			},
 			borderRadius: {
 				// Using numbers instead of sm, md, lg because easier to add radii in between later
 				3: '3px',

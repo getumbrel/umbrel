@@ -2,6 +2,7 @@ import {range} from 'remeda'
 
 import {Card} from '@/components/ui/card'
 import {H2, H3} from '@/layouts/stories'
+import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Separator} from '@/shadcn-components/ui/separator'
 
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
@@ -28,7 +29,43 @@ export default function SettingsStory() {
 				<DeviceInfoContent umbrelHostEnvironment='raspberry-pi' osVersion='v0.4.0' />
 				<DeviceInfoContent umbrelHostEnvironment='linux' osVersion='v0.4.0' />
 			</div>
+			<H2>Progress Card</H2>
+			<Card>
+				<ProgressStatCardContent
+					title='Sync Status'
+					value='69.69'
+					valueSub='%'
+					secondaryValue='69.69 GB'
+					progress={0.6969}
+				/>
+			</Card>
+			<Card>
+				<ProgressStatCardContent
+					title='Ljgrem Ipsum Dolor Sit Amet'
+					value='Ljgrem Ipsum Dolor Sit Amet'
+					valueSub='Ljgrem Ipsum Dolor Sit Amet'
+					secondaryValue='Ljgrem Ipsum Dolor Sit Amet'
+					progress={0.6969}
+				/>
+			</Card>
+			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
+				<Card>
+					<ProgressStatCardContent
+						title='Ljgrem Ipsum Dolor Sit Amet'
+						value='Ljgrem Ipsum Dolor Sit Amet'
+						valueSub='Ljgrem Ipsum Dolor Sit Amet'
+						secondaryValue='Ljgrem Ipsum Dolor Sit Amet'
+						progress={0.6969}
+					/>
+				</Card>
+			</div>
 			<H2>Tempurature Card</H2>
+			<H3>Extreme</H3>
+			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
+				<Card>
+					<TempStatCardContent tempInCelcius={999999} />
+				</Card>
+			</div>
 			<H3>undefined</H3>
 			<Card>
 				<TempStatCardContent />

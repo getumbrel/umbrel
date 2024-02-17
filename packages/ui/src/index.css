@@ -158,3 +158,11 @@ a {
 		scale: 1;
 	}
 }
+
+/* Override Tailwind truncate class because  */
+/* https://github.com/tailwindlabs/tailwindcss/issues/10939 */
+.truncate {
+	overflow: initial;
+	overflow-x: hidden; /* for older browsers, though top and bottom of text in `tight-inter-trim` is going to be clipped at the top and bottom */
+	overflow-x: clip;
+}
