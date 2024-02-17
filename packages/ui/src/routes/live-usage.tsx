@@ -3,7 +3,7 @@ import {ReactNode} from 'react'
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
 import {DebugOnly} from '@/components/ui/debug-only'
-import {ImmersiveDialog, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useMemoryForUi} from '@/hooks/use-memory'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
@@ -23,8 +23,10 @@ export default function LiveUsageDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<h1 className={immersiveDialogTitleClass}>{title}</h1>
-			<LiveUsageContent />
+			<ImmersiveDialogContent>
+				<h1 className={immersiveDialogTitleClass}>{title}</h1>
+				<LiveUsageContent />
+			</ImmersiveDialogContent>
 		</ImmersiveDialog>
 	)
 }

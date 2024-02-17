@@ -1,4 +1,4 @@
-import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal} from '@radix-ui/react-dialog'
+import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
 import {motion} from 'framer-motion'
 import {LucideIcon} from 'lucide-react'
 import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
@@ -24,36 +24,29 @@ export function ImmersiveDialogSeparator() {
 	return <hr className='w-full border-white/10' />
 }
 
-export function ImmersiveDialog({
-	children,
-	open,
-	onOpenChange,
-}: {
-	children: React.ReactNode
-	open: boolean
-	onOpenChange: (open: boolean) => void
-}) {
+export const ImmersiveDialog = Dialog
+export const ImmersiveDialogTrigger = DialogTrigger
+
+export function ImmersiveDialogContent({children}: {children: React.ReactNode}) {
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogPortal>
-				<ImmersiveDialogOverlay />
-				{/* shell */}
-				<DialogContent
-					className={cn(
-						dialogContentClass,
-						dialogContentAnimationClass,
-						dialogContentAnimationSlideClass,
-						immersiveContentSizeClass,
-						'p-0',
-					)}
-				>
-					<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto p-6 md:p-[30px]'>
-						{children}
-					</div>
-					<ImmersiveDialogClose />
-				</DialogContent>
-			</DialogPortal>
-		</Dialog>
+		<DialogPortal>
+			<ImmersiveDialogOverlay />
+			{/* shell */}
+			<DialogContent
+				className={cn(
+					dialogContentClass,
+					dialogContentAnimationClass,
+					dialogContentAnimationSlideClass,
+					immersiveContentSizeClass,
+					'p-0',
+				)}
+			>
+				<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto p-6 md:p-[30px]'>
+					{children}
+				</div>
+				<ImmersiveDialogClose />
+			</DialogContent>
+		</DialogPortal>
 	)
 }
 
