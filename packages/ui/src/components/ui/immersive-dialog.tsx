@@ -5,6 +5,7 @@ import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
 import type {IconType} from 'react-icons'
 import {RiCloseLine} from 'react-icons/ri'
 
+import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {
 	dialogContentAnimationClass,
 	dialogContentAnimationSlideClass,
@@ -12,7 +13,6 @@ import {
 	dialogOverlayClass,
 } from '@/shadcn-components/ui/shared/dialog'
 import {cn} from '@/shadcn-lib/utils'
-import {afterDelayedClose} from '@/utils/dialog'
 import {tw} from '@/utils/tw'
 
 import {IconButton} from './icon-button'
@@ -50,45 +50,39 @@ export function ImmersiveDialogContent({children}: {children: React.ReactNode}) 
 	)
 }
 
-// TODO: consider splitting this into two components, one for the left side and one for the right side
-export function ImmersiveDialogSplit({
-	children,
-	leftChildren,
-	onClose,
-}: {
-	children: React.ReactNode
-	leftChildren: React.ReactNode
-	onClose?: () => void
-}) {
+export function ImmersiveDialogSplitContent({children, side}: {children: React.ReactNode; side: React.ReactNode}) {
 	return (
-		<Dialog defaultOpen onOpenChange={afterDelayedClose(onClose)}>
-			<DialogPortal>
-				{/* Not using anymore because overlay is added elsewhere */}
-				{/* <ImmersiveDialogOverlay /> */}
-				{/* shell */}
-				<DialogContent
-					className={cn(
-						dialogContentClass,
-						dialogContentAnimationClass,
-						dialogContentAnimationSlideClass,
-						immersiveContentSizeClass,
-						'flex flex-row justify-between gap-0 bg-black/40 p-0',
-					)}
-				>
-					<div className='hidden w-[210px] flex-col items-center justify-center md:flex'>{leftChildren}</div>
-					<div className='flex-1 rounded-20 bg-dialog-content/70 md:rounded-l-none md:rounded-r-20 md:px-4'>
-						<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto px-4 py-8'>
-							{children}
-						</div>
-					</div>
-					<ImmersiveDialogClose />
-				</DialogContent>
-			</DialogPortal>
-		</Dialog>
+		<DialogPortal>
+			<ImmersiveDialogOverlay />
+			<DialogContent
+				className={cn(
+					dialogContentClass,
+					'bg-transparent shadow-none ring-2 ring-white/3', // remove shadow from `dialogContentClass`
+					dialogContentAnimationClass,
+					dialogContentAnimationSlideClass,
+					immersiveContentSizeClass,
+					'flex flex-row justify-between gap-0 p-0',
+				)}
+			>
+				<section className='hidden w-[210px] flex-col items-center justify-center bg-black/40 md:flex md:rounded-l-20'>
+					{side}
+				</section>
+				<section className='flex-1 bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
+					<ScrollArea dialogInset className='h-full'>
+						<div className='flex h-full flex-col gap-6 p-4 md:p-8'>{children}</div>
+					</ScrollArea>
+				</section>
+				<ImmersiveDialogClose />
+			</DialogContent>
+		</DialogPortal>
 	)
 }
 
 const immersiveContentSizeClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
+// Want to do `overflow:hidden` on the parent because it's rounded, but then we lose the close button.
+// Could also put `overflow-x-clip` on the parent eventually
+// Using `first-of-type` means the elements should be `section` or some other unique-ish element
+const immersiveSplitClassChildRounding = tw`first-of-type:rounded-l-20 last-of-type:rounded-r-20`
 
 function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
 	return (
@@ -108,10 +102,8 @@ function ImmersiveDialogClose() {
 			<DialogClose asChild>
 				<IconButton
 					icon={RiCloseLine}
-					className='dialog-shadow h-[36px] w-[36px] border-none bg-dialog-content hover:bg-dialog-content active:bg-dialog-content'
-					style={{
-						boxShadow: '0px 32px 32px 0px rgba(0, 0, 0, 0.32), 1px 1px 1px 0px rgba(255, 255, 255, 0.08) inset',
-					}}
+					// Overriding state colors
+					className='shadow-immersive-dialog-close h-[36px] w-[36px] border-none bg-dialog-content bg-opacity-70 hover:border-solid hover:bg-dialog-content focus:border-solid focus:bg-dialog-content active:bg-dialog-content'
 				/>
 			</DialogClose>
 		</div>
@@ -132,7 +124,7 @@ export function ImmersiveDialogBody({
 	footer: React.ReactNode
 }) {
 	return (
-		<div className='flex h-full flex-col items-start gap-5'>
+		<div className='flex h-full h-full flex-col items-start gap-5'>
 			<div className='space-y-2'>
 				<h1 className={immersiveDialogTitleClass}>{title}</h1>
 				<p className={immersiveDialogDescriptionClass}>{description}</p>

@@ -1,7 +1,13 @@
 import {useState} from 'react'
 
-import {ImmersiveDialog, ImmersiveDialogContent, ImmersiveDialogTrigger} from '@/components/ui/immersive-dialog'
+import {
+	ImmersiveDialog,
+	ImmersiveDialogContent,
+	ImmersiveDialogSplitContent,
+	ImmersiveDialogTrigger,
+} from '@/components/ui/immersive-dialog'
 import {toast} from '@/components/ui/toast'
+import {Wallpaper} from '@/providers/wallpaper'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -36,12 +42,16 @@ import {
 
 export default function DialogExamples() {
 	return (
-		<div>
-			<DialogExample />
-			<AlertDialogExample />
-			<DrawerExample />
-			<ImmersiveDialogExample />
-		</div>
+		<>
+			<Wallpaper />
+			<div className='z-0 flex h-full flex-wrap gap-2'>
+				<DialogExample />
+				<AlertDialogExample />
+				<DrawerExample />
+				<ImmersiveDialogExample />
+				<ImmersiveDialogSplitExample />
+			</div>
+		</>
 	)
 }
 
@@ -51,7 +61,7 @@ function DialogExample() {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button>Open Dialog</Button>
+				<Button size='lg'>Open Dialog</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
@@ -90,7 +100,7 @@ function AlertDialogExample() {
 	return (
 		<AlertDialog>
 			<AlertDialogTrigger asChild>
-				<Button>Open Alert Dialog</Button>
+				<Button size='lg'>Open Alert Dialog</Button>
 			</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
@@ -118,7 +128,7 @@ function DrawerExample() {
 	return (
 		<Drawer>
 			<DrawerTrigger asChild>
-				<Button>Open Immersive Dialog</Button>
+				<Button size='lg'>Open Immersive Dialog</Button>
 			</DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader>
@@ -144,9 +154,42 @@ function ImmersiveDialogExample() {
 	return (
 		<ImmersiveDialog>
 			<ImmersiveDialogTrigger asChild>
-				<Button>Open Immersive Dialog</Button>
+				<Button size='lg'>Open Immersive Dialog</Button>
 			</ImmersiveDialogTrigger>
 			<ImmersiveDialogContent>Hello</ImmersiveDialogContent>
+		</ImmersiveDialog>
+	)
+}
+
+function ImmersiveDialogSplitExample() {
+	return (
+		<ImmersiveDialog>
+			<ImmersiveDialogTrigger asChild>
+				<Button size='lg'>Open Immersive Dialog Split</Button>
+			</ImmersiveDialogTrigger>
+			<ImmersiveDialogSplitContent side={<>Hello</>}>
+				<p>
+					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+					totam.
+				</p>
+				<p>
+					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+					totam.
+				</p>
+				<p>
+					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+					totam.
+				</p>
+
+				<div className='flex-1' />
+
+				<Button size='dialog' variant='primary' className='self-start justify-self-end'>
+					Continue
+				</Button>
+			</ImmersiveDialogSplitContent>
 		</ImmersiveDialog>
 	)
 }

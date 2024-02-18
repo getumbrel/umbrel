@@ -3,7 +3,7 @@ import {TbRotate2} from 'react-icons/tb'
 import {Route, Routes, useNavigate} from 'react-router-dom'
 import {toast} from 'sonner'
 
-import {ImmersiveDialogSplit} from '@/components/ui/immersive-dialog'
+import {ImmersiveDialog, ImmersiveDialogSplitContent} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -70,12 +70,9 @@ export default function FactoryReset() {
 function SplitDialog({children}: {children: React.ReactNode}) {
 	const navigate = useNavigate()
 	return (
-		<ImmersiveDialogSplit
-			onClose={() => navigate(backPath, {preventScrollReset: true})}
-			leftChildren={<SplitLeftContent />}
-		>
-			{children}
-		</ImmersiveDialogSplit>
+		<ImmersiveDialog defaultOpen onOpenChange={(isOpen) => !isOpen && navigate(backPath, {preventScrollReset: true})}>
+			<ImmersiveDialogSplitContent side={<SplitLeftContent />}>{children}</ImmersiveDialogSplitContent>
+		</ImmersiveDialog>
 	)
 }
 

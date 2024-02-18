@@ -3,7 +3,12 @@ import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from '
 import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
-import {ImmersiveDialogBody, ImmersiveDialogIconMessage, ImmersiveDialogSplit} from '@/components/ui/immersive-dialog'
+import {
+	ImmersiveDialog,
+	ImmersiveDialogBody,
+	ImmersiveDialogIconMessage,
+	ImmersiveDialogSplitContent,
+} from '@/components/ui/immersive-dialog'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
@@ -21,12 +26,14 @@ export default function MigrationAssistantDialog() {
 	const state = params.get('migration-state')
 
 	return (
-		<ImmersiveDialogSplit onClose={() => dialogProps.onOpenChange(false)} leftChildren={<MigrateImage />}>
-			{!state && <MigrationAssistantPrep />}
-			{state === 'prep' && <MigrationAssistantPrep />}
-			{state === 'errors' && <MigrationAssistantErrors />}
-			{state === 'ready' && <MigrationAssistantReady />}
-		</ImmersiveDialogSplit>
+		<ImmersiveDialog {...dialogProps}>
+			<ImmersiveDialogSplitContent side={<MigrateImage />}>
+				{!state && <MigrationAssistantPrep />}
+				{state === 'prep' && <MigrationAssistantPrep />}
+				{state === 'errors' && <MigrationAssistantErrors />}
+				{state === 'ready' && <MigrationAssistantReady />}
+			</ImmersiveDialogSplitContent>
+		</ImmersiveDialog>
 	)
 }
 
