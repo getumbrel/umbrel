@@ -339,5 +339,6 @@
   "logout-error-generic": "Backend error while logging out!",
   "app.stopping": "Stopping",
   "app.starting": "Starting",
-  "app.restarting": "Restarting"
+  "app.restarting": "Restarting",
+  "cpu": "CPU"
 }

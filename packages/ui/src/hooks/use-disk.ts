@@ -33,14 +33,16 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 
 	if (isLoading) {
 		return {
+			isLoading: true,
 			value: LOADING_DASH,
 			valueSub: '/ ' + LOADING_DASH,
 			secondaryValue: LOADING_DASH,
 			progress: 0,
-		}
+		} as const
 	}
 
 	return {
+		isLoading: false,
 		value: maybePrettyBytes(used),
 		valueSub: `/ ${maybePrettyBytes(size)}`,
 		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
@@ -50,5 +52,5 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 		isDiskLow,
 		isDiskFull,
 		apps,
-	}
+	} as const
 }
