@@ -2,11 +2,11 @@ import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
-import {DebugOnly} from '@/components/ui/debug-only'
 import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {Loading} from '@/components/ui/loading'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {LOADING_DASH} from '@/constants'
+import {useCpuForUi} from '@/hooks/use-cpu'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
@@ -140,21 +140,13 @@ function MemorySection() {
 }
 
 function CpuSection() {
-	// TODO: pull real CPU data instead of memory
-	const {isLoading, value, valueSub, secondaryValue, progress, isMemoryLow, apps} = useMemoryForUi({poll: true})
+	const {isLoading, value, secondaryValue, progress, apps} = useCpuForUi({poll: true})
 
 	return (
 		<>
-			<ProgressCard
-				value={value}
-				valueSub={valueSub}
-				progressLabel={secondaryValue}
-				progress={progress}
-				rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low-long')}</ErrorMessage>}
-			/>
+			<ProgressCard value={value} progressLabel={secondaryValue} progress={progress} />
 			{isLoading && <Loading />}
-			<AppList apps={apps} />
-			<DebugOnly>Stubbed from memory, not showing real CPU data yet</DebugOnly>
+			<AppList2 apps={apps} />
 		</>
 	)
 }
@@ -213,6 +205,25 @@ function AppList({apps}: {apps?: {id: string; used: number}[]}) {
 					icon={allAppsKeyed[id]?.icon}
 					title={allAppsKeyed[id]?.name || t('unknown-app')}
 					value={maybePrettyBytes(used)}
+				/>
+			))}
+		</div>
+	)
+}
+
+function AppList2({apps}: {apps?: {id: string; used: number}[]}) {
+	const {allAppsKeyed} = useApps()
+
+	if (!apps || apps.length === 0) return null
+
+	return (
+		<div className={appListClass}>
+			{apps?.map(({id, used}) => (
+				<AppListRow
+					key={id}
+					icon={allAppsKeyed[id]?.icon}
+					title={allAppsKeyed[id]?.name || t('unknown-app')}
+					value={used.toFixed(2) + '%'}
 				/>
 			))}
 		</div>
