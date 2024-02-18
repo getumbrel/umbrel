@@ -15,7 +15,7 @@ import {Button} from '@/shadcn-components/ui/button'
 
 export default function One() {
 	return (
-		<>
+		<div className='min-h-full bg-neutral-900'>
 			<h1 className='text-3xl font-bold text-red-500 underline'>Hello world!</h1>
 			<Link to='/two' unstable_viewTransition>
 				to Two
@@ -28,7 +28,7 @@ export default function One() {
 				}}
 			></div>
 			<AlertDialogExample />
-		</>
+		</div>
 	)
 }
 

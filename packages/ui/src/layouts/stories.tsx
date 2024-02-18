@@ -73,30 +73,29 @@ export function StoriesLayout() {
 	useUmbrelTitle('Stories')
 
 	return (
-		<>
-			<FadeScroller
-				direction='x'
-				className='umbrel-hide-scrollbar sticky top-0 z-50 flex items-center overflow-x-auto bg-neutral-900'
-			>
-				<NavLink to='/'>👈 Home</NavLink>
-				<LanguageDropdown />
-				<span className='px-2'>|</span>
-				<NavLink to='/stories'>Stories</NavLink>
-				{storyLinks.map(({name, path}) => (
-					<NavLink key={path} to={path}>
-						{name}
-					</NavLink>
-				))}
-				<a href='/iframe-test.html' className={navLinkClass}>
-					iframe-test.html
-				</a>
-			</FadeScroller>
-			<div className='flex flex-col gap-6'>
+		<div className='flex min-h-full flex-col bg-neutral-700'>
+			<div className='fixed top-0 z-50 w-full bg-neutral-900 '>
+				<FadeScroller direction='x' className='umbrel-hide-scrollbar flex shrink-0 items-center overflow-x-auto'>
+					<NavLink to='/'>👈 Home</NavLink>
+					<LanguageDropdown />
+					<span className='px-2'>|</span>
+					<NavLink to='/stories'>Stories</NavLink>
+					{storyLinks.map(({name, path}) => (
+						<NavLink key={path} to={path}>
+							{name}
+						</NavLink>
+					))}
+					<a href='/iframe-test.html' className={navLinkClass}>
+						iframe-test.html
+					</a>
+				</FadeScroller>
+			</div>
+			<div className='mt-10 flex h-full flex-col gap-6 p-5'>
 				<Suspense>
 					<Outlet />
 				</Suspense>
 			</div>
-		</>
+		</div>
 	)
 }
 
