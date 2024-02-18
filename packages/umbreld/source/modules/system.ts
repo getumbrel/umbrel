@@ -1,7 +1,10 @@
 import systemInformation from 'systeminformation'
 import {$} from 'execa'
+import fse from 'fs-extra'
 
 import type Umbreld from '../index.js'
+
+import getDirectorySize from './utilities/get-directory-size.js'
 
 export async function getCpuTemperature(): Promise<number> {
 	const cpuTemperature = await systemInformation.cpuTemperature()
@@ -50,11 +53,15 @@ export async function getDiskUsage(
 	)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 
+	const downloadsDirectory = `${umbreld.dataDirectory}/data/storage/downloads/`
+	let downloads = 0
+	if (await fse.pathExists(downloadsDirectory)) downloads = await getDirectorySize(downloadsDirectory)
+
 	return {
 		size,
 		totalUsed: used,
 		system: used - appsTotal,
-		downloads: 42_690, // TODO: calculate this and also remove it from system
+		downloads,
 		apps,
 	}
 }
