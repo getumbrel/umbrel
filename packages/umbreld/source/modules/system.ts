@@ -86,6 +86,35 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	}
 }
 
+type CpuUsage = {
+	id: string
+	used: number
+}
+
+export async function getCpuUsage(umbreld: Umbreld): Promise<{
+	threads: number
+	totalUsed: number
+	system: number
+	apps: CpuUsage[]
+}> {
+	const cpu = await systemInformation.currentLoad()
+	console.log({cpu})
+	const apps = await Promise.all(
+		umbreld.apps.instances.map(async (app) => ({
+			id: app.id,
+			used: await app.getCpuUsage(),
+		})),
+	)
+	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
+	const system = cpu.currentLoad - appsTotal
+	return {
+		threads: cpu.cpus.length,
+		totalUsed: cpu.currentLoad,
+		system,
+		apps,
+	}
+}
+
 // TODO: For powercycle methods we will probably want to handle cleanly stopping
 // as much Umbrel stuff as possible ourselves before handing over to the OS.
 // This will give us more control over the order of things terminating and allow

@@ -6,7 +6,7 @@ import {z} from 'zod'
 import systeminfo from 'systeminformation'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
-import {getCpuTemperature, getDiskUsage, getMemoryUsage, reboot, shutdown} from '../../../system.js'
+import {getCpuTemperature, getDiskUsage, getMemoryUsage, getCpuUsage, reboot, shutdown} from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
@@ -39,6 +39,7 @@ export default router({
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
+	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	shutdown: privateProcedure.mutation(() => shutdown()),
 	reboot: privateProcedure.mutation(() => reboot()),
 	//
