@@ -7,3 +7,10 @@ export function useIsMobile() {
 
 	return isMobile
 }
+
+export function useIsSmallMobile() {
+	const breakpoint = useBreakpoint()
+	const isMobile = breakpoint === 'sm'
+
+	return isMobile
+}
