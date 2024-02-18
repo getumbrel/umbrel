@@ -6,8 +6,11 @@ import {cn} from '@/shadcn-lib/utils'
 
 const ScrollArea = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({className, children, ...props}, ref) => {
+	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+		dialogInset?: boolean
+		orientation?: 'horizontal' | 'vertical'
+	}
+>(({className, children, dialogInset, orientation = 'vertical', ...props}, ref) => {
 	const {scrollerClass, ref: scrollerRef} = useFadeScroller('y')
 	return (
 		<ScrollAreaPrimitive.Root
@@ -16,10 +19,19 @@ const ScrollArea = React.forwardRef<
 			scrollHideDelay={0}
 			{...props}
 		>
-			<ScrollAreaPrimitive.Viewport ref={scrollerRef} className={cn('h-full w-full rounded-[inherit]', scrollerClass)}>
+			<ScrollAreaPrimitive.Viewport
+				ref={scrollerRef}
+				className={cn(
+					// Setting `block` to fix issues with radix `ScrollArea` component
+					// https://github.com/radix-ui/primitives/issues/926#issuecomment-1015279283
+					'flex h-full w-full rounded-[inherit] *:!block *:flex-grow',
+					orientation === 'vertical' && 'flex-col',
+					scrollerClass,
+				)}
+			>
 				{children}
 			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar />
+			<ScrollBar dialogInset={dialogInset} orientation={orientation} />
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
 	)
@@ -28,15 +40,19 @@ ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(({className, orientation = 'vertical', ...props}, ref) => (
+	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> & {
+		dialogInset?: boolean
+	}
+>(({className, dialogInset, orientation = 'vertical', ...props}, ref) => (
 	<ScrollAreaPrimitive.ScrollAreaScrollbar
 		ref={ref}
 		orientation={orientation}
 		className={cn(
 			'group flex touch-none select-none rounded-l transition-colors hover:bg-white/6',
-			orientation === 'vertical' && 'h-full w-2.5 border-l border-l-transparent p-[3px]',
+			orientation === 'vertical' && 'w-2.5 border-l border-l-transparent p-[3px]',
+			orientation === 'vertical' && dialogInset && 'my-5',
 			orientation === 'horizontal' && 'h-2.5 flex-col border-t border-t-transparent p-[3px]',
+			orientation === 'horizontal' && dialogInset && 'mx-5',
 			className,
 		)}
 		{...props}
