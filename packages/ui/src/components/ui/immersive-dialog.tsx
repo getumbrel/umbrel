@@ -79,10 +79,6 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 }
 
 const immersiveContentSizeClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
-// Want to do `overflow:hidden` on the parent because it's rounded, but then we lose the close button.
-// Could also put `overflow-x-clip` on the parent eventually
-// Using `first-of-type` means the elements should be `section` or some other unique-ish element
-const immersiveSplitClassChildRounding = tw`first-of-type:rounded-l-20 last-of-type:rounded-r-20`
 
 function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
 	return (
