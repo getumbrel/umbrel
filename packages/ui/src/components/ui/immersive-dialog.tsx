@@ -27,7 +27,13 @@ export function ImmersiveDialogSeparator() {
 export const ImmersiveDialog = Dialog
 export const ImmersiveDialogTrigger = DialogTrigger
 
-export function ImmersiveDialogContent({children}: {children: React.ReactNode}) {
+export function ImmersiveDialogContent({
+	children,
+	size = 'default',
+}: {
+	children: React.ReactNode
+	size: 'default' | 'lg'
+}) {
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
@@ -38,6 +44,8 @@ export function ImmersiveDialogContent({children}: {children: React.ReactNode}) 
 					dialogContentAnimationClass,
 					dialogContentAnimationSlideClass,
 					immersiveContentSizeClass,
+					// overrides default size
+					size === 'lg' && 'max-w-[980px]',
 					'p-0',
 				)}
 			>
