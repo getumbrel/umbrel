@@ -98,18 +98,23 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 	apps: CpuUsage[]
 }> {
 	const cpu = await systemInformation.currentLoad()
-	console.log({cpu})
+	const threads = cpu.cpus.length
+	// We devide all cpu usage by the number of threads to get the percentage usage of the overall CPU.
+	// e.g If an app is maxxing out two cores the system will report 200% CPU usage. In a 4 core system
+	// we want to report that as 50%.
+	const totalUsed = cpu.currentLoad / threads
+
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
-			used: await app.getCpuUsage(),
+			used: (await app.getCpuUsage()) / threads,
 		})),
 	)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
-	const system = cpu.currentLoad - appsTotal
+	const system = Math.max(0, totalUsed - appsTotal)
 	return {
-		threads: cpu.cpus.length,
-		totalUsed: cpu.currentLoad,
+		threads,
+		totalUsed,
 		system,
 		apps,
 	}

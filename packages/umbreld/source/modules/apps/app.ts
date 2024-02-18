@@ -210,7 +210,6 @@ export default class App {
 
 	async getCpuUsage() {
 		const containers = await this.getResourceUsage()
-		console.log(containers)
 		let totalCpuUsage = 0
 		for (const container of containers) {
 			totalCpuUsage += Number.parseFloat(container.CPUPerc)
