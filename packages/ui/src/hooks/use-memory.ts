@@ -45,7 +45,7 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 		value: maybePrettyBytes(used),
 		valueSub: `/ ${maybePrettyBytes(size)}`,
 		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
-		progress: BigNumber(used ?? 0 * 100)
+		progress: BigNumber(used ?? 0)
 			.dividedBy(size ?? 0)
 			.toNumber(),
 		isMemoryLow,
