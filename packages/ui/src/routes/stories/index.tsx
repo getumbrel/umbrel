@@ -310,9 +310,10 @@ function SegmentedControlExamples() {
 
 	const [selectedTab, setSelectedTab] = useState('change-name')
 	const [selectedTab2, setSelectedTab2] = useState('one')
+	const [selectedTab3, setSelectedTab3] = useState<string>()
 
 	return (
-		<div className='flex justify-start gap-2'>
+		<div className='flex flex-wrap justify-start gap-2'>
 			{sizes.map((size) => (
 				<div key={size} className='flex flex-col gap-2'>
 					{variants.map((variant) => (
@@ -344,6 +345,23 @@ function SegmentedControlExamples() {
 							]}
 							value={selectedTab2}
 							onValueChange={setSelectedTab2}
+						/>
+					))}
+				</div>
+			))}
+			{sizes.map((size) => (
+				<div key={size} className='flex flex-col gap-2'>
+					{variants.map((variant) => (
+						<SegmentedControl
+							key={`${size}-${variant}`}
+							size={size}
+							variant={variant}
+							tabs={[
+								{id: 'change-name', label: 'Display name'},
+								{id: 'change-password', label: 'Password'},
+							]}
+							value={selectedTab3}
+							onValueChange={setSelectedTab3}
 						/>
 					))}
 				</div>

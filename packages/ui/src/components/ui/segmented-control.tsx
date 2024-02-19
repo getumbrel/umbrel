@@ -14,7 +14,7 @@ export function SegmentedControl<T extends string>({
 	variant = 'default',
 	tabs,
 }: {
-	value: T
+	value?: T
 	onValueChange: (value: T) => void
 	size?: 'default' | 'lg' | 'sm'
 	variant?: 'default' | 'primary'
@@ -31,13 +31,13 @@ export function SegmentedControl<T extends string>({
 			layoutRoot
 			className={cn(
 				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/6 bg-white/3',
-				justTwo && 'cursor-pointer',
+				justTwo && value !== undefined && 'cursor-pointer',
 				size === 'sm' && 'h-[24px] p-1 text-[9px]',
 				size === 'default' && 'h-[30px] p-1 text-12',
 				size === 'lg' && 'h-[40px] p-[5px] text-12',
 			)}
 			onClick={() => {
-				if (justTwo) {
+				if (justTwo && value !== undefined) {
 					if (value === tabs[0].id) {
 						onValueChange(tabs[1].id)
 					} else {
@@ -50,7 +50,7 @@ export function SegmentedControl<T extends string>({
 				<button
 					key={tab.id}
 					className={cn(
-						'leading-inter-trimmed group relative flex-grow rounded-full outline-none transition-[box-shadow,background]',
+						'group relative flex-grow rounded-full leading-inter-trimmed outline-none transition-[box-shadow,background]',
 						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
 						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
 						size === 'sm' && 'px-2',
