@@ -2,19 +2,20 @@ import {useRef} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {AppIcon} from '@/components/app-icon'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useColorThief} from '@/hooks/use-color-thief'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {H2} from '@/layouts/stories'
 
 export default function ColorThiefExample() {
 	const title = 'Color Thief'
-	useUmbrelTitle(title)
+	g
 	// const [colors, setColors] = useState<[][] | undefined>()
 	const ref = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(ref)
 
 	return (
 		<div>
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<H2>{title}</H2>
 			{/* <img
 				src={'https://getumbrel.github.io/umbrel-apps-gallery/bitfeed/icon.svg'}

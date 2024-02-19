@@ -21,7 +21,7 @@ import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {toast} from '@/components/ui/toast'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H1, H2, H3} from '@/layouts/stories'
 import {NoForgotPasswordMessage} from '@/routes/settings/_components/no-forgot-password-message'
 import {Badge} from '@/shadcn-components/ui/badge'
@@ -56,10 +56,9 @@ import {fixmeHandler} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
 export default function Stories() {
-	useUmbrelTitle('Stories Home')
-
 	return (
 		<div className='flex flex-col gap-4 bg-white/20 p-4'>
+			<UmbrelHeadTitle>Stories Home</UmbrelHeadTitle>
 			<H1>Stories</H1>
 			<H2>i18n</H2>
 			<I18Examples />

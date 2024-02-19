@@ -1,6 +1,7 @@
 import {HTMLProps} from 'react'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
@@ -45,6 +46,7 @@ export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 // shouldn't be taken too far.
 export function Layout({
 	title,
+	headTitle,
 	transitionTitle = true,
 	subTitle,
 	subTitleMaxWidth,
@@ -52,6 +54,7 @@ export function Layout({
 	footer,
 }: {
 	title: string
+	headTitle?: string
 	transitionTitle?: boolean
 	subTitle: React.ReactNode
 	subTitleMaxWidth?: number
@@ -60,6 +63,8 @@ export function Layout({
 }) {
 	return (
 		<>
+			{/* TODO: probably want consumer to set the title */}
+			<UmbrelHeadTitle>{headTitle || title}</UmbrelHeadTitle>
 			<div className='flex-1' />
 			<div className='flex w-full flex-col items-center gap-5'>
 				<UmbrelLogoLarge />

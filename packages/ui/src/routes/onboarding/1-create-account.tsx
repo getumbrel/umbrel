@@ -3,7 +3,6 @@ import {Link} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {links} from '@/constants/links'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
@@ -12,7 +11,6 @@ import {t} from '@/utils/i18n'
 
 export default function CreateAccount() {
 	const title = t('onboarding.create-account')
-	useUmbrelTitle(title)
 	const auth = useAuth()
 
 	const [name, setName] = useState('')

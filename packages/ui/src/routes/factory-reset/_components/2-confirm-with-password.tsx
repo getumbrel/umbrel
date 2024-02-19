@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router-dom'
 import {useMount} from 'react-use'
 
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
@@ -20,7 +20,6 @@ export function ConfirmWithPassword({
 	onPasswordChange: (password: string) => void
 	mut: ReturnType<typeof trpcReact.system.factoryReset.useMutation>
 }) {
-	useUmbrelTitle(factoryResetTitle(t('factory-reset.confirm.title')))
 	const navigate = useNavigate()
 
 	const passwordRef = useRef<HTMLInputElement>(null)
@@ -39,6 +38,7 @@ export function ConfirmWithPassword({
 
 	return (
 		<form onSubmit={handleSubmit} className='flex-1'>
+			<UmbrelHeadTitle>{factoryResetTitle(t('factory-reset.confirm.title'))}</UmbrelHeadTitle>
 			<ImmersiveDialogBody
 				title={title()}
 				description={description()}

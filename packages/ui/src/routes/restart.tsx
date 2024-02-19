@@ -3,14 +3,13 @@ import {useEffectOnce} from 'react-use'
 
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export default function Restart() {
 	const navigate = useNavigate()
-	useUmbrelTitle('Restarting...')
 
 	const restartMut = trpcReact.system.reboot.useMutation({
 		onSuccess: () => navigate('/'),
@@ -22,9 +21,11 @@ export default function Restart() {
 	})
 
 	if (restartMut.isError) {
+		const title = t('restart.failed')
 		return (
 			<CoverMessage>
-				{t('restart.failed')}
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+				{title}
 				<Button size='sm' className='inline' onClick={() => restartMut.mutate()}>
 					{t('restart.try-again')}
 				</Button>
@@ -32,9 +33,12 @@ export default function Restart() {
 		)
 	}
 
+	const title = t('restart.restarting')
 	return (
 		<CoverMessage>
-			<Loading>{t('restart.restarting')}</Loading>
+			{/* TODO: add translation */}
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+			<Loading>{title}</Loading>
 			<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
 		</CoverMessage>
 	)

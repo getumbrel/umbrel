@@ -1,5 +1,5 @@
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	Drawer,
 	DrawerContent,
@@ -15,7 +15,6 @@ import {DeviceInfoContent} from '../device-info-content'
 
 export function DeviceInfoDrawer() {
 	const title = t('device-info-short')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('device-info')
 
 	const {data, isLoading} = useDeviceInfo()
@@ -28,6 +27,7 @@ export function DeviceInfoDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('device-info-description')}</DrawerDescription>
 				</DrawerHeader>

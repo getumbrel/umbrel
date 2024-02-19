@@ -1,8 +1,8 @@
 import {RiAlarmWarningFill} from 'react-icons/ri'
 
 import {ErrorAlert} from '@/components/ui/alert'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -21,7 +21,6 @@ import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 
 export default function ChangePasswordDialog() {
 	const title = t('change-password')
-	useUmbrelTitle(title)
 
 	const dialogProps = useDialogOpenProps('change-password')
 
@@ -47,6 +46,7 @@ export default function ChangePasswordDialog() {
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
+								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
 								<DialogDescription>{t('change-password.description')}</DialogDescription>
 							</DialogHeader>

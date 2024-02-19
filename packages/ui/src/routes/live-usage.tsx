@@ -5,13 +5,13 @@ import {Card} from '@/components/ui/card'
 import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
 import {Loading} from '@/components/ui/loading'
 import {SegmentedControl} from '@/components/ui/segmented-control'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useCpuForUi} from '@/hooks/use-cpu'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useMemoryForUi} from '@/hooks/use-memory'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {useApps} from '@/providers/apps'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
@@ -22,12 +22,12 @@ import {tw} from '@/utils/tw'
 
 export default function LiveUsageDialog() {
 	const title = t('live-usage')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('live-usage')
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
 			<ImmersiveDialogContent size='lg'>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<h1 className={immersiveDialogTitleClass}>{title}</h1>
 				<LiveUsageContent />
 			</ImmersiveDialogContent>

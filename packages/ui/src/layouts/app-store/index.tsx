@@ -6,7 +6,6 @@ import {Link, Outlet} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {
 	appsGridClass,
@@ -30,7 +29,6 @@ import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
 	const title = t('app-store.title')
-	useUmbrelTitle(title)
 
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)

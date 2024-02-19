@@ -1,4 +1,4 @@
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useUserName} from '@/hooks/use-user-name'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -16,7 +16,6 @@ import {t} from '@/utils/i18n'
 
 export default function ChangeNameDialog() {
 	const title = t('change-name')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('change-name')
 
 	const {name, setName, handleSubmit, formError, isLoading} = useUserName({
@@ -30,6 +29,7 @@ export default function ChangeNameDialog() {
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
+								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
 								<DialogDescription>{t('change-name.description')}</DialogDescription>
 							</DialogHeader>

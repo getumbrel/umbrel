@@ -2,7 +2,7 @@ import {useRef} from 'react'
 import {useMount, useTimeout} from 'react-use'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
 import {
 	Drawer,
@@ -19,7 +19,6 @@ import {sleep} from '@/utils/misc'
 
 export function WallpaperDrawer() {
 	const title = t('wallpaper')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('wallpaper')
 
 	const {wallpaper, setWallpaperId} = useWallpaper()
@@ -36,6 +35,7 @@ export function WallpaperDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
 				</DrawerHeader>

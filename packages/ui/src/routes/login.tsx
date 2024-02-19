@@ -2,7 +2,6 @@ import {useState} from 'react'
 import {flushSync} from 'react-dom'
 
 import {PinInput} from '@/components/ui/pin-input'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
@@ -13,8 +12,6 @@ import {transitionViewIfSupported} from '@/utils/misc'
 type Step = 'password' | '2fa'
 
 export default function Login() {
-	useUmbrelTitle(t('login'))
-
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
 
@@ -46,7 +43,7 @@ export default function Login() {
 	switch (step) {
 		case 'password': {
 			return (
-				<Layout title={t('login.title')} subTitle={t('login.subtitle')}>
+				<Layout title={t('login.title')} headTitle={t('login')} subTitle={t('login.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmitPassword}>
 						<div className={formGroupClass}>
 							<PasswordInput

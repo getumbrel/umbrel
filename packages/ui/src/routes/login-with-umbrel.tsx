@@ -4,7 +4,7 @@ import {useParams} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {PinInput} from '@/components/ui/pin-input'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAuth} from '@/modules/auth/use-auth'
 import {useUserApp} from '@/providers/apps'
 import {Button} from '@/shadcn-components/ui/button'
@@ -17,8 +17,6 @@ import {transitionViewIfSupported} from '@/utils/misc'
 type Step = 'password' | '2fa'
 
 export default function LoginWithUmbrel() {
-	useUmbrelTitle('Login with Umbrel')
-
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
 
@@ -94,6 +92,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 
 	return (
 		<div className='flex h-full w-full flex-grow items-center justify-center'>
+			<UmbrelHeadTitle>Login with Umbrel</UmbrelHeadTitle>
 			<div
 				className={cn(
 					'w-full rounded-20 bg-dialog-content/70 p-8 shadow-dialog backdrop-blur-3xl sm:max-w-[480px]',

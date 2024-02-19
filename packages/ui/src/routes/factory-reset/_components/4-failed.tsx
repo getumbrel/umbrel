@@ -1,12 +1,8 @@
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import FailedLayout from '@/modules/bare/failed-layout'
 import {t} from '@/utils/i18n'
 
-import {factoryResetTitle} from './misc'
-
 export function Failed() {
 	const title = t('factory-reset.failed.title')
-	useUmbrelTitle(factoryResetTitle(title))
 
 	return (
 		<FailedLayout

@@ -1,8 +1,8 @@
 import {useId} from 'react'
 
 import {listClass, ListRadioItem} from '@/components/ui/list'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {languages, useLanguage} from '@/hooks/use-language'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	Drawer,
 	DrawerContent,
@@ -17,7 +17,6 @@ import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {
 	const title = t('language')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('language')
 	const [activeCode, setActiveCode] = useLanguage()
 
@@ -34,6 +33,7 @@ export function LanguageDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('language.select-description')}</DrawerDescription>
 				</DrawerHeader>

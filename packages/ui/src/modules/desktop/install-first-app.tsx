@@ -4,6 +4,7 @@ import {Link, useLocation} from 'react-router-dom'
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
 import {ButtonLink} from '@/components/ui/button-link'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {useAvailableApps} from '@/providers/available-apps'
 import {cn} from '@/shadcn-lib/utils'
@@ -11,17 +12,20 @@ import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
-export function InstallFirstApp({title}: {title: string}) {
+export function InstallFirstApp() {
 	const {pathname} = useLocation()
 	const isHome = pathname === '/'
 
 	if (!isHome) return null
+
+	const title = t('install-your-first-app')
 
 	return (
 		<div className={cn('relative z-10 flex min-h-[100dvh] flex-col items-center duration-300 animate-in fade-in')}>
 			<div className='pt-14' />
 			<UmbrelLogo />
 			<div className='pt-5' />
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<h1
 				className='-translate-y-2 text-center text-24 font-bold leading-tight -tracking-2 md:text-48'
 				style={{

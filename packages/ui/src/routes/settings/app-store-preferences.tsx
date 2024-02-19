@@ -1,4 +1,4 @@
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
@@ -7,7 +7,6 @@ import {AppStorePreferencesContent} from './_components/app-store-preferences-co
 
 export default function AppStorePreferencesDialog() {
 	const title = t('settings.app-store-preferences.title')
-	useUmbrelTitle(title)
 
 	const dialogProps = useDialogOpenProps('app-store-preferences')
 
@@ -17,6 +16,7 @@ export default function AppStorePreferencesDialog() {
 				<DialogContent className='p-0'>
 					<div className='umbrel-dialog-fade-scroller space-y-6 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
+							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 							<DialogTitle>{t('app-store.title')}</DialogTitle>
 						</DialogHeader>
 						<AppStorePreferencesContent />

@@ -1,7 +1,7 @@
 import {useEffect} from 'react'
 
 import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
@@ -24,14 +24,10 @@ export function Desktop() {
 }
 
 function InstallFirstAppPage() {
-	const title = t('install-your-first-app')
-	useUmbrelTitle(title)
-
-	return <InstallFirstApp title={title} />
+	return <InstallFirstApp />
 }
 
 function DesktopPage() {
-	useUmbrelTitle(t('desktop.title'))
 	const {open, setOpen} = useCmdkOpen()
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect
@@ -44,6 +40,7 @@ function DesktopPage() {
 
 	return (
 		<>
+			<UmbrelHeadTitle>{t('desktop.title')}</UmbrelHeadTitle>
 			<DesktopContextMenu>
 				<div
 					className={
