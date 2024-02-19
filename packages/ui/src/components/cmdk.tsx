@@ -135,14 +135,14 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{systemAppsKeyed['settings'].name}
 				</SubItem>
 				<SubItem
-					value={systemAppsKeyed['settings'].name}
+					value={t('logout')}
 					icon={systemAppsKeyed['settings'].icon}
 					onSelect={() => {
 						navigate({search: addLinkSearchParams({dialog: 'logout'})})
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['settings'].name}
+					{t('logout')}
 				</SubItem>
 			</CommandList>
 		</CommandDialog>
