@@ -1,28 +1,18 @@
-import {useState} from 'react'
-
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UNKNOWN} from '@/constants'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {tempDescriptions, tempDescriptionsKeyed, TempUnit, useTempUnit} from '@/hooks/use-temp-unit'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
-import {keyBy} from '@/utils/misc'
 import {isCpuTooHot} from '@/utils/system'
 
 import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
 
-export function TempStatCardContent({
-	tempInCelcius,
-	defaultUnit = 'c',
-}: {
-	tempInCelcius?: number
-	defaultUnit?: TempUnit
-}) {
-	const [unit, setUnit] = useState<TempUnit>(defaultUnit)
+export function TempStatCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?: number; defaultUnit?: TempUnit}) {
+	const [unit, setUnit] = useTempUnit(defaultUnit)
 
-	const tempInFahrenheit = celciusToFahrenheit(tempInCelcius)
-
-	const tempNumber = unit === 'c' ? tempInCelcius : tempInFahrenheit
+	const tempNumber = unit === 'c' ? tempInCelcius : celciusToFahrenheit(tempInCelcius)
 	const tempUnitLabel = tempDescriptionsKeyed[unit].label
 
 	// 60% opacity to base 16
@@ -64,15 +54,6 @@ export function TempStatCardContent({
 		</div>
 	)
 }
-
-const tempDescriptions = [
-	{id: 'c', label: '°C'},
-	{id: 'f', label: '°F'},
-] as const
-
-type TempUnit = (typeof tempDescriptions)[number]['id']
-
-const tempDescriptionsKeyed = keyBy(tempDescriptions, 'id')
 
 // --- Helpers ---
 
