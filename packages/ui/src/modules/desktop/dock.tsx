@@ -76,7 +76,9 @@ export function Dock() {
 				<DockItem
 					to={hasInstalledApps ? systemAppsKeyed['widgets'].systemAppTo : undefined}
 					onClick={() => {
-						toast.info(t('widgets.install-an-app-before-using-widgets'))
+						if (!hasInstalledApps) {
+							toast.info(t('widgets.install-an-app-before-using-widgets'))
+						}
 					}}
 					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
 					bg={systemAppsKeyed['widgets'].icon}
