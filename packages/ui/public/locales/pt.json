@@ -335,5 +335,6 @@
   "widgets.edit.title": "Editar widgets",
   "widgets.install-an-app-before-using-widgets": "Instale um aplicativo antes de usar widgets.",
   "factory-reset.review.title": "Revise os dados",
-  "app.updating": "Atualizando"
+  "app.updating": "Atualizando",
+  "cpu-core-count": "{{cores}} núcleos"
 }

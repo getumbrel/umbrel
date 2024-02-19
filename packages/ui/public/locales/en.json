@@ -340,5 +340,6 @@
   "app.stopping": "Stopping",
   "app.starting": "Starting",
   "app.restarting": "Restarting",
-  "cpu": "CPU"
+  "cpu": "CPU",
+  "cpu-core-count": "{{cores}} cores"
 }

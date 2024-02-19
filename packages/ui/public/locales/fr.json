@@ -335,5 +335,6 @@
   "trpc.checking-backend": "Vérification du backend...",
   "widgets.install-an-app-before-using-widgets": "Installez une application avant d'utiliser des widgets.",
   "factory-reset.review.title": "Examiner les données",
-  "app.updating": "Mise à jour"
+  "app.updating": "Mise à jour",
+  "cpu-core-count": "{{cores}} cœurs"
 }
