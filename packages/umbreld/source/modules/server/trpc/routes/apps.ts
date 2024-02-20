@@ -10,7 +10,7 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					const {name, version, icon, port, path} = await app.readManifest()
+					const {name, version, icon, port, path, widgets} = await app.readManifest()
 					return {
 						id: app.id,
 						name,
@@ -24,6 +24,7 @@ export default router({
 							defaultPassword: '',
 						},
 						hiddenService: 'blah.onion', // TODO: Get hidden service
+						widgets,
 					}
 				} catch (error) {
 					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
