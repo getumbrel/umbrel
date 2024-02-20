@@ -35,10 +35,10 @@ export function ThreeUpWidget({
 function ThreeUpItem({iconName, title, value}: {iconName: string; title?: string; value?: string}) {
 	return (
 		// NOTE: consider reducing rounding if we don't have 3 items
-		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
+		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
-			<TablerIcon iconName={iconName} className='h-5 w-5 [&>svg]:h-5 [&>svg]:w-5' />
-			<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate max-sm:hidden md:mt-4')}>{title}</p>
+			{iconName && <TablerIcon iconName={iconName} className='h-5 w-5 md:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
+			<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate max-sm:hidden')}>{title}</p>
 			<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{value}</p>
 		</div>
 	)
