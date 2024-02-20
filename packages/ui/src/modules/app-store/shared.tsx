@@ -1,5 +1,6 @@
 import {ReactNode} from 'react'
 
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {SheetDescription, SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
@@ -42,6 +43,7 @@ export function AppStoreSheetInner({
 			{beforeHeaderChildren}
 			<SheetHeader className='gap-5'>
 				<div className='flex flex-col gap-x-5 gap-y-5 px-2.5 md:flex-row md:items-center md:px-0'>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<SheetTitle className='flex-1 whitespace-nowrap capitalize leading-none'>{title}</SheetTitle>
 					{titleRightChildren}
 				</div>

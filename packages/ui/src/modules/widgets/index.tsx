@@ -1,9 +1,13 @@
+import {ComponentPropsWithRef} from 'react'
 import {useNavigate} from 'react-router-dom'
+import {map} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {tempDescriptionsKeyed, useTempUnit} from '@/hooks/use-temp-unit'
 import {ExampleWidgetConfig, RegistryWidget, WidgetConfig, WidgetType} from '@/modules/widgets/constants'
 import {useApps} from '@/providers/apps'
+import {celciusToFahrenheit} from '@/utils/tempurature'
 
 import {ActionsWidget} from './actions-widget'
 import {FourUpWidget} from './four-up-widget'
@@ -53,6 +57,10 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 		}
 		case 'three-up': {
 			const w = widget as WidgetConfig<'three-up'>
+			// TODO: figure out how to show the user's desired temp unit from local storage in a way that isn't brittle
+			if (config.id === 'umbrel:system-stats') {
+				return <SystemThreeUpWidget {...w} onClick={() => handleClick()} />
+			}
 			return <ThreeUpWidget {...w} onClick={() => handleClick()} />
 		}
 		case 'four-up': {
@@ -68,6 +76,23 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 			return <NotificationsWidget {...w} onClick={() => handleClick()} />
 		}
 	}
+}
+
+// Hacky way to get the right temp unit based on user preferences
+export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeUpWidget>) {
+	const [tempUnit] = useTempUnit()
+
+	if (items === undefined) return
+
+	const modifiedItems = map.strict(items, (item) => {
+		if (!item.value?.includes('℃')) return item
+		const celciusNumber = parseInt(item.value.replace('℃', ''))
+		const tempNumber = tempUnit === 'f' ? celciusToFahrenheit(celciusNumber) : celciusNumber
+		const tempUnitLabel = tempDescriptionsKeyed[tempUnit].label
+		const newValue = tempNumber + tempUnitLabel
+		return {...item, value: newValue}
+	})
+	return <ThreeUpWidget items={modifiedItems} {...props} />
 }
 
 export function ExampleWidget<T extends WidgetType = WidgetType>({

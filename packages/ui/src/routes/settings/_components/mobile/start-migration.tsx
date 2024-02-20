@@ -1,5 +1,5 @@
 import {ButtonLink} from '@/components/ui/button-link'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {
 	Drawer,
@@ -14,7 +14,6 @@ import {t} from '@/utils/i18n'
 
 export function StartMigrationDrawer() {
 	const title = t('migration-assistant')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('start-migration')
 	const linkToDialog = useLinkToDialog()
 
@@ -25,6 +24,7 @@ export function StartMigrationDrawer() {
 					<div className='py-5'>
 						<MigrateImage />
 					</div>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('migration-assistant-description-long')}</DrawerDescription>
 				</DrawerHeader>

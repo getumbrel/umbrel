@@ -2,13 +2,11 @@ import {useEffect, useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export default function AccountCreated() {
-	useUmbrelTitle(t('onboarding.account-created.page-title'))
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 
 	const getQuery = trpcReact.user.get.useQuery()
@@ -29,6 +27,7 @@ export default function AccountCreated() {
 	return (
 		<Layout
 			title={t('onboarding.account-created.youre-all-set-name', {name})}
+			headTitle={t('onboarding.account-created.page-title')}
 			subTitle={t('onboarding.account-created.by-clicking-button-you-agree', {
 				button: launch,
 			})}

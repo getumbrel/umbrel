@@ -1,6 +1,6 @@
 import {useParams} from 'react-router-dom'
 
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
@@ -19,8 +19,6 @@ function CategoryContent() {
 	const {categoryishId} = useParams<{categoryishId: Categoryish}>()
 	const {appsGroupedByCategory, apps, isLoading} = useAvailableApps()
 
-	useUmbrelTitle(categoryishId ? categoryDescriptionsKeyed[categoryishId].label() : '')
-
 	// Probably invalid url param
 	if (!categoryishId) return null
 	if (isLoading) return null
@@ -30,5 +28,10 @@ function CategoryContent() {
 	const filteredApps = categoryId ? appsGroupedByCategory[categoryId] : apps
 	const title = categoryDescriptionsKeyed[categoryishId].label()
 
-	return <AppsGridFaintSection title={title} apps={filteredApps} />
+	return (
+		<>
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+			<AppsGridFaintSection title={title} apps={filteredApps} />
+		</>
+	)
 }

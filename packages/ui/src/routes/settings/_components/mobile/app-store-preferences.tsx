@@ -1,4 +1,4 @@
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {
 	Drawer,
 	DrawerContent,
@@ -14,13 +14,13 @@ import {AppStorePreferencesContent} from '../app-store-preferences-content'
 
 export function AppStorePreferencesDrawer() {
 	const title = t('settings.app-store-preferences.title')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('app-store-preferences')
 
 	return (
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight withScroll>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('app-store.description')}</DrawerDescription>
 				</DrawerHeader>

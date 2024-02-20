@@ -3,7 +3,7 @@ import {useInterval} from 'react-use'
 import {isString} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
@@ -26,7 +26,6 @@ export function Resetting() {
 	})
 
 	const message = (description ?? t('factory-reset.resetting.connecting')) + '...'
-	useUmbrelTitle(factoryResetTitle(message))
 
 	useInterval(factoryResetStatusQ.refetch, running ? 500 : null)
 
@@ -45,6 +44,7 @@ export function Resetting() {
 
 	return (
 		<div className={bareContainerClass}>
+			<UmbrelHeadTitle>{factoryResetTitle(message)}</UmbrelHeadTitle>
 			<BareLogoTitle>{t('factory-reset')}</BareLogoTitle>
 			<BareSpacer />
 			<Progress value={progress}>{message}</Progress>

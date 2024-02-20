@@ -2,7 +2,7 @@ import {RiShutDownLine} from 'react-icons/ri'
 
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,7 +17,6 @@ import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 export default function ShutdownDialog() {
-	useUmbrelTitle(t('shut-down'))
 	const dialogProps = useDialogOpenProps('shutdown')
 
 	const shutdownMut = trpcReact.system.shutdown.useMutation()
@@ -33,13 +32,20 @@ export default function ShutdownDialog() {
 
 	// TODO: consider just doing throw here
 	if (shutdownMut.isError) {
-		return <CoverMessage>{t('shut-down.failed')}</CoverMessage>
+		const title = t('shut-down.failed')
+		return (
+			<>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+				<CoverMessage>{title}</CoverMessage>
+			</>
+		)
 	}
 
 	return (
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiShutDownLine}>
+					<UmbrelHeadTitle>{t('shut-down')}</UmbrelHeadTitle>
 					<AlertDialogTitle>{t('shut-down.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

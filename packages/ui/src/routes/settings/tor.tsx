@@ -1,6 +1,6 @@
 import {TorIcon2} from '@/assets/tor-icon2'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -16,7 +16,6 @@ import {t} from '@/utils/i18n'
 
 export default function ConfirmEnableTorDialog() {
 	const title = t('tor.enable.title')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('tor')
 
 	const {setEnabled, isError} = useTorEnabled()
@@ -29,6 +28,7 @@ export default function ConfirmEnableTorDialog() {
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={TorIcon2}>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<AlertDialogTitle>{title}</AlertDialogTitle>
 					<AlertDialogDescription>{t('tor.enable.description')}</AlertDialogDescription>
 				</AlertDialogHeader>

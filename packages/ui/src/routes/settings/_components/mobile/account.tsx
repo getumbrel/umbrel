@@ -1,8 +1,8 @@
 import {useState} from 'react'
 
 import {SegmentedControl} from '@/components/ui/segmented-control'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {useUserName} from '@/hooks/use-user-name'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -21,8 +21,8 @@ import {t} from '@/utils/i18n'
 import {NoForgotPasswordMessage} from '../no-forgot-password-message'
 
 export function AccountDrawer() {
+	// TODO: add translation
 	const title = 'Account'
-	useUmbrelTitle(title)
 
 	const dialogProps = useDialogOpenProps('account')
 	const closeDialog = () => dialogProps.onOpenChange(false)
@@ -37,6 +37,7 @@ export function AccountDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
 				</DrawerHeader>

@@ -1,6 +1,6 @@
 import {listClass, listItemClass} from '@/components/ui/list'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {useDialogOpenProps} from '@/utils/dialog'
@@ -8,7 +8,6 @@ import {t} from '@/utils/i18n'
 
 export function TorDrawer() {
 	const title = t('tor-long')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('tor')
 
 	const {enabled, setEnabled, isError} = useTorEnabled()
@@ -21,6 +20,7 @@ export function TorDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('tor-description-long')}</DrawerDescription>
 				</DrawerHeader>

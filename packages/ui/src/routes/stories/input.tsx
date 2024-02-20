@@ -1,13 +1,12 @@
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H1, H2} from '@/layouts/stories'
 import {Input, InputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {tw} from '@/utils/tw'
 
 export default function InputExamples() {
-	useUmbrelTitle('Input')
-
 	return (
 		<div className='flex flex-col gap-4 bg-neutral-800 p-4'>
+			<UmbrelHeadTitle>Input</UmbrelHeadTitle>
 			<H1>Input</H1>
 			<H2>Default</H2>
 			<Input placeholder='Name' />

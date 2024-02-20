@@ -2,9 +2,9 @@ import React, {Suspense} from 'react'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 
@@ -116,13 +116,13 @@ function Dialog() {
 
 export function Settings() {
 	const title = t('settings')
-	useUmbrelTitle(title)
 
 	const isMobile = useIsMobile()
 
 	return (
 		<>
 			<SheetHeader className='px-2.5'>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}

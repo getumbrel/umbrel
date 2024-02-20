@@ -146,12 +146,12 @@ source_app() {
   export TOR_HS_APP_DIR="/data/app-${app}"
   export TOR_HS_PORTS="80:${APP_PROXY_HOSTNAME}:${APP_PROXY_PORT}"
 
-  tor_extra_hs_varname=$(echo "APP_${APP_ID^^}_TOR_HS_EXTRA_PORTS" | tr '-' '_')
-  tor_hs_extra_ports="${!tor_extra_hs_varname:-}"
+  # tor_extra_hs_varname=$(echo "APP_${APP_ID^^}_TOR_HS_EXTRA_PORTS" | tr '-' '_')
+  # tor_hs_extra_ports="${!tor_extra_hs_varname:-}"
 
-  if [[ ! -z "${tor_hs_extra_ports}" ]]; then
-    export TOR_HS_PORTS="${TOR_HS_PORTS} ${tor_hs_extra_ports}"
-  fi
+  # if [[ ! -z "${tor_hs_extra_ports}" ]]; then
+  #   export TOR_HS_PORTS="${TOR_HS_PORTS} ${tor_hs_extra_ports}"
+  # fi
 
   # Other
   export UMBREL_ROOT

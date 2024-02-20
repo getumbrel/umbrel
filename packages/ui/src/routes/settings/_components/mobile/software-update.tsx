@@ -1,8 +1,8 @@
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Loading} from '@/components/ui/loading'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
@@ -18,7 +18,6 @@ import {tw} from '@/utils/tw'
 
 export function SoftwareUpdateDrawer() {
 	const title = t('software-update.title')
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('software-update')
 
 	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
@@ -26,6 +25,7 @@ export function SoftwareUpdateDrawer() {
 	if (state === 'upgrading') {
 		return (
 			<CoverMessage>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
 				<CoverMessageParagraph>{t('do-not-while', {while: t('update')})}</CoverMessageParagraph>
 			</CoverMessage>
@@ -36,6 +36,7 @@ export function SoftwareUpdateDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent>
 				<DrawerHeader>
+					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('software-update.description-long')}</DrawerDescription>
 				</DrawerHeader>

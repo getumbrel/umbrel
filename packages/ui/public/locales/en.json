@@ -84,7 +84,7 @@
   "app.updating": "Updating",
   "app.open": "Open",
   "reload-page": "Reload Page",
-  "page-title-umbrel": "{{title}} – Umbrel",
+  "page-title-umbrel": "{{title}} – umbrelOS",
   "desktop.title": "Desktop",
   "notifications": "Notifications",
   "device-info.device": "Device",
@@ -340,5 +340,6 @@
   "app.stopping": "Stopping",
   "app.starting": "Starting",
   "app.restarting": "Restarting",
-  "cpu": "CPU"
+  "cpu": "CPU",
+  "cpu-core-count": "{{cores}} cores"
 }

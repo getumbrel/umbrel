@@ -2,7 +2,7 @@ import {RiRestartLine} from 'react-icons/ri'
 
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -17,29 +17,37 @@ import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 export default function RestartDialog() {
-	useUmbrelTitle(t('restart'))
 	const dialogProps = useDialogOpenProps('restart')
 
 	const restartMut = trpcReact.system.reboot.useMutation()
 
 	// TODO: redirect to `/restart` route instead of showing this cover message
 	if (restartMut.isLoading) {
+		const title = t('restart.restarting')
 		return (
 			<CoverMessage>
-				<Loading>{t('restart.restarting')}</Loading>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+				<Loading>{title}</Loading>
 				<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}
 
 	if (restartMut.isError) {
-		return <CoverMessage>{t('restart.failed')}</CoverMessage>
+		const title = t('restart.failed')
+		return (
+			<>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+				<CoverMessage>{title}</CoverMessage>
+			</>
+		)
 	}
 
 	return (
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiRestartLine}>
+					<UmbrelHeadTitle>{t('restart')}</UmbrelHeadTitle>
 					<AlertDialogTitle>{t('restart.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

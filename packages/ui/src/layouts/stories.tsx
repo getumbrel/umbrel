@@ -2,7 +2,7 @@ import {ReactNode, Suspense} from 'react'
 import {Link, Outlet} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {tw} from '@/utils/tw'
 
@@ -70,10 +70,9 @@ const storyLinks = [
 ]
 
 export function StoriesLayout() {
-	useUmbrelTitle('Stories')
-
 	return (
 		<div className='flex min-h-full flex-col bg-neutral-700'>
+			<UmbrelHeadTitle>Stories</UmbrelHeadTitle>
 			<div className='fixed top-0 z-50 w-full bg-neutral-900 '>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar flex shrink-0 items-center overflow-x-auto'>
 					<NavLink to='/'>👈 Home</NavLink>

@@ -4,17 +4,16 @@ import {Link} from 'react-router-dom'
 import urlJoin from 'url-join'
 
 import {Loading} from '@/components/ui/loading'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H3} from '@/layouts/stories'
 import {RouterOutput, trpcReact, trpcUrl} from '@/trpc/trpc'
 
 const trpcEndpointUrl = urlJoin(trpcUrl, 'debug.sayHi')
 
 export default function Trpc() {
-	useUmbrelTitle('tRPC')
-
 	return (
 		<div>
+			<UmbrelHeadTitle>tRPC</UmbrelHeadTitle>
 			<Link to={trpcEndpointUrl} className='underline'>
 				Link to test DEBUG result
 			</Link>

@@ -9,8 +9,8 @@ import {
 	ImmersiveDialogIconMessage,
 	ImmersiveDialogSplitContent,
 } from '@/components/ui/immersive-dialog'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
@@ -20,13 +20,13 @@ import {t} from '@/utils/i18n'
 const title = t('migration-assistant')
 
 export default function MigrationAssistantDialog() {
-	useUmbrelTitle(title)
 	const dialogProps = useDialogOpenProps('migration-assistant')
 	const {params} = useQueryParams()
 	const state = params.get('migration-state')
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<ImmersiveDialogSplitContent side={<MigrateImage />}>
 				{!state && <MigrationAssistantPrep />}
 				{state === 'prep' && <MigrationAssistantPrep />}

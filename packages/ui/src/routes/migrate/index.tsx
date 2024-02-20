@@ -1,7 +1,7 @@
 import {useNavigate} from 'react-router-dom'
 import {useInterval} from 'react-use'
 
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {MigrateInner} from '@/modules/migrate/migrate-inner'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -16,7 +16,6 @@ export default function Migrate() {
 	const {running, progress, error, description} = migrationStatusQ.data ?? {}
 
 	const message = (description || t('migrate.migrating.connecting')) + '...'
-	useUmbrelTitle(message)
 
 	if (error) {
 		navigate('/migrate/failed')
@@ -26,5 +25,10 @@ export default function Migrate() {
 		navigate('/migrate/success')
 	}
 
-	return <MigrateInner progress={progress} message={message} isRunning={!!running} />
+	return (
+		<>
+			<UmbrelHeadTitle>{message}</UmbrelHeadTitle>
+			<MigrateInner progress={progress} message={message} isRunning={!!running} />
+		</>
+	)
 }

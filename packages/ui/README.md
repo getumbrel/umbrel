@@ -1,6 +1,6 @@
-# Umbrel OS UI
+# umbrelOS UI
 
-## Getting Umbrel OS running locally
+## Getting umbrelOS running locally
 
 ### Prerequisites
 

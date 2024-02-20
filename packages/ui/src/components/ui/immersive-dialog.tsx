@@ -32,7 +32,7 @@ export function ImmersiveDialogContent({
 	size = 'default',
 }: {
 	children: React.ReactNode
-	size: 'default' | 'lg'
+	size?: 'default' | 'lg'
 }) {
 	return (
 		<DialogPortal>

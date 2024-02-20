@@ -2,13 +2,11 @@ import {useEffect, useRef} from 'react'
 import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
-import {useUmbrelTitle} from '@/hooks/use-umbrel-title'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
 import {t} from '@/utils/i18n'
 
 export default function OnboardingStart() {
 	const title = t('onboarding.start.title')
-	useUmbrelTitle(title)
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 
 	useEffect(() => {
