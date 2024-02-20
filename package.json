@@ -1,9 +1,11 @@
 {
-    "scripts": {
-        "dev": "touch .umbrel-dev && multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:umbrel && multipass exec umbrel-dev -- scripts/install --bootstrapped --no-install-umbrel && npm run dev:start",
-        "dev:start": "multipass exec umbrel-dev -- sudo scripts/start && echo && echo You may see NGINX errors for a few seconds while the dashboard dev server builds.",
-        "dev:stop": "multipass exec umbrel-dev -- sudo scripts/stop",
-        "dev:restart": "npm run dev:stop && npm run dev:start",
-        "dev:shell": "multipass shell umbrel-dev"
-    }
+  "scripts": {
+    "vm:provision": "multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:/opt/umbrel 23.10 && multipass exec umbrel-dev -- scripts/provision-vm",
+    "vm:update": "multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G --mount $PWD:/opt/umbrel 23.10 && multipass exec umbrel-dev -- scripts/provision-vm",
+    "vm:shell": "multipass shell umbrel-dev",
+    "vm:exec": "multipass exec umbrel-dev",
+    "vm:umbreld": "multipass exec umbrel-dev -- bash -c 'cd /opt/umbrel/packages/umbreld && sudo npm run start -- --data-directory ./data --log-level verbose'",
+    "vm:ui": "multipass exec umbrel-dev -- bash -c 'cd /opt/umbrel/packages/ui && sudo pnpm run dev'",
+    "vm:destroy": "multipass delete umbrel-dev && multipass purge"
+  }
 }
