@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 import process from 'node:process'
 
 import {$} from 'execa'

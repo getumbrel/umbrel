@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 import process from 'node:process'
 import path from 'node:path'
 
@@ -27,7 +27,7 @@ async function buildBinary() {
 		command: [
 			'env',
 			`PATH={{caxa}}/node_modules/.bin/:${process.env.PATH}`, // Temporary workaround to fix the path, migrate to AppImage
-			'{{caxa}}/node_modules/.bin/ts-node',
+			'{{caxa}}/node_modules/.bin/tsx',
 			entrypoint,
 		],
 	})

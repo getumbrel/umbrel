@@ -20,10 +20,10 @@
 		"test-everything": "npm run format && npm run test -- --run && npm run lint",
 		"watch": "NODE_ENV=development nodemon --ext js,json,ts --ignore data --ignore coverage --ignore build --ignore release --exec npm run",
 		"dev": "npm run watch -- start -- -- --data-directory ./data --port 3001 --log-level verbose",
-		"build": "ts-node scripts/build.ts",
-		"prepare-release": "ts-node scripts/prepare-release.ts",
+		"build": "tsx scripts/build.ts",
+		"prepare-release": "tsx scripts/prepare-release.ts",
 		"timestamp-release": "ots-cli.js stamp release/SHA256SUMS",
-		"generate-release-notes": "ts-node scripts/generate-release-notes.ts",
+		"generate-release-notes": "tsx scripts/generate-release-notes.ts",
 		"todo": "git grep --line-number TODO -- ':!package.json'"
 	},
 	"prettier": {
@@ -114,7 +114,7 @@
 		"session-file-store": "^1.5.0",
 		"systeminformation": "^5.18.6",
 		"thirty-two": "^1.0.2",
-		"ts-node": "^10.9.1",
+		"tsx": "^4.7.1",
 		"typescript": "^5.1.6",
 		"zod": "^3.21.4"
 	}
