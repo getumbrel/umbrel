@@ -14,10 +14,10 @@ import {DockSpacer} from './dock'
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
 
-	const {allAppsKeyed, userApps, isLoading} = useApps()
+	const {userApps, isLoading} = useApps()
 	const widgets = useWidgets()
 
-	if (isLoading) return null
+	if (isLoading || widgets.isLoading) return null
 	if (!userApps) return null
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
@@ -60,15 +60,35 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 				transition={variant === 'overlayed' ? {duration: 0} : {duration: 0.2, ease: 'easeOut', delay: 0.2}}
 			>
 				<AppGrid
-					widgets={widgets.selected.map((widget) => (
-						<WidgetWrapper
-							key={widget.endpoint}
-							// Get the app name from the endpoint
-							// TODO: should get app name from the widget config
-							label={allAppsKeyed[widget.endpoint.split('/')[2]]?.name}
+					widgets={widgets.selected.map((widget, i) => (
+						<motion.div
+							key={widget.id}
+							layout
+							initial={{
+								opacity: 0,
+								y: 50,
+							}}
+							animate={{
+								opacity: 1,
+								y: 0,
+							}}
+							exit={{
+								opacity: 0,
+								scale: 0.5,
+							}}
+							transition={{
+								delay: i * 0.02,
+								duration: 0.4,
+								ease: 'easeOut',
+							}}
 						>
-							<Widget appId={widget.app.id} config={widget} />
-						</WidgetWrapper>
+							<WidgetWrapper
+								// Get the app name from the endpoint
+								label={widget.app.name}
+							>
+								<Widget appId={widget.app.id} config={widget} />
+							</WidgetWrapper>
+						</motion.div>
 					))}
 					apps={userApps.map((app, i) => (
 						<motion.div
@@ -88,12 +108,12 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 								scale: 0.5,
 							}}
 							transition={{
-								delay: i * 0.02,
+								delay: (widgets.selected.length * 3 + i) * 0.02,
 								duration: 0.4,
 								ease: 'easeOut',
 							}}
 						>
-							<AppIconConnected key={app.id} appId={app.id} />
+							<AppIconConnected appId={app.id} />
 						</motion.div>
 					))}
 				/>
