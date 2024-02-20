@@ -1,12 +1,12 @@
 import {useEffect, useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 import {Link} from 'react-router-dom'
-import urlJoin from 'url-join'
 
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H3} from '@/layouts/stories'
 import {RouterOutput, trpcReact, trpcUrl} from '@/trpc/trpc'
+import {urlJoin} from '@/utils/misc'
 
 const trpcEndpointUrl = urlJoin(trpcUrl, 'debug.sayHi')
 
