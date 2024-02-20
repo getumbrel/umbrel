@@ -7,9 +7,11 @@ sudo /opt/umbrel/scripts/install --bootstrapped --no-install-umbrel --no-install
 
 echo installing umbreld deps
 cd /opt/umbrel/packages/umbreld
+rm -rf node_modules
 npm install
 
 echo installing ui deps
 cd /opt/umbrel/packages/ui
 sudo npm install -g pnpm
-pnpm install
+rm -rf node_modules
+pnpm install --force
