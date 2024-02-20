@@ -10,8 +10,7 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 	const currentDirname = dirname(currentFilename)
 	const scriptPath = join(currentDirname, 'app-script')
 	const SCRIPT_APP_REPO_DIR = await umbreld.appStore.getAppTemplateFilePath(arg)
-	await $({
-		stdio: 'inherit',
+	return $({
 		env: {
 			SCRIPT_UMBREL_ROOT: umbreld.dataDirectory,
 			SCRIPT_DOCKER_FRAGMENTS: currentDirname,

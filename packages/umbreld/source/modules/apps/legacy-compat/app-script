@@ -541,6 +541,13 @@ if [[ "$command" = "restart" ]]; then
   exit
 fi
 
+# Get logs for an app
+if [[ "$command" = "logs" ]]; then
+  compose "${app}" logs --tail 100
+
+  exit
+fi
+
 # Update an installed app
 if [[ "$command" = "update" ]]; then
 
