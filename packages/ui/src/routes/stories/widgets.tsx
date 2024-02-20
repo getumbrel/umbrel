@@ -6,10 +6,10 @@ import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
 import {ActionsWidget} from '@/modules/widgets/actions-widget'
-import {RegistryWidget, WidgetType} from '@/modules/widgets/constants'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
 import {NotificationsWidget} from '@/modules/widgets/notifications-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
+import {RegistryWidget, WidgetType} from '@/modules/widgets/shared/constants'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
@@ -17,19 +17,17 @@ import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
 import {AppsProvider} from '@/providers/apps'
 import {tw} from '@/utils/tw'
 
-export const demoWidgetConfigs = [
+export const demoWidgetRegistryConfigs = [
 	{
 		appId: 'bitcoin',
 		widgets: [
 			{
 				id: 'bitcoin:sync',
 				type: 'stat-with-progress',
-				endpoint: '/widgets/bitcoin/sync.json',
 			},
 			{
 				id: 'bitcoin:stats',
 				type: 'four-up',
-				endpoint: '/widgets/bitcoin/stats.json',
 			},
 		],
 	},
@@ -39,12 +37,10 @@ export const demoWidgetConfigs = [
 			{
 				id: 'lightning:balance-and-transact',
 				type: 'stat-with-buttons',
-				endpoint: '/widgets/lightning/balance-and-transact.json',
 			},
 			{
 				id: 'lightning:connections',
 				type: 'four-up',
-				endpoint: '/widgets/lightning/connections.json',
 			},
 		],
 	},
@@ -54,12 +50,10 @@ export const demoWidgetConfigs = [
 			{
 				id: 'nostr-relay:stats',
 				type: 'actions',
-				endpoint: '/widgets/nostr-relay/actions.json',
 			},
 			{
 				id: 'nostr-relay:notifications',
 				type: 'notifications',
-				endpoint: '/widgets/nostr-relay/notifications.json',
 			},
 		],
 	},
@@ -68,7 +62,7 @@ export const demoWidgetConfigs = [
 	widgets: RegistryWidget<WidgetType>[]
 }[]
 
-export const demoWidgetConfigsKeyed = indexBy(demoWidgetConfigs, (widget) => widget.appId)
+export const demoWidgetConfigsKeyed = indexBy(demoWidgetRegistryConfigs, (widget) => widget.appId)
 
 export default function WidgetsStory() {
 	const {pageInnerRef} = usePager({apps: [], widgets: []})
@@ -87,7 +81,7 @@ export default function WidgetsStory() {
 						config={{
 							id: 'example:error',
 							type: 'stat-with-progress',
-							endpoint: '/widgets/example/four-up.json',
+							// endpoint: '/widgets/example/four-up.json',
 						}}
 					/>
 				</div>
@@ -431,12 +425,12 @@ export default function WidgetsStory() {
 				<H3>settings</H3>
 				<div className='flex flex-wrap gap-2'>
 					{settingsWidgets.map((widget) => (
-						<WidgetWrapper key={widget.endpoint} label={widget.type}>
+						<WidgetWrapper key={widget.id} label={widget.type}>
 							<Widget appId='example' config={widget} />
 						</WidgetWrapper>
 					))}
 				</div>
-				{demoWidgetConfigs.map((app) => (
+				{demoWidgetRegistryConfigs.map((app) => (
 					<>
 						<H3>{app.appId}</H3>
 						<div className='flex flex-wrap gap-2'>
@@ -454,7 +448,6 @@ export default function WidgetsStory() {
 						config={{
 							id: 'settings:system-stats',
 							type: 'two-up-stat-with-progress',
-							endpoint: '/widgets/example/two-up-example.json',
 						}}
 					/>
 				</WidgetWrapper>

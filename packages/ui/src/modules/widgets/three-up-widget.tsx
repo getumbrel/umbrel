@@ -8,14 +8,16 @@ type ThreeUpItem = {icon: string; title?: string; value?: string}
 
 export function ThreeUpWidget({
 	items,
+	link,
 	onClick,
 }: {
 	items?: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
-	onClick?: () => void
+	link?: string
+	onClick?: (link?: string) => void
 }) {
 	return (
 		<WidgetContainer
-			onClick={onClick}
+			onClick={() => onClick?.(link)}
 			className='flex flex-col items-stretch justify-stretch gap-1.5 p-1.5 md:flex-row md:gap-2 md:px-4 md:py-3'
 		>
 			{items?.[0] && <ThreeUpItem iconName={items[0].icon} title={items[0].title} value={items[0].value} />}

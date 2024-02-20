@@ -1,3 +1,5 @@
+// TODO: this should all probably be in umbreld
+
 export type WidgetType =
 	| 'stat-with-buttons'
 	| 'stat-with-progress'
@@ -126,5 +128,4 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 	refresh?: number
 	// Examples aren't interactive so no need to include `link` in example
 	example?: ExampleWidgetConfig<T>
-	endpoint: string
 }

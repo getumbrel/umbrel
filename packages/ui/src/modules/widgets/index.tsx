@@ -5,8 +5,9 @@ import {map} from 'remeda'
 import {toast} from '@/components/ui/toast'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {tempDescriptionsKeyed, useTempUnit} from '@/hooks/use-temp-unit'
-import {ExampleWidgetConfig, RegistryWidget, WidgetConfig, WidgetType} from '@/modules/widgets/constants'
+import {ExampleWidgetConfig, RegistryWidget, WidgetConfig, WidgetType} from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
+import {trpcReact} from '@/trpc/trpc'
 import {celciusToFahrenheit} from '@/utils/tempurature'
 
 import {ActionsWidget} from './actions-widget'
@@ -14,26 +15,44 @@ import {FourUpWidget} from './four-up-widget'
 import {NotificationsWidget} from './notifications-widget'
 import {ProgressWidget} from './progress-widget'
 import {WidgetContainer} from './shared/shared'
-import {useWidgetEndpoint} from './shared/use-widget-endpoint'
 import {StatWithButtonsWidget} from './stat-with-buttons-widget'
 import {ThreeUpWidget} from './three-up-widget'
 import {TwoUpWidget} from './two-up-widget'
 
+const DEFAULT_REFRESH_MS = 1000 * 60 * 5
+
 export function Widget({appId, config}: {appId: string; config: RegistryWidget}) {
-	const {userAppsKeyed, systemAppsKeyed} = useApps()
-	const {widget, error, isLoading} = useWidgetEndpoint(config.endpoint, config.type)
+	// TODO: find a way to use `useApp()` to be cleaner
+	const {userAppsKeyed, systemAppsKeyed, isLoading: isLoadingApps} = useApps()
+	const app = userAppsKeyed?.[appId]
+	// const finalEndpointUrl = urlJoin(appToUrlWithAppPath(app), config.endpoint);
+
+	const widgetQ = trpcReact.widget.data.useQuery(
+		{widgetId: config.id},
+		{
+			retry: false,
+			// We do want refetching to happen on a schedule though
+			refetchInterval: config.refresh ?? DEFAULT_REFRESH_MS,
+		},
+	)
 
 	const navigate = useNavigate()
 	const launchApp = useLaunchApp()
 
-	if (error)
-		return <WidgetContainer className='p-5 text-12 text-destructive2-lightest'>Error: {error.message}</WidgetContainer>
-	if (isLoading) return <WidgetContainer />
+	const isLoading = isLoadingApps || widgetQ.isLoading
+
+	if (widgetQ.isError) {
+		return <ErrorWidget error='Error processing widget.' />
+	}
+	// TODO: Show correct widget type while loading, not just empty container
+	if (isLoading) return <LoadingWidget type={config.type} />
+
+	const widget = widgetQ.data as WidgetConfig
 
 	const handleClick = (link?: string) => {
 		if (appId === 'settings' && systemAppsKeyed.settings) {
-			navigate('/settings?dialog=live-usage')
-		} else if (userAppsKeyed?.[appId]) {
+			navigate('/?dialog=live-usage')
+		} else if (app) {
 			// Launching directly because it's weird to have credentials show up
 			// Users will likely open the app by clicking the icon before adding a widget associated with the app
 			launchApp(appId, {path: link, direct: true})
@@ -45,35 +64,35 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 	switch (config.type) {
 		case 'stat-with-buttons': {
 			const w = widget as WidgetConfig<'stat-with-buttons'>
-			return <StatWithButtonsWidget {...w} onClick={(link) => handleClick(link)} />
+			return <StatWithButtonsWidget {...w} onClick={handleClick} />
 		}
 		case 'stat-with-progress': {
 			const w = widget as WidgetConfig<'stat-with-progress'>
-			return <ProgressWidget {...w} onClick={() => handleClick()} />
+			return <ProgressWidget {...w} onClick={handleClick} />
 		}
 		case 'two-up-stat-with-progress': {
 			const w = widget as WidgetConfig<'two-up-stat-with-progress'>
-			return <TwoUpWidget {...w} onClick={() => handleClick()} />
+			return <TwoUpWidget {...w} onClick={handleClick} />
 		}
 		case 'three-up': {
 			const w = widget as WidgetConfig<'three-up'>
 			// TODO: figure out how to show the user's desired temp unit from local storage in a way that isn't brittle
 			if (config.id === 'umbrel:system-stats') {
-				return <SystemThreeUpWidget {...w} onClick={() => handleClick()} />
+				return <SystemThreeUpWidget {...w} onClick={handleClick} />
 			}
-			return <ThreeUpWidget {...w} onClick={() => handleClick()} />
+			return <ThreeUpWidget {...w} onClick={handleClick} />
 		}
 		case 'four-up': {
 			const w = widget as WidgetConfig<'four-up'>
-			return <FourUpWidget {...w} onClick={() => handleClick()} />
+			return <FourUpWidget {...w} onClick={handleClick} />
 		}
 		case 'actions': {
 			const w = widget as WidgetConfig<'actions'>
-			return <ActionsWidget {...w} onClick={() => handleClick()} />
+			return <ActionsWidget {...w} onClick={handleClick} />
 		}
 		case 'notifications': {
 			const w = widget as WidgetConfig<'notifications'>
-			return <NotificationsWidget {...w} onClick={() => handleClick()} />
+			return <NotificationsWidget {...w} onClick={handleClick} />
 		}
 	}
 }
@@ -82,7 +101,7 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeUpWidget>) {
 	const [tempUnit] = useTempUnit()
 
-	if (items === undefined) return
+	if (!items) return <ErrorWidget error='No data.' />
 
 	const modifiedItems = map.strict(items, (item) => {
 		if (!item.value?.includes('℃')) return item
@@ -137,4 +156,34 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 			return <NotificationsWidget {...w} />
 		}
 	}
+}
+
+export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: T}) {
+	switch (type) {
+		case 'stat-with-buttons': {
+			return <StatWithButtonsWidget />
+		}
+		case 'stat-with-progress': {
+			return <ProgressWidget />
+		}
+		case 'two-up-stat-with-progress': {
+			return <TwoUpWidget />
+		}
+		case 'three-up': {
+			return <ThreeUpWidget />
+		}
+		case 'four-up': {
+			return <FourUpWidget />
+		}
+		case 'actions': {
+			return <ActionsWidget />
+		}
+		case 'notifications': {
+			return <NotificationsWidget />
+		}
+	}
+}
+
+export function ErrorWidget({error}: {error: string}) {
+	return <WidgetContainer className='p-5 text-12 text-destructive2-lightest'>{error}</WidgetContainer>
 }

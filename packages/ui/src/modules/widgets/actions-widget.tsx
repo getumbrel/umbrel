@@ -5,6 +5,7 @@ import {WidgetContainer, widgetTextCva} from './shared/shared'
 export function ActionsWidget({
 	actions,
 	count,
+	link,
 	onClick,
 }: {
 	actions?: {
@@ -12,10 +13,11 @@ export function ActionsWidget({
 		title: string
 	}[]
 	count?: number
-	onClick?: () => void
+	link?: string
+	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={onClick} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
 			{!actions && <ActionItem emoji='' title={LOADING_DASH} />}
 			{actions?.[0] && <ActionItem emoji={actions?.[0].emoji} title={actions?.[0].title} />}
 			{actions?.[1] && (
