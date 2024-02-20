@@ -153,6 +153,7 @@ export async function runPreMigrationChecks(currentInstall: string, externalUmbr
 	// Check enough storage is available
 	const temporaryData = `${currentInstall}/.temporary-migration`
 	await fse.remove(temporaryData)
+	// @ts-expect-error We don't have types for checkDiskSpace
 	const {free} = await checkDiskSpace(currentInstall)
 	const buffer = 1024 * 1024 * 1024 // 1GB
 	const required = (await getDirectorySize(externalUmbrelInstall)) + buffer

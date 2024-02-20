@@ -3,7 +3,7 @@ import fse from 'fs-extra'
 
 import * as jwt from './jwt.js'
 
-import type {AppRouter} from './server/trpc/index'
+import type {AppRouter} from './server/trpc/index.js'
 
 async function signJwt() {
 	const secret = await fse.readFile(`./data/secrets/jwt`, {encoding: 'utf8'})
