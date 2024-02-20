@@ -9,6 +9,12 @@ export type WidgetType =
 
 // ------------------------------
 
+/**
+ * This link is relative to `RegistryApp['path']`
+ * NOTE: type is created for this comment to appear in VSCode
+ */
+type Link = string
+
 type FourUpItem = {
 	title: string
 	icon: string
@@ -17,7 +23,7 @@ type FourUpItem = {
 }
 export type FourUpWidget = {
 	type: 'four-up'
-	link?: string
+	link?: Link
 	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
 }
 
@@ -28,7 +34,7 @@ type ThreeUpItem = {
 }
 export type ThreeUpWidget = {
 	type: 'three-up'
-	link?: string
+	link?: Link
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
 }
 
@@ -45,13 +51,13 @@ type TwoUpStatWithProgressItem = {
 }
 export type TwoUpStatWithProgressWidget = {
 	type: 'two-up-stat-with-progress'
-	link?: string
+	link?: Link
 	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
 }
 
 export type StatWithProgressWidget = {
 	type: 'stat-with-progress'
-	link?: string
+	link?: Link
 	title: string
 	value: string
 	valueSub?: string
@@ -69,14 +75,14 @@ export type StatWithButtonsWidget = {
 	buttons: {
 		title: string
 		icon: string
-		link: string
+		link: Link
 	}[]
 }
 
 // TODO: rename to ListWidget
 export type NotificationsWidget = {
 	type: 'notifications'
-	link?: string
+	link?: Link
 	notifications: {
 		timestamp: number
 		description: string
@@ -85,7 +91,7 @@ export type NotificationsWidget = {
 
 export type ActionsWidget = {
 	type: 'actions'
-	link?: string
+	link?: Link
 	count: number
 	actions: {
 		emoji: string
