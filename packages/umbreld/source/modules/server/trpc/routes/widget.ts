@@ -6,8 +6,7 @@ const widgets = [
 	{
 		id: 'umbrel:storage',
 		type: 'stat-with-progress',
-		refresh: 1000 * 60 * 5,
-		example: {
+		data: {
 			title: 'Storage',
 			value: '256 GB',
 			progressLabel: '1.75 TB left',
@@ -17,29 +16,180 @@ const widgets = [
 	{
 		id: 'umbrel:memory',
 		type: 'stat-with-progress',
-		refresh: 1000 * 10,
-		example: {
+		data: {
 			title: 'Memory',
 			value: '5.8 GB',
-			subValue: '/16GB',
+			valueSub: '/16GB',
 			progressLabel: '11.4 GB left',
 			progress: 0.36,
 		},
 	},
-]
+	{
+		id: 'umbrel:system-stats',
+		type: 'three-up',
+		data: {
+			items: [
+				{
+					icon: 'system-widget-temperature',
+					title: 'Normal',
+					value: '56℃',
+				},
+				{
+					icon: 'system-widget-storage',
+					title: 'Free',
+					value: '1.75 TB',
+				},
+				{
+					icon: 'system-widget-memory',
+					title: 'Memory',
+					value: '5.8 GB',
+				},
+			],
+		},
+	},
+	{
+		id: 'bitcoin:stats',
+		type: 'four-up',
+		data: {
+			link: '?page=stats',
+			items: [
+				{title: 'Connections', value: '11', valueSub: 'peers'},
+				{title: 'Mempool', value: '36', valueSub: 'MB'},
+				{title: 'Hashrate', value: '366', valueSub: 'EH/s'},
+				{title: 'Blockchain size', value: '563', valueSub: 'GB'},
+			],
+		},
+	},
+	{
+		id: 'bitcoin:sync',
+		type: 'stat-with-progress',
+		data: {
+			link: '/',
+			title: 'Blockchain sync',
+			value: '86.92%',
+			progressLabel: 'In progress',
+			progress: 0.8692,
+		},
+	},
+	{
+		id: 'lightning:balance-and-transact',
+		type: 'stat-with-buttons',
+		data: {
+			title: 'Lightning Wallet',
+			value: '762,248',
+			valueSub: 'sats',
+			buttons: [
+				{
+					title: 'Deposit',
+					icon: 'arrow-up-right',
+					link: '?action=deposit',
+				},
+				{
+					title: 'Withdraw',
+					icon: 'arrow-down-right',
+					link: '?action=withdraw',
+				},
+			],
+		},
+	},
+	{
+		id: 'lightning:connections',
+		type: 'four-up',
+		data: {
+			link: '?page=stats',
+			items: [
+				{title: 'Connections', value: '11', valueSub: 'peers'},
+				{title: 'Active channels', value: '1', valueSub: 'channel'},
+				{title: 'Max send', value: '366', valueSub: 'sats'},
+				{title: 'Max receive', value: '563', valueSub: 'sats'},
+			],
+		},
+	},
+	{
+		id: 'nostr-relay:stats',
+		type: 'actions',
+		data: {
+			count: 128,
+			actions: [
+				{
+					emoji: '🔒',
+					title: 'Change password',
+				},
+				{
+					emoji: '🔒',
+					title: 'Change password',
+				},
+				{
+					emoji: '🔒',
+					title: 'Change password',
+				},
+				{
+					emoji: '🔒',
+					title: 'Change password',
+				},
+			],
+		},
+	},
+	{
+		id: 'nostr-relay:notifications',
+		type: 'notifications',
+		data: {
+			link: '/foobar',
+			notifications: [
+				{
+					timestamp: 1704418307143,
+					description:
+						'✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel with public relays, and back up past & future Nostr activity, even if the connection between your client & your private relay goes down',
+				},
+				{
+					timestamp: 1702100000000,
+					description: 'Just a test 2',
+				},
+				{
+					timestamp: 1700000000000,
+					description: 'Just a test 1',
+				},
+			],
+		},
+	},
+	{
+		id: 'settings:system-stats',
+		type: 'two-up-stat-with-progress',
+		data: {
+			items: [
+				{
+					title: 'Memory',
+					value: '12.3',
+					valueSub: 'GB',
+					progress: 0.5,
+				},
+				{
+					title: 'CPU',
+					value: '12.3',
+					valueSub: '%',
+					progress: 0.5,
+				},
+			],
+		},
+	},
+	{
+		id: 'transmission:status',
+		type: 'stat-with-progress',
+		data: {
+			link: '?bla=1',
+			title: 'Transmitting',
+			value: '12.92%',
+			progressLabel: 'In progress',
+			progress: 0.1292,
+		},
+	},
+] as const
 
 export default router({
-	// List all possible widgets that can be activated
-	listAll: privateProcedure.query(async ({ctx}) => {
-		// TODO: Iterate over installed apps and show all possible widgets.
-
-		return widgets
-	}),
-
 	// List enabled widgets
 	enabled: privateProcedure.query(async ({ctx}) => {
 		const widgetIds = (await ctx.umbreld.store.get('widgets')) || []
-		return widgets.filter((widget) => widgetIds.includes(widget.id))
+		return widgetIds
 	}),
 
 	// Enable widget
@@ -100,19 +250,8 @@ export default router({
 			}),
 		)
 		.query(async ({ctx, input}) => {
+			return widgets.find((w) => w.id === input.widgetId)?.data
 			// TODO: Return live data for a given widget
-
-			return {
-				id: 'umbrel:storage',
-				type: 'stat-with-progress',
-				refresh: 1000 * 60 * 5,
-				data: {
-					title: 'Storage',
-					value: '256 GB',
-					progressLabel: '1.75 TB left',
-					progress: 0.25,
-				},
-			}
 		}),
 })
 
