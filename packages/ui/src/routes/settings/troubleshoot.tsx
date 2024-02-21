@@ -1,5 +1,5 @@
 import {matchSorter} from 'match-sorter'
-import {useEffect, useRef, useState} from 'react'
+import {ReactNode, useEffect, useRef, useState} from 'react'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {AppIcon} from '@/components/app-icon'
@@ -23,6 +23,7 @@ import {
 import {Input} from '@/shadcn-components/ui/input'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {cn} from '@/shadcn-lib/utils'
+import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -46,15 +47,11 @@ export default function TroubleshootDialog() {
 				<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
 					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{title}</h1>
-					<div className='flex w-full justify-between'>
+					<div className='flex w-full items-center justify-between'>
 						<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 						<TroubleshootDropdown appId={appId} setAppId={setAppId} />
 					</div>
-					<div className='flex-1 overflow-y-auto rounded-10 bg-black px-5 py-4 font-mono text-white/50'>
-						{'Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad, dolorum possimus! Delectus totam pariatur sint libero alias? Qui vitae voluptatum hic quam veniam quod cum provident autem praesentium, sint repellendus?'.repeat(
-							6,
-						)}
-					</div>
+					<LogResults>{appId && <AppResults appId={appId} />}</LogResults>
 					<ImmersiveDialogFooter>
 						<Button variant='primary' size='dialog'>
 							{t('troubleshoot.download', {label: activeLabel})}
@@ -64,6 +61,30 @@ export default function TroubleshootDialog() {
 				</div>
 			</ImmersiveDialogContent>
 		</ImmersiveDialog>
+	)
+}
+
+function AppResults({appId}: {appId: string}) {
+	const troubleshootQ = trpcReact.apps.logs.useQuery(
+		{appId},
+		{
+			refetchInterval: 1000 * 2,
+		},
+	)
+
+	if (troubleshootQ.isLoading) return t('loading') + '...'
+	if (troubleshootQ.isError) return troubleshootQ.error.message
+
+	return troubleshootQ.data
+}
+
+function LogResults({children}: {children: ReactNode}) {
+	return (
+		<div className='w-full flex-1 overflow-y-auto whitespace-pre rounded-10 bg-black px-5 py-4 font-mono text-white/50'>
+			{children}
+			{/* Keeps scroll pinned to bottom */}
+			<div style={{overflowAnchor: 'auto'}} />
+		</div>
 	)
 }
 
