@@ -1,9 +1,8 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 import process from 'node:process'
 
 import {$} from 'execa'
 import fse from 'fs-extra'
-// @ts-expect-error no types found (not sure why because got is written in TypeScript)
 import got from 'got'
 
 const githubUsernames: Record<string, string> = {
@@ -22,11 +21,11 @@ async function lookupUsername(author: string) {
 	// Attempt to lookup the GitHub username from the commit details
 	try {
 		console.log(`Looking up ${author}`)
-		const data = await got(`https://api.github.com/search/users?q=${author}`, {
+		const data = (await got(`https://api.github.com/search/users?q=${author}`, {
 			headers: {
 				Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
 			},
-		}).json()
+		}).json()) as any
 		const username = data?.items?.[0]?.login
 
 		if (username) {

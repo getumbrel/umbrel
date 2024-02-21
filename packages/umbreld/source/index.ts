@@ -2,6 +2,8 @@ import path from 'node:path'
 
 import fse from 'fs-extra'
 
+// @ts-expect-error I can't get tsconfig setup in a way that allows this without breaking other things.
+// However we execute with tsx and it's able to resolve the import without issues.
 import packageJson from '../package.json' assert {type: 'json'}
 
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'

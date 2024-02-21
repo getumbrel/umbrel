@@ -146,6 +146,7 @@ source_app() {
   export TOR_HS_APP_DIR="/data/app-${app}"
   export TOR_HS_PORTS="80:${APP_PROXY_HOSTNAME}:${APP_PROXY_PORT}"
 
+  # TODO: Look into why this needed to be commented out for Mark.
   # tor_extra_hs_varname=$(echo "APP_${APP_ID^^}_TOR_HS_EXTRA_PORTS" | tr '-' '_')
   # tor_hs_extra_ports="${!tor_extra_hs_varname:-}"
 
@@ -537,6 +538,13 @@ if [[ "$command" = "restart" ]]; then
   "${0}" "stop" "${app}"
 
   "${0}" "start" "${app}"
+
+  exit
+fi
+
+# Get logs for an app
+if [[ "$command" = "logs" ]]; then
+  compose "${app}" logs --tail 100
 
   exit
 fi

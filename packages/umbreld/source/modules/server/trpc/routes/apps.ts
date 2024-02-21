@@ -96,6 +96,15 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.update(input.appId)),
 
+	// Update an app
+	logs: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+			}),
+		)
+		.query(async ({ctx, input}) => ctx.apps.getApp(input.appId).getLogs()),
+
 	trackOpen: privateProcedure
 		.input(
 			z.object({

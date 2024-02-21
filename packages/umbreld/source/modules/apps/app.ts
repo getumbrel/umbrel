@@ -200,4 +200,9 @@ export default class App {
 	async getDiskUsage() {
 		return getDirectorySize(this.dataDirectory)
 	}
+
+	async getLogs() {
+		const result = await appScript(this.#umbreld, 'logs', this.id)
+		return result.stdout
+	}
 }
