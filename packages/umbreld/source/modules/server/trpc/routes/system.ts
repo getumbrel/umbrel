@@ -1,9 +1,12 @@
 import os from 'node:os'
 import {setTimeout} from 'node:timers/promises'
+
 import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 import systeminfo from 'systeminformation'
+import fetch from 'node-fetch'
+
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {getCpuTemperature, getDiskUsage, getMemoryUsage, getCpuUsage, reboot, shutdown} from '../../../system.js'
@@ -13,10 +16,12 @@ import {privateProcedure, publicProcedure, router} from '../trpc.js'
 export default router({
 	uptime: privateProcedure.query(() => os.uptime()),
 	version: privateProcedure.query(({ctx}) => ctx.umbreld.version),
-	latestAvailableVersion: privateProcedure.query(async () => {
-		// TODO: do this for real
-		await setTimeout(1000)
-		return '1.0.1'
+	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
+		const result = await fetch('https://api.umbrel.com/latest-release', {
+			headers: {'User-Agent': `umbrelOS ${ctx.umbreld.version}`},
+		})
+		const data = await result.json()
+		return data.version as number
 	}),
 	update: privateProcedure.mutation(async () => {
 		// TODO: do this for real
