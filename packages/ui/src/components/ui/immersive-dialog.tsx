@@ -30,9 +30,11 @@ export const ImmersiveDialogTrigger = DialogTrigger
 export function ImmersiveDialogContent({
 	children,
 	size = 'default',
+	short = false,
 }: {
 	children: React.ReactNode
 	size?: 'default' | 'lg'
+	short?: boolean
 }) {
 	return (
 		<DialogPortal>
@@ -43,13 +45,13 @@ export function ImmersiveDialogContent({
 					dialogContentClass,
 					dialogContentAnimationClass,
 					dialogContentAnimationSlideClass,
-					immersiveContentSizeClass,
+					short ? immersiveContentShortClass : immersiveContentTallClass,
 					// overrides default size
 					size === 'lg' && 'max-w-[980px]',
 					'p-0',
 				)}
 			>
-				<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-6 overflow-y-auto p-6 md:p-[30px]'>
+				<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto p-6 md:p-[30px]'>
 					{children}
 				</div>
 				<ImmersiveDialogClose />
@@ -68,7 +70,7 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 					'bg-transparent shadow-none ring-2 ring-white/3', // remove shadow from `dialogContentClass`
 					dialogContentAnimationClass,
 					dialogContentAnimationSlideClass,
-					immersiveContentSizeClass,
+					immersiveContentShortClass,
 					'flex flex-row justify-between gap-0 p-0',
 				)}
 			>
@@ -86,7 +88,8 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 	)
 }
 
-const immersiveContentSizeClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
+const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-90px)]`
+const immersiveContentTallClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
 
 function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
 	return (
@@ -107,7 +110,7 @@ function ImmersiveDialogClose() {
 				<IconButton
 					icon={RiCloseLine}
 					// Overriding state colors
-					className='shadow-immersive-dialog-close h-[36px] w-[36px] border-none bg-dialog-content bg-opacity-70 hover:border-solid hover:bg-dialog-content focus:border-solid focus:bg-dialog-content active:bg-dialog-content'
+					className='h-[36px] w-[36px] border-none bg-dialog-content bg-opacity-70 shadow-immersive-dialog-close hover:border-solid hover:bg-dialog-content focus:border-solid focus:bg-dialog-content active:bg-dialog-content'
 				/>
 			</DialogClose>
 		</div>
@@ -153,8 +156,8 @@ export function ImmersiveDialogBody({
 	)
 }
 
-export function ImmersiveDialogFooter({children}: {children: React.ReactNode}) {
-	return <div className='flex w-full flex-wrap-reverse items-center gap-2'>{children}</div>
+export function ImmersiveDialogFooter({children, className}: {children: React.ReactNode; className?: string}) {
+	return <div className={cn('flex w-full flex-wrap-reverse items-center gap-2', className)}>{children}</div>
 }
 
 export function ImmersiveDialogIconMessage({
