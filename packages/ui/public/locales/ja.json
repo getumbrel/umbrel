@@ -314,7 +314,7 @@
   "troubleshoot": "トラブルシューティング",
   "troubleshoot-description": "トラブルシューティングのためにログを表示する",
   "troubleshoot.dmesg-logs": "DMESGログ",
-  "troubleshoot.download": "{{ラベル}}をダウンロード",
+  "troubleshoot.download": "{{label}}をダウンロード",
   "troubleshoot.share-with-umbrel-support": "Umbrel サポートと共有する",
   "troubleshoot.umbrel-logs": "アンブレルログ",
   "trpc.backend-unavailable": "バックエンドが利用できません。",
