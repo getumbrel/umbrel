@@ -1,3 +1,6 @@
+import {format} from 'date-fns'
+import {saveAs} from 'file-saver'
+import filenamify from 'filenamify/browser'
 import {matchSorter} from 'match-sorter'
 import {ReactNode, useEffect, useRef, useState} from 'react'
 import {TbChevronLeft} from 'react-icons/tb'
@@ -116,6 +119,11 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 
 	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
 
+	const log =
+		'Exercitation cupidatat officia labore exercitation reprehenderit non elit dolore eiusmod enim in ut sunt labore. Sint laborum aliqua irure enim sit pariatur aute ea aliquip labore. Amet occaecat culpa do duis sit cillum. Commodo magna ipsum ullamco laboris dolor aute anim sint veniam quis sunt. Enim aliqua cillum excepteur aute laborum reprehenderit cillum fugiat culpa consequat ut. Pariatur ut ex irure mollit velit ad adipisicing proident sint officia quis aliqua consectetur. Veniam et Lorem aliquip reprehenderit dolore occaecat duis ut nostrud reprehenderit voluptate excepteur adipisicing labore.\n'.repeat(
+			50,
+		)
+
 	return (
 		<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
 			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
@@ -129,13 +137,9 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 				</button>
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
-			<LogResults>
-				{'Exercitation cupidatat officia labore exercitation reprehenderit non elit dolore eiusmod enim in ut sunt labore. Sint laborum aliqua irure enim sit pariatur aute ea aliquip labore. Amet occaecat culpa do duis sit cillum. Commodo magna ipsum ullamco laboris dolor aute anim sint veniam quis sunt. Enim aliqua cillum excepteur aute laborum reprehenderit cillum fugiat culpa consequat ut. Pariatur ut ex irure mollit velit ad adipisicing proident sint officia quis aliqua consectetur. Veniam et Lorem aliquip reprehenderit dolore occaecat duis ut nostrud reprehenderit voluptate excepteur adipisicing labore.\n'.repeat(
-					50,
-				)}
-			</LogResults>
+			<LogResults>{log}</LogResults>
 			<ImmersiveDialogFooter className='justify-center'>
-				<Button variant='primary' size='dialog'>
+				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(log, activeTab)}>
 					{t('troubleshoot.system-download', {label: activeLabel})}
 				</Button>
 				<Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button>
@@ -157,6 +161,8 @@ function TroubleshootApp({
 	const {app} = useUserApp(appId)
 	const [open, setOpen] = useState(false)
 
+	const appLogs = useAppLogs(appId)
+
 	return (
 		<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
 			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
@@ -172,9 +178,9 @@ function TroubleshootApp({
 					<TroubleshootDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
 				</DropdownMenu>
 			</div>
-			{appId && <LogResults>{<AppResults appId={appId} />}</LogResults>}
-			<ImmersiveDialogFooter>
-				<Button variant='primary' size='dialog'>
+			{appId && <LogResults>{appLogs}</LogResults>}
+			<ImmersiveDialogFooter className='justify-center'>
+				<Button variant='primary' size='dialog' disabled={!appId} onClick={() => downloadUtf8Logs(appLogs, appId)}>
 					{t('troubleshoot.app-download', {app: app?.name || LOADING_DASH})}
 				</Button>
 				<Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button>
@@ -183,7 +189,19 @@ function TroubleshootApp({
 	)
 }
 
-function AppResults({appId}: {appId: string}) {
+const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
+	const currentDateTimeForFilename = format(new Date(), 'yyyy-MM-dd_HH-mm')
+	const blob = new Blob([contents], {type: 'text/plain;charset=utf-8'})
+	saveAs(
+		blob,
+		// Replacing strings and doing lowercase so good for urls too
+		filenamify(`umbrelos-logs_${fileNameString}_${currentDateTimeForFilename}`)
+			.replace(/\s+/g, '-')
+			.toLocaleLowerCase(),
+	) + '.txt'
+}
+
+function useAppLogs(appId: string) {
 	const troubleshootQ = trpcReact.apps.logs.useQuery(
 		{appId},
 		{
