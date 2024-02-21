@@ -336,5 +336,13 @@
   "widgets.install-an-app-before-using-widgets": "ウィジェットを使用する前にアプリをインストールしてください。",
   "factory-reset.review.title": "レビューデータ",
   "app.updating": "更新中",
-  "cpu-core-count": "{{cores}} コア"
+  "cpu-core-count": "{{cores}} コア",
+  "app.restarting": "再起動中",
+  "app.starting": "起動",
+  "app.stopping": "停止中",
+  "cpu": "CPU",
+  "logout-error-generic": "ログアウト中にバックエンド エラーが発生しました!",
+  "troubleshoot-pick-title": "何をトラブルシューティングしたいですか?",
+  "troubleshoot.app-download": "{{app}} ログをダウンロードする",
+  "troubleshoot.system-download": "{{ラベル}}をダウンロード"
 }
