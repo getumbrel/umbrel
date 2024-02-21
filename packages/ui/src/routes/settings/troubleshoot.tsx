@@ -104,13 +104,12 @@ function Content() {
 	}
 }
 
-const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center shadow-button-highlight-soft-hpx outline-none duration-300 hover:bg-white/6 transition-colors focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
+const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center shadow-button-highlight-soft-hpx outline-none duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
 const radioTitleClass = tw`text-15 font-medium -tracking-2`
 const radioDescriptionClass = tw`text-13 opacity-90 -tracking-2`
+const troubleshootContentLayoutClass = tw`flex max-h-full flex-1 flex-col items-start gap-4`
 
 function TroubleshootSystem({onBack}: {onBack: () => void}) {
-	const title = t('troubleshoot')
-
 	const tabs = [
 		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
 		{id: 'dmesg', label: t('troubleshoot.dmesg-logs')},
@@ -125,16 +124,9 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 		)
 
 	return (
-		<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+		<div className={troubleshootContentLayoutClass}>
 			<div className='flex w-full items-center justify-between'>
-				<button
-					onClick={() => onBack()}
-					className='flex items-center rounded-full outline-none ring-white ring-offset-black focus-visible:ring-2 focus-visible:ring-offset-4'
-				>
-					<TbChevronLeft className='size-6 opacity-50' />
-					<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{title}</h1>
-				</button>
+				<TroubleshootTitleBackButton onClick={onBack} />
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
 			<LogResults>{log}</LogResults>
@@ -157,23 +149,15 @@ function TroubleshootApp({
 	setAppId: (id: string) => void
 	onBack: () => void
 }) {
-	const title = t('troubleshoot')
 	const {app} = useUserApp(appId)
 	const [open, setOpen] = useState(false)
 
 	const appLogs = useAppLogs(appId)
 
 	return (
-		<div className='flex max-h-full flex-1 flex-col items-start gap-4'>
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+		<div className={troubleshootContentLayoutClass}>
 			<div className='flex w-full items-center justify-between'>
-				<button
-					onClick={() => onBack()}
-					className='flex items-center rounded-full outline-none ring-white ring-offset-black focus-visible:ring-2 focus-visible:ring-offset-4'
-				>
-					<TbChevronLeft className='size-6 opacity-50' />
-					<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{title}</h1>
-				</button>
+				<TroubleshootTitleBackButton onClick={onBack} />
 				<DropdownMenu open={open} onOpenChange={setOpen}>
 					<TroubleshootDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
 				</DropdownMenu>
@@ -186,6 +170,20 @@ function TroubleshootApp({
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
 		</div>
+	)
+}
+
+function TroubleshootTitleBackButton({onClick}: {onClick: () => void}) {
+	const title = t('troubleshoot')
+	return (
+		<button
+			onClick={onClick}
+			className='flex items-center justify-center rounded-full pr-2 decoration-white/20 underline-offset-4 outline-none focus-visible:underline'
+		>
+			<TbChevronLeft className='size-6 opacity-50' />
+			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+			<h1 className={cn(immersiveDialogTitleClass, 'text-19')}>{title}</h1>
+		</button>
 	)
 }
 
