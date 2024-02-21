@@ -210,7 +210,7 @@ function useAppLogs(appId: string) {
 	if (troubleshootQ.isLoading) return t('loading') + '...'
 	if (troubleshootQ.isError) return troubleshootQ.error.message
 
-	return troubleshootQ.data
+	return troubleshootQ.data || t('troubleshoot-no-logs-yet')
 }
 
 function useScrollToBottom(ref: React.RefObject<HTMLDivElement>) {

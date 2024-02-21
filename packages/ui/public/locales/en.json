@@ -343,5 +343,6 @@
   "app.restarting": "Restarting",
   "cpu": "CPU",
   "cpu-core-count": "{{cores}} cores",
-  "troubleshoot-pick-title": "What would you like to troubleshoot?"
+  "troubleshoot-pick-title": "What would you like to troubleshoot?",
+  "troubleshoot-no-logs-yet": "No logs yet."
 }
