@@ -142,7 +142,7 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(log, activeTab)}>
 					{t('troubleshoot.system-download', {label: activeLabel})}
 				</Button>
-				<Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button>
+				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
 		</div>
 	)
@@ -183,7 +183,7 @@ function TroubleshootApp({
 				<Button variant='primary' size='dialog' disabled={!appId} onClick={() => downloadUtf8Logs(appLogs, appId)}>
 					{t('troubleshoot.app-download', {app: app?.name || LOADING_DASH})}
 				</Button>
-				<Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button>
+				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
 		</div>
 	)
