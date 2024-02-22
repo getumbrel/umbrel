@@ -72,6 +72,10 @@ export default class Apps {
 		return app
 	}
 
+	async getInstalledApps() {
+		return this.instances.map((app) => app.id)
+	}
+
 	async install(appId: string) {
 		if (await this.isInstalled(appId)) throw new Error(`App ${appId} is already installed`)
 
