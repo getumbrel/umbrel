@@ -7,6 +7,8 @@ import type {AppRouter} from './server/trpc/index.js'
 
 async function signJwt() {
 	const secret = await fse.readFile(`./data/secrets/jwt`, {encoding: 'utf8'})
+	// jwt file is here on vm: /home/ubuntu/data/secrets/jwt
+	// const secret = await fse.readFile(`/home/ubuntu/data/secrets/jwt`, {encoding: 'utf8'})
 	const token = jwt.sign(secret)
 	return token
 }
@@ -16,6 +18,8 @@ const trpc = createTRPCProxyClient<AppRouter>({
 		httpBatchLink({
 			// TODO: Infer this port dynamically
 			url: 'http://localhost:3001/trpc',
+			// Umbreld port is 80 in VM
+			// url: 'http://localhost:80/trpc',
 			headers: async () => ({
 				Authorization: `Bearer ${await signJwt()}`,
 			}),
