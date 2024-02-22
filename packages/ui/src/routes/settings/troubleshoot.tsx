@@ -111,7 +111,7 @@ const troubleshootContentLayoutClass = tw`flex max-h-full flex-1 flex-col items-
 
 function TroubleshootSystem({onBack}: {onBack: () => void}) {
 	const tabs = [
-		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
+		{id: 'system', label: t('troubleshoot.umbrel-logs')},
 		{id: 'dmesg', label: t('troubleshoot.dmesg-logs')},
 	]
 	const [activeTab, setActiveTab] = useLocalStorage2('troubleshoot-system-active-tab', tabs[0].id)
@@ -188,15 +188,15 @@ function TroubleshootTitleBackButton({onClick}: {onClick: () => void}) {
 }
 
 const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
-	const currentDateTimeForFilename = format(new Date(), 'yyyy-MM-dd_HH-mm')
 	const blob = new Blob([contents], {type: 'text/plain;charset=utf-8'})
-	saveAs(
-		blob,
-		// Replacing strings and doing lowercase so good for urls too
-		filenamify(`umbrelos-logs_${fileNameString}_${currentDateTimeForFilename}`)
-			.replace(/\s+/g, '-')
-			.toLocaleLowerCase(),
-	) + '.txt'
+
+	// Separating sections with `_` so easier to machine-parse in the future
+	const name = ['umbrel', filenamify(fileNameString ?? 'logs'), format(new Date(), 'yyyy-MM-dd_HH-mm')].join('_')
+
+	// Final pass: replacing strings and doing lowercase so good for urls too?
+	const finalName = name.replace(/\s+/g, '-').toLocaleLowerCase()
+
+	saveAs(blob, finalName + '.log')
 }
 
 function useAppLogs(appId: string) {
