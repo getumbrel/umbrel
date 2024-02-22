@@ -1,11 +1,11 @@
 import os from 'node:os'
-import {setTimeout} from 'node:timers/promises'
 
 import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 import systeminfo from 'systeminformation'
 import fetch from 'node-fetch'
+import {$} from 'execa'
 
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
@@ -24,8 +24,12 @@ export default router({
 		return (data as any).version as number
 	}),
 	update: privateProcedure.mutation(async () => {
-		// TODO: do this for real
-		await setTimeout(1000)
+		// TODO: Fetch update script from API
+		const updateScript = `#!/usr/bin/env bash
+ 
+		echo hello from bash`
+
+		await $({stdio: 'inherit'})`bash -c ${updateScript}`
 		return '1.0.1'
 	}),
 	//
