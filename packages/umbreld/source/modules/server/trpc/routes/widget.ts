@@ -80,12 +80,12 @@ const widgets = [
 			valueSub: 'sats',
 			buttons: [
 				{
-					title: 'Deposit',
+					text: 'Deposit',
 					icon: 'arrow-up-right',
 					link: '?action=deposit',
 				},
 				{
-					title: 'Withdraw',
+					text: 'Withdraw',
 					icon: 'arrow-down-right',
 					link: '?action=withdraw',
 				},
@@ -107,47 +107,46 @@ const widgets = [
 	},
 	{
 		id: 'nostr-relay:stats',
-		type: 'actions',
+		type: 'list-emoji',
 		data: {
 			count: 128,
-			actions: [
+			items: [
 				{
 					emoji: '🔒',
-					title: 'Change password',
+					text: 'Change password',
 				},
 				{
 					emoji: '🔒',
-					title: 'Change password',
+					text: 'Change password',
 				},
 				{
 					emoji: '🔒',
-					title: 'Change password',
+					text: 'Change password',
 				},
 				{
 					emoji: '🔒',
-					title: 'Change password',
+					text: 'Change password',
 				},
 			],
 		},
 	},
 	{
 		id: 'nostr-relay:notifications',
-		type: 'notifications',
+		type: 'list',
 		data: {
 			link: '/foobar',
-			notifications: [
+			items: [
 				{
-					timestamp: 1704418307143,
-					description:
-						'✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel with public relays, and back up past & future Nostr activity, even if the connection between your client & your private relay goes down',
+					textSub: 'Jan 1 • 1:12 PM',
+					text: '✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel with public relays, and back up past & future Nostr activity, even if the connection between your client & your private relay goes down',
 				},
 				{
-					timestamp: 1702100000000,
-					description: 'Just a test 2',
+					textSub: 'Jan 2 • 1:12 PM',
+					text: 'Just a test 2',
 				},
 				{
-					timestamp: 1700000000000,
-					description: 'Just a test 1',
+					textSub: 'Jan 3 • 1:12 PM',
+					text: 'Just a test 1',
 				},
 			],
 		},
