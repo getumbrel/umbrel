@@ -14,15 +14,16 @@ export function ListWidget({
 	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer p-2 md:p-4'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer p-2 !pb-0 md:p-4 overflow-hidden'>
 			<div
 				className='flex h-full flex-col gap-2 max-sm:gap-0'
 				style={{
-					maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 50px), transparent)',
+					maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 				}}
 			>
 				{!items && <ListItem textSub={undefined} text={LOADING_DASH} />}
-				{items?.map((item, i) => (
+				{/* Slice just in case API sends down too much data */}
+				{items?.slice(0, 5)?.map((item, i) => (
 					<>
 						{i !== 0 && <hr className='border-white/5' />}
 						<ListItem key={i} textSub={item.textSub} text={item.text} />
