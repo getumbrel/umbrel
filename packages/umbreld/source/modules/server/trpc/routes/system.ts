@@ -21,7 +21,7 @@ export default router({
 			headers: {'User-Agent': `umbrelOS ${ctx.umbreld.version}`},
 		})
 		const data = await result.json()
-		return (data as any).version as number
+		return (data as any).version as string
 	}),
 	update: privateProcedure.mutation(async () => {
 		// TODO: do this for real
