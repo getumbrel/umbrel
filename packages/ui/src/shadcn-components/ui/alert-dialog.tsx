@@ -1,10 +1,10 @@
-import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
+import * as AlertDialogPrimitive from '@radix-ui/react-dialog'
 import {LucideIcon} from 'lucide-react'
 import * as React from 'react'
 import {IconType} from 'react-icons'
 import {omit} from 'remeda'
 
-import {buttonVariants} from '@/shadcn-components/ui/button'
+import {Button, buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 
 import {
@@ -19,7 +19,7 @@ const AlertDialog = AlertDialogPrimitive.Root
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 
-const AlertDialogPortal = ({className, ...props}: AlertDialogPrimitive.AlertDialogPortalProps) => (
+const AlertDialogPortal = ({className, ...props}: AlertDialogPrimitive.DialogPortalProps) => (
 	<AlertDialogPrimitive.Portal className={cn(className)} {...props} />
 )
 AlertDialogPortal.displayName = AlertDialogPrimitive.Portal.displayName
@@ -105,29 +105,23 @@ const AlertDialogDescription = React.forwardRef<
 AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName
 
 const AlertDialogAction = React.forwardRef<
-	React.ElementRef<typeof AlertDialogPrimitive.Action>,
-	React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {
-		variant?: 'primary' | 'destructive'
-	}
->(({className, variant, children, ...props}, ref) => (
-	<AlertDialogPrimitive.Action
-		ref={ref}
-		className={cn(buttonVariants({size: 'dialog', variant: variant ?? 'primary'}), className)}
-		{...props}
-	>
+	React.ElementRef<typeof Button>,
+	React.ComponentPropsWithoutRef<typeof Button>
+>(({variant, children, ...props}, ref) => (
+	<Button ref={ref} size={'dialog'} variant={variant ?? 'primary'} {...props}>
 		{children}
 		<span className='text-11 opacity-40'>↵</span>
-	</AlertDialogPrimitive.Action>
+	</Button>
 ))
-AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
+AlertDialogAction.displayName = 'AlertDialogAction'
 
 const AlertDialogCancel = React.forwardRef<
-	React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
-	React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
+	React.ElementRef<typeof Button>,
+	React.ComponentPropsWithoutRef<typeof Button>
 >(({className, ...props}, ref) => (
-	<AlertDialogPrimitive.Cancel ref={ref} className={cn(buttonVariants({size: 'dialog'}), className)} {...props} />
+	<Button ref={ref} className={cn(buttonVariants({size: 'dialog'}), className)} {...props} />
 ))
-AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
+AlertDialogCancel.displayName = 'AlertDialogCancel'
 
 export {
 	AlertDialog,
