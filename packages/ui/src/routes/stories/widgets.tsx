@@ -1,3 +1,4 @@
+import {format} from 'date-fns'
 import {indexBy} from 'remeda'
 
 import {Arc} from '@/components/ui/arc'
@@ -5,9 +6,9 @@ import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
-import {ActionsWidget} from '@/modules/widgets/actions-widget'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
-import {NotificationsWidget} from '@/modules/widgets/notifications-widget'
+import {ListEmojiWidget} from '@/modules/widgets/list-emoji-widget'
+import {ListWidget} from '@/modules/widgets/list-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
 import {RegistryWidget, WidgetType} from '@/modules/widgets/shared/constants'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
@@ -49,11 +50,11 @@ export const demoWidgetRegistryConfigs = [
 		widgets: [
 			{
 				id: 'nostr-relay:stats',
-				type: 'actions',
+				type: 'list-emoji',
 			},
 			{
 				id: 'nostr-relay:notifications',
-				type: 'notifications',
+				type: 'list',
 			},
 		],
 	},
@@ -63,6 +64,8 @@ export const demoWidgetRegistryConfigs = [
 }[]
 
 export const demoWidgetConfigsKeyed = indexBy(demoWidgetRegistryConfigs, (widget) => widget.appId)
+
+const formatTimestampNumber = (ts: number) => format(ts, 'h:mm aaa · MMM d')
 
 export default function WidgetsStory() {
 	const {pageInnerRef} = usePager({apps: [], widgets: []})
@@ -85,27 +88,6 @@ export default function WidgetsStory() {
 						}}
 					/>
 				</div>
-				{/* <H2>Blank</H2>
-				<div className={sectionClass}>
-					<WidgetWrapper label='stat-with-progress'>
-						<ProgressWidget />
-					</WidgetWrapper>
-					<WidgetWrapper label='stat-with-buttons'>
-						<StatWithButtonsWidget />
-					</WidgetWrapper>
-					<WidgetWrapper label='three-up'>
-						<ThreeUpWidget />
-					</WidgetWrapper>
-					<WidgetWrapper label='four-up'>
-						<FourUpWidget />
-					</WidgetWrapper>
-					<WidgetWrapper label='actions'>
-						<ActionsWidget />
-					</WidgetWrapper>
-					<WidgetWrapper label='notifications'>
-						<NotificationsWidget />
-					</WidgetWrapper>
-				</div> */}
 				<H2>Widget Types</H2>
 				<H3>stat-with-buttons</H3>
 				<div className={sectionClass}>
@@ -123,14 +105,14 @@ export default function WidgetsStory() {
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
-						buttons={[{title: 'Send', link: '/send'}]}
+						buttons={[{text: 'Send', link: '/send'}]}
 					/>
 					<StatWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
 						value='1,845,893'
 						valueSub='sats'
-						buttons={[{icon: 'send', title: 'Send', link: '/send'}]}
+						buttons={[{icon: 'send', text: 'Send', link: '/send'}]}
 					/>
 					<StatWithButtonsWidget
 						onClick={handleClick}
@@ -138,8 +120,8 @@ export default function WidgetsStory() {
 						value='1,845,893'
 						valueSub='sats'
 						buttons={[
-							{icon: 'send', title: 'Send', link: '/send'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
+							{icon: 'send', text: 'Send', link: '/send'},
+							{icon: 'inbox', text: 'Receive', link: '/receive'},
 						]}
 					/>
 					<StatWithButtonsWidget
@@ -148,9 +130,9 @@ export default function WidgetsStory() {
 						value='1,845,893'
 						valueSub='sats'
 						buttons={[
-							{icon: 'send', title: 'Send', link: '/send'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
-							{icon: 'inbox', title: 'Receive', link: '/receive'},
+							{icon: 'send', text: 'Send', link: '/send'},
+							{icon: 'inbox', text: 'Receive', link: '/receive'},
+							{icon: 'inbox', text: 'Receive', link: '/receive'},
 						]}
 					/>
 					<StatWithButtonsWidget
@@ -161,7 +143,7 @@ export default function WidgetsStory() {
 						buttons={[
 							{
 								icon: 'send',
-								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/send',
 							},
 						]}
@@ -174,17 +156,17 @@ export default function WidgetsStory() {
 						buttons={[
 							{
 								// icon: 'send',
-								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/send',
 							},
 							{
 								// icon: 'inbox',
-								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/receive',
 							},
 							{
 								icon: 'inbox',
-								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod',
 								link: '/receive',
 							},
 						]}
@@ -344,81 +326,81 @@ export default function WidgetsStory() {
 					/>
 					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
 				</div>
-				<H3>actions</H3>
+				<H3>list</H3>
 				<div className={sectionClass}>
-					<ActionsWidget />
-					<ActionsWidget count={1} actions={[{emoji: '😍', title: 'Message heartted'}]} />
-					<ActionsWidget
-						count={123}
-						actions={[
-							{title: 'Message heartted'},
-							{title: 'Booo!!'},
-							{title: 'Rain expected'},
-							{title: 'Search started'},
-							{title: 'lskdfjsdlkfjsdlfkj'},
+					<ListWidget />
+					<ListWidget
+						onClick={handleClick}
+						items={[
+							{
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								textSub: formatTimestampNumber(1620000000000),
+							},
+							{
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								textSub: formatTimestampNumber(1620000000000),
+							},
 						]}
 					/>
-					<ActionsWidget
-						count={123}
-						actions={[
-							{emoji: '😍', title: 'Message heartted'},
-							{emoji: '👻', title: 'Booo!!'},
-							{emoji: '☂️', title: 'Rain expected'},
-							{emoji: '🔍', title: 'Search started'},
-							{emoji: '❤️', title: 'lskdfjsdlkfjsdlfkj'},
-						]}
-					/>
-					<ActionsWidget
-						count={123123123}
-						actions={[
-							{emoji: '😍', title: 'Message heartted'},
-							{emoji: '👻', title: 'Booo!!'},
-							{emoji: '☂️', title: 'Rain expected'},
-							{emoji: '🔍', title: 'Search started'},
-							{emoji: '❤️', title: 'lskdfjsdlkfjsdlfkj'},
-						]}
-					/>
-					<ActionsWidget
-						count={123123123123123}
-						actions={[
-							{emoji: '😍😍😍😍', title: 'Message heartted'},
-							{emoji: '👻', title: 'Booo!!'},
-							{emoji: '☂️', title: 'Rain expected'},
-							{emoji: '🔍', title: 'Search started'},
-							{emoji: '❤️', title: 'lskdfjsdlkfjsdlfkj'},
+					<ListWidget
+						onClick={handleClick}
+						items={[
+							{
+								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
+								textSub: formatTimestampNumber(1620000000000),
+							},
 						]}
 					/>
 				</div>
-				<H3>notifications</H3>
+				<H3>list-emoji</H3>
 				<div className={sectionClass}>
-					<NotificationsWidget />
-					<NotificationsWidget
-						onClick={handleClick}
-						notifications={[
-							{
-								timestamp: 1620000000000,
-								description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-							},
-							{
-								timestamp: 1620000000000,
-								description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-							},
+					<ListEmojiWidget />
+					<ListEmojiWidget count={1} items={[{emoji: '😍', text: 'Message heartted'}]} />
+					<ListEmojiWidget
+						count={123}
+						items={[
+							{text: 'Message heartted'},
+							{text: 'Booo!!'},
+							{text: 'Rain expected'},
+							{text: 'Search started'},
+							{text: 'lskdfjsdlkfjsdlfkj'},
 						]}
 					/>
-					<NotificationsWidget
-						onClick={handleClick}
-						notifications={[
-							{
-								timestamp: 1620000000000,
-								description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-							},
+					<ListEmojiWidget
+						count={123}
+						items={[
+							{emoji: '😍', text: 'Message heartted'},
+							{emoji: '👻', text: 'Booo!!'},
+							{emoji: '☂️', text: 'Rain expected'},
+							{emoji: '🔍', text: 'Search started'},
+							{emoji: '❤️', text: 'lskdfjsdlkfjsdlfkj'},
+						]}
+					/>
+					<ListEmojiWidget
+						count={123123123}
+						items={[
+							{emoji: '😍', text: 'Message heartted'},
+							{emoji: '👻', text: 'Booo!!'},
+							{emoji: '☂️', text: 'Rain expected'},
+							{emoji: '🔍', text: 'Search started'},
+							{emoji: '❤️', text: 'lskdfjsdlkfjsdlfkj'},
+						]}
+					/>
+					<ListEmojiWidget
+						count={123123123123123}
+						items={[
+							{emoji: '😍😍😍😍', text: 'Message heartted'},
+							{emoji: '👻', text: 'Booo!!'},
+							{emoji: '☂️', text: 'Rain expected'},
+							{emoji: '🔍', text: 'Search started'},
+							{emoji: '❤️', text: 'lskdfjsdlkfjsdlfkj'},
 						]}
 					/>
 				</div>
 				{/* ------------------------------------ */}
 				<H2>With widget wrapper</H2>
 				<WidgetWrapper label='fooo'>
-					<ActionsWidget />
+					<ListEmojiWidget />
 				</WidgetWrapper>
 				{/* ------------------------------------ */}
 				<H2>Connected</H2>

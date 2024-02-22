@@ -10,9 +10,9 @@ import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {celciusToFahrenheit} from '@/utils/tempurature'
 
-import {ActionsWidget} from './actions-widget'
 import {FourUpWidget} from './four-up-widget'
-import {NotificationsWidget} from './notifications-widget'
+import {ListEmojiWidget} from './list-emoji-widget'
+import {ListWidget} from './list-widget'
 import {ProgressWidget} from './progress-widget'
 import {WidgetContainer} from './shared/shared'
 import {StatWithButtonsWidget} from './stat-with-buttons-widget'
@@ -86,13 +86,13 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 			const w = widget as WidgetConfig<'four-up'>
 			return <FourUpWidget {...w} onClick={handleClick} />
 		}
-		case 'actions': {
-			const w = widget as WidgetConfig<'actions'>
-			return <ActionsWidget {...w} onClick={handleClick} />
+		case 'list': {
+			const w = widget as WidgetConfig<'list'>
+			return <ListWidget {...w} onClick={handleClick} />
 		}
-		case 'notifications': {
-			const w = widget as WidgetConfig<'notifications'>
-			return <NotificationsWidget {...w} onClick={handleClick} />
+		case 'list-emoji': {
+			const w = widget as WidgetConfig<'list-emoji'>
+			return <ListEmojiWidget {...w} onClick={handleClick} />
 		}
 	}
 }
@@ -147,13 +147,13 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 			const w = example as WidgetConfig<'four-up'>
 			return <FourUpWidget {...w} />
 		}
-		case 'actions': {
-			const w = example as WidgetConfig<'actions'>
-			return <ActionsWidget {...w} />
+		case 'list': {
+			const w = example as WidgetConfig<'list'>
+			return <ListWidget {...w} />
 		}
-		case 'notifications': {
-			const w = example as WidgetConfig<'notifications'>
-			return <NotificationsWidget {...w} />
+		case 'list-emoji': {
+			const w = example as WidgetConfig<'list-emoji'>
+			return <ListEmojiWidget {...w} />
 		}
 	}
 }
@@ -175,11 +175,11 @@ export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: 
 		case 'four-up': {
 			return <FourUpWidget />
 		}
-		case 'actions': {
-			return <ActionsWidget />
+		case 'list': {
+			return <ListWidget />
 		}
-		case 'notifications': {
-			return <NotificationsWidget />
+		case 'list-emoji': {
+			return <ListEmojiWidget />
 		}
 	}
 }

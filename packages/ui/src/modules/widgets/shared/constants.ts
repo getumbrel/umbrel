@@ -6,8 +6,8 @@ export type WidgetType =
 	| 'two-up-stat-with-progress'
 	| 'three-up'
 	| 'four-up'
-	| 'actions'
-	| 'notifications'
+	| 'list-emoji'
+	| 'list'
 
 // ------------------------------
 
@@ -75,29 +75,28 @@ export type StatWithButtonsWidget = {
 	value: string
 	valueSub: string
 	buttons: {
-		title: string
+		text: string
 		icon: string
 		link: Link
 	}[]
 }
 
-// TODO: rename to ListWidget
-export type NotificationsWidget = {
-	type: 'notifications'
+export type ListWidget = {
+	type: 'list'
 	link?: Link
-	notifications: {
-		timestamp: number
-		description: string
+	items: {
+		text: string
+		textSub: string
 	}[]
 }
 
-export type ActionsWidget = {
-	type: 'actions'
+export type ListEmojiWidget = {
+	type: 'list-emoji'
 	link?: Link
 	count: number
-	actions: {
+	items: {
 		emoji: string
-		title: string
+		text: string
 	}[]
 }
 
@@ -107,8 +106,8 @@ type AnyWidgetConfig =
 	| TwoUpStatWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
-	| NotificationsWidget
-	| ActionsWidget
+	| ListWidget
+	| ListEmojiWidget
 
 // Choose the widget AnyWidgetConfig based on the type `T` passed in, othwerwise `never`
 export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetConfig, {type: T}>
