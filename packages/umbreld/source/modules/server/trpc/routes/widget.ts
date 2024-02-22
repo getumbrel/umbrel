@@ -1,45 +1,61 @@
 import z from 'zod'
+// importing {execa} instead of {$} due to issues with template parsing for docker commands using $ syntax
+import {execa} from 'execa'
+import axios, {AxiosError} from 'axios'
 
 import {router, privateProcedure} from '../trpc.js'
+import {type Context} from '../context.js'
 
-const widgets = [
-	{
-		id: 'umbrel:storage',
-		type: 'stat-with-progress',
-		refresh: 1000 * 60 * 5,
-		example: {
-			title: 'Storage',
-			value: '256 GB',
-			progressLabel: '1.75 TB left',
-			progress: 0.25,
-		},
-	},
-	{
-		id: 'umbrel:memory',
-		type: 'stat-with-progress',
-		refresh: 1000 * 10,
-		example: {
-			title: 'Memory',
-			value: '5.8 GB',
-			subValue: '/16GB',
-			progressLabel: '11.4 GB left',
-			progress: 0.36,
-		},
-	},
-]
+const MAX_ALLOWED_WIDGETS = 3
+
+// Splits a widgetId into appId and widgetName
+// e.g., "transmission:status" => { appId: "transmission", widgetName: "status" }
+function splitWidgetId(widgetId: string) {
+	const [appId, widgetName] = widgetId.split(':')
+
+	return { appId, widgetName }
+}
+
+// Returns a specific widget's info from the app manifest
+async function getWidgetInfoFromManifest(ctx: Context, appId: string, widgetName: string) {
+	// Get the app's manifest
+	const manifest = await ctx.apps.getApp(appId).readManifest()
+	if (!manifest.widgets) throw new Error(`No widgets found for app ${appId}`)
+
+	// Grab the specific widget data from the app's manifest
+	const widgetInfo = manifest.widgets.find((widget) => widget.id === widgetName)
+	if (!widgetInfo) throw new Error(`No widget found for id ${appId}:${widgetName}`)
+
+	return widgetInfo
+}
 
 export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
-		// TODO: Iterate over installed apps and show all possible widgets.
+		const installedApps = await ctx.apps.getInstalledApps()
+		
+		// Iterate over installed apps and show all possible widgets.
+		const widgetIdPromises = installedApps.map(async (appId) => {
+			const app = ctx.apps.getApp(appId)
+			const manifest = await app.readManifest()
 
-		return widgets
+			if (manifest.widgets) {
+					return manifest.widgets.map((widget: { id: string }) => `${appId}:${widget.id}`)
+			}
+			return []
+		})
+
+		const nestedWidgetIds = await Promise.all(widgetIdPromises)
+		const widgetIds = nestedWidgetIds.flat()
+
+		return widgetIds
 	}),
 
 	// List enabled widgets
 	enabled: privateProcedure.query(async ({ctx}) => {
 		const widgetIds = (await ctx.umbreld.store.get('widgets')) || []
-		return widgets.filter((widget) => widgetIds.includes(widget.id))
+
+		return widgetIds
 	}),
 
 	// Enable widget
@@ -50,17 +66,21 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			// TODO: Validate widgetId
+			const { appId, widgetName } = splitWidgetId(input.widgetId)
+
+			// Validate widget by checking if it exists in the app's manifest
+			await getWidgetInfoFromManifest(ctx, appId, widgetName)
 
 			// Save widget ID
 			await ctx.umbreld.store.getWriteLock(async ({get, set}) => {
 				const widgets = (await get('widgets')) || []
 
-				// TODO: Check if widget is already active
+				// Check if widget is already active
+				if (widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is already enabled`)
 
-				// TODO: Check we don't have more than 3 widgets enabled
+				// Check we don't have more than 3 widgets enabled
+				if (widgets.length >= MAX_ALLOWED_WIDGETS) throw new Error(`The maximum number of widgets (${MAX_ALLOWED_WIDGETS}) has already been enabled`)
 
-				widgets.push(input.widgetId)
 				await set('widgets', widgets)
 			})
 
@@ -80,9 +100,7 @@ export default router({
 				const widgets = await get('widgets')
 
 				// Check if widget is currently enabled
-				if (!widgets.includes(input.widgetId)) {
-					throw new Error(`Widget ${input.widgetId} is not enabled`)
-				}
+				if (!widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is not enabled`)
 
 				// Remove widget
 				const updatedWidgets = widgets.filter((widget) => widget !== input.widgetId)
@@ -100,32 +118,74 @@ export default router({
 			}),
 		)
 		.query(async ({ctx, input}) => {
-			// TODO: Return live data for a given widget
+			// TODO: How will we handle Umbrel core widgets? Will the frontend run a function directly instead of making a request to this endpoint?
 
-			return {
-				id: 'umbrel:storage',
-				type: 'stat-with-progress',
-				refresh: 1000 * 60 * 5,
-				data: {
-					title: 'Storage',
-					value: '256 GB',
-					progressLabel: '1.75 TB left',
-					progress: 0.25,
-				},
+			// Get widget info from the app's manifest
+			const { appId, widgetName } = splitWidgetId(input.widgetId)
+			const { widgetInfo } = await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			const { container, port, endpoint } = widgetInfo
+
+			// Get all running containers from docker
+			// TODO: what should we do here for the case where an app is installed but not running?
+			const { stdout: allContainers } = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
+			
+			// Get the specific container name for the widget endpoint
+			const containerName = allContainers.split('\n').find((name) => {
+				// Using regex to match the container name across differnet Docker compose naming conventions (e.g., `app_container_1` and `app-container-1`)
+				// and to precent partial matches with similar container names (e.g., `app_container_1` and `app_container-proxy_1`)
+				const regex = new RegExp(`^${appId}[-_]${container}[-_][0-9]+$`)
+				return regex.test(name)
+			})
+
+			if (!containerName) {
+				throw new Error(`No container named ${container} found for app ${appId}`)
+			}
+
+			// Find container IP
+			const { stdout: containerIp } = await execa('docker', ['inspect', '-f', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', containerName])
+			// console.log(`http://${containerIp}:${port}/${endpoint}`)
+
+			try {
+				const response = await axios.get(`http://${containerIp}:${port}/${endpoint}`)
+				const widgetData = response.data
+				return widgetData
+			} catch (error) {
+				  if (error instanceof AxiosError) {
+						throw new Error(`Failed to fetch data from ${endpoint}: ${error.message}`)
+				  }
+					throw error
 			}
 		}),
 })
 
-// Saving Mark's previous types for later use
+// Saving Mark's types for later use
+
+export type WidgetType =
+	| 'stat-with-buttons'
+	| 'stat-with-progress'
+	| 'two-up-stat-with-progress'
+	| 'three-up'
+	| 'four-up'
+	| 'list-emoji'
+	| 'list'
+
+// ------------------------------
+
+/**
+ * This link is relative to `RegistryApp['path']`
+ * NOTE: type is created for this comment to appear in VSCode
+ */
+type Link = string
 
 type FourUpItem = {
 	title: string
+	icon: string
 	value: string
 	valueSub: string
 }
 export type FourUpWidget = {
 	type: 'four-up'
-	link: string
+	link?: Link
 	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
 }
 
@@ -136,54 +196,95 @@ type ThreeUpItem = {
 }
 export type ThreeUpWidget = {
 	type: 'three-up'
-	link: string
+	link?: Link
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
+}
+
+// NOTE:
+// The long name feels like it could be just be two-up, but this two-up widget is
+// different from the others because it also has a progress. If we ever add one without a progress,
+// that one would be two-up.
+type TwoUpStatWithProgressItem = {
+	title: string
+	value: string
+	valueSub: string
+	/** Number from 0 to 1 */
+	progress: number
+}
+export type TwoUpStatWithProgressWidget = {
+	type: 'two-up-stat-with-progress'
+	link?: Link
+	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
 }
 
 export type StatWithProgressWidget = {
 	type: 'stat-with-progress'
-	link: string
+	link?: Link
 	title: string
 	value: string
+	valueSub?: string
 	progressLabel: string
+	/** Number from 0 to 1 */
 	progress: number
 }
 
 export type StatWithButtonsWidget = {
 	type: 'stat-with-buttons'
+	icon: string
 	title: string
 	value: string
 	valueSub: string
 	buttons: {
-		title: string
+		text: string
 		icon: string
-		link: string
+		link: Link
 	}[]
 }
 
-export type NotificationsWidget = {
-	type: 'notifications'
-	link: string
-	notifications: {
-		timestamp: number
-		description: string
+export type ListWidget = {
+	type: 'list'
+	link?: Link
+	items: {
+		text: string
+		textSub: string
 	}[]
 }
 
-export type ActionsWidget = {
-	type: 'actions'
-	link: string
+export type ListEmojiWidget = {
+	type: 'list-emoji'
+	link?: Link
 	count: number
-	actions: {
+	items: {
 		emoji: string
-		title: string
+		text: string
 	}[]
 }
 
-export type AnyWidgetConfig =
+type AnyWidgetConfig =
 	| FourUpWidget
 	| ThreeUpWidget
+	| TwoUpStatWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
-	| NotificationsWidget
-	| ActionsWidget
+	| ListWidget
+	| ListEmojiWidget
+
+// Choose the widget AnyWidgetConfig based on the type `T` passed in, othwerwise `never`
+export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetConfig, {type: T}>
+
+// ------------------------------
+
+export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'stat-with-buttons'
+	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
+	  Omit<StatWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<StatWithButtonsWidget['buttons'], 'link'>}
+	: // Otherwise, just omit the `type`
+	  Omit<WidgetConfig<T>, 'type'>
+
+// Adding `= WidgetType` to `T` makes it so that if `T` is not provided, it defaults to `WidgetType`. Prevents us from always having to write `RegistryWidget<WidgetType>` when referring to the type.
+export type RegistryWidget<T extends WidgetType = WidgetType> = {
+	id: string
+	type: T
+	refresh?: number
+	// Examples aren't interactive so no need to include `link` in example
+	example?: ExampleWidgetConfig<T>
+}
