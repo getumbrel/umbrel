@@ -1,0 +1,5 @@
+# <device>                          <dir>               <type>      <options>   <dump>  <fsck>
+/                                   /mnt/root           none        bind        0       0
+/data/umbrelos/var/log             /var/log            none        bind        0       0
+/data/umbrelos/var/lib/docker      /var/lib/docker     none        bind        0       0
+/data/umbrelos/home                /home               none        bind        0       0
