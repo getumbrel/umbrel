@@ -16,7 +16,7 @@ function splitWidgetId(widgetId: string) {
 	return {appId, widgetName}
 }
 
-// Returns a specific widget's info from the app manifest
+// Returns a specific widget's info from an app's manifest
 async function getWidgetInfoFromManifest(ctx: Context, appId: string, widgetName: string) {
 	// Get the app's manifest
 	const manifest = await ctx.apps.getApp(appId).readManifest()
