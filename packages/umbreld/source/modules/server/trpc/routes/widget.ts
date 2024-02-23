@@ -125,7 +125,6 @@ export default router({
 			// Get widget info from the app's manifest
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
 			const widgetInfo = await getWidgetInfoFromManifest(ctx, appId, widgetName)
-			console.log(widgetInfo)
 			const {container, port, endpoint} = widgetInfo
 
 			// Get all running containers from docker
@@ -151,15 +150,16 @@ export default router({
 				'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
 				containerName,
 			])
-			// console.log(`http://${containerIp}:${port}/${endpoint}`)
+
+			const url = `http://${containerIp}:${port}/${endpoint}`
 
 			try {
-				const response = await axios.get(`http://${containerIp}:${port}/${endpoint}`)
+				const response = await axios.get(url)
 				const widgetData = response.data
 				return widgetData
 			} catch (error) {
 				if (error instanceof AxiosError) {
-					throw new Error(`Failed to fetch data from ${endpoint}: ${error.message}`)
+					throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
 				}
 				throw error
 			}
