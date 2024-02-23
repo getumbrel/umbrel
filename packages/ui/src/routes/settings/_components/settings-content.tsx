@@ -48,15 +48,12 @@ export function SettingsContent() {
 
 	const [langOpen, setLangOpen] = useState(false)
 
-	const [userQ, uptimeQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const [userQ, uptimeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
-		t.migration.isUmbrelHome(),
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
-
-	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// Scroll to hash
 	useEffect(() => {
@@ -149,14 +146,12 @@ export function SettingsContent() {
 							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
 						/>
 					</ListRow>
-					{isUmbrelHome && (
-						<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
-							{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
-							<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
-								{t('migrate')}
-							</IconButton>
-						</ListRow>
-					)}
+					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
+						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
+						<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
+							{t('migrate')}
+						</IconButton>
+					</ListRow>
 					<ListRow
 						title={t('language')}
 						description={t('language-description')}

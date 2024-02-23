@@ -12,6 +12,14 @@ import {
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
@@ -23,6 +31,28 @@ export default function MigrationAssistantDialog() {
 	const dialogProps = useDialogOpenProps('migration-assistant')
 	const {params} = useQueryParams()
 	const state = params.get('migration-state')
+
+	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
+	const isUmbrelHome = !!isUmbrelHomeQ.data
+
+	// Don't show anything atm
+	if (isUmbrelHomeQ.isLoading) return null
+
+	if (!isUmbrelHome) {
+		return (
+			<AlertDialog {...dialogProps}>
+				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Please start up your Umbrel home and open this dialog from there.</AlertDialogTitle>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => dialogProps.onOpenChange(false)}>{t('ok')}</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		)
+	}
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
