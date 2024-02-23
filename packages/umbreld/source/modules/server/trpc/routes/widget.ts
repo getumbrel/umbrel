@@ -13,7 +13,7 @@ const MAX_ALLOWED_WIDGETS = 3
 function splitWidgetId(widgetId: string) {
 	const [appId, widgetName] = widgetId.split(':')
 
-	return { appId, widgetName }
+	return {appId, widgetName}
 }
 
 // Returns a specific widget's info from the app manifest
@@ -33,14 +33,14 @@ export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
 		const installedApps = await ctx.apps.getInstalledApps()
-		
+
 		// Iterate over installed apps and show all possible widgets.
 		const widgetIdPromises = installedApps.map(async (appId) => {
 			const app = ctx.apps.getApp(appId)
 			const manifest = await app.readManifest()
 
 			if (manifest.widgets) {
-					return manifest.widgets.map((widget: { id: string }) => `${appId}:${widget.id}`)
+				return manifest.widgets.map((widget: {id: string}) => `${appId}:${widget.id}`)
 			}
 			return []
 		})
@@ -66,7 +66,7 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			const { appId, widgetName } = splitWidgetId(input.widgetId)
+			const {appId, widgetName} = splitWidgetId(input.widgetId)
 
 			// Validate widget by checking if it exists in the app's manifest
 			await getWidgetInfoFromManifest(ctx, appId, widgetName)
@@ -79,8 +79,10 @@ export default router({
 				if (widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is already enabled`)
 
 				// Check we don't have more than 3 widgets enabled
-				if (widgets.length >= MAX_ALLOWED_WIDGETS) throw new Error(`The maximum number of widgets (${MAX_ALLOWED_WIDGETS}) has already been enabled`)
+				if (widgets.length >= MAX_ALLOWED_WIDGETS)
+					throw new Error(`The maximum number of widgets (${MAX_ALLOWED_WIDGETS}) has already been enabled`)
 
+				widgets.push(input.widgetId)
 				await set('widgets', widgets)
 			})
 
@@ -121,14 +123,14 @@ export default router({
 			// TODO: How will we handle Umbrel core widgets? Will the frontend run a function directly instead of making a request to this endpoint?
 
 			// Get widget info from the app's manifest
-			const { appId, widgetName } = splitWidgetId(input.widgetId)
-			const { widgetInfo } = await getWidgetInfoFromManifest(ctx, appId, widgetName)
-			const { container, port, endpoint } = widgetInfo
+			const {appId, widgetName} = splitWidgetId(input.widgetId)
+			const {widgetInfo} = await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			const {container, port, endpoint} = widgetInfo
 
 			// Get all running containers from docker
 			// TODO: what should we do here for the case where an app is installed but not running?
-			const { stdout: allContainers } = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
-			
+			const {stdout: allContainers} = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
+
 			// Get the specific container name for the widget endpoint
 			const containerName = allContainers.split('\n').find((name) => {
 				// Using regex to match the container name across differnet Docker compose naming conventions (e.g., `app_container_1` and `app-container-1`)
@@ -142,7 +144,12 @@ export default router({
 			}
 
 			// Find container IP
-			const { stdout: containerIp } = await execa('docker', ['inspect', '-f', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', containerName])
+			const {stdout: containerIp} = await execa('docker', [
+				'inspect',
+				'-f',
+				'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
+				containerName,
+			])
 			// console.log(`http://${containerIp}:${port}/${endpoint}`)
 
 			try {
@@ -150,10 +157,10 @@ export default router({
 				const widgetData = response.data
 				return widgetData
 			} catch (error) {
-				  if (error instanceof AxiosError) {
-						throw new Error(`Failed to fetch data from ${endpoint}: ${error.message}`)
-				  }
-					throw error
+				if (error instanceof AxiosError) {
+					throw new Error(`Failed to fetch data from ${endpoint}: ${error.message}`)
+				}
+				throw error
 			}
 		}),
 })
