@@ -32,6 +32,7 @@ async function getWidgetInfoFromManifest(ctx: Context, appId: string, widgetName
 export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
+		// TODO: should this also return Umbrel Core widgets?
 		const installedApps = await ctx.apps.getInstalledApps()
 
 		// Iterate over installed apps and show all possible widgets.
@@ -69,6 +70,7 @@ export default router({
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
 
 			// Validate widget by checking if it exists in the app's manifest
+			// TODO: need to also allow Umbrel Core widgets
 			await getWidgetInfoFromManifest(ctx, appId, widgetName)
 
 			// Save widget ID
