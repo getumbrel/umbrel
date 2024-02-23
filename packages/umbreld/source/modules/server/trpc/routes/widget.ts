@@ -124,7 +124,8 @@ export default router({
 
 			// Get widget info from the app's manifest
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
-			const {widgetInfo} = await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			const widgetInfo = await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			console.log(widgetInfo)
 			const {container, port, endpoint} = widgetInfo
 
 			// Get all running containers from docker
