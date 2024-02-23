@@ -7,6 +7,7 @@ import {RouterProvider} from 'react-router-dom'
 import './index.css'
 import './utils/i18n'
 
+import i18next from 'i18next'
 import {ErrorBoundary} from 'react-error-boundary'
 
 import {IframeChecker} from './components/iframe-checker'
@@ -18,22 +19,24 @@ import {TooltipProvider} from './shadcn-components/ui/tooltip'
 import {TrpcProvider} from './trpc/trpc-provider'
 import {t} from './utils/i18n'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-	<React.StrictMode>
-		<IframeChecker>
-			{/* <UpdatingCover> */}
-			<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
-				<TrpcProvider>
-					<WallpaperProvider>
-						<RemoteWallpaperInjector />
-						<TooltipProvider>
-							{/* TODO: move stories out of main router */}
-							<RouterProvider router={router} />
-						</TooltipProvider>
-					</WallpaperProvider>
-				</TrpcProvider>
-				<Toaster />
-			</ErrorBoundary>
-		</IframeChecker>
-	</React.StrictMode>,
-)
+i18next.on('initialized', () => {
+	ReactDOM.createRoot(document.getElementById('root')!).render(
+		<React.StrictMode>
+			<IframeChecker>
+				{/* <UpdatingCover> */}
+				<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
+					<TrpcProvider>
+						<WallpaperProvider>
+							<RemoteWallpaperInjector />
+							<TooltipProvider>
+								{/* TODO: move stories out of main router */}
+								<RouterProvider router={router} />
+							</TooltipProvider>
+						</WallpaperProvider>
+					</TrpcProvider>
+					<Toaster />
+				</ErrorBoundary>
+			</IframeChecker>
+		</React.StrictMode>,
+	)
+})
