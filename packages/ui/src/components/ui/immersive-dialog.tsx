@@ -70,7 +70,7 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 					'bg-transparent shadow-none ring-2 ring-white/3', // remove shadow from `dialogContentClass`
 					dialogContentAnimationClass,
 					dialogContentAnimationSlideClass,
-					immersiveContentShortClass,
+					immersiveContentTallClass,
 					'flex flex-row justify-between gap-0 p-0',
 				)}
 			>
