@@ -1,3 +1,6 @@
+# TODO: Instead of using the debian:bookworm image as a base we should
+# build a fresh rootfs from scratch. We can use the same tool the Docker
+# images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
 FROM debian:bookworm
 
 # Add non-free sources and update package index
