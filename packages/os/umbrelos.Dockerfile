@@ -41,10 +41,17 @@ RUN usermod -aG sudo umbrel
 # Install Docker and docker-compose
 RUN apt-get install --yes docker.io docker-compose
 
-# TODO: Install Umbrel
+# Install Umbrel
+RUN apt-get install --yes npm
+COPY packages/umbreld /tmp/umbreld
+WORKDIR /tmp/umbreld
+RUN rm -rf node_modules || true
+RUN npm install --omit dev --global
+RUN rm -rf /tmp/umbreld
+WORKDIR /
 
 # Copy in filesystem overlay
-COPY overlay /
+COPY packages/os/overlay /
 
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.
