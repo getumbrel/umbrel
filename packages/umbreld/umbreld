@@ -1,0 +1,11 @@
+#!/bin/env bash
+
+# We need to add this shim as the main umbreld entrypoint so we can run the start script from npm.
+# This is important because npm sets up the environmnet we need like adding node_modules/.bin to the PATH
+# so we have access to the local Node.js version and tsx.
+
+# Change into the project directory
+cd "$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
+
+# Run the npm start script and pass through any arguments
+exec npm run start --silent -- "$@"

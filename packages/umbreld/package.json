@@ -3,7 +3,7 @@
 	"type": "module",
 	"version": "1.0.0",
 	"main": "./source/index.ts",
-	"bin": "./source/cli.ts",
+	"bin": "./umbreld",
 	"license": "PolyForm Noncommercial License 1.0.0",
 	"private": true,
 	"scripts": {
