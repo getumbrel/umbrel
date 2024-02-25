@@ -25,6 +25,7 @@ Commands:
     start                      Starts an installed app
     stop                       Stops an installed app
     restart                    Restarts an installed app
+    update                     Updates an installed app to the latest version
     compose                    Passes all arguments to docker-compose
     ls-installed               Lists installed apps
 EOF
