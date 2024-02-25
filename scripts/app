@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.0.3"
+VERSION="0.0.4"
 
 UMBREL_ROOT="$(readlink -f $(dirname "${BASH_SOURCE[0]}")/..)"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
@@ -538,6 +538,9 @@ if [[ "$command" = "update" ]]; then
   app_compose_file="${app_data_dir}/docker-compose.yml"
   app_old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${app_compose_file}")
 
+  echo "Pulling images for app ${app}..."
+  app_data_dir="${app_repo_dir}" compose "${app}" pull
+
   if [[ "$*" != *"--skip-stop"* ]]; then
     "${0}" "stop" "${app}"
   fi
@@ -562,9 +565,6 @@ if [[ "$command" = "update" ]]; then
 
   # Now apply templates
   template_app "${app}"
-
-  echo "Pulling images for app ${app}..."
-  compose "${app}" pull
 
   # Copy remaining files to mark update as complete
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
