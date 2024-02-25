@@ -155,33 +155,34 @@ if [[ "$command" = "ls-installed" ]]; then
   exit
 fi
 
+# All other commands need an app specified
 if [ -z ${2+x} ]; then
   show_help
   exit 1
-else
-  app="$2"
+fi
 
-  repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
-  repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
-  app_repo_dir="${repo_path}/${app}"
-  app_data_dir="${UMBREL_ROOT}/app-data/${app}"
-  
-  app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
-  
-  if [[ "${app}" == "installed" ]]; then
-    for app in $(list_installed_apps); do
-      if [[ "${app}" != "" ]]; then
-        "${0}" "${1}" "${app}" "${@:3}" &
-      fi
-    done
-    wait
-    exit
-  fi
-  
-  if [[ -z "${app}" ]]; then
-    >&2 echo "Error: \"${app}\" is not a valid app"
-    exit 1
-  fi
+app="$2"
+
+repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
+repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+app_repo_dir="${repo_path}/${app}"
+app_data_dir="${UMBREL_ROOT}/app-data/${app}"
+
+app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
+
+if [[ "${app}" == "installed" ]]; then
+  for app in $(list_installed_apps); do
+    if [[ "${app}" != "" ]]; then
+      "${0}" "${1}" "${app}" "${@:3}" &
+    fi
+  done
+  wait
+  exit
+fi
+
+if [[ -z "${app}" ]]; then
+  >&2 echo "Error: \"${app}\" is not a valid app"
+  exit 1
 fi
 
 if [ -z ${3+x} ]; then
