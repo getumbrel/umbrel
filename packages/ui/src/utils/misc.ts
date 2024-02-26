@@ -88,6 +88,8 @@ export function platform() {
 	return 'other'
 }
 
+export const IS_ANDROID = /Android/i.test(navigator.userAgent)
+
 export function isDev() {
 	return process.env.NODE_ENV === 'development'
 }
