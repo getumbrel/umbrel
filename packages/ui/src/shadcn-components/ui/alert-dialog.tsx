@@ -15,7 +15,35 @@ import {
 	dialogOverlayClass,
 } from './shared/dialog'
 
-const AlertDialog = AlertDialogPrimitive.Root
+// https://github.com/radix-ui/primitives/issues/1281#issuecomment-1081767007
+const AlertDialogContext = React.createContext<{
+	open?: boolean
+	onOpenChange?: (open: boolean) => void
+}>({
+	open: false,
+	onOpenChange: () => {},
+})
+
+function useDialogState() {
+	const context = React.useContext(AlertDialogContext)
+	if (!context) {
+		throw new Error('useDialogState must be used within a AlertDialogProvider')
+	}
+	return context
+}
+
+const AlertDialog = ({children, ...props}: AlertDialogPrimitive.DialogProps) => {
+	return (
+		<AlertDialogContext.Provider
+			value={{
+				open: props.open,
+				onOpenChange: props.onOpenChange,
+			}}
+		>
+			<AlertDialogPrimitive.Root {...props}>{children}</AlertDialogPrimitive.Root>
+		</AlertDialogContext.Provider>
+	)
+}
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 
@@ -118,9 +146,20 @@ AlertDialogAction.displayName = 'AlertDialogAction'
 const AlertDialogCancel = React.forwardRef<
 	React.ElementRef<typeof Button>,
 	React.ComponentPropsWithoutRef<typeof Button>
->(({className, ...props}, ref) => (
-	<Button ref={ref} className={cn(buttonVariants({size: 'dialog'}), className)} {...props} />
-))
+>(({className, ...props}, ref) => {
+	const {onOpenChange} = useDialogState()
+	return (
+		<Button
+			ref={ref}
+			className={cn(buttonVariants({size: 'dialog'}), className)}
+			onClick={(e) => {
+				props.onClick?.(e)
+				onOpenChange?.(false)
+			}}
+			{...props}
+		/>
+	)
+})
 AlertDialogCancel.displayName = 'AlertDialogCancel'
 
 export {
