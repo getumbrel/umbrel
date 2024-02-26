@@ -153,12 +153,12 @@ export function SettingsContentMobile() {
 					description={t('language-description')}
 					onClick={() => navigate(linkToDialog('language'))}
 				/>
-				<ListRowMobile
+				{/* <ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}
 					description={t('app-store.description')}
 					onClick={() => navigate(linkToDialog('app-store-preferences'))}
-				/>
+				/> */}
 				<ListRowMobile
 					icon={TbTool}
 					title={t('troubleshoot')}

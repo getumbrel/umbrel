@@ -163,11 +163,11 @@ export function SettingsContent() {
 							<LanguageDropdownContent />
 						</DropdownMenu>
 					</ListRow>
-					<ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
+					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}
 						</IconButton>
-					</ListRow>
+					</ListRow> */}
 					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
 						<IconButton icon={TbTool} onClick={() => navigate(linkToDialog('troubleshoot'))}>
 							{t('troubleshoot')}
