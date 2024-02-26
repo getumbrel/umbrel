@@ -125,7 +125,7 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 
 	return (
 		<div className={troubleshootContentLayoutClass}>
-			<div className='flex w-full items-center justify-between'>
+			<div className='flex w-full flex-wrap items-center justify-between'>
 				<TroubleshootTitleBackButton onClick={onBack} />
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
