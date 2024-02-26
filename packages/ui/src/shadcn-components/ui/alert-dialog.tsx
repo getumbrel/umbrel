@@ -138,7 +138,7 @@ const AlertDialogAction = React.forwardRef<
 >(({variant, children, ...props}, ref) => (
 	<Button ref={ref} size={'dialog'} variant={variant ?? 'primary'} {...props}>
 		{children}
-		<span className='text-11 opacity-40'>↵</span>
+		<span className='text-11 opacity-40 max-md:hidden'>↵</span>
 	</Button>
 ))
 AlertDialogAction.displayName = 'AlertDialogAction'
