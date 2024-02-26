@@ -40,10 +40,7 @@ RUN adduser --gecos "" --disabled-password umbrel
 RUN echo "umbrel:umbrel" | chpasswd
 RUN usermod -aG sudo umbrel
 
-# Install Docker and docker-compose
-RUN apt-get install --yes docker.io docker-compose
-
-# Install Umbrel
+# Install umbreld
 RUN apt-get install --yes npm
 COPY packages/umbreld /tmp/umbreld
 WORKDIR /tmp/umbreld
@@ -51,6 +48,9 @@ RUN rm -rf node_modules || true
 RUN npm install --omit dev --global
 RUN rm -rf /tmp/umbreld
 WORKDIR /
+
+# Let umbreld provision the system
+RUN umbreld --install-os-dependencies
 
 # Copy in filesystem overlay
 COPY packages/os/overlay /
