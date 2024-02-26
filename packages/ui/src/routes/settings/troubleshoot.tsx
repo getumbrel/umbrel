@@ -200,12 +200,7 @@ const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
 }
 
 function useAppLogs(appId: string) {
-	const troubleshootQ = trpcReact.apps.logs.useQuery(
-		{appId},
-		{
-			refetchInterval: 1000 * 2,
-		},
-	)
+	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
 
 	if (troubleshootQ.isLoading) return t('loading') + '...'
 	if (troubleshootQ.isError) return troubleshootQ.error.message
