@@ -19,6 +19,7 @@ export function useLanguage() {
 	return [code, setCode] as const
 }
 
+// TODO: consider moving to `@/utils`
 export const languages = [
 	{name: 'English', code: 'en'},
 	{name: 'Deutsch', code: 'de'},

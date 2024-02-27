@@ -1,8 +1,8 @@
+// TODO: move to widgets module
 import {useState} from 'react'
 
-import {RegistryWidget} from '@/modules/widgets/constants'
+import {RegistryWidget} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
-import {useAvailableApps} from '@/providers/available-apps'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -16,7 +16,6 @@ export const settingsWidgets: [
 	{
 		id: 'umbrel:storage',
 		type: 'stat-with-progress',
-		endpoint: '/widgets/settings/storage-stat.json',
 		example: {
 			title: t('storage'),
 			value: '256 GB',
@@ -27,7 +26,6 @@ export const settingsWidgets: [
 	{
 		id: 'umbrel:memory',
 		type: 'stat-with-progress',
-		endpoint: '/widgets/settings/memory-stat.json',
 		example: {
 			title: t('memory'),
 			value: '5.8 GB',
@@ -39,7 +37,6 @@ export const settingsWidgets: [
 	{
 		id: 'umbrel:system-stats',
 		type: 'three-up',
-		endpoint: '/widgets/settings/system-stats.json',
 		example: {
 			items: [
 				{
@@ -65,34 +62,31 @@ export const settingsWidgets: [
 export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
 	const [selectedTooMany, setSelectedTooMany] = useState(false)
-	const availableApps = useAvailableApps()
 	const apps = useApps()
 
 	const {selected, enable, disable, isLoading: isSelectedLoading} = useEnableWidgets()
-	const isLoading = availableApps.isLoading || apps.isLoading || isSelectedLoading
+	const isLoading = apps.isLoading || isSelectedLoading
 
-	const availableUserAppWidgets =
-		availableApps.appsKeyed && apps.userApps
-			? apps.userApps.map((app) => ({
-					appId: app.id,
-					icon: app.icon,
-					name: app.name,
-					widgets: availableApps.appsKeyed[app.id]?.widgets as RegistryWidget[] | undefined,
-			  }))
-			: []
+	const availableUserAppWidgets = apps.userApps
+		? apps.userApps.map((app) => ({
+				appId: app.id,
+				icon: app.icon,
+				name: app.name,
+				widgets: app.widgets ?? [],
+		  }))
+		: []
 
-	const availableWidgets =
-		availableApps.appsKeyed && apps.userApps
-			? [
-					{
-						appId: 'settings',
-						icon: systemAppsKeyed['settings'].icon,
-						name: systemAppsKeyed['settings'].name,
-						widgets: settingsWidgets,
-					},
-					...availableUserAppWidgets,
-			  ].filter(({widgets}) => widgets?.length)
-			: []
+	const availableWidgets = apps.userApps
+		? [
+				{
+					appId: 'settings',
+					icon: systemAppsKeyed['settings'].icon,
+					name: systemAppsKeyed['settings'].name,
+					widgets: settingsWidgets,
+				},
+				...availableUserAppWidgets,
+		  ].filter(({widgets}) => widgets?.length)
+		: []
 
 	// No need to specify app id because widget endpoints are unique
 	const toggleSelected = (widget: RegistryWidget, checked: boolean) => {
@@ -102,26 +96,29 @@ export function useWidgets() {
 			return
 		}
 		setSelectedTooMany(false)
-		if (selected.map((w) => w.endpoint).includes(widget.endpoint)) {
+		if (selected.includes(widget.id)) {
 			disable(widget.id)
 		} else {
 			enable(widget.id)
 		}
-		console.log(widget.endpoint)
+		console.log(widget.id)
 	}
 
-	const appFromEndpoint = (endpoint: string) => {
-		return availableWidgets.find((app) => app.widgets?.find((widget) => widget.endpoint === endpoint))
+	const appFromWidgetId = (id: string) => {
+		return availableWidgets.find((app) => app.widgets?.find((widget) => widget.id === id))
 	}
 
 	const selectedWithAppInfo = selected
-		.filter((w) => {
-			const app = appFromEndpoint(w.endpoint)
+		.filter((id) => {
+			const app = appFromWidgetId(id)
 			return !!app
 		})
-		.map((widget) => {
+		.map((id) => {
 			// Expect app to be found because we filtered out widgets without apps
-			const app = appFromEndpoint(widget.endpoint)!
+			const app = appFromWidgetId(id)!
+
+			// Assume we'll always find a widget
+			const widget = app.widgets.find((w) => w.id === id)!
 
 			return {
 				...widget,
@@ -139,7 +136,6 @@ export function useWidgets() {
 		toggleSelected,
 		selectedTooMany,
 		isLoading,
-		appFromEndpoint,
 	}
 }
 
@@ -150,16 +146,18 @@ function useEnableWidgets() {
 	const enableMut = trpcReact.widget.enable.useMutation({
 		onSuccess: () => {
 			ctx.user.invalidate()
+			ctx.widget.enabled.invalidate()
 		},
 	})
 
 	const disableMut = trpcReact.widget.disable.useMutation({
 		onSuccess: () => {
 			ctx.user.invalidate()
+			ctx.widget.enabled.invalidate()
 		},
 	})
 
-	const selected = (widgetQ.data ?? []) as RegistryWidget[]
+	const selected = widgetQ.data ?? []
 	// const setSelected = (widgets: WidgetT[]) => enableMut.mutate({widgets})
 
 	const isLoading = widgetQ.isLoading || enableMut.isLoading

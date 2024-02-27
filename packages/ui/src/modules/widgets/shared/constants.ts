@@ -1,13 +1,21 @@
+// TODO: this should all probably be in umbreld
+
 export type WidgetType =
 	| 'stat-with-buttons'
 	| 'stat-with-progress'
 	| 'two-up-stat-with-progress'
 	| 'three-up'
 	| 'four-up'
-	| 'actions'
-	| 'notifications'
+	| 'list-emoji'
+	| 'list'
 
 // ------------------------------
+
+/**
+ * This link is relative to `RegistryApp['path']`
+ * NOTE: type is created for this comment to appear in VSCode
+ */
+type Link = string
 
 type FourUpItem = {
 	title: string
@@ -17,7 +25,7 @@ type FourUpItem = {
 }
 export type FourUpWidget = {
 	type: 'four-up'
-	link?: string
+	link?: Link
 	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
 }
 
@@ -28,7 +36,7 @@ type ThreeUpItem = {
 }
 export type ThreeUpWidget = {
 	type: 'three-up'
-	link?: string
+	link?: Link
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
 }
 
@@ -45,13 +53,13 @@ type TwoUpStatWithProgressItem = {
 }
 export type TwoUpStatWithProgressWidget = {
 	type: 'two-up-stat-with-progress'
-	link?: string
+	link?: Link
 	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
 }
 
 export type StatWithProgressWidget = {
 	type: 'stat-with-progress'
-	link?: string
+	link?: Link
 	title: string
 	value: string
 	valueSub?: string
@@ -67,29 +75,28 @@ export type StatWithButtonsWidget = {
 	value: string
 	valueSub: string
 	buttons: {
-		title: string
+		text: string
 		icon: string
-		link: string
+		link: Link
 	}[]
 }
 
-// TODO: rename to ListWidget
-export type NotificationsWidget = {
-	type: 'notifications'
-	link?: string
-	notifications: {
-		timestamp: number
-		description: string
+export type ListWidget = {
+	type: 'list'
+	link?: Link
+	items: {
+		text: string
+		textSub: string
 	}[]
 }
 
-export type ActionsWidget = {
-	type: 'actions'
-	link?: string
+export type ListEmojiWidget = {
+	type: 'list-emoji'
+	link?: Link
 	count: number
-	actions: {
+	items: {
 		emoji: string
-		title: string
+		text: string
 	}[]
 }
 
@@ -99,8 +106,8 @@ type AnyWidgetConfig =
 	| TwoUpStatWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
-	| NotificationsWidget
-	| ActionsWidget
+	| ListWidget
+	| ListEmojiWidget
 
 // Choose the widget AnyWidgetConfig based on the type `T` passed in, othwerwise `never`
 export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetConfig, {type: T}>
@@ -120,5 +127,4 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 	refresh?: number
 	// Examples aren't interactive so no need to include `link` in example
 	example?: ExampleWidgetConfig<T>
-	endpoint: string
 }

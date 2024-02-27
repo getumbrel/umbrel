@@ -26,8 +26,8 @@ export function NotFound() {
 						<AlertDialogDescription></AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={() => navigate(-1)}>{t('not-found-404.back')}</AlertDialogCancel>
-						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
+						<AlertDialogAction onClick={() => navigate(-1)}>{t('not-found-404.back')}</AlertDialogAction>
+						<AlertDialogCancel onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

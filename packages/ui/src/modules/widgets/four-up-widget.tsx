@@ -5,16 +5,21 @@ import {WidgetContainer, widgetTextCva} from './shared/shared'
 
 export function FourUpWidget({
 	items,
+	link,
 	onClick,
 }: {
 	items?: {title: string; value: string; valueSub: string}[]
-	onClick?: () => void
+	link?: string
+	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={onClick} className='grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5'>
-			{items?.map((item) => (
-				<FourUpItem key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />
-			))}
+		<WidgetContainer
+			onClick={() => onClick?.(link)}
+			className='grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5'
+		>
+			{items
+				?.slice(0, 4)
+				?.map((item) => <FourUpItem key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />)}
 			{!items && (
 				<>
 					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />

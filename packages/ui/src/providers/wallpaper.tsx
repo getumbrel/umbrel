@@ -245,7 +245,7 @@ export function Wallpaper({
 				key={wallpaper.url + '-loading'}
 				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
 				className={cn(
-					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000',
+					'pointer-events-none fixed inset-0 h-lvh w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000',
 					isPreview && 'absolute',
 				)}
 			/>
@@ -255,7 +255,7 @@ export function Wallpaper({
 					src={wallpaper.url}
 					className={cn(
 						// Using black bg by default because sometimes we want to show the wallpaper before it's loaded, and over other elements
-						tw`pointer-events-none fixed inset-0 h-full w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
+						tw`pointer-events-none fixed inset-0 h-lvh w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
 						isPreview && 'absolute',
 						className,
 					)}

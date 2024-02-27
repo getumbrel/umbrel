@@ -6,9 +6,17 @@ import {WidgetContainer} from './shared/shared'
 
 type TwoUpItem = {title?: string; value?: string; valueSub?: string; progress?: number}
 
-export function TwoUpWidget({items, onClick}: {items?: [TwoUpItem, TwoUpItem]; onClick?: () => void}) {
+export function TwoUpWidget({
+	items,
+	link,
+	onClick,
+}: {
+	items?: [TwoUpItem, TwoUpItem]
+	link?: string
+	onClick?: (link?: string) => void
+}) {
 	return (
-		<WidgetContainer onClick={onClick} className=' flex-row items-center justify-center md:gap-[30px]'>
+		<WidgetContainer onClick={() => onClick?.(link)} className=' flex-row items-center justify-center md:gap-[30px]'>
 			{items?.[0] && (
 				<TwoUpItem
 					title={items[0].title}

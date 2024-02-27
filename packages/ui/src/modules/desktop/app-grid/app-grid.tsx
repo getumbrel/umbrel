@@ -1,4 +1,3 @@
-import {AnimatePresence} from 'framer-motion'
 import {ReactNode, useEffect, useState} from 'react'
 
 import {t} from '@/utils/i18n'
@@ -56,30 +55,29 @@ export function AppGrid({
 					<Page index={0}>
 						<PageInner innerRef={pageInnerRef}>
 							{noRoom && <div className='w-full text-center'>{t('desktop.not-enough-room')}</div>}
-							<AnimatePresence>
-								{pages[0]?.widgets.length > 0 && <div className={widgetRowClass}>{pages[0].widgets}</div>}
-								{pages[0]?.apps && pages[0]?.apps.length > 0 && (
-									<div className={appGridClass} style={appColumnsStyle}>
-										{/* TODO: use `appsPerRow` to split apps into separate rows */}
-										{/* TODO: consider laying apps out manually */}
-										{pages[0].apps}
-									</div>
-								)}
-							</AnimatePresence>
+							{pages[0]?.widgets.length > 0 && (
+								// NOTE: need to keep key
+								<div className={widgetRowClass}>{pages[0].widgets}</div>
+							)}
+							{pages[0]?.apps && pages[0]?.apps.length > 0 && (
+								<div className={appGridClass} style={appColumnsStyle}>
+									{/* TODO: use `appsPerRow` to split apps into separate rows */}
+									{/* TODO: consider laying apps out manually */}
+									{pages[0].apps}
+								</div>
+							)}
 						</PageInner>
 					</Page>
 					{!onlyFirstPage &&
 						pages.slice(1).map(({apps, widgets}, i) => (
 							<Page key={i} index={i + 1}>
 								<PageInner>
-									<AnimatePresence>
-										{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
-										{apps && (
-											<div className={appGridClass} style={appColumnsStyle}>
-												{apps}
-											</div>
-										)}
-									</AnimatePresence>
+									{widgets.length > 0 && <div className={widgetRowClass}>{widgets}</div>}
+									{apps && (
+										<div className={appGridClass} style={appColumnsStyle}>
+											{apps}
+										</div>
+									)}
 								</PageInner>
 							</Page>
 						))}
@@ -122,7 +120,7 @@ function ArrowButtonWrapper({side, children}: {side: 'left' | 'right'; children:
 export function PageInner({children, innerRef}: {children?: ReactNode; innerRef?: React.Ref<HTMLDivElement>}) {
 	return (
 		// Size the container to fill parent so we can later calculate what can fit inside it
-		<div className='flex h-full w-full items-stretch justify-center'>
+		<div className='flex h-full w-full items-stretch justify-center pt-2'>
 			<div
 				ref={innerRef}
 				className='flex w-full max-w-[var(--apps-max-w)] flex-col content-start items-center gap-y-[var(--app-y-gap)] px-[var(--apps-padding-x)]'

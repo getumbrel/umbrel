@@ -11,6 +11,7 @@ export function ProgressWidget({
 	valueSub,
 	progressLabel,
 	progress = 0,
+	link,
 	onClick,
 }: {
 	title?: string
@@ -19,10 +20,11 @@ export function ProgressWidget({
 	progressLabel?: string
 	/** Progress from 0 to 1 */
 	progress?: number
-	onClick?: () => void
+	link?: string
+	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer className='p-2 md:p-5' onClick={onClick}>
+		<WidgetContainer className='p-2 md:p-5' onClick={() => onClick?.(link)}>
 			<StatText title={title ?? LOADING_DASH} value={value} valueSub={valueSub} />
 			<div className='flex-1' />
 			{/* TODO: use shadcn progress component */}

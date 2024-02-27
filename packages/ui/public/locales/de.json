@@ -336,5 +336,13 @@
   "widgets.install-an-app-before-using-widgets": "Installieren Sie eine App, bevor Sie Widgets verwenden.",
   "factory-reset.review.title": "Überprüfen Sie die Daten",
   "app.updating": "Aktualisierung",
-  "cpu-core-count": "{{cores}} Kerne"
+  "cpu-core-count": "{{cores}} Kerne",
+  "app.restarting": "Neustart",
+  "app.starting": "Beginnend",
+  "app.stopping": "Anhalten",
+  "cpu": "CPU",
+  "logout-error-generic": "Backend-Fehler beim Abmelden!",
+  "troubleshoot-pick-title": "Was möchten Sie beheben?",
+  "troubleshoot.app-download": "Laden Sie {{app}}-Protokolle herunter",
+  "troubleshoot.system-download": "Laden Sie {{label}} herunter"
 }

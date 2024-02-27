@@ -1,11 +1,10 @@
 import {useNavigate} from 'react-router-dom'
-import urlJoin from 'url-join'
 
 import {useApps} from '@/providers/apps'
 import {UserApp} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
-import {appToUrl, isOnionPage} from '@/utils/misc'
+import {appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
 /**
@@ -63,6 +62,6 @@ export function useLaunchApp() {
 
 function openApp(app: UserApp, path?: string) {
 	trackAppOpen(app.id)
-	const url = path ? urlJoin(appToUrl(app), path) : appToUrl(app)
+	const url = path ? urlJoin(appToUrlWithAppPath(app), path) : appToUrlWithAppPath(app)
 	window.open(url, '_blank')?.focus()
 }

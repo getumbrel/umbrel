@@ -7,6 +7,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
+import {IS_ANDROID} from '@/utils/misc'
 
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
@@ -101,7 +102,7 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
 function Dialog() {
-	const isMobile = useIsMobile()
+	const isMobile = useIsMobile() && !IS_ANDROID
 	const routeToDialog = isMobile ? routeToDialogMobile : routeToDialogDesktop
 
 	const {params} = useQueryParams()
@@ -117,7 +118,7 @@ function Dialog() {
 export function Settings() {
 	const title = t('settings')
 
-	const isMobile = useIsMobile()
+	const isMobile = useIsMobile() && !IS_ANDROID
 
 	return (
 		<>

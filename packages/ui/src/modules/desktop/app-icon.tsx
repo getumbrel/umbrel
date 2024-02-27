@@ -39,7 +39,7 @@ export function AppIcon({
 			onClick={disabled ? undefined : onClick}
 			className={cn(
 				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none',
-				disabled && 'disabled',
+				disabled && 'disabled pointer-events-none',
 			)}
 			layout
 			initial={{

@@ -1,5 +1,4 @@
 import {indexBy} from 'remeda'
-import urlJoin from 'url-join'
 
 import {UserApp} from '@/trpc/trpc'
 
@@ -30,12 +29,20 @@ export function keyBy<T, U extends keyof T>(array: ReadonlyArray<T>, key: U): Re
 	return indexBy(array, (el) => el[key])
 }
 
+// Not using `url-join` or others because they remove desired slashes after joining. `new URL('?bla=1', 'http://localhost:3001/a/').href` preserves trailing slash to return 'http://localhost:3001/a/?bla=1'
+// The `transmission` app depends on this behavior because the app's full path is `http://localhost:9091/transmission/web/` but when joining a query string, we want it to be `http://localhost:9091/transmission/web/?bla=1`
+export function urlJoin(base: string, path: string) {
+	return new URL(path, base).href
+}
+
 export function appToUrl(app: UserApp) {
-	const baseUrl = app.torOnly
+	return app.torOnly
 		? `${location.protocol}//${app.hiddenService}:${app.port}`
 		: `${location.protocol}//${location.hostname}:${app.port}`
+}
 
-	return urlJoin(baseUrl, app.path ?? '')
+export function appToUrlWithAppPath(app: UserApp) {
+	return urlJoin(appToUrl(app), app.path ?? '')
 }
 
 export function isOnionPage() {
@@ -80,6 +87,8 @@ export function platform() {
 	if (isMac()) return 'mac'
 	return 'other'
 }
+
+export const IS_ANDROID = /Android/i.test(navigator.userAgent)
 
 export function isDev() {
 	return process.env.NODE_ENV === 'development'

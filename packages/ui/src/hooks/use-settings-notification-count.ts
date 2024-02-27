@@ -8,16 +8,17 @@ import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
 
+function useMounted() {
+	const [mounted, setMounted] = useState(false)
+	// First render sets mounted to true
+	useEffect(() => setMounted(true), [])
+	return mounted
+}
+
 export function useSettingsNotificationCount() {
 	const navigate = useNavigate()
 
-	const [mounted, setMounted] = useState(false)
-
-	// First render sets mounted to true
-	useEffect(() => {
-		if (!mounted) setMounted(true)
-	}, [mounted])
-
+	const mounted = useMounted()
 	const [count, setCount] = useState(0)
 
 	// Make all the calls at once so we can count properly
