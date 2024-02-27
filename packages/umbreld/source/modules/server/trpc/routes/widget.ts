@@ -1,67 +1,87 @@
 import z from 'zod'
 import {$} from 'execa'
 import fetch from 'node-fetch'
+import prettyBytes from 'pretty-bytes'
 
 import {router, privateProcedure} from '../trpc.js'
+import type Umbreld from '../../../../index.js'
+import { getDiskUsage, getMemoryUsage, getCpuUsage } from '../../../system.js'
 
 const MAX_ALLOWED_WIDGETS = 3
 
-const systemWidgets = {
-  storage: async function() {
-    // const data = await getStorageData()
-    // return data
-		return {
-			id: 'umbrel:storage',
-			type: 'stat-with-progress',
-			data: {
-				title: 'Storage',
-				value: '256 GB',
-				progressLabel: '1.75 TB left',
-				progress: 0.25,
+async function getStorageData(umbreld: Umbreld) {
+	const {size, totalUsed} = await getDiskUsage(umbreld)
+
+	return {
+		type: 'stat-with-progress',
+		link: '?dialog=live-usage',
+		title: 'Storage',
+		value: prettyBytes(totalUsed),
+		progressLabel: `${prettyBytes(size - totalUsed)} left`,
+		progress: ( totalUsed / size ).toFixed(2),
+	}
+}
+
+async function getMemoryData(umbreld: Umbreld) {
+	const {size, totalUsed} = await getMemoryUsage(umbreld)
+
+	return {
+		type: 'stat-with-progress',
+		link: '?dialog=live-usage',
+		title: 'Memory',
+		value: prettyBytes(totalUsed),
+		valueSub: prettyBytes(size),
+		progressLabel: `${prettyBytes(size - totalUsed)} left`,
+		progress: ( totalUsed / size ).toFixed(2),
+	}
+}
+
+async function getSystemStats(umbreld: Umbreld) {
+	const [cpuUsage, diskUsage, memoryUsage] = await Promise.all([
+		getCpuUsage(umbreld),
+		getDiskUsage(umbreld),
+		getMemoryUsage(umbreld)
+	]);
+
+	const { totalUsed: cpuTotalUsed } = cpuUsage;
+	const {size: diskSize, totalUsed: diskTotalUsed} = diskUsage;
+	const {size: memorySize, totalUsed: memoryTotalUsed} = memoryUsage;
+
+	return {
+		type: 'three-up',
+		link: '?dialog=live-usage',
+		items: [
+			{
+				icon: 'system-widget-cpu',
+				title: 'CPU',
+				value: `${cpuTotalUsed.toPrecision(2)}%`,
 			},
-		}
-  },
-  memory: async function() {
-    // const data = await getMemoryData()
-    // return data
-		return {
-			id: 'umbrel:memory',
-			type: 'stat-with-progress',
-			data: {
+			{
+				icon: 'system-widget-storage',
+				title: 'Free',
+				value: `${prettyBytes(diskSize - diskTotalUsed)}`,
+			},
+			{
+				icon: 'system-widget-memory',
 				title: 'Memory',
-				value: '5.8 GB',
-				valueSub: '/16GB',
-				progressLabel: '11.4 GB left',
-				progress: 0.36,
-			},
-		}
+				value: `${prettyBytes(memorySize - memoryTotalUsed)}`,
+			}
+		]
+	}
+}
+
+const systemWidgets = {
+  storage: async function(umbreld: Umbreld) {
+    const data = await getStorageData(umbreld)
+    return data
   },
-	'system-stats': async function() {
-		// const data = await getSystemStats()
-		// return data
-		return {
-			id: 'umbrel:system-stats',
-			type: 'three-up',
-			data: {
-				items: [
-					{
-						icon: 'system-widget-temperature',
-						title: 'Normal',
-						value: '56℃',
-					},
-					{
-						icon: 'system-widget-storage',
-						title: 'Free',
-						value: '1.75 TB',
-					},
-					{
-						icon: 'system-widget-memory',
-						title: 'Memory',
-						value: '5.8 GB',
-					},
-				],
-			},
-		}
+  memory: async function(umbreld: Umbreld) {
+    const data = await getMemoryData(umbreld)
+    return data
+  },
+	'system-stats': async function(umbreld: Umbreld) {
+		const data = await getSystemStats(umbreld)
+		return data
 	}
 }
 
@@ -178,7 +198,7 @@ export default router({
 			if (appId === 'umbrel') {
 				// This is a system widget
 				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
-				const widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets]()
+				const widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
 
 				return widgetData
 			} else {
@@ -217,134 +237,3 @@ export default router({
 			}
 		}),
 })
-
-// Saving Mark's types for later use
-
-export type WidgetType =
-	| 'stat-with-buttons'
-	| 'stat-with-progress'
-	| 'two-up-stat-with-progress'
-	| 'three-up'
-	| 'four-up'
-	| 'list-emoji'
-	| 'list'
-
-// ------------------------------
-
-/**
- * This link is relative to `RegistryApp['path']`
- * NOTE: type is created for this comment to appear in VSCode
- */
-type Link = string
-
-type FourUpItem = {
-	title: string
-	icon: string
-	value: string
-	valueSub: string
-}
-export type FourUpWidget = {
-	type: 'four-up'
-	link?: Link
-	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
-}
-
-type ThreeUpItem = {
-	icon: string
-	title: string
-	value: string
-}
-export type ThreeUpWidget = {
-	type: 'three-up'
-	link?: Link
-	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
-}
-
-// NOTE:
-// The long name feels like it could be just be two-up, but this two-up widget is
-// different from the others because it also has a progress. If we ever add one without a progress,
-// that one would be two-up.
-type TwoUpStatWithProgressItem = {
-	title: string
-	value: string
-	valueSub: string
-	/** Number from 0 to 1 */
-	progress: number
-}
-export type TwoUpStatWithProgressWidget = {
-	type: 'two-up-stat-with-progress'
-	link?: Link
-	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
-}
-
-export type StatWithProgressWidget = {
-	type: 'stat-with-progress'
-	link?: Link
-	title: string
-	value: string
-	valueSub?: string
-	progressLabel: string
-	/** Number from 0 to 1 */
-	progress: number
-}
-
-export type StatWithButtonsWidget = {
-	type: 'stat-with-buttons'
-	icon: string
-	title: string
-	value: string
-	valueSub: string
-	buttons: {
-		text: string
-		icon: string
-		link: Link
-	}[]
-}
-
-export type ListWidget = {
-	type: 'list'
-	link?: Link
-	items: {
-		text: string
-		textSub: string
-	}[]
-}
-
-export type ListEmojiWidget = {
-	type: 'list-emoji'
-	link?: Link
-	count: number
-	items: {
-		emoji: string
-		text: string
-	}[]
-}
-
-type AnyWidgetConfig =
-	| FourUpWidget
-	| ThreeUpWidget
-	| TwoUpStatWithProgressWidget
-	| StatWithProgressWidget
-	| StatWithButtonsWidget
-	| ListWidget
-	| ListEmojiWidget
-
-// Choose the widget AnyWidgetConfig based on the type `T` passed in, othwerwise `never`
-export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetConfig, {type: T}>
-
-// ------------------------------
-
-export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'stat-with-buttons'
-	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
-	  Omit<StatWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<StatWithButtonsWidget['buttons'], 'link'>}
-	: // Otherwise, just omit the `type`
-	  Omit<WidgetConfig<T>, 'type'>
-
-// Adding `= WidgetType` to `T` makes it so that if `T` is not provided, it defaults to `WidgetType`. Prevents us from always having to write `RegistryWidget<WidgetType>` when referring to the type.
-export type RegistryWidget<T extends WidgetType = WidgetType> = {
-	id: string
-	type: T
-	refresh?: number
-	// Examples aren't interactive so no need to include `link` in example
-	example?: ExampleWidgetConfig<T>
-}
