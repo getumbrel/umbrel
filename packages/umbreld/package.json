@@ -13,6 +13,7 @@
 	"private": true,
 	"scripts": {
 		"start": "./source/cli.ts",
+		"client": "UMBREL_DATA_DIR=./data UMBREL_TRPC_ENDPOINT=http://localhost:3001/trpc npm run start -- client",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "xo",
