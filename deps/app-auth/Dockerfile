@@ -14,7 +14,7 @@ RUN yarn
 COPY . .
 
 # Build frontend (vue app)
-RUN yarn build
+# RUN yarn build
 
 # Final image
 FROM node:16-buster-slim AS umbrel-app-auth
