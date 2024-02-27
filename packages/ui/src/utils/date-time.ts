@@ -4,6 +4,10 @@ import {de, enUS, es, fr, it, ja, nl, pt} from 'date-fns/locale'
 import {UNKNOWN} from '@/constants'
 import {SupportedLanguageCode} from '@/hooks/use-language'
 
+export const MS_PER_SECOND: number = 1000
+export const MS_PER_MINUTE: number = MS_PER_SECOND * 60
+export const MS_PER_HOUR: number = MS_PER_MINUTE * 60
+
 const langCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 	en: enUS,
 	de: de,

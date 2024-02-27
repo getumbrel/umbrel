@@ -1,13 +1,16 @@
 import {useState} from 'react'
+import {JSONTree} from 'react-json-tree'
 
 import {ErrorAlert} from '@/components/ui/alert'
+import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {useAuth} from '@/modules/auth/use-auth'
+import {Button} from '@/shadcn-components/ui/button'
 import {Input} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export default function LoginTest() {
-	const {loginWithJwt} = useAuth()
+	const {loginWithJwt, refreshToken, jwt} = useAuth()
 	const loginMut = trpcReact.user.login.useMutation({
 		onSuccess: loginWithJwt,
 	})
@@ -25,6 +28,9 @@ export default function LoginTest() {
 		},
 	})
 
+	// TODO: query debug trpc private route
+	const debug = trpcReact.debug.private.useQuery()
+
 	return (
 		<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmit}>
 			<div>
@@ -40,6 +46,11 @@ export default function LoginTest() {
 				{t('create-user')}
 			</button>
 			{loginMut.error && <ErrorAlert description={loginMut.error.message} />}
+			<Button onClick={refreshToken}>Refresh Token</Button>
+			<JSONTree data={{jwt, localStorageJwt: localStorage.getItem(JWT_LOCAL_STORAGE_KEY)}} />
+			<Button onClick={() => localStorage.removeItem(JWT_LOCAL_STORAGE_KEY)}>Remove JWT from localStorage</Button>
+			<JSONTree data={debug.data} />
+			<Button onClick={() => debug.refetch()}>Refetch debug</Button>
 		</form>
 	)
 }
