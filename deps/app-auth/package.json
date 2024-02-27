@@ -7,9 +7,7 @@
     "start": "node ./bin/www",
     "test": "mocha 'test/**/*.js'",
     "coverage": "nyc --all mocha 'test/**/*.js'",
-    "postcoverage": "codecov",
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build --mode production"
+    "postcoverage": "codecov"
   },
   "dependencies": {
     "animate.css": "^3.7.2",
