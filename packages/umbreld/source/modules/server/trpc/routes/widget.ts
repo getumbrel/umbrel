@@ -185,18 +185,21 @@ export default router({
 				// This is an app widget
 				// Get widget info from the app's manifest
 				const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
-				const {container, port, endpoint} = widgetInfo
+				
+				// endpoint format: <service>:<port>/<api-endpoint>
+				const {endpoint} = widgetInfo
+				const [service, portAndEndpoint] = endpoint.split(':')
 
 				// Retrieve the container name from the compose file
 				// This works because we have a temporary patch to force all container names to the old Compose scheme to maintain compatibility between Compose v1 and v2
 				const compose = await ctx.apps.getApp(appId).readCompose()
-				const containerName = compose.services![container].container_name
+				const containerName = compose.services![service].container_name
 
-				if (!containerName) throw new Error(`No container named ${container} found for app ${appId}`)
+				if (!containerName) throw new Error(`No container_name found for service ${service} in app ${appId}`)
 
 				const {stdout: containerIp} = await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
-	
-				const url = `http://${containerIp}:${port}/${endpoint}`
+
+				const url = `http://${containerIp}:${portAndEndpoint}`
 	
 				try {
 					const response = await fetch(url)
