@@ -1,6 +1,8 @@
 const express = require("express");
 const axios = require("axios");
 const { StatusCodes } = require("http-status-codes");
+const fs = require("fs").promises;
+const yaml = require("js-yaml");
 
 // const CONSTANTS = require("../utils/const.js");
 const manager = require("../utils/manager.js");
@@ -93,8 +95,9 @@ router.post(
 router.get(
   "/v1/account/wallpaper",
   safeHandler(async (req, res) => {
-    // res.send((await manager.account.wallpaper()).data);
-    res.send("2");
+    const store = yaml.load(await fs.readFile("/data/umbrel.yaml"));
+    const { wallpaper } = store.user;
+    res.send(wallpaper);
   })
 );
 
