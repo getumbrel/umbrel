@@ -4,7 +4,6 @@ import {useState} from 'react'
 import {RegistryWidget} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export const MAX_WIDGETS = 3
 
@@ -17,9 +16,9 @@ export const settingsWidgets: [
 		id: 'umbrel:storage',
 		type: 'stat-with-progress',
 		example: {
-			title: t('storage'),
+			title: 'Storage',
 			value: '256 GB',
-			progressLabel: t('something-left', {left: '1.75 TB'}),
+			progressLabel: '1.75 TB left',
 			progress: 0.25,
 		},
 	},
@@ -27,10 +26,10 @@ export const settingsWidgets: [
 		id: 'umbrel:memory',
 		type: 'stat-with-progress',
 		example: {
-			title: t('memory'),
+			title: 'Memory',
 			value: '5.8 GB',
 			valueSub: '/16GB',
-			progressLabel: t('something-left', {left: '11.4 GB'}),
+			progressLabel: '11.4 GB left',
 			progress: 0.36,
 		},
 	},
@@ -41,17 +40,17 @@ export const settingsWidgets: [
 			items: [
 				{
 					icon: 'system-widget-temperature',
-					title: t('temp.normal'),
+					title: 'Normal',
 					value: '56℃',
 				},
 				{
 					icon: 'system-widget-storage',
-					title: t('free'),
+					title: 'Free',
 					value: '1.75 TB',
 				},
 				{
 					icon: 'system-widget-memory',
-					title: t('memory'),
+					title: 'Memory',
 					value: '5.8 GB',
 				},
 			],
