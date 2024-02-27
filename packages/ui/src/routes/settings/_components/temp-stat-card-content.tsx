@@ -14,6 +14,7 @@ export function TempStatCardContent({tempInCelcius, defaultUnit}: {tempInCelcius
 
 	const tempNumber = unit === 'c' ? tempInCelcius : celciusToFahrenheit(tempInCelcius)
 	const tempUnitLabel = tempDescriptionsKeyed[unit].label
+	const tempMessage = tempNumber === 69 ? t('temp.nice') : tempToMessage(tempInCelcius)
 
 	// 60% opacity to base 16
 	const opacity = (60).toString(16)
@@ -39,7 +40,7 @@ export function TempStatCardContent({tempInCelcius, defaultUnit}: {tempInCelcius
 								} as React.CSSProperties // forcing because of `--tw-ring-color`
 							}
 						/>
-						<div className={cn(cardSecondaryValueClass, 'leading-inter-trimmed')}>{tempToMessage(tempInCelcius)}</div>
+						<div className={cn(cardSecondaryValueClass, 'leading-inter-trimmed')}>{tempMessage}</div>
 					</div>
 				</div>
 				<SegmentedControl

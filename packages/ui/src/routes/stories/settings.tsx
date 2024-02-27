@@ -3,6 +3,7 @@ import {range} from 'remeda'
 import {Card} from '@/components/ui/card'
 import {H2, H3} from '@/layouts/stories'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
+import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
 
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
@@ -60,6 +61,14 @@ export default function SettingsStory() {
 				</Card>
 			</div>
 			<H2>Tempurature Card</H2>
+			<Button
+				onClick={() => {
+					localStorage.removeItem('UMBREL_temp-unit')
+					window.location.reload()
+				}}
+			>
+				Clear local storage temp
+			</Button>
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
@@ -81,6 +90,9 @@ export default function SettingsStory() {
 			<H3>69</H3>
 			<Card>
 				<TempStatCardContent tempInCelcius={69} defaultUnit='c' />
+			</Card>
+			<Card>
+				<TempStatCardContent tempInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
 			<div className='flex flex-row flex-wrap gap-2'>

@@ -10,13 +10,13 @@ export function tempToColor(tempInCelcius?: number) {
 	const temp = tempInCelcius
 	if (temp === undefined) return '#CCCCCC'
 
-	if (temp > 85) {
+	if (temp >= 95) {
 		return '#F45252'
 	}
-	if (temp > 75) {
+	if (temp > 80) {
 		return '#F1CB6B'
 	}
-	if (temp > 65) {
+	if (temp > 70) {
 		return '#E6E953'
 	}
 	if (temp > 20) {
@@ -31,16 +31,13 @@ export function tempToMessage(tempInCelcius?: number) {
 
 	const temp = tempInCelcius
 
-	if (temp > 85) {
+	if (temp >= 95) {
 		return t('temp.dangerously-hot')
 	}
-	if (temp > 75) {
+	if (temp > 80) {
 		return t('temp.hot')
 	}
-	if (temp === 69) {
-		return t('temp.nice')
-	}
-	if (temp > 40) {
+	if (temp > 70) {
 		return t('temp.warm')
 	}
 	if (temp > 20) {
