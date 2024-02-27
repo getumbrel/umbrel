@@ -26,38 +26,27 @@ export default function LoginWithUmbrel() {
 		// alert('submit')
 		try {
 			const data = await login({password, totpToken: ''})
-			// if ('error' in data) {
-			// 	throw new Error(data.error?.message)
-			// }
-			if ('error' in data) {
-				if (data.error?.message === 'Missing 2FA token') {
+			if ('error' in data && data.error) {
+				if (data.error.message === 'Missing 2FA token') {
 					setStep('2fa')
 				} else {
-					toast.error(t('unexpected-error'))
+					toast.error(data.error.message)
 				}
 			}
 		} catch (error: any) {
-			debugger
 			if (error.message === 'Missing 2FA token') {
 				setStep('2fa')
 			} else {
-				toast.error(t('unexpected-error'))
+				toast.error(error?.message)
 			}
 		}
-		// transitionViewIfSupported(() => {
-		// 	flushSync(() => {
-		// 		loginMut.mutate({password})
-		// 	})
-		// })
 	}
 
-	const handleSubmit2fa = async (totpToken: string) => {
-		const res = await login({password, totpToken})
-		debugger
+	// Specifying return because we want to ensure that the return type is a boolean for the `onCodeCheck` prop
+	const handleSubmit2fa = async (totpToken: string): Promise<boolean> => {
+		const data = await login({password, totpToken})
 
-		// const res = await loginMut.mutateAsync({password, totpToken})
-		// return !!res
-		return true
+		return 'error' in data
 	}
 
 	switch (step) {
@@ -104,8 +93,6 @@ function useLogin() {
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({password, totpToken}),
 		}).then(async (res) => {
-			debugger
-
 			const data = (await res.json()) as
 				| {
 						url: string
@@ -190,7 +177,6 @@ function useWallpaperId() {
 			.then(async (res) => {
 				// `unknown` because `any` is too loose
 				const id = (await res.text()) as unknown
-				debugger
 				const knownId = arrayIncludes(wallpaperIds, id) ? id : DEFAULT_WALLPAPER_ID
 				setWallpaper(knownId)
 			})
