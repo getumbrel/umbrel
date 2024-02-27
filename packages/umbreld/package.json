@@ -19,7 +19,7 @@
 		"test:coverage": "open ./coverage/index.html",
 		"test-everything": "npm run format && npm run test -- --run && npm run lint",
 		"watch": "NODE_ENV=development nodemon --ext js,json,ts --ignore data --ignore coverage --ignore build --ignore release --exec npm run",
-		"dev": "npm run watch -- start -- -- --data-directory ./data --port 3001 --log-level verbose",
+		"dev": "UMBREL_UI_PROXY=http://localhost:3000 npm run watch -- start -- -- --data-directory ./data --port 3001 --log-level verbose",
 		"build": "tsx scripts/build.ts",
 		"prepare-release": "tsx scripts/prepare-release.ts",
 		"timestamp-release": "ots-cli.js stamp release/SHA256SUMS",

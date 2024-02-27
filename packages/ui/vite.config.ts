@@ -11,6 +11,7 @@ export default defineConfig({
 		},
 	},
 	build: {
+		outDir: path.resolve(__dirname, '../umbreld/ui'),
 		rollupOptions: {
 			output: {
 				minifyInternalExports: true,
