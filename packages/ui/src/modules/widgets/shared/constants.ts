@@ -128,3 +128,58 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 	// Examples aren't interactive so no need to include `link` in example
 	example?: ExampleWidgetConfig<T>
 }
+
+// ------------------------------
+
+export const MAX_WIDGETS = 3
+
+export const settingsWidgets: [
+	RegistryWidget<'stat-with-progress'>,
+	RegistryWidget<'stat-with-progress'>,
+	RegistryWidget<'three-up'>,
+] = [
+	{
+		id: 'umbrel:storage',
+		type: 'stat-with-progress',
+		example: {
+			title: 'Storage',
+			value: '256 GB',
+			progressLabel: '1.75 TB left',
+			progress: 0.25,
+		},
+	},
+	{
+		id: 'umbrel:memory',
+		type: 'stat-with-progress',
+		example: {
+			title: 'Memory',
+			value: '5.8 GB',
+			valueSub: '/16GB',
+			progressLabel: '11.4 GB left',
+			progress: 0.36,
+		},
+	},
+	{
+		id: 'umbrel:system-stats',
+		type: 'three-up',
+		example: {
+			items: [
+				{
+					icon: 'system-widget-temperature',
+					title: 'Normal',
+					value: '56℃',
+				},
+				{
+					icon: 'system-widget-storage',
+					title: 'Free',
+					value: '1.75 TB',
+				},
+				{
+					icon: 'system-widget-memory',
+					title: 'Memory',
+					value: '5.8 GB',
+				},
+			],
+		},
+	},
+]
