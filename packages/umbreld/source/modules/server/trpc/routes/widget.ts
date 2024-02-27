@@ -4,15 +4,67 @@ import {execa} from 'execa'
 import axios, {AxiosError} from 'axios'
 
 import {router, privateProcedure} from '../trpc.js'
-import {type Context} from '../context.js'
 
 const MAX_ALLOWED_WIDGETS = 3
 
-const UMBREL_CORE_WIDGETS = [
-	'umbrel:storage',
-	'umbrel:memory',
-	'umbrel:system',
-]
+const systemWidgets = {
+  storage: async function() {
+    // const data = await getStorageData()
+    // return data
+		return {
+			id: 'umbrel:storage',
+			type: 'stat-with-progress',
+			data: {
+				title: 'Storage',
+				value: '256 GB',
+				progressLabel: '1.75 TB left',
+				progress: 0.25,
+			},
+		}
+  },
+  memory: async function() {
+    // const data = await getMemoryData()
+    // return data
+		return {
+			id: 'umbrel:memory',
+			type: 'stat-with-progress',
+			data: {
+				title: 'Memory',
+				value: '5.8 GB',
+				valueSub: '/16GB',
+				progressLabel: '11.4 GB left',
+				progress: 0.36,
+			},
+		}
+  },
+	'system-stats': async function() {
+		// const data = await getSystemStats()
+		// return data
+		return {
+			id: 'umbrel:system-stats',
+			type: 'three-up',
+			data: {
+				items: [
+					{
+						icon: 'system-widget-temperature',
+						title: 'Normal',
+						value: '56℃',
+					},
+					{
+						icon: 'system-widget-storage',
+						title: 'Free',
+						value: '1.75 TB',
+					},
+					{
+						icon: 'system-widget-memory',
+						title: 'Memory',
+						value: '5.8 GB',
+					},
+				],
+			},
+		}
+	}
+}
 
 // Splits a widgetId into appId and widgetName
 // e.g., "transmission:status" => { appId: "transmission", widgetName: "status" }
@@ -25,9 +77,8 @@ function splitWidgetId(widgetId: string) {
 export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
-		// TODO: should this also return Umbrel Core widgets?
-		// Iterate over installed apps and show all possible widgets.
-		const widgetIdPromises = ctx.apps.instances.map(async (app) => {
+		// Iterate over installed apps and get their widgetIds
+		const appWidgetIdPromises = ctx.apps.instances.map(async (app) => {
 			const manifest = await app.readManifest()
 
 			if (manifest.widgets) {
@@ -36,8 +87,12 @@ export default router({
 			return []
 		})
 
-		const nestedWidgetIds = await Promise.all(widgetIdPromises)
-		const widgetIds = nestedWidgetIds.flat()
+		const nestedAppWidgetIds = await Promise.all(appWidgetIdPromises)
+		let appWidgetIds = nestedAppWidgetIds.flat()
+
+		// Add system widgetIds
+		const systemWidgetIds = Object.keys(systemWidgets).map(widget => `umbrel:${widget}`);
+		const widgetIds = [...appWidgetIds, ...systemWidgetIds];
 
 		return widgetIds
 	}),
@@ -59,11 +114,16 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
 
-			// TODO: need to also allow Umbrel Core widgets
-			
-			// Validate widget by checking if it exists in the app's manifest
-			// Throws an error if the widget doesn't exist
-			await ctx.apps.getApp(appId).getWidget(widgetName)
+
+			// Validate widget
+			if (appId === 'umbrel') {
+				// This is a system widget
+				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+			} else {
+				// This is an app widget
+				// Throws an error if the widget doesn't exist
+				await ctx.apps.getApp(appId).getWidget(widgetName)
+			}
 
 			// Save widget ID
 			await ctx.umbreld.store.getWriteLock(async ({get, set}) => {
@@ -114,48 +174,55 @@ export default router({
 			}),
 		)
 		.query(async ({ctx, input}) => {
-			// TODO: How will we handle Umbrel core widgets? Will the frontend run a function directly instead of making a request to this endpoint?
-
-			// Get widget info from the app's manifest
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
-			const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
-			const {container, port, endpoint} = widgetInfo
 
-			// Get all running containers from docker
-			// TODO: what should we do here for the case where an app is installed but not running?
-			const {stdout: allContainers} = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
-
-			// Get the specific container name for the widget endpoint
-			const containerName = allContainers.split('\n').find((name) => {
-				// Using regex to match the container name across differnet Docker compose naming conventions (e.g., `app_container_1` and `app-container-1`)
-				// and to precent partial matches with similar container names (e.g., `app_container_1` and `app_container-proxy_1`)
-				const regex = new RegExp(`^${appId}[-_]${container}[-_][0-9]+$`)
-				return regex.test(name)
-			})
-
-			if (!containerName) {
-				throw new Error(`No container named ${container} found for app ${appId}`)
-			}
-
-			// Find container IP
-			const {stdout: containerIp} = await execa('docker', [
-				'inspect',
-				'-f',
-				'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
-				containerName,
-			])
-
-			const url = `http://${containerIp}:${port}/${endpoint}`
-
-			try {
-				const response = await axios.get(url)
-				const widgetData = response.data
+			if (appId === 'umbrel') {
+				// This is a system widget
+				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+				const widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets]()
 				return widgetData
-			} catch (error) {
-				if (error instanceof AxiosError) {
-					throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
+			} else {
+				// This is an app widget
+				// Get widget info from the app's manifest
+				const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
+				const {container, port, endpoint} = widgetInfo
+	
+				// Get all running containers from docker
+				// TODO: what should we do here for the case where an app is installed but not running?
+				const {stdout: allContainers} = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
+	
+				// Get the specific container name for the widget endpoint
+				const containerName = allContainers.split('\n').find((name) => {
+					// Using regex to match the container name across differnet Docker compose naming conventions (e.g., `app_container_1` and `app-container-1`)
+					// and to precent partial matches with similar container names (e.g., `app_container_1` and `app_container-proxy_1`)
+					const regex = new RegExp(`^${appId}[-_]${container}[-_][0-9]+$`)
+					return regex.test(name)
+				})
+	
+				if (!containerName) {
+					throw new Error(`No container named ${container} found for app ${appId}`)
 				}
-				throw error
+	
+				// Find container IP
+				const {stdout: containerIp} = await execa('docker', [
+					'inspect',
+					'-f',
+					'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
+					containerName,
+				])
+	
+				const url = `http://${containerIp}:${port}/${endpoint}`
+	
+				try {
+					const response = await axios.get(url)
+					const widgetData = response.data
+					return widgetData
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
+					}
+					throw error
+				}
 			}
 		}),
 })
