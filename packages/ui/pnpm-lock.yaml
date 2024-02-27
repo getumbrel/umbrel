@@ -271,6 +271,9 @@ devDependencies:
   tailwindcss-animate:
     specifier: 1.0.7
     version: 1.0.7(tailwindcss@3.4.1)
+  ts-plugin-sort-import-suggestions:
+    specifier: ^1.0.4
+    version: 1.0.4
   typescript:
     specifier: 5.2.2
     version: 5.2.2
@@ -6740,6 +6743,10 @@ packages:
 
   /ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
+    dev: true
+
+  /ts-plugin-sort-import-suggestions@1.0.4:
+    resolution: {integrity: sha512-85n5lm2OQQ+b7aRNK9omU1gmjMNXRsgeLwojm5u4OSY5sVBkAHTcgMQPEeHMNlyyfFW0uXnwgqAU0pNfhD96Bw==}
     dev: true
 
   /tslib@1.14.1:
