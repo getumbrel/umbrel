@@ -1,8 +1,10 @@
 const express = require("express");
 const axios = require("axios");
 const { StatusCodes } = require("http-status-codes");
+const fs = require("fs").promises;
+const yaml = require("js-yaml");
 
-const CONSTANTS = require("../utils/const.js");
+// const CONSTANTS = require("../utils/const.js");
 const manager = require("../utils/manager.js");
 const dashboard = require("../utils/dashboard.js");
 const safeHandler = require("../utils/safe_handler.js");
@@ -12,17 +14,30 @@ const validateToken = require("../middleware/validate_token.js");
 
 const router = express.Router();
 
-// Serve static Vue app out of /app/dist
-router.use("/js", express.static("/app/dist/js"));
-router.use("/css", express.static("/app/dist/css"));
-router.use("/img", express.static("/app/dist/img"));
-router.use("/favicon.png", express.static("/app/dist/favicon.png"));
-router.use("/favicon.ico", express.static("/app/dist/favicon.ico"));
 router.use(express.json());
+
+// --- Public paths ---
+
+const publicPaths = [
+  // "/app-auth",
+  "/assets",
+  "/favicon",
+  "/figma-exports",
+  "/locales",
+  "/wallpapers",
+  // not needed
+  // "/generated-tabler-icons"
+];
+
+publicPaths.forEach((path) => {
+  router.use(path, express.static(`/app/dist${path}`));
+});
 
 router.get("/", safeHandler(validateToken.mw()), (req, res) => {
   res.sendFile("/app/dist/index.html");
 });
+
+// ---
 
 router.post(
   "/v1/account/login",
@@ -80,7 +95,9 @@ router.post(
 router.get(
   "/v1/account/wallpaper",
   safeHandler(async (req, res) => {
-    res.send((await manager.account.wallpaper()).data);
+    const store = yaml.load(await fs.readFile("/data/umbrel.yaml"));
+    const { wallpaper } = store.user;
+    res.send(wallpaper);
   })
 );
 
@@ -95,6 +112,7 @@ router.get(
   })
 );
 
+// TODO: remove
 router.get(
   "/wallpapers/:filename(\\d+[.]\\w+)",
   safeHandler(async (req, res) => {

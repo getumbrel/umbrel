@@ -19,7 +19,9 @@ services:
     # TODO: IMPORTANT build new image and use that here
     # image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
     user: '1000:1000'
-    build: ../../../../../../deps/app-auth
+    build:
+      dockerfile: deps/app-auth/Dockerfile
+      context: ../../../../../../
     restart: on-failure
     environment:
       PORT: $AUTH_PORT
@@ -33,6 +35,7 @@ services:
     volumes:
       - ${UMBREL_DATA_DIR}/tor/data:/var/lib/tor:ro
       - ${UMBREL_DATA_DIR}/app-data:/app-data:ro
+      - ${UMBREL_DATA_DIR}:/data:ro
     ports:
       - '${AUTH_PORT}:${AUTH_PORT}'
     networks:
