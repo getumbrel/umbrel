@@ -26,8 +26,8 @@ RUN apt-get install --yes systemd-sysv
 RUN apt-get install --yes systemd-boot
 
 # Install non-free firmware
-RUN if [[ "$TARGETARCH" == "amd64" ]]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
-RUN if [[ "$TARGETARCH" == "arm64" ]]; then apt-get install --yes raspi-firmware; fi
+RUN if [ "$TARGETARCH" = "amd64" ]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
+RUN if [ "$TARGETARCH" = "arm64" ]; then apt-get install --yes raspi-firmware; fi
 
 # Install essential networking services
 RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
