@@ -9,9 +9,10 @@
 	},
 	"scripts": {
 		"dev": "vite --port 3000",
-		"postinstall": "node copy-tabler-icons.js",
-		"prebuild": "node copy-tabler-icons.js",
 		"build": "vite build",
+		"app-auth:dev": "vite --config app-auth/vite.config.js --port 2001",
+		"app-auth:build": "vite build --config app-auth/vite.config.js && mv dist-app-auth/app-auth/index.html dist-app-auth/index.html",
+		"app-auth:start": "serve -p 2003 dist-app-auth",
 		"lint": "eslint .",
 		"preview": "vite preview --port 4000",
 		"build-remote": "ssh root@mark-dev './pull.sh'",
