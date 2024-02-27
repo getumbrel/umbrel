@@ -44,7 +44,6 @@ services:
 networks:
   default:
     name: umbrel_main_network
-    external: true
     ipam:
       driver: default
       config:
