@@ -205,4 +205,15 @@ export default class App {
 		const result = await appScript(this.#umbreld, 'logs', this.id)
 		return result.stdout
 	}
+
+	// Returns a specific widget's info from an app's manifest
+	async getWidget(widgetId: string) {
+		const manifest = await this.readManifest()
+		if (!manifest.widgets) throw new Error(`No widgets found for app ${this.id}`)
+
+		const widget = manifest.widgets.find((widget) => widget.id === widgetId)
+		if (!widget) throw new Error(`Invalid widget ${widgetId} for app ${this.id}`)
+
+		return widget
+	}
 }

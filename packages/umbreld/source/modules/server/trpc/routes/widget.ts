@@ -22,19 +22,6 @@ function splitWidgetId(widgetId: string) {
 	return {appId, widgetName}
 }
 
-// Returns a specific widget's info from an app's manifest
-async function getWidgetInfoFromManifest(ctx: Context, appId: string, widgetName: string) {
-	// Get the app's manifest
-	const manifest = await ctx.apps.getApp(appId).readManifest()
-	if (!manifest.widgets) throw new Error(`No widgets found for app ${appId}`)
-
-	// Grab the specific widget data from the app's manifest
-	const widgetInfo = manifest.widgets.find((widget) => widget.id === widgetName)
-	if (!widgetInfo) throw new Error(`No widget found for id ${appId}:${widgetName}`)
-
-	return widgetInfo
-}
-
 export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
@@ -72,9 +59,11 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
 
-			// Validate widget by checking if it exists in the app's manifest
 			// TODO: need to also allow Umbrel Core widgets
-			await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			
+			// Validate widget by checking if it exists in the app's manifest
+			// Throws an error if the widget doesn't exist
+			await ctx.apps.getApp(appId).getWidget(widgetName)
 
 			// Save widget ID
 			await ctx.umbreld.store.getWriteLock(async ({get, set}) => {
@@ -129,7 +118,7 @@ export default router({
 
 			// Get widget info from the app's manifest
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
-			const widgetInfo = await getWidgetInfoFromManifest(ctx, appId, widgetName)
+			const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
 			const {container, port, endpoint} = widgetInfo
 
 			// Get all running containers from docker
