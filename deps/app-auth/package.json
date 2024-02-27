@@ -7,7 +7,8 @@
     "start": "node ./bin/www",
     "test": "mocha 'test/**/*.js'",
     "coverage": "nyc --all mocha 'test/**/*.js'",
-    "postcoverage": "codecov"
+    "postcoverage": "codecov",
+    "build": "docker buildx build --platform linux/amd64,linux/arm64 --tag getumbrel/auth-server --file Dockerfile ../../"
   },
   "dependencies": {
     "animate.css": "^3.7.2",
