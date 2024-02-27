@@ -32,6 +32,7 @@ export function InstallTheseFirstDialog({
 	toInstallFirstIds: string[]
 }) {
 	const appsQ = trpcReact.appStore.registry.useQuery()
+	// TODO: check that the registry logic is correct
 	const apps = appsQ.data?.find((repo) => repo?.meta.id === registryId)?.apps ?? []
 	const appsKeyed = keyBy(apps, 'id')
 	const app = apps?.find((app) => app.id === appId)
@@ -54,6 +55,7 @@ export function InstallTheseFirstDialog({
 							key={app.id}
 							icon={app.icon}
 							appName={app.name}
+							// TODO: link to community app store if needed
 							to={`/app-store/${app.id}`}
 							onClick={() => onOpenChange(false)}
 						/>
