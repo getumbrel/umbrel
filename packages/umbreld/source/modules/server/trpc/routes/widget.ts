@@ -1,7 +1,6 @@
 import z from 'zod'
-// importing {execa} instead of {$} due to issues with template parsing for docker commands using $ syntax
-import {execa} from 'execa'
-import axios, {AxiosError} from 'axios'
+import {$} from 'execa'
+import fetch from 'node-fetch'
 
 import {router, privateProcedure} from '../trpc.js'
 
@@ -180,48 +179,37 @@ export default router({
 				// This is a system widget
 				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
 				const widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets]()
+
 				return widgetData
 			} else {
 				// This is an app widget
 				// Get widget info from the app's manifest
 				const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
 				const {container, port, endpoint} = widgetInfo
-	
-				// Get all running containers from docker
-				// TODO: what should we do here for the case where an app is installed but not running?
-				const {stdout: allContainers} = await execa('docker', ['container', 'ls', '--format', '{{.Names}}'])
-	
-				// Get the specific container name for the widget endpoint
-				const containerName = allContainers.split('\n').find((name) => {
-					// Using regex to match the container name across differnet Docker compose naming conventions (e.g., `app_container_1` and `app-container-1`)
-					// and to precent partial matches with similar container names (e.g., `app_container_1` and `app_container-proxy_1`)
-					const regex = new RegExp(`^${appId}[-_]${container}[-_][0-9]+$`)
-					return regex.test(name)
-				})
-	
-				if (!containerName) {
-					throw new Error(`No container named ${container} found for app ${appId}`)
-				}
-	
-				// Find container IP
-				const {stdout: containerIp} = await execa('docker', [
-					'inspect',
-					'-f',
-					'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}',
-					containerName,
-				])
+
+				// Retrieve the container name from the compose file
+				// This works because we have a temporary patch to force all container names to the old Compose scheme to maintain compatibility between Compose v1 and v2
+				const compose = await ctx.apps.getApp(appId).readCompose()
+				const containerName = compose.services![container].container_name
+
+				if (!containerName) throw new Error(`No container named ${container} found for app ${appId}`)
+
+				const {stdout: containerIp} = await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
 	
 				const url = `http://${containerIp}:${port}/${endpoint}`
 	
 				try {
-					const response = await axios.get(url)
-					const widgetData = response.data
+					const response = await fetch(url)
+					if (!response.ok) throw new Error(`Failed to fetch data from ${url}: ${response.statusText}`)
+					const widgetData = await response.json()
+
 					return widgetData
 				} catch (error) {
-					if (error instanceof AxiosError) {
+					if (error instanceof Error) {
 						throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
+					} else {
+						throw new Error(`An unexpected error occured while fetching data from ${url}: ${error}`)
 					}
-					throw error
 				}
 			}
 		}),
