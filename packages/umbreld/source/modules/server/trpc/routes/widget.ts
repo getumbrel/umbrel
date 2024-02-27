@@ -8,6 +8,12 @@ import {type Context} from '../context.js'
 
 const MAX_ALLOWED_WIDGETS = 3
 
+const UMBREL_CORE_WIDGETS = [
+	'umbrel:storage',
+	'umbrel:memory',
+	'umbrel:system',
+]
+
 // Splits a widgetId into appId and widgetName
 // e.g., "transmission:status" => { appId: "transmission", widgetName: "status" }
 function splitWidgetId(widgetId: string) {
@@ -33,15 +39,12 @@ export default router({
 	// List all possible widgets that can be activated
 	listAll: privateProcedure.query(async ({ctx}) => {
 		// TODO: should this also return Umbrel Core widgets?
-		const installedApps = await ctx.apps.getInstalledApps()
-
 		// Iterate over installed apps and show all possible widgets.
-		const widgetIdPromises = installedApps.map(async (appId) => {
-			const app = ctx.apps.getApp(appId)
+		const widgetIdPromises = ctx.apps.instances.map(async (app) => {
 			const manifest = await app.readManifest()
 
 			if (manifest.widgets) {
-				return manifest.widgets.map((widget: {id: string}) => `${appId}:${widget.id}`)
+				return manifest.widgets.map((widget: {id: string}) => `${app.id}:${widget.id}`)
 			}
 			return []
 		})
