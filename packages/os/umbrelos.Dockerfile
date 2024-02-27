@@ -23,7 +23,9 @@ RUN apt-get install --yes systemd-sysv
 # Install boot tooling
 # We don't actually use systemd-boot as a bootloader since Mender injects GRUB
 # but we use its systemd-repart tool to expand partitions on boot.
-RUN apt-get install --yes systemd-boot
+# We install mender-client via apt because injecting via mender-convert appears
+# to be broken on bookworm.
+RUN apt-get install --yes systemd-boot mender-client
 
 # Install non-free firmware
 RUN if [ "$TARGETARCH" = "amd64" ]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
