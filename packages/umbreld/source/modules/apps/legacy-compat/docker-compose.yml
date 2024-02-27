@@ -20,6 +20,9 @@ services:
     # image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
     user: '1000:1000'
     build: ../../../../../../deps/app-auth
+    # build:
+    #   path: ../../../../../../deps/app-auth
+    #   context: ../../../../../../deps
     restart: on-failure
     environment:
       PORT: $AUTH_PORT
@@ -41,6 +44,7 @@ services:
 networks:
   default:
     name: umbrel_main_network
+    external: true
     ipam:
       driver: default
       config:
