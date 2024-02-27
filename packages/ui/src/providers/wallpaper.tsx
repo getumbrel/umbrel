@@ -125,11 +125,11 @@ export const wallpapers = [
 
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
-const wallpaperIds = wallpapers.map((w) => w.id)
+export const wallpaperIds = wallpapers.map((w) => w.id)
 
 // ---
 
-const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
+export const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
 
 const nullWallpaper = {
 	id: undefined,
@@ -180,14 +180,7 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 
 	const prevId = usePreviousDistinct(wallpaper.id)
 
-	const {brandColorHsl} = wallpaper
-
-	useLayoutEffect(() => {
-		const el = document.documentElement
-		el.style.setProperty('--color-brand', brandColorHsl)
-		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
-		el.style.setProperty('--color-brand-lightest', brandHslLightest(brandColorHsl))
-	}, [brandColorHsl])
+	useWallpaperCssVars(wallpaper.id)
 
 	useLayoutEffect(() => {
 		if (wallpaper.id === prevId) return
@@ -215,6 +208,17 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 			{children}
 		</WallPaperContext.Provider>
 	)
+}
+
+export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
+	const {brandColorHsl} = wallpaperId ? wallpapersKeyed[wallpaperId] : wallpapersKeyed[DEFAULT_WALLPAPER_ID]
+
+	useLayoutEffect(() => {
+		const el = document.documentElement
+		el.style.setProperty('--color-brand', brandColorHsl)
+		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
+		el.style.setProperty('--color-brand-lightest', brandHslLightest(brandColorHsl))
+	}, [brandColorHsl])
 }
 
 /**
