@@ -15,7 +15,6 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				index: path.resolve(__dirname, 'index.html'),
-				'auth-proxy': path.resolve(__dirname, 'index-auth-proxy.html'),
 			},
 			output: {
 				minifyInternalExports: true,
