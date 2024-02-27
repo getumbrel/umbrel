@@ -5,7 +5,7 @@ import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
 import {cliClient} from './modules/cli-client.js'
-import provision from './modules/provision.js'
+import provision from './modules/provision/provision.js'
 
 import update from './modules/migrations/index.js'
 import Umbreld, {type UmbreldOptions} from './index.js'
@@ -24,7 +24,7 @@ if (process.argv.includes('--update')) {
 }
 
 // Installs required OS dependencies
-if (process.argv.includes('--install-os-dependencies')) {
+if (process.argv.includes('provision-os')) {
 	await provision()
 	process.exit(0)
 }

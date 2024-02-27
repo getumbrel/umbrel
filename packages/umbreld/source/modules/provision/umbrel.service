@@ -1,0 +1,14 @@
+[Unit]
+Description=Umbrel daemon
+After=network-online.target docker.service
+
+[Service]
+TimeoutStopSec=15min
+ExecStart=umbreld --data-directory=/home/umbrel/umbrel
+Restart=always
+# This prevents us hitting restart rate limits and ensures we keep restarting
+# indefinitely.
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target

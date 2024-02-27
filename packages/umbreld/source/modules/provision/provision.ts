@@ -1,7 +1,9 @@
 import crypto from 'node:crypto'
-import fs from 'node:fs'
+import {fileURLToPath} from 'node:url'
+import {dirname, join} from 'node:path'
 
 import fetch from 'node-fetch'
+import fse from 'fs-extra'
 import {$} from 'execa'
 
 // Quickly hack together some yq install logic based on the old install bash script.
@@ -27,10 +29,10 @@ async function downloadAndInstallYq() {
 		if (!response.ok) throw new Error(`Failed to download yq: ${response.statusText}`)
 
 		// Save the downloaded binary to a temp file
-		fs.writeFileSync(yqTempFile, Buffer.from(await response.arrayBuffer()))
+		await fse.writeFile(yqTempFile, Buffer.from(await response.arrayBuffer()))
 
 		// Calculate the SHA256 checksum of the downloaded file
-		const fileBuffer = fs.readFileSync(yqTempFile)
+		const fileBuffer = await fse.readFile(yqTempFile)
 		const hashSum = crypto.createHash('sha256')
 		hashSum.update(fileBuffer)
 		const hex = hashSum.digest('hex')
@@ -50,10 +52,34 @@ async function downloadAndInstallYq() {
 	}
 }
 
+// Install systemd service
+async function installService() {
+	const currentFilename = fileURLToPath(import.meta.url)
+	const currentDirname = dirname(currentFilename)
+	const servicePath = join(currentDirname, 'umbrel.service')
+
+	try {
+		// Read the service file
+		const serviceFile = await fse.readFile(servicePath, 'utf8')
+
+		// Write the service file to the systemd directory
+		await fse.writeFile('/etc/systemd/system/umbrel.service', serviceFile)
+
+		// Create relative symlinks for manual enabling
+		await fse.symlink('../umbrel.service', '/etc/systemd/system/multi-user.target.wants/umbrel.service')
+
+		console.log('Systemd service installed successfully...')
+	} catch (error) {
+		console.error(`Error installing systemd service: ${(error as Error).message}`)
+		process.exit(1)
+	}
+}
+
 // TODO: Tidy this up, we should do auto detection for deps etc
 export default async function provision() {
 	await $({
 		stdio: 'inherit',
 	})`apt-get install --yes docker.io docker-compose network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns`
 	await downloadAndInstallYq()
+	await installService()
 }

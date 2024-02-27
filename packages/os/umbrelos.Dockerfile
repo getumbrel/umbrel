@@ -52,7 +52,7 @@ RUN rm -rf /tmp/umbreld
 WORKDIR /
 
 # Let umbreld provision the system
-RUN umbreld --install-os-dependencies
+RUN umbreld provision-os
 
 # Copy in filesystem overlay
 COPY packages/os/overlay /
