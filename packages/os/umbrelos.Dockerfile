@@ -1,7 +1,33 @@
+#########################################################################
+# ui build stage
+#########################################################################
+
+FROM node:18.19.1-buster-slim as ui-build
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the package.json and package-lock.json
+COPY packages/ui/ .
+
+# Install the dependencies
+RUN rm -rf node_modules || true
+RUN pnpm install
+
+# Build the app
+RUN pnpm run build
+
+#########################################################################
+# umbrelos build stage
+#########################################################################
+
 # TODO: Instead of using the debian:bookworm image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
-FROM debian:bookworm
+FROM debian:bookworm as umbrelos
 ARG TARGETARCH
 
 # Add non-free sources and update package index
@@ -45,6 +71,7 @@ RUN usermod -aG sudo umbrel
 # Install umbreld
 RUN apt-get install --yes npm
 COPY packages/umbreld /tmp/umbreld
+COPY --from=ui-build /app/dist /tmp/umbreld/ui
 WORKDIR /tmp/umbreld
 RUN rm -rf node_modules || true
 RUN npm install --omit dev --global

@@ -11,7 +11,6 @@ export default defineConfig({
 		},
 	},
 	build: {
-		outDir: path.resolve(__dirname, '../umbreld/ui'),
 		rollupOptions: {
 			input: {
 				index: path.resolve(__dirname, 'index.html'),
