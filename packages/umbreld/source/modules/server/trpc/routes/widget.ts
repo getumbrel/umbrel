@@ -98,28 +98,6 @@ function splitWidgetId(widgetId: string) {
 }
 
 export default router({
-	// List all possible widgets that can be activated
-	listAll: privateProcedure.query(async ({ctx}) => {
-		// Iterate over installed apps and get their widgetIds
-		const appWidgetIdPromises = ctx.apps.instances.map(async (app) => {
-			const manifest = await app.readManifest()
-
-			if (manifest.widgets) {
-				return manifest.widgets.map((widget: {id: string}) => `${app.id}:${widget.id}`)
-			}
-			return []
-		})
-
-		const nestedAppWidgetIds = await Promise.all(appWidgetIdPromises)
-		let appWidgetIds = nestedAppWidgetIds.flat()
-
-		// Add system widgetIds
-		const systemWidgetIds = Object.keys(systemWidgets).map(widget => `umbrel:${widget}`);
-		const widgetIds = [...appWidgetIds, ...systemWidgetIds];
-
-		return widgetIds
-	}),
-
 	// List enabled widgets
 	enabled: privateProcedure.query(async ({ctx}) => {
 		const widgetIds = (await ctx.umbreld.store.get('widgets')) || []
