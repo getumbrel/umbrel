@@ -48,6 +48,26 @@ const widgets = [
 		},
 	},
 	{
+		id: 'umbrel:system-stats',
+		type: 'two-up-stat-with-progress',
+		data: {
+			items: [
+				{
+					title: 'Memory',
+					value: '12.3',
+					valueSub: 'GB',
+					progress: 0.5,
+				},
+				{
+					title: 'CPU',
+					value: '12.3',
+					valueSub: '%',
+					progress: 0.5,
+				},
+			],
+		},
+	},
+	{
 		id: 'bitcoin:stats',
 		type: 'four-up',
 		data: {
@@ -147,26 +167,6 @@ const widgets = [
 				{
 					textSub: 'Jan 3 • 1:12 PM',
 					text: 'Just a test 1',
-				},
-			],
-		},
-	},
-	{
-		id: 'settings:system-stats',
-		type: 'two-up-stat-with-progress',
-		data: {
-			items: [
-				{
-					title: 'Memory',
-					value: '12.3',
-					valueSub: 'GB',
-					progress: 0.5,
-				},
-				{
-					title: 'CPU',
-					value: '12.3',
-					valueSub: '%',
-					progress: 0.5,
 				},
 			],
 		},
