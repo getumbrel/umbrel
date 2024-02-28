@@ -30,8 +30,8 @@ export function useWidgets() {
 	const availableSystemWidgets = [
 		{
 			appId: 'live-usage',
-			icon: systemAppsKeyed['live-usage'].icon,
-			name: systemAppsKeyed['live-usage'].name,
+			icon: systemAppsKeyed['UMBREL_live-usage'].icon,
+			name: systemAppsKeyed['UMBREL_live-usage'].name,
 			widgets: liveUsageWidgets,
 		},
 		// Add others here

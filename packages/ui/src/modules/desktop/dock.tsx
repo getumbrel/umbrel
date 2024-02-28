@@ -43,35 +43,35 @@ export function Dock() {
 				}}
 			>
 				<DockItem
-					to={systemAppsKeyed['home'].systemAppTo}
+					to={systemAppsKeyed['UMBREL_home'].systemAppTo}
 					open={pathname === '/'}
-					bg={systemAppsKeyed['home'].icon}
+					bg={systemAppsKeyed['UMBREL_home'].icon}
 					mouseX={mouseX}
 				/>
 				<DockItem
-					to={systemAppsKeyed['app-store'].systemAppTo}
-					open={pathname.startsWith(systemAppsKeyed['app-store'].systemAppTo)}
-					bg={systemAppsKeyed['app-store'].icon}
+					to={systemAppsKeyed['UMBREL_app-store'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['UMBREL_app-store'].systemAppTo)}
+					bg={systemAppsKeyed['UMBREL_app-store'].icon}
 					notificationCount={appUpdateCount}
 					mouseX={mouseX}
 				/>
 				<DockItem
-					to={systemAppsKeyed['settings'].systemAppTo}
-					open={pathname.startsWith(systemAppsKeyed['settings'].systemAppTo)}
-					bg={systemAppsKeyed['settings'].icon}
+					to={systemAppsKeyed['UMBREL_settings'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
+					bg={systemAppsKeyed['UMBREL_settings'].icon}
 					notificationCount={settingsNotificationCount}
 					mouseX={mouseX}
 				/>
 				<DockItem
 					to={{search: addLinkSearchParams({dialog: 'live-usage'})}}
-					open={pathname.startsWith(systemAppsKeyed['live-usage'].systemAppTo)}
-					bg={systemAppsKeyed['live-usage'].icon}
+					open={pathname.startsWith(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)}
+					bg={systemAppsKeyed['UMBREL_live-usage'].icon}
 					mouseX={mouseX}
 				/>
 				<DockItem
-					to={systemAppsKeyed['widgets'].systemAppTo}
-					open={pathname.startsWith(systemAppsKeyed['widgets'].systemAppTo)}
-					bg={systemAppsKeyed['widgets'].icon}
+					to={systemAppsKeyed['UMBREL_widgets'].systemAppTo}
+					open={pathname.startsWith(systemAppsKeyed['UMBREL_widgets'].systemAppTo)}
+					bg={systemAppsKeyed['UMBREL_widgets'].icon}
 					mouseX={mouseX}
 				/>
 			</motion.div>
@@ -94,12 +94,12 @@ export function DockPreview() {
 				paddingBottom: PADDING,
 			}}
 		>
-			<DockItem bg={systemAppsKeyed['home'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['app-store'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['settings'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_home'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_app-store'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_settings'].icon} mouseX={mouseX} />
 			<DockDivider />
-			<DockItem bg={systemAppsKeyed['live-usage'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['widgets'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_live-usage'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_widgets'].icon} mouseX={mouseX} />
 		</div>
 	)
 }
