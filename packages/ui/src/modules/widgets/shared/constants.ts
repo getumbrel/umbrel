@@ -133,7 +133,7 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 
 export const MAX_WIDGETS = 3
 
-export const settingsWidgets: [
+export const liveUsageWidgets: [
 	RegistryWidget<'stat-with-progress'>,
 	RegistryWidget<'stat-with-progress'>,
 	RegistryWidget<'three-up'>,

@@ -5,7 +5,7 @@ import {MAX_WIDGETS, RegistryWidget} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
-import {settingsWidgets} from '../modules/widgets/shared/constants'
+import {liveUsageWidgets} from '../modules/widgets/shared/constants'
 
 export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
@@ -27,10 +27,10 @@ export function useWidgets() {
 	const availableWidgets = apps.userApps
 		? [
 				{
-					appId: 'settings',
-					icon: systemAppsKeyed['settings'].icon,
-					name: systemAppsKeyed['settings'].name,
-					widgets: settingsWidgets,
+					appId: 'live-usage',
+					icon: systemAppsKeyed['live-usage'].icon,
+					name: systemAppsKeyed['live-usage'].name,
+					widgets: liveUsageWidgets,
 				},
 				...availableUserAppWidgets,
 		  ].filter(({widgets}) => widgets?.length)
