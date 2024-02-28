@@ -14,7 +14,7 @@ export function Progress({value, children}: {value?: number; children?: ReactNod
 				)}
 			>
 				<ProgressPrimitive.Indicator
-					className='h-full w-full flex-1 rounded-full bg-white transition-all'
+					className='h-full w-full flex-1 rounded-full bg-white transition-all duration-700'
 					style={{transform: `translateX(-${100 - (value || 0)}%)`}}
 				/>
 			</ProgressPrimitive.Root>
