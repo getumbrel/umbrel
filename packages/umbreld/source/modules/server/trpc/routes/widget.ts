@@ -175,7 +175,7 @@ const widgets = [
 		id: 'transmission:status',
 		type: 'stat-with-progress',
 		data: {
-			link: '?bla=1',
+			link: '/transmission/web/?bla=1',
 			title: 'Transmitting',
 			value: '12.92%',
 			progressLabel: 'In progress',
