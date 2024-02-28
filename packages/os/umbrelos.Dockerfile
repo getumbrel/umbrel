@@ -57,6 +57,11 @@ RUN apt-get install --yes systemd-boot mender-client
 RUN if [ "$TARGETARCH" = "amd64" ]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
 RUN if [ "$TARGETARCH" = "arm64" ]; then apt-get install --yes raspi-firmware; fi
 
+# Install acpid
+# We use acpid to implement custom behaviour for power button presses
+RUN apt-get install --yes acpid
+RUN systemctl enable acpid
+
 # Install essential networking services
 RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
 

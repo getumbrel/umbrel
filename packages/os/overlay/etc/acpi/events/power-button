@@ -1,0 +1,2 @@
+event=button/power.*PBTN
+action=systemd-cat -t umbrel-power-button /etc/acpi/power-button.sh &
