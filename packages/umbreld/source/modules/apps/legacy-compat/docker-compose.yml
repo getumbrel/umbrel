@@ -19,7 +19,7 @@ services:
     image: getumbrel/auth-server:1.0.0@sha256:8ae7ca39fd31a480decc8c8507efe147a94ade8e378c3815ec0ffd38bbd9325d
     user: '1000:1000'
     # build:
-    #   dockerfile: deps/app-auth/Dockerfile
+    #   dockerfile: containers/app-auth/Dockerfile
     #   context: ../../../../../../
     restart: on-failure
     environment:
