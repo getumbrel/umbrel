@@ -5,8 +5,8 @@ import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {TEMP_NORMAL_MAX, TEMP_NORMAL_MIN, TEMP_THROTTLE, TEMP_TOO_COLD, TEMP_TOO_HOT} from '@/utils/tempurature'
 
+import {CpuTempCardContent} from '../settings/_components/cpu-temp-card-content'
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
-import {TempStatCardContent} from '../settings/_components/temp-stat-card-content'
 
 const tempThresholds = [
 	TEMP_TOO_COLD - 1,
@@ -81,38 +81,38 @@ export default function SettingsStory() {
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<TempStatCardContent tempInCelcius={-999999} />
+					<CpuTempCardContent tempInCelcius={-999999} />
 				</Card>
 			</div>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<TempStatCardContent tempInCelcius={999999} />
+					<CpuTempCardContent tempInCelcius={999999} />
 				</Card>
 			</div>
 			<H3>undefined</H3>
 			<Card>
-				<TempStatCardContent />
+				<CpuTempCardContent />
 			</Card>
 			<H3>NaN</H3>
 			<Card>
-				<TempStatCardContent tempInCelcius={NaN} defaultUnit='c' />
+				<CpuTempCardContent tempInCelcius={NaN} defaultUnit='c' />
 			</Card>
 			<H3>Infinity</H3>
 			<Card>
-				<TempStatCardContent tempInCelcius={Infinity} defaultUnit='c' />
+				<CpuTempCardContent tempInCelcius={Infinity} defaultUnit='c' />
 			</Card>
 			<H3>69</H3>
 			<Card>
-				<TempStatCardContent tempInCelcius={69} defaultUnit='c' />
+				<CpuTempCardContent tempInCelcius={69} defaultUnit='c' />
 			</Card>
 			<Card>
-				<TempStatCardContent tempInCelcius={20.5} defaultUnit='f' />
+				<CpuTempCardContent tempInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
 			<div className='flex flex-col gap-2'>
 				{tempThresholds.map((temp) => (
 					<Card key={temp}>
-						<TempStatCardContent tempInCelcius={temp} defaultUnit='c' />
+						<CpuTempCardContent tempInCelcius={temp} defaultUnit='c' />
 					</Card>
 				))}
 			</div>

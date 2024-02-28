@@ -14,7 +14,7 @@ import {useNavigate} from 'react-router-dom'
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {LOADING_DASH, UNKNOWN} from '@/constants'
+import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
@@ -27,13 +27,13 @@ import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
+import {CpuTempCardContent} from './cpu-temp-card-content'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from './language-dropdown'
 import {ListRow} from './list-row'
-import {MemoryCard} from './memory-card'
+import {MemoryCardContent} from './memory-card-content'
 import {ContactSupportLink} from './shared'
 import {SoftwareUpdateListRow} from './software-update-list-row'
-import {StorageCard} from './storage-card'
-import {TempStatCardContent} from './temp-stat-card-content'
+import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
@@ -101,11 +101,15 @@ export function SettingsContent() {
 					</div>
 				</Card>
 				<div className='flex flex-col gap-3'>
-					<StorageCard />
-					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
-					<MemoryCard />
 					<Card>
-						<TempStatCardContent tempInCelcius={cpuTemp.temp} />
+						<StorageCardContent />
+					</Card>
+					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
+					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
+						<MemoryCardContent />
+					</Card>
+					<Card>
+						<CpuTempCardContent tempInCelcius={cpuTemp.temp} />
 					</Card>
 					<div className='mx-auto'>
 						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>

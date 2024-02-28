@@ -9,7 +9,7 @@ import {celciusToFahrenheit, tempToColor, tempToMessage} from '@/utils/tempuratu
 
 import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
 
-export function TempStatCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?: number; defaultUnit?: TempUnit}) {
+export function CpuTempCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?: number; defaultUnit?: TempUnit}) {
 	const [unit, setUnit] = useTempUnit(defaultUnit)
 
 	const tempNumber = unit === 'c' ? tempInCelcius : celciusToFahrenheit(tempInCelcius)
