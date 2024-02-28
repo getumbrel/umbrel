@@ -2,6 +2,7 @@ import z from 'zod'
 import {$} from 'execa'
 import fetch from 'node-fetch'
 import prettyBytes from 'pretty-bytes'
+import ms from 'ms'
 
 import {router, privateProcedure} from '../trpc.js'
 import type Umbreld from '../../../../index.js'
@@ -15,6 +16,7 @@ async function getStorageData(umbreld: Umbreld) {
 	return {
 		type: 'stat-with-progress',
 		link: '?dialog=live-usage',
+		refresh: '30s',
 		title: 'Storage',
 		value: prettyBytes(totalUsed),
 		progressLabel: `${prettyBytes(size - totalUsed)} left`,
@@ -28,6 +30,7 @@ async function getMemoryData(umbreld: Umbreld) {
 	return {
 		type: 'stat-with-progress',
 		link: '?dialog=live-usage',
+		refresh: '10s',
 		title: 'Memory',
 		value: prettyBytes(totalUsed),
 		valueSub: prettyBytes(size),
@@ -50,6 +53,7 @@ async function getSystemStats(umbreld: Umbreld) {
 	return {
 		type: 'three-up',
 		link: '?dialog=live-usage',
+		refresh: '10s',
 		items: [
 			{
 				icon: 'system-widget-cpu',
@@ -194,13 +198,12 @@ export default router({
 		)
 		.query(async ({ctx, input}) => {
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
+			let widgetData: { [key: string]: any }
 
 			if (appId === 'umbrel') {
 				// This is a system widget
 				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
-				const widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
-
-				return widgetData
+				widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
 			} else {
 				// This is an app widget
 				// Get widget info from the app's manifest
@@ -224,9 +227,7 @@ export default router({
 				try {
 					const response = await fetch(url)
 					if (!response.ok) throw new Error(`Failed to fetch data from ${url}: ${response.statusText}`)
-					const widgetData = await response.json()
-
-					return widgetData
+					widgetData = await response.json() as { [key: string]: any }
 				} catch (error) {
 					if (error instanceof Error) {
 						throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
@@ -235,5 +236,10 @@ export default router({
 					}
 				}
 			}
+
+			// Parse refresh time from human-readable string to milliseconds
+			widgetData.refresh = ms(widgetData.refresh)
+
+			return widgetData
 		}),
 })
