@@ -1,6 +1,5 @@
 import {useEffect, useState} from 'react'
 import {
-	RiEqualizerLine,
 	RiExpandRightFill,
 	RiKeyLine,
 	RiLogoutCircleRLine,

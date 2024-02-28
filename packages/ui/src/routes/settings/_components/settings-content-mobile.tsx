@@ -7,7 +7,6 @@ import {
 	TbPhoto,
 	TbRotate2,
 	TbServer,
-	TbShoppingBag,
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
