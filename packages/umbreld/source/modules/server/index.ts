@@ -1,6 +1,8 @@
 import http from 'node:http'
 import process from 'node:process'
 import {promisify} from 'node:util'
+import {fileURLToPath} from 'node:url'
+import {dirname, join} from 'node:path'
 
 import express from 'express'
 import cors from 'cors'
@@ -68,23 +70,32 @@ class Server {
 		// Handle tRPC routes
 		app.use('/trpc', trpcHandler)
 
-		// If we have no API route hits then serve the ui at the root
-		// TODO: This should be configurable and only run in development
-		// in produciton we statically serve the built ui
-		app.use(
-			'/',
-			createProxyMiddleware({
-				target: 'http://localhost:3000',
-				ws: true,
-				logProvider: () => ({
-					log: this.logger.verbose,
-					debug: this.logger.verbose,
-					info: this.logger.verbose,
-					warn: this.logger.verbose,
-					error: this.logger.error,
+		// If we have no API route hits then serve the ui at the root.
+		// We proxy through to the ui dev server during development with
+		// process.env.UMBREL_UI_PROXY otherwise in production we
+		// statically serve the built ui.
+		if (process.env.UMBREL_UI_PROXY) {
+			app.use(
+				'/',
+				createProxyMiddleware({
+					target: process.env.UMBREL_UI_PROXY,
+					ws: true,
+					logProvider: () => ({
+						log: this.logger.verbose,
+						debug: this.logger.verbose,
+						info: this.logger.verbose,
+						warn: this.logger.verbose,
+						error: this.logger.error,
+					}),
 				}),
-			}),
-		)
+			)
+		} else {
+			const currentFilename = fileURLToPath(import.meta.url)
+			const currentDirname = dirname(currentFilename)
+			const uiPath = join(currentDirname, '../../../ui')
+			app.use('/', express.static(uiPath))
+			app.use('*', express.static(`${uiPath}/index.html`))
+		}
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
 		// them here and log them.

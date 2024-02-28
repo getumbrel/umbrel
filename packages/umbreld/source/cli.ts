@@ -5,6 +5,7 @@ import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
 import {cliClient} from './modules/cli-client.js'
+import provision from './modules/provision/provision.js'
 
 import update from './modules/migrations/index.js'
 import Umbreld, {type UmbreldOptions} from './index.js'
@@ -19,6 +20,12 @@ if (process.argv.includes('--update')) {
 	const updateRoot = process.argv[updateIndex + 1]
 	const umbrelRoot = process.argv[updateIndex + 2]
 	await update({updateRoot, umbrelRoot})
+	process.exit(0)
+}
+
+// Installs required OS dependencies
+if (process.argv.includes('provision-os')) {
+	await provision()
 	process.exit(0)
 }
 

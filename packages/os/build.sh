@@ -23,7 +23,8 @@ function bootstrap() {
     mkdir -p build
 
     echo "Building Umbrel OS Docker image..."
-    docker_buildx --cache-from type=gha,scope=umbrelos --cache-to type=gha,mode=max,scope=umbrelos --file umbrelos.Dockerfile --tag umbrelos .
+    # Note we run the build context in ../../ so the build process has access to the entire repo to copy in umbreld stuff.
+    docker_buildx --cache-from type=gha,scope=umbrelos --cache-to type=gha,mode=max,scope=umbrelos --file umbrelos.Dockerfile --tag umbrelos ../../
 
     echo "Dumping Umbrel OS Docker image filesytem into a tar archive..."
     umbrel_os_container_id=$(docker run --detach umbrelos /bin/true)

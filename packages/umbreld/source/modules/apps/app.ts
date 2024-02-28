@@ -171,7 +171,8 @@ export default class App {
 	async getResourceUsage() {
 		const compose = await this.readCompose()
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
-		const result = await $`docker stats --no-stream --format json ${containers}`
+		const result =
+			await $`docker stats --no-stream --format {"container":"{{.Name}}","CPUPerc":"{{.CPUPerc}}","MemPerc":"{{.MemPerc}}"} ${containers}`
 		const data = result.stdout.split('\n').map((line) => JSON.parse(line))
 		return data
 	}
