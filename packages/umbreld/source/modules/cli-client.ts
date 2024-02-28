@@ -8,8 +8,8 @@ import * as jwt from './jwt.js'
 
 import type {AppRouter} from './server/trpc/index.js'
 
-const dataDir = process.env.UMBREL_DATA_DIR || `${os.homedir()}/umbrel`
-const trpcEndpoint = process.env.UMBREL_TRPC_ENDPOINT || `http://localhost/trpc`
+const dataDir = process.env.UMBREL_DATA_DIR ?? `${os.homedir()}/umbrel`
+const trpcEndpoint = process.env.UMBREL_TRPC_ENDPOINT ?? `http://localhost/trpc`
 
 async function signJwt() {
 	const secret = await fse.readFile(`${dataDir}/secrets/jwt`, {encoding: 'utf8'})
