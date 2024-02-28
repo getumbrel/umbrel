@@ -326,7 +326,7 @@ function TroubleshootDropdown({
 								className='flex gap-2'
 								data-highlighted={i === 0 && query ? true : undefined}
 							>
-								<AppIcon size={20} src={app.icon} className='rounded-4 bg-white/10' />
+								<AppIcon size={20} src={app.icon} className='rounded-4' />
 								{app.name}
 							</DropdownMenuCheckboxItem>
 						))}
