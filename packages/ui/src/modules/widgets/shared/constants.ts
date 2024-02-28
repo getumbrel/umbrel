@@ -165,9 +165,9 @@ export const settingsWidgets: [
 		example: {
 			items: [
 				{
-					icon: 'system-widget-temperature',
-					title: 'Normal',
-					value: '56℃',
+					icon: 'system-widget-cpu',
+					title: 'CPU',
+					value: '24%',
 				},
 				{
 					icon: 'system-widget-storage',

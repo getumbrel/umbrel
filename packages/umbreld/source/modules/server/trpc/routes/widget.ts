@@ -30,9 +30,9 @@ const widgets = [
 		data: {
 			items: [
 				{
-					icon: 'system-widget-temperature',
-					title: 'Normal',
-					value: '56℃',
+					icon: 'system-widget-cpu',
+					title: 'CPU',
+					value: '11%',
 				},
 				{
 					icon: 'system-widget-storage',
