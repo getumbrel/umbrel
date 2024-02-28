@@ -17,7 +17,7 @@ import {Link, useNavigate} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card, cardClass} from '@/components/ui/card'
-import {LOADING_DASH, UNKNOWN} from '@/constants'
+import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -94,10 +94,11 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
+				{/* Choosing first card because we wanna scroll to see them all */}
 				<Card>
 					<StorageCardContent />
 				</Card>
-				<Card>
+				<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 					<MemoryCardContent />
 				</Card>
 				<Card>
