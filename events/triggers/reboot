@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-./scripts/stop
-shutdown -r now
