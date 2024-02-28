@@ -5,7 +5,7 @@ import {MAX_WIDGETS, RegistryWidget} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
-import {liveUsageWidgets} from '../modules/widgets/shared/constants'
+import {liveUsageWidgets} from './../modules/widgets/shared/constants'
 
 export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
@@ -24,16 +24,21 @@ export function useWidgets() {
 		  }))
 		: []
 
+	// NOTE: the backend Umbrel system widgets always have an `umbrel:` prefix. For now this is good
+	// because it means we can associate them with any system app. It used to be that some system widgets
+	// were in the `settings` app. But they were moved to a new `live-usage` app.
+	const availableSystemWidgets = [
+		{
+			appId: 'live-usage',
+			icon: systemAppsKeyed['live-usage'].icon,
+			name: systemAppsKeyed['live-usage'].name,
+			widgets: liveUsageWidgets,
+		},
+		// Add others here
+	]
+
 	const availableWidgets = apps.userApps
-		? [
-				{
-					appId: 'live-usage',
-					icon: systemAppsKeyed['live-usage'].icon,
-					name: systemAppsKeyed['live-usage'].name,
-					widgets: liveUsageWidgets,
-				},
-				...availableUserAppWidgets,
-		  ].filter(({widgets}) => widgets?.length)
+		? [...availableSystemWidgets, ...availableUserAppWidgets].filter(({widgets}) => widgets?.length)
 		: []
 
 	// No need to specify app id because widget endpoints are unique
