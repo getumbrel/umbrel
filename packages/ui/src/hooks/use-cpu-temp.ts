@@ -1,5 +1,5 @@
 import {trpcReact} from '@/trpc/trpc'
-import {isCpuTooHot} from '@/utils/system'
+import {isCpuTooCold, isCpuTooHot} from '@/utils/system'
 
 export function useCpuTemp() {
 	const cpuTempQ = trpcReact.system.cpuTemperature.useQuery(undefined, {
@@ -15,6 +15,7 @@ export function useCpuTemp() {
 		temp,
 		isLoading: cpuTempQ.isLoading,
 		isHot: isCpuTooHot(temp),
+		isCold: isCpuTooCold(temp),
 		error: cpuTempQ.error,
 	}
 }

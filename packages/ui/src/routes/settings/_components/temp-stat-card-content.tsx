@@ -4,7 +4,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {tempDescriptions, tempDescriptionsKeyed, TempUnit, useTempUnit} from '@/hooks/use-temp-unit'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
-import {isCpuTooHot} from '@/utils/system'
+import {isCpuTooCold, isCpuTooHot} from '@/utils/system'
 import {celciusToFahrenheit, tempToColor, tempToMessage} from '@/utils/tempurature'
 
 import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
@@ -52,6 +52,9 @@ export function TempStatCardContent({tempInCelcius, defaultUnit}: {tempInCelcius
 				/>
 			</div>
 			{isCpuTooHot(tempInCelcius ?? 0) && <span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>}
+			{isCpuTooCold(tempInCelcius ?? 0) && (
+				<span className={cardErrorClass}>{t('tempurature.too-cold-suggestion')}</span>
+			)}
 		</div>
 	)
 }

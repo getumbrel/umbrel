@@ -1,13 +1,22 @@
-import {range} from 'remeda'
-
 import {Card} from '@/components/ui/card'
 import {H2, H3} from '@/layouts/stories'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
+import {TEMP_NORMAL_MAX, TEMP_NORMAL_MIN, TEMP_THROTTLE, TEMP_TOO_COLD, TEMP_TOO_HOT} from '@/utils/tempurature'
 
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
 import {TempStatCardContent} from '../settings/_components/temp-stat-card-content'
+
+const tempThresholds = [
+	TEMP_TOO_COLD - 1,
+	// TEMP_TOO_COLD,
+	TEMP_NORMAL_MIN,
+	TEMP_NORMAL_MAX,
+	TEMP_THROTTLE + 1,
+	TEMP_TOO_HOT,
+	TEMP_TOO_HOT + 1,
+]
 
 export default function SettingsStory() {
 	return (
@@ -72,6 +81,11 @@ export default function SettingsStory() {
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
+					<TempStatCardContent tempInCelcius={-999999} />
+				</Card>
+			</div>
+			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
+				<Card>
 					<TempStatCardContent tempInCelcius={999999} />
 				</Card>
 			</div>
@@ -95,10 +109,10 @@ export default function SettingsStory() {
 				<TempStatCardContent tempInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
-			<div className='flex flex-row flex-wrap gap-2'>
-				{range(-3, 11).map((temp) => (
+			<div className='flex flex-col gap-2'>
+				{tempThresholds.map((temp) => (
 					<Card key={temp}>
-						<TempStatCardContent tempInCelcius={temp * 10} defaultUnit='c' />
+						<TempStatCardContent tempInCelcius={temp} defaultUnit='c' />
 					</Card>
 				))}
 			</div>
