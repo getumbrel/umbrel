@@ -37,6 +37,8 @@ services:
       - ${UMBREL_DATA_DIR}:/data:ro
     ports:
       - '${AUTH_PORT}:${AUTH_PORT}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     networks:
       default:
         ipv4_address: $AUTH_IP
