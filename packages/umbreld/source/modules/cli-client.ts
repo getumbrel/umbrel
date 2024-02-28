@@ -1,3 +1,4 @@
+import process from 'node:process'
 import os from 'node:os'
 
 import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
