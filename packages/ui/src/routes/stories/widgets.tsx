@@ -2,7 +2,6 @@ import {format} from 'date-fns'
 import {indexBy} from 'remeda'
 
 import {Arc} from '@/components/ui/arc'
-import {settingsWidgets} from '@/hooks/use-widgets'
 import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {Widget} from '@/modules/widgets'
@@ -10,7 +9,7 @@ import {FourUpWidget} from '@/modules/widgets/four-up-widget'
 import {ListEmojiWidget} from '@/modules/widgets/list-emoji-widget'
 import {ListWidget} from '@/modules/widgets/list-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
-import {RegistryWidget, WidgetType} from '@/modules/widgets/shared/constants'
+import {liveUsageWidgets, RegistryWidget, WidgetType} from '@/modules/widgets/shared/constants'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
@@ -406,7 +405,7 @@ export default function WidgetsStory() {
 				<H2>Connected</H2>
 				<H3>settings</H3>
 				<div className='flex flex-wrap gap-2'>
-					{settingsWidgets.map((widget) => (
+					{liveUsageWidgets.map((widget) => (
 						<WidgetWrapper key={widget.id} label={widget.type}>
 							<Widget appId='example' config={widget} />
 						</WidgetWrapper>

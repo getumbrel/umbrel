@@ -6,7 +6,7 @@ function sanitizeIconName(input: string) {
 	return input.replace(/[^a-z0-9-]/g, '')
 }
 
-const customIcons = ['system-widget-memory', 'system-widget-storage', 'system-widget-temperature']
+const customIcons = ['system-widget-memory', 'system-widget-storage', 'system-widget-temperature', 'system-widget-cpu']
 
 export function TablerIcon({iconName, className, ...props}: {iconName: string} & HTMLProps<HTMLDivElement>) {
 	const [icon, setIcon] = useState('')

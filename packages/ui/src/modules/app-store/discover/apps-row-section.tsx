@@ -44,9 +44,9 @@ function App({app, index}: {app: RegistryApp; index: number}) {
 			<div
 				className='relative flex h-[150px] w-[267px] flex-col justify-start overflow-hidden rounded-20 p-[27px] md:h-[188px] md:w-[345px]'
 				style={{
-					background: `linear-gradient(123deg, ${colors ? colors[0] : '#24242499'}, ${
-						colors ? colors[1] : '#18181899'
-					})`,
+					background: `radial-gradient(circle farthest-side at 30% 10%, #ffffff22, #00000000), linear-gradient(123deg, ${
+						colors ? colors[0] : '#24242499'
+					}, ${colors ? colors[1] : '#18181899'})`,
 				}}
 			>
 				{/* <div className='absolute inset-0 z-0 bg-red-500'></div> */}

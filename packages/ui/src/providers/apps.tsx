@@ -12,9 +12,11 @@ type AppT = {
 	systemAppTo?: string
 }
 
+// `UMBREL_` prefix to make extra clear the distinction between system app IDs and user installable ids.
+// In `umbreld`, system app widgets are prefixed with `umbrel:`.
 export const systemApps = [
 	{
-		id: 'system',
+		id: 'UMBREL_system',
 		name: 'System',
 		icon: '/figma-exports/umbrel-app.svg',
 		systemApp: true,
@@ -22,28 +24,28 @@ export const systemApps = [
 	},
 	// For the dock...
 	{
-		id: 'home',
+		id: 'UMBREL_home',
 		name: 'Home',
 		icon: '/figma-exports/dock-home.png',
 		systemApp: true,
 		systemAppTo: '/',
 	},
 	{
-		id: 'app-store',
+		id: 'UMBREL_app-store',
 		name: 'App Store',
 		icon: '/figma-exports/dock-app-store.png',
 		systemApp: true,
 		systemAppTo: '/app-store',
 	},
 	{
-		id: 'settings',
+		id: 'UMBREL_settings',
 		name: 'Settings',
 		icon: '/figma-exports/dock-settings.png',
 		systemApp: true,
 		systemAppTo: '/settings',
 	},
 	{
-		id: 'live-usage',
+		id: 'UMBREL_live-usage',
 		name: 'Live Usage',
 		icon: '/figma-exports/dock-live-usage.png',
 		systemApp: true,
@@ -52,7 +54,7 @@ export const systemApps = [
 		systemAppTo: '?dialog=live-usage',
 	},
 	{
-		id: 'widgets',
+		id: 'UMBREL_widgets',
 		name: 'Widgets',
 		icon: '/figma-exports/dock-widgets.png',
 		systemApp: true,

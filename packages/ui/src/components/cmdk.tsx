@@ -42,7 +42,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<FrequentApps />
 				<CommandEmpty>{t('no-results-found')}</CommandEmpty>
 				<CommandItem
-					icon={systemAppsKeyed['settings'].icon}
+					icon={systemAppsKeyed['UMBREL_settings'].icon}
 					onSelect={() => {
 						navigate({pathname: '/settings', search: addLinkSearchParams({dialog: 'restart'})})
 						setOpen(false)
@@ -51,7 +51,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{t('cmdk.restart-umbrel')}
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['app-store'].icon}
+					icon={systemAppsKeyed['UMBREL_app-store'].icon}
 					onSelect={() => {
 						navigate('/app-store?dialog=updates')
 						setOpen(false)
@@ -60,7 +60,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{t('cmdk.update-all-apps')}
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['settings'].icon}
+					icon={systemAppsKeyed['UMBREL_settings'].icon}
 					onSelect={() => {
 						navigate(isMobile ? '/settings?dialog=wallpaper' : '/settings')
 						setOpen(false)
@@ -69,16 +69,16 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{t('cmdk.change-wallpaper')}
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['live-usage'].icon}
+					icon={systemAppsKeyed['UMBREL_live-usage'].icon}
 					onSelect={() => {
-						navigate(systemAppsKeyed['live-usage'].systemAppTo)
+						navigate(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)
 						setOpen(false)
 					}}
 				>
 					{t('cmdk.live-usage')}
 				</CommandItem>
 				<CommandItem
-					icon={systemAppsKeyed['widgets'].icon}
+					icon={systemAppsKeyed['UMBREL_widgets'].icon}
 					onSelect={() => {
 						navigate('/edit-widgets')
 						setOpen(false)
@@ -105,38 +105,38 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					</SubItem>
 				</DebugOnlyBare>
 				<SubItem
-					value={systemAppsKeyed['home'].name}
-					icon={systemAppsKeyed['home'].icon}
+					value={systemAppsKeyed['UMBREL_home'].name}
+					icon={systemAppsKeyed['UMBREL_home'].icon}
 					onSelect={() => {
-						navigate(systemAppsKeyed['home'].systemAppTo)
+						navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['home'].name}
+					{systemAppsKeyed['UMBREL_home'].name}
 				</SubItem>
 				<SubItem
-					value={systemAppsKeyed['app-store'].name}
-					icon={systemAppsKeyed['app-store'].icon}
+					value={systemAppsKeyed['UMBREL_app-store'].name}
+					icon={systemAppsKeyed['UMBREL_app-store'].icon}
 					onSelect={() => {
-						navigate(systemAppsKeyed['app-store'].systemAppTo)
+						navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['app-store'].name}
+					{systemAppsKeyed['UMBREL_app-store'].name}
 				</SubItem>
 				<SubItem
-					value={systemAppsKeyed['settings'].name}
-					icon={systemAppsKeyed['settings'].icon}
+					value={systemAppsKeyed['UMBREL_settings'].name}
+					icon={systemAppsKeyed['UMBREL_settings'].icon}
 					onSelect={() => {
-						navigate(systemAppsKeyed['settings'].systemAppTo)
+						navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['settings'].name}
+					{systemAppsKeyed['UMBREL_settings'].name}
 				</SubItem>
 				<SubItem
 					value={t('logout')}
-					icon={systemAppsKeyed['settings'].icon}
+					icon={systemAppsKeyed['UMBREL_settings'].icon}
 					onSelect={() => {
 						navigate({search: addLinkSearchParams({dialog: 'logout'})})
 						setOpen(false)

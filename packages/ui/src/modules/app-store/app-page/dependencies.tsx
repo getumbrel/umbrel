@@ -30,6 +30,7 @@ export const DependenciesSection = ({app}: {app: RegistryApp}) => {
 }
 
 const Dependency = ({app, installed = false}: {app: RegistryApp; installed: boolean}) => (
+	// TODO: link to community app store if needed
 	<Link className='flex items-center gap-2.5' to={`/app-store/${app.id}`}>
 		<AppIcon src={app.icon} size={36} className='rounded-8' />
 		<div className='flex-1 text-15 font-medium'>{app.name}</div>

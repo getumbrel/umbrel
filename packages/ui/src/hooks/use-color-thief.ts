@@ -17,7 +17,8 @@ export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 	useEffect(() => {
 		if (!ref.current) return
 		if (!intersection) return
-		if (intersection.intersectionRatio < 0.1) return
+		console.log('ratio', intersection.intersectionRatio)
+		if (intersection.intersectionRatio === 0) return
 
 		const img = ref.current
 

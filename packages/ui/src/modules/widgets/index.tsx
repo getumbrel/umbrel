@@ -50,7 +50,7 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 	const widget = widgetQ.data as WidgetConfig
 
 	const handleClick = (link?: string) => {
-		if (appId === 'settings' && systemAppsKeyed.settings) {
+		if (appId === 'live-usage' && systemAppsKeyed['UMBREL_live-usage']) {
 			navigate('/?dialog=live-usage')
 		} else if (app) {
 			// Launching directly because it's weird to have credentials show up

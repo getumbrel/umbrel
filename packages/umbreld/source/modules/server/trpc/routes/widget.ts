@@ -34,11 +34,11 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
 
-
 			// Validate widget
 			if (appId === 'umbrel') {
 				// This is a system widget
-				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+				if (!(widgetName in systemWidgets))
+					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
 			} else {
 				// This is an app widget
 				// Throws an error if the widget doesn't exist
@@ -95,17 +95,18 @@ export default router({
 		)
 		.query(async ({ctx, input}) => {
 			const {appId, widgetName} = splitWidgetId(input.widgetId)
-			let widgetData: { [key: string]: any }
+			let widgetData: {[key: string]: any}
 
 			if (appId === 'umbrel') {
 				// This is a system widget
-				if (!(widgetName in systemWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+				if (!(widgetName in systemWidgets))
+					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
 				widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
 			} else {
 				// This is an app widget
 				// Get widget info from the app's manifest
 				const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
-				
+
 				// endpoint format: <service>:<port>/<api-endpoint>
 				const {endpoint} = widgetInfo
 				const [service, portAndEndpoint] = endpoint.split(':')
@@ -117,14 +118,15 @@ export default router({
 
 				if (!containerName) throw new Error(`No container_name found for service ${service} in app ${appId}`)
 
-				const {stdout: containerIp} = await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
+				const {stdout: containerIp} =
+					await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
 
 				const url = `http://${containerIp}:${portAndEndpoint}`
-	
+
 				try {
 					const response = await fetch(url)
 					if (!response.ok) throw new Error(`Failed to fetch data from ${url}: ${response.statusText}`)
-					widgetData = await response.json() as { [key: string]: any }
+					widgetData = (await response.json()) as {[key: string]: any}
 				} catch (error) {
 					if (error instanceof Error) {
 						throw new Error(`Failed to fetch data from ${url}: ${error.message}`)

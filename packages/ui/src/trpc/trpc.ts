@@ -1,6 +1,7 @@
 import {createTRPCProxyClient, createTRPCReact, httpBatchLink, loggerLink} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
+import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {RegistryWidget} from '@/modules/widgets/shared/constants'
 
 import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
@@ -18,7 +19,7 @@ export const links = [
 	httpBatchLink({
 		url: trpcUrl,
 		headers: async () => {
-			const jwt = localStorage.getItem('jwt')
+			const jwt = localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
 			return {
 				Authorization: `Bearer ${jwt}`,
 			}
