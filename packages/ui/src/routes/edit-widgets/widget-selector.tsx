@@ -18,11 +18,9 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 	// Delay until after `usePager` has injected CSS vars
 	const [isReady] = useTimeout(300)
 
-	const widgets = useWidgets()
+	const {availableWidgets, toggleSelected, selected, selectedTooMany} = useWidgets()
 
 	if (!isReady()) return null
-
-	const {availableWidgets, toggleSelected, selected, selectedTooMany} = widgets
 
 	const selectedH = selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
 
@@ -55,7 +53,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 							{selected.map((widget) => {
 								return (
 									<motion.div
-										key={widget.endpoint}
+										key={widget.id}
 										layout
 										initial={{
 											opacity: 1,
@@ -75,7 +73,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 											damping: 30,
 										}}
 									>
-										<ExampleWidget type={widget.type} example={widget.example} />
+										<Widget appId={widget.app.id} config={widget} />
 									</motion.div>
 								)
 							})}
@@ -90,11 +88,11 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 							{widgets?.map((widget) => {
 								return (
 									<WidgetChecker
-										key={widget.endpoint}
-										checked={selected.map((w) => w.endpoint).includes(widget.endpoint)}
+										key={widget.id}
+										checked={selected.map((w) => w.id).includes(widget.id)}
 										onCheckedChange={(checked) => toggleSelected(widget, checked)}
 									>
-										<Widget appId={appId} config={widget} />
+										<ExampleWidget type={widget.type} example={widget.example} />
 									</WidgetChecker>
 								)
 							})}

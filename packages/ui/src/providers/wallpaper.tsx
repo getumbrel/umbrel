@@ -125,11 +125,11 @@ export const wallpapers = [
 
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
-const wallpaperIds = wallpapers.map((w) => w.id)
+export const wallpaperIds = wallpapers.map((w) => w.id)
 
 // ---
 
-const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
+export const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
 
 const nullWallpaper = {
 	id: undefined,
@@ -180,14 +180,7 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 
 	const prevId = usePreviousDistinct(wallpaper.id)
 
-	const {brandColorHsl} = wallpaper
-
-	useLayoutEffect(() => {
-		const el = document.documentElement
-		el.style.setProperty('--color-brand', brandColorHsl)
-		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
-		el.style.setProperty('--color-brand-lightest', brandHslLightest(brandColorHsl))
-	}, [brandColorHsl])
+	useWallpaperCssVars(wallpaper.id)
 
 	useLayoutEffect(() => {
 		if (wallpaper.id === prevId) return
@@ -215,6 +208,17 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 			{children}
 		</WallPaperContext.Provider>
 	)
+}
+
+export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
+	const {brandColorHsl} = wallpaperId ? wallpapersKeyed[wallpaperId] : wallpapersKeyed[DEFAULT_WALLPAPER_ID]
+
+	useLayoutEffect(() => {
+		const el = document.documentElement
+		el.style.setProperty('--color-brand', brandColorHsl)
+		el.style.setProperty('--color-brand-lighter', brandHslLighter(brandColorHsl))
+		el.style.setProperty('--color-brand-lightest', brandHslLightest(brandColorHsl))
+	}, [brandColorHsl])
 }
 
 /**
@@ -245,7 +249,7 @@ export function Wallpaper({
 				key={wallpaper.url + '-loading'}
 				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
 				className={cn(
-					'pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000',
+					'pointer-events-none fixed inset-0 h-lvh w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000',
 					isPreview && 'absolute',
 				)}
 			/>
@@ -255,7 +259,7 @@ export function Wallpaper({
 					src={wallpaper.url}
 					className={cn(
 						// Using black bg by default because sometimes we want to show the wallpaper before it's loaded, and over other elements
-						tw`pointer-events-none fixed inset-0 h-full w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
+						tw`pointer-events-none fixed inset-0 h-lvh w-full bg-black object-cover object-center duration-700 animate-in fade-in zoom-in-125`,
 						isPreview && 'absolute',
 						className,
 					)}

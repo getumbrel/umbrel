@@ -11,6 +11,8 @@ import isUmbrelHome from '../../../is-umbrel-home.js'
 
 export default router({
 	isUmbrelHome: privateProcedure.query(() => isUmbrelHome()),
+	// TODO: Implement
+	isMigratingFromUmbrelHome: privateProcedure.query(() => false),
 
 	canMigrate: privateProcedure.query(async ({ctx}) => {
 		const currentInstall = ctx.umbreld.dataDirectory

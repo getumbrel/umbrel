@@ -5,20 +5,13 @@ import arg from 'arg'
 import camelcaseKeys from 'camelcase-keys'
 
 import {cliClient} from './modules/cli-client.js'
+import provision from './modules/provision/provision.js'
 
-import update from './modules/migrations/index.js'
 import Umbreld, {type UmbreldOptions} from './index.js'
 
-// In the future migrations will run on start and we'll run through
-// all required migrations for the version range we've jumped between.
-// However during the transition phase we need to run migrations manually
-// during the OTA update process because we need to update scripts before
-// starting umbrel again.
-if (process.argv.includes('--update')) {
-	const updateIndex = process.argv.indexOf('--update')
-	const updateRoot = process.argv[updateIndex + 1]
-	const umbrelRoot = process.argv[updateIndex + 2]
-	await update({updateRoot, umbrelRoot})
+// Installs required OS dependencies
+if (process.argv.includes('provision-os')) {
+	await provision()
 	process.exit(0)
 }
 

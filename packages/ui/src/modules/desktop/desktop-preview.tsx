@@ -74,7 +74,7 @@ export function DesktopPreview() {
 }
 
 function DesktopContent() {
-	const {allAppsKeyed, userApps, isLoading} = useApps()
+	const {userApps, isLoading} = useApps()
 	const {selected} = useWidgets()
 
 	if (isLoading) return null
@@ -89,12 +89,7 @@ function DesktopContent() {
 				<AppGrid
 					onlyFirstPage
 					widgets={selected?.map((widget) => (
-						<WidgetWrapper
-							key={widget.endpoint}
-							// Get the app name from the endpoint
-							// TODO: should get app name from the widget config
-							label={allAppsKeyed[widget.endpoint.split('/')[2]]?.name}
-						>
+						<WidgetWrapper key={widget.id} label={widget.app.name}>
 							<Widget appId={widget.app.id} config={widget} />
 						</WidgetWrapper>
 					))}

@@ -8,7 +8,6 @@ import {H2} from '@/layouts/stories'
 
 export default function ColorThiefExample() {
 	const title = 'Color Thief'
-	g
 	// const [colors, setColors] = useState<[][] | undefined>()
 	const ref = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(ref)

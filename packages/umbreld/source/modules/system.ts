@@ -28,6 +28,8 @@ export async function getDiskUsage(
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
 
+	// TODO: Fix this, it gets the disk usage of the system partition not the data partition on umbrelOS
+
 	// TODO: get list of installed apps and their disk usage
 	// to calculate the disk usage of each app
 	const fileSystemSize = await systemInformation.fsSize()

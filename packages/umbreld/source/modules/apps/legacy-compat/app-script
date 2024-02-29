@@ -544,7 +544,7 @@ fi
 
 # Get logs for an app
 if [[ "$command" = "logs" ]]; then
-  compose "${app}" logs --tail 100
+  compose "${app}" logs --tail 300
 
   exit
 fi

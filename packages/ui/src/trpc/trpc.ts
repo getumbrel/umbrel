@@ -1,6 +1,8 @@
 import {createTRPCProxyClient, createTRPCReact, httpBatchLink, loggerLink} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
+import {RegistryWidget} from '@/modules/widgets/shared/constants'
+
 import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
 
@@ -88,4 +90,5 @@ export type UserApp = YamlApp &
 		// TODO: if state is installing, this should be 0-100, otherwise undefined
 		/** From 0 to 100 */
 		installProgress?: number
+		widgets?: RegistryWidget[]
 	}

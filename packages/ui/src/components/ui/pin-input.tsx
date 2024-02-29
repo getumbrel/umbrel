@@ -54,8 +54,11 @@ export const PinInput = ({length, onCodeCheck, autoFocus}: PinInputProps) => {
 				if (input.value.length === length) {
 					setState('loading')
 					onCodeCheck(input.value)
-						.then(() => {
+						.then((res) => {
 							setState('success')
+							if (!res) {
+								throw new Error('Invalid code')
+							}
 						})
 						.catch(() => {
 							setState('error')

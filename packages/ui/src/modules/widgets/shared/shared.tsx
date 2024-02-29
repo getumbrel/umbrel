@@ -45,7 +45,16 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({className, ...p
 	// Only allow `onClick` to do something if it's truthy
 	if ('onClick' in props) {
 		const p = props as WidgetContainerButtonProps
-		return <button className={cn(widgetContainerCva({variant}), 'cursor-pointer', className)} {...p} />
+		return (
+			<button
+				className={cn(
+					widgetContainerCva({variant}),
+					'cursor-pointer ring-white/25 transition-[transform,box-shadow] duration-300 hover:scale-105 focus:outline-none focus-visible:ring-6 active:scale-95',
+					className,
+				)}
+				{...p}
+			/>
+		)
 	} else {
 		const p = props as WidgetContainerDivProps
 		return <div className={cn(widgetContainerCva({variant}), className)} {...p} />

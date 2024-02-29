@@ -336,5 +336,13 @@
   "widgets.install-an-app-before-using-widgets": "Installez une application avant d'utiliser des widgets.",
   "factory-reset.review.title": "Examiner les données",
   "app.updating": "Mise à jour",
-  "cpu-core-count": "{{cores}} cœurs"
+  "cpu-core-count": "{{cores}} cœurs",
+  "app.restarting": "Redémarrage",
+  "app.starting": "Départ",
+  "app.stopping": "Arrêt",
+  "cpu": "CPU",
+  "logout-error-generic": "Erreur backend lors de la déconnexion !",
+  "troubleshoot-pick-title": "Que souhaiteriez-vous dépanner ?",
+  "troubleshoot.app-download": "Télécharger les journaux {{app}}",
+  "troubleshoot.system-download": "Télécharger {{label}}"
 }

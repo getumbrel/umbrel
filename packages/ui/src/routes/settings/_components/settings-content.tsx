@@ -1,4 +1,3 @@
-import {formatDistance} from 'date-fns'
 import {useEffect, useState} from 'react'
 import {
 	RiEqualizerLine,
@@ -19,11 +18,13 @@ import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
+import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
@@ -39,6 +40,7 @@ import {WallpaperPicker} from './wallpaper-picker'
 export function SettingsContent() {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
+	const [languageCode] = useLanguage()
 
 	const tor = useTorEnabled()
 	const deviceInfo = useDeviceInfo()
@@ -46,15 +48,12 @@ export function SettingsContent() {
 
 	const [langOpen, setLangOpen] = useState(false)
 
-	const [userQ, uptimeQ, isUmbrelHomeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const [userQ, uptimeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
-		t.migration.isUmbrelHome(),
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
-
-	const isUmbrelHome = !!isUmbrelHomeQ.data
 
 	// Scroll to hash
 	useEffect(() => {
@@ -87,7 +86,7 @@ export function SettingsContent() {
 							<dt className='opacity-40'>{t('umbrelos-version')}</dt>
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : osVersionQ.data ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
-							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data)}</dd>
+							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -147,14 +146,12 @@ export function SettingsContent() {
 							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
 						/>
 					</ListRow>
-					{isUmbrelHome && (
-						<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
-							{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
-							<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
-								{t('migrate')}
-							</IconButton>
-						</ListRow>
-					)}
+					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
+						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
+						<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
+							{t('migrate')}
+						</IconButton>
+					</ListRow>
 					<ListRow
 						title={t('language')}
 						description={t('language-description')}
@@ -166,11 +163,11 @@ export function SettingsContent() {
 							<LanguageDropdownContent />
 						</DropdownMenu>
 					</ListRow>
-					<ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
+					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}
 						</IconButton>
-					</ListRow>
+					</ListRow> */}
 					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
 						<IconButton icon={TbTool} onClick={() => navigate(linkToDialog('troubleshoot'))}>
 							{t('troubleshoot')}
@@ -192,9 +189,4 @@ export function SettingsContent() {
 			</div>
 		</div>
 	)
-}
-
-function duration(seconds?: number) {
-	if (seconds === undefined) return UNKNOWN()
-	return formatDistance(0, seconds * 1000, {includeSeconds: true})
 }

@@ -16,10 +16,11 @@ services:
         ipv4_address: $TOR_PROXY_IP
   auth:
     container_name: auth
-    # TODO: IMPORTANT build new image and use that here
-    # image: getumbrel/auth-server:v0.5.1@sha256:afcd9065eab02f98ee6bf705045170a4b385fb5f81e3b168bb92ffb8ac7a1760
+    image: getumbrel/auth-server:1.0.0@sha256:8ae7ca39fd31a480decc8c8507efe147a94ade8e378c3815ec0ffd38bbd9325d
     user: '1000:1000'
-    build: ../../../../../../deps/app-auth
+    # build:
+    #   dockerfile: containers/app-auth/Dockerfile
+    #   context: ../../../../../../
     restart: on-failure
     environment:
       PORT: $AUTH_PORT
@@ -33,8 +34,11 @@ services:
     volumes:
       - ${UMBREL_DATA_DIR}/tor/data:/var/lib/tor:ro
       - ${UMBREL_DATA_DIR}/app-data:/app-data:ro
+      - ${UMBREL_DATA_DIR}:/data:ro
     ports:
       - '${AUTH_PORT}:${AUTH_PORT}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     networks:
       default:
         ipv4_address: $AUTH_IP

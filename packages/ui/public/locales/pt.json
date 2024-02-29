@@ -336,5 +336,13 @@
   "widgets.install-an-app-before-using-widgets": "Instale um aplicativo antes de usar widgets.",
   "factory-reset.review.title": "Revise os dados",
   "app.updating": "Atualizando",
-  "cpu-core-count": "{{cores}} núcleos"
+  "cpu-core-count": "{{cores}} núcleos",
+  "app.restarting": "Reiniciando",
+  "app.starting": "Iniciando",
+  "app.stopping": "Parando",
+  "cpu": "CPU",
+  "logout-error-generic": "Erro de back-end ao sair!",
+  "troubleshoot-pick-title": "O que você gostaria de solucionar?",
+  "troubleshoot.app-download": "Baixar registros do {{app}}",
+  "troubleshoot.system-download": "Baixar {{rótulo}}"
 }

@@ -1,5 +1,6 @@
 import {useEffect} from 'react'
 import {useLocation, useNavigation} from 'react-router-dom'
+import {usePrevious} from 'react-use'
 
 // TODO: Probably use this after it's merged:
 // https://github.com/remix-run/react-router/pull/10468
@@ -11,10 +12,12 @@ import {useLocation, useNavigation} from 'react-router-dom'
  */
 export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 	const location = useLocation()
+	const prevPathname = usePrevious(location.pathname)
 	// Checking against settings for now because settings pages doesn't have subpages and app store does.
 	// Settings page only has dialogs for now, but because they add to the history, each page transition automatically causes
 	// a scroll to top. This is a workaround for that.
-	const keyPart = location.pathname === '/settings' ? location.pathname : location.key
+	// Always scroll to top for settings page itself, but don't do that for sub-pages
+	const keyPart = location.pathname.startsWith('/settings') ? location.pathname : location.key
 	const key = `scroll-position-${keyPart}`
 	const {state} = useNavigation()
 
@@ -33,10 +36,17 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 
 	useEffect(() => {
 		if (state === 'idle') {
-			console.log('scrolling to', key, getScrollPosition(key))
-			container.current?.scrollTo(0, getScrollPosition(key))
+			// Always reset scroll to top if going to settings page from non-settings page
+			if (location.pathname.startsWith('/settings') && !prevPathname?.startsWith('/settings')) {
+				// Reset scroll position
+				setScrollPosition(key, 0)
+				container.current?.scrollTo(0, 0)
+			} else {
+				console.log('scrolling to', key, getScrollPosition(key))
+				container.current?.scrollTo(0, getScrollPosition(key))
+			}
 		}
-	}, [key, state, container])
+	}, [key, state, container, location.pathname, prevPathname])
 }
 
 function getScrollPosition(key: string) {

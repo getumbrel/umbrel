@@ -8,6 +8,8 @@ i18next
 	.use(Backend)
 	.use(LanguageDetector)
 	.init({
+		// debug: true,
+		// initImmediate: true,
 		backend: {
 			loadPath: '/locales/{{lng}}.json',
 		},

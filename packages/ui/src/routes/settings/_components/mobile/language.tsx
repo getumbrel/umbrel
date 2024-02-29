@@ -2,7 +2,7 @@ import {useId} from 'react'
 
 import {listClass, ListRadioItem} from '@/components/ui/list'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {languages, useLanguage} from '@/hooks/use-language'
+import {languages, SupportedLanguageCode, useLanguage} from '@/hooks/use-language'
 import {
 	Drawer,
 	DrawerContent,
@@ -20,7 +20,7 @@ export function LanguageDrawer() {
 	const dialogProps = useDialogOpenProps('language')
 	const [activeCode, setActiveCode] = useLanguage()
 
-	const changeLanguage = async (code: string) => {
+	const changeLanguage = async (code: SupportedLanguageCode) => {
 		setActiveCode(code)
 		// Delay so user can see the checkmark
 		await sleep(200)
