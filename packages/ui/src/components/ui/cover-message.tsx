@@ -18,15 +18,25 @@ export function BareCoverMessage({children, delayed}: {children: React.ReactNode
 }
 
 /** Covers entire screen to show a message */
-export function CoverMessage({children, delayed}: {children: React.ReactNode; delayed?: boolean}) {
+export function CoverMessage({
+	children,
+	onClick,
+	delayed,
+}: {
+	children: React.ReactNode
+	onClick?: () => void
+	delayed?: boolean
+}) {
 	const [show] = useTimeout(600)
 
 	return (
 		<Portal>
 			<div className='z-50'>
-				<Wallpaper className='z-50' />
+				<Wallpaper className={'z-50'} />
 				<div className='absolute inset-0 z-50 backdrop-blur-2xl animate-in fade-in' />
-				<div className={coverMessageBodyClass}>{!delayed ? children : show() && children}</div>
+				<div onClick={onClick} className={coverMessageBodyClass}>
+					{!delayed ? children : show() && children}
+				</div>
 			</div>
 		</Portal>
 	)

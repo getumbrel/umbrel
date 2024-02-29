@@ -1,12 +1,17 @@
 import {useEffect, useState} from 'react'
 
-import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 
 export type RestartState = 'initial' | 'waiting' | 'failing' | 'succeeding-again'
 
 /** Can also use for shutdown */
-export function useShutdownRestartPolling() {
+export function useShutdownRestartPolling({
+	onFailing,
+	onSucceedingAgain,
+}: {
+	onFailing?: () => void
+	onSucceedingAgain?: () => void
+} = {}) {
 	const [state, setState] = useState<RestartState>('initial')
 
 	const canPoll = state === 'waiting' || state === 'failing'
@@ -29,13 +34,11 @@ export function useShutdownRestartPolling() {
 		// We want to react to the first failure.
 		if (pingQ.isError || pingQ.failureCount > 0) {
 			setState('failing')
-			if (pingQ.failureReason) {
-				toast(pingQ.failureReason.message)
-				console.log('ping failure', pingQ.failureReason)
-			}
+			onFailing?.()
 			// The real check is not `isSuccess` because trpc doesn't change that state until a few failed attempts.
 		} else if (state === 'failing' && pingQ.isSuccess && !pingQ.isFetching && !pingQ.isRefetching) {
 			setState('succeeding-again')
+			onSucceedingAgain?.()
 		}
 	}, [pingQ.isError, pingQ.isSuccess, pingQ.failureCount, pingQ.isFetching, pingQ.isRefetching])
 

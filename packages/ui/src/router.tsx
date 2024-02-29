@@ -16,7 +16,6 @@ import {AppsProvider} from './providers/apps'
 import {AvailableAppsProvider} from './providers/available-apps'
 import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
-import Restart from './routes/restart'
 import {Settings} from './routes/settings'
 import {MarkdownExample} from './routes/stories/markdown'
 import MiscStory from './routes/stories/misc'
@@ -219,14 +218,6 @@ export const router = createBrowserRouter([
 			{
 				path: 'factory-reset/*',
 				element: <FactoryReset />,
-			},
-			{
-				path: 'restart',
-				element: (
-					<EnsureLoggedIn>
-						<Restart />
-					</EnsureLoggedIn>
-				),
 			},
 		],
 	},
