@@ -31,10 +31,11 @@ const showHelp = () =>
         $ umbreld
 
     Options
-        --help            Shows this help message
-        --data-directory  Your Umbrel data directory
-        --port            The port to listen on
-        --log-level       The logging intensity: silent|normal|verbose
+        --help                    Shows this help message
+        --data-directory          Your Umbrel data directory
+        --port                    The port to listen on
+        --log-level               The logging intensity: silent|normal|verbose
+		--default-app-store-repo  The default app store repository
 
     Examples
         $ umbreld --data-directory ~/umbrel
@@ -46,6 +47,7 @@ const args = camelcaseKeys(
 		'--data-directory': String,
 		'--port': Number,
 		'--log-level': String,
+		'--default-app-store-repo': String,
 	}),
 )
 
