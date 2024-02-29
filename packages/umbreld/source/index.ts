@@ -1,7 +1,5 @@
 import path from 'node:path'
 
-import fse from 'fs-extra'
-
 // @ts-expect-error I can't get tsconfig setup in a way that allows this without breaking other things.
 // However we execute with tsx and it's able to resolve the import without issues.
 import packageJson from '../package.json' assert {type: 'json'}
@@ -9,6 +7,7 @@ import packageJson from '../package.json' assert {type: 'json'}
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
 
+import Migration from './modules/migration/index.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
@@ -42,6 +41,7 @@ export default class Umbreld {
 	logLevel: LogLevel
 	logger: ReturnType<typeof createLogger>
 	store: FileStore<StoreSchema>
+	migration: Migration
 	server: Server
 	user: User
 	appStore: AppStore
@@ -58,6 +58,7 @@ export default class Umbreld {
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)
 		this.store = new FileStore<StoreSchema>({filePath: `${dataDirectory}/umbrel.yaml`})
+		this.migration = new Migration(this)
 		this.server = new Server({umbreld: this})
 		this.user = new User(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
@@ -72,11 +73,10 @@ export default class Umbreld {
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
 
-		// Ensure data directory exists
-		await fse.ensureDir(this.dataDirectory)
-
-		// In the future we'll handle migrations here, for now lets just write the version to check read/write permissions are ok.
-		await this.store.set('version', this.version)
+		// Run migration module before anything else
+		// TODO: think through if we want to allow the server module to run before migration.
+		// It might be useful if we add more complicated migrations so we can signal progress.
+		await this.migration.start()
 
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
