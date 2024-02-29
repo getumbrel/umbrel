@@ -53,6 +53,7 @@ const WidgetsStory = React.lazy(() => import('./routes/stories/widgets'))
 const SheetStory = React.lazy(() => import('./routes/stories/sheet'))
 const Trpc = React.lazy(() => import('./routes/stories/trpc'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
+const RestartTest = React.lazy(() => import('./routes/restart-test'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -249,6 +250,10 @@ export const router = createBrowserRouter([
 	{
 		path: 'login-test',
 		Component: LoginTest,
+	},
+	{
+		path: 'restart-test',
+		Component: RestartTest,
 	},
 	{
 		path: '/',
