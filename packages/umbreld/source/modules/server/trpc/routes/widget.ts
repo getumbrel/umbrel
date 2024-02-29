@@ -1,6 +1,4 @@
 import z from 'zod'
-import {$} from 'execa'
-import fetch from 'node-fetch'
 import ms from 'ms'
 
 import {router, privateProcedure} from '../trpc.js'
@@ -42,7 +40,7 @@ export default router({
 			} else {
 				// This is an app widget
 				// Throws an error if the widget doesn't exist
-				await ctx.apps.getApp(appId).getWidget(widgetName)
+				await ctx.apps.getApp(appId).getWidgetMetadata(widgetName)
 			}
 
 			// Save widget ID
@@ -101,39 +99,11 @@ export default router({
 				// This is a system widget
 				if (!(widgetName in systemWidgets))
 					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+
 				widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
 			} else {
 				// This is an app widget
-				// Get widget info from the app's manifest
-				const widgetInfo = await ctx.apps.getApp(appId).getWidget(widgetName)
-
-				// endpoint format: <service>:<port>/<api-endpoint>
-				const {endpoint} = widgetInfo
-				const [service, portAndEndpoint] = endpoint.split(':')
-
-				// Retrieve the container name from the compose file
-				// This works because we have a temporary patch to force all container names to the old Compose scheme to maintain compatibility between Compose v1 and v2
-				const compose = await ctx.apps.getApp(appId).readCompose()
-				const containerName = compose.services![service].container_name
-
-				if (!containerName) throw new Error(`No container_name found for service ${service} in app ${appId}`)
-
-				const {stdout: containerIp} =
-					await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
-
-				const url = `http://${containerIp}:${portAndEndpoint}`
-
-				try {
-					const response = await fetch(url)
-					if (!response.ok) throw new Error(`Failed to fetch data from ${url}: ${response.statusText}`)
-					widgetData = (await response.json()) as {[key: string]: any}
-				} catch (error) {
-					if (error instanceof Error) {
-						throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
-					} else {
-						throw new Error(`An unexpected error occured while fetching data from ${url}: ${error}`)
-					}
-				}
+				widgetData = await ctx.apps.getApp(appId).getWidgetData(widgetName)
 			}
 
 			// Parse refresh time from human-readable string to milliseconds

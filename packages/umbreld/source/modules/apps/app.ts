@@ -3,6 +3,7 @@ import yaml from 'js-yaml'
 import {type Compose} from 'compose-spec-schema'
 import {$} from 'execa'
 import systemInformation from 'systeminformation'
+import fetch from 'node-fetch'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 
@@ -207,14 +208,55 @@ export default class App {
 		return result.stdout
 	}
 
+	async getContainerIp(service: string) {
+		// Retrieve the container name from the compose file
+		// This works because we have a temporary patch to force all container names to the old Compose scheme to maintain compatibility between Compose v1 and v2
+		const compose = await this.readCompose()
+		const containerName = compose.services![service].container_name
+
+		if (!containerName) throw new Error(`No container_name found for service ${service} in app ${this.id}`)
+
+		const {stdout: containerIp} =
+			await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
+
+		return containerIp
+	}
+
 	// Returns a specific widget's info from an app's manifest
-	async getWidget(widgetId: string) {
+	async getWidgetMetadata(widgetName: string) {
 		const manifest = await this.readManifest()
 		if (!manifest.widgets) throw new Error(`No widgets found for app ${this.id}`)
 
-		const widget = manifest.widgets.find((widget) => widget.id === widgetId)
-		if (!widget) throw new Error(`Invalid widget ${widgetId} for app ${this.id}`)
+		const widgetMetadata = manifest.widgets.find((widget) => widget.id === widgetName)
+		if (!widgetMetadata) throw new Error(`Invalid widget ${widgetName} for app ${this.id}`)
 
-		return widget
+		return widgetMetadata
+	}
+
+	// Returns a specific widget's data
+	async getWidgetData(widgetId: string) {
+		// Get widget info from the app's manifest
+		const widgetMetadata = await this.getWidgetMetadata(widgetId)
+
+		const url = new URL(`http://${widgetMetadata.endpoint}`)
+		const service = url.hostname
+
+		url.hostname = await this.getContainerIp(service)
+		console.log(url)
+
+		try {
+			const response = await fetch(url)
+
+			if (!response.ok) throw new Error(`Failed to fetch data from ${url}: ${response.statusText}`)
+
+			const widgetData = (await response.json()) as {[key: string]: any}
+			return widgetData
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Failed to fetch data from ${url}: ${error.message}`)
+			} else {
+				throw new Error(`An unexpected error occured while fetching data from ${url}: ${error}`)
+			}
+		}
 	}
 }
