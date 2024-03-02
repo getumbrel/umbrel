@@ -40,6 +40,11 @@ class Migration {
 		if (legacyData.installedApps) await this.umbreld.store.set('apps', legacyData.installedApps)
 		if (legacyData.remoteTorAccess) await this.umbreld.store.set('torEnabled', legacyData.remoteTorAccess)
 
+		// Ensure we have app repositories pulled otherwise there will be a race condition where
+		// if an app gets started before the repo has completed it's initial pull on startup we'll
+		// get the error `App with ID <appId> not found in any repository `
+		await this.umbreld.appStore.update()
+
 		// Mark the legacy file as migrated
 		await fse.move(userJsonPath, `${userJsonPath}.migrated`)
 		this.logger.log('Migration successful')
