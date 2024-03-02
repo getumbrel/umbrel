@@ -1,73 +1,132 @@
-import {ReactNode, Suspense} from 'react'
-import {Link, Outlet} from 'react-router-dom'
+import { ReactNode, Suspense } from 'react'
+import { Link, Outlet, RouteObject, useLocation } from 'react-router-dom'
 
-import {FadeScroller} from '@/components/fade-scroller'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
-import {tw} from '@/utils/tw'
+import { FadeScroller } from '@/components/fade-scroller'
+import { UmbrelHeadTitle } from '@/components/umbrel-head-title'
+import { AvailableAppsProvider } from '@/providers/available-apps'
+import { LanguageDropdown } from '@/routes/settings/_components/language-dropdown'
+import AppStoreStory from '@/routes/stories/app-store'
+import CmdkStory from '@/routes/stories/cmdk'
+import ColorThiefExample from '@/routes/stories/color-thief'
+import DesktopStory from '@/routes/stories/desktop'
+import DialogExamples from '@/routes/stories/dialogs'
+import ErrorStory from '@/routes/stories/error'
+import InputExamples from '@/routes/stories/input'
+import { MarkdownExample } from '@/routes/stories/markdown'
+import MigrateStory from '@/routes/stories/migrate'
+import MiscStory from '@/routes/stories/misc'
+import SettingsStory from '@/routes/stories/settings'
+import SheetStory from '@/routes/stories/sheet'
+import TailwindStory from '@/routes/stories/tailwind'
+import Trpc from '@/routes/stories/trpc'
+import WidgetsStory from '@/routes/stories/widgets'
+import { keyBy, pathJoin } from '@/utils/misc'
+import { tw } from '@/utils/tw'
 
-const storyLinks = [
+type StoryRoute = RouteObject & {name: string; path: string}
+
+const storyLinks: StoryRoute[] = [
 	{
 		name: 'Dialogs',
-		path: '/stories/dialogs',
+		path: '/dialogs',
+		Component: DialogExamples,
 	},
 	{
 		name: 'Desktop',
-		path: '/stories/desktop',
+		path: '/desktop',
+		element: (
+			<AvailableAppsProvider>
+				<DesktopStory />
+			</AvailableAppsProvider>
+		),
 	},
 	{
 		name: 'Widgets',
-		path: '/stories/widgets',
+		path: '/widgets',
+		Component: WidgetsStory,
 	},
 	{
 		name: 'App Store',
-		path: '/stories/app-store',
+		path: '/app-store',
+		Component: AppStoreStory,
 	},
 	{
 		name: 'Settings',
-		path: '/stories/settings',
+		path: '/settings',
+		Component: SettingsStory,
 	},
 	{
 		name: 'tRPC',
-		path: '/stories/trpc',
+		path: '/trpc',
+		Component: Trpc,
 	},
 	{
 		name: 'Input',
-		path: '/stories/input',
+		path: '/input',
+		Component: InputExamples,
 	},
 	{
 		name: 'Color Thief',
-		path: '/stories/color-thief',
+		path: '/color-thief',
+		Component: ColorThiefExample,
 	},
 	{
 		name: 'Error',
-		path: '/stories/error',
+		path: '/error',
+		Component: ErrorStory,
 	},
 	{
 		name: 'CMDK',
-		path: '/stories/cmdk',
+		path: '/cmdk',
+		element: (
+			<AvailableAppsProvider>
+				<CmdkStory />
+			</AvailableAppsProvider>
+		),
 	},
 	{
 		name: 'Sheet',
-		path: '/stories/sheet',
+		path: '/sheet',
+		element: <SheetStory />,
 	},
 	{
 		name: 'Migrate',
-		path: '/stories/migrate',
+		path: '/migrate',
+		Component: MigrateStory,
 	},
 	{
 		name: 'Markdown',
-		path: '/stories/markdown',
+		path: '/markdown',
+		Component: MarkdownExample,
 	},
 	{
 		name: 'Tailwind',
-		path: '/stories/tailwind',
+		path: '/tailwind',
+		Component: TailwindStory,
 	},
 	{
 		name: 'Misc',
-		path: '/stories/misc',
+		path: '/misc',
+		Component: MiscStory,
 	},
 ]
+
+const storyRoutesKeyed = keyBy(storyLinks, 'path')
+
+export function SpecificStory() {
+	const location = useLocation()
+
+	const path = location.pathname.replace(/^\/stories/, '');
+	const {Component, element} = path in storyRoutesKeyed ? storyRoutesKeyed[path] : {Component: undefined, element: undefined}
+
+	if (Component) {
+		return <Component />
+	} else if (element) {
+		return element
+	} else {
+		return <div>Story not found</div>
+	}
+}
 
 export function StoriesLayout() {
 	return (
@@ -80,7 +139,7 @@ export function StoriesLayout() {
 					<span className='px-2'>|</span>
 					<NavLink to='/stories'>Stories</NavLink>
 					{storyLinks.map(({name, path}) => (
-						<NavLink key={path} to={path}>
+						<NavLink key={path} to={pathJoin('stories/', path)}>
 							{name}
 						</NavLink>
 					))}

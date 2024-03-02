@@ -17,9 +17,6 @@ import {AvailableAppsProvider} from './providers/available-apps'
 import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
 import {Settings} from './routes/settings'
-import {MarkdownExample} from './routes/stories/markdown'
-import MiscStory from './routes/stories/misc'
-import TailwindStory from './routes/stories/tailwind'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
 const CategoryPage = React.lazy(() => import('./routes/app-store/category-page'))
@@ -39,20 +36,9 @@ const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/1-create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/2-account-created'))
 const Stories = React.lazy(() => import('./routes/stories'))
-const DialogExamples = React.lazy(() => import('./routes/stories/dialogs'))
-const AppStoreStory = React.lazy(() => import('./routes/stories/app-store'))
-const CmdkStory = React.lazy(() => import('./routes/stories/cmdk'))
-const ColorThiefExample = React.lazy(() => import('./routes/stories/color-thief'))
-const DesktopStory = React.lazy(() => import('./routes/stories/desktop'))
-const ErrorStory = React.lazy(() => import('./routes/stories/error'))
-const InputExamples = React.lazy(() => import('./routes/stories/input'))
-const MigrateStory = React.lazy(() => import('./routes/stories/migrate'))
-const SettingsStory = React.lazy(() => import('./routes/stories/settings'))
-const WidgetsStory = React.lazy(() => import('./routes/stories/widgets'))
-const SheetStory = React.lazy(() => import('./routes/stories/sheet'))
-const Trpc = React.lazy(() => import('./routes/stories/trpc'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 const RestartTest = React.lazy(() => import('./routes/restart-test'))
+const SpecificStory = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.SpecificStory})))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -254,75 +240,11 @@ export const router = createBrowserRouter([
 			{
 				path: 'stories',
 				Component: Stories,
+				index: true,
 			},
 			{
-				path: 'stories/dialogs',
-				Component: DialogExamples,
-			},
-			{
-				path: 'stories/app-store',
-				Component: AppStoreStory,
-			},
-			{
-				path: 'stories/widgets',
-				Component: WidgetsStory,
-			},
-			{
-				path: 'stories/settings',
-				Component: SettingsStory,
-			},
-			{
-				path: 'stories/trpc',
-				Component: Trpc,
-			},
-			{
-				path: 'stories/input',
-				Component: InputExamples,
-			},
-			{
-				path: 'stories/color-thief',
-				Component: ColorThiefExample,
-			},
-			{
-				path: 'stories/error',
-				Component: ErrorStory,
-			},
-			{
-				path: 'stories/desktop',
-				// Component: DesktopStory,
-				element: (
-					<AvailableAppsProvider>
-						<DesktopStory />
-					</AvailableAppsProvider>
-				),
-			},
-			{
-				path: 'stories/cmdk',
-				element: (
-					<AvailableAppsProvider>
-						<CmdkStory />
-					</AvailableAppsProvider>
-				),
-			},
-			{
-				path: 'stories/sheet',
-				element: <SheetStory />,
-			},
-			{
-				path: 'stories/migrate',
-				Component: MigrateStory,
-			},
-			{
-				path: 'stories/tailwind',
-				Component: TailwindStory,
-			},
-			{
-				path: 'stories/misc',
-				Component: MiscStory,
-			},
-			{
-				path: 'stories/markdown',
-				Component: MarkdownExample,
+				path: 'stories/*',
+				Component: SpecificStory,
 			},
 		],
 	},
