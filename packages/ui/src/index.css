@@ -166,3 +166,8 @@ a {
 	overflow-x: hidden; /* for older browsers, though top and bottom of text in `tight-inter-trim` is going to be clipped at the top and bottom */
 	overflow-x: clip;
 }
+
+/* By default, `[data-sonner-toaster]` `z-index` is high enough that we can't put anything over it  */
+[data-sonner-toaster] {
+	@apply !z-50;
+}
