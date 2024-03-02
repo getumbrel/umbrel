@@ -13,7 +13,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 import {initTokenRenewal} from '@/modules/auth/shared'
 
 import {IframeChecker} from './components/iframe-checker'
-import {BareCoverMessage} from './components/ui/cover-message'
+import {BareCoverMessage, CoverMessageTarget} from './components/ui/cover-message'
 import {Toaster} from './components/ui/toast'
 import {RemoteWallpaperInjector, WallpaperProvider} from './providers/wallpaper'
 import {router} from './router'
@@ -39,6 +39,8 @@ i18next.on('initialized', () => {
 						</WallpaperProvider>
 					</TrpcProvider>
 					<Toaster />
+					{/* Want to show cover message over Toast elements */}
+					<CoverMessageTarget />
 				</ErrorBoundary>
 			</IframeChecker>
 		</React.StrictMode>,
