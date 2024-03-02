@@ -1,4 +1,4 @@
-import {useSearchParams} from 'react-router-dom'
+import {NavigateOptions, useSearchParams} from 'react-router-dom'
 import {pickBy} from 'remeda'
 
 type QueryObject = {[key: string]: string}
@@ -7,19 +7,19 @@ type QueryObject = {[key: string]: string}
 export function useQueryParams<T extends QueryObject>() {
 	const [searchParams, setSearchParams] = useSearchParams()
 
-	const add = (param: keyof T, value: string) => {
+	const add = (param: keyof T, value: string, navigateOpts?: NavigateOptions) => {
 		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...newParams, [param]: value})
+		setSearchParams({...newParams, [param]: value}, navigateOpts)
 	}
 
-	const remove = (param: keyof T) => {
+	const remove = (param: keyof T, navigateOpts?: NavigateOptions) => {
 		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...pickBy(newParams, (_, k) => k !== param)})
+		setSearchParams({...pickBy(newParams, (_, k) => k !== param)}, navigateOpts)
 	}
 
 	// Adding `& string` because otherwise `key` can be a number if `T` is not specified when calling `useQueryParams`
-	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean) => {
-		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn))
+	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean, navigateOpts?: NavigateOptions) => {
+		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn), navigateOpts)
 	}
 
 	return {
