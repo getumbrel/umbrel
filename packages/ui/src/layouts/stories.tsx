@@ -1,18 +1,19 @@
-import { ReactNode, Suspense } from 'react'
-import { Link, Outlet, RouteObject, useLocation } from 'react-router-dom'
+import {ReactNode, Suspense} from 'react'
+import {Link, Outlet, RouteObject, useLocation} from 'react-router-dom'
 
-import { FadeScroller } from '@/components/fade-scroller'
-import { UmbrelHeadTitle } from '@/components/umbrel-head-title'
-import { AvailableAppsProvider } from '@/providers/available-apps'
-import { LanguageDropdown } from '@/routes/settings/_components/language-dropdown'
+import {FadeScroller} from '@/components/fade-scroller'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
+import {AvailableAppsProvider} from '@/providers/available-apps'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import AppStoreStory from '@/routes/stories/app-store'
 import CmdkStory from '@/routes/stories/cmdk'
 import ColorThiefExample from '@/routes/stories/color-thief'
+import CoverStory from '@/routes/stories/cover'
 import DesktopStory from '@/routes/stories/desktop'
 import DialogExamples from '@/routes/stories/dialogs'
 import ErrorStory from '@/routes/stories/error'
 import InputExamples from '@/routes/stories/input'
-import { MarkdownExample } from '@/routes/stories/markdown'
+import {MarkdownExample} from '@/routes/stories/markdown'
 import MigrateStory from '@/routes/stories/migrate'
 import MiscStory from '@/routes/stories/misc'
 import SettingsStory from '@/routes/stories/settings'
@@ -20,8 +21,8 @@ import SheetStory from '@/routes/stories/sheet'
 import TailwindStory from '@/routes/stories/tailwind'
 import Trpc from '@/routes/stories/trpc'
 import WidgetsStory from '@/routes/stories/widgets'
-import { keyBy, pathJoin } from '@/utils/misc'
-import { tw } from '@/utils/tw'
+import {keyBy, pathJoin} from '@/utils/misc'
+import {tw} from '@/utils/tw'
 
 type StoryRoute = RouteObject & {name: string; path: string}
 
@@ -109,6 +110,11 @@ const storyLinks: StoryRoute[] = [
 		path: '/misc',
 		Component: MiscStory,
 	},
+	{
+		name: 'Cover',
+		path: '/stories/cover',
+		Component: CoverStory,
+	},
 ]
 
 const storyRoutesKeyed = keyBy(storyLinks, 'path')
@@ -116,8 +122,9 @@ const storyRoutesKeyed = keyBy(storyLinks, 'path')
 export function SpecificStory() {
 	const location = useLocation()
 
-	const path = location.pathname.replace(/^\/stories/, '');
-	const {Component, element} = path in storyRoutesKeyed ? storyRoutesKeyed[path] : {Component: undefined, element: undefined}
+	const path = location.pathname.replace(/^\/stories/, '')
+	const {Component, element} =
+		path in storyRoutesKeyed ? storyRoutesKeyed[path] : {Component: undefined, element: undefined}
 
 	if (Component) {
 		return <Component />
