@@ -252,6 +252,7 @@ export function Wallpaper({
 					'pointer-events-none fixed inset-0 w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000',
 					isPreview && 'absolute h-full',
 					!isPreview && 'h-lvh',
+					className,
 				)}
 			/>
 			{!isLoading && !stayBlurred && (
