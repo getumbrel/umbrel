@@ -5,6 +5,8 @@ import {Wallpaper} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
+import {DarkenLayer} from '../darken-layer'
+
 /** Cover message without  */
 export function BareCoverMessage({
 	children,
@@ -43,7 +45,8 @@ export function CoverMessage({
 	return (
 		<CoverMessageContent>
 			{/* <div className='absolute inset-0 z-50'> */}
-			<Wallpaper className={'z-50'} stayBlurred />
+			<Wallpaper className='z-50' stayBlurred />
+			<DarkenLayer className='z-50' />
 			<div onClick={onClick} className={cn(coverMessageBodyClass, bodyClassName)}>
 				{!delayed ? children : show() && children}
 			</div>

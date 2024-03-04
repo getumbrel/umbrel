@@ -1,13 +1,14 @@
 import {Suspense} from 'react'
 import {Outlet} from 'react-router-dom'
 
+import {DarkenLayer} from '@/components/darken-layer'
 import {Wallpaper} from '@/providers/wallpaper'
 
 export function BareLayout() {
 	return (
 		<>
 			<Wallpaper stayBlurred />
-			<div className='fixed inset-0 bg-black/50  contrast-more:bg-black' />
+			<DarkenLayer />
 			<div className='relative flex min-h-[100dvh] flex-col items-center justify-between p-5'>
 				<Suspense>
 					<Outlet />
