@@ -7,6 +7,7 @@ const widgets = [
 		id: 'umbrel:storage',
 		type: 'stat-with-progress',
 		data: {
+			refresh: 1000 * 2,
 			title: 'Storage',
 			value: '256 GB',
 			progressLabel: '1.75 TB left',
@@ -17,6 +18,7 @@ const widgets = [
 		id: 'umbrel:memory',
 		type: 'stat-with-progress',
 		data: {
+			refresh: 1000 * 2,
 			title: 'Memory',
 			value: '5.8 GB',
 			valueSub: '/16GB',
@@ -28,6 +30,7 @@ const widgets = [
 		id: 'umbrel:system-stats',
 		type: 'three-up',
 		data: {
+			refresh: 1000 * 2,
 			items: [
 				{
 					icon: 'system-widget-cpu',
@@ -51,6 +54,7 @@ const widgets = [
 		id: 'umbrel:system-stats',
 		type: 'two-up-stat-with-progress',
 		data: {
+			refresh: 1000 * 2,
 			items: [
 				{
 					title: 'Memory',
@@ -71,6 +75,7 @@ const widgets = [
 		id: 'bitcoin:stats',
 		type: 'four-up',
 		data: {
+			refresh: 1000 * 2,
 			link: '?page=stats',
 			items: [
 				{title: 'Connections', value: '11', valueSub: 'peers'},
@@ -84,6 +89,7 @@ const widgets = [
 		id: 'bitcoin:sync',
 		type: 'stat-with-progress',
 		data: {
+			refresh: 1000 * 2,
 			link: '/',
 			title: 'Blockchain sync',
 			value: '86.92%',
@@ -95,6 +101,7 @@ const widgets = [
 		id: 'lightning:balance-and-transact',
 		type: 'stat-with-buttons',
 		data: {
+			refresh: 1000 * 2,
 			title: 'Lightning Wallet',
 			value: '762,248',
 			valueSub: 'sats',
@@ -116,6 +123,7 @@ const widgets = [
 		id: 'lightning:connections',
 		type: 'four-up',
 		data: {
+			refresh: 1000 * 2,
 			link: '?page=stats',
 			items: [
 				{title: 'Connections', value: '11', valueSub: 'peers'},
@@ -129,6 +137,7 @@ const widgets = [
 		id: 'nostr-relay:stats',
 		type: 'list-emoji',
 		data: {
+			refresh: 1000 * 2,
 			count: 128,
 			items: [
 				{
@@ -154,6 +163,7 @@ const widgets = [
 		id: 'nostr-relay:notifications',
 		type: 'list',
 		data: {
+			refresh: 1000 * 2,
 			link: '/foobar',
 			items: [
 				{
@@ -175,6 +185,7 @@ const widgets = [
 		id: 'transmission:status',
 		type: 'stat-with-progress',
 		data: {
+			refresh: 1000 * 2,
 			link: '/transmission/web/?bla=1',
 			title: 'Transmitting',
 			value: '12.92%',

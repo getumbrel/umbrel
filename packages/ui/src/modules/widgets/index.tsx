@@ -1,11 +1,17 @@
-import {ComponentPropsWithRef} from 'react'
+import {ComponentPropsWithRef, useEffect, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {map} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {tempDescriptionsKeyed, useTempUnit} from '@/hooks/use-temp-unit'
-import {ExampleWidgetConfig, RegistryWidget, WidgetConfig, WidgetType} from '@/modules/widgets/shared/constants'
+import {
+	DEFAULT_REFRESH_MS,
+	ExampleWidgetConfig,
+	RegistryWidget,
+	WidgetConfig,
+	WidgetType,
+} from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {celciusToFahrenheit} from '@/utils/tempurature'
@@ -19,22 +25,30 @@ import {StatWithButtonsWidget} from './stat-with-buttons-widget'
 import {ThreeUpWidget} from './three-up-widget'
 import {TwoUpWidget} from './two-up-widget'
 
-const DEFAULT_REFRESH_MS = 1000 * 60 * 5
-
-export function Widget({appId, config}: {appId: string; config: RegistryWidget}) {
+export function Widget({appId, config: manifestConfig}: {appId: string; config: RegistryWidget}) {
 	// TODO: find a way to use `useApp()` to be cleaner
 	const {userAppsKeyed, systemAppsKeyed, isLoading: isLoadingApps} = useApps()
 	const app = userAppsKeyed?.[appId]
 	// const finalEndpointUrl = urlJoin(appToUrlWithAppPath(app), config.endpoint);
 
+	const [refetchInterval, setRefetchInterval] = useState(manifestConfig.refresh ?? DEFAULT_REFRESH_MS)
+
 	const widgetQ = trpcReact.widget.data.useQuery(
-		{widgetId: config.id},
+		{widgetId: manifestConfig.id},
 		{
 			retry: false,
 			// We do want refetching to happen on a schedule though
-			refetchInterval: config.refresh ?? DEFAULT_REFRESH_MS,
+			refetchInterval,
 		},
 	)
+
+	// Update the refetch interval based on the widget config, not the manifest config
+	// This makes the widget refresh interval dynamic
+	const widgetConfigRefresh = (widgetQ.data as WidgetConfig)?.refresh
+	useEffect(() => {
+		if (!widgetConfigRefresh) return
+		setRefetchInterval(widgetConfigRefresh)
+	}, [widgetConfigRefresh])
 
 	const navigate = useNavigate()
 	const launchApp = useLaunchApp()
@@ -45,7 +59,7 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 		return <ErrorWidget error='Error processing widget.' />
 	}
 	// TODO: Show correct widget type while loading, not just empty container
-	if (isLoading) return <LoadingWidget type={config.type} />
+	if (isLoading) return <LoadingWidget type={manifestConfig.type} />
 
 	const widget = widgetQ.data as WidgetConfig
 
@@ -61,7 +75,7 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 		}
 	}
 
-	switch (config.type) {
+	switch (manifestConfig.type) {
 		case 'stat-with-buttons': {
 			const w = widget as WidgetConfig<'stat-with-buttons'>
 			return <StatWithButtonsWidget {...w} onClick={handleClick} />
@@ -77,7 +91,7 @@ export function Widget({appId, config}: {appId: string; config: RegistryWidget})
 		case 'three-up': {
 			const w = widget as WidgetConfig<'three-up'>
 			// TODO: figure out how to show the user's desired temp unit from local storage in a way that isn't brittle
-			if (config.id === 'umbrel:system-stats') {
+			if (manifestConfig.id === 'umbrel:system-stats') {
 				return <SystemThreeUpWidget {...w} onClick={handleClick} />
 			}
 			return <ThreeUpWidget {...w} onClick={handleClick} />
