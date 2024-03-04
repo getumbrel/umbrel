@@ -96,6 +96,6 @@ COPY packages/os/overlay /
 # Migrataing current data is required to not break journald, otherwise
 # /var/log/journal will not exist and journald will log to RAM and not
 # persist between reboots.
-RUN mkdir -p /data/umbrelos/var
-RUN mv /var/log     /data/umbrelos/var/log
-RUN mv /home        /data/umbrelos/home
+RUN mkdir -p /data/umbrel-os/var
+RUN mv /var/log     /data/umbrel-os/var/log
+RUN mv /home        /data/umbrel-os/home
