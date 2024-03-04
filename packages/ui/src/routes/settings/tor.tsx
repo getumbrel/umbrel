@@ -37,8 +37,8 @@ export default function ConfirmEnableTorDialog() {
 						variant='destructive'
 						className='px-6'
 						onClick={() => {
-							// Prevent closing by default
 							setEnabled(true)
+							dialogProps.onOpenChange(false)
 						}}
 					>
 						{t('tor.enable.submit')}
