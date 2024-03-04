@@ -1,10 +1,11 @@
-import {ReloadPageButton} from '@/components/reload-page-button'
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
-import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
+import { BareCoverMessage } from '@/components/ui/cover-message'
+import { Loading } from '@/components/ui/loading'
+import { trpcReact } from '@/trpc/trpc'
+import { t } from '@/utils/i18n'
 
-import {RedirectLogin, RedirectOnboarding} from './redirects'
+import { toast } from '@/components/ui/toast'
+import { RedirectLogin, RedirectOnboarding } from './redirects'
+
 
 export function EnsureUserDoesntExist({children}: {children?: React.ReactNode}) {
 	return (
@@ -34,6 +35,9 @@ function EnsureUser({
 }) {
 	const userExistsQ = trpcReact.user.exists.useQuery(undefined, {
 		retry: false,
+		onError() {
+			toast.error(t('auth.failed-to-check-if-user-exists'))
+		}
 	})
 	const userExists = userExistsQ.data ?? false
 	const wantsUserExists = exists
@@ -42,15 +46,6 @@ function EnsureUser({
 		return (
 			<BareCoverMessage delayed>
 				<Loading />
-			</BareCoverMessage>
-		)
-	}
-
-	if (userExistsQ.isError) {
-		return (
-			<BareCoverMessage>
-				{t('auth.failed-to-check-if-user-exists')}
-				<ReloadPageButton />
 			</BareCoverMessage>
 		)
 	}
