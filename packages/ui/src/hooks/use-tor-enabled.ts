@@ -6,13 +6,13 @@ export function useTorEnabled() {
 	const torEnabledQ = trpcReact.apps.getTorEnabled.useQuery()
 
 	const setMut = trpcReact.apps.setTorEnabled.useMutation({
-		onSuccess: () => ctx.user.get.invalidate(),
+		onSuccess: () => ctx.apps.getTorEnabled.invalidate(),
 	})
 
 	return {
 		enabled: torEnabledQ.data,
 		setEnabled: (enabled: boolean) => setMut.mutate(enabled),
-		isLoading: setMut.isLoading,
+		isLoading: torEnabledQ.isLoading || setMut.isLoading,
 		isError: setMut.isError,
 		error: setMut.error,
 	}

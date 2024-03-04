@@ -143,7 +143,7 @@ export function SettingsContent() {
 							onCheckedChange={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
 						/>
 					</ListRow>
-					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel>
+					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
 						<Switch
 							checked={tor.enabled}
 							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
