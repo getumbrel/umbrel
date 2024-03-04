@@ -58,7 +58,9 @@ check_dependencies () {
 }
 
 list_installed_apps() {
-  cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+  # cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
+  YAML_FILE="${UMBREL_ROOT}/umbrel.yaml"
+  yq e '.apps[]' "${YAML_FILE}" 2> /dev/null || true
 }
 
 # Deterministically derives 128 bits of cryptographically secure entropy
