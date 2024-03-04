@@ -102,7 +102,7 @@ export function SettingsContentMobile() {
 					<MemoryCardContent />
 				</Card>
 				<Card>
-					<CpuTempCardContent tempInCelcius={cpuTemp.temp} />
+					<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
 				</Card>
 				<Link
 					className={cn(cardClass, 'flex flex-col justify-between')}

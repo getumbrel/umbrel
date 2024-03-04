@@ -5,16 +5,24 @@ import {tempDescriptions, tempDescriptionsKeyed, TempUnit, useTempUnit} from '@/
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {isCpuTooCold, isCpuTooHot} from '@/utils/system'
-import {celciusToFahrenheit, tempToColor, tempToMessage} from '@/utils/tempurature'
+import {celciusToFahrenheit, CpuType, tempToColor, tempToMessage} from '@/utils/tempurature'
 
 import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
 
-export function CpuTempCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?: number; defaultUnit?: TempUnit}) {
+export function CpuTempCardContent({
+	tempInCelcius,
+	defaultUnit,
+	cpuType,
+}: {
+	tempInCelcius?: number
+	defaultUnit?: TempUnit
+	cpuType: CpuType
+}) {
 	const [unit, setUnit] = useTempUnit(defaultUnit)
 
 	const tempNumber = unit === 'c' ? tempInCelcius : celciusToFahrenheit(tempInCelcius)
 	const tempUnitLabel = tempDescriptionsKeyed[unit].label
-	const tempMessage = tempNumber === 69 ? t('temp.nice') : tempToMessage(tempInCelcius)
+	const tempMessage = tempNumber === 69 ? t('temp.nice') : tempToMessage(cpuType, tempInCelcius)
 
 	// 60% opacity to base 16
 	const opacity = (60).toString(16)
@@ -35,8 +43,8 @@ export function CpuTempCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?
 							className={cn('h-[5px] w-[5px] rounded-full ring-3', !isUnknown && 'animate-pulse')}
 							style={
 								{
-									backgroundColor: tempToColor(tempInCelcius),
-									'--tw-ring-color': tempToColor(tempInCelcius) + opacity,
+									backgroundColor: tempToColor(cpuType, tempInCelcius),
+									'--tw-ring-color': tempToColor(cpuType, tempInCelcius) + opacity,
 								} as React.CSSProperties // forcing because of `--tw-ring-color`
 							}
 						/>
@@ -51,8 +59,10 @@ export function CpuTempCardContent({tempInCelcius, defaultUnit}: {tempInCelcius?
 					onValueChange={setUnit}
 				/>
 			</div>
-			{isCpuTooHot(tempInCelcius ?? 0) && <span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>}
-			{isCpuTooCold(tempInCelcius ?? 0) && (
+			{isCpuTooHot(cpuType, tempInCelcius ?? 0) && (
+				<span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>
+			)}
+			{isCpuTooCold(cpuType, tempInCelcius ?? 0) && (
 				<span className={cardErrorClass}>{t('tempurature.too-cold-suggestion')}</span>
 			)}
 		</div>

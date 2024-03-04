@@ -344,5 +344,8 @@
   "logout-error-generic": "Backend-Fehler beim Abmelden!",
   "troubleshoot-pick-title": "Was möchten Sie beheben?",
   "troubleshoot.app-download": "Laden Sie {{app}}-Protokolle herunter",
-  "troubleshoot.system-download": "Laden Sie {{label}} herunter"
+  "troubleshoot.system-download": "Laden Sie {{label}} herunter",
+  "notifications.cpu.too-cold": "Zu kalt!",
+  "tempurature.too-cold-suggestion": "Erwägen Sie, das Gerät in einen warmen Raum zu bringen",
+  "troubleshoot-no-logs-yet": "Noch keine Protokolle."
 }
