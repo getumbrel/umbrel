@@ -7,6 +7,7 @@ import {PinInput} from '@/components/ui/pin-input'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Dialog,
 	DialogContent,
@@ -32,7 +33,7 @@ export default function TwoFactorEnableDialog() {
 	const title = t('2fa.enable.title')
 	const isMobile = useIsMobile()
 
-	const dialogProps = useDialogOpenProps('2fa-enable')
+	const dialogProps = useSettingsDialogProps()
 
 	const scanThisMessage = t('2fa.enable.scan-this')
 

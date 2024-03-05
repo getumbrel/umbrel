@@ -138,7 +138,7 @@ export function SettingsContentMobile() {
 					icon={Tb2Fa}
 					title={t('2fa-long')}
 					description={t('2fa-description')}
-					onClick={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
+					onClick={() => navigate(is2faEnabledQ.data ? '2fa/disable' : '2fa/enable')}
 				/>
 				<ListRowMobile
 					icon={TorIcon2}

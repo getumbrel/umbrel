@@ -1,4 +1,5 @@
 import React, {Suspense} from 'react'
+import {Route, Routes} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
@@ -126,6 +127,10 @@ export function Settings() {
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
+			<Routes>
+				<Route path='/2fa/enable' Component={TwoFactorEnableDialog} />
+				<Route path='/2fa/disable' Component={TwoFactorDisableDialog} />
+			</Routes>
 			<Suspense>
 				<Dialog />
 			</Suspense>

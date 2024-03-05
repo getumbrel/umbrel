@@ -140,7 +140,7 @@ export function SettingsContent() {
 					<ListRow title={t('2fa-long')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
 						<Switch
 							checked={is2faEnabledQ.data}
-							onCheckedChange={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
+							onCheckedChange={() => navigate(is2faEnabledQ.data ? '2fa/disable' : '2fa/enable')}
 						/>
 					</ListRow>
 					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel disabled={tor.isLoading}>

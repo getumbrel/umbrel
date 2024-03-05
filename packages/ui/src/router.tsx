@@ -112,7 +112,7 @@ export const router = createBrowserRouter([
 						],
 					},
 					{
-						path: 'settings',
+						path: 'settings/*',
 						Component: Settings,
 					},
 				],

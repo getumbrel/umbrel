@@ -1,10 +1,12 @@
+import {useState} from 'react'
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {RiAlarmWarningFill} from 'react-icons/ri'
-import {Link} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {links} from '@/constants/links'
 import {cn} from '@/shadcn-lib/utils'
+import {useAfterDelayedClose} from '@/utils/dialog'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -31,4 +33,16 @@ export function ContactSupportLink({className}: {className?: string}) {
 
 export function ChangePasswordWarning() {
 	return <ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
+}
+
+export function useSettingsDialogProps() {
+	const navigate = useNavigate()
+
+	const [open, setOpen] = useState(true)
+	useAfterDelayedClose(open, () => navigate('/settings'))
+
+	return {
+		open,
+		onOpenChange: setOpen,
+	}
 }
