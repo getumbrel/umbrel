@@ -6,14 +6,17 @@ type BaseWidget = {
 	refresh?: number
 }
 
-export type WidgetType =
-	| 'stat-with-buttons'
-	| 'stat-with-progress'
-	| 'two-up-stat-with-progress'
-	| 'three-up'
-	| 'four-up'
-	| 'list-emoji'
-	| 'list'
+export const widgetTypes = [
+	'stat-with-buttons',
+	'stat-with-progress',
+	'two-up-stat-with-progress',
+	'three-up',
+	'four-up',
+	'list-emoji',
+	'list',
+] as const
+
+export type WidgetType = (typeof widgetTypes)[number]
 
 // ------------------------------
 

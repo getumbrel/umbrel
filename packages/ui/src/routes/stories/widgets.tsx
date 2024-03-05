@@ -1,15 +1,17 @@
 import {format} from 'date-fns'
+import {useEffect, useState} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {indexBy} from 'remeda'
 
 import {Arc} from '@/components/ui/arc'
 import {H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
-import {Widget} from '@/modules/widgets'
+import {ExampleWidget, LoadingWidget, Widget} from '@/modules/widgets'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
 import {ListEmojiWidget} from '@/modules/widgets/list-emoji-widget'
 import {ListWidget} from '@/modules/widgets/list-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
-import {liveUsageWidgets, RegistryWidget, WidgetType} from '@/modules/widgets/shared/constants'
+import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modules/widgets/shared/constants'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
@@ -76,6 +78,9 @@ export default function WidgetsStory() {
 	return (
 		<AppsProvider>
 			<div className='bg-white/30' ref={pageInnerRef}>
+				<H2>Any</H2>
+				<EditableWidget />
+				<H2>Widget type</H2>
 				<H2>Error</H2>
 				<div className={sectionClass}>
 					<Widget
@@ -434,6 +439,59 @@ export default function WidgetsStory() {
 				</WidgetWrapper>
 			</div>
 		</AppsProvider>
+	)
+}
+
+export function EditableWidget() {
+	const [code, setCode] = useState(JSON.stringify(liveUsageWidgets[0], null, 2))
+	// const [widgetType, setWidgetType] = useState<WidgetType>('stat-with-progress')
+	const [registryConfig, setRegistryConfig] = useState<RegistryWidget>(liveUsageWidgets[0])
+	const [error, setError] = useState('')
+
+	useEffect(() => {
+		let json: any
+		try {
+			json = JSON.parse(code)
+			setError('')
+			setRegistryConfig(json)
+		} catch (e) {
+			console.error(e)
+			setError('Invalid JSON: ' + (e as Error).message)
+		}
+	}, [code])
+
+	return (
+		<div className='grid grid-cols-2 gap-2'>
+			<div>
+				<label htmlFor='widget-type'>Widget type</label>
+				<select
+					id='widget-type'
+					className='w-full bg-black'
+					value={registryConfig?.type}
+					onChange={(e) => {
+						const newConfig = {...registryConfig, type: e.target.value as WidgetType}
+						setCode(JSON.stringify(newConfig, null, 2))
+					}}
+				>
+					{widgetTypes.map((type) => (
+						<option key={type} value={type}>
+							{type}
+						</option>
+					))}
+				</select>
+				<textarea
+					className='h-[200px] w-full border border-white/10 bg-black p-2 font-mono'
+					value={code}
+					onChange={(e) => {
+						setCode(e.target.value)
+					}}
+				/>
+				{error && <div className='bg-black text-red-500'>{error}</div>}
+			</div>
+			<ErrorBoundary fallback={<LoadingWidget type={registryConfig?.type} />}>
+				<ExampleWidget type={registryConfig?.type} example={registryConfig?.example} />
+			</ErrorBoundary>
+		</div>
 	)
 }
 
