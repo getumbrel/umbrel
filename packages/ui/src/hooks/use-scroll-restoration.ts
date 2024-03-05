@@ -25,12 +25,18 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 		const el = container.current
 		const handleScrollEnd = () => {
 			const y = Math.round(el?.scrollTop ?? 0)
-			console.log('scroll end', key, y ?? 0)
+			// console.log('scroll end', key, y ?? 0)
 			setScrollPosition(key, y ?? 0)
 		}
-		el?.addEventListener('scrollend', handleScrollEnd)
+		// handleScrollEnd()
+
+		// Add scrollend listener when supported in Safari
+		// https://caniuse.com/?search=scrollend
+		// el?.addEventListener('scrollend', handleScrollEnd)
+		el?.addEventListener('scroll', handleScrollEnd)
 		return () => {
-			el?.removeEventListener('scrollend', handleScrollEnd)
+			// el?.removeEventListener('scrollend', handleScrollEnd)
+			el?.addEventListener('scroll', handleScrollEnd)
 		}
 	}, [container, key])
 
