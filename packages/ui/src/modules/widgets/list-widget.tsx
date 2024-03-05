@@ -3,6 +3,7 @@ import { LOADING_DASH } from '@/constants'
 
 import { ListWidget } from '@/modules/widgets/shared/constants'
 import { WidgetContainer } from './shared/shared'
+import { Fragment } from 'react'
 
 export function ListWidget({
 	items,
@@ -24,10 +25,10 @@ export function ListWidget({
 				{!items && <ListItem textSub={undefined} text={LOADING_DASH} />}
 				{/* Slice just in case API sends down too much data */}
 				{items?.slice(0, 5)?.map((item, i) => (
-					<>
+					<Fragment key={i}>
 						{i !== 0 && <hr className='border-white/5' />}
-						<ListItem key={i} textSub={item.textSub} text={item.text} />
-					</>
+						<ListItem textSub={item.textSub} text={item.text} />
+					</Fragment>
 				))}
 			</div>
 		</WidgetContainer>
