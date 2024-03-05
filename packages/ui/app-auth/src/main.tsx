@@ -7,6 +7,7 @@ import '../../src/index.css'
 
 import i18next from 'i18next'
 import {ErrorBoundary} from 'react-error-boundary'
+import {HelmetProvider} from 'react-helmet-async'
 import {BrowserRouter} from 'react-router-dom'
 
 import {IframeChecker} from '../../src/components/iframe-checker'
@@ -20,14 +21,16 @@ i18next.on('initialized', () => {
 	ReactDOM.createRoot(document.getElementById('root')!).render(
 		<React.StrictMode>
 			<IframeChecker>
-				<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
-					<TooltipProvider>
-						<BrowserRouter>
-							<LoginWithUmbrel />
-						</BrowserRouter>
-					</TooltipProvider>
-					<Toaster />
-				</ErrorBoundary>
+				<HelmetProvider>
+					<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
+						<TooltipProvider>
+							<BrowserRouter>
+								<LoginWithUmbrel />
+							</BrowserRouter>
+						</TooltipProvider>
+						<Toaster />
+					</ErrorBoundary>
+				</HelmetProvider>
 			</IframeChecker>
 		</React.StrictMode>,
 	)

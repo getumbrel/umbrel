@@ -9,6 +9,7 @@ import './utils/i18n'
 
 import i18next from 'i18next'
 import {ErrorBoundary} from 'react-error-boundary'
+import {HelmetProvider} from 'react-helmet-async'
 
 import {initTokenRenewal} from '@/modules/auth/shared'
 
@@ -26,23 +27,25 @@ initTokenRenewal()
 i18next.on('initialized', () => {
 	ReactDOM.createRoot(document.getElementById('root')!).render(
 		<React.StrictMode>
-			<IframeChecker>
-				{/* <UpdatingCover> */}
-				<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
-					<TrpcProvider>
-						<WallpaperProvider>
-							<RemoteWallpaperInjector />
-							<TooltipProvider>
-								{/* TODO: move stories out of main router */}
-								<RouterProvider router={router} />
-							</TooltipProvider>
-						</WallpaperProvider>
-					</TrpcProvider>
-					<Toaster />
-					{/* Want to show cover message over Toast elements */}
-					<CoverMessageTarget />
-				</ErrorBoundary>
-			</IframeChecker>
+			<HelmetProvider>
+				<IframeChecker>
+					{/* <UpdatingCover> */}
+					<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
+						<TrpcProvider>
+							<WallpaperProvider>
+								<RemoteWallpaperInjector />
+								<TooltipProvider>
+									{/* TODO: move stories out of main router */}
+									<RouterProvider router={router} />
+								</TooltipProvider>
+							</WallpaperProvider>
+						</TrpcProvider>
+						<Toaster />
+						{/* Want to show cover message over Toast elements */}
+						<CoverMessageTarget />
+					</ErrorBoundary>
+				</IframeChecker>
+			</HelmetProvider>
 		</React.StrictMode>,
 	)
 })
