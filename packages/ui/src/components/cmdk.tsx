@@ -1,6 +1,7 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, useEffect, useRef, useState} from 'react'
+import {ComponentPropsWithoutRef, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
+import {useKey} from 'react-use'
 import {range} from 'remeda'
 
 import {LOADING_DASH} from '@/constants'
@@ -262,16 +263,10 @@ const SubItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 export function useCmdkOpen() {
 	const [open, setOpen] = useState(false)
 
-	useEffect(() => {
-		const down = (e: KeyboardEvent) => {
-			if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-				e.preventDefault()
-				setOpen((open) => !open)
-			}
-		}
-		document.addEventListener('keydown', down)
-		return () => document.removeEventListener('keydown', down)
-	}, [])
+	useKey(
+		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
+		() => setOpen((open) => !open),
+	)
 
 	return {open, setOpen}
 }
