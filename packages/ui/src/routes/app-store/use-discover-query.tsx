@@ -19,6 +19,7 @@ export type DiscoverData = {
 
 export function useDiscoverQuery() {
 	const discoverQ = useQuery<{data: DiscoverData}>({
+		queryKey: ['app-store', 'discover'],
 		queryFn: () => fetch('https://apps.umbrel.com/api/v1/umbrel-os/app-store/discover').then((res) => res.json()),
 	})
 
