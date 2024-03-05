@@ -116,8 +116,8 @@ function AlertDialogExample() {
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel>Cancel</AlertDialogCancel>
 					<AlertDialogAction onClick={() => toast('Continue!')}>Continue</AlertDialogAction>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
@@ -128,7 +128,7 @@ function DrawerExample() {
 	return (
 		<Drawer>
 			<DrawerTrigger asChild>
-				<Button size='lg'>Open Immersive Dialog</Button>
+				<Button size='lg'>Open Drawer</Button>
 			</DrawerTrigger>
 			<DrawerContent>
 				<DrawerHeader>
