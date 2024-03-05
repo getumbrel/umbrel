@@ -7,33 +7,30 @@ STATE_FILE="/tmp/power_button_state"
 PASSWORD_RESET_FLAG="/tmp/password_reset_flag"
 
 reset_umbrel_password() {
-  user_json="/home/umbrel/umbrel/db/user.json"
-  new_password='$2b$10$PDwSSnPmfCQJh3x72KjKs.Nb7NgU62gftuic991GkRyFMcIowpTv2'
-
-  # The seed is no longer used for anything but it needs to be present in the user.json file
-  # and decryptable by the password for the legacy password change logic to work.
-  new_seed='TgXPdw/2PAVunpgU/gC+Mw==$87da593006e88d358f2c8ea6fb060faf$8QPHQcfgevnn$9f16c056e076b30c2d9232c8d945033c12a3c35e97f0f43e50e99d7087adb027$250000$cbc'
+  yaml_file="/home/umbrel/umbrel/umbrel.yaml"
 
   echo "umbrel:umbrel" | chpasswd
 
-  if ! [ -f "$user_json" ]; then
+  if ! [ -f "$yaml_file" ]; then
     echo "Error: File not found."
     return
   fi
 
   JSON=$(cat "$user_json" 2>/dev/null)
 
-  if ! jq -e . >/dev/null 2>&1 <<<"$JSON"; then
-    echo "Error: Invalid JSON file."
+  if ! yq eval . "${yaml_file}" >/dev/null 2>&1; then
+    echo "Error: Invalid YAML file."
     return
   fi
 
-  if ! jq -e '.password' >/dev/null 2>&1 <<<"$JSON"; then
-    echo "Error: Password property not found in the JSON file."
+  if ! yq -e .user.hashedPassword "${yaml_file}" >/dev/null 2>&1 <<<"$JSON"; then
+    echo "Error: Password property not found in the YAML file."
     return
   fi
 
-  jq --arg new_password "$new_password" --arg new_seed "$new_seed" '.password = $new_password | .seed = $new_seed' <<<"$JSON" >"$user_json"
+  yq eval '.user.hashedPassword = "$2b$10$PDwSSnPmfCQJh3x72KjKs.Nb7NgU62gftuic991GkRyFMcIowpTv2"' -i "${yaml_file}"
+  yq eval 'del(.user.totpUri)' -i "${yaml_file}"
+
   echo "Password updated successfully."
 }
 

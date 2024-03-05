@@ -131,6 +131,9 @@ export default class App {
 	async start() {
 		this.logger.log(`Starting app ${this.id}`)
 		this.state = 'starting'
+		// We re-run the patch here to fix an edge case where 0.5.x imported apps
+		// wont run because they haven't been patched.
+		await this.patchComposeServices()
 		await appScript(this.#umbreld, 'start', this.id)
 		this.state = 'ready'
 

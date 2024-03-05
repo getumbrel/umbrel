@@ -57,6 +57,11 @@ RUN apt-get install --yes systemd-boot mender-client
 RUN if [ "$TARGETARCH" = "amd64" ]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
 RUN if [ "$TARGETARCH" = "arm64" ]; then apt-get install --yes raspi-firmware; fi
 
+# Install acpid
+# We use acpid to implement custom behaviour for power button presses
+RUN apt-get install --yes acpid
+RUN systemctl enable acpid
+
 # Install essential networking services
 RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
 
@@ -91,6 +96,6 @@ COPY packages/os/overlay /
 # Migrataing current data is required to not break journald, otherwise
 # /var/log/journal will not exist and journald will log to RAM and not
 # persist between reboots.
-RUN mkdir -p /data/umbrelos/var
-RUN mv /var/log     /data/umbrelos/var/log
-RUN mv /home        /data/umbrelos/home
+RUN mkdir -p /data/umbrel-os/var
+RUN mv /var/log     /data/umbrel-os/var/log
+RUN mv /home        /data/umbrel-os/home

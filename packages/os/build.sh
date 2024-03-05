@@ -96,6 +96,10 @@ function create_disk_image() {
     cp "${overlay_dir}/etc/hostname" "${root_mount_point}/etc/hostname"
     cp "${overlay_dir}/etc/hosts" "${root_mount_point}/etc/hosts"
 
+    echo "Remove .dockerenv..."
+    # We also need to remove this to prevent the system from being detected as a contianer
+    rm "${root_mount_point}/.dockerenv"
+
     echo "Copying boot directory over to ESP partition..."
     cp -r "${root_mount_point}/boot/." "${efi_mount_point}"
     tree "${efi_mount_point}"

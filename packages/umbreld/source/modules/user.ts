@@ -40,6 +40,11 @@ export default class User {
 		const saltRounds = 10
 		const hashedPassword = await bcrypt.hash(password, saltRounds)
 
+		return this.setHashedPassword(hashedPassword)
+	}
+
+	// Directly sets the hashed password value (only exposed for data migration)
+	async setHashedPassword(hashedPassword: string) {
 		return this.#store.set('user.hashedPassword', hashedPassword)
 	}
 
