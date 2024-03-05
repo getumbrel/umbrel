@@ -17,7 +17,7 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 	// Settings page only has dialogs for now, but because they add to the history, each page transition automatically causes
 	// a scroll to top. This is a workaround for that.
 	// Always scroll to top for settings page itself, but don't do that for sub-pages
-	const keyPart = location.pathname.startsWith('/settings') ? location.pathname : location.key
+	const keyPart = location.pathname.startsWith('/settings') ? '/settings' : location.key
 	const key = `scroll-position-${keyPart}`
 	const {state} = useNavigation()
 
