@@ -30,30 +30,28 @@ const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-ena
 const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
 // drawers
 const StartMigrationDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
+	import('@/routes/settings/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
 )
 const AccountDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/account').then((m) => ({default: m.AccountDrawer})),
+	import('@/routes/settings/mobile/account').then((m) => ({default: m.AccountDrawer})),
 )
 const WallpaperDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/wallpaper').then((m) => ({default: m.WallpaperDrawer})),
+	import('@/routes/settings/mobile/wallpaper').then((m) => ({default: m.WallpaperDrawer})),
 )
 const LanguageDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/language').then((m) => ({default: m.LanguageDrawer})),
+	import('@/routes/settings/mobile/language').then((m) => ({default: m.LanguageDrawer})),
 )
-const TorDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/tor').then((m) => ({default: m.TorDrawer})),
-)
+const TorDrawer = React.lazy(() => import('@/routes/settings/mobile/tor').then((m) => ({default: m.TorDrawer})))
 const AppStorePreferencesDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/app-store-preferences').then((m) => ({
+	import('@/routes/settings/mobile/app-store-preferences').then((m) => ({
 		default: m.AppStorePreferencesDrawer,
 	})),
 )
 const DeviceInfoDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
+	import('@/routes/settings/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
 )
 const SoftwareUpdateDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
+	import('@/routes/settings/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
 )
 
 const routeToDialogDesktop = {

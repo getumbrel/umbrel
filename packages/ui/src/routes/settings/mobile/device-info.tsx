@@ -11,7 +11,7 @@ import {
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-import {DeviceInfoContent} from '../device-info-content'
+import {DeviceInfoContent} from '../_components/device-info-content'
 
 export function DeviceInfoDrawer() {
 	const title = t('device-info-short')

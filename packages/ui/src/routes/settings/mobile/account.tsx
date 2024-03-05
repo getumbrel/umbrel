@@ -19,7 +19,7 @@ import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-compon
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-import {NoForgotPasswordMessage} from '../no-forgot-password-message'
+import {NoForgotPasswordMessage} from '../_components/no-forgot-password-message'
 
 export function AccountDrawer() {
 	// TODO: add translation
