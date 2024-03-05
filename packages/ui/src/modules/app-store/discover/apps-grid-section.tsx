@@ -44,7 +44,7 @@ export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
 	return (
 		<Link
 			to={to ? to : `/app-store/${app.id}`}
-			className='group flex w-full items-center gap-2.5 rounded-20 p-2.5 duration-300 hover:bg-white/4'
+			className='group flex w-full items-center gap-2.5 rounded-20 p-2.5 outline-none duration-300 hover:bg-white/4 focus:bg-white/4'
 			unstable_viewTransition
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 		>
