@@ -20,9 +20,10 @@ import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export function CommunityAppStoreDialog() {
-	const title = 'Community app stores'
+	const title = t('app-store.menu.community-app-stores')
 	const dialogProps = useDialogOpenProps('add-community-store')
 
 	// state
