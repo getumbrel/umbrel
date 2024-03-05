@@ -4,6 +4,7 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
 import {useUserName} from '@/hooks/use-user-name'
+import {ChangePasswordWarning} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
@@ -94,6 +95,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
+				<ChangePasswordWarning />
 				<Labeled label={t('change-password.current-password')}>
 					<PasswordInput value={password} onValueChange={setPassword} />
 				</Labeled>

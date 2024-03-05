@@ -1,8 +1,6 @@
-import {RiAlarmWarningFill} from 'react-icons/ri'
-
-import {ErrorAlert} from '@/components/ui/alert'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
+import {ChangePasswordWarning} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -50,7 +48,7 @@ export default function ChangePasswordDialog() {
 								<DialogTitle>{title}</DialogTitle>
 								<DialogDescription>{t('change-password.description')}</DialogDescription>
 							</DialogHeader>
-							<ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
+							<ChangePasswordWarning />
 							<PasswordInput
 								label={t('change-password.current-password')}
 								value={password}
