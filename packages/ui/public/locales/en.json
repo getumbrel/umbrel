@@ -346,5 +346,6 @@
   "troubleshoot-pick-title": "What would you like to troubleshoot?",
   "troubleshoot-no-logs-yet": "No logs yet.",
   "notifications.cpu.too-cold": "Too cold!",
-  "tempurature.too-cold-suggestion": "Consider bringing the device indoors where it's warm"
+  "tempurature.too-cold-suggestion": "Consider bringing the device indoors where it's warm",
+  "cmdk.install-from-app-store": "from App Store"
 }

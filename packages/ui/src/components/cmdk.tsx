@@ -9,6 +9,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
+import {useAvailableApps} from '@/providers/available-apps'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {trpcReact} from '@/trpc/trpc'
@@ -21,18 +22,24 @@ import {DebugOnlyBare} from './ui/debug-only'
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
-	const {userApps, isLoading} = useApps()
+	const userApps = useApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const isMobile = useIsMobile()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
+	const availableApps = useAvailableApps()
 
+	const isLoading = userQ.isLoading || availableApps.isLoading || userApps.isLoading
+
+	if (availableApps.isLoading) return null
 	if (isLoading) return null
-	if (!userApps) return null
 	if (userQ.isLoading) return null
+	if (!userApps.userApps || !userApps.userAppsKeyed) return null
 
-	const installedApps = userApps.filter((app) => app.state === 'ready')
+	const installedApps = userApps.userApps.filter((app) => app.state === 'ready')
+	// Apps not installed yet
+	const installableApps = availableApps.apps.filter((app) => !userApps.userAppsKeyed?.[app.id])
 
 	return (
 		<CommandDialog open={open} onOpenChange={setOpen}>
@@ -97,6 +104,21 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						}}
 					>
 						{app.name}
+					</SubItem>
+				))}
+				{installableApps.map((app) => (
+					<SubItem
+						value={app.name}
+						icon={app.icon}
+						key={app.id}
+						onSelect={() => {
+							navigate(`/app-store/${app.id}`)
+							setOpen(false)
+						}}
+					>
+						<span>
+							{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
+						</span>
 					</SubItem>
 				))}
 				<DebugOnlyBare>
