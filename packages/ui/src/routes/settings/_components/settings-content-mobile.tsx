@@ -20,10 +20,12 @@ import {Card, cardClass} from '@/components/ui/card'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useLanguage} from '@/hooks/use-language'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
@@ -34,12 +36,14 @@ import {ContactSupportLink} from './shared'
 import {StorageCardContent} from './storage-card-content'
 
 export function SettingsContentMobile() {
+	const [languageCode] = useLanguage()
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
+	const uptimeQ = trpcReact.system.uptime.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
@@ -88,6 +92,8 @@ export function SettingsContentMobile() {
 						<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
 						<dt className='opacity-40'>{t('umbrelos-version')}</dt>
 						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
+						<dt className='opacity-40'>{t('uptime')}</dt>
+						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 					</dl>
 				</div>
 			</div>
