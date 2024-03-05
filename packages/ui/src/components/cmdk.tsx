@@ -93,39 +93,6 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				>
 					{t('cmdk.add-widgets')}
 				</CommandItem>
-				{installedApps.map((app) => (
-					<SubItem
-						value={app.name}
-						icon={app.icon}
-						key={app.id}
-						onSelect={() => {
-							launchApp(app.id)
-							setOpen(false)
-						}}
-					>
-						{app.name}
-					</SubItem>
-				))}
-				{installableApps.map((app) => (
-					<SubItem
-						value={app.name}
-						icon={app.icon}
-						key={app.id}
-						onSelect={() => {
-							navigate(`/app-store/${app.id}`)
-							setOpen(false)
-						}}
-					>
-						<span>
-							{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
-						</span>
-					</SubItem>
-				))}
-				<DebugOnlyBare>
-					<SubItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
-						{t('install-a-bunch-of-random-apps')}
-					</SubItem>
-				</DebugOnlyBare>
 				<SubItem
 					value={systemAppsKeyed['UMBREL_home'].name}
 					icon={systemAppsKeyed['UMBREL_home'].icon}
@@ -166,6 +133,39 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				>
 					{t('logout')}
 				</SubItem>
+				{installedApps.map((app) => (
+					<SubItem
+						value={app.name}
+						icon={app.icon}
+						key={app.id}
+						onSelect={() => {
+							launchApp(app.id)
+							setOpen(false)
+						}}
+					>
+						{app.name}
+					</SubItem>
+				))}
+				{installableApps.map((app) => (
+					<SubItem
+						value={app.name}
+						icon={app.icon}
+						key={app.id}
+						onSelect={() => {
+							navigate(`/app-store/${app.id}`)
+							setOpen(false)
+						}}
+					>
+						<span>
+							{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
+						</span>
+					</SubItem>
+				))}
+				<DebugOnlyBare>
+					<SubItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
+						{t('install-a-bunch-of-random-apps')}
+					</SubItem>
+				</DebugOnlyBare>
 			</CommandList>
 		</CommandDialog>
 	)
