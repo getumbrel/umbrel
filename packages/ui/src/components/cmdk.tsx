@@ -134,6 +134,10 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					value={t('logout')}
 					onSelect={() => navigate({search: addLinkSearchParams({dialog: 'logout'})})}
 				/>
+				<SettingsSearchItem
+					value={t('cmdk.shutdown-umbrel')}
+					onSelect={() => navigate({pathname: 'settings', search: addLinkSearchParams({dialog: 'shutdown'})})}
+				/>
 				<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
 				<SettingsSearchItem
 					value={t('change-password')}

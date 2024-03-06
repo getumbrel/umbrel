@@ -347,5 +347,6 @@
   "troubleshoot-no-logs-yet": "No logs yet.",
   "notifications.cpu.too-cold": "Too cold!",
   "tempurature.too-cold-suggestion": "Consider bringing the device indoors where it's warm",
-  "cmdk.install-from-app-store": "from App Store"
+  "cmdk.install-from-app-store": "from App Store",
+  "cmdk.shutdown-umbrel": "Shutdown Umbrel"
 }
