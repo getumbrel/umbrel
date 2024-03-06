@@ -100,22 +100,22 @@ export function Settings() {
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
-			<Routes>
-				<Route path='/2fa' Component={TwoFactorDialog} />
-				<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
-				{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
-				{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
-				{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
-				{<Route path='/account/:accountTab' Component={AccountDrawer} />}
-				{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
-				<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
-				{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
-				{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
-				{isMobile && <Route path='/language' Component={LanguageDrawer} />}
-				<Route path='/troubleshoot' Component={TroubleshootDialog} />
-				{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
-			</Routes>
 			<Suspense>
+				<Routes>
+					<Route path='/2fa' Component={TwoFactorDialog} />
+					<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
+					{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
+					{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
+					{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
+					{<Route path='/account/:accountTab' Component={AccountDrawer} />}
+					{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
+					<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
+					{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
+					{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
+					{isMobile && <Route path='/language' Component={LanguageDrawer} />}
+					<Route path='/troubleshoot' Component={TroubleshootDialog} />
+					{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
+				</Routes>
 				<Dialog />
 			</Suspense>
 		</>
