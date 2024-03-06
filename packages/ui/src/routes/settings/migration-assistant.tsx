@@ -30,7 +30,7 @@ const title = t('migration-assistant')
 export default function MigrationAssistantDialog() {
 	const dialogProps = useDialogOpenProps('migration-assistant')
 	const {params} = useQueryParams()
-	const state = params.get('migration-state')
+	const state = params.get('migration-assistant-state')
 
 	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	const isUmbrelHome = !!isUmbrelHomeQ.data
@@ -87,7 +87,7 @@ function MigrationAssistantPrep() {
 						onClick={() => {
 							navigate({
 								search: addLinkSearchParams({
-									'migration-state': 'errors',
+									'migration-assistant-state': 'errors',
 								}),
 							})
 						}}
@@ -138,7 +138,7 @@ function MigrationAssistantErrors() {
 						onClick={() =>
 							navigate({
 								search: addLinkSearchParams({
-									'migration-state': 'ready',
+									'migration-assistant-state': 'ready',
 								}),
 							})
 						}
