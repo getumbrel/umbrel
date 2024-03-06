@@ -60,7 +60,6 @@ const routeToDialogDesktop = {
 	'app-store-preferences': AppStorePreferencesDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
-	troubleshoot: TroubleshootDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
 } as const satisfies Record<string, React.ComponentType>
 
@@ -72,7 +71,6 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	'app-store-preferences': AppStorePreferencesDrawer,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
-	troubleshoot: TroubleshootDialog,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
 function Dialog() {
