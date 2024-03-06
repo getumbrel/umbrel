@@ -6,7 +6,7 @@ import {toast} from '@/components/ui/toast'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
+import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
 
 function useMounted() {
 	const [mounted, setMounted] = useState(false)
@@ -72,6 +72,10 @@ export function useSettingsNotificationCount() {
 			if (isCpuTooHot(cpuTemp)) {
 				currCount++
 				const id = toast.error(t('notifications.cpu.too-hot'), toastOptions)
+				toastIds.push(id)
+			} else if (isCpuTooCold(cpuTemp)) {
+				currCount++
+				const id = toast.error(t('notifications.cpu.too-cold'), toastOptions)
 				toastIds.push(id)
 			}
 

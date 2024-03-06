@@ -25,7 +25,7 @@ function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps,
 				minHeight: size,
 				// borderRadius: (size * 15) / 50, // 15px for 50px size
 				backgroundImage: !loaded ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
-				backgroundColor: !loaded ? 'transparent' : undefined,
+				// backgroundColor: !loaded ? 'transparent' : undefined,
 			}}
 			{...props}
 		/>

@@ -135,7 +135,7 @@ export default class AppRepository {
 		// Handle official repo which does not have meta
 		// TODO: Instead of this hack we can probably just add this to the official repo
 		// before we ship this code.
-		if (this.url === 'https://github.com/getumbrel/umbrel-apps.git') {
+		if (this.url === this.#umbreld.appStore.defaultAppStoreRepo) {
 			meta = {
 				id: 'umbrel-app-store',
 				name: 'Umbrel App Store',

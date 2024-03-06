@@ -344,5 +344,7 @@
   "cpu": "CPU",
   "cpu-core-count": "{{cores}} cores",
   "troubleshoot-pick-title": "What would you like to troubleshoot?",
-  "troubleshoot-no-logs-yet": "No logs yet."
+  "troubleshoot-no-logs-yet": "No logs yet.",
+  "notifications.cpu.too-cold": "Too cold!",
+  "tempurature.too-cold-suggestion": "Consider bringing the device indoors where it's warm"
 }

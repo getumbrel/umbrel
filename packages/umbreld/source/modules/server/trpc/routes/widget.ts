@@ -1,193 +1,24 @@
 import z from 'zod'
+import ms from 'ms'
 
 import {router, privateProcedure} from '../trpc.js'
+import {systemWidgets} from '../../../system-widgets.js'
 
-const widgets = [
-	{
-		id: 'umbrel:storage',
-		type: 'stat-with-progress',
-		data: {
-			title: 'Storage',
-			value: '256 GB',
-			progressLabel: '1.75 TB left',
-			progress: 0.25,
-		},
-	},
-	{
-		id: 'umbrel:memory',
-		type: 'stat-with-progress',
-		data: {
-			title: 'Memory',
-			value: '5.8 GB',
-			valueSub: '/16GB',
-			progressLabel: '11.4 GB left',
-			progress: 0.36,
-		},
-	},
-	{
-		id: 'umbrel:system-stats',
-		type: 'three-up',
-		data: {
-			items: [
-				{
-					icon: 'system-widget-temperature',
-					title: 'Normal',
-					value: '56℃',
-				},
-				{
-					icon: 'system-widget-storage',
-					title: 'Free',
-					value: '1.75 TB',
-				},
-				{
-					icon: 'system-widget-memory',
-					title: 'Memory',
-					value: '5.8 GB',
-				},
-			],
-		},
-	},
-	{
-		id: 'bitcoin:stats',
-		type: 'four-up',
-		data: {
-			link: '?page=stats',
-			items: [
-				{title: 'Connections', value: '11', valueSub: 'peers'},
-				{title: 'Mempool', value: '36', valueSub: 'MB'},
-				{title: 'Hashrate', value: '366', valueSub: 'EH/s'},
-				{title: 'Blockchain size', value: '563', valueSub: 'GB'},
-			],
-		},
-	},
-	{
-		id: 'bitcoin:sync',
-		type: 'stat-with-progress',
-		data: {
-			link: '/',
-			title: 'Blockchain sync',
-			value: '86.92%',
-			progressLabel: 'In progress',
-			progress: 0.8692,
-		},
-	},
-	{
-		id: 'lightning:balance-and-transact',
-		type: 'stat-with-buttons',
-		data: {
-			title: 'Lightning Wallet',
-			value: '762,248',
-			valueSub: 'sats',
-			buttons: [
-				{
-					text: 'Deposit',
-					icon: 'arrow-up-right',
-					link: '?action=deposit',
-				},
-				{
-					text: 'Withdraw',
-					icon: 'arrow-down-right',
-					link: '?action=withdraw',
-				},
-			],
-		},
-	},
-	{
-		id: 'lightning:connections',
-		type: 'four-up',
-		data: {
-			link: '?page=stats',
-			items: [
-				{title: 'Connections', value: '11', valueSub: 'peers'},
-				{title: 'Active channels', value: '1', valueSub: 'channel'},
-				{title: 'Max send', value: '366', valueSub: 'sats'},
-				{title: 'Max receive', value: '563', valueSub: 'sats'},
-			],
-		},
-	},
-	{
-		id: 'nostr-relay:stats',
-		type: 'list-emoji',
-		data: {
-			count: 128,
-			items: [
-				{
-					emoji: '🔒',
-					text: 'Change password',
-				},
-				{
-					emoji: '🔒',
-					text: 'Change password',
-				},
-				{
-					emoji: '🔒',
-					text: 'Change password',
-				},
-				{
-					emoji: '🔒',
-					text: 'Change password',
-				},
-			],
-		},
-	},
-	{
-		id: 'nostr-relay:notifications',
-		type: 'list',
-		data: {
-			link: '/foobar',
-			items: [
-				{
-					textSub: 'Jan 1 • 1:12 PM',
-					text: '✨ Introducing a new feature in our Nostr Relay app for Umbrel. Now you can sync your private relay on Umbrel with public relays, and back up past & future Nostr activity, even if the connection between your client & your private relay goes down',
-				},
-				{
-					textSub: 'Jan 2 • 1:12 PM',
-					text: 'Just a test 2',
-				},
-				{
-					textSub: 'Jan 3 • 1:12 PM',
-					text: 'Just a test 1',
-				},
-			],
-		},
-	},
-	{
-		id: 'settings:system-stats',
-		type: 'two-up-stat-with-progress',
-		data: {
-			items: [
-				{
-					title: 'Memory',
-					value: '12.3',
-					valueSub: 'GB',
-					progress: 0.5,
-				},
-				{
-					title: 'CPU',
-					value: '12.3',
-					valueSub: '%',
-					progress: 0.5,
-				},
-			],
-		},
-	},
-	{
-		id: 'transmission:status',
-		type: 'stat-with-progress',
-		data: {
-			link: '?bla=1',
-			title: 'Transmitting',
-			value: '12.92%',
-			progressLabel: 'In progress',
-			progress: 0.1292,
-		},
-	},
-] as const
+const MAX_ALLOWED_WIDGETS = 3
+
+// Splits a widgetId into appId and widgetName
+// e.g., "transmission:status" => { appId: "transmission", widgetName: "status" }
+function splitWidgetId(widgetId: string) {
+	const [appId, widgetName] = widgetId.split(':')
+
+	return {appId, widgetName}
+}
 
 export default router({
 	// List enabled widgets
 	enabled: privateProcedure.query(async ({ctx}) => {
 		const widgetIds = (await ctx.umbreld.store.get('widgets')) || []
+
 		return widgetIds
 	}),
 
@@ -199,15 +30,29 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			// TODO: Validate widgetId
+			const {appId, widgetName} = splitWidgetId(input.widgetId)
+
+			// Validate widget
+			if (appId === 'umbrel') {
+				// This is a system widget
+				if (!(widgetName in systemWidgets))
+					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+			} else {
+				// This is an app widget
+				// Throws an error if the widget doesn't exist
+				await ctx.apps.getApp(appId).getWidgetMetadata(widgetName)
+			}
 
 			// Save widget ID
 			await ctx.umbreld.store.getWriteLock(async ({get, set}) => {
 				const widgets = (await get('widgets')) || []
 
-				// TODO: Check if widget is already active
+				// Check if widget is already active
+				if (widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is already enabled`)
 
-				// TODO: Check we don't have more than 3 widgets enabled
+				// Check we don't have more than 3 widgets enabled
+				if (widgets.length >= MAX_ALLOWED_WIDGETS)
+					throw new Error(`The maximum number of widgets (${MAX_ALLOWED_WIDGETS}) has already been enabled`)
 
 				widgets.push(input.widgetId)
 				await set('widgets', widgets)
@@ -229,9 +74,7 @@ export default router({
 				const widgets = await get('widgets')
 
 				// Check if widget is currently enabled
-				if (!widgets.includes(input.widgetId)) {
-					throw new Error(`Widget ${input.widgetId} is not enabled`)
-				}
+				if (!widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is not enabled`)
 
 				// Remove widget
 				const updatedWidgets = widgets.filter((widget) => widget !== input.widgetId)
@@ -249,7 +92,23 @@ export default router({
 			}),
 		)
 		.query(async ({ctx, input}) => {
-			return widgets.find((w) => w.id === input.widgetId)?.data
-			// TODO: Return live data for a given widget
+			const {appId, widgetName} = splitWidgetId(input.widgetId)
+			let widgetData: {[key: string]: any}
+
+			if (appId === 'umbrel') {
+				// This is a system widget
+				if (!(widgetName in systemWidgets))
+					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+
+				widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
+			} else {
+				// This is an app widget
+				widgetData = await ctx.apps.getApp(appId).getWidgetData(widgetName)
+			}
+
+			// Parse refresh time from human-readable string to milliseconds
+			widgetData.refresh = ms(widgetData.refresh)
+
+			return widgetData
 		}),
 })

@@ -1,63 +1,11 @@
 // TODO: move to widgets module
 import {useState} from 'react'
 
-import {RegistryWidget} from '@/modules/widgets/shared/constants'
+import {MAX_WIDGETS, RegistryWidget} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
-export const MAX_WIDGETS = 3
-
-export const settingsWidgets: [
-	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'three-up'>,
-] = [
-	{
-		id: 'umbrel:storage',
-		type: 'stat-with-progress',
-		example: {
-			title: t('storage'),
-			value: '256 GB',
-			progressLabel: t('something-left', {left: '1.75 TB'}),
-			progress: 0.25,
-		},
-	},
-	{
-		id: 'umbrel:memory',
-		type: 'stat-with-progress',
-		example: {
-			title: t('memory'),
-			value: '5.8 GB',
-			valueSub: '/16GB',
-			progressLabel: t('something-left', {left: '11.4 GB'}),
-			progress: 0.36,
-		},
-	},
-	{
-		id: 'umbrel:system-stats',
-		type: 'three-up',
-		example: {
-			items: [
-				{
-					icon: 'system-widget-temperature',
-					title: t('temp.normal'),
-					value: '56℃',
-				},
-				{
-					icon: 'system-widget-storage',
-					title: t('free'),
-					value: '1.75 TB',
-				},
-				{
-					icon: 'system-widget-memory',
-					title: t('memory'),
-					value: '5.8 GB',
-				},
-			],
-		},
-	},
-]
+import {liveUsageWidgets} from './../modules/widgets/shared/constants'
 
 export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
@@ -76,16 +24,21 @@ export function useWidgets() {
 		  }))
 		: []
 
+	// NOTE: the backend Umbrel system widgets always have an `umbrel:` prefix. For now this is good
+	// because it means we can associate them with any system app. It used to be that some system widgets
+	// were in the `settings` app. But they were moved to a new `live-usage` app.
+	const availableSystemWidgets = [
+		{
+			appId: 'live-usage',
+			icon: systemAppsKeyed['UMBREL_live-usage'].icon,
+			name: systemAppsKeyed['UMBREL_live-usage'].name,
+			widgets: liveUsageWidgets,
+		},
+		// Add others here
+	]
+
 	const availableWidgets = apps.userApps
-		? [
-				{
-					appId: 'settings',
-					icon: systemAppsKeyed['settings'].icon,
-					name: systemAppsKeyed['settings'].name,
-					widgets: settingsWidgets,
-				},
-				...availableUserAppWidgets,
-		  ].filter(({widgets}) => widgets?.length)
+		? [...availableSystemWidgets, ...availableUserAppWidgets].filter(({widgets}) => widgets?.length)
 		: []
 
 	// No need to specify app id because widget endpoints are unique

@@ -4,7 +4,7 @@ import {useApps} from '@/providers/apps'
 import {UserApp} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
-import {appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
+import {appToUrl, appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
 import {trackAppOpen} from '@/utils/track-app-open'
 
 /**
@@ -62,6 +62,9 @@ export function useLaunchApp() {
 
 function openApp(app: UserApp, path?: string) {
 	trackAppOpen(app.id)
-	const url = path ? urlJoin(appToUrlWithAppPath(app), path) : appToUrlWithAppPath(app)
+	// Don't prefix by default because this is called from widgets
+	// https://discord.com/channels/936693236339183716/940192361743540245/1212269980066779197
+	// We don't wanna be prefixing every time
+	const url = path ? urlJoin(appToUrl(app), path) : appToUrlWithAppPath(app)
 	window.open(url, '_blank')?.focus()
 }

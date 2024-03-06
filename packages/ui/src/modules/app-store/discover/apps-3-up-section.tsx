@@ -64,7 +64,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 	return (
 		<div
 			className={cn(
-				'relative opacity-0',
+				'relative',
 				colors &&
 					'opacity-100 duration-200 animate-in fade-in slide-in-from-bottom-3 fill-mode-both [&:nth-child(1)]:delay-100 [&:nth-child(2)]:delay-200 [&:nth-child(3)]:delay-300',
 			)}

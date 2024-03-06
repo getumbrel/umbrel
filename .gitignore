@@ -1,3 +1,7 @@
+# Ignore node_modules anywhere they may be
+
+node_modules
+
 # Ignore all the bash stuff
 
 .bash_history

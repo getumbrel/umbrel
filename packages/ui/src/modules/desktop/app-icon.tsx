@@ -150,6 +150,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
+	// TODO: consider showing context menu in other states too
 	switch (appInstall.state) {
 		case 'loading':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />

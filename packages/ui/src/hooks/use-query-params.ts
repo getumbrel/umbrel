@@ -17,7 +17,8 @@ export function useQueryParams<T extends QueryObject>() {
 		setSearchParams({...pickBy(newParams, (_, k) => k !== param)})
 	}
 
-	const filter = (fn: (item: [key: keyof T, value: string]) => boolean) => {
+	// Adding `& string` because otherwise `key` can be a number if `T` is not specified when calling `useQueryParams`
+	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean) => {
 		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn))
 	}
 

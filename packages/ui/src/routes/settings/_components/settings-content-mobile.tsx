@@ -7,7 +7,6 @@ import {
 	TbPhoto,
 	TbRotate2,
 	TbServer,
-	TbShoppingBag,
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
@@ -18,7 +17,7 @@ import {Link, useNavigate} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card, cardClass} from '@/components/ui/card'
-import {LOADING_DASH, UNKNOWN} from '@/constants'
+import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -28,11 +27,11 @@ import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
+import {CpuTempCardContent} from './cpu-temp-card-content'
 import {ListRowMobile} from './list-row'
-import {MemoryCard} from './memory-card'
+import {MemoryCardContent} from './memory-card-content'
 import {ContactSupportLink} from './shared'
-import {StorageCard} from './storage-card'
-import {TempStatCardContent} from './temp-stat-card-content'
+import {StorageCardContent} from './storage-card-content'
 
 export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
@@ -95,11 +94,15 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
-				{/* TODO: `StorageCard` and `TempStatCardContent` are inconsistent */}
-				<StorageCard />
-				<MemoryCard />
+				{/* Choosing first card because we wanna scroll to see them all */}
 				<Card>
-					<TempStatCardContent tempInCelcius={cpuTemp.temp} />
+					<StorageCardContent />
+				</Card>
+				<Card id={SETTINGS_SYSTEM_CARDS_ID}>
+					<MemoryCardContent />
+				</Card>
+				<Card>
+					<CpuTempCardContent tempInCelcius={cpuTemp.temp} />
 				</Card>
 				<Link
 					className={cn(cardClass, 'flex flex-col justify-between')}

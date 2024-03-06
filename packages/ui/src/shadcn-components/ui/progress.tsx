@@ -16,7 +16,7 @@ const progressVariants = cva('relative w-full overflow-hidden rounded-full bg-wh
 	},
 })
 
-const progressIndicatorVariants = cva('h-full w-full flex-1 bg-white transition-all', {
+const progressIndicatorVariants = cva('h-full w-full flex-1 bg-white transition-all duration-700', {
 	variants: {
 		variant: {
 			default: 'bg-white',
