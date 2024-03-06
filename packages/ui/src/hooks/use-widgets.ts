@@ -1,7 +1,7 @@
 // TODO: move to widgets module
 import {useState} from 'react'
 
-import {MAX_WIDGETS, RegistryWidget} from '@/modules/widgets/shared/constants'
+import {MAX_WIDGETS} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -20,7 +20,7 @@ export function useWidgets() {
 				appId: app.id,
 				icon: app.icon,
 				name: app.name,
-				widgets: app.widgets ?? [],
+				widgets: app.widgets?.map((w) => ({...w, id: app.id + ':' + w.id})) ?? [],
 		  }))
 		: []
 
@@ -42,19 +42,20 @@ export function useWidgets() {
 		: []
 
 	// No need to specify app id because widget endpoints are unique
-	const toggleSelected = (widget: RegistryWidget, checked: boolean) => {
+	// TODO: don't call it `toggle` because it's not a toggle
+	const toggleSelected = (widgetId: string, checked: boolean) => {
 		if (selected.length >= MAX_WIDGETS && checked) {
 			setSelectedTooMany(true)
 			setTimeout(() => setSelectedTooMany(false), 500)
 			return
 		}
 		setSelectedTooMany(false)
-		if (selected.includes(widget.id)) {
-			disable(widget.id)
+		if (selected.includes(widgetId)) {
+			disable(widgetId)
 		} else {
-			enable(widget.id)
+			enable(widgetId)
 		}
-		console.log(widget.id)
+		console.log(widgetId)
 	}
 
 	const appFromWidgetId = (id: string) => {
