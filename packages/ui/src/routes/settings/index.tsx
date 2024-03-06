@@ -73,7 +73,7 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	shutdown: ShutdownDialog,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
-function Dialog() {
+function QueryStringDialog() {
 	const isMobile = useIsMobile() && !IS_ANDROID
 	const routeToDialog = isMobile ? routeToDialogMobile : routeToDialogDesktop
 
@@ -116,7 +116,7 @@ export function Settings() {
 					<Route path='/troubleshoot' Component={TroubleshootDialog} />
 					{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 				</Routes>
-				<Dialog />
+				<QueryStringDialog />
 			</Suspense>
 		</>
 	)
