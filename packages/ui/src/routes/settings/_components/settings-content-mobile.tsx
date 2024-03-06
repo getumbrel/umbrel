@@ -27,7 +27,6 @@ import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-pre
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
-import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -48,8 +47,6 @@ export function SettingsContentMobile() {
 	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-
-	const linkToDialog = useLinkToDialog()
 
 	if (!userQ.data) {
 		return null
