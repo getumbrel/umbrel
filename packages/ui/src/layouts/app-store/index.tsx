@@ -7,6 +7,7 @@ import {useKeyPressEvent} from 'react-use'
 
 import {Loading} from '@/components/ui/loading'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {CommunityAppStoreDialog} from '@/modules/app-store/community-app-store-dialog'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {
 	appsGridClass,
@@ -15,6 +16,7 @@ import {
 	sectionTitleClass,
 	slideInFromBottomClass,
 } from '@/modules/app-store/shared'
+import {UpdatesButton} from '@/modules/app-store/updates-button'
 import {useAvailableApps} from '@/providers/available-apps'
 import {
 	DropdownMenu,
@@ -24,9 +26,6 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
-
-import {CommunityAppStoreDialog} from './community-app-store-dialog'
-import {UpdatesButton} from './updates-button'
 
 export function AppStoreLayout() {
 	const title = t('app-store.title')
