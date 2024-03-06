@@ -156,6 +156,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					onSelect={() => navigate('/settings/migration-assistant')}
 				/>
 				<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
+				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
 				{/* ---- */}
 				{installedApps.map((app) => (
 					<SearchItem

@@ -18,6 +18,7 @@ import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useApps, useUserApp} from '@/providers/apps'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	DropdownMenu,
@@ -29,14 +30,13 @@ import {Input} from '@/shadcn-components/ui/input'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 type TroubleshootType = 'NONE' | 'system' | 'app'
 
 export default function TroubleshootDialog() {
-	const dialogProps = useDialogOpenProps('troubleshoot')
+	const dialogProps = useSettingsDialogProps()
 
 	return (
 		<ImmersiveDialog {...dialogProps}>

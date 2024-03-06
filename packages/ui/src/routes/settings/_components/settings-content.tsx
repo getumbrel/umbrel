@@ -176,7 +176,7 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow> */}
 					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
-						<IconButton icon={TbTool} onClick={() => navigate(linkToDialog('troubleshoot'))}>
+						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
 							{t('troubleshoot')}
 						</IconButton>
 					</ListRow>

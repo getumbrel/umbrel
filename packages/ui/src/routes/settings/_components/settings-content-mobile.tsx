@@ -173,7 +173,7 @@ export function SettingsContentMobile() {
 					icon={TbTool}
 					title={t('troubleshoot')}
 					description={t('troubleshoot-description')}
-					onClick={() => navigate(linkToDialog('troubleshoot'))}
+					onClick={() => navigate('troubleshoot')}
 				/>
 				<ListRowMobile
 					icon={TbServer}
