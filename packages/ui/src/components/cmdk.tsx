@@ -51,7 +51,6 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
-	const isMobile = useIsMobile()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
 	const availableApps = useAvailableApps()
 
