@@ -1,6 +1,8 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import * as React from 'react'
 
+import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {cn} from '@/shadcn-lib/utils'
 
 import {
@@ -55,6 +57,18 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+const DialogScrollableContent = ({children, showClose}: {children: React.ReactNode; showClose?: boolean}) => {
+	return (
+		<DialogContent className='flex flex-col p-0'>
+			{/* TODO: adjust dialog inset if `showClose` is true so close button isn't too close to scrollbar */}
+			<ScrollArea className='flex flex-col' dialogInset>
+				{children}
+			</ScrollArea>
+			{showClose && <DialogCloseButton className='absolute right-2 top-2 z-50' />}
+		</DialogContent>
+	)
+}
+
 const DialogHeader = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
 	<div className={cn('flex flex-col space-y-1.5', className)} {...props} />
 )
@@ -89,4 +103,14 @@ const DialogDescription = React.forwardRef<
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
-export {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogPortal, DialogTitle, DialogTrigger}
+export {
+	Dialog,
+	DialogContent,
+	DialogScrollableContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogPortal,
+	DialogTitle,
+	DialogTrigger,
+}
