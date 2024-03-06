@@ -97,6 +97,7 @@ export type ListWidget = BaseWidget & {
 		text: string
 		textSub: string
 	}[]
+	noItemsText?: string
 }
 
 export type ListEmojiWidget = BaseWidget & {
