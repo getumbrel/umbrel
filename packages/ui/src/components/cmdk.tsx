@@ -152,7 +152,10 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{t('2fa-long')}
 				</SettingsSearchItem>
 				<SettingsSearchItem value={t('tor-long')} onSelect={() => navigate('/settings/tor')} />
-				<SettingsSearchItem value={t('device-info-long')} onSelect={() => navigate('/settings/device-info')} />
+				<SettingsSearchItem
+					value={t('migration-assistant')}
+					onSelect={() => navigate('/settings/migration-assistant')}
+				/>
 				{/* ---- */}
 				{installedApps.map((app) => (
 					<SearchItem

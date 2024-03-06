@@ -154,7 +154,7 @@ export function SettingsContent() {
 					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
 						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
-						<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
+						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
 							{t('migrate')}
 						</IconButton>
 					</ListRow>

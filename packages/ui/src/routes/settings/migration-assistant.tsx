@@ -12,6 +12,7 @@ import {
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -22,13 +23,12 @@ import {
 } from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 const title = t('migration-assistant')
 
 export default function MigrationAssistantDialog() {
-	const dialogProps = useDialogOpenProps('migration-assistant')
+	const dialogProps = useSettingsDialogProps()
 	const {params} = useQueryParams()
 	const state = params.get('migration-assistant-state')
 

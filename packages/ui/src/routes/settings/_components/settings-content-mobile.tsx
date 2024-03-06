@@ -155,7 +155,7 @@ export function SettingsContentMobile() {
 					icon={TbArrowBigRightLines}
 					title={t('migration-assistant')}
 					description={t('migration-assistant-description')}
-					onClick={() => navigate(linkToDialog('start-migration'))}
+					onClick={() => navigate('migration-assistant')}
 				/>
 				<ListRowMobile
 					icon={TbLanguage}

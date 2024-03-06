@@ -1,6 +1,12 @@
+import {useState} from 'react'
+
 import {ButtonLink} from '@/components/ui/button-link'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import MigrationAssistantDialog from '@/routes/settings/migration-assistant'
+import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -9,13 +15,18 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {useDialogOpenProps, useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-export function StartMigrationDrawer() {
+export function StartMigrationDrawerOrDialog() {
 	const title = t('migration-assistant')
-	const dialogProps = useDialogOpenProps('start-migration')
-	const linkToDialog = useLinkToDialog()
+	const dialogProps = useSettingsDialogProps()
+
+	const isMobile = useIsMobile()
+	const [startMigration, setStartMigration] = useState(isMobile ? false : true)
+
+	if (startMigration) {
+		return <MigrationAssistantDialog />
+	}
 
 	return (
 		<Drawer {...dialogProps}>
@@ -29,9 +40,9 @@ export function StartMigrationDrawer() {
 					<DrawerDescription>{t('migration-assistant-description-long')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
-					<ButtonLink to={linkToDialog('migration-assistant')} variant='primary' size='dialog'>
+					<Button onClick={() => setStartMigration(true)} variant='primary' size='dialog'>
 						{t('migration-assistant.mobile.start-button')}
-					</ButtonLink>
+					</Button>
 				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>
