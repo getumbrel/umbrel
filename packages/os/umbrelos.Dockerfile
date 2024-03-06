@@ -73,6 +73,12 @@ RUN adduser --gecos "" --disabled-password umbrel
 RUN echo "umbrel:umbrel" | chpasswd
 RUN usermod -aG sudo umbrel
 
+# These deps are actually handled by the `umbreld provision-os` below, but since we invalidate the cache
+# and need to re-run that step every time we change umbreld we just manually install all those packages here.
+# It makes OS rebuilds way quicker. We should remove this at some point in the future to ensure that umbreld
+# is the single source of truth for OS provisioning.
+RUN apt-get install --yes docker.io docker-compose network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns
+
 # Install umbreld
 RUN apt-get install --yes npm
 COPY packages/umbreld /tmp/umbreld
