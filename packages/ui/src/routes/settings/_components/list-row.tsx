@@ -1,5 +1,6 @@
 import React, {MouseEventHandler} from 'react'
 import {IconType} from 'react-icons'
+import {useMount} from 'react-use'
 
 import {cn} from '@/shadcn-lib/utils'
 
@@ -7,6 +8,7 @@ export function ListRow({
 	title,
 	description,
 	children,
+	isActive = false,
 	isLabel = false,
 	disabled,
 	onClick,
@@ -14,18 +16,31 @@ export function ListRow({
 	title: string
 	description: React.ReactNode
 	children?: React.ReactNode
+	isActive?: boolean
 	isLabel?: boolean
 	disabled?: boolean
 	onClick?: MouseEventHandler
 }) {
 	const El = isLabel ? 'label' : 'div'
+	const ref = React.useRef<any>(null)
+
+	useMount(() => {
+		if (!isActive) return
+		// ref.current?.scrollIntoView({behavior: 'smooth'})
+		ref.current?.focus()
+	})
 
 	return (
 		<El
+			// Allow being focused if active
+			tabIndex={isActive ? 0 : -1}
+			ref={ref}
 			className={cn(
-				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 py-4',
+				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 py-4 outline-none',
 				isLabel &&
 					'cursor-pointer bg-gradient-to-r from-transparent to-transparent hover:via-white/4 active:via-white/3',
+				// TODO: also scroll into view if active
+				isActive && 'umbrel-pulse-a-few-times',
 				disabled && 'pointer-events-none opacity-50',
 			)}
 			onClick={onClick}
