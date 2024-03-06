@@ -7,24 +7,26 @@ type QueryObject = {[key: string]: string}
 export function useQueryParams<T extends QueryObject>() {
 	const [searchParams, setSearchParams] = useSearchParams()
 
+	const object = Object.fromEntries(searchParams.entries()) as T
+
 	const add = (param: keyof T, value: string, navigateOpts?: NavigateOptions) => {
-		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...newParams, [param]: value}, navigateOpts)
+		const newParams = {...object, [param]: value}
+		setSearchParams(newParams, navigateOpts)
 	}
 
 	const remove = (param: keyof T, navigateOpts?: NavigateOptions) => {
-		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...pickBy(newParams, (_, k) => k !== param)}, navigateOpts)
+		const newParams = {...pickBy(object, (_, k) => k !== param)}
+		setSearchParams(newParams, navigateOpts)
 	}
 
 	// Adding `& string` because otherwise `key` can be a number if `T` is not specified when calling `useQueryParams`
 	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean, navigateOpts?: NavigateOptions) => {
-		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn), navigateOpts)
+		setSearchParams(Object.entries(object).filter(fn), navigateOpts)
 	}
 
 	return {
 		params: searchParams,
-		object: Object.fromEntries(searchParams.entries()) as T,
+		object,
 		remove,
 		add,
 		filter,
@@ -37,7 +39,7 @@ export function useQueryParams<T extends QueryObject>() {
 		 */
 		addLinkSearchParams: (newParams: T) => {
 			return new URLSearchParams({
-				...Object.fromEntries(searchParams.entries()),
+				...object,
 				...newParams,
 			}).toString()
 		},
