@@ -54,7 +54,7 @@ export function SettingsContent() {
 		t.system.version(),
 	])
 
-	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper'}>()
+	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language'}>()
 
 	// Scroll to hash
 	useEffect(() => {
@@ -163,6 +163,7 @@ export function SettingsContent() {
 						description={t('language-description')}
 						isLabel
 						onClick={() => setLangOpen(true)}
+						isActive={settingsDialog === 'language'}
 					>
 						<DropdownMenu open={langOpen} onOpenChange={setLangOpen}>
 							<LanguageDropdownTrigger />

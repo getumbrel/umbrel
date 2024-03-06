@@ -63,7 +63,6 @@ const routeToDialogDesktop = {
 	troubleshoot: TroubleshootDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
 	// drawers
-	language: LanguageDrawer,
 	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<string, React.ComponentType>
 
@@ -77,7 +76,6 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
 	// drawers
-	language: LanguageDrawer,
 	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
@@ -119,6 +117,7 @@ export function Settings() {
 				<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
 				{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
 				{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
+				{isMobile && <Route path='/language' Component={LanguageDrawer} />}
 			</Routes>
 			<Suspense>
 				<Dialog />

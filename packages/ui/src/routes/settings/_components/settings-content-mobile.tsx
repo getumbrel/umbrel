@@ -161,7 +161,7 @@ export function SettingsContentMobile() {
 					icon={TbLanguage}
 					title={t('language')}
 					description={t('language-description')}
-					onClick={() => navigate(linkToDialog('language'))}
+					onClick={() => navigate('language')}
 				/>
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
