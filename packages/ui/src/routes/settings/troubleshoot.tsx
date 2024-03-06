@@ -48,8 +48,15 @@ export default function TroubleshootDialog() {
 function Content() {
 	const initialTitle = t('troubleshoot-pick-title')
 	const [troubleshootType, setTroubleshootType] = useLocalStorage2<TroubleshootType>('troubleshoot-type')
-	const [appId, setAppId] = useLocalStorage2<string>('troubleshoot-app-active-tab', 'NONE')
+	const [localStorageAppId, setAppId] = useLocalStorage2<string>('troubleshoot-app-active-tab', 'NONE')
 	const [appDialogOpen, setAppDialogOpen] = useState(false)
+	const {userAppsKeyed} = useApps()
+
+	// If the app is uninstalled or not available, we don't wanna error out down the line
+	let appId = localStorageAppId
+	if (appId && userAppsKeyed && !(appId in userAppsKeyed)) {
+		appId = 'NONE'
+	}
 
 	const handleBack = () => {
 		setTroubleshootType('NONE')
