@@ -1,7 +1,6 @@
-import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
-import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogHeader, DialogPortal, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -21,9 +20,8 @@ export default function DeviceInfoDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogContent className='p-0'>
-					<DialogCloseButton className='absolute right-2 top-2 z-50' />
-					<div className='umbrel-dialog-fade-scroller space-y-6 overflow-y-auto px-5 py-6'>
+				<DialogScrollableContent showClose>
+					<div className='space-y-6 px-5 py-6'>
 						<DialogHeader>
 							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 							<DialogTitle>{title}</DialogTitle>
@@ -35,7 +33,7 @@ export default function DeviceInfoDialog() {
 							serialNumber={data.serialNumber}
 						/>
 					</div>
-				</DialogContent>
+				</DialogScrollableContent>
 			</DialogPortal>
 		</Dialog>
 	)
