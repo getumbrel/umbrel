@@ -3,6 +3,7 @@ import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {RegistryWidget} from '@/modules/widgets/shared/constants'
+import {isDev} from '@/utils/misc'
 
 import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
@@ -14,7 +15,7 @@ export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
 export const links = [
 	loggerLink({
-		enabled: () => true,
+		enabled: () => isDev(),
 	}),
 	httpBatchLink({
 		url: trpcUrl,

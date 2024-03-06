@@ -1,5 +1,6 @@
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -8,14 +9,13 @@ import {
 	DrawerScroller,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-import {DeviceInfoContent} from '../device-info-content'
+import {DeviceInfoContent} from '../_components/device-info-content'
 
 export function DeviceInfoDrawer() {
 	const title = t('device-info-short')
-	const dialogProps = useDialogOpenProps('device-info')
+	const dialogProps = useSettingsDialogProps()
 
 	const {data, isLoading} = useDeviceInfo()
 

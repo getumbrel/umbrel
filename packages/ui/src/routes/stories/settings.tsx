@@ -1,24 +1,19 @@
+import {useState} from 'react'
+
 import {Card} from '@/components/ui/card'
+import {SegmentedControl} from '@/components/ui/segmented-control'
 import {H2, H3} from '@/layouts/stories'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {TEMP_NORMAL_MAX, TEMP_NORMAL_MIN, TEMP_THROTTLE, TEMP_TOO_COLD, TEMP_TOO_HOT} from '@/utils/tempurature'
+import {CpuType, cpuTypes, TEMP_THRESHOLDS} from '@/utils/tempurature'
 
 import {CpuTempCardContent} from '../settings/_components/cpu-temp-card-content'
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
 
-const tempThresholds = [
-	TEMP_TOO_COLD - 1,
-	// TEMP_TOO_COLD,
-	TEMP_NORMAL_MIN,
-	TEMP_NORMAL_MAX,
-	TEMP_THROTTLE + 1,
-	TEMP_TOO_HOT,
-	TEMP_TOO_HOT + 1,
-]
-
 export default function SettingsStory() {
+	const [cpuType, setCpuType] = useState<CpuType>('pi')
+
 	return (
 		<div className='flex flex-col flex-wrap items-start gap-8 bg-white/10 p-8'>
 			<H3>Device Icons</H3>
@@ -69,7 +64,15 @@ export default function SettingsStory() {
 					/>
 				</Card>
 			</div>
+			{/* ------- */}
 			<H2>Tempurature Card</H2>
+			<SegmentedControl
+				size='lg'
+				// variant={variant}
+				tabs={cpuTypes.map((type) => ({id: type, label: type.toUpperCase()}))}
+				value={cpuType}
+				onValueChange={setCpuType}
+			/>
 			<Button
 				onClick={() => {
 					localStorage.removeItem('UMBREL_temp-unit')
@@ -81,41 +84,70 @@ export default function SettingsStory() {
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent tempInCelcius={-999999} />
+					<CpuTempCardContent cpuType={cpuType} tempInCelcius={-999999} />
 				</Card>
 			</div>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent tempInCelcius={999999} />
+					<CpuTempCardContent cpuType={cpuType} tempInCelcius={999999} />
 				</Card>
 			</div>
 			<H3>undefined</H3>
 			<Card>
-				<CpuTempCardContent />
+				<CpuTempCardContent cpuType={cpuType} />
 			</Card>
 			<H3>NaN</H3>
 			<Card>
-				<CpuTempCardContent tempInCelcius={NaN} defaultUnit='c' />
+				<CpuTempCardContent cpuType={cpuType} tempInCelcius={NaN} defaultUnit='c' />
 			</Card>
 			<H3>Infinity</H3>
 			<Card>
-				<CpuTempCardContent tempInCelcius={Infinity} defaultUnit='c' />
+				<CpuTempCardContent cpuType={cpuType} tempInCelcius={Infinity} defaultUnit='c' />
 			</Card>
 			<H3>69</H3>
 			<Card>
-				<CpuTempCardContent tempInCelcius={69} defaultUnit='c' />
+				<CpuTempCardContent cpuType={cpuType} tempInCelcius={69} defaultUnit='c' />
 			</Card>
 			<Card>
-				<CpuTempCardContent tempInCelcius={20.5} defaultUnit='f' />
+				<CpuTempCardContent cpuType={cpuType} tempInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
-			<div className='flex flex-col gap-2'>
-				{tempThresholds.map((temp) => (
-					<Card key={temp}>
-						<CpuTempCardContent tempInCelcius={temp} defaultUnit='c' />
-					</Card>
-				))}
-			</div>
+			<TempThresholds />
 		</div>
 	)
+}
+
+export function TempThresholds() {
+	return (
+		<div className='flex flex-row gap-2'>
+			{cpuTypes.map((type) => (
+				<div key={type} className='space-y-2'>
+					<H3>{type}</H3>
+					{tempThresholds(type).map((temp) => (
+						<Card key={temp}>
+							<CpuTempCardContent cpuType={type} tempInCelcius={temp} />
+						</Card>
+					))}
+				</div>
+			))}
+		</div>
+	)
+}
+
+function tempThresholds(cpuType: CpuType) {
+	const TEMP_TOO_COLD = TEMP_THRESHOLDS[cpuType].cold
+	const TEMP_NORMAL_MIN = TEMP_THRESHOLDS[cpuType].cold
+	const TEMP_NORMAL_MAX = TEMP_THRESHOLDS[cpuType].throttle
+	const TEMP_THROTTLE = TEMP_THRESHOLDS[cpuType].throttle
+	const TEMP_TOO_HOT = TEMP_THRESHOLDS[cpuType].hot
+
+	return [
+		TEMP_TOO_COLD - 1,
+		// TEMP_TOO_COLD,
+		TEMP_NORMAL_MIN,
+		TEMP_NORMAL_MAX,
+		TEMP_THROTTLE + 1,
+		TEMP_TOO_HOT,
+		TEMP_TOO_HOT + 1,
+	]
 }

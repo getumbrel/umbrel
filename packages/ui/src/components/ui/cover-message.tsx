@@ -2,38 +2,73 @@ import {Portal} from '@radix-ui/react-portal'
 import {useTimeout} from 'react-use'
 
 import {Wallpaper} from '@/providers/wallpaper'
+import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
+import {DarkenLayer} from '../darken-layer'
+
 /** Cover message without  */
-export function BareCoverMessage({children, delayed}: {children: React.ReactNode; delayed?: boolean}) {
+export function BareCoverMessage({
+	children,
+	delayed,
+	onClick,
+}: {
+	children: React.ReactNode
+	delayed?: boolean
+	onClick?: () => void
+}) {
 	const [show] = useTimeout(600)
 
 	return (
-		<Portal>
-			<div className='absolute inset-0 z-50 bg-black'>
+		<CoverMessageContent>
+			<div className='absolute inset-0 z-50 bg-black' onClick={onClick}>
 				<div className={coverMessageBodyClass}>{!delayed ? children : show() && children}</div>
 			</div>
-		</Portal>
+		</CoverMessageContent>
 	)
 }
 
 /** Covers entire screen to show a message */
-export function CoverMessage({children, delayed}: {children: React.ReactNode; delayed?: boolean}) {
+export function CoverMessage({
+	children,
+	bodyClassName,
+	onClick,
+	delayed,
+}: {
+	children: React.ReactNode
+	bodyClassName?: string
+	onClick?: () => void
+	delayed?: boolean
+}) {
 	const [show] = useTimeout(600)
 
 	return (
-		<Portal>
-			<div className='z-50'>
-				<Wallpaper className='z-50' />
-				<div className='absolute inset-0 z-50 backdrop-blur-2xl animate-in fade-in' />
-				<div className={coverMessageBodyClass}>{!delayed ? children : show() && children}</div>
+		<CoverMessageContent>
+			{/* <div className='absolute inset-0 z-50'> */}
+			<Wallpaper className='z-50' stayBlurred />
+			<DarkenLayer className='z-50' />
+			<div onClick={onClick} className={cn(coverMessageBodyClass, bodyClassName)}>
+				{!delayed ? children : show() && children}
 			</div>
-		</Portal>
+			{/* </div> */}
+		</CoverMessageContent>
 	)
 }
 
-export function CoverMessageParagraph({children}: {children: React.ReactNode}) {
-	return <p className={tw`max-sm: px-4 text-center text-13 text-white/60`}>{children}</p>
+// ---
+
+export const COVER_MESSAGE_TARGET_ID = 'cover-message-id'
+
+export function CoverMessageTarget() {
+	return <div id={COVER_MESSAGE_TARGET_ID} />
+}
+export function CoverMessageContent({children}: {children: React.ReactNode}) {
+	// `?? undefined` to ensure we put portal in default place otherwise
+	return <Portal container={document.getElementById(COVER_MESSAGE_TARGET_ID) ?? undefined}>{children}</Portal>
 }
 
-const coverMessageBodyClass = tw`fixed inset-0 z-50 flex flex-col items-center justify-center gap-1`
+export function CoverMessageParagraph({children, className}: {children: React.ReactNode; className?: string}) {
+	return <p className={cn(tw`max-sm: px-4 text-center text-13 text-white/60`, className)}>{children}</p>
+}
+
+export const coverMessageBodyClass = tw`fixed inset-0 z-50 flex flex-col items-center justify-center gap-1 duration-700 animate-in fade-in fill-mode-both`

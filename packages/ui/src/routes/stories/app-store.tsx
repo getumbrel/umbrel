@@ -2,13 +2,13 @@ import {useState} from 'react'
 
 import {InstallButton} from '@/components/install-button'
 import {Loading} from '@/components/ui/loading'
-import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {H3} from '@/layouts/stories'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
-import {AvailableAppsProvider} from '@/providers/available-apps'
+import {UpdatesDialog} from '@/modules/app-store/updates-button'
+import {AvailableAppsProvider, useAvailableApps} from '@/providers/available-apps'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
@@ -53,8 +53,11 @@ function Inner() {
 
 	return (
 		<div>
-			<InstallABunchOfApps />
+			<AppUpdatesZeroExample />
+			<AppUpdatesTwoExample />
+			<AppUpdatesManyExample />
 			<InstallFirstExample />
+			<InstallFirst2Example />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
 				galleryId='immich'
@@ -65,6 +68,67 @@ function Inner() {
 				]}
 			/>
 		</div>
+	)
+}
+
+function AppUpdatesZeroExample() {
+	const [open, setOpen] = useState(false)
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Updates (0)</Button>
+			<UpdatesDialog
+				open={open}
+				onOpenChange={setOpen}
+				appsWithUpdates={[]}
+				titleRightChildren={
+					<Button size='dialog' variant='primary' onClick={() => alert('update all')}>
+						Update all
+					</Button>
+				}
+			/>
+		</>
+	)
+}
+
+function AppUpdatesTwoExample() {
+	const [open, setOpen] = useState(false)
+	const {apps} = useAvailableApps()
+
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Updates (3)</Button>
+			<UpdatesDialog
+				open={open}
+				onOpenChange={setOpen}
+				appsWithUpdates={apps?.slice(0, 3) ?? []}
+				titleRightChildren={
+					<Button size='dialog' variant='primary' onClick={() => alert('update all')}>
+						Update all
+					</Button>
+				}
+			/>
+		</>
+	)
+}
+
+function AppUpdatesManyExample() {
+	const [open, setOpen] = useState(false)
+	const {apps} = useAvailableApps()
+
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Updates (15)</Button>
+			<UpdatesDialog
+				open={open}
+				onOpenChange={setOpen}
+				appsWithUpdates={apps?.slice(0, 15) ?? []}
+				titleRightChildren={
+					<Button size='dialog' variant='primary' onClick={() => alert('update all')}>
+						Update all
+					</Button>
+				}
+			/>
+		</>
 	)
 }
 
@@ -102,17 +166,27 @@ function InstallButtonExamples() {
 	)
 }
 
-function InstallABunchOfApps() {
-	const handleInstallABunch = useDebugInstallRandomApps()
-	return <Button onClick={handleInstallABunch}>Install a bunch of apps</Button>
-}
-
 function InstallFirstExample() {
 	const [open, setOpen] = useState(false)
 	return (
 		<>
-			<Button onClick={() => setOpen(true)}>Install Lightning App</Button>
+			<Button onClick={() => setOpen(true)}>Install Lightning App (show dialog only)</Button>
 			<InstallTheseFirstDialog appId='lightning' toInstallFirstIds={['bitcoin']} open={open} onOpenChange={setOpen} />
+		</>
+	)
+}
+
+function InstallFirst2Example() {
+	const [open, setOpen] = useState(false)
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Install Electrs App (show dialog only)</Button>
+			<InstallTheseFirstDialog
+				appId='lightning'
+				toInstallFirstIds={['bitcoin', 'lightning']}
+				open={open}
+				onOpenChange={setOpen}
+			/>
 		</>
 	)
 }

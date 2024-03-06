@@ -9,7 +9,7 @@ import {
 	RiUserLine,
 } from 'react-icons/ri'
 import {TbRotate2, TbServer, TbTool} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
+import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
@@ -53,6 +53,8 @@ export function SettingsContent() {
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
+
+	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper'}>()
 
 	// Scroll to hash
 	useEffect(() => {
@@ -109,7 +111,7 @@ export function SettingsContent() {
 						<MemoryCardContent />
 					</Card>
 					<Card>
-						<CpuTempCardContent tempInCelcius={cpuTemp.temp} />
+						<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
 					</Card>
 					<div className='mx-auto'>
 						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>
@@ -122,15 +124,19 @@ export function SettingsContent() {
 				<Card className='umbrel-divide-y overflow-hidden !py-2'>
 					<ListRow title={t('account')} description={t('account-description')}>
 						<div className='flex flex-wrap gap-2'>
-							<IconButtonLink to={linkToDialog('change-name')} icon={RiUserLine}>
+							<IconButtonLink to={'account/change-name'} icon={RiUserLine}>
 								{t('change-name')}
 							</IconButtonLink>
-							<IconButtonLink to={linkToDialog('change-password')} icon={RiKeyLine}>
+							<IconButtonLink to={'account/change-password'} icon={RiKeyLine}>
 								{t('change-password')}
 							</IconButtonLink>
 						</div>
 					</ListRow>
-					<ListRow title={t('wallpaper')} description={t('wallpaper-description')}>
+					<ListRow
+						title={t('wallpaper')}
+						description={t('wallpaper-description')}
+						isActive={settingsDialog === 'wallpaper'}
+					>
 						{/* -mx-2 so that when last item is active, it right aligns with other list row buttons, and first item aligns on mobile when picker wrapped down */}
 						{/* w-full to prevent overflow issues */}
 						<div className='-mx-2 max-w-full'>
@@ -138,15 +144,12 @@ export function SettingsContent() {
 						</div>
 					</ListRow>
 					<ListRow title={t('2fa-long')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
-						<Switch
-							checked={is2faEnabledQ.data}
-							onCheckedChange={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
-						/>
+						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
-					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel>
+					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
 						<Switch
 							checked={tor.enabled}
-							onCheckedChange={(checked) => (checked ? navigate(linkToDialog('tor')) : tor.setEnabled(false))}
+							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
 						/>
 					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
@@ -177,7 +180,7 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow>
 					<ListRow title={t('device-info-long')} description={t('device-info-description')} isLabel>
-						<IconButton icon={TbServer} onClick={() => navigate(linkToDialog('device-info'))}>
+						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>

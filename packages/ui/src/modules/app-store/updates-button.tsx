@@ -1,3 +1,4 @@
+import {DialogProps} from '@radix-ui/react-dialog'
 import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
@@ -23,7 +24,7 @@ export function UpdatesButton() {
 
 	// If we link to the updates dialog, show it even if there are no updates
 	if (!appsWithUpdates.length) {
-		return <UpdatesDialog />
+		return <UpdatesDialogConnected />
 	}
 
 	return (
@@ -33,21 +34,48 @@ export function UpdatesButton() {
 				Updates
 				<NotificationBadge count={appsWithUpdates.length} />
 			</ButtonLink>
-			<UpdatesDialog />
+			<UpdatesDialogConnected />
 		</>
 	)
 }
 
-export function UpdatesDialog() {
+function UpdatesDialogConnected() {
 	const dialogProps = useDialogOpenProps('updates')
-
-	const title = 'Updates'
-
 	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
-
 	const updateAll = useUpdateAllApps()
 
 	if (isLoading) return null
+
+	return (
+		<UpdatesDialog
+			{...dialogProps}
+			open={dialogProps.open}
+			appsWithUpdates={appsWithUpdates}
+			titleRightChildren={
+				<Button
+					size='dialog'
+					variant='primary'
+					onClick={updateAll.updateAll}
+					className='w-auto'
+					disabled={updateAll.isLoading || appsWithUpdates.length === 0}
+				>
+					{/* TODO: translate */}
+					{updateAll.isLoading ? 'Updating...' : 'Update all'}
+				</Button>
+			}
+		/>
+	)
+}
+
+export function UpdatesDialog({
+	appsWithUpdates,
+	titleRightChildren,
+	...dialogProps
+}: {
+	appsWithUpdates: RegistryApp[]
+	titleRightChildren?: React.ReactNode
+} & DialogProps) {
+	const title = 'Updates'
 
 	return (
 		<Dialog {...dialogProps}>
@@ -59,20 +87,12 @@ export function UpdatesDialog() {
 					<DialogHeader className='px-5 pb-5'>
 						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle className='flex flex-row items-center justify-between'>
-							{appsWithUpdates.length} updates available{' '}
-							<Button
-								size='dialog'
-								variant='primary'
-								onClick={updateAll.updateAll}
-								className='w-auto'
-								disabled={updateAll.isLoading || appsWithUpdates.length === 0}
-							>
-								{updateAll.isLoading ? 'Updating...' : 'Update all'}
-							</Button>
+							<span>{appsWithUpdates.length} updates available</span>
+							{titleRightChildren}
 						</DialogTitle>
 					</DialogHeader>
 					<Separator />
-					<ScrollArea className='flex h-[500px] flex-col gap-y-2.5 px-5'>
+					<ScrollArea className='flex max-h-[500px] flex-col gap-y-2.5 px-5'>
 						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
 								{i === 0 ? undefined : <Separator className='my-1' />}

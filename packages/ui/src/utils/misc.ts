@@ -35,6 +35,12 @@ export function urlJoin(base: string, path: string) {
 	return new URL(path, base).href
 }
 
+/** `urlJoin` doesn't work when used like so: `urlJoin('foo', 'bar')`, and sometimes we just want basic behavior */
+export function pathJoin(base: string, path: string) {
+	// Remove trailing slash from base and leading slash from path
+	return base.replace(/\/$/, '') + '/' + path.replace(/^\//, '')
+}
+
 export function appToUrl(app: UserApp) {
 	return app.torOnly
 		? `${location.protocol}//${app.hiddenService}:${app.port}`
@@ -88,6 +94,7 @@ export function platform() {
 	return 'other'
 }
 
+// NOTE: in Chrome, this can be `true` when emulating a touch device
 export const IS_ANDROID = /Android/i.test(navigator.userAgent)
 
 export function isDev() {

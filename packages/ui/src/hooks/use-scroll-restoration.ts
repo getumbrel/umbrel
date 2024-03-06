@@ -17,7 +17,7 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 	// Settings page only has dialogs for now, but because they add to the history, each page transition automatically causes
 	// a scroll to top. This is a workaround for that.
 	// Always scroll to top for settings page itself, but don't do that for sub-pages
-	const keyPart = location.pathname.startsWith('/settings') ? location.pathname : location.key
+	const keyPart = location.pathname.startsWith('/settings') ? '/settings' : location.key
 	const key = `scroll-position-${keyPart}`
 	const {state} = useNavigation()
 
@@ -25,12 +25,18 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 		const el = container.current
 		const handleScrollEnd = () => {
 			const y = Math.round(el?.scrollTop ?? 0)
-			console.log('scroll end', key, y ?? 0)
+			// console.log('scroll end', key, y ?? 0)
 			setScrollPosition(key, y ?? 0)
 		}
-		el?.addEventListener('scrollend', handleScrollEnd)
+		// handleScrollEnd()
+
+		// Add scrollend listener when supported in Safari
+		// https://caniuse.com/?search=scrollend
+		// el?.addEventListener('scrollend', handleScrollEnd)
+		el?.addEventListener('scroll', handleScrollEnd)
 		return () => {
-			el?.removeEventListener('scrollend', handleScrollEnd)
+			// el?.removeEventListener('scrollend', handleScrollEnd)
+			el?.addEventListener('scroll', handleScrollEnd)
 		}
 	}, [container, key])
 
@@ -42,6 +48,12 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 				setScrollPosition(key, 0)
 				container.current?.scrollTo(0, 0)
 			} else {
+				// This fails to go to the correct scroll position when you open a path like `/settings/2fa`.
+				// Instead, goes to the top of the page. But if you close the dialog and then open the path again,
+				// it goes to the correct scroll position. Happens in Safari, Chrome, and Firefox.
+				// After lots of debugging, this appears to be an issue with `react-router-dom` and scroll containers within a page.
+				// https://reactrouter.com/en/main/components/scroll-restoration
+				// Using `preventScrollReset` in links and putting `<ScrollRestoration />` in the `Sheet` layout scroll container doesn't seem to do anything either.
 				console.log('scrolling to', key, getScrollPosition(key))
 				container.current?.scrollTo(0, getScrollPosition(key))
 			}

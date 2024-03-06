@@ -54,10 +54,20 @@ export function useUninstallAllApps() {
 export function useAppInstall(id: string) {
 	const invalidateInstallDependencies = useInvalidateDeps(id)
 
+	const ctx = trpcReact.useContext()
 	const appStateQ = trpcReact.apps.state.useQuery({appId: id})
 
 	// Refetch so that we can update the `appState` variable, which then triggers the useEffect below
-	const installMut = trpcReact.apps.install.useMutation({onSuccess: invalidateInstallDependencies})
+	// Also doing optimistic updates here:
+	// https://create.t3.gg/en/usage/trpc#optimistic-updates
+	// Optimistic because `trpcReact.apps.install` doesn't return until the app is installed
+	const installMut = trpcReact.apps.install.useMutation({
+		onSuccess: invalidateInstallDependencies,
+		onMutate() {
+			ctx.apps.state.cancel()
+			ctx.apps.state.setData({appId: id}, {state: 'installing', progress: 0})
+		},
+	})
 	const uninstallMut = trpcReact.apps.uninstall.useMutation({onSuccess: invalidateInstallDependencies})
 	const restartMut = trpcReact.apps.restart.useMutation({onSuccess: invalidateInstallDependencies})
 

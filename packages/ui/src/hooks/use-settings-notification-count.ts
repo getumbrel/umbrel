@@ -7,6 +7,7 @@ import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
+import {CpuType} from '@/utils/tempurature'
 
 function useMounted() {
 	const [mounted, setMounted] = useState(false)
@@ -44,6 +45,8 @@ export function useSettingsNotificationCount() {
 			trpcClient.system.diskUsage.query(),
 		])
 
+		const cpuType: CpuType = 'pi'
+
 		const toastIds: (string | number)[] = []
 
 		res.then((allData) => {
@@ -69,11 +72,11 @@ export function useSettingsNotificationCount() {
 				toastIds.push(id)
 			}
 
-			if (isCpuTooHot(cpuTemp)) {
+			if (isCpuTooHot(cpuType, cpuTemp)) {
 				currCount++
 				const id = toast.error(t('notifications.cpu.too-hot'), toastOptions)
 				toastIds.push(id)
-			} else if (isCpuTooCold(cpuTemp)) {
+			} else if (isCpuTooCold(cpuType, cpuTemp)) {
 				currCount++
 				const id = toast.error(t('notifications.cpu.too-cold'), toastOptions)
 				toastIds.push(id)

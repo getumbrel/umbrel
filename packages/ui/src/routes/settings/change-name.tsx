@@ -1,5 +1,6 @@
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useUserName} from '@/hooks/use-user-name'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -11,12 +12,11 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 export default function ChangeNameDialog() {
 	const title = t('change-name')
-	const dialogProps = useDialogOpenProps('change-name')
+	const dialogProps = useSettingsDialogProps()
 
 	const {name, setName, handleSubmit, formError, isLoading} = useUserName({
 		onSuccess: () => dialogProps.onOpenChange(false),

@@ -1,9 +1,14 @@
+import {useState} from 'react'
 import {Trans} from 'react-i18next/TransWithoutContext'
-import {Link} from 'react-router-dom'
+import {RiAlarmWarningFill} from 'react-icons/ri'
+import {Link, useNavigate} from 'react-router-dom'
 
+import {ErrorAlert} from '@/components/ui/alert'
 import {links} from '@/constants/links'
 import {cn} from '@/shadcn-lib/utils'
+import {afterDelayedClose} from '@/utils/dialog'
 import {linkClass} from '@/utils/element-classes'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export const cardTitleClass = tw`text-12 font-semibold leading-tight truncate -tracking-2 text-white/40`
@@ -24,4 +29,22 @@ export function ContactSupportLink({className}: {className?: string}) {
 			/>
 		</p>
 	)
+}
+
+export function ChangePasswordWarning() {
+	return <ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
+}
+
+export function useSettingsDialogProps() {
+	const navigate = useNavigate()
+
+	const [open, setOpen] = useState(true)
+
+	return {
+		open,
+		onOpenChange: (open: boolean) => {
+			setOpen(open)
+			afterDelayedClose(() => navigate('/settings'))(open)
+		},
+	}
 }

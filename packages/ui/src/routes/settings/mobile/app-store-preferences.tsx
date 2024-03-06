@@ -10,7 +10,7 @@ import {
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-import {AppStorePreferencesContent} from '../app-store-preferences-content'
+import {AppStorePreferencesContent} from '../_components/app-store-preferences-content'
 
 export function AppStorePreferencesDrawer() {
 	const title = t('settings.app-store-preferences.title')

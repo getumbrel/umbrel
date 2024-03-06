@@ -344,5 +344,8 @@
   "logout-error-generic": "Erreur backend lors de la déconnexion !",
   "troubleshoot-pick-title": "Que souhaiteriez-vous dépanner ?",
   "troubleshoot.app-download": "Télécharger les journaux {{app}}",
-  "troubleshoot.system-download": "Télécharger {{label}}"
+  "troubleshoot.system-download": "Télécharger {{label}}",
+  "notifications.cpu.too-cold": "Trop froid!",
+  "tempurature.too-cold-suggestion": "Pensez à ramener l'appareil à l'intérieur où il fait chaud",
+  "troubleshoot-no-logs-yet": "Aucun journal pour l'instant."
 }

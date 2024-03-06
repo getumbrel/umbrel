@@ -1,4 +1,4 @@
-import {useSearchParams} from 'react-router-dom'
+import {NavigateOptions, useSearchParams} from 'react-router-dom'
 import {pickBy} from 'remeda'
 
 type QueryObject = {[key: string]: string}
@@ -7,24 +7,26 @@ type QueryObject = {[key: string]: string}
 export function useQueryParams<T extends QueryObject>() {
 	const [searchParams, setSearchParams] = useSearchParams()
 
-	const add = (param: keyof T, value: string) => {
-		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...newParams, [param]: value})
+	const object = Object.fromEntries(searchParams.entries()) as T
+
+	const add = (param: keyof T, value: string, navigateOpts?: NavigateOptions) => {
+		const newParams = {...object, [param]: value}
+		setSearchParams(newParams, navigateOpts)
 	}
 
-	const remove = (param: keyof T) => {
-		const newParams = Object.fromEntries(searchParams.entries())
-		setSearchParams({...pickBy(newParams, (_, k) => k !== param)})
+	const remove = (param: keyof T, navigateOpts?: NavigateOptions) => {
+		const newParams = {...pickBy(object, (_, k) => k !== param)}
+		setSearchParams(newParams, navigateOpts)
 	}
 
 	// Adding `& string` because otherwise `key` can be a number if `T` is not specified when calling `useQueryParams`
-	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean) => {
-		setSearchParams(Object.entries(Object.fromEntries(searchParams.entries())).filter(fn))
+	const filter = (fn: (item: [key: keyof T & string, value: string]) => boolean, navigateOpts?: NavigateOptions) => {
+		setSearchParams(Object.entries(object).filter(fn), navigateOpts)
 	}
 
 	return {
 		params: searchParams,
-		object: Object.fromEntries(searchParams.entries()) as T,
+		object,
 		remove,
 		add,
 		filter,
@@ -37,7 +39,7 @@ export function useQueryParams<T extends QueryObject>() {
 		 */
 		addLinkSearchParams: (newParams: T) => {
 			return new URLSearchParams({
-				...Object.fromEntries(searchParams.entries()),
+				...object,
 				...newParams,
 			}).toString()
 		},

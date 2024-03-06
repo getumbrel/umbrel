@@ -1,11 +1,13 @@
 import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
-import {memo, useDeferredValue, useState} from 'react'
+import {memo, useDeferredValue, useRef, useState} from 'react'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet} from 'react-router-dom'
+import {useKeyPressEvent} from 'react-use'
 
 import {Loading} from '@/components/ui/loading'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {CommunityAppStoreDialog} from '@/modules/app-store/community-app-store-dialog'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {
 	appsGridClass,
@@ -14,6 +16,7 @@ import {
 	sectionTitleClass,
 	slideInFromBottomClass,
 } from '@/modules/app-store/shared'
+import {UpdatesButton} from '@/modules/app-store/updates-button'
 import {useAvailableApps} from '@/providers/available-apps'
 import {
 	DropdownMenu,
@@ -24,14 +27,19 @@ import {
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
-import {CommunityAppStoreDialog} from './community-app-store-dialog'
-import {UpdatesButton} from './updates-button'
-
 export function AppStoreLayout() {
 	const title = t('app-store.title')
 
 	const [searchQuery, setSearchQuery] = useState('')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
+
+	const inputRef = useRef<HTMLInputElement>(null)
+
+	useKeyPressEvent(
+		(e) => e.key === '/',
+		undefined, // if doing focus here, input gets a '/' in it
+		() => inputRef.current?.focus(),
+	)
 
 	return (
 		<AppStoreSheetInner
@@ -42,7 +50,7 @@ export function AppStoreLayout() {
 					<CommunityAppsDropdown />
 					<UpdatesButton />
 					<div className='flex-1 md:hidden' />
-					<SearchInput value={searchQuery} onValueChange={setSearchQuery} />
+					<SearchInput inputRef={inputRef} value={searchQuery} onValueChange={setSearchQuery} />
 				</motion.div>
 			}
 		>
@@ -51,12 +59,21 @@ export function AppStoreLayout() {
 	)
 }
 
-function SearchInput({value, onValueChange}: {value: string; onValueChange: (query: string) => void}) {
+function SearchInput({
+	value,
+	onValueChange,
+	inputRef,
+}: {
+	value: string
+	onValueChange: (query: string) => void
+	inputRef?: React.Ref<HTMLInputElement>
+}) {
 	return (
 		<div className='-ml-2 flex min-w-0 items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
 			{/* Set specific input width so it's consistent across browsers */}
 			<input
+				ref={inputRef}
 				className='w-[160px] bg-transparent p-1 text-15 outline-none placeholder:text-white/40'
 				placeholder={t('app-store.search-apps')}
 				value={value}

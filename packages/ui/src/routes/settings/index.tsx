@@ -1,10 +1,12 @@
 import React, {Suspense} from 'react'
+import {Route, Routes} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {TwoFactorDialog} from '@/routes/settings/2fa'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
@@ -26,46 +28,36 @@ const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
-const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-enable'))
-const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
+
 // drawers
 const StartMigrationDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
+	import('@/routes/settings/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
 )
 const AccountDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/account').then((m) => ({default: m.AccountDrawer})),
+	import('@/routes/settings/mobile/account').then((m) => ({default: m.AccountDrawer})),
 )
 const WallpaperDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/wallpaper').then((m) => ({default: m.WallpaperDrawer})),
+	import('@/routes/settings/mobile/wallpaper').then((m) => ({default: m.WallpaperDrawer})),
 )
 const LanguageDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/language').then((m) => ({default: m.LanguageDrawer})),
+	import('@/routes/settings/mobile/language').then((m) => ({default: m.LanguageDrawer})),
 )
-const TorDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/tor').then((m) => ({default: m.TorDrawer})),
-)
+const TorDrawer = React.lazy(() => import('@/routes/settings/mobile/tor').then((m) => ({default: m.TorDrawer})))
 const AppStorePreferencesDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/app-store-preferences').then((m) => ({
+	import('@/routes/settings/mobile/app-store-preferences').then((m) => ({
 		default: m.AppStorePreferencesDrawer,
 	})),
 )
 const DeviceInfoDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
+	import('@/routes/settings/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
 )
 const SoftwareUpdateDrawer = React.lazy(() =>
-	import('@/routes/settings/_components/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
+	import('@/routes/settings/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
 )
 
 const routeToDialogDesktop = {
-	'2fa-enable': TwoFactorEnableDialog,
-	'2fa-disable': TwoFactorDisableDialog,
 	'app-store-preferences': AppStorePreferencesDialog,
-	account: AccountDrawer,
-	'change-name': ChangeNameDialog,
-	'change-password': ChangePasswordDialog,
 	'migration-assistant': MigrationAssistantDialog,
-	tor: ConfirmEnableTorDialog,
-	'device-info': DeviceInfoDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
@@ -73,7 +65,6 @@ const routeToDialogDesktop = {
 	// drawers
 	'start-migration': StartMigrationDrawer,
 	language: LanguageDrawer,
-	wallpaper: WallpaperDrawer,
 	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<string, React.ComponentType>
 
@@ -82,22 +73,14 @@ const dialogKeys = keys.strict(routeToDialogDesktop)
 export type SettingsDialogKey = keyof typeof routeToDialogDesktop
 
 const routeToDialogMobile: Record<string, React.ComponentType> = {
-	'2fa-enable': TwoFactorEnableDialog,
-	'2fa-disable': TwoFactorDisableDialog,
 	'app-store-preferences': AppStorePreferencesDrawer,
-	account: AccountDrawer,
-	'change-name': AccountDrawer,
-	'change-password': AccountDrawer,
 	'migration-assistant': MigrationAssistantDialog,
-	'device-info': DeviceInfoDrawer,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
 	// drawers
 	'start-migration': StartMigrationDrawer,
 	language: LanguageDrawer,
-	wallpaper: WallpaperDrawer,
-	tor: TorDrawer,
 	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
@@ -128,6 +111,16 @@ export function Settings() {
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
+			<Routes>
+				<Route path='/2fa' Component={TwoFactorDialog} />
+				<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
+				{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
+				{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
+				{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
+				{<Route path='/account/:accountTab' Component={AccountDrawer} />}
+				{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
+				<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
+			</Routes>
 			<Suspense>
 				<Dialog />
 			</Suspense>

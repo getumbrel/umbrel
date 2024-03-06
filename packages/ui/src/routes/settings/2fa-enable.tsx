@@ -3,16 +3,17 @@ import {ReactNode, useEffect} from 'react'
 import QRCode from 'react-qr-code'
 
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Loading} from '@/components/ui/loading'
 import {PinInput} from '@/components/ui/pin-input'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Dialog,
-	DialogContent,
 	DialogDescription,
 	DialogHeader,
-	DialogPortal,
+	DialogScrollableContent,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {
@@ -24,17 +25,19 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export default function TwoFactorEnableDialog() {
 	const title = t('2fa.enable.title')
-	const isMobile = useIsMobile()
-
-	const dialogProps = useDialogOpenProps('2fa-enable')
-
 	const scanThisMessage = t('2fa.enable.scan-this')
+
+	const isMobile = useIsMobile()
+	const dialogProps = useSettingsDialogProps()
+
+	// const dialogProps = useDialogOpenProps('2fa-enable')
+	const {enable, totpUri, generateTotpUri} = use2fa(() => dialogProps.onOpenChange(false))
+	useEffect(generateTotpUri, [generateTotpUri])
 
 	if (isMobile) {
 		return (
@@ -49,7 +52,7 @@ export default function TwoFactorEnableDialog() {
 						<p className={paragraphClass}>{scanThisMessage}</p>
 						<div className='flex flex-col items-center gap-5'>
 							{/* NOTE: keep this small so that the pin input is visible within the viewport */}
-							<Inner qrCodeSize={150} />
+							<Inner qrCodeSize={150} totpUri={totpUri} onCodeCheck={enable} />
 							<div className='mb-4' />
 						</div>
 					</DrawerScroller>
@@ -60,36 +63,37 @@ export default function TwoFactorEnableDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogPortal>
-				<DialogContent className='flex flex-col items-center gap-5'>
+			<DialogScrollableContent>
+				<div className='flex flex-col items-center gap-5 p-8'>
 					<DialogHeader>
 						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{scanThisMessage}</DialogDescription>
 					</DialogHeader>
-					<Inner />
-				</DialogContent>
-			</DialogPortal>
+					<Inner totpUri={totpUri} onCodeCheck={enable} />
+				</div>
+			</DialogScrollableContent>
 		</Dialog>
 	)
 }
 
 const paragraphClass = tw`text-left text-13 font-normal leading-tight -tracking-2 text-white/40`
 
-function Inner({qrCodeSize = 240}: {qrCodeSize?: number}) {
-	const dialogProps = useDialogOpenProps('2fa-enable')
-	const {enable, totpUri, generateTotpUri} = use2fa(() => dialogProps.onOpenChange(false))
-
-	useEffect(generateTotpUri, [generateTotpUri])
-
-	if (!totpUri) return null
-
+function Inner({
+	qrCodeSize = 240,
+	totpUri,
+	onCodeCheck,
+}: {
+	qrCodeSize?: number
+	totpUri: string
+	onCodeCheck: (code: string) => Promise<boolean>
+}) {
 	return (
 		<>
-			<AnimateInQr size={qrCodeSize}>
+			<AnimateInQr size={qrCodeSize} animateIn={!!totpUri}>
 				<QRCode
 					size={256}
-					style={{height: 'auto', maxWidth: '100%', width: '100%'}}
+					style={{height: 'auto', maxWidth: '100%', width: '100%', opacity: totpUri ? 1 : 0}}
 					value={totpUri}
 					viewBox={`0 0 256 256`}
 				/>
@@ -100,12 +104,12 @@ function Inner({qrCodeSize = 240}: {qrCodeSize?: number}) {
 			</div>
 			<Separator />
 			<p className='text-center text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
-			<PinInput autoFocus length={6} onCodeCheck={enable} />
+			<PinInput autoFocus length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)
 }
 
-const AnimateInQr = ({children, size}: {children: ReactNode; size: number}) => (
+const AnimateInQr = ({children, size, animateIn}: {children: ReactNode; size: number; animateIn?: boolean}) => (
 	<div
 		className='relative mx-auto'
 		style={{
@@ -122,16 +126,23 @@ const AnimateInQr = ({children, size}: {children: ReactNode; size: number}) => (
 				rotateZ: 0,
 				scale: 0.5,
 			}}
-			animate={{
-				opacity: 1,
-				rotateX: 0,
-				rotateY: 0,
-				rotateZ: 0,
-				scale: 1,
-			}}
+			animate={
+				animateIn && {
+					opacity: 1,
+					rotateX: 0,
+					rotateY: 0,
+					rotateZ: 0,
+					scale: 1,
+				}
+			}
 			transition={{duration: 0.15, ease: 'easeOut'}}
 		>
 			{children}
 		</motion.div>
+		{!animateIn && (
+			<div className='absolute inset-0 grid place-items-center'>
+				<Loading />
+			</div>
+		)}
 	</div>
 )

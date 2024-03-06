@@ -33,6 +33,7 @@ export function Header() {
 							evening: t('desktop.greeting.evening', {name}),
 						}[getPartofDay()]
 					}
+					.
 				</h1>
 			</div>
 		</div>

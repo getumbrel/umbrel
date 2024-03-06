@@ -1,13 +1,22 @@
 // TODO: this should all probably be in umbreld
 
-export type WidgetType =
-	| 'stat-with-buttons'
-	| 'stat-with-progress'
-	| 'two-up-stat-with-progress'
-	| 'three-up'
-	| 'four-up'
-	| 'list-emoji'
-	| 'list'
+export const DEFAULT_REFRESH_MS = 1000 * 60 * 5
+
+type BaseWidget = {
+	refresh?: number
+}
+
+export const widgetTypes = [
+	'stat-with-buttons',
+	'stat-with-progress',
+	'two-up-stat-with-progress',
+	'three-up',
+	'four-up',
+	'list-emoji',
+	'list',
+] as const
+
+export type WidgetType = (typeof widgetTypes)[number]
 
 // ------------------------------
 
@@ -17,13 +26,13 @@ export type WidgetType =
  */
 type Link = string
 
-type FourUpItem = {
+type FourUpItem = BaseWidget & {
 	title: string
 	icon: string
 	value: string
 	valueSub: string
 }
-export type FourUpWidget = {
+export type FourUpWidget = BaseWidget & {
 	type: 'four-up'
 	link?: Link
 	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
@@ -34,7 +43,7 @@ type ThreeUpItem = {
 	title: string
 	value: string
 }
-export type ThreeUpWidget = {
+export type ThreeUpWidget = BaseWidget & {
 	type: 'three-up'
 	link?: Link
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
@@ -51,13 +60,13 @@ type TwoUpStatWithProgressItem = {
 	/** Number from 0 to 1 */
 	progress: number
 }
-export type TwoUpStatWithProgressWidget = {
+export type TwoUpStatWithProgressWidget = BaseWidget & {
 	type: 'two-up-stat-with-progress'
 	link?: Link
 	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
 }
 
-export type StatWithProgressWidget = {
+export type StatWithProgressWidget = BaseWidget & {
 	type: 'stat-with-progress'
 	link?: Link
 	title: string
@@ -68,7 +77,7 @@ export type StatWithProgressWidget = {
 	progress: number
 }
 
-export type StatWithButtonsWidget = {
+export type StatWithButtonsWidget = BaseWidget & {
 	type: 'stat-with-buttons'
 	icon: string
 	title: string
@@ -81,7 +90,7 @@ export type StatWithButtonsWidget = {
 	}[]
 }
 
-export type ListWidget = {
+export type ListWidget = BaseWidget & {
 	type: 'list'
 	link?: Link
 	items: {
@@ -90,7 +99,7 @@ export type ListWidget = {
 	}[]
 }
 
-export type ListEmojiWidget = {
+export type ListEmojiWidget = BaseWidget & {
 	type: 'list-emoji'
 	link?: Link
 	count: number

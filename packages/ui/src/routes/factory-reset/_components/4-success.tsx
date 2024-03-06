@@ -17,7 +17,7 @@ export function Success() {
 			<BareLogoTitle>{title}</BareLogoTitle>
 			<p className={cn(bareTextClass, 'w-[80%] sm:w-[55%]')}>{t('factory-reset.success.description')}</p>
 			<BareSpacer />
-			<Link to='/restart' className={buttonClass}>
+			<Link to='/' className={buttonClass} onClick={() => alert('TODO: implement')}>
 				{t('factory-reset.success.restart-device')}
 			</Link>
 		</div>

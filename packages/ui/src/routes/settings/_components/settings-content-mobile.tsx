@@ -20,10 +20,13 @@ import {Card, cardClass} from '@/components/ui/card'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useLanguage} from '@/hooks/use-language'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
@@ -34,15 +37,17 @@ import {ContactSupportLink} from './shared'
 import {StorageCardContent} from './storage-card-content'
 
 export function SettingsContentMobile() {
+	const [languageCode] = useLanguage()
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
+	const uptimeQ = trpcReact.system.uptime.useQuery()
+	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 
 	const linkToDialog = useLinkToDialog()
 
@@ -88,6 +93,8 @@ export function SettingsContentMobile() {
 						<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
 						<dt className='opacity-40'>{t('umbrelos-version')}</dt>
 						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
+						<dt className='opacity-40'>{t('uptime')}</dt>
+						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 					</dl>
 				</div>
 			</div>
@@ -102,7 +109,7 @@ export function SettingsContentMobile() {
 					<MemoryCardContent />
 				</Card>
 				<Card>
-					<CpuTempCardContent tempInCelcius={cpuTemp.temp} />
+					<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
 				</Card>
 				<Link
 					className={cn(cardClass, 'flex flex-col justify-between')}
@@ -120,29 +127,29 @@ export function SettingsContentMobile() {
 					icon={TbUser}
 					title={t('account')}
 					description={t('account-description')}
-					onClick={() => navigate(linkToDialog('account'))}
+					onClick={() => navigate('account/change-name')}
 				/>
 				<ListRowMobile
 					icon={TbPhoto}
 					title={t('wallpaper')}
 					description={t('wallpaper-description')}
-					onClick={() => navigate(linkToDialog('wallpaper'))}
+					onClick={() => navigate('wallpaper')}
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}
 					title={t('2fa-long')}
 					description={t('2fa-description')}
-					onClick={() => navigate(linkToDialog(is2faEnabledQ.data ? '2fa-disable' : '2fa-enable'))}
+					onClick={() => navigate('2fa')}
 				/>
 				<ListRowMobile
 					icon={TorIcon2}
 					title={
-						<span className='flex items-center gap-2' onClick={() => navigate(linkToDialog('tor'))}>
-							{t('tor-long')} <TorPulse />
+						<span className='flex items-center gap-2' onClick={() => navigate('tor')}>
+							{t('tor-long')} {tor.enabled && <TorPulse />}
 						</span>
 					}
 					description={t('tor-description')}
-					onClick={() => navigate(linkToDialog('tor'))}
+					onClick={() => navigate('tor')}
 				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
@@ -175,7 +182,7 @@ export function SettingsContentMobile() {
 						model: deviceInfo.data?.modelNumber ?? UNKNOWN(),
 						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
 					})}
-					onClick={() => navigate(linkToDialog('device-info'))}
+					onClick={() => navigate('device-info')}
 				/>
 				<ListRowMobile
 					icon={TbCircleArrowUp}
