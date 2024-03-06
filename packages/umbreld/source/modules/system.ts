@@ -80,6 +80,7 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	apps: MemoryUsage[]
 }> {
 	const {total: size, active: totalUsed} = await systemInformation.mem()
+	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
@@ -113,6 +114,7 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 	// we want to report that as 50%.
 	const totalUsed = cpu.currentLoad / threads
 
+	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
