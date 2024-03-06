@@ -131,7 +131,7 @@ export function SettingsContentMobile() {
 					icon={TbPhoto}
 					title={t('wallpaper')}
 					description={t('wallpaper-description')}
-					onClick={() => navigate(linkToDialog('wallpaper'))}
+					onClick={() => navigate('wallpaper')}
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}

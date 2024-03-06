@@ -4,6 +4,7 @@ import {useMount, useTimeout} from 'react-use'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -13,13 +14,12 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {cn} from '@/shadcn-lib/utils'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function WallpaperDrawer() {
 	const title = t('wallpaper')
-	const dialogProps = useDialogOpenProps('wallpaper')
+	const dialogProps = useSettingsDialogProps()
 
 	const {wallpaper, setWallpaperId} = useWallpaper()
 

@@ -94,7 +94,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<CommandItem
 					icon={systemAppsKeyed['UMBREL_settings'].icon}
 					onSelect={() => {
-						navigate(isMobile ? '/settings?dialog=wallpaper' : '/settings')
+						navigate('/settings/wallpaper')
 						setOpen(false)
 					}}
 				>
@@ -138,6 +138,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					value={t('cmdk.shutdown-umbrel')}
 					onSelect={() => navigate({pathname: 'settings', search: addLinkSearchParams({dialog: 'shutdown'})})}
 				/>
+				{/* ---- */}
+				{/* List rows */}
 				<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
 				<SettingsSearchItem
 					value={t('change-password')}

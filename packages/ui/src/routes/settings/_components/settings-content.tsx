@@ -9,7 +9,7 @@ import {
 	RiUserLine,
 } from 'react-icons/ri'
 import {TbRotate2, TbServer, TbTool} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
+import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
 import {IconButton} from '@/components/ui/icon-button'
@@ -53,6 +53,8 @@ export function SettingsContent() {
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
+
+	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper'}>()
 
 	// Scroll to hash
 	useEffect(() => {
@@ -130,7 +132,11 @@ export function SettingsContent() {
 							</IconButtonLink>
 						</div>
 					</ListRow>
-					<ListRow title={t('wallpaper')} description={t('wallpaper-description')}>
+					<ListRow
+						title={t('wallpaper')}
+						description={t('wallpaper-description')}
+						isActive={settingsDialog === 'wallpaper'}
+					>
 						{/* -mx-2 so that when last item is active, it right aligns with other list row buttons, and first item aligns on mobile when picker wrapped down */}
 						{/* w-full to prevent overflow issues */}
 						<div className='-mx-2 max-w-full'>
