@@ -1,10 +1,11 @@
 import {useState} from 'react'
+import {useParams} from 'react-router-dom'
 
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
 import {useUserName} from '@/hooks/use-user-name'
-import {ChangePasswordWarning} from '@/routes/settings/_components/shared'
+import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
@@ -16,7 +17,6 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 import {NoForgotPasswordMessage} from '../_components/no-forgot-password-message'
@@ -25,14 +25,17 @@ export function AccountDrawer() {
 	// TODO: add translation
 	const title = 'Account'
 
-	const dialogProps = useDialogOpenProps('account')
+	const dialogProps = useSettingsDialogProps()
 	const closeDialog = () => dialogProps.onOpenChange(false)
 
 	const tabs = [
 		{id: 'change-name', label: 'Display name'},
 		{id: 'change-password', label: 'Password'},
-	]
-	const [activeTab, setActiveTab] = useState(tabs[0].id)
+	] as const
+	type TabId = (typeof tabs)[number]['id']
+
+	const {accountTab} = useParams<{accountTab: TabId}>()
+	const [activeTab, setActiveTab] = useState(accountTab ?? tabs[0].id)
 
 	return (
 		<Drawer {...dialogProps}>

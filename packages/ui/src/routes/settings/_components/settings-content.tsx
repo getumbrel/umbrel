@@ -122,10 +122,10 @@ export function SettingsContent() {
 				<Card className='umbrel-divide-y overflow-hidden !py-2'>
 					<ListRow title={t('account')} description={t('account-description')}>
 						<div className='flex flex-wrap gap-2'>
-							<IconButtonLink to={linkToDialog('change-name')} icon={RiUserLine}>
+							<IconButtonLink to={'account/change-name'} icon={RiUserLine}>
 								{t('change-name')}
 							</IconButtonLink>
-							<IconButtonLink to={linkToDialog('change-password')} icon={RiKeyLine}>
+							<IconButtonLink to={'account/change-password'} icon={RiKeyLine}>
 								{t('change-password')}
 							</IconButtonLink>
 						</div>

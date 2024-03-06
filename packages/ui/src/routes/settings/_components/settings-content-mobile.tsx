@@ -125,7 +125,7 @@ export function SettingsContentMobile() {
 					icon={TbUser}
 					title={t('account')}
 					description={t('account-description')}
-					onClick={() => navigate(linkToDialog('account'))}
+					onClick={() => navigate('account/change-name')}
 				/>
 				<ListRowMobile
 					icon={TbPhoto}

@@ -134,6 +134,11 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					value={t('logout')}
 					onSelect={() => navigate({search: addLinkSearchParams({dialog: 'logout'})})}
 				/>
+				<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
+				<SettingsSearchItem
+					value={t('change-password')}
+					onSelect={() => navigate('settings/account/change-password')}
+				/>
 				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
 					{t('2fa-long')}
 				</SettingsSearchItem>

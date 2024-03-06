@@ -57,9 +57,6 @@ const SoftwareUpdateDrawer = React.lazy(() =>
 
 const routeToDialogDesktop = {
 	'app-store-preferences': AppStorePreferencesDialog,
-	account: AccountDrawer,
-	'change-name': ChangeNameDialog,
-	'change-password': ChangePasswordDialog,
 	'migration-assistant': MigrationAssistantDialog,
 	tor: ConfirmEnableTorDialog,
 	restart: RestartDialog,
@@ -79,9 +76,6 @@ export type SettingsDialogKey = keyof typeof routeToDialogDesktop
 
 const routeToDialogMobile: Record<string, React.ComponentType> = {
 	'app-store-preferences': AppStorePreferencesDrawer,
-	account: AccountDrawer,
-	'change-name': AccountDrawer,
-	'change-password': AccountDrawer,
 	'migration-assistant': MigrationAssistantDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
@@ -124,6 +118,10 @@ export function Settings() {
 			<Routes>
 				<Route path='/2fa' Component={TwoFactorDialog} />
 				<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
+				{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
+				{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
+				{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
+				{<Route path='/account/:accountTab' Component={AccountDrawer} />}
 			</Routes>
 			<Suspense>
 				<Dialog />

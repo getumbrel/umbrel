@@ -1,6 +1,6 @@
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
-import {ChangePasswordWarning} from '@/routes/settings/_components/shared'
+import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -12,7 +12,6 @@ import {
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
@@ -20,7 +19,7 @@ import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 export default function ChangePasswordDialog() {
 	const title = t('change-password')
 
-	const dialogProps = useDialogOpenProps('change-password')
+	const dialogProps = useSettingsDialogProps()
 
 	const {
 		password,
