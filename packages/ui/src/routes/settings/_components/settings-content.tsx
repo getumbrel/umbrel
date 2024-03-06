@@ -54,7 +54,7 @@ export function SettingsContent() {
 		t.system.version(),
 	])
 
-	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language'}>()
+	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
 	// Scroll to hash
 	useEffect(() => {
@@ -185,7 +185,7 @@ export function SettingsContent() {
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
-					<SoftwareUpdateListRow />
+					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
 					<ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
 							{t('factory-reset.reset')}

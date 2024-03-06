@@ -62,8 +62,6 @@ const routeToDialogDesktop = {
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
-	// drawers
-	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<string, React.ComponentType>
 
 const dialogKeys = keys.strict(routeToDialogDesktop)
@@ -75,8 +73,6 @@ const routeToDialogMobile: Record<string, React.ComponentType> = {
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
-	// drawers
-	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
 function Dialog() {
@@ -119,6 +115,7 @@ export function Settings() {
 				{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
 				{isMobile && <Route path='/language' Component={LanguageDrawer} />}
 				<Route path='/troubleshoot' Component={TroubleshootDialog} />
+				{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 			</Routes>
 			<Suspense>
 				<Dialog />

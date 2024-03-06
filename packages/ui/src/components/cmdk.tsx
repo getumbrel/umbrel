@@ -157,6 +157,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				/>
 				<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
 				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
+				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
 				{/* ---- */}
 				{installedApps.map((app) => (
 					<SearchItem

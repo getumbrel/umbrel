@@ -3,6 +3,7 @@ import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Drawer,
@@ -12,13 +13,12 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function SoftwareUpdateDrawer() {
 	const title = t('software-update.title')
-	const dialogProps = useDialogOpenProps('software-update')
+	const dialogProps = useSettingsDialogProps()
 
 	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
 

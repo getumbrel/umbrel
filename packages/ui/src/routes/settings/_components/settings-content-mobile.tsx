@@ -188,7 +188,7 @@ export function SettingsContentMobile() {
 					icon={TbCircleArrowUp}
 					title={t('software-update.title')}
 					description={t('check-for-latest-version')}
-					onClick={() => navigate(linkToDialog('software-update'))}
+					onClick={() => navigate('software-update')}
 				/>
 				<ListRowMobile
 					icon={TbRotate2}

@@ -9,7 +9,7 @@ import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
-export function SoftwareUpdateListRow() {
+export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
 
 	if (state === 'upgrading') {
@@ -24,6 +24,7 @@ export function SoftwareUpdateListRow() {
 	if (state === 'update-available') {
 		return (
 			<ListRow
+				isActive={isActive}
 				title={`umbrelOS ${currentVersion}`}
 				description={
 					<span className='flex items-center gap-1'>
@@ -43,6 +44,7 @@ export function SoftwareUpdateListRow() {
 
 	return (
 		<ListRow
+			isActive={isActive}
 			title={`umbrelOS ${currentVersion}`}
 			description={
 				<span className='flex items-center gap-1'>
