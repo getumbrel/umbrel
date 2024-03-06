@@ -22,6 +22,7 @@ import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
@@ -44,6 +45,7 @@ export function SettingsContentMobile() {
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
 	const uptimeQ = trpcReact.system.uptime.useQuery()
+	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 
@@ -142,12 +144,12 @@ export function SettingsContentMobile() {
 				<ListRowMobile
 					icon={TorIcon2}
 					title={
-						<span className='flex items-center gap-2' onClick={() => navigate(linkToDialog('tor'))}>
-							{t('tor-long')} <TorPulse />
+						<span className='flex items-center gap-2' onClick={() => navigate('tor')}>
+							{t('tor-long')} {tor.enabled && <TorPulse />}
 						</span>
 					}
 					description={t('tor-description')}
-					onClick={() => navigate(linkToDialog('tor'))}
+					onClick={() => navigate('tor')}
 				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}

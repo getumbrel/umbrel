@@ -151,6 +151,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={t('2fa-long')} onSelect={() => navigate('/settings/2fa')}>
 					{t('2fa-long')}
 				</SettingsSearchItem>
+				<SettingsSearchItem value={t('tor-long')} onSelect={() => navigate('/settings/tor')} />
 				<SettingsSearchItem value={t('device-info-long')} onSelect={() => navigate('/settings/device-info')} />
 				{/* ---- */}
 				{installedApps.map((app) => (

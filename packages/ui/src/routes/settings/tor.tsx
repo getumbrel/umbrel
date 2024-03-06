@@ -1,6 +1,10 @@
 import {TorIcon2} from '@/assets/tor-icon2'
+import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Loading} from '@/components/ui/loading'
+import {toast} from '@/components/ui/toast'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -11,17 +15,31 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 export default function ConfirmEnableTorDialog() {
 	const title = t('tor.enable.title')
-	const dialogProps = useDialogOpenProps('tor')
+	const dialogProps = useSettingsDialogProps()
 
-	const {setEnabled, isError} = useTorEnabled()
+	const {setEnabled, isError, isMutLoading} = useTorEnabled({
+		onSuccess: () => {
+			dialogProps.onOpenChange(false)
+			toast.success(t('tor.enable.success'))
+		},
+	})
 
 	if (isError) {
 		throw new Error(t('tor.enable.failed'))
+	}
+
+	if (isMutLoading) {
+		return (
+			<CoverMessage>
+				<UmbrelHeadTitle>{t('tor.enable.progress')}</UmbrelHeadTitle>
+				<Loading>Enabling Tor</Loading>
+				<CoverMessageParagraph>{t('tor.enable.description')}</CoverMessageParagraph>
+			</CoverMessage>
+		)
 	}
 
 	return (
@@ -38,7 +56,6 @@ export default function ConfirmEnableTorDialog() {
 						className='px-6'
 						onClick={() => {
 							setEnabled(true)
-							dialogProps.onOpenChange(false)
 						}}
 					>
 						{t('tor.enable.submit')}

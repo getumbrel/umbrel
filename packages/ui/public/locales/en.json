@@ -134,8 +134,8 @@
   "shut-down.confirm.submit": "Shut down",
   "tor.enable.title": "Enable Tor for remote access",
   "tor.enable.failed": "Failed to enable.",
-  "tor.enable.description": "This will restart your Umbrel and it may take a few minutes.",
-  "tor.enable.submit": "Restart & enable Tor",
+  "tor.enable.description": "This may restart your Umbrel and it can take a few minutes.",
+  "tor.enable.submit": "Enable Tor",
   "troubleshoot.umbrel-logs": "Umbrel logs",
   "troubleshoot.dmesg-logs": "DMESG logs",
   "troubleshoot.system-download": "Download {{label}}",
@@ -348,5 +348,9 @@
   "notifications.cpu.too-cold": "Too cold!",
   "tempurature.too-cold-suggestion": "Consider bringing the device indoors where it's warm",
   "cmdk.install-from-app-store": "from App Store",
-  "cmdk.shutdown-umbrel": "Shutdown Umbrel"
+  "cmdk.shutdown-umbrel": "Shutdown Umbrel",
+  "tor.enable.success": "Tor enabled successfully!",
+  "tor.enable.progress": "Enabling Tor",
+  "tor.disable.success": "Tor disabled successfully!",
+  "tor.disable.progress": "Disabling Tor"
 }
