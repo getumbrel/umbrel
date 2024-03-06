@@ -4,7 +4,7 @@ import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-export function use2fa(onEnableChange: (enabled: boolean) => void) {
+export function use2fa(onEnableChange?: (enabled: boolean) => void) {
 	const ctx = trpcReact.useContext()
 
 	const enableMut = trpcReact.user.enable2fa.useMutation({
@@ -12,7 +12,7 @@ export function use2fa(onEnableChange: (enabled: boolean) => void) {
 			ctx.user.is2faEnabled.invalidate()
 			setTimeout(() => {
 				toast.success(t('2fa.enable.success'))
-				onEnableChange(true)
+				onEnableChange?.(true)
 			}, 500)
 		},
 	})
@@ -22,7 +22,7 @@ export function use2fa(onEnableChange: (enabled: boolean) => void) {
 			ctx.user.is2faEnabled.invalidate()
 			setTimeout(() => {
 				toast.success(t('2fa.disable.success'))
-				onEnableChange(false)
+				onEnableChange?.(false)
 			}, 500)
 		},
 	})

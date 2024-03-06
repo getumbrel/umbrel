@@ -6,6 +6,7 @@ import {arrayIncludes} from 'ts-extras'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {TwoFactorDialog} from '@/routes/settings/2fa'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
@@ -27,8 +28,7 @@ const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
-const TwoFactorEnableDialog = React.lazy(() => import('@/routes/settings/2fa-enable'))
-const TwoFactorDisableDialog = React.lazy(() => import('@/routes/settings/2fa-disable'))
+
 // drawers
 const StartMigrationDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
@@ -56,15 +56,12 @@ const SoftwareUpdateDrawer = React.lazy(() =>
 )
 
 const routeToDialogDesktop = {
-	'2fa-enable': TwoFactorEnableDialog,
-	'2fa-disable': TwoFactorDisableDialog,
 	'app-store-preferences': AppStorePreferencesDialog,
 	account: AccountDrawer,
 	'change-name': ChangeNameDialog,
 	'change-password': ChangePasswordDialog,
 	'migration-assistant': MigrationAssistantDialog,
 	tor: ConfirmEnableTorDialog,
-	'device-info': DeviceInfoDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
@@ -81,14 +78,11 @@ const dialogKeys = keys.strict(routeToDialogDesktop)
 export type SettingsDialogKey = keyof typeof routeToDialogDesktop
 
 const routeToDialogMobile: Record<string, React.ComponentType> = {
-	'2fa-enable': TwoFactorEnableDialog,
-	'2fa-disable': TwoFactorDisableDialog,
 	'app-store-preferences': AppStorePreferencesDrawer,
 	account: AccountDrawer,
 	'change-name': AccountDrawer,
 	'change-password': AccountDrawer,
 	'migration-assistant': MigrationAssistantDialog,
-	'device-info': DeviceInfoDrawer,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
 	troubleshoot: TroubleshootDialog,
@@ -128,8 +122,8 @@ export function Settings() {
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
 			<Routes>
-				<Route path='/2fa/enable' Component={TwoFactorEnableDialog} />
-				<Route path='/2fa/disable' Component={TwoFactorDisableDialog} />
+				<Route path='/2fa' Component={TwoFactorDialog} />
+				<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
 			</Routes>
 			<Suspense>
 				<Dialog />

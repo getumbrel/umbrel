@@ -46,7 +46,6 @@ export function SettingsContentMobile() {
 	const uptimeQ = trpcReact.system.uptime.useQuery()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-	const is2faEnabledQ = trpcReact.user.is2faEnabled.useQuery()
 
 	const linkToDialog = useLinkToDialog()
 
@@ -138,7 +137,7 @@ export function SettingsContentMobile() {
 					icon={Tb2Fa}
 					title={t('2fa-long')}
 					description={t('2fa-description')}
-					onClick={() => navigate(is2faEnabledQ.data ? '2fa/disable' : '2fa/enable')}
+					onClick={() => navigate('2fa')}
 				/>
 				<ListRowMobile
 					icon={TorIcon2}
@@ -181,7 +180,7 @@ export function SettingsContentMobile() {
 						model: deviceInfo.data?.modelNumber ?? UNKNOWN(),
 						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
 					})}
-					onClick={() => navigate(linkToDialog('device-info'))}
+					onClick={() => navigate('device-info')}
 				/>
 				<ListRowMobile
 					icon={TbCircleArrowUp}

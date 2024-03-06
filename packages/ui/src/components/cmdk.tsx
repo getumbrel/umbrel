@@ -1,5 +1,5 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, useRef, useState} from 'react'
+import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useRef, useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 import {useKey} from 'react-use'
 import {range} from 'remeda'
@@ -19,6 +19,30 @@ import {t} from '@/utils/i18n'
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
 import {DebugOnlyBare} from './ui/debug-only'
+
+const CmdkOpenContext = createContext<{
+	open: boolean
+	setOpen: (value: SetStateAction<boolean>) => void
+} | null>(null)
+
+export function useCmdkOpen() {
+	const ctx = useContext(CmdkOpenContext)
+
+	if (!ctx) throw new Error('useCmdkOpen must be used within a CommandRoot')
+
+	useKey(
+		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
+		() => ctx.setOpen((open) => !open),
+	)
+
+	return ctx
+}
+
+export function CmdkProvier({children}: {children: React.ReactNode}) {
+	const [open, setOpen] = useState(false)
+
+	return <CmdkOpenContext.Provider value={{open, setOpen}}>{children}</CmdkOpenContext.Provider>
+}
 
 export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
 	const navigate = useNavigate()
@@ -94,48 +118,32 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				>
 					{t('cmdk.add-widgets')}
 				</CommandItem>
-				<SubItem
+				<SettingsSearchItem
 					value={systemAppsKeyed['UMBREL_home'].name}
-					icon={systemAppsKeyed['UMBREL_home'].icon}
-					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)
-						setOpen(false)
-					}}
-				>
-					{systemAppsKeyed['UMBREL_home'].name}
-				</SubItem>
-				<SubItem
+					onSelect={() => navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)}
+				/>
+				<SettingsSearchItem
 					value={systemAppsKeyed['UMBREL_app-store'].name}
-					icon={systemAppsKeyed['UMBREL_app-store'].icon}
-					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)
-						setOpen(false)
-					}}
-				>
-					{systemAppsKeyed['UMBREL_app-store'].name}
-				</SubItem>
-				<SubItem
+					onSelect={() => navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)}
+				/>
+				<SettingsSearchItem
 					value={systemAppsKeyed['UMBREL_settings'].name}
-					icon={systemAppsKeyed['UMBREL_settings'].icon}
-					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)
-						setOpen(false)
-					}}
-				>
-					{systemAppsKeyed['UMBREL_settings'].name}
-				</SubItem>
-				<SubItem
+					onSelect={() => navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
+				/>
+				<SettingsSearchItem
 					value={t('logout')}
-					icon={systemAppsKeyed['UMBREL_settings'].icon}
-					onSelect={() => {
-						navigate({search: addLinkSearchParams({dialog: 'logout'})})
-						setOpen(false)
-					}}
-				>
-					{t('logout')}
-				</SubItem>
+					onSelect={() => navigate({search: addLinkSearchParams({dialog: 'logout'})})}
+				/>
+				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
+					{t('2fa-long')}
+				</SettingsSearchItem>
+				<SettingsSearchItem value={t('2fa-long')} onSelect={() => navigate('/settings/2fa')}>
+					{t('2fa-long')}
+				</SettingsSearchItem>
+				<SettingsSearchItem value={t('device-info-long')} onSelect={() => navigate('/settings/device-info')} />
+				{/* ---- */}
 				{installedApps.map((app) => (
-					<SubItem
+					<SearchItem
 						value={app.name}
 						icon={app.icon}
 						key={app.id}
@@ -145,10 +153,10 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						}}
 					>
 						{app.name}
-					</SubItem>
+					</SearchItem>
 				))}
 				{installableApps.map((app) => (
-					<SubItem
+					<SearchItem
 						value={app.name}
 						icon={app.icon}
 						key={app.id}
@@ -160,12 +168,12 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						<span>
 							{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
 						</span>
-					</SubItem>
+					</SearchItem>
 				))}
 				<DebugOnlyBare>
-					<SubItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
+					<SearchItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
 						{t('install-a-bunch-of-random-apps')}
-					</SubItem>
+					</SearchItem>
 				</DebugOnlyBare>
 			</CommandList>
 		</CommandDialog>
@@ -253,20 +261,40 @@ function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: st
 	)
 }
 
-const SubItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
+const SettingsSearchItem = ({
+	onSelect,
+	value,
+	children,
+}: {
+	onSelect: () => void
+	value: string
+	children?: React.ReactNode
+}) => {
+	const {setOpen} = useCmdkOpen()
+	return (
+		<SearchItem
+			value={value}
+			icon={systemAppsKeyed['UMBREL_settings'].icon}
+			onSelect={() => {
+				onSelect()
+				setOpen(false)
+			}}
+		>
+			{children ?? value}
+		</SearchItem>
+	)
+}
+
+const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 	const search = useCommandState((state) => state.search)
 	if (!search) return null
 
-	return <CommandItem {...props} />
-}
-
-export function useCmdkOpen() {
-	const [open, setOpen] = useState(false)
-
-	useKey(
-		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
-		() => setOpen((open) => !open),
+	return (
+		<CommandItem
+			{...props}
+			onSelect={(value) => {
+				props.onSelect?.(value)
+			}}
+		/>
 	)
-
-	return {open, setOpen}
 }

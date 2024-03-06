@@ -1,14 +1,14 @@
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
-import {Dialog, DialogHeader, DialogPortal, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {useDialogOpenProps} from '@/utils/dialog'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from './_components/device-info-content'
 
 export default function DeviceInfoDialog() {
 	const title = t('device-info-long')
-	const dialogProps = useDialogOpenProps('device-info')
+	const dialogProps = useSettingsDialogProps()
 
 	const {isLoading, data} = useDeviceInfo()
 
@@ -19,22 +19,20 @@ export default function DeviceInfoDialog() {
 
 	return (
 		<Dialog {...dialogProps}>
-			<DialogPortal>
-				<DialogScrollableContent showClose>
-					<div className='space-y-6 px-5 py-6'>
-						<DialogHeader>
-							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
-							<DialogTitle>{title}</DialogTitle>
-						</DialogHeader>
-						<DeviceInfoContent
-							umbrelHostEnvironment={data.umbrelHostEnvironment}
-							osVersion={data.osVersion}
-							modelNumber={data.modelNumber}
-							serialNumber={data.serialNumber}
-						/>
-					</div>
-				</DialogScrollableContent>
-			</DialogPortal>
+			<DialogScrollableContent showClose>
+				<div className='space-y-6 px-5 py-6'>
+					<DialogHeader>
+						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
+						<DialogTitle>{title}</DialogTitle>
+					</DialogHeader>
+					<DeviceInfoContent
+						umbrelHostEnvironment={data.umbrelHostEnvironment}
+						osVersion={data.osVersion}
+						modelNumber={data.modelNumber}
+						serialNumber={data.serialNumber}
+					/>
+				</div>
+			</DialogScrollableContent>
 		</Dialog>
 	)
 }

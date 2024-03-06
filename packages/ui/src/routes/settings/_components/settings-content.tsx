@@ -138,10 +138,7 @@ export function SettingsContent() {
 						</div>
 					</ListRow>
 					<ListRow title={t('2fa-long')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
-						<Switch
-							checked={is2faEnabledQ.data}
-							onCheckedChange={() => navigate(is2faEnabledQ.data ? '2fa/disable' : '2fa/enable')}
-						/>
+						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
 					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
 						<Switch
@@ -177,7 +174,7 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow>
 					<ListRow title={t('device-info-long')} description={t('device-info-description')} isLabel>
-						<IconButton icon={TbServer} onClick={() => navigate(linkToDialog('device-info'))}>
+						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
