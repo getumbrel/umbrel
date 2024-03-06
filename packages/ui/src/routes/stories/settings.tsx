@@ -2,7 +2,6 @@ import {useState} from 'react'
 
 import {Card} from '@/components/ui/card'
 import {SegmentedControl} from '@/components/ui/segmented-control'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {H2, H3} from '@/layouts/stories'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'

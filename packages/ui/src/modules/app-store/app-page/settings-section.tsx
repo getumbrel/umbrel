@@ -2,14 +2,12 @@ import {ReactNode} from 'react'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {UNKNOWN} from '@/constants'
-import {trpcReact, UserApp} from '@/trpc/trpc'
+import {UserApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
 export function SettingsSection({userApp}: {userApp: UserApp}) {
-	const ctx = trpcReact.useContext()
-
 	return (
 		<div className={cardClass}>
 			<h2 className={cardTitleClass}>{t('app-page.section.settings.title')}</h2>

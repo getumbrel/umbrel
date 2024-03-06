@@ -1,5 +1,5 @@
 import {DialogProps} from '@radix-ui/react-dialog'
-import {Fragment, PropsWithoutRef, useState} from 'react'
+import {Fragment, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
 import {Markdown} from '@/components/markdown'
