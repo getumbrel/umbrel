@@ -89,8 +89,8 @@ export default router({
 
 		await shutdown()
 	}),
-	reboot: privateProcedure.mutation(async ({ctx}) => {
-		updateSystemStatus({status: 'restarting', progress: 0, description: 'Rebooting...'})
+	restart: privateProcedure.mutation(async ({ctx}) => {
+		updateSystemStatus({status: 'restarting', progress: 0, description: 'Restarting...'})
 		await ctx.umbreld.stop()
 
 		await reboot()
