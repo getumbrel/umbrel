@@ -168,7 +168,6 @@ main () {
   if [[ $no_of_block_devices -gt 1 ]]; then
     echo "Multiple block devices found, only one drive is supported"
     echo "Exiting mount script without doing anything"
-    $set_status mount errored multiple-block-devices
     exit 1
   fi
 
@@ -234,6 +233,7 @@ main () {
   fi
 
   echo "Bind mounting external storage over local Umbrel installation..."
+  mkdir -p "${UMBREL_ROOT}" # Create the directory if it doesn't exist
   mount --bind "${EXTERNAL_UMBREL_ROOT}" "${UMBREL_ROOT}"
 
   echo "Bind mounting external storage over local Docker data dir..."
