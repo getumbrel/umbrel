@@ -245,7 +245,6 @@ export default class App {
 		const service = url.hostname
 
 		url.hostname = await this.getContainerIp(service)
-		console.log(url)
 
 		try {
 			const response = await fetch(url)
