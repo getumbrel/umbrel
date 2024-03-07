@@ -54,6 +54,7 @@ export default router({
 		updateSystemStatus({status: 'updating', progress: 10, description: 'Updating...'})
 		// TODO: Fetch update script from API
 		const updateScript = `#!/usr/bin/env bash
+		set -euo pipefail
 		echo umbrel-update: '{"percent": 0, "message": "Downloading update"}'
 
 		mender install http://lukes-pro.local:8000/build/umbrelos-pi.mender
