@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+#
+# Copyright 2023-2024 Silitics GmbH <info@silitics.com>
+#
+# This file is part of Rugpi (https://rugpi.io).
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+
+import pathlib
+import subprocess
+import sys
+
+
+try:
+    # Mender provides us with two arguments:
+    # 1. The current state of the update process.
+    # 2. A directory where we can find the files of the artifact.
+    STATE = sys.argv[1]
+    FILES = pathlib.Path(sys.argv[2])
+except IndexError:
+    raise RuntimeError(f"usage: {sys.argv[0]} <state> <files>")
+
+
+def rugpi_commit_system():
+    """Commit the current partition set."""
+    subprocess.check_call(["rugpi-ctrl", "system", "commit"])
+
+
+def rugpi_install_image(image: pathlib.Path):
+    """Install a Rugpi image without rebooting in streaming mode."""
+    subprocess.check_call(
+        [
+            "rugpi-ctrl",
+            "update",
+            "install",
+            "--stream",
+            "--no-reboot",
+            image,
+        ]
+    )
+
+
+def query_supports_rollback():
+    """The `SupportsRollback` query of the update process."""
+    # We do support rollbacks.
+    print("Yes")
+
+
+def query_needs_artifact_reboot():
+    """The `NeedsArtifactReboot` query of the update process."""
+    # We want Mender to take care of rebooting.
+    print("Automatic")
+
+
+def state_download():
+    """The `Download` state of the update process."""
+    image_found = False
+    # Commit the present system so that we can overwrite the cold partitions.
+    rugpi_commit_system()
+    with (FILES / "stream-next").open("rt") as stream_next:
+        while True:
+            next_file = stream_next.readline().strip()
+            if not next_file:
+                # No more files left in the stream.
+                break
+            if next_file.strip().endswith(".img"):
+                # We found an image, let's install it.
+                image_found = True
+                rugpi_install_image(FILES / next_file)
+    if not image_found:
+        raise RuntimeError("unable to find image in the artifact")
+
+
+def state_artifact_install():
+    """The `ArtifactInstall` state of the update process."""
+    # The image has already been installed in the downloade state. It remains
+    # to create the marker file such that Mender reboots via Rugpi.
+    pathlib.Path("/run/rugpi/.mender-reboot-spare").touch()
+
+
+def state_artifact_rollback():
+    """The `ArtifactRollback` state of the update process."""
+    # Rebooting will automatically roll back the system.
+
+
+def state_artifact_verify_reboot():
+    """The `ArtifactVerifyReboot` state of the update process."""
+    output = subprocess.check_output(["rugpi-ctrl", "system", "info"]).decode()
+    hot = None
+    default = None
+    for line in output.splitlines():
+        try:
+            key, _, value = line.partition(":")
+        except ValueError:
+            pass
+        else:
+            key = key.strip()
+            value = value.strip()
+            if key == "Hot":
+                hot = value
+            elif key == "Default":
+                default = value
+    if hot == default:
+        # Something went wrong!
+        sys.exit(1)
+
+
+def state_artifact_commit():
+    """The `ArtifactCommit` state of the update process."""
+    rugpi_commit_system()
+
+
+def state_nop():
+    """Called for all states we do not need to handle."""
+
+
+{
+    "SupportsRollback": query_supports_rollback,
+    "NeedsArtifactReboot": query_needs_artifact_reboot,
+    "Download": state_download,
+    "ArtifactInstall": state_artifact_install,
+    "ArtifactRollback": state_artifact_rollback,
+    "ArtifactVerifyReboot": state_artifact_verify_reboot,
+    "ArtifactCommit": state_artifact_commit,
+}.get(STATE, state_nop)()

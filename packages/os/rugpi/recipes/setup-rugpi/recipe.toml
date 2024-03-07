@@ -1,0 +1,5 @@
+description = "setup Rugpi for umbrelOS"
+
+dependencies = [
+    "core/rugpi-ctrl",
+]

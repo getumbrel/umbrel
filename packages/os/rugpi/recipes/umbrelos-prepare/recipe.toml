@@ -1,0 +1,3 @@
+description = "prepare umbrelOS base image for Rugpi"
+priority = 800_000
+dependencies = ["umbrelos-cleanup"]

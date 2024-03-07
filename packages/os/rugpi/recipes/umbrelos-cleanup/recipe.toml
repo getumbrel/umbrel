@@ -1,0 +1,2 @@
+description = "cleanup and restore original umbrelOS configuration"
+priority = -800_000

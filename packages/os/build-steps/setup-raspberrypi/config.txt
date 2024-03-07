@@ -1,0 +1,9 @@
+# Enable DRM VC4 V3D driver.
+#
+# MX: This has been enabled by default and is required for 3D graphics
+# hardware acceleration. We just leave it enabled.
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# We want to run the processor in its 64-bit mode.
+arm_64bit=1

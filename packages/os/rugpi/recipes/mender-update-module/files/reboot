@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Copyright 2023-2024 Silitics GmbH <info@silitics.com>
+#
+# This file is part of Rugpi (https://rugpi.io).
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+#
+# Why do we need this file?
+# =========================
+# Unfortunately, we cannot tell Mender to let Rugpi do the reboot itself. Instead, we
+# inject this shell script as the `reboot` binary. When Mender reboots, it will use this
+# script and we can then handle the reboot via Rugpi here.
+
+set -euo pipefail
+
+if [ -f "/run/rugpi/.mender-reboot-spare" ]; then
+    exec /usr/sbin/reboot "0 tryboot"
+else
+    exec /usr/sbin/reboot "$@"
+fi

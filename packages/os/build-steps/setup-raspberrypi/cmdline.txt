@@ -1,0 +1,1 @@
+console=serial0,115200 console=tty1 rootfstype=ext4 fsck.repair=yes rootwait

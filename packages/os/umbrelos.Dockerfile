@@ -20,31 +20,59 @@ RUN pnpm install
 # Build the app
 RUN pnpm run build
 
+
+#########################################################################
+# umbrelos-base-amd64 build stage
+#########################################################################
+
+FROM debian:bookworm as umbrelos-base-amd64
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh
+
+# Install Linux kernel and non-free firmware.
+RUN apt-get install --yes \
+    linux-image-amd64 \
+    intel-microcode \
+    amd64-microcode \
+    firmware-linux \
+    firmware-realtek \
+    firmware-iwlwifi
+
+# Cleanup build steps.
+RUN rm -rf /build-steps
+
+
+#########################################################################
+# umbrelos-base-arm64 build stage
+#########################################################################
+
+FROM debian:bookworm as umbrelos-base-arm64
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh
+
+RUN /build-steps/setup-raspberrypi.sh
+
+# Cleanup build steps.
+RUN rm -rf /build-steps
+
+
 #########################################################################
 # umbrelos build stage
 #########################################################################
 
+ARG TARGETARCH
+
 # TODO: Instead of using the debian:bookworm image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
-FROM debian:bookworm as umbrelos
+FROM umbrelos-base-${TARGETARCH} AS umbrelos
+
+# We need to duplicate this such that we can also use the argument below.
 ARG TARGETARCH
-
-# Add non-free sources and update package index
-RUN rm /etc/apt/sources.list.d/debian.sources
-RUN echo "deb http://deb.debian.org/debian bookworm main non-free-firmware" > /etc/apt/sources.list
-RUN echo "deb-src http://deb.debian.org/debian bookworm main non-free-firmware" >> /etc/apt/sources.list
-RUN echo "deb http://deb.debian.org/debian-security bookworm-security main non-free-firmware" >> /etc/apt/sources.list
-RUN echo "deb-src http://deb.debian.org/debian-security bookworm-security main non-free-firmware" >> /etc/apt/sources.list
-RUN echo "deb http://deb.debian.org/debian bookworm-updates main non-free-firmware" >> /etc/apt/sources.list
-RUN echo "deb-src http://deb.debian.org/debian bookworm-updates main non-free-firmware" >> /etc/apt/sources.list
-RUN apt-get update --yes
-
-# Install Linux kernel
-RUN apt-get install --yes "linux-image-$TARGETARCH"
-
-# Install systemd
-RUN apt-get install --yes systemd-sysv
 
 # Install boot tooling
 # We don't actually use systemd-boot as a bootloader since Mender injects GRUB
@@ -52,10 +80,6 @@ RUN apt-get install --yes systemd-sysv
 # We install mender-client via apt because injecting via mender-convert appears
 # to be broken on bookworm.
 RUN apt-get install --yes systemd-boot mender-client
-
-# Install non-free firmware
-RUN if [ "$TARGETARCH" = "amd64" ]; then apt-get install --yes intel-microcode amd64-microcode firmware-linux firmware-realtek firmware-iwlwifi; fi
-RUN if [ "$TARGETARCH" = "arm64" ]; then apt-get install --yes raspi-firmware; fi
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
@@ -93,7 +117,8 @@ WORKDIR /
 RUN umbreld provision-os
 
 # Copy in filesystem overlay
-COPY packages/os/overlay /
+COPY packages/os/overlay-common /
+COPY "packages/os/overlay-${TARGETARCH}" /
 
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.

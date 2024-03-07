@@ -1,0 +1,14 @@
+parent = "umbrelos-base"
+
+recipes = [
+    # Prepare umbrelOS base image for Rugpi.
+    "umbrelos-prepare",
+    # Install and configure Rugpi.
+    "setup-rugpi",
+    # Install the Rugpi mender update module.
+    "mender-update-module",
+    # Fix `/etc/hostname` and `/etc/hosts`.
+    "fix-overlay",
+    # Patch `/usr/sbin/reboot` to reboot to the spare partion after an update.
+    "patch-reboot",
+]

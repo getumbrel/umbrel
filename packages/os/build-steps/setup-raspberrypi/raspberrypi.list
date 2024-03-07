@@ -1,0 +1,3 @@
+deb http://archive.raspberrypi.com/debian/ RELEASE main
+# Uncomment line below then 'apt-get update' to enable 'apt-get source'
+#deb-src http://archive.raspberrypi.com/debian/ RELEASE main

@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# Copyright 2023-2024 Silitics GmbH <info@silitics.com>
+#
+# This file is part of Rugpi (https://rugpi.io).
+#
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+#
+# Why do we need this file?
+# =========================
+# When rebooting after an update, we need to make sure to boot into the spare partition.
+
+set -euo pipefail
+
+if [ -f "/run/rugpi/.mender-reboot-spare" ]; then
+    exec -a /usr/sbin/reboot /bin/systemctl "0 tryboot"
+else
+    exec -a /usr/sbin/reboot /bin/systemctl "$@"
+fi

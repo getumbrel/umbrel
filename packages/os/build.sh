@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Pin the Rugpi Docker image.
+export RUGPI_BAKERY_IMAGE="ghcr.io/silitics/rugpi-bakery@sha256:36757e5a3fcebf6cc21a142a6dfbfa3a8e00a92660b14fbd3fff9070443f64e9"
+
 # Allow running from anywhere
 cd "$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
 
 docker_buildx() {
-    docker buildx build --load --platform linux/amd64 $@
+    docker buildx build --load $@
 }
 
 # This will run on the host machine when this script is called.
@@ -19,21 +22,31 @@ function bootstrap() {
         release="$(git rev-parse --short HEAD)-$(date +%s)"
         dev="true"
     fi
-    echo "Ensuring the build dir exists..."
-    mkdir -p build
 
-    echo "Building Umbrel OS Docker image..."
-    # Note we run the build context in ../../ so the build process has access to the entire repo to copy in umbreld stuff.
-    docker_buildx --cache-from type=gha,scope=umbrelos --cache-to type=gha,mode=max,scope=umbrelos --file umbrelos.Dockerfile --tag umbrelos ../../
-
-    echo "Dumping Umbrel OS Docker image filesytem into a tar archive..."
-    umbrel_os_container_id=$(docker run --detach umbrelos /bin/true)
-    docker export --output build/umbrelos.tar "${umbrel_os_container_id}"
-    docker rm "${umbrel_os_container_id}"
+    if [ -z "${SKIP_ARM64:-}" ]; then 
+        build_root_fs arm64 "${release}"
+        build_rugpi_images
+    fi
+    if [ -z "${SKIP_AMD64:-}" ]; then 
+        build_root_fs amd64 "${release}"
+    fi
 
     echo "Building bootable Umbrel OS disk image from tar archive..."
-    docker_buildx --cache-from type=gha,scope=builder --cache-to type=gha,mode=max,scope=builder --file builder.Dockerfile --tag umbrelos:builder .
-    docker run --entrypoint /data/build.sh --env UMBREL_OS_DEV_BUILD="${dev}" --env MENDER_ARTIFACT_NAME="${release}" --volume $PWD:/data --privileged umbrelos:builder '--bootstrapped'
+    docker_buildx --platform "linux/amd64" --cache-from type=gha,scope=builder --cache-to type=gha,mode=max,scope=builder --file builder.Dockerfile --tag umbrelos:builder .
+    docker run \
+        --platform "linux/amd64" \
+        --entrypoint /data/build.sh \
+        --env UMBREL_OS_DEV_BUILD="${dev}" \
+        --env MENDER_ARTIFACT_NAME="${release}" \
+        --env SKIP_ARM64="${SKIP_ARM64:-}" \
+        --env SKIP_AMD64="${SKIP_AMD64:-}" \
+        --env SKIP_PI4="${SKIP_PI4:-}" \
+        --env SKIP_PI5="${SKIP_PI5:-}" \
+        --env SKIP_MENDER="${SKIP_MENDER:-}" \
+        --volume $PWD:/data \
+        --privileged \
+        umbrelos:builder \
+        '--bootstrapped'
 
     # TODO: Clean up any left behind containers to free up disk space
 
@@ -41,10 +54,95 @@ function bootstrap() {
     # qemu-system-x86_64 -net nic -net user,hostfwd=tcp::2222-:22 -machine accel=tcg -cpu max -smp 4 -m 8192 -hda build/umbrelos.img -bios OVMF.fd
 }
 
+# Build the root filesystem.
+#
+# Arguments: <arch> <release>
+function build_root_fs() {
+    local arch=$1;
+    local release=$2;
+
+    echo "Ensuring the build dir exists..."
+    mkdir -p build
+
+    echo "Building Umbrel OS Docker image..."
+    # Note that we run the build context in ../../ so the build process has access to the
+    # entire repo to copy in umbreld stuff.
+    docker_buildx \
+        --cache-from type=gha,scope=umbrelos \
+        --cache-to type=gha,mode=max,scope=umbrelos \
+        --platform "linux/${arch}" \
+        --file umbrelos.Dockerfile \
+        --tag "umbrelos-${arch}" \
+        ../../
+
+    echo "Dumping Umbrel OS Docker image filesytem into a tar archive..."
+    umbrel_os_container_id=$(docker run --platform "linux/${arch}" --detach "umbrelos-${arch}" /bin/true)
+    docker export --output "build/umbrelos-${arch}.tar" "${umbrel_os_container_id}"
+    docker rm "${umbrel_os_container_id}"
+}
+
+# Build Rugpi images for Pi 4 and 5.
+function build_rugpi_images() {
+    # Make sure that the Rugpi build directory exists.
+    mkdir -p rugpi/build
+    # Copy the root filesystem previously build with Docker.
+    cp build/umbrelos-arm64.tar rugpi/build/umbrelos-base.tar
+    
+    # Enable `binfmt`-based emulation for `arm64`.
+    docker run --privileged --rm tonistiigi/binfmt --install all
+
+    # Copy `/etc/hostname` and `/etc/hosts` such that Rugpi can fix them.
+    cp overlay-common/etc/{hostname,hosts} rugpi/recipes/fix-overlay/files
+
+    pushd rugpi
+    # Clean Rugpi cache to get a clean build.
+    rm -rf .rugpi
+    # Bake both images.
+    if [ -z "${SKIP_PI4:-}" ]; then 
+        ./run-bakery bake image pi4 build/umbrelos-pi4.img
+        # Move image to global build directory.
+        mv build/umbrelos-pi4.img ../build/umbrelos-pi4.img
+    fi
+    if [ -z "${SKIP_PI5:-}" ]; then 
+        ./run-bakery bake image tryboot build/umbrelos-tryboot.img
+        # Move image to global build directory.
+        mv build/umbrelos-tryboot.img ../build/umbrelos-pi5.img
+    fi
+    popd
+}
+
 # This will run inside a container when the --bootstrapped flag is passed
-function create_disk_image() {
+function bootstrapped() {
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_MENDER:-}" ]; then 
+        build_raspberrypi_mender_artifact
+    fi
+    if [ -z "${SKIP_AMD64:-}" ]; then 
+        build_x86_artifacts
+    fi
+}
+
+# Build the Raspberry Pi mender artifact.
+function build_raspberrypi_mender_artifact() {
+    if [ -n "${SKIP_PI5:-}" ]; then
+        echo "Pi 5 image is required for Mender artifact."
+        exit 1
+    fi
+
+    echo "Build Raspberry Pi Mender artifact..."
+    # We use the Pi 5 image as a basis. The only difference to the Pi 4 image is that
+    # it lacks the firmware update, which is not necessary for the update.
+    /usr/bin/mender-artifact write module-image \
+        --artifact-name "${MENDER_ARTIFACT_NAME}" \
+        -t raspberrypi \
+        -T rugpi-image \
+        -f /data/build/umbrelos-pi5.img \
+        -o /data/build/umbrelos-pi.mender
+}
+
+# Build the x86 artifacts.
+function build_x86_artifacts() {
     echo "Creating disk image..."
-    rootfs_tar_size="$(du --block-size 1M /data/build/umbrelos.tar | awk '{print $1}')"
+    rootfs_tar_size="$(du --block-size 1M /data/build/umbrelos-amd64.tar | awk '{print $1}')"
     rootfs_buffer="1024"
     disk_size_mb="$((rootfs_tar_size + rootfs_buffer))"
     disk_size_sector=$(expr $disk_size_mb \* 1024 \* 1024 / 512)
@@ -87,12 +185,13 @@ function create_disk_image() {
     mount -t ext4 "${root_device}" "${root_mount_point}"
 
     echo "Extracting rootfs..."
-    tar -xf /data/build/umbrelos.tar --directory "${root_mount_point}"
+    tar -xf /data/build/umbrelos-amd64.tar --directory "${root_mount_point}"
 
     echo "Setup hostname..."
     # We need to do this here becuse if we do it in the Dockerfile it gets
-    # clobbered when Docker sets a random hostname during `docker run`
-    overlay_dir="/data/overlay"
+    # clobbered when Docker sets a random hostname during `docker run`. If
+    # you copy any additional files here, please also do so in Rugpi.
+    overlay_dir="/data/overlay-common"
     cp "${overlay_dir}/etc/hostname" "${root_mount_point}/etc/hostname"
     cp "${overlay_dir}/etc/hosts" "${root_mount_point}/etc/hosts"
 
@@ -127,7 +226,7 @@ arguments=${@:-}
 
 if [[ "${arguments}" = *"--bootstrapped"* ]]
 then
-    create_disk_image
+    bootstrapped
 else
     bootstrap $@
 fi
