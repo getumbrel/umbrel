@@ -3,12 +3,12 @@
 
 [Unit]
 Description=External Storage Mounter
-Before=docker.service
+Before=docker.service umbrel.service
 
 [Service]
 Type=oneshot
 Restart=no
-ExecStart=/home/umbrel/umbrel/scripts/umbrel-os/external-storage/mount
+ExecStart=/bin/umbrelos-external-storage-mount
 TimeoutStartSec=45min
 User=root
 Group=root
