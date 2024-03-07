@@ -21,8 +21,28 @@ import {
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
+type SystemStatus = {
+	status: 'running' | 'updating'
+	/** From 0 to 100 */
+	progress: number
+	description: string
+	error: boolean | string
+}
+
+let systemStatus: SystemStatus = {
+	status: 'running',
+	progress: 0,
+	description: '',
+	error: false,
+}
+
+function updateSystemStatus(properties: Partial<SystemStatus>) {
+	systemStatus = {...systemStatus, ...properties}
+}
+
 export default router({
 	online: publicProcedure.query(() => true),
+	status: privateProcedure.query(() => systemStatus),
 	uptime: privateProcedure.query(() => os.uptime()),
 	version: privateProcedure.query(({ctx}) => ctx.umbreld.version),
 	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
@@ -33,12 +53,29 @@ export default router({
 		return (data as any).version as string
 	}),
 	update: privateProcedure.mutation(async () => {
+		updateSystemStatus({status: 'updating', progress: 10, description: 'Updating...'})
 		// TODO: Fetch update script from API
 		const updateScript = `#!/usr/bin/env bash
- 
-		echo hello from bash`
+		echo umbrel-update: '{"percent": 0, "message": "Downloading update"}'
 
-		await $({stdio: 'inherit'})`bash -c ${updateScript}`
+		mender install http://lukes-pro.local:8000/build/umbrelos-pi.mender
+
+		echo umbrel-update: '{"percent": 100, "message": "Download complete"}'`
+
+		const process = $`bash -c ${updateScript}`
+
+		for await (const chunk of process.stdout!) {
+			const text = chunk.toString()
+			const lines = text.split('\n')
+			for (const line of lines) {
+				if (line.startsWith('umbrel-update: ')) {
+					const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<SystemStatus>
+					updateSystemStatus(status)
+				}
+			}
+		}
+
+		await process
 		return '1.0.1'
 	}),
 	//
