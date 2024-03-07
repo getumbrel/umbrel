@@ -9,7 +9,15 @@ import {$} from 'execa'
 
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
-import {getCpuTemperature, getDiskUsage, getMemoryUsage, getCpuUsage, reboot, shutdown} from '../../../system.js'
+import {
+	getCpuTemperature,
+	getDiskUsage,
+	getMemoryUsage,
+	getCpuUsage,
+	reboot,
+	shutdown,
+	detectDevice,
+} from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
@@ -34,17 +42,7 @@ export default router({
 		return '1.0.1'
 	}),
 	//
-	device: privateProcedure.query(async () => {
-		// This file exists in old versions of amd64 Umbrel OS builds due to the Docker build system.
-		// It confuses the systeminfo library and makes it return the model as 'Docker Container'.
-		// TODO: Remove this once we've done a full fs upgrade
-		await fse.remove('/.dockerenv')
-
-		const {manufacturer, model, serial, uuid, sku} = await systeminfo.system()
-
-		// TODO: Allow these to be overidden by env vars or cli flags
-		return {manufacturer, model, serial, uuid, sku}
-	}),
+	device: privateProcedure.query(() => detectDevice()),
 	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
