@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+const express = require('express');
+
+const PORT = process.env.PORT || 80;
+
+const app = express();
+
+app.get('/clock', function(req, res) {
+	res.writeHead(200, {
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		'Connection': 'keep-alive'
+	});
+
+	const clockInterval = setInterval(() => {
+		const data = (new Date()).toString();
+		res.write("data: " + data + "\n\n");
+	}, 1000);
+
+	req.on("close", () => {
+		clearInterval(clockInterval);
+	});
+});
+
+app.get('/', (req, res) => {
+	res.end(`<html>
+	<head>
+	  <script>
+	  if (!!window.EventSource) {
+	    var source = new EventSource('/clock')
+
+	    source.addEventListener('message', function(e) {
+	      document.getElementById('data').innerHTML+= e.data + "<br>"
+	    }, false)
+
+	    source.addEventListener('open', function(e) {
+	      document.getElementById('state').innerHTML = "Connected"
+	    }, false)
+
+	    source.addEventListener('error', function(e) {
+	      const id_state = document.getElementById('state')
+	      if (e.eventPhase == EventSource.CLOSED)
+	        source.close()
+	      if (e.target.readyState == EventSource.CLOSED) {
+	        id_state.innerHTML = "Disconnected"
+	      }
+	      else if (e.target.readyState == EventSource.CONNECTING) {
+	        id_state.innerHTML = "Connecting..."
+	      }
+	    }, false)
+	  } else {
+	    console.log("Your browser doesn't support SSE")
+	  }
+	  </script>
+	</head>
+	<body>
+	  <h2>Status: <span id="state"></span></h2>
+	  <h2>Data</h2>
+	  <pre id="data"></pre>
+	</body>
+	</html>`);
+});
+
+app.listen(PORT, () => {
+	console.log(`Listening on port: ${PORT}`);
+});
