@@ -148,3 +148,15 @@ export async function reboot(): Promise<boolean> {
 
 	return true
 }
+
+export async function commitOsPartition(umbreld: Umbreld): Promise<boolean> {
+	try {
+		await $`mender commit`
+		umbreld.logger.log('Successfully commited to new OS partition.')
+		return true
+	} catch (error) {
+		// TODO: We should detect if we're running in umbrelOS and make a bigger deal about this if it fails.
+		umbreld.logger.error(`Failed to commit OS partition: ${(error as Error).message}`)
+		return false
+	}
+}

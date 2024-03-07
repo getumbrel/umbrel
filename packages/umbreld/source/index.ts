@@ -13,6 +13,8 @@ import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 
+import {commitOsPartition} from './modules/system.js'
+
 type StoreSchema = {
 	version: string
 	apps: string[]
@@ -72,6 +74,9 @@ export default class Umbreld {
 		this.logger.log(`port:          ${this.port}`)
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
+
+		// If we've successfully booted then commit to the current OS partition
+		commitOsPartition(this)
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
