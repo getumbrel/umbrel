@@ -1,7 +1,7 @@
 import {useLocation} from 'react-router-dom'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
-import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useWallpaper} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
@@ -55,7 +55,7 @@ function getPartofDay() {
 }
 
 export function Search({onClick}: {onClick?: () => void}) {
-	const isMobile = useIsMobile()
+	const isMobile = useIsSmallMobile()
 	return (
 		<button
 			className='z-10 select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors delay-500 duration-300 animate-in fade-in fill-mode-both hover:bg-neutral-600/30 active:bg-neutral-600/10'

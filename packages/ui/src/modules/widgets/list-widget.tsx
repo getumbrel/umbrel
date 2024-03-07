@@ -8,23 +8,26 @@ import { Fragment } from 'react'
 export function ListWidget({
 	items,
 	link,
+	noItemsText = 'Nothing to show.',
 	onClick,
 }: {
 	items?: ListWidget['items']
-	link?: string
+	link?: string,
+	noItemsText?: string
 	onClick?: (link?: string) => void
 }) {
 	return (
 		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer p-2 !pb-0 md:p-4 overflow-hidden'>
 			<div
-				className='flex h-full flex-col gap-2 max-sm:gap-0'
+				className='flex h-full w-full flex-col gap-2 max-sm:gap-0'
 				style={{
 					maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 				}}
 			>
 				{!items && <ListItem textSub={undefined} text={LOADING_DASH} />}
+				{items?.length === 0 && <div className='w-full h-full grid place-items-center text-center pb-2 md:pb-4'>{noItemsText}</div>}
 				{/* Slice just in case API sends down too much data */}
-				{items?.slice(0, 5)?.map((item, i) => (
+				{items && items.length > 0 && items.slice(0, 5).map((item, i) => (
 					<Fragment key={i}>
 						{i !== 0 && <hr className='border-white/5' />}
 						<ListItem textSub={item.textSub} text={item.text} />

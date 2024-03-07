@@ -90,7 +90,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 									<WidgetChecker
 										key={widget.id}
 										checked={selected.map((w) => w.id).includes(widget.id)}
-										onCheckedChange={(checked) => toggleSelected(widget, checked)}
+										onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
 									>
 										<ExampleWidget type={widget.type} example={widget.example} />
 									</WidgetChecker>

@@ -48,13 +48,7 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
 				setScrollPosition(key, 0)
 				container.current?.scrollTo(0, 0)
 			} else {
-				// This fails to go to the correct scroll position when you open a path like `/settings/2fa`.
-				// Instead, goes to the top of the page. But if you close the dialog and then open the path again,
-				// it goes to the correct scroll position. Happens in Safari, Chrome, and Firefox.
-				// After lots of debugging, this appears to be an issue with `react-router-dom` and scroll containers within a page.
-				// https://reactrouter.com/en/main/components/scroll-restoration
-				// Using `preventScrollReset` in links and putting `<ScrollRestoration />` in the `Sheet` layout scroll container doesn't seem to do anything either.
-				console.log('scrolling to', key, getScrollPosition(key))
+				// console.log('scrolling to', key, getScrollPosition(key))
 				container.current?.scrollTo(0, getScrollPosition(key))
 			}
 		}

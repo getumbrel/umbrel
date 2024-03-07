@@ -51,7 +51,6 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	const scrollRef = useRef<HTMLDivElement>(null)
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
-	const isMobile = useIsMobile()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
 	const availableApps = useAvailableApps()
 
@@ -152,7 +151,15 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					{t('2fa-long')}
 				</SettingsSearchItem>
 				<SettingsSearchItem value={t('tor-long')} onSelect={() => navigate('/settings/tor')} />
+				<SettingsSearchItem
+					value={t('migration-assistant')}
+					onSelect={() => navigate('/settings/migration-assistant')}
+				/>
+				<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
+				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
 				<SettingsSearchItem value={t('device-info-long')} onSelect={() => navigate('/settings/device-info')} />
+				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
+				<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
 				{/* ---- */}
 				{installedApps.map((app) => (
 					<SearchItem

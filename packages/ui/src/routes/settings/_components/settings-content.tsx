@@ -54,7 +54,7 @@ export function SettingsContent() {
 		t.system.version(),
 	])
 
-	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper'}>()
+	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
 	// Scroll to hash
 	useEffect(() => {
@@ -154,7 +154,7 @@ export function SettingsContent() {
 					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
 						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
-						<IconButton icon={RiExpandRightFill} onClick={() => navigate(linkToDialog('migration-assistant'))}>
+						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
 							{t('migrate')}
 						</IconButton>
 					</ListRow>
@@ -163,6 +163,7 @@ export function SettingsContent() {
 						description={t('language-description')}
 						isLabel
 						onClick={() => setLangOpen(true)}
+						isActive={settingsDialog === 'language'}
 					>
 						<DropdownMenu open={langOpen} onOpenChange={setLangOpen}>
 							<LanguageDropdownTrigger />
@@ -175,7 +176,7 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow> */}
 					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
-						<IconButton icon={TbTool} onClick={() => navigate(linkToDialog('troubleshoot'))}>
+						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
 							{t('troubleshoot')}
 						</IconButton>
 					</ListRow>
@@ -184,7 +185,7 @@ export function SettingsContent() {
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
-					<SoftwareUpdateListRow />
+					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
 					<ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
 							{t('factory-reset.reset')}

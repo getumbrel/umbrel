@@ -27,7 +27,6 @@ import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-pre
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
-import {useLinkToDialog} from '@/utils/dialog'
 import {maybeT, t} from '@/utils/i18n'
 
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -48,8 +47,6 @@ export function SettingsContentMobile() {
 	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
-
-	const linkToDialog = useLinkToDialog()
 
 	if (!userQ.data) {
 		return null
@@ -155,13 +152,13 @@ export function SettingsContentMobile() {
 					icon={TbArrowBigRightLines}
 					title={t('migration-assistant')}
 					description={t('migration-assistant-description')}
-					onClick={() => navigate(linkToDialog('start-migration'))}
+					onClick={() => navigate('migration-assistant')}
 				/>
 				<ListRowMobile
 					icon={TbLanguage}
 					title={t('language')}
 					description={t('language-description')}
-					onClick={() => navigate(linkToDialog('language'))}
+					onClick={() => navigate('language')}
 				/>
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
@@ -173,7 +170,7 @@ export function SettingsContentMobile() {
 					icon={TbTool}
 					title={t('troubleshoot')}
 					description={t('troubleshoot-description')}
-					onClick={() => navigate(linkToDialog('troubleshoot'))}
+					onClick={() => navigate('troubleshoot')}
 				/>
 				<ListRowMobile
 					icon={TbServer}
@@ -188,7 +185,7 @@ export function SettingsContentMobile() {
 					icon={TbCircleArrowUp}
 					title={t('software-update.title')}
 					description={t('check-for-latest-version')}
-					onClick={() => navigate(linkToDialog('software-update'))}
+					onClick={() => navigate('software-update')}
 				/>
 				<ListRowMobile
 					icon={TbRotate2}

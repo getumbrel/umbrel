@@ -22,7 +22,6 @@ const SettingsContentMobile = React.lazy(() =>
 const AppStorePreferencesDialog = React.lazy(() => import('@/routes/settings/app-store-preferences'))
 const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'))
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
-const MigrationAssistantDialog = React.lazy(() => import('@/routes/settings/migration-assistant'))
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
@@ -30,8 +29,10 @@ const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 
 // drawers
-const StartMigrationDrawer = React.lazy(() =>
-	import('@/routes/settings/mobile/start-migration').then((m) => ({default: m.StartMigrationDrawer})),
+const StartMigrationDrawerOrDialog = React.lazy(() =>
+	import('@/routes/settings/mobile/start-migration-drawer-or-dialog').then((m) => ({
+		default: m.StartMigrationDrawerOrDialog,
+	})),
 )
 const AccountDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/account').then((m) => ({default: m.AccountDrawer})),
@@ -57,15 +58,9 @@ const SoftwareUpdateDrawer = React.lazy(() =>
 
 const routeToDialogDesktop = {
 	'app-store-preferences': AppStorePreferencesDialog,
-	'migration-assistant': MigrationAssistantDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
-	troubleshoot: TroubleshootDialog,
 	// Allow drawers in desktop in case someone opens a link to a drawer
-	// drawers
-	'start-migration': StartMigrationDrawer,
-	language: LanguageDrawer,
-	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<string, React.ComponentType>
 
 const dialogKeys = keys.strict(routeToDialogDesktop)
@@ -74,17 +69,11 @@ export type SettingsDialogKey = keyof typeof routeToDialogDesktop
 
 const routeToDialogMobile: Record<string, React.ComponentType> = {
 	'app-store-preferences': AppStorePreferencesDrawer,
-	'migration-assistant': MigrationAssistantDialog,
 	restart: RestartDialog,
 	shutdown: ShutdownDialog,
-	troubleshoot: TroubleshootDialog,
-	// drawers
-	'start-migration': StartMigrationDrawer,
-	language: LanguageDrawer,
-	'software-update': SoftwareUpdateDrawer,
 } as const satisfies Record<SettingsDialogKey, React.ComponentType>
 
-function Dialog() {
+function QueryStringDialog() {
 	const isMobile = useIsMobile() && !IS_ANDROID
 	const routeToDialog = isMobile ? routeToDialogMobile : routeToDialogDesktop
 
@@ -111,18 +100,23 @@ export function Settings() {
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}
 			{!isMobile && <SettingsContent />}
-			<Routes>
-				<Route path='/2fa' Component={TwoFactorDialog} />
-				<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
-				{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
-				{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
-				{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
-				{<Route path='/account/:accountTab' Component={AccountDrawer} />}
-				{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
-				<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
-			</Routes>
 			<Suspense>
-				<Dialog />
+				<Routes>
+					<Route path='/2fa' Component={TwoFactorDialog} />
+					<Route path='/device-info' Component={isMobile ? DeviceInfoDrawer : DeviceInfoDialog} />
+					{!isMobile && <Route path='/account/change-name' Component={ChangeNameDialog} />}
+					{!isMobile && <Route path='/account/change-password' Component={ChangePasswordDialog} />}
+					{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
+					{<Route path='/account/:accountTab' Component={AccountDrawer} />}
+					{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
+					<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
+					{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
+					{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
+					{isMobile && <Route path='/language' Component={LanguageDrawer} />}
+					<Route path='/troubleshoot' Component={TroubleshootDialog} />
+					{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
+				</Routes>
+				<QueryStringDialog />
 			</Suspense>
 		</>
 	)

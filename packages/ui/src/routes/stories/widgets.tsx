@@ -355,6 +355,18 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
+					<div className='w-full'>
+						<code>items: undefined</code>
+						<ListWidget onClick={handleClick} />
+					</div>
+					<div className='w-full'>
+						<code>items: []</code>
+						<ListWidget onClick={handleClick} items={[]} />
+					</div>
+					<div className='w-full'>
+						<code>items: [], noItemsText: 'Nothing downloading'</code>
+						<ListWidget onClick={handleClick} items={[]} noItemsText='Nothing downloading' />
+					</div>
 				</div>
 				<H3>list-emoji</H3>
 				<div className={sectionClass}>

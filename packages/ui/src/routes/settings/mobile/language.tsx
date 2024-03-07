@@ -3,6 +3,7 @@ import {useId} from 'react'
 import {listClass, ListRadioItem} from '@/components/ui/list'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {languages, SupportedLanguageCode, useLanguage} from '@/hooks/use-language'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -11,13 +12,12 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
-import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {
 	const title = t('language')
-	const dialogProps = useDialogOpenProps('language')
+	const dialogProps = useSettingsDialogProps()
 	const [activeCode, setActiveCode] = useLanguage()
 
 	const changeLanguage = async (code: SupportedLanguageCode) => {
