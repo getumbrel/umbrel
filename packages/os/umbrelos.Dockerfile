@@ -90,7 +90,7 @@ RUN systemctl enable acpid
 RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode usbutils
 
 # Add Umbrel user
 RUN adduser --gecos "" --disabled-password umbrel
