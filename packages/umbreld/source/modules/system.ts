@@ -161,11 +161,14 @@ export async function commitOsPartition(umbreld: Umbreld): Promise<boolean> {
 	}
 }
 
-type Device = 'pi4' | 'pi5' | 'home' | 'unknown'
+export async function detectDevice() {
+	let {manufacturer, model, serial, uuid, sku, version} = await systemInformation.system()
+	let productName = model
+	model = sku
+	let device = `${manufacturer} ${productName}`
 
-export async function detectDevice(): Promise<Device> {
-	const {model} = await systemInformation.system()
-	if (model === 'Umbrel Home') return 'home'
+	if (model === 'U130120') device = 'Umbrel Home (2023)'
+	if (model === 'U130121') device = 'Umbrel Home (2024)'
 
 	// I haven't been able to find another way to reliably detect Pi hardware. Most existing
 	// solutions don't actually detect Pi hardware but just detect Pi OS which we don't match.
@@ -174,12 +177,16 @@ export async function detectDevice(): Promise<Device> {
 	// appended to the output of `/proc/cpuinfo` so we can use that to detect Pi hardware.
 	try {
 		const cpuInfo = await fse.readFile('/proc/cpuinfo')
-		if (cpuInfo.includes('Raspberry Pi 5 ')) return 'pi5'
-		if (cpuInfo.includes('Raspberry Pi 4 ')) return 'pi4'
+		if (cpuInfo.includes('Raspberry Pi ')) {
+			manufacturer = 'Raspberry Pi'
+			productName = 'Raspberry Pi'
+			model = version
+			if (cpuInfo.includes('Raspberry Pi 5 ')) device = 'Raspberry Pi 5'
+			if (cpuInfo.includes('Raspberry Pi 4 ')) device = 'Raspberry Pi 4'
+		}
 	} catch (error) {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
 	}
 
-	// This will be returned for users running custom installs on self built Linux machines or VMs.
-	return 'unknown'
+	return {device, productName, manufacturer, model, serial, uuid}
 }
