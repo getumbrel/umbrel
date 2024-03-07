@@ -95,7 +95,7 @@ export default router({
 		updateSystemStatus({status: 'restarting', progress: 0, description: 'Shutting down...'})
 		await ctx.umbreld.stop()
 
-		await restart()
+		await reboot()
 	}),
 	//
 	factoryReset: privateProcedure
