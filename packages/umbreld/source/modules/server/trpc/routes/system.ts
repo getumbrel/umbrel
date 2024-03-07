@@ -1,9 +1,7 @@
 import os from 'node:os'
 
-import fse from 'fs-extra'
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
-import systeminfo from 'systeminformation'
 import fetch from 'node-fetch'
 import {$} from 'execa'
 
