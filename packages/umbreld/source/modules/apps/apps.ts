@@ -58,7 +58,18 @@ export default class Apps {
 
 	async stop() {
 		this.logger.log('Stopping apps')
-		await Promise.all(this.instances.map((app) => app.stop()))
+		await Promise.all(
+			this.instances.map((app) =>
+				app.stop().catch((error) => {
+					// We handle individual errors here to prevent apps start from throwing
+					// if a dingle app fails.
+					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
+				}),
+			),
+		)
+
+		this.logger.log('Stopping app environment')
+		await appEnvironment(this.#umbreld, 'down')
 	}
 
 	async isInstalled(appId: string) {

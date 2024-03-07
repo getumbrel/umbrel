@@ -86,4 +86,9 @@ export default class Umbreld {
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
 	}
+
+	async stop() {
+		// Stop modules
+		await Promise.all([this.apps.stop(), this.appStore.stop()])
+	}
 }

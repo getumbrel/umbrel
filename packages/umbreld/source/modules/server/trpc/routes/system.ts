@@ -22,7 +22,7 @@ import {
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
 type SystemStatus = {
-	status: 'running' | 'updating'
+	status: 'running' | 'updating' | 'shutting-down' | 'restarting'
 	/** From 0 to 100 */
 	progress: number
 	description: string
@@ -85,8 +85,18 @@ export default router({
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
-	shutdown: privateProcedure.mutation(() => shutdown()),
-	reboot: privateProcedure.mutation(() => reboot()),
+	shutdown: privateProcedure.mutation(async ({ctx}) => {
+		updateSystemStatus({status: 'shutting-down', progress: 0, description: 'Shutting down...'})
+		await ctx.umbreld.stop()
+
+		await shutdown()
+	}),
+	reboot: privateProcedure.mutation(async ({ctx}) => {
+		updateSystemStatus({status: 'restarting', progress: 0, description: 'Shutting down...'})
+		await ctx.umbreld.stop()
+
+		await restart()
+	}),
 	//
 	factoryReset: privateProcedure
 		.input(
