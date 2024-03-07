@@ -9,7 +9,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
 	const composePath = join(currentDirname, 'docker-compose.yml')
-	await $({
+	const options = {
 		stdio: 'inherit',
 		cwd: umbreld.dataDirectory,
 		env: {
@@ -27,5 +27,9 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			JWT_SECRET: await umbreld.server.getJwtSecret(),
 			UMBRELD_RPC_HOST: `host.docker.internal:${umbreld.server.port}`, // TODO: Check host.docker.internal works on linux
 		},
-	})`docker-compose --project-name umbrel --file ${composePath} ${command} --build --detach`
+	}
+	if (command === 'up') {
+		await $(options)`docker-compose --project-name umbrel --file ${composePath} ${command} --build --detach`
+	}
+	await $(options)`docker-compose --project-name umbrel --file ${composePath} ${command}`
 }
