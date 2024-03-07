@@ -14,6 +14,7 @@ import {getCpuTemperature, getDiskUsage, getMemoryUsage, getCpuUsage, reboot, sh
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
 
 export default router({
+	online: publicProcedure.query(() => true),
 	uptime: privateProcedure.query(() => os.uptime()),
 	version: privateProcedure.query(({ctx}) => ctx.umbreld.version),
 	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
