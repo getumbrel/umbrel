@@ -79,7 +79,7 @@ export default router({
 			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-amd64.update"
 		fi
 
-		echo mender install "\${update_url}"`
+		mender install "\${update_url}"`
 
 		// Exectute update script and report progress
 		const process = $`bash -c ${updateScript}`
