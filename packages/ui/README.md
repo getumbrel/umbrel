@@ -99,6 +99,11 @@ You can then search the repo for `viewTransitionName` to find them all
 
 Use `onFooBarClick` rather than `onClickFooBar`
 
+## No barrel files
+
+Vite doesn't like them. Haven't tested how bad they are for performance, though.
+https://vitejs.dev/guide/performance#avoid-barrel-files
+
 ## tRPC
 
 Prefer `trpcReact` over `trpcClient` because it lets you manage error and loading state, caching, and invalidation. More info here: https://trpc.io/docs/client/vanilla#when-not-to-use-the-vanilla-client
