@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 echo installing os deps
-sudo apt-get install --yes nodejs npm docker.io docker-compose python3 build-essential
-sudo /opt/umbrel/scripts/install --bootstrapped --no-install-umbrel --no-install-docker --no-install-compose
+sudo apt-get install --yes npm
 
 echo installing umbreld deps
 cd /opt/umbrel/packages/umbreld
-rm -rf node_modules
+rm -rf node_modules || true
 npm install
+sudo npm run start provision-os
 
 echo installing ui deps
 cd /opt/umbrel/packages/ui
 sudo npm install -g pnpm
-rm -rf node_modules
+rm -rf node_modules || true
 pnpm install --force
