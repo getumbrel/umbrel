@@ -100,24 +100,12 @@ export default router({
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	shutdown: privateProcedure.mutation(async ({ctx}) => {
 		updateSystemStatus({status: 'shutting-down', progress: 0, description: 'Shutting down...'})
-		try {
-			await ctx.umbreld.stop()
-		} catch (error) {
-			// If we fail to stop gracefully just log and continue with shutdown
-			ctx.umbreld.logger.error(`Failed to stop umbreld: ${(error as Error).message}`)
-		}
-
+		await ctx.umbreld.stop()
 		await shutdown()
 	}),
 	restart: privateProcedure.mutation(async ({ctx}) => {
 		updateSystemStatus({status: 'restarting', progress: 0, description: 'Restarting...'})
-		try {
-			await ctx.umbreld.stop()
-		} catch (error) {
-			// If we fail to stop gracefully just log and continue with restart
-			ctx.umbreld.logger.error(`Failed to stop umbreld: ${(error as Error).message}`)
-		}
-
+		await ctx.umbreld.stop()
 		await reboot()
 	}),
 	//
