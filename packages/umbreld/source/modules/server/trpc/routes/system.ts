@@ -55,27 +55,41 @@ export default router({
 		// TODO: Fetch update script from API
 		const updateScript = `#!/usr/bin/env bash
 		set -euo pipefail
-		echo umbrel-update: '{"percent": 0, "message": "Downloading update"}'
+		echo umbrel-update: '{"progress": 0, "message": "Downloading update"}'
 
 		mender install http://lukes-pro.local:8000/build/umbrelos-pi.mender
 
-		echo umbrel-update: '{"percent": 100, "message": "Download complete"}'`
+		echo umbrel-update: '{"progress": 100, "message": "Download complete"}'`
 
 		const process = $`bash -c ${updateScript}`
 
-		for await (const chunk of process.stdout!) {
-			const text = chunk.toString()
-			const lines = text.split('\n')
-			for (const line of lines) {
-				if (line.startsWith('umbrel-update: ')) {
-					const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<SystemStatus>
-					updateSystemStatus(status)
+		let menderInstallDots = 0
+
+		async function handleUpdateScriptOutput(output: NodeJS.ReadableStream) {
+			for await (const chunk of output) {
+				const text = chunk.toString()
+				const lines = text.split('\n')
+				for (const line of lines) {
+					// Handle our custom status updates
+					if (line.startsWith('umbrel-update: ')) {
+						const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<SystemStatus>
+						updateSystemStatus(status)
+					}
+
+					// Handle mender install progress
+					if (line === '.') {
+						menderInstallDots++
+						// Mender install will stream 70 dots to stdout, lets convert that into 10%-90% of install progress
+						const progress = Math.min(90, Math.floor((menderInstallDots / 70) * 80) + 10)
+						updateSystemStatus({progress})
+					}
 				}
 			}
 		}
 
-		await process
-		return '1.0.1'
+		await Promise.all([handleUpdateScriptOutput(process.stdout!), handleUpdateScriptOutput(process.stderr!)])
+
+		return true
 	}),
 	//
 	device: privateProcedure.query(() => detectDevice()),
