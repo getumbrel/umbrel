@@ -56,11 +56,12 @@ export default router({
 		return (data as any).version as string
 	}),
 	update: privateProcedure.mutation(async ({ctx}) => {
-		updateSystemStatus({status: 'updating', progress: 10, description: 'Updating...', error: false})
+		updateSystemStatus({status: 'updating', progress: 5, description: 'Updating...', error: false})
 		// TODO: Fetch update script from API
 		const updateScript = `#!/usr/bin/env bash
 		set -euo pipefail
-		echo umbrel-update: '{"progress": 0, "message": "Downloading update"}'
+
+		update_url=""
 
 		if ! command -v mender &> /dev/null
 		then
@@ -68,9 +69,17 @@ export default router({
 			exit 1
 		fi
 
-		mender install http://lukes-pro.local:8000/build/umbrelos-pi.mender
+		if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
+		then
+			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-pi.update"
+		fi
 
-		echo umbrel-update: '{"progress": 100, "message": "Download complete"}'`
+		if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
+		then
+			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-amd64.update"
+		fi
+
+		echo mender install "\${update_url}"`
 
 		// Exectute update script and report progress
 		const process = $`bash -c ${updateScript}`
