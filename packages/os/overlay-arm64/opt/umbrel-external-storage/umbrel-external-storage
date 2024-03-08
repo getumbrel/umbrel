@@ -127,6 +127,9 @@ setup_new_device () {
 
   echo "Creating Umbrel data directory on external storage..."
   mkdir -p "${EXTERNAL_UMBREL_ROOT}"
+
+  echo "Touching dotfile on external storage so we recognise this device in the future..."
+  touch "${EXTERNAL_UMBREL_ROOT}"/.umbrel
 }
 
 # Copy Docker data dir to external storage

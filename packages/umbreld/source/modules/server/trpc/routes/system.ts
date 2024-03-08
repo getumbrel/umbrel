@@ -27,12 +27,17 @@ type SystemStatus = {
 	error: boolean | string
 }
 
-let systemStatus: SystemStatus = {
-	status: 'running',
-	progress: 0,
-	description: '',
-	error: false,
+function resetSystemStatus() {
+	systemStatus = {
+		status: 'running',
+		progress: 0,
+		description: '',
+		error: false,
+	}
 }
+
+let systemStatus: SystemStatus
+resetSystemStatus()
 
 function updateSystemStatus(properties: Partial<SystemStatus>) {
 	systemStatus = {...systemStatus, ...properties}
@@ -50,31 +55,86 @@ export default router({
 		const data = await result.json()
 		return (data as any).version as string
 	}),
-	update: privateProcedure.mutation(async () => {
-		updateSystemStatus({status: 'updating', progress: 10, description: 'Updating...'})
+	update: privateProcedure.mutation(async ({ctx}) => {
+		updateSystemStatus({status: 'updating', progress: 5, description: 'Updating...', error: false})
 		// TODO: Fetch update script from API
 		const updateScript = `#!/usr/bin/env bash
-		echo umbrel-update: '{"percent": 0, "message": "Downloading update"}'
+		set -euo pipefail
 
-		mender install http://lukes-pro.local:8000/build/umbrelos-pi.mender
+		update_url=""
 
-		echo umbrel-update: '{"percent": 100, "message": "Download complete"}'`
+		if ! command -v mender &> /dev/null
+		then
+			echo umbrel-update: '{"error": "Mender not installed"}'
+			exit 1
+		fi
 
+		if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
+		then
+			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-pi.update"
+		fi
+
+		if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
+		then
+			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-amd64.update"
+		fi
+
+		mender install "\${update_url}"`
+
+		// Exectute update script and report progress
 		const process = $`bash -c ${updateScript}`
-
-		for await (const chunk of process.stdout!) {
+		let menderInstallDots = 0
+		async function handleUpdateScriptOutput(chunk: Buffer) {
 			const text = chunk.toString()
 			const lines = text.split('\n')
 			for (const line of lines) {
+				// Handle our custom status updates
 				if (line.startsWith('umbrel-update: ')) {
-					const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<SystemStatus>
-					updateSystemStatus(status)
+					try {
+						const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<SystemStatus>
+						updateSystemStatus(status)
+					} catch (error) {
+						// Don't kill update on JSON parse errors
+					}
+				}
+
+				// Handle mender install progress
+				if (line === '.') {
+					menderInstallDots++
+					// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
+					const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
+					updateSystemStatus({progress})
 				}
 			}
 		}
+		process.stdout?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
+		process.stderr?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
 
-		await process
-		return '1.0.1'
+		// Wait for script to complete and handle errors
+		try {
+			await process
+		} catch (error) {
+			// Don't overwrite a useful error message reported by the update script
+			if (!systemStatus.error) updateSystemStatus({error: 'Update failed'})
+
+			// Reset the state back to running but leave the error message so ui polls
+			// can differentiate between a successful update after reboot and a failed
+			// update that didn't reboot.
+			const errorStatus = systemStatus.error
+			resetSystemStatus()
+			updateSystemStatus({error: errorStatus})
+
+			ctx.umbreld.logger.error(`Update script failed: ${(error as Error).message}`)
+
+			return false
+		}
+
+		updateSystemStatus({progress: 95})
+
+		await ctx.umbreld.stop()
+		await reboot()
+
+		return true
 	}),
 	//
 	device: privateProcedure.query(() => detectDevice()),
@@ -84,15 +144,13 @@ export default router({
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	shutdown: privateProcedure.mutation(async ({ctx}) => {
-		updateSystemStatus({status: 'shutting-down', progress: 0, description: 'Shutting down...'})
+		updateSystemStatus({status: 'shutting-down', progress: 0, description: 'Shutting down...', error: false})
 		await ctx.umbreld.stop()
-
 		await shutdown()
 	}),
 	restart: privateProcedure.mutation(async ({ctx}) => {
-		updateSystemStatus({status: 'restarting', progress: 0, description: 'Restarting...'})
+		updateSystemStatus({status: 'restarting', progress: 0, description: 'Restarting...', error: false})
 		await ctx.umbreld.stop()
-
 		await reboot()
 	}),
 	//

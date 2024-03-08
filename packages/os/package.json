@@ -1,5 +1,7 @@
 {
   "scripts": {
-    "build": "./build.sh"
+    "build": "./build.sh",
+    "build:amd64": "SKIP_ARM64=true npm run build",
+    "build:arm64": "SKIP_AMD64=true npm run build"
   }
 }

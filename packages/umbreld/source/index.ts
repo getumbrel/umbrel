@@ -88,7 +88,15 @@ export default class Umbreld {
 	}
 
 	async stop() {
-		// Stop modules
-		await Promise.all([this.apps.stop(), this.appStore.stop()])
+		try {
+			// Stop modules
+			await Promise.all([this.apps.stop(), this.appStore.stop()])
+			return true
+		} catch (error) {
+			// If we fail to stop gracefully there's not really much we can do, just log the error and return false
+			// so it can be handled elsewhere if needed
+			this.logger.error(`Failed to stop umbreld: ${(error as Error).message}`)
+			return false
+		}
 	}
 }

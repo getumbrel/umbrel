@@ -1,10 +1,10 @@
 {
   "scripts": {
-    "vm:provision": "multipass launch --name umbrel-dev --cpus 2 --memory 4G --disk 50G 23.10 && npm run vm:transfer && multipass exec umbrel-dev -- /opt/umbrel/scripts/provision-vm",
-    "vm:transfer": "npm run vm:exec sudo mkdir -p /opt/umbrel; npm run vm:exec sudo chown ubuntu:ubuntu /opt/umbrel && multipass transfer --recursive $PWD/. umbrel-dev:/opt/umbrel",
+    "vm:provision": "multipass launch --name umbrel-dev --cpus 4 --memory 8G --disk 50G 23.10 && npm run vm:transfer && multipass exec umbrel-dev -- /opt/umbrel/scripts/provision-vm",
+    "vm:transfer": "npm run vm:exec -- -- sudo mkdir -p /opt/umbrel/scripts; npm run vm:exec -- -- sudo mkdir -p /opt/umbrel/packages/umbreld; npm run vm:exec -- -- sudo mkdir -p /opt/umbrel/packages/ui; npm run vm:exec -- -- sudo chown -R ubuntu:ubuntu /opt/umbrel && multipass transfer --recursive $PWD/scripts/. umbrel-dev:/opt/umbrel/scripts && multipass transfer --recursive $PWD/packages/ui/. umbrel-dev:/opt/umbrel/packages/ui && multipass transfer --recursive $PWD/packages/umbreld/. umbrel-dev:/opt/umbrel/packages/umbreld",
     "vm:shell": "multipass shell umbrel-dev",
     "vm:exec": "multipass exec umbrel-dev",
-    "vm:umbreld": "multipass exec umbrel-dev -- bash -c 'cd /opt/umbrel/packages/umbreld && sudo npm run start -- --data-directory /home/ubuntu/data --log-level verbose'",
+    "vm:umbreld": "multipass exec umbrel-dev -- bash -c 'cd /opt/umbrel/packages/umbreld && sudo npm run dev -- --port 80'",
     "vm:ui": "multipass exec umbrel-dev -- bash -c 'cd /opt/umbrel/packages/ui && sudo pnpm run dev'",
     "vm:destroy": "multipass delete umbrel-dev && multipass purge"
   }
