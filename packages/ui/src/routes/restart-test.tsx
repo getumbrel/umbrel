@@ -9,7 +9,7 @@ import {useShutdownRestartPolling} from '../hooks/use-shutdown-restart-polling'
 export default function RestartTest() {
 	const {state, startExpectingFailure, canManualPing, manualPing, pingQ} = useShutdownRestartPolling()
 
-	const restartMut = trpcReact.system.reboot.useMutation({
+	const restartMut = trpcReact.system.restart.useMutation({
 		onSuccess: () => startExpectingFailure(),
 		onError: (error) => toast(error.message),
 	})
