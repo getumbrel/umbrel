@@ -29,7 +29,10 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 		},
 	}
 	if (command === 'up') {
-		await $(options as any)`docker-compose --project-name umbrel --file ${composePath} ${command} --build --detach`
+		await $(
+			options as any,
+		)`docker-compose --project-name umbrel --file ${composePath} ${command} --build --detach --remove-orphans`
+	} else {
+		await $(options as any)`docker-compose --project-name umbrel --file ${composePath} ${command}`
 	}
-	await $(options as any)`docker-compose --project-name umbrel --file ${composePath} ${command}`
 }
