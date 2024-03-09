@@ -53,7 +53,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 	})
 
-	const status = systemStatusQ.data?.status
+	const status = systemStatusQ.data
 	const prevStatus = usePreviousDistinct(status)
 
 	useEffect(() => {
