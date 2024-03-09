@@ -44,10 +44,9 @@ function updateSystemStatus(properties: Partial<SystemStatus>) {
 }
 
 export default router({
-	online: publicProcedure.query(() => true),
+	version: publicProcedure.query(({ctx}) => ctx.umbreld.version),
 	status: privateProcedure.query(() => systemStatus),
 	uptime: privateProcedure.query(() => os.uptime()),
-	version: privateProcedure.query(({ctx}) => ctx.umbreld.version),
 	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
 		const result = await fetch('https://api.umbrel.com/latest-release', {
 			headers: {'User-Agent': `umbrelOS ${ctx.umbreld.version}`},
