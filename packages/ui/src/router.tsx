@@ -7,7 +7,6 @@ import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
 import {Desktop} from './layouts/desktop'
 import {SheetLayout} from './layouts/sheet'
-import {StoriesLayout} from './layouts/stories'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {BlurBelowDock} from './modules/desktop/blur-below-dock'
@@ -18,6 +17,7 @@ import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
 import {Settings} from './routes/settings'
 
+const StoriesLayout = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.StoriesLayout})))
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
 const CategoryPage = React.lazy(() => import('./routes/app-store/category-page'))
 const Discover = React.lazy(() => import('./routes/app-store/discover'))

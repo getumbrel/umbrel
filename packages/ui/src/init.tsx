@@ -3,7 +3,7 @@ import './index.css'
 import './utils/i18n'
 
 import i18next from 'i18next'
-import React from 'react'
+import React, {Suspense} from 'react'
 import ReactDOM from 'react-dom/client'
 import {ErrorBoundary} from 'react-error-boundary'
 import {HelmetProvider} from 'react-helmet-async'
@@ -20,14 +20,16 @@ export function init(element: React.ReactNode) {
 			<React.StrictMode>
 				<HelmetProvider>
 					<IframeChecker>
-						<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
-							<TooltipProvider>
-								{element}
-								<Toaster />
-								{/* Want to show cover message over Toast elements */}
-								<CoverMessageTarget />
-							</TooltipProvider>
-						</ErrorBoundary>
+						<Suspense>
+							<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
+								<TooltipProvider>
+									{element}
+									<Toaster />
+									{/* Want to show cover message over Toast elements */}
+									<CoverMessageTarget />
+								</TooltipProvider>
+							</ErrorBoundary>
+						</Suspense>
 					</IframeChecker>
 				</HelmetProvider>
 			</React.StrictMode>,
