@@ -47,6 +47,7 @@ function setUpdateStatus(properties: Partial<UpdateStatus>) {
 }
 
 export default router({
+	online: publicProcedure.query(() => true),
 	version: publicProcedure.query(({ctx}) => ctx.umbreld.version),
 	status: publicProcedure.query(() => systemStatus),
 	updateStatus: privateProcedure.query(() => updateStatus),
