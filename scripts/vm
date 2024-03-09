@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+MOUNT_DIR="/opt/umbrel-mount"
+VM_DIR="/home/ubuntu/umbrel"
+
 function sync_umbrel_source() {
-    sudo mkdir -p /opt/umbrel
-    sudo chown ubuntu:ubuntu /opt/umbrel
+    sudo mkdir -p "${VM_DIR}"
+    sudo chown ubuntu:ubuntu "${VM_DIR}"
     rsync -avh \
         --exclude packages/os/ \
         --exclude packages/umbreld/data/ \
@@ -13,7 +16,7 @@ function sync_umbrel_source() {
         --exclude node_modules/ \
         --exclude .git/ \
         --exclude .pnpm-store/ \
-        /opt/umbrel-mount/. /opt/umbrel
+        "${MOUNT_DIR}/." "${VM_DIR}"
 }
 
 function install_deps() {
@@ -22,13 +25,13 @@ function install_deps() {
     sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes nodejs build-essential
 
     echo installing umbreld deps
-    pushd /opt/umbrel/packages/umbreld
+    pushd "${VM_DIR}/packages/umbreld"
     npm install
     sudo DEBIAN_FRONTEND=noninteractive npm run start provision-os
     popd
 
     echo installing ui deps
-    pushd /opt/umbrel/packages/ui
+    pushd "${VM_DIR}/packages/ui"
     sudo npm install -g pnpm
     pnpm install
     popd
@@ -50,7 +53,7 @@ function install_services() {
 Description=${service}
 
 [Service]
-ExecStart=/opt/umbrel-mount/scripts/vm ${service}
+ExecStart="${MOUNT_DIR}/scripts/vm" ${service}
 Restart=always
 StartLimitInterval=0
 
@@ -73,6 +76,11 @@ then
     sync_umbrel_source
     install_deps
     install_services
+    echo
+    echo "  ☂️  VM setup complete"
+    echo
+    echo "  http://umbrel-dev.local"
+
     exit
 fi
 
@@ -88,23 +96,23 @@ fi
 
 if [[ "${command}" = "ui" ]]
 then
-    cd /opt/umbrel/packages/ui
+    cd "${VM_DIR}/packages/ui"
     exec npm run dev
 fi
 
 if [[ "${command}" = "umbreld" ]]
 then
-    cd /opt/umbrel/packages/umbreld
+    cd "${VM_DIR}/packages/umbreld"
     exec npm run dev:vm
 fi
 
 if [[ "${command}" = "umbreld-production" ]]
 then
-    cd /opt/umbrel/packages/ui
+    cd "${VM_DIR}/packages/ui"
     pnpm run build
-    rm -rf /opt/umbrel/packages/umbreld/ui || true
-    mv /opt/umbrel/packages/ui/dist /opt/umbrel/packages/umbreld/ui
-    cd /opt/umbrel/packages/umbreld
+    rm -rf "${VM_DIR}/packages/umbreld/ui" || true
+    mv "${VM_DIR}/packages/ui/dist" "${VM_DIR}/packages/umbreld/ui"
+    cd "${VM_DIR}/packages/umbreld"
     exec npm run start:vm
 fi
 
