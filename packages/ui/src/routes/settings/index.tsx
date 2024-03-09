@@ -1,12 +1,16 @@
-import React, {Suspense} from 'react'
+import React, {Suspense, useState} from 'react'
 import {Route, Routes} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
+import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {DebugOnly} from '@/components/ui/debug-only'
+import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
+import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
@@ -117,7 +121,26 @@ export function Settings() {
 					{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 				</Routes>
 				<QueryStringDialog />
+				<DebugOnly>
+					<CoverTest />
+				</DebugOnly>
 			</Suspense>
+		</>
+	)
+}
+
+export function CoverTest() {
+	const [showCover, setShowCover] = useState(false)
+
+	return (
+		<>
+			<Button onClick={() => setShowCover(true)}>Show cover</Button>
+			{showCover && (
+				<CoverMessage onClick={() => setShowCover(false)}>
+					<Loading>{t('shut-down.shutting-down')}</Loading>
+					<CoverMessageParagraph>{t('shut-down.shutting-down-message')}</CoverMessageParagraph>
+				</CoverMessage>
+			)}
 		</>
 	)
 }
