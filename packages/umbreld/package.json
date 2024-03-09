@@ -13,6 +13,7 @@
 	"private": true,
 	"scripts": {
 		"start": "./source/cli.ts",
+		"start:vm": "sudo npm run start -- --data-directory ./data --port 80 --log-level verbose",
 		"client": "UMBREL_DATA_DIR=./data UMBREL_TRPC_ENDPOINT=http://localhost:3001/trpc npm run start -- client",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
@@ -26,6 +27,7 @@
 		"test-everything": "npm run format && npm run test -- --run && npm run lint",
 		"watch": "NODE_ENV=development nodemon --ext js,json,ts --ignore data --ignore coverage --ignore build --ignore release --exec npm run",
 		"dev": "UMBREL_UI_PROXY=http://localhost:3000 npm run watch -- start -- -- --data-directory ./data --port 3001 --log-level verbose",
+		"dev:vm": "sudo npm run dev -- --port 80",
 		"build": "tsx scripts/build.ts",
 		"prepare-release": "tsx scripts/prepare-release.ts",
 		"timestamp-release": "ots-cli.js stamp release/SHA256SUMS",
