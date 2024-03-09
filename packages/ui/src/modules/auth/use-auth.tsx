@@ -26,6 +26,7 @@ export function useAuth() {
 
 	const logoutMut = trpcReact.user.logout.useMutation({
 		onSuccess(didWork) {
+			// TODO: add translation
 			if (!didWork) throw new Error("Logout didn't work.")
 			removeJwt()
 			// Hard navigate to `/login` to force all parent layouts to re-render
