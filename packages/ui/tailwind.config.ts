@@ -3,6 +3,9 @@ import tailwindTypography from '@tailwindcss/typography'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
 
+import {screens} from './src/utils/tw'
+import { mapValues } from 'remeda'
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -19,10 +22,8 @@ export default {
 		container: {
 			center: true,
 			padding: '2rem',
-			screens: {
-				'2xl': '1400px',
-			},
 		},
+		screens: mapValues(screens, (value) => value + 'px'),
 		extend: {
 			flexShrink: {
 				// Used if you want to shrink the item totally if no room
