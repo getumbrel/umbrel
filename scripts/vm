@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+function sync_umbrel_source() {
+    sudo mkdir -p /opt/umbrel
+    sudo chown ubuntu:ubuntu /opt/umbrel
+    rsync -avh \
+        --exclude packages/os/ \
+        --exclude packages/umbreld/data/ \
+        --exclude packages/ui/public/generated-tabler-icons/ \
+        --exclude packages/ui/dist/ \
+        --exclude packages/ui/dist-app-auth/ \
+        --exclude node_modules/ \
+        --exclude .git/ \
+        --exclude .pnpm-store/ \
+        /opt/umbrel-mount/. /opt/umbrel
+}
+
+function install_deps() {
+    echo installing os deps
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo DEBIAN_FRONTEND=noninteractive bash -
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes nodejs build-essential
+
+    echo installing umbreld deps
+    pushd /opt/umbrel/packages/umbreld
+    npm install
+    sudo DEBIAN_FRONTEND=noninteractive npm run start provision-os
+    popd
+
+    echo installing ui deps
+    pushd /opt/umbrel/packages/ui
+    sudo npm install -g pnpm
+    pnpm install
+    popd
+}
+
+function install_services() {
+
+    services=(
+        "sync"
+        "ui"
+        "umbreld"
+        "umbreld-production"
+    )
+
+    for service in "${services[@]}"
+    do
+        echo "
+[Unit]
+Description=${service}
+
+[Service]
+ExecStart=/opt/umbrel-mount/scripts/vm ${service}
+Restart=always
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target" | sudo tee "/etc/systemd/system/${service}.service"
+
+        sudo systemctl daemon-reload
+        if [[ "${service}" != "umbreld-production" ]]
+        then
+            sudo systemctl enable "${service}"
+            sudo systemctl start "${service}"
+        fi
+    done
+}
+
+command="${1}"
+
+if [[ "${command}" = "provision" ]]
+then
+    sync_umbrel_source
+    install_deps
+    install_services
+    exit
+fi
+
+if [[ "${command}" = "sync" ]]
+then
+    while true
+    do
+        sync_umbrel_source
+        sleep 0.1
+    done
+    exit
+fi
+
+if [[ "${command}" = "ui" ]]
+then
+    cd /opt/umbrel/packages/ui
+    exec npm run dev
+fi
+
+if [[ "${command}" = "umbreld" ]]
+then
+    cd /opt/umbrel/packages/umbreld
+    exec npm run dev:vm
+fi
+
+if [[ "${command}" = "umbreld-production" ]]
+then
+    cd /opt/umbrel/packages/ui
+    pnpm run build
+    rm -rf /opt/umbrel/packages/umbreld/ui || true
+    mv /opt/umbrel/packages/ui/dist /opt/umbrel/packages/umbreld/ui
+    cd /opt/umbrel/packages/umbreld
+    exec npm run start:vm
+fi
+
+if [[ "${command}" = "enable-production" ]]
+then
+    echo "Enabling production services"
+    sudo systemctl stop umbreld ui
+    sudo systemctl disable umbreld ui
+    sudo systemctl enable umbreld-production
+    sudo systemctl restart umbreld-production
+fi
+
+if [[ "${command}" = "enable-development" ]]
+then
+    echo "Enabling development services"
+    sudo systemctl stop umbreld-production
+    sudo systemctl disable umbreld-production
+    sudo systemctl enable umbreld ui
+    sudo systemctl start umbreld ui
+fi
