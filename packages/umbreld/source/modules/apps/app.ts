@@ -161,6 +161,7 @@ export default class App {
 	async uninstall() {
 		this.state = 'uninstalling'
 		await appScript(this.#umbreld, 'stop', this.id)
+		await appScript(this.#umbreld, 'nuke-images', this.id)
 		await fse.remove(this.dataDirectory)
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {

@@ -675,6 +675,12 @@ if [[ "$command" = "post-patch-update" ]]; then
   exit
 fi
 
+# Nuke app images
+if [[ "$command" = "nuke-images" ]]; then
+  compose "${app}" down --rmi all --remove-orphans
+  exit
+fi
+
 # Passes all arguments to docker-compose
 if [[ "$command" = "compose" ]]; then
 
