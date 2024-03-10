@@ -26,6 +26,6 @@ export const trpcHandler = createExpressMiddleware({
 	router: appRouter,
 	createContext,
 	onError({error, ctx}) {
-		ctx.logger.error(`${ctx.request.method} ${ctx.request.path} ${error.message}`)
+		ctx?.logger.error(`${ctx?.request.method} ${ctx?.request.path} ${error.message}`)
 	},
 })
