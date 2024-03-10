@@ -25,7 +25,7 @@
 		"test:integration": "npm run test -- integration",
 		"test:coverage": "open ./coverage/index.html",
 		"test-everything": "npm run format && npm run test -- --run && npm run lint",
-		"watch": "NODE_ENV=development nodemon --ext js,json,ts --ignore data --ignore coverage --ignore build --ignore release --exec npm run",
+		"watch": "NODE_ENV=development nodemon --ext js,json,ts --watch source --exec npm run",
 		"dev": "UMBREL_UI_PROXY=http://localhost:3000 npm run watch -- start -- -- --data-directory ./data --port 3001 --log-level verbose",
 		"dev:vm": "sudo npm run dev -- --port 80",
 		"build": "tsx scripts/build.ts",
