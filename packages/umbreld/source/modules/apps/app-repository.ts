@@ -6,6 +6,7 @@ import * as git from 'isomorphic-git'
 import http from 'isomorphic-git/http/node/index.js'
 import yaml from 'js-yaml'
 import {globby} from 'globby'
+import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
@@ -77,6 +78,9 @@ export default class AppRepository {
 			depth: 1,
 			singleBranch: true,
 		})
+
+		// We're running as root so we need to relax file permissions so container can access them
+		await $`chown -R 1000:1000 ${temporaryPath}`
 
 		await fse.move(temporaryPath, this.path, {overwrite: true})
 	}
