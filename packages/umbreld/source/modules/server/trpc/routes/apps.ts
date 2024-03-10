@@ -10,7 +10,12 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					const {name, version, icon, port, path, widgets} = await app.readManifest()
+					let {name, version, icon, port, path, widgets, defaultUsername, defaultPassword, deterministicPassword} =
+						await app.readManifest()
+					const hiddenService = await app.readHiddenService()
+					if (deterministicPassword) {
+						defaultPassword = await app.deriveDeterministicPassword()
+					}
 					return {
 						id: app.id,
 						name,
@@ -20,10 +25,10 @@ export default router({
 						path,
 						state: app.state,
 						credentials: {
-							defaultUsername: '',
-							defaultPassword: '',
+							defaultUsername,
+							defaultPassword,
 						},
-						hiddenService: 'blah.onion', // TODO: Get hidden service
+						hiddenService,
 						widgets,
 					}
 				} catch (error) {
