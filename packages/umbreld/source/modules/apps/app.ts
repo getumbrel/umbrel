@@ -1,3 +1,5 @@
+import crypto from 'node:crypto'
+
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {type Compose} from 'compose-spec-schema'
@@ -62,6 +64,23 @@ export default class App {
 
 	readCompose() {
 		return readYaml(`${this.dataDirectory}/docker-compose.yml`) as Promise<Compose>
+	}
+
+	async readHiddenService() {
+		try {
+			return fse.readFile(`${this.#umbreld.dataDirectory}/tor/data/app-${this.id}/hostname`, 'utf-8') as Promise<string>
+		} catch (error) {
+			this.logger.error(`Failed to read hidden service for app ${this.id}: ${(error as Error).message}`)
+			return ''
+		}
+	}
+
+	async deriveDeterministicPassword() {
+		const umbrelSeed = await fse.readFile(`${this.#umbreld.dataDirectory}/db/umbrel-seed/seed`)
+		const identifier = `app-${this.id}-seed-APP_PASSWORD`
+		const deterministicPassword = crypto.createHmac('sha256', umbrelSeed).update(identifier).digest('hex')
+
+		return deterministicPassword
 	}
 
 	writeCompose(compose: Compose) {
