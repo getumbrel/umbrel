@@ -40,6 +40,7 @@ export default class Apps {
 
 		// Start app environment
 		await appEnvironment(this.#umbreld, 'up')
+		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
 
 		// Start apps
 		this.logger.log('Starting apps')
