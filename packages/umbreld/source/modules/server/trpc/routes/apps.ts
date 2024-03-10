@@ -6,13 +6,15 @@ export default router({
 	// List all apps
 	list: privateProcedure.query(async ({ctx}) => {
 		const apps = ctx.apps.instances
+		const torEnabled = await ctx.umbreld.store.get('torEnabled')
 
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
 					let {name, version, icon, port, path, widgets, defaultUsername, defaultPassword, deterministicPassword} =
 						await app.readManifest()
-					const hiddenService = await app.readHiddenService()
+
+					const hiddenService = torEnabled ? await app.readHiddenService() : ''
 					if (deterministicPassword) {
 						defaultPassword = await app.deriveDeterministicPassword()
 					}
