@@ -3,7 +3,7 @@
     "vm:provision": "multipass launch --name umbrel-dev --cpus 4 --memory 8G --disk 50G --mount $PWD:/opt/umbrel-mount 23.10 && multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm provision",
     "vm:shell": "multipass shell umbrel-dev",
     "vm:exec": "multipass exec --working-directory /home/ubuntu umbrel-dev --",
-    "vm:logs": "multipass exec umbrel-dev -- journalctl -u umbreld-production -u umbreld -u ui -f -n 100",
+    "vm:logs": "multipass exec umbrel-dev -- journalctl --unit umbreld-production --unit umbreld --unit ui --follow --lines 100 --output cat",
     "vm:enable-development": "multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm enable-development",
     "vm:enable-production": "multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm enable-production",
     "vm:trpc": "npm run --silent vm:exec -- UMBREL_DATA_DIR=./data UMBREL_TRPC_ENDPOINT=http://localhost/trpc npm --prefix /home/ubuntu/umbrel/packages/umbreld run start -- client",
