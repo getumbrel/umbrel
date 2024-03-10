@@ -207,7 +207,8 @@ export default class App {
 	}
 
 	async getLogs() {
-		const result = await appScript(this.#umbreld, 'logs', this.id)
+		const inheritStdio = false
+		const result = await appScript(this.#umbreld, 'logs', this.id, inheritStdio)
 		return result.stdout
 	}
 
