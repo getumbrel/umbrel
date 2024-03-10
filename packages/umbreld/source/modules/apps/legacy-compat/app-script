@@ -18,10 +18,11 @@ UMBREL_ROOT="${SCRIPT_UMBREL_ROOT}"
 USER_FILE="${UMBREL_ROOT}/db/user.json"
 
 APP_PROXY_SERVICE_NAME="app_proxy"
-REMOTE_TOR_ACCESS="false"
-if [[ -f "${USER_FILE}" ]]; then
-  REMOTE_TOR_ACCESS=$(cat "${USER_FILE}" | jq 'has("remoteTorAccess") and .remoteTorAccess')
-fi
+# We'll pass this in from umbreld
+# REMOTE_TOR_ACCESS="false"
+# if [[ -f "${USER_FILE}" ]]; then
+#   REMOTE_TOR_ACCESS=$(cat "${USER_FILE}" | jq 'has("remoteTorAccess") and .remoteTorAccess')
+# fi
 
 show_help() {
   cat << EOF
