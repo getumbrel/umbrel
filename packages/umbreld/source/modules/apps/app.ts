@@ -68,7 +68,7 @@ export default class App {
 
 	async readHiddenService() {
 		try {
-			return fse.readFile(`${this.#umbreld.dataDirectory}/tor/data/app-${this.id}/hostname`, 'utf-8') as Promise<string>
+			return await fse.readFile(`${this.#umbreld.dataDirectory}/tor/data/app-${this.id}/hostname`, 'utf-8')
 		} catch (error) {
 			this.logger.error(`Failed to read hidden service for app ${this.id}: ${(error as Error).message}`)
 			return ''
