@@ -17,6 +17,7 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 			SCRIPT_DOCKER_FRAGMENTS: currentDirname,
 			JWT_SECRET: await umbreld.server.getJwtSecret(),
 			SCRIPT_APP_REPO_DIR,
+			BITCOIN_NETWORK: 'mainnet', // Needed for legacy reasons otherwise the Bitcoin app fails to start
 		},
 	})`${scriptPath} ${command} ${arg}`
 }
