@@ -9,6 +9,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
 	const composePath = join(currentDirname, 'docker-compose.yml')
+	const torEnabled = await umbreld.store.get('torEnabled')
 	const options = {
 		stdio: 'inherit',
 		cwd: umbreld.dataDirectory,
@@ -29,6 +30,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			JWT_SECRET: await umbreld.server.getJwtSecret(),
 			UMBRELD_RPC_HOST: `host.docker.internal:${umbreld.server.port}`, // TODO: Check host.docker.internal works on linux
 			UMBREL_LEGACY_COMPAT_DIR: currentDirname,
+			UMBREL_TORRC: torEnabled ? `${currentDirname}/tor-server-torrc` : `${currentDirname}/tor-proxy-torrc`,
 		},
 	}
 	if (command === 'up') {
