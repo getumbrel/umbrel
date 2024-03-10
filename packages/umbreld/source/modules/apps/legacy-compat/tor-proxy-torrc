@@ -1,0 +1,9 @@
+# Warning: it's not recommended to modify these files directly. Any
+# modifications you make can break the functionality of your umbrel. These files
+# are automatically reset with every Umbrel update.
+
+# Bind only to "10.21.21.11" which is the tor IP within the container
+SocksPort   10.21.21.11:9050
+ControlPort 10.21.21.11:29051
+
+HashedControlPassword 16:158FBE422B1A9D996073BE2B9EC38852C70CE12362CA016F8F6859C426
