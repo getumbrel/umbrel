@@ -7,7 +7,7 @@ services:
     user: '1000:1000'
     restart: on-failure
     volumes:
-      - ${UMBREL_DATA_DIR}/tor/torrc-proxy:/etc/tor/torrc:ro
+      - ${UMBREL_LEGACY_COMPAT_DIR}/tor-proxy-torrc:/etc/tor/torrc:ro
       - ${UMBREL_DATA_DIR}/tor/data:/data
     environment:
       HOME: '/tmp'
