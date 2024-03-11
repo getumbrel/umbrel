@@ -27,6 +27,11 @@ export default class Apps {
 			await this.#umbreld.store.set('apps', [])
 		}
 
+		// Set torEnabled to false on first start
+		if ((await this.#umbreld.store.get('torEnabled')) === undefined) {
+			await this.#umbreld.store.set('torEnabled', false)
+		}
+
 		// Create a random umbrel seed on first start if one doesn't exist.
 		// This is only used to determinstically derive app seed, app password
 		// and custom app specific environment variables. It's needed to maintain

@@ -5,6 +5,7 @@ import {z} from 'zod'
 import fetch from 'node-fetch'
 import {$} from 'execa'
 import fse from 'fs-extra'
+import stripAnsi from 'strip-ansi'
 
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
@@ -170,6 +171,22 @@ export default router({
 
 		return true
 	}),
+	logs: privateProcedure
+		.input(
+			z.object({
+				type: z.enum(['umbrel', 'system']),
+			}),
+		)
+		.query(async ({input}) => {
+			let process
+			if (input.type === 'umbrel') {
+				process = await $`journalctl --unit umbrel --unit umbreld-production --unit umbreld --unit ui --lines 1500`
+			}
+			if (input.type === 'system') {
+				process = await $`journalctl --lines 1500`
+			}
+			return stripAnsi(process!.stdout)
+		}),
 	//
 	factoryReset: privateProcedure
 		.input(
