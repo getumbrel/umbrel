@@ -4,6 +4,7 @@ import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 import fetch from 'node-fetch'
 import {$} from 'execa'
+import fse from 'fs-extra'
 
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
@@ -142,9 +143,15 @@ export default router({
 
 		return true
 	}),
-	//
+	hiddenService: privateProcedure.query(async ({ctx}) => {
+		try {
+			return await fse.readFile(`${ctx.umbreld.dataDirectory}/tor/data/web/hostname`, 'utf-8')
+		} catch (error) {
+			ctx.umbreld.logger.error(`Failed to read hidden service for ui: ${(error as Error).message}`)
+			return ''
+		}
+	}),
 	device: privateProcedure.query(() => detectDevice()),
-	//
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
