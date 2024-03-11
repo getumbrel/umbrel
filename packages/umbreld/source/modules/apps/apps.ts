@@ -13,6 +13,7 @@ export default class Apps {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	instances: App[] = []
+	isTorBeingToggled = false
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -148,21 +149,29 @@ export default class Apps {
 	}
 
 	async setTorEnabled(torEnabled: boolean) {
-		const currentTorEnabled = await this.#umbreld.store.get('torEnabled')
-
-		// TODO: check if tor is currently in the process of being enabled/disabled
-
-		// Check if we're applying the current setting
-		if (currentTorEnabled === torEnabled) {
-			throw new Error(`Tor is already ${torEnabled ? 'enabled' : 'disabled'}`)
+		if (this.isTorBeingToggled) {
+			throw new Error(
+				'Tor is already in the process of being toggled. Please wait until the current process is finished.',
+			)
 		}
+		this.isTorBeingToggled = true
+		try {
+			const currentTorEnabled = await this.#umbreld.store.get('torEnabled')
 
-		// Toggle Tor
-		await this.stop()
-		await this.#umbreld.store.set('torEnabled', torEnabled)
-		await this.start()
+			// Check if we're applying the current setting
+			if (currentTorEnabled === torEnabled) {
+				throw new Error(`Tor is already ${torEnabled ? 'enabled' : 'disabled'}`)
+			}
 
-		return true
+			// Toggle Tor
+			await this.stop()
+			await this.#umbreld.store.set('torEnabled', torEnabled)
+			await this.start()
+
+			return true
+		} finally {
+			this.isTorBeingToggled = false
+		}
 	}
 
 	async getTorEnabled() {
