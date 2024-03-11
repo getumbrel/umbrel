@@ -6,6 +6,7 @@
     "vm:logs": "multipass exec umbrel-dev -- journalctl --unit umbreld-production --unit umbreld --unit ui --follow --lines 100 --output cat",
     "vm:enable-development": "multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm enable-development",
     "vm:enable-production": "multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm enable-production",
+    "vm:install-deps": "multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm install-deps",
     "vm:trpc": "npm run --silent vm:exec -- UMBREL_DATA_DIR=./data UMBREL_TRPC_ENDPOINT=http://localhost/trpc npm --prefix /home/ubuntu/umbrel/packages/umbreld run start -- client",
     "vm:start": "multipass start umbrel-dev",
     "vm:stop": "multipass stop umbrel-dev",

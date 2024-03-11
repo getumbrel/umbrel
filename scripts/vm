@@ -133,3 +133,15 @@ then
     sudo systemctl enable umbreld ui
     sudo systemctl start umbreld ui
 fi
+
+if [[ "${command}" = "install-deps" ]]
+then
+    echo installing umbreld deps
+    cd "${VM_DIR}/packages/umbreld"
+    npm install
+
+    echo installing ui deps
+    cd "${VM_DIR}/packages/ui"
+    pnpm install
+    exit
+fi
