@@ -6,6 +6,7 @@ import {type Compose} from 'compose-spec-schema'
 import {$} from 'execa'
 import systemInformation from 'systeminformation'
 import fetch from 'node-fetch'
+import stripAnsi from 'strip-ansi'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 
@@ -229,7 +230,7 @@ export default class App {
 	async getLogs() {
 		const inheritStdio = false
 		const result = await appScript(this.#umbreld, 'logs', this.id, inheritStdio)
-		return result.stdout
+		return stripAnsi(result.stdout)
 	}
 
 	async getContainerIp(service: string) {
