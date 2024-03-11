@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SSH_STATE_DIR=${SSH_STATE_DIR:-"/data/ssh"}
+
+if [ ! -f "${SSH_STATE_DIR}"/ssh_host_rsa_key ]; then
+    rm -f /etc/ssh/ssh_host_*_key*
+    ssh-keygen -A
+
+    # Copy the keys to the data partition.
+    mkdir -p "${SSH_STATE_DIR}"
+    cp /etc/ssh/ssh_host_*_key* "${SSH_STATE_DIR}"
+fi
+
+# Restore the keys from the data partition.
+cp "${SSH_STATE_DIR}"/ssh_host_*_key* /etc/ssh/

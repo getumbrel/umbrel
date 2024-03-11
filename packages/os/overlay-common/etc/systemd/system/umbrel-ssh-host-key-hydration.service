@@ -1,0 +1,10 @@
+[Unit]
+Description=Hydrate SSH Host Keys
+Before=ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/umbrel-ssh-host-key-hydration/umbrel-ssh-host-key-hydration
+
+[Install]
+WantedBy=multi-user.target
