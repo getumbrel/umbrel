@@ -8,8 +8,8 @@ import {Wallpaper} from '@/providers/wallpaper'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'
-import {Header} from './desktop-misc'
 import {DockPreview} from './dock'
+import {Header} from './header'
 
 export function DesktopPreview() {
 	const W = 1440

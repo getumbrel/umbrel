@@ -8,8 +8,9 @@ import {useApps} from '@/providers/apps'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'
-import {Header, Search} from './desktop-misc'
+import {Search} from './desktop-misc'
 import {DockSpacer} from './dock'
+import {Header} from './header'
 
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
