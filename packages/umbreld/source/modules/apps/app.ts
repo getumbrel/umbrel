@@ -7,6 +7,7 @@ import {$} from 'execa'
 import systemInformation from 'systeminformation'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
+import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 
@@ -113,7 +114,14 @@ export default class App {
 		// TODO: Pull images here before the install script and calculate live progress for
 		// this.stateProgress so button animations work
 
-		await appScript(this.#umbreld, 'install', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} installing app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'ready'
 
 		return true
@@ -155,7 +163,14 @@ export default class App {
 		// We re-run the patch here to fix an edge case where 0.5.x imported apps
 		// wont run because they haven't been patched.
 		await this.patchComposeServices()
-		await appScript(this.#umbreld, 'start', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'ready'
 
 		return true
@@ -163,7 +178,14 @@ export default class App {
 
 	async stop() {
 		this.state = 'stopping'
-		await appScript(this.#umbreld, 'stop', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'stopped'
 
 		return true
@@ -180,7 +202,14 @@ export default class App {
 
 	async uninstall() {
 		this.state = 'uninstalling'
-		await appScript(this.#umbreld, 'stop', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		await appScript(this.#umbreld, 'nuke-images', this.id)
 		await fse.remove(this.dataDirectory)
 
