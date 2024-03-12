@@ -2,7 +2,7 @@ import {useCallback, useState} from 'react'
 
 import {toast} from '@/components/ui/toast'
 import {LOADING_DASH} from '@/constants'
-import {trpcReact} from '@/trpc/trpc'
+import {trpcClient, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-available' | 'upgrading'
@@ -13,12 +13,16 @@ export function useSoftwareUpdate() {
 
 	const ctx = trpcReact.useContext()
 	const osVersionQ = trpcReact.system.version.useQuery()
+
 	const updateVersionMut = trpcReact.system.update.useMutation({
-		onSuccess: (version) => {
-			if (version === latestVersion) {
+		onSuccess: (onLatest) => {
+			if (onLatest) {
 				ctx.system.version.invalidate()
-				setState('at-latest')
-				toast.success(t('software-update.success', {version}))
+				trpcClient.system.version.query().then((version) => {
+					// TODO: put this in global state
+					setState('at-latest')
+					toast.success(t('software-update.success', {version}))
+				})
 			} else {
 				setState('initial')
 				toast.error(t('software-update.failed'))
