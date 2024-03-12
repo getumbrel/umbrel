@@ -186,11 +186,11 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
-					<ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
+					{/* <ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
 							{t('factory-reset.reset')}
 						</IconButton>
-					</ListRow>
+					</ListRow> */}
 				</Card>
 				<ContactSupportLink className='lg:hidden' />
 			</div>

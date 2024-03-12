@@ -187,12 +187,12 @@ export function SettingsContentMobile() {
 					description={t('check-for-latest-version')}
 					onClick={() => navigate('software-update')}
 				/>
-				<ListRowMobile
+				{/* <ListRowMobile
 					icon={TbRotate2}
 					title={t('factory-reset')}
 					description={t('factory-reset.desc')}
 					onClick={() => navigate('/factory-reset')}
-				/>
+				/> */}
 			</div>
 
 			<ContactSupportLink />
