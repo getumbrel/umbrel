@@ -106,6 +106,7 @@ export default router({
 						menderInstallDots++
 						// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
 						const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
+						ctx.umbreld.logger.verbose(`Update progress: ${progress}%`)
 						setUpdateStatus({progress})
 					}
 				}
