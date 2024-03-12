@@ -30,9 +30,7 @@ function EnsureLoggedInState({
 	otherwise: React.ReactNode
 	children?: React.ReactNode
 }) {
-	const isLoggedInQ = trpcReact.user.isLoggedIn.useQuery(undefined, {
-		retry: false,
-	})
+	const isLoggedInQ = trpcReact.user.isLoggedIn.useQuery(undefined)
 	const isLoggedIn = isLoggedInQ.data ?? false
 	const wantsLoggedIn = loggedIn
 
