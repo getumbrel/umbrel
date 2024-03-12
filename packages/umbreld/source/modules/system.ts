@@ -28,7 +28,6 @@ export async function getDiskUsage(
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
 
-	// TODO: get list of installed apps and their disk usage
 	// to calculate the disk usage of each app
 	const fileSystemSize = await systemInformation.fsSize()
 
