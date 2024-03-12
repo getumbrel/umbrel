@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+update_url=""
+
+if ! command -v mender &> /dev/null
+then
+	echo umbrel-update: '{"error": "Mender not installed"}'
+	exit 1
+fi
+
+if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
+then
+	update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-pi.update"
+fi
+
+if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
+then
+	update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-amd64.update"
+fi
+
+mender install "${update_url}"

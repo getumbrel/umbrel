@@ -7,8 +7,10 @@ import {$} from 'execa'
 import systemInformation from 'systeminformation'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
+import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
+import {pullAll} from '../utilities/docker-pull.js'
 
 import type Umbreld from '../../index.js'
 import {type AppManifest} from './schema.js'
@@ -106,21 +108,45 @@ export default class App {
 		await this.writeCompose(compose)
 	}
 
+	async pull() {
+		const defaultImages = [
+			'getumbrel/app-proxy:1.0.0@sha256:49eb600c4667c4b948055e33171b42a509b7e0894a77e0ca40df8284c77b52fb',
+			'getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a',
+		]
+		const compose = await this.readCompose()
+		const images = Object.values(compose.services!)
+			.map((service) => service.image)
+			.filter(Boolean) as string[]
+		await pullAll([...defaultImages, ...images], (progress) => {
+			this.stateProgress = Math.max(1, progress * 99)
+			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+		})
+	}
+
 	async install() {
 		this.state = 'installing'
+		this.stateProgress = 1
+
 		await this.patchComposeServices()
+		await this.pull()
 
-		// TODO: Pull images here before the install script and calculate live progress for
-		// this.stateProgress so button animations work
-
-		await appScript(this.#umbreld, 'install', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} installing app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'ready'
+		this.stateProgress = 0
 
 		return true
 	}
 
 	async update() {
 		this.state = 'updating'
+		this.stateProgress = 1
 
 		// TODO: Pull images here before the install script and calculate live progress for
 		// this.stateProgress so button animations work
@@ -136,6 +162,7 @@ export default class App {
 		// Update the app, patching the compose file half way through
 		await appScript(this.#umbreld, 'pre-patch-update', this.id)
 		await this.patchComposeServices()
+		await this.pull()
 		await appScript(this.#umbreld, 'post-patch-update', this.id)
 
 		// Delete the old images if we can. Silently fail on error cos docker
@@ -145,6 +172,7 @@ export default class App {
 		} catch {}
 
 		this.state = 'ready'
+		this.stateProgress = 0
 
 		return true
 	}
@@ -155,7 +183,14 @@ export default class App {
 		// We re-run the patch here to fix an edge case where 0.5.x imported apps
 		// wont run because they haven't been patched.
 		await this.patchComposeServices()
-		await appScript(this.#umbreld, 'start', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'ready'
 
 		return true
@@ -163,7 +198,14 @@ export default class App {
 
 	async stop() {
 		this.state = 'stopping'
-		await appScript(this.#umbreld, 'stop', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		this.state = 'stopped'
 
 		return true
@@ -180,7 +222,14 @@ export default class App {
 
 	async uninstall() {
 		this.state = 'uninstalling'
-		await appScript(this.#umbreld, 'stop', this.id)
+		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		await appScript(this.#umbreld, 'nuke-images', this.id)
 		await fse.remove(this.dataDirectory)
 
@@ -203,28 +252,43 @@ export default class App {
 	}
 
 	async getMemoryUsage() {
-		const containers = await this.getResourceUsage()
-		let totalMemoryPercentage = 0
-		for (const container of containers) {
-			totalMemoryPercentage += Number.parseFloat(container.MemPerc)
-		}
+		try {
+			const containers = await this.getResourceUsage()
+			let totalMemoryPercentage = 0
+			for (const container of containers) {
+				totalMemoryPercentage += Number.parseFloat(container.MemPerc)
+			}
 
-		const {total} = await systemInformation.mem()
-		return total * (totalMemoryPercentage / 100)
+			const {total} = await systemInformation.mem()
+			return total * (totalMemoryPercentage / 100)
+		} catch (error) {
+			this.logger.error(`Failed to get memory usage for app ${this.id}: ${(error as Error).message}`)
+			return 0
+		}
 	}
 
 	async getCpuUsage() {
-		const containers = await this.getResourceUsage()
-		let totalCpuUsage = 0
-		for (const container of containers) {
-			totalCpuUsage += Number.parseFloat(container.CPUPerc)
-		}
+		try {
+			const containers = await this.getResourceUsage()
+			let totalCpuUsage = 0
+			for (const container of containers) {
+				totalCpuUsage += Number.parseFloat(container.CPUPerc)
+			}
 
-		return totalCpuUsage
+			return totalCpuUsage
+		} catch (error) {
+			this.logger.error(`Failed to get CPU usage for app ${this.id}: ${(error as Error).message}`)
+			return 0
+		}
 	}
 
 	async getDiskUsage() {
-		return getDirectorySize(this.dataDirectory)
+		try {
+			return getDirectorySize(this.dataDirectory)
+		} catch (error) {
+			this.logger.error(`Failed to get disk usage for app ${this.id}: ${(error as Error).message}`)
+			return 0
+		}
 	}
 
 	async getLogs() {

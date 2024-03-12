@@ -28,17 +28,14 @@ export async function getDiskUsage(
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
 
-	// TODO: Fix this, it gets the disk usage of the system partition not the data partition on umbrelOS
-
-	// TODO: get list of installed apps and their disk usage
 	// to calculate the disk usage of each app
 	const fileSystemSize = await systemInformation.fsSize()
 
 	// Get the disk usage information for the file system containing the Umbreld data dir.
 	// Sort by mount length to get the most specific mount point
-	const dataDirectoryFilesystem = fileSystemSize
-		.filter((fs) => umbreld.dataDirectory.startsWith(fs.mount))
-		.sort((a, b) => b.mount.length - a.mount.length)[0]
+	const df = await $`df -h ${umbreld.dataDirectory}`
+	const partition = df.stdout.split('\n').slice(-1)[0].split(' ')[0]
+	const dataDirectoryFilesystem = fileSystemSize.find((filesystem) => filesystem.fs === partition)
 
 	if (!dataDirectoryFilesystem) {
 		throw new Error('Could not find file system containing Umbreld data directory')
@@ -80,7 +77,6 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	apps: MemoryUsage[]
 }> {
 	const {total: size, active: totalUsed} = await systemInformation.mem()
-	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
@@ -109,12 +105,8 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 }> {
 	const cpu = await systemInformation.currentLoad()
 	const threads = cpu.cpus.length
-	// We devide all cpu usage by the number of threads to get the percentage usage of the overall CPU.
-	// e.g If an app is maxxing out two cores the system will report 200% CPU usage. In a 4 core system
-	// we want to report that as 50%.
-	const totalUsed = cpu.currentLoad / threads
+	const totalUsed = cpu.currentLoad
 
-	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,

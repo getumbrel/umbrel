@@ -1,5 +1,6 @@
 import fse from 'fs-extra'
 import {$} from 'execa'
+import pRetry from 'p-retry'
 
 import randomToken from '../../modules/utilities/random-token.js'
 
@@ -45,7 +46,14 @@ export default class Apps {
 		}
 
 		// Start app environment
-		await appEnvironment(this.#umbreld, 'up')
+		await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
 
 		// Start apps
@@ -69,14 +77,21 @@ export default class Apps {
 			this.instances.map((app) =>
 				app.stop().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
-					// if a dingle app fails.
+					// if a single app fails.
 					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
 				}),
 			),
 		)
 
 		this.logger.log('Stopping app environment')
-		await appEnvironment(this.#umbreld, 'down')
+		await pRetry(() => appEnvironment(this.#umbreld, 'down'), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} stopping app environmnet failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 2,
+		})
 	}
 
 	async isInstalled(appId: string) {
