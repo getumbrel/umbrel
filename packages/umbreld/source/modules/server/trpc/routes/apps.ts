@@ -94,6 +94,15 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.restart(input.appId)),
 
+	// Stop an app
+	stop: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.apps.getApp(input.appId).stop()),
+
 	// Update an app
 	update: privateProcedure
 		.input(
