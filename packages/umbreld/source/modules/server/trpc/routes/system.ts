@@ -7,6 +7,7 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
+import type Umbreld from '../../../../index.js'
 import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {
@@ -48,6 +49,14 @@ function setUpdateStatus(properties: Partial<UpdateStatus>) {
 	updateStatus = {...updateStatus, ...properties}
 }
 
+async function getLatestRelease(umbreld: Umbreld) {
+	const result = await fetch('https://api.umbrel.com/latest-release', {
+		headers: {'User-Agent': `umbrelOS ${umbreld.version}`},
+	})
+	const data = await result.json()
+	return data as {version: string; updateScript?: string}
+}
+
 export default router({
 	online: publicProcedure.query(() => true),
 	version: publicProcedure.query(({ctx}) => ctx.umbreld.version),
@@ -55,70 +64,56 @@ export default router({
 	updateStatus: privateProcedure.query(() => updateStatus),
 	uptime: privateProcedure.query(() => os.uptime()),
 	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
-		const result = await fetch('https://api.umbrel.com/latest-release', {
-			headers: {'User-Agent': `umbrelOS ${ctx.umbreld.version}`},
-		})
-		const data = await result.json()
-		return (data as any).version as string
+		const {version} = await getLatestRelease(ctx.umbreld)
+		return version
 	}),
 	update: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'updating'
 		setUpdateStatus({running: true, progress: 5, description: 'Updating...', error: false})
-		// TODO: Fetch update script from API
-		const updateScript = `#!/usr/bin/env bash
-		set -euo pipefail
 
-		update_url=""
+		try {
+			const {updateScript} = await getLatestRelease(ctx.umbreld)
 
-		if ! command -v mender &> /dev/null
-		then
-			echo umbrel-update: '{"error": "Mender not installed"}'
-			exit 1
-		fi
+			if (!updateScript) {
+				setUpdateStatus({error: 'No update script found'})
+				throw new Error('No update script found')
+			}
 
-		if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
-		then
-			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-pi.update"
-		fi
+			const result = await fetch(updateScript, {
+				headers: {'User-Agent': `umbrelOS ${ctx.umbreld.version}`},
+			})
+			const updateSCriptContents = await result.text()
 
-		if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
-		then
-			update_url="https://umbrel.nyc3.digitaloceanspaces.com/dev/umbrelos-amd64.update"
-		fi
+			// Exectute update script and report progress
+			const process = $`bash -c ${updateSCriptContents}`
+			let menderInstallDots = 0
+			async function handleUpdateScriptOutput(chunk: Buffer) {
+				const text = chunk.toString()
+				const lines = text.split('\n')
+				for (const line of lines) {
+					// Handle our custom status updates
+					if (line.startsWith('umbrel-update: ')) {
+						try {
+							const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<UpdateStatus>
+							setUpdateStatus(status)
+						} catch (error) {
+							// Don't kill update on JSON parse errors
+						}
+					}
 
-		mender install "\${update_url}"`
-
-		// Exectute update script and report progress
-		const process = $`bash -c ${updateScript}`
-		let menderInstallDots = 0
-		async function handleUpdateScriptOutput(chunk: Buffer) {
-			const text = chunk.toString()
-			const lines = text.split('\n')
-			for (const line of lines) {
-				// Handle our custom status updates
-				if (line.startsWith('umbrel-update: ')) {
-					try {
-						const status = JSON.parse(line.replace('umbrel-update: ', '')) as Partial<UpdateStatus>
-						setUpdateStatus(status)
-					} catch (error) {
-						// Don't kill update on JSON parse errors
+					// Handle mender install progress
+					if (line === '.') {
+						menderInstallDots++
+						// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
+						const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
+						setUpdateStatus({progress})
 					}
 				}
-
-				// Handle mender install progress
-				if (line === '.') {
-					menderInstallDots++
-					// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
-					const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
-					setUpdateStatus({progress})
-				}
 			}
-		}
-		process.stdout?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
-		process.stderr?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
+			process.stdout?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
+			process.stderr?.on('data', (chunk) => handleUpdateScriptOutput(chunk))
 
-		// Wait for script to complete and handle errors
-		try {
+			// Wait for script to complete and handle errors
 			await process
 		} catch (error) {
 			// Don't overwrite a useful error message reported by the update script
