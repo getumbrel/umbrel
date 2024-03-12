@@ -106,10 +106,7 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 }> {
 	const cpu = await systemInformation.currentLoad()
 	const threads = cpu.cpus.length
-	// We devide all cpu usage by the number of threads to get the percentage usage of the overall CPU.
-	// e.g If an app is maxxing out two cores the system will report 200% CPU usage. In a 4 core system
-	// we want to report that as 50%.
-	const totalUsed = cpu.currentLoad / threads
+	const totalUsed = cpu.currentLoad
 
 	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
