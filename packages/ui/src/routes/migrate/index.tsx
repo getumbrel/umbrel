@@ -1,8 +1,7 @@
 import {useNavigate} from 'react-router-dom'
 import {useInterval} from 'react-use'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {MigrateInner} from '@/modules/migrate/migrate-inner'
+import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -25,10 +24,5 @@ export default function Migrate() {
 		navigate('/migrate/success')
 	}
 
-	return (
-		<>
-			<UmbrelHeadTitle>{message}</UmbrelHeadTitle>
-			<MigrateInner progress={progress} message={message} isRunning={!!running} />
-		</>
-	)
+	return <ProgressLayout title={t('migration-assistant')} progress={progress} message={message} isRunning={!!running} />
 }

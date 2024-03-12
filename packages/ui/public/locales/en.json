@@ -327,7 +327,7 @@
   "migrate.failed.retry": "Retry migration",
   "migrate.success.title": "Migration successful",
   "migrate.success.description": "All your apps, app data, and account details have been migrated to your Umbrel Home.",
-  "migrate.success.continue-to-log-in": "Continue to log in",
+  "continue-to-log-in": "Continue to log in",
   "trpc.checking-backend": "Checking backend...",
   "trpc.backend-unavailable": "Backend unavailable.",
   "auth.checking-backend-for-user": "Checking backend for user...",
