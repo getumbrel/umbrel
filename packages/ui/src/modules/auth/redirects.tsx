@@ -2,9 +2,9 @@ import {useLocation, useNavigate} from 'react-router-dom'
 
 import {BareCoverMessage} from '@/components/ui/cover-message'
 import {t} from '@/utils/i18n'
-import {sleep} from '@/utils/misc'
+import {isDev, sleep} from '@/utils/misc'
 
-const SLEEP_TIME = 600
+const SLEEP_TIME = isDev() ? 600 : 0
 
 type Page = 'onboarding' | 'login' | 'home'
 
@@ -28,6 +28,8 @@ export function RedirectOnboarding() {
 	if (location.pathname.startsWith(path)) return null
 
 	sleep(SLEEP_TIME).then(() => navigate(path))
+
+	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-onboarding')}</BareCoverMessage>
 }
 
@@ -45,6 +47,8 @@ export function RedirectLogin() {
 			search: redirect.createRedirectSearch(),
 		}),
 	)
+
+	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-login')}</BareCoverMessage>
 }
 
@@ -57,6 +61,8 @@ export function RedirectHome() {
 	if (location.pathname === path) return null
 
 	sleep(SLEEP_TIME).then(() => navigate(path))
+
+	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-home')}</BareCoverMessage>
 }
 
