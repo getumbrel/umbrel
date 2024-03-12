@@ -24,9 +24,8 @@ export function init(element: React.ReactNode) {
 							<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
 								<TooltipProvider>
 									{element}
-									<Toaster />
-									{/* Want to show cover message over Toast elements */}
 									<CoverMessageTarget />
+									<Toaster />
 								</TooltipProvider>
 							</ErrorBoundary>
 						</Suspense>
