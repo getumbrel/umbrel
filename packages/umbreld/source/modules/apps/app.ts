@@ -10,6 +10,7 @@ import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
+import {pullAll} from '../utilities/docker-pull.js'
 
 import type Umbreld from '../../index.js'
 import {type AppManifest} from './schema.js'
@@ -109,10 +110,19 @@ export default class App {
 
 	async install() {
 		this.state = 'installing'
+		this.stateProgress = 1
+
 		await this.patchComposeServices()
 
-		// TODO: Pull images here before the install script and calculate live progress for
-		// this.stateProgress so button animations work
+		const compose = await this.readCompose()
+
+		const images = Object.values(compose.services!)
+			.map((service) => service.image)
+			.filter(Boolean) as string[]
+		await pullAll(images, (progress) => {
+			this.stateProgress = Math.max(1, progress * 99)
+			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+		})
 
 		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
 			onFailedAttempt: (error) => {
@@ -123,6 +133,7 @@ export default class App {
 			retries: 2,
 		})
 		this.state = 'ready'
+		this.stateProgress = 0
 
 		return true
 	}
