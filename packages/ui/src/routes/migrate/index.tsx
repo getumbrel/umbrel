@@ -14,8 +14,6 @@ export default function Migrate() {
 
 	const {running, progress, error, description} = migrationStatusQ.data ?? {}
 
-	const message = (description || t('migrate.migrating.connecting')) + '...'
-
 	if (error) {
 		navigate('/migrate/failed')
 	}
@@ -24,5 +22,7 @@ export default function Migrate() {
 		navigate('/migrate/success')
 	}
 
-	return <ProgressLayout title={t('migration-assistant')} progress={progress} message={message} isRunning={!!running} />
+	return (
+		<ProgressLayout title={t('migration-assistant')} progress={progress} message={description} isRunning={!!running} />
+	)
 }

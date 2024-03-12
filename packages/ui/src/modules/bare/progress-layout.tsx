@@ -19,15 +19,18 @@ export function ProgressLayout({
 	// onSuccess: () => void
 	// onFail: () => void
 	progress?: number
-	message: string
+	message?: string
 	// isStarting: boolean
 	isRunning: boolean
 }) {
 	const isStarting = !progress && !isRunning
 
+	// Empty string also gets the default message
+	const finalMessage = message || t('connecting')
+
 	return (
 		<>
-			<UmbrelHeadTitle>{message}</UmbrelHeadTitle>
+			<UmbrelHeadTitle>{finalMessage}</UmbrelHeadTitle>
 			<motion.div
 				className={bareContainerClass}
 				initial={{opacity: 0}}
@@ -37,7 +40,7 @@ export function ProgressLayout({
 				<BareLogoTitle>{title}</BareLogoTitle>
 				<BareSpacer />
 				{/* Show indeterminate value if not running */}
-				<Progress value={isStarting ? undefined : progress}>{message}</Progress>
+				<Progress value={isStarting ? undefined : progress}>{finalMessage}</Progress>
 				<div className='flex-1 pt-4' />
 				<Alert>{t('migrate.callout')}</Alert>
 			</motion.div>

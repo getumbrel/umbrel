@@ -320,7 +320,7 @@
   "factory-reset.success.title": "Reset successful!",
   "factory-reset.success.description": "All your apps, app data, and account details have been deleted from your device. Restart to start from scratch.",
   "factory-reset.success.restart-device": "Restart device",
-  "migrate.migrating.connecting": "Connecting",
+  "connecting": "Connecting...",
   "migrate.failed.title": "Migration failed",
   "migrate.failed.description": "There was an error during migration.",
   "migrate.failed.please-try-again": "Please try again.",
