@@ -55,7 +55,7 @@
   "software-update.check-short": "Check for updates",
   "software-update.new-version": "New version {{version}} is available",
   "software-update.updating-to": "Updating to umbrelOS {{version}}",
-  "do-not-while": "Please do not refresh this page or turn off your Umbrel while the {{while}} is in progress",
+  "software-update.updating-message": "Please do not refresh this page or turn off your Umbrel while it is updating.",
   "update": "update",
   "software-update.update-now": "Update now",
   "storage": "Storage",

@@ -27,7 +27,7 @@ export function SoftwareUpdateDrawer() {
 			<CoverMessage>
 				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
-				<CoverMessageParagraph>{t('do-not-while', {while: t('update')})}</CoverMessageParagraph>
+				<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
 			</CoverMessage>
 		)
 	}

@@ -63,7 +63,6 @@
   "device-info.serial-number": "Numéro de série",
   "device-info.software-version": "Une version de logiciel",
   "device-info.view-info": "Afficher les informations",
-  "do-not-while": "Veuillez ne pas actualiser cette page ni éteindre votre parapluie pendant que le {{while}} est en cours.",
   "factory-reset": "Retour aux paramètres d'usine",
   "factory-reset.desc": "Supprimez toutes les données et réinitialisez complètement votre appareil",
   "factory-reset.reset": "Réinitialiser",

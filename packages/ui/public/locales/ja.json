@@ -128,7 +128,6 @@
   "device-info.serial-number": "シリアルナンバー",
   "device-info.software-version": "ソフトウェアバージョン",
   "device-info.view-info": "情報を見る",
-  "do-not-while": "{{while}} の進行中は、このページを更新したり、Umbrel をオフにしないでください。",
   "factory-reset": "工場出荷時設定にリセット",
   "factory-reset.confirm.body": "リセットを開始するには、Umbrel パスワードを確認してください",
   "factory-reset.confirm.password-label": "パスワードを入力する",

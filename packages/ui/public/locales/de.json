@@ -128,7 +128,6 @@
   "device-info.serial-number": "Seriennummer",
   "device-info.software-version": "Softwareversion",
   "device-info.view-info": "Informationen anzeigen",
-  "do-not-while": "Bitte aktualisieren Sie diese Seite nicht und schalten Sie Ihren Umbrel nicht aus, während der {{while}} läuft",
   "factory-reset": "Werkseinstellungen zurückgesetzt",
   "factory-reset.confirm.body": "Bestätigen Sie das Umbrel-Passwort, um mit dem Zurücksetzen zu beginnen",
   "factory-reset.confirm.password-label": "Passwort eingeben",
