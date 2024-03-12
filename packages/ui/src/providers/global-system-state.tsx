@@ -8,6 +8,7 @@ import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {Loading} from '@/components/ui/loading'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useJwt} from '@/modules/auth/use-auth'
+import {Progress} from '@/modules/bare/progress'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
@@ -17,6 +18,7 @@ type SystemStatus = RouterOutput['system']['status']
 const GlobalSystemStateContext = createContext<{
 	shutdown: () => void
 	restart: () => void
+	update: () => void
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
@@ -41,10 +43,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 
 	// TODO: handle `onError`
 	const restart = useRestart({onMutate, onSuccess})
-	const shutdown = useShutdown({
-		onMutate,
-		onSuccess,
-	})
+	const shutdown = useShutdown({onMutate, onSuccess})
+	const update = useSoftwareUpdate({onMutate, onSuccess})
 
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
@@ -145,7 +145,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart}}>
+				<GlobalSystemStateContext.Provider value={{shutdown, restart, update}}>
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>
@@ -169,6 +169,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 				</CoverMessage>
 			)
 		}
+		case 'updating': {
+			return (
+				<>
+					<UpdatingCoverMessage />
+					{debugInfo}
+				</>
+			)
+		}
 		default: {
 			// Shouldn't happen
 			return (
@@ -179,6 +187,30 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			)
 		}
 	}
+}
+
+function UpdatingCoverMessage() {
+	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery()
+	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
+		refetchInterval: 500,
+	})
+	const latestVersion = latestVersionQ.data
+
+	if (!latestVersion) {
+		return null
+	}
+
+	const {progress, description, running} = updateStatusQ.data ?? {}
+	const indeterminate = updateStatusQ.isLoading || !running
+
+	return (
+		<CoverMessage>
+			<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
+			<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
+			<Progress value={indeterminate ? undefined : progress}>{description}</Progress>
+			<JSONTree data={updateStatusQ.data} />
+		</CoverMessage>
+	)
 }
 
 export function useGlobalSystemState() {
@@ -206,4 +238,15 @@ function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: 
 	const shutdown = shutdownMut.mutate
 
 	return shutdown
+}
+
+export function useSoftwareUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: () => void}) {
+	const updateVersionMut = trpcReact.system.update.useMutation({
+		onMutate,
+		onSuccess,
+	})
+
+	const update = updateVersionMut.mutate
+
+	return update
 }
