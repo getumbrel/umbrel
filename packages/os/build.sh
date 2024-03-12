@@ -136,7 +136,7 @@ function build_raspberrypi_mender_artifact() {
         -t raspberrypi \
         -T rugpi-image \
         -f /data/build/umbrelos-pi5.img \
-        -o /data/build/umbrelos-pi.mender
+        -o /data/build/umbrelos-pi.update
 }
 
 # Build the x86 artifacts.
@@ -219,7 +219,8 @@ function build_x86_artifacts() {
     /mender/mender-convert --disk-image "${disk_image}" --config /data/mender.cfg
 
     echo "Copying to ./build/..."
-    mv /mender/deploy/* /data/build/
+    mv /mender/deploy/umbrelos.mender /data/build/umbrelos-amd64.update
+    mv /mender/deploy/umbrelos.img /data/build/umbrelos-amd64.img
 }
 
 arguments=${@:-}
