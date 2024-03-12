@@ -108,14 +108,8 @@ export default class App {
 		await this.writeCompose(compose)
 	}
 
-	async install() {
-		this.state = 'installing'
-		this.stateProgress = 1
-
-		await this.patchComposeServices()
-
+	async pull() {
 		const compose = await this.readCompose()
-
 		const images = Object.values(compose.services!)
 			.map((service) => service.image)
 			.filter(Boolean) as string[]
@@ -123,6 +117,14 @@ export default class App {
 			this.stateProgress = Math.max(1, progress * 99)
 			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
 		})
+	}
+
+	async install() {
+		this.state = 'installing'
+		this.stateProgress = 1
+
+		await this.patchComposeServices()
+		await this.pull()
 
 		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
 			onFailedAttempt: (error) => {
@@ -140,6 +142,7 @@ export default class App {
 
 	async update() {
 		this.state = 'updating'
+		this.stateProgress = 1
 
 		// TODO: Pull images here before the install script and calculate live progress for
 		// this.stateProgress so button animations work
@@ -155,6 +158,7 @@ export default class App {
 		// Update the app, patching the compose file half way through
 		await appScript(this.#umbreld, 'pre-patch-update', this.id)
 		await this.patchComposeServices()
+		await this.pull()
 		await appScript(this.#umbreld, 'post-patch-update', this.id)
 
 		// Delete the old images if we can. Silently fail on error cos docker
@@ -164,6 +168,7 @@ export default class App {
 		} catch {}
 
 		this.state = 'ready'
+		this.stateProgress = 0
 
 		return true
 	}

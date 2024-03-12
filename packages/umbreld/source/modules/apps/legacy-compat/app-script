@@ -653,9 +653,6 @@ if [[ "$command" = "pre-patch-update" ]]; then
   # Now apply templates
   template_app "${app}"
 
-  echo "Pulling images for app ${app}..."
-  compose "${app}" pull
-
   # Copy remaining files to mark update as complete
   copy_app_files "${UPDATE_FILES_WHITELIST_POST}"
 
@@ -664,6 +661,9 @@ fi
 
 # Update an installed app
 if [[ "$command" = "post-patch-update" ]]; then
+
+  echo "Pulling images for app ${app}..."
+  compose "${app}" pull
 
   if [[ "$*" != *"--skip-start"* ]]; then
     "${0}" "start" "${app}"
