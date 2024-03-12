@@ -203,14 +203,19 @@ export default class App {
 	}
 
 	async getMemoryUsage() {
-		const containers = await this.getResourceUsage()
-		let totalMemoryPercentage = 0
-		for (const container of containers) {
-			totalMemoryPercentage += Number.parseFloat(container.MemPerc)
-		}
+		try {
+			const containers = await this.getResourceUsage()
+			let totalMemoryPercentage = 0
+			for (const container of containers) {
+				totalMemoryPercentage += Number.parseFloat(container.MemPerc)
+			}
 
-		const {total} = await systemInformation.mem()
-		return total * (totalMemoryPercentage / 100)
+			const {total} = await systemInformation.mem()
+			return total * (totalMemoryPercentage / 100)
+		} catch (error) {
+			this.logger.error(`Failed to get memory usage for app ${this.id}: ${(error as Error).message}`)
+			return 0
+		}
 	}
 
 	async getCpuUsage() {

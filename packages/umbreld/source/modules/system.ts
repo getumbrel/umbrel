@@ -77,7 +77,6 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	apps: MemoryUsage[]
 }> {
 	const {total: size, active: totalUsed} = await systemInformation.mem()
-	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
