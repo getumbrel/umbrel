@@ -143,7 +143,7 @@ function MigrationAssistantErrors() {
 							})
 						}
 					>
-						{t('migration-assistant.try-again')}
+						{t('try-again')}
 					</Button>
 				</>
 			}

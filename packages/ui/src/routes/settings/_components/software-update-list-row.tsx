@@ -1,40 +1,32 @@
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiRefreshLine} from 'react-icons/ri'
 
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Icon} from '@/components/ui/icon'
-import {Loading} from '@/components/ui/loading'
+import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
+import {useGlobalSystemState} from '@/providers/global-system-state'
 import {Button} from '@/shadcn-components/ui/button'
 import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
-	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
-
-	if (state === 'upgrading') {
-		return (
-			<CoverMessage>
-				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
-				<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
-			</CoverMessage>
-		)
-	}
+	const {update} = useGlobalSystemState()
+	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 
 	if (state === 'update-available') {
 		return (
 			<ListRow
 				isActive={isActive}
-				title={`umbrelOS ${currentVersion}`}
+				title={`umbrelOS ${currentVersion || LOADING_DASH}`}
 				description={
 					<span className='flex items-center gap-1'>
 						<Icon component={RiArrowUpCircleFill} className='text-brand' />
-						{t('software-update.new-version', {version: latestVersion})}
+						{t('software-update.new-version', {version: latestVersion || LOADING_DASH})}
 					</span>
 				}
 				isLabel
 			>
-				<Button variant='primary' onClick={upgrade}>
+				<Button variant='primary' onClick={update}>
 					<Icon component={RiRefreshLine} />
 					{t('software-update.update-now')}
 				</Button>
@@ -45,7 +37,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 	return (
 		<ListRow
 			isActive={isActive}
-			title={`umbrelOS ${currentVersion}`}
+			title={`umbrelOS ${currentVersion || LOADING_DASH}`}
 			description={
 				<span className='flex items-center gap-1'>
 					{state === 'at-latest' ? (

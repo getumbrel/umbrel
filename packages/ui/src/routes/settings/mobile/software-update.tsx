@@ -2,6 +2,7 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
+import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
@@ -26,7 +27,7 @@ export function SoftwareUpdateDrawer() {
 		return (
 			<CoverMessage>
 				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
-				<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
+				<Loading>{t('software-update.updating-to', {version: latestVersion || LOADING_DASH})}</Loading>
 				<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
 			</CoverMessage>
 		)
@@ -43,7 +44,7 @@ export function SoftwareUpdateDrawer() {
 				<div className='flex flex-col items-center py-8'>
 					<FadeInImg src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
-					<p className='text-15 -tracking-4'>umbrelOS {currentVersion}</p>
+					<p className='text-15 -tracking-4'>umbrelOS {currentVersion || LOADING_DASH}</p>
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>

@@ -7,8 +7,10 @@ import {BareCoverMessage, CoverMessage, CoverMessageParagraph} from '@/component
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {Loading} from '@/components/ui/loading'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {BarePage} from '@/layouts/bare/bare-page'
 import {useJwt} from '@/modules/auth/use-auth'
-import {Progress} from '@/modules/bare/progress'
+import FailedLayout from '@/modules/bare/failed-layout'
+import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
@@ -73,6 +75,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	useEffect(() => {
 		console.log('global-system-state: useEffect')
 		if (status === 'running' && shouldLogoutOnRunning === true) {
+			// Rely on page reload to reset `triggered` state
+			// setTriggered(false)
 			console.log('global-system-state: go to login')
 			setShouldLogout(false)
 			// Delay the stuff after `setShouldLogout(false)` to ensure that local storage is updated. We wouldn't want to take the user through this again
@@ -172,7 +176,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'updating': {
 			return (
 				<>
-					<UpdatingCoverMessage />
+					<UpdatingCoverMessage onRetry={() => update()} />
 					{debugInfo}
 				</>
 			)
@@ -189,7 +193,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}
 }
 
-function UpdatingCoverMessage() {
+function UpdatingCoverMessage({onRetry}: {onRetry: () => void}) {
 	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery()
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
 		refetchInterval: 500,
@@ -200,16 +204,34 @@ function UpdatingCoverMessage() {
 		return null
 	}
 
-	const {progress, description, running} = updateStatusQ.data ?? {}
+	const {progress, description, running, error} = updateStatusQ.data ?? {}
 	const indeterminate = updateStatusQ.isLoading || !running
 
 	return (
-		<CoverMessage>
-			<Loading>{t('software-update.updating-to', {version: latestVersion})}</Loading>
-			<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
-			<Progress value={indeterminate ? undefined : progress}>{description}</Progress>
-			<JSONTree data={updateStatusQ.data} />
-		</CoverMessage>
+		<BarePage>
+			{!error && (
+				<ProgressLayout
+					title={t('software-update.updating-to', {version: latestVersion})}
+					progress={indeterminate ? undefined : progress}
+					message={description}
+					isRunning={!!running}
+				/>
+			)}
+			{error && (
+				<FailedLayout
+					title={t('software-update.failed')}
+					description={
+						<>
+							{t('software-update.failed.description')}
+							<br />
+							{t('software-update.failed.please-try-again')}
+						</>
+					}
+					buttonText={t('software-update.failed.retry')}
+					buttonOnClick={onRetry}
+				/>
+			)}
+		</BarePage>
 	)
 }
 
