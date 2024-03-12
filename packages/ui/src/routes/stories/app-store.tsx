@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
 import {Loading} from '@/components/ui/loading'
@@ -8,6 +9,7 @@ import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {UpdatesDialog} from '@/modules/app-store/updates-button'
+import {useApps} from '@/providers/apps'
 import {AvailableAppsProvider, useAvailableApps} from '@/providers/available-apps'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
@@ -58,6 +60,7 @@ function Inner() {
 			<AppUpdatesManyExample />
 			<InstallFirstExample />
 			<InstallFirst2Example />
+			<TorOnlyApps />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
 				galleryId='immich'
@@ -69,6 +72,12 @@ function Inner() {
 			/>
 		</div>
 	)
+}
+
+function TorOnlyApps() {
+	const {apps} = useAvailableApps()
+
+	return <JSONTree data={apps?.filter((app) => app.torOnly)} />
 }
 
 function AppUpdatesZeroExample() {
