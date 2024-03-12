@@ -28,17 +28,15 @@ export async function getDiskUsage(
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
 
-	// TODO: Fix this, it gets the disk usage of the system partition not the data partition on umbrelOS
-
 	// TODO: get list of installed apps and their disk usage
 	// to calculate the disk usage of each app
 	const fileSystemSize = await systemInformation.fsSize()
 
 	// Get the disk usage information for the file system containing the Umbreld data dir.
 	// Sort by mount length to get the most specific mount point
-	const dataDirectoryFilesystem = fileSystemSize
-		.filter((fs) => umbreld.dataDirectory.startsWith(fs.mount))
-		.sort((a, b) => b.mount.length - a.mount.length)[0]
+	const df = await $`df -h ${umbreld.dataDirectory}`
+	const partition = df.stdout.split('\n').slice(-1)[0].split(' ')[0]
+	const dataDirectoryFilesystem = fileSystemSize.find((filesystem) => filesystem.fs === partition)
 
 	if (!dataDirectoryFilesystem) {
 		throw new Error('Could not find file system containing Umbreld data directory')
