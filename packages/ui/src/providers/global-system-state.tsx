@@ -3,7 +3,7 @@ import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {BareCoverMessage, CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {Loading} from '@/components/ui/loading'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
@@ -20,6 +20,7 @@ const GlobalSystemStateContext = createContext<{
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
+	const [shouldLogoutOnRunning, setShouldLogout] = useLocalStorage2<true | false>('should-logout-on-running', false)
 
 	const onMutate = async () => {
 		setTriggered(true)
@@ -29,61 +30,93 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const ctx = trpcReact.useContext()
 
 	const onSuccess = () => {
+		console.log('global-system-state: onSuccess')
 		// Cancel last query in case it returns as still running
 		ctx.system.status.cancel()
-		// Still delay a bit just in case.
-		setTimeout(() => {
-			setShouldLogout(true)
-		}, MS_PER_SECOND)
 	}
 
-	const [shouldLogoutOnRunning, setShouldLogout] = useLocalStorage2<true | false>('should-logout-on-running', false)
-
-	const restart = useRestart({
-		onMutate,
-		onSuccess: () => {
-			setTimeout(() => {
-				setShouldLogout(true)
-			}, 500)
-		},
-	})
+	// TODO: handle `onError`
+	const restart = useRestart({onMutate, onSuccess})
 	const shutdown = useShutdown({onMutate, onSuccess})
 
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 	})
 
+	if (systemStatusQ.error && !triggered) {
+		debugger
+		console.log('global-system-state: systemStatusQ.error')
+		// This error should get caught by a parent error boundary component
+		throw systemStatusQ.error
+	}
+
 	const status = systemStatusQ.data
 	const prevStatus = usePreviousDistinct(status)
 
 	useEffect(() => {
+		if (status !== 'running' && triggered && !shouldLogoutOnRunning) {
+			// This means a shutdown/restart or similar process has started
+			// So we'll now wait until the system is back up and running
+			// before we can log the user out
+			setShouldLogout(true)
+		}
+	}, [setShouldLogout, shouldLogoutOnRunning, status, triggered])
+
+	useEffect(() => {
+		console.log('global-system-state: useEffect')
 		if (status === 'running' && shouldLogoutOnRunning === true) {
 			setTriggered(false)
-			debugger
+			console.log('global-system-state: go to login')
 			setShouldLogout(false)
-			// Canceling queries to prevent them from causing auth errors
-			queryClient.cancelQueries()
-			jwt.removeJwt()
-			window.location.href = '/'
+			// Delay the stuff after `setShouldLogout(false)` to ensure that local storage is updated. We wouldn't want to take the user through this again
+			setTimeout(() => {
+				// Canceling queries to prevent them from causing auth errors
+				queryClient.cancelQueries()
+				jwt.removeJwt()
+				window.location.href = '/'
+			}, 1000)
 			return
 		}
-	}, [status, shouldLogoutOnRunning, jwt, setShouldLogout])
+	}, [status, shouldLogoutOnRunning, jwt, setShouldLogout, queryClient])
 
 	// When we come back online, we should continue to show the previous state until we've logged out
-	const statusToShow = shouldLogoutOnRunning === true && status === 'running' ? prevStatus : status
+	const statusToShow = triggered === true && status === 'running' ? prevStatus : status
 
 	const debugInfo = (
 		<DebugOnlyBare>
-			<div
-				className='fixed left-0 top-0 origin-top-left scale-50'
-				style={{
-					zIndex: 1000,
-				}}
-			>
-				<JSONTree data={{status, prevStatus, triggered, shouldLogoutOnRunning}} />
+			<div className='fixed left-0 top-0 origin-top-left scale-50' style={{zIndex: 1000}}>
+				<JSONTree
+					data={{
+						status,
+						prevStatus,
+						statusToShow,
+						triggered,
+						shouldLogoutOnRunning,
+						statusIsError: systemStatusQ.isError,
+						failureCount: systemStatusQ.failureCount,
+					}}
+				/>
 			</div>
 		</DebugOnlyBare>
 	)
+
+	if (systemStatusQ.isLoading) {
+		return (
+			<>
+				<BareCoverMessage delayed>{t('trpc.checking-backend')}</BareCoverMessage>
+				{debugInfo}
+			</>
+		)
+	}
+
+	if (statusToShow === 'shutting-down' && (systemStatusQ.isError || systemStatusQ.failureCount > 0)) {
+		return (
+			<BareCoverMessage>
+				Shutdown (probably) completed.
+				<CoverMessageParagraph>Please check your device hardware to know for sure.</CoverMessageParagraph>
+			</BareCoverMessage>
+		)
+	}
 
 	switch (statusToShow) {
 		case 'running': {
