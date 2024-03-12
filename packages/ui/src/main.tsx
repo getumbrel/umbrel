@@ -12,6 +12,7 @@ initTokenRenewal()
 
 init(
 	<TrpcProvider>
+		{/* Wallpaper inside trpc because it requires backend call */}
 		<WallpaperProvider>
 			<RemoteWallpaperInjector />
 			<GlobalSystemStateProvider>
