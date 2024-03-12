@@ -63,14 +63,18 @@ export function DefaultCredentialsDialog() {
 							<DialogDescription>{t('default-credentials.description')}</DialogDescription>
 						</DialogHeader>
 						<Separator />
-						<div>
-							<label className={textClass}>{t('default-credentials.username')}</label>
-							<CopyableField value={defaultUsername} />
-						</div>
-						<div>
-							<label className={textClass}>{t('default-credentials.password')}</label>
-							<CopyableField isPassword value={defaultPassword} />
-						</div>
+						{defaultUsername && (
+							<div>
+								<label className={textClass}>{t('default-credentials.username')}</label>
+								<CopyableField value={defaultUsername} />
+							</div>
+						)}
+						{defaultPassword && (
+							<div>
+								<label className={textClass}>{t('default-credentials.password')}</label>
+								<CopyableField isPassword value={defaultPassword} />
+							</div>
+						)}
 						<p className={textClass}>{t('default-credentials.message-app-store-page')}</p>
 						<Separator />
 						<div className='flex items-center justify-between'>

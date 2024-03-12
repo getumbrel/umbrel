@@ -183,11 +183,14 @@ export function AppIconConnected({appId}: {appId: string}) {
 							<ContextMenuItem asChild>
 								<Link to={`/app-store/${appId}`}>{t('desktop.app.context.go-to-store-page')}</Link>
 							</ContextMenuItem>
-							<ContextMenuItem asChild>
-								<Link to={linkToDialog('default-credentials', {for: appId})}>
-									{t('desktop.app.context.show-default-credentials')}
-								</Link>
-							</ContextMenuItem>
+							{userApp.app.credentials &&
+								(userApp.app.credentials.defaultUsername || userApp.app.credentials.defaultPassword) && (
+									<ContextMenuItem asChild>
+										<Link to={linkToDialog('default-credentials', {for: appId})}>
+											{t('desktop.app.context.show-default-credentials')}
+										</Link>
+									</ContextMenuItem>
+								)}
 							<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
 							<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
 								{t('desktop.app.context.uninstall')}

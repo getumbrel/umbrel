@@ -8,17 +8,26 @@ import {t} from '@/utils/i18n'
 import {cardClass, cardTitleClass} from './shared'
 
 export function SettingsSection({userApp}: {userApp: UserApp}) {
+	if (!userApp.credentials) return null
+
+	const {defaultUsername, defaultPassword} = userApp.credentials
+	if (!defaultUsername && !defaultPassword) return null
+
 	return (
 		<div className={cardClass}>
 			<h2 className={cardTitleClass}>{t('app-page.section.settings.title')}</h2>
-			<KV
-				k={t('default-credentials.username')}
-				v={<CopyableField className='w-[120px]' narrow value={userApp.credentials.defaultUsername} />}
-			/>
-			<KV
-				k={t('default-credentials.password')}
-				v={<CopyableField narrow className='w-[120px]' value={userApp.credentials.defaultPassword} isPassword />}
-			/>
+			{defaultUsername && (
+				<KV
+					k={t('default-credentials.username')}
+					v={<CopyableField className='w-[120px]' narrow value={defaultUsername} />}
+				/>
+			)}
+			{defaultPassword && (
+				<KV
+					k={t('default-credentials.password')}
+					v={<CopyableField narrow className='w-[120px]' value={defaultPassword} isPassword />}
+				/>
+			)}
 		</div>
 	)
 }
