@@ -69,7 +69,7 @@ export default class Apps {
 			this.instances.map((app) =>
 				app.stop().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
-					// if a dingle app fails.
+					// if a single app fails.
 					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
 				}),
 			),
