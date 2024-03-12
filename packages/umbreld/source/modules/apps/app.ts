@@ -214,13 +214,18 @@ export default class App {
 	}
 
 	async getCpuUsage() {
-		const containers = await this.getResourceUsage()
-		let totalCpuUsage = 0
-		for (const container of containers) {
-			totalCpuUsage += Number.parseFloat(container.CPUPerc)
-		}
+		try {
+			const containers = await this.getResourceUsage()
+			let totalCpuUsage = 0
+			for (const container of containers) {
+				totalCpuUsage += Number.parseFloat(container.CPUPerc)
+			}
 
-		return totalCpuUsage
+			return totalCpuUsage
+		} catch (error) {
+			this.logger.error(`Failed to get CPU usage for app ${this.id}: ${(error as Error).message}`)
+			return 0
+		}
 	}
 
 	async getDiskUsage() {

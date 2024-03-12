@@ -108,7 +108,6 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 	const threads = cpu.cpus.length
 	const totalUsed = cpu.currentLoad
 
-	// TODO: Handle errors so we don't kill the entire response
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
