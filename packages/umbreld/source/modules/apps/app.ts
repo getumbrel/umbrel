@@ -109,11 +109,15 @@ export default class App {
 	}
 
 	async pull() {
+		const defaultImages = [
+			'getumbrel/app-proxy:1.0.0@sha256:49eb600c4667c4b948055e33171b42a509b7e0894a77e0ca40df8284c77b52fb',
+			'getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a',
+		]
 		const compose = await this.readCompose()
 		const images = Object.values(compose.services!)
 			.map((service) => service.image)
 			.filter(Boolean) as string[]
-		await pullAll(images, (progress) => {
+		await pullAll([...defaultImages, ...images], (progress) => {
 			this.stateProgress = Math.max(1, progress * 99)
 			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
 		})
