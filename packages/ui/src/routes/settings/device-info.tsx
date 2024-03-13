@@ -27,6 +27,7 @@ export default function DeviceInfoDialog() {
 					</DialogHeader>
 					<DeviceInfoContent
 						umbrelHostEnvironment={data.umbrelHostEnvironment}
+						device={data.device}
 						osVersion={data.osVersion}
 						modelNumber={data.modelNumber}
 						serialNumber={data.serialNumber}

@@ -9,11 +9,13 @@ import {tw} from '@/utils/tw'
 
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
+	device,
 	osVersion,
 	modelNumber,
 	serialNumber,
 }: {
 	umbrelHostEnvironment?: UmbrelHostEnvironment
+	device?: string
 	osVersion?: string
 	modelNumber?: string
 	serialNumber?: string
@@ -26,7 +28,7 @@ export function DeviceInfoContent({
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>{t('device-info.device')}</span>
-					<span className='pr-6 font-normal'>{maybeT(umbrelHostEnvironment)}</span>
+					<span className='pr-6 font-normal'>{maybeT(device)}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>

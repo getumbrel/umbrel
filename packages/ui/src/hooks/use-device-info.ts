@@ -1,5 +1,5 @@
 import {hostEnvironmentMap, LOADING_DASH, UmbrelHostEnvironment, UNKNOWN} from '@/constants'
-import {trpcReact} from '@/trpc/trpc'
+import {RouterOutput, trpcReact} from '@/trpc/trpc'
 
 type UiHostInfo = {
 	icon?: string
@@ -16,6 +16,7 @@ type DeviceInfoT =
 			isLoading: false
 			data: {
 				umbrelHostEnvironment?: UmbrelHostEnvironment
+				device?: string
 				modelNumber?: string
 				serialNumber?: string
 				osVersion?: string
@@ -39,9 +40,9 @@ export function useDeviceInfo(): DeviceInfoT {
 		} as const
 	}
 
-	// TODO: Add umbrel host environment
-	const umbrelHostEnvironment: UmbrelHostEnvironment | undefined = undefined
+	const umbrelHostEnvironment: UmbrelHostEnvironment | undefined = deviceInfoToHostEnvironment(deviceInfoQ.data)
 
+	const device = deviceInfoQ.data?.device
 	const modelNumber = deviceInfoQ.data?.model
 	const serialNumber = deviceInfoQ.data?.serial
 	const osVersion = osQ.data
@@ -50,15 +51,38 @@ export function useDeviceInfo(): DeviceInfoT {
 		isLoading,
 		data: {
 			umbrelHostEnvironment,
+			device,
 			modelNumber,
 			serialNumber,
 			osVersion,
 		},
 		uiData: umbrelHostEnvironment
-			? hostEnvironmentMap[umbrelHostEnvironment]
+			? {
+					icon: hostEnvironmentMap[umbrelHostEnvironment].icon,
+					title: device || LOADING_DASH,
+			  }
 			: {
 					icon: undefined,
 					title: UNKNOWN(),
 			  },
 	}
+}
+
+type DeviceInfo = RouterOutput['system']['device']
+
+function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnvironment | undefined {
+	if (!deviceInfo) {
+		return undefined
+	}
+
+	if (deviceInfo.device.toLowerCase().includes('umbrel home')) {
+		return 'umbrel-home'
+	}
+
+	if (deviceInfo.device.toLowerCase().includes('raspberry pi')) {
+		return 'raspberry-pi'
+	}
+
+	// Assume Linux
+	return 'linux'
 }
