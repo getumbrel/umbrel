@@ -292,7 +292,6 @@
   "default-credentials.close": "J'ai compris",
   "default-credentials.description": "Voici les informations d’identification dont vous aurez besoin pour accéder à l’application.",
   "default-credentials.launch": "Démarrer l'application",
-  "default-credentials.message-app-store-page": "Vous pouvez accéder aux informations d'identification par défaut de n'importe quelle application à partir de sa page de magasin.",
   "default-credentials.password": "Mot de passe par défaut",
   "default-credentials.title": "Identifiants pour {{app}}",
   "default-credentials.username": "Nom d'utilisateur par défaut",

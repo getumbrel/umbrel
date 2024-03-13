@@ -184,7 +184,8 @@ export function SettingsContent() {
 							{t('migrate')}
 						</IconButton>
 					</ListRow>
-					<ListRow
+					{/* TODO: Uncomment and enable after fixing translations  */}
+					{/* <ListRow
 						title={t('language')}
 						description={t('language-description')}
 						isLabel
@@ -195,7 +196,7 @@ export function SettingsContent() {
 							<LanguageDropdownTrigger />
 							<LanguageDropdownContent />
 						</DropdownMenu>
-					</ListRow>
+					</ListRow> */}
 					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}

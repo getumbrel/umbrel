@@ -156,12 +156,13 @@ export function SettingsContentMobile() {
 					description={t('migration-assistant-description')}
 					onClick={() => navigate('migration-assistant')}
 				/>
-				<ListRowMobile
+				{/* TODO: Uncomment and enable after fixing translations  */}
+				{/* <ListRowMobile
 					icon={TbLanguage}
 					title={t('language')}
 					description={t('language-description')}
 					onClick={() => navigate('language')}
-				/>
+				/> */}
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}

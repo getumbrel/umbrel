@@ -98,7 +98,6 @@
   "default-credentials.close": "Habe es",
   "default-credentials.description": "Hier sind die Anmeldeinformationen, die Sie für den Zugriff auf die App benötigen.",
   "default-credentials.launch": "App starten",
-  "default-credentials.message-app-store-page": "Sie können über die Store-Seite jeder App auf die Standardanmeldeinformationen zugreifen.",
   "default-credentials.password": "Standard-Passwort",
   "default-credentials.title": "Anmeldeinformationen für {{app}}",
   "default-credentials.username": "Standardbenutzername",

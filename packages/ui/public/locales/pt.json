@@ -98,7 +98,6 @@
   "default-credentials.close": "Entendi",
   "default-credentials.description": "Aqui estão as credenciais de que você precisará para acessar o aplicativo.",
   "default-credentials.launch": "Lançamento do Aplicativo",
-  "default-credentials.message-app-store-page": "Você pode acessar as credenciais padrão de qualquer aplicativo na página da loja.",
   "default-credentials.password": "Senha padrão",
   "default-credentials.title": "Credenciais para {{app}}",
   "default-credentials.username": "Nome de usuário padrão",
