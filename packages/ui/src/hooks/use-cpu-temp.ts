@@ -2,7 +2,7 @@ import {useState} from 'react'
 
 import {trpcReact} from '@/trpc/trpc'
 import {isCpuTooCold, isCpuTooHot} from '@/utils/system'
-import {CpuType} from '@/utils/tempurature'
+import {CpuType} from '@/utils/temperature'
 
 export function useCpuTemp() {
 	const [enabled, setEnabled] = useState(true)

@@ -6,7 +6,7 @@ import {H2, H3} from '@/layouts/stories'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {CpuType, cpuTypes, TEMP_THRESHOLDS} from '@/utils/tempurature'
+import {CpuType, cpuTypes, TEMP_THRESHOLDS} from '@/utils/temperature'
 
 import {CpuTempCardContent} from '../settings/_components/cpu-temp-card-content'
 import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
@@ -65,7 +65,7 @@ export default function SettingsStory() {
 				</Card>
 			</div>
 			{/* ------- */}
-			<H2>Tempurature Card</H2>
+			<H2>Temperature Card</H2>
 			<SegmentedControl
 				size='lg'
 				// variant={variant}

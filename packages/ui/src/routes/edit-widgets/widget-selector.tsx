@@ -130,7 +130,7 @@ function WidgetSheet({
 					<ScrollArea className='h-full rounded-t-20'>
 						<div
 							className={cn(
-								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-[50px] md:px-[80px] md:pt-12',
+								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12',
 								'opacity-100 duration-100 animate-in fade-in',
 							)}
 						>
@@ -155,6 +155,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
 			</div>
 			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>
+			<div className='h-1'></div>
 		</>
 	)
 }

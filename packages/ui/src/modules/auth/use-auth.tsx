@@ -56,7 +56,7 @@ export function useAuth() {
 		},
 		signUpWithJwt(jwt: string) {
 			setJwt(jwt)
-			window.location.href = '/onboarding/2-account-created'
+			window.location.href = '/onboarding/account-created'
 		},
 		refreshToken,
 	}

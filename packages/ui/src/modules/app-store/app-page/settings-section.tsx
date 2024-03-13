@@ -15,7 +15,7 @@ export function SettingsSection({userApp}: {userApp: UserApp}) {
 
 	return (
 		<div className={cardClass}>
-			<h2 className={cardTitleClass}>{t('app-page.section.settings.title')}</h2>
+			<h2 className={cardTitleClass}>{t('app-page.section.credentials.title')}</h2>
 			{defaultUsername && (
 				<KV
 					k={t('default-credentials.username')}

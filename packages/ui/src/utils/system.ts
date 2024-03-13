@@ -1,5 +1,5 @@
 import {RouterOutput} from '@/trpc/trpc'
-import {CpuType, TEMP_THRESHOLDS} from '@/utils/tempurature'
+import {CpuType, TEMP_THRESHOLDS} from '@/utils/temperature'
 
 export function trpcDiskToLocal(data?: RouterOutput['system']['diskUsage']) {
 	if (data === undefined) return undefined

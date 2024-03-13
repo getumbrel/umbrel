@@ -6,6 +6,7 @@ import {links} from '@/constants/links'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -61,9 +62,13 @@ export default function CreateAccount() {
 			subTitle={t('onboarding.create-account.subtitle')}
 			subTitleMaxWidth={630}
 			footer={
-				<Link to={links.support} target='_blank' className={footerLinkClass}>
-					{t('contact-support')}
-				</Link>
+				<div className='flex flex-col items-center gap-3'>
+					{/* TODO: consider adding drawer on mobile */}
+					<LanguageDropdown />
+					<Link to={links.support} target='_blank' className={footerLinkClass}>
+						{t('onboarding.contact-support')}
+					</Link>
+				</div>
 			}
 		>
 			<form onSubmit={onSubmit} className='w-full'>

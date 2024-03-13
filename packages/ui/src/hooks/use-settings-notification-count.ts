@@ -7,7 +7,7 @@ import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
-import {CpuType} from '@/utils/tempurature'
+import {CpuType} from '@/utils/temperature'
 
 function useMounted() {
 	const [mounted, setMounted] = useState(false)

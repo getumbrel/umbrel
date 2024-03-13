@@ -5,7 +5,7 @@ import {tempDescriptions, tempDescriptionsKeyed, TempUnit, useTempUnit} from '@/
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {isCpuTooCold, isCpuTooHot} from '@/utils/system'
-import {celciusToFahrenheit, CpuType, tempToColor, tempToMessage} from '@/utils/tempurature'
+import {celciusToFahrenheit, CpuType, tempToColor, tempToMessage} from '@/utils/temperature'
 
 import {cardErrorClass, cardSecondaryValueClass, cardTitleClass, cardValueClass} from './shared'
 
@@ -32,7 +32,7 @@ export function CpuTempCardContent({
 
 	return (
 		<div className='flex flex-col gap-4'>
-			<div className={cardTitleClass}>{t('tempurature')}</div>
+			<div className={cardTitleClass}>{t('temperature')}</div>
 			<div className='flex flex-wrap-reverse items-center justify-between gap-2'>
 				<div className='flex shrink-0 flex-col gap-2.5'>
 					<div className={cardValueClass}>
@@ -60,10 +60,10 @@ export function CpuTempCardContent({
 				/>
 			</div>
 			{isCpuTooHot(cpuType, tempInCelcius ?? 0) && (
-				<span className={cardErrorClass}>{t('tempurature.too-hot-suggestion')}</span>
+				<span className={cardErrorClass}>{t('temperature.too-hot-suggestion')}</span>
 			)}
 			{isCpuTooCold(cpuType, tempInCelcius ?? 0) && (
-				<span className={cardErrorClass}>{t('tempurature.too-cold-suggestion')}</span>
+				<span className={cardErrorClass}>{t('temperature.too-cold-suggestion')}</span>
 			)}
 		</div>
 	)

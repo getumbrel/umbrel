@@ -115,7 +115,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						setOpen(false)
 					}}
 				>
-					{t('cmdk.add-widgets')}
+					{t('cmdk.widgets')}
 				</CommandItem>
 				<SearchItem
 					icon={systemAppsKeyed['UMBREL_home'].icon}

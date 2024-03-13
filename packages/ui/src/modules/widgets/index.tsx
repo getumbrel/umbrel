@@ -14,7 +14,7 @@ import {
 } from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
-import {celciusToFahrenheit} from '@/utils/tempurature'
+import {celciusToFahrenheit} from '@/utils/temperature'
 
 import {FourUpWidget} from './four-up-widget'
 import {ListEmojiWidget} from './list-emoji-widget'
