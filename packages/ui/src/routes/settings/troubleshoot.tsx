@@ -29,11 +29,12 @@ import {
 import {Input} from '@/shadcn-components/ui/input'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {cn} from '@/shadcn-lib/utils'
-import {trpcReact} from '@/trpc/trpc'
+import {RouterInput, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 type TroubleshootType = 'NONE' | 'system' | 'app'
+type SystemLogType = RouterInput['system']['logs']['type']
 
 export default function TroubleshootDialog() {
 	const dialogProps = useSettingsDialogProps()
@@ -120,15 +121,13 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 	const tabs = [
 		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
 		{id: 'system', label: t('troubleshoot.system-logs')},
-	]
-	const [activeTab, setActiveTab] = useLocalStorage2('troubleshoot-system-active-tab', tabs[0].id)
+	] as const satisfies readonly {id: SystemLogType; label: string}[]
+
+	const defaultTab = tabs[0].id
+	const [activeTab, setActiveTab] = useLocalStorage2<SystemLogType>('troubleshoot-system-active-tab', defaultTab)
+	const logs = useSystemLogs(activeTab ?? defaultTab)
 
 	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
-
-	const log =
-		'Exercitation cupidatat officia labore exercitation reprehenderit non elit dolore eiusmod enim in ut sunt labore. Sint laborum aliqua irure enim sit pariatur aute ea aliquip labore. Amet occaecat culpa do duis sit cillum. Commodo magna ipsum ullamco laboris dolor aute anim sint veniam quis sunt. Enim aliqua cillum excepteur aute laborum reprehenderit cillum fugiat culpa consequat ut. Pariatur ut ex irure mollit velit ad adipisicing proident sint officia quis aliqua consectetur. Veniam et Lorem aliquip reprehenderit dolore occaecat duis ut nostrud reprehenderit voluptate excepteur adipisicing labore.\n'.repeat(
-			50,
-		)
 
 	return (
 		<div className={troubleshootContentLayoutClass}>
@@ -136,9 +135,9 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 				<TroubleshootTitleBackButton onClick={onBack} />
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
-			<LogResults>{log}</LogResults>
+			<LogResults>{logs}</LogResults>
 			<ImmersiveDialogFooter className='justify-center'>
-				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(log, activeTab)}>
+				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(logs, activeTab)}>
 					{t('troubleshoot.system-download', {label: activeLabel})}
 				</Button>
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
@@ -208,6 +207,15 @@ const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
 
 function useAppLogs(appId: string) {
 	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
+
+	if (troubleshootQ.isLoading) return t('loading') + '...'
+	if (troubleshootQ.isError) return troubleshootQ.error.message
+
+	return troubleshootQ.data || t('troubleshoot-no-logs-yet')
+}
+
+function useSystemLogs(type: SystemLogType) {
+	const troubleshootQ = trpcReact.system.logs.useQuery({type})
 
 	if (troubleshootQ.isLoading) return t('loading') + '...'
 	if (troubleshootQ.isError) return troubleshootQ.error.message
