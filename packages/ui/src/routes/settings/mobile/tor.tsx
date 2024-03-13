@@ -1,11 +1,13 @@
+import {CopyableField} from '@/components/ui/copyable-field'
 import {listClass, listItemClass} from '@/components/ui/list'
-import {Loading} from '@/components/ui/loading'
+import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
+import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export function TorDrawer() {
@@ -27,6 +29,8 @@ export function TorDrawer() {
 		dialogProps.onOpenChange(false)
 	}
 
+	const hiddenServiceQ = trpcReact.system.hiddenService.useQuery(undefined, {enabled})
+
 	return (
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
@@ -38,11 +42,17 @@ export function TorDrawer() {
 				<div className={listClass}>
 					<label className={listItemClass}>
 						{t('tor.enable.mobile.switch-label')}
-						<Switch checked={enabled} onCheckedChange={setEnabled} disabled={isMutLoading} />
+						<div className='flex items-center gap-2'>
+							{isMutLoading && <Spinner />}
+							<Switch checked={enabled} onCheckedChange={setEnabled} disabled={isMutLoading} />
+						</div>
 					</label>
 				</div>
 				<div>{t('tor.enable.description')}</div>
-				{isMutLoading && <Loading>{enabled ? 'Disabling Tor' : 'Enabling Tor'}</Loading>}
+				<div className='space-y-2'>
+					<span className='text-15 font-medium -tracking-4'>{t('tor.hidden-service')}</span>
+					<CopyableField value={hiddenServiceQ.data ?? ''} />
+				</div>
 			</DrawerContent>
 		</Drawer>
 	)
