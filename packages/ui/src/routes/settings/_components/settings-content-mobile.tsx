@@ -87,7 +87,7 @@ export function SettingsContentMobile() {
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>{t('running-on')}</dt>
-						<dd>{maybeT(deviceInfo.data?.umbrelHostEnvironment)}</dd>
+						<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 						<dt className='opacity-40'>{t('umbrelos-version')}</dt>
 						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
 						<dt className='opacity-40'>{t('uptime')}</dt>
