@@ -3,7 +3,6 @@ import {ReactNode} from 'react'
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
 import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
-import {Loading} from '@/components/ui/loading'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
@@ -115,7 +114,7 @@ function StorageSection() {
 					</>
 				}
 			/>
-			{isLoading && <Loading />}
+			{isLoading && <AppListSkeleton />}
 			<AppList apps={apps} />
 		</>
 	)
@@ -133,7 +132,7 @@ function MemorySection() {
 				progress={progress}
 				rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low-long')}</ErrorMessage>}
 			/>
-			{isLoading && <Loading />}
+			{isLoading && <AppListSkeleton />}
 			<AppList apps={apps} />
 		</>
 	)
@@ -145,7 +144,7 @@ function CpuSection() {
 	return (
 		<>
 			<ProgressCard value={value} progressLabel={secondaryValue} progress={progress} />
-			{isLoading && <Loading />}
+			{isLoading && <AppListSkeleton />}
 			<AppList2 apps={apps} />
 		</>
 	)
@@ -226,6 +225,15 @@ function AppList2({apps}: {apps?: {id: string; used: number}[]}) {
 					value={used.toFixed(2) + '%'}
 				/>
 			))}
+		</div>
+	)
+}
+
+export function AppListSkeleton() {
+	return (
+		<div className={appListClass}>
+			{/* TODO: derive app count and use that here */}
+			<AppListRow title={LOADING_DASH} value={LOADING_DASH} />
 		</div>
 	)
 }
