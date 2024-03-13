@@ -1,9 +1,8 @@
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
+import {useGlobalSystemState} from '@/providers/global-system-state'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -21,17 +20,8 @@ export function SoftwareUpdateDrawer() {
 	const title = t('software-update.title')
 	const dialogProps = useSettingsDialogProps()
 
-	const {state, currentVersion, latestVersion, upgrade, checkLatest} = useSoftwareUpdate()
-
-	if (state === 'upgrading') {
-		return (
-			<CoverMessage>
-				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
-				<Loading>{t('software-update.updating-to', {version: latestVersion || LOADING_DASH})}</Loading>
-				<CoverMessageParagraph>{t('software-update.updating-message')}</CoverMessageParagraph>
-			</CoverMessage>
-		)
-	}
+	const {update} = useGlobalSystemState()
+	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 
 	return (
 		<Drawer {...dialogProps}>
@@ -71,7 +61,7 @@ export function SoftwareUpdateDrawer() {
 								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
 								{t('software-update.new-version', {version: latestVersion})}
 							</div>
-							<Button variant='primary' size='dialog' onClick={upgrade}>
+							<Button variant='primary' size='dialog' onClick={update}>
 								{t('software-update.update-now')}
 							</Button>
 						</>
