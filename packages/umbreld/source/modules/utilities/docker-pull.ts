@@ -65,7 +65,6 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 				(progress) => {
 					if (alreadyDownloadedImages.includes(image)) return
 					imageProgress[image] = progress
-					console.log(imageProgress)
 					const totalProgress =
 						Object.values(imageProgress).reduce((total, image) => total + image, 0) /
 						Object.values(imageProgress).length
