@@ -150,6 +150,8 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
+	const isRunning = appInstall.state === 'ready' || appInstall.state === 'running'
+
 	// TODO: consider showing context menu in other states too
 	switch (appInstall.state) {
 		case 'loading':
@@ -165,7 +167,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 		case 'not-installed':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
 		case 'installing':
-			return <AppIcon label={userApp.app.name} src={userApp.app.icon} state='installing' />
 		case 'running':
 		case 'ready': {
 			return (
@@ -191,10 +192,14 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
-							<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
-							<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
-								{t('desktop.app.context.uninstall')}
-							</ContextMenuItem>
+							{isRunning && (
+								<>
+									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
+									<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
+										{t('desktop.app.context.uninstall')}
+									</ContextMenuItem>
+								</>
+							)}
 						</ContextMenuContent>
 					</ContextMenu>
 					{toUninstallFirstIds.length > 0 && (
