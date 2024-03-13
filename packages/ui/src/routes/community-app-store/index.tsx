@@ -37,7 +37,6 @@ export default function CommunityAppStoreHome() {
 			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<AppStoreSheetInner
 				title={`${appStoreName} app store`}
-				description={`Discover and install apps from the ${appStoreName} App Store`}
 				beforeHeaderChildren={
 					<>
 						<CommunityBadge className='self-start' />

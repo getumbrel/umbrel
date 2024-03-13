@@ -33,8 +33,8 @@ const Migrate = React.lazy(() => import('./routes/migrate'))
 const MigrateFailed = React.lazy(() => import('./routes/migrate/migrate-failed'))
 const MigrateSuccess = React.lazy(() => import('./routes/migrate/migrate-success'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
-const CreateAccount = React.lazy(() => import('./routes/onboarding/1-create-account'))
-const AccountCreated = React.lazy(() => import('./routes/onboarding/2-account-created'))
+const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
+const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
 const Stories = React.lazy(() => import('./routes/stories'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 const RestartTest = React.lazy(() => import('./routes/restart-test'))
@@ -165,7 +165,7 @@ export const router = createBrowserRouter([
 						),
 					},
 					{
-						path: '1-create-account',
+						path: 'create-account',
 						element: (
 							<EnsureUserDoesntExist>
 								<CreateAccount />
@@ -173,7 +173,7 @@ export const router = createBrowserRouter([
 						),
 					},
 					{
-						path: '2-account-created',
+						path: 'account-created',
 						element: (
 							<EnsureLoggedIn>
 								<AccountCreated />

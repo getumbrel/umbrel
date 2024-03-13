@@ -31,8 +31,8 @@ test('happy path', async ({page, context}) => {
 
 	// Click the button
 	await page.click('text=Start')
-	// Expect to go to `/1-create-account`
-	await expect(page).toHaveURL(/\/1-create-account/)
+	// Expect to go to `/create-account`
+	await expect(page).toHaveURL(/\/create-account/)
 
 	// Expect focus at `name`
 	await expect(page.getByPlaceholder('Name')).toBeFocused()
@@ -54,7 +54,7 @@ test('happy path', async ({page, context}) => {
 	// await page.click('text=Create')
 
 	// Wait for redirect
-	await page.waitForURL(/\/2-account-created/)
+	await page.waitForURL(/\/account-created/)
 	await page.waitForLoadState()
 	// Wait for text
 	await page.waitForSelector('text=You’re all set')

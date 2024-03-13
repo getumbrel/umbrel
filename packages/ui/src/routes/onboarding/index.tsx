@@ -21,16 +21,16 @@ export default function OnboardingStart() {
 			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
 			footer={
-				<>
-					<Link to={links.support} target='_blank' className={footerLinkClass}>
-						{t('contact-support')}
-					</Link>
+				<div className='flex flex-col items-center gap-3'>
 					{/* TODO: consider adding drawer on mobile */}
 					<LanguageDropdown />
-				</>
+					<Link to={links.support} target='_blank' className={footerLinkClass}>
+						{t('onboarding.contact-support')}
+					</Link>
+				</div>
 			}
 		>
-			<Link to='/onboarding/1-create-account' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
+			<Link to='/onboarding/create-account' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
 				{t('onboarding.start.continue')}
 			</Link>
 		</Layout>

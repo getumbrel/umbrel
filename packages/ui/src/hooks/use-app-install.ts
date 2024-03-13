@@ -76,7 +76,7 @@ export function useAppInstall(id: string) {
 
 	// Poll for install status if we're installing or uninstalling
 	const shouldPollForStatus = appState && arrayIncludes(pollStates, appState)
-	useInterval(appStateQ.refetch, shouldPollForStatus ? 500 : null)
+	useInterval(appStateQ.refetch, shouldPollForStatus ? 2000 : null)
 	useEffect(() => {
 		if (appState && !arrayIncludes(pollStates, appState)) {
 			invalidateInstallDependencies()

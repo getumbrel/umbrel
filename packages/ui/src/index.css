@@ -18,7 +18,7 @@ html {
 	--font-inter: 'Inter';
 	/* Space above the sheet. Putting here because it's used in multiple places for calculations */
 	--sheet-top: 2vh;
-	--wallpaper-blur: 50px;
+	--wallpaper-blur: 12px;
 }
 
 @supports (font-variation-settings: normal) {

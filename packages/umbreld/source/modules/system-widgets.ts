@@ -13,6 +13,7 @@ export const systemWidgets = {
 			refresh: '30s',
 			title: 'Storage',
 			value: prettyBytes(totalUsed),
+			valueSub: `/ ${prettyBytes(size)}`,
 			progressLabel: `${prettyBytes(size - totalUsed)} left`,
 			progress: (totalUsed / size).toFixed(2),
 		}
@@ -26,7 +27,7 @@ export const systemWidgets = {
 			refresh: '10s',
 			title: 'Memory',
 			value: prettyBytes(totalUsed),
-			valueSub: prettyBytes(size),
+			valueSub: `/ ${prettyBytes(size)}`,
 			progressLabel: `${prettyBytes(size - totalUsed)} left`,
 			progress: (totalUsed / size).toFixed(2),
 		}
@@ -39,8 +40,8 @@ export const systemWidgets = {
 		])
 
 		const {totalUsed: cpuTotalUsed} = cpuUsage
-		const {size: diskSize, totalUsed: diskTotalUsed} = diskUsage
-		const {size: memorySize, totalUsed: memoryTotalUsed} = memoryUsage
+		const {totalUsed: diskTotalUsed} = diskUsage
+		const {totalUsed: memoryTotalUsed} = memoryUsage
 
 		return {
 			type: 'three-up',
@@ -48,19 +49,19 @@ export const systemWidgets = {
 			refresh: '10s',
 			items: [
 				{
-					icon: 'system-widget-cpu',
-					title: 'CPU',
-					value: `${cpuTotalUsed.toPrecision(2)}%`,
-				},
-				{
 					icon: 'system-widget-storage',
-					title: 'Free',
-					value: `${prettyBytes(diskSize - diskTotalUsed)}`,
+					title: 'Storage',
+					value: `${prettyBytes(diskTotalUsed)}`,
 				},
 				{
 					icon: 'system-widget-memory',
 					title: 'Memory',
-					value: `${prettyBytes(memorySize - memoryTotalUsed)}`,
+					value: `${prettyBytes(memoryTotalUsed)}`,
+				},
+				{
+					icon: 'system-widget-cpu',
+					title: 'CPU',
+					value: `${cpuTotalUsed.toPrecision(2)}%`,
 				},
 			],
 		}

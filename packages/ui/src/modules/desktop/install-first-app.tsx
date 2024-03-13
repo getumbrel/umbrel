@@ -27,21 +27,21 @@ export function InstallFirstApp() {
 			<div className='pt-5' />
 			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<h1
-				className='-translate-y-2 text-center text-24 font-bold leading-tight -tracking-2 md:text-48'
+				className='-translate-y-2 text-center text-3xl font-bold leading-tight -tracking-2 md:text-48'
 				style={{
 					viewTransitionName: 'title',
 				}}
 			>
 				{title}
 			</h1>
-			<div className='pt-12' />
+			<div className='pt-6' />
 			<div className='flex-1' />
 			<div className='flex w-full flex-col items-center justify-center'>
 				<div className='grid w-full max-w-md gap-[30px] px-2 lg:max-w-[1200px] lg:grid-cols-3 lg:px-[30px]'>
 					<Cards />
 				</div>
 			</div>
-			<div className='pt-[50px]' />
+			<div className='pt-7' />
 			<ButtonLink to='/app-store' className='h-[42px] px-5 py-4 text-14 backdrop-blur-md'>
 				{t('desktop.install-first.link-to-app-store')}
 			</ButtonLink>
@@ -64,7 +64,7 @@ function Cards() {
 			<div className={cardClass}>
 				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-self-hoster')}</h2>
 				<AppApp app={appsKeyed['nextcloud']} />
-				<AppApp app={appsKeyed['tailscale']} />
+				<AppApp app={appsKeyed['immich']} />
 				<AppApp app={appsKeyed['home-assistant']} />
 				<AppApp app={appsKeyed['pi-hole']} />
 			</div>
@@ -72,7 +72,7 @@ function Cards() {
 				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
 				<AppApp app={appsKeyed['bitcoin']} />
 				<AppApp app={appsKeyed['lightning']} />
-				<AppApp app={appsKeyed['thunderhub']} />
+				<AppApp app={appsKeyed['electrs']} />
 				<AppApp app={appsKeyed['mempool']} />
 			</div>
 			<div className={cardClass}>
@@ -80,7 +80,7 @@ function Cards() {
 				<AppApp app={appsKeyed['plex']} />
 				<AppApp app={appsKeyed['transmission']} />
 				<AppApp app={appsKeyed['sonarr']} />
-				<AppApp app={appsKeyed['overseerr']} />
+				<AppApp app={appsKeyed['jellyfin']} />
 			</div>
 		</>
 	)
@@ -138,9 +138,9 @@ function App({
 	return (
 		<Link
 			to={`/app-store/${id}`}
-			className='flex w-full items-center gap-2.5 rounded-20 p-2 duration-300 hover:bg-white/4'
+			className='flex w-full items-center gap-2.5 rounded-15 p-2 duration-300 hover:bg-white/4'
 		>
-			<AppIcon src={icon} size={50} className='rounded-15' />
+			<AppIcon src={icon} size={50} className='rounded-10' />
 			<div className='flex min-w-0 flex-1 flex-col'>
 				<h3 className='text-15 font-semibold -tracking-3'>{appName}</h3>
 				<p className='w-full min-w-0 truncate text-13 opacity-50'>{appDescription}</p>

@@ -44,7 +44,6 @@ export function AppStoreLayout() {
 	return (
 		<AppStoreSheetInner
 			title={title}
-			description={<>{t('app-store.tagline')}</>}
 			titleRightChildren={
 				<motion.div layout className='flex max-w-full flex-1 flex-row-reverse items-center gap-3'>
 					<CommunityAppsDropdown />

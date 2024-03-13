@@ -196,7 +196,7 @@ export default function WidgetsStory() {
 							{
 								title: 'CPU',
 								value: '4.2',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.25,
 							},
 						]}
@@ -206,13 +206,13 @@ export default function WidgetsStory() {
 							{
 								// title: 'CPU',
 								value: '4.2',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 							{
 								// title: 'CPU',
 								value: '4.2',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 						]}
@@ -222,13 +222,13 @@ export default function WidgetsStory() {
 							{
 								title: 'CPU',
 								// value: '4.2',
-								// valueSub: 'GHz',
+								// valueSub: '%',
 								progress: 0.75,
 							},
 							{
 								title: 'CPU',
 								// value: '4.2',
-								// valueSub: 'GHz',
+								// valueSub: '%',
 								progress: 0.75,
 							},
 						]}
@@ -238,13 +238,13 @@ export default function WidgetsStory() {
 							{
 								title: 'CPU',
 								value: '4.2',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 							{
 								title: 'CPU',
 								value: '4.2',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 						]}
@@ -254,13 +254,13 @@ export default function WidgetsStory() {
 							{
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
 								value: 'Lorem ipsum',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 							{
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
 								value: 'Lorem ipsum',
-								valueSub: 'GHz',
+								valueSub: '%',
 								progress: 0.75,
 							},
 						]}
@@ -276,35 +276,35 @@ export default function WidgetsStory() {
 					<ThreeUpWidget />
 					<ThreeUpWidget
 						// @ts-expect-error expecting 3 items
-						items={[{icon: 'cpu', title: 'CPU', value: '4.2 GHz'}]}
+						items={[{icon: 'cpu', title: 'CPU', value: '4.2 %'}]}
 					/>
 					<ThreeUpWidget
 						// @ts-expect-error expecting 3 items
 						items={[
-							{icon: 'cpu', title: 'CPU', value: '4.2 GHz'},
+							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
 							{icon: 'cpu', title: 'Memory', value: '16 GB'},
 						]}
 					/>
 					<ThreeUpWidget
 						items={[
-							{icon: '', title: 'CPU', value: '4.2 GHz'},
-							{icon: '', title: 'Memory', value: '16 GB'},
 							{icon: '', title: 'Storage', value: '256 GB'},
+							{icon: '', title: 'Memory', value: '16 GB'},
+							{icon: '', title: 'CPU', value: '4.2 %'},
 							// {icon: 'hard-drive', title: 'Storage', value: '256 GB'},
 						]}
 					/>
 					<ThreeUpWidget
 						items={[
-							{icon: 'cpu', title: 'CPU', value: '4.2 GHz'},
-							{icon: 'cpu', title: 'Memory', value: '16 GB'},
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
+							{icon: 'cpu', title: 'Memory', value: '16 GB'},
+							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
 						]}
 					/>
 					<ThreeUpWidget
 						items={[
-							{icon: 'cpu', title: 'CPU', value: '4.2 GHz'},
-							{icon: 'cpu', title: 'Memory', value: '16 GB'},
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
+							{icon: 'cpu', title: 'Memory', value: '16 GB'},
+							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
 							// @ts-expect-error expecting 3 items
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
 						]}
@@ -322,13 +322,13 @@ export default function WidgetsStory() {
 					<FourUpWidget />
 					<FourUpWidget
 						items={[
-							{title: 'CPU', value: '4.2', valueSub: 'GHz'},
+							{title: 'Storage', value: '256', valueSub: 'GB'},
 							{title: 'Memory', value: '16', valueSub: 'GB'},
-							{title: 'Storage', value: '256', valueSub: 'GB'},
-							{title: 'Storage', value: '256', valueSub: 'GB'},
+							{title: 'CPU', value: '4.2', valueSub: '%'},
+							{title: 'CPU', value: '4.2', valueSub: '%'},
 						]}
 					/>
-					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: 'GHz'}]} />
+					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: '%'}]} />
 				</div>
 				<H3>list</H3>
 				<div className={sectionClass}>

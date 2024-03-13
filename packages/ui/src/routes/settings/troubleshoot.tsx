@@ -86,13 +86,13 @@ function Content() {
 					<button className={radioButtonClass} onClick={() => setTroubleshootType('system')}>
 						<div>
 							<div className={radioTitleClass}>umbrelOS</div>
-							<div className={radioDescriptionClass}>Get Umbrel Logs and system logs for your umbrelOS</div>
+							<div className={radioDescriptionClass}>View umbrelOS logs and system logs</div>
 						</div>
 					</button>
 					<button className={radioButtonClass} onClick={() => setAppDialogOpen(true)}>
 						<div>
 							<div className={radioTitleClass}>Specific application...</div>
-							<div className={radioDescriptionClass}>Get logs for an app installed on your Umbrel</div>
+							<div className={radioDescriptionClass}>View logs for an app installed on your Umbrel</div>
 						</div>
 						<DropdownMenu open={appDialogOpen} onOpenChange={setAppDialogOpen}>
 							<TroubleshootDropdown
@@ -119,7 +119,7 @@ const troubleshootContentLayoutClass = tw`flex max-h-full flex-1 flex-col items-
 
 function TroubleshootSystem({onBack}: {onBack: () => void}) {
 	const tabs = [
-		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
+		{id: 'umbrel', label: t('troubleshoot.umbrelos-logs')},
 		{id: 'system', label: t('troubleshoot.system-logs')},
 	] as const satisfies readonly {id: SystemLogType; label: string}[]
 
@@ -240,7 +240,7 @@ function LogResults({children}: {children: ReactNode}) {
 	return (
 		<div
 			ref={ref}
-			className='w-full flex-1 overflow-auto whitespace-pre rounded-10 bg-black px-5 py-4 font-mono text-white/50'
+			className='w-full flex-1 overflow-auto whitespace-pre rounded-10 bg-black px-5 py-4 font-mono text-xs text-white/50'
 		>
 			{children}
 			{/* Keeps scroll pinned to bottom */}
