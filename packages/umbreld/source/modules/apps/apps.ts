@@ -195,7 +195,6 @@ export default class Apps {
 	}
 
 	async getTorEnabled() {
-		// TODO: check if tor is currently in the process of being enabled/disabled
 		return this.#umbreld.store.get('torEnabled')
 	}
 }
