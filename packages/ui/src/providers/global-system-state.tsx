@@ -23,6 +23,7 @@ const GlobalSystemStateContext = createContext<{
 	update: () => void
 } | null>(null)
 
+// TODO: split up logic so restart, shutdown, update are done in separate components?
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
@@ -37,10 +38,19 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const queryClient = useQueryClient()
 	const ctx = trpcReact.useContext()
 
-	const onSuccess = () => {
+	const onSuccess = (didWork: boolean) => {
 		console.log('global-system-state: onSuccess')
 		// Cancel last query in case it returns as still running
 		ctx.system.status.cancel()
+		debugger
+		// alert('shouldLogoutOnRunning: true')
+		if (!didWork) {
+			// TODO: Consider showing a toast here, especially right after triggering the action
+			// toast.error('Failed to perform action')
+			setTriggered(false)
+			setShouldLogout(false)
+			setStartShutdownTimer(false)
+		}
 	}
 
 	// TODO: handle `onError`
@@ -176,7 +186,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'updating': {
 			return (
 				<>
-					<UpdatingCoverMessage onRetry={() => update()} />
+					<UpdatingCoverMessage onRetry={update} />
 					{debugInfo}
 				</>
 			)
@@ -242,7 +252,7 @@ export function useGlobalSystemState() {
 	return ctx
 }
 
-function useRestart({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: () => void}) {
+function useRestart({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const restartMut = trpcReact.system.restart.useMutation({
 		onMutate,
 		onSuccess,
@@ -252,7 +262,7 @@ function useRestart({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (
 	return restart
 }
 
-function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: () => void}) {
+function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const shutdownMut = trpcReact.system.shutdown.useMutation({
 		onMutate,
 		onSuccess,
@@ -262,13 +272,19 @@ function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: 
 	return shutdown
 }
 
-export function useSoftwareUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: () => void}) {
+export function useSoftwareUpdate({
+	onMutate,
+	onSuccess,
+}: {
+	onMutate?: () => void
+	onSuccess?: (didWork: boolean) => void
+}) {
 	const updateVersionMut = trpcReact.system.update.useMutation({
 		onMutate,
 		onSuccess,
 	})
 
-	const update = updateVersionMut.mutate
+	const update = () => updateVersionMut.mutate()
 
 	return update
 }
