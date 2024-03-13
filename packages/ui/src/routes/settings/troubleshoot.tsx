@@ -135,7 +135,7 @@ function TroubleshootSystem({onBack}: {onBack: () => void}) {
 				<TroubleshootTitleBackButton onClick={onBack} />
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
-			<LogResults>{logs}</LogResults>
+			<LogResults key={activeTab}>{logs}</LogResults>
 			<ImmersiveDialogFooter className='justify-center'>
 				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(logs, activeTab)}>
 					{t('troubleshoot.system-download', {label: activeLabel})}
