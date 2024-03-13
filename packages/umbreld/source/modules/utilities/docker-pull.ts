@@ -53,6 +53,7 @@ export async function pull(
 }
 
 export async function pullAll(images: string[], updateProgress: (progress: number) => void) {
+	let lastTotalProgress = 0
 	const imageProgress: Record<string, number> = {}
 	const alreadyDownloadedImages: string[] = []
 	for (const image of images) {
@@ -68,7 +69,13 @@ export async function pullAll(images: string[], updateProgress: (progress: numbe
 					const totalProgress =
 						Object.values(imageProgress).reduce((total, image) => total + image, 0) /
 						Object.values(imageProgress).length
-					updateProgress(totalProgress)
+					// We need this because somehow progress can occasionally go backwards
+					// I'm not sure why, maybe we aren't guaranteed to get the events in the
+					// correct order?
+					if (totalProgress > lastTotalProgress) {
+						updateProgress(totalProgress)
+						lastTotalProgress = totalProgress
+					}
 				},
 				// Already downloaded so fix progress
 				() => {
