@@ -42,7 +42,7 @@ export function pathJoin(base: string, path: string) {
 }
 
 export function appToUrl(app: UserApp) {
-	return app.torOnly
+	return isOnionPage()
 		? `${location.protocol}//${app.hiddenService}:${app.port}`
 		: `${location.protocol}//${location.hostname}:${app.port}`
 }
