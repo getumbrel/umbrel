@@ -137,7 +137,7 @@
   "tor.enable.description": "This may restart your Umbrel and it can take a few minutes.",
   "tor.enable.submit": "Enable Tor",
   "troubleshoot.umbrel-logs": "Umbrel logs",
-  "troubleshoot.dmesg-logs": "DMESG logs",
+  "troubleshoot.system-logs": "System logs",
   "troubleshoot.system-download": "Download {{label}}",
   "troubleshoot.app-download": "Download {{app}} logs",
   "troubleshoot.share-with-umbrel-support": "Share with Umbrel Support",

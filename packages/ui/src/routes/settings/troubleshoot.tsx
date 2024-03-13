@@ -85,7 +85,7 @@ function Content() {
 					<button className={radioButtonClass} onClick={() => setTroubleshootType('system')}>
 						<div>
 							<div className={radioTitleClass}>umbrelOS</div>
-							<div className={radioDescriptionClass}>Get Umbrel Logs and DMESG Logs for your umbrelOS</div>
+							<div className={radioDescriptionClass}>Get Umbrel Logs and system logs for your umbrelOS</div>
 						</div>
 					</button>
 					<button className={radioButtonClass} onClick={() => setAppDialogOpen(true)}>
@@ -118,8 +118,8 @@ const troubleshootContentLayoutClass = tw`flex max-h-full flex-1 flex-col items-
 
 function TroubleshootSystem({onBack}: {onBack: () => void}) {
 	const tabs = [
-		{id: 'system', label: t('troubleshoot.umbrel-logs')},
-		{id: 'dmesg', label: t('troubleshoot.dmesg-logs')},
+		{id: 'umbrel', label: t('troubleshoot.umbrel-logs')},
+		{id: 'system', label: t('troubleshoot.system-logs')},
 	]
 	const [activeTab, setActiveTab] = useLocalStorage2('troubleshoot-system-active-tab', tabs[0].id)
 
