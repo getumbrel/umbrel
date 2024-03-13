@@ -29,7 +29,7 @@ export default function ConfirmEnableTorDialog() {
 	})
 
 	if (isError) {
-		throw new Error(t('tor.enable.failed'))
+		dialogProps.onOpenChange(false)
 	}
 
 	if (isMutLoading) {

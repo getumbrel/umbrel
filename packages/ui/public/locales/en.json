@@ -135,6 +135,7 @@
   "tor.enable.title": "Enable Tor for remote access",
   "tor.enable.failed": "Failed to enable.",
   "tor.enable.description": "This may restart your Umbrel and it can take a few minutes.",
+  "tor.disable.description": "This may restart your Umbrel and it can take a few minutes.",
   "tor.enable.submit": "Enable Tor",
   "troubleshoot.umbrel-logs": "Umbrel logs",
   "troubleshoot.system-logs": "System logs",

@@ -24,7 +24,7 @@ export function TorDrawer() {
 	})
 
 	if (isError) {
-		throw new Error(t('tor.enable.failed'))
+		dialogProps.onOpenChange(false)
 	}
 
 	return (

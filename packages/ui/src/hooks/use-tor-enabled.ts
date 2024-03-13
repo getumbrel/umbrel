@@ -1,3 +1,4 @@
+import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 
 export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
@@ -9,6 +10,9 @@ export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => vo
 		onSuccess: (enabled) => {
 			ctx.apps.getTorEnabled.invalidate()
 			onSuccess?.(enabled)
+		},
+		onError: (err) => {
+			toast.error(err.message)
 		},
 	})
 

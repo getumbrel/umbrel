@@ -8,12 +8,15 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbRotate2, TbServer, TbTool} from 'react-icons/tb'
+import {TbServer, TbTool} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
+import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {Loading} from '@/components/ui/loading'
+import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -152,6 +155,13 @@ export function SettingsContent() {
 							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
 						/>
 					</ListRow>
+					{tor.isMutLoading && (
+						<CoverMessage>
+							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
+							<Loading>Disabling Tor</Loading>
+							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
+						</CoverMessage>
+					)}
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
 						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
 						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
