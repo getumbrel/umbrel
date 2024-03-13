@@ -75,11 +75,11 @@ function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnviron
 		return undefined
 	}
 
-	if (deviceInfo.device.toLowerCase().includes('umbrel home')) {
+	if (deviceInfo.productName.toLowerCase().includes('umbrel home')) {
 		return 'umbrel-home'
 	}
 
-	if (deviceInfo.device.toLowerCase().includes('raspberry pi')) {
+	if (deviceInfo.productName.toLowerCase().includes('raspberry pi')) {
 		return 'raspberry-pi'
 	}
 
