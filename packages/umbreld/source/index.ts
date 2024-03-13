@@ -27,6 +27,7 @@ type StoreSchema = {
 		totpUri?: string
 		wallpaper?: string
 	}
+	recentlyOpenedApps: string[]
 }
 
 export type UmbreldOptions = {

@@ -157,7 +157,7 @@ export async function detectDevice() {
 	let {manufacturer, model, serial, uuid, sku, version} = await systemInformation.system()
 	let productName = model
 	model = sku
-	let device = `${manufacturer} ${productName}`
+	let device = productName // TODO: Maybe format this better in the future.
 
 	if (model === 'U130120') device = 'Umbrel Home (2023)'
 	if (model === 'U130121') device = 'Umbrel Home (2024)'
@@ -178,6 +178,12 @@ export async function detectDevice() {
 		}
 	} catch (error) {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
+	}
+
+	// Blank out model and serial for non Umbrel Home devices
+	if (productName !== 'Umbrel Home') {
+		model = ''
+		serial = ''
 	}
 
 	return {device, productName, manufacturer, model, serial, uuid}
