@@ -179,6 +179,9 @@ export default class Apps {
 			// Remove duplicates
 			recentlyOpenedApps = [...new Set(recentlyOpenedApps)]
 
+			// Limit to 10
+			recentlyOpenedApps = recentlyOpenedApps.slice(0, 10)
+
 			await set('recentlyOpenedApps', recentlyOpenedApps)
 		})
 
