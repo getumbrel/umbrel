@@ -55,11 +55,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 
 	const isLoading = isLoadingApps || widgetQ.isLoading
 
-	if (widgetQ.isError) {
-		return <ErrorWidget error='Error processing widget.' />
-	}
-	// TODO: Show correct widget type while loading, not just empty container
-	if (isLoading) return <LoadingWidget type={manifestConfig.type} />
+	if (isLoading || widgetQ.isError) return <LoadingWidget type={manifestConfig.type} />
 
 	const widget = widgetQ.data as WidgetConfig
 
