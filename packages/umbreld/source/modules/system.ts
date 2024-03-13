@@ -180,5 +180,11 @@ export async function detectDevice() {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
 	}
 
+	// Blank out model and serial for non Umbrel Home devices
+	if (productName !== 'Umbrel Home') {
+		model = ''
+		serial = ''
+	}
+
 	return {device, productName, manufacturer, model, serial, uuid}
 }
