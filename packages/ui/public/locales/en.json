@@ -357,5 +357,6 @@
   "tor.enable.success": "Tor enabled successfully!",
   "tor.enable.progress": "Enabling Tor",
   "tor.disable.success": "Tor disabled successfully!",
-  "tor.disable.progress": "Disabling Tor"
+  "tor.disable.progress": "Disabling Tor",
+  "tor.hidden-service": "Tor hidden service"
 }

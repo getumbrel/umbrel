@@ -12,6 +12,7 @@ import {TbServer, TbTool} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
+import {CopyableField} from '@/components/ui/copyable-field'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
@@ -28,7 +29,7 @@ import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
-import {maybeT, t} from '@/utils/i18n'
+import {t} from '@/utils/i18n'
 
 import {CpuTempCardContent} from './cpu-temp-card-content'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from './language-dropdown'
@@ -57,6 +58,10 @@ export function SettingsContent() {
 		t.system.version(),
 	])
 
+	const hiddenServiceQ = trpcReact.system.hiddenService.useQuery(undefined, {
+		enabled: tor.enabled,
+	})
+
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
 	// Scroll to hash
@@ -84,13 +89,24 @@ export function SettingsContent() {
 							{userQ.data?.name ?? UNKNOWN()}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
-						<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
+						<dl className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 							<dt className='opacity-40'>{t('running-on')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 							<dt className='opacity-40'>{t('umbrelos-version')}</dt>
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : osVersionQ.data ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
+							{tor.enabled && (
+								<>
+									<dt className='opacity-40'>{t('tor.hidden-service')}</dt>
+									<dd>
+										<CopyableField narrow value={hiddenServiceQ.data ?? ''} />
+										{/* <a href={hiddenServiceQ.data} target='_blank' className='block truncate underline'>
+											{hiddenServiceQ.data}
+										</a> */}
+									</dd>
+								</>
+							)}
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>

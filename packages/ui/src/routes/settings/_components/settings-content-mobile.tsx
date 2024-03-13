@@ -92,6 +92,8 @@ export function SettingsContentMobile() {
 						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
 						<dt className='opacity-40'>{t('uptime')}</dt>
 						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
+						{/* TODO: add tor hidden service */}
+						{/* But for now, assume mobile users don't have tor */}
 					</dl>
 				</div>
 			</div>
