@@ -16,7 +16,7 @@ export function useShutdownRestartPolling({
 
 	const canPoll = state === 'waiting' || state === 'failing'
 
-	const pingQ = trpcReact.debug.sayHi.useQuery(undefined, {
+	const pingQ = trpcReact.system.online.useQuery(undefined, {
 		enabled: canPoll,
 		refetchInterval: 1000,
 		cacheTime: 0,
