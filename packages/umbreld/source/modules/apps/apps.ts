@@ -33,6 +33,11 @@ export default class Apps {
 			await this.#umbreld.store.set('torEnabled', false)
 		}
 
+		// Set recentlyOpenedApps to empty array on first start
+		if ((await this.#umbreld.store.get('recentlyOpenedApps')) === undefined) {
+			await this.#umbreld.store.set('recentlyOpenedApps', [])
+		}
+
 		// Create a random umbrel seed on first start if one doesn't exist.
 		// This is only used to determinstically derive app seed, app password
 		// and custom app specific environment variables. It's needed to maintain
@@ -164,8 +169,24 @@ export default class Apps {
 	async trackOpen(appId: string) {
 		const app = this.getApp(appId)
 
-		// TODO: Implement track open
+		// Save installed app
+		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+			let recentlyOpenedApps = await get('recentlyOpenedApps')
+
+			// Add app.id to the beginning of the array
+			recentlyOpenedApps.unshift(app.id)
+
+			// Remove duplicates
+			recentlyOpenedApps = [...new Set(recentlyOpenedApps)]
+
+			await set('recentlyOpenedApps', recentlyOpenedApps)
+		})
+
 		return true
+	}
+
+	async recentlyOpened() {
+		return this.#umbreld.store.get('recentlyOpenedApps')
 	}
 
 	async setTorEnabled(torEnabled: boolean) {

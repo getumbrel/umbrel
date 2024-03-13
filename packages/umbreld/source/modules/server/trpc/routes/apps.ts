@@ -129,7 +129,7 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.trackOpen(input.appId)),
 
-	recentlyOpened: privateProcedure.query(() => []),
+	recentlyOpened: privateProcedure.query(({ctx}) => ctx.apps.recentlyOpened()),
 
 	setTorEnabled: privateProcedure.input(z.boolean()).mutation(({ctx, input}) => ctx.apps.setTorEnabled(input)),
 	getTorEnabled: privateProcedure.query(({ctx}) => ctx.apps.getTorEnabled()),
