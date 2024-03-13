@@ -16,7 +16,7 @@ function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps,
 			alt=''
 			ref={ref}
 			className={cn('aspect-square shrink-0 bg-cover bg-center', !loaded && 'bg-white/10', className)}
-			onLoad={() => setLoaded(true)}
+			onLoad={() => src && setLoaded(true)}
 			style={{
 				...style,
 				width: size,
