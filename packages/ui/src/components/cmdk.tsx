@@ -117,14 +117,26 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				>
 					{t('cmdk.add-widgets')}
 				</CommandItem>
-				<SettingsSearchItem
+				<SearchItem
+					icon={systemAppsKeyed['UMBREL_home'].icon}
 					value={systemAppsKeyed['UMBREL_home'].name}
-					onSelect={() => navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)}
-				/>
-				<SettingsSearchItem
+					onSelect={() => {
+						navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['UMBREL_home'].name}
+				</SearchItem>
+				<SearchItem
+					icon={systemAppsKeyed['UMBREL_app-store'].icon}
 					value={systemAppsKeyed['UMBREL_app-store'].name}
-					onSelect={() => navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)}
-				/>
+					onSelect={() => {
+						navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)
+						setOpen(false)
+					}}
+				>
+					{systemAppsKeyed['UMBREL_app-store'].name}
+				</SearchItem>
 				<SettingsSearchItem
 					value={systemAppsKeyed['UMBREL_settings'].name}
 					onSelect={() => navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
