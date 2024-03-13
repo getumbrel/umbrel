@@ -8,9 +8,11 @@ import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {Loading} from '@/components/ui/loading'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useJwt} from '@/modules/auth/use-auth'
-import {trpcReact} from '@/trpc/trpc'
+import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
+
+type SystemStatus = RouterOutput['system']['status']
 
 const GlobalSystemStateContext = createContext<{
 	shutdown: () => void
@@ -21,6 +23,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
 	const [shouldLogoutOnRunning, setShouldLogout] = useLocalStorage2<true | false>('should-logout-on-running', false)
+	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
+	const [shutdownComplete, setShutdownComplete] = useState(false)
 
 	const onMutate = async () => {
 		setTriggered(true)
@@ -37,10 +41,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 
 	// TODO: handle `onError`
 	const restart = useRestart({onMutate, onSuccess})
-	const shutdown = useShutdown({onMutate, onSuccess})
+	const shutdown = useShutdown({
+		onMutate,
+		onSuccess,
+	})
 
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
+		cacheTime: 0,
 	})
 
 	if (systemStatusQ.error && !triggered) {
@@ -51,7 +59,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}
 
 	const status = systemStatusQ.data
-	const prevStatus = usePreviousDistinct(status)
+	const prevStatus: SystemStatus = usePreviousDistinct(status) ?? 'running'
 
 	useEffect(() => {
 		if (status !== 'running' && triggered && !shouldLogoutOnRunning) {
@@ -65,11 +73,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	useEffect(() => {
 		console.log('global-system-state: useEffect')
 		if (status === 'running' && shouldLogoutOnRunning === true) {
-			setTriggered(false)
 			console.log('global-system-state: go to login')
 			setShouldLogout(false)
 			// Delay the stuff after `setShouldLogout(false)` to ensure that local storage is updated. We wouldn't want to take the user through this again
 			setTimeout(() => {
+				// Let the page transition update the `triggered` state
+				// setTriggered(false)
 				// Canceling queries to prevent them from causing auth errors
 				queryClient.cancelQueries()
 				jwt.removeJwt()
@@ -78,6 +87,18 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			return
 		}
 	}, [status, shouldLogoutOnRunning, jwt, setShouldLogout, queryClient])
+
+	// Start shutdown timer when status endpoint starts failing
+	useEffect(() => {
+		if (
+			status === 'shutting-down' &&
+			!startShutdownTimer &&
+			(systemStatusQ.isError || systemStatusQ.failureCount > 0)
+		) {
+			setStartShutdownTimer(true)
+			setTimeout(() => setShutdownComplete(true), 30 * MS_PER_SECOND)
+		}
+	}, [startShutdownTimer, status, systemStatusQ.failureCount, systemStatusQ.isError, triggered])
 
 	// When we come back online, we should continue to show the previous state until we've logged out
 	const statusToShow = triggered === true && status === 'running' ? prevStatus : status
@@ -92,6 +113,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 						statusToShow,
 						triggered,
 						shouldLogoutOnRunning,
+						startShutdownTimer,
+						shutdownComplete,
 						statusIsError: systemStatusQ.isError,
 						failureCount: systemStatusQ.failureCount,
 					}}
@@ -109,16 +132,17 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		)
 	}
 
-	if (statusToShow === 'shutting-down' && (systemStatusQ.isError || systemStatusQ.failureCount > 0)) {
+	if (statusToShow === 'shutting-down' && shutdownComplete) {
 		return (
 			<BareCoverMessage>
-				Shutdown (probably) completed.
+				Shutdown (probably) complete.
 				<CoverMessageParagraph>Please check your device hardware to know for sure.</CoverMessageParagraph>
 			</BareCoverMessage>
 		)
 	}
 
 	switch (statusToShow) {
+		case undefined:
 		case 'running': {
 			return (
 				<GlobalSystemStateContext.Provider value={{shutdown, restart}}>
