@@ -75,7 +75,6 @@ export function DefaultCredentialsDialog() {
 								<CopyableField isPassword value={defaultPassword} />
 							</div>
 						)}
-						<p className={textClass}>{t('default-credentials.message-app-store-page')}</p>
 						<Separator />
 						<div className='flex items-center justify-between'>
 							{direct && <ShowCredentialsBeforeOpenCheckbox appId={appId} />}

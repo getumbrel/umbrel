@@ -94,7 +94,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 				<h3 className='font-16 truncate font-bold'>{app.name}</h3>
 				<p className='truncate text-13 -tracking-3 opacity-50'>{app.developer}</p>
 				<Button size='sm' variant='secondary' className='mt-2'>
-					{t('app.install')}
+					{t('app.view')}
 				</Button>
 			</Link>
 			{/* <div
