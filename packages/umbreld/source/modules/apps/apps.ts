@@ -144,6 +144,11 @@ export default class Apps {
 	}
 
 	async uninstall(appId: string) {
+		const installedManifests = await Promise.all(this.instances.map((app) => app.readManifest()))
+		const isDependency = installedManifests.some((manifest) => manifest.dependencies?.includes(appId))
+
+		if (isDependency) throw new Error(`App ${appId} is a dependency of another app and cannot be uninstalled`)
+
 		const app = this.getApp(appId)
 
 		await app.uninstall()
