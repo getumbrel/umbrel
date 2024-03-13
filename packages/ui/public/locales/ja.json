@@ -58,6 +58,7 @@
   "app.uninstall.deps.used-by.description_other": "{{app}} をアンインストールするには、まずこれらのアプリをアンインストールしてください。",
   "app.uninstall.deps.used-by.title": "{{app}} は次によって使用されます",
   "app.uninstalling": "アンインストールする",
+  "app.view": "View",
   "app_one": "アプリ",
   "app_other": "アプリ",
   "apps.uninstall.failed-to-get-required-apps": "必要なアプリの取得に失敗しました",

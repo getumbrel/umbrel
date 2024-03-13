@@ -86,6 +86,7 @@
   "app.installing": "Installing",
   "app.updating": "Updating",
   "app.open": "Open",
+  "app.view": "View",
   "reload-page": "Reload Page",
   "page-title-umbrel": "{{title}} – umbrelOS",
   "desktop.title": "Desktop",

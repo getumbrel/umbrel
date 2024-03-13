@@ -58,6 +58,7 @@
   "app.uninstall.deps.used-by.description_other": "Desinstale esses aplicativos primeiro para desinstalar o {{app}}.",
   "app.uninstall.deps.used-by.title": "{{app}} é usado por",
   "app.uninstalling": "Desinstalando",
+  "app.view": "View",
   "app_one": "aplicativo",
   "app_other": "aplicativos",
   "apps.uninstall.failed-to-get-required-apps": "Falha ao obter os aplicativos necessários",
