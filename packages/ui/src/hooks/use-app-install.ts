@@ -57,6 +57,15 @@ export function useAppInstall(id: string) {
 	const ctx = trpcReact.useContext()
 	const appStateQ = trpcReact.apps.state.useQuery({appId: id})
 
+	const stopMut = trpcReact.apps.stop.useMutation({
+		onSuccess: invalidateInstallDependencies,
+		onMutate() {
+			ctx.apps.state.cancel()
+			ctx.apps.state.setData({appId: id}, {state: 'stopping', progress: 0})
+		},
+	})
+	const stop = async () => stopMut.mutate({appId: id})
+
 	// Refetch so that we can update the `appState` variable, which then triggers the useEffect below
 	// Also doing optimistic updates here:
 	// https://create.t3.gg/en/usage/trpc#optimistic-updates
@@ -106,6 +115,7 @@ export function useAppInstall(id: string) {
 	const state: AppStateOrLoading = appStateQ.isLoading ? 'loading' : appState ?? 'not-installed'
 
 	return {
+		stop,
 		restart,
 		install,
 		getAppsToUninstallFirst,

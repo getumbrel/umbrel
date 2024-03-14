@@ -1,7 +1,9 @@
 import {motion} from 'framer-motion'
 import {useState} from 'react'
 import {Link, useNavigate} from 'react-router-dom'
+import {arrayIncludes} from 'ts-extras'
 
+import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
@@ -11,7 +13,7 @@ import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState, AppStateOrLoading} from '@/trpc/trpc'
+import {AppState, AppStateOrLoading, progressStates} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -35,6 +37,8 @@ export function AppIcon({
 	const [url, setUrl] = useState(src)
 
 	const disabled = state !== 'ready'
+
+	const shouldPulse = arrayIncludes(progressStates, state)
 
 	return (
 		<motion.button
@@ -79,8 +83,8 @@ export function AppIcon({
 						onError={() => setUrl('')}
 						className={cn(
 							'h-full w-full duration-500',
-							state !== 'ready' && 'animate-pulse duration-1000',
-							state === 'ready' && 'animate-in fade-in',
+							shouldPulse && 'animate-pulse duration-1000',
+							!shouldPulse && 'animate-in fade-in',
 						)}
 						draggable={false}
 					/>
@@ -154,6 +158,8 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	const isRunning = appInstall.state === 'ready' || appInstall.state === 'running'
 
+	const isInProgress = arrayIncludes(progressStates, appInstall.state)
+
 	// TODO: consider showing context menu in other states too
 	switch (appInstall.state) {
 		case 'loading':
@@ -162,7 +168,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 		case 'starting':
 		case 'stopping':
 		case 'unknown':
-		case 'stopped':
 		case 'uninstalling':
 		case 'updating':
 			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
@@ -170,7 +175,8 @@ export function AppIconConnected({appId}: {appId: string}) {
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
 		case 'installing':
 		case 'running':
-		case 'ready': {
+		case 'ready':
+		case 'stopped': {
 			return (
 				<>
 					<ContextMenu>
@@ -192,8 +198,13 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
-							{isRunning && (
+							{!isInProgress && (
 								<>
+									{appInstall.state !== 'stopped' && (
+										<DebugOnlyBare>
+											<ContextMenuItem onSelect={appInstall.stop}>DEBUG: {t('stop')}</ContextMenuItem>
+										</DebugOnlyBare>
+									)}
 									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
 									<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
 										{t('desktop.app.context.uninstall')}
