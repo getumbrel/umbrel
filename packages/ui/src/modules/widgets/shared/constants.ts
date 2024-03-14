@@ -102,15 +102,17 @@ export type ListWidget = BaseWidget & {
 }
 export type ListWidgetProps = Omit<ListWidget, 'type'>
 
+export type ListEmojiItem = {
+	emoji?: string
+	text?: string
+}
 export type ListEmojiWidget = BaseWidget & {
 	type: 'list-emoji'
 	link?: Link
-	count: number
-	items: {
-		emoji: string
-		text: string
-	}[]
+	count?: number
+	items?: ListEmojiItem[]
 }
+export type ListEmojiWidgetProps = Omit<ListEmojiWidget, 'type'>
 
 type AnyWidgetConfig =
 	| FourStatsWidget
