@@ -2,9 +2,9 @@ import {useLocation, useNavigate} from 'react-router-dom'
 
 import {BareCoverMessage} from '@/components/ui/cover-message'
 import {t} from '@/utils/i18n'
-import {isDev, sleep} from '@/utils/misc'
+import {IS_DEV, sleep} from '@/utils/misc'
 
-const SLEEP_TIME = isDev() ? 600 : 0
+const SLEEP_TIME = IS_DEV ? 600 : 0
 
 type Page = 'onboarding' | 'login' | 'home'
 

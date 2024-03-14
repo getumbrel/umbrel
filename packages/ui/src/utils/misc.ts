@@ -97,9 +97,7 @@ export function platform() {
 // NOTE: in Chrome, this can be `true` when emulating a touch device
 export const IS_ANDROID = /Android/i.test(navigator.userAgent)
 
-export function isDev() {
-	return localStorage.getItem('debug') === 'true'
-}
+export const IS_DEV = localStorage.getItem('debug') === 'true'
 
 export function cmdOrCtrl() {
 	return isMac() ? '⌘' : 'Ctrl+'
