@@ -1,14 +1,21 @@
 import MarkdownPrimitive from 'react-markdown'
+import {useLocation} from 'react-router-dom'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 
 import {cn} from '@/shadcn-lib/utils'
+import {tw} from '@/utils/tw'
 
 // IMPORTANT: Want to avoid any risk of tracking pixels, XSS, etc.
 // NEVER ALLOW HTML IN MARKDOWN
 // NEVER ALLOW IMAGES IN MARKDOWN
 export function Markdown({className, ...props}: React.ComponentProps<typeof MarkdownPrimitive>) {
-	// return <div className={cn(className, 'whitespace-pre-line')} {...props} />
+	const {pathname} = useLocation()
+	const isInCommunityAppStore = pathname.startsWith('/community-app-store')
+
+	if (isInCommunityAppStore) {
+		return <div className={cn(textClass, 'whitespace-pre-line', className)} {...props} />
+	}
 
 	return (
 		<MarkdownPrimitive
@@ -54,8 +61,10 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 			unwrapDisallowed
 			// `skipHtml` still renders contents
 			skipHtml
-			className={cn('prose prose-sm prose-neutral prose-invert overflow-x-hidden', className)}
+			className={cn(textClass, className)}
 			{...props}
 		/>
 	)
 }
+
+const textClass = tw`prose prose-sm prose-neutral prose-invert overflow-x-hidden`
