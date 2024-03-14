@@ -114,12 +114,12 @@ export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typ
 	if (!items) return <ErrorWidget error='No data.' />
 
 	const modifiedItems = map.strict(items, (item) => {
-		if (!item.value?.includes('℃')) return item
-		const celciusNumber = parseInt(item.value.replace('℃', ''))
+		if (!item.text?.includes('℃')) return item
+		const celciusNumber = parseInt(item.text.replace('℃', ''))
 		const tempNumber = tempUnit === 'f' ? celciusToFahrenheit(celciusNumber) : celciusNumber
 		const tempUnitLabel = tempDescriptionsKeyed[tempUnit].label
 		const newValue = tempNumber + tempUnitLabel
-		return {...item, value: newValue}
+		return {...item, text: newValue}
 	})
 	return <ThreeStatsWidget items={modifiedItems} {...props} />
 }

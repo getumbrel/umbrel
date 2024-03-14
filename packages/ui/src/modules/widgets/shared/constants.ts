@@ -38,16 +38,17 @@ export type FourStatsWidget = BaseWidget & {
 }
 export type FourStatsWidgetProps = Omit<FourStatsWidget, 'type'>
 
-type ThreeUpItem = {
+export type ThreeStatsItem = {
 	icon: string
-	title: string
-	value: string
+	subtext: string
+	text: string
 }
-export type ThreeUpWidget = BaseWidget & {
+export type ThreeStatsWidget = BaseWidget & {
 	type: 'three-stats'
 	link?: Link
-	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
+	items?: [ThreeStatsItem, ThreeStatsItem, ThreeStatsItem]
 }
+export type ThreeStatsWidgetProps = Omit<ThreeStatsWidget, 'type'>
 
 // The long name feels like it could be just be two-stats, but if we ever add one without a progress, what would we call it?
 type TwoStatsWithProgressItem = {
@@ -109,7 +110,7 @@ export type ListEmojiWidget = BaseWidget & {
 
 type AnyWidgetConfig =
 	| FourStatsWidget
-	| ThreeUpWidget
+	| ThreeStatsWidget
 	| TwoStatsWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
@@ -173,18 +174,18 @@ export const liveUsageWidgets: [
 			items: [
 				{
 					icon: 'system-widget-storage',
-					title: 'Storage',
-					value: '1.75 TB',
+					subtext: 'Storage',
+					text: '1.75 TB',
 				},
 				{
 					icon: 'system-widget-memory',
-					title: 'Memory',
-					value: '5.8 GB',
+					subtext: 'Memory',
+					text: '5.8 GB',
 				},
 				{
 					icon: 'system-widget-cpu',
-					title: 'CPU',
-					value: '24%',
+					subtext: 'CPU',
+					text: '24%',
 				},
 			],
 		},

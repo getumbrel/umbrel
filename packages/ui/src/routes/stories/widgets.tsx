@@ -281,44 +281,44 @@ export default function WidgetsStory() {
 					<ThreeStatsWidget />
 					<ThreeStatsWidget
 						// @ts-expect-error expecting 3 items
-						items={[{icon: 'cpu', title: 'CPU', value: '4.2 %'}]}
+						items={[{icon: 'cpu', subtext: 'CPU', text: '4.2 %'}]}
 					/>
 					<ThreeStatsWidget
 						// @ts-expect-error expecting 3 items
 						items={[
-							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
-							{icon: 'cpu', title: 'Memory', value: '16 GB'},
+							{icon: 'cpu', subtext: 'CPU', text: '4.2 %'},
+							{icon: 'cpu', subtext: 'Memory', text: '16 GB'},
 						]}
 					/>
 					<ThreeStatsWidget
 						items={[
-							{icon: '', title: 'Storage', value: '256 GB'},
-							{icon: '', title: 'Memory', value: '16 GB'},
-							{icon: '', title: 'CPU', value: '4.2 %'},
+							{icon: '', subtext: 'Storage', text: '256 GB'},
+							{icon: '', subtext: 'Memory', text: '16 GB'},
+							{icon: '', subtext: 'CPU', text: '4.2 %'},
 							// {icon: 'hard-drive', title: 'Storage', value: '256 GB'},
 						]}
 					/>
 					<ThreeStatsWidget
 						items={[
-							{icon: 'cpu', title: 'Storage', value: '256 GB'},
-							{icon: 'cpu', title: 'Memory', value: '16 GB'},
-							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
+							{icon: 'cpu', subtext: 'Storage', text: '256 GB'},
+							{icon: 'cpu', subtext: 'Memory', text: '16 GB'},
+							{icon: 'cpu', subtext: 'CPU', text: '4.2 %'},
 						]}
 					/>
 					<ThreeStatsWidget
 						items={[
-							{icon: 'cpu', title: 'Storage', value: '256 GB'},
-							{icon: 'cpu', title: 'Memory', value: '16 GB'},
-							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
+							{icon: 'cpu', subtext: 'Storage', text: '256 GB'},
+							{icon: 'cpu', subtext: 'Memory', text: '16 GB'},
+							{icon: 'cpu', subtext: 'CPU', text: '4.2 %'},
 							// @ts-expect-error expecting 3 items
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
 						]}
 					/>
 					<ThreeStatsWidget
 						items={[
-							{icon: 'cpu', title: 'Lorem ipsum dolor', value: 'Lorem ipsum dolor'},
-							{icon: 'cpu', title: 'Lorem ipsum dolor', value: 'Lorem ipsum dolor'},
-							{icon: 'cpu', title: 'Lorem ipsum dolor', value: 'Lorem ipsum dolor'},
+							{icon: 'cpu', subtext: 'Lorem ipsum dolor', text: 'Lorem ipsum dolor'},
+							{icon: 'cpu', subtext: 'Lorem ipsum dolor', text: 'Lorem ipsum dolor'},
+							{icon: 'cpu', subtext: 'Lorem ipsum dolor', text: 'Lorem ipsum dolor'},
 						]}
 					/>
 				</div>
@@ -333,6 +333,7 @@ export default function WidgetsStory() {
 							{title: 'CPU', text: '4.2', subtext: '%'},
 						]}
 					/>
+					{/* @ts-expect-error expecting 4 items */}
 					<FourStatsWidget onClick={handleClick} items={[{title: 'CPU', text: '4.2', subtext: '%'}]} />
 				</div>
 				<H3>list</H3>
