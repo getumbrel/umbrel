@@ -124,7 +124,6 @@
   "device-info.device": "デバイス",
   "device-info.model-number": "モデル番号",
   "device-info.serial-number": "シリアルナンバー",
-  "device-info.software-version": "ソフトウェアバージョン",
   "device-info.view-info": "情報を見る",
   "factory-reset": "工場出荷時設定にリセット",
   "factory-reset.confirm.body": "リセットを開始するには、Umbrel パスワードを確認してください",

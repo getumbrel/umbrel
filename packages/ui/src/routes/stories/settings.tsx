@@ -25,14 +25,9 @@ export default function SettingsStory() {
 			</div>
 			<div className='flex flex-wrap gap-2 bg-red-500/10'>
 				<DeviceInfoContent />
-				<DeviceInfoContent
-					umbrelHostEnvironment='umbrel-home'
-					osVersion='v0.4.0'
-					modelNumber='U130121'
-					serialNumber='U230300078'
-				/>
-				<DeviceInfoContent umbrelHostEnvironment='raspberry-pi' osVersion='v0.4.0' />
-				<DeviceInfoContent umbrelHostEnvironment='linux' osVersion='v0.4.0' />
+				<DeviceInfoContent umbrelHostEnvironment='umbrel-home' modelNumber='U130121' serialNumber='U230300078' />
+				<DeviceInfoContent umbrelHostEnvironment='raspberry-pi' />
+				<DeviceInfoContent umbrelHostEnvironment='linux' />
 			</div>
 			<H2>Progress Card</H2>
 			<Card>

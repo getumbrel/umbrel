@@ -61,7 +61,6 @@
   "device-info.device": "Appareil",
   "device-info.model-number": "Numéro de modèle",
   "device-info.serial-number": "Numéro de série",
-  "device-info.software-version": "Une version de logiciel",
   "device-info.view-info": "Afficher les informations",
   "factory-reset": "Retour aux paramètres d'usine",
   "factory-reset.desc": "Supprimez toutes les données et réinitialisez complètement votre appareil",

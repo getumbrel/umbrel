@@ -124,7 +124,6 @@
   "device-info.device": "Dispositivo",
   "device-info.model-number": "Número do modelo",
   "device-info.serial-number": "Número de série",
-  "device-info.software-version": "Versão do software",
   "device-info.view-info": "Ver informações",
   "factory-reset": "Restauração de fábrica",
   "factory-reset.confirm.body": "Confirme a senha do Umbrel para começar a redefinir",
