@@ -20,10 +20,10 @@ import {FourStatsWidget} from './four-stats-widget'
 import {ListEmojiWidget} from './list-emoji-widget'
 import {ListWidget} from './list-widget'
 import {WidgetContainer} from './shared/shared'
-import {StatWithButtonsWidget} from './stat-with-buttons-widget'
-import {StatWithProgressWidget} from './stat-with-progress-widget'
+import {StatWithButtonsWidget} from './text-with-buttons-widget'
+import {StatWithProgressWidget} from './text-with-progress-widget'
 import {ThreeStatsWidget} from './three-stats-widget'
-import {TwoStatsWidget} from './two-stats-with-progress-widget'
+import {TwoStatsWidget} from './two-stats-with-guage-widget'
 
 export function Widget({appId, config: manifestConfig}: {appId: string; config: RegistryWidget}) {
 	// TODO: find a way to use `useApp()` to be cleaner
@@ -72,16 +72,16 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	}
 
 	switch (manifestConfig.type) {
-		case 'stat-with-buttons': {
-			const w = widget as WidgetConfig<'stat-with-buttons'>
+		case 'text-with-buttons': {
+			const w = widget as WidgetConfig<'text-with-buttons'>
 			return <StatWithButtonsWidget {...w} onClick={handleClick} />
 		}
-		case 'stat-with-progress': {
-			const w = widget as WidgetConfig<'stat-with-progress'>
+		case 'text-with-progress': {
+			const w = widget as WidgetConfig<'text-with-progress'>
 			return <StatWithProgressWidget {...w} onClick={handleClick} />
 		}
-		case 'two-stats-with-progress': {
-			const w = widget as WidgetConfig<'two-stats-with-progress'>
+		case 'two-stats-with-guage': {
+			const w = widget as WidgetConfig<'two-stats-with-guage'>
 			return <TwoStatsWidget {...w} onClick={handleClick} />
 		}
 		case 'three-stats': {
@@ -132,8 +132,8 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 	example?: ExampleWidgetConfig<T>
 }) {
 	switch (type) {
-		case 'stat-with-buttons': {
-			const w = example as WidgetConfig<'stat-with-buttons'>
+		case 'text-with-buttons': {
+			const w = example as WidgetConfig<'text-with-buttons'>
 			const widgetWithButtonLinks = {
 				...w,
 				// Link to nowhere
@@ -141,12 +141,12 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 			}
 			return <StatWithButtonsWidget {...widgetWithButtonLinks} />
 		}
-		case 'stat-with-progress': {
-			const w = example as WidgetConfig<'stat-with-progress'>
+		case 'text-with-progress': {
+			const w = example as WidgetConfig<'text-with-progress'>
 			return <StatWithProgressWidget {...w} />
 		}
-		case 'two-stats-with-progress': {
-			const w = example as WidgetConfig<'two-stats-with-progress'>
+		case 'two-stats-with-guage': {
+			const w = example as WidgetConfig<'two-stats-with-guage'>
 			return <TwoStatsWidget {...w} />
 		}
 		case 'three-stats': {
@@ -170,13 +170,13 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 
 export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: T}) {
 	switch (type) {
-		case 'stat-with-buttons': {
+		case 'text-with-buttons': {
 			return <StatWithButtonsWidget />
 		}
-		case 'stat-with-progress': {
+		case 'text-with-progress': {
 			return <StatWithProgressWidget />
 		}
-		case 'two-stats-with-progress': {
+		case 'two-stats-with-guage': {
 			return <TwoStatsWidget />
 		}
 		case 'three-stats': {

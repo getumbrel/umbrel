@@ -8,9 +8,9 @@ type BaseWidget = {
 }
 
 export const widgetTypes = [
-	'stat-with-buttons',
-	'stat-with-progress',
-	'two-stats-with-progress',
+	'text-with-buttons',
+	'text-with-progress',
+	'two-stats-with-guage',
 	'three-stats',
 	'four-stats',
 	'list-emoji',
@@ -59,13 +59,13 @@ type TwoStatsWithProgressItem = {
 	progress: number
 }
 export type TwoStatsWithProgressWidget = BaseWidget & {
-	type: 'two-stats-with-progress'
+	type: 'two-stats-with-guage'
 	link?: Link
 	items: [TwoStatsWithProgressItem, TwoStatsWithProgressItem]
 }
 
 export type StatWithProgressWidget = BaseWidget & {
-	type: 'stat-with-progress'
+	type: 'text-with-progress'
 	link?: Link
 	title: string
 	value: string
@@ -76,7 +76,7 @@ export type StatWithProgressWidget = BaseWidget & {
 }
 
 export type StatWithButtonsWidget = BaseWidget & {
-	type: 'stat-with-buttons'
+	type: 'text-with-buttons'
 	icon: string
 	title: string
 	value: string
@@ -122,7 +122,7 @@ export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetC
 
 // ------------------------------
 
-export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'stat-with-buttons'
+export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'text-with-buttons'
 	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
 	  Omit<StatWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<StatWithButtonsWidget['buttons'], 'link'>}
 	: // Otherwise, just omit the `type`
@@ -142,13 +142,13 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 export const MAX_WIDGETS = 3
 
 export const liveUsageWidgets: [
-	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'stat-with-progress'>,
+	RegistryWidget<'text-with-progress'>,
+	RegistryWidget<'text-with-progress'>,
 	RegistryWidget<'three-stats'>,
 ] = [
 	{
 		id: 'umbrel:storage',
-		type: 'stat-with-progress',
+		type: 'text-with-progress',
 		example: {
 			title: 'Storage',
 			value: '256 GB',
@@ -158,7 +158,7 @@ export const liveUsageWidgets: [
 	},
 	{
 		id: 'umbrel:memory',
-		type: 'stat-with-progress',
+		type: 'text-with-progress',
 		example: {
 			title: 'Memory',
 			value: '5.8 GB',

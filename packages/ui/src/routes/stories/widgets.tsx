@@ -13,10 +13,10 @@ import {ListWidget} from '@/modules/widgets/list-widget'
 import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modules/widgets/shared/constants'
 import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
-import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
-import {StatWithProgressWidget} from '@/modules/widgets/stat-with-progress-widget'
+import {StatWithButtonsWidget} from '@/modules/widgets/text-with-buttons-widget'
+import {StatWithProgressWidget} from '@/modules/widgets/text-with-progress-widget'
 import {ThreeStatsWidget} from '@/modules/widgets/three-stats-widget'
-import {TwoStatsWidget} from '@/modules/widgets/two-stats-with-progress-widget'
+import {TwoStatsWidget} from '@/modules/widgets/two-stats-with-guage-widget'
 import {AppsProvider} from '@/providers/apps'
 import {Input, Labeled} from '@/shadcn-components/ui/input'
 import {linkClass} from '@/utils/element-classes'
@@ -28,7 +28,7 @@ export const demoWidgetRegistryConfigs = [
 		widgets: [
 			{
 				id: 'bitcoin:sync',
-				type: 'stat-with-progress',
+				type: 'text-with-progress',
 			},
 			{
 				id: 'bitcoin:stats',
@@ -41,7 +41,7 @@ export const demoWidgetRegistryConfigs = [
 		widgets: [
 			{
 				id: 'lightning:balance-and-transact',
-				type: 'stat-with-buttons',
+				type: 'text-with-buttons',
 			},
 			{
 				id: 'lightning:connections',
@@ -92,13 +92,13 @@ export default function WidgetsStory() {
 						appId='example'
 						config={{
 							id: 'example:error',
-							type: 'stat-with-progress',
+							type: 'text-with-progress',
 							// endpoint: '/widgets/example/four-stats.json',
 						}}
 					/>
 				</div>
 				<H2>Widget Types</H2>
-				<H3>stat-with-buttons</H3>
+				<H3>text-with-buttons</H3>
 				<div className={sectionClass}>
 					<StatWithButtonsWidget />
 					<StatWithButtonsWidget
@@ -181,7 +181,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H3>stat-with-progress</H3>
+				<H3>text-with-progress</H3>
 				<div className={sectionClass}>
 					<StatWithProgressWidget />
 					<StatWithProgressWidget
@@ -192,7 +192,7 @@ export default function WidgetsStory() {
 						progress={0.25}
 					/>
 				</div>
-				<H3>two-stats-with-progress</H3>
+				<H3>two-stats-with-guage</H3>
 				<div className={sectionClass}>
 					<TwoStatsWidget />
 					<TwoStatsWidget
@@ -445,12 +445,12 @@ export default function WidgetsStory() {
 						</div>
 					</>
 				))}
-				<WidgetWrapper label={'two-stats-with-progress'}>
+				<WidgetWrapper label={'two-stats-with-guage'}>
 					<Widget
 						appId='settings'
 						config={{
 							id: 'settings:system-stats',
-							type: 'two-stats-with-progress',
+							type: 'two-stats-with-guage',
 						}}
 					/>
 				</WidgetWrapper>
@@ -488,7 +488,7 @@ function TablerIconExample() {
 
 export function EditableWidget() {
 	const [code, setCode] = useState(JSON.stringify(liveUsageWidgets[0], null, 2))
-	// const [widgetType, setWidgetType] = useState<WidgetType>('stat-with-progress')
+	// const [widgetType, setWidgetType] = useState<WidgetType>('text-with-progress')
 	const [registryConfig, setRegistryConfig] = useState<RegistryWidget>(liveUsageWidgets[0])
 	const [error, setError] = useState('')
 
