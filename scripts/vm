@@ -143,6 +143,5 @@ then
     echo installing ui deps
     cd "${VM_DIR}/packages/ui"
     pnpm install
-    node copy-tabler-icons.js
     exit
 fi
