@@ -49,10 +49,12 @@ export function TorDrawer() {
 					</label>
 				</div>
 				<div>{t('tor.enable.description')}</div>
-				<div className='space-y-2'>
-					<span className='text-15 font-medium -tracking-4'>{t('tor.hidden-service')}</span>
-					<CopyableField value={hiddenServiceQ.data ?? ''} />
-				</div>
+				{enabled && (
+					<div className='space-y-2'>
+						<span className='text-15 font-medium -tracking-4'>{t('tor.hidden-service')}</span>
+						<CopyableField value={hiddenServiceQ.data ?? ''} />
+					</div>
+				)}
 			</DrawerContent>
 		</Drawer>
 	)
