@@ -65,16 +65,17 @@ export type TwoStatsWithProgressWidget = BaseWidget & {
 }
 export type TwoStatsWithProgressWidgetProps = Omit<TwoStatsWithProgressWidget, 'type'>
 
-export type StatWithProgressWidget = BaseWidget & {
+export type TextWithProgressWidget = BaseWidget & {
 	type: 'text-with-progress'
 	link?: Link
-	title: string
-	value: string
-	valueSub?: string
-	progressLabel: string
+	title?: string
+	text?: string
+	subtext?: string
+	progressLabel?: string
 	/** Number from 0 to 1 */
-	progress: number
+	progress?: number
 }
+export type TextWithProgressWidgetProps = Omit<TextWithProgressWidget, 'type'>
 
 export type StatWithButtonsWidget = BaseWidget & {
 	type: 'text-with-buttons'
@@ -113,7 +114,7 @@ type AnyWidgetConfig =
 	| FourStatsWidget
 	| ThreeStatsWidget
 	| TwoStatsWithProgressWidget
-	| StatWithProgressWidget
+	| TextWithProgressWidget
 	| StatWithButtonsWidget
 	| ListWidget
 	| ListEmojiWidget
@@ -152,7 +153,7 @@ export const liveUsageWidgets: [
 		type: 'text-with-progress',
 		example: {
 			title: 'Storage',
-			value: '256 GB',
+			text: '256 GB',
 			progressLabel: '1.75 TB left',
 			progress: 0.25,
 		},
@@ -162,8 +163,8 @@ export const liveUsageWidgets: [
 		type: 'text-with-progress',
 		example: {
 			title: 'Memory',
-			value: '5.8 GB',
-			valueSub: '/16GB',
+			text: '5.8 GB',
+			subtext: '/16GB',
 			progressLabel: '11.4 GB left',
 			progress: 0.36,
 		},

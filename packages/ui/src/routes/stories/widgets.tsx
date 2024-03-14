@@ -14,7 +14,7 @@ import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modul
 import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/text-with-buttons-widget'
-import {StatWithProgressWidget} from '@/modules/widgets/text-with-progress-widget'
+import {TextWithProgressWidget} from '@/modules/widgets/text-with-progress-widget'
 import {ThreeStatsWidget} from '@/modules/widgets/three-stats-widget'
 import {TwoStatsWidget} from '@/modules/widgets/two-stats-with-guage-widget'
 import {AppsProvider} from '@/providers/apps'
@@ -183,11 +183,11 @@ export default function WidgetsStory() {
 				</div>
 				<H3>text-with-progress</H3>
 				<div className={sectionClass}>
-					<StatWithProgressWidget />
-					<StatWithProgressWidget
+					<TextWithProgressWidget />
+					<TextWithProgressWidget
 						title='Storage'
-						value='256 GB'
-						valueSub='/ 2 TB'
+						text='256 GB'
+						subtext='/ 2 TB'
 						progressLabel='1.75 TB left'
 						progress={0.25}
 					/>

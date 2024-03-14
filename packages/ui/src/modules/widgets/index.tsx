@@ -21,7 +21,7 @@ import {ListEmojiWidget} from './list-emoji-widget'
 import {ListWidget} from './list-widget'
 import {WidgetContainer} from './shared/shared'
 import {StatWithButtonsWidget} from './text-with-buttons-widget'
-import {StatWithProgressWidget} from './text-with-progress-widget'
+import {TextWithProgressWidget} from './text-with-progress-widget'
 import {ThreeStatsWidget} from './three-stats-widget'
 import {TwoStatsWidget} from './two-stats-with-guage-widget'
 
@@ -78,7 +78,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 		}
 		case 'text-with-progress': {
 			const w = widget as WidgetConfig<'text-with-progress'>
-			return <StatWithProgressWidget {...w} onClick={handleClick} />
+			return <TextWithProgressWidget {...w} onClick={handleClick} />
 		}
 		case 'two-stats-with-guage': {
 			const w = widget as WidgetConfig<'two-stats-with-guage'>
@@ -143,7 +143,7 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 		}
 		case 'text-with-progress': {
 			const w = example as WidgetConfig<'text-with-progress'>
-			return <StatWithProgressWidget {...w} />
+			return <TextWithProgressWidget {...w} />
 		}
 		case 'two-stats-with-guage': {
 			const w = example as WidgetConfig<'two-stats-with-guage'>
@@ -174,7 +174,7 @@ export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: 
 			return <StatWithButtonsWidget />
 		}
 		case 'text-with-progress': {
-			return <StatWithProgressWidget />
+			return <TextWithProgressWidget />
 		}
 		case 'two-stats-with-guage': {
 			return <TwoStatsWidget />
