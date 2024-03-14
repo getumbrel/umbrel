@@ -25,7 +25,7 @@ export default function LiveUsageDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<ImmersiveDialogContent size='lg'>
+			<ImmersiveDialogContent size='lg' showScroll>
 				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<h1 className={immersiveDialogTitleClass}>{title}</h1>
 				<LiveUsageContent />

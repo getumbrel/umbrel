@@ -31,10 +31,12 @@ export function ImmersiveDialogContent({
 	children,
 	size = 'default',
 	short = false,
+	showScroll = false,
 }: {
 	children: React.ReactNode
 	size?: 'default' | 'lg'
 	short?: boolean
+	showScroll?: boolean
 }) {
 	return (
 		<DialogPortal>
@@ -51,9 +53,13 @@ export function ImmersiveDialogContent({
 					'p-0',
 				)}
 			>
-				<div className='umbrel-dialog-fade-scroller flex h-full flex-col gap-5 overflow-y-auto p-6 md:p-[30px]'>
-					{children}
-				</div>
+				{showScroll ? (
+					<ScrollArea dialogInset className='h-full'>
+						<div className={immersiveScrollAreaContentsClass}>{children}</div>
+					</ScrollArea>
+				) : (
+					<div className={immersiveScrollAreaContentsClass}>{children}</div>
+				)}
 				<ImmersiveDialogClose />
 			</DialogContent>
 		</DialogPortal>
@@ -79,7 +85,7 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 				</section>
 				<section className='flex-1 bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
 					<ScrollArea dialogInset className='h-full'>
-						<div className='flex h-full flex-col gap-6 p-4 md:p-8'>{children}</div>
+						<div className={immersiveScrollAreaContentsClass}>{children}</div>
 					</ScrollArea>
 				</section>
 				<ImmersiveDialogClose />
@@ -90,6 +96,7 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 
 const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-90px)]`
 const immersiveContentTallClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
+const immersiveScrollAreaContentsClass = tw`flex h-full flex-col gap-6 p-4 md:p-8`
 
 function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
 	return (
