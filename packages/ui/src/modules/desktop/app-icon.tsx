@@ -1,10 +1,12 @@
 import {motion} from 'framer-motion'
 import {useState} from 'react'
-import {Link} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
+import {getAppStoreAppFromInstalledApp} from '@/modules/app-store/utils'
 import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
@@ -181,9 +183,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 							/>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
-							<ContextMenuItem asChild>
-								<Link to={`/app-store/${appId}`}>{t('desktop.app.context.go-to-store-page')}</Link>
-							</ContextMenuItem>
+							<ContextMenuItemLink appId={appId} />
 							{userApp.app.credentials &&
 								(userApp.app.credentials.defaultUsername || userApp.app.credentials.defaultPassword) && (
 									<ContextMenuItem asChild>
@@ -224,4 +224,25 @@ export function AppIconConnected({appId}: {appId: string}) {
 			)
 		}
 	}
+}
+
+function ContextMenuItemLink({appId}: {appId: string}) {
+	const navigate = useNavigate()
+	return (
+		<ContextMenuItem asChild>
+			<button
+				onClick={async () => {
+					const appStoreApp = await getAppStoreAppFromInstalledApp(appId)
+					const registryId = appStoreApp?.registryId ?? UMBREL_APP_STORE_ID
+					if (registryId !== UMBREL_APP_STORE_ID) {
+						navigate(`/community-app-store/${registryId}/${appId}`)
+					} else {
+						navigate(`/app-store/${appId}`)
+					}
+				}}
+			>
+				{t('desktop.app.context.go-to-store-page')}
+			</button>
+		</ContextMenuItem>
+	)
 }
