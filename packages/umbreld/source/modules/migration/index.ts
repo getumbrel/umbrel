@@ -47,6 +47,10 @@ class Migration {
 
 		// Mark the legacy file as migrated
 		await fse.move(userJsonPath, `${userJsonPath}.migrated`)
+
+		// Move the .env file so env vars don't get preserved
+		const envPath = `${this.umbreld.dataDirectory}/.env`
+		await fse.move(envPath, `${envPath}.migrated`)
 		this.logger.log('Migration successful')
 	}
 
