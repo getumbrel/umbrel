@@ -3,8 +3,17 @@
 
 console.allLogs = []
 
+function pushLog(log: any) {
+	try {
+		console.allLogs.push(`${new Date().toUTCString()} LOG: ` + JSON.stringify(Array.from(log)))
+	} catch (e) {
+		// ignore
+	}
+}
+
 /**
  * Redirect all logs to our own thing so they can be downloaded
+ * https://stackoverflow.com/a/52142526
  */
 export function monkeyPatchConsoleLog() {
 	// default
@@ -12,7 +21,8 @@ export function monkeyPatchConsoleLog() {
 	console.log = function () {
 		// default &  console.log()
 		console.defaultLog.apply(console, arguments)
-		console.allLogs.push(Array.from(arguments))
+
+		pushLog(arguments)
 	}
 
 	// error
@@ -21,17 +31,11 @@ export function monkeyPatchConsoleLog() {
 	console.error = function () {
 		// default &  console.error()
 		console.defaultError.apply(console, arguments)
-		console.allLogs.push(Array.from(arguments))
+		pushLog(arguments)
 	}
 
 	// warn
-	console.defaultWarn = console.warn.bind(console)
-
-	console.warn = function () {
-		// default &  console.warn()
-		console.defaultWarn.apply(console, arguments)
-		console.allLogs.push(Array.from(arguments))
-	}
+	// Not doing ths for now
 
 	// debug
 	console.defaultDebug = console.debug.bind(console)
@@ -39,6 +43,32 @@ export function monkeyPatchConsoleLog() {
 	console.debug = function () {
 		// default &  console.debug()
 		console.defaultDebug.apply(console, arguments)
-		console.allLogs.push(Array.from(arguments))
+		pushLog(arguments)
 	}
+}
+
+// https://stackoverflow.com/a/19818659
+export function downloadLogs() {
+	let data = console.allLogs
+
+	if (!data) {
+		console.error('Console.save: No data')
+		return
+	}
+
+	const filename = 'console.json'
+
+	if (typeof data === 'object') {
+		data = JSON.stringify(data, undefined, 4)
+	}
+
+	const blob = new Blob([data], {type: 'text/json'}),
+		e = document.createEvent('MouseEvents'),
+		a = document.createElement('a')
+
+	a.download = filename
+	a.href = window.URL.createObjectURL(blob)
+	a.dataset.downloadurl = ['text/json', a.download, a.href].join(':')
+	e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null)
+	a.dispatchEvent(e)
 }
