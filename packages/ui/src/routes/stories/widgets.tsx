@@ -19,6 +19,7 @@ import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
 import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
 import {AppsProvider} from '@/providers/apps'
 import {Input, Labeled} from '@/shadcn-components/ui/input'
+import {linkClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 export const demoWidgetRegistryConfigs = [
@@ -467,6 +468,9 @@ function TablerIconExample() {
 					<Input value={custom} onValueChange={setCustom} />
 				</Labeled>
 				<TablerIcon iconName={custom} className='h-10 w-10 [&>svg]:h-10 [&>svg]:w-10' />
+				<a href='https://tabler.io/icons' target='_blank' rel='noopener noreferrer' className={linkClass}>
+					Tabler icons
+				</a>
 			</div>
 			<div className='flex flex-col gap-2'>
 				system-widget-memory
