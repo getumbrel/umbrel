@@ -1,10 +1,18 @@
-import {CmdkMenu, useCmdkOpen} from '@/components/cmdk'
+import {CmdkMenu, CmdkProvier, useCmdkOpen} from '@/components/cmdk'
 import {H1} from '@/layouts/stories'
 import {Search} from '@/modules/desktop/desktop-misc'
 import {AppsProvider} from '@/providers/apps'
 import {Wallpaper} from '@/providers/wallpaper'
 
 export default function CmdkStory() {
+	return (
+		<CmdkProvier>
+			<Inner />
+		</CmdkProvier>
+	)
+}
+
+function Inner() {
 	const {open, setOpen} = useCmdkOpen()
 
 	return (
