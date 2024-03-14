@@ -93,12 +93,13 @@ export type TextWithButtonsWidgetProps = Omit<TextWithButtonsWidget, 'type'>
 export type ListWidget = BaseWidget & {
 	type: 'list'
 	link?: Link
-	items: {
-		text: string
-		textSub: string
+	items?: {
+		text?: string
+		subtext?: string
 	}[]
 	noItemsText?: string
 }
+export type ListWidgetProps = Omit<ListWidget, 'type'>
 
 export type ListEmojiWidget = BaseWidget & {
 	type: 'list-emoji'

@@ -344,11 +344,11 @@ export default function WidgetsStory() {
 						items={[
 							{
 								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-								textSub: formatTimestampNumber(1620000000000),
+								subtext: formatTimestampNumber(1620000000000),
 							},
 							{
 								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-								textSub: formatTimestampNumber(1620000000000),
+								subtext: formatTimestampNumber(1620000000000),
 							},
 						]}
 					/>
@@ -357,7 +357,7 @@ export default function WidgetsStory() {
 						items={[
 							{
 								text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-								textSub: formatTimestampNumber(1620000000000),
+								subtext: formatTimestampNumber(1620000000000),
 							},
 						]}
 					/>
