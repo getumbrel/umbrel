@@ -3,7 +3,6 @@
 export const DEFAULT_REFRESH_MS = 1000 * 60 * 5
 
 type BaseWidget = {
-	type: WidgetType
 	refresh?: number
 }
 
@@ -27,17 +26,17 @@ export type WidgetType = (typeof widgetTypes)[number]
  */
 type Link = string
 
-type FourUpItem = BaseWidget & {
-	title: string
-	icon: string
-	value: string
-	valueSub: string
+export type FourStatsItem = BaseWidget & {
+	title?: string
+	text?: string
+	subtext?: string
 }
-export type FourUpWidget = BaseWidget & {
+export type FourStatsWidget = BaseWidget & {
 	type: 'four-stats'
 	link?: Link
-	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
+	items?: [FourStatsItem, FourStatsItem, FourStatsItem, FourStatsItem]
 }
+export type FourStatsWidgetProps = Omit<FourStatsWidget, 'type'>
 
 type ThreeUpItem = {
 	icon: string
@@ -109,7 +108,7 @@ export type ListEmojiWidget = BaseWidget & {
 }
 
 type AnyWidgetConfig =
-	| FourUpWidget
+	| FourStatsWidget
 	| ThreeUpWidget
 	| TwoStatsWithProgressWidget
 	| StatWithProgressWidget

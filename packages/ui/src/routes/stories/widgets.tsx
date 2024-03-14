@@ -327,13 +327,13 @@ export default function WidgetsStory() {
 					<FourStatsWidget />
 					<FourStatsWidget
 						items={[
-							{title: 'Storage', value: '256', valueSub: 'GB'},
-							{title: 'Memory', value: '16', valueSub: 'GB'},
-							{title: 'CPU', value: '4.2', valueSub: '%'},
-							{title: 'CPU', value: '4.2', valueSub: '%'},
+							{title: 'Storage', text: '256', subtext: 'GB'},
+							{title: 'Memory', text: '16', subtext: 'GB'},
+							{title: 'CPU', text: '4.2', subtext: '%'},
+							{title: 'CPU', text: '4.2', subtext: '%'},
 						]}
 					/>
-					<FourStatsWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: '%'}]} />
+					<FourStatsWidget onClick={handleClick} items={[{title: 'CPU', text: '4.2', subtext: '%'}]} />
 				</div>
 				<H3>list</H3>
 				<div className={sectionClass}>

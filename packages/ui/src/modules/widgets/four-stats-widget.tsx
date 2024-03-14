@@ -1,4 +1,5 @@
 import {LOADING_DASH} from '@/constants'
+import type {FourStatsItem, FourStatsWidget, FourStatsWidgetProps} from '@/modules/widgets/shared/constants'
 import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
@@ -7,9 +8,7 @@ export function FourStatsWidget({
 	items,
 	link,
 	onClick,
-}: {
-	items?: {title: string; value: string; valueSub: string}[]
-	link?: string
+}: FourStatsWidgetProps & {
 	onClick?: (link?: string) => void
 }) {
 	return (
@@ -19,20 +18,20 @@ export function FourStatsWidget({
 		>
 			{items
 				?.slice(0, 4)
-				?.map((item) => <Item key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />)}
+				?.map((item) => <Item key={item.title} title={item.title} text={item.text} subtext={item.subtext} />)}
 			{!items && (
 				<>
-					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<Item title={LOADING_DASH} text={LOADING_DASH} subtext={LOADING_DASH} />
+					<Item title={LOADING_DASH} text={LOADING_DASH} subtext={LOADING_DASH} />
+					<Item title={LOADING_DASH} text={LOADING_DASH} subtext={LOADING_DASH} />
+					<Item title={LOADING_DASH} text={LOADING_DASH} subtext={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>
 	)
 }
 
-function Item({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
+function Item(item: Partial<FourStatsItem>) {
 	return (
 		<div className='flex h-full flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>
 			<p
@@ -42,12 +41,12 @@ function Item({title, value, valueSub}: {title?: string; value?: string; valueSu
 					}),
 					'text-[8px] md:text-11',
 				)}
-				title={value}
+				title={item.text}
 			>
-				{title}
+				{item.title}
 			</p>
 			<p className={widgetTextCva()}>
-				{value} <span className={widgetTextCva({opacity: 'tertiary'})}>{valueSub}</span>
+				{item.text} <span className={widgetTextCva({opacity: 'tertiary'})}>{item.subtext}</span>
 			</p>
 		</div>
 	)
