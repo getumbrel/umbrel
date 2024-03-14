@@ -158,10 +158,10 @@ export function SettingsContent() {
 							<WallpaperPicker />
 						</div>
 					</ListRow>
-					<ListRow title={t('2fa')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
+					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
-					<ListRow title={t('remote-tor-access')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
+					<ListRow title={t('remote-tor-access')} description={t('tor-description')} disabled={tor.isLoading}>
 						<Switch
 							checked={tor.enabled}
 							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
@@ -174,8 +174,8 @@ export function SettingsContent() {
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>
 					)}
-					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')} isLabel>
-						{/* We could use an IconButtonLink but then the `isLabel` from `ListRow` wouldn't work */}
+					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')}>
+						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
 						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
 							{t('migrate')}
 						</IconButton>
@@ -184,7 +184,7 @@ export function SettingsContent() {
 					{/* <ListRow
 						title={t('language')}
 						description={t('language-description')}
-						isLabel
+					
 						onClick={() => setLangOpen(true)}
 						isActive={settingsDialog === 'language'}
 					>
@@ -193,23 +193,23 @@ export function SettingsContent() {
 							<LanguageDropdownContent />
 						</DropdownMenu>
 					</ListRow> */}
-					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')} isLabel>
+					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}
 						</IconButton>
 					</ListRow> */}
-					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')} isLabel>
+					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')}>
 						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
 							{t('troubleshoot')}
 						</IconButton>
 					</ListRow>
-					<ListRow title={t('device-info')} description={t('device-info-description')} isLabel>
+					<ListRow title={t('device-info')} description={t('device-info-description')}>
 						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
 					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
-					{/* <ListRow title={t('factory-reset')} description={t('factory-reset.desc')} isLabel>
+					{/* <ListRow title={t('factory-reset')} description={t('factory-reset.desc')}>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
 							{t('factory-reset.reset')}
 						</IconButton>

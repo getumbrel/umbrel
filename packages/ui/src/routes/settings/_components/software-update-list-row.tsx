@@ -24,7 +24,6 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 						{t('software-update.new-version', {version: latestVersion || LOADING_DASH})}
 					</span>
 				}
-				isLabel
 			>
 				<Button variant='primary' onClick={update}>
 					<Icon component={RiRefreshLine} />
@@ -54,7 +53,6 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 					)}
 				</span>
 			}
-			isLabel={state !== 'at-latest'}
 		>
 			{state !== 'at-latest' && (
 				<Button onClick={checkLatest}>

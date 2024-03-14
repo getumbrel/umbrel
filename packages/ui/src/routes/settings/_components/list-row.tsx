@@ -37,8 +37,10 @@ export function ListRow({
 			ref={ref}
 			className={cn(
 				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 py-4 outline-none',
-				isLabel &&
-					'cursor-pointer bg-gradient-to-r from-transparent to-transparent hover:via-white/4 active:via-white/3',
+				// Show hover effect by default
+				'bg-gradient-to-r from-transparent to-transparent hover:via-white/4',
+				// Make it clickable if it's a label
+				isLabel && 'cursor-pointer active:via-white/3',
 				// TODO: also scroll into view if active
 				isActive && 'umbrel-pulse-a-few-times',
 				disabled && 'pointer-events-none opacity-50',
