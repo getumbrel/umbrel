@@ -34,7 +34,7 @@ function NormalUseQueryExample() {
 }
 
 function NormalUseQueryExample2() {
-	const res = trpcReact.debug.greet.useQuery('world')
+	const res = trpcReact.system.online.useQuery()
 
 	if (res.isLoading) {
 		return <Loading />

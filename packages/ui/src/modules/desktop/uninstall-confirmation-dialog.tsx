@@ -1,4 +1,4 @@
-import {useAvailableApps} from '@/providers/available-apps'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,7 +24,7 @@ export function UninstallConfirmationDialog({
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void
 }) {
-	const {appsKeyed, isLoading} = useAvailableApps(registryId)
+	const {appsKeyed, isLoading} = useAllAvailableApps()
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null

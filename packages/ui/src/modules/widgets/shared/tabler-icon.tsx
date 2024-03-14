@@ -19,7 +19,7 @@ export function TablerIcon({iconName, className, ...props}: {iconName: string} &
 			.then((res) => res.text())
 			.then((res) => {
 				if (res.startsWith('<svg')) return setIcon(res)
-				console.error(`Icon: "${name}.svg" not found in ${process.env.PUBLIC_URL}/icons`)
+				console.error(`Icon: "${iconName}.svg" not found`)
 				return setIcon('')
 			})
 	}, [iconName])

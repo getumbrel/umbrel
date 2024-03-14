@@ -2,7 +2,6 @@ import {useNavigate} from 'react-router-dom'
 import {useInterval} from 'react-use'
 
 import {ProgressLayout} from '@/modules/bare/progress-layout'
-import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

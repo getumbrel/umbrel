@@ -124,7 +124,6 @@
   "device-info.device": "Gerät",
   "device-info.model-number": "Modell-Nr",
   "device-info.serial-number": "Seriennummer",
-  "device-info.software-version": "Softwareversion",
   "device-info.view-info": "Informationen anzeigen",
   "factory-reset": "Werkseinstellungen zurückgesetzt",
   "factory-reset.confirm.body": "Bestätigen Sie das Umbrel-Passwort, um mit dem Zurücksetzen zu beginnen",

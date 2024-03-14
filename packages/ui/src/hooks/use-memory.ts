@@ -12,7 +12,7 @@ export function useMemory(options: {poll?: boolean} = {}) {
 		// Sometimes we won't be able to get disk usage, so prevent retry
 		retry: false,
 		// We do want refetching to happen on a schedule though
-		refetchInterval: options.poll ? 500 : undefined,
+		refetchInterval: options.poll ? 2000 : undefined,
 	})
 
 	const transformed = trpcMemoryToLocal(memoryQ.data)

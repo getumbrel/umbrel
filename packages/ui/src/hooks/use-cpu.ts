@@ -36,7 +36,7 @@ export function useCpuForUi(options: {poll?: boolean} = {}) {
 
 	return {
 		isLoading: false,
-		value: percentUsed.toPrecision(2) + '%',
+		value: Math.ceil(percentUsed) + '%',
 		progress: percentUsed / 100,
 		secondaryValue: t('cpu-core-count', {cores: threads}),
 		apps,

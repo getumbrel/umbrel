@@ -119,7 +119,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 
 	const debugInfo = (
 		<DebugOnlyBare>
-			<div className='fixed left-0 top-0 origin-top-left scale-50' style={{zIndex: 1000}}>
+			<div className='fixed bottom-0 right-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
 				<JSONTree
 					data={{
 						status,

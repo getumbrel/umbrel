@@ -4,7 +4,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 import {indexBy} from 'remeda'
 
 import {Arc} from '@/components/ui/arc'
-import {H2, H3} from '@/layouts/stories'
+import {H1, H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {ExampleWidget, LoadingWidget, Widget} from '@/modules/widgets'
 import {FourUpWidget} from '@/modules/widgets/four-up-widget'
@@ -12,11 +12,14 @@ import {ListEmojiWidget} from '@/modules/widgets/list-emoji-widget'
 import {ListWidget} from '@/modules/widgets/list-widget'
 import {ProgressWidget} from '@/modules/widgets/progress-widget'
 import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modules/widgets/shared/constants'
+import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
 import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
 import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
 import {AppsProvider} from '@/providers/apps'
+import {Input, Labeled} from '@/shadcn-components/ui/input'
+import {linkClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 export const demoWidgetRegistryConfigs = [
@@ -77,6 +80,8 @@ export default function WidgetsStory() {
 
 	return (
 		<AppsProvider>
+			<H1>Widgets</H1>
+			<TablerIconExample />
 			<div className='bg-white/30' ref={pageInnerRef}>
 				<H2>Any</H2>
 				<EditableWidget />
@@ -451,6 +456,33 @@ export default function WidgetsStory() {
 				</WidgetWrapper>
 			</div>
 		</AppsProvider>
+	)
+}
+
+function TablerIconExample() {
+	const [custom, setCustom] = useState('trash')
+	return (
+		<div className='flex flex-row gap-2'>
+			<div className='flex flex-col gap-2'>
+				<Labeled label='Custom icon'>
+					<Input value={custom} onValueChange={setCustom} />
+				</Labeled>
+				<TablerIcon iconName={custom} className='h-10 w-10 [&>svg]:h-10 [&>svg]:w-10' />
+				<a href='https://tabler.io/icons' target='_blank' rel='noopener noreferrer' className={linkClass}>
+					Tabler icons
+				</a>
+			</div>
+			<div className='flex flex-col gap-2'>
+				system-widget-memory
+				<TablerIcon iconName='system-widget-memory' />
+				system-widget-storage
+				<TablerIcon iconName='system-widget-storage' />
+				system-widget-temperature
+				<TablerIcon iconName='system-widget-temperature' />
+				system-widget-cpu
+				<TablerIcon iconName='system-widget-cpu' />
+			</div>
+		</div>
 	)
 }
 

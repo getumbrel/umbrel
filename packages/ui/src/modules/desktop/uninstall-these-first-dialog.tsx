@@ -2,7 +2,7 @@ import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {useAvailableApps} from '@/providers/available-apps'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -27,7 +27,7 @@ export function UninstallTheseFirstDialog({
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }) {
-	const {appsKeyed, isLoading} = useAvailableApps(registryId)
+	const {appsKeyed, isLoading} = useAllAvailableApps()
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null
@@ -48,6 +48,7 @@ export function UninstallTheseFirstDialog({
 					))}
 				</div>
 				<DialogDescription>
+					{/* i18n-ally-key-missing expected, but the key exists */}
 					{t('app.uninstall.deps.used-by.description', {
 						count: toUninstallApps.length,
 						app: appName,

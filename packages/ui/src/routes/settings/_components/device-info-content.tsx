@@ -2,7 +2,7 @@ import {TbQuestionMark} from 'react-icons/tb'
 
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {hostEnvironmentMap, UmbrelHostEnvironment, UNKNOWN} from '@/constants'
+import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
 import {cn} from '@/shadcn-lib/utils'
 import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -10,13 +10,11 @@ import {tw} from '@/utils/tw'
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
 	device,
-	osVersion,
 	modelNumber,
 	serialNumber,
 }: {
 	umbrelHostEnvironment?: UmbrelHostEnvironment
 	device?: string
-	osVersion?: string
 	modelNumber?: string
 	serialNumber?: string
 }) {
@@ -46,10 +44,6 @@ export function DeviceInfoContent({
 						</span>
 					</div>
 				)}
-				<div className={listItemClassNarrow}>
-					<span>{t('device-info.software-version')}</span>
-					<span className='pr-6 font-normal'>{osVersion ? `umbrelOS ${osVersion}` : UNKNOWN()}</span>
-				</div>
 			</div>
 		</div>
 	)

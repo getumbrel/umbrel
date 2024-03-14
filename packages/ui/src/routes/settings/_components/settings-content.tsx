@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react'
+import {useEffect} from 'react'
 import {
 	RiExpandRightFill,
 	RiKeyLine,
@@ -24,7 +24,6 @@ import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
-import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
@@ -32,7 +31,6 @@ import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 import {CpuTempCardContent} from './cpu-temp-card-content'
-import {LanguageDropdownContent, LanguageDropdownTrigger} from './language-dropdown'
 import {ListRow} from './list-row'
 import {MemoryCardContent} from './memory-card-content'
 import {ContactSupportLink} from './shared'
@@ -48,8 +46,6 @@ export function SettingsContent() {
 	const tor = useTorEnabled()
 	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
-
-	const [langOpen, setLangOpen] = useState(false)
 
 	const [userQ, uptimeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),

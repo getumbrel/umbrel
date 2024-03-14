@@ -56,6 +56,17 @@ export const appStates = [
 	'ready',
 ] satisfies AppState[]
 
+export const progressStates = [
+	// 'loading',
+	'installing',
+	'starting',
+	'running',
+	'stopping',
+	'restarting',
+	'uninstalling',
+	'updating',
+] satisfies AppState[]
+
 // `loading` means the frontend is currently fetching the state from the backend
 export type AppStateOrLoading = 'loading' | AppState
 
