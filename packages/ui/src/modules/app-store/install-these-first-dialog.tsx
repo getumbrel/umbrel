@@ -3,6 +3,7 @@ import {ReactNode} from 'react'
 import {Link, To} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -12,9 +13,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
-import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {keyBy} from '@/utils/misc'
 
 import {UMBREL_APP_STORE_ID} from './constants'
 
@@ -31,17 +30,14 @@ export function InstallTheseFirstDialog({
 	registryId?: string
 	toInstallFirstIds: string[]
 }) {
-	const appsQ = trpcReact.appStore.registry.useQuery()
-	// TODO: check that the registry logic is correct
-	const apps = appsQ.data?.find((repo) => repo?.meta.id === registryId)?.apps ?? []
-	const appsKeyed = keyBy(apps, 'id')
-	const app = apps?.find((app) => app.id === appId)
+	const availableApps = useAllAvailableApps()
+	const app = availableApps.appsKeyed?.[appId]
 
-	if (appsQ.isLoading) return null
+	if (availableApps.isLoading) return null
 	if (!app) throw new Error('App not found')
 
 	const appName = app?.name
-	const toInstallApps = toInstallFirstIds.map((id) => appsKeyed?.[id])
+	const toInstallApps = toInstallFirstIds.map((id) => availableApps.appsKeyed?.[id])
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>

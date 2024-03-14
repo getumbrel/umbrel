@@ -116,21 +116,19 @@ export function useAppInstall(id: string) {
 }
 
 async function getRequiredBy(targetAppId: string) {
-	const apps = await trpcClient.apps.list.query()
+	// "installed"  really means they're user apps, because they can be in other states
+	const installedApps = await trpcClient.apps.list.query()
+
 	const availableApps = await trpcClient.appStore.registry.query()
+	// Flatted apps from all registries
+	const availableAppsFlat = availableApps.flatMap((group) => group.apps)
+	// Filter out non-installed apps
+	const availableAppsFlatAndInstalled = availableAppsFlat.filter((app) =>
+		installedApps.find((userApp) => userApp.id === app.id),
+	)
 
-	type Group = NonNullable<(typeof availableApps)[0]>
+	// Look in array to see if `targetAppId` is a dependency of any of the apps
+	const requiredByApps = availableAppsFlatAndInstalled.filter((app) => app.dependencies?.includes(targetAppId))
 
-	const nonNullGroups = availableApps.filter((group): group is Group => group !== null)
-
-	// We don't need to check if apps are installed because if it's in the user apps, then it means we're busy with the apps, so not safe to uninstall until it's no longer in the user apps entirely
-	return apps.filter((userApp) => {
-		// @ts-expect-error `registryId`
-		const registryApps = nonNullGroups.find((group) => group.meta.id === userApp.registryId)?.apps
-		if (!registryApps) return false
-
-		const deps = registryApps.find((app) => app.id === userApp.id)?.dependencies
-
-		return deps?.includes(targetAppId)
-	})
+	return requiredByApps
 }
