@@ -29,7 +29,7 @@ export default function LoginTest() {
 	})
 
 	// TODO: query debug trpc private route
-	const debug = trpcReact.debug.private.useQuery()
+	const debug = trpcReact.user.get.useQuery()
 
 	return (
 		<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmit}>

@@ -3,9 +3,7 @@ import {
 	TbActivityHeartbeat,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
-	TbLanguage,
 	TbPhoto,
-	TbRotate2,
 	TbServer,
 	TbTool,
 	TbUser,
@@ -27,7 +25,7 @@ import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-pre
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
-import {maybeT, t} from '@/utils/i18n'
+import {t} from '@/utils/i18n'
 
 import {CpuTempCardContent} from './cpu-temp-card-content'
 import {ListRowMobile} from './list-row'
