@@ -51,18 +51,19 @@ export type ThreeStatsWidget = BaseWidget & {
 export type ThreeStatsWidgetProps = Omit<ThreeStatsWidget, 'type'>
 
 // The long name feels like it could be just be two-stats, but if we ever add one without a progress, what would we call it?
-type TwoStatsWithProgressItem = {
-	title: string
-	value: string
-	valueSub: string
+export type TwoStatsWithProgressItem = {
+	title?: string
+	text?: string
+	subtext?: string
 	/** Number from 0 to 1 */
-	progress: number
+	progress?: number
 }
 export type TwoStatsWithProgressWidget = BaseWidget & {
 	type: 'two-stats-with-guage'
 	link?: Link
-	items: [TwoStatsWithProgressItem, TwoStatsWithProgressItem]
+	items?: [TwoStatsWithProgressItem, TwoStatsWithProgressItem]
 }
+export type TwoStatsWithProgressWidgetProps = Omit<TwoStatsWithProgressWidget, 'type'>
 
 export type StatWithProgressWidget = BaseWidget & {
 	type: 'text-with-progress'

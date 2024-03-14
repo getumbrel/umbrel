@@ -200,8 +200,8 @@ export default function WidgetsStory() {
 						items={[
 							{
 								title: 'CPU',
-								value: '4.2',
-								valueSub: '%',
+								text: '4.2',
+								subtext: '%',
 								progress: 0.25,
 							},
 						]}
@@ -210,14 +210,14 @@ export default function WidgetsStory() {
 						items={[
 							{
 								// title: 'CPU',
-								value: '4.2',
-								valueSub: '%',
+								text: '4.2',
+								subtext: '%',
 								progress: 0.75,
 							},
 							{
 								// title: 'CPU',
-								value: '4.2',
-								valueSub: '%',
+								text: '4.2',
+								subtext: '%',
 								progress: 0.75,
 							},
 						]}
@@ -242,14 +242,14 @@ export default function WidgetsStory() {
 						items={[
 							{
 								title: 'CPU',
-								value: '4.2',
-								valueSub: '%',
+								text: '4.2',
+								subtext: '%',
 								progress: 0.75,
 							},
 							{
 								title: 'CPU',
-								value: '4.2',
-								valueSub: '%',
+								text: '4.2',
+								subtext: '%',
 								progress: 0.75,
 							},
 						]}
@@ -258,14 +258,14 @@ export default function WidgetsStory() {
 						items={[
 							{
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-								value: 'Lorem ipsum',
-								valueSub: '%',
+								text: 'Lorem ipsum',
+								subtext: '%',
 								progress: 0.75,
 							},
 							{
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
-								value: 'Lorem ipsum',
-								valueSub: '%',
+								text: 'Lorem ipsum',
+								subtext: '%',
 								progress: 0.75,
 							},
 						]}
