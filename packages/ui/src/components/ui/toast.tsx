@@ -8,7 +8,7 @@ import {tw} from '@/utils/tw'
 export function Toaster() {
 	return (
 		<SonnerPrimitive.Toaster
-			position='top-center'
+			position='top-right'
 			toastOptions={{
 				unstyled: true,
 				classNames: {
