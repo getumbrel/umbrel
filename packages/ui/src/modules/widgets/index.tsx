@@ -20,7 +20,7 @@ import {FourStatsWidget} from './four-stats-widget'
 import {ListEmojiWidget} from './list-emoji-widget'
 import {ListWidget} from './list-widget'
 import {WidgetContainer} from './shared/shared'
-import {StatWithButtonsWidget} from './text-with-buttons-widget'
+import {TextWithButtonsWidget} from './text-with-buttons-widget'
 import {TextWithProgressWidget} from './text-with-progress-widget'
 import {ThreeStatsWidget} from './three-stats-widget'
 import {TwoStatsWidget} from './two-stats-with-guage-widget'
@@ -74,7 +74,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	switch (manifestConfig.type) {
 		case 'text-with-buttons': {
 			const w = widget as WidgetConfig<'text-with-buttons'>
-			return <StatWithButtonsWidget {...w} onClick={handleClick} />
+			return <TextWithButtonsWidget {...w} onClick={handleClick} />
 		}
 		case 'text-with-progress': {
 			const w = widget as WidgetConfig<'text-with-progress'>
@@ -137,9 +137,9 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 			const widgetWithButtonLinks = {
 				...w,
 				// Link to nowhere
-				buttons: w.buttons.map((button) => ({...button, link: ''})),
+				buttons: w.buttons?.map((button) => ({...button, link: ''})),
 			}
-			return <StatWithButtonsWidget {...widgetWithButtonLinks} />
+			return <TextWithButtonsWidget {...widgetWithButtonLinks} />
 		}
 		case 'text-with-progress': {
 			const w = example as WidgetConfig<'text-with-progress'>
@@ -171,7 +171,7 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: T}) {
 	switch (type) {
 		case 'text-with-buttons': {
-			return <StatWithButtonsWidget />
+			return <TextWithButtonsWidget />
 		}
 		case 'text-with-progress': {
 			return <TextWithProgressWidget />

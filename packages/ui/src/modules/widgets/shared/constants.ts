@@ -77,18 +77,18 @@ export type TextWithProgressWidget = BaseWidget & {
 }
 export type TextWithProgressWidgetProps = Omit<TextWithProgressWidget, 'type'>
 
-export type StatWithButtonsWidget = BaseWidget & {
+export type TextWithButtonsWidget = BaseWidget & {
 	type: 'text-with-buttons'
-	icon: string
-	title: string
-	value: string
-	valueSub: string
-	buttons: {
+	title?: string
+	text?: string
+	subtext?: string
+	buttons?: {
 		text: string
-		icon: string
+		icon?: string
 		link: Link
 	}[]
 }
+export type TextWithButtonsWidgetProps = Omit<TextWithButtonsWidget, 'type'>
 
 export type ListWidget = BaseWidget & {
 	type: 'list'
@@ -115,7 +115,7 @@ type AnyWidgetConfig =
 	| ThreeStatsWidget
 	| TwoStatsWithProgressWidget
 	| TextWithProgressWidget
-	| StatWithButtonsWidget
+	| TextWithButtonsWidget
 	| ListWidget
 	| ListEmojiWidget
 
@@ -126,7 +126,7 @@ export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetC
 
 export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'text-with-buttons'
 	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
-	  Omit<StatWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<StatWithButtonsWidget['buttons'], 'link'>}
+	  Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
 	: // Otherwise, just omit the `type`
 	  Omit<WidgetConfig<T>, 'type'>
 

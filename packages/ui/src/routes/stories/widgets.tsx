@@ -13,7 +13,7 @@ import {ListWidget} from '@/modules/widgets/list-widget'
 import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modules/widgets/shared/constants'
 import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
-import {StatWithButtonsWidget} from '@/modules/widgets/text-with-buttons-widget'
+import {TextWithButtonsWidget} from '@/modules/widgets/text-with-buttons-widget'
 import {TextWithProgressWidget} from '@/modules/widgets/text-with-progress-widget'
 import {ThreeStatsWidget} from '@/modules/widgets/three-stats-widget'
 import {TwoStatsWidget} from '@/modules/widgets/two-stats-with-guage-widget'
@@ -100,55 +100,55 @@ export default function WidgetsStory() {
 				<H2>Widget Types</H2>
 				<H3>text-with-buttons</H3>
 				<div className={sectionClass}>
-					<StatWithButtonsWidget />
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget />
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
+						text='1,845,893'
+						subtext='sats'
 						// @ts-expect-error expecting title
 						buttons={[{link: '/send'}]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
+						text='1,845,893'
+						subtext='sats'
 						buttons={[{text: 'Send', link: '/send'}]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
+						text='1,845,893'
+						subtext='sats'
 						buttons={[{icon: 'send', text: 'Send', link: '/send'}]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
+						text='1,845,893'
+						subtext='sats'
 						buttons={[
 							{icon: 'send', text: 'Send', link: '/send'},
 							{icon: 'inbox', text: 'Receive', link: '/receive'},
 						]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Bitcoin Wallet'
-						value='1,845,893'
-						valueSub='sats'
+						text='1,845,893'
+						subtext='sats'
 						buttons={[
 							{icon: 'send', text: 'Send', link: '/send'},
 							{icon: 'inbox', text: 'Receive', link: '/receive'},
 							{icon: 'inbox', text: 'Receive', link: '/receive'},
 						]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
-						value='Lorem'
-						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
+						text='Lorem'
+						subtext='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						buttons={[
 							{
 								icon: 'send',
@@ -157,11 +157,11 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<StatWithButtonsWidget
+					<TextWithButtonsWidget
 						onClick={handleClick}
 						title='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.'
-						value='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
-						valueSub='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
+						text='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
+						subtext='Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod'
 						buttons={[
 							{
 								// icon: 'send',
