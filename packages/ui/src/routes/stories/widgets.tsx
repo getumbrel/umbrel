@@ -106,7 +106,6 @@ export default function WidgetsStory() {
 						title='Bitcoin Wallet'
 						text='1,845,893'
 						subtext='sats'
-						// @ts-expect-error expecting title
 						buttons={[{link: '/send'}]}
 					/>
 					<TextWithButtonsWidget
