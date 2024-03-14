@@ -156,8 +156,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
-	const isRunning = appInstall.state === 'ready' || appInstall.state === 'running'
-
 	const isInProgress = arrayIncludes(progressStates, appInstall.state)
 
 	// TODO: consider showing context menu in other states too
