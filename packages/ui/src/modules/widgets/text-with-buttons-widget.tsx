@@ -24,7 +24,7 @@ export function TextWithButtonsWidget({
 			<div className='flex flex-col gap-1 md:flex-row'>
 				{buttons &&
 					take(buttons, 3).map((button) => (
-						// Not using endpoint for `key` in case user wants two buttons to link to the same endpoint for some reason
+						// Not using `link` for `key` in case user wants two buttons to link to the same `link` for some reason
 						<WidgetButton key={button.text} onClick={() => onClick?.(button.link)}>
 							{button.icon && <TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />}
 							<span className='truncate'>{button.text}</span>
