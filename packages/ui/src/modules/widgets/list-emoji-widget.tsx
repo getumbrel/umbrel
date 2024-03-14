@@ -1,4 +1,5 @@
 import {LOADING_DASH} from '@/constants'
+import type {ListEmojiItem, ListEmojiWidget, ListEmojiWidgetProps} from '@/modules/widgets/shared/constants'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
@@ -7,13 +8,7 @@ export function ListEmojiWidget({
 	count,
 	link,
 	onClick,
-}: {
-	items?: {
-		emoji?: string
-		text: string
-	}[]
-	count?: number
-	link?: string
+}: ListEmojiWidgetProps & {
 	onClick?: (link?: string) => void
 }) {
 	return (
@@ -42,13 +37,13 @@ export function ListEmojiWidget({
 	)
 }
 
-function ListEmojiItem({emoji, text}: {emoji?: string; text?: string}) {
+function ListEmojiItem(item?: ListEmojiItem) {
 	return (
 		<div className='flex items-center gap-1.5'>
 			<div className='flex h-5 w-5 items-center justify-center rounded-5 bg-white/5'>
-				{limitToOneEmoji(emoji ?? '')}
+				{limitToOneEmoji(item?.emoji ?? '')}
 			</div>
-			<p className={widgetTextCva()}>{text}</p>
+			<p className={widgetTextCva()}>{item?.text}</p>
 		</div>
 	)
 }

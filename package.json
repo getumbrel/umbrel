@@ -11,6 +11,7 @@
     "vm:start": "multipass start umbrel-dev",
     "vm:stop": "multipass stop umbrel-dev",
     "vm:restart": "multipass restart umbrel-dev",
-    "vm:destroy": "multipass delete umbrel-dev && multipass purge"
+    "vm:destroy": "multipass delete umbrel-dev && multipass purge",
+    "vm:remount": "multipass mount . umbrel-dev:/opt/umbrel-mount"
   }
 }

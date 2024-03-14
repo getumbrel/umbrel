@@ -16,14 +16,14 @@ import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {celciusToFahrenheit} from '@/utils/temperature'
 
-import {FourUpWidget} from './four-up-widget'
+import {FourStatsWidget} from './four-stats-widget'
 import {ListEmojiWidget} from './list-emoji-widget'
 import {ListWidget} from './list-widget'
-import {ProgressWidget} from './progress-widget'
 import {WidgetContainer} from './shared/shared'
-import {StatWithButtonsWidget} from './stat-with-buttons-widget'
-import {ThreeUpWidget} from './three-up-widget'
-import {TwoUpWidget} from './two-up-widget'
+import {TextWithButtonsWidget} from './text-with-buttons-widget'
+import {TextWithProgressWidget} from './text-with-progress-widget'
+import {ThreeStatsWidget} from './three-stats-widget'
+import {TwoStatsWidget} from './two-stats-with-guage-widget'
 
 export function Widget({appId, config: manifestConfig}: {appId: string; config: RegistryWidget}) {
 	// TODO: find a way to use `useApp()` to be cleaner
@@ -72,29 +72,29 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	}
 
 	switch (manifestConfig.type) {
-		case 'stat-with-buttons': {
-			const w = widget as WidgetConfig<'stat-with-buttons'>
-			return <StatWithButtonsWidget {...w} onClick={handleClick} />
+		case 'text-with-buttons': {
+			const w = widget as WidgetConfig<'text-with-buttons'>
+			return <TextWithButtonsWidget {...w} onClick={handleClick} />
 		}
-		case 'stat-with-progress': {
-			const w = widget as WidgetConfig<'stat-with-progress'>
-			return <ProgressWidget {...w} onClick={handleClick} />
+		case 'text-with-progress': {
+			const w = widget as WidgetConfig<'text-with-progress'>
+			return <TextWithProgressWidget {...w} onClick={handleClick} />
 		}
-		case 'two-up-stat-with-progress': {
-			const w = widget as WidgetConfig<'two-up-stat-with-progress'>
-			return <TwoUpWidget {...w} onClick={handleClick} />
+		case 'two-stats-with-guage': {
+			const w = widget as WidgetConfig<'two-stats-with-guage'>
+			return <TwoStatsWidget {...w} onClick={handleClick} />
 		}
-		case 'three-up': {
-			const w = widget as WidgetConfig<'three-up'>
+		case 'three-stats': {
+			const w = widget as WidgetConfig<'three-stats'>
 			// TODO: figure out how to show the user's desired temp unit from local storage in a way that isn't brittle
-			if (manifestConfig.id === 'umbrel:system-stats') {
+			if (manifestConfig.id === 'umbrel:system-statss') {
 				return <SystemThreeUpWidget {...w} onClick={handleClick} />
 			}
-			return <ThreeUpWidget {...w} onClick={handleClick} />
+			return <ThreeStatsWidget {...w} onClick={handleClick} />
 		}
-		case 'four-up': {
-			const w = widget as WidgetConfig<'four-up'>
-			return <FourUpWidget {...w} onClick={handleClick} />
+		case 'four-stats': {
+			const w = widget as WidgetConfig<'four-stats'>
+			return <FourStatsWidget {...w} onClick={handleClick} />
 		}
 		case 'list': {
 			const w = widget as WidgetConfig<'list'>
@@ -108,20 +108,20 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 }
 
 // Hacky way to get the right temp unit based on user preferences
-export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeUpWidget>) {
+export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeStatsWidget>) {
 	const [tempUnit] = useTempUnit()
 
 	if (!items) return <ErrorWidget error='No data.' />
 
 	const modifiedItems = map.strict(items, (item) => {
-		if (!item.value?.includes('℃')) return item
-		const celciusNumber = parseInt(item.value.replace('℃', ''))
+		if (!item.text?.includes('℃')) return item
+		const celciusNumber = parseInt(item.text.replace('℃', ''))
 		const tempNumber = tempUnit === 'f' ? celciusToFahrenheit(celciusNumber) : celciusNumber
 		const tempUnitLabel = tempDescriptionsKeyed[tempUnit].label
 		const newValue = tempNumber + tempUnitLabel
-		return {...item, value: newValue}
+		return {...item, text: newValue}
 	})
-	return <ThreeUpWidget items={modifiedItems} {...props} />
+	return <ThreeStatsWidget items={modifiedItems} {...props} />
 }
 
 export function ExampleWidget<T extends WidgetType = WidgetType>({
@@ -132,30 +132,30 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 	example?: ExampleWidgetConfig<T>
 }) {
 	switch (type) {
-		case 'stat-with-buttons': {
-			const w = example as WidgetConfig<'stat-with-buttons'>
+		case 'text-with-buttons': {
+			const w = example as WidgetConfig<'text-with-buttons'>
 			const widgetWithButtonLinks = {
 				...w,
 				// Link to nowhere
-				buttons: w.buttons.map((button) => ({...button, link: ''})),
+				buttons: w.buttons?.map((button) => ({...button, link: ''})),
 			}
-			return <StatWithButtonsWidget {...widgetWithButtonLinks} />
+			return <TextWithButtonsWidget {...widgetWithButtonLinks} />
 		}
-		case 'stat-with-progress': {
-			const w = example as WidgetConfig<'stat-with-progress'>
-			return <ProgressWidget {...w} />
+		case 'text-with-progress': {
+			const w = example as WidgetConfig<'text-with-progress'>
+			return <TextWithProgressWidget {...w} />
 		}
-		case 'two-up-stat-with-progress': {
-			const w = example as WidgetConfig<'two-up-stat-with-progress'>
-			return <TwoUpWidget {...w} />
+		case 'two-stats-with-guage': {
+			const w = example as WidgetConfig<'two-stats-with-guage'>
+			return <TwoStatsWidget {...w} />
 		}
-		case 'three-up': {
-			const w = example as WidgetConfig<'three-up'>
-			return <ThreeUpWidget {...w} />
+		case 'three-stats': {
+			const w = example as WidgetConfig<'three-stats'>
+			return <ThreeStatsWidget {...w} />
 		}
-		case 'four-up': {
-			const w = example as WidgetConfig<'four-up'>
-			return <FourUpWidget {...w} />
+		case 'four-stats': {
+			const w = example as WidgetConfig<'four-stats'>
+			return <FourStatsWidget {...w} />
 		}
 		case 'list': {
 			const w = example as WidgetConfig<'list'>
@@ -170,20 +170,20 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 
 export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: T}) {
 	switch (type) {
-		case 'stat-with-buttons': {
-			return <StatWithButtonsWidget />
+		case 'text-with-buttons': {
+			return <TextWithButtonsWidget />
 		}
-		case 'stat-with-progress': {
-			return <ProgressWidget />
+		case 'text-with-progress': {
+			return <TextWithProgressWidget />
 		}
-		case 'two-up-stat-with-progress': {
-			return <TwoUpWidget />
+		case 'two-stats-with-guage': {
+			return <TwoStatsWidget />
 		}
-		case 'three-up': {
-			return <ThreeUpWidget />
+		case 'three-stats': {
+			return <ThreeStatsWidget />
 		}
-		case 'four-up': {
-			return <FourUpWidget />
+		case 'four-stats': {
+			return <FourStatsWidget />
 		}
 		case 'list': {
 			return <ListWidget />

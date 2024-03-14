@@ -2,36 +2,29 @@ import {ReactNode} from 'react'
 import {take} from 'remeda'
 
 import {LOADING_DASH} from '@/constants'
+import type {TextWithButtonsWidgetProps} from '@/modules/widgets/shared/constants'
 
 import {WidgetContainer} from './shared/shared'
 import {StatText} from './shared/stat-text'
 import {TablerIcon} from './shared/tabler-icon'
 
-export function StatWithButtonsWidget({
+export function TextWithButtonsWidget({
 	title,
-	value,
-	valueSub,
+	text,
+	subtext,
 	buttons,
 	onClick,
-}: {
-	title?: string
-	value?: string
-	valueSub?: string
-	buttons?: {
-		icon?: string
-		text: string
-		link: string
-	}[]
+}: TextWithButtonsWidgetProps & {
 	onClick?: (link: string) => void
 }) {
 	return (
 		<WidgetContainer className='gap-0 p-2 md:p-5'>
-			<StatText title={title ?? LOADING_DASH} value={value} valueSub={valueSub} />
+			<StatText title={title ?? LOADING_DASH} value={text} valueSub={subtext} />
 			<div className='flex-1' />
 			<div className='flex flex-col gap-1 md:flex-row'>
 				{buttons &&
 					take(buttons, 3).map((button) => (
-						// Not using endpoint for `key` in case user wants two buttons to link to the same endpoint for some reason
+						// Not using `link` for `key` in case user wants two buttons to link to the same `link` for some reason
 						<WidgetButton key={button.text} onClick={() => onClick?.(button.link)}>
 							{button.icon && <TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />}
 							<span className='truncate'>{button.text}</span>

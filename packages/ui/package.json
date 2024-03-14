@@ -19,7 +19,9 @@
 		"format": "prettier . --write",
 		"tsc": "tsc --noEmit",
 		"size": "vite-bundle-visualizer",
-		"playwright": "playwright test"
+		"playwright": "playwright test",
+		"copy-tabler-icons": "mkdir -p public/generated-tabler-icons && cp -r ./node_modules/@tabler/icons/icons/. ./public/generated-tabler-icons",
+		"postinstall": "npm run copy-tabler-icons"
 	},
 	"dependencies": {
 		"@radix-ui/react-alert-dialog": "1.0.4",

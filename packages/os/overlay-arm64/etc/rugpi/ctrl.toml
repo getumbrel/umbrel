@@ -1,4 +1,4 @@
 # The size of the system partitions.
-system_size = "10G"
+system_size = "5G"
 # Persist the writeable overlay of the root filesystem.
 overlay = "persist"

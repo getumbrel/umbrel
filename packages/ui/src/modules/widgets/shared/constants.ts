@@ -7,11 +7,11 @@ type BaseWidget = {
 }
 
 export const widgetTypes = [
-	'stat-with-buttons',
-	'stat-with-progress',
-	'two-up-stat-with-progress',
-	'three-up',
-	'four-up',
+	'text-with-buttons',
+	'text-with-progress',
+	'two-stats-with-guage',
+	'three-stats',
+	'four-stats',
 	'list-emoji',
 	'list',
 ] as const
@@ -26,96 +26,100 @@ export type WidgetType = (typeof widgetTypes)[number]
  */
 type Link = string
 
-type FourUpItem = BaseWidget & {
-	title: string
-	icon: string
-	value: string
-	valueSub: string
+export type FourStatsItem = BaseWidget & {
+	title?: string
+	text?: string
+	subtext?: string
 }
-export type FourUpWidget = BaseWidget & {
-	type: 'four-up'
+export type FourStatsWidget = BaseWidget & {
+	type: 'four-stats'
 	link?: Link
-	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
+	items?: [FourStatsItem, FourStatsItem, FourStatsItem, FourStatsItem]
 }
+export type FourStatsWidgetProps = Omit<FourStatsWidget, 'type'>
 
-type ThreeUpItem = {
-	icon: string
-	title: string
-	value: string
+export type ThreeStatsItem = {
+	icon?: string
+	subtext?: string
+	text?: string
 }
-export type ThreeUpWidget = BaseWidget & {
-	type: 'three-up'
+export type ThreeStatsWidget = BaseWidget & {
+	type: 'three-stats'
 	link?: Link
-	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
+	items?: [ThreeStatsItem, ThreeStatsItem, ThreeStatsItem]
 }
+export type ThreeStatsWidgetProps = Omit<ThreeStatsWidget, 'type'>
 
-// NOTE:
-// The long name feels like it could be just be two-up, but this two-up widget is
-// different from the others because it also has a progress. If we ever add one without a progress,
-// that one would be two-up.
-type TwoUpStatWithProgressItem = {
-	title: string
-	value: string
-	valueSub: string
+// The long name feels like it could be just be two-stats, but if we ever add one without a progress, what would we call it?
+export type TwoStatsWithProgressItem = {
+	title?: string
+	text?: string
+	subtext?: string
 	/** Number from 0 to 1 */
-	progress: number
+	progress?: number
 }
-export type TwoUpStatWithProgressWidget = BaseWidget & {
-	type: 'two-up-stat-with-progress'
+export type TwoStatsWithProgressWidget = BaseWidget & {
+	type: 'two-stats-with-guage'
 	link?: Link
-	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
+	items?: [TwoStatsWithProgressItem, TwoStatsWithProgressItem]
 }
+export type TwoStatsWithProgressWidgetProps = Omit<TwoStatsWithProgressWidget, 'type'>
 
-export type StatWithProgressWidget = BaseWidget & {
-	type: 'stat-with-progress'
+export type TextWithProgressWidget = BaseWidget & {
+	type: 'text-with-progress'
 	link?: Link
-	title: string
-	value: string
-	valueSub?: string
-	progressLabel: string
+	title?: string
+	text?: string
+	subtext?: string
+	progressLabel?: string
 	/** Number from 0 to 1 */
-	progress: number
+	progress?: number
 }
+export type TextWithProgressWidgetProps = Omit<TextWithProgressWidget, 'type'>
 
-export type StatWithButtonsWidget = BaseWidget & {
-	type: 'stat-with-buttons'
-	icon: string
-	title: string
-	value: string
-	valueSub: string
-	buttons: {
-		text: string
-		icon: string
+export type TextWithButtonsWidget = BaseWidget & {
+	type: 'text-with-buttons'
+	title?: string
+	text?: string
+	subtext?: string
+	buttons?: {
+		text?: string
+		icon?: string
 		link: Link
 	}[]
 }
+export type TextWithButtonsWidgetProps = Omit<TextWithButtonsWidget, 'type'>
 
+export type ListWidgetItem = {
+	text?: string
+	subtext?: string
+}
 export type ListWidget = BaseWidget & {
 	type: 'list'
 	link?: Link
-	items: {
-		text: string
-		textSub: string
-	}[]
+	items?: ListWidgetItem[]
 	noItemsText?: string
 }
+export type ListWidgetProps = Omit<ListWidget, 'type'>
 
+export type ListEmojiItem = {
+	emoji?: string
+	text?: string
+}
 export type ListEmojiWidget = BaseWidget & {
 	type: 'list-emoji'
 	link?: Link
-	count: number
-	items: {
-		emoji: string
-		text: string
-	}[]
+	count?: number
+	items?: ListEmojiItem[]
 }
+export type ListEmojiWidgetProps = Omit<ListEmojiWidget, 'type'>
 
 type AnyWidgetConfig =
-	| FourUpWidget
-	| ThreeUpWidget
-	| TwoUpStatWithProgressWidget
-	| StatWithProgressWidget
-	| StatWithButtonsWidget
+	| FourStatsWidget
+	| ThreeStatsWidget
+	| TwoStatsWithProgressWidget
+	| TextWithProgressWidget
+	| TextWithButtonsWidget
 	| ListWidget
 	| ListEmojiWidget
 
@@ -124,9 +128,9 @@ export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetC
 
 // ------------------------------
 
-export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'stat-with-buttons'
+export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'text-with-buttons'
 	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
-	  Omit<StatWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<StatWithButtonsWidget['buttons'], 'link'>}
+	  Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
 	: // Otherwise, just omit the `type`
 	  Omit<WidgetConfig<T>, 'type'>
 
@@ -144,51 +148,51 @@ export type RegistryWidget<T extends WidgetType = WidgetType> = {
 export const MAX_WIDGETS = 3
 
 export const liveUsageWidgets: [
-	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'three-up'>,
+	RegistryWidget<'text-with-progress'>,
+	RegistryWidget<'text-with-progress'>,
+	RegistryWidget<'three-stats'>,
 ] = [
 	{
 		id: 'umbrel:storage',
-		type: 'stat-with-progress',
+		type: 'text-with-progress',
 		example: {
 			title: 'Storage',
-			value: '256 GB',
+			text: '256 GB',
 			progressLabel: '1.75 TB left',
 			progress: 0.25,
 		},
 	},
 	{
 		id: 'umbrel:memory',
-		type: 'stat-with-progress',
+		type: 'text-with-progress',
 		example: {
 			title: 'Memory',
-			value: '5.8 GB',
-			valueSub: '/16GB',
+			text: '5.8 GB',
+			subtext: '/16GB',
 			progressLabel: '11.4 GB left',
 			progress: 0.36,
 		},
 	},
 	{
 		id: 'umbrel:system-stats',
-		type: 'three-up',
+		type: 'three-stats',
 		example: {
 			items: [
 				{
 					icon: 'system-widget-storage',
-					title: 'Storage',
-					value: '1.75 TB',
+					subtext: 'Storage',
+					text: '1.75 TB',
 				},
 				{
 					icon: 'system-widget-memory',
-					title: 'Memory',
-					value: '5.8 GB',
+					subtext: 'Memory',
+					text: '5.8 GB',
 				},
 				{
 					icon: 'system-widget-cpu',
-					title: 'CPU',
-					value: '24%',
-				}
+					subtext: 'CPU',
+					text: '24%',
+				},
 			],
 		},
 	},
