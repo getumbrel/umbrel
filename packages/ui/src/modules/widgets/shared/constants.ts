@@ -39,9 +39,9 @@ export type FourStatsWidget = BaseWidget & {
 export type FourStatsWidgetProps = Omit<FourStatsWidget, 'type'>
 
 export type ThreeStatsItem = {
-	icon: string
-	subtext: string
-	text: string
+	icon?: string
+	subtext?: string
+	text?: string
 }
 export type ThreeStatsWidget = BaseWidget & {
 	type: 'three-stats'
@@ -83,7 +83,7 @@ export type TextWithButtonsWidget = BaseWidget & {
 	text?: string
 	subtext?: string
 	buttons?: {
-		text: string
+		text?: string
 		icon?: string
 		link: Link
 	}[]

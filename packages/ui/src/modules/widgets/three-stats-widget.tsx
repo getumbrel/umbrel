@@ -31,14 +31,14 @@ export function ThreeStatsWidget({
 	)
 }
 
-function Item(item: ThreeStatsItem) {
+function Item(item?: ThreeStatsItem) {
 	return (
 		// NOTE: consider reducing rounding if we don't have 3 items
 		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
-			{item.icon && <TablerIcon iconName={item.icon} className='h-5 w-5 md:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
-			<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate max-sm:hidden')}>{item.subtext}</p>
-			<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{item.text}</p>
+			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 md:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
+			<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate max-sm:hidden')}>{item?.subtext}</p>
+			<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{item?.text}</p>
 		</div>
 	)
 }

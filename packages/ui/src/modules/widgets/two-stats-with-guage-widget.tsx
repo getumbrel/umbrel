@@ -28,26 +28,26 @@ export function TwoStatsWidget({
 	)
 }
 
-function Item(item: TwoStatsWithProgressItem) {
+function Item(item?: TwoStatsWithProgressItem) {
 	const isMobile = useIsMobile()
 	const size = isMobile ? 65 : 94
 	const strokeWidth = isMobile ? 5 : 7
 
 	return (
 		<div className='relative'>
-			<Arc strokeWidth={strokeWidth} size={size} progress={item.progress ?? 0} />
+			<Arc strokeWidth={strokeWidth} size={size} progress={item?.progress ?? 0} />
 			<div
 				className='absolute left-1/2 top-1/2 mt-[1px] -translate-x-1/2 -translate-y-1/2 px-1.5 text-center'
 				// Set width so text fits inside the arc
 				style={{width: size - strokeWidth * 2}}
 			>
 				<div className='truncate text-[9px] font-semibold leading-tight tracking-normal md:text-13'>
-					{item.text}
-					{item.subtext && <span className='opacity-40'>{item.subtext}</span>}
+					{item?.text}
+					{item?.subtext && <span className='opacity-40'>{item?.subtext}</span>}
 				</div>
-				{item.title && (
+				{item?.title && (
 					<div className='truncate text-[9px] font-medium leading-tight -tracking-3 opacity-40 md:text-12'>
-						{item.title}
+						{item?.title}
 					</div>
 				)}
 			</div>
