@@ -90,13 +90,14 @@ export type TextWithButtonsWidget = BaseWidget & {
 }
 export type TextWithButtonsWidgetProps = Omit<TextWithButtonsWidget, 'type'>
 
+export type ListWidgetItem = {
+	text?: string
+	subtext?: string
+}
 export type ListWidget = BaseWidget & {
 	type: 'list'
 	link?: Link
-	items?: {
-		text?: string
-		subtext?: string
-	}[]
+	items?: ListWidgetItem[]
 	noItemsText?: string
 }
 export type ListWidgetProps = Omit<ListWidget, 'type'>

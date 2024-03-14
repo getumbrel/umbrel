@@ -1,7 +1,7 @@
 import {Fragment} from 'react'
 
 import {LOADING_DASH} from '@/constants'
-import type {ListWidget, ListWidgetProps} from '@/modules/widgets/shared/constants'
+import type {ListWidget, ListWidgetItem, ListWidgetProps} from '@/modules/widgets/shared/constants'
 
 import {WidgetContainer} from './shared/shared'
 
@@ -39,11 +39,11 @@ export function ListWidget({
 	)
 }
 
-function ListItem(item: ListWidget['items'][0]) {
+function ListItem(item?: ListWidgetItem) {
 	return (
 		<div className='text-12 leading-tight'>
-			<div className='truncate opacity-20'>{item.subtext ?? LOADING_DASH}</div>
-			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>{item.text}</p>
+			<div className='truncate opacity-20'>{item?.subtext ?? LOADING_DASH}</div>
+			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>{item?.text}</p>
 		</div>
 	)
 }
