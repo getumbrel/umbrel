@@ -98,7 +98,7 @@ export function platform() {
 export const IS_ANDROID = /Android/i.test(navigator.userAgent)
 
 export function isDev() {
-	return process.env.NODE_ENV === 'development' || localStorage.getItem('debug') === 'true'
+	return localStorage.getItem('debug') === 'true'
 }
 
 export function cmdOrCtrl() {
