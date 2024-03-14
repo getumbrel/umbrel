@@ -31,7 +31,7 @@ export function FourStatsWidget({
 	)
 }
 
-function Item(item: Partial<FourStatsItem>) {
+function Item(item?: FourStatsItem) {
 	return (
 		<div className='flex h-full flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>
 			<p
@@ -41,12 +41,12 @@ function Item(item: Partial<FourStatsItem>) {
 					}),
 					'text-[8px] md:text-11',
 				)}
-				title={item.text}
+				title={item?.text}
 			>
-				{item.title}
+				{item?.title}
 			</p>
 			<p className={widgetTextCva()}>
-				{item.text} <span className={widgetTextCva({opacity: 'tertiary'})}>{item.subtext}</span>
+				{item?.text} <span className={widgetTextCva({opacity: 'tertiary'})}>{item?.subtext}</span>
 			</p>
 		</div>
 	)
