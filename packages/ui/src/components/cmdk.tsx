@@ -32,7 +32,11 @@ export function useCmdkOpen() {
 
 	useKey(
 		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
-		() => ctx.setOpen((open) => !open),
+		(e) => {
+			// Prevent default behavior (in Windows Chrome where it opens the search bar)
+			e.preventDefault()
+			ctx.setOpen((open) => !open)
+		},
 	)
 
 	return ctx
