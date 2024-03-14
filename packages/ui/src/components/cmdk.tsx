@@ -42,7 +42,7 @@ export function useCmdkOpen() {
 	return ctx
 }
 
-export function CmdkProvier({children}: {children: React.ReactNode}) {
+export function CmdkProvider({children}: {children: React.ReactNode}) {
 	const [open, setOpen] = useState(false)
 
 	return <CmdkOpenContext.Provider value={{open, setOpen}}>{children}</CmdkOpenContext.Provider>
