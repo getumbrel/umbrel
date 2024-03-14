@@ -34,6 +34,7 @@ export function DeviceInfoDrawer() {
 				<DrawerScroller>
 					<DeviceInfoContent
 						umbrelHostEnvironment={data.umbrelHostEnvironment}
+					  device={data.device}
 						modelNumber={data.modelNumber}
 						serialNumber={data.serialNumber}
 					/>
