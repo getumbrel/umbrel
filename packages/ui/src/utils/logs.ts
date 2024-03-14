@@ -5,7 +5,7 @@ console.allLogs = []
 
 function pushLog(log: any) {
 	try {
-		console.allLogs.push(`${new Date().toUTCString()} LOG: ` + JSON.stringify(Array.from(log)))
+		console.allLogs.push(`${new Date().toUTCString()} LOG: `, Array.from(log))
 	} catch (e) {
 		// ignore
 	}
@@ -59,7 +59,7 @@ export function downloadLogs() {
 	const filename = 'console.json'
 
 	if (typeof data === 'object') {
-		data = JSON.stringify(data, undefined, 4)
+		data = JSON.stringify(data)
 	}
 
 	const blob = new Blob([data], {type: 'text/json'}),
