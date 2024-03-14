@@ -2,13 +2,17 @@ import type {IconType} from 'react-icons'
 import {TbAlertCircle, TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
 import * as SonnerPrimitive from 'sonner'
 
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {tw} from '@/utils/tw'
 
 export function Toaster() {
+	const isMobile = useIsMobile()
 	return (
 		<SonnerPrimitive.Toaster
 			position='top-right'
+			// `undefined` to use the default value
+			offset={isMobile ? 12 : undefined}
 			toastOptions={{
 				unstyled: true,
 				classNames: {
