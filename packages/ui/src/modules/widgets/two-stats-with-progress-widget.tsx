@@ -6,7 +6,7 @@ import {WidgetContainer} from './shared/shared'
 
 type TwoUpItem = {title?: string; value?: string; valueSub?: string; progress?: number}
 
-export function TwoUpWidget({
+export function TwoStatsWidget({
 	items,
 	link,
 	onClick,
@@ -18,32 +18,22 @@ export function TwoUpWidget({
 	return (
 		<WidgetContainer onClick={() => onClick?.(link)} className=' flex-row items-center justify-center md:gap-[30px]'>
 			{items?.[0] && (
-				<TwoUpItem
-					title={items[0].title}
-					value={items[0].value}
-					valueSub={items[0].valueSub}
-					progress={items[0].progress}
-				/>
+				<Item title={items[0].title} value={items[0].value} valueSub={items[0].valueSub} progress={items[0].progress} />
 			)}
 			{items?.[1] && (
-				<TwoUpItem
-					title={items[1].title}
-					value={items[1].value}
-					valueSub={items[1].valueSub}
-					progress={items[1].progress}
-				/>
+				<Item title={items[1].title} value={items[1].value} valueSub={items[1].valueSub} progress={items[1].progress} />
 			)}
 			{!items && (
 				<>
-					<TwoUpItem title={LOADING_DASH} value={LOADING_DASH} />
-					<TwoUpItem title={LOADING_DASH} value={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>
 	)
 }
 
-function TwoUpItem({title, value, valueSub, progress}: TwoUpItem) {
+function Item({title, value, valueSub, progress}: TwoUpItem) {
 	const isMobile = useIsMobile()
 	const size = isMobile ? 65 : 94
 	const strokeWidth = isMobile ? 5 : 7

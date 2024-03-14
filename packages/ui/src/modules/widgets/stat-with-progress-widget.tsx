@@ -5,7 +5,7 @@ import {t} from '@/utils/i18n'
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 import {StatText} from './shared/stat-text'
 
-export function ProgressWidget({
+export function StatWithProgressWidget({
 	title,
 	value,
 	valueSub,

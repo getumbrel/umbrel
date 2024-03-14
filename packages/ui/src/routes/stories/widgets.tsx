@@ -7,16 +7,16 @@ import {Arc} from '@/components/ui/arc'
 import {H1, H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {ExampleWidget, LoadingWidget, Widget} from '@/modules/widgets'
-import {FourUpWidget} from '@/modules/widgets/four-up-widget'
+import {FourStatsWidget} from '@/modules/widgets/four-stats-widget'
 import {ListEmojiWidget} from '@/modules/widgets/list-emoji-widget'
 import {ListWidget} from '@/modules/widgets/list-widget'
-import {ProgressWidget} from '@/modules/widgets/progress-widget'
 import {liveUsageWidgets, RegistryWidget, WidgetType, widgetTypes} from '@/modules/widgets/shared/constants'
 import {TablerIcon} from '@/modules/widgets/shared/tabler-icon'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {StatWithButtonsWidget} from '@/modules/widgets/stat-with-buttons-widget'
-import {ThreeUpWidget} from '@/modules/widgets/three-up-widget'
-import {TwoUpWidget} from '@/modules/widgets/two-up-widget'
+import {StatWithProgressWidget} from '@/modules/widgets/stat-with-progress-widget'
+import {ThreeStatsWidget} from '@/modules/widgets/three-stats-widget'
+import {TwoStatsWidget} from '@/modules/widgets/two-stats-with-progress-widget'
 import {AppsProvider} from '@/providers/apps'
 import {Input, Labeled} from '@/shadcn-components/ui/input'
 import {linkClass} from '@/utils/element-classes'
@@ -32,7 +32,7 @@ export const demoWidgetRegistryConfigs = [
 			},
 			{
 				id: 'bitcoin:stats',
-				type: 'four-up',
+				type: 'four-stats',
 			},
 		],
 	},
@@ -45,7 +45,7 @@ export const demoWidgetRegistryConfigs = [
 			},
 			{
 				id: 'lightning:connections',
-				type: 'four-up',
+				type: 'four-stats',
 			},
 		],
 	},
@@ -93,7 +93,7 @@ export default function WidgetsStory() {
 						config={{
 							id: 'example:error',
 							type: 'stat-with-progress',
-							// endpoint: '/widgets/example/four-up.json',
+							// endpoint: '/widgets/example/four-stats.json',
 						}}
 					/>
 				</div>
@@ -183,8 +183,8 @@ export default function WidgetsStory() {
 				</div>
 				<H3>stat-with-progress</H3>
 				<div className={sectionClass}>
-					<ProgressWidget />
-					<ProgressWidget
+					<StatWithProgressWidget />
+					<StatWithProgressWidget
 						title='Storage'
 						value='256 GB'
 						valueSub='/ 2 TB'
@@ -192,10 +192,10 @@ export default function WidgetsStory() {
 						progress={0.25}
 					/>
 				</div>
-				<H3>two-up-stat-with-progress</H3>
+				<H3>two-stats-with-progress</H3>
 				<div className={sectionClass}>
-					<TwoUpWidget />
-					<TwoUpWidget
+					<TwoStatsWidget />
+					<TwoStatsWidget
 						// @ts-expect-error expecting 2 items
 						items={[
 							{
@@ -206,7 +206,7 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<TwoUpWidget
+					<TwoStatsWidget
 						items={[
 							{
 								// title: 'CPU',
@@ -222,7 +222,7 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<TwoUpWidget
+					<TwoStatsWidget
 						items={[
 							{
 								title: 'CPU',
@@ -238,7 +238,7 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<TwoUpWidget
+					<TwoStatsWidget
 						items={[
 							{
 								title: 'CPU',
@@ -254,7 +254,7 @@ export default function WidgetsStory() {
 							},
 						]}
 					/>
-					<TwoUpWidget
+					<TwoStatsWidget
 						items={[
 							{
 								title: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod.',
@@ -276,21 +276,21 @@ export default function WidgetsStory() {
 					<Arc strokeWidth={5} size={65} progress={0.75} />
 					<Arc strokeWidth={5} size={65} progress={1} />
 				</div>
-				<H3>three-up</H3>
+				<H3>three-stats</H3>
 				<div className={sectionClass}>
-					<ThreeUpWidget />
-					<ThreeUpWidget
+					<ThreeStatsWidget />
+					<ThreeStatsWidget
 						// @ts-expect-error expecting 3 items
 						items={[{icon: 'cpu', title: 'CPU', value: '4.2 %'}]}
 					/>
-					<ThreeUpWidget
+					<ThreeStatsWidget
 						// @ts-expect-error expecting 3 items
 						items={[
 							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
 							{icon: 'cpu', title: 'Memory', value: '16 GB'},
 						]}
 					/>
-					<ThreeUpWidget
+					<ThreeStatsWidget
 						items={[
 							{icon: '', title: 'Storage', value: '256 GB'},
 							{icon: '', title: 'Memory', value: '16 GB'},
@@ -298,14 +298,14 @@ export default function WidgetsStory() {
 							// {icon: 'hard-drive', title: 'Storage', value: '256 GB'},
 						]}
 					/>
-					<ThreeUpWidget
+					<ThreeStatsWidget
 						items={[
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
 							{icon: 'cpu', title: 'Memory', value: '16 GB'},
 							{icon: 'cpu', title: 'CPU', value: '4.2 %'},
 						]}
 					/>
-					<ThreeUpWidget
+					<ThreeStatsWidget
 						items={[
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
 							{icon: 'cpu', title: 'Memory', value: '16 GB'},
@@ -314,7 +314,7 @@ export default function WidgetsStory() {
 							{icon: 'cpu', title: 'Storage', value: '256 GB'},
 						]}
 					/>
-					<ThreeUpWidget
+					<ThreeStatsWidget
 						items={[
 							{icon: 'cpu', title: 'Lorem ipsum dolor', value: 'Lorem ipsum dolor'},
 							{icon: 'cpu', title: 'Lorem ipsum dolor', value: 'Lorem ipsum dolor'},
@@ -322,10 +322,10 @@ export default function WidgetsStory() {
 						]}
 					/>
 				</div>
-				<H3>four-up</H3>
+				<H3>four-stats</H3>
 				<div className={sectionClass}>
-					<FourUpWidget />
-					<FourUpWidget
+					<FourStatsWidget />
+					<FourStatsWidget
 						items={[
 							{title: 'Storage', value: '256', valueSub: 'GB'},
 							{title: 'Memory', value: '16', valueSub: 'GB'},
@@ -333,7 +333,7 @@ export default function WidgetsStory() {
 							{title: 'CPU', value: '4.2', valueSub: '%'},
 						]}
 					/>
-					<FourUpWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: '%'}]} />
+					<FourStatsWidget onClick={handleClick} items={[{title: 'CPU', value: '4.2', valueSub: '%'}]} />
 				</div>
 				<H3>list</H3>
 				<div className={sectionClass}>
@@ -445,12 +445,12 @@ export default function WidgetsStory() {
 						</div>
 					</>
 				))}
-				<WidgetWrapper label={'two-up-stat-with-progress'}>
+				<WidgetWrapper label={'two-stats-with-progress'}>
 					<Widget
 						appId='settings'
 						config={{
 							id: 'settings:system-stats',
-							type: 'two-up-stat-with-progress',
+							type: 'two-stats-with-progress',
 						}}
 					/>
 				</WidgetWrapper>

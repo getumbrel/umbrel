@@ -3,15 +3,16 @@
 export const DEFAULT_REFRESH_MS = 1000 * 60 * 5
 
 type BaseWidget = {
+	type: WidgetType
 	refresh?: number
 }
 
 export const widgetTypes = [
 	'stat-with-buttons',
 	'stat-with-progress',
-	'two-up-stat-with-progress',
-	'three-up',
-	'four-up',
+	'two-stats-with-progress',
+	'three-stats',
+	'four-stats',
 	'list-emoji',
 	'list',
 ] as const
@@ -33,7 +34,7 @@ type FourUpItem = BaseWidget & {
 	valueSub: string
 }
 export type FourUpWidget = BaseWidget & {
-	type: 'four-up'
+	type: 'four-stats'
 	link?: Link
 	items: [FourUpItem, FourUpItem, FourUpItem, FourUpItem]
 }
@@ -44,26 +45,23 @@ type ThreeUpItem = {
 	value: string
 }
 export type ThreeUpWidget = BaseWidget & {
-	type: 'three-up'
+	type: 'three-stats'
 	link?: Link
 	items: [ThreeUpItem, ThreeUpItem, ThreeUpItem]
 }
 
-// NOTE:
-// The long name feels like it could be just be two-up, but this two-up widget is
-// different from the others because it also has a progress. If we ever add one without a progress,
-// that one would be two-up.
-type TwoUpStatWithProgressItem = {
+// The long name feels like it could be just be two-stats, but if we ever add one without a progress, what would we call it?
+type TwoStatsWithProgressItem = {
 	title: string
 	value: string
 	valueSub: string
 	/** Number from 0 to 1 */
 	progress: number
 }
-export type TwoUpStatWithProgressWidget = BaseWidget & {
-	type: 'two-up-stat-with-progress'
+export type TwoStatsWithProgressWidget = BaseWidget & {
+	type: 'two-stats-with-progress'
 	link?: Link
-	items: [TwoUpStatWithProgressItem, TwoUpStatWithProgressItem]
+	items: [TwoStatsWithProgressItem, TwoStatsWithProgressItem]
 }
 
 export type StatWithProgressWidget = BaseWidget & {
@@ -113,7 +111,7 @@ export type ListEmojiWidget = BaseWidget & {
 type AnyWidgetConfig =
 	| FourUpWidget
 	| ThreeUpWidget
-	| TwoUpStatWithProgressWidget
+	| TwoStatsWithProgressWidget
 	| StatWithProgressWidget
 	| StatWithButtonsWidget
 	| ListWidget
@@ -146,7 +144,7 @@ export const MAX_WIDGETS = 3
 export const liveUsageWidgets: [
 	RegistryWidget<'stat-with-progress'>,
 	RegistryWidget<'stat-with-progress'>,
-	RegistryWidget<'three-up'>,
+	RegistryWidget<'three-stats'>,
 ] = [
 	{
 		id: 'umbrel:storage',
@@ -171,7 +169,7 @@ export const liveUsageWidgets: [
 	},
 	{
 		id: 'umbrel:system-stats',
-		type: 'three-up',
+		type: 'three-stats',
 		example: {
 			items: [
 				{
@@ -188,7 +186,7 @@ export const liveUsageWidgets: [
 					icon: 'system-widget-cpu',
 					title: 'CPU',
 					value: '24%',
-				}
+				},
 			],
 		},
 	},

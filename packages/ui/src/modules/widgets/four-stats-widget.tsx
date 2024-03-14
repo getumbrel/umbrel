@@ -3,7 +3,7 @@ import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
-export function FourUpWidget({
+export function FourStatsWidget({
 	items,
 	link,
 	onClick,
@@ -19,20 +19,20 @@ export function FourUpWidget({
 		>
 			{items
 				?.slice(0, 4)
-				?.map((item) => <FourUpItem key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />)}
+				?.map((item) => <Item key={item.title} title={item.title} value={item.value} valueSub={item.valueSub} />)}
 			{!items && (
 				<>
-					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
-					<FourUpItem title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
+					<Item title={LOADING_DASH} value={LOADING_DASH} valueSub={LOADING_DASH} />
 				</>
 			)}
 		</WidgetContainer>
 	)
 }
 
-function FourUpItem({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
+function Item({title, value, valueSub}: {title?: string; value?: string; valueSub?: string}) {
 	return (
 		<div className='flex h-full flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>
 			<p
