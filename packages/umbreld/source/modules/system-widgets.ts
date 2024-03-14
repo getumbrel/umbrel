@@ -8,12 +8,12 @@ export const systemWidgets = {
 		const {size, totalUsed} = await getDiskUsage(umbreld)
 
 		return {
-			type: 'stat-with-progress',
+			type: 'text-with-progress',
 			link: '?dialog=live-usage',
 			refresh: '30s',
 			title: 'Storage',
-			value: prettyBytes(totalUsed),
-			valueSub: `/ ${prettyBytes(size)}`,
+			text: prettyBytes(totalUsed),
+			subtext: `/ ${prettyBytes(size)}`,
 			progressLabel: `${prettyBytes(size - totalUsed)} left`,
 			progress: (totalUsed / size).toFixed(2),
 		}
@@ -22,12 +22,12 @@ export const systemWidgets = {
 		const {size, totalUsed} = await getMemoryUsage(umbreld)
 
 		return {
-			type: 'stat-with-progress',
+			type: 'text-with-progress',
 			link: '?dialog=live-usage',
 			refresh: '10s',
 			title: 'Memory',
-			value: prettyBytes(totalUsed),
-			valueSub: `/ ${prettyBytes(size)}`,
+			text: prettyBytes(totalUsed),
+			subtext: `/ ${prettyBytes(size)}`,
 			progressLabel: `${prettyBytes(size - totalUsed)} left`,
 			progress: (totalUsed / size).toFixed(2),
 		}
@@ -44,24 +44,24 @@ export const systemWidgets = {
 		const {totalUsed: memoryTotalUsed} = memoryUsage
 
 		return {
-			type: 'three-up',
+			type: 'three-stats',
 			link: '?dialog=live-usage',
 			refresh: '10s',
 			items: [
 				{
 					icon: 'system-widget-storage',
-					title: 'Storage',
-					value: `${prettyBytes(diskTotalUsed)}`,
+					subtext: 'Storage',
+					text: `${prettyBytes(diskTotalUsed)}`,
 				},
 				{
 					icon: 'system-widget-memory',
-					title: 'Memory',
-					value: `${prettyBytes(memoryTotalUsed)}`,
+					subtext: 'Memory',
+					text: `${prettyBytes(memoryTotalUsed)}`,
 				},
 				{
 					icon: 'system-widget-cpu',
-					title: 'CPU',
-					value: `${cpuTotalUsed.toPrecision(2)}%`,
+					subtext: 'CPU',
+					text: `${cpuTotalUsed.toPrecision(2)}%`,
 				},
 			],
 		}
