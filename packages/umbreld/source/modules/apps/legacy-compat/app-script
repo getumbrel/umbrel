@@ -174,7 +174,7 @@ source_app() {
 }
 
 # Check dependencies
-check_dependencies docker-compose jq yq openssl envsubst
+check_dependencies docker jq yq openssl envsubst
 
 if [ -z ${1+x} ]; then
   command=""
@@ -286,7 +286,7 @@ compose() {
 
   # TODO: We removed the .env source, we probs need to add that back in somehow
   # --env-file "${umbrel_env_file}" \
-  docker-compose \
+  docker compose \
     --project-name "${app}" \
     "${compose_args[@]}"
 }
