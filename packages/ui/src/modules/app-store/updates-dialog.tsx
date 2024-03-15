@@ -13,6 +13,7 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp, trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
+import {t} from '@/utils/i18n'
 
 export function UpdatesDialogConnected() {
 	const dialogProps = useDialogOpenProps('updates')
@@ -35,7 +36,7 @@ export function UpdatesDialogConnected() {
 					disabled={updateAll.isLoading || appsWithUpdates.length === 0}
 				>
 					{/* TODO: translate */}
-					{updateAll.isLoading ? 'Updating...' : 'Update all'}
+					{updateAll.isLoading ? t('app-updates.updating') : t('app-updates.update-all')}
 				</Button>
 			}
 		/>
@@ -50,7 +51,7 @@ export function UpdatesDialog({
 	appsWithUpdates: RegistryApp[]
 	titleRightChildren?: React.ReactNode
 } & DialogProps) {
-	const title = 'Updates'
+	const title = t('app-updates.title')
 
 	return (
 		<Dialog {...dialogProps}>
@@ -62,7 +63,7 @@ export function UpdatesDialog({
 					<DialogHeader className='px-5 pb-5'>
 						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle className='flex flex-row items-center justify-between'>
-							<span>{appsWithUpdates.length} updates available</span>
+							<span>{t('app-updates.updates-available-count', {count: appsWithUpdates.length})}</span>
 							{titleRightChildren}
 						</DialogTitle>
 					</DialogHeader>
@@ -95,7 +96,7 @@ function AppItem({app}: {app: RegistryApp}) {
 				</div>
 				<div className='flex-1' />
 				<Button size='sm' onClick={updateApp} disabled={updateMut.isLoading}>
-					{updateMut.isLoading ? 'Updating...' : 'Update'}
+					{updateMut.isLoading ? t('app-updates.updating') : t('app-updates.update')}
 				</Button>
 			</div>
 			{app.releaseNotes && (
@@ -117,7 +118,7 @@ function AppItem({app}: {app: RegistryApp}) {
 						)}
 						onClick={() => setShowAll((s) => !s)}
 					>
-						{showAll ? 'less' : 'more'}
+						{showAll ? t('app-updates.less') : t('app-updates.more')}
 					</button>
 				</div>
 			)}
