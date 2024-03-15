@@ -47,7 +47,7 @@ export function useSoftwareUpdate() {
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
 			}
-			if (latestVersion !== currentVersion) {
+			if (latestVersion.version !== currentVersion) {
 				setState('update-available')
 			} else {
 				setState('at-latest')
