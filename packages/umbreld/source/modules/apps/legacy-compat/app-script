@@ -128,6 +128,10 @@ source_app() {
       # We replace the literal text "${UMBREL_ROOT}/scripts/app" within the exports.sh file with the path to this script
       sed -i 's|"${UMBREL_ROOT}/scripts/app"|'"${CURRENT_SCRIPT_PATH}"'|g' "${EXPORTS_APP_FILE}"
 
+      # We replace the literal text "${UMBREL_ROOT}/db/user.json" within the exports.sh file with the path to the umbrel.yaml file
+      # This specifically handles the Tailscale app
+      sed -i 's|"${UMBREL_ROOT}/db/user.json"|"${UMBREL_ROOT}/umbrel.yaml"|g' "${EXPORTS_APP_FILE}"
+
       # Source the modified temporary exports file
       . "${EXPORTS_APP_FILE}"
     fi
