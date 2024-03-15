@@ -16,6 +16,7 @@ import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
+import {formatNumberI18n} from '@/utils/number'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
@@ -222,7 +223,7 @@ function AppList2({apps}: {apps?: {id: string; used: number}[]}) {
 					key={id}
 					icon={allAppsKeyed[id]?.icon}
 					title={allAppsKeyed[id]?.name || t('unknown-app')}
-					value={used.toFixed(2) + '%'}
+					value={formatNumberI18n(used) + '%'}
 				/>
 			))}
 		</div>
