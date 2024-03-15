@@ -23,7 +23,6 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {toast} from '@/components/ui/toast'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H1, H2, H3} from '@/layouts/stories'
-import {NoForgotPasswordMessage} from '@/routes/settings/_components/no-forgot-password-message'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
@@ -123,7 +122,6 @@ export function I18Examples() {
 	return (
 		<div>
 			<H3>Trans component</H3>
-			<NoForgotPasswordMessage />
 			<H3>Plurals</H3>
 			<p>{0 + ' installed ' + t('app', {count: 0})}</p>
 			<p>{1 + ' installed ' + t('app', {count: 1})}</p>

@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
 
-import {CmdkMenu, CmdkProvier, useCmdkOpen} from '@/components/cmdk'
+import {CmdkMenu, CmdkProvider, useCmdkOpen} from '@/components/cmdk'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
@@ -21,9 +21,9 @@ export function Desktop() {
 	}
 
 	return (
-		<CmdkProvier>
+		<CmdkProvider>
 			<DesktopPage />
-		</CmdkProvier>
+		</CmdkProvider>
 	)
 }
 

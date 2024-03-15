@@ -11,7 +11,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export function TorDrawer() {
-	const title = t('tor-long')
+	const title = t('remote-tor-access')
 	const dialogProps = useSettingsDialogProps()
 
 	const {enabled, setEnabled, isMutLoading, isError} = useTorEnabled({
@@ -37,7 +37,7 @@ export function TorDrawer() {
 				<DrawerHeader>
 					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('tor-description-long')}</DrawerDescription>
+					<DrawerDescription>{t('tor-description')}</DrawerDescription>
 				</DrawerHeader>
 				<div className={listClass}>
 					<label className={listItemClass}>

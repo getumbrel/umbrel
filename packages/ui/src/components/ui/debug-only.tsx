@@ -1,7 +1,7 @@
-import {isDev} from '@/utils/misc'
+import {IS_DEV} from '@/utils/misc'
 
 export function DebugOnly({children}: {children: React.ReactNode}) {
-	if (isDev()) {
+	if (IS_DEV) {
 		return (
 			<div className='relative border border-dotted border-white/50 p-2'>
 				{children}
@@ -13,7 +13,7 @@ export function DebugOnly({children}: {children: React.ReactNode}) {
 }
 
 export function DebugOnlyBare({children}: {children: React.ReactNode}) {
-	if (isDev()) {
+	if (IS_DEV) {
 		return <>{children}</>
 	}
 	return null

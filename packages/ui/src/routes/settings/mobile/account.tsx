@@ -19,8 +19,6 @@ import {
 import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
 import {t} from '@/utils/i18n'
 
-import {NoForgotPasswordMessage} from '../_components/no-forgot-password-message'
-
 export function AccountDrawer() {
 	// TODO: add translation
 	const title = 'Account'
@@ -29,8 +27,8 @@ export function AccountDrawer() {
 	const closeDialog = () => dialogProps.onOpenChange(false)
 
 	const tabs = [
-		{id: 'change-name', label: 'Display name'},
-		{id: 'change-password', label: 'Password'},
+		{id: 'change-name', label: t('name')},
+		{id: 'change-password', label: t('password')},
 	] as const
 	type TabId = (typeof tabs)[number]['id']
 
@@ -43,7 +41,7 @@ export function AccountDrawer() {
 				<DrawerHeader>
 					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>Your display name & Umbrel password</DrawerDescription>
+					<DrawerDescription>{t('account-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
@@ -61,7 +59,7 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
 			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
-				<Labeled label='Display name'>
+				<Labeled label={t('change-name.input-placeholder')}>
 					<Input value={name} onValueChange={setName} />
 				</Labeled>
 				<div className='-my-2.5'>
@@ -112,7 +110,6 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 						error={fieldErrors.newPassword}
 					/>
 				</Labeled>
-				<NoForgotPasswordMessage />
 				<div className='flex-1' />
 				<div className='-my-2.5'>
 					<AnimatedInputError>{formError}</AnimatedInputError>
@@ -123,7 +120,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 						{t('cancel')}
 					</Button>
 					<Button type='submit' size='dialog' variant='primary'>
-						{t('save-changes')}
+						{t('confirm')}
 					</Button>
 				</DrawerFooter>
 			</fieldset>

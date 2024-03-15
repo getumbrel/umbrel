@@ -36,7 +36,7 @@ export function StartMigrationDrawerOrDialog() {
 					</div>
 					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('migration-assistant-description-long')}</DrawerDescription>
+					<DrawerDescription>{t('migration-assistant-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
 					<Button onClick={() => setStartMigration(true)} variant='primary' size='dialog'>

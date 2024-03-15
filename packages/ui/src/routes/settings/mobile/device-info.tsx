@@ -14,7 +14,7 @@ import {t} from '@/utils/i18n'
 import {DeviceInfoContent} from '../_components/device-info-content'
 
 export function DeviceInfoDrawer() {
-	const title = t('device-info-short')
+	const title = t('device-info')
 	const dialogProps = useSettingsDialogProps()
 
 	const {data, isLoading} = useDeviceInfo()
@@ -34,6 +34,7 @@ export function DeviceInfoDrawer() {
 				<DrawerScroller>
 					<DeviceInfoContent
 						umbrelHostEnvironment={data.umbrelHostEnvironment}
+					  device={data.device}
 						modelNumber={data.modelNumber}
 						serialNumber={data.serialNumber}
 					/>

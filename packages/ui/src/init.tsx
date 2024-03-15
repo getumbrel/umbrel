@@ -13,6 +13,9 @@ import {BareCoverMessage, CoverMessageTarget} from '@/components/ui/cover-messag
 import {Toaster} from '@/components/ui/toast'
 import {TooltipProvider} from '@/shadcn-components/ui/tooltip'
 import {t} from '@/utils/i18n'
+import {monkeyPatchConsoleLog} from '@/utils/logs'
+
+monkeyPatchConsoleLog()
 
 export function init(element: React.ReactNode) {
 	i18next.on('initialized', () => {

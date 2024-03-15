@@ -1,28 +1,54 @@
 // import {useErrorBoundary} from 'react-error-boundary'
-import {useRouteError} from 'react-router-dom'
+import {useState} from 'react'
 
+import {Button} from '@/shadcn-components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
+import {downloadLogs} from '@/utils/logs'
 
-import {ReloadPageButton} from '../reload-page-button'
-import {BareCoverMessage} from './cover-message'
+import {CoverMessage} from './cover-message'
 
 export function ErrorBoundary() {
-	const error = useRouteError()
+	// const error = useRouteError()
+	const [open, setOpen] = useState(true)
+
 	// TODO: reset doesn't work
 	// const {resetBoundary} = useErrorBoundary()
 	// console.error(error)
+
 	return (
-		<BareCoverMessage>
-			<div>
-				<h1 className='font-semibold text-destructive2-lightest'>{t('unexpected-error.heading')}</h1>
-				<p className='max-w-sm text-13'>{error instanceof Error ? error.message : t('unexpected-error')}</p>
-				<div className='mt-2 flex items-center gap-2'>
-					{/* <Button variant='secondary' size='sm' onClick={resetBoundary}>
-						Try Again
-					</Button> */}
-					<ReloadPageButton />
-				</div>
-			</div>
-		</BareCoverMessage>
+		<CoverMessage>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>{t('something-went-wrong')}</DialogTitle>
+						{/* <DialogDescription>
+							Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo aspernatur in consequatur illum quos non
+							voluptatum quidem, laboriosam natus praesentium soluta, aliquam fugit harum dolore exercitationem saepe
+							nihil ad quia.
+						</DialogDescription> */}
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							size='dialog'
+							variant='primary'
+							onClick={() => {
+								downloadLogs()
+							}}
+						>
+							{t('download-logs')}
+						</Button>
+						<Button
+							size='dialog'
+							onClick={() => {
+								window.location.reload()
+							}}
+						>
+							{t('retry')}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</CoverMessage>
 	)
 }

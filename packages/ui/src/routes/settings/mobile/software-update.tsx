@@ -29,13 +29,13 @@ export function SoftwareUpdateDrawer() {
 				<DrawerHeader>
 					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('software-update.description-long')}</DrawerDescription>
+					<DrawerDescription>{t('check-for-latest-version')}</DrawerDescription>
 				</DrawerHeader>
 				<div className='flex flex-col items-center py-8'>
 					<FadeInImg src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
-					<p className='text-15 -tracking-4'>umbrelOS {currentVersion || LOADING_DASH}</p>
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
+					<p className='text-15 -tracking-4'>umbrelOS {currentVersion || LOADING_DASH}</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>
@@ -43,7 +43,7 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>{t('software-update.on-latest')}</div>
 							<Button variant='primary' size='dialog' onClick={checkLatest}>
-								{t('software-update.check-short')}
+								{t('software-update.check')}
 							</Button>
 						</>
 					)}
@@ -51,7 +51,7 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>&nbsp;{/* Spacer */}</div>
 							<Button variant='primary' size='dialog' onClick={checkLatest} disabled={state === 'checking'}>
-								{state === 'checking' ? t('software-update.checking') : t('software-update.check-short')}
+								{state === 'checking' ? t('software-update.checking') : t('software-update.check')}
 							</Button>
 						</>
 					)}

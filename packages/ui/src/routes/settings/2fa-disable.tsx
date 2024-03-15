@@ -23,7 +23,6 @@ export default function TwoFactorDisableDialog() {
 					<DrawerHeader>
 						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DrawerTitle>{title}</DrawerTitle>
-						<DrawerDescription>{t('2fa.disable.description')}</DrawerDescription>
 					</DrawerHeader>
 					<Inner onCodeCheck={disable} />
 				</DrawerContent>

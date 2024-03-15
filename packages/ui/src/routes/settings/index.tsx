@@ -10,6 +10,7 @@ import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
+import ErrorStory from '@/routes/stories/error'
 import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
@@ -123,6 +124,7 @@ export function Settings() {
 				<QueryStringDialog />
 				<DebugOnly>
 					<CoverTest />
+					<ErrorStory />
 				</DebugOnly>
 			</Suspense>
 		</>

@@ -24,7 +24,7 @@ export function ErrorAlert({
 			)}
 		>
 			{IconComponent && <IconComponent className='h-5 w-5 shrink-0' />}
-			<span className='opacity-60'>{description}</span>
+			<span className='opacity-90'>{description}</span>
 		</div>
 	)
 }

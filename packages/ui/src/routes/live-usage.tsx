@@ -109,7 +109,7 @@ function StorageSection() {
 				progress={progress}
 				rightChildren={
 					<>
-						{isDiskLow && <ErrorMessage>{t('storage.low-long')}</ErrorMessage>}
+						{isDiskLow && <ErrorMessage>{t('storage.low')}</ErrorMessage>}
 						{isDiskFull && <ErrorMessage>{t('storage.full')}</ErrorMessage>}
 					</>
 				}
@@ -130,7 +130,7 @@ function MemorySection() {
 				valueSub={valueSub}
 				progressLabel={secondaryValue}
 				progress={progress}
-				rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low-long')}</ErrorMessage>}
+				rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low')}</ErrorMessage>}
 			/>
 			{isLoading && <AppListSkeleton />}
 			<AppList apps={apps} />

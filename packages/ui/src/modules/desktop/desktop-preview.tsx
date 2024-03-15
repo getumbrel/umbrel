@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react'
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
+import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {useApps} from '@/providers/apps'
 import {Wallpaper} from '@/providers/wallpaper'
 
@@ -45,7 +46,7 @@ export function DesktopPreview() {
 			<div
 				className='shrink-0 origin-top-left'
 				style={{
-					transform: `scale(${scale})`,
+					transform: `scale3d(${scale}, ${scale}, 1)`,
 				}}
 			>
 				<div
@@ -81,7 +82,7 @@ function DesktopContent() {
 	if (!userApps) return null
 
 	return (
-		<>
+		<BackdropBlurVariantContext.Provider value='default'>
 			<div className='pt-12' />
 			<Header />
 			<div className='pt-12' />
@@ -98,7 +99,7 @@ function DesktopContent() {
 					))}
 				/>
 			</div>
-		</>
+		</BackdropBlurVariantContext.Provider>
 	)
 }
 
