@@ -22,13 +22,14 @@ export function useMemory(options: {poll?: boolean} = {}) {
 		isLoading: memoryQ.isLoading,
 		//
 		...transformed,
+		system: memoryQ.data?.system,
 		apps: sort(memoryQ.data?.apps ?? [], (a, b) => b.used - a.used),
 		isMemoryLow: isMemoryLow({size: transformed?.size, used: transformed?.used}),
 	}
 }
 
 export function useMemoryForUi(options: {poll?: boolean} = {}) {
-	const {isLoading, used, size, available, apps, isMemoryLow} = useMemory({poll: options.poll})
+	const {isLoading, used, size, available, isMemoryLow, system, apps} = useMemory({poll: options.poll})
 
 	if (isLoading) {
 		return {
@@ -49,6 +50,7 @@ export function useMemoryForUi(options: {poll?: boolean} = {}) {
 			.dividedBy(size ?? 0)
 			.toNumber(),
 		isMemoryLow,
+		system,
 		apps,
 	} as const
 }

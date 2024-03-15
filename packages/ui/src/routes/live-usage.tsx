@@ -11,7 +11,7 @@ import {useDiskForUi} from '@/hooks/use-disk'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useMemoryForUi} from '@/hooks/use-memory'
-import {useApps} from '@/providers/apps'
+import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {Progress} from '@/shadcn-components/ui/progress'
 import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
@@ -38,10 +38,8 @@ type SelectedTab = 'storage' | 'memory' | 'cpu'
 
 function LiveUsageContent() {
 	const isSmall = useIsSmallMobile()
-	const {allAppsKeyed} = useApps()
 	const [selectedTab, setSelectedTab] = useLocalStorage2<SelectedTab>('live-usage-selected-tab', 'storage')
 
-	if (!allAppsKeyed) return null
 	if (!selectedTab) return null
 
 	if (isSmall) {
@@ -98,7 +96,9 @@ function LiveUsageSection({title, children}: {title: string; children: React.Rea
 }
 
 function StorageSection() {
-	const {isLoading, value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull, apps} = useDiskForUi({poll: true})
+	const {isLoading, value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull, system, apps} = useDiskForUi({
+		poll: true,
+	})
 
 	return (
 		<>
@@ -115,13 +115,13 @@ function StorageSection() {
 				}
 			/>
 			{isLoading && <AppListSkeleton />}
-			<AppList apps={apps} />
+			<AppList system={system} apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
 		</>
 	)
 }
 
 function MemorySection() {
-	const {isLoading, value, valueSub, secondaryValue, progress, isMemoryLow, apps} = useMemoryForUi({poll: true})
+	const {isLoading, value, valueSub, secondaryValue, progress, isMemoryLow, system, apps} = useMemoryForUi({poll: true})
 
 	return (
 		<>
@@ -133,19 +133,19 @@ function MemorySection() {
 				rightChildren={isMemoryLow && <ErrorMessage>{t('memory.low')}</ErrorMessage>}
 			/>
 			{isLoading && <AppListSkeleton />}
-			<AppList apps={apps} />
+			<AppList system={system} apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
 		</>
 	)
 }
 
 function CpuSection() {
-	const {isLoading, value, secondaryValue, progress, apps} = useCpuForUi({poll: true})
+	const {isLoading, value, secondaryValue, progress, system, apps} = useCpuForUi({poll: true})
 
 	return (
 		<>
 			<ProgressCard value={value} progressLabel={secondaryValue} progress={progress} />
 			{isLoading && <AppListSkeleton />}
-			<AppList2 apps={apps} />
+			<AppList system={system} apps={apps} formatValue={(v) => v.toFixed(2) + '%'} />
 		</>
 	)
 }
@@ -191,38 +191,33 @@ function ErrorMessage({children}: {children?: ReactNode}) {
 
 // --
 
-function AppList({apps}: {apps?: {id: string; used: number}[]}) {
-	const {allAppsKeyed} = useApps()
+function AppList({
+	system,
+	apps,
+	formatValue,
+}: {
+	system?: number
+	apps?: {id: string; used: number}[]
+	formatValue: (value: number) => string
+}) {
+	const {userAppsKeyed} = useApps()
 
+	if (userAppsKeyed === undefined) return null
 	if (!apps || apps.length === 0) return null
 
 	return (
 		<div className={appListClass}>
+			<AppListRow
+				icon={systemAppsKeyed.UMBREL_system.icon}
+				title={systemAppsKeyed.UMBREL_system.name}
+				value={system === undefined ? LOADING_DASH : formatValue(system)}
+			/>
 			{apps?.map(({id, used}) => (
 				<AppListRow
 					key={id}
-					icon={allAppsKeyed[id]?.icon}
-					title={allAppsKeyed[id]?.name || t('unknown-app')}
-					value={maybePrettyBytes(used)}
-				/>
-			))}
-		</div>
-	)
-}
-
-function AppList2({apps}: {apps?: {id: string; used: number}[]}) {
-	const {allAppsKeyed} = useApps()
-
-	if (!apps || apps.length === 0) return null
-
-	return (
-		<div className={appListClass}>
-			{apps?.map(({id, used}) => (
-				<AppListRow
-					key={id}
-					icon={allAppsKeyed[id]?.icon}
-					title={allAppsKeyed[id]?.name || t('unknown-app')}
-					value={used.toFixed(2) + '%'}
+					icon={userAppsKeyed[id]?.icon}
+					title={userAppsKeyed[id]?.name || t('unknown-app')}
+					value={formatValue(used)}
 				/>
 			))}
 		</div>

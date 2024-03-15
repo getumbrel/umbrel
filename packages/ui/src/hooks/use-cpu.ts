@@ -18,12 +18,13 @@ export function useCpu(options: {poll?: boolean} = {}) {
 		//
 		percentUsed: cpuQ.data?.totalUsed ?? 0,
 		threads: cpuQ.data?.threads ?? 0,
+		system: cpuQ.data?.system ?? 0,
 		apps: sort(cpuQ.data?.apps ?? [], (a, b) => b.used - a.used),
 	}
 }
 
 export function useCpuForUi(options: {poll?: boolean} = {}) {
-	const {isLoading, apps, percentUsed, threads} = useCpu({poll: options.poll})
+	const {isLoading, percentUsed, threads, system, apps} = useCpu({poll: options.poll})
 
 	if (isLoading) {
 		return {
@@ -39,6 +40,7 @@ export function useCpuForUi(options: {poll?: boolean} = {}) {
 		value: Math.ceil(percentUsed) + '%',
 		progress: percentUsed / 100,
 		secondaryValue: t('cpu-core-count', {cores: threads}),
+		system,
 		apps,
 	} as const
 }
