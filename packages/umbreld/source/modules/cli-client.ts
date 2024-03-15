@@ -1,7 +1,7 @@
 import process from 'node:process'
 import os from 'node:os'
 
-import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
+import {createTRPCProxyClient, httpLink} from '@trpc/client'
 import fse from 'fs-extra'
 
 import * as jwt from './jwt.js'
@@ -20,7 +20,7 @@ async function signJwt() {
 
 const trpc = createTRPCProxyClient<AppRouter>({
 	links: [
-		httpBatchLink({
+		httpLink({
 			url: trpcEndpoint,
 			headers: async () => ({
 				Authorization: `Bearer ${await signJwt()}`,
