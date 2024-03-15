@@ -5,7 +5,6 @@ import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogPortal,
@@ -13,8 +12,6 @@ import {
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {t} from '@/utils/i18n'
-
-import {NoForgotPasswordMessage} from './_components/no-forgot-password-message'
 
 export default function ChangePasswordDialog() {
 	const title = t('change-password')
@@ -45,7 +42,6 @@ export default function ChangePasswordDialog() {
 							<DialogHeader>
 								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
-								<DialogDescription>{t('change-password.description')}</DialogDescription>
 							</DialogHeader>
 							<ChangePasswordWarning />
 							<PasswordInput
@@ -68,10 +64,9 @@ export default function ChangePasswordDialog() {
 							<div className='-my-2.5'>
 								<AnimatedInputError>{formError}</AnimatedInputError>
 							</div>
-							<NoForgotPasswordMessage />
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
-									{t('change-password.submit')}
+									{t('confirm')}
 								</Button>
 								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
 									{t('cancel')}

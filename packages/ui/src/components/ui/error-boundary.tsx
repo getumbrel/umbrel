@@ -36,7 +36,7 @@ export function ErrorBoundary() {
 								downloadLogs()
 							}}
 						>
-							Download Logs
+							{t('download-logs')}
 						</Button>
 						<Button
 							size='dialog'
@@ -44,7 +44,7 @@ export function ErrorBoundary() {
 								window.location.reload()
 							}}
 						>
-							{t('reload-page')}
+							{t('retry')}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

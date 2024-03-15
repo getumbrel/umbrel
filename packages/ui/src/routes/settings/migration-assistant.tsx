@@ -1,5 +1,5 @@
 import {RiAlertFill} from 'react-icons/ri'
-import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from 'react-icons/tb'
+import {TbAlertTriangleFilled, TbArrowBadgeRight, TbInfoCircle, TbLock, TbPower, TbUsb} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
@@ -44,7 +44,7 @@ export default function MigrationAssistantDialog() {
 				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Please start up your Umbrel home and open this dialog from there.</AlertDialogTitle>
+						<AlertDialogTitle>Please start up your Umbrel Home and open this dialog from there.</AlertDialogTitle>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => dialogProps.onOpenChange(false)}>{t('ok')}</AlertDialogAction>
@@ -76,7 +76,7 @@ function MigrationAssistantPrep() {
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description={t('migration-assistant.description')}
+			description={t('migration-assistant-description')}
 			bodyText={t('migration-assistant.prep.body')}
 			footer={
 				<>
@@ -108,6 +108,7 @@ function MigrationAssistantPrep() {
 				</>
 			}
 		>
+			<ImmersiveDialogIconMessage icon={TbInfoCircle} title={t('migration-assistant.prep.update')} />
 			<ImmersiveDialogIconMessage icon={TbPower} title={t('migration-assistant.prep.shut-down-rpi')} />
 			<ImmersiveDialogIconMessage icon={TbUsb} title={t('migration-assistant.prep.connect-disk-to-home')} />
 			<ImmersiveDialogIconMessage
@@ -127,7 +128,7 @@ function MigrationAssistantErrors() {
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description={t('migration-assistant.description')}
+			description={t('migration-assistant-description')}
 			bodyText={t('migration-assistant.failed')}
 			footer={
 				<>

@@ -86,10 +86,10 @@ export function SettingsContent() {
 						</h2>
 						<div className='pt-5' />
 						<dl className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-							<dt className='opacity-40'>{t('running-on')}</dt>
+							<dt className='opacity-40'>{t('device')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-							<dt className='opacity-40'>{t('umbrelos-version')}</dt>
-							<dd>{osVersionQ.isLoading ? LOADING_DASH : osVersionQ.data ?? UNKNOWN()}</dd>
+							<dt className='opacity-40'>{t('umbrelos')}</dt>
+							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${t('umbrelos')} ${osVersionQ.data}` ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 							{tor.enabled && (
@@ -158,10 +158,10 @@ export function SettingsContent() {
 							<WallpaperPicker />
 						</div>
 					</ListRow>
-					<ListRow title={t('2fa-long')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
+					<ListRow title={t('2fa')} description={t('2fa-description')} isLabel disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
-					<ListRow title={t('tor-long')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
+					<ListRow title={t('remote-tor-access')} description={t('tor-description')} isLabel disabled={tor.isLoading}>
 						<Switch
 							checked={tor.enabled}
 							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
@@ -203,7 +203,7 @@ export function SettingsContent() {
 							{t('troubleshoot')}
 						</IconButton>
 					</ListRow>
-					<ListRow title={t('device-info-long')} description={t('device-info-description')} isLabel>
+					<ListRow title={t('device-info')} description={t('device-info-description')} isLabel>
 						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
 							{t('device-info.view-info')}
 						</IconButton>

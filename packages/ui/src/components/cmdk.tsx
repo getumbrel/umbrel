@@ -161,19 +161,19 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					onSelect={() => navigate('settings/account/change-password')}
 				/>
 				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
-					{t('2fa-long')}
+					{t('2fa')}
 				</SettingsSearchItem>
-				<SettingsSearchItem value={t('2fa-long')} onSelect={() => navigate('/settings/2fa')}>
-					{t('2fa-long')}
+				<SettingsSearchItem value={t('2fa')} onSelect={() => navigate('/settings/2fa')}>
+					{t('2fa')}
 				</SettingsSearchItem>
-				<SettingsSearchItem value={t('tor-long')} onSelect={() => navigate('/settings/tor')} />
+				<SettingsSearchItem value={t('tor')} onSelect={() => navigate('/settings/tor')} />
 				<SettingsSearchItem
 					value={t('migration-assistant')}
 					onSelect={() => navigate('/settings/migration-assistant')}
 				/>
 				<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
 				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
-				<SettingsSearchItem value={t('device-info-long')} onSelect={() => navigate('/settings/device-info')} />
+				<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
 				<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
 				{/* ---- */}
@@ -206,8 +206,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					</SearchItem>
 				))}
 				<DebugOnlyBare>
-					<SearchItem value={t('install-a-bunch-of-random-apps')} onSelect={debugInstallRandomApps}>
-						{t('install-a-bunch-of-random-apps')}
+					<SearchItem value="Install a bunch of random apps" onSelect={debugInstallRandomApps}>
+						Install a bunch of random apps
 					</SearchItem>
 				</DebugOnlyBare>
 			</CommandList>

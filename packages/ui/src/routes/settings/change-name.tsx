@@ -5,7 +5,6 @@ import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogPortal,
@@ -31,7 +30,6 @@ export default function ChangeNameDialog() {
 							<DialogHeader>
 								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
-								<DialogDescription>{t('change-name.description')}</DialogDescription>
 							</DialogHeader>
 							<Input placeholder={t('change-name.input-placeholder')} value={name} onValueChange={setName} />
 							<div className='-my-2.5'>
@@ -39,7 +37,7 @@ export default function ChangeNameDialog() {
 							</div>
 							<DialogFooter>
 								<Button type='submit' size='dialog' variant='primary'>
-									{t('save-changes')}
+									{t('confirm')}
 								</Button>
 								<Button type='button' size='dialog' onClick={() => dialogProps.onOpenChange(false)}>
 									{t('cancel')}

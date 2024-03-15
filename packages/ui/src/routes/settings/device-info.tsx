@@ -7,7 +7,7 @@ import {t} from '@/utils/i18n'
 import {DeviceInfoContent} from './_components/device-info-content'
 
 export default function DeviceInfoDialog() {
-	const title = t('device-info-long')
+	const title = t('device-info')
 	const dialogProps = useSettingsDialogProps()
 
 	const {isLoading, data} = useDeviceInfo()

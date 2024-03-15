@@ -46,7 +46,7 @@ export default function TwoFactorEnableDialog() {
 					<DrawerHeader>
 						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DrawerTitle>{title}</DrawerTitle>
-						<DrawerDescription>{t('2fa.enable.description')}</DrawerDescription>
+						<DrawerDescription>{t('2fa-description')}</DrawerDescription>
 					</DrawerHeader>
 					<DrawerScroller>
 						<p className={paragraphClass}>{scanThisMessage}</p>

@@ -84,10 +84,10 @@ export function SettingsContentMobile() {
 					</h2>
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-						<dt className='opacity-40'>{t('running-on')}</dt>
+						<dt className='opacity-40'>{t('device')}</dt>
 						<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-						<dt className='opacity-40'>{t('umbrelos-version')}</dt>
-						<dd>{osVersionQ.data ?? LOADING_DASH}</dd>
+						<dt className='opacity-40'>{t('umbrelos')}</dt>
+						<dd>{osVersionQ.isLoading ? LOADING_DASH : `${t('umbrelos')} ${osVersionQ.data}` ?? UNKNOWN()}</dd>
 						<dt className='opacity-40'>{t('uptime')}</dt>
 						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 						{/* TODO: add tor hidden service */}
@@ -134,7 +134,7 @@ export function SettingsContentMobile() {
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}
-					title={t('2fa-long')}
+					title={t('2fa')}
 					description={t('2fa-description')}
 					onClick={() => navigate('2fa')}
 				/>
@@ -142,7 +142,7 @@ export function SettingsContentMobile() {
 					icon={TorIcon2}
 					title={
 						<span className='flex items-center gap-2' onClick={() => navigate('tor')}>
-							{t('tor-long')} {tor.enabled && <TorPulse />}
+							{t('remote-tor-access')} {tor.enabled && <TorPulse />}
 						</span>
 					}
 					description={t('tor-description')}
@@ -175,8 +175,8 @@ export function SettingsContentMobile() {
 				/>
 				<ListRowMobile
 					icon={TbServer}
-					title={t('device-info-short')}
-					description={t('device-info-detail-description', {
+					title={t('device-info')}
+					description={t('device-info-description', {
 						model: deviceInfo.data?.modelNumber ?? UNKNOWN(),
 						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
 					})}
