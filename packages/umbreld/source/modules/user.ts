@@ -1,4 +1,6 @@
 import bcrypt from 'bcryptjs'
+import fse from 'fs-extra'
+import {$} from 'execa'
 
 import type Umbreld from '../index.js'
 
@@ -6,9 +8,11 @@ import * as totp from './utilities/totp.js'
 
 export default class User {
 	#store: Umbreld['store']
+	#umbreld: Umbreld
 
 	constructor(umbreld: Umbreld) {
 		this.#store = umbreld.store
+		this.#umbreld = umbreld
 	}
 
 	// Get the user object from the store
@@ -41,6 +45,21 @@ export default class User {
 		const hashedPassword = await bcrypt.hash(password, saltRounds)
 
 		return this.setHashedPassword(hashedPassword)
+	}
+
+	async setSystemPassword(password: string) {
+		try {
+			const userFile = await fse.readFile('/etc/passwd', 'utf8')
+			const hasUmbrelSystemUser = userFile.split('\n').some((line) => line.startsWith('umbrel:'))
+
+			// Only attempt this if there's an umbrel user
+			if (hasUmbrelSystemUser) {
+				console.log(await $({input: `umbrel:${password}`})`chpasswd`)
+			}
+		} catch (error) {
+			// If the system password update fails, log it but continue
+			this.#umbreld.logger.error(`Failed to update system password: ${(error as Error).message}`)
+		}
 	}
 
 	// Directly sets the hashed password value (only exposed for data migration)
