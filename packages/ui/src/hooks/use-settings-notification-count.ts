@@ -66,7 +66,7 @@ export function useSettingsNotificationCount() {
 				duration: Infinity,
 			}
 
-			if (version !== latestAvailableVersion) {
+			if (version !== latestAvailableVersion.version) {
 				currCount++
 				const id = toast.info(t('notifications.new-version-available'), toastOptions)
 				toastIds.push(id)

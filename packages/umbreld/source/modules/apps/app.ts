@@ -237,6 +237,16 @@ export default class App {
 			let apps = await get('apps')
 			apps = apps.filter((appId) => appId !== this.id)
 			await set('apps', apps)
+
+			// Remove app from recentlyOpenedApps
+			let recentlyOpenedApps = await get('recentlyOpenedApps')
+			recentlyOpenedApps = recentlyOpenedApps.filter((appId) => appId !== this.id)
+			await set('recentlyOpenedApps', recentlyOpenedApps)
+
+			// Disable any associated widgets
+			let widgets = await get('widgets')
+			widgets = widgets.filter((widget) => !widget.startsWith(`${this.id}:`))
+			await set('widgets', widgets)
 		})
 
 		return true

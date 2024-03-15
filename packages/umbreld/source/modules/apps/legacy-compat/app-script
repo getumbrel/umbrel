@@ -97,7 +97,7 @@ source_app() {
   # Load in existing Umbrel .env
   # So that apps in their exports.sh can access
   # e.g. $TOR_PROXY_IP, $TOR_PROXY_PORT
-  [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
+  # [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
 
   export NETWORK_IP="${NETWORK_IP}"
 
@@ -127,6 +127,10 @@ source_app() {
     if [[ -f "${EXPORTS_APP_FILE}" ]]; then
       # We replace the literal text "${UMBREL_ROOT}/scripts/app" within the exports.sh file with the path to this script
       sed -i 's|"${UMBREL_ROOT}/scripts/app"|'"${CURRENT_SCRIPT_PATH}"'|g' "${EXPORTS_APP_FILE}"
+
+      # We replace the literal text "${UMBREL_ROOT}/db/user.json" within the exports.sh file with the path to the umbrel.yaml file
+      # This specifically handles the Tailscale app
+      sed -i 's|"${UMBREL_ROOT}/db/user.json"|"${UMBREL_ROOT}/umbrel.yaml"|g' "${EXPORTS_APP_FILE}"
 
       # Source the modified temporary exports file
       . "${EXPORTS_APP_FILE}"
@@ -170,7 +174,7 @@ source_app() {
 }
 
 # Check dependencies
-check_dependencies docker-compose jq yq openssl envsubst
+check_dependencies docker jq yq openssl envsubst
 
 if [ -z ${1+x} ]; then
   command=""
@@ -282,7 +286,7 @@ compose() {
 
   # TODO: We removed the .env source, we probs need to add that back in somehow
   # --env-file "${umbrel_env_file}" \
-  docker-compose \
+  docker compose \
     --project-name "${app}" \
     "${compose_args[@]}"
 }

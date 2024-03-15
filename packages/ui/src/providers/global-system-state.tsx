@@ -221,7 +221,7 @@ function UpdatingCoverMessage({onRetry}: {onRetry: () => void}) {
 		<BarePage>
 			{!error && (
 				<ProgressLayout
-					title={t('software-update.updating-to', {version: latestVersion})}
+					title={t('software-update.updating-to', {version: latestVersion.version})}
 					progress={indeterminate ? undefined : progress}
 					message={description}
 					isRunning={!!running}

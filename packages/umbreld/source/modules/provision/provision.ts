@@ -77,9 +77,19 @@ async function installService() {
 
 // TODO: Tidy this up, we should do auto detection for deps etc
 export default async function provision() {
+	const dockerVersion = 'v25.0.4'
+	const commitHash = '0efeea282625c87d28fa1f0d7aace794be2ce3cd'
+	const dockerInstallScriptUrl = `https://raw.githubusercontent.com/docker/docker-install/${commitHash}/install.sh`
+	const dockerInstallScript = await (await fetch(dockerInstallScriptUrl)).text()
+	await fse.writeFile('/tmp/install-docker.sh', dockerInstallScript)
 	await $({
 		stdio: 'inherit',
-	})`apt-get install --yes docker.io docker-compose network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns`
+		env: {VERSION: dockerVersion},
+	})`sh /tmp/install-docker.sh`
+	await fse.remove('/tmp/install-docker.sh')
+	await $({
+		stdio: 'inherit',
+	})`apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns`
 	await downloadAndInstallYq()
 	await installService()
 }

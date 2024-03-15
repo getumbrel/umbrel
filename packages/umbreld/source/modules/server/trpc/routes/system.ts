@@ -54,7 +54,7 @@ async function getLatestRelease(umbreld: Umbreld) {
 		headers: {'User-Agent': `umbrelOS ${umbreld.version}`},
 	})
 	const data = await result.json()
-	return data as {version: string; updateScript?: string}
+	return data as {version: string; releaseNotes: string; updateScript?: string}
 }
 
 export default router({
@@ -64,8 +64,8 @@ export default router({
 	updateStatus: privateProcedure.query(() => updateStatus),
 	uptime: privateProcedure.query(() => os.uptime()),
 	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
-		const {version} = await getLatestRelease(ctx.umbreld)
-		return version
+		const {version, releaseNotes} = await getLatestRelease(ctx.umbreld)
+		return {version, releaseNotes}
 	}),
 	update: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'updating'

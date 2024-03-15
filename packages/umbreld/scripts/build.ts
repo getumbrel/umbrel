@@ -18,7 +18,8 @@ async function runMultiArchDockerBuilds(architectures: string[]) {
 }
 
 async function buildBinary() {
-	const {bin} = await fse.readJson('package.json')
+	// const {bin} = await fse.readJson('package.json')
+	const bin = './source/cli.ts'
 	const entrypoint = path.join('{{caxa}}', bin)
 	await caxa({
 		input: '.',

@@ -59,7 +59,7 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>
 								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
-								{t('software-update.new-version', {version: latestVersion})}
+								{t('software-update.new-version', {version: latestVersion?.version})}
 							</div>
 							<Button variant='primary' size='dialog' onClick={update}>
 								{t('software-update.update-now')}

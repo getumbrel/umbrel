@@ -58,6 +58,17 @@ export default router({
 				}
 			}
 
+			// At this point we have a valid login
+
+			// We always update the system password any time we know we have a valid
+			// Umbrel password. This is because the system password can get out of
+			// sync with Umbrel. For example after an OTA update or migration.
+			// Always setting the system password whenever we know we have a valid
+			// Umbrel password ensures that the system password will be back in sync
+			// with Umbrel after the next login after an OTA/migration.
+			// It's async but we don't need to wait for it to complete
+			ctx.user.setSystemPassword(input.password)
+
 			// Set proxy token cookie
 			const proxyToken = await ctx.server.signProxyToken()
 			const expires = new Date(Date.now() + ONE_WEEK)
@@ -119,6 +130,10 @@ export default router({
 			if (!(await ctx.user.validatePassword(input.oldPassword))) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
 			}
+
+			// Also update Linux system password
+			// It's async but we don't need to wait for it to complete
+			ctx.user.setSystemPassword(input.newPassword)
 
 			return ctx.user.setPassword(input.newPassword)
 		}),
