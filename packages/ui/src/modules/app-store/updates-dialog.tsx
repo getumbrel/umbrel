@@ -83,7 +83,13 @@ export function UpdatesDialog({
 }
 function AppItem({app}: {app: RegistryApp}) {
 	const [showAll, setShowAll] = useState(false)
-	const updateMut = trpcReact.apps.update.useMutation()
+	const ctx = trpcReact.useContext()
+	const updateMut = trpcReact.apps.update.useMutation({
+		onSuccess: () => {
+			// This should cause the app to be removed from the list
+			ctx.apps.list.invalidate()
+		},
+	})
 	const updateApp = () => updateMut.mutate({appId: app.id})
 
 	return (
