@@ -97,7 +97,7 @@ source_app() {
   # Load in existing Umbrel .env
   # So that apps in their exports.sh can access
   # e.g. $TOR_PROXY_IP, $TOR_PROXY_PORT
-  [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
+  # [[ -f "${UMBREL_ROOT}/.env" ]] && . "${UMBREL_ROOT}/.env"
 
   export NETWORK_IP="${NETWORK_IP}"
 
