@@ -59,6 +59,19 @@ if (args.help) {
 // TODO: Validate these args are valid
 const umbreld = new Umbreld(args as UmbreldOptions)
 
+// Shutdown cleanly on SIGINT and SIGTERM
+let isShuttingDown = false
+async function cleanShutdown(signal: string) {
+	if (isShuttingDown) return
+	isShuttingDown = true
+
+	umbreld.logger.log(`Received ${signal}, shutting down cleanly...`)
+	await umbreld.stop()
+	process.exit(0)
+}
+process.on('SIGINT', cleanShutdown.bind(null, 'SIGINT'))
+process.on('SIGTERM', cleanShutdown.bind(null, 'SIGTERM'))
+
 try {
 	await umbreld.start()
 } catch (error) {
