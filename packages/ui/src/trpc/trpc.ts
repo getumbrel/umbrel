@@ -1,4 +1,4 @@
-import {createTRPCProxyClient, createTRPCReact, httpBatchLink, loggerLink} from '@trpc/react-query'
+import {createTRPCProxyClient, createTRPCReact, httpLink, loggerLink} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
@@ -17,7 +17,7 @@ export const links = [
 	loggerLink({
 		enabled: () => IS_DEV,
 	}),
-	httpBatchLink({
+	httpLink({
 		url: trpcUrl,
 		headers: async () => {
 			const jwt = localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
