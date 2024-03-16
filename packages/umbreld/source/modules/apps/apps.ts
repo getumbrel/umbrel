@@ -144,7 +144,13 @@ export default class Apps {
 		this.instances.push(app)
 
 		// Complete the install process via the app script
-		await app.install()
+		try {
+			await app.install()
+		} catch (error) {
+			this.logger.error(`Failed to install app ${appId}: ${(error as Error).message}`)
+			this.instances = this.instances.filter((app) => app.id !== appId)
+			return false
+		}
 
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
