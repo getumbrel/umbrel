@@ -5,7 +5,6 @@ import {arrayIncludes} from 'ts-extras'
 
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {Spinner} from '@/components/ui/loading'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
@@ -90,11 +89,11 @@ export function AppIcon({
 						draggable={false}
 					/>
 				)}
-				{state === 'installing' && progress && (
+				{inProgress && state === 'installing' && progress && (
           <div className="absolute inset-0 flex items-center justify-center">
-						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/50">
+						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
 							<div
-								className="absolute inset-0 rounded-full bg-white transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
+								className="absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
 								style={{
 									width: `${progress}%`,
 								}}
@@ -104,7 +103,9 @@ export function AppIcon({
         )}
 				{inProgress && state !== 'installing' && (
 					<div className="absolute inset-0 flex items-center justify-center">
-						<Spinner size="6" />
+						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
+							<div className="absolute inset-0 w-[30%] rounded-full bg-white/90 animate-sliding-loader"/>
+						</div>
 					</div>
 				)}
 			</div>
