@@ -31,7 +31,7 @@ export default router({
 		const externalUmbrelInstall = await findExternalUmbrelInstall()
 		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string)
 
-		void migrateData(currentInstall, externalUmbrelInstall as string)
+		void migrateData(currentInstall, externalUmbrelInstall as string, ctx.umbreld)
 
 		return true
 	}),
