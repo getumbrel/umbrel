@@ -9,7 +9,12 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
 	const scriptPath = join(currentDirname, 'app-script')
-	const SCRIPT_APP_REPO_DIR = await umbreld.appStore.getAppTemplateFilePath(arg)
+	// Allow repo to be unset, needed if the repo hasn't been pulled yet after a mmigration
+	// or a 3rd party app had it's repo uninstalled.
+	let SCRIPT_APP_REPO_DIR = ''
+	try {
+		SCRIPT_APP_REPO_DIR = await umbreld.appStore.getAppTemplateFilePath(arg)
+	} catch {}
 	const torEnabled = await umbreld.store.get('torEnabled')
 	return $({
 		stdio: inheritStdio ? 'inherit' : 'pipe',
