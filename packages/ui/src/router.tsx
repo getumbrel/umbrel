@@ -9,7 +9,6 @@ import {Desktop} from './layouts/desktop'
 import {SheetLayout} from './layouts/sheet'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
-import {BlurBelowDock} from './modules/desktop/blur-below-dock'
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
 import {AppsProvider} from './providers/apps'
 import {AvailableAppsProvider} from './providers/available-apps'
@@ -54,8 +53,6 @@ export const router = createBrowserRouter([
 						<Suspense>
 							<Outlet />
 						</Suspense>
-						{/* Putting `BlurBelowDock` after `AppGridGradientMasking` because we don't want layering issues  */}
-						<BlurBelowDock />
 						<DockBottomPositioner>
 							<Dock />
 						</DockBottomPositioner>
