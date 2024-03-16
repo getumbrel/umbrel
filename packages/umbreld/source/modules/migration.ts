@@ -8,9 +8,14 @@ import {execa} from 'execa'
 import pRetry from 'p-retry'
 import {globby} from 'globby'
 import yaml from 'js-yaml'
+import semver from 'semver'
+
+import type Umbreld from '../index.js'
 
 import isUmbrelHome from './is-umbrel-home.js'
 import type {ProgressStatus} from './apps/schema.js'
+import {reboot} from './system.js'
+import {setSystemStatus} from './server/trpc/routes/system.js'
 
 let migrationStatus: ProgressStatus = {
 	running: false,
@@ -124,7 +129,7 @@ export async function unmountExternalDrives() {
 }
 
 // Run a series of checks and throw a descriptive error if any of them fail
-export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string) {
+export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string, umbreld: Umbreld) {
 	// Check we're running on Umbrel Home hardware
 	if (!(await isUmbrelHome())) {
 		throw new Error('This feature is only supported on Umbrel Home hardware')
@@ -140,14 +145,24 @@ export async function runPreMigrationChecks(currentInstall: string, externalUmbr
 		throw new Error('No drive found with an umbrelOS install')
 	}
 
-	// Check versions match
-	const {version: previousVersion} = await fse.readJson(`${externalUmbrelInstall}/info.json`)
-	const {version: currentVersion} = await fse.readJson(`${currentInstall}/info.json`)
-	// TODO: We might want to loosen this check to a wider range in future updates.
-	if (previousVersion !== currentVersion) {
-		throw new Error(
-			`umbrelOS versions do not match. Cannot migrate umbrelOS ${previousVersion} data into an umbrelOS ${currentVersion} install`,
-		)
+	// Check version
+	let externalVersion = 'unknown'
+	if (await fse.exists(`${externalUmbrelInstall}/umbrel.yaml`)) {
+		// >=1.0 install
+		const data = await fse.readFile(`${externalUmbrelInstall}/umbrel.yaml`, 'utf8')
+		const {version} = yaml.load(data) as {version: string}
+		externalVersion = version
+	} else if (await fse.exists(`${externalUmbrelInstall}/info.json`)) {
+		// <=0.5.4 install
+		const {version} = await fse.readJson(`${externalUmbrelInstall}/info.json`)
+		externalVersion = version
+	}
+
+	// Don't allow migrating in data more recent than the current install
+	const validVersionRange =
+		externalVersion !== 'unknown' && semver.gte(umbreld.version, semver.coerce(externalVersion)!)
+	if (!validVersionRange) {
+		throw new Error(`Cannot migrate umbrelOS ${externalVersion} data into an umbrelOS ${umbreld.version} install.`)
 	}
 
 	// Check enough storage is available
@@ -165,28 +180,22 @@ export async function runPreMigrationChecks(currentInstall: string, externalUmbr
 }
 
 // Safely migrate data from an external Umbrel install to the current one
-export async function migrateData(currentInstall: string, externalUmbrelInstall: string) {
+export async function migrateData(currentInstall: string, externalUmbrelInstall: string, umbreld: Umbreld) {
 	updateMigrationStatus({running: false, progress: 0, description: '', error: false})
 
 	const temporaryData = `${currentInstall}/.temporary-migration`
-	const statePaths = ['.env', 'db', 'tor', 'repos', 'app-data', 'data']
+	const finalData = `${currentInstall}/import`
 
 	// Start migration
 	updateMigrationStatus({running: true, description: 'Copying data'})
 
 	try {
-		// Copy over state from previous install to temp dir while preserving permissions
-		const includes = [
-			...statePaths.map((path) => `--include=${path}`),
-			...statePaths.map((path) => `--include=${path}/***`),
-		]
+		// Copy over data dir from previous install to temp dir while preserving permissions
 		await fse.remove(temporaryData)
 		const rsync = execa('rsync', [
 			'--info=progress2',
 			'--archive',
 			'--delete',
-			...includes,
-			`--exclude=*`,
 			`${externalUmbrelInstall}/`,
 			temporaryData,
 		])
@@ -240,42 +249,17 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 			console.error('Error processing docker-compose files:', error)
 		}
 
-		// Stop apps / umbrel
-		updateMigrationStatus({progress: 90, description: 'Stopping Umbrel'})
-		await execa('./scripts/stop', ['--no-stop-server'], {cwd: currentInstall})
-
-		// Move data from temp dir to current install
-		// This is the only dangerous action in the migration process, before this action the Umbrel state is still intact
-		// After this action the Umbrel state should be fully migrated. We previously copied all the data to the same filesystem
-		// as the Umbrel install, so we can do this risky step with a quick rename operation (fse.move) which just updates a
-		// pointer and doesn't actually move any data. This means this operation is very fast, reducing the chance of leaving the install
-		// in a broken state.
-		updateMigrationStatus({progress: 92, description: 'Linking new data'})
-		for (const path of statePaths) {
-			const temporaryPath = `${temporaryData}/${path}`
-			if (await fse.pathExists(temporaryPath)) {
-				await fse.move(temporaryPath, `${currentInstall}/${path}`, {overwrite: true})
-			}
-		}
+		// Move data from temp migration dir to final migration dir
+		// The main data dir will be replaced with this dir on the next reboot
+		updateMigrationStatus({progress: 92, description: 'Cleaning up'})
+		await fse.move(temporaryData, finalData, {overwrite: true})
 	} catch (error) {
 		console.error(error)
 		updateMigrationStatus({error: 'Failed to migrate data'})
 	}
 
-	// Clean up temp dir
-	try {
-		updateMigrationStatus({progress: 93, description: 'Cleaning up'})
-		await fse.remove(temporaryData)
-	} catch {}
-
-	// Start apps / umbrel
-	updateMigrationStatus({progress: 95, description: 'Starting Umbrel'})
-	await pRetry(() => execa('./scripts/start', ['--no-start-server'], {cwd: currentInstall}), {
-		retries: 5,
-	})
-
-	updateMigrationStatus({running: false, progress: 100, description: ''})
-
-	// Cleanup mounted drives
-	await unmountExternalDrives()
+	updateMigrationStatus({progress: 95, description: 'rebooting'})
+	setSystemStatus('restarting')
+	await umbreld.stop()
+	await reboot()
 }

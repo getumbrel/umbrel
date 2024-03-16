@@ -50,26 +50,40 @@ export default class Apps {
 			await fse.writeFile(umbrelSeedFile, randomToken(256))
 		}
 
+		// Create app instances
+		const appIds = await this.#umbreld.store.get('apps')
+		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
+
 		// Start app environment
-		await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
-			onFailedAttempt: (error) => {
-				this.logger.error(
-					`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
-				)
-			},
-			retries: 2,
-		})
-		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
+		try {
+			await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
+				onFailedAttempt: (error) => {
+					this.logger.error(
+						`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
+					)
+				},
+				retries: 3, // This will do exponential backoff for 1s, 2s, 4s
+			})
+		} catch (error) {
+			// Log the error but continue to try to bring apps up to make it a less bad failure
+			this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
+		}
+
+		try {
+			// Set permissions for tor data directory
+			await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
+		} catch (error) {
+			this.logger.error(`Failed to set permissions for Tor data directory: ${(error as Error).message}`)
+		}
 
 		// Start apps
 		this.logger.log('Starting apps')
-		const appIds = await this.#umbreld.store.get('apps')
-		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 		await Promise.all(
 			this.instances.map((app) =>
 				app.start().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
 					// if a dingle app fails.
+					app.state = 'unknown'
 					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
 				}),
 			),
@@ -131,7 +145,13 @@ export default class Apps {
 		this.instances.push(app)
 
 		// Complete the install process via the app script
-		await app.install()
+		try {
+			await app.install()
+		} catch (error) {
+			this.logger.error(`Failed to install app ${appId}: ${(error as Error).message}`)
+			this.instances = this.instances.filter((app) => app.id !== appId)
+			return false
+		}
 
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {

@@ -40,7 +40,9 @@ export default router({
 			}),
 		)
 
-		return appData
+		const appDataSortedByNames = appData.sort((a, b) => a.name!.localeCompare(b.name!))
+
+		return appDataSortedByNames
 	}),
 
 	// Install an app

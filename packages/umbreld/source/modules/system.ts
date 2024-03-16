@@ -56,10 +56,12 @@ export async function getDiskUsage(
 	let downloads = 0
 	if (await fse.pathExists(downloadsDirectory)) downloads = await getDirectorySize(downloadsDirectory)
 
+	const minSystemUsage = 2 * 1024 * 1024 * 1024 // 2GB
+
 	return {
 		size,
 		totalUsed: used,
-		system: used - appsTotal,
+		system: Math.max(minSystemUsage, used - appsTotal),
 		downloads,
 		apps,
 	}
@@ -84,10 +86,13 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 		})),
 	)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
+
+	const minSystemUsage = 100 * 1024 * 1024 // 100MB
+
 	return {
 		size,
 		totalUsed,
-		system: totalUsed - appsTotal,
+		system: Math.max(minSystemUsage, totalUsed - appsTotal),
 		apps,
 	}
 }
