@@ -28,11 +28,13 @@ export function AppIcon({
 	src,
 	onClick,
 	state = 'ready',
+	progress,
 }: {
 	label: string
 	src: string
 	onClick?: () => void
 	state?: AppState
+	progress?: number
 }) {
 	const [url, setUrl] = useState(src)
 
@@ -71,6 +73,7 @@ export function AppIcon({
 					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15',
 					!disabled &&
 						'group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
+					disabled && 'grayscale',
 				)}
 				style={{
 					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
@@ -92,7 +95,18 @@ export function AppIcon({
 			</div>
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
-					<AppLabel state={state} label={label} />
+					{state === 'installing' && progress ? (
+						<div className='relative h-1 w-[50px] overflow-hidden rounded-full bg-white/20'>
+							<div
+								className='absolute inset-0 w-[var(--app-w)] rounded-full bg-gradient-to-r from-white/20 to-white delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both '
+								style={{
+									transform: `translateX(${-100 + progress}%)`,
+								}}
+							/>
+						</div>
+					) : (
+						<AppLabel state={state} label={label} />
+					)}
 				</div>
 			</div>
 		</motion.button>
@@ -184,6 +198,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 								src={userApp.app.icon}
 								onClick={() => launchApp(appId)}
 								state={appInstall.state}
+								progress={appInstall.progress}
 							/>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
