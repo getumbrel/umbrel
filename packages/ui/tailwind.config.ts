@@ -151,11 +151,20 @@ export default {
 						transform: 'translate3d(4px, 0, 0)',
 					},
 				},
+				'sliding-loader': {
+					'0%, 100%': {
+						left: '-30%',
+					},
+					'50%': {
+						left: '100%',
+					}
+				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
+				'sliding-loader': 'sliding-loader 1s ease infinite'
 			},
 			typography: () => ({
 				neutral: {

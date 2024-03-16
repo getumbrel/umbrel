@@ -28,17 +28,19 @@ export function AppIcon({
 	src,
 	onClick,
 	state = 'ready',
+	progress,
 }: {
 	label: string
 	src: string
 	onClick?: () => void
 	state?: AppState
+	progress?: number
 }) {
 	const [url, setUrl] = useState(src)
 
 	const disabled = state !== 'ready'
 
-	const shouldPulse = arrayIncludes(progressStates, state)
+	const inProgress = arrayIncludes(progressStates, state)
 
 	return (
 		<motion.button
@@ -68,9 +70,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15',
-					!disabled &&
-						'group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
+					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
 				)}
 				style={{
 					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
@@ -83,11 +83,30 @@ export function AppIcon({
 						onError={() => setUrl('')}
 						className={cn(
 							'h-full w-full duration-500',
-							shouldPulse && 'animate-pulse duration-1000',
-							!shouldPulse && 'animate-in fade-in',
+							inProgress && 'brightness-50',
+							!inProgress && 'animate-in fade-in',
 						)}
 						draggable={false}
 					/>
+				)}
+				{inProgress && state === 'installing' && progress && (
+          <div className="absolute inset-0 flex items-center justify-center">
+						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
+							<div
+								className="absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
+								style={{
+									width: `${progress}%`,
+								}}
+							/>
+						</div>
+					</div>
+        )}
+				{inProgress && state !== 'installing' && (
+					<div className="absolute inset-0 flex items-center justify-center">
+						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
+							<div className="absolute inset-0 w-[30%] rounded-full bg-white/90 animate-sliding-loader"/>
+						</div>
+					</div>
 				)}
 			</div>
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
@@ -104,7 +123,7 @@ function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
 		case 'not-installed':
 			return t('app.installing')
 		case 'installing':
-			return t('app.installing') + '...'
+			return label
 		case 'ready':
 		case 'running':
 			return label
@@ -156,7 +175,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
-	const isInProgress = arrayIncludes(progressStates, appInstall.state)
+	const inProgress = arrayIncludes(progressStates, appInstall.state)
 
 	// TODO: consider showing context menu in other states too
 	switch (appInstall.state) {
@@ -184,6 +203,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 								src={userApp.app.icon}
 								onClick={() => launchApp(appId)}
 								state={appInstall.state}
+								progress={appInstall.progress}
 							/>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
@@ -196,7 +216,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
-							{!isInProgress && (
+							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' && (
 										<DebugOnlyBare>

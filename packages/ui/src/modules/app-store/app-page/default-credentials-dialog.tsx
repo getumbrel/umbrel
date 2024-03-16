@@ -85,7 +85,7 @@ export function DefaultCredentialsDialog() {
 									className='w-auto'
 									onClick={() => launchApp(appId, {direct: true})}
 								>
-									{t('default-credentials.launch')}
+									{t('default-credentials.open', {app: appName})}
 								</Button>
 							) : (
 								<Button

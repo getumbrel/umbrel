@@ -14,8 +14,7 @@ import {useAvailableApps} from '@/providers/available-apps'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
-import {trpcReact} from '@/trpc/trpc'
-import {appStateToLabel} from '@/utils/apps'
+import {AppState, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {AppIcon} from './app-icon'
@@ -205,7 +204,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						}}
 					>
 						<span>
-							{app.name} <span className='opacity-50'> – {appStateToLabel[app.state]}</span>
+							{app.name} <span className='opacity-50'> – {appStateToString(app.state)}</span>
 						</span>
 					</SearchItem>
 				))}
@@ -352,4 +351,21 @@ const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 			}}
 		/>
 	)
+}
+
+export function appStateToString(appState: AppState) {
+	return {
+		'not-installed': t('app.install'),
+		installing: t('app.installing'),
+		ready: t('app.open'),
+		running: t('app.open'),
+		starting: t('app.restarting'),
+		restarting: t('app.starting'),
+		stopping: t('app.stopping'),
+		updating: t('app.updating'),
+		uninstalling: t('app.uninstalling'),
+		unknown: t('app.offline'),
+		stopped: t('app.offline'),
+		loading: t('loading'),
+	}[appState]
 }

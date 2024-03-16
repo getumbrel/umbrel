@@ -2,8 +2,8 @@ import {useEffect, useState} from 'react'
 
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
-import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
+import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {useApps} from '@/providers/apps'
 import {Wallpaper} from '@/providers/wallpaper'
 
