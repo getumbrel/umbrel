@@ -8,6 +8,7 @@ import {execa} from 'execa'
 import pRetry from 'p-retry'
 import {globby} from 'globby'
 import yaml from 'js-yaml'
+import semver from 'semver'
 
 import type Umbreld from '../index.js'
 
@@ -128,7 +129,7 @@ export async function unmountExternalDrives() {
 }
 
 // Run a series of checks and throw a descriptive error if any of them fail
-export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string) {
+export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string, umbreld: Umbreld) {
 	// Check we're running on Umbrel Home hardware
 	if (!(await isUmbrelHome())) {
 		throw new Error('This feature is only supported on Umbrel Home hardware')
@@ -144,16 +145,25 @@ export async function runPreMigrationChecks(currentInstall: string, externalUmbr
 		throw new Error('No drive found with an umbrelOS install')
 	}
 
-	// TODO: Version check
-	// Check versions match
-	// const {version: previousVersion} = await fse.readJson(`${externalUmbrelInstall}/info.json`)
-	// const {version: currentVersion} = await fse.readJson(`${currentInstall}/info.json`)
-	// // TODO: We might want to loosen this check to a wider range in future updates.
-	// if (previousVersion !== currentVersion) {
-	// 	throw new Error(
-	// 		`umbrelOS versions do not match. Cannot migrate umbrelOS ${previousVersion} data into an umbrelOS ${currentVersion} install`,
-	// 	)
-	// }
+	// Check version
+	let externalVersion = 'unknown'
+	if (await fse.exists(`${externalUmbrelInstall}/umbrel.yaml`)) {
+		// >=1.0 install
+		const data = await fse.readFile(`${externalUmbrelInstall}/umbrel.yaml`, 'utf8')
+		const {version} = yaml.load(data) as {version: string}
+		externalVersion = version
+	} else if (await fse.exists(`${externalUmbrelInstall}/info.json`)) {
+		// <=0.5.4 install
+		const {version} = await fse.readJson(`${externalUmbrelInstall}/info.json`)
+		externalVersion = version
+	}
+
+	// Don't allow migrating in data more recent than the current install
+	const validVersionRange =
+		externalVersion !== 'unknown' && semver.gte(umbreld.version, semver.coerce(externalVersion)!)
+	if (!validVersionRange) {
+		throw new Error(`Cannot migrate umbrelOS ${externalVersion} data into an umbrelOS ${umbreld.version} install.`)
+	}
 
 	// Check enough storage is available
 	const temporaryData = `${currentInstall}/.temporary-migration`

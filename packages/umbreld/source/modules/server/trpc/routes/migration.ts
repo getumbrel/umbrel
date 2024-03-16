@@ -17,7 +17,7 @@ export default router({
 	canMigrate: privateProcedure.query(async ({ctx}) => {
 		const currentInstall = ctx.umbreld.dataDirectory
 		const externalUmbrelInstall = await findExternalUmbrelInstall()
-		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string)
+		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string, ctx.umbreld)
 		await unmountExternalDrives()
 
 		return true
@@ -29,7 +29,7 @@ export default router({
 	migrate: privateProcedure.mutation(async ({ctx}) => {
 		const currentInstall = ctx.umbreld.dataDirectory
 		const externalUmbrelInstall = await findExternalUmbrelInstall()
-		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string)
+		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string, ctx.umbreld)
 
 		void migrateData(currentInstall, externalUmbrelInstall as string, ctx.umbreld)
 
