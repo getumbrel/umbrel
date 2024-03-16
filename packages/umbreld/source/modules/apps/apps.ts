@@ -55,15 +55,19 @@ export default class Apps {
 		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 
 		// Start app environment
-		await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
-			onFailedAttempt: (error) => {
-				this.logger.error(
-					`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
-				)
-			},
-			retries: 5,
-			maxTimeout: 10000,
-		})
+		try {
+			await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
+				onFailedAttempt: (error) => {
+					this.logger.error(
+						`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
+					)
+				},
+				retries: 3,
+			})
+		} catch (error) {
+			// Log the error but continue to try to bring apps up to make it a less bad failure
+			this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
+		}
 		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
 
 		// Start apps
