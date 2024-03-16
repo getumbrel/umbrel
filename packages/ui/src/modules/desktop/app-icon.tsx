@@ -96,11 +96,11 @@ export function AppIcon({
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
 					{state === 'installing' && progress ? (
-						<div className='relative h-1 w-[50px] overflow-hidden rounded-full bg-white/20'>
+						<div className='relative h-1 w-12 overflow-hidden rounded-full bg-white/20 md:w-16'>
 							<div
-								className='absolute inset-0 w-[var(--app-w)] rounded-full bg-gradient-to-r from-white/20 to-white delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both '
+								className='absolute inset-0 rounded-full bg-gradient-to-r from-white/20 to-white transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
 								style={{
-									transform: `translateX(${-100 + progress}%)`,
+									width: `${progress}%`,
 								}}
 							/>
 						</div>
