@@ -165,10 +165,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
 					{t('2fa')}
 				</SettingsSearchItem>
-				<SettingsSearchItem value={t('2fa')} onSelect={() => navigate('/settings/2fa')}>
-					{t('2fa')}
-				</SettingsSearchItem>
-				<SettingsSearchItem value={t('tor')} onSelect={() => navigate('/settings/tor')} />
+				<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/tor')} />
 				<SettingsSearchItem
 					value={t('migration-assistant')}
 					onSelect={() => navigate('/settings/migration-assistant')}
@@ -177,7 +174,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
 				<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
-				<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
+				{/* TODO: Enable after factory reset is hooked with umbreld */}
+				{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
 				{/* ---- */}
 				{readyApps.map((app) => (
 					<SearchItem

@@ -149,8 +149,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	if (statusToShow === 'shutting-down' && shutdownComplete) {
 		return (
 			<BareCoverMessage>
-				Shutdown (probably) complete.
-				<CoverMessageParagraph>Please check your device hardware to know for sure.</CoverMessageParagraph>
+				{t('shut-down.complete')}
+				<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
 			</BareCoverMessage>
 		)
 	}
@@ -195,7 +195,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			// Shouldn't happen
 			return (
 				<CoverMessage>
-					<CoverMessageParagraph>Unexpected state</CoverMessageParagraph>
+					<CoverMessageParagraph>{t('unexpected-error')}</CoverMessageParagraph>
 					{debugInfo}
 				</CoverMessage>
 			)

@@ -3,11 +3,14 @@ import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppsThreeColumnSection} from '@/modules/app-store/discover/apps-three-column-section'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
+import {categoryDescriptionsKeyed} from '@/modules/app-store/constants'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {useAvailableApps} from '@/providers/available-apps'
 import {ButtonLink} from '@/components/ui/button-link'
 
 import {useDiscoverQuery} from './use-discover-query'
+
+import {t} from '@/utils/i18n'
 
 export default function Discover() {
 	const availableApps = useAvailableApps()
@@ -58,9 +61,11 @@ export default function Discover() {
 						textLocation={section.textLocation}
 						description={section.description || ''}
 					>
-						<ButtonLink variant='primary' size='dialog' to={`/app-store/category/${section.category}`}>
-							Browse {section.category} apps
-						</ButtonLink>
+						{section.category && (
+							<ButtonLink variant='primary' size='dialog' to={`/app-store/category/${section.category}`}>
+								{t('app-store.browse-category-apps', {category: t(categoryDescriptionsKeyed[section.category].label())})}
+							</ButtonLink>
+						)}
 					</AppsThreeColumnSection>
 				}
 			})}

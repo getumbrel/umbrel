@@ -124,7 +124,7 @@ export function CommunityAppStoreDialog() {
 						<Separator />
 						{nonUmbrelAppStores.map(({url, meta}) => (
 							<Card key={meta.id} className='space-y-3'>
-								<b>{meta.name}</b>
+								<b>{meta.name} {t('community-app-store')}</b>
 								{url && <CopyableField value={url} />}
 								<div className='flex items-center justify-between'>
 									<Button
