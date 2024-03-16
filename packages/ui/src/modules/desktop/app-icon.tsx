@@ -240,6 +240,8 @@ function ContextMenuItemLink({appId}: {appId: string}) {
 	return (
 		<ContextMenuItem asChild>
 			<button
+				// `w-full` because it doesn't fill the context menu otherwise
+				className='w-full'
 				onClick={async () => {
 					const appStoreApp = await getAppStoreAppFromInstalledApp(appId)
 					const registryId = appStoreApp?.registryId ?? UMBREL_APP_STORE_ID

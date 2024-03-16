@@ -19,7 +19,7 @@ export function ErrorBoundary() {
 	return (
 		<CoverMessage>
 			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent>
+				<DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
 					<DialogHeader>
 						<DialogTitle>{t('something-went-wrong')}</DialogTitle>
 						{/* <DialogDescription>

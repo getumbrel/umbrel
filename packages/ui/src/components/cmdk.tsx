@@ -13,7 +13,9 @@ import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
 import {Separator} from '@/shadcn-components/ui/separator'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
+import {appStateToLabel} from '@/utils/apps'
 import {t} from '@/utils/i18n'
 
 import {AppIcon} from './app-icon'
@@ -65,7 +67,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 	if (userQ.isLoading) return null
 	if (!userApps.userApps || !userApps.userAppsKeyed) return null
 
-	const installedApps = userApps.userApps.filter((app) => app.state === 'ready')
+	const readyApps = userApps.userApps.filter((app) => app.state === 'ready')
+	const unreadyApps = userApps.userApps.filter((app) => app.state !== 'ready')
 	// Apps not installed yet
 	const installableApps = availableApps.apps.filter((app) => !userApps.userAppsKeyed?.[app.id])
 
@@ -177,7 +180,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
 				<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
 				{/* ---- */}
-				{installedApps.map((app) => (
+				{readyApps.map((app) => (
 					<SearchItem
 						value={app.name}
 						icon={app.icon}
@@ -188,6 +191,22 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 						}}
 					>
 						{app.name}
+					</SearchItem>
+				))}
+				{unreadyApps.map((app) => (
+					<SearchItem
+						disabled
+						value={app.name}
+						icon={app.icon}
+						key={app.id}
+						onSelect={() => {
+							navigate(`/app-store/${app.id}`)
+							setOpen(false)
+						}}
+					>
+						<span>
+							{app.name} <span className='opacity-50'> – {appStateToLabel[app.state]}</span>
+						</span>
 					</SearchItem>
 				))}
 				{installableApps.map((app) => (
@@ -206,7 +225,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 					</SearchItem>
 				))}
 				<DebugOnlyBare>
-					<SearchItem value="Install a bunch of random apps" onSelect={debugInstallRandomApps}>
+					<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
 						Install a bunch of random apps
 					</SearchItem>
 				</DebugOnlyBare>
@@ -327,6 +346,7 @@ const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 	return (
 		<CommandItem
 			{...props}
+			className={cn(props.className, props.disabled && 'opacity-50')}
 			onSelect={(value) => {
 				props.onSelect?.(value)
 			}}

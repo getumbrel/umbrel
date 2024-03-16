@@ -354,5 +354,13 @@
   "tor.disable.success": "Tor disabled successfully!",
   "tor.disable.progress": "Disabling Tor",
   "tor.hidden-service": "Tor hidden service",
-  "stop": "Stop"
+  "stop": "Stop",
+  "app-updates.updates-available-count_one": "{{count}} update available",
+  "app-updates.updates-available-count_other": "{{count}} updates available",
+  "app-updates.title": "Updates",
+  "app-updates.update-all": "Update all",
+  "app-updates.updating": "Updating...",
+  "app-updates.update": "Update",
+  "app-updates.less": "less",
+  "app-updates.more": "more"
 }

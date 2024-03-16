@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {range} from 'remeda'
 
 import {
 	ImmersiveDialog,
@@ -156,7 +157,15 @@ function ImmersiveDialogExample() {
 			<ImmersiveDialogTrigger asChild>
 				<Button size='lg'>Open Immersive Dialog</Button>
 			</ImmersiveDialogTrigger>
-			<ImmersiveDialogContent>Hello</ImmersiveDialogContent>
+			<ImmersiveDialogContent showScroll>
+				{range(0, 10).map((i) => (
+					<p key={i}>
+						Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+						consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+						totam.
+					</p>
+				))}
+			</ImmersiveDialogContent>
 		</ImmersiveDialog>
 	)
 }
@@ -168,21 +177,13 @@ function ImmersiveDialogSplitExample() {
 				<Button size='lg'>Open Immersive Dialog Split</Button>
 			</ImmersiveDialogTrigger>
 			<ImmersiveDialogSplitContent side={<>Hello</>}>
-				<p>
-					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
-					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
-					totam.
-				</p>
-				<p>
-					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
-					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
-					totam.
-				</p>
-				<p>
-					Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
-					consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
-					totam.
-				</p>
+				{range(0, 3).map((i) => (
+					<p key={i}>
+						Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+						consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+						totam.
+					</p>
+				))}
 
 				<div className='flex-1' />
 
