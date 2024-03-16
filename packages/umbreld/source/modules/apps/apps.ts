@@ -83,6 +83,7 @@ export default class Apps {
 				app.start().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
 					// if a dingle app fails.
+					app.state = 'unknown'
 					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
 				}),
 			),
