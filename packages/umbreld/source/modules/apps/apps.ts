@@ -61,7 +61,8 @@ export default class Apps {
 					`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
 				)
 			},
-			retries: 2,
+			retries: 5,
+			maxTimeout: 10000,
 		})
 		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
 
