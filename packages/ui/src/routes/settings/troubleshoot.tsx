@@ -112,7 +112,7 @@ function Content() {
 	}
 }
 
-const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center shadow-button-highlight-soft-hpx outline-none duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
+const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center gap-2 flex-wrap shadow-button-highlight-soft-hpx outline-none duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
 const radioTitleClass = tw`text-15 font-medium -tracking-2`
 const radioDescriptionClass = tw`text-13 opacity-90 -tracking-2`
 const troubleshootContentLayoutClass = tw`flex max-h-full flex-1 flex-col items-start gap-4`
