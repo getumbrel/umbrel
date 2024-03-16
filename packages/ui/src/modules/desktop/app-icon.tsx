@@ -5,6 +5,7 @@ import {arrayIncludes} from 'ts-extras'
 
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {Spinner} from '@/components/ui/loading'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
@@ -40,7 +41,7 @@ export function AppIcon({
 
 	const disabled = state !== 'ready'
 
-	const shouldPulse = arrayIncludes(progressStates, state)
+	const inProgress = arrayIncludes(progressStates, state)
 
 	return (
 		<motion.button
@@ -70,10 +71,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15',
-					!disabled &&
-						'group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6',
-					disabled && 'grayscale',
+					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
 				)}
 				style={{
 					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
@@ -86,27 +84,33 @@ export function AppIcon({
 						onError={() => setUrl('')}
 						className={cn(
 							'h-full w-full duration-500',
-							shouldPulse && 'animate-pulse duration-1000',
-							!shouldPulse && 'animate-in fade-in',
+							inProgress && 'brightness-50',
+							!inProgress && 'animate-in fade-in',
 						)}
 						draggable={false}
 					/>
 				)}
-			</div>
-			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
-				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
-					{state === 'installing' && progress ? (
-						<div className='relative h-1 w-12 overflow-hidden rounded-full bg-white/20 md:w-16'>
+				{state === 'installing' && progress && (
+          <div className="absolute inset-0 flex items-center justify-center">
+						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/50">
 							<div
-								className='absolute inset-0 rounded-full bg-gradient-to-r from-white/20 to-white transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
+								className="absolute inset-0 rounded-full bg-white transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
 								style={{
 									width: `${progress}%`,
 								}}
 							/>
 						</div>
-					) : (
-						<AppLabel state={state} label={label} />
-					)}
+					</div>
+        )}
+				{inProgress && state !== 'installing' && (
+					<div className="absolute inset-0 flex items-center justify-center">
+						<Spinner size="6" />
+					</div>
+				)}
+			</div>
+			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
+				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
+					<AppLabel state={state} label={label} />
 				</div>
 			</div>
 		</motion.button>
@@ -118,7 +122,7 @@ function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
 		case 'not-installed':
 			return t('app.installing')
 		case 'installing':
-			return t('app.installing') + '...'
+			return label
 		case 'ready':
 		case 'running':
 			return label
@@ -170,7 +174,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
-	const isInProgress = arrayIncludes(progressStates, appInstall.state)
+	const inProgress = arrayIncludes(progressStates, appInstall.state)
 
 	// TODO: consider showing context menu in other states too
 	switch (appInstall.state) {
@@ -211,7 +215,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
-							{!isInProgress && (
+							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' && (
 										<DebugOnlyBare>
