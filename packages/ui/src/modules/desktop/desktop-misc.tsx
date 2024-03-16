@@ -5,20 +5,6 @@ import {useWallpaper} from '@/providers/wallpaper'
 import {t} from '@/utils/i18n'
 import {cmdOrCtrl, platform} from '@/utils/misc'
 
-// https://stackoverflow.com/a/13245058
-export function getPartofDay() {
-	const today = new Date()
-	const curHr = today.getHours()
-
-	if (curHr < 12) {
-		return 'morning'
-	} else if (curHr < 18) {
-		return 'afternoon'
-	} else {
-		return 'evening'
-	}
-}
-
 export function Search({onClick}: {onClick?: () => void}) {
 	const isMobile = useIsSmallMobile()
 	return (

@@ -23,7 +23,8 @@ import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
-import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
@@ -75,7 +76,7 @@ export function SettingsContent() {
 			<div className='grid w-full gap-x-[30px] gap-y-[20px] lg:grid-cols-[280px_auto]'>
 				<div className='flex items-center justify-center'>
 					<DesktopPreviewFrame>
-						<DesktopPreview />
+						<DesktopPreviewConnected />
 					</DesktopPreviewFrame>
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
@@ -152,9 +153,7 @@ export function SettingsContent() {
 					</ListRow>
 					<ListRow title={t('remote-tor-access')} description={t('tor-description')} disabled={tor.isLoading}>
 						<div className='flex flex-wrap gap-3'>
-							{tor.enabled && (
-								<CopyableField narrow value={hiddenServiceQ.data ?? ''} />
-							)}
+							{tor.enabled && <CopyableField narrow value={hiddenServiceQ.data ?? ''} />}
 							<Switch
 								checked={tor.enabled}
 								onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}

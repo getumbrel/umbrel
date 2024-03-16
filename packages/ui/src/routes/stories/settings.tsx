@@ -1,8 +1,12 @@
 import {useState} from 'react'
+import {range, shuffle} from 'remeda'
 
 import {Card} from '@/components/ui/card'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {H2, H3} from '@/layouts/stories'
+import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreview} from '@/modules/desktop/desktop-preview-basic'
+import {wallpaperIds} from '@/providers/wallpaper'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
@@ -14,8 +18,47 @@ import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/de
 export default function SettingsStory() {
 	const [cpuType, setCpuType] = useState<CpuType>('pi')
 
+	const wId = shuffle(wallpaperIds)[0]
+
 	return (
 		<div className='flex flex-col flex-wrap items-start gap-8 bg-white/10 p-8'>
+			<DesktopPreviewFrame>
+				<DesktopPreview
+					wallpaperId={wId}
+					userName='John Doe'
+					widgets={[]}
+					apps={range(0, 50).map((i) => ({
+						icon: 'https://source.unsplash.com/random/100x100',
+						name: 'sdlfksjdflksdjflksjdkf',
+					}))}
+				/>
+			</DesktopPreviewFrame>
+			<DesktopPreview
+				wallpaperId={wId}
+				userName='John Doe'
+				widgets={[
+					{
+						type: 'four-stats',
+						app: {
+							name: 'sdlfkjsdflk',
+						},
+						id: 'sdfsdf',
+					},
+				]}
+				apps={range(0, 50).map((i) => ({
+					icon: 'https://source.unsplash.com/random/100x100',
+					name: 'sdlfksjdflksdjflksjdkf',
+				}))}
+			/>
+			<DesktopPreview
+				wallpaperId={wId}
+				userName='John Doe'
+				widgets={range(0, 3).map((i) => ({app: {name: 'sdlfkjsdflk'}, id: i.toString(), type: 'four-stats'}))}
+				apps={range(0, 50).map((i) => ({
+					icon: 'https://source.unsplash.com/random/100x100',
+					name: 'sdlfksjdflksdjflksjdkf',
+				}))}
+			/>
 			<H3>Device Icons</H3>
 			<div className='flex gap-4'>
 				<HostEnvironmentIcon />

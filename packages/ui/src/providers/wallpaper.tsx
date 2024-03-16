@@ -9,7 +9,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {keyBy, preloadImage} from '@/utils/misc'
 import {tw} from '@/utils/tw'
 
-type WallpaperT = {
+type WallpaperBase = {
 	id: string | undefined
 	url: string
 	brandColorHsl: string
@@ -121,8 +121,9 @@ export const wallpapers = [
 		url: '/wallpapers/21.jpg',
 		brandColorHsl: '12 78% 50%',
 	},
-] as const satisfies readonly WallpaperT[]
+] as const satisfies readonly WallpaperBase[]
 
+type Wallpaper = (typeof wallpapers)[number]
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 export const wallpaperIds = wallpapers.map((w) => w.id)
@@ -135,12 +136,12 @@ const nullWallpaper = {
 	id: undefined,
 	url: '',
 	brandColorHsl: '0 0% 100%',
-} as const satisfies WallpaperT
+} as const satisfies WallpaperBase
 
 type WallpaperType = {
-	wallpaper: WallpaperT
+	wallpaper: Wallpaper | typeof nullWallpaper
 	isLoading: boolean
-	prevWallpaper: WallpaperT | undefined
+	prevWallpaper: Wallpaper | undefined
 	setWallpaperId: (id: WallpaperId) => void
 	wallpaperFullyVisible: boolean
 	setWallpaperFullyVisible: () => void

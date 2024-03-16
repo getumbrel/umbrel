@@ -6,6 +6,7 @@ import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {useApps} from '@/providers/apps'
 import {Wallpaper} from '@/providers/wallpaper'
+import {trpcReact} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIcon} from './app-icon'
@@ -77,14 +78,17 @@ export function DesktopPreview() {
 function DesktopContent() {
 	const {userApps, isLoading} = useApps()
 	const {selected} = useWidgets()
+	const getQuery = trpcReact.user.get.useQuery()
+	const name = getQuery.data?.name
 
 	if (isLoading) return null
 	if (!userApps) return null
+	if (!name) return null
 
 	return (
 		<BackdropBlurVariantContext.Provider value='default'>
 			<div className='pt-12' />
-			<Header />
+			<Header userName={name} />
 			<div className='pt-12' />
 			<div className='flex w-full flex-grow overflow-hidden'>
 				<AppGrid

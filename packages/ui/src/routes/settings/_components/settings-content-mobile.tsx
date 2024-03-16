@@ -21,7 +21,8 @@ import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
-import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
@@ -54,7 +55,7 @@ export function SettingsContentMobile() {
 		<div className='flex flex-col gap-5 animate-in fade-in'>
 			<div className='flex items-center justify-center'>
 				<DesktopPreviewFrame>
-					<DesktopPreview />
+					<DesktopPreviewConnected />
 				</DesktopPreviewFrame>
 			</div>
 
