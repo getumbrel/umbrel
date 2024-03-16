@@ -50,6 +50,10 @@ export default class Apps {
 			await fse.writeFile(umbrelSeedFile, randomToken(256))
 		}
 
+		// Create app instances
+		const appIds = await this.#umbreld.store.get('apps')
+		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
+
 		// Start app environment
 		await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
 			onFailedAttempt: (error) => {
@@ -63,8 +67,6 @@ export default class Apps {
 
 		// Start apps
 		this.logger.log('Starting apps')
-		const appIds = await this.#umbreld.store.get('apps')
-		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 		await Promise.all(
 			this.instances.map((app) =>
 				app.start().catch((error) => {
