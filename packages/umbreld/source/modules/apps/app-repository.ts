@@ -82,6 +82,10 @@ export default class AppRepository {
 		// We're running as root so we need to relax file permissions so container can access them
 		await $`chown -R 1000:1000 ${temporaryPath}`
 
+		// We also need to strip out all .gitkeep files since some apps cannot be initialised with
+		// a non-empty volume directory
+		await $`find ${temporaryPath} -name .gitkeep -delete`
+
 		await fse.move(temporaryPath, this.path, {overwrite: true})
 	}
 
