@@ -109,7 +109,7 @@ export type ListEmojiItem = {
 export type ListEmojiWidget = BaseWidget & {
 	type: 'list-emoji'
 	link?: Link
-	count?: number
+	count?: string
 	items?: ListEmojiItem[]
 }
 export type ListEmojiWidgetProps = Omit<ListEmojiWidget, 'type'>

@@ -31,7 +31,7 @@ export function ListEmojiWidget({
 				</div>
 			)}
 			<div className='absolute bottom-3 right-3 text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
-				{count && count > 999 ? '999+' : count ?? LOADING_DASH}
+				{count ?? LOADING_DASH}
 			</div>
 		</WidgetContainer>
 	)

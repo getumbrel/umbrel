@@ -255,7 +255,7 @@
   "app-store.search.no-results": "No results",
   "app-store.search.results-for": "Results for",
   "factory-reset.review.submit": "Continue",
-  "factory-reset.review.account-info": "Account info",
+  "factory-reset.review.account-info": "Account info and password",
   "factory-reset.review.total-data": "Total data",
   "factory-reset.review.apps": "Apps",
   "onboarding.create-account.failed.name-required": "Name is required",

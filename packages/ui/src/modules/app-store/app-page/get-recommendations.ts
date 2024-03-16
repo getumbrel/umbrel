@@ -8,6 +8,6 @@ export function getRecommendationsFor(apps: RegistryApp[], appId: string) {
 	// Filter apps by the same category, excluding the current app
 	const categoryApps = apps.filter((app) => app.category === category && app.id !== appId)
 
-	// Sample 6 apps from the same category
-	return sample(categoryApps, 6)
+	// Sample 4 apps from the same category
+	return sample(categoryApps, 4)
 }
