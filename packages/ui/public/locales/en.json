@@ -100,7 +100,7 @@
   "no-forgot-password-message": "If you lose your password, you won't be able to log into your Umbrel. Make sure to safely secure it.",
   "settings.contact-support": "Need help? <linked>Contact support.</linked>",
   "temperature": "Temperature",
-  "temperature.too-hot-suggestion": "Consider using a heatsink, fan or a cooling case.",
+  "temperature.too-hot-suggestion": "Consider changing your device's environment.",
   "temp.dangerously-hot": "Very hot",
   "temp.hot": "Hot",
   "temp.nice": "Nice",

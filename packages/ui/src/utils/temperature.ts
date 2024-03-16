@@ -1,4 +1,4 @@
-import {UNKNOWN} from '@/constants'
+import {LOADING_DASH} from '@/constants'
 import {t} from '@/utils/i18n'
 
 type Thresholds = {
@@ -55,7 +55,7 @@ export function tempToColor(cpuType: CpuType, tempInCelcius?: number) {
 }
 
 export function tempToMessage(cpuType: CpuType, tempInCelcius?: number) {
-	if (tempInCelcius === undefined) return UNKNOWN()
+	if (tempInCelcius === undefined) return LOADING_DASH
 
 	const thresholds = TEMP_THRESHOLDS[cpuType]
 	if (tempInCelcius < thresholds.cold) {
