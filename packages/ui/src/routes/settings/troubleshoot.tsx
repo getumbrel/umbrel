@@ -287,7 +287,7 @@ function TroubleshootDropdown({
 		? apps.userAppsKeyed[appId]
 		: {
 				icon: undefined,
-				name: 'Select app...',
+				name: t('troubleshoot.select-app'),
 		  }
 
 	const appResults = matchSorter(apps.userApps, query, {
@@ -327,7 +327,7 @@ function TroubleshootDropdown({
 						}
 					}}
 					sizeVariant={'short-square'}
-					placeholder='Search...'
+					placeholder={t('troubleshoot.search')}
 					ref={inputRef}
 				/>
 				{appResults.length === 0 && <div className='text-14 text-white/50'>{t('no-results-found')}</div>}

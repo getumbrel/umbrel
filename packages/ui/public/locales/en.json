@@ -366,5 +366,7 @@
   "app-updates.updating": "Updating...",
   "app-updates.update": "Update",
   "app-updates.less": "less",
-  "app-updates.more": "more"
+  "app-updates.more": "more",
+  "troubleshoot.select-app": "Select app...",
+  "troubleshoot.search": "Search..."
 }
