@@ -92,7 +92,7 @@
   "default-credentials..dont-show-again": "これを二度と表示しないでください",
   "default-credentials.close": "わかった",
   "default-credentials.description": "アプリにアクセスするために必要な認証情報は次のとおりです。",
-  "default-credentials.launch": "アプリを起動する",
+  "default-credentials.open": "アプリを起動する",
   "default-credentials.password": "デフォルトのパスワード",
   "default-credentials.title": "{{app}}の認証情報",
   "default-credentials.username": "デフォルトのユーザー名",

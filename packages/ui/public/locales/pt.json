@@ -92,7 +92,7 @@
   "default-credentials..dont-show-again": "Não mostre isso de novo",
   "default-credentials.close": "Entendi",
   "default-credentials.description": "Aqui estão as credenciais de que você precisará para acessar o aplicativo.",
-  "default-credentials.launch": "Lançamento do Aplicativo",
+  "default-credentials.open": "Lançamento do Aplicativo",
   "default-credentials.password": "Senha padrão",
   "default-credentials.title": "Credenciais para {{app}}",
   "default-credentials.username": "Nome de usuário padrão",

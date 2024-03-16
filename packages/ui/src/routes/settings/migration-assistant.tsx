@@ -108,7 +108,6 @@ function MigrationAssistantPrep() {
 				</>
 			}
 		>
-			<ImmersiveDialogIconMessage icon={TbInfoCircle} title={t('migration-assistant.prep.update')} />
 			<ImmersiveDialogIconMessage icon={TbPower} title={t('migration-assistant.prep.shut-down-rpi')} />
 			<ImmersiveDialogIconMessage icon={TbUsb} title={t('migration-assistant.prep.connect-disk-to-home')} />
 			<ImmersiveDialogIconMessage

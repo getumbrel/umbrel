@@ -92,7 +92,7 @@
   "default-credentials..dont-show-again": "Zeigen Sie dies nicht noch einmal",
   "default-credentials.close": "Habe es",
   "default-credentials.description": "Hier sind die Anmeldeinformationen, die Sie für den Zugriff auf die App benötigen.",
-  "default-credentials.launch": "App starten",
+  "default-credentials.open": "App starten",
   "default-credentials.password": "Standard-Passwort",
   "default-credentials.title": "Anmeldeinformationen für {{app}}",
   "default-credentials.username": "Standardbenutzername",
