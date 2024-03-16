@@ -68,7 +68,13 @@ export default class Apps {
 			// Log the error but continue to try to bring apps up to make it a less bad failure
 			this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
 		}
-		await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
+
+		try {
+			// Set permissions for tor data directory
+			await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
+		} catch (error) {
+			this.logger.error(`Failed to set permissions for Tor data directory: ${(error as Error).message}`)
+		}
 
 		// Start apps
 		this.logger.log('Starting apps')
