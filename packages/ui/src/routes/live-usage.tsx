@@ -146,7 +146,7 @@ function CpuSection() {
 		<>
 			<ProgressCard value={value} progressLabel={secondaryValue} progress={progress} />
 			{isLoading && <AppListSkeleton />}
-			<AppList system={system} apps={apps} formatValue={(v) => v.toFixed(2) + '%'} />
+			<AppList system={system} apps={apps} formatValue={(v) => formatNumberI18n(v) + '%'} />
 		</>
 	)
 }
