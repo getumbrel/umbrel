@@ -62,7 +62,7 @@ export default class Apps {
 						`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
 					)
 				},
-				retries: 3,
+				retries: 3, // This will do exponential backoff for 1s, 2s, 4s
 			})
 		} catch (error) {
 			// Log the error but continue to try to bring apps up to make it a less bad failure
