@@ -1,13 +1,14 @@
 import process from 'node:process'
 import os from 'node:os'
 
-import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
+import {createTRPCProxyClient, httpLink} from '@trpc/client'
 import fse from 'fs-extra'
 
 import * as jwt from './jwt.js'
 
 import type {AppRouter} from './server/trpc/index.js'
 
+// TODO: Maybe just read the endpoint from the data dir
 const dataDir = process.env.UMBREL_DATA_DIR ?? `${os.homedir()}/umbrel`
 const trpcEndpoint = process.env.UMBREL_TRPC_ENDPOINT ?? `http://localhost/trpc`
 
@@ -19,8 +20,7 @@ async function signJwt() {
 
 const trpc = createTRPCProxyClient<AppRouter>({
 	links: [
-		httpBatchLink({
-			// TODO: Infer this port dynamically
+		httpLink({
 			url: trpcEndpoint,
 			headers: async () => ({
 				Authorization: `Bearer ${await signJwt()}`,
