@@ -92,17 +92,6 @@ export function SettingsContent() {
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${t('umbrelos')} ${osVersionQ.data}` ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
-							{tor.enabled && (
-								<>
-									<dt className='opacity-40'>{t('tor.hidden-service')}</dt>
-									<dd>
-										<CopyableField narrow value={hiddenServiceQ.data ?? ''} />
-										{/* <a href={hiddenServiceQ.data} target='_blank' className='block truncate underline'>
-											{hiddenServiceQ.data}
-										</a> */}
-									</dd>
-								</>
-							)}
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -162,15 +151,20 @@ export function SettingsContent() {
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
 					<ListRow title={t('remote-tor-access')} description={t('tor-description')} disabled={tor.isLoading}>
-						<Switch
-							checked={tor.enabled}
-							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
-						/>
+						<div className='flex flex-wrap gap-3'>
+							{tor.enabled && (
+								<CopyableField narrow value={hiddenServiceQ.data ?? ''} />
+							)}
+							<Switch
+								checked={tor.enabled}
+								onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
+							/>
+						</div>
 					</ListRow>
 					{tor.isMutLoading && (
 						<CoverMessage>
 							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
-							<Loading>Disabling Tor</Loading>
+							<Loading>{t('tor.disable.progress')}</Loading>
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>
 					)}
