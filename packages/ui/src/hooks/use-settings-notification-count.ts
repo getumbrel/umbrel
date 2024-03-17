@@ -80,7 +80,7 @@ export function useSettingsNotificationCount() {
 				action: {
 					label: t('notifications.view'),
 					onClick: () => {
-						navigate(`/settings/software-update`)
+						navigate(`/settings/software-update/confirm`)
 					},
 				},
 				// Don't auto-close
@@ -93,7 +93,7 @@ export function useSettingsNotificationCount() {
 
 				if (version !== latestAvailableVersion.version) {
 					currCount++
-					const id = toast.info(t('notifications.new-version-available'), softwareUpdateToastOptions)
+					const id = toast.info(t('notifications.new-version-available', {update: `umbrelOS ${latestAvailableVersion.version}`}), softwareUpdateToastOptions)
 					toastIds.push(id)
 				}
 			}

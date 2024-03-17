@@ -5,6 +5,7 @@ import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useGlobalSystemState} from '@/providers/global-system-state'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
+import {ButtonLink} from '@/components/ui/button-link'
 import {
 	Drawer,
 	DrawerContent,
@@ -61,9 +62,9 @@ export function SoftwareUpdateDrawer() {
 								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
 								{t('software-update.new-version', {version: latestVersion?.version})}
 							</div>
-							<Button variant='primary' size='dialog' onClick={update}>
-								{t('software-update.update-now')}
-							</Button>
+							<ButtonLink variant='primary' size='dialog' to='/settings/software-update/confirm'>
+								{t('software-update.view')}
+							</ButtonLink>
 						</>
 					)}
 				</DrawerFooter>

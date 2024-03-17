@@ -10,6 +10,7 @@ import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
+import {SoftwareUpdateConfirmDialog} from '@/routes/settings/software-update-confirm'
 import ErrorStory from '@/routes/stories/error'
 import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
@@ -120,6 +121,7 @@ export function Settings() {
 					{isMobile && <Route path='/language' Component={LanguageDrawer} />}
 					<Route path='/troubleshoot' Component={TroubleshootDialog} />
 					{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
+					<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
 				</Routes>
 				<QueryStringDialog />
 				<DebugOnly>

@@ -62,6 +62,7 @@
   "software-update.failed.retry": "Retry",
   "update": "update",
   "software-update.update-now": "Update now",
+  "software-update.view": "View",
   "storage": "Storage",
   "storage.low": "Low storage",
   "storage.full": "Storage full",
@@ -200,7 +201,7 @@
   "change-password.failed.must-be-unique": "New password must be different from the current password",
   "change-password.failed.min-length": "Password must be at least {{characters}} characters",
   "notifications.view": "View",
-  "notifications.new-version-available": "A new umbrelOS version is now available",
+  "notifications.new-version-available": "{{update}} is now available to install",
   "notifications.cpu.too-hot": "High CPU temperature",
   "notifications.cpu.too-cold": "Low CPU temperature",
   "notifications.storage.full": "Your device's storage is full",
@@ -361,6 +362,7 @@
   "tor.disable.progress": "Disabling remote Tor access",
   "tor.hidden-service": "Tor hidden service URL",
   "stop": "Stop",
+  "software-update.release-notes.title": "Release notes",
   "app-updates.updates-available-count_one": "{{count}} update available",
   "app-updates.updates-available-count_other": "{{count}} updates available",
   "app-updates.title": "Updates",
@@ -370,5 +372,6 @@
   "app-updates.less": "less",
   "app-updates.more": "more",
   "troubleshoot.select-app": "Select app...",
-  "troubleshoot.search": "Search..."
+  "troubleshoot.search": "Search...",
+  "software-update.install-now": "Install now"
 }

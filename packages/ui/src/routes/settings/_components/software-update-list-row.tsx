@@ -1,16 +1,14 @@
-import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiRefreshLine} from 'react-icons/ri'
-
+import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiRefreshLine, RiInformationLine} from 'react-icons/ri'
 import {Icon} from '@/components/ui/icon'
+import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
-import {useGlobalSystemState} from '@/providers/global-system-state'
 import {Button} from '@/shadcn-components/ui/button'
 import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
-	const {update} = useGlobalSystemState()
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 
 	if (state === 'update-available') {
@@ -25,10 +23,9 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 					</span>
 				}
 			>
-				<Button variant='primary' onClick={update}>
-					<Icon component={RiRefreshLine} />
-					{t('software-update.update-now')}
-				</Button>
+				<IconButtonLink icon={RiInformationLine} variant='primary' to='/settings/software-update/confirm'>
+					{t('software-update.view')}
+				</IconButtonLink>
 			</ListRow>
 		)
 	}
@@ -54,12 +51,10 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 				</span>
 			}
 		>
-			{state !== 'at-latest' && (
-				<Button onClick={checkLatest}>
-					<Icon component={RiRefreshLine} className={state === 'checking' ? 'animate-spin' : undefined} />
-					{state === 'checking' ? t('software-update.checking') : t('software-update.check')}
-				</Button>
-			)}
+			<Button onClick={checkLatest}>
+				<Icon component={RiRefreshLine} className={state === 'checking' ? 'animate-spin' : undefined} />
+				{state === 'checking' ? t('software-update.checking') : t('software-update.check')}
+			</Button>
 		</ListRow>
 	)
 }
