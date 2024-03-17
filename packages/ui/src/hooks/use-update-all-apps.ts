@@ -5,7 +5,16 @@ export function useUpdateAllApps() {
 	const allAvailableApps = useAllAvailableApps()
 	const ctx = trpcReact.useContext()
 	const appsQ = trpcReact.apps.list.useQuery()
-	const updateMut = trpcReact.apps.update.useMutation({onSuccess: () => ctx.apps.list.invalidate()})
+	const updateMut = trpcReact.apps.update.useMutation({
+		onMutate: () => {
+			// Optimistic updates because otherwise it's too slow and feels like nothing is happening
+			ctx.apps.state.cancel()
+			allAvailableApps?.apps?.map((app) => {
+				ctx.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
+			})
+		},
+		onSuccess: () => ctx.apps.list.invalidate(),
+	})
 
 	const updateAll = () => {
 		const apps = appsQ.data ?? []

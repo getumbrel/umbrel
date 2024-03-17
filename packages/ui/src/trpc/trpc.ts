@@ -57,7 +57,7 @@ export const appStates = [
 ] satisfies AppState[]
 
 export const progressStates = [
-	// 'loading',
+	// 'not-installed',
 	'installing',
 	'starting',
 	'running',
