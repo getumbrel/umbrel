@@ -11,7 +11,7 @@ import {RegistryApp} from '@/trpc/trpc'
 
 import {InstallButton} from './install-button'
 
-export function ConnectedInstallButton({
+export function InstallButtonConnected({
 	app,
 	registryId = UMBREL_APP_STORE_ID,
 }: {
