@@ -130,7 +130,7 @@ export const wallpaperIds = wallpapers.map((w) => w.id)
 
 // ---
 
-export const DEFAULT_WALLPAPER_ID: WallpaperId = '1'
+export const DEFAULT_WALLPAPER_ID: WallpaperId = '18'
 
 const nullWallpaper = {
 	id: undefined,
