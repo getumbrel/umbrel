@@ -181,6 +181,13 @@ main () {
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
+  echo "Checking if partition exsts before blacklisting USB device IDs against UAS driver..."
+  partition_should_exist="false"
+  if [[ -e "${partition_path}" ]]; then
+    echo "Partition exists"
+    partition_should_exist="true"
+  fi
+
   echo "Blacklisting USB device IDs against UAS driver..."
   blacklist_uas
 
@@ -197,6 +204,13 @@ main () {
     echo "Waiting for USB devices..."
     sleep 1
   done
+
+  echo "Checking if partition exists after blacklisting USB device IDs against UAS driver..."
+  if [[ $partition_should_exist = "true" ]] && [[ ! -e "${partition_path}" ]]; then
+    echo "Partition didn't return after USB rebinding"
+    echo "Exiting mount script without doing anything"
+    exit 1
+  fi
 
   echo "Checking if the device is ext4..."
 
