@@ -1,78 +1,76 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script needs to be in this exact location for legacy reasons.
+# 
+# It bootstraps the umbrelOS 1.0 update for old 0.5.x Umbrel installs.
+# During OTA they download the latest release tarball from GitHub, extract
+# it and then execute ./scripts/*-run.sh to process the update. So now we just
+# have this ./scripts/bootstrap-run.sh in this exact location in the codebase
+# so old Umbrel installs can bootstrap into the new mender based update system
+# and reboot into the new OS.
+
 RELEASE=$1
 UMBREL_ROOT=$2
 UPDATE_ROOT=$(readlink -f "${PWD}/../..")
 
-echo "Bootstrapping umbreld"
-
 # Make sure we correctly display an error if the bootstrap fails
-function show_error {
+function fail_update() {
+  reason="${1}"
+  echo "${reason}" | tee "${UMBREL_ROOT}/statuses/update-failure"
   echo "Update failed!"
-  echo "Error bootstrapping umbrel server" > "${UMBREL_ROOT}/statuses/update-failure"
-}
-trap show_error ERR
-
-# Save current images to clean up later
-echo "Saving current Umbrel Docker images to clean up later"
-compose_file="${UMBREL_ROOT}/docker-compose.yml"
-echo "Reading file: ${compose_file}"
-old_images=$(yq e '.services | map(select(.image != null)) | .[].image' "${compose_file}")
-echo "${old_images}"
-
-# Map uname architecture to umbreld architecture
-machine_arch="$(uname --machine)"
-if [[ "${machine_arch}" = "x86_64" ]]
-then
-  binary_arch="amd64"
-elif [[ "${machine_arch}" = "aarch64" ]]
-then
-  binary_arch="arm64"
-else
-  echo "Unsupported architecture: ${machine_arch}"
   exit 1
-fi
-echo "Detected architecture: ${binary_arch}"
+}
 
-binary_source_location="${UPDATE_ROOT}/packages/umbreld/build/linux_${binary_arch}/umbreld"
-binary_destination_location="${UMBREL_ROOT}/bin/umbreld"
+function is_pi() {
+  cat /proc/cpuinfo | grep --quiet 'Raspberry Pi'
+}
 
-# Download umbreld release binary if we don't have a local dev build
-echo "Installing umbreld to \"${binary_destination_location}\""
-echo '{"state": "installing", "progress": 25, "description": "Installing umbreld", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+function is_home() {
+  dmidecode -t system | grep --silent 'Umbrel Home'
+}
 
-if [[ -f "${binary_source_location}" ]]
+echo "Hardware support detection"
+
+# Raspberry Pi
+if is_pi
 then
-  echo "Using local development binary at \"${binary_source_location}\""
-  cp "${binary_source_location}" "${binary_destination_location}-new"
-  mv "${binary_destination_location}-new" "${binary_destination_location}"
-else
-  # TODO: Ideally this would do a lookup to download.umbrel.com which would return a redirect to
-  # the GitHub release asset. That way we have freedom to change the repo or not use GitHub releases
-  # at all in the future.
-  binary_url="https://github.com/getumbrel/umbrel/releases/download/${RELEASE}/umbreld-${RELEASE}-${binary_arch}.tar.gz"
-  echo "Downloading umbreld from \"${binary_url}\""
-  binary_containing_directory="${binary_destination_location%/*}"
-  tmp_binary_containing_directory="${binary_containing_directory}/tmp"
-  mkdir -p "${tmp_binary_containing_directory}"
-  curl --fail --location "${binary_url}" | tar --extract --gzip --directory="${tmp_binary_containing_directory}"
-  mv "${tmp_binary_containing_directory}/umbreld" "${binary_destination_location}"
-  rm -rf "${tmp_binary_containing_directory}"
+  echo "Raspberry Pi detected"
+  fail_update "Reflash your SDcard to update to umbrelOS 1.0 https://link.umbrel.com/pi-update"
 fi
 
-echo "Running \"umbreld --update\""
-echo '{"state": "installing", "progress": 50, "description": "Running Umbrel migrations", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
-"${binary_destination_location}" --update "${UPDATE_ROOT}" "${UMBREL_ROOT}"
+# Not an Umbrel Home (custom Linux install)
+if ! is_home
+then
+  echo "Custon Linux install detected"
+  fail_update "OTA update not yet supported for custom Linux installs"
+fi
 
-echo "Starting \"umbreld\""
-echo '{"state": "installing", "progress": 75, "description": "Starting new services", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
-"${UMBREL_ROOT}/scripts/start"
+# If we get here we're running on an Umbrel Home
+echo "Umbrel Home detected"
 
-# Remove any old images we don't need anymore
-echo "Deleting previous images"
-echo '{"state": "success", "progress": 90, "description": "Deleting previous images", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
-docker rmi $old_images || true
+# Flash new update
+echo '{"state": "installing", "progress": 25, "description": "Flashing umbrelOS 1.0, this may take a while", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+mender install https://download.umbrel.com/release/1.0.0/umbrelos-amd64.update
 
-echo "Successfully installed Umbrel $RELEASE"
-echo '{"state": "success", "progress": 100, "description": "Successfully installed Umbrel '$RELEASE'", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+# Reboot
+cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
+{"state": "installing", "progress": 97, "description": "Rebooting your Umbrel Home"}
+EOF
+
+# Sleep 5 seconds to give the frontend a chance to poll
+# and pull in latest update status
+echo "Sleeping 5 seconds"
+sleep 5
+
+# The following two cleanups shouldn't be needed since we'll reboot into a 1.0 install
+# but we do it just incase something goes wrong and we end up back in 0.5.x
+
+# Remove update lockfile so the next OTA update doesn't fail
+rm -f "${UMBREL_ROOT}/statuses/update-in-progress"
+
+# Write out a status file which will be used within scripts/start
+# To complete the update when the system boots up again
+touch "${UMBREL_ROOT}/statuses/umbrel-update-reboot-performed"
+shutdown --reboot now
+exit 0
