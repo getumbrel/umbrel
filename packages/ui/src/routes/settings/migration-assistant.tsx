@@ -12,7 +12,7 @@ import {
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
-import {useGlobalSystemState} from '@/providers/global-system-state'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	AlertDialog,

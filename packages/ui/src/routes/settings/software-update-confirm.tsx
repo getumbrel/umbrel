@@ -1,5 +1,5 @@
 import {Markdown} from '@/components/markdown'
-import {useGlobalSystemState} from '@/providers/global-system-state'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
