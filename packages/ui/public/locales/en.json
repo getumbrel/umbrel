@@ -146,7 +146,7 @@
   "troubleshoot.share-with-umbrel-support": "Share with Umbrel Support",
   "login": "Login",
   "migration-assistant.prep.body": "Prepare for migration",
-  "migration-assistant.prep.button-start": "Start migration",
+  "migration-assistant.prep.button-continue": "Continue",
   "migration-assistant.prep.callout": "The data on your Umbrel Home, if any, will be permanently deleted.",
   "migration-assistant.prep.shut-down-rpi": "Shut down your Raspberry Pi Umbrel.",
   "migration-assistant.prep.connect-disk-to-home": "Connect its external drive to any USB port on your Umbrel Home.",
@@ -373,6 +373,8 @@
   "app-updates.more": "more",
   "troubleshoot.select-app": "Select app...",
   "troubleshoot.search": "Search...",
+  "migration-assistant.failed.retrying-message": "Retrying...",
+  "unknown-error": "Unknown error",
   "software-update.install-now": "Install now",
   "app-updates.no-updates": "All apps are up-to-date!"
 }

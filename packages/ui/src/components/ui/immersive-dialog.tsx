@@ -133,7 +133,7 @@ export function ImmersiveDialogBody({
 }: {
 	title: string
 	description: string
-	bodyText: string
+	bodyText: React.ReactNode
 	children: React.ReactNode
 	footer: React.ReactNode
 }) {
@@ -144,22 +144,33 @@ export function ImmersiveDialogBody({
 				<p className={immersiveDialogDescriptionClass}>{description}</p>
 			</div>
 			<ImmersiveDialogSeparator />
-			<div className='text-15 font-medium leading-none -tracking-4 text-white/90'>{bodyText}</div>
-			<motion.div className='w-full space-y-2.5'>
-				{Children.map(children, (child, i) => (
-					<motion.div
-						key={i}
-						initial={{opacity: 0, translateY: 10}}
-						animate={{opacity: 1, translateY: 0}}
-						transition={{delay: i * 0.2 + 0.1}}
-					>
-						{child}
-					</motion.div>
-				))}
-			</motion.div>
+			<div className='w-full space-y-2.5'>
+				<div className={bodyTextClass}>{bodyText}</div>
+				<AnimateIn>{children}</AnimateIn>
+			</div>
 			<div className='flex-1' />
 			<ImmersiveDialogFooter>{footer}</ImmersiveDialogFooter>
 		</div>
+	)
+}
+
+const bodyTextClass = tw`text-15 font-medium leading-none -tracking-4 text-white/90`
+
+function AnimateIn({children}: {children: React.ReactNode}) {
+	return (
+		<>
+			{Children.map(children, (child, i) => (
+				<motion.div
+					// TODO: don't use index as key
+					key={i}
+					initial={{opacity: 0, translateY: 10}}
+					animate={{opacity: 1, translateY: 0}}
+					transition={{delay: i * 0.2 + 0.1}}
+				>
+					{child}
+				</motion.div>
+			))}
+		</>
 	)
 }
 

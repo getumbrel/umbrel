@@ -28,9 +28,6 @@ const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const Login = React.lazy(() => import('./routes/login'))
 const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
-const Migrate = React.lazy(() => import('./routes/migrate'))
-const MigrateFailed = React.lazy(() => import('./routes/migrate/migrate-failed'))
-const MigrateSuccess = React.lazy(() => import('./routes/migrate/migrate-success'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
@@ -178,30 +175,6 @@ export const router = createBrowserRouter([
 						),
 					},
 				],
-			},
-			{
-				path: 'migrate',
-				element: (
-					<EnsureLoggedIn>
-						<Migrate />
-					</EnsureLoggedIn>
-				),
-			},
-			{
-				path: 'migrate/success',
-				element: (
-					<EnsureLoggedIn>
-						<MigrateSuccess />
-					</EnsureLoggedIn>
-				),
-			},
-			{
-				path: 'migrate/failed',
-				element: (
-					<EnsureLoggedIn>
-						<MigrateFailed />
-					</EnsureLoggedIn>
-				),
 			},
 			{
 				path: 'factory-reset/*',
