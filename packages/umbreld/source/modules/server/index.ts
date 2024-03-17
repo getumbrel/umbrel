@@ -67,6 +67,12 @@ class Server {
 			next()
 		})
 
+		// This is needed for legacy reasons when 0.5.x users OTA update to 1.0.
+		// 0.5.x polls this endpoint during update to know when it's completed.
+		app.get('/manager-api/v1/system/update-status', (request, response) => {
+			response.json({state: 'success', progress: 100, description: '', updateTo: ''})
+		})
+
 		// Handle tRPC routes
 		app.use('/trpc', trpcHandler)
 
