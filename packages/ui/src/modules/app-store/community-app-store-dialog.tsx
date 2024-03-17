@@ -123,8 +123,10 @@ export function CommunityAppStoreDialog() {
 						</form>
 						<Separator />
 						{nonUmbrelAppStores.map(({url, meta}) => (
-							<Card key={meta.id} className='space-y-3'>
-								<b>{meta.name} {t('community-app-store')}</b>
+							<Card key={meta.id} className='shrink-0 space-y-3'>
+								<b>
+									{meta.name} {t('community-app-store')}
+								</b>
 								{url && <CopyableField value={url} />}
 								<div className='flex items-center justify-between'>
 									<Button
@@ -136,7 +138,7 @@ export function CommunityAppStoreDialog() {
 										{t('community-app-store.remove-button')}
 									</Button>
 									<ButtonLink size='dialog' className='ml-2 w-auto' to={`/community-app-store/${meta.id}`}>
-									{t('community-app-store.open-button')}
+										{t('community-app-store.open-button')}
 									</ButtonLink>
 								</div>
 							</Card>
