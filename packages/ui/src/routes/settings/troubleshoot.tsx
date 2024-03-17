@@ -85,14 +85,14 @@ function Content() {
 				<div className='flex flex-col gap-2.5'>
 					<button className={radioButtonClass} onClick={() => setTroubleshootType('system')}>
 						<div>
-							<div className={radioTitleClass}>umbrelOS</div>
-							<div className={radioDescriptionClass}>View umbrelOS logs and system logs</div>
+							<div className={radioTitleClass}>{t('umbrelos')}</div>
+							<div className={radioDescriptionClass}>{t('troubleshoot.umbrelos-description')}</div>
 						</div>
 					</button>
 					<button className={radioButtonClass} onClick={() => setAppDialogOpen(true)}>
 						<div>
-							<div className={radioTitleClass}>Specific application...</div>
-							<div className={radioDescriptionClass}>View logs for an app installed on your Umbrel</div>
+							<div className={radioTitleClass}>{t('troubleshoot.app')}</div>
+							<div className={radioDescriptionClass}>{t('troubleshoot.app-description')}</div>
 						</div>
 						<DropdownMenu open={appDialogOpen} onOpenChange={setAppDialogOpen}>
 							<TroubleshootDropdown
