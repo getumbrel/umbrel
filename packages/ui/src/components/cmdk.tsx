@@ -306,7 +306,7 @@ function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: st
 				}
 			}}
 		>
-			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-8 md:rounded-15' />
+			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-10 lg:rounded-15' />
 			<div className='w-full truncate text-[10px] -tracking-2 text-white/75 md:text-13'>{name ?? appId}</div>
 		</button>
 	)

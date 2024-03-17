@@ -121,7 +121,7 @@ const CommandItem = React.forwardRef<
 			)}
 			{...props}
 		>
-			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-8' />}
+			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-6 sm:rounded-8' />}
 			{children}
 			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
 		</CommandPrimitive.Item>

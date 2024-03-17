@@ -46,7 +46,7 @@ export default function Login() {
 		case 'password': {
 			return (
 				<Layout title={t('login.title')} headTitle={t('login')} subTitle={t('login.subtitle')}>
-					<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmitPassword}>
+					<form className='flex w-full flex-col items-center gap-5 px-4 md:px-0' onSubmit={handleSubmitPassword}>
 						<div className={formGroupClass}>
 							<PasswordInput
 								label={t('login.password-label')}
@@ -66,7 +66,7 @@ export default function Login() {
 		case '2fa': {
 			return (
 				<Layout title={t('login-2fa.title')} subTitle={t('login-2fa.subtitle')}>
-					<form className='flex w-full flex-col items-center gap-5' onSubmit={handleSubmitPassword}>
+					<form className='flex w-full flex-col items-center gap-5 px-4 md:px-0' onSubmit={handleSubmitPassword}>
 						<PinInput autoFocus length={6} onCodeCheck={handleSubmit2fa} />
 					</form>
 				</Layout>
