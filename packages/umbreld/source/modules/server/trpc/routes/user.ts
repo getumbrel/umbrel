@@ -215,4 +215,12 @@ export default router({
 
 			return true
 		}),
+
+	// Returns the users wallpaper
+	// This endpoint is public so it can be shown on the login screen
+	wallpaper: publicProcedure.query(async ({ctx}) => {
+		const user = await ctx.user.get()
+
+		return user.wallpaper
+	}),
 })
