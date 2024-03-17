@@ -42,19 +42,19 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			if (!(await ctx.user.validatePassword(input.password))) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 			}
 
 			// 2FA
 			if (await ctx.user.is2faEnabled()) {
 				// Check we have a token
 				if (!input.totpToken) {
-					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Missing 2FA token'})
+					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Missing 2FA code'})
 				}
 
 				// Verify the token
 				if (!(await ctx.user.validate2faToken(input.totpToken))) {
-					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
+					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
 				}
 			}
 
@@ -128,7 +128,7 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			// Validate old password
 			if (!(await ctx.user.validatePassword(input.oldPassword))) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid login'})
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
 			}
 
 			// Also update Linux system password
@@ -157,7 +157,7 @@ export default router({
 
 			// Verify the token
 			if (!totp.verify(input.totpUri, input.totpToken)) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
 			}
 
 			// Save URI
@@ -181,7 +181,7 @@ export default router({
 
 			// Verify the token
 			if (!(await ctx.user.validate2faToken(input.totpToken))) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid 2FA token'})
+				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
 			}
 
 			// Delete the URI

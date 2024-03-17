@@ -30,7 +30,7 @@ test('exists() returns false when no user is registered', async () => {
 
 test('login() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.user.login.mutate({password: testUserCredentials.password})).rejects.toThrow(
-		'Invalid login',
+		'Incorrect password',
 	)
 })
 
@@ -74,7 +74,7 @@ test('register() throws an error if the user is already registered', async () =>
 })
 
 test('login() throws an error for invalid credentials', async () => {
-	await expect(umbreld.client.user.login.mutate({password: 'usdtothemoon'})).rejects.toThrow('Invalid login')
+	await expect(umbreld.client.user.login.mutate({password: 'usdtothemoon'})).rejects.toThrow('Incorrect password')
 })
 
 test('login() throws an error if password is not supplied', async () => {
@@ -122,7 +122,7 @@ test('enable2fa() throws error on invalid token', async () => {
 			totpToken: '1234356',
 			totpUri,
 		}),
-	).rejects.toThrow('Invalid 2FA token')
+	).rejects.toThrow('Incorrect 2FA code')
 })
 
 test('enable2fa() enables 2FA on login', async () => {
@@ -136,7 +136,7 @@ test('enable2fa() enables 2FA on login', async () => {
 })
 
 test('login() requires 2FA token if enabled', async () => {
-	await expect(umbreld.client.user.login.mutate(testUserCredentials)).rejects.toThrow('Missing 2FA token')
+	await expect(umbreld.client.user.login.mutate(testUserCredentials)).rejects.toThrow('Missing 2FA code')
 
 	const totpToken = totp.generateToken(testTotpUri)
 	await expect(
@@ -152,7 +152,7 @@ test('disable2fa() throws error on invalid token', async () => {
 		umbreld.client.user.disable2fa.mutate({
 			totpToken: '000000',
 		}),
-	).rejects.toThrow('Invalid 2FA token')
+	).rejects.toThrow('Incorrect 2FA code')
 })
 
 test('disable2fa() disables 2fa on login', async () => {
@@ -195,7 +195,7 @@ test('set() throws on unknown property', async () => {
 test('changePassword() throws on inavlid oldPassword', async () => {
 	await expect(
 		umbreld.client.user.changePassword.mutate({oldPassword: 'fiat4lyfe', newPassword: 'usdtothemoon'}),
-	).rejects.toThrow('Invalid login')
+	).rejects.toThrow('Incorrect password')
 })
 
 test("changePassword() changes the user's password", async () => {

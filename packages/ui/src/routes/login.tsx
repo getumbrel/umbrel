@@ -20,7 +20,7 @@ export default function Login() {
 	const loginMut = trpcReact.user.login.useMutation({
 		onSuccess: loginWithJwt,
 		onError: (error) => {
-			if (error.message === 'Missing 2FA token') {
+			if (error.message === 'Missing 2FA code') {
 				setStep('2fa')
 			}
 		},
