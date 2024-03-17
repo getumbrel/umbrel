@@ -13,7 +13,7 @@ export const widgetContainerCva = cva(
 		variants: {
 			variant: {
 				'with-backdrop-blur':
-					'bg-neutral-900/80 backdrop-blur-xl contrast-more:backdrop-blur-none contrast-more:bg-neutral-900 backdrop-saturate-[300%] shadow-widget',
+					'bg-neutral-900/70 backdrop-blur-xl backdrop-saturate-150 backdrop-brightness-[1.25] contrast-more:backdrop-blur-none contrast-more:bg-neutral-900 backdrop-saturate-[300%] shadow-widget',
 				default: 'bg-neutral-900/80 shadow-widget',
 			},
 		},
