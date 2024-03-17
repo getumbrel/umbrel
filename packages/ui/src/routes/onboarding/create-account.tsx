@@ -98,11 +98,7 @@ export default function CreateAccount() {
 						<AnimatedInputError>{formError}</AnimatedInputError>
 					</div>
 					<button type='submit' className={buttonClass}>
-						{isLoading ? (
-							<Loading>{t('onboarding.create-account.submitting')}</Loading>
-						) : (
-							t('onboarding.create-account.submit')
-						)}
+						{isLoading ? t('onboarding.create-account.submitting') : t('onboarding.create-account.submit')}
 					</button>
 				</fieldset>
 			</form>
