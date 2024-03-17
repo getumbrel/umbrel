@@ -3,7 +3,6 @@ import {usePreviousDistinct} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {keyBy, preloadImage} from '@/utils/misc'
@@ -130,8 +129,6 @@ export const wallpaperIds = wallpapers.map((w) => w.id)
 
 // ---
 
-export const DEFAULT_WALLPAPER_ID: WallpaperId = '18'
-
 const nullWallpaper = {
 	id: undefined,
 	url: '',
@@ -162,22 +159,17 @@ Scenarios:
 */
 
 export function WallpaperProvider({children}: {children: React.ReactNode}) {
-	const [localWallpaperId, setLocalWallpaperId] = useLocalStorage2<WallpaperId>('wallpaperId')
-	const remote = useRemoteWallpaper(setLocalWallpaperId)
+	const remote = useRemoteWallpaper()
 	const [isLoading, setIsLoading] = useState(true)
 	const [wallpaperFullyVisible, setWallpaperFullyVisible] = useState(false)
 
-	const defaultWallpaper = wallpapersKeyed[DEFAULT_WALLPAPER_ID]
-	const localWallpaper = localWallpaperId && wallpapersKeyed[localWallpaperId]
 	const remoteWallpaper = remote.wallpaper
 
 	// We want to avoid showing a wallpaper and then changing it later, unless we already had one cached locally
 	// since that's most likely going to be the right one. But after the remote call returns, we show the remote
 	// one if it returns (usually when user is logged in), and otherwise we show either the local one.
 	// The default one is loaded when nothing is in local storage yet.
-	const wallpaper = remote.isLoading
-		? localWallpaper || nullWallpaper
-		: remoteWallpaper || localWallpaper || defaultWallpaper
+	const wallpaper = remote.isLoading ? nullWallpaper : remoteWallpaper || nullWallpaper
 
 	const prevId = usePreviousDistinct(wallpaper.id)
 
@@ -199,7 +191,6 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 				isLoading,
 				prevWallpaper: (prevId && wallpapersKeyed[prevId]) || undefined,
 				setWallpaperId: (id: WallpaperId) => {
-					setLocalWallpaperId(id)
 					remote.setWallpaperId(id)
 				},
 				wallpaperFullyVisible,
@@ -212,7 +203,7 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 }
 
 export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
-	const {brandColorHsl} = wallpaperId ? wallpapersKeyed[wallpaperId] : wallpapersKeyed[DEFAULT_WALLPAPER_ID]
+	const {brandColorHsl} = wallpaperId ? wallpapersKeyed[wallpaperId] : nullWallpaper
 
 	useLayoutEffect(() => {
 		const el = document.documentElement
@@ -294,19 +285,22 @@ export function Wallpaper({
 
 function useRemoteWallpaper(onSuccess?: (id: WallpaperId) => void) {
 	// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
-	const userQ = trpcReact.user.get.useQuery(undefined, {
+	const userQ = trpcReact.user.wallpaper.useQuery(undefined, {
 		retry: false,
-		onSuccess: (data) => {
-			if (arrayIncludes(wallpaperIds, data.wallpaper)) {
-				onSuccess?.(data.wallpaper)
+		onSuccess: (wallpaperId) => {
+			if (arrayIncludes(wallpaperIds, wallpaperId)) {
+				onSuccess?.(wallpaperId)
 			}
 		},
 	})
-	const wallpaperQId = userQ.data?.wallpaper
+	const wallpaperQId = userQ.data
 
 	const ctx = trpcReact.useContext()
 	const userMut = trpcReact.user.set.useMutation({
-		onSuccess: () => ctx.user.get.invalidate(),
+		onSuccess: () => {
+			ctx.user.get.invalidate()
+			ctx.user.wallpaper.invalidate()
+		},
 	})
 	const setWallpaperId = useCallback((id: WallpaperId) => userMut.mutate({wallpaper: id}), [userMut])
 

@@ -2,7 +2,7 @@ import {RouterProvider} from 'react-router-dom'
 
 import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
-import {GlobalSystemStateProvider} from '@/providers/global-system-state'
+import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
 import {RemoteWallpaperInjector, WallpaperProvider} from './providers/wallpaper'
 import {router} from './router'

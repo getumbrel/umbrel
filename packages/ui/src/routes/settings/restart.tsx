@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {RiRestartLine} from 'react-icons/ri'
 
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {useGlobalSystemState} from '@/providers/global-system-state'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {
 	AlertDialog,
 	AlertDialogAction,

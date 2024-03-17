@@ -1,6 +1,6 @@
 import {useParams} from 'react-router-dom'
 
-import {ConnectedInstallButton} from '@/components/connected-install-button'
+import {InstallButtonConnected} from '@/components/install-button-connected'
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
@@ -32,7 +32,7 @@ export default function AppPage() {
 				app={app}
 				childrenRight={
 					<div className='flex items-center gap-5'>
-						<ConnectedInstallButton app={app} />
+						<InstallButtonConnected app={app} />
 					</div>
 				}
 			/>

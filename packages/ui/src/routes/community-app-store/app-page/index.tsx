@@ -1,6 +1,6 @@
 import {useParams} from 'react-router-dom'
 
-import {ConnectedInstallButton} from '@/components/connected-install-button'
+import {InstallButtonConnected} from '@/components/install-button-connected'
 import {Loading} from '@/components/ui/loading'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
@@ -28,7 +28,7 @@ export default function CommunityAppPage() {
 		<div className={appPageWrapperClass}>
 			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<CommunityBadge className='self-start' />
-			<TopHeader app={app} childrenRight={<ConnectedInstallButton app={app} registryId={appStoreId} />} />
+			<TopHeader app={app} childrenRight={<InstallButtonConnected app={app} registryId={appStoreId} />} />
 			<AppContent app={app} />
 		</div>
 	)
