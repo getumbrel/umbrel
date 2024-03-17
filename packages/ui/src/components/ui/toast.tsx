@@ -10,13 +10,16 @@ export function Toaster() {
 	const isMobile = useIsMobile()
 	return (
 		<SonnerPrimitive.Toaster
+			closeButton
 			position='top-right'
 			// `undefined` to use the default value
 			offset={isMobile ? 12 : undefined}
+			className='group'
 			toastOptions={{
 				unstyled: true,
 				classNames: {
-					toast: tw`bg-[#404040]/40 rounded-12 py-4 px-5 backdrop-blur-md flex items-center gap-2 shadow-dialog text-15 text-white -tracking-4 w-full`,
+					closeButton: tw`absolute top-0 right-0 p-1 -translate-y-1/3 translate-x-1/3 bg-neutral-500/80 rounded-full hover:scale-110 transition-[transform,opacity] duration-300 opacity-0 group-hover:opacity-100`,
+					toast: tw`bg-[#404040]/40 rounded-12 py-4 px-5 backdrop-blur-md flex items-center gap-2 shadow-dialog text-15 text-white -tracking-4 w-full `,
 					title: tw`font-medium leading-[18px]`,
 					description: tw`opacity-60 leading-[18px]`,
 					actionButton: buttonVariants(),
