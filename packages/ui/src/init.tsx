@@ -27,8 +27,9 @@ export function init(element: React.ReactNode) {
 							<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
 								<TooltipProvider>
 									{element}
-									<CoverMessageTarget />
 									<Toaster />
+									{/* Put `CoverMessageTarget` after `Toaster` because we don't want toasts to show up on these pages */}
+									<CoverMessageTarget />
 								</TooltipProvider>
 							</ErrorBoundary>
 						</Suspense>
