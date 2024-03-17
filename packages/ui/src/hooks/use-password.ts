@@ -50,6 +50,11 @@ export function usePassword({onSuccess}: {onSuccess: () => void}) {
 			return
 		}
 
+		if (newPassword.length < 12) {
+			setLocalError(t('change-password.failed.min-length', {characters: 12}))
+			return
+		}
+
 		changePasswordMut.mutate({oldPassword: password, newPassword})
 	}
 
