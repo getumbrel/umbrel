@@ -34,6 +34,7 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 			{!error && (
 				<ProgressLayout
 					title={t('software-update.updating-to', {version: latestVersion.version})}
+					callout={t('software-update.callout')}
 					progress={indeterminate ? undefined : progress}
 					message={description}
 					isRunning={!!running}

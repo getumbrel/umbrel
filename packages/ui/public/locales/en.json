@@ -55,7 +55,7 @@
   "software-update.check": "Check for update",
   "software-update.new-version": "New umbrelOS {{version}} is available to install",
   "software-update.updating-to": "Updating to umbrelOS {{version}}",
-  "software-update.updating-message": "Please do not refresh this page or turn off your Umbrel while it is updating.",
+  "software-update.callout": "Please do not refresh this page or turn off your Umbrel while it is updating.",
   "software-update.failed.title": "Software update failed",
   "software-update.failed.description": "There was an error during the software update",
   "software-update.failed.please-try-again": "Please try again",

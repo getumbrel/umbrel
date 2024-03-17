@@ -28,6 +28,7 @@ export function MigratingCover({onRetry}: {onRetry: () => void}) {
 			{!error && (
 				<ProgressLayout
 					title={t('migration-assistant')}
+					callout={t('migrate.callout')}
 					progress={indeterminate ? undefined : progress}
 					message={description}
 					isRunning={!!running}

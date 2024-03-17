@@ -14,6 +14,7 @@ export function ProgressLayout({
 	message,
 	// isStarting,
 	isRunning,
+	callout,
 }: {
 	title: string
 	// onSuccess: () => void
@@ -22,6 +23,7 @@ export function ProgressLayout({
 	message?: string
 	// isStarting: boolean
 	isRunning: boolean
+	callout: string
 }) {
 	const isStarting = !progress && !isRunning
 
@@ -42,7 +44,7 @@ export function ProgressLayout({
 				{/* Show indeterminate value if not running */}
 				<Progress value={isStarting ? undefined : progress}>{finalMessage}</Progress>
 				<div className='flex-1 pt-4' />
-				<Alert>{t('migrate.callout')}</Alert>
+				<Alert>{callout}</Alert>
 			</motion.div>
 		</>
 	)
