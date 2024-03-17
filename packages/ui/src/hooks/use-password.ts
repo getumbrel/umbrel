@@ -50,8 +50,8 @@ export function usePassword({onSuccess}: {onSuccess: () => void}) {
 			return
 		}
 
-		if (newPassword.length < 12) {
-			setLocalError(t('change-password.failed.min-length', {characters: 12}))
+		if (newPassword.length < 6) {
+			setLocalError(t('change-password.failed.min-length', {characters: 6}))
 			return
 		}
 

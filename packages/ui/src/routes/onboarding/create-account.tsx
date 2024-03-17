@@ -48,8 +48,8 @@ export default function CreateAccount() {
 			return
 		}
 
-		if (password.length < 12) {
-			setLocalError(t('change-password.failed.min-length', {characters: 12}))
+		if (password.length < 6) {
+			setLocalError(t('change-password.failed.min-length', {characters: 6}))
 			return
 		}
 
