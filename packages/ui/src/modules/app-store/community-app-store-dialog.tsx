@@ -10,10 +10,10 @@ import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
-	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogPortal,
+	DialogScrollableContent,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
 import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
@@ -84,7 +84,7 @@ export function CommunityAppStoreDialog() {
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
-				<DialogContent className='p-0'>
+				<DialogScrollableContent showClose>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-3 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
 							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
@@ -144,7 +144,7 @@ export function CommunityAppStoreDialog() {
 							</Card>
 						))}
 					</div>
-				</DialogContent>
+				</DialogScrollableContent>
 			</DialogPortal>
 		</Dialog>
 	)
