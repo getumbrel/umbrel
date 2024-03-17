@@ -10,6 +10,8 @@ const ONE_HOUR = 60 * ONE_MINUTE
 const ONE_DAY = 24 * ONE_HOUR
 const ONE_WEEK = 7 * ONE_DAY
 
+const DEFAULT_WALLPAPER = '18'
+
 export default router({
 	// Registers a new user
 	register: publicProcedure
@@ -192,6 +194,10 @@ export default router({
 	get: privateProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
 
+		if (user.wallpaper === undefined) {
+			user.wallpaper = DEFAULT_WALLPAPER
+		}
+
 		// Only return non sensitive data
 		return {
 			name: user.name,
@@ -220,6 +226,10 @@ export default router({
 	// This endpoint is public so it can be shown on the login screen
 	wallpaper: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
+
+		if (user.wallpaper === undefined) {
+			user.wallpaper = DEFAULT_WALLPAPER
+		}
 
 		return user.wallpaper
 	}),
