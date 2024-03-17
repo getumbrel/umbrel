@@ -22,6 +22,8 @@ export default function Login() {
 		onError: (error) => {
 			if (error.message === 'Missing 2FA token') {
 				setStep('2fa')
+			} else {
+				setPassword('')
 			}
 		},
 	})
