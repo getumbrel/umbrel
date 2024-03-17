@@ -27,14 +27,14 @@ export default function LoginWithUmbrel() {
 		try {
 			const data = await login({password, totpToken: ''})
 			if ('error' in data && data.error) {
-				if (data.error.message === 'Missing 2FA token') {
+				if (data.error.message === 'Missing 2FA code') {
 					setStep('2fa')
 				} else {
 					toast.error(data.error.message)
 				}
 			}
 		} catch (error: any) {
-			if (error.message === 'Missing 2FA token') {
+			if (error.message === 'Missing 2FA code') {
 				setStep('2fa')
 			} else {
 				toast.error(error?.message)
@@ -102,12 +102,12 @@ function useLogin() {
 
 			// 	{
 			// 		"error": {
-			// 				"message": "Missing 2FA token",
+			// 				"message": "Missing 2FA code",
 			// 				"code": -32001,
 			// 				"data": {
 			// 						"code": "UNAUTHORIZED",
 			// 						"httpStatus": 401,
-			// 						"stack": "TRPCError: Missing 2FA token...
+			// 						"stack": "TRPCError: Missing 2FA code...
 			// 						"path": "user.login",
 			// 						"zodError": null
 			// 				}
