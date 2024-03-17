@@ -55,9 +55,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			initial={{opacity: 0}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
 		>
-			<div className='pt-6 md:pt-12' />
+			<div className='pt-6 md:pt-8' />
 			<Header userName={name} />
-			<div className='pt-6 md:pt-12' />
+			<div className='pt-6 md:pt-8' />
 			<motion.div
 				className='flex w-full grow overflow-hidden'
 				initial={{opacity: 0, scale: 1}}

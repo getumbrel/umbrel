@@ -48,9 +48,9 @@ export function usePager({apps, widgets}: PageT): {
 	const paddingX = responsive([10, 32])
 	const appsPerRowMax = responsive([4, 6])
 	const appW = responsive([70, 120])
-	const appH = responsive([90, 120])
+	const appH = responsive([90, 110])
 	const appXGap = responsive([20, 30])
-	const appYGap = responsive([0, 20])
+	const appYGap = responsive([0, 12])
 	const widgetW = appW + appXGap + appW
 
 	const appsInnerW = (appW + appXGap) * appsPerRowMax - appXGap
