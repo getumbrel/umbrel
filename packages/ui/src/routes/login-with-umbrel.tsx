@@ -7,7 +7,7 @@ import {PinInput} from '@/components/ui/pin-input'
 import {toast} from '@/components/ui/toast'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {DEFAULT_WALLPAPER_ID, useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
+import {useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {cn} from '@/shadcn-lib/utils'
@@ -177,11 +177,11 @@ function useWallpaperId() {
 			.then(async (res) => {
 				// `unknown` because `any` is too loose
 				const id = (await res.text()) as unknown
-				const knownId = arrayIncludes(wallpaperIds, id) ? id : DEFAULT_WALLPAPER_ID
+				const knownId = arrayIncludes(wallpaperIds, id) ? id : '18'
 				setWallpaper(knownId)
 			})
 			.catch(() => {
-				setWallpaper(DEFAULT_WALLPAPER_ID)
+				setWallpaper('18')
 			})
 	}, [])
 
