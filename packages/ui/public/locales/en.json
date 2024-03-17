@@ -373,5 +373,6 @@
   "app-updates.more": "more",
   "troubleshoot.select-app": "Select app...",
   "troubleshoot.search": "Search...",
-  "software-update.install-now": "Install now"
+  "software-update.install-now": "Install now",
+  "app-updates.no-updates": "All apps are up-to-date!"
 }

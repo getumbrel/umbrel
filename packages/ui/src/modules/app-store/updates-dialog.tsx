@@ -69,6 +69,9 @@ export function UpdatesDialog({
 					</DialogHeader>
 					<Separator />
 					<ScrollArea className='flex max-h-[500px] flex-col gap-y-2.5 px-5'>
+						{appsWithUpdates.length === 0 && (
+							<p className='p-4 text-center text-13 opacity-40'>{t('app-updates.no-updates')}</p>
+						)}
 						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
 								{i === 0 ? undefined : <Separator className='my-1' />}
