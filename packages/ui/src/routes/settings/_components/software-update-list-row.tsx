@@ -17,7 +17,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 				isActive={isActive}
 				title={`umbrelOS ${currentVersion || LOADING_DASH}`}
 				description={
-					<span className='flex items-center gap-1'>
+					<span className='flex items-center gap-1 pb-3'>
 						<Icon component={RiArrowUpCircleFill} className='text-brand' />
 						{t('software-update.new-version', {version: latestVersion?.version || LOADING_DASH})}
 					</span>
