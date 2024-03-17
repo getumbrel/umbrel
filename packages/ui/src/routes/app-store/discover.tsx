@@ -1,13 +1,16 @@
 import {Loading} from '@/components/ui/loading'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
-import {Apps3UpSection} from '@/modules/app-store/discover/apps-3-up-section'
+import {AppsThreeColumnSection} from '@/modules/app-store/discover/apps-three-column-section'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
+import {categoryDescriptionsKeyed} from '@/modules/app-store/constants'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {useAvailableApps} from '@/providers/available-apps'
 import {ButtonLink} from '@/components/ui/button-link'
 
 import {useDiscoverQuery} from './use-discover-query'
+
+import {t} from '@/utils/i18n'
 
 export default function Discover() {
 	const availableApps = useAvailableApps()
@@ -50,7 +53,7 @@ export default function Discover() {
 				}
 
 				if (section.type === 'three-column') {
-					return <Apps3UpSection
+					return <AppsThreeColumnSection
 						key={section.heading + section.subheading}
 						apps={apps.filter((app) => section.apps.includes(app.id))}
 						overline={section.subheading}
@@ -58,10 +61,12 @@ export default function Discover() {
 						textLocation={section.textLocation}
 						description={section.description || ''}
 					>
-						<ButtonLink variant='primary' size='dialog' to={`/app-store/category/${section.category}`}>
-							Browse {section.category} apps
-						</ButtonLink>
-					</Apps3UpSection>
+						{section.category && (
+							<ButtonLink variant='primary' size='dialog' to={`/app-store/category/${section.category}`}>
+								{t('app-store.browse-category-apps', {category: t(categoryDescriptionsKeyed[section.category].label())})}
+							</ButtonLink>
+						)}
+					</AppsThreeColumnSection>
 				}
 			})}
 		</>

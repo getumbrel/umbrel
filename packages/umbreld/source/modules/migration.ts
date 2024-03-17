@@ -181,6 +181,7 @@ export async function runPreMigrationChecks(currentInstall: string, externalUmbr
 
 // Safely migrate data from an external Umbrel install to the current one
 export async function migrateData(currentInstall: string, externalUmbrelInstall: string, umbreld: Umbreld) {
+	setSystemStatus('migrating')
 	updateMigrationStatus({running: false, progress: 0, description: '', error: false})
 
 	const temporaryData = `${currentInstall}/.temporary-migration`

@@ -3,17 +3,19 @@ import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
-import {BareCoverMessage, CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
-import {Loading} from '@/components/ui/loading'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
-import {BarePage} from '@/layouts/bare/bare-page'
 import {useJwt} from '@/modules/auth/use-auth'
-import FailedLayout from '@/modules/bare/failed-layout'
-import {ProgressLayout} from '@/modules/bare/progress-layout'
+import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
+import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
+import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
 import {RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
+import {assertUnreachable, IS_DEV} from '@/utils/misc'
+
+import {UpdatingCover, useUpdate} from './update'
 
 type SystemStatus = RouterOutput['system']['status']
 
@@ -21,6 +23,7 @@ const GlobalSystemStateContext = createContext<{
 	shutdown: () => void
 	restart: () => void
 	update: () => void
+	migrate: () => void
 } | null>(null)
 
 // TODO: split up logic so restart, shutdown, update are done in separate components?
@@ -42,7 +45,6 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		console.log('global-system-state: onSuccess')
 		// Cancel last query in case it returns as still running
 		ctx.system.status.cancel()
-		debugger
 		// alert('shouldLogoutOnRunning: true')
 		if (!didWork) {
 			// TODO: Consider showing a toast here, especially right after triggering the action
@@ -56,18 +58,21 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// TODO: handle `onError`
 	const restart = useRestart({onMutate, onSuccess})
 	const shutdown = useShutdown({onMutate, onSuccess})
-	const update = useSoftwareUpdate({onMutate, onSuccess})
+	const update = useUpdate({onMutate, onSuccess})
+	const migrate = useMigrate({onMutate, onSuccess})
 
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		cacheTime: 0,
 	})
 
-	if (systemStatusQ.error && !triggered) {
-		debugger
-		console.log('global-system-state: systemStatusQ.error')
-		// This error should get caught by a parent error boundary component
-		throw systemStatusQ.error
+	if (!IS_DEV) {
+		if (systemStatusQ.error && !triggered) {
+			console.log('global-system-state: systemStatusQ.error')
+			// This error should get caught by a parent error boundary component
+			// TODO: figure out what to do about network errors
+			throw systemStatusQ.error
+		}
 	}
 
 	const status = systemStatusQ.data
@@ -149,8 +154,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	if (statusToShow === 'shutting-down' && shutdownComplete) {
 		return (
 			<BareCoverMessage>
-				Shutdown (probably) complete.
-				<CoverMessageParagraph>Please check your device hardware to know for sure.</CoverMessageParagraph>
+				{t('shut-down.complete')}
+				<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
 			</BareCoverMessage>
 		)
 	}
@@ -159,7 +164,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart, update}}>
+				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate}}>
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>
@@ -167,82 +172,38 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		}
 		case 'shutting-down': {
 			return (
-				<CoverMessage>
-					<Loading>{t('shut-down.shutting-down')}</Loading>
-					<CoverMessageParagraph>{t('shut-down.shutting-down-message')}</CoverMessageParagraph>
+				<>
+					<ShuttingDownCover />
 					{debugInfo}
-				</CoverMessage>
+				</>
 			)
 		}
 		case 'restarting': {
 			return (
-				<CoverMessage>
-					<Loading>{t('restart.restarting')}</Loading>
-					<CoverMessageParagraph>{t('restart.restarting-message')}</CoverMessageParagraph>
+				<>
+					<RestartingCover />
 					{debugInfo}
-				</CoverMessage>
+				</>
 			)
 		}
 		case 'updating': {
 			return (
 				<>
-					<UpdatingCoverMessage onRetry={update} />
+					<UpdatingCover onRetry={update} />
 					{debugInfo}
 				</>
 			)
 		}
-		default: {
-			// Shouldn't happen
+		case 'migrating': {
 			return (
-				<CoverMessage>
-					<CoverMessageParagraph>Unexpected state</CoverMessageParagraph>
+				<>
+					<MigratingCover onRetry={migrate} />
 					{debugInfo}
-				</CoverMessage>
+				</>
 			)
 		}
 	}
-}
-
-function UpdatingCoverMessage({onRetry}: {onRetry: () => void}) {
-	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery()
-	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
-		refetchInterval: 500,
-	})
-	const latestVersion = latestVersionQ.data
-
-	if (!latestVersion) {
-		return null
-	}
-
-	const {progress, description, running, error} = updateStatusQ.data ?? {}
-	const indeterminate = updateStatusQ.isLoading || !running
-
-	return (
-		<BarePage>
-			{!error && (
-				<ProgressLayout
-					title={t('software-update.updating-to', {version: latestVersion.version})}
-					progress={indeterminate ? undefined : progress}
-					message={description}
-					isRunning={!!running}
-				/>
-			)}
-			{error && (
-				<FailedLayout
-					title={t('software-update.failed')}
-					description={
-						<>
-							{t('software-update.failed.description')}
-							<br />
-							{t('software-update.failed.please-try-again')}
-						</>
-					}
-					buttonText={t('software-update.failed.retry')}
-					buttonOnClick={onRetry}
-				/>
-			)}
-		</BarePage>
-	)
+	assertUnreachable(statusToShow)
 }
 
 export function useGlobalSystemState() {
@@ -250,41 +211,4 @@ export function useGlobalSystemState() {
 	if (!ctx) throw new Error('`useGlobalSystemState` must be used within `GlobalSystemStateProvider`')
 
 	return ctx
-}
-
-function useRestart({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
-	const restartMut = trpcReact.system.restart.useMutation({
-		onMutate,
-		onSuccess,
-	})
-	const restart = restartMut.mutate
-
-	return restart
-}
-
-function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
-	const shutdownMut = trpcReact.system.shutdown.useMutation({
-		onMutate,
-		onSuccess,
-	})
-	const shutdown = shutdownMut.mutate
-
-	return shutdown
-}
-
-export function useSoftwareUpdate({
-	onMutate,
-	onSuccess,
-}: {
-	onMutate?: () => void
-	onSuccess?: (didWork: boolean) => void
-}) {
-	const updateVersionMut = trpcReact.system.update.useMutation({
-		onMutate,
-		onSuccess,
-	})
-
-	const update = () => updateVersionMut.mutate()
-
-	return update
 }

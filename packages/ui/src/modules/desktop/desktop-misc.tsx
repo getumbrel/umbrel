@@ -5,25 +5,11 @@ import {useWallpaper} from '@/providers/wallpaper'
 import {t} from '@/utils/i18n'
 import {cmdOrCtrl, platform} from '@/utils/misc'
 
-// https://stackoverflow.com/a/13245058
-export function getPartofDay() {
-	const today = new Date()
-	const curHr = today.getHours()
-
-	if (curHr < 12) {
-		return 'morning'
-	} else if (curHr < 18) {
-		return 'afternoon'
-	} else {
-		return 'evening'
-	}
-}
-
 export function Search({onClick}: {onClick?: () => void}) {
 	const isMobile = useIsSmallMobile()
 	return (
 		<button
-			className='z-10 select-none rounded-full bg-neutral-600/10 px-3 py-2.5 text-12 leading-inter-trimmed text-white/75 backdrop-blur-lg transition-colors delay-500 duration-300 animate-in fade-in fill-mode-both hover:bg-neutral-600/30 active:bg-neutral-600/10'
+			className='z-10 select-none rounded-full bg-neutral-600/20 px-3 py-2.5 text-12 leading-inter-trimmed text-white/90 transition-colors delay-500 duration-300 animate-in fade-in fill-mode-both hover:bg-neutral-600/30 active:bg-neutral-600/10'
 			onClick={onClick}
 		>
 			{/* TODO: ideally, centralize shortcut preview and shortcut event listener so always in sync */}

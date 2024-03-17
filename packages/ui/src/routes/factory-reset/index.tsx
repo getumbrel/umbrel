@@ -8,11 +8,11 @@ import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-import {ReviewData} from './_components/1-review-data'
-import {ConfirmWithPassword} from './_components/2-confirm-with-password'
-import {Resetting} from './_components/3-resetting'
-import {Failed} from './_components/4-failed'
-import {Success} from './_components/4-success'
+import {ReviewData} from './_components/review-data'
+import {ConfirmWithPassword} from './_components/confirm-with-password'
+import {Resetting} from './_components/resetting'
+import {Failed} from './_components/failed'
+import {Success} from './_components/success'
 import {backPath} from './_components/misc'
 
 export default function FactoryReset() {

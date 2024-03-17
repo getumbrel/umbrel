@@ -9,7 +9,6 @@ import {Desktop} from './layouts/desktop'
 import {SheetLayout} from './layouts/sheet'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
-import {BlurBelowDock} from './modules/desktop/blur-below-dock'
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
 import {AppsProvider} from './providers/apps'
 import {AvailableAppsProvider} from './providers/available-apps'
@@ -29,9 +28,6 @@ const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const Login = React.lazy(() => import('./routes/login'))
 const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
-const Migrate = React.lazy(() => import('./routes/migrate'))
-const MigrateFailed = React.lazy(() => import('./routes/migrate/migrate-failed'))
-const MigrateSuccess = React.lazy(() => import('./routes/migrate/migrate-success'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
@@ -54,8 +50,6 @@ export const router = createBrowserRouter([
 						<Suspense>
 							<Outlet />
 						</Suspense>
-						{/* Putting `BlurBelowDock` after `AppGridGradientMasking` because we don't want layering issues  */}
-						<BlurBelowDock />
 						<DockBottomPositioner>
 							<Dock />
 						</DockBottomPositioner>
@@ -181,30 +175,6 @@ export const router = createBrowserRouter([
 						),
 					},
 				],
-			},
-			{
-				path: 'migrate',
-				element: (
-					<EnsureLoggedIn>
-						<Migrate />
-					</EnsureLoggedIn>
-				),
-			},
-			{
-				path: 'migrate/success',
-				element: (
-					<EnsureLoggedIn>
-						<MigrateSuccess />
-					</EnsureLoggedIn>
-				),
-			},
-			{
-				path: 'migrate/failed',
-				element: (
-					<EnsureLoggedIn>
-						<MigrateFailed />
-					</EnsureLoggedIn>
-				),
 			},
 			{
 				path: 'factory-reset/*',

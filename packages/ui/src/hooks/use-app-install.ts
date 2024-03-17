@@ -71,13 +71,20 @@ export function useAppInstall(id: string) {
 	// https://create.t3.gg/en/usage/trpc#optimistic-updates
 	// Optimistic because `trpcReact.apps.install` doesn't return until the app is installed
 	const installMut = trpcReact.apps.install.useMutation({
-		onSuccess: invalidateInstallDependencies,
 		onMutate() {
 			ctx.apps.state.cancel()
 			ctx.apps.state.setData({appId: id}, {state: 'installing', progress: 0})
+			// Fixes issue where installing the first app doesn't immediately invalidate the app list
+			setTimeout(() => {
+				invalidateInstallDependencies()
+			}, 1000)
 		},
+		onSuccess: invalidateInstallDependencies,
 	})
-	const uninstallMut = trpcReact.apps.uninstall.useMutation({onSuccess: invalidateInstallDependencies})
+	const uninstallMut = trpcReact.apps.uninstall.useMutation({
+		onMutate: invalidateInstallDependencies,
+		onSuccess: invalidateInstallDependencies,
+	})
 	const restartMut = trpcReact.apps.restart.useMutation({onSuccess: invalidateInstallDependencies})
 
 	const appState = appStateQ.data?.state

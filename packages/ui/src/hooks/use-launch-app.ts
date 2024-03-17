@@ -22,7 +22,7 @@ import {trackAppOpen} from '@/utils/track-app-open'
  * Trying to satisfy multiple considerations here:
  * - Consumer API should be simple. We don't want the consumer to have to deal with the "how" of openining an app, only the intent. You want to open an app? Just tell us which app and we'll handle the rest.
  * - Not returning a href because then how do we open in a blank page? The consumer of this hook would have to deal with the logic of this.
- * - Want to track app opens. If we only return a href, it's too easy to forget to track app opens.
+ * - Want to track app opens to compute frequent apps for CMD K. If we only return a href, it's too easy to forget to track app opens.
  * - Want to show a dialog if the app has default credentials.
  * - API like `useLaunchApp(appId)` won't work because we want to sometimes loop through multiple apps and add an `onClick`to each one.
  * - If an app has been uninstalled, but the UI still shows it (maybe because some queries haven't been invalidated), we want to let the user know they can't open the app because it's be uninstalled?

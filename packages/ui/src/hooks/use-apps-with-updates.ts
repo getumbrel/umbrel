@@ -1,10 +1,9 @@
 import {useApps} from '@/providers/apps'
-import {useAvailableApps} from '@/providers/available-apps'
+import {useAllAvailableApps} from '@/providers/available-apps'
 
 export function useAppsWithUpdates() {
-	// TODO: determine if we want community apps here
 	const apps = useApps()
-	const availableApps = useAvailableApps()
+	const availableApps = useAllAvailableApps()
 
 	// NOTE: a parent should have the apps loaded before we get here, but don't wanna assume
 	if (apps.isLoading || availableApps.isLoading) {

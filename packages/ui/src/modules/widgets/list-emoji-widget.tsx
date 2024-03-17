@@ -30,8 +30,8 @@ export function ListEmojiWidget({
 					<ListEmojiItem emoji={items?.[3].emoji} text={items?.[3].text} />
 				</div>
 			)}
-			<div className='absolute bottom-3 right-3 text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
-				{count && count > 999 ? '999+' : count ?? LOADING_DASH}
+			<div className='absolute bottom-3 right-3 w-1/2 truncate text-right text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
+				{count ?? LOADING_DASH}
 			</div>
 		</WidgetContainer>
 	)

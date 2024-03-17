@@ -165,10 +165,7 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
 					{t('2fa')}
 				</SettingsSearchItem>
-				<SettingsSearchItem value={t('2fa')} onSelect={() => navigate('/settings/2fa')}>
-					{t('2fa')}
-				</SettingsSearchItem>
-				<SettingsSearchItem value={t('tor')} onSelect={() => navigate('/settings/tor')} />
+				<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/tor')} />
 				<SettingsSearchItem
 					value={t('migration-assistant')}
 					onSelect={() => navigate('/settings/migration-assistant')}
@@ -177,7 +174,8 @@ export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolea
 				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
 				<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
-				<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
+				{/* TODO: Enable after factory reset is hooked with umbreld */}
+				{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
 				{/* ---- */}
 				{readyApps.map((app) => (
 					<SearchItem
@@ -251,7 +249,7 @@ function FrequentApps() {
 	return (
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>
+				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block ml-2'>
 					{t('cmdk.frequent-apps')}
 				</h3>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
@@ -308,7 +306,7 @@ function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: st
 				}
 			}}
 		>
-			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-8 md:rounded-15' />
+			<AppIcon src={icon} size={isMobile ? 48 : 64} className='rounded-10 lg:rounded-15' />
 			<div className='w-full truncate text-[10px] -tracking-2 text-white/75 md:text-13'>{name ?? appId}</div>
 		</button>
 	)

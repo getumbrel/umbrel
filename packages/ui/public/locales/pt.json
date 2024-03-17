@@ -207,7 +207,7 @@
   "notifications.cpu.too-hot": "Muito quente!",
   "notifications.memory.low": "Pouco espaço em disco!",
   "notifications.new-version-available": "Nova versão disponível!",
-  "notifications.open-settings": "Abrir configurações",
+  "notifications.view": "Abrir configurações",
   "notifications.storage.full": "O disco está cheio!",
   "notifications.storage.low": "O disco está baixo.",
   "ok": "OK",

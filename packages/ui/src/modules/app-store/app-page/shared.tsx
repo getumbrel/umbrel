@@ -22,7 +22,7 @@ export function ReadMoreMarkdownSection({children, collapseClassName}: {children
 	)
 }
 
-export const appPageWrapperClass = tw`flex flex-col gap-5 md:gap-[40px]`
+export const appPageWrapperClass = tw`flex flex-col gap-8`
 export const cardClass = cn(cardFaintClass, tw`rounded-12 px-[20px] py-[30px] flex flex-col gap-5`)
 export const cardTitleClass = tw`text-12 opacity-50 uppercase leading-inter-trim font-semibold tracking-normal`
 export const cardTextClass = tw`text-15 leading-snug`

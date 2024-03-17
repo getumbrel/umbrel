@@ -23,7 +23,8 @@ import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
-import {DesktopPreview, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
+import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
@@ -75,7 +76,7 @@ export function SettingsContent() {
 			<div className='grid w-full gap-x-[30px] gap-y-[20px] lg:grid-cols-[280px_auto]'>
 				<div className='flex items-center justify-center'>
 					<DesktopPreviewFrame>
-						<DesktopPreview />
+						<DesktopPreviewConnected />
 					</DesktopPreviewFrame>
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
@@ -92,17 +93,6 @@ export function SettingsContent() {
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${t('umbrelos')} ${osVersionQ.data}` ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
-							{tor.enabled && (
-								<>
-									<dt className='opacity-40'>{t('tor.hidden-service')}</dt>
-									<dd>
-										<CopyableField narrow value={hiddenServiceQ.data ?? ''} />
-										{/* <a href={hiddenServiceQ.data} target='_blank' className='block truncate underline'>
-											{hiddenServiceQ.data}
-										</a> */}
-									</dd>
-								</>
-							)}
 						</dl>
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
@@ -136,9 +126,9 @@ export function SettingsContent() {
 					<div className='flex-1' />
 					<ContactSupportLink className='max-lg:hidden' />
 				</div>
-				<Card className='umbrel-divide-y overflow-hidden !py-2'>
+				<Card className='umbrel-divide-y overflow-hidden !py-0'>
 					<ListRow title={t('account')} description={t('account-description')}>
-						<div className='flex flex-wrap gap-2'>
+						<div className='flex flex-wrap gap-2 pt-3'>
 							<IconButtonLink to={'account/change-name'} icon={RiUserLine}>
 								{t('change-name')}
 							</IconButtonLink>
@@ -162,15 +152,18 @@ export function SettingsContent() {
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
 					<ListRow title={t('remote-tor-access')} description={t('tor-description')} disabled={tor.isLoading}>
-						<Switch
-							checked={tor.enabled}
-							onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
-						/>
+						<div className='flex flex-wrap gap-3'>
+							{tor.enabled && <CopyableField narrow value={hiddenServiceQ.data ?? ''} />}
+							<Switch
+								checked={tor.enabled}
+								onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
+							/>
+						</div>
 					</ListRow>
 					{tor.isMutLoading && (
 						<CoverMessage>
 							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
-							<Loading>Disabling Tor</Loading>
+							<Loading>{t('tor.disable.progress')}</Loading>
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>
 					)}

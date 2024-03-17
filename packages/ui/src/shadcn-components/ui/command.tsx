@@ -52,7 +52,7 @@ const CommandInput = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Input>,
 	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({className, ...props}, ref) => (
-	<div className='flex items-center pr-2 md:px-3' cmdk-input-wrapper=''>
+	<div className='flex items-center pr-2' cmdk-input-wrapper=''>
 		<CommandPrimitive.Input
 			ref={ref}
 			className={cn(
@@ -121,7 +121,7 @@ const CommandItem = React.forwardRef<
 			)}
 			{...props}
 		>
-			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-8' />}
+			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-6 sm:rounded-8' />}
 			{children}
 			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
 		</CommandPrimitive.Item>

@@ -31,12 +31,12 @@ export function AppContent({
 			{/* NOTE: consider conditionally rendering */}
 			{/* Desktop */}
 			<div className={cn(slideInFromBottomDelayedClass, 'hidden flex-row gap-5 lg:flex')}>
-				<div className='flex flex-1 flex-col gap-2.5'>
+				<div className='flex flex-1 flex-col gap-5'>
 					<AboutSection app={app} />
 					<ReleaseNotesSection app={app} />
 				</div>
 				{/* Since contents can be arbitrarily wide, we wanna limit */}
-				<div className='flex flex-col gap-2.5 md:max-w-sm'>
+				<div className='flex flex-col gap-5 md:max-w-sm'>
 					{userApp && <SettingsSection userApp={userApp} />}
 					<InfoSection app={app} />
 					{hasDependencies && <DependenciesSection app={app} />}
@@ -44,7 +44,7 @@ export function AppContent({
 				</div>
 			</div>
 			{/* Mobile */}
-			<div className='space-y-2.5 lg:hidden'>
+			<div className='space-y-5 lg:hidden'>
 				{userApp && <SettingsSection userApp={userApp} />}
 				<AboutSection app={app} />
 				<InfoSection app={app} />

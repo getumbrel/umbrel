@@ -11,7 +11,7 @@ import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-export type Apps3UpSectionProps = {
+export type AppsThreeColumnSectionProps = {
 	apps: RegistryApp[]
 	overline: string
 	title: string
@@ -20,7 +20,7 @@ export type Apps3UpSectionProps = {
 	children: React.ReactNode
 }
 
-export const Apps3UpSection: React.FC<Apps3UpSectionProps> = ({
+export const AppsThreeColumnSection: React.FC<AppsThreeColumnSectionProps> = ({
 	apps,
 	overline,
 	title,

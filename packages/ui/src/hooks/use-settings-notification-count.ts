@@ -3,10 +3,9 @@ import {useNavigate} from 'react-router-dom'
 import {ExternalToast} from 'sonner'
 
 import {toast} from '@/components/ui/toast'
-import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcDiskLow, isTrpcMemoryLow} from '@/utils/system'
+import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
 import {CpuType} from '@/utils/temperature'
 
 function useMounted() {
@@ -37,7 +36,7 @@ export function useSettingsNotificationCount() {
 		if (!mounted) return
 
 		// alert('useEffect')
-		const res = Promise.all([
+		const res = Promise.allSettled([
 			trpcClient.system.version.query(),
 			trpcClient.system.latestAvailableVersion.query(),
 			trpcClient.system.cpuTemperature.query(),
@@ -51,52 +50,86 @@ export function useSettingsNotificationCount() {
 
 		res.then((allData) => {
 			console.log('allData', allData)
-			const [version, latestAvailableVersion, cpuTemp, memory, disk] = allData ?? []
+			const [versionResult, latestAvailableVersionResult, cpuTempResult, memoryResult, diskResult] = allData ?? []
 
 			let currCount = 0
 
-			const toastOptions: ExternalToast = {
+			const liveUsageToastOptions: ExternalToast = {
 				action: {
-					label: t('notifications.open-settings'),
+					label: t('notifications.view'),
 					onClick: () => {
-						navigate(`/settings#${SETTINGS_SYSTEM_CARDS_ID}`)
+						navigate(`?dialog=live-usage`)
 					},
 				},
 				// Don't auto-close
 				duration: Infinity,
 			}
 
-			if (version !== latestAvailableVersion.version) {
-				currCount++
-				const id = toast.info(t('notifications.new-version-available'), toastOptions)
-				toastIds.push(id)
+			const cpuTempToastOptions: ExternalToast = {
+				action: {
+					label: t('notifications.view'),
+					onClick: () => {
+						navigate(`/settings`)
+					},
+				},
+				// Don't auto-close
+				duration: Infinity,
 			}
 
-			if (isCpuTooHot(cpuType, cpuTemp)) {
-				currCount++
-				const id = toast.error(t('notifications.cpu.too-hot'), toastOptions)
-				toastIds.push(id)
-			} else if (isCpuTooCold(cpuType, cpuTemp)) {
-				currCount++
-				const id = toast.error(t('notifications.cpu.too-cold'), toastOptions)
-				toastIds.push(id)
+			const softwareUpdateToastOptions: ExternalToast = {
+				action: {
+					label: t('notifications.view'),
+					onClick: () => {
+						navigate(`/settings/software-update/confirm`)
+					},
+				},
+				// Don't auto-close
+				duration: Infinity,
 			}
 
-			if (isTrpcDiskFull(disk)) {
-				currCount++
-				const id = toast.error(t('notifications.storage.full'), toastOptions)
-				toastIds.push(id)
-			} else if (isTrpcDiskLow(disk)) {
-				currCount++
-				// TODO: show message when disk is low?
-				// const id = toast.error(t('notifications.storage.low'), toastOptions)
-				// toastIds.push(id)
+			if (versionResult.status === 'fulfilled' && latestAvailableVersionResult.status === 'fulfilled') {
+				const version = versionResult.value
+				const latestAvailableVersion = latestAvailableVersionResult.value
+
+				if (version !== latestAvailableVersion.version) {
+					currCount++
+					const id = toast.info(t('notifications.new-version-available', {update: `umbrelOS ${latestAvailableVersion.version}`}), softwareUpdateToastOptions)
+					toastIds.push(id)
+				}
 			}
 
-			if (isTrpcMemoryLow(memory)) {
-				currCount++
-				const id = toast.warning(t('notifications.memory.low'), toastOptions)
-				toastIds.push(id)
+			if (cpuTempResult.status === 'fulfilled') {
+				const cpuTemp = cpuTempResult.value
+
+				if (isCpuTooHot(cpuType, cpuTemp)) {
+					currCount++
+					const id = toast.warning(t('notifications.cpu.too-hot'), cpuTempToastOptions)
+					toastIds.push(id)
+				} else if (isCpuTooCold(cpuType, cpuTemp)) {
+					currCount++
+					const id = toast.warning(t('notifications.cpu.too-cold'), cpuTempToastOptions)
+					toastIds.push(id)
+				}
+			}
+
+			if (diskResult.status === 'fulfilled') {
+				const disk = diskResult.value
+
+				if (isTrpcDiskFull(disk)) {
+					currCount++
+					const id = toast.warning(t('notifications.storage.full'), liveUsageToastOptions)
+					toastIds.push(id)
+				}
+			}
+
+			if (memoryResult.status === 'fulfilled') {
+				const memory = memoryResult.value
+
+				if (isTrpcMemoryLow(memory)) {
+					currCount++
+					const id = toast.warning(t('notifications.memory.low'), liveUsageToastOptions)
+					toastIds.push(id)
+				}
 			}
 
 			setCount(currCount)

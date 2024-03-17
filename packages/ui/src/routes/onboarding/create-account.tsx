@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {Link} from 'react-router-dom'
 
-import {Loading} from '@/components/ui/loading'
 import {links} from '@/constants/links'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
@@ -45,6 +44,11 @@ export default function CreateAccount() {
 
 		if (password !== confirmPassword) {
 			setLocalError(t('onboarding.create-account.failed.passwords-dont-match'))
+			return
+		}
+
+		if (password.length < 6) {
+			setLocalError(t('change-password.failed.min-length', {characters: 6}))
 			return
 		}
 
@@ -98,11 +102,7 @@ export default function CreateAccount() {
 						<AnimatedInputError>{formError}</AnimatedInputError>
 					</div>
 					<button type='submit' className={buttonClass}>
-						{isLoading ? (
-							<Loading>{t('onboarding.create-account.submitting')}</Loading>
-						) : (
-							t('onboarding.create-account.submit')
-						)}
+						{isLoading ? t('onboarding.create-account.submitting') : t('onboarding.create-account.submit')}
 					</button>
 				</fieldset>
 			</form>

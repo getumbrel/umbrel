@@ -31,5 +31,6 @@
 		"function": "cn"
 	},
 	"i18n-ally.extract.ignored": ["h:mm aaa · MMM d"],
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"i18n-ally.extract.autoDetect": true
 }

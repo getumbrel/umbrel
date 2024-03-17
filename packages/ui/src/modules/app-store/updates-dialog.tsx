@@ -1,7 +1,9 @@
 import {DialogProps} from '@radix-ui/react-dialog'
 import {Fragment, useState} from 'react'
+import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
+import {appStateToString} from '@/components/cmdk'
 import {Markdown} from '@/components/markdown'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
@@ -11,7 +13,7 @@ import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
-import {RegistryApp, trpcReact} from '@/trpc/trpc'
+import {progressStates, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -33,10 +35,9 @@ export function UpdatesDialogConnected() {
 					variant='primary'
 					onClick={updateAll.updateAll}
 					className='w-auto'
-					disabled={updateAll.isLoading || appsWithUpdates.length === 0}
+					disabled={updateAll.isLoading || updateAll.isUpdating || appsWithUpdates.length === 0}
 				>
-					{/* TODO: translate */}
-					{updateAll.isLoading ? t('app-updates.updating') : t('app-updates.update-all')}
+					{updateAll.isUpdating ? t('app-updates.updating') : t('app-updates.update-all')}
 				</Button>
 			}
 		/>
@@ -69,6 +70,9 @@ export function UpdatesDialog({
 					</DialogHeader>
 					<Separator />
 					<ScrollArea className='flex max-h-[500px] flex-col gap-y-2.5 px-5'>
+						{appsWithUpdates.length === 0 && (
+							<p className='p-4 text-center text-13 opacity-40'>{t('app-updates.no-updates')}</p>
+						)}
 						{appsWithUpdates.map((app, i) => (
 							<Fragment key={app.id}>
 								{i === 0 ? undefined : <Separator className='my-1' />}
@@ -82,15 +86,24 @@ export function UpdatesDialog({
 	)
 }
 function AppItem({app}: {app: RegistryApp}) {
+	const appStateQ = trpcReact.apps.state.useQuery({appId: app.id})
 	const [showAll, setShowAll] = useState(false)
 	const ctx = trpcReact.useContext()
 	const updateMut = trpcReact.apps.update.useMutation({
+		onMutate: () => {
+			// Optimistic updates because otherwise it's too slow and feels like nothing is happening
+			ctx.apps.state.cancel()
+			ctx.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
+		},
 		onSuccess: () => {
 			// This should cause the app to be removed from the list
 			ctx.apps.list.invalidate()
 		},
 	})
 	const updateApp = () => updateMut.mutate({appId: app.id})
+
+	const appState = appStateQ.data?.state
+	const inProgress = arrayIncludes(progressStates, appState)
 
 	return (
 		<div className='p-2.5'>
@@ -101,8 +114,8 @@ function AppItem({app}: {app: RegistryApp}) {
 					<p className='text-13 opacity-40'>{app.version}</p>
 				</div>
 				<div className='flex-1' />
-				<Button size='sm' onClick={updateApp} disabled={updateMut.isLoading}>
-					{updateMut.isLoading ? t('app-updates.updating') : t('app-updates.update')}
+				<Button size='sm' onClick={updateApp} disabled={inProgress || updateMut.isLoading}>
+					{inProgress ? appStateToString(appState) + '...' : t('app-updates.update')}
 				</Button>
 			</div>
 			{app.releaseNotes && (

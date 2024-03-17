@@ -1,10 +1,10 @@
 import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindTypography from '@tailwindcss/typography'
+import {mapValues} from 'remeda'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
 
 import {screens} from './src/utils/tw'
-import { mapValues } from 'remeda'
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -58,6 +58,7 @@ export default {
 				'dialog-content': '#1E1E1E',
 			},
 			borderWidth: {
+				px: '1px',
 				hpx: '0.5px',
 			},
 			boxShadow: {
@@ -157,14 +158,14 @@ export default {
 					},
 					'50%': {
 						left: '100%',
-					}
-				}
+					},
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
-				'sliding-loader': 'sliding-loader 1s ease infinite'
+				'sliding-loader': 'sliding-loader 1s ease infinite',
 			},
 			typography: () => ({
 				neutral: {

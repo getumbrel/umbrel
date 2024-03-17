@@ -5,6 +5,7 @@ import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {useApps} from '@/providers/apps'
+import {trpcReact} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected} from './app-icon'
@@ -15,11 +16,15 @@ import {Header} from './header'
 export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 	const {pathname} = useLocation()
 
+	const getQuery = trpcReact.user.get.useQuery()
+	const name = getQuery.data?.name
+
 	const {userApps, isLoading} = useApps()
 	const widgets = useWidgets()
 
 	if (isLoading || widgets.isLoading) return null
 	if (!userApps) return null
+	if (!name) return null
 
 	type DesktopVariant = 'default' | 'edit-widgets' | 'overlayed'
 	const variant: DesktopVariant =
@@ -50,9 +55,9 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			initial={{opacity: 0}}
 			transition={{duration: 0.15, ease: 'easeOut'}}
 		>
-			<div className='pt-6 md:pt-12' />
-			<Header />
-			<div className='pt-6 md:pt-12' />
+			<div className='pt-6 md:pt-8' />
+			<Header userName={name} />
+			<div className='pt-6 md:pt-8' />
 			<motion.div
 				className='flex w-full grow overflow-hidden'
 				initial={{opacity: 0, scale: 1}}

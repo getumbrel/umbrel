@@ -26,8 +26,8 @@ export function TextWithButtonsWidget({
 					take(buttons, 3).map((button) => (
 						// Not using `link` for `key` in case user wants two buttons to link to the same `link` for some reason
 						<WidgetButton key={button.text} onClick={() => onClick?.(button.link)}>
-							{button.icon && <TablerIcon iconName={button.icon} className='mr-1 h-4 w-4 [&>svg]:h-4 [&>svg]:w-4' />}
-							<span className='truncate'>{button.text}</span>
+							{button.icon && <TablerIcon iconName={button.icon} className='mr-1 md:h-4 md:w-4 h-3 w-3 [&>svg]:md:h-4 [&>svg]:md:w-4 [&>svg]:h-3 [&>svg]:w-3' />}
+							<span className='truncate text-xs py-1'>{button.text}</span>
 						</WidgetButton>
 					))}
 			</div>
