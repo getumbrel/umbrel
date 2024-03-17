@@ -126,9 +126,9 @@ export function SettingsContent() {
 					<div className='flex-1' />
 					<ContactSupportLink className='max-lg:hidden' />
 				</div>
-				<Card className='umbrel-divide-y overflow-hidden !py-2'>
+				<Card className='umbrel-divide-y overflow-hidden !py-0'>
 					<ListRow title={t('account')} description={t('account-description')}>
-						<div className='flex flex-wrap gap-2'>
+						<div className='flex flex-wrap gap-2 pt-3'>
 							<IconButtonLink to={'account/change-name'} icon={RiUserLine}>
 								{t('change-name')}
 							</IconButtonLink>

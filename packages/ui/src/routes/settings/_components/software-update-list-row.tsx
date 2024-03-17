@@ -38,7 +38,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 			isActive={isActive}
 			title={`umbrelOS ${currentVersion || LOADING_DASH}`}
 			description={
-				<span className='flex items-center gap-1'>
+				<span className='flex items-center gap-1 pb-3'>
 					{state === 'at-latest' ? (
 						<>
 							<Icon component={RiCheckboxCircleFill} className='text-success' />
