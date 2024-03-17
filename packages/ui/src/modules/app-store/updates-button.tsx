@@ -3,6 +3,8 @@ import {NotificationBadge} from '@/components/ui/notification-badge'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useLinkToDialog} from '@/utils/dialog'
 
+import { TbCircleArrowUp } from 'react-icons/tb'
+
 import {UpdatesDialogConnected} from './updates-dialog'
 
 export function UpdatesButton() {
@@ -20,6 +22,7 @@ export function UpdatesButton() {
 		<>
 			{/* w-auto because 'dialog' size buttons take up full width on mobile */}
 			<ButtonLink to={linkToDialog('updates')} size='dialog' className='relative h-[33px] w-auto bg-white/10'>
+				<TbCircleArrowUp/>
 				Updates
 				<NotificationBadge count={appsWithUpdates.length} />
 			</ButtonLink>
