@@ -25,7 +25,7 @@ type StoreSchema = {
 		name: string
 		hashedPassword: string
 		totpUri?: string
-		wallpaper?: string
+		wallpaper: string
 	}
 	recentlyOpenedApps: string[]
 }
@@ -83,6 +83,11 @@ export default class Umbreld {
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
+
+		// Set default wallpaper
+		if ((await this.store.get('user.wallpaper')) === undefined) {
+			await this.store.set('user.wallpaper', '18')
+		}
 
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
