@@ -189,7 +189,7 @@
   "notifications.cpu.too-hot": "Trop chaud!",
   "notifications.memory.low": "Espace disque faible!",
   "notifications.new-version-available": "Nouvelle version disponible!",
-  "notifications.open-settings": "Ouvrir les paramètres",
+  "notifications.view": "Ouvrir les paramètres",
   "notifications.storage.full": "Le disque est plein !",
   "notifications.storage.low": "Le disque est faible.",
   "software-update.failed": "Échec de la mise à niveau.",

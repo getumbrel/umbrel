@@ -207,7 +207,7 @@
   "notifications.cpu.too-hot": "熱すぎる！",
   "notifications.memory.low": "ディスク空き容量が少ない！",
   "notifications.new-version-available": "新しいバージョンが利用可能になりました!",
-  "notifications.open-settings": "設定を開く",
+  "notifications.view": "設定を開く",
   "notifications.storage.full": "ディスクがいっぱいです!",
   "notifications.storage.low": "ディスクが少なくなっています。",
   "ok": "わかりました",
