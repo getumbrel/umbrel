@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {Link} from 'react-router-dom'
 
-import {Loading} from '@/components/ui/loading'
 import {links} from '@/constants/links'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'

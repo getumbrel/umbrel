@@ -376,9 +376,9 @@ export default function WidgetsStory() {
 				<H3>list-emoji</H3>
 				<div className={sectionClass}>
 					<ListEmojiWidget />
-					<ListEmojiWidget count={1} items={[{emoji: '😍', text: 'Message heartted'}]} />
+					<ListEmojiWidget count={'1'} items={[{emoji: '😍', text: 'Message heartted'}]} />
 					<ListEmojiWidget
-						count={123}
+						count={'123'}
 						items={[
 							{text: 'Message heartted'},
 							{text: 'Booo!!'},
@@ -388,7 +388,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<ListEmojiWidget
-						count={123}
+						count={'123'}
 						items={[
 							{emoji: '😍', text: 'Message heartted'},
 							{emoji: '👻', text: 'Booo!!'},
@@ -398,7 +398,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<ListEmojiWidget
-						count={123123123}
+						count={'123123123'}
 						items={[
 							{emoji: '😍', text: 'Message heartted'},
 							{emoji: '👻', text: 'Booo!!'},
@@ -408,7 +408,7 @@ export default function WidgetsStory() {
 						]}
 					/>
 					<ListEmojiWidget
-						count={123123123123123}
+						count={'123123123123123'}
 						items={[
 							{emoji: '😍😍😍😍', text: 'Message heartted'},
 							{emoji: '👻', text: 'Booo!!'},

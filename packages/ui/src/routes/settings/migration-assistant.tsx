@@ -1,5 +1,5 @@
 import {RiAlertFill} from 'react-icons/ri'
-import {TbAlertTriangleFilled, TbArrowBadgeRight, TbInfoCircle, TbLock, TbPower, TbUsb} from 'react-icons/tb'
+import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'

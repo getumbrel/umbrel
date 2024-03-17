@@ -1,11 +1,10 @@
+import {ButtonLink} from '@/components/ui/button-link'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
-import {useGlobalSystemState} from '@/providers/global-system-state'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
-import {ButtonLink} from '@/components/ui/button-link'
 import {
 	Drawer,
 	DrawerContent,
@@ -21,7 +20,6 @@ export function SoftwareUpdateDrawer() {
 	const title = t('software-update.title')
 	const dialogProps = useSettingsDialogProps()
 
-	const {update} = useGlobalSystemState()
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 
 	return (

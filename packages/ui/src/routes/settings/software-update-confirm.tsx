@@ -2,14 +2,7 @@ import {Markdown} from '@/components/markdown'
 import {useGlobalSystemState} from '@/providers/global-system-state'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -56,28 +49,28 @@ export function SoftwareUpdateConfirmDialog() {
 	)
 }
 
-const sampleMarkdownReleaseNotes = `
-# What's new
+// const sampleMarkdownReleaseNotes = `
+// # What's new
 
-Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
-quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam,
+// Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
+// quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam,
 
-## New features
+// ## New features
 
-### More support:
+// ### More support:
 
-- Added support for the Raspberry Pi 4 and 400
-- Added support for the Raspberry Pi 5 and 500
-- Added support for the Raspberry Pi 6 and 600
-- Added support for the Raspberry Pi 7 and 700
-- Added support for the Raspberry Pi 8 and 800
+// - Added support for the Raspberry Pi 4 and 400
+// - Added support for the Raspberry Pi 5 and 500
+// - Added support for the Raspberry Pi 6 and 600
+// - Added support for the Raspberry Pi 7 and 700
+// - Added support for the Raspberry Pi 8 and 800
 
-### Improvements
+// ### Improvements
 
-[Lorem ipsum dolor](https://umbrel.com) sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
-quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam,
+// [Lorem ipsum dolor](https://umbrel.com) sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
+// quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam, quisquam. Quisquam,
 
-### Fixes
+// ### Fixes
 
-Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
-`
+// Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quam. Quam, quisquam. Quisquam, quam. Quam,
+// `
