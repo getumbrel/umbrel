@@ -12,6 +12,7 @@ import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
+import {detectDevice, setCpuGovernor} from './modules/system.js'
 
 import {commitOsPartition} from './modules/system.js'
 
@@ -69,6 +70,20 @@ export default class Umbreld {
 		this.apps = new Apps(this)
 	}
 
+	async setupPiCpuGoverner() {
+		// TODO: Move this to a system module
+		// Set ondemand cpu governer for Raspberry Pi
+		try {
+			const {productName} = await detectDevice()
+			if (productName === 'Raspberry Pi') {
+				await setCpuGovernor('ondemand')
+				this.logger.log(`Set ondemand cpu governor`)
+			}
+		} catch (error) {
+			this.logger.error(`Failed to set ondemand cpu governor: ${(error as Error).message}`)
+		}
+	}
+
 	async start() {
 		this.logger.log(`☂️  Starting Umbrel v${this.version}`)
 		this.logger.log()
@@ -79,6 +94,9 @@ export default class Umbreld {
 
 		// If we've successfully booted then commit to the current OS partition
 		commitOsPartition(this)
+
+		// Set ondemand cpu governer for Raspberry Pi
+		this.setupPiCpuGoverner()
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.

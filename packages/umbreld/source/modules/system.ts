@@ -214,3 +214,7 @@ export async function detectDevice() {
 export async function isUmbrelOS() {
 	return fse.exists('/umbrelOS')
 }
+
+export async function setCpuGovernor(governor: string) {
+	await fse.writeFile('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', governor)
+}
