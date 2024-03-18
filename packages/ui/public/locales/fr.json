@@ -272,7 +272,6 @@
   "default-credentials.username": "Nom d'utilisateur par défaut",
   "read-less": "Lire moins",
   "read-more": "En savoir plus",
-  "install-first.description": "Installez-les d'abord pour installer {{app}}.",
   "install-first.title": "{{app}} nécessite un accès à",
   "ok": "D'accord",
   "auth.checking-backend-for-user": "Vérification du backend pour l'utilisateur...",

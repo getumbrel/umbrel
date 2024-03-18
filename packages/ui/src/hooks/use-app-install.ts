@@ -51,6 +51,7 @@ export function useUninstallAllApps() {
 	return () => mut.mutate()
 }
 
+// TODO: rename to something that covers more than install
 export function useAppInstall(id: string) {
 	const invalidateInstallDependencies = useInvalidateDeps(id)
 

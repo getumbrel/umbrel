@@ -1,14 +1,18 @@
 import {useState} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
+import {GenericErrorText} from '@/components/ui/generic-error-text'
 import {Loading} from '@/components/ui/loading'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {H3} from '@/layouts/stories'
+import {AppPermissionsDialog} from '@/modules/app-store/app-permissions-dialog'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {UpdatesDialog} from '@/modules/app-store/updates-dialog'
+import {AppsProvider} from '@/providers/apps'
 import {AvailableAppsProvider, useAvailableApps} from '@/providers/available-apps'
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
@@ -24,9 +28,14 @@ export default function AppStoreStory() {
 				<AppStoreNav activeId='discover' />
 				<AppStoreNav activeId='developer' />
 			</div>
-			<AvailableAppsProvider>
-				<Inner />
-			</AvailableAppsProvider>
+
+			<ErrorBoundary fallback={<GenericErrorText />}>
+				<AppsProvider>
+					<AvailableAppsProvider>
+						<Inner />
+					</AvailableAppsProvider>
+				</AppsProvider>
+			</ErrorBoundary>
 			<AppGallerySection
 				galleryId='immich'
 				gallery={[
@@ -59,6 +68,7 @@ function Inner() {
 			<AppUpdatesManyExample />
 			<InstallFirstExample />
 			<InstallFirst2Example />
+			<AppPermissionsExample />
 			<TorOnlyApps />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
@@ -179,7 +189,7 @@ function InstallFirstExample() {
 	return (
 		<>
 			<Button onClick={() => setOpen(true)}>Install Lightning App (show dialog only)</Button>
-			<InstallTheseFirstDialog appId='lightning' toInstallFirstIds={['bitcoin']} open={open} onOpenChange={setOpen} />
+			<InstallTheseFirstDialog appId='lightning' dependencies={['bitcoin']} open={open} onOpenChange={setOpen} />
 		</>
 	)
 }
@@ -191,9 +201,25 @@ function InstallFirst2Example() {
 			<Button onClick={() => setOpen(true)}>Install Electrs App (show dialog only)</Button>
 			<InstallTheseFirstDialog
 				appId='lightning'
-				toInstallFirstIds={['bitcoin', 'lightning']}
+				dependencies={['bitcoin', 'lightning']}
 				open={open}
 				onOpenChange={setOpen}
+			/>
+		</>
+	)
+}
+
+function AppPermissionsExample() {
+	const [open, setOpen] = useState(false)
+	return (
+		<>
+			<Button onClick={() => setOpen(true)}>Install Electrs App (show dialog only)</Button>
+			<AppPermissionsDialog
+				appId='lightning'
+				appsUsed={['bitcoin', 'lightning']}
+				open={open}
+				onOpenChange={setOpen}
+				onNext={() => alert('next')}
 			/>
 		</>
 	)

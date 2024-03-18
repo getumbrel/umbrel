@@ -1,5 +1,6 @@
 import {ReactNode} from 'react'
 
+import {AppIcon} from '@/components/app-icon'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {cn} from '@/shadcn-lib/utils'
@@ -47,6 +48,24 @@ export function AppStoreSheetInner({
 				</div>
 			</SheetHeader>
 			{children}
+		</div>
+	)
+}
+
+export function AppWithName({
+	icon,
+	appName,
+	childrenRight,
+}: {
+	icon: string
+	appName: ReactNode
+	childrenRight?: ReactNode
+}) {
+	return (
+		<div className='flex w-full items-center gap-2.5'>
+			<AppIcon src={icon} size={36} className='rounded-8' />
+			<h3 className='flex-1 truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
+			{childrenRight}
 		</div>
 	)
 }

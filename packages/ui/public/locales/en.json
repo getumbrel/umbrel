@@ -317,7 +317,8 @@
   "read-more": "Read more",
   "app.optimized-for-umbrel-home": "Optimized for Umbrel Home",
   "install-first.title": "{{app}} requires access to",
-  "install-first.description": "Install these apps first to install {{app}}.",
+  "install-first.description_one": "Install this app to install {{app}}.",
+  "install-first.description_other": "Install these apps first to install {{app}}.",
   "ok": "Ok",
   "factory-reset.confirm.title": "Confirm with password",
   "factory-reset.confirm.body": "Confirm Umbrel password to reset",
@@ -379,5 +380,6 @@
   "migration-assistant.failed.retrying-message": "Retrying...",
   "unknown-error": "Unknown error",
   "software-update.install-now": "Install now",
-  "app-updates.no-updates": "All apps are up-to-date!"
+  "app-updates.no-updates": "All apps are up-to-date!",
+  "continue": "Continue"
 }

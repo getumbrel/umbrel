@@ -1,13 +1,15 @@
 import prettyBytes from 'pretty-bytes'
 import {useState} from 'react'
 import {useTimeout} from 'react-use'
+import {arrayIncludes} from 'ts-extras'
 
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {AppPermissionsDialog} from '@/modules/app-store/app-permissions-dialog'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
 import {useApps} from '@/providers/apps'
-import {RegistryApp} from '@/trpc/trpc'
+import {installedStates, RegistryApp} from '@/trpc/trpc'
 
 import {InstallButton} from './install-button'
 
@@ -20,6 +22,7 @@ export function InstallButtonConnected({
 }) {
 	const appInstall = useAppInstall(app.id)
 	const [showDepsDialog, setShowDepsDialog] = useState(false)
+	const [showAppPermissionsDialog, setShowAppPermissionsDialog] = useState(false)
 	const {userAppsKeyed, isLoading} = useApps()
 	const openApp = useLaunchApp()
 
@@ -38,11 +41,16 @@ export function InstallButtonConnected({
 	// Uninstalled deps, or deps in the middle of something (like install or update)
 	// TODO: Also check if app is ready? `&& userAppsKeyed[dep].state === 'ready'`
 	// Will want to mark apps as in progress so we don't show that an app needs to be installed first
-	const deps = app.dependencies?.filter((dep) => !(dep in userAppsKeyed)) ?? []
+	const deps = app.dependencies ?? []
+	const areDepsAllInstalled = deps.every((dep) => arrayIncludes(installedStates, userAppsKeyed[dep]?.state))
 
 	const install = () => {
 		if (deps.length > 0) {
-			setShowDepsDialog(true)
+			if (areDepsAllInstalled) {
+				setShowAppPermissionsDialog(true)
+			} else {
+				setShowDepsDialog(true)
+			}
 			return
 		}
 		appInstall.install()
@@ -64,9 +72,17 @@ export function InstallButtonConnected({
 			<InstallTheseFirstDialog
 				appId={app.id}
 				registryId={registryId}
-				toInstallFirstIds={deps}
+				dependencies={deps}
 				open={showDepsDialog}
 				onOpenChange={setShowDepsDialog}
+			/>
+			<AppPermissionsDialog
+				appId={app.id}
+				registryId={registryId}
+				appsUsed={deps}
+				open={showAppPermissionsDialog}
+				onOpenChange={setShowAppPermissionsDialog}
+				onNext={() => appInstall.install()}
 			/>
 		</>
 	)
