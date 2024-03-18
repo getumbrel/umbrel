@@ -46,8 +46,6 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 					description={
 						<>
 							{t('software-update.failed.description')}
-							<br />
-							{t('software-update.failed.please-try-again')}
 						</>
 					}
 					buttonText={t('software-update.failed.retry')}
