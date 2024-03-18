@@ -225,7 +225,7 @@ function AppList({
 				<AppListRow
 					icon={systemAppsKeyed.UMBREL_downloads.icon}
 					title={systemAppsKeyed.UMBREL_downloads.name}
-					value={system === undefined ? LOADING_DASH : formatValue(system)}
+					value={downloads === undefined ? LOADING_DASH : formatValue(downloads)}
 				/>
 			)}
 			{apps?.map(({id, used}) => (

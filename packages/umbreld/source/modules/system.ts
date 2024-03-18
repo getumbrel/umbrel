@@ -52,7 +52,7 @@ export async function getDiskUsage(
 	)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 
-	const downloadsDirectory = `${umbreld.dataDirectory}/storage/downloads/`
+	const downloadsDirectory = `${umbreld.dataDirectory}/data/storage/downloads/`
 	let downloads = 0
 	if (await fse.pathExists(downloadsDirectory)) downloads = await getDirectorySize(downloadsDirectory)
 
