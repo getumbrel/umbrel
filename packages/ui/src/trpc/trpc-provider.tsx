@@ -1,5 +1,4 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
-import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 import {useState} from 'react'
 
 import {MS_PER_MINUTE} from '@/utils/date-time'
@@ -22,7 +21,6 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 		<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
 			<QueryClientProvider client={queryClient}>
 				{children}
-				{IS_DEV && <ReactQueryDevtools />}
 				{IS_DEV && <LoadingIndicator />}
 			</QueryClientProvider>
 		</trpcReact.Provider>
