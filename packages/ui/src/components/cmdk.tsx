@@ -49,7 +49,8 @@ export function CmdkProvider({children}: {children: React.ReactNode}) {
 	return <CmdkOpenContext.Provider value={{open, setOpen}}>{children}</CmdkOpenContext.Provider>
 }
 
-export function CmdkMenu({open, setOpen}: {open: boolean; setOpen: (open: boolean) => void}) {
+export function CmdkMenu() {
+	const {open, setOpen} = useCmdkOpen()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
 	const userApps = useApps()
@@ -249,7 +250,7 @@ function FrequentApps() {
 	return (
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 hidden text-15 font-semibold leading-tight -tracking-2 md:block ml-2'>
+				<h3 className='mb-5 ml-2 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>
 					{t('cmdk.frequent-apps')}
 				</h3>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>

@@ -13,7 +13,7 @@ export default function CmdkStory() {
 }
 
 function Inner() {
-	const {open, setOpen} = useCmdkOpen()
+	const {setOpen} = useCmdkOpen()
 
 	return (
 		<div className='relative z-0'>
@@ -23,7 +23,7 @@ function Inner() {
 				<Search onClick={() => setOpen(true)} />
 			</div>
 			<AppsProvider>
-				<CmdkMenu open={open} setOpen={setOpen} />
+				<CmdkMenu />
 			</AppsProvider>
 		</div>
 	)

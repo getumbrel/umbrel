@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
 
-import {CmdkMenu, CmdkProvider, useCmdkOpen} from '@/components/cmdk'
+import {useCmdkOpen} from '@/components/cmdk'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
@@ -19,11 +19,7 @@ export function Desktop() {
 		return <InstallFirstAppPage />
 	}
 
-	return (
-		<CmdkProvider>
-			<DesktopPage />
-		</CmdkProvider>
-	)
+	return <DesktopPage />
 }
 
 function InstallFirstAppPage() {
@@ -31,7 +27,7 @@ function InstallFirstAppPage() {
 }
 
 function DesktopPage() {
-	const {open, setOpen} = useCmdkOpen()
+	const {setOpen} = useCmdkOpen()
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect
 	useEffect(() => {
@@ -52,7 +48,6 @@ function DesktopPage() {
 			>
 				<DesktopContent onSearchClick={() => setOpen(true)} />
 			</div>
-			<CmdkMenu open={open} setOpen={setOpen} />
 			<DefaultCredentialsDialog />
 		</>
 	)
