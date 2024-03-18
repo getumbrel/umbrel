@@ -2,26 +2,46 @@ name: Node.js CI
 
 on: push
 
+# defaults:
+#   run:
+#     working-directory: packages/umbreld
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         task:
+#           - format:check
+#           - lint
+#           - typecheck
+#           - test:unit -- --coverage
+#           - test:integration -- --coverage
+#     steps:
+#       - uses: actions/checkout@v3
+#       - uses: actions/setup-node@v3
+#         with:
+#           node-version: 18
+#       - run: npm clean-install
+#       - run: npm run ${{ matrix.task }}
+
 defaults:
   run:
-    working-directory: packages/umbreld
+    working-directory: packages/os
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-os:
+    runs-on: release-runner-64
     strategy:
       fail-fast: false
       matrix:
         task:
-          - format:check
-          - lint
-          - typecheck
-          - test:unit -- --coverage
-          - test:integration -- --coverage
+          - build:amd64
+          - build:arm64
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm clean-install
       - run: npm run ${{ matrix.task }}
