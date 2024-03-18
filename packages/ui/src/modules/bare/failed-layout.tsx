@@ -2,10 +2,11 @@ import {ReactNode} from 'react'
 import {Link, To} from 'react-router-dom'
 
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
-import {buttonClass} from '@/layouts/bare/shared'
+import {buttonClass, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {cn} from '@/shadcn-lib/utils'
 
 import {bareContainerClass, BareSpacer, bareTextClass, bareTitleClass} from './shared'
+import {t} from '@/utils/i18n'
 
 export default function FailedLayout({
 	title,
@@ -22,6 +23,7 @@ export default function FailedLayout({
 	to?: To
 	buttonOnClick?: () => void
 }) {
+
 	return (
 		<div className={cn(bareContainerClass, 'animate-in slide-in-from-bottom-2')}>
 			<UmbrelHeadTitle>{headTitle || title}</UmbrelHeadTitle>
@@ -35,9 +37,14 @@ export default function FailedLayout({
 				</Link>
 			)}
 			{!to && (
-				<button className={buttonClass} onClick={buttonOnClick}>
-					{buttonText}
-				</button>
+				<div className='flex flex-row gap-2.5'>
+					<a href='/' className={buttonClass}>
+						{t('not-found-404.home')}
+					</a>
+					<button className={secondaryButtonClasss} onClick={buttonOnClick}>
+						{buttonText}
+					</button>
+				</div>
 			)}
 		</div>
 	)

@@ -30,6 +30,7 @@
   "tor-description": "Toegang tot je Umbrel van overal met een Tor browser",
   "migration-assistant": "Migratieassistent",
   "migration-assistant-description": "Zet al je apps en gegevens over van een Raspberry Pi naar Umbrel Home",
+  "migration-assistant-unsupported-device-description": "Migratie-assistent ondersteunt momenteel het overzetten van alle gegevens en apps van een Raspberry Pi met umbrelOS naar de Umbrel Home. Open de Migratie-assistent op uw Umbrel Home om te beginnen.",
   "language": "Taal",
   "language-description": "Je voorkeurstaal voor umbrelOS",
   "app-store.description": "Je app-update instellingen",

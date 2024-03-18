@@ -10,8 +10,6 @@ export function Failed() {
 			description={
 				<>
 					{t('factory-reset.failed.message')}
-					<br />
-					{t('factory-reset.failed.message.please-try-again')}
 				</>
 			}
 			buttonText={t('factory-reset.failed.retry')}
