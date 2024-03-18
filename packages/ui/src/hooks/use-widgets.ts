@@ -16,12 +16,14 @@ export function useWidgets() {
 	const isLoading = apps.isLoading || isSelectedLoading
 
 	const availableUserAppWidgets = apps.userApps
-		? apps.userApps.map((app) => ({
-				appId: app.id,
-				icon: app.icon,
-				name: app.name,
-				widgets: app.widgets?.map((w) => ({...w, id: app.id + ':' + w.id})) ?? [],
-		  }))
+		? apps.userApps
+				.filter((app) => app.state === 'ready')
+				.map((app) => ({
+					appId: app.id,
+					icon: app.icon,
+					name: app.name,
+					widgets: app.widgets?.map((w) => ({...w, id: app.id + ':' + w.id})) ?? [],
+				}))
 		: []
 
 	// NOTE: the backend Umbrel system widgets always have an `umbrel:` prefix. For now this is good
