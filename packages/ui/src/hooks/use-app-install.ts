@@ -1,6 +1,7 @@
 import {useMutation} from '@tanstack/react-query'
 import {useCallback, useEffect} from 'react'
 import {useInterval} from 'react-use'
+import {uniq} from 'remeda'
 import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
@@ -106,7 +107,8 @@ export function useAppInstall(id: string) {
 		// We expect to have an array, even if it's empty
 		if (!appsToUninstallFirst) throw new Error(t('apps.uninstall.failed-to-get-required-apps'))
 		if (appsToUninstallFirst.length > 0) {
-			return appsToUninstallFirst.map((app) => app.id)
+			// TODO: clean up logic around multiple registries so we don't need to use `uniq`?
+			return uniq(appsToUninstallFirst.map((app) => app.id))
 		}
 		return []
 	}
