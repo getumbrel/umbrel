@@ -1,4 +1,5 @@
 import {ReactNode} from 'react'
+import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
@@ -9,7 +10,6 @@ import {LOADING_DASH} from '@/constants'
 import {useCpuForUi} from '@/hooks/use-cpu'
 import {useDiskForUi} from '@/hooks/use-disk'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useMemoryForUi} from '@/hooks/use-memory'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {Progress} from '@/shadcn-components/ui/progress'
@@ -39,9 +39,15 @@ type SelectedTab = 'storage' | 'memory' | 'cpu'
 
 function LiveUsageContent() {
 	const isSmall = useIsSmallMobile()
-	const [selectedTab, setSelectedTab] = useLocalStorage2<SelectedTab>('live-usage-selected-tab', 'storage')
+	const { search } = useLocation();
+	const navigate = useNavigate();
+	const queryParams = new URLSearchParams(search);
+	const selectedTab = queryParams.get('tab') as SelectedTab || 'storage';
 
-	if (!selectedTab) return null
+	const setSelectedTab = (tab: SelectedTab) => {
+		queryParams.set('tab', tab);
+		navigate({ search: queryParams.toString() });
+	};
 
 	if (isSmall) {
 		return (
@@ -49,7 +55,6 @@ function LiveUsageContent() {
 				{isSmall && (
 					<SegmentedControl
 						size='lg'
-						// variant={variant}
 						tabs={[
 							{id: 'storage', label: t('storage')},
 							{id: 'memory', label: t('memory')},

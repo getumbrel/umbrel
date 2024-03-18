@@ -31,6 +31,7 @@ import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
+import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
 import {ListRow} from './list-row'
 import {MemoryCardContent} from './memory-card-content'
@@ -114,6 +115,9 @@ export function SettingsContent() {
 					{/* Choosing middle card because we wanna scroll to center to likely see them all */}
 					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 						<MemoryCardContent />
+					</Card>
+					<Card>
+						<CpuCardContent />
 					</Card>
 					<Card>
 						<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
