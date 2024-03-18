@@ -57,7 +57,7 @@ export function DesktopPreview({
 	const appRows = widgets && widgets.length > 0 ? 2 : 3
 
 	const widgetWidth = appWidth * 2
-	const widgetHeight = appHeight * 1.2
+	const widgetHeight = appHeight * 1.4
 
 	// Delay mounting for performace
 	const [show] = useTimeout(300)

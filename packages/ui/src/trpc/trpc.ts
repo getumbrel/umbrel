@@ -56,6 +56,11 @@ export const appStates = [
 	'ready',
 ] satisfies AppState[]
 
+export const installStates = ['installing', 'uninstalling', 'updating'] satisfies AppState[]
+export type InstallState = (typeof installStates)[number]
+export const installedStates = ['running', 'stopped', 'ready', 'restarting', 'starting'] satisfies AppState[]
+export type InstalledState = (typeof installedStates)[number]
+
 export const progressStates = [
 	// 'not-installed',
 	'installing',

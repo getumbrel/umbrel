@@ -1,6 +1,9 @@
 import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
+import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
+import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
+
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
@@ -46,7 +49,12 @@ export const router = createBrowserRouter([
 				<Wallpaper />
 				<AvailableAppsProvider>
 					<AppsProvider>
-						<Desktop />
+						<CmdkProvider>
+							<DesktopContextMenu>
+								<Desktop />
+							</DesktopContextMenu>
+							<CmdkMenu />
+						</CmdkProvider>
 						<Suspense>
 							<Outlet />
 						</Suspense>

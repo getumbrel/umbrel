@@ -1,4 +1,5 @@
-import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiRefreshLine, RiInformationLine} from 'react-icons/ri'
+import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshLine} from 'react-icons/ri'
+
 import {Icon} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH} from '@/constants'
@@ -19,7 +20,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 				description={
 					<span className='flex items-center gap-1 pb-3'>
 						<Icon component={RiArrowUpCircleFill} className='text-brand' />
-						{t('software-update.new-version', {version: latestVersion?.version || LOADING_DASH})}
+						{t('software-update.new-version', {version: latestVersion || LOADING_DASH})}
 					</span>
 				}
 			>
@@ -36,7 +37,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 			title={`umbrelOS ${currentVersion || LOADING_DASH}`}
 			description={
 				<span className='flex items-center gap-1 pb-3'>
-					{state === 'at-latest' ? (
+					{state === 'at-latest' || state === 'checking' ? (
 						<>
 							<Icon component={RiCheckboxCircleFill} className='text-success' />
 							{t('software-update.on-latest')}

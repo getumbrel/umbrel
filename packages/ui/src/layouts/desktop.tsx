@@ -1,10 +1,9 @@
 import {useEffect} from 'react'
 
-import {CmdkMenu, CmdkProvider, useCmdkOpen} from '@/components/cmdk'
+import {useCmdkOpen} from '@/components/cmdk'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
-import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
 import {useApps} from '@/providers/apps'
 import {t} from '@/utils/i18n'
@@ -20,11 +19,7 @@ export function Desktop() {
 		return <InstallFirstAppPage />
 	}
 
-	return (
-		<CmdkProvider>
-			<DesktopPage />
-		</CmdkProvider>
-	)
+	return <DesktopPage />
 }
 
 function InstallFirstAppPage() {
@@ -32,7 +27,7 @@ function InstallFirstAppPage() {
 }
 
 function DesktopPage() {
-	const {open, setOpen} = useCmdkOpen()
+	const {setOpen} = useCmdkOpen()
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect
 	useEffect(() => {
@@ -45,17 +40,14 @@ function DesktopPage() {
 	return (
 		<>
 			<UmbrelHeadTitle>{t('desktop.title')}</UmbrelHeadTitle>
-			<DesktopContextMenu>
-				<div
-					className={
-						// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
-						'relative flex h-[100dvh] w-full flex-col items-center justify-between'
-					}
-				>
-					<DesktopContent onSearchClick={() => setOpen(true)} />
-				</div>
-			</DesktopContextMenu>
-			<CmdkMenu open={open} setOpen={setOpen} />
+			<div
+				className={
+					// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
+					'relative flex h-[100dvh] w-full flex-col items-center justify-between'
+				}
+			>
+				<DesktopContent onSearchClick={() => setOpen(true)} />
+			</div>
 			<DefaultCredentialsDialog />
 		</>
 	)

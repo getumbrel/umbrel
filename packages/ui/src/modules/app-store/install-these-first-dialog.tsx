@@ -1,8 +1,11 @@
 import {Close} from '@radix-ui/react-dialog'
-import {ReactNode} from 'react'
-import {Link, To} from 'react-router-dom'
+import {TbCircleCheckFilled} from 'react-icons/tb'
+import {Link} from 'react-router-dom'
+import {arrayIncludes} from 'ts-extras'
 
-import {AppIcon} from '@/components/app-icon'
+import {appStateToString} from '@/components/cmdk'
+import {AppWithName} from '@/modules/app-store/shared'
+import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -13,6 +16,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
+import {AppState, installedStates} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {UMBREL_APP_STORE_ID} from './constants'
@@ -22,22 +26,24 @@ export function InstallTheseFirstDialog({
 	onOpenChange,
 	appId,
 	registryId = UMBREL_APP_STORE_ID,
-	toInstallFirstIds,
+	dependencies,
 }: {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	appId: string
 	registryId?: string
-	toInstallFirstIds: string[]
+	dependencies: string[]
 }) {
 	const availableApps = useAllAvailableApps()
+	const userApps = useApps()
 	const app = availableApps.appsKeyed?.[appId]
 
+	if (userApps.isLoading) return null
 	if (availableApps.isLoading) return null
 	if (!app) throw new Error('App not found')
 
 	const appName = app?.name
-	const toInstallApps = toInstallFirstIds.map((id) => availableApps.appsKeyed?.[id])
+	const allDepApps = dependencies.map((id) => availableApps.appsKeyed?.[id])
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,18 +52,24 @@ export function InstallTheseFirstDialog({
 					<DialogTitle>{t('install-first.title', {app: appName})}</DialogTitle>
 				</DialogHeader>
 				<div className='space-y-3'>
-					{toInstallApps.map((app) => (
+					{allDepApps.map((app) => (
 						<AppWithName
 							key={app.id}
 							icon={app.icon}
 							appName={app.name}
-							// TODO: link to community app store if needed
-							to={`/app-store/${app.id}`}
-							onClick={() => onOpenChange(false)}
+							childrenRight={
+								<AppStateText
+									appId={app.id}
+									appState={userApps.userAppsKeyed?.[app.id]?.state ?? 'not-installed'}
+									onClick={() => onOpenChange(false)}
+								/>
+							}
 						/>
 					))}
 				</div>
-				<DialogDescription>{t('install-first.description', {app: appName})}</DialogDescription>
+				<DialogDescription>
+					{t('install-first.description', {app: appName, count: allDepApps.length})}
+				</DialogDescription>
 				<DialogFooter>
 					<Close asChild>
 						<Button variant='primary' size='dialog'>
@@ -65,20 +77,26 @@ export function InstallTheseFirstDialog({
 						</Button>
 					</Close>
 				</DialogFooter>
+				{/* <JSONTree data={{toInstallApps: allDepApps, deps}} /> */}
 			</DialogContent>
 		</Dialog>
 	)
 }
 
-function AppWithName({icon, appName, to, onClick}: {icon: string; appName: ReactNode; to: To; onClick?: () => void}) {
-	return (
-		<div className='flex w-full items-center gap-2.5'>
-			<AppIcon src={icon} size={36} className='rounded-8' />
+function AppStateText({appId, appState, onClick}: {appId: string; appState: AppState; onClick?: () => void}) {
+	if (arrayIncludes(installedStates, appState)) {
+		return <TbCircleCheckFilled className='h-[18px] w-[18px] text-success-light' />
+	}
 
-			<h3 className='flex-1 truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
-			<Link to={to} className='font-medium text-brand-lighter' onClick={onClick}>
-				{t('app.install')}
-			</Link>
-		</div>
-	)
+	switch (appState) {
+		case 'not-installed':
+			return (
+				// TODO: link to community app store if needed using `getAppStoreAppFromInstalledApp`
+				<Link to={`/app-store/${appId}`} className='font-medium text-brand-lighter' onClick={onClick}>
+					{t('app.install')}
+				</Link>
+			)
+		default:
+			return <div className='opacity-50'>{appStateToString(appState) + '...'}</div>
+	}
 }
