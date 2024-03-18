@@ -19,6 +19,7 @@ export type AppRepositoryMeta = {
 export type AppManifest = {
 	manifestVersion: number
 	id: string
+	disabled?: boolean
 	name: string
 	tagline: string
 	icon: string

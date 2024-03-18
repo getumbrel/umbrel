@@ -168,6 +168,8 @@ export default class AppRepository {
 		apps = apps
 			// Filter out invalid manifests
 			.filter((app) => app !== undefined)
+			// Filter out disabled apps
+			.filter((app) => app.disabled !== true)
 			// Filter out invalid IDs
 			.filter((app) => meta.id === 'umbrel-app-store' || app.id.startsWith(meta.id))
 			// Add icons
