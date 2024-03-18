@@ -150,6 +150,7 @@
   "troubleshoot.search": "検索...",
   "troubleshoot.share-with-umbrel-support": "Umbrelサポートと共有",
   "login": "ログイン",
+  "migration-assistant-unsupported-device-description": "Migration Assistantは現在、umbrelOSを実行しているRaspberry PiからUmbrel Homeへのすべてのデータとアプリの転送をサポートしています。Umbrel HomeでMigration Assistantを開いて開始してください。",
   "migration-assistant.prep.body": "移行の準備",
   "migration-assistant.prep.button-continue": "続行",
   "migration-assistant.prep.callout": "あなたのUmbrel Homeにあるデータが永久に削除されます。",

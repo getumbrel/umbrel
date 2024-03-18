@@ -18,6 +18,7 @@ import {
 	AlertDialog,
 	AlertDialogAction,
 	AlertDialogContent,
+	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
@@ -43,8 +44,16 @@ export default function MigrationAssistantDialog() {
 				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Please start up your Umbrel Home and open this dialog from there.</AlertDialogTitle>
+						<AlertDialogTitle>
+							{t('migration-assistant')}
+						</AlertDialogTitle>
 					</AlertDialogHeader>
+					<div className='flex justify-center mt-2'>
+						<MigrateImage />
+					</div>
+					<AlertDialogDescription className='text-center'>
+						{t('migration-assistant-unsupported-device-description')}
+						</AlertDialogDescription>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => dialogProps.onOpenChange(false)}>{t('ok')}</AlertDialogAction>
 					</AlertDialogFooter>
