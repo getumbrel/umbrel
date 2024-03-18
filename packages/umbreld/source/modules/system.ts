@@ -78,7 +78,7 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	system: number
 	apps: MemoryUsage[]
 }> {
-	const {total: size, active: totalUsed} = await systemInformation.mem()
+	let {total: size, active: totalUsed} = await systemInformation.mem()
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
 			id: app.id,
@@ -88,11 +88,18 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 
 	const minSystemUsage = 100 * 1024 * 1024 // 100MB
+	const system = Math.max(minSystemUsage, totalUsed - appsTotal)
+
+	// Hack to make sure total always adds up and don't overflow.
+	// These values come direct from Docker and don't seem to be very
+	// accurate. We should implement our own custom logic and calculate
+	// these values in a more reliable way.
+	totalUsed = Math.min(size, appsTotal + system)
 
 	return {
 		size,
 		totalUsed,
-		system: Math.max(minSystemUsage, totalUsed - appsTotal),
+		system,
 		apps,
 	}
 }
