@@ -257,6 +257,7 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 	} catch (error) {
 		console.error(error)
 		updateMigrationStatus({error: 'Failed to migrate data'})
+		return
 	}
 
 	updateMigrationStatus({progress: 95, description: 'rebooting'})
