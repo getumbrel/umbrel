@@ -54,6 +54,24 @@ export default class Apps {
 		const appIds = await this.#umbreld.store.get('apps')
 		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 
+		// Attempt to pre-load local Docker images
+		try {
+			// Loop over iamges in /images
+			const images = await fse.readdir(`/images`)
+			await Promise.all(
+				images.map(async (image) => {
+					try {
+						this.logger.log(`Pre-loading local Docker image ${image}`)
+						await $({stdio: 'inherit'})`docker load --input /images/${image}`
+					} catch (error) {
+						this.logger.error(`Failed to pre-load local Docker image ${image}: ${(error as Error).message}`)
+					}
+				}),
+			)
+		} catch (error) {
+			this.logger.error(`Failed to pre-load local Docker images: ${(error as Error).message}`)
+		}
+
 		// Start app environment
 		try {
 			await pRetry(() => appEnvironment(this.#umbreld, 'up'), {

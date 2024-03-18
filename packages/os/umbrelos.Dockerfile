@@ -103,6 +103,12 @@ RUN usermod -aG sudo umbrel
 # is the single source of truth for OS provisioning.
 RUN apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns
 
+# Preload images
+RUN sudo apt-get install --yes skopeo
+RUN mkdir -p /images
+RUN skopeo copy docker://getumbrel/tor@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a docker-archive:/images/tor
+RUN skopeo copy docker://getumbrel/auth-server@sha256:8ae7ca39fd31a480decc8c8507efe147a94ade8e378c3815ec0ffd38bbd9325d docker-archive:/images/auth
+
 # Install umbreld
 RUN apt-get install --yes npm
 COPY packages/umbreld /tmp/umbreld
