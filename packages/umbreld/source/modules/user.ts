@@ -54,7 +54,7 @@ export default class User {
 
 			// Only attempt this if there's an umbrel user
 			if (hasUmbrelSystemUser) {
-				console.log(await $({input: `umbrel:${password}`})`chpasswd`)
+				await $({input: `umbrel:${password}`})`chpasswd`
 			}
 		} catch (error) {
 			// If the system password update fails, log it but continue
