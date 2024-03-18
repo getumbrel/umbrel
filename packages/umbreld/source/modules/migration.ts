@@ -256,6 +256,7 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 		await fse.move(temporaryData, finalData, {overwrite: true})
 	} catch (error) {
 		console.error(error)
+		setSystemStatus('running')
 		updateMigrationStatus({error: 'Failed to migrate data'})
 		return
 	}
