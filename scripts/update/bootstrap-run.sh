@@ -36,26 +36,26 @@ echo "Hardware support detection"
 if is_pi
 then
   echo "Raspberry Pi detected"
-  fail_update "Reflash your SDcard to update to umbrelOS 1.0 https://link.umbrel.com/pi-update"
+  fail_update "Please install umbrelOS 1.0 on your microSD card to update: https://link.umbrel.com/pi-update"
 fi
 
 # Not an Umbrel Home (custom Linux install)
 if ! is_home
 then
   echo "Custon Linux install detected"
-  fail_update "OTA update not yet supported for custom Linux installs"
+  fail_update "umbrelOS 1.0 is not yet supported for custom Linux installs: https://link.umbrel.com/linux-update"
 fi
 
 # If we get here we're running on an Umbrel Home
 echo "Umbrel Home detected"
 
 # Flash new update
-echo '{"state": "installing", "progress": 25, "description": "Flashing umbrelOS 1.0, this may take a while", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
+echo '{"state": "installing", "progress": 25, "description": "Installing umbrelOS 1.0, this may take a while", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
 mender install https://download.umbrel.com/release/1.0.0/umbrelos-amd64.update
 
 # Reboot
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
-{"state": "installing", "progress": 97, "description": "Rebooting your Umbrel Home"}
+{"state": "installing", "progress": 97, "description": "Restarting Umbrel Home"}
 EOF
 
 # Sleep 5 seconds to give the frontend a chance to poll
