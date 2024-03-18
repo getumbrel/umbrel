@@ -19,7 +19,7 @@ type DeviceInfoT =
 				device?: string
 				modelNumber?: string
 				serialNumber?: string
-				osVersion?: string
+				osVersionName?: string
 			}
 			uiData: UiHostInfo
 	  }
@@ -45,7 +45,7 @@ export function useDeviceInfo(): DeviceInfoT {
 	const device = deviceInfoQ.data?.device
 	const modelNumber = deviceInfoQ.data?.model
 	const serialNumber = deviceInfoQ.data?.serial
-	const osVersion = osQ.data
+	const osVersionName = osQ.data?.name
 
 	return {
 		isLoading,
@@ -54,7 +54,7 @@ export function useDeviceInfo(): DeviceInfoT {
 			device,
 			modelNumber,
 			serialNumber,
-			osVersion,
+			osVersionName,
 		},
 		uiData: umbrelHostEnvironment
 			? {

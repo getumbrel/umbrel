@@ -16,7 +16,7 @@ export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSucce
 }
 
 export function UpdatingCover({onRetry}: {onRetry: () => void}) {
-	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery()
+	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
 		refetchInterval: 500,
 	})
@@ -33,7 +33,7 @@ export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 		<BarePage>
 			{!error && (
 				<ProgressLayout
-					title={t('software-update.updating-to', {version: latestVersion.version})}
+					title={t('software-update.updating-to', {name: latestVersion.name})}
 					callout={t('software-update.callout')}
 					progress={indeterminate ? undefined : progress}
 					message={description}

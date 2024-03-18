@@ -8,7 +8,7 @@ export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-availab
 
 export function useSoftwareUpdate() {
 	const ctx = trpcReact.useContext()
-	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery(undefined, {
+	const latestVersionQ = trpcReact.system.checkUpdate.useQuery(undefined, {
 		retry: false,
 		refetchOnReconnect: false,
 		refetchOnWindowFocus: false,
@@ -16,12 +16,12 @@ export function useSoftwareUpdate() {
 	const osVersionQ = trpcReact.system.version.useQuery()
 
 	const currentVersion = osVersionQ.data
-	const latestVersion = latestVersionQ.data?.version
+	const latestVersion = latestVersionQ.data
 
 	const checkLatest = useCallback(async () => {
 		try {
-			ctx.system.latestAvailableVersion.invalidate()
-			const latestVersion = await ctx.system.latestAvailableVersion.fetch()
+			ctx.system.checkUpdate.invalidate()
+			const latestVersion = await ctx.system.checkUpdate.fetch()
 
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
@@ -29,16 +29,16 @@ export function useSoftwareUpdate() {
 		} catch (error) {
 			toast.error(t('software-update.failed-to-check'))
 		}
-	}, [ctx.system.latestAvailableVersion])
+	}, [ctx.system.checkUpdate])
 
 	let state: UpdateState = 'initial'
-	if (latestVersionQ.isLoading || osVersionQ.isLoading) {
+	if (latestVersionQ.isLoading) {
 		state = 'initial'
 	} else if (latestVersionQ.isRefetching) {
 		state = 'checking'
 	} else if (latestVersionQ.error) {
 		state = 'initial'
-	} else if (currentVersion === latestVersion) {
+	} else if (!latestVersionQ.data.available) {
 		state = 'at-latest'
 	} else {
 		state = 'update-available'

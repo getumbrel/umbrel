@@ -34,7 +34,7 @@ export function SoftwareUpdateDrawer() {
 					<FadeInImg src='/figma-exports/umbrel-ios.png' className='h-[96px] w-[96px]' />
 					<div className='mb-4' />
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
-					<p className='text-15 -tracking-4'>umbrelOS {currentVersion || LOADING_DASH}</p>
+					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>
@@ -58,7 +58,7 @@ export function SoftwareUpdateDrawer() {
 						<>
 							<div className={versionMessageClass}>
 								<div className='mr-2 inline-block h-1.5 w-1.5 -translate-y-px rounded-full bg-brand align-middle' />
-								{t('software-update.new-version', {version: latestVersion})}
+								{t('software-update.new-version', {name: latestVersion?.name})}
 							</div>
 							<ButtonLink variant='primary' size='dialog' to='/settings/software-update/confirm'>
 								{t('software-update.view')}

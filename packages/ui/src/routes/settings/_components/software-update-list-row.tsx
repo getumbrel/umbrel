@@ -16,11 +16,11 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 		return (
 			<ListRow
 				isActive={isActive}
-				title={`umbrelOS ${currentVersion || LOADING_DASH}`}
+				title={currentVersion?.name || `umbrelOS ${LOADING_DASH}`}
 				description={
 					<span className='flex items-center gap-1 pb-3'>
 						<Icon component={RiArrowUpCircleFill} className='text-brand' />
-						{t('software-update.new-version', {version: latestVersion || LOADING_DASH})}
+						{t('software-update.new-version', {name: latestVersion?.name || LOADING_DASH})}
 					</span>
 				}
 			>
@@ -34,7 +34,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 	return (
 		<ListRow
 			isActive={isActive}
-			title={`umbrelOS ${currentVersion || LOADING_DASH}`}
+			title={currentVersion?.name || `umbrelOS ${LOADING_DASH}`}
 			description={
 				<span className='flex items-center gap-1 pb-3'>
 					{state === 'at-latest' || state === 'checking' ? (

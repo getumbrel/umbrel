@@ -9,7 +9,7 @@ import {t} from '@/utils/i18n'
 
 export function SoftwareUpdateConfirmDialog() {
 	const {update} = useGlobalSystemState()
-	const latestVersionQ = trpcReact.system.latestAvailableVersion.useQuery()
+	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
 	const dialogProps = useSettingsDialogProps()
 
 	if (latestVersionQ.isLoading) {
@@ -20,7 +20,7 @@ export function SoftwareUpdateConfirmDialog() {
 		<Dialog {...dialogProps}>
 			<DialogContent className='px-0'>
 				<DialogHeader className='px-4 sm:px-8'>
-					<DialogTitle>umbrelOS {latestVersionQ.data?.version}</DialogTitle>
+					<DialogTitle>{latestVersionQ.data?.name}</DialogTitle>
 				</DialogHeader>
 				<ScrollArea className='flex max-h-[500px] flex-col gap-5 px-4 sm:px-8'>
 					<Markdown>{latestVersionQ.data?.releaseNotes}</Markdown>

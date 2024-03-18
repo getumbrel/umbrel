@@ -23,8 +23,7 @@ export function useSettingsNotificationCount() {
 
 	// Make all the calls at once so we can count properly
 	// const queries = trpcReact.useQueries((t) => [
-	// 	t.system.version(),
-	// 	t.system.latestAvailableVersion(),
+	// 	t.system.checkUpdate(),
 	// 	t.system.cpuTemperature(),
 	// 	t.system.memoryUsage(),
 	// 	t.system.diskUsage(),
@@ -37,8 +36,7 @@ export function useSettingsNotificationCount() {
 
 		// alert('useEffect')
 		const res = Promise.allSettled([
-			trpcClient.system.version.query(),
-			trpcClient.system.latestAvailableVersion.query(),
+			trpcClient.system.checkUpdate.query(),
 			trpcClient.system.cpuTemperature.query(),
 			trpcClient.system.memoryUsage.query(),
 			trpcClient.system.diskUsage.query(),
@@ -50,7 +48,7 @@ export function useSettingsNotificationCount() {
 
 		res.then((allData) => {
 			console.log('allData', allData)
-			const [versionResult, latestAvailableVersionResult, cpuTempResult, memoryResult, diskResult] = allData ?? []
+			const [checkUpdateResult, cpuTempResult, memoryResult, diskResult] = allData ?? []
 
 			let currCount = 0
 
@@ -87,13 +85,12 @@ export function useSettingsNotificationCount() {
 				duration: Infinity,
 			}
 
-			if (versionResult.status === 'fulfilled' && latestAvailableVersionResult.status === 'fulfilled') {
-				const version = versionResult.value
-				const latestAvailableVersion = latestAvailableVersionResult.value
+			if (checkUpdateResult.status === 'fulfilled') {
+				const { name, available } = checkUpdateResult.value
 
-				if (version !== latestAvailableVersion.version) {
+				if (available) {
 					currCount++
-					const id = toast.info(t('notifications.new-version-available', {update: `umbrelOS ${latestAvailableVersion.version}`}), softwareUpdateToastOptions)
+					const id = toast.info(t('notifications.new-version-available', {update: name}), softwareUpdateToastOptions)
 					toastIds.push(id)
 				}
 			}
