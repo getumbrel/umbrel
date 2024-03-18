@@ -28,6 +28,7 @@ export function ErrorBoundary() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
+						<Button size="dialog" variant="default" onClick={() => navigate('/settings')}>Go to Settings</Button>
 						<Button size="dialog" variant="default" onClick={() => downloadLogs()}>{t('download-logs')}</Button>
 					</AlertDialogFooter>
 				</AlertDialogContent>
