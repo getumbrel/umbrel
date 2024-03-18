@@ -4,7 +4,6 @@ import {CmdkMenu, CmdkProvider, useCmdkOpen} from '@/components/cmdk'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
-import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
 import {useApps} from '@/providers/apps'
 import {t} from '@/utils/i18n'
@@ -45,16 +44,14 @@ function DesktopPage() {
 	return (
 		<>
 			<UmbrelHeadTitle>{t('desktop.title')}</UmbrelHeadTitle>
-			<DesktopContextMenu>
-				<div
-					className={
-						// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
-						'relative flex h-[100dvh] w-full flex-col items-center justify-between'
-					}
-				>
-					<DesktopContent onSearchClick={() => setOpen(true)} />
-				</div>
-			</DesktopContextMenu>
+			<div
+				className={
+					// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`
+					'relative flex h-[100dvh] w-full flex-col items-center justify-between'
+				}
+			>
+				<DesktopContent onSearchClick={() => setOpen(true)} />
+			</div>
 			<CmdkMenu open={open} setOpen={setOpen} />
 			<DefaultCredentialsDialog />
 		</>

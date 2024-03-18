@@ -1,6 +1,8 @@
 import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
+import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
+
 import {ErrorBoundary} from './components/ui/error-boundary'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
@@ -46,7 +48,9 @@ export const router = createBrowserRouter([
 				<Wallpaper />
 				<AvailableAppsProvider>
 					<AppsProvider>
-						<Desktop />
+						<DesktopContextMenu>
+							<Desktop />
+						</DesktopContextMenu>
 						<Suspense>
 							<Outlet />
 						</Suspense>
