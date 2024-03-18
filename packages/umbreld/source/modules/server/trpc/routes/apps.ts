@@ -40,7 +40,7 @@ export default router({
 			}),
 		)
 
-		const appDataSortedByNames = appData.sort((a, b) => a.name!.localeCompare(b.name!))
+		const appDataSortedByNames = appData.sort((a, b) => a.name?.localeCompare(b.name))
 
 		return appDataSortedByNames
 	}),
