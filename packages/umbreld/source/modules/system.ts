@@ -61,7 +61,7 @@ export async function getDiskUsage(
 	return {
 		size,
 		totalUsed: used,
-		system: Math.max(minSystemUsage, used - appsTotal),
+		system: Math.max(minSystemUsage, used - (appsTotal + downloads)),
 		downloads,
 		apps,
 	}
