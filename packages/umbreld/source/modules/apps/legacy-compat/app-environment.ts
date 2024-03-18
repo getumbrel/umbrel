@@ -26,7 +26,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			TOR_PROXY_PORT: '9050',
 			TOR_PASSWORD: 'mLcLDdt5qqMxlq3wv8Din3UD44bTZHzRFhIktw38kWg=',
 			TOR_HASHED_PASSWORD: '16:158FBE422B1A9D996073BE2B9EC38852C70CE12362CA016F8F6859C426',
-			UMBREL_AUTH_SECRET: 'DEADBEEF',
+			UMBREL_AUTH_SECRET: 'DEADBEEF', // Not used, just left in for compatibility reasons
 			JWT_SECRET: await umbreld.server.getJwtSecret(),
 			UMBRELD_RPC_HOST: `host.docker.internal:${umbreld.server.port}`, // TODO: Check host.docker.internal works on linux
 			UMBREL_LEGACY_COMPAT_DIR: currentDirname,
