@@ -1,3 +1,6 @@
+import {fileURLToPath} from 'node:url'
+import {dirname, join} from 'node:path'
+
 import fse from 'fs-extra'
 import {$} from 'execa'
 import pRetry from 'p-retry'
@@ -48,6 +51,25 @@ export default class Apps {
 			this.logger.verbose('Creating Umbrel seed')
 			await fse.ensureFile(umbrelSeedFile)
 			await fse.writeFile(umbrelSeedFile, randomToken(256))
+		}
+
+		// Setup bin dir
+		try {
+			const currentFilename = fileURLToPath(import.meta.url)
+			const currentDirname = dirname(currentFilename)
+			const binSourcePath = join(currentDirname, 'legacy-compat/bin')
+			const binDestPath = `${this.#umbreld.dataDirectory}/bin`
+			await fse.mkdirp(binDestPath)
+			const bins = await fse.readdir(binSourcePath)
+			this.logger.log(`Copying bins to ${binDestPath}`)
+			for (const bin of bins) {
+				this.logger.log(`Copying ${bin}`)
+				const source = join(binSourcePath, bin)
+				const dest = join(binDestPath, bin)
+				await fse.copyFile(source, dest)
+			}
+		} catch (error) {
+			this.logger.error(`Failed to copy bins: ${(error as Error).message}`)
 		}
 
 		// Create app instances

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+echo
+echo "  *** Deprecation notice ***"
+echo "  In a future version of Umbrel, 'bitcoin-cli' will be removed."
+echo
+
+result=$(docker exec -it bitcoin_bitcoind_1 bitcoin-cli "$@")
+
+# We need to echo with quotes to preserve output formatting
+echo "$result"
