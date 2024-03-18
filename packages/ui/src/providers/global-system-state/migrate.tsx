@@ -39,7 +39,7 @@ export function MigratingCover({onRetry}: {onRetry: () => void}) {
 					title={t('migrate.failed.title')}
 					description={
 						<>
-							{t('migrate.failed.description')}
+							Error: {error}
 						</>
 					}
 					buttonText={t('migrate.failed.retry')}
