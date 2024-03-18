@@ -39,15 +39,15 @@ type SelectedTab = 'storage' | 'memory' | 'cpu'
 
 function LiveUsageContent() {
 	const isSmall = useIsSmallMobile()
-	const { search } = useLocation();
-	const navigate = useNavigate();
-	const queryParams = new URLSearchParams(search);
-	const selectedTab = queryParams.get('tab') as SelectedTab || 'storage';
+	const {search} = useLocation()
+	const navigate = useNavigate()
+	const queryParams = new URLSearchParams(search)
+	const selectedTab = (queryParams.get('tab') as SelectedTab) || 'storage'
 
 	const setSelectedTab = (tab: SelectedTab) => {
-		queryParams.set('tab', tab);
-		navigate({ search: queryParams.toString() });
-	};
+		queryParams.set('tab', tab)
+		navigate({search: queryParams.toString()})
+	}
 
 	if (isSmall) {
 		return (
@@ -102,9 +102,10 @@ function LiveUsageSection({title, children}: {title: string; children: React.Rea
 }
 
 function StorageSection() {
-	const {isLoading, value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull, system, apps} = useDiskForUi({
-		poll: true,
-	})
+	const {isLoading, value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull, system, downloads, apps} =
+		useDiskForUi({
+			poll: true,
+		})
 
 	return (
 		<>
@@ -121,7 +122,7 @@ function StorageSection() {
 				}
 			/>
 			{isLoading && <AppListSkeleton />}
-			<AppList system={system} apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
+			<AppList system={system} downloads={downloads} apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
 		</>
 	)
 }
@@ -199,10 +200,12 @@ function ErrorMessage({children}: {children?: ReactNode}) {
 
 function AppList({
 	system,
+	downloads,
 	apps,
 	formatValue,
 }: {
 	system?: number
+	downloads?: number
 	apps?: {id: string; used: number}[]
 	formatValue: (value: number) => string
 }) {
@@ -218,6 +221,13 @@ function AppList({
 				title={systemAppsKeyed.UMBREL_system.name}
 				value={system === undefined ? LOADING_DASH : formatValue(system)}
 			/>
+			{downloads !== undefined && (
+				<AppListRow
+					icon={systemAppsKeyed.UMBREL_downloads.icon}
+					title={systemAppsKeyed.UMBREL_downloads.name}
+					value={system === undefined ? LOADING_DASH : formatValue(system)}
+				/>
+			)}
 			{apps?.map(({id, used}) => (
 				<AppListRow
 					key={id}
@@ -241,10 +251,10 @@ export function AppListSkeleton() {
 
 const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
 
-function AppListRow({icon, title, value}: {icon?: string; title: string; value: string}) {
+function AppListRow({icon, title, value, disabled}: {icon?: string; title: string; value: string; disabled?: boolean}) {
 	return (
-		<div className='flex items-center gap-2 p-3'>
-			<AppIcon src={icon} size={25} className='rounded-5 shadow-md' />
+		<div className={cn('flex items-center gap-2 p-3', disabled && 'opacity-50')}>
+			<AppIcon src={icon} size={25} className={cn('rounded-5 shadow-md', disabled && 'grayscale')} />
 			<span className='flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
 			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
 		</div>

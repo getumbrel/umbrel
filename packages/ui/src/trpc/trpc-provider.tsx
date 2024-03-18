@@ -1,19 +1,17 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
-import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 import {useState} from 'react'
 
+import {MS_PER_MINUTE} from '@/utils/date-time'
 import {IS_DEV} from '@/utils/misc'
 
 import {LoadingIndicator} from './loading-indicator'
 import {links, trpcReact} from './trpc'
 
 export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
-	// https://tanstack.com/query/latest/docs/react/guides/important-defaults
-	// Adding long staleTime to avoid unnecessary re-fetching
 	const [queryClient] = useState(
 		() =>
 			new QueryClient({
-				defaultOptions: {queries: {staleTime: 5000}},
+				defaultOptions: {queries: {staleTime: MS_PER_MINUTE}},
 			}),
 	)
 
@@ -23,7 +21,6 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 		<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
 			<QueryClientProvider client={queryClient}>
 				{children}
-				{IS_DEV && <ReactQueryDevtools />}
 				{IS_DEV && <LoadingIndicator />}
 			</QueryClientProvider>
 		</trpcReact.Provider>
