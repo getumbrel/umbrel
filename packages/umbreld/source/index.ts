@@ -38,7 +38,8 @@ export type UmbreldOptions = {
 }
 
 export default class Umbreld {
-	version = packageJson.version
+	version: string = packageJson.version
+	versionName: string = packageJson.versionName
 	dataDirectory: string
 	port: number
 	logLevel: LogLevel

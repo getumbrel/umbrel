@@ -164,8 +164,12 @@ export async function detectDevice() {
 	model = sku
 	let device = productName // TODO: Maybe format this better in the future.
 
+	// Used for update server
+	let deviceId = 'unknown'
+
 	if (model === 'U130120') device = 'Umbrel Home (2023)'
 	if (model === 'U130121') device = 'Umbrel Home (2024)'
+	if (productName === 'Umbrel Home') deviceId = model
 
 	// I haven't been able to find another way to reliably detect Pi hardware. Most existing
 	// solutions don't actually detect Pi hardware but just detect Pi OS which we don't match.
@@ -178,8 +182,14 @@ export async function detectDevice() {
 			manufacturer = 'Raspberry Pi'
 			productName = 'Raspberry Pi'
 			model = version
-			if (cpuInfo.includes('Raspberry Pi 5 ')) device = 'Raspberry Pi 5'
-			if (cpuInfo.includes('Raspberry Pi 4 ')) device = 'Raspberry Pi 4'
+			if (cpuInfo.includes('Raspberry Pi 5 ')) {
+				device = 'Raspberry Pi 5'
+				deviceId = 'pi-5'
+			}
+			if (cpuInfo.includes('Raspberry Pi 4 ')) {
+				device = 'Raspberry Pi 4'
+				deviceId = 'pi-4'
+			}
 		}
 	} catch (error) {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
@@ -191,5 +201,9 @@ export async function detectDevice() {
 		serial = ''
 	}
 
-	return {device, productName, manufacturer, model, serial, uuid}
+	return {deviceId, device, productName, manufacturer, model, serial, uuid}
+}
+
+export async function isUmbrelOS() {
+	return fse.exists('/umbrelOS')
 }

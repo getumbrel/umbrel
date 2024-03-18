@@ -18,6 +18,7 @@ import {
 	reboot,
 	shutdown,
 	detectDevice,
+	isUmbrelOS,
 } from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
@@ -55,22 +56,56 @@ function setUpdateStatus(properties: Partial<UpdateStatus>) {
 }
 
 async function getLatestRelease(umbreld: Umbreld) {
-	const result = await fetch('https://api.umbrel.com/latest-release', {
+	let deviceId = 'unknown'
+	try {
+		deviceId = (await detectDevice()).deviceId
+	} catch (error) {
+		umbreld.logger.error(`Failed to detect device type: ${(error as Error).message}`)
+	}
+
+	let platform = 'unknown'
+	try {
+		if (await isUmbrelOS()) {
+			platform = 'umbrelOS'
+		}
+	} catch (error) {
+		umbreld.logger.error(`Failed to detect platform: ${(error as Error).message}`)
+	}
+
+	const updateUrl = new URL('https://api.umbrel.com/latest-release')
+	// Provide context to the update server about the underlying device and platform
+	// so we can avoid the 1.0 update situation where we need to shim multiple update
+	// mechanisms and error-out updates for unsupported platforms. This also helps
+	// notifying users for critical security updates that are be relevant only to their specific
+	// platform, and avoids notififying users of updates that aren't yet available for their
+	// platform.
+	updateUrl.searchParams.set('version', umbreld.version)
+	updateUrl.searchParams.set('device', deviceId)
+	updateUrl.searchParams.set('platform', platform)
+
+	const result = await fetch(updateUrl, {
 		headers: {'User-Agent': `umbrelOS ${umbreld.version}`},
 	})
 	const data = await result.json()
-	return data as {version: string; releaseNotes: string; updateScript?: string}
+	return data as {version: string; name: string; releaseNotes: string; updateScript?: string}
 }
 
 export default router({
 	online: publicProcedure.query(() => true),
-	version: publicProcedure.query(({ctx}) => ctx.umbreld.version),
+	version: publicProcedure.query(async ({ctx}) => {
+		return {
+			version: ctx.umbreld.version,
+			name: ctx.umbreld.versionName,
+		}
+	}),
 	status: publicProcedure.query(() => systemStatus),
 	updateStatus: privateProcedure.query(() => updateStatus),
 	uptime: privateProcedure.query(() => os.uptime()),
-	latestAvailableVersion: privateProcedure.query(async ({ctx}) => {
-		const {version, releaseNotes} = await getLatestRelease(ctx.umbreld)
-		return {version, releaseNotes}
+	checkUpdate: privateProcedure.query(async ({ctx}) => {
+		let {version, name, releaseNotes} = await getLatestRelease(ctx.umbreld)
+		// v prefix is needed in the tag name for legacy reasons, remove it before comparing to local version
+		const available = version.replace('v', '') !== ctx.umbreld.version
+		return {available, version, name, releaseNotes}
 	}),
 	update: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'updating'

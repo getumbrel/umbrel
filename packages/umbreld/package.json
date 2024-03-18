@@ -2,6 +2,7 @@
 	"name": "umbreld",
 	"type": "module",
 	"version": "1.0.0",
+	"versionName": "umbrelOS 1.0",
 	"files": [
 		"source",
 		"ui",
