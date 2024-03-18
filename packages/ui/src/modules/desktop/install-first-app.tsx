@@ -121,6 +121,7 @@ function SkeletonApp() {
 }
 
 function AppApp({app}: {app: RegistryApp}) {
+	if (!app) return <SkeletonApp />
 	return <App id={app.id} icon={app.icon} appName={app.name} appDescription={app.tagline} />
 }
 
