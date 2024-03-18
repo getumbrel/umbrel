@@ -24,7 +24,7 @@ export const TrpcProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 			<QueryClientProvider client={queryClient}>
 				{children}
 				{IS_DEV && <ReactQueryDevtools />}
-				<LoadingIndicator />
+				{IS_DEV && <LoadingIndicator />}
 			</QueryClientProvider>
 		</trpcReact.Provider>
 	)
