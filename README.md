@@ -1,7 +1,6 @@
+[![umbrelOS](https://github.com/getumbrel/umbrel/assets/10330103/56be7b95-0c24-4dee-ad3a-e5947bc2ee07)](https://umbrel.com/umbrelos)
+
 <p align="center">
-  <a href="https://umbrel.com">
-    <img src="https://i.imgur.com/b8IeGru.jpeg" alt="Logo">
-  </a>
   <h1 align="center">umbrelOS</h1>
   <p align="center">
     A beautiful home server OS for self-hosting
@@ -9,12 +8,11 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
+    Buy an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> or install on:
     <br />
-    Pre order an <a href="https://umbrel.com">Umbrel Home</a> or install on:
-    <br />
-    <a href="https://umbrel.com/#start">Raspberry Pi</a>
+    <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 4</a>
     ·
-    <a href="#installing-umbrel">Ubuntu</a>
+    <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
     ·
     <a href="#installing-umbrel">Debian</a>
     <br />
@@ -35,6 +33,9 @@
 </p>
 
 <br />
+
+[![Watch the umbrelOS 1.0 reveal](https://github.com/getumbrel/umbrel/assets/10330103/0b99b2b5-f090-464d-a865-a2eddb8d85c9)](https://www.youtube.com/watch?v=Q-vmmboobEM)
+
 <br />
 
 <p align="center">
@@ -51,30 +52,22 @@ Just like the cloud, but one that you own and control.
 
 <br />
 
-https://user-images.githubusercontent.com/10330103/191728171-67b7a8b1-d2b0-45f3-aedf-06a5cfa681c7.mp4
-
 <br />
 
 ## Installing umbrelOS
-> umbrelOS is currently in beta and should not be considered secure. See [SECURITY.md](SECURITY.md) for more details.
 
-The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 4](https://download.umbrel.com/umbrel-os.zip). Step-by-step installation intructions can be found [here](https://umbrel.com/#start).
+The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 5](https://download.umbrel.com/release/1.0.0/umbrelos-pi5.img.zip) or [Raspberry Pi 4](https://download.umbrel.com/release/1.0.0/umbrelos-pi4.img.zip). Step-by-step installation instructions can be found [here](https://umbrel.com/umbrelos#install).
 
-Alternatively you can install umbrelOS on any Ubuntu or Debian system (both x86 and arm64) with:
-
-```bash
-curl -L https://umbrel.sh | bash
-```
+Support for devices other than Raspberry Pi 4, Pi 5, and the Umbrel Home is arriving in April 2024.
 
 ## Umbrel App Store
-
-https://user-images.githubusercontent.com/10330103/191728195-f512ff5e-556a-4c61-b13c-8c079806bba2.mp4
 
 <br />
 
 Here are some of the apps available in the Umbrel App Store. For the complete list of apps, visit [apps.umbrel.com](https://apps.umbrel.com/).
 
 #### Bitcoin & Finance
+
 - [Bitcoin Node](https://apps.umbrel.com/app/bitcoin) — Run your personal node powered by Bitcoin Core
 - [Electrs](https://apps.umbrel.com/app/electrs) — A simple and efficient Electrum Server
 - [Mempool](https://apps.umbrel.com/app/mempool) — A self-hosted explorer for the Bitcoin community
@@ -91,7 +84,14 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [ThunderHub](https://apps.umbrel.com/app/thunderhub) — Take full control of your Lightning node
 - [Invoice Ninja](https://apps.umbrel.com/app/invoice-ninja) - We'll help with the invoicing
 
+#### AI
+
+- [LlamaGPT](https://apps.umbrel.com/app/llama-gpt) - Self-hosted, offline ChatGPT-like chatbot powered by Llama 2
+- [ChatBot UI](https://apps.umbrel.com/app/chatbot-ui) - ChatGPT but better
+- [Chatpad AI](https://apps.umbrel.com/app/chatpad-ai) - Premium quality UI for ChatGPT
+
 #### Files & Productivity
+
 - [Calibre Web](https://apps.umbrel.com/app/calibre-web) — A clean web app for your eBooks
 - [Nextcloud](https://apps.umbrel.com/app/nextcloud) — Productivity platform that keeps you in control
 - [Immich](https://apps.umbrel.com/app/immich) - High performance photo and video backup solution
@@ -100,6 +100,7 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Vaultwarden](https://apps.umbrel.com/app/vaultwarden) — Unofficial Bitwarden® compatible server
 
 #### Media
+
 - [Jellyfin](https://apps.umbrel.com/app/jellyfin) — The Free Software Media System
 - [Lidarr](https://apps.umbrel.com/app/lidarr) — Looks and smells like Sonarr but made for music
 - [Plex](https://apps.umbrel.com/app/plex) — Stream Movies & TV Shows
@@ -108,6 +109,7 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Sonarr](https://apps.umbrel.com/app/sonarr) — Smart PVR for newsgroup and bittorrent users
 
 #### Networking
+
 - [Pi-hole](https://apps.umbrel.com/app/pi-hole) — Block ads on your entire network
 - [Tailscale](https://apps.umbrel.com/app/tailscale) — Zero config VPN to access your Umbrel from anywhere
 - [Transmission](https://apps.umbrel.com/app/transmission) — A fast, easy and free BitTorrent client
@@ -116,6 +118,7 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Whoogle Search](https://apps.umbrel.com/app/whoogle-search) — A self-hosted, ad-free, privacy-respecting metasearch engine
 
 #### Social
+
 - [Element](https://apps.umbrel.com/app/element) — A glossy Matrix client compatible with Synapse
 - [Invidious](https://apps.umbrel.com/app/invidious) — Browse YouTube without tracking or ads
 - [LibReddit](https://apps.umbrel.com/app/libreddit) — An alternative private front-end to Reddit
@@ -124,11 +127,13 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Synapse](https://apps.umbrel.com/app/synapse) — Matrix reference homeserver
 
 #### Automation
+
 - [Home Assistant](https://apps.umbrel.com/app/home-assistant) — Home automation that puts local control & privacy first
 - [n8n](https://apps.umbrel.com/app/n8n) - Build complex workflows, really fast
 - [Node-RED](https://apps.umbrel.com/app/node-red-standalone) — Wire together the Internet of Things
 
 #### Developer Tools
+
 - [Code Server](https://apps.umbrel.com/app/code-server) — Run VS Code on your Umbrel
 - [Gitea](https://apps.umbrel.com/app/gitea) — A painless self-hosted Git service
 
@@ -138,20 +143,9 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 
 If you're interested in building an app for umbrelOS or packaging an existing one, please refer to the [Umbrel App Framework documentation](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
 
-
 ## Setting up a development environment
 
-With the release of umbrelOS 0.5, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
-
-
-## Contributing
-
-We welcome and appreciate new contributions.
-
-If you're a developer looking to help but not sure where to begin, check out [these issues](https://github.com/getumbrel/umbrel/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) that have specifically been marked as being friendly to new contributors.
-
-If you're looking for a bigger challenge, before opening a pull request please [create an issue](https://github.com/getumbrel/umbrel/issues/new/choose) or [join our community chat](https://t.me/getumbrel) to get feedback, discuss the best way to tackle the challenge, and to ensure that there's no duplication of work.
-
+With the release of umbrelOS 1.0, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
 
 ## License
 
