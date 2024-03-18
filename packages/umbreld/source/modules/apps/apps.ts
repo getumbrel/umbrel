@@ -146,6 +146,10 @@ export default class Apps {
 
 		// Complete the install process via the app script
 		try {
+			// We quickly try to start the app env before installing the app. In most normal cases
+			// this just quickly returns and does nothing since the app env is already running.
+			// However in the case where the app env is down this ensures we start it again.
+			await appEnvironment(this.#umbreld, 'up')
 			await app.install()
 		} catch (error) {
 			this.logger.error(`Failed to install app ${appId}: ${(error as Error).message}`)
