@@ -11,8 +11,18 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					let {name, version, icon, port, path, widgets, defaultUsername, defaultPassword, deterministicPassword} =
-						await app.readManifest()
+					let {
+						name,
+						version,
+						icon,
+						port,
+						path,
+						widgets,
+						defaultUsername,
+						defaultPassword,
+						deterministicPassword,
+						dependencies,
+					} = await app.readManifest()
 
 					const hiddenService = torEnabled ? await app.readHiddenService() : ''
 					if (deterministicPassword) {
@@ -32,6 +42,7 @@ export default router({
 						},
 						hiddenService,
 						widgets,
+						dependencies,
 					}
 				} catch (error) {
 					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
