@@ -1,4 +1,4 @@
-import {useId} from 'react'
+import {useId, useState} from 'react'
 
 import {listClass, ListRadioItem} from '@/components/ui/list'
 import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
@@ -19,12 +19,17 @@ export function LanguageDrawer() {
 	const title = t('language')
 	const dialogProps = useSettingsDialogProps()
 	const [activeCode, setActiveCode] = useLanguage()
+	const [tempCode, setTempCode] = useState(activeCode)
 
 	const changeLanguage = async (code: SupportedLanguageCode) => {
-		setActiveCode(code)
+		// Using this janky approach with a temp code because we want to show feedback right away
+		// and also close the dialog (which updates the page URL), so the timeout causes the page refresh to happen
+		// at the desired url
+		setTempCode(code)
 		// Delay so user can see the checkmark
 		await sleep(200)
 		dialogProps.onOpenChange(false)
+		setTimeout(() => setActiveCode(code), 200)
 	}
 
 	const radioName = useId()
@@ -43,16 +48,13 @@ export function LanguageDrawer() {
 						<ListRadioItem
 							key={code}
 							name={radioName}
-							checked={activeCode === code}
+							checked={tempCode === code}
 							onSelect={() => changeLanguage(code)}
 						>
 							{name}
 						</ListRadioItem>
 					))}
 				</div>
-
-				{/* Spacing to match figma */}
-				<div className='h-[80px]' />
 				{/* empty `DrawerFooter` adding bottom spacing */}
 				<DrawerFooter></DrawerFooter>
 			</DrawerContent>

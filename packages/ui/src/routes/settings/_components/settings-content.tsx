@@ -1,4 +1,4 @@
-import {useEffect} from 'react'
+import {useEffect, useState} from 'react'
 import {
 	RiExpandRightFill,
 	RiKeyLine,
@@ -25,6 +25,8 @@ import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
+import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
@@ -44,6 +46,7 @@ export function SettingsContent() {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const [languageCode] = useLanguage()
+	const [langOpen, setLangOpen] = useState(false)
 
 	const tor = useTorEnabled()
 	const deviceInfo = useDeviceInfo()
@@ -178,10 +181,9 @@ export function SettingsContent() {
 						</IconButton>
 					</ListRow>
 					{/* TODO: Uncomment and enable after fixing translations  */}
-					{/* <ListRow
+					<ListRow
 						title={t('language')}
 						description={t('language-description')}
-					
 						onClick={() => setLangOpen(true)}
 						isActive={settingsDialog === 'language'}
 					>
@@ -189,7 +191,7 @@ export function SettingsContent() {
 							<LanguageDropdownTrigger />
 							<LanguageDropdownContent />
 						</DropdownMenu>
-					</ListRow> */}
+					</ListRow>
 					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}

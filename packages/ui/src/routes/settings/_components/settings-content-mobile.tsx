@@ -2,6 +2,7 @@ import {
 	Tb2Fa,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
+	TbLanguage,
 	TbPhoto,
 	TbServer,
 	TbTool,
@@ -164,13 +165,12 @@ export function SettingsContentMobile() {
 					description={t('migration-assistant-description')}
 					onClick={() => navigate('migration-assistant')}
 				/>
-				{/* TODO: Uncomment and enable after fixing translations  */}
-				{/* <ListRowMobile
+				<ListRowMobile
 					icon={TbLanguage}
 					title={t('language')}
 					description={t('language-description')}
 					onClick={() => navigate('language')}
-				/> */}
+				/>
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}
