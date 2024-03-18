@@ -95,6 +95,7 @@ function MigrateContent() {
 	})
 
 	const retry = () => {
+		setState('check')
 		canMigrateQ.refetch()
 	}
 	const {isFetching, error} = canMigrateQ
