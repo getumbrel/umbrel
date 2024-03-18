@@ -294,7 +294,7 @@ export default class App {
 
 	async getDiskUsage() {
 		try {
-			return getDirectorySize(this.dataDirectory)
+			return await getDirectorySize(this.dataDirectory)
 		} catch (error) {
 			this.logger.error(`Failed to get disk usage for app ${this.id}: ${(error as Error).message}`)
 			return 0
