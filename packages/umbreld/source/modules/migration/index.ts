@@ -56,6 +56,9 @@ class Migration {
 		if (legacyData.installedApps) await this.umbreld.store.set('apps', legacyData.installedApps)
 		if (legacyData.remoteTorAccess) await this.umbreld.store.set('torEnabled', legacyData.remoteTorAccess)
 
+		// Showcase widgets for migrating users
+		await this.umbreld.store.set('widgets', ['umbrel:memory', 'umbrel:system-stats', 'umbrel:storage'])
+
 		// Ensure we have app repositories pulled otherwise there will be a race condition where
 		// if an app gets started before the repo has completed it's initial pull on startup we'll
 		// get the error `App with ID <appId> not found in any repository `
