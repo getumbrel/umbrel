@@ -28,9 +28,15 @@ export function UninstallConfirmationDialog({
 	const app = appsKeyed?.[appId]
 
 	if (isLoading) return null
-	if (!app) throw new Error(t('app-not-found', {app: appId}))
+	// The app may have been removed from the app store
+	// so we just allow to continue uninstallation
+	// TODO: refactor to check for the app against the
+	// installed apps instead of apps in the app store
+	if (!app) {
+		console.error(`${appId} not found`)
+	}
 
-	const appName = app?.name
+	const appName = app?.name || t('app')
 
 	return (
 		<AlertDialog open={open} onOpenChange={onOpenChange}>
