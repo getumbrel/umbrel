@@ -1,54 +1,37 @@
-// import {useErrorBoundary} from 'react-error-boundary'
-import {useState} from 'react'
+import {useNavigate} from 'react-router-dom'
 
+import {Wallpaper} from '@/providers/wallpaper'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {t} from '@/utils/i18n'
 import {downloadLogs} from '@/utils/logs'
-
-import {CoverMessage} from './cover-message'
+import {t} from '@/utils/i18n'
 
 export function ErrorBoundary() {
-	// const error = useRouteError()
-	const [open, setOpen] = useState(true)
-
-	// TODO: reset doesn't work
-	// const {resetBoundary} = useErrorBoundary()
-	// console.error(error)
+	const navigate = useNavigate()
 
 	return (
-		<CoverMessage>
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-					<DialogHeader>
-						<DialogTitle>{t('something-went-wrong')}</DialogTitle>
-						{/* <DialogDescription>
-							Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo aspernatur in consequatur illum quos non
-							voluptatum quidem, laboriosam natus praesentium soluta, aliquam fugit harum dolore exercitationem saepe
-							nihil ad quia.
-						</DialogDescription> */}
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							size='dialog'
-							variant='primary'
-							onClick={() => {
-								downloadLogs()
-							}}
-						>
-							{t('download-logs')}
-						</Button>
-						<Button
-							size='dialog'
-							onClick={() => {
-								window.location.reload()
-							}}
-						>
-							{t('retry')}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		</CoverMessage>
+		<>
+			<Wallpaper />
+			<AlertDialog open={true}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t('something-went-wrong')}</AlertDialogTitle>
+						<AlertDialogDescription></AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
+						<Button size="dialog" variant="default" onClick={() => downloadLogs()}>{t('download-logs')}</Button>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	)
 }
