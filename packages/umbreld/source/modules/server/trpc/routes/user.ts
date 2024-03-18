@@ -227,8 +227,8 @@ export default router({
 	wallpaper: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
 
-		if (user.wallpaper === undefined) {
-			user.wallpaper = DEFAULT_WALLPAPER
+		if (user?.wallpaper === undefined) {
+			return DEFAULT_WALLPAPER
 		}
 
 		return user.wallpaper
