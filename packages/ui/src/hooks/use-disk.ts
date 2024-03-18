@@ -23,6 +23,7 @@ export function useDisk(options: {poll?: boolean} = {}) {
 		//
 		...transformed,
 		system: diskQ.data?.system,
+		downloads: diskQ.data?.downloads,
 		apps: sort(diskQ.data?.apps ?? [], (a, b) => b.used - a.used),
 		isDiskLow: isDiskLow(transformed?.available),
 		isDiskFull: isDiskFull(transformed?.available),
@@ -30,7 +31,9 @@ export function useDisk(options: {poll?: boolean} = {}) {
 }
 
 export function useDiskForUi(options: {poll?: boolean} = {}) {
-	const {isLoading, used, size, available, isDiskFull, isDiskLow, system, apps} = useDisk({poll: options.poll})
+	const {isLoading, used, size, available, isDiskFull, isDiskLow, system, downloads, apps} = useDisk({
+		poll: options.poll,
+	})
 
 	if (isLoading) {
 		return {
@@ -53,6 +56,7 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 		isDiskLow,
 		isDiskFull,
 		system,
+		downloads,
 		apps,
 	} as const
 }
