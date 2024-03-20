@@ -61,52 +61,6 @@ get_block_device_model () {
   echo "$(echo $vendor) $(echo $model)"
 }
 
-# By default Linux uses the UAS driver for most devices. This causes major
-# stability problems on the Raspberry Pi, not due to issues with UAS, but due
-# to devices running in UAS mode using much more power. The Pi can't reliably
-# provide enough power to the USB port and the entire system experiences
-# extreme instability. By blacklisting all devices from the UAS driver on boot
-# we fall back to the mass-storage driver, which results in decreased
-# performance, but lower power usage, and much better system stability.
-blacklist_uas () {
-  echo "Scanning for USB devices running in UAS mode and switching to usb-storage..."
-  # Loop through each uevent file in the /sys/bus/usb/devices/ directory
-  for uevent_path in /sys/bus/usb/devices/*/uevent; do
-      # Read the DRIVER and PRODUCT fields from the uevent file
-      driver=$(grep ^DRIVER= "$uevent_path" | cut -d '=' -f2)
-      product=$(grep ^PRODUCT= "$uevent_path" | cut -d '=' -f2)
-
-      # Extract the bus directory (parent directory of the uevent file)
-      bus_dir=$(dirname "$uevent_path")
-      bus=$(basename "$bus_dir")
-
-      # Extract device ID in the format needed for the quirks parameter
-      device_id=$(echo "$product" | awk -F/ '{print $1 ":" $2}')
-
-      # Check if the current driver is uas
-      if [ "$driver" = "uas" ]; then
-          echo "Device $device_id ($bus) is using uas. Switching to usb-storage..."
-
-          echo "Unbinding the device from the uas driver"
-          echo "$bus" > /sys/bus/usb/drivers/uas/unbind
-
-          echo "Apply the quirk: $device_id:u"
-          echo -n "$device_id:u" > /sys/module/usb_storage/parameters/quirks
-
-          echo "Binding the device to the usb-storage driver"
-          echo "$bus" > /sys/bus/usb/drivers/usb-storage/bind
-
-          echo "Rescanning the SCSI bus"
-          echo "- - -" > /sys/class/scsi_host/host0/scan
-
-          echo "Switch completed for $device_id."
-      else
-          echo "Device $device_id ($bus) is not using uas. No action needed."
-      fi
-  done
-}
-
-
 is_partition_ext4 () {
   partition_path="${1}"
   # We need to run sync here to make sure the filesystem is reflecting the
@@ -207,37 +161,6 @@ main () {
   partition_path="${block_device_path}1"
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
-
-  echo "Checking if partition exsts before blacklisting USB device IDs against UAS driver..."
-  partition_should_exist="false"
-  if [[ -e "${partition_path}" ]]; then
-    echo "Partition exists"
-    partition_should_exist="true"
-  fi
-
-  echo "Blacklisting USB device IDs against UAS driver..."
-  blacklist_uas
-
-  echo "Checking USB devices are back..."
-  retry_for_usb_devices=1
-  while [[ ! -e "${block_device_path}" ]]; do
-    retry_for_usb_devices=$(( $retry_for_usb_devices + 1 ))
-    if [[ $retry_for_usb_devices -gt 10 ]]; then
-      echo "USB devices weren't registered after 10 tries..."
-      echo "Exiting mount script without doing anything"
-      exit 1
-    fi
-
-    echo "Waiting for USB devices..."
-    sleep 1
-  done
-
-  echo "Checking if partition exists after blacklisting USB device IDs against UAS driver..."
-  if [[ $partition_should_exist = "true" ]] && [[ ! -e "${partition_path}" ]]; then
-    echo "Partition didn't return after USB rebinding"
-    echo "Exiting mount script without doing anything"
-    exit 1
-  fi
 
   echo "Checking if the device is ext4..."
 
