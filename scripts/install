@@ -15,7 +15,7 @@ cat << "EOF"
 
 ------------------------------------------------------
 |                                                    |
-|  umbrelOS 1.0 is currently only compatable with    |
+|  umbrelOS 1.0 is currently only compatible with    |
 |  Umbrel Home, Raspberry Pi 4 and Raspberry Pi 5.   |
 |  Support for more devices is coming in April 2024. |
 |                                                    |
