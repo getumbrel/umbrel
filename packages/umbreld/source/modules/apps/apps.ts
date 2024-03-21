@@ -82,6 +82,14 @@ export default class Apps {
 		// get confused.
 		for (const app of this.instances) app.state = 'starting'
 
+		// Attempt to cleanup old network if possible
+		// This is needed because sometimes 0.5.4 installs didn't clean up the network
+		// properly on shutdown on it causes errors on the first boot of 1.0
+		try {
+			this.logger.log('Cleaning up old docker network')
+			await $({stdio: 'inherit'})`docker network rm umbrel_main_network`
+		} catch (error) {}
+
 		// Attempt to pre-load local Docker images
 		try {
 			// Loop over iamges in /images
