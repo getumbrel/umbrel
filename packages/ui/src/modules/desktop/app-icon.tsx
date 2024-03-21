@@ -118,7 +118,7 @@ export function AppIcon({
 	)
 }
 
-function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
+export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?: string}) {
 	switch (state) {
 		case 'not-installed':
 			return t('app.installing')

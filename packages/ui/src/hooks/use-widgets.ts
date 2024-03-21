@@ -3,7 +3,7 @@ import {useState} from 'react'
 
 import {MAX_WIDGETS} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
-import {trpcReact} from '@/trpc/trpc'
+import {AppState, trpcReact} from '@/trpc/trpc'
 
 import {liveUsageWidgets} from './../modules/widgets/shared/constants'
 
@@ -17,11 +17,15 @@ export function useWidgets() {
 
 	const availableUserAppWidgets = apps.userApps
 		? apps.userApps
-				.filter((app) => app.state === 'ready')
+				// Don't want to allow users to select widgets while installing
+				// But after done installing, the app might not be reachable, but we still want to
+				// show its widgets.
+				.filter((app) => app.state !== 'installing')
 				.map((app) => ({
 					appId: app.id,
 					icon: app.icon,
 					name: app.name,
+					state: app.state,
 					widgets: app.widgets?.map((w) => ({...w, id: app.id + ':' + w.id})) ?? [],
 				}))
 		: []
@@ -34,6 +38,7 @@ export function useWidgets() {
 			appId: 'live-usage',
 			icon: systemAppsKeyed['UMBREL_live-usage'].icon,
 			name: systemAppsKeyed['UMBREL_live-usage'].name,
+			state: 'ready' as const satisfies AppState,
 			widgets: liveUsageWidgets,
 		},
 		// Add others here
@@ -82,6 +87,7 @@ export function useWidgets() {
 					id: app.appId,
 					icon: app.icon,
 					name: app.name,
+					state: app.state,
 				},
 			}
 		})
