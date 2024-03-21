@@ -102,6 +102,7 @@ export default class Umbreld {
 			// Only run on Raspberry Pi 4
 			const {deviceId} = await detectDevice()
 			if (deviceId !== 'pi-4') return
+			this.logger.log('Checking for UAS devices to blacklist')
 			const blacklist = []
 			// Get all USB device uevent files
 			const usbDeviceUeventFiles = await globby('/sys/bus/usb/devices/*/uevent')
@@ -120,6 +121,7 @@ export default class Umbreld {
 
 			// Don't reboot if we don't have any UAS devices
 			if (blacklist.length === 0) {
+				this.logger.log('No UAS devices found!')
 				await fse.remove(justDidRebootFile)
 				return
 			}
