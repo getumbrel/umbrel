@@ -25,6 +25,32 @@ export default class Apps {
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
 	}
 
+	// This is a really brutal and heavy handed way of cleaning up old Docker state.
+	// We should only do this sparingly. It's needed if an old version of Docker
+	// didn't shutdown cleanly and then we update to a new version of Docker.
+	// The next version of Docker can have issues starting containers if the old
+	// containers/networks are still hanging around. We had this issue because sometimes
+	// 0.5.4 installs didn't clean up properly on shutdown and it causes critical errors
+	// bringing up containers in 1.0.
+	async cleanDockerState() {
+		try {
+			const containerIds = (await $`docker ps -aq`).stdout.split('\n').filter(Boolean)
+			if (containerIds.length) {
+				this.logger.log('Cleaning up old containers...')
+				await $({stdio: 'inherit'})`docker stop --time 10 ${containerIds}`
+				await $({stdio: 'inherit'})`docker rm ${containerIds}`
+			}
+		} catch (error) {
+			this.logger.error(`Failed to clean containers: ${(error as Error).message}`)
+		}
+		try {
+			this.logger.log('Cleaning up old networks...')
+			await $({stdio: 'inherit'})`docker network prune -f`
+		} catch (error) {
+			this.logger.error(`Failed to clean networks: ${(error as Error).message}`)
+		}
+	}
+
 	async start() {
 		// Set apps to empty array on first start
 		if ((await this.#umbreld.store.get('apps')) === undefined) {
@@ -82,14 +108,6 @@ export default class Apps {
 		// get confused.
 		for (const app of this.instances) app.state = 'starting'
 
-		// Attempt to cleanup old network if possible
-		// This is needed because sometimes 0.5.4 installs didn't clean up the network
-		// properly on shutdown on it causes errors on the first boot of 1.0
-		try {
-			this.logger.log('Cleaning up old docker network')
-			await $({stdio: 'inherit'})`docker network rm umbrel_main_network`
-		} catch (error) {}
-
 		// Attempt to pre-load local Docker images
 		try {
 			// Loop over iamges in /images
@@ -110,13 +128,20 @@ export default class Apps {
 
 		// Start app environment
 		try {
+			try {
+				await appEnvironment(this.#umbreld, 'up')
+			} catch (error) {
+				this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
+				this.logger.log('Attempting to clean Docker state before retrying...')
+				await this.cleanDockerState()
+			}
 			await pRetry(() => appEnvironment(this.#umbreld, 'up'), {
 				onFailedAttempt: (error) => {
 					this.logger.error(
 						`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
 					)
 				},
-				retries: 3, // This will do exponential backoff for 1s, 2s, 4s
+				retries: 2, // This will do exponential backoff for 1s, 2s
 			})
 		} catch (error) {
 			// Log the error but continue to try to bring apps up to make it a less bad failure
