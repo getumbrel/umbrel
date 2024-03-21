@@ -1,3 +1,5 @@
+import pRetry from 'p-retry'
+
 import type Umbreld from '../../index.js'
 import runEvery from '../utilities/run-every.js'
 import AppRepository from './app-repository.js'
@@ -26,6 +28,14 @@ export default class AppStore {
 
 		// Initialise repositories
 		this.logger.log(`Initialising repositories...`)
+		await pRetry(() => this.update(), {
+			onFailedAttempt: (error) => {
+				this.logger.error(
+					`Attempt ${error.attemptNumber} initialising repositories failed. There are ${error.retriesLeft} retries left.`,
+				)
+			},
+			retries: 5, // This will do exponential backoff for 1s, 2s, 4s, 8s, 16s
+		})
 		await this.update()
 		this.logger.log(`Repositories initialised!`)
 

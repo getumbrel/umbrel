@@ -76,6 +76,20 @@ export default class Apps {
 		const appIds = await this.#umbreld.store.get('apps')
 		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 
+		// Force the app state to starting so users don't get confused.
+		// They aren't actually starting yet, we need to make sure the app env is up first.
+		// But if that takes a long time users see all their apps listed as not running and
+		// get confused.
+		for (const app of this.instances) app.state = 'starting'
+
+		// Attempt to cleanup old network if possible
+		// This is needed because sometimes 0.5.4 installs didn't clean up the network
+		// properly on shutdown on it causes errors on the first boot of 1.0
+		try {
+			this.logger.log('Cleaning up old docker network')
+			await $({stdio: 'inherit'})`docker network rm umbrel_main_network`
+		} catch (error) {}
+
 		// Attempt to pre-load local Docker images
 		try {
 			// Loop over iamges in /images
