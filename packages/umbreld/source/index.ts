@@ -165,6 +165,7 @@ export default class Umbreld {
 			await commitOsPartition(this)
 			await fse.writeFile(justDidRebootFile, cmdline)
 			await reboot()
+			return true
 		} catch (error) {
 			this.logger.error(`Failed to blacklist UAS driver: ${(error as Error).message}`)
 		}
@@ -185,7 +186,8 @@ export default class Umbreld {
 		this.setupPiCpuGoverner()
 
 		// Blacklist UAS driver for Raspberry Pi 4
-		await this.blacklistUASDriver()
+		const isRebooting = await this.blacklistUASDriver()
+		if (isRebooting === true) return // Don't let the server start if we're rebooting
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
