@@ -1,4 +1,5 @@
 import path from 'node:path'
+import {setTimeout} from 'node:timers/promises'
 
 import {globby} from 'globby'
 import fse from 'fs-extra'
@@ -171,6 +172,35 @@ export default class Umbreld {
 		}
 	}
 
+	// Wait for system time to be synced for up to the number of seconds passed in.
+	// We need this on Raspberry Pi since it doesn' have a persistent real time clock.
+	// It avoids race conditions where umbrelOS starts making network requests before
+	// the local time is set which then fail with SSL cert errors.
+	async waitForSystemTime(timeout: number) {
+		try {
+			// Only run on Pi
+			const {deviceId} = await detectDevice()
+			if (!['pi-4', 'pi-5'].includes(deviceId)) return
+
+			this.logger.log('Checking if system time is synced before continuing...')
+			let tries = 0
+			while (tries < timeout) {
+				tries++
+				const timeStatus = await $`timedatectl status`
+				const isSynced = timeStatus.stdout.includes('System clock synchronized: yes')
+				if (isSynced) {
+					this.logger.log('System time is synced. Continuing...')
+					return
+				}
+				this.logger.log('System time is not currently synced, waiting...')
+				await setTimeout(1000)
+			}
+			this.logger.error('System time is not synced but timeout was reached. Continuing...')
+		} catch (error) {
+			this.logger.error(`Failed to check system time: ${(error as Error).message}`)
+		}
+	}
+
 	async start() {
 		this.logger.log(`☂️  Starting Umbrel v${this.version}`)
 		this.logger.log()
@@ -193,6 +223,9 @@ export default class Umbreld {
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
+
+		// Wait for system time to be synced for up to 10 seconds before proceeding
+		await this.waitForSystemTime(10)
 
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
