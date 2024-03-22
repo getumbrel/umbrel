@@ -28,7 +28,6 @@ apt-get install -y raspberrypi-archive-keyring
 apt-get install -y \
     initramfs-tools \
     raspi-firmware \
-    firmware-brcm80211 \
     linux-image-rpi-v8 \
     linux-headers-rpi-v8 \
     linux-image-rpi-2712 \
