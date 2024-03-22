@@ -14,7 +14,7 @@ import {Button} from '@/shadcn-components/ui/button'
 import {t} from '@/utils/i18n'
 import {downloadLogs} from '@/utils/logs'
 
-export function ErrorBoundary() {
+export function ErrorBoundaryFallback() {
 	const navigate = useNavigate()
 
 	return (

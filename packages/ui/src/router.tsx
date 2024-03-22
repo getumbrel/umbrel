@@ -4,7 +4,7 @@ import {createBrowserRouter, Outlet} from 'react-router-dom'
 import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 
-import {ErrorBoundary} from './components/ui/error-boundary'
+import {ErrorBoundaryFallback} from './components/ui/error-boundary-fallback'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -65,7 +65,7 @@ export const router = createBrowserRouter([
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
 		),
-		errorElement: <ErrorBoundary />,
+		errorElement: <ErrorBoundaryFallback />,
 		children: [
 			{
 				path: 'edit-widgets',
@@ -131,7 +131,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: BareLayout,
-		errorElement: <ErrorBoundary />,
+		errorElement: <ErrorBoundaryFallback />,
 		children: [
 			{
 				path: 'login',
@@ -195,7 +195,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: Demo,
-		errorElement: <ErrorBoundary />,
+		errorElement: <ErrorBoundaryFallback />,
 		children: [
 			{
 				path: 'one',
@@ -218,7 +218,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: StoriesLayout,
-		errorElement: <ErrorBoundary />,
+		errorElement: <ErrorBoundaryFallback />,
 		children: [
 			{
 				path: 'stories',
