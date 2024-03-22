@@ -212,12 +212,12 @@ export default class Umbreld {
 		// If we've successfully booted then commit to the current OS partition
 		commitOsPartition(this)
 
-		// Set ondemand cpu governer for Raspberry Pi
-		this.setupPiCpuGoverner()
-
 		// Blacklist UAS driver for Raspberry Pi 4
 		const isRebooting = await this.blacklistUASDriver()
 		if (isRebooting === true) return // Don't let the server start if we're rebooting
+
+		// Set ondemand cpu governer for Raspberry Pi
+		this.setupPiCpuGoverner()
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
