@@ -1,8 +1,6 @@
 import path from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
-import {globby} from 'globby'
-import fse from 'fs-extra'
 import {$} from 'execa'
 
 // @ts-expect-error I can't get tsconfig setup in a way that allows this without breaking other things.
@@ -89,89 +87,6 @@ export default class Umbreld {
 		}
 	}
 
-	// By default Linux uses the UAS driver for most devices. This causes major
-	// stability problems on the Raspberry Pi 4, not due to issues with UAS, but due
-	// to devices running in UAS mode using much more power. The Pi can't reliably
-	// provide enough power to the USB port and the entire system experiences
-	// extreme instability. By blacklisting all devices from the UAS driver on first
-	// and then rebooting we fall back to the mass-storage driver, which results in
-	// decreased performance, but lower power usage, and much better system stability.
-	// TODO: Move this to a system module
-	async blacklistUASDriver() {
-		try {
-			const justDidRebootFile = '/umbrel-just-did-reboot'
-			// Only run on Raspberry Pi 4
-			const {deviceId} = await detectDevice()
-			if (deviceId !== 'pi-4') return
-			this.logger.log('Checking for UAS devices to blacklist')
-			const blacklist = []
-			// Get all USB device uevent files
-			const usbDeviceUeventFiles = await globby('/sys/bus/usb/devices/*/uevent')
-			for (const ueventFile of usbDeviceUeventFiles) {
-				const uevent = await fse.readFile(ueventFile, 'utf8')
-				if (!uevent.includes('DRIVER=uas')) continue
-				const [vendorId, productId] = uevent
-					.split('\n')
-					.find((line) => line?.startsWith('PRODUCT='))
-					.replace('PRODUCT=', '')
-					.split('/')
-				const deviceId = `${vendorId}:${productId}`
-				this.logger.log(`UAS device found ${deviceId}`)
-				blacklist.push(deviceId)
-			}
-
-			// Don't reboot if we don't have any UAS devices
-			if (blacklist.length === 0) {
-				this.logger.log('No UAS devices found!')
-				await fse.remove(justDidRebootFile)
-				return
-			}
-
-			// Check we're not in a boot loop
-			if (await fse.pathExists(justDidRebootFile)) {
-				this.logger.log('We just rebooted, we could be in a bootloop, skipping reboot')
-				return
-			}
-
-			// Read current cmdline
-			this.logger.log(`Applying quirks to cmdline.txt`)
-			let cmdline = await fse.readFile('/boot/cmdline.txt', 'utf8')
-
-			// Don't apply quirks if they're already applied
-			const quirksAlreadyApplied = blacklist.every((deviceId) => cmdline.includes(`${deviceId}:u`))
-			if (quirksAlreadyApplied) {
-				this.logger.log('UAS quirks already applied, skipping')
-				return
-			}
-
-			// Remove any current quirks
-			cmdline = cmdline
-				.trim()
-				.split(' ')
-				.filter((flag) => !flag.startsWith('usb-storage.quirks='))
-				.join(' ')
-			// Add new quirks
-			const quirks = blacklist.map((deviceId) => `${deviceId}:u`).join(',')
-			cmdline = `${cmdline} usb-storage.quirks=${quirks}`
-
-			// Remount /boot as writable
-			await $`mount -o remount,rw /boot`
-			// Write new cmdline
-			await fse.writeFile('/boot/cmdline.txt', cmdline)
-
-			// Reboot the system
-			this.logger.log(`Rebooting`)
-			// We need to make sure we commit before rebooting otherwise
-			// OTA updates will get instantly rolled back.
-			await commitOsPartition(this)
-			await fse.writeFile(justDidRebootFile, cmdline)
-			await reboot()
-			return true
-		} catch (error) {
-			this.logger.error(`Failed to blacklist UAS driver: ${(error as Error).message}`)
-		}
-	}
-
 	// Wait for system time to be synced for up to the number of seconds passed in.
 	// We need this on Raspberry Pi since it doesn' have a persistent real time clock.
 	// It avoids race conditions where umbrelOS starts making network requests before
@@ -211,10 +126,6 @@ export default class Umbreld {
 
 		// If we've successfully booted then commit to the current OS partition
 		commitOsPartition(this)
-
-		// Blacklist UAS driver for Raspberry Pi 4
-		const isRebooting = await this.blacklistUASDriver()
-		if (isRebooting === true) return // Don't let the server start if we're rebooting
 
 		// Set ondemand cpu governer for Raspberry Pi
 		this.setupPiCpuGoverner()

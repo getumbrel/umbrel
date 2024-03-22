@@ -155,6 +155,15 @@ main () {
     exit 1
   fi
 
+  # Check if device is running with uas driver, if so balcklist it and reboot
+  echo "Checking if we need to blacklist UAS"
+  blacklist_uas_output=$(umbreld blacklist-uas || true)
+  # Check output includes text "mount-script-halt" which means we are rebooting and should not mount
+  if [[ "${blacklist_uas_output}" == *"mount-script-halt"* ]]; then
+    echo "UAS was blacklisted and device is rebooting, exiting"
+    return
+  fi
+
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
   block_device_path="/dev/${block_device}"

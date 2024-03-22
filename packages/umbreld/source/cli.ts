@@ -6,12 +6,19 @@ import camelcaseKeys from 'camelcase-keys'
 
 import {cliClient} from './modules/cli-client.js'
 import provision from './modules/provision/provision.js'
+import blacklistUas from './modules/blacklist-uas/blacklist-uas.js'
 
 import Umbreld, {type UmbreldOptions} from './index.js'
 
 // Installs required OS dependencies
 if (process.argv.includes('provision-os')) {
 	await provision()
+	process.exit(0)
+}
+
+// Blacklists uas drivers early in the boot process
+if (process.argv.includes('blacklist-uas')) {
+	await blacklistUas()
 	process.exit(0)
 }
 
