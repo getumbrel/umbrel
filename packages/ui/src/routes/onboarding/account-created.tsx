@@ -1,12 +1,12 @@
 import {useEffect, useRef} from 'react'
-import {Link} from 'react-router-dom'
 import {Trans} from 'react-i18next/TransWithoutContext'
+import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
 import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
-import {linkClass} from '@/utils/element-classes'
 // import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
+import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 
 export default function AccountCreated() {
@@ -28,7 +28,6 @@ export default function AccountCreated() {
 	return (
 		<Layout
 			title={t('onboarding.account-created.youre-all-set-name', {name})}
-			headTitle={t('onboarding.account-created.page-title')}
 			subTitle={t('onboarding.account-created.subtitle')}
 			subTitleMaxWidth={470}
 			footer={
@@ -42,7 +41,13 @@ export default function AccountCreated() {
 				</div>
 			}
 		>
-			<Link data-testid='to-desktop' to='/' unstable_viewTransition className={`${buttonClass} mb-2`} ref={continueLinkRef}>
+			<Link
+				data-testid='to-desktop'
+				to='/'
+				unstable_viewTransition
+				className={`${buttonClass} mb-2`}
+				ref={continueLinkRef}
+			>
 				{t('onboarding.account-created.next')}
 			</Link>
 			<p className='text-center text-xs font-medium opacity-70'>

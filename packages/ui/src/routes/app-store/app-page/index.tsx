@@ -2,14 +2,12 @@ import {useParams} from 'react-router-dom'
 
 import {InstallButtonConnected} from '@/components/install-button-connected'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommendations'
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
 import {TopHeader} from '@/modules/app-store/app-page/top-header'
 import {useApps} from '@/providers/apps'
 import {useAvailableApp, useAvailableApps} from '@/providers/available-apps'
-import {t} from '@/utils/i18n'
 
 export default function AppPage() {
 	const {appId} = useParams()
@@ -27,7 +25,6 @@ export default function AppPage() {
 
 	return (
 		<div className={appPageWrapperClass}>
-			<UmbrelHeadTitle>{app?.name || t('unknown-app')}</UmbrelHeadTitle>
 			<TopHeader
 				app={app}
 				childrenRight={

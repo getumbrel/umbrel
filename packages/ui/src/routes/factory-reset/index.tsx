@@ -8,12 +8,12 @@ import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-import {ReviewData} from './_components/review-data'
 import {ConfirmWithPassword} from './_components/confirm-with-password'
-import {Resetting} from './_components/resetting'
 import {Failed} from './_components/failed'
-import {Success} from './_components/success'
 import {backPath} from './_components/misc'
+import {Resetting} from './_components/resetting'
+import {ReviewData} from './_components/review-data'
+import {Success} from './_components/success'
 
 export default function FactoryReset() {
 	// TODO: if the route is `/failed` and we don't have a password, redirect to `/confirm`

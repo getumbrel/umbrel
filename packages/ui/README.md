@@ -1,59 +1,5 @@
 # umbrelOS UI
 
-## Getting umbrelOS running locally
-
-### Prerequisites
-
-`npm` and `pnpm` is installed.
-
-First install `pnpm`. One way is via `brew install pnpm` on mac, assuming you have homebrew installed.
-
-### Clone the repo and checkout the `mark` branch
-
-`git clone -b mark git@github.com:getumbrel/private-umbrel.git`
-
-### Go into the repo
-
-`cd private-umbrel`
-
-### Get frontend running
-
-1. `cd packages/ui`
-1. `pnpm install`
-1. `pnpm run dev`
-
-### Get backend running
-
-1. Get back to the root of the repo and `cd` into umbreld: `cd packages/umbreld`
-1. Make the dir for the data: `mkdir data`
-1. `npm install`
-1. `npm run dev`
-
-## Sharing semi-publicly (on Mac)
-
-1. [Get the CLI](https://tailscale.com/kb/1080/cli/#using-the-cli)
-2. Add this to your `.zshrc` or `.bashrc`:
-
-```sh
-alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
-```
-
-3. Run `tailscale serve`:
-
-```sh
-tailscale serve http:3000 / http://127.0.0.1:3000
-```
-
-4. For production:
-
-```sh
-tailscale serve http:4000 / http://127.0.0.1:4000
-```
-
-Running on HTTP for now. HTTPS would be a bit more complicated. The prod build is especially important for getting a true sense of performance on mobile since the dev build will have extra cruft.
-
----
-
 # Decisions / common patterns
 
 ## `keyBy`

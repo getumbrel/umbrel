@@ -4,7 +4,6 @@ import {Link, useLocation} from 'react-router-dom'
 import UmbrelLogo from '@/assets/umbrel-logo'
 import {AppIcon} from '@/components/app-icon'
 import {ButtonLink} from '@/components/ui/button-link'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {useAvailableApps} from '@/providers/available-apps'
 import {cn} from '@/shadcn-lib/utils'
@@ -25,7 +24,6 @@ export function InstallFirstApp() {
 			<div className='pt-14' />
 			<UmbrelLogo />
 			<div className='pt-5' />
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<h1
 				className='-translate-y-2 text-center text-3xl font-bold leading-tight -tracking-2 md:text-48'
 				style={{

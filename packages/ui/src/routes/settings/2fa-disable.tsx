@@ -1,5 +1,4 @@
 import {PinInput} from '@/components/ui/pin-input'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -21,7 +20,6 @@ export default function TwoFactorDisableDialog() {
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
 					<DrawerHeader>
-						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DrawerTitle>{title}</DrawerTitle>
 					</DrawerHeader>
 					<Inner onCodeCheck={disable} />
@@ -34,7 +32,6 @@ export default function TwoFactorDisableDialog() {
 		<Dialog {...dialogProps}>
 			<DialogContent className='flex flex-col items-center gap-5'>
 				<DialogHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DialogTitle>{title}</DialogTitle>
 				</DialogHeader>
 				<Inner onCodeCheck={disable} />

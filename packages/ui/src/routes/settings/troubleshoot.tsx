@@ -14,7 +14,6 @@ import {
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useApps, useUserApp} from '@/providers/apps'
@@ -80,7 +79,6 @@ function Content() {
 	} else {
 		return (
 			<ImmersiveDialogContent short>
-				<UmbrelHeadTitle>{initialTitle}</UmbrelHeadTitle>
 				<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{initialTitle}</h1>
 				<div className='flex flex-col gap-2.5'>
 					<button className={radioButtonClass} onClick={() => setTroubleshootType('system')}>
@@ -187,7 +185,6 @@ function TroubleshootTitleBackButton({onClick}: {onClick: () => void}) {
 			className='flex items-center justify-center rounded-full pr-2 decoration-white/20 underline-offset-4 outline-none focus-visible:underline'
 		>
 			<TbChevronLeft className='size-6 opacity-50' />
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<h1 className={cn(immersiveDialogTitleClass, 'text-19')}>{title}</h1>
 		</button>
 	)

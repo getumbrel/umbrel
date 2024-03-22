@@ -3,7 +3,6 @@ import {JSONTree} from 'react-json-tree'
 import {Link} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H3} from '@/layouts/stories'
 import {RouterOutput, trpcReact, trpcUrl} from '@/trpc/trpc'
 import {urlJoin} from '@/utils/misc'
@@ -13,7 +12,6 @@ const trpcEndpointUrl = urlJoin(trpcUrl, 'debug.sayHi')
 export default function Trpc() {
 	return (
 		<div>
-			<UmbrelHeadTitle>tRPC</UmbrelHeadTitle>
 			<Link to={trpcEndpointUrl} className='underline'>
 				Link to test DEBUG result
 			</Link>

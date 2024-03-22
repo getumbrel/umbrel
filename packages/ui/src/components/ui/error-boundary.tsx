@@ -11,8 +11,8 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
-import {downloadLogs} from '@/utils/logs'
 import {t} from '@/utils/i18n'
+import {downloadLogs} from '@/utils/logs'
 
 export function ErrorBoundary() {
 	const navigate = useNavigate()
@@ -28,8 +28,12 @@ export function ErrorBoundary() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
-						<Button size="dialog" variant="default" onClick={() => navigate('/settings')}>Go to Settings</Button>
-						<Button size="dialog" variant="default" onClick={() => downloadLogs()}>{t('download-logs')}</Button>
+						<Button size='dialog' variant='default' onClick={() => navigate('/settings')}>
+							Go to Settings
+						</Button>
+						<Button size='dialog' variant='default' onClick={() => downloadLogs()}>
+							{t('download-logs')}
+						</Button>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

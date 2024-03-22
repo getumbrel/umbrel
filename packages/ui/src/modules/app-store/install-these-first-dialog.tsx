@@ -19,19 +19,17 @@ import {
 import {AppState, installedStates} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-import {UMBREL_APP_STORE_ID} from './constants'
-
 export function InstallTheseFirstDialog({
 	open,
 	onOpenChange,
 	appId,
-	registryId = UMBREL_APP_STORE_ID,
+
 	dependencies,
 }: {
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	appId: string
-	registryId?: string
+
 	dependencies: string[]
 }) {
 	const availableApps = useAllAvailableApps()

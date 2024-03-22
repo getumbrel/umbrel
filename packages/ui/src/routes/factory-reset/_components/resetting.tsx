@@ -3,14 +3,11 @@ import {useInterval} from 'react-use'
 import {isString} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-
-import {factoryResetTitle} from './misc'
 
 export function Resetting() {
 	const navigate = useNavigate()
@@ -44,7 +41,6 @@ export function Resetting() {
 
 	return (
 		<div className={bareContainerClass}>
-			<UmbrelHeadTitle>{factoryResetTitle(message)}</UmbrelHeadTitle>
 			<BareLogoTitle>{t('factory-reset')}</BareLogoTitle>
 			<BareSpacer />
 			<Progress value={progress}>{message}</Progress>

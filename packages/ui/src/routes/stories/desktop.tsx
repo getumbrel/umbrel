@@ -4,7 +4,6 @@ import {JSONTree} from 'react-json-tree'
 
 import {InstallButton} from '@/components/install-button'
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppInstall, useUninstallAllApps} from '@/hooks/use-app-install'
 import {H2} from '@/layouts/stories'
 import {AppGrid} from '@/modules/desktop/app-grid/app-grid'
@@ -21,7 +20,6 @@ import {appStates} from '@/trpc/trpc'
 export default function DesktopStory() {
 	return (
 		<>
-			<UmbrelHeadTitle>Desktop</UmbrelHeadTitle>
 			<AppsProvider>
 				<H2>Install Example</H2>
 				<InstallExample />

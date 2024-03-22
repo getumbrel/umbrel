@@ -1,6 +1,5 @@
 import {useParams} from 'react-router-dom'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
@@ -30,7 +29,6 @@ function CategoryContent() {
 
 	return (
 		<>
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<AppsGridFaintSection title={title} apps={filteredApps} />
 		</>
 	)

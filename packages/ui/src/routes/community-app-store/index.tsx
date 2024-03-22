@@ -4,13 +4,11 @@ import {groupBy} from 'remeda'
 import {objectKeys} from 'ts-extras'
 
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {appsGridClass, AppStoreSheetInner, cardFaintClass, sectionOverlineClass} from '@/modules/app-store/shared'
 import {CommunityBadge} from '@/modules/community-app-store/community-badge'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
-
 import {t} from '@/utils/i18n'
 
 export default function CommunityAppStoreHome() {
@@ -21,7 +19,6 @@ export default function CommunityAppStoreHome() {
 
 	const appStore = registryQ.data?.find((appStore) => appStore?.meta.id === appStoreId)
 	const appStoreName = appStore?.meta.name
-	const title = appStoreName ? `${appStoreName} ${t('community-app-store')}` : t('community-app-store.loading')
 
 	if (registryQ.isLoading) {
 		return <Loading />
@@ -36,7 +33,6 @@ export default function CommunityAppStoreHome() {
 
 	return (
 		<>
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<AppStoreSheetInner
 				title={`${appStoreName} app store`}
 				beforeHeaderChildren={
@@ -46,7 +42,8 @@ export default function CommunityAppStoreHome() {
 							onClick={() => navigate('/app-store')}
 							className='flex items-center gap-1 self-start underline-offset-2 outline-none focus-visible:underline'
 						>
-							<TbArrowLeft className='h-5 w-5' />{t('community-app-store.back-to-umbrel-app-store')}
+							<TbArrowLeft className='h-5 w-5' />
+							{t('community-app-store.back-to-umbrel-app-store')}
 						</button>
 					</>
 				}

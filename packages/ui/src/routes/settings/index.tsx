@@ -6,7 +6,6 @@ import {arrayIncludes} from 'ts-extras'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnly} from '@/components/ui/debug-only'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
@@ -101,7 +100,6 @@ export function Settings() {
 	return (
 		<>
 			<SheetHeader className='px-2.5'>
-				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
 			{isMobile && <SettingsContentMobile />}

@@ -3,13 +3,12 @@ import {useNavigate} from 'react-router-dom'
 import {useMount} from 'react-use'
 
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-import {description, factoryResetTitle, title} from './misc'
+import {description, title} from './misc'
 
 export function ConfirmWithPassword({
 	password,
@@ -38,7 +37,6 @@ export function ConfirmWithPassword({
 
 	return (
 		<form onSubmit={handleSubmit} className='flex-1'>
-			<UmbrelHeadTitle>{factoryResetTitle(t('factory-reset.confirm.title'))}</UmbrelHeadTitle>
 			<ImmersiveDialogBody
 				title={title()}
 				description={description()}

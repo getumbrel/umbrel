@@ -7,11 +7,7 @@ export function Failed() {
 	return (
 		<FailedLayout
 			title={title}
-			description={
-				<>
-					{t('factory-reset.failed.message')}
-				</>
-			}
+			description={<>{t('factory-reset.failed.message')}</>}
 			buttonText={t('factory-reset.failed.retry')}
 			to='/factory-reset'
 		/>

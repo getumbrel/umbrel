@@ -88,7 +88,7 @@ export function DockItem({
 			{/* icon */}
 			<motion.div
 				className={cn(
-					'has-[:focus-visible]:brightness-125 relative origin-top-left bg-cover transition-[filter]',
+					'relative origin-top-left bg-cover transition-[filter] has-[:focus-visible]:brightness-125',
 					className,
 				)}
 				style={{

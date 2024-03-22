@@ -70,7 +70,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
+					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
 				)}
 				style={{
 					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
@@ -90,21 +90,21 @@ export function AppIcon({
 					/>
 				)}
 				{inProgress && state === 'installing' && progress && (
-          <div className="absolute inset-0 flex items-center justify-center">
-						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
+					<div className='absolute inset-0 flex items-center justify-center'>
+						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
 							<div
-								className="absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
+								className='absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
 								style={{
 									width: `${progress}%`,
 								}}
 							/>
 						</div>
 					</div>
-        )}
+				)}
 				{inProgress && state !== 'installing' && (
-					<div className="absolute inset-0 flex items-center justify-center">
-						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
-							<div className="absolute inset-0 w-[30%] rounded-full bg-white/90 animate-sliding-loader"/>
+					<div className='absolute inset-0 flex items-center justify-center'>
+						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
+							<div className='absolute inset-0 w-[30%] animate-sliding-loader rounded-full bg-white/90' />
 						</div>
 					</div>
 				)}
@@ -234,7 +234,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 					{toUninstallFirstIds.length > 0 && (
 						<UninstallTheseFirstDialog
 							appId={appId}
-							registryId={userApp.app.registryId}
 							toUninstallFirstIds={toUninstallFirstIds}
 							open={openDepsDialog}
 							onOpenChange={setOpenDepsDialog}

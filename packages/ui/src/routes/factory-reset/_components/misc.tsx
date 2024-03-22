@@ -6,7 +6,3 @@ export const title = () => t('factory-reset')
 export const description = () => t('factory-reset.desc')
 
 export const backPath = '/settings'
-
-export function factoryResetTitle(subtitle: string) {
-	return `${subtitle} - ${title}`
-}

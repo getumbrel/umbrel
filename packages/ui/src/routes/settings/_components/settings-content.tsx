@@ -17,7 +17,6 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -169,7 +168,6 @@ export function SettingsContent() {
 					</ListRow>
 					{tor.isMutLoading && (
 						<CoverMessage>
-							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
 							<Loading>{t('tor.disable.progress')}</Loading>
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>

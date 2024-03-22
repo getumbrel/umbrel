@@ -37,7 +37,7 @@ function Item(item?: ThreeStatsItem) {
 		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
 			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 md:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
-			<div className='flex flex-row justify-between w-full md:flex-col md:text-center'>
+			<div className='flex w-full flex-row justify-between md:flex-col md:text-center'>
 				<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate')}>{item?.subtext}</p>
 				<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{item?.text}</p>
 			</div>

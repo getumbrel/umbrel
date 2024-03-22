@@ -99,27 +99,32 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'}),
+					}}
+				>
 					<Card>
 						<StorageCardContent />
 					</Card>
 				</Link>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'})
-				}}>
+
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'}),
+					}}
+				>
 					{/* Set id on the second card because we wanna scroll to see them all */}
 					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 						<MemoryCardContent />
 					</Card>
 				</Link>
 
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'}),
+					}}
+				>
 					<Card>
 						<CpuCardContent />
 					</Card>

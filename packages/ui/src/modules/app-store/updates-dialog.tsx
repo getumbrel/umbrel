@@ -5,7 +5,6 @@ import {arrayIncludes} from 'ts-extras'
 import {AppIcon} from '@/components/app-icon'
 import {appStateToString} from '@/components/cmdk'
 import {Markdown} from '@/components/markdown'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
 import {Button} from '@/shadcn-components/ui/button'
@@ -52,8 +51,6 @@ export function UpdatesDialog({
 	appsWithUpdates: RegistryApp[]
 	titleRightChildren?: React.ReactNode
 } & DialogProps) {
-	const title = t('app-updates.title')
-
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
@@ -62,7 +59,6 @@ export function UpdatesDialog({
 					slide={false}
 				>
 					<DialogHeader className='px-5 pb-5'>
-						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle className='flex flex-row items-center justify-between'>
 							<span>{t('app-updates.updates-available-count', {count: appsWithUpdates.length})}</span>
 							{titleRightChildren}

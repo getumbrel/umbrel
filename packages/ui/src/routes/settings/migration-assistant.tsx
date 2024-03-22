@@ -10,7 +10,6 @@ import {
 	ImmersiveDialogSplitContent,
 } from '@/components/ui/immersive-dialog'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -41,19 +40,16 @@ export default function MigrationAssistantDialog() {
 	if (!isUmbrelHome) {
 		return (
 			<AlertDialog {...dialogProps}>
-				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>
-							{t('migration-assistant')}
-						</AlertDialogTitle>
+						<AlertDialogTitle>{t('migration-assistant')}</AlertDialogTitle>
 					</AlertDialogHeader>
-					<div className='flex justify-center mt-2'>
+					<div className='mt-2 flex justify-center'>
 						<MigrateImage />
 					</div>
 					<AlertDialogDescription className='text-center'>
 						{t('migration-assistant-unsupported-device-description')}
-						</AlertDialogDescription>
+					</AlertDialogDescription>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => dialogProps.onOpenChange(false)}>{t('ok')}</AlertDialogAction>
 					</AlertDialogFooter>
@@ -64,7 +60,6 @@ export default function MigrationAssistantDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 			<ImmersiveDialogSplitContent side={<MigrateImage />}>
 				<MigrateContent />
 			</ImmersiveDialogSplitContent>

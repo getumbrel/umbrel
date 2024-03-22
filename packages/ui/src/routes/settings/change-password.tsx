@@ -1,4 +1,3 @@
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
 import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
@@ -40,7 +39,6 @@ export default function ChangePasswordDialog() {
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
-								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
 							</DialogHeader>
 							<ChangePasswordWarning />

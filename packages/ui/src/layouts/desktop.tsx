@@ -1,12 +1,10 @@
 import {useEffect} from 'react'
 
 import {useCmdkOpen} from '@/components/cmdk'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
 import {useApps} from '@/providers/apps'
-import {t} from '@/utils/i18n'
 
 export function Desktop() {
 	const {userApps, isLoading} = useApps()
@@ -39,7 +37,6 @@ function DesktopPage() {
 
 	return (
 		<>
-			<UmbrelHeadTitle>{t('desktop.title')}</UmbrelHeadTitle>
 			<div
 				className={
 					// `relative` positioning keeps children above <Wallpaper /> since that element is positioned `fixed`

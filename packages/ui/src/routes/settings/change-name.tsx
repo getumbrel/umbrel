@@ -1,4 +1,3 @@
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useUserName} from '@/hooks/use-user-name'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
@@ -28,7 +27,6 @@ export default function ChangeNameDialog() {
 					<form onSubmit={handleSubmit}>
 						<fieldset disabled={isLoading} className='flex flex-col gap-5'>
 							<DialogHeader>
-								<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 								<DialogTitle>{title}</DialogTitle>
 							</DialogHeader>
 							<Input placeholder={t('change-name.input-placeholder')} value={name} onValueChange={setName} />

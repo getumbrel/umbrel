@@ -86,7 +86,7 @@ export function useSettingsNotificationCount() {
 			}
 
 			if (checkUpdateResult.status === 'fulfilled') {
-				const { name, available } = checkUpdateResult.value
+				const {name, available} = checkUpdateResult.value
 
 				if (available) {
 					currCount++

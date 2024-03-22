@@ -2,7 +2,6 @@ import {ReactNode, Suspense} from 'react'
 import {Link, Outlet, RouteObject, useLocation} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {AvailableAppsProvider} from '@/providers/available-apps'
 import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import AppStoreStory from '@/routes/stories/app-store'
@@ -138,7 +137,6 @@ export function SpecificStory() {
 export function StoriesLayout() {
 	return (
 		<div className='flex min-h-full flex-col bg-neutral-700'>
-			<UmbrelHeadTitle>Stories</UmbrelHeadTitle>
 			<div className='fixed top-0 z-50 w-full bg-neutral-900 '>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar flex shrink-0 items-center overflow-x-auto'>
 					<NavLink to='/'>👈 Home</NavLink>

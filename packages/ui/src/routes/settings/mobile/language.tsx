@@ -1,7 +1,6 @@
 import {useId, useState} from 'react'
 
 import {listClass, ListRadioItem} from '@/components/ui/list'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {languages, SupportedLanguageCode, useLanguage} from '@/hooks/use-language'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
@@ -38,7 +37,6 @@ export function LanguageDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('language.select-description')}</DrawerDescription>
 				</DrawerHeader>
