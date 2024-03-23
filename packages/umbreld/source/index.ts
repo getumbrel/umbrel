@@ -138,6 +138,13 @@ export default class Umbreld {
 		// Wait for system time to be synced for up to 10 seconds before proceeding
 		await this.waitForSystemTime(10)
 
+		// We need to forcefully clean Docker state before being able to safely continue
+		// If an existing container is listening on port 80 we'll crash, if an old version
+		// of Umbrel wasn't shutdown properly, bringing containers up can fail.
+		await this.apps
+			.cleanDockerState()
+			.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
 	}

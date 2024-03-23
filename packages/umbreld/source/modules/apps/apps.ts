@@ -37,7 +37,7 @@ export default class Apps {
 			const containerIds = (await $`docker ps -aq`).stdout.split('\n').filter(Boolean)
 			if (containerIds.length) {
 				this.logger.log('Cleaning up old containers...')
-				await $({stdio: 'inherit'})`docker stop --time 10 ${containerIds}`
+				await $({stdio: 'inherit'})`docker stop --time 30 ${containerIds}`
 				await $({stdio: 'inherit'})`docker rm ${containerIds}`
 			}
 		} catch (error) {
