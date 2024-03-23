@@ -1,8 +1,8 @@
 {
 	"name": "umbreld",
 	"type": "module",
-	"version": "1.0.2",
-	"versionName": "umbrelOS 1.0.2",
+	"version": "1.0.3",
+	"versionName": "umbrelOS 1.0.3",
 	"files": [
 		"source",
 		"ui",

@@ -51,7 +51,7 @@ echo "Umbrel Home detected"
 
 # Flash new update
 echo '{"state": "installing", "progress": 25, "description": "Installing umbrelOS 1.0, this may take a while", "updateTo": ""}' > "${UMBREL_ROOT}/statuses/update-status.json"
-mender install https://download.umbrel.com/release/1.0.2/umbrelos-amd64.update
+mender install https://download.umbrel.com/release/1.0.3/umbrelos-amd64.update
 
 # Reboot
 cat <<EOF > "$UMBREL_ROOT"/statuses/update-status.json
