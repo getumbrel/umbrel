@@ -1,1 +1,1 @@
-console=serial0,115200 console=tty1 rootfstype=ext4 fsck.repair=yes rootwait cgroup_enable=memory swapaccount=1
+console=serial0,115200 console=tty1 rootfstype=ext4 fsck.repair=yes rootwait cgroup_enable=memory swapaccount=1 usb-storage.quirks=152d:1561:u,152d:1576:u,152d:0578:u,125f:a76a:u,04e8:61b6:u
