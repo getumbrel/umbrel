@@ -232,19 +232,6 @@ export const router = createBrowserRouter([
 		],
 	},
 	{
-		path: 'debug',
-		loader: () => {
-			if (localStorage.getItem('debug') === 'true') {
-				localStorage.setItem('debug', 'false')
-			} else {
-				localStorage.setItem('debug', 'true')
-			}
-			return false
-		},
-		element: <div>Debug toggled</div>,
-	},
-
-	{
 		path: '*',
 		Component: NotFound,
 	},
