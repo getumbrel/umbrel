@@ -2,9 +2,10 @@ import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
+import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 
-import {ErrorBoundaryFallback} from './components/ui/error-boundary-fallback'
+import {ErrorBoundaryPageFallback} from './components/ui/error-boundary-page-fallback'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -65,11 +66,12 @@ export const router = createBrowserRouter([
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
 		),
-		errorElement: <ErrorBoundaryFallback />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'edit-widgets',
 				Component: EditWidgetsPage,
+				ErrorBoundary: ErrorBoundaryComponentFallback,
 			},
 			{
 				Component: SheetLayout,
@@ -85,10 +87,12 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: Discover,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 							{
 								path: 'category/:categoryishId',
 								Component: CategoryPage,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 						],
 					},
@@ -106,10 +110,12 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: CommunityAppStoreHome,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 							{
 								path: ':appId',
 								Component: CommunityAppPage,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 						],
 					},
@@ -131,7 +137,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: BareLayout,
-		errorElement: <ErrorBoundaryFallback />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'login',
@@ -195,7 +201,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: Demo,
-		errorElement: <ErrorBoundaryFallback />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'one',
@@ -218,7 +224,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: StoriesLayout,
-		errorElement: <ErrorBoundaryFallback />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'stories',

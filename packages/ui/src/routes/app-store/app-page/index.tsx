@@ -1,6 +1,8 @@
+import {ErrorBoundary} from 'react-error-boundary'
 import {useParams} from 'react-router-dom'
 
 import {InstallButtonConnected} from '@/components/install-button-connected'
+import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Loading} from '@/components/ui/loading'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommendations'
@@ -29,11 +31,15 @@ export default function AppPage() {
 				app={app}
 				childrenRight={
 					<div className='flex items-center gap-5'>
-						<InstallButtonConnected app={app} />
+						<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+							<InstallButtonConnected app={app} />
+						</ErrorBoundary>
 					</div>
 				}
 			/>
-			<AppContent app={app} userApp={userApp} recommendedApps={recommendedApps} />
+			<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+				<AppContent app={app} userApp={userApp} recommendedApps={recommendedApps} />
+			</ErrorBoundary>
 		</div>
 	)
 }

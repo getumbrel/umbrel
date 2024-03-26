@@ -23,14 +23,12 @@ export default function EditWidgetsPage() {
 	}
 
 	return (
-		<>
-			<WidgetSelector
-				open={open}
-				onOpenChange={(open) => {
-					setOpen(open)
-					afterDelayedClose(() => navigate('/'))(open)
-				}}
-			/>
-		</>
+		<WidgetSelector
+			open={open}
+			onOpenChange={(open) => {
+				setOpen(open)
+				afterDelayedClose(() => navigate('/'))(open)
+			}}
+		/>
 	)
 }

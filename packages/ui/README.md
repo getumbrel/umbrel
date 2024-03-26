@@ -54,6 +54,12 @@ https://vitejs.dev/guide/performance#avoid-barrel-files
 
 Prefer `trpcReact` over `trpcClient` because it lets you manage error and loading state, caching, and invalidation. More info here: https://trpc.io/docs/client/vanilla#when-not-to-use-the-vanilla-client
 
+## Error boundaries
+
+Organize error boundaries to avoid them crashing headings and navigation elements.
+
+For most cases, `ErrorBoundaryComponentFallback` is best. But when that's not possible because the error text won't have a place to go, then use `ErrorBoundaryPageFallback`.
+
 ---
 
 # TROUBLESHOOTING
