@@ -94,7 +94,7 @@ function AppIconExamples() {
 			{appStates.map((state) => (
 				<div key={state}>
 					{state}
-					<AppIcon label={'foobar'} src={iconSrc} state={state} onClick={() => toast(state)} />
+					<AppIcon label={'foobar'} src={iconSrc} state={state} progress={50} onClick={() => toast(state)} />
 				</div>
 			))}
 		</div>

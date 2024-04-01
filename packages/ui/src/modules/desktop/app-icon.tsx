@@ -13,7 +13,7 @@ import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState, AppStateOrLoading, progressStates} from '@/trpc/trpc'
+import {AppState, AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -89,22 +89,17 @@ export function AppIcon({
 						draggable={false}
 					/>
 				)}
-				{inProgress && state === 'installing' && progress && (
+				{inProgress && (
 					<div className='absolute inset-0 flex items-center justify-center'>
 						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
-							<div
-								className='absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
-								style={{
-									width: `${progress}%`,
-								}}
-							/>
-						</div>
-					</div>
-				)}
-				{inProgress && state !== 'installing' && (
-					<div className='absolute inset-0 flex items-center justify-center'>
-						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
-							<div className='absolute inset-0 w-[30%] animate-sliding-loader rounded-full bg-white/90' />
+							{arrayIncludes(progressBarStates, state) ? (
+								<div
+									className='absolute inset-0 w-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
+									style={{width: `${progress}%`}}
+								/>
+							) : (
+								<div className='absolute inset-0 w-[30%] animate-sliding-loader rounded-full bg-white/90' />
+							)}
 						</div>
 					</div>
 				)}
@@ -186,11 +181,11 @@ export function AppIconConnected({appId}: {appId: string}) {
 		case 'stopping':
 		case 'unknown':
 		case 'uninstalling':
-		case 'updating':
 			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
 		case 'not-installed':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
 		case 'installing':
+		case 'updating':
 		case 'running':
 		case 'ready':
 		case 'stopped': {
