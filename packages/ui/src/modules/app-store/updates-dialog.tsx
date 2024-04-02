@@ -5,6 +5,7 @@ import {arrayIncludes} from 'ts-extras'
 import {AppIcon} from '@/components/app-icon'
 import {appStateToString} from '@/components/cmdk'
 import {Markdown} from '@/components/markdown'
+import {ProgressButton} from '@/components/progress-button'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
 import {Button} from '@/shadcn-components/ui/button'
@@ -13,6 +14,7 @@ import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {progressStates, RegistryApp, trpcReact} from '@/trpc/trpc'
+import {MS_PER_SECOND} from '@/utils/date-time'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -82,7 +84,12 @@ export function UpdatesDialog({
 	)
 }
 function AppItem({app}: {app: RegistryApp}) {
-	const appStateQ = trpcReact.apps.state.useQuery({appId: app.id})
+	const appStateQ = trpcReact.apps.state.useQuery(
+		{appId: app.id},
+		{
+			refetchInterval: 2 * MS_PER_SECOND,
+		},
+	)
 	const [showAll, setShowAll] = useState(false)
 	const ctx = trpcReact.useContext()
 	const updateMut = trpcReact.apps.update.useMutation({
@@ -98,7 +105,8 @@ function AppItem({app}: {app: RegistryApp}) {
 	})
 	const updateApp = () => updateMut.mutate({appId: app.id})
 
-	const appState = appStateQ.data?.state
+	const progress = appStateQ.data?.progress
+	const appState = appStateQ.isLoading ? 'loading' : appStateQ.data!.state
 	const inProgress = arrayIncludes(progressStates, appState)
 
 	return (
@@ -110,9 +118,18 @@ function AppItem({app}: {app: RegistryApp}) {
 					<p className='text-13 opacity-40'>{app.version}</p>
 				</div>
 				<div className='flex-1' />
-				<Button size='sm' onClick={updateApp} disabled={inProgress || updateMut.isLoading}>
+				<ProgressButton
+					size='sm'
+					onClick={updateApp}
+					disabled={inProgress || updateMut.isLoading}
+					state={appState}
+					progress={progress}
+					style={{
+						['--progress-button-bg' as string]: 'hsl(0 0 30%)',
+					}}
+				>
 					{inProgress ? appStateToString(appState) + '...' : t('app-updates.update')}
-				</Button>
+				</ProgressButton>
 			</div>
 			{app.releaseNotes && (
 				<div className='relative mt-2 grid'>
@@ -120,6 +137,11 @@ function AppItem({app}: {app: RegistryApp}) {
 						className={cn('relative overflow-x-auto text-13 opacity-50 transition-all')}
 						style={{
 							maskImage: showAll ? undefined : 'linear-gradient(-45deg, transparent 30px, white 60px, white)',
+						}}
+						ref={(ref) => {
+							ref?.addEventListener('focusin', () => {
+								setShowAll(true)
+							})
 						}}
 					>
 						<Markdown className={cn('text-13 leading-snug -tracking-3', !showAll && 'line-clamp-2')}>

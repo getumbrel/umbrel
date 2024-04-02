@@ -1,8 +1,11 @@
 import {useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {JSONTree} from 'react-json-tree'
+import {arrayIncludes} from 'ts-extras'
 
+import {appStateToString} from '@/components/cmdk'
 import {InstallButton} from '@/components/install-button'
+import {ProgressButton} from '@/components/progress-button'
 import {GenericErrorText} from '@/components/ui/generic-error-text'
 import {Loading} from '@/components/ui/loading'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
@@ -17,7 +20,7 @@ import {AvailableAppsProvider, useAvailableApps} from '@/providers/available-app
 import {useDiscoverQuery} from '@/routes/app-store/use-discover-query'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {appStates} from '@/trpc/trpc'
+import {appStates, progressStates} from '@/trpc/trpc'
 
 export default function AppStoreStory() {
 	return (
@@ -152,11 +155,24 @@ function AppUpdatesManyExample() {
 
 function InstallButtonExamples() {
 	const {progress, state, install} = useDemoInstallProgress()
+	const demoUpdateProgress = useDemoInstallProgress()
 
 	return (
 		<div>
 			<H3>Install Button</H3>
 			<div className='flex flex-col items-end gap-1'>
+				<ProgressButton
+					variant={'destructive'}
+					className='border-3 border [--progress-button-bg:blue] data-[progressing=true]:border-blue-500'
+					size='xl'
+					initial={{borderRadius: 10}}
+					progress={demoUpdateProgress.progress}
+					state={demoUpdateProgress.state}
+					onClick={demoUpdateProgress.install}
+				>
+					progress button: {appStateToString(demoUpdateProgress.state)}
+					{arrayIncludes(progressStates, demoUpdateProgress.state as string) && '...'}
+				</ProgressButton>
 				<InstallButton
 					installSize='1.5GB'
 					progress={progress}
@@ -165,6 +181,14 @@ function InstallButtonExamples() {
 					onOpenClick={() => alert('foobar')}
 				/>
 				<Separator />
+				{/* Loading state */}
+				<InstallButton
+					installSize='1.5GB'
+					progress={demoUpdateProgress.progress}
+					state='loading'
+					onInstallClick={demoUpdateProgress.install}
+					onOpenClick={() => alert('foobar')}
+				/>
 				{appStates.map((state) => (
 					<div key={state}>
 						{state}{' '}
