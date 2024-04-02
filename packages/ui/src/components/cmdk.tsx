@@ -227,6 +227,9 @@ export function CmdkMenu() {
 					<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
 						Install a bunch of random apps
 					</SearchItem>
+					<SearchItem value='Stories' onSelect={() => navigate('/stories')}>
+						Stories
+					</SearchItem>
 				</DebugOnlyBare>
 				<SearchItem value='____' onSelect={debugToggle}>
 					debug
