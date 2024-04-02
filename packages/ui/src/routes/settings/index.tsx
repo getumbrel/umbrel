@@ -31,7 +31,7 @@ const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
-const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot'))
+const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot/index'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 
@@ -120,7 +120,7 @@ export function Settings() {
 						{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
 						{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
 						{isMobile && <Route path='/language' Component={LanguageDrawer} />}
-						<Route path='/troubleshoot' Component={TroubleshootDialog} />
+						<Route path='/troubleshoot/*' Component={TroubleshootDialog} />
 						{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
 					</Routes>
