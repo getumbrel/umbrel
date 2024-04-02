@@ -142,6 +142,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 }
 
 export function AppIconConnected({appId}: {appId: string}) {
+	const navigate = useNavigate()
 	const userApp = useUserApp(appId)
 	const appInstall = useAppInstall(appId)
 	const [openDepsDialog, setOpenDepsDialog] = useState(false)
@@ -211,6 +212,9 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
+							<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
+								Troubleshoot
+							</ContextMenuItem>
 							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' && (
