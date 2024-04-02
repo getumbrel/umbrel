@@ -90,7 +90,13 @@ export function SettingsContent() {
 							{firstNameFromFullName(userQ.data?.name ?? UNKNOWN())}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
-						<dl className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
+						<dl
+							className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+							style={{
+								// Makes columns not all the same width
+								gridTemplateColumns: 'auto auto',
+							}}
+						>
 							<dt className='opacity-40'>{t('device')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 							<dt className='opacity-40'>{t('umbrelos')}</dt>
