@@ -26,6 +26,7 @@ import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -81,7 +82,7 @@ export function SettingsContentMobile() {
 
 				<div className='mx-2.5'>
 					<h2 className='text-24 font-bold leading-none -tracking-4'>
-						{userQ.data.name}’s <span className='opacity-40'>{t('umbrel')}</span>
+						{firstNameFromFullName(userQ.data.name)}’s <span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>

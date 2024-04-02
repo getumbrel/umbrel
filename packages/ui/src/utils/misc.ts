@@ -8,6 +8,10 @@ export function fixmeAlert() {
 
 export const fixmeHandler = () => fixmeAlert()
 
+export function firstNameFromFullName(name: string) {
+	return name.split(' ')[0]
+}
+
 export function sleep(milliseconds: number) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
@@ -74,6 +78,8 @@ export function transitionViewIfSupported(cb: () => void) {
 		cb()
 	}
 }
+
+// ---
 
 export function isWindows() {
 	return /Win/i.test(navigator.userAgent)
