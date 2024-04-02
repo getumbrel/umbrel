@@ -83,7 +83,7 @@ export function SettingsContent() {
 						<DesktopPreviewConnected />
 					</DesktopPreviewFrame>
 				</div>
-				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
+				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
 						<h2 className='text-24 font-bold leading-none -tracking-4'>
 							{/* TODO: interpolate here */}
