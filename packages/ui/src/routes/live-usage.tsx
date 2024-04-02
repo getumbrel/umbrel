@@ -1,3 +1,4 @@
+import {DialogPortal} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useLocation, useNavigate} from 'react-router-dom'
@@ -5,7 +6,12 @@ import {useLocation, useNavigate} from 'react-router-dom'
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
 import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
-import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
+import {
+	ImmersiveDialog,
+	ImmersiveDialogContent,
+	ImmersiveDialogOverlay,
+	immersiveDialogTitleClass,
+} from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {LOADING_DASH} from '@/constants'
 import {useCpuForUi} from '@/hooks/use-cpu'
@@ -27,12 +33,15 @@ export default function LiveUsageDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<ImmersiveDialogContent size='lg' showScroll>
-				<h1 className={immersiveDialogTitleClass}>{title}</h1>
-				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
-					<LiveUsageContent />
-				</ErrorBoundary>
-			</ImmersiveDialogContent>
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				<ImmersiveDialogContent size='lg' showScroll>
+					<h1 className={immersiveDialogTitleClass}>{title}</h1>
+					<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+						<LiveUsageContent />
+					</ErrorBoundary>
+				</ImmersiveDialogContent>
+			</DialogPortal>
 		</ImmersiveDialog>
 	)
 }

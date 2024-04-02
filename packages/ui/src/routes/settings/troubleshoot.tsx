@@ -1,3 +1,4 @@
+import {DialogPortal} from '@radix-ui/react-dialog'
 import {format} from 'date-fns'
 import {saveAs} from 'file-saver'
 import filenamify from 'filenamify/browser'
@@ -11,6 +12,7 @@ import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
 	ImmersiveDialogFooter,
+	ImmersiveDialogOverlay,
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
@@ -40,7 +42,10 @@ export default function TroubleshootDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<Content />
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				<Content />
+			</DialogPortal>
 		</ImmersiveDialog>
 	)
 }

@@ -1,9 +1,11 @@
+import {DialogPortal} from '@radix-ui/react-dialog'
 import {useState} from 'react'
 import {range} from 'remeda'
 
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
+	ImmersiveDialogOverlay,
 	ImmersiveDialogSplitContent,
 	ImmersiveDialogTrigger,
 } from '@/components/ui/immersive-dialog'
@@ -157,15 +159,18 @@ function ImmersiveDialogExample() {
 			<ImmersiveDialogTrigger asChild>
 				<Button size='lg'>Open Immersive Dialog</Button>
 			</ImmersiveDialogTrigger>
-			<ImmersiveDialogContent showScroll>
-				{range(0, 10).map((i) => (
-					<p key={i}>
-						Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
-						consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
-						totam.
-					</p>
-				))}
-			</ImmersiveDialogContent>
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				<ImmersiveDialogContent showScroll>
+					{range(0, 10).map((i) => (
+						<p key={i}>
+							Lorem ipsum dolor sit amet consectetur adipisicing elit. Modi, nisi dolore quasi ea quos corporis ipsa
+							consectetur, eligendi accusamus qui commodi sunt explicabo cum. Accusamus amet tempore exercitationem eos
+							totam.
+						</p>
+					))}
+				</ImmersiveDialogContent>
+			</DialogPortal>
 		</ImmersiveDialog>
 	)
 }
