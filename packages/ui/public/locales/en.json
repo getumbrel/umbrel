@@ -382,5 +382,6 @@
   "unknown-error": "Unknown error",
   "software-update.install-now": "Install now",
   "app-updates.no-updates": "All apps are up-to-date!",
-  "continue": "Continue"
+  "continue": "Continue",
+  "version": "Version"
 }
