@@ -29,10 +29,12 @@ UMBREL_INSTALL_PATH="$HOME/umbrel"
 # Parse arguments
 arguments=${@:-}
 
-if [[ "${arguments}" = *"--bootstrapped"* ]]
-then
-  BOOTSTRAPPED="true"
-fi
+# if [[ "${arguments}" = *"--bootstrapped"* ]]
+# then
+#   BOOTSTRAPPED="true"
+# fi
+# Force bootstrapped
+BOOTSTRAPPED="true"
 
 if [[ "${arguments}" = *"--no-docker-warning"* ]]
 then
@@ -80,10 +82,12 @@ then
   INSTALL_UMBREL="true"
 fi
 
-if [[ "${arguments}" = *"--version"* ]]
-then
-  UMBREL_VERSION="$(echo "${arguments}" | sed 's/.*--version \([^ ]*\).*/\1/')"
-fi
+# Pin version to v0.5.4
+# if [[ "${arguments}" = *"--version"* ]]
+# then
+#   UMBREL_VERSION="$(echo "${arguments}" | sed 's/.*--version \([^ ]*\).*/\1/')"
+# fi
+UMBREL_VERSION="v0.5.4"
 
 if [[ "${arguments}" = *"--install-path"* ]]
 then
@@ -150,10 +154,7 @@ install_docker() {
 }
 
 install_docker_compose() {
-  sudo apt-get install --yes python3-pip libffi-dev
-  # We need to upgrade pip (via itself) because old pip versions in some OS repos fail to install deps.
-  python3 -m pip install --upgrade pip
-  sudo python3 -m pip install docker-compose
+  sudo apt-get install --yes libffi-dev docker-compose
 }
 
 get_arch() {
