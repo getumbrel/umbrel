@@ -132,7 +132,7 @@ export const wallpaperIds = wallpapers.map((w) => w.id)
 const nullWallpaper = {
 	id: undefined,
 	url: '',
-	brandColorHsl: '0 0% 100%',
+	brandColorHsl: '0 0% 50%',
 } as const satisfies WallpaperBase
 
 type WallpaperType = {
