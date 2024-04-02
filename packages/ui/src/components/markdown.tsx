@@ -4,6 +4,7 @@ import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 
 import {cn} from '@/shadcn-lib/utils'
+import {linkClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 // IMPORTANT: Want to avoid any risk of tracking pixels, XSS, etc.
@@ -37,6 +38,12 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 				h4: 'h4',
 				h5: 'h4',
 				h6: 'h4',
+				a: (props) => (
+					<a
+						className='decoration-white/30 underline-offset-2 outline-none transition-opacity hover:opacity-80 focus:opacity-80'
+						{...props}
+					/>
+				),
 			}}
 			allowedElements={[
 				'h1',
