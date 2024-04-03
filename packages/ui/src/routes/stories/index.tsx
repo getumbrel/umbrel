@@ -46,6 +46,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
+import {Label} from '@/shadcn-components/ui/label'
+import {RadioGroup, RadioGroupItem} from '@/shadcn-components/ui/radio-group'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
@@ -85,6 +87,8 @@ export default function Stories() {
 			</NumberedList>
 			<H2>Badge</H2>
 			<Badges />
+			<H2>Radio Group</H2>
+			<RadioGroupDemo />
 			<H2>Checkbox</H2>
 			<CheckboxExamples />
 			<H2>Loading</H2>
@@ -113,6 +117,25 @@ export default function Stories() {
 				</div>
 			</ScrollArea>
 		</div>
+	)
+}
+
+export function RadioGroupDemo() {
+	return (
+		<RadioGroup defaultValue='comfortable'>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='default' id='r1' />
+				<Label htmlFor='r1'>Default</Label>
+			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='comfortable' id='r2' />
+				<Label htmlFor='r2'>Comfortable</Label>
+			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='compact' id='r3' />
+				<Label htmlFor='r3'>Compact</Label>
+			</div>
+		</RadioGroup>
 	)
 }
 
