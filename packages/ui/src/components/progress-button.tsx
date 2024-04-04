@@ -44,7 +44,7 @@ export function ProgressButton({variant, size, progress, state, children, classN
 		// Adding transitions so hover and other transitions work
 		transition: '--progress-button-progress 0.3s',
 		// ['--progress-button-bg' as string]: 'var(--color-brand)',
-		['--progress-button-progress' as string]: `${progress}%`,
+		['--progress-button-progress' as string]: `${Math.round(progress ?? 0)}%`,
 		backgroundImage:
 			'linear-gradient(to right, var(--progress-button-bg) var(--progress-button-progress), transparent var(--progress-button-progress))',
 	}
