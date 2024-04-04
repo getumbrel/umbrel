@@ -4,7 +4,6 @@ import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 
 import {cn} from '@/shadcn-lib/utils'
-import {linkClass} from '@/utils/element-classes'
 import {tw} from '@/utils/tw'
 
 // IMPORTANT: Want to avoid any risk of tracking pixels, XSS, etc.

@@ -168,7 +168,7 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 	}
 }
 
-export function LoadingWidget<T extends WidgetType = WidgetType>({type, onClick}: {type: T; onClick: () => void}) {
+export function LoadingWidget<T extends WidgetType = WidgetType>({type, onClick}: {type: T; onClick?: () => void}) {
 	switch (type) {
 		case 'text-with-buttons': {
 			return <TextWithButtonsWidget onClick={onClick} />
