@@ -9,14 +9,12 @@ import {bareContainerClass, BareSpacer, bareTextClass, bareTitleClass} from './s
 
 export default function FailedLayout({
 	title,
-	headTitle,
 	description,
 	buttonText,
 	to,
 	buttonOnClick,
 }: {
 	title: string
-	headTitle?: string
 	description: ReactNode
 	buttonText: string
 	to?: To
