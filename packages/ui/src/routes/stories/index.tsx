@@ -135,6 +135,10 @@ export function RadioGroupDemo() {
 				<RadioGroupItem value='compact' id='r3' />
 				<Label htmlFor='r3'>Compact</Label>
 			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='disabled' id='r4' disabled />
+				<Label htmlFor='r4'>Disabled</Label>
+			</div>
 		</RadioGroup>
 	)
 }

@@ -79,6 +79,7 @@ export default {
 				'button-highlight-soft-hpx': '0px 0.5px 0px 0px rgba(255, 255, 255, 0.1) inset',
 				'immersive-dialog-close':
 					'0px 32px 32px 0px rgba(0, 0, 0, 0.32), 1px 1px 1px 0px rgba(255, 255, 255, 0.08) inset',
+				'radio-outline': '0 0 0 1px rgba(255, 255, 255, 0.2) inset',
 			},
 			dropShadow: {
 				'desktop-label': '0px 2px 4px rgba(0, 0, 0, 0.60)',
