@@ -37,7 +37,6 @@ const CreateAccount = React.lazy(() => import('./routes/onboarding/create-accoun
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
 const Stories = React.lazy(() => import('./routes/stories'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
-const RestartTest = React.lazy(() => import('./routes/restart-test'))
 const SpecificStory = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.SpecificStory})))
 
 // NOTE: consider extracting certain providers into react-router loaders
@@ -216,10 +215,6 @@ export const router = createBrowserRouter([
 	{
 		path: 'login-test',
 		Component: LoginTest,
-	},
-	{
-		path: 'restart-test',
-		Component: RestartTest,
 	},
 	{
 		path: '/',
