@@ -6,6 +6,7 @@ import {useTimeout} from 'react-use'
 import {WidgetCheckIcon} from '@/assets/widget-check-icon'
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
@@ -139,7 +140,7 @@ function WidgetSheet({
 							<SheetHeader>
 								<SheetTitle>{t('widgets.edit.select-up-to-3-widgets')}</SheetTitle>
 							</SheetHeader>
-							<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>{children}</ErrorBoundary>
+							<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>{children}</ErrorBoundary>
 							<DockSpacer />
 						</div>
 					</ScrollArea>

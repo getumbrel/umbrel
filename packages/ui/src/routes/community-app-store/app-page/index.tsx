@@ -1,6 +1,9 @@
+import {ErrorBoundary} from 'react-error-boundary'
 import {useParams} from 'react-router-dom'
 
 import {InstallButtonConnected} from '@/components/install-button-connected'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Loading} from '@/components/ui/loading'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
@@ -23,8 +26,17 @@ export default function CommunityAppPage() {
 	return (
 		<div className={appPageWrapperClass}>
 			<CommunityBadge className='self-start' />
-			<TopHeader app={app} childrenRight={<InstallButtonConnected app={app} registryId={appStoreId} />} />
-			<AppContent app={app} />
+			<TopHeader
+				app={app}
+				childrenRight={
+					<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+						<InstallButtonConnected app={app} registryId={appStoreId} />
+					</ErrorBoundary>
+				}
+			/>
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+				<AppContent app={app} />
+			</ErrorBoundary>
 		</div>
 	)
 }

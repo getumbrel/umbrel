@@ -1,7 +1,7 @@
 import {ErrorBoundary} from 'react-error-boundary'
 import {useParams} from 'react-router-dom'
 
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed, Categoryish} from '@/modules/app-store/constants'
 import {AppsGridFaintSection} from '@/modules/app-store/discover/apps-grid-section'
@@ -11,7 +11,7 @@ export default function CategoryPage() {
 	return (
 		<>
 			<ConnectedAppStoreNav />
-			<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 				<CategoryContent />
 			</ErrorBoundary>
 		</>

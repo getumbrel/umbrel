@@ -5,7 +5,7 @@ import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -37,7 +37,7 @@ export default function LiveUsageDialog() {
 				<ImmersiveDialogOverlay />
 				<ImmersiveDialogContent size='lg' showScroll>
 					<h1 className={immersiveDialogTitleClass}>{title}</h1>
-					<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+					<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 						<LiveUsageContent />
 					</ErrorBoundary>
 				</ImmersiveDialogContent>
@@ -75,8 +75,8 @@ function LiveUsageContent() {
 						onValueChange={setSelectedTab}
 					/>
 				)}
-				// Key to make sure we reset the error
-				<ErrorBoundary key={selectedTab} FallbackComponent={ErrorBoundaryComponentFallback}>
+				{/* Key to make sure we reset the error */}
+				<ErrorBoundary key={selectedTab} FallbackComponent={ErrorBoundaryCardFallback}>
 					{selectedTab === 'storage' && <StorageSection />}
 					{selectedTab === 'memory' && <MemorySection />}
 					{selectedTab === 'cpu' && <CpuSection />}
@@ -88,17 +88,17 @@ function LiveUsageContent() {
 	return (
 		<div className='grid grid-cols-3 gap-x-4'>
 			<LiveUsageSection title={t('storage')}>
-				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 					<StorageSection />
 				</ErrorBoundary>
 			</LiveUsageSection>
 			<LiveUsageSection title={t('memory')}>
-				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 					<MemorySection />
 				</ErrorBoundary>
 			</LiveUsageSection>
 			<LiveUsageSection title={t('cpu')}>
-				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 					<CpuSection />
 				</ErrorBoundary>
 			</LiveUsageSection>

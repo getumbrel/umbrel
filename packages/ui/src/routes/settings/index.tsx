@@ -6,7 +6,7 @@ import {arrayIncludes} from 'ts-extras'
 
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnly} from '@/components/ui/debug-only'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -104,7 +104,7 @@ export function Settings() {
 			<SheetHeader className='px-2.5'>
 				<SheetTitle className='leading-none'>{title}</SheetTitle>
 			</SheetHeader>
-			<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 				{isMobile && <SettingsContentMobile />}
 				{!isMobile && <SettingsContent />}
 				<Suspense>

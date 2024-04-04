@@ -2,6 +2,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 import {useParams} from 'react-router-dom'
 
 import {InstallButtonConnected} from '@/components/install-button-connected'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Loading} from '@/components/ui/loading'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
@@ -37,7 +38,7 @@ export default function AppPage() {
 					</div>
 				}
 			/>
-			<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
 				<AppContent app={app} userApp={userApp} recommendedApps={recommendedApps} />
 			</ErrorBoundary>
 		</div>

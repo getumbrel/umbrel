@@ -1,7 +1,6 @@
 import {GenericErrorText} from '@/components/ui/generic-error-text'
 import {Badge} from '@/shadcn-components/ui/badge'
 
-// TODO: make a large one for sheets
 /**
  * Used for when we can replace the error with text. EX: buttons, page content
  */

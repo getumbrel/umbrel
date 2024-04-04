@@ -1,4 +1,7 @@
+import {ErrorBoundary} from 'react-error-boundary'
+
 import {ButtonLink} from '@/components/ui/button-link'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {categoryDescriptionsKeyed} from '@/modules/app-store/constants'
@@ -12,6 +15,17 @@ import {t} from '@/utils/i18n'
 import {useDiscoverQuery} from './use-discover-query'
 
 export default function Discover() {
+	return (
+		<>
+			<ConnectedAppStoreNav />
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+				<DiscoverContent />
+			</ErrorBoundary>
+		</>
+	)
+}
+
+function DiscoverContent() {
 	const availableApps = useAvailableApps()
 
 	const discoverQ = useDiscoverQuery()
@@ -27,10 +41,8 @@ export default function Discover() {
 	}
 
 	const {banners, sections} = discoverQ.data
-
 	return (
 		<>
-			<ConnectedAppStoreNav />
 			<AppsGallerySection banners={banners} />
 			{sections.map((section) => {
 				if (section.type === 'grid') {
