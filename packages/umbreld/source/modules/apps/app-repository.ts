@@ -122,12 +122,7 @@ export default class AppRepository {
 			this.logger.verbose(`${this.url} is already up to date`)
 		} else {
 			this.logger.verbose(`Newer version of ${this.url} available, updating`)
-			try {
-				await this.atomicClone()
-			} catch (error) {
-				this.logger.error(`Update failed for ${this.url}: ${(error as Error).message}`)
-			}
-
+			await this.atomicClone()
 			this.logger.verbose(`Updated ${this.url}!`)
 		}
 

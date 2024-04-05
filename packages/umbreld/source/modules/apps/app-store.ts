@@ -27,21 +27,34 @@ export default class AppStore {
 		}
 
 		// Initialise repositories
-		this.logger.log(`Initialising repositories...`)
-		await pRetry(() => this.update(), {
-			onFailedAttempt: (error) => {
-				this.logger.error(
-					`Attempt ${error.attemptNumber} initialising repositories failed. There are ${error.retriesLeft} retries left.`,
-				)
-			},
-			retries: 5, // This will do exponential backoff for 1s, 2s, 4s, 8s, 16s
-		})
-		await this.update()
-		this.logger.log(`Repositories initialised!`)
+		this.logger.log(`Initialising default repository...`)
+		try {
+			const repositories = await this.getRepositories()
+			const defaultRepository = repositories.find((repository) => repository.url === this.defaultAppStoreRepo)
+			if (!defaultRepository) throw new Error(`Default repository ${this.defaultAppStoreRepo} not found`)
+			await pRetry(
+				async () => {
+					await defaultRepository.update()
+				},
+				{
+					onFailedAttempt: (error) => {
+						this.logger.error(
+							`Failed to initialise default repository ${defaultRepository.url}: ${
+								(error as Error).message
+							}, will retry ${error.retriesLeft} more times.`,
+						)
+					},
+					retries: 5, // This will do exponential backoff for 1s, 2s, 4s, 8s, 16s
+				},
+			)
+			this.logger.log(`Default repository initialised!`)
+		} catch (error) {
+			this.logger.error(`Failed to initialise default repository: ${(error as Error).message}`)
+		}
 
 		// Kick off update loop
 		this.logger.log(`Checking repositories for updates every ${this.updateInterval}`)
-		this.#stopUpdating = runEvery(this.updateInterval, () => this.update(), {runInstantly: false})
+		this.#stopUpdating = runEvery(this.updateInterval, () => this.update(), {runInstantly: true})
 	}
 
 	async stop() {
