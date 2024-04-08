@@ -11,7 +11,7 @@ defaults:
 
 jobs:
   build-os:
-    runs-on: release-runner-64
+    runs-on: ${{ matrix.task == 'build:amd64' && 'ubicloud-standard-16' || 'ubicloud-standard-16-arm' }}
     defaults:
       run:
         working-directory: packages/os
