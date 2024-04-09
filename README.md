@@ -64,7 +64,7 @@ To install Umbrel on a Debian-based system, run:
 curl -L https://umbrel.sh | bash
 ```
 
-> ![note]
+> [!note]
 > Currently only UmbrelOS 0.5 is supported on Debian-based systems (1.0 coming this month). To use Umbrel 1.0 buy an [Umbrel Home](https://umbrel.com/umbrel-home) or use a [Raspberry PI](https://umbrel.com/umbrelos#install).
 
 ## Umbrel App Store
