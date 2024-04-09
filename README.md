@@ -20,15 +20,16 @@
       <img src="https://img.shields.io/twitter/follow/umbrel?style=social" />
     </a>
     <a href="https://t.me/getumbrel">
-      <img src="https://img.shields.io/badge/community-chat-%235351FB">
+      <img src="https://img.shields.io/badge/community-chat-%235351FB" />
     </a>
     <a href="https://reddit.com/r/getumbrel">
-      <img src="https://img.shields.io/reddit/subreddit-subscribers/getumbrel?style=social">
+      <img src="https://img.shields.io/reddit/subreddit-subscribers/getumbrel?style=social" />
     </a>
     <a href="https://community.getumbrel.com">
-      <img src="https://img.shields.io/badge/community-forum-%235351FB">
+      <img src="https://img.shields.io/badge/community-forum-%235351FB" />
     </a>
 </p>
+
 
 <br />
 
