@@ -1,8 +1,7 @@
 [![umbrelOS](https://github.com/getumbrel/umbrel/assets/10330103/56be7b95-0c24-4dee-ad3a-e5947bc2ee07)](https://umbrel.com/umbrelos)
 
+<h1 align="center">umbrelOS</h1>
 <p align="center">
-  <h1 align="center">umbrelOS</h1>
-  <p align="center">
     A beautiful home server OS for self-hosting
     <br />
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
@@ -29,7 +28,6 @@
     <a href="https://community.getumbrel.com">
       <img src="https://img.shields.io/badge/community-forum-%235351FB">
     </a>
-  </p>
 </p>
 
 <br />
