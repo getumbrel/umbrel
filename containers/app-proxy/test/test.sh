@@ -34,4 +34,4 @@ echo "Proxy booting on port: ${APP_PORT}"
 # Generate random project id
 PROJECT=$(echo -n "${COMPOSE_FILE}" | sha256sum)
 
-docker-compose --env-file "${UMBREL_ENV_FILE}" --project-name "${PROJECT}" -f ./docker-compose.yml -f "${COMPOSE_FILE}" up
+docker compose --env-file "${UMBREL_ENV_FILE}" --project-name "${PROJECT}" -f ./docker-compose.yml -f "${COMPOSE_FILE}" up

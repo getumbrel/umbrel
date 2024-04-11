@@ -147,7 +147,7 @@ fi
 echo
 echo "Starting Docker services..."
 echo
-docker-compose "${compose_files[@]}" up --detach --build --remove-orphans || {
+docker compose "${compose_files[@]}" up --detach --build --remove-orphans || {
   echo "Failed to start containers"
   $set_status umbrel errored docker-failed
   exit 1

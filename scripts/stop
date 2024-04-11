@@ -63,4 +63,4 @@ fi
 
 echo "Stopping Docker services..."
 echo
-docker-compose "${compose_files[@]}" down
+docker compose "${compose_files[@]}" down

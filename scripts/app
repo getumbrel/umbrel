@@ -245,7 +245,7 @@ compose() {
   # Merge compose files and args. passed into 'compose'
   compose_args=("${compose_files[@]}" "${@}")
 
-  docker-compose \
+  docker compose \
     --env-file "${umbrel_env_file}" \
     --project-name "${app}" \
     "${compose_args[@]}"

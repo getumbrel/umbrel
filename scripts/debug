@@ -128,13 +128,13 @@ echo
 echo "Umbrel logs"
 echo "-----------"
 echo
-docker-compose logs --tail=30 manager
+docker compose logs --tail=30 manager
 
 echo
 echo "Tor Proxy logs"
 echo "--------"
 echo
-docker-compose logs --tail=10 tor_proxy
+docker compose logs --tail=10 tor_proxy
 
 installed_apps=$(./scripts/app ls-installed)
 if [[ ! -z "${installed_apps:-}" ]]; then
