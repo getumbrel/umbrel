@@ -19,7 +19,7 @@ const RadioGroupItem = React.forwardRef<
 		<RadioGroupPrimitive.Item
 			ref={ref}
 			className={cn(
-				'shadow-radio-outline group aspect-square h-5 w-5 rounded-full bg-white/10 opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lighter/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-transparent data-[state=checked]:shadow-none',
+				'group aspect-square h-5 w-5 rounded-full bg-white/10 opacity-100 shadow-radio-outline transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lighter/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-white/0',
 				className,
 			)}
 			{...props}
@@ -40,7 +40,7 @@ const RadioIndicator = () => (
 		width={20}
 		height={20}
 		fill='none'
-		className='block duration-300 animate-in fade-in zoom-in-125'
+		className='block duration-300 animate-in fade-in zoom-in-50'
 	>
 		<use
 			xlinkHref='#path'
