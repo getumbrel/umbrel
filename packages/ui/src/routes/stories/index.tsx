@@ -483,12 +483,10 @@ function ToastExample() {
 					toast('Event has been created', {
 						description: 'Monday, January 3rd at 6:00pm',
 						action: {
-							label: 'Action',
+							label: 'OK',
 							onClick: fixmeHandler,
 						},
-						classNames: {
-							actionButton: tw`rounded-full bg-red-500`,
-						},
+						duration: Infinity,
 					})
 				}
 			>
