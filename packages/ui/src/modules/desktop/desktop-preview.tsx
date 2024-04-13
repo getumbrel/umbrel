@@ -108,6 +108,10 @@ function DesktopContent() {
 }
 
 export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
+	const W = 1440
+	const H = 850
+	const scale = 0.18
+
 	return (
 		<div
 			className='max-h-fit max-w-fit rounded-15 p-[1px]'
@@ -118,7 +122,22 @@ export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 					'drop-shadow(0px 0px 0.6332594156265259px rgba(0, 21, 64, 0.14)) drop-shadow(0px 0.6332594156265259px 1.2665188312530518px rgba(0, 21, 64, 0.05))',
 			}}
 		>
-			<div className='rounded-15 bg-[#0C0D0C] p-[9px]'>{children}</div>
+			<div className='rounded-15 bg-[#0C0D0C] p-[9px]'>
+				<div
+					className='relative overflow-hidden rounded-5 duration-100 animate-in fade-in'
+					style={{
+						width: W * scale,
+						height: H * scale,
+						transform: `translateZ(0)`, // Force rounded border clipping in Safari
+					}}
+					// Tell screen readers to ignore this element
+					aria-hidden='true'
+					// Prevent browser from interacting with children
+					ref={(node) => node && node.setAttribute('inert', '')}
+				>
+					{children}
+				</div>
+			</div>
 		</div>
 	)
 }

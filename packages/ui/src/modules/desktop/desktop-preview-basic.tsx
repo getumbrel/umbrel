@@ -47,10 +47,6 @@ export function DesktopPreview({
 	widgets?: {id: string; type: WidgetType; app: {name: string}}[]
 	apps?: {name: string; icon: string}[]
 }) {
-	const W = 1440
-	const H = 850
-	const scale = 0.18
-
 	const appsPerRow = 6
 	const appWidth = 28
 	const appHeight = 22
@@ -63,18 +59,7 @@ export function DesktopPreview({
 	const [show] = useTimeout(300)
 
 	return (
-		<div
-			className='relative overflow-hidden rounded-5 duration-100 animate-in'
-			style={{
-				width: W * scale,
-				height: H * scale,
-				transform: `translateZ(0)`, // Force rounded border clipping in Safari
-			}}
-			// Tell screen readers to ignore this element
-			aria-hidden='true'
-			// Prevent browser from interacting with children
-			ref={(node) => node && node.setAttribute('inert', '')}
-		>
+		<div>
 			{wallpaperId && (
 				<FadeInImg
 					key={wallpaperId}
