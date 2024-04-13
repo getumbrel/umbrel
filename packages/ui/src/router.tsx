@@ -30,7 +30,6 @@ const One = React.lazy(() => import('./routes/demo/one'))
 const Two = React.lazy(() => import('./routes/demo/two'))
 const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const Login = React.lazy(() => import('./routes/login'))
-const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
@@ -145,18 +144,6 @@ export const router = createBrowserRouter([
 						<EnsureLoggedOut>
 							<Login />
 						</EnsureLoggedOut>
-					</EnsureUserExists>
-				),
-			},
-			{
-				path: 'login-with-umbrel/:appId',
-				element: (
-					<EnsureUserExists>
-						<AppsProvider>
-							{/* <EnsureLoggedIn> */}
-							<LoginWithUmbrel />
-							{/* </EnsureLoggedIn> */}
-						</AppsProvider>
 					</EnsureUserExists>
 				),
 			},

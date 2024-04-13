@@ -35,7 +35,7 @@
 			}
 		]
 	},
-	"include": ["src", "tailwind.config.ts", "app-auth/main-app-auth.tsx"],
+	"include": ["src", "tailwind.config.ts", "app-auth"],
 	/* Exclude parent */
 	// "exclude": ["../"],
 	"references": [{"path": "./tsconfig.node.json"}]
