@@ -212,9 +212,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
-							<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
-								Troubleshoot
-							</ContextMenuItem>
 							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' ? (
@@ -223,6 +220,9 @@ export function AppIconConnected({appId}: {appId: string}) {
  										<ContextMenuItem onSelect={appInstall.start}>{t('start')}</ContextMenuItem>
 									)}
 									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
+									<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
+										{t('troubleshoot')}
+									</ContextMenuItem>
 									<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
 										{t('desktop.app.context.uninstall')}
 									</ContextMenuItem>
