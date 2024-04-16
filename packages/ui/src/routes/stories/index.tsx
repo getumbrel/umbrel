@@ -21,7 +21,6 @@ import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {H1, H2, H3} from '@/layouts/stories'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
@@ -47,6 +46,8 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
+import {Label} from '@/shadcn-components/ui/label'
+import {RadioGroup, RadioGroupItem} from '@/shadcn-components/ui/radio-group'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
@@ -57,7 +58,6 @@ import {tw} from '@/utils/tw'
 export default function Stories() {
 	return (
 		<div className='flex flex-col gap-4 bg-white/20 p-4'>
-			<UmbrelHeadTitle>Stories Home</UmbrelHeadTitle>
 			<H1>Stories</H1>
 			<H2>i18n</H2>
 			<I18Examples />
@@ -87,6 +87,8 @@ export default function Stories() {
 			</NumberedList>
 			<H2>Badge</H2>
 			<Badges />
+			<H2>Radio Group</H2>
+			<RadioGroupDemo />
 			<H2>Checkbox</H2>
 			<CheckboxExamples />
 			<H2>Loading</H2>
@@ -115,6 +117,29 @@ export default function Stories() {
 				</div>
 			</ScrollArea>
 		</div>
+	)
+}
+
+export function RadioGroupDemo() {
+	return (
+		<RadioGroup defaultValue='comfortable'>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='default' id='r1' />
+				<Label htmlFor='r1'>Default</Label>
+			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='comfortable' id='r2' />
+				<Label htmlFor='r2'>Comfortable</Label>
+			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='compact' id='r3' />
+				<Label htmlFor='r3'>Compact</Label>
+			</div>
+			<div className='flex items-center space-x-2'>
+				<RadioGroupItem value='disabled' id='r4' disabled />
+				<Label htmlFor='r4'>Disabled</Label>
+			</div>
+		</RadioGroup>
 	)
 }
 
@@ -458,12 +483,10 @@ function ToastExample() {
 					toast('Event has been created', {
 						description: 'Monday, January 3rd at 6:00pm',
 						action: {
-							label: 'Action',
+							label: 'OK',
 							onClick: fixmeHandler,
 						},
-						classNames: {
-							actionButton: tw`rounded-full bg-red-500`,
-						},
+						duration: Infinity,
 					})
 				}
 			>

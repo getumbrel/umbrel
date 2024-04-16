@@ -200,3 +200,8 @@ a {
 [data-sonner-toaster] {
 	@apply !z-50;
 }
+
+/* Fixes action button not aligning to the right when content is too short */
+[data-sonner-toaster] [data-content] {
+	@apply w-full;
+}

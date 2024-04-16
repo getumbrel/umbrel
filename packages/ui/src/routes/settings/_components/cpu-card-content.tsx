@@ -6,12 +6,5 @@ import {ProgressStatCardContent} from './progress-card-content'
 export function CpuCardContent() {
 	const {value, secondaryValue, progress} = useCpuForUi()
 
-	return (
-		<ProgressStatCardContent
-			title={t('cpu')}
-			value={value}
-			secondaryValue={secondaryValue}
-			progress={progress}
-		/>
-	)
+	return <ProgressStatCardContent title={t('cpu')} value={value} secondaryValue={secondaryValue} progress={progress} />
 }

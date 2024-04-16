@@ -2,9 +2,10 @@ import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
+import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 
-import {ErrorBoundary} from './components/ui/error-boundary'
+import {ErrorBoundaryPageFallback} from './components/ui/error-boundary-page-fallback'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
 import {Demo} from './layouts/demo-layout'
@@ -29,14 +30,12 @@ const One = React.lazy(() => import('./routes/demo/one'))
 const Two = React.lazy(() => import('./routes/demo/two'))
 const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const Login = React.lazy(() => import('./routes/login'))
-const LoginWithUmbrel = React.lazy(() => import('./routes/login-with-umbrel'))
 const LoginTest = React.lazy(() => import('./routes/login-test'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
 const Stories = React.lazy(() => import('./routes/stories'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
-const RestartTest = React.lazy(() => import('./routes/restart-test'))
 const SpecificStory = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.SpecificStory})))
 
 // NOTE: consider extracting certain providers into react-router loaders
@@ -65,11 +64,12 @@ export const router = createBrowserRouter([
 				</AvailableAppsProvider>
 			</EnsureLoggedIn>
 		),
-		errorElement: <ErrorBoundary />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'edit-widgets',
 				Component: EditWidgetsPage,
+				ErrorBoundary: ErrorBoundaryComponentFallback,
 			},
 			{
 				Component: SheetLayout,
@@ -85,10 +85,12 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: Discover,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 							{
 								path: 'category/:categoryishId',
 								Component: CategoryPage,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 						],
 					},
@@ -106,10 +108,12 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: CommunityAppStoreHome,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 							{
 								path: ':appId',
 								Component: CommunityAppPage,
+								ErrorBoundary: ErrorBoundaryComponentFallback,
 							},
 						],
 					},
@@ -131,7 +135,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: BareLayout,
-		errorElement: <ErrorBoundary />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'login',
@@ -140,18 +144,6 @@ export const router = createBrowserRouter([
 						<EnsureLoggedOut>
 							<Login />
 						</EnsureLoggedOut>
-					</EnsureUserExists>
-				),
-			},
-			{
-				path: 'login-with-umbrel/:appId',
-				element: (
-					<EnsureUserExists>
-						<AppsProvider>
-							{/* <EnsureLoggedIn> */}
-							<LoginWithUmbrel />
-							{/* </EnsureLoggedIn> */}
-						</AppsProvider>
 					</EnsureUserExists>
 				),
 			},
@@ -195,7 +187,7 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		Component: Demo,
-		errorElement: <ErrorBoundary />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'one',
@@ -212,13 +204,9 @@ export const router = createBrowserRouter([
 		Component: LoginTest,
 	},
 	{
-		path: 'restart-test',
-		Component: RestartTest,
-	},
-	{
 		path: '/',
 		Component: StoriesLayout,
-		errorElement: <ErrorBoundary />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
 				path: 'stories',
@@ -231,19 +219,6 @@ export const router = createBrowserRouter([
 			},
 		],
 	},
-	{
-		path: 'debug',
-		loader: () => {
-			if (localStorage.getItem('debug') === 'true') {
-				localStorage.setItem('debug', 'false')
-			} else {
-				localStorage.setItem('debug', 'true')
-			}
-			return false
-		},
-		element: <div>Debug toggled</div>,
-	},
-
 	{
 		path: '*',
 		Component: NotFound,

@@ -17,7 +17,6 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -32,6 +31,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -83,17 +83,23 @@ export function SettingsContent() {
 						<DesktopPreviewConnected />
 					</DesktopPreviewFrame>
 				</div>
-				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
+				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
 						<h2 className='text-24 font-bold leading-none -tracking-4'>
 							{/* TODO: interpolate here */}
-							{userQ.data?.name ?? UNKNOWN()}’s <span className='opacity-40'>{t('umbrel')}</span>
+							{firstNameFromFullName(userQ.data?.name ?? UNKNOWN())}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
-						<dl className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
+						<dl
+							className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+							style={{
+								// Makes columns not all the same width
+								gridTemplateColumns: 'auto auto',
+							}}
+						>
 							<dt className='opacity-40'>{t('device')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-							<dt className='opacity-40'>{t('umbrelos')}</dt>
+							<dt className='opacity-40'>{t('version')}</dt>
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
@@ -169,7 +175,6 @@ export function SettingsContent() {
 					</ListRow>
 					{tor.isMutLoading && (
 						<CoverMessage>
-							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
 							<Loading>{t('tor.disable.progress')}</Loading>
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>

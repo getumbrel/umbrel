@@ -27,7 +27,7 @@ export default function SettingsStory() {
 					wallpaperId={wId}
 					userName='John Doe'
 					widgets={[]}
-					apps={range(0, 50).map((i) => ({
+					apps={range(0, 50).map(() => ({
 						icon: 'https://source.unsplash.com/random/100x100',
 						name: 'sdlfksjdflksdjflksjdkf',
 					}))}
@@ -45,7 +45,7 @@ export default function SettingsStory() {
 						id: 'sdfsdf',
 					},
 				]}
-				apps={range(0, 50).map((i) => ({
+				apps={range(0, 50).map(() => ({
 					icon: 'https://source.unsplash.com/random/100x100',
 					name: 'sdlfksjdflksdjflksjdkf',
 				}))}
@@ -54,7 +54,7 @@ export default function SettingsStory() {
 				wallpaperId={wId}
 				userName='John Doe'
 				widgets={range(0, 3).map((i) => ({app: {name: 'sdlfkjsdflk'}, id: i.toString(), type: 'four-stats'}))}
-				apps={range(0, 50).map((i) => ({
+				apps={range(0, 50).map(() => ({
 					icon: 'https://source.unsplash.com/random/100x100',
 					name: 'sdlfksjdflksdjflksjdkf',
 				}))}

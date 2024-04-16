@@ -77,7 +77,7 @@
   "cmdk.input-placeholder": "Search for apps, settings, or actions",
   "no-results-found": "No results found",
   "cmdk.restart-umbrel": "Restart Umbrel",
-  "cmdk.update-all-apps": "Update all apps",
+  "cmdk.update-all-apps": "Update all apps...",
   "cmdk.change-wallpaper": "Change wallpaper",
   "cmdk.live-usage": "Live Usage",
   "cmdk.widgets": "Widgets",
@@ -382,5 +382,6 @@
   "unknown-error": "Unknown error",
   "software-update.install-now": "Install now",
   "app-updates.no-updates": "All apps are up-to-date!",
-  "continue": "Continue"
+  "continue": "Continue",
+  "version": "Version"
 }

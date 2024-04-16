@@ -18,11 +18,9 @@ export function UninstallTheseFirstDialog({
 	open,
 	onOpenChange,
 	appId,
-	registryId,
 	toUninstallFirstIds: toInstallFirstIds,
 }: {
 	appId: string
-	registryId?: string
 	toUninstallFirstIds: string[]
 	open: boolean
 	onOpenChange: (open: boolean) => void

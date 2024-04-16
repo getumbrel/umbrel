@@ -45,7 +45,7 @@ export default function Login() {
 	switch (step) {
 		case 'password': {
 			return (
-				<Layout title={t('login.title')} headTitle={t('login')} subTitle={t('login.subtitle')}>
+				<Layout title={t('login.title')} subTitle={t('login.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5 px-4 md:px-0' onSubmit={handleSubmitPassword}>
 						<div className={formGroupClass}>
 							<PasswordInput

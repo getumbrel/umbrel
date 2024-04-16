@@ -1,4 +1,3 @@
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {
 	Drawer,
 	DrawerContent,
@@ -20,7 +19,6 @@ export function AppStorePreferencesDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight withScroll>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('app-store.description')}</DrawerDescription>
 				</DrawerHeader>

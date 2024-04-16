@@ -2,7 +2,6 @@ import {TorIcon2} from '@/assets/tor-icon2'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
@@ -35,7 +34,6 @@ export default function ConfirmEnableTorDialog() {
 	if (isMutLoading) {
 		return (
 			<CoverMessage>
-				<UmbrelHeadTitle>{t('tor.enable.progress')}</UmbrelHeadTitle>
 				<Loading>Enabling Tor</Loading>
 				<CoverMessageParagraph>{t('tor.enable.description')}</CoverMessageParagraph>
 			</CoverMessage>
@@ -46,7 +44,6 @@ export default function ConfirmEnableTorDialog() {
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={TorIcon2}>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<AlertDialogTitle>{title}</AlertDialogTitle>
 					<AlertDialogDescription>{t('tor.enable.description')}</AlertDialogDescription>
 				</AlertDialogHeader>

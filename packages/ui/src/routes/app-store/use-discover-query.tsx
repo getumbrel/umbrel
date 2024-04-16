@@ -1,6 +1,6 @@
-import {Categoryish} from '@/modules/app-store/constants'
-
 import {useQuery} from '@tanstack/react-query'
+
+import {Categoryish} from '@/modules/app-store/constants'
 
 export type Banner = {
 	id: string
@@ -12,7 +12,7 @@ export type Section = {
 	heading: string
 	subheading: string
 	apps: string[]
-	textLocation?: "left" | "right" | undefined
+	textLocation?: 'left' | 'right' | undefined
 	description?: string
 	category?: Categoryish
 }

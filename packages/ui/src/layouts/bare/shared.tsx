@@ -1,7 +1,6 @@
 import {HTMLProps} from 'react'
 
 import UmbrelLogo from '@/assets/umbrel-logo'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
@@ -39,7 +38,7 @@ export const footerClass = tw`flex items-center justify-center gap-4`
 export const footerLinkClass = tw`text-13 transition-colors font-normal text-white/60 -tracking-3 hover:text-white/80 focus:outline-none focus-visible:ring-3`
 
 export const buttonClass = tw`flex h-[42px] items-center rounded-full bg-white px-4 text-14 font-medium -tracking-1 text-black ring-white/40 transition-all duration-300 hover:bg-white/80 focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-white/90 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
-export const secondaryButtonClasss  = tw`flex h-[42px] items-center rounded-full bg-neutral-600/40 backdrop-blur-sm px-4 text-14 font-medium -tracking-1 text-white ring-white/40 transition-all duration-300 hover:bg-neutral-600/60 focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-neutral-600/60 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
+export const secondaryButtonClasss = tw`flex h-[42px] items-center rounded-full bg-neutral-600/40 backdrop-blur-sm px-4 text-14 font-medium -tracking-1 text-white ring-white/40 transition-all duration-300 hover:bg-neutral-600/60 focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-neutral-600/60 min-w-[112px] justify-center disabled:pointer-events-none disabled:opacity-50`
 
 export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 
@@ -47,7 +46,6 @@ export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 // shouldn't be taken too far.
 export function Layout({
 	title,
-	headTitle,
 	transitionTitle = true,
 	subTitle,
 	subTitleMaxWidth,
@@ -55,7 +53,6 @@ export function Layout({
 	footer,
 }: {
 	title: string
-	headTitle?: string
 	transitionTitle?: boolean
 	subTitle: React.ReactNode
 	subTitleMaxWidth?: number
@@ -65,7 +62,6 @@ export function Layout({
 	return (
 		<>
 			{/* TODO: probably want consumer to set the title */}
-			<UmbrelHeadTitle>{headTitle || title}</UmbrelHeadTitle>
 			<div className='flex-1' />
 			<div className='flex w-full flex-col items-center gap-5'>
 				<UmbrelLogoLarge />

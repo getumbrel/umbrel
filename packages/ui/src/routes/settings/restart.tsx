@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {RiRestartLine} from 'react-icons/ri'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {
 	AlertDialog,
@@ -25,7 +24,6 @@ export default function RestartDialog() {
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiRestartLine}>
-					<UmbrelHeadTitle>{t('restart')}</UmbrelHeadTitle>
 					<AlertDialogTitle>{t('restart.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

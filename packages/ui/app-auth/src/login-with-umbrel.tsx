@@ -5,7 +5,6 @@ import {AppIcon} from '@/components/app-icon'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {PinInput} from '@/components/ui/pin-input'
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
 import {Button} from '@/shadcn-components/ui/button'
@@ -204,7 +203,6 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 			<div className='fixed inset-0 bg-black/50  contrast-more:bg-black' />
 			<div className='relative flex min-h-[100dvh] flex-col items-center justify-between p-5'>
 				<div className='flex h-full w-full flex-grow items-center justify-center'>
-					<UmbrelHeadTitle>Login with Umbrel</UmbrelHeadTitle>
 					<div
 						className={cn(
 							'w-full rounded-20 bg-dialog-content/70 p-8 shadow-dialog sm:max-w-[480px]',

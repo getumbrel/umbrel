@@ -13,7 +13,7 @@ import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState, AppStateOrLoading, progressStates} from '@/trpc/trpc'
+import {AppState, AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -70,7 +70,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 md:w-16 md:rounded-15 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6'
+					'aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
 				)}
 				style={{
 					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
@@ -89,22 +89,17 @@ export function AppIcon({
 						draggable={false}
 					/>
 				)}
-				{inProgress && state === 'installing' && progress && (
-          <div className="absolute inset-0 flex items-center justify-center">
-						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
-							<div
-								className="absolute inset-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both"
-								style={{
-									width: `${progress}%`,
-								}}
-							/>
-						</div>
-					</div>
-        )}
-				{inProgress && state !== 'installing' && (
-					<div className="absolute inset-0 flex items-center justify-center">
-						<div className="relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40">
-							<div className="absolute inset-0 w-[30%] rounded-full bg-white/90 animate-sliding-loader"/>
+				{inProgress && (
+					<div className='absolute inset-0 flex items-center justify-center'>
+						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
+							{arrayIncludes(progressBarStates, state) ? (
+								<div
+									className='absolute inset-0 w-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
+									style={{width: `${progress}%`}}
+								/>
+							) : (
+								<div className='absolute inset-0 w-[30%] animate-sliding-loader rounded-full bg-white/90' />
+							)}
 						</div>
 					</div>
 				)}
@@ -118,7 +113,7 @@ export function AppIcon({
 	)
 }
 
-function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
+export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?: string}) {
 	switch (state) {
 		case 'not-installed':
 			return t('app.installing')
@@ -147,6 +142,7 @@ function AppLabel({state, label}: {state: AppStateOrLoading; label: string}) {
 }
 
 export function AppIconConnected({appId}: {appId: string}) {
+	const navigate = useNavigate()
 	const userApp = useUserApp(appId)
 	const appInstall = useAppInstall(appId)
 	const [openDepsDialog, setOpenDepsDialog] = useState(false)
@@ -186,11 +182,11 @@ export function AppIconConnected({appId}: {appId: string}) {
 		case 'stopping':
 		case 'unknown':
 		case 'uninstalling':
-		case 'updating':
 			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
 		case 'not-installed':
 			return <AppIcon label='' src={userApp.app.icon} state='ready' />
 		case 'installing':
+		case 'updating':
 		case 'running':
 		case 'ready':
 		case 'stopped': {
@@ -216,6 +212,9 @@ export function AppIconConnected({appId}: {appId: string}) {
 										</Link>
 									</ContextMenuItem>
 								)}
+							<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
+								Troubleshoot
+							</ContextMenuItem>
 							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' && (
@@ -234,7 +233,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 					{toUninstallFirstIds.length > 0 && (
 						<UninstallTheseFirstDialog
 							appId={appId}
-							registryId={userApp.app.registryId}
 							toUninstallFirstIds={toUninstallFirstIds}
 							open={openDepsDialog}
 							onOpenChange={setOpenDepsDialog}

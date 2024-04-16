@@ -26,6 +26,7 @@ import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -81,13 +82,13 @@ export function SettingsContentMobile() {
 
 				<div className='mx-2.5'>
 					<h2 className='text-24 font-bold leading-none -tracking-4'>
-						{userQ.data.name}’s <span className='opacity-40'>{t('umbrel')}</span>
+						{firstNameFromFullName(userQ.data.name)}’s <span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>{t('device')}</dt>
 						<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-						<dt className='opacity-40'>{t('umbrelos')}</dt>
+						<dt className='opacity-40'>{t('version')}</dt>
 						<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
 						<dt className='opacity-40'>{t('uptime')}</dt>
 						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
@@ -99,27 +100,32 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'}),
+					}}
+				>
 					<Card>
 						<StorageCardContent />
 					</Card>
 				</Link>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'})
-				}}>
+
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'}),
+					}}
+				>
 					{/* Set id on the second card because we wanna scroll to see them all */}
 					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 						<MemoryCardContent />
 					</Card>
 				</Link>
 
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'}),
+					}}
+				>
 					<Card>
 						<CpuCardContent />
 					</Card>

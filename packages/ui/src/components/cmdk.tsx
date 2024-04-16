@@ -1,9 +1,11 @@
 import {useCommandState} from 'cmdk'
 import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useRef, useState} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {useNavigate} from 'react-router-dom'
 import {useKey} from 'react-use'
 import {range} from 'remeda'
 
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {LOADING_DASH} from '@/constants'
 import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -16,6 +18,7 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
+import {sleep} from '@/utils/misc'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
@@ -51,6 +54,20 @@ export function CmdkProvider({children}: {children: React.ReactNode}) {
 
 export function CmdkMenu() {
 	const {open, setOpen} = useCmdkOpen()
+
+	return (
+		<CommandDialog open={open} onOpenChange={setOpen}>
+			<CommandInput placeholder={t('cmdk.input-placeholder')} />
+			<Separator />
+			<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+				<CmdkContent />
+			</ErrorBoundary>
+		</CommandDialog>
+	)
+}
+
+function CmdkContent() {
+	const {setOpen} = useCmdkOpen()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
 	const userApps = useApps()
@@ -73,163 +90,171 @@ export function CmdkMenu() {
 	const installableApps = availableApps.apps.filter((app) => !userApps.userAppsKeyed?.[app.id])
 
 	return (
-		<CommandDialog open={open} onOpenChange={setOpen}>
-			<CommandInput placeholder={t('cmdk.input-placeholder')} />
-			<Separator />
-			<CommandList ref={scrollRef}>
-				<FrequentApps />
-				<CommandEmpty>{t('no-results-found')}</CommandEmpty>
-				<CommandItem
-					icon={systemAppsKeyed['UMBREL_settings'].icon}
-					onSelect={() => {
-						navigate({pathname: '/settings', search: addLinkSearchParams({dialog: 'restart'})})
-						setOpen(false)
-					}}
-				>
-					{t('cmdk.restart-umbrel')}
-				</CommandItem>
-				<CommandItem
-					icon={systemAppsKeyed['UMBREL_app-store'].icon}
-					onSelect={() => {
-						navigate('/app-store?dialog=updates')
-						setOpen(false)
-					}}
-				>
-					{t('cmdk.update-all-apps')}
-				</CommandItem>
-				<CommandItem
-					icon={systemAppsKeyed['UMBREL_settings'].icon}
-					onSelect={() => {
-						navigate('/settings/wallpaper')
-						setOpen(false)
-					}}
-				>
-					{t('cmdk.change-wallpaper')}
-				</CommandItem>
-				<CommandItem
-					icon={systemAppsKeyed['UMBREL_live-usage'].icon}
-					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)
-						setOpen(false)
-					}}
-				>
-					{t('cmdk.live-usage')}
-				</CommandItem>
-				<CommandItem
-					icon={systemAppsKeyed['UMBREL_widgets'].icon}
-					onSelect={() => {
-						navigate('/edit-widgets')
-						setOpen(false)
-					}}
-				>
-					{t('cmdk.widgets')}
-				</CommandItem>
+		<CommandList ref={scrollRef}>
+			<FrequentApps />
+			<CommandEmpty>{t('no-results-found')}</CommandEmpty>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_settings'].icon}
+				onSelect={() => {
+					navigate({pathname: '/settings', search: addLinkSearchParams({dialog: 'restart'})})
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.restart-umbrel')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_app-store'].icon}
+				onSelect={() => {
+					navigate('/app-store?dialog=updates')
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.update-all-apps')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_settings'].icon}
+				onSelect={() => {
+					navigate('/settings/wallpaper')
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.change-wallpaper')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_live-usage'].icon}
+				onSelect={() => {
+					navigate(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.live-usage')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_widgets'].icon}
+				onSelect={() => {
+					navigate('/edit-widgets')
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.widgets')}
+			</CommandItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_home'].icon}
+				value={systemAppsKeyed['UMBREL_home'].name}
+				onSelect={() => {
+					navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)
+					setOpen(false)
+				}}
+			>
+				{systemAppsKeyed['UMBREL_home'].name}
+			</SearchItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_app-store'].icon}
+				value={systemAppsKeyed['UMBREL_app-store'].name}
+				onSelect={() => {
+					navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)
+					setOpen(false)
+				}}
+			>
+				{systemAppsKeyed['UMBREL_app-store'].name}
+			</SearchItem>
+			<SettingsSearchItem
+				value={systemAppsKeyed['UMBREL_settings'].name}
+				onSelect={() => navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
+			/>
+			<SettingsSearchItem
+				value={t('logout')}
+				onSelect={() => navigate({search: addLinkSearchParams({dialog: 'logout'})})}
+			/>
+			<SettingsSearchItem
+				value={t('cmdk.shutdown-umbrel')}
+				onSelect={() => navigate({pathname: 'settings', search: addLinkSearchParams({dialog: 'shutdown'})})}
+			/>
+			{/* ---- */}
+			{/* List rows */}
+			<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
+			<SettingsSearchItem value={t('change-password')} onSelect={() => navigate('settings/account/change-password')} />
+			<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
+				{t('2fa')}
+			</SettingsSearchItem>
+			<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/tor')} />
+			<SettingsSearchItem value={t('migration-assistant')} onSelect={() => navigate('/settings/migration-assistant')} />
+			<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
+			<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
+			<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
+			<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
+			{/* TODO: Enable after factory reset is hooked with umbreld */}
+			{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
+			{/* ---- */}
+			{readyApps.map((app) => (
 				<SearchItem
-					icon={systemAppsKeyed['UMBREL_home'].icon}
-					value={systemAppsKeyed['UMBREL_home'].name}
+					value={app.name}
+					icon={app.icon}
+					key={app.id}
 					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_home'].systemAppTo)
+						launchApp(app.id)
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['UMBREL_home'].name}
+					{app.name}
 				</SearchItem>
+			))}
+			{unreadyApps.map((app) => (
 				<SearchItem
-					icon={systemAppsKeyed['UMBREL_app-store'].icon}
-					value={systemAppsKeyed['UMBREL_app-store'].name}
+					disabled
+					value={app.name}
+					icon={app.icon}
+					key={app.id}
 					onSelect={() => {
-						navigate(systemAppsKeyed['UMBREL_app-store'].systemAppTo)
+						navigate(`/app-store/${app.id}`)
 						setOpen(false)
 					}}
 				>
-					{systemAppsKeyed['UMBREL_app-store'].name}
+					<span>
+						{app.name} <span className='opacity-50'> – {appStateToString(app.state)}</span>
+					</span>
 				</SearchItem>
-				<SettingsSearchItem
-					value={systemAppsKeyed['UMBREL_settings'].name}
-					onSelect={() => navigate(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
-				/>
-				<SettingsSearchItem
-					value={t('logout')}
-					onSelect={() => navigate({search: addLinkSearchParams({dialog: 'logout'})})}
-				/>
-				<SettingsSearchItem
-					value={t('cmdk.shutdown-umbrel')}
-					onSelect={() => navigate({pathname: 'settings', search: addLinkSearchParams({dialog: 'shutdown'})})}
-				/>
-				{/* ---- */}
-				{/* List rows */}
-				<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
-				<SettingsSearchItem
-					value={t('change-password')}
-					onSelect={() => navigate('settings/account/change-password')}
-				/>
-				<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
-					{t('2fa')}
-				</SettingsSearchItem>
-				<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/tor')} />
-				<SettingsSearchItem
-					value={t('migration-assistant')}
-					onSelect={() => navigate('/settings/migration-assistant')}
-				/>
-				<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
-				<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
-				<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
-				<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
-				{/* TODO: Enable after factory reset is hooked with umbreld */}
-				{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
-				{/* ---- */}
-				{readyApps.map((app) => (
-					<SearchItem
-						value={app.name}
-						icon={app.icon}
-						key={app.id}
-						onSelect={() => {
-							launchApp(app.id)
-							setOpen(false)
-						}}
-					>
-						{app.name}
-					</SearchItem>
-				))}
-				{unreadyApps.map((app) => (
-					<SearchItem
-						disabled
-						value={app.name}
-						icon={app.icon}
-						key={app.id}
-						onSelect={() => {
-							navigate(`/app-store/${app.id}`)
-							setOpen(false)
-						}}
-					>
-						<span>
-							{app.name} <span className='opacity-50'> – {appStateToString(app.state)}</span>
-						</span>
-					</SearchItem>
-				))}
-				{installableApps.map((app) => (
-					<SearchItem
-						value={app.name}
-						icon={app.icon}
-						key={app.id}
-						onSelect={() => {
-							navigate(`/app-store/${app.id}`)
-							setOpen(false)
-						}}
-					>
-						<span>
-							{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
-						</span>
-					</SearchItem>
-				))}
-				<DebugOnlyBare>
-					<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
-						Install a bunch of random apps
-					</SearchItem>
-				</DebugOnlyBare>
-			</CommandList>
-		</CommandDialog>
+			))}
+			{installableApps.map((app) => (
+				<SearchItem
+					value={app.name}
+					icon={app.icon}
+					key={app.id}
+					onSelect={() => {
+						navigate(`/app-store/${app.id}`)
+						setOpen(false)
+					}}
+				>
+					<span>
+						{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
+					</span>
+				</SearchItem>
+			))}
+			<DebugOnlyBare>
+				<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
+					Install a bunch of random apps
+				</SearchItem>
+				<SearchItem value='Stories' onSelect={() => navigate('/stories')}>
+					Stories
+				</SearchItem>
+			</DebugOnlyBare>
+			<SearchItem value='____' onSelect={debugToggle}>
+				debug
+			</SearchItem>
+		</CommandList>
 	)
+}
+
+async function debugToggle() {
+	if (localStorage.getItem('debug') === 'true') {
+		localStorage.setItem('debug', 'false')
+		await sleep(500)
+		window.location.reload()
+	} else {
+		localStorage.setItem('debug', 'true')
+		await sleep(500)
+		window.location.reload()
+	}
 }
 
 function FrequentApps() {

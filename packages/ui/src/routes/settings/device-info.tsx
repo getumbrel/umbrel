@@ -1,4 +1,3 @@
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
@@ -22,7 +21,6 @@ export default function DeviceInfoDialog() {
 			<DialogScrollableContent showClose>
 				<div className='space-y-6 px-5 py-6'>
 					<DialogHeader>
-						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle>{title}</DialogTitle>
 					</DialogHeader>
 					<DeviceInfoContent

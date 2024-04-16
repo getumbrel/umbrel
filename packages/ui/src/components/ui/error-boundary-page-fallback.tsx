@@ -1,5 +1,9 @@
+import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
+import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
+import {AppsProvider} from '@/providers/apps'
+import {AvailableAppsProvider} from '@/providers/available-apps'
 import {Wallpaper} from '@/providers/wallpaper'
 import {
 	AlertDialog,
@@ -11,16 +15,27 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
-import {downloadLogs} from '@/utils/logs'
 import {t} from '@/utils/i18n'
+import {downloadLogs} from '@/utils/logs'
 
-export function ErrorBoundary() {
+/**
+ * Used for when we can't reasonably replace the component with error text. EX: wallpaper or cmdk
+ */
+export function ErrorBoundaryPageFallback() {
 	const navigate = useNavigate()
+	const [open, setOpen] = useState(true)
 
 	return (
 		<>
 			<Wallpaper />
-			<AlertDialog open={true}>
+			<AppsProvider>
+				<AvailableAppsProvider>
+					<DockBottomPositioner>
+						<Dock />
+					</DockBottomPositioner>
+				</AvailableAppsProvider>
+			</AppsProvider>
+			<AlertDialog open={open} onOpenChange={(o) => setOpen(o)}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t('something-went-wrong')}</AlertDialogTitle>
@@ -28,8 +43,9 @@ export function ErrorBoundary() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={() => navigate('/')}>{t('not-found-404.home')}</AlertDialogAction>
-						<Button size="dialog" variant="default" onClick={() => navigate('/settings')}>Go to Settings</Button>
-						<Button size="dialog" variant="default" onClick={() => downloadLogs()}>{t('download-logs')}</Button>
+						<Button size='dialog' variant='default' onClick={() => downloadLogs()}>
+							{t('download-logs')}
+						</Button>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

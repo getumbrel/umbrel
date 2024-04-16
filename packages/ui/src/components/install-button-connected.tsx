@@ -71,7 +71,6 @@ export function InstallButtonConnected({
 			/>
 			<InstallTheseFirstDialog
 				appId={app.id}
-				registryId={registryId}
 				dependencies={deps}
 				open={showDepsDialog}
 				onOpenChange={setShowDepsDialog}

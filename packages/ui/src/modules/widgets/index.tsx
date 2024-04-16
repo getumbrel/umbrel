@@ -55,10 +55,6 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 
 	const isLoading = isLoadingApps || widgetQ.isLoading
 
-	if (isLoading || widgetQ.isError) return <LoadingWidget type={manifestConfig.type} />
-
-	const widget = widgetQ.data as WidgetConfig
-
 	const handleClick = (link?: string) => {
 		if (appId === 'live-usage' && systemAppsKeyed['UMBREL_live-usage']) {
 			navigate('/?dialog=live-usage')
@@ -70,6 +66,10 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 			toast.error(`App "${appId}" not found.`)
 		}
 	}
+
+	if (isLoading || widgetQ.isError) return <LoadingWidget type={manifestConfig.type} onClick={handleClick} />
+
+	const widget = widgetQ.data as WidgetConfig
 
 	switch (manifestConfig.type) {
 		case 'text-with-buttons': {
@@ -168,28 +168,28 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 	}
 }
 
-export function LoadingWidget<T extends WidgetType = WidgetType>({type}: {type: T}) {
+export function LoadingWidget<T extends WidgetType = WidgetType>({type, onClick}: {type: T; onClick?: () => void}) {
 	switch (type) {
 		case 'text-with-buttons': {
-			return <TextWithButtonsWidget />
+			return <TextWithButtonsWidget onClick={onClick} />
 		}
 		case 'text-with-progress': {
-			return <TextWithProgressWidget />
+			return <TextWithProgressWidget onClick={onClick} />
 		}
 		case 'two-stats-with-guage': {
-			return <TwoStatsWidget />
+			return <TwoStatsWidget onClick={onClick} />
 		}
 		case 'three-stats': {
-			return <ThreeStatsWidget />
+			return <ThreeStatsWidget onClick={onClick} />
 		}
 		case 'four-stats': {
-			return <FourStatsWidget />
+			return <FourStatsWidget onClick={onClick} />
 		}
 		case 'list': {
-			return <ListWidget />
+			return <ListWidget onClick={onClick} />
 		}
 		case 'list-emoji': {
-			return <ListEmojiWidget />
+			return <ListEmojiWidget onClick={onClick} />
 		}
 	}
 }

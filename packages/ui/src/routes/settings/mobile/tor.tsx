@@ -2,7 +2,6 @@ import {CopyableField} from '@/components/ui/copyable-field'
 import {listClass, listItemClass} from '@/components/ui/list'
 import {Spinner} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
@@ -35,7 +34,6 @@ export function TorDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('tor-description')}</DrawerDescription>
 				</DrawerHeader>

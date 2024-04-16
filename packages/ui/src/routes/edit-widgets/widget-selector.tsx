@@ -1,10 +1,13 @@
 import {AnimatePresence, motion} from 'framer-motion'
 import {ReactNode} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {useTimeout} from 'react-use'
 
 import {WidgetCheckIcon} from '@/assets/widget-check-icon'
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {useWidgets} from '@/hooks/use-widgets'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {ExampleWidget, Widget} from '@/modules/widgets'
@@ -137,7 +140,7 @@ function WidgetSheet({
 							<SheetHeader>
 								<SheetTitle>{t('widgets.edit.select-up-to-3-widgets')}</SheetTitle>
 							</SheetHeader>
-							{children}
+							<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>{children}</ErrorBoundary>
 							<DockSpacer />
 						</div>
 					</ScrollArea>
@@ -154,7 +157,9 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 				<AppIcon src={iconSrc} size={36} className='rounded-8' />
 				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
 			</div>
-			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>
+			<div className='flex flex-row flex-wrap gap-[20px]'>
+				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>{children}</ErrorBoundary>
+			</div>
 			<div className='h-1'></div>
 		</>
 	)

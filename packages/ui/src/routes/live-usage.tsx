@@ -1,11 +1,18 @@
+import {DialogPortal} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Card} from '@/components/ui/card'
-import {ImmersiveDialog, ImmersiveDialogContent, immersiveDialogTitleClass} from '@/components/ui/immersive-dialog'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {
+	ImmersiveDialog,
+	ImmersiveDialogContent,
+	ImmersiveDialogOverlay,
+	immersiveDialogTitleClass,
+} from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useCpuForUi} from '@/hooks/use-cpu'
 import {useDiskForUi} from '@/hooks/use-disk'
@@ -26,11 +33,15 @@ export default function LiveUsageDialog() {
 
 	return (
 		<ImmersiveDialog {...dialogProps}>
-			<ImmersiveDialogContent size='lg' showScroll>
-				<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
-				<h1 className={immersiveDialogTitleClass}>{title}</h1>
-				<LiveUsageContent />
-			</ImmersiveDialogContent>
+			<DialogPortal>
+				<ImmersiveDialogOverlay />
+				<ImmersiveDialogContent size='lg' showScroll>
+					<h1 className={immersiveDialogTitleClass}>{title}</h1>
+					<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+						<LiveUsageContent />
+					</ErrorBoundary>
+				</ImmersiveDialogContent>
+			</DialogPortal>
 		</ImmersiveDialog>
 	)
 }
@@ -64,9 +75,12 @@ function LiveUsageContent() {
 						onValueChange={setSelectedTab}
 					/>
 				)}
-				{selectedTab === 'storage' && <StorageSection />}
-				{selectedTab === 'memory' && <MemorySection />}
-				{selectedTab === 'cpu' && <CpuSection />}
+				{/* Key to make sure we reset the error */}
+				<ErrorBoundary key={selectedTab} FallbackComponent={ErrorBoundaryCardFallback}>
+					{selectedTab === 'storage' && <StorageSection />}
+					{selectedTab === 'memory' && <MemorySection />}
+					{selectedTab === 'cpu' && <CpuSection />}
+				</ErrorBoundary>
 			</div>
 		)
 	}
@@ -74,13 +88,19 @@ function LiveUsageContent() {
 	return (
 		<div className='grid grid-cols-3 gap-x-4'>
 			<LiveUsageSection title={t('storage')}>
-				<StorageSection />
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+					<StorageSection />
+				</ErrorBoundary>
 			</LiveUsageSection>
 			<LiveUsageSection title={t('memory')}>
-				<MemorySection />
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+					<MemorySection />
+				</ErrorBoundary>
 			</LiveUsageSection>
 			<LiveUsageSection title={t('cpu')}>
-				<CpuSection />
+				<ErrorBoundary FallbackComponent={ErrorBoundaryCardFallback}>
+					<CpuSection />
+				</ErrorBoundary>
 			</LiveUsageSection>
 		</div>
 	)

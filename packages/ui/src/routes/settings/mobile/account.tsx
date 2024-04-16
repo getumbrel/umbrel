@@ -2,7 +2,6 @@ import {useState} from 'react'
 import {useParams} from 'react-router-dom'
 
 import {SegmentedControl} from '@/components/ui/segmented-control'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {usePassword} from '@/hooks/use-password'
 import {useUserName} from '@/hooks/use-user-name'
 import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -39,7 +38,6 @@ export function AccountDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('account-description')}</DrawerDescription>
 				</DrawerHeader>
