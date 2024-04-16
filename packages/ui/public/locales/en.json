@@ -383,5 +383,7 @@
   "software-update.install-now": "Install now",
   "app-updates.no-updates": "All apps are up-to-date!",
   "continue": "Continue",
-  "version": "Version"
+  "version": "Version",
+  "app.stopped": "Stopped",
+  "start": "Start"
 }

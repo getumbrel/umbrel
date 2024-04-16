@@ -3,7 +3,6 @@ import {useState} from 'react'
 import {Link, useNavigate} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
 
-import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
@@ -135,6 +134,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'loading':
 			return t('loading') + '...'
 		case 'stopped':
+			return t('app.stopped')
 		case 'unknown':
 			return t('app.offline')
 	}
@@ -217,10 +217,10 @@ export function AppIconConnected({appId}: {appId: string}) {
 							</ContextMenuItem>
 							{!inProgress && (
 								<>
-									{appInstall.state !== 'stopped' && (
-										<DebugOnlyBare>
-											<ContextMenuItem onSelect={appInstall.stop}>DEBUG: {t('stop')}</ContextMenuItem>
-										</DebugOnlyBare>
+									{appInstall.state !== 'stopped' ? (
+ 										<ContextMenuItem onSelect={appInstall.stop}>{t('stop')}</ContextMenuItem>
+ 									) : (
+ 										<ContextMenuItem onSelect={appInstall.start}>{t('start')}</ContextMenuItem>
 									)}
 									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
 									<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>

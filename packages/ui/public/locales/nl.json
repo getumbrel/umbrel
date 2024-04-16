@@ -382,5 +382,7 @@
   "unknown-error": "Onbekende fout",
   "software-update.install-now": "Nu installeren",
   "app-updates.no-updates": "Alle apps zijn up-to-date!",
-  "continue": "Doorgaan"
+  "continue": "Doorgaan",
+  "app.stopped": "Gestopt",
+  "start": "Starten"
 }

@@ -382,5 +382,7 @@
   "unknown-error": "Erreur inconnue",
   "software-update.install-now": "Installer maintenant",
   "app-updates.no-updates": "Toutes les applications sont à jour !",
-  "continue": "Continuer"
+  "continue": "Continuer",
+  "app.stopped": "Arrêté",
+  "start": "Démarrer"
 }

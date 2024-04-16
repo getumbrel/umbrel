@@ -382,5 +382,7 @@
   "unknown-error": "不明なエラー",
   "software-update.install-now": "今すぐインストール",
   "app-updates.no-updates": "すべてのアプリが最新です！",
-  "continue": "続行"
+  "continue": "続行",
+  "app.stopped": "停止済み",
+  "start": "開始"
 }

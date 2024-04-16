@@ -382,5 +382,7 @@
   "unknown-error": "Error desconocido",
   "software-update.install-now": "Instalar ahora",
   "app-updates.no-updates": "¡Todas las aplicaciones están actualizadas!",
-  "continue": "Continuar"
+  "continue": "Continuar",
+  "app.stopped": "Detenido",
+  "start": "Iniciar"
 }
