@@ -18,7 +18,6 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {cn} from '@/shadcn-lib/utils'
 import {AppState, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {sleep} from '@/utils/misc'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
@@ -238,23 +237,8 @@ function CmdkContent() {
 					Stories
 				</SearchItem>
 			</DebugOnlyBare>
-			<SearchItem value='____' onSelect={debugToggle}>
-				debug
-			</SearchItem>
 		</CommandList>
 	)
-}
-
-async function debugToggle() {
-	if (localStorage.getItem('debug') === 'true') {
-		localStorage.setItem('debug', 'false')
-		await sleep(500)
-		window.location.reload()
-	} else {
-		localStorage.setItem('debug', 'true')
-		await sleep(500)
-		window.location.reload()
-	}
 }
 
 function FrequentApps() {
