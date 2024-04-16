@@ -2,7 +2,7 @@
 FROM node:18.19.1-buster-slim as umbrel-app-auth-ui-builder
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8
 
 # Set the working directory
 WORKDIR /app
