@@ -88,7 +88,7 @@ export function SettingsContentMobile() {
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
 						<dt className='opacity-40'>{t('device')}</dt>
 						<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-						<dt className='opacity-40'>{t('version')}</dt>
+						<dt className='opacity-40'>{t('umbrelos')}</dt>
 						<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
 						<dt className='opacity-40'>{t('uptime')}</dt>
 						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>

@@ -99,7 +99,7 @@ export function SettingsContent() {
 						>
 							<dt className='opacity-40'>{t('device')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-							<dt className='opacity-40'>{t('version')}</dt>
+							<dt className='opacity-40'>{t('umbrelos')}</dt>
 							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
 							<dt className='opacity-40'>{t('uptime')}</dt>
 							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
