@@ -13,7 +13,7 @@ import {
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {TroubleshootDropdown} from '@/routes/settings/troubleshoot/_shared'
 import {TroubleshootApp} from '@/routes/settings/troubleshoot/app'
-import TroubleshootSystem from '@/routes/settings/troubleshoot/system'
+import TroubleshootUmbrelOs from '@/routes/settings/troubleshoot/umbrelos'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
@@ -28,11 +28,11 @@ export default function TroubleshootDialog() {
 					<Routes>
 						<Route index path='/' element={<PickerDialogContent />} />
 						<Route
-							path='/system/:systemTab?'
+							path='/umbrelos/:systemTab?'
 							element={
 								<ImmersiveDialogContent>
 									<div className={troubleshootContentLayoutClass}>
-										<TroubleshootSystem />
+										<TroubleshootUmbrelOs />
 									</div>
 								</ImmersiveDialogContent>
 							}
@@ -65,7 +65,7 @@ function PickerDialogContent() {
 		<ImmersiveDialogContent short>
 			<h1 className={cn(immersiveDialogTitleClass, '-mt-1 text-19')}>{t('troubleshoot-pick-title')}</h1>
 			<div className='flex flex-col gap-2.5'>
-				<button className={radioButtonClass} onClick={() => navigate('/settings/troubleshoot/system')}>
+				<button className={radioButtonClass} onClick={() => navigate('/settings/troubleshoot/umbrelos/umbrelos')}>
 					<div>
 						<div className={radioTitleClass}>{t('umbrelos')}</div>
 						<div className={radioDescriptionClass}>{t('troubleshoot.umbrelos-description')}</div>

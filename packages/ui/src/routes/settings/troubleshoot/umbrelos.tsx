@@ -12,9 +12,9 @@ import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
-export default function TroubleshootSystem() {
+export default function TroubleshootUmbrelOs() {
 	const tabs = [
-		{id: 'umbrel', label: t('troubleshoot.umbrelos-logs')},
+		{id: 'umbrelos', label: t('troubleshoot.umbrelos-logs')},
 		{id: 'system', label: t('troubleshoot.system-logs')},
 	] as const satisfies readonly {id: SystemLogType; label: string}[]
 
@@ -25,7 +25,7 @@ export default function TroubleshootSystem() {
 	const params = useParams<{systemTab: SystemLogType}>()
 	const activeTab = params.systemTab ?? defaultTab
 	const setActiveTab = (tab: SystemLogType) => {
-		navigate(`/settings/troubleshoot/system/${tab}`, {
+		navigate(`/settings/troubleshoot/umbrelos/${tab}`, {
 			replace: true,
 		})
 	}

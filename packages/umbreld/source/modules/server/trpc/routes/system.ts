@@ -210,12 +210,12 @@ export default router({
 	logs: privateProcedure
 		.input(
 			z.object({
-				type: z.enum(['umbrel', 'system']),
+				type: z.enum(['umbrelos', 'system']),
 			}),
 		)
 		.query(async ({input}) => {
 			let process
-			if (input.type === 'umbrel') {
+			if (input.type === 'umbrelos') {
 				process = await $`journalctl --unit umbrel --unit umbreld-production --unit umbreld --unit ui --lines 1500`
 			}
 			if (input.type === 'system') {
