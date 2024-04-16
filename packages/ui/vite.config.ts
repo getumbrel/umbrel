@@ -36,6 +36,7 @@ export default defineConfig({
 					colorThief: ['colorthief'],
 				},
 			},
+			external: ['@radix-ui/react-label', '@radix-ui/react-radio-group'],
 		},
 	},
 })
