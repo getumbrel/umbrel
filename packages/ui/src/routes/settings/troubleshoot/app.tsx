@@ -3,13 +3,9 @@ import {useNavigate, useParams} from 'react-router-dom'
 
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
 import {LOADING_DASH} from '@/constants'
+import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-picker'
 import {useUserApp} from '@/providers/apps'
-import {
-	downloadUtf8Logs,
-	LogResults,
-	TroubleshootDropdown,
-	TroubleshootTitleBackButton,
-} from '@/routes/settings/troubleshoot/_shared'
+import {downloadUtf8Logs, LogResults, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {trpcReact} from '@/trpc/trpc'
@@ -27,11 +23,11 @@ export function TroubleshootApp() {
 	const appLogs = useAppLogs(appId)
 
 	return (
-		<>
+		<ImmersivePickerDialogContent>
 			<div className='flex w-full items-center justify-between'>
-				<TroubleshootTitleBackButton />
+				<TroubleshootTitleBackLink />
 				<DropdownMenu open={open} onOpenChange={setOpen}>
-					<TroubleshootDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
+					<AppDropdown appId={appId} setAppId={setAppId} open={open} onOpenChange={setOpen} />
 				</DropdownMenu>
 			</div>
 			{appLogs && <LogResults>{appLogs}</LogResults>}
@@ -41,7 +37,7 @@ export function TroubleshootApp() {
 				</Button>
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
-		</>
+		</ImmersivePickerDialogContent>
 	)
 }
 

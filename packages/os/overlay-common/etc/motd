@@ -10,10 +10,10 @@
     !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
      ""          "^          '"          ""
 
-- Warning --------------------------------------------------------------------
-| SSH access is only enabled for debugging purposes. Any modifications made  |
-| to the umbrelOS system will not be persisted between software updates. For |
-| use-cases where you want to run custom software in a Linux environment,    |
-| consider using the Portainer app available in the Umbrel App Store.        |
-------------------------------------------------------------------------------
+- Warning ---------------------------------------------------------------------
+| Terminal access is only enabled for debugging purposes. Any modifications   |
+| made to the umbrelOS system will not be persisted between software updates. |
+| For use-cases where you want to run custom software in a Linux environment, |
+| consider using the Portainer app available in the Umbrel App Store.         |
+-------------------------------------------------------------------------------
 

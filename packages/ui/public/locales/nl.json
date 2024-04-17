@@ -147,8 +147,8 @@
   "troubleshoot.system-logs": "Systeemlogbestanden",
   "troubleshoot.system-download": "Download {{label}}",
   "troubleshoot.app-download": "Download {{app}} logbestanden",
-  "troubleshoot.select-app": "Selecteer app...",
-  "troubleshoot.search": "Zoeken...",
+  "app-picker.select-app": "Selecteer app...",
+  "app-picker.search": "Zoeken...",
   "troubleshoot.share-with-umbrel-support": "Delen met Umbrel ondersteuning",
   "login": "Inloggen",
   "migration-assistant.prep.body": "Voorbereiden voor migratie",
@@ -384,5 +384,15 @@
   "app-updates.no-updates": "Alle apps zijn up-to-date!",
   "continue": "Doorgaan",
   "app.stopped": "Gestopt",
-  "start": "Starten"
+  "start": "Starten",
+  "terminal": "Terminal",
+  "terminal-description": "Voer aangepaste commando's uit in umbrelOS of binnen een app",
+  "terminal.umbrelos-description": "Voer aangepaste commando's uit in umbrelOS",
+  "terminal.app": "App",
+  "terminal.app-description": "Voer aangepaste commando's uit binnen een specifieke app",
+  "open": "Openen",
+  "advanced-settings": "Geavanceerde instellingen",
+  "advanced-settings-description": "Open de terminal of meld je aan voor het umbrelOS Beta Programma",
+  "beta-program": "umbrelOS Beta Programma",
+  "beta-program-description": "Meld je aan om beta-updates van umbrelOS te ontvangen, krijg vroegtijdig toegang tot nieuwe functies en help ons deze te verfijnen door jouw feedback te geven. Beta-updates kunnen onstabiel zijn en het oplossen van problemen kan bekendheid met de terminal vereisen."
 }

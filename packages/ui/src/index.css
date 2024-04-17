@@ -205,3 +205,12 @@ a {
 [data-sonner-toaster] [data-content] {
 	@apply w-full;
 }
+
+.xterm .xterm-viewport {
+	background-color: transparent !important;
+}
+
+.xterm .xterm-viewport {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}

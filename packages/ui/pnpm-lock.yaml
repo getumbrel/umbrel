@@ -68,6 +68,12 @@ dependencies:
   '@trpc/server':
     specifier: 10.34.0
     version: 10.34.0
+  '@xterm/addon-fit':
+    specifier: ^0.9.0
+    version: 0.9.0(@xterm/xterm@5.4.0)
+  '@xterm/xterm':
+    specifier: ^5.4.0
+    version: 5.4.0
   bignumber.js:
     specifier: ^9.1.2
     version: 9.1.2
@@ -2628,6 +2634,18 @@ packages:
 
   /@xobotyi/scrollbar-width@1.9.5:
     resolution: {integrity: sha512-N8tkAACJx2ww8vFMneJmaAgmjAG1tnVBZJRLRcx061tmsLRZHSEZSLuGWnwPtunsSLvSqXQ2wfp7Mgqg1I+2dQ==}
+    dev: false
+
+  /@xterm/addon-fit@0.9.0(@xterm/xterm@5.4.0):
+    resolution: {integrity: sha512-hDlPPbTVPYyvwXu/asW8HbJkI/2RMi0cMaJnBZYVeJB0SWP2NeESMCNr+I7CvBlyI0sAxpxOg8Wk4OMkxBz9WA==}
+    peerDependencies:
+      '@xterm/xterm': ^5.0.0
+    dependencies:
+      '@xterm/xterm': 5.4.0
+    dev: false
+
+  /@xterm/xterm@5.4.0:
+    resolution: {integrity: sha512-GlyzcZZ7LJjhFevthHtikhiDIl8lnTSgol6eTM4aoSNLcuXu3OEhnbqdCVIjtIil3jjabf3gDtb1S8FGahsuEw==}
     dev: false
 
   /@zeit/schemas@2.29.0:

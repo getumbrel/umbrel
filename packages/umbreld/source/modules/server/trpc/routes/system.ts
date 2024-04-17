@@ -72,6 +72,13 @@ async function getLatestRelease(umbreld: Umbreld) {
 		umbreld.logger.error(`Failed to detect platform: ${(error as Error).message}`)
 	}
 
+	let channel = 'stable'
+	try {
+		channel = (await umbreld.store.get('settings.releaseChannel')) || 'stable'
+	} catch (error) {
+		umbreld.logger.error(`Failed to get release channel: ${(error as Error).message}`)
+	}
+
 	const updateUrl = new URL('https://api.umbrel.com/latest-release')
 	// Provide context to the update server about the underlying device and platform
 	// so we can avoid the 1.0 update situation where we need to shim multiple update
@@ -82,6 +89,7 @@ async function getLatestRelease(umbreld: Umbreld) {
 	updateUrl.searchParams.set('version', umbreld.version)
 	updateUrl.searchParams.set('device', deviceId)
 	updateUrl.searchParams.set('platform', platform)
+	updateUrl.searchParams.set('channel', channel)
 
 	const result = await fetch(updateUrl, {
 		headers: {'User-Agent': `umbrelOS ${umbreld.version}`},
@@ -107,6 +115,18 @@ export default router({
 		const available = version.replace('v', '') !== ctx.umbreld.version
 		return {available, version, name, releaseNotes}
 	}),
+	getReleaseChannel: privateProcedure.query(async ({ctx}) => {
+		return (await ctx.umbreld.store.get('settings.releaseChannel')) || 'stable'
+	}),
+	setReleaseChannel: privateProcedure
+		.input(
+			z.object({
+				channel: z.enum(['stable', 'beta']),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			return ctx.umbreld.store.set('settings.releaseChannel', input.channel)
+		}),
 	update: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'updating'
 		setUpdateStatus({running: true, progress: 5, description: 'Updating...', error: false})

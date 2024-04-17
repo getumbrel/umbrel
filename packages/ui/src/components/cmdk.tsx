@@ -180,6 +180,7 @@ function CmdkContent() {
 			<SettingsSearchItem value={t('migration-assistant')} onSelect={() => navigate('/settings/migration-assistant')} />
 			<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
 			<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />
+			<SettingsSearchItem value={t('terminal')} onSelect={() => navigate('/settings/terminal')} />
 			<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 			<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
 			{/* TODO: Enable after factory reset is hooked with umbreld */}

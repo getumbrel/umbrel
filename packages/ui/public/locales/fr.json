@@ -147,8 +147,8 @@
   "troubleshoot.system-logs": "Journaux système",
   "troubleshoot.system-download": "Télécharger {{label}}",
   "troubleshoot.app-download": "Télécharger les journaux de {{app}}",
-  "troubleshoot.select-app": "Sélectionner une application...",
-  "troubleshoot.search": "Rechercher...",
+  "app-picker.select-app": "Sélectionner une application...",
+  "app-picker.search": "Rechercher...",
   "troubleshoot.share-with-umbrel-support": "Partager avec le support Umbrel",
   "login": "Connexion",
   "migration-assistant.prep.body": "Préparation à la migration",
@@ -384,5 +384,15 @@
   "app-updates.no-updates": "Toutes les applications sont à jour !",
   "continue": "Continuer",
   "app.stopped": "Arrêté",
-  "start": "Démarrer"
+  "start": "Démarrer",
+  "terminal": "Terminal",
+  "terminal-description": "Exécutez des commandes personnalisées dans umbrelOS ou au sein d'une application",
+  "terminal.umbrelos-description": "Exécutez des commandes personnalisées dans umbrelOS",
+  "terminal.app": "App",
+  "terminal.app-description": "Exécutez des commandes personnalisées dans une application spécifique",
+  "open": "Ouvrir",
+  "advanced-settings": "Paramètres avancés",
+  "advanced-settings-description": "Ouvrez le terminal ou inscrivez-vous au programme bêta d'umbrelOS",
+  "beta-program": "Programme bêta d'umbrelOS",
+  "beta-program-description": "Optez pour recevoir des mises à jour bêta d'umbrelOS, accédez en avant-première à de nouvelles fonctionnalités et aidez-nous à les peaufiner en fournissant vos retours. Les mises à jour bêta peuvent être instables, et le dépannage peut nécessiter une familiarité avec le terminal."
 }

@@ -147,8 +147,8 @@
   "troubleshoot.system-logs": "System logs",
   "troubleshoot.system-download": "Download {{label}}",
   "troubleshoot.app-download": "Download {{app}} logs",
-  "troubleshoot.select-app": "Select app...",
-  "troubleshoot.search": "Search...",
+  "app-picker.select-app": "Select app...",
+  "app-picker.search": "Search...",
   "troubleshoot.share-with-umbrel-support": "Share with Umbrel Support",
   "login": "Login",
   "migration-assistant.prep.body": "Prepare for migration",
@@ -384,5 +384,15 @@
   "app-updates.no-updates": "All apps are up-to-date!",
   "continue": "Continue",
   "app.stopped": "Stopped",
-  "start": "Start"
+  "start": "Start",
+  "terminal": "Terminal",
+  "terminal-description": "Run custom commands in umbrelOS or within an app",
+  "terminal.umbrelos-description": "Run custom commands in umbrelOS",
+  "terminal.app": "App",
+  "terminal.app-description": "Run custom commands within a specific app",
+  "open": "Open",
+  "advanced-settings": "Advanced settings",
+  "advanced-settings-description": "Open terminal or enroll into umbrelOS Beta Program",
+  "beta-program": "umbrelOS Beta Program",
+  "beta-program-description": "Opt in to receiving umbrelOS beta updates, gain early access to new features, and help us refine them by providing your feedback. Beta updates might be unstable, and troubleshooting may require familiarity with terminal."
 }

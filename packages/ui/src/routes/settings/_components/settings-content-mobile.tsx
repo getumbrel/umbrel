@@ -5,6 +5,7 @@ import {
 	TbLanguage,
 	TbPhoto,
 	TbServer,
+	TbSettingsMinus,
 	TbTool,
 	TbUser,
 } from 'react-icons/tb'
@@ -199,6 +200,12 @@ export function SettingsContentMobile() {
 					onClick={() => navigate('device-info')}
 				/>
 				<ListRowMobile
+					icon={TbSettingsMinus}
+					title={t('advanced-settings')}
+					description={t('advanced-settings-description')}
+					onClick={() => navigate('advanced')}
+				/>
+				<ListRowMobile
 					icon={TbCircleArrowUp}
 					title={t('software-update.title')}
 					description={t('check-for-latest-version')}
@@ -211,7 +218,6 @@ export function SettingsContentMobile() {
 					onClick={() => navigate('/factory-reset')}
 				/> */}
 			</div>
-
 			<ContactSupportLink />
 		</div>
 	)

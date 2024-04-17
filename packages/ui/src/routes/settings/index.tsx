@@ -11,6 +11,7 @@ import {Loading} from '@/components/ui/loading'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
+import AdvancedSettingsDrawerOrDialog from '@/routes/settings/advanced'
 import {SoftwareUpdateConfirmDialog} from '@/routes/settings/software-update-confirm'
 import ErrorStory from '@/routes/stories/error'
 import {Button} from '@/shadcn-components/ui/button'
@@ -32,6 +33,7 @@ const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-p
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot/index'))
+const TerminalDialog = React.lazy(() => import('@/routes/settings/terminal/index'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 
@@ -121,8 +123,10 @@ export function Settings() {
 						{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
 						{isMobile && <Route path='/language' Component={LanguageDrawer} />}
 						<Route path='/troubleshoot/*' Component={TroubleshootDialog} />
+						<Route path='/terminal/*' Component={TerminalDialog} />
 						{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
+						<Route path='/advanced' Component={AdvancedSettingsDrawerOrDialog} />
 					</Routes>
 					<QueryStringDialog />
 					<DebugOnly>

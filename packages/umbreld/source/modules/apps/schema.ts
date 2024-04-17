@@ -46,4 +46,5 @@ export type AppManifest = {
 	/** In bytes */
 	installSize?: number
 	widgets?: any[] // TODO: Define this type
+	defaultShell?: string
 }

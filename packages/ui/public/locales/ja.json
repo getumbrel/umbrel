@@ -146,8 +146,8 @@
   "troubleshoot.system-logs": "システムログ",
   "troubleshoot.system-download": "{{label}}のダウンロード",
   "troubleshoot.app-download": "{{app}}ログのダウンロード",
-  "troubleshoot.select-app": "アプリを選択...",
-  "troubleshoot.search": "検索...",
+  "app-picker.select-app": "アプリを選択...",
+  "app-picker.search": "検索...",
   "troubleshoot.share-with-umbrel-support": "Umbrelサポートと共有",
   "login": "ログイン",
   "migration-assistant-unsupported-device-description": "Migration Assistantは現在、umbrelOSを実行しているRaspberry PiからUmbrel Homeへのすべてのデータとアプリの転送をサポートしています。Umbrel HomeでMigration Assistantを開いて開始してください。",
@@ -384,5 +384,15 @@
   "app-updates.no-updates": "すべてのアプリが最新です！",
   "continue": "続行",
   "app.stopped": "停止済み",
-  "start": "開始"
+  "start": "開始",
+  "terminal": "Terminal",
+  "terminal-description": "umbrelOSまたはアプリ内でカスタムコマンドを実行",
+  "terminal.umbrelos-description": "umbrelOSでカスタムコマンドを実行",
+  "terminal.app": "アプリ",
+  "terminal.app-description": "特定のアプリ内でカスタムコマンドを実行",
+  "open": "開く",
+  "advanced-settings": "詳細設定",
+  "advanced-settings-description": "Terminalを開くか、umbrelOSベータプログラムに登録する",
+  "beta-program": "umbrelOSベータプログラム",
+  "beta-program-description": "umbrelOSのベータアップデートを受け取ることに同意し、新機能への早期アクセスを得て、フィードバックを提供することでそれらの改善に協力してください。ベータアップデートは不安定な場合があり、トラブルシューティングにはTerminalの知識が必要になることがあります。"
 }

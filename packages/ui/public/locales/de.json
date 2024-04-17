@@ -147,8 +147,8 @@
   "troubleshoot.system-logs": "Systemprotokolle",
   "troubleshoot.system-download": "{{label}} herunterladen",
   "troubleshoot.app-download": "{{app}} Protokolle herunterladen",
-  "troubleshoot.select-app": "App auswählen...",
-  "troubleshoot.search": "Suchen...",
+  "app-picker.select-app": "App auswählen...",
+  "app-picker.search": "Suchen...",
   "troubleshoot.share-with-umbrel-support": "Mit dem Umbrel-Support teilen",
   "login": "Anmelden",
   "migration-assistant.prep.body": "Vorbereitung für die Migration",
@@ -384,5 +384,15 @@
   "app-updates.no-updates": "Alle Apps sind auf dem neuesten Stand!",
   "continue": "Fortsetzen",
   "app.stopped": "Gestoppt",
-   "start": "Starten"
+  "start": "Starten",
+  "terminal": "Terminal",
+  "terminal-description": "Führe benutzerdefinierte Befehle in umbrelOS oder innerhalb einer App aus",
+  "terminal.umbrelos-description": "Führe benutzerdefinierte Befehle in umbrelOS aus",
+  "terminal.app": "App",
+  "terminal.app-description": "Führe benutzerdefinierte Befehle innerhalb einer spezifischen App aus",
+  "open": "Öffnen",
+  "advanced-settings": "Erweiterte Einstellungen",
+  "advanced-settings-description": "Öffne das Terminal oder melde dich beim umbrelOS Beta Programm an",
+  "beta-program": "umbrelOS Beta Programm",
+  "beta-program-description": "Melde dich an, um Beta-Updates von umbrelOS zu erhalten, erhalte frühen Zugang zu neuen Funktionen und hilf uns, diese zu verbessern, indem du dein Feedback gibst. Beta-Updates können instabil sein und die Fehlerbehebung kann Kenntnisse des Terminals erfordern."
 }

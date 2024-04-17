@@ -2,11 +2,12 @@ import {useNavigate, useParams} from 'react-router-dom'
 
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
 import {SegmentedControl} from '@/components/ui/segmented-control'
+import {ImmersivePickerDialogContent} from '@/modules/immersive-picker'
 import {
 	downloadUtf8Logs,
 	LogResults,
 	SystemLogType,
-	TroubleshootTitleBackButton,
+	TroubleshootTitleBackLink,
 } from '@/routes/settings/troubleshoot/_shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
@@ -34,9 +35,9 @@ export default function TroubleshootUmbrelOs() {
 	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
 
 	return (
-		<>
+		<ImmersivePickerDialogContent>
 			<div className='flex w-full flex-wrap items-center justify-between'>
-				<TroubleshootTitleBackButton />
+				<TroubleshootTitleBackLink />
 				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
 			<LogResults key={activeTab}>{logs}</LogResults>
@@ -46,7 +47,7 @@ export default function TroubleshootUmbrelOs() {
 				</Button>
 				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
-		</>
+		</ImmersivePickerDialogContent>
 	)
 }
 

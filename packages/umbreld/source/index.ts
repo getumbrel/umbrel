@@ -31,6 +31,9 @@ type StoreSchema = {
 		totpUri?: string
 		wallpaper?: string
 	}
+	settings: {
+		releaseChannel: 'stable' | 'beta'
+	}
 	recentlyOpenedApps: string[]
 }
 

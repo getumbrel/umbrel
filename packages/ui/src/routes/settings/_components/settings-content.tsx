@@ -8,7 +8,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbServer, TbTool} from 'react-icons/tb'
+import {TbServer, TbSettingsMinus, TbTool} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
@@ -211,6 +211,11 @@ export function SettingsContent() {
 						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
 							{t('device-info.view-info')}
 						</IconButton>
+					</ListRow>
+					<ListRow title={t('advanced-settings')} description={t('advanced-settings-description')}>
+						<IconButtonLink icon={TbSettingsMinus} to='/settings/advanced'>
+							{t('open')}
+						</IconButtonLink>
 					</ListRow>
 					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
 					{/* <ListRow title={t('factory-reset')} description={t('factory-reset.desc')}>

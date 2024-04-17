@@ -7,10 +7,11 @@ import {Route, Routes, useNavigate, useParams} from 'react-router-dom'
 import {ImmersiveDialog, ImmersiveDialogOverlay} from '@/components/ui/immersive-dialog'
 import {AppDropdown, ImmersivePickerDialogContentInit, ImmersivePickerItem} from '@/modules/immersive-picker'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {TroubleshootApp} from '@/routes/settings/troubleshoot/app'
-import TroubleshootUmbrelOs from '@/routes/settings/troubleshoot/umbrelos'
 
-export default function TroubleshootDialog() {
+import {App} from './app'
+import UmbrelOs from './umbrelos'
+
+export default function TerminalDialog() {
 	const dialogProps = useSettingsDialogProps()
 
 	return (
@@ -20,8 +21,8 @@ export default function TroubleshootDialog() {
 				<Suspense>
 					<Routes>
 						<Route index path='/' Component={PickerDialogContent} />
-						<Route path='/umbrelos/:systemTab?' Component={TroubleshootUmbrelOs} />
-						<Route path='/app/:appId' Component={TroubleshootApp} />
+						<Route path='/umbrelos' Component={UmbrelOs} />
+						<Route path='/app/:appId' Component={App} />
 					</Routes>
 				</Suspense>
 			</DialogPortal>
@@ -35,15 +36,15 @@ function PickerDialogContent() {
 	const params = useParams<{appId: string}>()
 
 	return (
-		<ImmersivePickerDialogContentInit title={t('troubleshoot-pick-title')}>
+		<ImmersivePickerDialogContentInit title={t('terminal')}>
 			<ImmersivePickerItem
 				title={t('umbrelos')}
-				description={t('troubleshoot.umbrelos-description')}
-				to='/settings/troubleshoot/umbrelos/umbrelos'
+				description={t('terminal.umbrelos-description')}
+				to='/settings/terminal/umbrelos'
 			/>
 			<ImmersivePickerItem
-				title={t('troubleshoot.app')}
-				description={t('troubleshoot.app-description')}
+				title={t('terminal.app')}
+				description={t('terminal.app-description')}
 				onClick={() => setAppDialogOpen(true)}
 			>
 				<DropdownMenu open={appDialogOpen} onOpenChange={setAppDialogOpen}>
@@ -51,7 +52,7 @@ function PickerDialogContent() {
 						open={appDialogOpen}
 						onOpenChange={setAppDialogOpen}
 						appId={params.appId}
-						setAppId={(appId) => navigate(`/settings/troubleshoot/app/${appId}`)}
+						setAppId={(appId) => navigate(`/settings/terminal/app/${appId}`)}
 					/>
 				</DropdownMenu>
 			</ImmersivePickerItem>

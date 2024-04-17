@@ -34,7 +34,7 @@ export function ImmersiveDialogContent({
 	showScroll = false,
 }: {
 	children: React.ReactNode
-	size?: 'default' | 'lg'
+	size?: 'default' | 'lg' | 'xl'
 	short?: boolean
 	showScroll?: boolean
 }) {
@@ -47,6 +47,7 @@ export function ImmersiveDialogContent({
 				short ? immersiveContentShortClass : immersiveContentTallClass,
 				// overrides default size
 				size === 'lg' && 'max-w-[980px]',
+				size === 'xl' && 'max-w-[1440px]',
 				'p-0',
 			)}
 		>
