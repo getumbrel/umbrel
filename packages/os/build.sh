@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Pin the Rugpi Docker image.
-export RUGPI_BAKERY_IMAGE="ghcr.io/silitics/rugpi-bakery@sha256:36757e5a3fcebf6cc21a142a6dfbfa3a8e00a92660b14fbd3fff9070443f64e9"
+export RUGPI_BAKERY_IMAGE="ghcr.io/silitics/rugpi-bakery@sha256:ed8b522d3511434dc351bc6576bb56d9fbbc4b596f4189bd487ae9db40789901" # v0.6.5
 
 # Allow running from anywhere
 cd "$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
