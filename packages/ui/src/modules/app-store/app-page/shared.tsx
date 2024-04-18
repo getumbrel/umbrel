@@ -40,7 +40,7 @@ export function ReadMoreMarkdownSection({children}: {children: string}) {
 				className={cn(
 					cardTextClass,
 					'transition-[max-height] duration-200',
-					isExpanded ? 'max-h-[999px]' : 'max-h-[calc(1.7em*6)] overflow-hidden',
+					isExpanded ? 'max-h-[9999px]' : 'max-h-[calc(1.7em*6)] overflow-hidden',
 				)}
 			>
 				<Markdown>{children}</Markdown>
