@@ -5,7 +5,7 @@ RUN echo "root:root" | chpasswd
 RUN apt-get -y update
 
 # Install Linux kernel, systemd and bootloader
-RUN apt-get install --yes --no-install-recommends linux-image-amd64 systemd-sysv systemd-boot
+RUN apt-get install --yes --no-install-recommends linux-image-amd64 systemd-sysv systemd-boot xz-utils
 
 # We can't install the bootloader via `bootctl install` from Docker because it complains
 # about an invalid ESP partition. We can't easily fix it with loopback mounts from a Docker
@@ -23,11 +23,11 @@ RUN echo " \n\
 title   Debian \n\
 linux   $(ls /boot/vmlinuz-* | sed 's/\/boot//') \n\
 initrd  $(ls /boot/initrd.img* | sed 's/\/boot//') \n\
-options root=LABEL=ROOTFS rw" | tee "/boot/loader/entries/debian.conf"
+options root=LABEL=ROOTFS rw quiet loglevel=1" | tee "/boot/loader/entries/debian.conf"
 
 RUN echo " \n\
 default debian \n\
-timeout 1 \n\
+timeout 0 \n\
 console-mode max \n\
 editor no" | tee "/boot/loader/loader.conf"
 
@@ -40,3 +40,7 @@ RUN usermod -aG sudo umbrel
 
 # Copy in filesystem overlay
 COPY overlay /
+
+RUN systemctl enable custom-tty.service
+RUN systemctl mask console-getty.service
+RUN systemctl mask getty@tty1.service

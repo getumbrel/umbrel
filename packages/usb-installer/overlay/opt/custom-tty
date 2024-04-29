@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+sleep 1
+
+clear
+
+cat << 'EOF'
+
+              ,;###GGGGGGGGGGl#Sp
+           ,##GGGlW""^'  '`""%GGGG#S,
+         ,#GGG"                  "lGG#o
+        #GGl^                      '$GG#
+      ,#GGb                          \GGG,
+      lGG"                            "GGG
+     #GGGlGGGl##p,,p##lGGl##p,,p###ll##GGGG
+    !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
+     ""          "^          '"          ""
+EOF
+
+choice=""
+
+read -p "Do you want to install the dotfiles? [y/n] " choice
+
+echo $choice
