@@ -39,7 +39,9 @@ RUN echo "umbrel:umbrel" | chpasswd
 RUN usermod -aG sudo umbrel
 
 # Copy in filesystem overlay
-COPY overlay /
+COPY usb-installer/overlay /
+
+COPY os/build/umbrelos-amd64.img.xz  /
 
 RUN systemctl enable custom-tty.service
 RUN systemctl mask console-getty.service
