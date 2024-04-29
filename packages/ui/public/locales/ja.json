@@ -250,7 +250,7 @@
   "desktop.app.context.show-default-credentials": "デフォルトの資格情報を表示",
   "desktop.app.context.uninstall": "アンインストール",
   "desktop.install-first.link-to-app-store": "App Storeでさらに探索",
-  "migrate.callout": "移行が完了するまでUmbrel Homeをオフにしないでください",
+  "migrate.callout": "移行が完了するまでUmbrelをオフにしないでください",
   "app.uninstall.confirm.title": "{{app}}をアンインストールしますか？",
   "app.uninstall.confirm.submit": "アンインストール",
   "app.uninstall.confirm.description": "{{app}}に関連するすべてのデータが永久に削除されます。この操作は元に戻せません。",

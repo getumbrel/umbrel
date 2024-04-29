@@ -129,9 +129,14 @@ export async function unmountExternalDrives() {
 }
 
 // Run a series of checks and throw a descriptive error if any of them fail
-export async function runPreMigrationChecks(currentInstall: string, externalUmbrelInstall: string, umbreld: Umbreld) {
+export async function runPreMigrationChecks(
+	currentInstall: string,
+	externalUmbrelInstall: string,
+	umbreld: Umbreld,
+	onlyAllowHome = true,
+) {
 	// Check we're running on Umbrel Home hardware
-	if (!(await isUmbrelHome())) {
+	if (onlyAllowHome && !(await isUmbrelHome())) {
 		throw new Error('This feature is only supported on Umbrel Home hardware')
 	}
 

@@ -250,7 +250,7 @@
   "desktop.app.context.show-default-credentials": "Show default credentials",
   "desktop.app.context.uninstall": "Uninstall",
   "desktop.install-first.link-to-app-store": "Explore more in App Store",
-  "migrate.callout": "Do not turn off your Umbrel Home until the migration is complete",
+  "migrate.callout": "Do not turn off your Umbrel until the migration is complete",
   "app.uninstall.confirm.title": "Uninstall {{app}}?",
   "app.uninstall.confirm.submit": "Uninstall",
   "app.uninstall.confirm.description": "All data associated with {{app}} will be permanently deleted. This action cannot be undone.",

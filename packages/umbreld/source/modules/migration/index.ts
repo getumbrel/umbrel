@@ -3,6 +3,9 @@ import {z} from 'zod'
 
 import type Umbreld from '../../index.js'
 
+import {detectDevice} from '../system.js'
+import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration.js'
+
 class Migration {
 	umbreld: Umbreld
 	logger: Umbreld['logger']
@@ -11,6 +14,35 @@ class Migration {
 		this.umbreld = umbreld
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+	}
+
+	// One off migration for legacy custom Linux install users
+	async migrateLegacyLinuxData() {
+		const {deviceId} = await detectDevice()
+
+		// Only run this on unknown devices AKA not a Home or a Pi
+		if (deviceId !== 'unknown') return
+
+		// Don't do anything if a user has already been registered
+		if (await this.umbreld.user.exists()) return
+
+		this.logger.log(
+			'Unkown device booting for the first time, checking if we need to migrate legacy Linux install data...',
+		)
+
+		const externalUmbrelInstall = await findExternalUmbrelInstall()
+		if (!externalUmbrelInstall) {
+			this.logger.log('No legacy Linux install found, skipping migration')
+			return
+		}
+
+		this.logger.log('Legacy Linux install found, migrating data...')
+
+		const currentInstall = this.umbreld.dataDirectory
+		await runPreMigrationChecks(currentInstall, externalUmbrelInstall as string, this.umbreld, false)
+		await this.umbreld.server.start()
+		await migrateData(currentInstall, externalUmbrelInstall as string, this.umbreld)
+		this.logger.log('Migration complete!')
 	}
 
 	async activateImportedDataDirectory() {
@@ -89,6 +121,13 @@ class Migration {
 			await this.migrateLegacyData()
 		} catch (error) {
 			this.logger.error(`Failed to migrate legacy data: ${(error as Error).message}`)
+		}
+
+		// Check for first boot of an unknown device and migrate legacy Linux install data if it exists
+		try {
+			await this.migrateLegacyLinuxData()
+		} catch (error) {
+			this.logger.error(`Failed to migrate legacy Linux data: ${(error as Error).message}`)
 		}
 
 		// Write the current version to signal what version we've migrated up to.

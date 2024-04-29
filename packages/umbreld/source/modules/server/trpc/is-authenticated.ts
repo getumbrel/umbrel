@@ -2,12 +2,12 @@ import {TRPCError} from '@trpc/server'
 
 import {type Context} from './context.js'
 
-type IsAuthenticatedOptions = {
+type MiddlewareOptions = {
 	ctx: Context
 	next: () => Promise<any>
 }
 
-export const isAuthenticated = async ({ctx, next}: IsAuthenticatedOptions) => {
+export const isAuthenticated = async ({ctx, next}: MiddlewareOptions) => {
 	if (ctx.dangerouslyBypassAuthentication === true) {
 		return next()
 	}
@@ -22,4 +22,15 @@ export const isAuthenticated = async ({ctx, next}: IsAuthenticatedOptions) => {
 	}
 
 	return next()
+}
+
+export const isAuthenticatedIfUserExists = async ({ctx, next}: MiddlewareOptions) => {
+	// Allow request through if user has not yet been registered
+	const userExists = await ctx.user.exists()
+	if (!userExists) {
+		return next()
+	}
+
+	// If a user exists, follow usual authentication flow
+	return isAuthenticated({ctx, next})
 }

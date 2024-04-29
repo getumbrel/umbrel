@@ -250,7 +250,7 @@
   "desktop.app.context.show-default-credentials": "Standardanmeldeinformationen anzeigen",
   "desktop.app.context.uninstall": "Deinstallieren",
   "desktop.install-first.link-to-app-store": "Entdecke mehr im App Store",
-  "migrate.callout": "Schalte dein Umbrel Home nicht aus, bis die Migration abgeschlossen ist",
+  "migrate.callout": "Schalte dein Umbrel nicht aus, bis die Migration abgeschlossen ist",
   "app.uninstall.confirm.title": "{{app}} deinstallieren?",
   "app.uninstall.confirm.submit": "Deinstallieren",
   "app.uninstall.confirm.description": "Alle mit {{app}} verbundenen Daten werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
