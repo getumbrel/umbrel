@@ -14,7 +14,7 @@
     ·
     <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
     ·
-    <a href="#installing-umbrel">Debian</a>
+    <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">Any x86 system</a>
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
@@ -56,9 +56,8 @@ Just like the cloud, but one that you own and control.
 
 ## Installing umbrelOS
 
-The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 5](https://download.umbrel.com/release/1.0.0/umbrelos-pi5.img.zip) or [Raspberry Pi 4](https://download.umbrel.com/release/1.0.0/umbrelos-pi4.img.zip). Step-by-step installation instructions can be found [here](https://umbrel.com/umbrelos#install).
-
-Support for devices other than Raspberry Pi 4, Pi 5, and the Umbrel Home is arriving in April 2024.
+- [Instructions to install umbrelOS on a Raspberry Pi 4 and Pi 5](https://umbrel.com/umbrelos#install)
+- [Instructions to install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems)
 
 ## Umbrel App Store
 
