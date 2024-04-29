@@ -266,7 +266,7 @@ export async function migrateData(currentInstall: string, externalUmbrelInstall:
 		return
 	}
 
-	updateMigrationStatus({progress: 95, description: 'rebooting'})
+	updateMigrationStatus({progress: 95, description: 'Rebooting'})
 	setSystemStatus('restarting')
 	await umbreld.stop()
 	await reboot()
