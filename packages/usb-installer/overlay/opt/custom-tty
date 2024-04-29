@@ -27,6 +27,14 @@ do
     if [[ -n "$device" ]]
     then
         echo "installing umbrelOS on: $device"
+        device_path="/dev/$(echo $device | awk '{print $1}')"
+        xz --decompress --stdout /umbrelos-amd64.img.xz | dd of=$device_path bs=4M status=progress
+        sync
+        echo
+        echo "umbrelOS has been installed!"
+        printf "Press any key to shutdown, remember to remove the USB drive before turning the device back on."
+        read -n 1 -s
+        poweroff
         break
     else
         echo "Invalid choice, please try again."
