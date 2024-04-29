@@ -2,7 +2,7 @@
 
 echo "Creating disk image..."
 rootfs_tar_size="$(du --block-size 1M /data/build/rootfs.tar | awk '{print $1}')"
-rootfs_buffer="256"
+rootfs_buffer="512"
 disk_size_mb="$((rootfs_tar_size + rootfs_buffer))"
 disk_size_sector=$(expr $disk_size_mb \* 1024 \* 1024 / 512)
 disk_image="/data/build/disk.img"
