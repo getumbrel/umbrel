@@ -1,8 +1,7 @@
 [![umbrelOS](https://github.com/getumbrel/umbrel/assets/10330103/56be7b95-0c24-4dee-ad3a-e5947bc2ee07)](https://umbrel.com/umbrelos)
 
+<h1 align="center">umbrelOS</h1>
 <p align="center">
-  <h1 align="center">umbrelOS</h1>
-  <p align="center">
     A beautiful home server OS for self-hosting
     <br />
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
@@ -14,23 +13,23 @@
     ·
     <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
     ·
-    <a href="#installing-umbrel">Debian</a>
+    <a href="#Installing-on-Debian">Debian</a>
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
       <img src="https://img.shields.io/twitter/follow/umbrel?style=social" />
     </a>
     <a href="https://t.me/getumbrel">
-      <img src="https://img.shields.io/badge/community-chat-%235351FB">
+      <img src="https://img.shields.io/badge/community-chat-%235351FB" />
     </a>
     <a href="https://reddit.com/r/getumbrel">
-      <img src="https://img.shields.io/reddit/subreddit-subscribers/getumbrel?style=social">
+      <img src="https://img.shields.io/reddit/subreddit-subscribers/getumbrel?style=social" />
     </a>
     <a href="https://community.getumbrel.com">
-      <img src="https://img.shields.io/badge/community-forum-%235351FB">
+      <img src="https://img.shields.io/badge/community-forum-%235351FB" />
     </a>
-  </p>
 </p>
+
 
 <br />
 
@@ -58,7 +57,15 @@ Just like the cloud, but one that you own and control.
 
 The easiest way to get started on a custom (non Umbrel Home) system is by running [umbrelOS for Raspberry Pi 5](https://download.umbrel.com/release/1.0.0/umbrelos-pi5.img.zip) or [Raspberry Pi 4](https://download.umbrel.com/release/1.0.0/umbrelos-pi4.img.zip). Step-by-step installation instructions can be found [here](https://umbrel.com/umbrelos#install).
 
-Support for devices other than Raspberry Pi 4, Pi 5, and the Umbrel Home is arriving in April 2024.
+### Installing on Debian
+To install Umbrel on a Debian-based system, run:
+
+```bash
+curl -L https://umbrel.sh | bash
+```
+
+> [!note]
+> Currently only UmbrelOS 0.5 is supported on Debian-based systems (1.0 coming this month). To use Umbrel 1.0 buy an [Umbrel Home](https://umbrel.com/umbrel-home) or use a [Raspberry PI](https://umbrel.com/umbrelos#install).
 
 ## Umbrel App Store
 
