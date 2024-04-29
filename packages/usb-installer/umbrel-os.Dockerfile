@@ -1,17 +1,11 @@
-FROM debian:bookworm
+FROM debian:bookworm-slim
 
 RUN echo "root:root" | chpasswd
 
 RUN apt-get -y update
 
-# Install Linux kernel
-RUN apt-get -y install linux-image-amd64
-
-# Install systemd
-RUN apt-get -y install systemd-sysv
-
-# Install bootloader
-RUN apt-get install -y systemd-boot
+# Install Linux kernel, systemd and bootloader
+RUN apt-get install --yes --no-install-recommends linux-image-amd64 systemd-sysv systemd-boot
 
 # We can't install the bootloader via `bootctl install` from Docker because it complains
 # about an invalid ESP partition. We can't easily fix it with loopback mounts from a Docker
