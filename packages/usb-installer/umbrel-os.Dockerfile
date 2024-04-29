@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 
 RUN echo "root:root" | chpasswd
 
@@ -11,12 +11,7 @@ RUN apt-get -y install linux-image-amd64
 RUN apt-get -y install systemd-sysv
 
 # Install bootloader
-# We want the latest version of systemd-boot from backports
-RUN echo "" >> /etc/apt/sources.list
-RUN echo "deb http://deb.debian.org/debian bullseye-backports main contrib non-free" >> /etc/apt/sources.list
-RUN echo "deb-src http://deb.debian.org/debian bullseye-backports main contrib non-free" >> /etc/apt/sources.list
-RUN apt-get update -y
-RUN apt-get install -y -t bullseye-backports systemd-boot
+RUN apt-get install -y systemd-boot
 
 # We can't install the bootloader via `bootctl install` from Docker because it complains
 # about an invalid ESP partition. We can't easily fix it with loopback mounts from a Docker
