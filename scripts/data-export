@@ -1,0 +1,274 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# This script will:
+# - Look for an internal Umbrel install
+# - Ask the user to confirm the location or enter a new one
+# - Exit and print error if no valid Umbrel install detected
+# - Look for USB storage device
+# - Ask the user to confirm the device or enter a new one
+# - Exit and print error if no valid USB storage device detected
+# - Check size of external storage is large enough for Umbrel install
+# - Check we have write permissions on external drive
+# - Stop Umbrel if it's running
+# - Copy Umbrel install to external drive
+
+# Bail if not running as root
+check_root() {
+  if [[ $UID != 0 ]]; then
+    echo "This script must be run as root"
+    exit 1
+  fi
+}
+
+# Check depndencies are installed
+check_dependencies () {
+  for cmd in "$@"; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+      echo "This script requires \"${cmd}\" to be installed"
+      echo
+      echo "You can try running: sudo apt-get install ${cmd}"
+      exit 1
+    fi
+  done
+}
+
+# Interactively confirm a value with the user. The user can press enter to accept the default value
+# or enter a new value.
+confirm_value_with_user() {
+    local prompt="${1}"
+    local default_value="${2}"
+    local user_input
+
+    # Prompt the user and get input
+    read -p "$prompt " user_input </dev/tty # We need to explicitly pipe /dev/tty in here because stdin might be the curl output
+
+    # If input is empty, return the default value
+    if [[ -z "$user_input" ]]; then
+        echo "$default_value"
+    else
+        echo "$user_input"
+    fi
+}
+
+# Grabs the Umbrel data directory from the systemd service file
+find_umbrel_install() {
+    local service_file_path="/etc/systemd/system/umbrel-startup.service"
+    if [[ ! -f "${service_file_path}" ]]
+    then
+        return
+    fi
+
+    local umbrel_install=$(cat "${service_file_path}" | grep '^ExecStart=')
+    umbrel_install="${umbrel_install#ExecStart=}"
+    umbrel_install="${umbrel_install%/scripts/start}"
+    echo "${umbrel_install}"
+}
+
+# Lists block devices for currently attached USB storage devices
+# We only return unmounted devices
+list_usb_storage_devices() {
+    local devices=$(lsblk --output NAME,TRAN --json | jq -r '.blockdevices[] | select(.tran=="usb") | .name')
+    for device in $devices
+    do
+        echo "/dev/${device}"
+    done
+}
+
+# Returns the vendor and model name of a block device
+get_block_device_model() {
+  device="${1}"
+  vendor=$(cat "/sys/block/${device}/device/vendor")
+  model=$(cat "/sys/block/${device}/device/model")
+
+  # We echo in a subshell without quotes to strip surrounding whitespace
+  echo "$(echo $vendor) $(echo $model)"
+}
+
+# Reutns the block device size in bytes
+get_block_device_size_bytes() {
+    local block_device="${1}"
+    lsblk --nodeps --noheadings --output SIZE --bytes "${block_device}"
+}
+
+# Converts bytes to GB
+bytes_to_gb() {
+    echo $1 | awk '{printf "%.1f", $1 / 1024 / 1024 / 1024}'
+}
+
+# Wipes a block device and reformats it with a single EXT4 partition
+format_block_device () {
+  device_path="${1}"
+  partition_path="${device_path}1"
+  wipefs -a "${device_path}"
+  parted --script "${device_path}" mklabel gpt
+  parted --script "${device_path}" mkpart primary ext4 0% 100%
+  # We need to run sync here to make sure the filesystem is reflecting the
+  # the latest changes in /dev/*
+  sync
+  mkfs.ext4 -F -L umbrel "${partition_path}"
+}
+
+main() {
+    check_root
+
+    check_dependencies jq rsync lsblk wipefs parted mkfs.ext4
+
+    echo "Searching for Umbrel installations..."
+    local umbrel_install=$(find_umbrel_install)
+    if [[ ! -d "${umbrel_install}/app-data" ]]
+    then
+        echo "No Umbrel installation automatically found"
+        umbrel_install=""
+    fi
+    echo
+    echo "Please confirm your Umbrel installation directory."
+    if [[ -d "${umbrel_install}/app-data" ]]
+    then
+        echo "  - If it is '${umbrel_install}', just press Enter."
+        echo "  - If it is a different directory, type its full path and press Enter."
+    else
+        echo "  - Type it's full path and press Enter."
+    fi
+    echo
+    umbrel_install=$(confirm_value_with_user "Your Umbrel installation directory:" "${umbrel_install}")
+
+    if [[ -d "${umbrel_install}/app-data" ]]
+    then
+        echo
+        echo "Exporting your Umbrel data from: ${umbrel_install}"
+        local install_size=$(du --human --max-depth 0 "${umbrel_install}" | awk '{print $1}')
+        echo "Your Umbrel data (${install_size}), including the apps listed below, is ready to be exported to a USB storage device:"
+        echo "$(ls ${umbrel_install}/app-data)" || true
+    else
+        echo "Error: Umbrel installation not found"
+        exit 1
+    fi
+
+    echo "Searching for USB storage devices..."
+    local usb_storage_devices=$(list_usb_storage_devices)
+    local largest_usb_size_bytes="0"
+    local default_usb_device=""
+    for block_device in $usb_storage_devices
+    do
+        local usb_name=$(get_block_device_model ${block_device#/dev/})
+        local usb_size=$(lsblk --nodeps --noheadings --output SIZE ${block_device})
+        local usb_size_bytes=$(get_block_device_size_bytes "${block_device}")
+        echo "  - ${block_device} (${usb_name} ${usb_size})"
+        if [[ $usb_size_bytes -gt $largest_usb_size_bytes ]]
+        then
+            largest_usb_size_bytes="${usb_size_bytes}"
+            default_usb_device="${block_device}"
+        fi
+    done
+
+    if [[ -z "${default_usb_device}" ]]
+    then
+        echo "No USB devices automatically found"
+    fi
+    echo
+    echo "Please confirm the USB storage device where you want to export your Umbrel data."
+     if [[ ! -z "${default_usb_device}" ]]
+    then
+        local usb_name=$(get_block_device_model ${block_device#/dev/})
+        local usb_size=$(lsblk --nodeps --noheadings --output SIZE ${block_device})
+        echo "  - If you'd like to use ${block_device} (${usb_name} ${usb_size}), just press Enter."
+        echo "  - If you'd like to use a different USB storage device, type its path (eg. "/dev/sdb", without quotes) and press Enter."
+    else
+        echo "  - Type the full path of your USB storage device (eg. "/dev/sdb", without quotes) and press Enter."
+    fi
+    echo
+    local usb_block_device=$(confirm_value_with_user "USB storage device:" "${default_usb_device}")
+
+    if [[ ! -b "${usb_block_device}" ]]
+    then
+        echo "Error: \"${usb_block_device}\" ($(get_block_device_model ${usb_block_device#/dev/})) is not a valid storage device. Please make sure you've connected a compatible storage device like an external HDD or SSD."
+        exit 1
+    fi
+
+    echo "Continuing with ${usb_block_device} ($(get_block_device_model ${usb_block_device#/dev/}))"
+
+    local usb_size_bytes=$(get_block_device_size_bytes "${usb_block_device}")
+    local umbrel_install_size_bytes=$(du --bytes --max-depth 0 "${umbrel_install}" | awk '{print $1}')
+    local buffer_bytes=$(( 1024 * 1024 * 1024 )) # 1GB buffer
+    if [[ $usb_size_bytes -lt $(( umbrel_install_size_bytes + buffer_bytes )) ]]
+    then
+        echo "Error: $(get_block_device_model ${usb_block_device#/dev/}) ($(bytes_to_gb $usb_size_bytes) GB) does not have enough space to store your Umbrel data ($(bytes_to_gb $umbrel_install_size_bytes) GB). Please connect a larger storage device and run this script again."
+        exit 1
+    fi
+
+    echo
+    echo "WARNING: Continuing will format the USB storage device $(get_block_device_model ${usb_block_device#/dev/}) and erase any existing data on it."
+
+    local confirm_formatting=$(confirm_value_with_user "Type \"y\" (without quotes) and press Enter to continue:" "")
+    if [[ "${confirm_formatting}" != "y" ]]
+    then
+        echo "Exiting now: did not receive \"y\" as the confirmation to continue."
+        echo "To restart the process, simply re-run this script and select the correct USB storage device."
+        exit 1
+    fi
+
+    echo "Formatting USB storage device $(get_block_device_model ${usb_block_device#/dev/})..."
+    # Quickly attempt to unmount all partitions on the USB device
+    # This will throw errors but we don't care
+    umount "${usb_block_device}"* 2> /dev/null || true
+    sync
+    echo
+    format_block_device "${usb_block_device}"
+    echo
+
+    local usb_partition="${usb_block_device}1"
+    echo "Mounting ${usb_partition}..."
+    local usb_mount_path=$(mktemp --directory --suffix -umbrel-usb-mount)
+    mount "${usb_partition}" "${usb_mount_path}"
+
+    # Make sure no matter what, this gets unmounted
+    trap "umount ${usb_mount_path} 2> /dev/null || true" EXIT
+
+    # Check we can write
+    local temporary_copy_path="${usb_mount_path}/umbrel-data-export-temporary-${RANDOM}-$(date +%s)"
+    mkdir "${temporary_copy_path}"
+    if [[ ! -d "${temporary_copy_path}" ]]
+    then
+        echo "Error: Could not write to the USB storage device $(get_block_device_model ${usb_block_device#/dev/}). Please re-connect a compatible USB storage device and run this script again."
+        exit 1
+    fi
+
+    # Stop Umbrel if it's running so we can safely copy data
+    echo "Stopping Umbrel to prepare for data export..."
+    echo
+    "${umbrel_install}/scripts/stop" || {
+        # If the stop script fails try heavy handedly stopping all Docker containers to ensure
+        docker stop $(docker ps -aq) || {
+            echo "Error: Could not stop Umbrel"
+            exit 1
+        }
+    }
+    echo
+
+    # Copy data
+    echo "Exporting your Umbrel data to the USB storage device $(get_block_device_model ${usb_block_device#/dev/}), this may take a while..."
+    local final_path="${usb_mount_path}/umbrel"
+    rsync --archive --delete "${umbrel_install}/" "${temporary_copy_path}"
+    mv "${temporary_copy_path}" "${final_path}"
+
+    # Ensure fs caches are flushed and unmount
+    echo "Export complete, unmounting USB storage device..."
+    sync
+    umount ${usb_mount_path}
+
+    echo
+    echo "Done! Your Umbrel data has been exported to your external USB storage device $(get_block_device_model ${usb_block_device#/dev/})."
+    echo
+    echo "Next steps:"
+    echo "  1. Shutdown your device."
+    echo "  2. Flash umbrelOS 1.1.1 on its internal storage."
+    echo "  3. Boot up with the USB storage device $(get_block_device_model ${usb_block_device#/dev/}) connected to your device."
+    echo "  4. Open http://umbrel.local"
+    echo
+    echo "For detailed instructions, visit:"
+    echo "  https://link.umbrel.com/linux-update"
+}
+
+main

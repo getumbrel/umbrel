@@ -1,4 +1,4 @@
-import {router, privateProcedure} from '../trpc.js'
+import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../trpc.js'
 
 import {
 	findExternalUmbrelInstall,
@@ -24,7 +24,7 @@ export default router({
 	}),
 
 	// TODO: Refactor this into a subscription
-	migrationStatus: privateProcedure.query(() => getMigrationStatus()),
+	migrationStatus: publicProcedureWhenNoUserExists.query(() => getMigrationStatus()),
 
 	migrate: privateProcedure.mutation(async ({ctx}) => {
 		const currentInstall = ctx.umbreld.dataDirectory

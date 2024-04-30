@@ -29,9 +29,13 @@ jobs:
           node-version: 18
       - run: npm run ${{ matrix.task }}
 
-      - name: Prepare release assets
+      # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
+      - name: Prepare arm64 release assets
         if: matrix.task == 'build:arm64'
         run: cd build && (zip umbrelos-pi4.img.zip umbrelos-pi4.img & zip umbrelos-pi5.img.zip umbrelos-pi5.img & wait)
+      - name: Prepare amd64 release assets
+        if: matrix.task == 'build:amd64'
+        run: cd build && sudo xz --keep --threads=0 umbrelos-amd64.img
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
@@ -41,3 +45,4 @@ jobs:
           files: |
             packages/os/build/*.update
             packages/os/build/*.img.zip
+            packages/os/build/*.img.xz

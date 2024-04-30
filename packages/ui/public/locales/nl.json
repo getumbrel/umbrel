@@ -250,7 +250,7 @@
   "desktop.app.context.show-default-credentials": "Standaard inloggegevens tonen",
   "desktop.app.context.uninstall": "Deïnstalleren",
   "desktop.install-first.link-to-app-store": "Ontdek meer in App Store",
-  "migrate.callout": "Zet je Umbrel Home niet uit tot de migratie voltooid is",
+  "migrate.callout": "Zet je Umbrel niet uit tot de migratie voltooid is",
   "app.uninstall.confirm.title": "{{app}} deïnstalleren?",
   "app.uninstall.confirm.submit": "Deïnstalleren",
   "app.uninstall.confirm.description": "Alle gegevens geassocieerd met {{app}} worden permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",

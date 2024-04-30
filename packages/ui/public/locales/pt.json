@@ -250,7 +250,7 @@
   "desktop.app.context.show-default-credentials": "Mostrar credenciais padrão",
   "desktop.app.context.uninstall": "Desinstalar",
   "desktop.install-first.link-to-app-store": "Explorar mais na App Store",
-  "migrate.callout": "Não desligue seu Umbrel Home até a migração estar completa",
+  "migrate.callout": "Não desligue seu Umbrel até a migração estar completa",
   "app.uninstall.confirm.title": "Desinstalar {{app}}?",
   "app.uninstall.confirm.submit": "Desinstalar",
   "app.uninstall.confirm.description": "Todos os dados associados a {{app}} serão permanentemente excluídos. Esta ação não pode ser desfeita.",
