@@ -1,7 +1,7 @@
+import {H1} from '@stories/components'
 import {useEffect, useRef, useState} from 'react'
 
 import {Markdown} from '@/components/markdown'
-import {H1} from '@/layouts/stories'
 
 export function MarkdownExample() {
 	const inputRef = useRef<HTMLTextAreaElement>(null)

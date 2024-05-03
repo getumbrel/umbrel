@@ -1,12 +1,12 @@
+import {H2, H3} from '@stories/components'
 import {JSONTree} from 'react-json-tree'
 import {useWindowSize} from 'react-use'
 import {Config} from 'tailwindcss'
 import resolveConfig from 'tailwindcss/resolveConfig'
 
-import {H2, H3} from '@/layouts/stories'
 import {screens, useBreakpoint} from '@/utils/tw'
 
-import tailwindConfig from '../../../tailwind.config.ts'
+import tailwindConfig from '../../../../tailwind.config.ts'
 
 export const tailwindConfigFull = resolveConfig({
 	...tailwindConfig,

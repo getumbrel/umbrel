@@ -9,6 +9,7 @@
 	},
 	"scripts": {
 		"dev": "vite --port 3000",
+		"stories": "vite --config stories/vite.config.ts --port 3002",
 		"build": "vite build",
 		"app-auth:dev": "vite --config app-auth/vite.config.js --port 2001",
 		"app-auth:build": "vite build --config app-auth/vite.config.js && mv dist-app-auth/app-auth/index.html dist-app-auth/index.html",

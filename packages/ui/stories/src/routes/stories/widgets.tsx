@@ -1,10 +1,10 @@
+import {H1, H2, H3} from '@stories/components'
 import {format} from 'date-fns'
 import {useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {indexBy} from 'remeda'
 
 import {Arc} from '@/components/ui/arc'
-import {H1, H2, H3} from '@/layouts/stories'
 import {usePager} from '@/modules/desktop/app-grid/app-pagination-utils'
 import {ExampleWidget, LoadingWidget, Widget} from '@/modules/widgets'
 import {FourStatsWidget} from '@/modules/widgets/four-stats-widget'

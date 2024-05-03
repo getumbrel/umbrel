@@ -1,3 +1,4 @@
+import {H1, H2, H3} from '@stories/components'
 import {Globe, User} from 'lucide-react'
 import {ComponentProps, useEffect, useId, useState} from 'react'
 import {RiAlarmWarningFill} from 'react-icons/ri'
@@ -21,7 +22,6 @@ import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {toast} from '@/components/ui/toast'
-import {H1, H2, H3} from '@/layouts/stories'
 import {Badge} from '@/shadcn-components/ui/badge'
 import {Button} from '@/shadcn-components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
@@ -53,7 +53,6 @@ import {Switch} from '@/shadcn-components/ui/switch'
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
 import {t} from '@/utils/i18n'
 import {fixmeHandler} from '@/utils/misc'
-import {tw} from '@/utils/tw'
 
 export default function Stories() {
 	return (

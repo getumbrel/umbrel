@@ -28,7 +28,6 @@ export default function LoginTest() {
 		},
 	})
 
-	// TODO: query debug trpc private route
 	const debug = trpcReact.user.get.useQuery()
 
 	return (
@@ -48,7 +47,14 @@ export default function LoginTest() {
 			{loginMut.error && <ErrorAlert description={loginMut.error.message} />}
 			<Button onClick={refreshToken}>Refresh Token</Button>
 			<JSONTree data={{jwt, localStorageJwt: localStorage.getItem(JWT_LOCAL_STORAGE_KEY)}} />
-			<Button onClick={() => localStorage.removeItem(JWT_LOCAL_STORAGE_KEY)}>Remove JWT from localStorage</Button>
+			<Button
+				onClick={() => {
+					localStorage.removeItem(JWT_LOCAL_STORAGE_KEY)
+					window.location.reload()
+				}}
+			>
+				Log out (Remove JWT from localStorage)
+			</Button>
 			<JSONTree data={debug.data} />
 			<Button onClick={() => debug.refetch()}>Refetch debug</Button>
 		</form>
