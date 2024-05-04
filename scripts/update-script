@@ -19,4 +19,10 @@ then
 	update_url="https://download.umbrel.com/release/1.1.1/umbrelos-amd64.update"
 fi
 
+# Fix /etc/mender/artifact_info not existing in some OS builds
+if [[ ! -f /etc/mender/artifact_info ]]
+then
+	echo "artifact_name=umbrelOS" > /etc/mender/artifact_info
+fi
+
 mender install "${update_url}"
