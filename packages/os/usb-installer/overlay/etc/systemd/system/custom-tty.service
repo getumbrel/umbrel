@@ -1,0 +1,14 @@
+[Unit]
+Description=Custom TTY
+After=multi-user.target
+
+[Service]
+ExecStart=/opt/custom-tty
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/tty1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

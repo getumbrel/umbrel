@@ -37,6 +37,10 @@ jobs:
         if: matrix.task == 'build:amd64'
         run: cd build && sudo xz --keep --threads=0 umbrelos-amd64.img
 
+      - name: Create USB installer
+        if: matrix.task == 'build:amd64'
+        run: npm run build:amd64:usb-installer
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
         with:
@@ -46,3 +50,4 @@ jobs:
             packages/os/build/*.update
             packages/os/build/*.img.zip
             packages/os/build/*.img.xz
+            packages/os/usb-installer/build/*.img.xz

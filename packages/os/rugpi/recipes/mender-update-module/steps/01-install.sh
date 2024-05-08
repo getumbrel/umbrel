@@ -5,8 +5,6 @@ set -euo pipefail
 mkdir -p /data/mender
 echo "device_type=raspberrypi" >/data/mender/device_type
 
-echo "artifact_name=umbrelOS" >/etc/mender/artifact_info
-
 install -D -m 755 "${RECIPE_DIR}/files/reboot" \
     -t /usr/lib/rugpi-mender/bin
 
