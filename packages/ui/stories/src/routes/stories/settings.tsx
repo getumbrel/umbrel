@@ -1,19 +1,18 @@
+import {H2, H3} from '@stories/components'
 import {useState} from 'react'
 import {range, shuffle} from 'remeda'
 
 import {Card} from '@/components/ui/card'
 import {SegmentedControl} from '@/components/ui/segmented-control'
-import {H2, H3} from '@/layouts/stories'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview-basic'
 import {wallpaperIds} from '@/providers/wallpaper'
+import {CpuTempCardContent} from '@/routes/settings/_components/cpu-temp-card-content'
+import {DeviceInfoContent, HostEnvironmentIcon} from '@/routes/settings/_components/device-info-content'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
 import {CpuType, cpuTypes, TEMP_THRESHOLDS} from '@/utils/temperature'
-
-import {CpuTempCardContent} from '../settings/_components/cpu-temp-card-content'
-import {DeviceInfoContent, HostEnvironmentIcon} from '../settings/_components/device-info-content'
 
 export default function SettingsStory() {
 	const [cpuType, setCpuType] = useState<CpuType>('pi')
@@ -33,32 +32,36 @@ export default function SettingsStory() {
 					}))}
 				/>
 			</DesktopPreviewFrame>
-			<DesktopPreview
-				wallpaperId={wId}
-				userName='John Doe'
-				widgets={[
-					{
-						type: 'four-stats',
-						app: {
-							name: 'sdlfkjsdflk',
+			<DesktopPreviewFrame>
+				<DesktopPreview
+					wallpaperId={wId}
+					userName='John Doe'
+					widgets={[
+						{
+							type: 'four-stats',
+							app: {
+								name: 'sdlfkjsdflk',
+							},
+							id: 'sdfsdf',
 						},
-						id: 'sdfsdf',
-					},
-				]}
-				apps={range(0, 50).map(() => ({
-					icon: 'https://source.unsplash.com/random/100x100',
-					name: 'sdlfksjdflksdjflksjdkf',
-				}))}
-			/>
-			<DesktopPreview
-				wallpaperId={wId}
-				userName='John Doe'
-				widgets={range(0, 3).map((i) => ({app: {name: 'sdlfkjsdflk'}, id: i.toString(), type: 'four-stats'}))}
-				apps={range(0, 50).map(() => ({
-					icon: 'https://source.unsplash.com/random/100x100',
-					name: 'sdlfksjdflksdjflksjdkf',
-				}))}
-			/>
+					]}
+					apps={range(0, 50).map(() => ({
+						icon: 'https://source.unsplash.com/random/100x100',
+						name: 'sdlfksjdflksdjflksjdkf',
+					}))}
+				/>
+			</DesktopPreviewFrame>
+			<DesktopPreviewFrame>
+				<DesktopPreview
+					wallpaperId={wId}
+					userName='John Doe'
+					widgets={range(0, 3).map((i) => ({app: {name: 'sdlfkjsdflk'}, id: i.toString(), type: 'four-stats'}))}
+					apps={range(0, 50).map(() => ({
+						icon: 'https://source.unsplash.com/random/100x100',
+						name: 'sdlfksjdflksdjflksjdkf',
+					}))}
+				/>
+			</DesktopPreviewFrame>
 			<H3>Device Icons</H3>
 			<div className='flex gap-4'>
 				<HostEnvironmentIcon />

@@ -1,5 +1,6 @@
+import {H1} from '@stories/components'
+
 import {CmdkMenu, CmdkProvider, useCmdkOpen} from '@/components/cmdk'
-import {H1} from '@/layouts/stories'
 import {Search} from '@/modules/desktop/desktop-misc'
 import {AppsProvider} from '@/providers/apps'
 import {Wallpaper} from '@/providers/wallpaper'

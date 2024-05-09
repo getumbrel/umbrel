@@ -8,7 +8,6 @@ import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 import {ErrorBoundaryPageFallback} from './components/ui/error-boundary-page-fallback'
 import {AppStoreLayout} from './layouts/app-store'
 import {BareLayout} from './layouts/bare/bare'
-import {Demo} from './layouts/demo-layout'
 import {Desktop} from './layouts/desktop'
 import {SheetLayout} from './layouts/sheet'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
@@ -20,23 +19,17 @@ import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
 import {Settings} from './routes/settings'
 
-const StoriesLayout = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.StoriesLayout})))
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
 const CategoryPage = React.lazy(() => import('./routes/app-store/category-page'))
 const Discover = React.lazy(() => import('./routes/app-store/discover'))
 const CommunityAppStoreHome = React.lazy(() => import('./routes/community-app-store'))
 const CommunityAppPage = React.lazy(() => import('./routes/community-app-store/app-page'))
-const One = React.lazy(() => import('./routes/demo/one'))
-const Two = React.lazy(() => import('./routes/demo/two'))
 const EditWidgetsPage = React.lazy(() => import('./routes/edit-widgets'))
 const Login = React.lazy(() => import('./routes/login'))
-const LoginTest = React.lazy(() => import('./routes/login-test'))
 const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
-const Stories = React.lazy(() => import('./routes/stories'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
-const SpecificStory = React.lazy(() => import('./layouts/stories').then((m) => ({default: m.SpecificStory})))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -179,43 +172,6 @@ export const router = createBrowserRouter([
 			{
 				path: 'factory-reset/*',
 				element: <FactoryReset />,
-			},
-		],
-	},
-
-	// demo/test
-	{
-		path: '/',
-		Component: Demo,
-		ErrorBoundary: ErrorBoundaryPageFallback,
-		children: [
-			{
-				path: 'one',
-				Component: One,
-			},
-			{
-				path: 'two',
-				Component: Two,
-			},
-		],
-	},
-	{
-		path: 'login-test',
-		Component: LoginTest,
-	},
-	{
-		path: '/',
-		Component: StoriesLayout,
-		ErrorBoundary: ErrorBoundaryPageFallback,
-		children: [
-			{
-				path: 'stories',
-				Component: Stories,
-				index: true,
-			},
-			{
-				path: 'stories/*',
-				Component: SpecificStory,
 			},
 		],
 	},

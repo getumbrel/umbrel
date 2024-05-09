@@ -1,4 +1,5 @@
-import {H1, H2} from '@/layouts/stories'
+import {H1, H2} from '@stories/components'
+
 import {Input, InputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {tw} from '@/utils/tw'
 

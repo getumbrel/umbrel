@@ -8,7 +8,7 @@ import {screens} from './src/utils/tw'
 
 /** @type {import('tailwindcss').Config} */
 export default {
-	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './stories/**/*.{js,ts,jsx,tsx}'],
 	future: {
 		// This allows ring-brand/40 (ring color with opacity to work correctly)
 		// https://github.com/tailwindlabs/tailwindcss/issues/9016#issuecomment-1205713065

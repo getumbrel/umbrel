@@ -1,9 +1,9 @@
+import {H2} from '@stories/components'
 import {useRef} from 'react'
 import {JSONTree} from 'react-json-tree'
 
 import {AppIcon} from '@/components/app-icon'
 import {useColorThief} from '@/hooks/use-color-thief'
-import {H2} from '@/layouts/stories'
 
 export default function ColorThiefExample() {
 	const title = 'Color Thief'

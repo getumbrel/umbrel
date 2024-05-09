@@ -1,27 +1,31 @@
+import {H3} from '@stories/components'
 import {useEffect, useState} from 'react'
 import {JSONTree} from 'react-json-tree'
 import {Link} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
-import {H3} from '@/layouts/stories'
+import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {RouterOutput, trpcReact, trpcUrl} from '@/trpc/trpc'
-import {urlJoin} from '@/utils/misc'
+import {pathJoin} from '@/utils/misc'
 
-const trpcEndpointUrl = urlJoin(trpcUrl, 'debug.sayHi')
+const trpcEndpointUrl = pathJoin(trpcUrl, 'system.status')
 
 export default function Trpc() {
 	return (
-		<div>
-			<Link to={trpcEndpointUrl} className='underline'>
-				Link to test DEBUG result
-			</Link>
-			<H3>Normal tRPC example</H3>
-			<NormalUseQueryExample />
-			<H3>Normal tRPC example 2</H3>
-			<NormalUseQueryExample2 />
-			<H3>Context example</H3>
-			<ContextExample />
-		</div>
+		<EnsureLoggedIn>
+			<div>
+				<JSONTree data={{trpcUrl, trpcEndpointUrl}} />
+				<Link to={trpcEndpointUrl} className='underline'>
+					Link to test DEBUG result
+				</Link>
+				<H3>Normal tRPC example</H3>
+				<NormalUseQueryExample />
+				<H3>Normal tRPC example 2</H3>
+				<NormalUseQueryExample2 />
+				<H3>Context example</H3>
+				<ContextExample />
+			</div>
+		</EnsureLoggedIn>
 	)
 }
 
