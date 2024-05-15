@@ -87,7 +87,7 @@ RUN apt-get install --yes acpid
 RUN systemctl enable acpid
 
 # Install essential networking services
-RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
+RUN apt-get install --yes network-manager ntp openssh-server
 
 # Install essential system utilities
 RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode usbutils
