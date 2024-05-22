@@ -50,4 +50,4 @@ jobs:
             packages/os/build/*.update
             packages/os/build/*.img.zip
             packages/os/build/*.img.xz
-            packages/os/usb-installer/build/*.img.xz
+            packages/os/usb-installer/build/*.iso.xz
