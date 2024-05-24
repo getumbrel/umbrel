@@ -25,6 +25,12 @@ export function ReadMoreMarkdownSection({children}: {children: string}) {
 		/** If the available space is close to not enough, we don't collapse */
 		const WIGGLE_ROOM = 20
 		setShowReadMore(el.scrollHeight > el.clientHeight + WIGGLE_ROOM)
+
+		const handleFocus = () => setIsExpanded(true)
+		el.addEventListener('focusin', handleFocus)
+		return () => {
+			el.removeEventListener('focusin', handleFocus)
+		}
 	}, [children])
 
 	return (
