@@ -8,9 +8,10 @@ const ScrollArea = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.Root>,
 	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
 		dialogInset?: boolean
+		scrollbarClass?: string
 		orientation?: 'horizontal' | 'vertical'
 	}
->(({className, children, dialogInset, orientation = 'vertical', ...props}, ref) => {
+>(({className, children, dialogInset, scrollbarClass, orientation = 'vertical', ...props}, ref) => {
 	const {scrollerClass, ref: scrollerRef} = useFadeScroller('y')
 	return (
 		<ScrollAreaPrimitive.Root
@@ -31,7 +32,7 @@ const ScrollArea = React.forwardRef<
 			>
 				{children}
 			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar dialogInset={dialogInset} orientation={orientation} />
+			<ScrollBar dialogInset={dialogInset} scrollbarClass={scrollbarClass} orientation={orientation} />
 			<ScrollAreaPrimitive.Corner />
 		</ScrollAreaPrimitive.Root>
 	)
@@ -42,8 +43,9 @@ const ScrollBar = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
 	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> & {
 		dialogInset?: boolean
+		scrollbarClass?: string
 	}
->(({className, dialogInset, orientation = 'vertical', ...props}, ref) => (
+>(({className, dialogInset, scrollbarClass, orientation = 'vertical', ...props}, ref) => (
 	<ScrollAreaPrimitive.ScrollAreaScrollbar
 		ref={ref}
 		orientation={orientation}
@@ -53,6 +55,7 @@ const ScrollBar = React.forwardRef<
 			orientation === 'vertical' && dialogInset && 'my-5',
 			orientation === 'horizontal' && 'h-2.5 flex-col border-t border-t-transparent p-[3px]',
 			orientation === 'horizontal' && dialogInset && 'mx-5',
+			scrollbarClass,
 			className,
 		)}
 		{...props}
