@@ -1,3 +1,4 @@
+import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 import {ReactNode, useState} from 'react'
 import {RouterProvider} from 'react-router-dom'
 
@@ -15,6 +16,7 @@ init(
 		<TrpcProvider>
 			<RouterProvider router={storiesRouter} />
 			<TrpcMarker />
+			<ReactQueryDevtools initialIsOpen={false} position='bottom-right' />
 		</TrpcProvider>
 	</SimpleWallpaperProvider>,
 )
