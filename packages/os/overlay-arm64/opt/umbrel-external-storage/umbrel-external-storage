@@ -48,17 +48,32 @@ list_block_devices () {
   #
   # sed 's!.*/!!' is to return the device path so we get sda
   # instead of /sys/block/sda
-  (ls -d /sys/block/sd* 2>/dev/null || true) | sed 's!.*/!!'
+  (ls -d /sys/block/sd* /sys/block/nvme0n* 2>/dev/null || true) | sed 's!.*/!!'
 }
 
 # Returns the vendor and model name of a block device
 get_block_device_model () {
   device="${1}"
-  vendor=$(cat "/sys/block/${device}/device/vendor")
+
+  if [[ "${device}" == nvme* ]]; then
+    vendor=$(cat "/sys/block/${device}/device/device/vendor")
+  else
+    vendor=$(cat "/sys/block/${device}/device/vendor")
+  fi
   model=$(cat "/sys/block/${device}/device/model")
 
   # We echo in a subshell without quotes to strip surrounding whitespace
   echo "$(echo $vendor) $(echo $model)"
+}
+
+# Returns the path of the first partition of a block device
+get_first_partition_path () {
+  device_path="${1}"
+  if [[ "${device_path}" == /dev/nvme* ]]; then
+    echo "${device_path}p1"
+  else
+    echo "${device_path}1"
+  fi
 }
 
 is_partition_ext4 () {
@@ -73,7 +88,7 @@ is_partition_ext4 () {
 format_block_device () {
   device="${1}"
   device_path="/dev/${device}"
-  partition_path="${device_path}1"
+  partition_path=$(get_first_partition_path "${device_path}")
   wipefs -a "${device_path}"
   parted --script "${device_path}" mklabel gpt
   parted --script "${device_path}" mkpart primary ext4 0% 100%
@@ -167,7 +182,7 @@ main () {
   # At this point we know there is only one block device attached
   block_device=$(list_block_devices)
   block_device_path="/dev/${block_device}"
-  partition_path="${block_device_path}1"
+  partition_path=$(get_first_partition_path "${block_device_path}")
   block_device_model=$(get_block_device_model $block_device)
   echo "Found device \"${block_device_model}\""
 
@@ -226,13 +241,13 @@ main () {
   echo "Checking Umbrel root is now on external storage..."
   sync
   sleep 1
-  df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd'
+  df -h "${UMBREL_ROOT}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Checking ${DOCKER_DIR} is now on external storage..."
-  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd'
+  df -h "${DOCKER_DIR}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Checking ${SWAP_DIR} is now on external storage..."
-  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd'
+  df -h "${SWAP_DIR}" | grep --quiet '/dev/sd\|/dev/nvme'
 
   echo "Setting up swapfile"
   rm "${SWAP_FILE}" || true
