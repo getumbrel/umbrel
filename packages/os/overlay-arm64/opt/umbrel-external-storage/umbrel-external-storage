@@ -37,6 +37,15 @@ check_dependencies () {
   done
 }
 
+running_off_sdcard() {
+  if df -h | grep --silent /dev/mmcblk0
+  then
+    echo "true"
+  else
+    echo "false"
+  fi
+}
+
 # Returns a list of block device paths
 list_block_devices () {
   # We need to run sync here to make sure the filesystem is reflecting the
@@ -141,6 +150,12 @@ main () {
   echo "Running external storage mount script..."
   check_root
   check_dependencies sed wipefs parted mount sync umount
+
+  if [[ "$(running_off_sdcard)" == "false" ]]
+  then
+    echo "This script should only run when umbrelOS boots from an SD card, exiting..."
+    exit
+  fi
 
   no_of_block_devices=$(list_block_devices | wc -l)
 
