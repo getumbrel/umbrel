@@ -4,7 +4,7 @@ const package = require('../package.json');
 const CONSTANTS = require('./const.js');
 
 const axiosInstance = axios.create({
-	baseURL: `http://${CONSTANTS.MANAGER_IP}:${CONSTANTS.MANAGER_PORT}`,
+	baseURL: `${CONSTANTS.APP_PROTOCOL}://${CONSTANTS.MANAGER_IP}:${CONSTANTS.MANAGER_PORT}`,
 	headers: {
 		common: {
 			"User-Agent": `${package.name}/${package.version}`
