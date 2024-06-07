@@ -8,7 +8,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbServer, TbSettingsMinus, TbTool} from 'react-icons/tb'
+import {TbServer, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
@@ -24,6 +24,7 @@ import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
 import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
@@ -52,9 +53,10 @@ export function SettingsContent() {
 	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
 
-	const [userQ, uptimeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const [userQ, uptimeQ, wifiSupportedQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
+		t.wifi.supported(),
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
@@ -161,6 +163,13 @@ export function SettingsContent() {
 							<WallpaperPicker />
 						</div>
 					</ListRow>
+					{wifiSupportedQ.data ? (
+						<WifiSupportedListRow />
+					) : (
+						<ListRow title={t('wifi')} description={t('wifi-description')}>
+							<Switch checked={false} onCheckedChange={() => navigate('wifi-unsupported')} />
+						</ListRow>
+					)}
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
@@ -227,5 +236,26 @@ export function SettingsContent() {
 				<ContactSupportLink className='lg:hidden' />
 			</div>
 		</div>
+	)
+}
+
+function WifiSupportedListRow() {
+	const navigate = useNavigate()
+	const wifiQ = trpcReact.wifi.connected.useQuery()
+
+	return wifiQ.data?.status === 'connected' ? (
+		<ListRow
+			title={t('wifi')}
+			description={<WifiListRowConnectedDescription network={wifiQ.data} />}
+			disabled={wifiQ.isLoading}
+		>
+			<IconButtonLink to={'wifi'} icon={TbWifi}>
+				{t('wifi-view-networks')}
+			</IconButtonLink>
+		</ListRow>
+	) : (
+		<ListRow title={t('wifi')} description={t('wifi-description')} disabled={wifiQ.isLoading}>
+			<Switch checked={false} onCheckedChange={() => navigate('wifi')} />
+		</ListRow>
 	)
 }

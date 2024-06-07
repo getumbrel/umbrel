@@ -394,5 +394,22 @@
   "advanced-settings": "詳細設定",
   "advanced-settings-description": "Terminalを開くか、umbrelOSベータプログラムに登録する",
   "beta-program": "umbrelOSベータプログラム",
-  "beta-program-description": "umbrelOSのベータアップデートを受け取ることに同意し、新機能への早期アクセスを得て、フィードバックを提供することでそれらの改善に協力してください。ベータアップデートは不安定な場合があり、トラブルシューティングにはTerminalの知識が必要になることがあります。"
+  "beta-program-description": "umbrelOSのベータアップデートを受け取ることに同意し、新機能への早期アクセスを得て、フィードバックを提供することでそれらの改善に協力してください。ベータアップデートは不安定な場合があり、トラブルシューティングにはTerminalの知識が必要になることがあります。",
+  "wifi": "Wi-Fi",
+  "wifi-description": "デバイスをWi-Fiネットワークに接続します",
+  "wifi-disabled-message": "Wi-Fiをオンにしてネットワークをスキャンし、接続してください",
+  "wifi-description-long": "デバイスは選択したWi-Fiに接続されたままになります。Ethernetケーブルが取り外されても、起動時に自動的にWi-Fiに再接続されます。",
+  "wifi-searching": "Wi-Fiネットワークを検索しています...",
+  "wifi-view-networks": "ネットワークを表示",
+  "wifi-connection-failed": "接続できません",
+  "wifi-connect-insecure-message": "オープンネットワークは安全でない可能性があります",
+  "wifi-no-networks-message": "Wi-Fiネットワークが見つかりません",
+  "wifi-not-supported": "Wi-Fiはサポートされていません",
+  "wifi-unsupported-device-description": "このデバイスではWi-Fiがサポートされていません。これは、ワイヤレスアダプタがないか、互換性がないためです。",
+  "wifi-dangerous-change-confirmation-title": "本当にWi-Fiネットワークを変更しますか？",
+  "wifi-dangerous-change-confirmation-description": "Wi-Fiネットワークを変更すると、Umbrelから切断される可能性があります。再接続するには、Umbrelとアクセスしているデバイスの両方が同じネットワーク上にあることを確認してください。",
+  "change": "変更",
+  "wifi-dangerous-disable-confirmation-title": "本当にWi-Fiを無効にしますか？",
+  "wifi-dangerous-disable-confirmation-description": "Wi-Fiを無効にすると、Umbrelから切断される可能性があります。再接続するには、UmbrelにEthernetケーブルを接続し、Umbrelとアクセスしているデバイスの両方が同じネットワーク上にあることを確認してください。",
+  "disable": "無効にする"
 }

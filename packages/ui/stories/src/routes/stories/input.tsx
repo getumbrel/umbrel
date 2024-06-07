@@ -1,5 +1,6 @@
-import {H1, H2} from '@stories/components'
+import {H1, H2, H3} from '@stories/components'
 
+import {Button} from '@/shadcn-components/ui/button'
 import {Input, InputError, PasswordInput} from '@/shadcn-components/ui/input'
 import {tw} from '@/utils/tw'
 
@@ -7,12 +8,30 @@ export default function InputExamples() {
 	return (
 		<div className='flex flex-col gap-4 bg-neutral-800 p-4'>
 			<H1>Input</H1>
-			<H2>Default</H2>
+			<H2>sizeVariant</H2>
+			<H3>default</H3>
 			<Input placeholder='Name' />
+			<H3>short</H3>
+			<div className='flex items-center gap-2'>
+				<Input sizeVariant={'short'} placeholder='Name' />
+				<Button size='input-short'>Button</Button>
+				<Button variant='primary' size='input-short'>
+					Button
+				</Button>
+			</div>
+			<H3>short-square</H3>
+			<div className='flex items-center gap-2'>
+				<Input sizeVariant={'short-square'} placeholder='Name' />
+				<Button size='md-squared'>Button</Button>
+				<Button variant='primary' size='md-squared'>
+					Button
+				</Button>
+			</div>
 			<H2>Disabled</H2>
 			<Input placeholder='Name' disabled />
-			<H2>Test</H2>
+			<H2>Password</H2>
 			<PasswordInput />
+			<H2>Input error</H2>
 			<InputErrorExample />
 		</div>
 	)

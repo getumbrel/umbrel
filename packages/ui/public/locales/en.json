@@ -394,5 +394,23 @@
   "advanced-settings": "Advanced settings",
   "advanced-settings-description": "Open terminal or enroll into umbrelOS Beta Program",
   "beta-program": "umbrelOS Beta Program",
-  "beta-program-description": "Opt in to receiving umbrelOS beta updates, gain early access to new features, and help us refine them by providing your feedback. Beta updates might be unstable, and troubleshooting may require familiarity with terminal."
+  "beta-program-description": "Opt in to receiving umbrelOS beta updates, gain early access to new features, and help us refine them by providing your feedback. Beta updates might be unstable, and troubleshooting may require familiarity with terminal.",
+  "wifi": "Wi-Fi",
+  "wifi-description": "Connect your device to a Wi-Fi network",
+  "wifi-disabled-message": "Turn on Wi-Fi to scan and connect to a network",
+  "wifi-description-long": "Your device stays connected to your chosen Wi-Fi, even if the Ethernet cable is removed, and automatically reconnects to Wi-Fi on startup.",
+  "wifi-searching": "Searching for Wi-Fi networks...",
+  "wifi-view-networks": "View networks",
+  "wifi-connection-failed": "Unable to connect",
+  "wifi-connect-insecure-message": "Open networks can be insecure",
+  "wifi-no-networks-message": "No Wi-Fi networks found",
+  "wifi-not-supported": "Wi-Fi not supported",
+  "wifi-unsupported-device-description": "Wi-Fi is not supported on this device. This may be due to a missing or incompatible wireless adapter.",
+  "wifi-dangerous-change-confirmation-title": "Are you sure you want to change Wi-Fi network?",
+  "wifi-dangerous-change-confirmation-description": "Changing the Wi-Fi network may disconnect you from your Umbrel. To reconnect, ensure that both your Umbrel and the device you're accessing it from are on the same network.",
+  "change": "Change",
+  "wifi-dangerous-disable-confirmation-title": "Are you sure you want to disable Wi-Fi?",
+  "wifi-dangerous-disable-confirmation-description": "Disabling Wi-Fi may disconnect you from your Umbrel. To reconnect, plug in an Ethernet cable to your Umbrel and ensure that both your Umbrel and the device you're accessing it from are on the same network.",
+  "disable": "Disable"
 }
+

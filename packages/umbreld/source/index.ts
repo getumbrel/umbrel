@@ -15,7 +15,7 @@ import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
-import {detectDevice, setCpuGovernor, reboot} from './modules/system.js'
+import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
 
 import {commitOsPartition} from './modules/system.js'
 
@@ -33,6 +33,10 @@ type StoreSchema = {
 	}
 	settings: {
 		releaseChannel: 'stable' | 'beta'
+		wifi?: {
+			ssid: string
+			password?: string
+		}
 	}
 	recentlyOpenedApps: string[]
 }
@@ -74,6 +78,25 @@ export default class Umbreld {
 		this.user = new User(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 		this.apps = new Apps(this)
+	}
+
+	// TODO: Move this to a system module
+	// Restore WiFi after OTA update
+	async restoreWiFi() {
+		const wifiCredentials = await this.store.get('settings.wifi')
+		if (!wifiCredentials) return
+
+		while (true) {
+			this.logger.log(`Attempting to restore WiFi connection to ${wifiCredentials.ssid}...`)
+			try {
+				await connectToWiFiNetwork(wifiCredentials)
+				this.logger.log(`WiFi connection restored!`)
+				break
+			} catch (error) {
+				this.logger.error(`Failed to restore WiFi connection "${(error as Error).message}". Retrying in 1 minute...`)
+				await setTimeout(1000 * 60)
+			}
+		}
 	}
 
 	async setupPiCpuGoverner() {
@@ -137,6 +160,9 @@ export default class Umbreld {
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
+
+		// Restore WiFi connection after OTA update
+		this.restoreWiFi()
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
 		await this.waitForSystemTime(10)

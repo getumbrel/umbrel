@@ -8,6 +8,7 @@ import {
 	TbSettingsMinus,
 	TbTool,
 	TbUser,
+	TbWifi,
 } from 'react-icons/tb'
 import {Link, useNavigate} from 'react-router-dom'
 
@@ -24,6 +25,7 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
@@ -43,6 +45,7 @@ export function SettingsContentMobile() {
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
+	const wifiQ = trpcReact.wifi.connected.useQuery()
 	const osVersionQ = trpcReact.system.version.useQuery()
 	const uptimeQ = trpcReact.system.uptime.useQuery()
 	const tor = useTorEnabled()
@@ -149,6 +152,18 @@ export function SettingsContentMobile() {
 					title={t('wallpaper')}
 					description={t('wallpaper-description')}
 					onClick={() => navigate('wallpaper')}
+				/>
+				<ListRowMobile
+					icon={TbWifi}
+					title={t('wifi')}
+					description={
+						wifiQ.data?.status === 'connected' ? (
+							<WifiListRowConnectedDescription network={wifiQ.data} />
+						) : (
+							t('wifi-description')
+						)
+					}
+					onClick={() => navigate('wifi')}
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}

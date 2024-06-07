@@ -1,42 +1,45 @@
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
 import * as React from 'react'
+import {mergeRefs} from 'react-merge-refs'
 
 import {useFadeScroller} from '@/components/fade-scroller'
 import {cn} from '@/shadcn-lib/utils'
 
-const ScrollArea = React.forwardRef<
-	React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
-		dialogInset?: boolean
-		scrollbarClass?: string
-		orientation?: 'horizontal' | 'vertical'
-	}
->(({className, children, dialogInset, scrollbarClass, orientation = 'vertical', ...props}, ref) => {
-	const {scrollerClass, ref: scrollerRef} = useFadeScroller('y')
-	return (
-		<ScrollAreaPrimitive.Root
-			ref={ref}
-			className={cn('relative overflow-hidden', className)}
-			scrollHideDelay={0}
-			{...props}
-		>
-			<ScrollAreaPrimitive.Viewport
-				ref={scrollerRef}
-				className={cn(
-					// Setting `block` to fix issues with radix `ScrollArea` component
-					// https://github.com/radix-ui/primitives/issues/926#issuecomment-1015279283
-					'flex h-full w-full rounded-[inherit] *:!block *:flex-grow',
-					orientation === 'vertical' && 'flex-col',
-					scrollerClass,
-				)}
+type Props = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
+	dialogInset?: boolean
+	scrollbarClass?: string
+	orientation?: 'horizontal' | 'vertical'
+	viewportRef?: React.RefObject<HTMLDivElement>
+}
+
+const ScrollArea = React.forwardRef<React.ElementRef<typeof ScrollAreaPrimitive.Root>, Props>(
+	({className, children, viewportRef, dialogInset, scrollbarClass, orientation = 'vertical', ...props}, ref) => {
+		const {scrollerClass, ref: scrollerRef} = useFadeScroller('y')
+		return (
+			<ScrollAreaPrimitive.Root
+				ref={ref}
+				className={cn('relative overflow-hidden', className)}
+				scrollHideDelay={0}
+				{...props}
 			>
-				{children}
-			</ScrollAreaPrimitive.Viewport>
-			<ScrollBar dialogInset={dialogInset} scrollbarClass={scrollbarClass} orientation={orientation} />
-			<ScrollAreaPrimitive.Corner />
-		</ScrollAreaPrimitive.Root>
-	)
-})
+				<ScrollAreaPrimitive.Viewport
+					ref={mergeRefs([viewportRef, scrollerRef])}
+					className={cn(
+						// Setting `block` to fix issues with radix `ScrollArea` component
+						// https://github.com/radix-ui/primitives/issues/926#issuecomment-1015279283
+						'flex h-full w-full rounded-[inherit] *:!block *:flex-grow',
+						orientation === 'vertical' && 'flex-col',
+						scrollerClass,
+					)}
+				>
+					{children}
+				</ScrollAreaPrimitive.Viewport>
+				<ScrollBar dialogInset={dialogInset} scrollbarClass={scrollbarClass} orientation={orientation} />
+				<ScrollAreaPrimitive.Corner />
+			</ScrollAreaPrimitive.Root>
+		)
+	},
+)
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<

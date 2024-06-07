@@ -394,5 +394,22 @@
   "advanced-settings": "Paramètres avancés",
   "advanced-settings-description": "Ouvrez le terminal ou inscrivez-vous au programme bêta d'umbrelOS",
   "beta-program": "Programme bêta d'umbrelOS",
-  "beta-program-description": "Optez pour recevoir des mises à jour bêta d'umbrelOS, accédez en avant-première à de nouvelles fonctionnalités et aidez-nous à les peaufiner en fournissant vos retours. Les mises à jour bêta peuvent être instables, et le dépannage peut nécessiter une familiarité avec le terminal."
+  "beta-program-description": "Optez pour recevoir des mises à jour bêta d'umbrelOS, accédez en avant-première à de nouvelles fonctionnalités et aidez-nous à les peaufiner en fournissant vos retours. Les mises à jour bêta peuvent être instables, et le dépannage peut nécessiter une familiarité avec le terminal.",
+  "wifi": "Wi-Fi",
+  "wifi-description": "Connectez votre appareil à un réseau Wi-Fi",
+  "wifi-disabled-message": "Activez le Wi-Fi pour scanner et vous connecter à un réseau",
+  "wifi-description-long": "Votre appareil reste connecté à votre Wi-Fi choisi, même si le câble Ethernet est retiré, et se reconnecte automatiquement au Wi-Fi au démarrage.",
+  "wifi-searching": "Recherche de réseaux Wi-Fi...",
+  "wifi-view-networks": "Voir les réseaux",
+  "wifi-connection-failed": "Impossible de se connecter",
+  "wifi-connect-insecure-message": "Les réseaux ouverts peuvent être peu sécurisés",
+  "wifi-no-networks-message": "Aucun réseau Wi-Fi trouvé",
+  "wifi-not-supported": "Wi-Fi non pris en charge",
+  "wifi-unsupported-device-description": "Le Wi-Fi n'est pas pris en charge sur cet appareil. Cela peut être dû à un adaptateur sans fil manquant ou incompatible.",
+  "wifi-dangerous-change-confirmation-title": "Êtes-vous sûr de vouloir changer de réseau Wi-Fi ?",
+  "wifi-dangerous-change-confirmation-description": "Changer de réseau Wi-Fi peut vous déconnecter de votre Umbrel. Pour vous reconnecter, assurez-vous que votre Umbrel et l'appareil à partir duquel vous y accédez sont sur le même réseau.",
+  "change": "Changer",
+  "wifi-dangerous-disable-confirmation-title": "Êtes-vous sûr de vouloir désactiver le Wi-Fi ?",
+  "wifi-dangerous-disable-confirmation-description": "Désactiver le Wi-Fi peut vous déconnecter de votre Umbrel. Pour vous reconnecter, branchez un câble Ethernet à votre Umbrel et assurez-vous que votre Umbrel et l'appareil à partir duquel vous y accédez sont sur le même réseau.",
+  "disable": "Désactiver"  
 }

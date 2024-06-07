@@ -70,6 +70,7 @@ export function PasswordInput({
 	autoFocus,
 	sizeVariant,
 	inputRef,
+	className,
 }: {
 	value?: string
 	/** Calling it a label rather than a placeholder */
@@ -79,10 +80,11 @@ export function PasswordInput({
 	autoFocus?: boolean
 	sizeVariant?: VariantProps<typeof inputVariants>['sizeVariant']
 	inputRef?: React.Ref<HTMLInputElement>
+	className?: string
 }) {
 	const [showPassword, setShowPassword] = React.useState(false)
 	return (
-		<div>
+		<div className={className}>
 			<div className={cn(iconRightClasses.root)}>
 				<Input
 					ref={inputRef}

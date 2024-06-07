@@ -41,6 +41,8 @@ const StartMigrationDrawerOrDialog = React.lazy(() =>
 		default: m.StartMigrationDrawerOrDialog,
 	})),
 )
+const Wifi = React.lazy(() => import('@/routes/settings/wifi'))
+const WifiUnsupported = React.lazy(() => import('@/routes/settings/wifi-unsupported'))
 const AccountDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/account').then((m) => ({default: m.AccountDrawer})),
 )
@@ -116,9 +118,11 @@ export function Settings() {
 						{/* Fall-through `/account` to here. If going to account, always show drawer, even if on desktop */}
 						{<Route path='/account/:accountTab' Component={AccountDrawer} />}
 						{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
+						<Route path='/wifi' Component={Wifi} />
+						<Route path='/wifi-unsupported' Component={WifiUnsupported} />
 						<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
 						{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
-						{<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />}
+						<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />
 						{isMobile && <Route path='/language' Component={LanguageDrawer} />}
 						<Route path='/troubleshoot/*' Component={TroubleshootDialog} />
 						<Route path='/terminal/*' Component={TerminalDialog} />
