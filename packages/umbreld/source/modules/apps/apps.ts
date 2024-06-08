@@ -74,7 +74,7 @@ export default class Apps {
 		// storing their own random seed/password/etc inside their own data directory.
 		const umbrelSeedFile = `${this.#umbreld.dataDirectory}/db/umbrel-seed/seed`
 		if (!(await fse.exists(umbrelSeedFile))) {
-			this.logger.verbose('Creating Umbrel seed')
+			this.logger.log('Creating Umbrel seed')
 			await fse.ensureFile(umbrelSeedFile)
 			await fse.writeFile(umbrelSeedFile, randomToken(256))
 		}
@@ -212,7 +212,7 @@ export default class Apps {
 		const appTemplateExists = await fse.pathExists(`${appTemplatePath}/umbrel-app.yml`)
 		if (!appTemplateExists) throw new Error('App template not found')
 
-		this.logger.verbose(`Setting up data directory for ${appId}`)
+		this.logger.log(`Setting up data directory for ${appId}`)
 		const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data/${appId}`
 		await fse.mkdirp(appDataDirectory)
 

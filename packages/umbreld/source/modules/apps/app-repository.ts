@@ -116,14 +116,14 @@ export default class AppRepository {
 
 	// Update (or install) the repo
 	async update() {
-		this.logger.verbose(`Checking for update for ${this.url}`)
+		this.logger.log(`Checking for update for ${this.url}`)
 		const isUpdated = await this.isUpdated()
 		if (isUpdated) {
-			this.logger.verbose(`${this.url} is already up to date`)
+			this.logger.log(`${this.url} is already up to date`)
 		} else {
-			this.logger.verbose(`Newer version of ${this.url} available, updating`)
+			this.logger.log(`Newer version of ${this.url} available, updating`)
 			await this.atomicClone()
-			this.logger.verbose(`Updated ${this.url}!`)
+			this.logger.log(`Updated ${this.url}!`)
 		}
 
 		return this.isUpdated()

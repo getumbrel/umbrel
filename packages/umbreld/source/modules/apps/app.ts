@@ -119,7 +119,7 @@ export default class App {
 			.filter(Boolean) as string[]
 		await pullAll([...defaultImages, ...images], (progress) => {
 			this.stateProgress = Math.max(1, progress * 99)
-			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
 		})
 	}
 
