@@ -252,6 +252,8 @@ export async function getWifiNetworks() {
 			network.active = network.active || networks.some((item) => item.ssid === network.ssid && item.active)
 			return network
 		})
+		// Order by SSID
+		.sort((a, b) => a.ssid.localeCompare(b.ssid))
 
 	return filteredNetworks
 }
