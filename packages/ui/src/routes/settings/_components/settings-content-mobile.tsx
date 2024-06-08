@@ -17,17 +17,16 @@ import {Link, useNavigate} from 'react-router-dom'
 import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
-import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
+import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
-import {useLanguage} from '@/hooks/use-language'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
+import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {trpcReact} from '@/trpc/trpc'
-import {duration} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
@@ -39,15 +38,12 @@ import {ContactSupportLink} from './shared'
 import {StorageCardContent} from './storage-card-content'
 
 export function SettingsContentMobile() {
-	const [languageCode] = useLanguage()
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
-	const osVersionQ = trpcReact.system.version.useQuery()
-	const uptimeQ = trpcReact.system.uptime.useQuery()
 	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
@@ -89,16 +85,7 @@ export function SettingsContentMobile() {
 						{firstNameFromFullName(userQ.data.name)}’s <span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
-					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
-						<dt className='opacity-40'>{t('device')}</dt>
-						<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-						<dt className='opacity-40'>{t('umbrelos')}</dt>
-						<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
-						<dt className='opacity-40'>{t('uptime')}</dt>
-						<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
-						{/* TODO: add tor hidden service */}
-						{/* But for now, assume mobile users don't have tor */}
-					</dl>
+					<SettingsSummary />
 				</div>
 			</div>
 

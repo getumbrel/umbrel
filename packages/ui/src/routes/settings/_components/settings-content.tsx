@@ -17,19 +17,17 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
-import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
+import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
-import {useDeviceInfo} from '@/hooks/use-device-info'
-import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
+import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
-import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
@@ -46,19 +44,15 @@ import {WallpaperPicker} from './wallpaper-picker'
 export function SettingsContent() {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
-	const [languageCode] = useLanguage()
 	const [langOpen, setLangOpen] = useState(false)
 
 	const tor = useTorEnabled()
-	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
 
-	const [userQ, uptimeQ, wifiSupportedQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
-		t.system.uptime(),
 		t.wifi.supported(),
 		t.user.is2faEnabled(),
-		t.system.version(),
 	])
 
 	const hiddenServiceQ = trpcReact.system.hiddenService.useQuery(undefined, {
@@ -92,20 +86,7 @@ export function SettingsContent() {
 							{firstNameFromFullName(userQ.data?.name ?? UNKNOWN())}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
-						<dl
-							className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
-							style={{
-								// Makes columns not all the same width
-								gridTemplateColumns: 'auto auto',
-							}}
-						>
-							<dt className='opacity-40'>{t('device')}</dt>
-							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
-							<dt className='opacity-40'>{t('umbrelos')}</dt>
-							<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
-							<dt className='opacity-40'>{t('uptime')}</dt>
-							<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
-						</dl>
+						<SettingsSummary />
 					</div>
 					<div className='flex w-full flex-col items-stretch gap-2.5 md:w-auto md:flex-row'>
 						<IconButtonLink to={linkToDialog('logout')} size='xl' icon={RiLogoutCircleRLine}>
