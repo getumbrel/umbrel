@@ -72,10 +72,19 @@ export const progressStates = [
 	'updating',
 ] satisfies AppState[]
 
+export const progressBarStates = ['installing', 'updating'] satisfies AppState[]
+
 // `loading` means the frontend is currently fetching the state from the backend
 export type AppStateOrLoading = 'loading' | AppState
 
 export type UserAppWithoutError = Exclude<RouterOutput['apps']['list'][number], {id: string; error: string}>
+
+// Omitting `active` because we get the connection status from `WifiStatus` since it's more detailed and
+// don't wanna get confused on the frontend with two different ways of getting the connection status
+export type WifiNetwork = Omit<RouterOutput['wifi']['networks'][number], 'active'>
+export type WifiStatus = Exclude<RouterOutput['wifi']['connected'], undefined>['status']
+// `loading` is not returned by the backend, but is used in the frontend
+export type WifiStatusUi = WifiStatus | 'loading'
 
 // ---
 

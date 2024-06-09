@@ -51,7 +51,7 @@ export default router({
 			}),
 		)
 
-		const appDataSortedByNames = appData.sort((a, b) => a.name?.localeCompare(b.name))
+		const appDataSortedByNames = appData.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 
 		return appDataSortedByNames
 	}),
@@ -106,6 +106,15 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.restart(input.appId)),
+
+	// Start an app
+	start: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.apps.getApp(input.appId).start()),
 
 	// Stop an app
 	stop: privateProcedure

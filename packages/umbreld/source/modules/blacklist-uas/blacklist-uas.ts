@@ -31,7 +31,7 @@ export default async function blacklistUASDriver() {
 			if (!uevent.includes('DRIVER=uas')) continue
 			const [vendorId, productId] = uevent
 				.split('\n')
-				.find((line) => line?.startsWith('PRODUCT='))
+				.find((line) => line?.startsWith('PRODUCT='))!
 				.replace('PRODUCT=', '')
 				.split('/')
 			const deviceId = `${vendorId}:${productId}`

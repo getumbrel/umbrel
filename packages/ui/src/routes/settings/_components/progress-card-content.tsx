@@ -23,7 +23,8 @@ export function ProgressStatCardContent({
 			<div className={cardTitleClass}>{title}</div>
 			<div className='flex items-baseline justify-between gap-4 truncate text-17 leading-tight'>
 				<div className='flex items-baseline gap-1 truncate'>
-					<span className={cardValueClass}>{value}</span> <span className={cn(cardValueSubClass, 'hidden sm:block')}>{valueSub}</span>
+					<span className={cardValueClass}>{value}</span>{' '}
+					<span className={cn(cardValueSubClass, 'hidden sm:block')}>{valueSub}</span>
 				</div>
 				<span className={cn(cardSecondaryValueClass, 'text-xs')}>{secondaryValue}</span>
 			</div>

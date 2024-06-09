@@ -5,8 +5,10 @@ import {
 	TbLanguage,
 	TbPhoto,
 	TbServer,
+	TbSettingsMinus,
 	TbTool,
 	TbUser,
+	TbWifi,
 } from 'react-icons/tb'
 import {Link, useNavigate} from 'react-router-dom'
 
@@ -23,9 +25,11 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -41,6 +45,7 @@ export function SettingsContentMobile() {
 	const userQ = trpcReact.user.get.useQuery()
 	const cpuTemp = useCpuTemp()
 	const deviceInfo = useDeviceInfo()
+	const wifiQ = trpcReact.wifi.connected.useQuery()
 	const osVersionQ = trpcReact.system.version.useQuery()
 	const uptimeQ = trpcReact.system.uptime.useQuery()
 	const tor = useTorEnabled()
@@ -81,7 +86,7 @@ export function SettingsContentMobile() {
 
 				<div className='mx-2.5'>
 					<h2 className='text-24 font-bold leading-none -tracking-4'>
-						{userQ.data.name}’s <span className='opacity-40'>{t('umbrel')}</span>
+						{firstNameFromFullName(userQ.data.name)}’s <span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
 					<dl className='grid grid-cols-2 gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
@@ -99,27 +104,32 @@ export function SettingsContentMobile() {
 
 			{/* --- */}
 			<div className='grid grid-cols-2 gap-2'>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'storage'}),
+					}}
+				>
 					<Card>
 						<StorageCardContent />
 					</Card>
 				</Link>
-				
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'})
-				}}>
+
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'memory'}),
+					}}
+				>
 					{/* Set id on the second card because we wanna scroll to see them all */}
 					<Card id={SETTINGS_SYSTEM_CARDS_ID}>
 						<MemoryCardContent />
 					</Card>
 				</Link>
 
-				<Link to={{
-					search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'})
-				}}>
+				<Link
+					to={{
+						search: addLinkSearchParams({dialog: 'live-usage', tab: 'cpu'}),
+					}}
+				>
 					<Card>
 						<CpuCardContent />
 					</Card>
@@ -142,6 +152,18 @@ export function SettingsContentMobile() {
 					title={t('wallpaper')}
 					description={t('wallpaper-description')}
 					onClick={() => navigate('wallpaper')}
+				/>
+				<ListRowMobile
+					icon={TbWifi}
+					title={t('wifi')}
+					description={
+						wifiQ.data?.status === 'connected' ? (
+							<WifiListRowConnectedDescription network={wifiQ.data} />
+						) : (
+							t('wifi-description')
+						)
+					}
+					onClick={() => navigate('wifi')}
 				/>
 				<ListRowMobile
 					icon={Tb2Fa}
@@ -193,6 +215,12 @@ export function SettingsContentMobile() {
 					onClick={() => navigate('device-info')}
 				/>
 				<ListRowMobile
+					icon={TbSettingsMinus}
+					title={t('advanced-settings')}
+					description={t('advanced-settings-description')}
+					onClick={() => navigate('advanced')}
+				/>
+				<ListRowMobile
 					icon={TbCircleArrowUp}
 					title={t('software-update.title')}
 					description={t('check-for-latest-version')}
@@ -205,7 +233,6 @@ export function SettingsContentMobile() {
 					onClick={() => navigate('/factory-reset')}
 				/> */}
 			</div>
-
 			<ContactSupportLink />
 		</div>
 	)

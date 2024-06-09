@@ -1,3 +1,6 @@
+// Add types for `import.meta.env`
+/// <reference types="vite/client" />
+
 // https://github.com/lokesh/color-thief/issues/188#issuecomment-1166887824
 declare module 'colorthief' {
 	export type RGBColor = [number, number, number];

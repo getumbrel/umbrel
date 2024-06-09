@@ -34,35 +34,32 @@ export function ImmersiveDialogContent({
 	showScroll = false,
 }: {
 	children: React.ReactNode
-	size?: 'default' | 'lg'
+	size?: 'default' | 'lg' | 'xl'
 	short?: boolean
 	showScroll?: boolean
 }) {
 	return (
-		<DialogPortal>
-			<ImmersiveDialogOverlay />
-			{/* shell */}
-			<DialogContent
-				className={cn(
-					dialogContentClass,
-					dialogContentAnimationClass,
-					dialogContentAnimationSlideClass,
-					short ? immersiveContentShortClass : immersiveContentTallClass,
-					// overrides default size
-					size === 'lg' && 'max-w-[980px]',
-					'p-0',
-				)}
-			>
-				{showScroll ? (
-					<ScrollArea dialogInset className='h-full'>
-						<div className={immersiveScrollAreaContentsClass}>{children}</div>
-					</ScrollArea>
-				) : (
+		<DialogContent
+			className={cn(
+				dialogContentClass,
+				dialogContentAnimationClass,
+				dialogContentAnimationSlideClass,
+				short ? immersiveContentShortClass : immersiveContentTallClass,
+				// overrides default size
+				size === 'lg' && 'max-w-[980px]',
+				size === 'xl' && 'max-w-[1440px]',
+				'p-0',
+			)}
+		>
+			{showScroll ? (
+				<ScrollArea dialogInset className='h-full'>
 					<div className={immersiveScrollAreaContentsClass}>{children}</div>
-				)}
-				<ImmersiveDialogClose />
-			</DialogContent>
-		</DialogPortal>
+				</ScrollArea>
+			) : (
+				<div className={immersiveScrollAreaContentsClass}>{children}</div>
+			)}
+			<ImmersiveDialogClose />
+		</DialogContent>
 	)
 }
 
@@ -107,7 +104,7 @@ function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLD
 	)
 }
 
-const ImmersiveDialogOverlay = forwardRef(ForwardedImmersiveDialogOverlay)
+export const ImmersiveDialogOverlay = forwardRef(ForwardedImmersiveDialogOverlay)
 
 function ImmersiveDialogClose() {
 	return (

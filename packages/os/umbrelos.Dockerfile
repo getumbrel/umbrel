@@ -5,7 +5,7 @@
 FROM node:18.19.1-buster-slim as ui-build
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8
 
 # Set the working directory
 WORKDIR /app
@@ -87,7 +87,7 @@ RUN apt-get install --yes acpid
 RUN systemctl enable acpid
 
 # Install essential networking services
-RUN apt-get install --yes isc-dhcp-client network-manager ntp openssh-server
+RUN apt-get install --yes network-manager systemd-timesyncd openssh-server
 
 # Install essential system utilities
 RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode usbutils
@@ -107,7 +107,7 @@ RUN apt-get install --yes network-manager python3 fswatch jq rsync curl git gett
 RUN sudo apt-get install --yes skopeo
 RUN mkdir -p /images
 RUN skopeo copy docker://getumbrel/tor@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a docker-archive:/images/tor
-RUN skopeo copy docker://getumbrel/auth-server@sha256:8ae7ca39fd31a480decc8c8507efe147a94ade8e378c3815ec0ffd38bbd9325d docker-archive:/images/auth
+RUN skopeo copy docker://getumbrel/auth-server@sha256:b4a4b37896911a85fb74fa159e010129abd9dff751a40ef82f724ae066db3c2a docker-archive:/images/auth
 
 # Install umbreld
 RUN apt-get install --yes npm

@@ -2,7 +2,7 @@ import {ZodError} from 'zod'
 import {initTRPC} from '@trpc/server'
 
 import {type Context} from './context.js'
-import {isAuthenticated} from './is-authenticated.js'
+import {isAuthenticated, isAuthenticatedIfUserExists} from './is-authenticated.js'
 
 export const t = initTRPC.context<Context>().create({
 	// TODO: Add more context on why this is needed
@@ -21,3 +21,7 @@ export const t = initTRPC.context<Context>().create({
 export const router = t.router
 export const publicProcedure = t.procedure
 export const privateProcedure = t.procedure.use(isAuthenticated)
+// Use this procedure type sparingly, it's for exposing endpoints that usually need authentication but
+// may need to be used before a user is registered when a token can't exist. We shouldn't use it for
+// everything because there could be edgecases where it gets applied like if the user file is corrupted.
+export const publicProcedureWhenNoUserExists = t.procedure.use(isAuthenticatedIfUserExists)

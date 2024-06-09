@@ -37,6 +37,12 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 				h4: 'h4',
 				h5: 'h4',
 				h6: 'h4',
+				a: (props) => (
+					<a
+						className='decoration-white/30 underline-offset-2 outline-none transition-opacity hover:opacity-80 focus:opacity-80'
+						{...props}
+					/>
+				),
 			}}
 			allowedElements={[
 				'h1',

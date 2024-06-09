@@ -3,12 +3,13 @@ import {useLocation} from 'react-router-dom'
 
 import {useWidgets} from '@/hooks/use-widgets'
 import {Widget} from '@/modules/widgets'
+import {WidgetContainer} from '@/modules/widgets/shared/shared'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
-import {AppIconConnected} from './app-icon'
+import {AppIconConnected, AppLabel} from './app-icon'
 import {Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {Header} from './header'
@@ -92,7 +93,13 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 								// Get the app name from the endpoint
 								label={widget.app.name}
 							>
-								<Widget appId={widget.app.id} config={widget} />
+								{widget.app.state === 'ready' ? (
+									<Widget appId={widget.app.id} config={widget} />
+								) : (
+									<WidgetContainer className='grid place-items-center text-13 text-white/50'>
+										<AppLabel state={widget.app.state} />
+									</WidgetContainer>
+								)}
 							</WidgetWrapper>
 						</motion.div>
 					))}

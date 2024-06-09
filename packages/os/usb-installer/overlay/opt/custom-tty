@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+sleep 1
+
+clear
+
+cat << 'EOF'
+
+              ,;###GGGGGGGGGGl#Sp
+           ,##GGGlW""^'  '`""%GGGG#S,
+         ,#GGG"                  "lGG#o
+        #GGl^                      '$GG#
+      ,#GGb                          \GGG,
+      lGG"                            "GGG
+     #GGGlGGGl##p,,p##lGGl##p,,p###ll##GGGG
+    !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
+     ""          "^          '"          ""
+             umbrelOS USB Installer
+EOF
+echo
+
+# If device is an Umbrel Home auto flash and shutdown non-interactively since we don't have video output.
+if dmidecode -t system | grep --silent 'Umbrel Home'
+then
+    echo "Umbrel Home detected."
+    echo "Automatically flashing internal storage..."
+    xz --decompress --stdout /umbrelos-amd64.img.xz | dd of=/dev/nvme0n1 bs=4M status=progress
+    echo "umbrelOS has been installed, shutting down."
+    poweroff
+    exit 1
+fi
+
+# For all other devices, run the interactive installer.
+echo "Installing umbrelOS will wipe your entire storage device."
+echo
+readarray -t devices < <(lsblk --nodeps --output NAME,VENDOR,MODEL,SIZE | sed '1d')
+PS3="Select a storage device by number to install umbrelOS on: "
+select device in "${devices[@]}"
+do
+    if [[ -n "$device" ]]
+    then
+        echo "installing umbrelOS on: $device"
+        device_path="/dev/$(echo $device | awk '{print $1}')"
+        xz --decompress --stdout /umbrelos-amd64.img.xz | dd of=$device_path bs=4M status=progress
+        sync
+        echo
+        echo "umbrelOS has been installed!"
+        printf "Press any key to shutdown, remember to remove the USB drive before turning the device back on."
+        read -n 1 -s
+        poweroff
+        break
+    else
+        echo "Invalid choice, please try again."
+    fi
+done

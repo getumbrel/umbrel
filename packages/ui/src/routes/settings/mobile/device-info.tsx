@@ -1,4 +1,3 @@
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
@@ -27,14 +26,13 @@ export function DeviceInfoDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('device-info-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
 					<DeviceInfoContent
 						umbrelHostEnvironment={data.umbrelHostEnvironment}
-					  device={data.device}
+						device={data.device}
 						modelNumber={data.modelNumber}
 						serialNumber={data.serialNumber}
 					/>

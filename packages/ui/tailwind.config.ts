@@ -3,12 +3,13 @@ import tailwindTypography from '@tailwindcss/typography'
 import {mapValues} from 'remeda'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
+import {PluginAPI} from 'tailwindcss/types/config'
 
 import {screens} from './src/utils/tw'
 
 /** @type {import('tailwindcss').Config} */
 export default {
-	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './stories/**/*.{js,ts,jsx,tsx}'],
 	future: {
 		// This allows ring-brand/40 (ring color with opacity to work correctly)
 		// https://github.com/tailwindlabs/tailwindcss/issues/9016#issuecomment-1205713065
@@ -79,6 +80,7 @@ export default {
 				'button-highlight-soft-hpx': '0px 0.5px 0px 0px rgba(255, 255, 255, 0.1) inset',
 				'immersive-dialog-close':
 					'0px 32px 32px 0px rgba(0, 0, 0, 0.32), 1px 1px 1px 0px rgba(255, 255, 255, 0.08) inset',
+				'radio-outline': '0 0 0 1px rgba(255, 255, 255, 0.2) inset',
 			},
 			dropShadow: {
 				'desktop-label': '0px 2px 4px rgba(0, 0, 0, 0.60)',
@@ -177,5 +179,16 @@ export default {
 			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography],
+	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography, utilPlugin],
+}
+
+function utilPlugin(plugin: PluginAPI) {
+	plugin.addUtilities({
+		'.absolute-center': {
+			position: 'absolute',
+			left: '50%',
+			top: '50%',
+			transform: 'translate(-50%, -50%)',
+		},
+	})
 }

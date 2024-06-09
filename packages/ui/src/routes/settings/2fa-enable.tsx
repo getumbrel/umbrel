@@ -5,7 +5,6 @@ import QRCode from 'react-qr-code'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {Loading} from '@/components/ui/loading'
 import {PinInput} from '@/components/ui/pin-input'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -44,7 +43,6 @@ export default function TwoFactorEnableDialog() {
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
 					<DrawerHeader>
-						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DrawerTitle>{title}</DrawerTitle>
 						<DrawerDescription>{t('2fa-description')}</DrawerDescription>
 					</DrawerHeader>
@@ -66,7 +64,6 @@ export default function TwoFactorEnableDialog() {
 			<DialogScrollableContent>
 				<div className='flex flex-col items-center gap-5 p-8'>
 					<DialogHeader>
-						<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{scanThisMessage}</DialogDescription>
 					</DialogHeader>

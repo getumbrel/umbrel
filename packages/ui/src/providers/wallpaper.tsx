@@ -1,4 +1,4 @@
-import {createContext, useCallback, useContext, useEffect, useLayoutEffect, useState} from 'react'
+import {createContext, ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useState} from 'react'
 import {usePreviousDistinct} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
@@ -122,7 +122,7 @@ export const wallpapers = [
 	},
 ] as const satisfies readonly WallpaperBase[]
 
-type Wallpaper = (typeof wallpapers)[number]
+export type Wallpaper = (typeof wallpapers)[number]
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 export const wallpaperIds = wallpapers.map((w) => w.id)
@@ -132,7 +132,7 @@ export const wallpaperIds = wallpapers.map((w) => w.id)
 const nullWallpaper = {
 	id: undefined,
 	url: '',
-	brandColorHsl: '0 0% 100%',
+	brandColorHsl: '0 0% 50%',
 } as const satisfies WallpaperBase
 
 type WallpaperType = {
@@ -158,10 +158,8 @@ Scenarios:
 	* After logged in, use remote value
 */
 
-export function WallpaperProvider({children}: {children: React.ReactNode}) {
+export function WallpaperProviderConnected({children}: {children: ReactNode}) {
 	const remote = useRemoteWallpaper()
-	const [isLoading, setIsLoading] = useState(true)
-	const [wallpaperFullyVisible, setWallpaperFullyVisible] = useState(false)
 
 	const remoteWallpaper = remote.wallpaper
 
@@ -170,6 +168,25 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 	// one if it returns (usually when user is logged in), and otherwise we show either the local one.
 	// The default one is loaded when nothing is in local storage yet.
 	const wallpaper = remote.isLoading ? nullWallpaper : remoteWallpaper || nullWallpaper
+
+	return (
+		<WallpaperProvider wallpaper={wallpaper} onWallpaperChange={(w) => remote.setWallpaperId(w.id)}>
+			{children}
+		</WallpaperProvider>
+	)
+}
+
+export function WallpaperProvider({
+	wallpaper,
+	onWallpaperChange,
+	children,
+}: {
+	wallpaper: Wallpaper | typeof nullWallpaper
+	onWallpaperChange: (wallpaper: Wallpaper) => void
+	children: ReactNode
+}) {
+	const [isLoading, setIsLoading] = useState(true)
+	const [wallpaperFullyVisible, setWallpaperFullyVisible] = useState(false)
 
 	const prevId = usePreviousDistinct(wallpaper.id)
 
@@ -191,7 +208,7 @@ export function WallpaperProvider({children}: {children: React.ReactNode}) {
 				isLoading,
 				prevWallpaper: (prevId && wallpapersKeyed[prevId]) || undefined,
 				setWallpaperId: (id: WallpaperId) => {
-					remote.setWallpaperId(id)
+					onWallpaperChange(wallpapersKeyed[id])
 				},
 				wallpaperFullyVisible,
 				setWallpaperFullyVisible: () => setWallpaperFullyVisible(true),

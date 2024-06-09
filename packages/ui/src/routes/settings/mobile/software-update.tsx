@@ -1,6 +1,5 @@
 import {ButtonLink} from '@/components/ui/button-link'
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -26,7 +25,6 @@ export function SoftwareUpdateDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('check-for-latest-version')}</DrawerDescription>
 				</DrawerHeader>

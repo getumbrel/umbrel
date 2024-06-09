@@ -1,6 +1,5 @@
 import {useState} from 'react'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -34,7 +33,6 @@ export function StartMigrationDrawerOrDialog() {
 					<div className='py-5'>
 						<MigrateImage />
 					</div>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('migration-assistant-description')}</DrawerDescription>
 				</DrawerHeader>

@@ -4,8 +4,12 @@ import {promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
 import {dirname, join} from 'node:path'
 
+import {$} from 'execa'
 import express from 'express'
 import cors from 'cors'
+import pty, {IPty} from 'node-pty'
+
+import {WebSocketServer} from 'ws'
 import {createProxyMiddleware} from 'http-proxy-middleware'
 
 import getOrCreateFile from '../utilities/get-or-create-file.js'
@@ -14,6 +18,7 @@ import randomToken from '../utilities/random-token.js'
 import type Umbreld from '../../index.js'
 import * as jwt from '../jwt.js'
 import {trpcHandler} from './trpc/index.js'
+import createTerminalWebSocketHandler from './terminal-socket.js'
 
 export type ServerOptions = {umbreld: Umbreld}
 
@@ -117,6 +122,30 @@ class Server {
 		await listen(this.umbreld.port)
 		this.port = (server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)
+
+		// Create the terminal WebSocket server
+		const terminalLogger = this.logger.createChildLogger('terminal')
+		const wss = new WebSocketServer({noServer: true})
+		wss.on('connection', createTerminalWebSocketHandler({umbreld: this.umbreld, logger: terminalLogger}))
+
+		// Handle WebSocket upgrade requests
+		server.on('upgrade', async (request, socket, head) => {
+			// Only handle requests to /terminal
+			const {pathname} = new URL(`https://localhost${request.url}`)
+			if (pathname === '/terminal') {
+				// Verify the auth token before doing anything
+				const token = new URL(`https://localhost/${request.url}`).searchParams.get('token')
+				try {
+					if (await this.verifyToken(token!)) {
+						// Upgrade connection to WebSocket and fire the connection handler
+						wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request))
+					}
+				} catch (error) {
+					terminalLogger.error(`Error creating socket: ${(error as Error).message}`)
+					socket.destroy()
+				}
+			}
+		})
 
 		return this
 	}

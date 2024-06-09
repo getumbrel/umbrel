@@ -23,8 +23,8 @@ export function AnimatedNumber({to}: CounterProps) {
 		}
 
 		const controls = animate(from, to, {
-			duration: 0.2,
-			ease: 'circOut',
+			duration: 0.3,
+			ease: 'easeInOut',
 			onUpdate(value) {
 				node.textContent = value.toFixed(0)
 			},

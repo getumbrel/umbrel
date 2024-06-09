@@ -1,48 +1,53 @@
-# name: Create release on tag
+name: Create release on tag
 
-# on:
-#   push:
-#     tags:
-#       - '*'
+on:
+  push:
+    tags:
+      - "*"
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     defaults:
-#       run:
-#         working-directory: ./packages/umbreld
-#     steps:
-#       - name: Checkout codebase
-#         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-#         with:
-#           # We need this to get all commit history and tags to generate release notes
-#           fetch-depth: 0
+defaults:
+  run:
+    working-directory: packages/os
 
-#       - name: Setup Docker buildx
-#         run: docker buildx create --use
+jobs:
+  build-os:
+    runs-on: ${{ matrix.task == 'build:amd64' && 'ubicloud-standard-16' || 'ubicloud-standard-16-arm' }}
+    defaults:
+      run:
+        working-directory: packages/os
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - build:amd64
+          - build:arm64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm run ${{ matrix.task }}
 
-#       - name: Install dependencies
-#         run: npm ci
+      # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
+      - name: Prepare arm64 release assets
+        if: matrix.task == 'build:arm64'
+        run: cd build && (zip umbrelos-pi4.img.zip umbrelos-pi4.img & zip umbrelos-pi5.img.zip umbrelos-pi5.img & wait)
+      - name: Prepare amd64 release assets
+        if: matrix.task == 'build:amd64'
+        run: cd build && sudo xz --keep --threads=0 umbrelos-amd64.img
 
-#       - name: Build release
-#         run: npm run build
+      - name: Create USB installer
+        if: matrix.task == 'build:amd64'
+        run: npm run build:amd64:usb-installer
 
-#       - name: Prepare release assets
-#         run: npm run prepare-release -- ${{ github.ref_name }}
-
-#       - name: Timestamp release
-#         continue-on-error: true
-#         run: npm run timestamp-release
-
-#       - name: Generate release notes
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#         run: npm run generate-release-notes
-
-#       - name: Create GitHub Release
-#         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
-#         with:
-#           draft: true
-#           name: umbrelOS ${{ github.ref_name }}
-#           files: server/release/*
-#           body_path: server/release-notes.md
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          draft: true
+          name: umbrelOS ${{ github.ref_name }}
+          files: |
+            packages/os/build/*.update
+            packages/os/build/*.img.zip
+            packages/os/build/*.img.xz
+            packages/os/usb-installer/build/*.iso.xz

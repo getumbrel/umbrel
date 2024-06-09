@@ -7,3 +7,13 @@ max_framebuffers=2
 
 # We want to run the processor in its 64-bit mode.
 arm_64bit=1
+
+# Enable NVMe interface
+# This is not needed if booting with NVMe so potentially
+# we only want to support that and don't need this.
+dtparam=nvme
+
+# This may improve NVMe performance but is not stable:
+# > The Raspberry Pi 5 is not certified for Gen 3.0 speeds. PCIe Gen 3.0 connections may be unstable.
+# - https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#pcie-gen-3-0
+# dtparam=pciex1_gen=3

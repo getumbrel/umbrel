@@ -2,7 +2,6 @@ import {useRef} from 'react'
 import {useMount, useTimeout} from 'react-use'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
@@ -35,7 +34,6 @@ export function WallpaperDrawer() {
 		<Drawer {...dialogProps}>
 			<DrawerContent fullHeight>
 				<DrawerHeader>
-					<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
 				</DrawerHeader>

@@ -1,6 +1,5 @@
 import {motion} from 'framer-motion'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
@@ -32,7 +31,6 @@ export function ProgressLayout({
 
 	return (
 		<>
-			<UmbrelHeadTitle>{finalMessage}</UmbrelHeadTitle>
 			<motion.div
 				className={bareContainerClass}
 				initial={{opacity: 0}}

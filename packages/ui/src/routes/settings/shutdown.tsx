@@ -1,6 +1,5 @@
 import {RiShutDownLine} from 'react-icons/ri'
 
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {
 	AlertDialog,
@@ -23,7 +22,6 @@ export default function ShutdownDialog() {
 		<AlertDialog {...dialogProps}>
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiShutDownLine}>
-					<UmbrelHeadTitle>{t('shut-down')}</UmbrelHeadTitle>
 					<AlertDialogTitle>{t('shut-down.confirm.title')}</AlertDialogTitle>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

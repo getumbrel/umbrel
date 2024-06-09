@@ -218,3 +218,89 @@ export async function isUmbrelOS() {
 export async function setCpuGovernor(governor: string) {
 	await fse.writeFile('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', governor)
 }
+
+export async function hasWifi() {
+	const {stdout} = await $`nmcli --terse --fields TYPE device status`
+	const networkDevices = stdout.split('\n')
+
+	return networkDevices.includes('wifi')
+}
+
+export async function getWifiNetworks() {
+	const listNetworks = await $`nmcli --terse --fields IN-USE,SSID,SECURITY,SIGNAL device wifi list`
+
+	// Format into object
+	const networks = listNetworks.stdout.split('\n').map((item: string) => {
+		const [inUse, ssid, security, signal] = item.split(':')
+		return {
+			active: inUse === '*',
+			ssid,
+			authenticated: !!security,
+			signal: parseInt(signal),
+		}
+	})
+
+	const filteredNetworks = networks
+		// Remove duplicate and empty SSIDs
+		.filter((network, index, list) => {
+			if (network.ssid === '') return false
+			const indexOfFirstEntry = list.findIndex((item) => item.ssid === network.ssid)
+			return indexOfFirstEntry === index
+		})
+		// Reapply active status in case it got removed in filtering
+		.map((network) => {
+			network.active = network.active || networks.some((item) => item.ssid === network.ssid && item.active)
+			return network
+		})
+
+	return filteredNetworks
+}
+
+export async function deleteWifiConnections({inactiveOnly = false}: {inactiveOnly?: boolean}) {
+	const connections = await $`nmcli --terse --fields UUID,TYPE,ACTIVE connection`
+	for (const connection of connections.stdout.split('\n')) {
+		const [uuid, type, active] = connection.split(':')
+		// Type will be something like '802-11-wireless'
+		if (!type?.includes('wireless')) continue
+		if (inactiveOnly && active === 'yes') continue
+		await $`nmcli connection delete ${uuid}`
+	}
+}
+
+export async function connectToWiFiNetwork({ssid, password}: {ssid: string; password?: string}) {
+	let connection
+	if (password !== undefined) {
+		connection = $`nmcli device wifi connect ${ssid} password ${password}`
+	} else {
+		connection = $`nmcli device wifi connect ${ssid}`
+	}
+
+	try {
+		await connection
+
+		// Destroy any inactive WiFi connections incase we just transitioned
+		// from a previous wireless connection. We don't wanna leave that
+		// conneciton in NetworkManager since it will be out of sync with umbreld.
+		try {
+			await deleteWifiConnections({inactiveOnly: true})
+		} catch (error) {
+			console.log(`Failed to cleanup WiFi connections: ${(error as Error).message}`)
+		}
+
+		return true
+	} catch (error) {
+		// We destroy the failed WiFi connection if we fail to connect to the network.
+		// This is so umbreld retains ownership of the network connection management.
+		// Otherwise if this fails nmcli will remember the connection and try to reconnect
+		// which umbreld is not aware of.
+		try {
+			await deleteWifiConnections({inactiveOnly: true})
+		} catch (error) {
+			console.log(`Failed to cleanup WiFi connections: ${(error as Error).message}`)
+		}
+
+		if (connection.exitCode === 10) throw new Error('Network not found')
+		if (connection.exitCode === 1 || connection.exitCode === 4) throw new Error('Incorrect password')
+		throw new Error('Connection failed')
+	}
+}

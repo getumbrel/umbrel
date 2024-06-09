@@ -5,7 +5,6 @@ import {toast} from 'sonner'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -87,7 +86,6 @@ export function CommunityAppStoreDialog() {
 				<DialogScrollableContent showClose>
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-3 overflow-y-auto px-5 py-6'>
 						<DialogHeader>
-							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 							<DialogTitle>{title}</DialogTitle>
 							<DialogDescription className='text-13 text-white/50'>
 								{t('community-app-stores.description')}

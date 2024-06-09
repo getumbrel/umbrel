@@ -3,13 +3,12 @@ import {useNavigate} from 'react-router-dom'
 
 import {ButtonLink} from '@/components/ui/button-link'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/components/ui/immersive-dialog'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
-import {backPath, description, factoryResetTitle, title} from './misc'
+import {backPath, description, title} from './misc'
 
 export function ReviewData() {
 	const navigate = useNavigate()
@@ -23,7 +22,6 @@ export function ReviewData() {
 
 	return (
 		<>
-			<UmbrelHeadTitle>{factoryResetTitle(t('factory-reset.review.title'))}</UmbrelHeadTitle>
 			<ImmersiveDialogBody
 				title={title()}
 				description={description()}

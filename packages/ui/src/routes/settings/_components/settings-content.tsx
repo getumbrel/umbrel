@@ -8,7 +8,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbServer, TbTool} from 'react-icons/tb'
+import {TbServer, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Card} from '@/components/ui/card'
@@ -17,7 +17,6 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {LOADING_DASH, SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -25,6 +24,7 @@ import {useLanguage} from '@/hooks/use-language'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
 import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
@@ -32,6 +32,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
 import {CpuTempCardContent} from './cpu-temp-card-content'
@@ -52,9 +53,10 @@ export function SettingsContent() {
 	const deviceInfo = useDeviceInfo()
 	const cpuTemp = useCpuTemp()
 
-	const [userQ, uptimeQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
+	const [userQ, uptimeQ, wifiSupportedQ, is2faEnabledQ, osVersionQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.system.uptime(),
+		t.wifi.supported(),
 		t.user.is2faEnabled(),
 		t.system.version(),
 	])
@@ -83,14 +85,20 @@ export function SettingsContent() {
 						<DesktopPreviewConnected />
 					</DesktopPreviewFrame>
 				</div>
-				<Card className='flex flex-wrap items-center justify-between gap-y-5'>
+				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
 						<h2 className='text-24 font-bold leading-none -tracking-4'>
 							{/* TODO: interpolate here */}
-							{userQ.data?.name ?? UNKNOWN()}’s <span className='opacity-40'>{t('umbrel')}</span>
+							{firstNameFromFullName(userQ.data?.name ?? UNKNOWN())}’s <span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
-						<dl className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'>
+						<dl
+							className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+							style={{
+								// Makes columns not all the same width
+								gridTemplateColumns: 'auto auto',
+							}}
+						>
 							<dt className='opacity-40'>{t('device')}</dt>
 							<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 							<dt className='opacity-40'>{t('umbrelos')}</dt>
@@ -155,6 +163,13 @@ export function SettingsContent() {
 							<WallpaperPicker />
 						</div>
 					</ListRow>
+					{wifiSupportedQ.data ? (
+						<WifiSupportedListRow />
+					) : (
+						<ListRow title={t('wifi')} description={t('wifi-description')}>
+							<Switch checked={false} onCheckedChange={() => navigate('wifi-unsupported')} />
+						</ListRow>
+					)}
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
@@ -169,7 +184,6 @@ export function SettingsContent() {
 					</ListRow>
 					{tor.isMutLoading && (
 						<CoverMessage>
-							<UmbrelHeadTitle>{t('tor.disable.progress')}</UmbrelHeadTitle>
 							<Loading>{t('tor.disable.progress')}</Loading>
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>
@@ -207,6 +221,11 @@ export function SettingsContent() {
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
+					<ListRow title={t('advanced-settings')} description={t('advanced-settings-description')}>
+						<IconButtonLink icon={TbSettingsMinus} to='/settings/advanced'>
+							{t('open')}
+						</IconButtonLink>
+					</ListRow>
 					<SoftwareUpdateListRow isActive={settingsDialog === 'software-update'} />
 					{/* <ListRow title={t('factory-reset')} description={t('factory-reset.desc')}>
 						<IconButton text='destructive' icon={TbRotate2} onClick={() => navigate('/factory-reset')}>
@@ -217,5 +236,26 @@ export function SettingsContent() {
 				<ContactSupportLink className='lg:hidden' />
 			</div>
 		</div>
+	)
+}
+
+function WifiSupportedListRow() {
+	const navigate = useNavigate()
+	const wifiQ = trpcReact.wifi.connected.useQuery()
+
+	return wifiQ.data?.status === 'connected' ? (
+		<ListRow
+			title={t('wifi')}
+			description={<WifiListRowConnectedDescription network={wifiQ.data} />}
+			disabled={wifiQ.isLoading}
+		>
+			<IconButtonLink to={'wifi'} icon={TbWifi}>
+				{t('wifi-view-networks')}
+			</IconButtonLink>
+		</ListRow>
+	) : (
+		<ListRow title={t('wifi')} description={t('wifi-description')} disabled={wifiQ.isLoading}>
+			<Switch checked={false} onCheckedChange={() => navigate('wifi')} />
+		</ListRow>
 	)
 }

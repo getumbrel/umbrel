@@ -6,7 +6,6 @@ import i18next from 'i18next'
 import React, {Suspense} from 'react'
 import ReactDOM from 'react-dom/client'
 import {ErrorBoundary} from 'react-error-boundary'
-import {HelmetProvider} from 'react-helmet-async'
 
 import {IframeChecker} from '@/components/iframe-checker'
 import {BareCoverMessage, CoverMessageTarget} from '@/components/ui/cover-message'
@@ -21,20 +20,18 @@ export function init(element: React.ReactNode) {
 	i18next.on('initialized', () => {
 		ReactDOM.createRoot(document.getElementById('root')!).render(
 			<React.StrictMode>
-				<HelmetProvider>
-					<IframeChecker>
-						<Suspense>
-							<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
-								<TooltipProvider>
-									{element}
-									<Toaster />
-									{/* Put `CoverMessageTarget` after `Toaster` because we don't want toasts to show up on these pages */}
-									<CoverMessageTarget />
-								</TooltipProvider>
-							</ErrorBoundary>
-						</Suspense>
-					</IframeChecker>
-				</HelmetProvider>
+				<IframeChecker>
+					<Suspense>
+						<ErrorBoundary fallback={<BareCoverMessage>{t('something-went-wrong')}</BareCoverMessage>}>
+							<TooltipProvider>
+								{element}
+								<Toaster />
+								{/* Put `CoverMessageTarget` after `Toaster` because we don't want toasts to show up on these pages */}
+								<CoverMessageTarget />
+							</TooltipProvider>
+						</ErrorBoundary>
+					</Suspense>
+				</IframeChecker>
 			</React.StrictMode>,
 		)
 	})

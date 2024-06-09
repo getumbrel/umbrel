@@ -12,9 +12,6 @@ export default defineConfig({
 	},
 	build: {
 		rollupOptions: {
-			input: {
-				index: path.resolve(__dirname, 'index.html'),
-			},
 			output: {
 				minifyInternalExports: true,
 				manualChunks: {
@@ -36,6 +33,7 @@ export default defineConfig({
 					colorThief: ['colorthief'],
 				},
 			},
+			external: ['@radix-ui/react-label', '@radix-ui/react-radio-group'],
 		},
 	},
 })

@@ -1,7 +1,6 @@
 import {useId} from 'react'
 
 import {CopyableField} from '@/components/ui/copyable-field'
-import {UmbrelHeadTitle} from '@/components/umbrel-head-title'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useUserApp} from '@/providers/apps'
@@ -58,7 +57,6 @@ export function DefaultCredentialsDialog() {
 					<div className='umbrel-dialog-fade-scroller flex flex-col gap-y-4 overflow-y-auto p-7'>
 						{/* <JSONTree data={app} /> */}
 						<DialogHeader>
-							<UmbrelHeadTitle>{title}</UmbrelHeadTitle>
 							<DialogTitle className='flex flex-row items-center justify-between'>{title}</DialogTitle>
 							<DialogDescription>{t('default-credentials.description')}</DialogDescription>
 						</DialogHeader>

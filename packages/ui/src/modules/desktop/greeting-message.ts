@@ -1,10 +1,13 @@
 import {t} from '@/utils/i18n'
+import {firstNameFromFullName} from '@/utils/misc'
 
 export function greetingMessage(name: string) {
+	const firstName = firstNameFromFullName(name)
+
 	const greetingMap = {
-		morning: t('desktop.greeting.morning', {name}),
-		afternoon: t('desktop.greeting.afternoon', {name}),
-		evening: t('desktop.greeting.evening', {name}),
+		morning: t('desktop.greeting.morning', {name: firstName}),
+		afternoon: t('desktop.greeting.afternoon', {name: firstName}),
+		evening: t('desktop.greeting.evening', {name: firstName}),
 	}
 
 	return greetingMap[getPartofDay()] + '.'
