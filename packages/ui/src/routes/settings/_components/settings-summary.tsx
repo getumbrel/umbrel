@@ -24,7 +24,7 @@ export function SettingsSummary() {
 			<dt className='opacity-40'>{t('umbrelos')}</dt>
 			<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
 			<dt className='opacity-40'>{t('uptime')}</dt>
-			<dd className='capitalize'>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
+			<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 		</dl>
 	)
 }
