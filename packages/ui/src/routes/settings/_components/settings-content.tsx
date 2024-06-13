@@ -17,7 +17,7 @@ import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
-import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
+import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useCpuTemp} from '@/hooks/use-cpu-temp'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -82,8 +82,8 @@ export function SettingsContent() {
 				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
 						<h2 className='text-24 font-bold leading-none -tracking-4'>
-							{/* TODO: interpolate here */}
-							{firstNameFromFullName(userQ.data?.name ?? UNKNOWN())}’s <span className='opacity-40'>{t('umbrel')}</span>
+							{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
+							<span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
 						<div className='pt-5' />
 						<SettingsSummary />

@@ -82,7 +82,8 @@ export function SettingsContentMobile() {
 
 				<div className='mx-2.5'>
 					<h2 className='text-24 font-bold leading-none -tracking-4'>
-						{firstNameFromFullName(userQ.data.name)}’s <span className='opacity-40'>{t('umbrel')}</span>
+						{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
+						<span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
 					<div className='pt-5' />
 					<SettingsSummary />
