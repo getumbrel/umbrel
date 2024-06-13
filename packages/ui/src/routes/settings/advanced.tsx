@@ -1,15 +1,10 @@
 import {TbTerminal2} from 'react-icons/tb'
 
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'

@@ -215,9 +215,9 @@ export function AppIconConnected({appId}: {appId: string}) {
 							{!inProgress && (
 								<>
 									{appInstall.state !== 'stopped' ? (
- 										<ContextMenuItem onSelect={appInstall.stop}>{t('stop')}</ContextMenuItem>
- 									) : (
- 										<ContextMenuItem onSelect={appInstall.start}>{t('start')}</ContextMenuItem>
+										<ContextMenuItem onSelect={appInstall.stop}>{t('stop')}</ContextMenuItem>
+									) : (
+										<ContextMenuItem onSelect={appInstall.start}>{t('start')}</ContextMenuItem>
 									)}
 									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
 									<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>

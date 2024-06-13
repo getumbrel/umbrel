@@ -66,7 +66,9 @@ export function WifiDrawerOrDialogContent() {
 							<AlertDialogContent>
 								<AlertDialogHeader>
 									<AlertDialogTitle>{t('wifi-dangerous-disable-confirmation-title')}</AlertDialogTitle>
-									<AlertDialogDescription>{t('wifi-dangerous-disable-confirmation-description')}</AlertDialogDescription>
+									<AlertDialogDescription>
+										{t('wifi-dangerous-disable-confirmation-description')}
+									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
 									<AlertDialogAction

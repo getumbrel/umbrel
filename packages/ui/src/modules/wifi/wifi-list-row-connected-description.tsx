@@ -1,8 +1,8 @@
+import {UNKNOWN} from '@/constants'
 import {WifiNetwork} from '@/trpc/trpc'
 import {signalToBars} from '@/utils/wifi'
 
 import {LockIcon, WifiIcon2} from './icon'
-import { UNKNOWN } from '@/constants'
 
 export function WifiListRowConnectedDescription({network}: {network: Partial<WifiNetwork>}) {
 	return (
