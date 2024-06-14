@@ -5,8 +5,7 @@ import {ExternalToast} from 'sonner'
 import {toast} from '@/components/ui/toast'
 import {trpcClient} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {isCpuTooCold, isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
-import {CpuType} from '@/utils/temperature'
+import {isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
 
 function useMounted() {
 	const [mounted, setMounted] = useState(false)
@@ -41,8 +40,6 @@ export function useSettingsNotificationCount() {
 			trpcClient.system.memoryUsage.query(),
 			trpcClient.system.diskUsage.query(),
 		])
-
-		const cpuType: CpuType = 'pi'
 
 		const toastIds: (string | number)[] = []
 
@@ -96,15 +93,11 @@ export function useSettingsNotificationCount() {
 			}
 
 			if (cpuTempResult.status === 'fulfilled') {
-				const cpuTemp = cpuTempResult.value
+				const warning = cpuTempResult.value.warning
 
-				if (isCpuTooHot(cpuType, cpuTemp)) {
+				if (isCpuTooHot(warning)) {
 					currCount++
 					const id = toast.warning(t('notifications.cpu.too-hot'), cpuTempToastOptions)
-					toastIds.push(id)
-				} else if (isCpuTooCold(cpuType, cpuTemp)) {
-					currCount++
-					const id = toast.warning(t('notifications.cpu.too-cold'), cpuTempToastOptions)
 					toastIds.push(id)
 				}
 			}

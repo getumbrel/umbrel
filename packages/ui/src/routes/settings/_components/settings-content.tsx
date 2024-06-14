@@ -112,7 +112,7 @@ export function SettingsContent() {
 						<CpuCardContent />
 					</Card>
 					<Card>
-						<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
+						<CpuTempCardContent warning={cpuTemp.warning} tempInCelcius={cpuTemp.temp} />
 					</Card>
 					<div className='mx-auto'>
 						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>

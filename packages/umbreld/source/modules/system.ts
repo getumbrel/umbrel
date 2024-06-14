@@ -6,14 +6,30 @@ import type Umbreld from '../index.js'
 
 import getDirectorySize from './utilities/get-directory-size.js'
 
-export async function getCpuTemperature(): Promise<number> {
+export async function getCpuTemperature(): Promise<{
+	warning: 'normal' | 'warm' | 'hot'
+	temperature: number
+}> {
+	// Get CPU temperature
 	const cpuTemperature = await systemInformation.cpuTemperature()
+	if (typeof cpuTemperature.main !== 'number') throw new Error('Could not get CPU temperature')
+	const temperature = cpuTemperature.main
 
-	if (typeof cpuTemperature.main !== 'number') {
-		throw new Error('Could not get CPU temperature')
+	// Generic Intel thresholds
+	let temperatureThreshold = {warm: 90, hot: 95}
+
+	// Raspberry Pi thresholds
+	if (await isRaspberryPi()) temperatureThreshold = {warm: 80, hot: 85}
+
+	// Set warning level based on temperature
+	let warning: 'normal' | 'warm' | 'hot' = 'normal'
+	if (temperature >= temperatureThreshold.hot) warning = 'hot'
+	else if (temperature >= temperatureThreshold.warm) warning = 'warm'
+
+	return {
+		warning,
+		temperature,
 	}
-
-	return cpuTemperature.main
 }
 
 type DiskUsage = {
@@ -209,6 +225,11 @@ export async function detectDevice() {
 	}
 
 	return {deviceId, device, productName, manufacturer, model, serial, uuid}
+}
+
+export async function isRaspberryPi() {
+	const {productName} = await detectDevice()
+	return productName === 'Raspberry Pi'
 }
 
 export async function isUmbrelOS() {

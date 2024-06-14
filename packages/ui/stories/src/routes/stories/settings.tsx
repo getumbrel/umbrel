@@ -12,10 +12,9 @@ import {DeviceInfoContent, HostEnvironmentIcon} from '@/routes/settings/_compone
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
 import {Separator} from '@/shadcn-components/ui/separator'
-import {CpuType, cpuTypes, TEMP_THRESHOLDS} from '@/utils/temperature'
 
 export default function SettingsStory() {
-	const [cpuType, setCpuType] = useState<CpuType>('pi')
+	const [cpuWarning, setCpuWarning] = useState<string>('normal')
 
 	const wId = shuffle(wallpaperIds)[0]
 
@@ -110,9 +109,9 @@ export default function SettingsStory() {
 			<SegmentedControl
 				size='lg'
 				// variant={variant}
-				tabs={cpuTypes.map((type) => ({id: type, label: type.toUpperCase()}))}
-				value={cpuType}
-				onValueChange={setCpuType}
+				tabs={['normal', 'warm', 'hot'].map((warning) => ({id: warning, label: warning.toUpperCase()}))}
+				value={cpuWarning}
+				onValueChange={setCpuWarning}
 			/>
 			<Button
 				onClick={() => {
@@ -125,70 +124,34 @@ export default function SettingsStory() {
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent cpuType={cpuType} tempInCelcius={-999999} />
+					<CpuTempCardContent warning={cpuWarning} tempInCelcius={-999999} />
 				</Card>
 			</div>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent cpuType={cpuType} tempInCelcius={999999} />
+					<CpuTempCardContent warning={cpuWarning} tempInCelcius={999999} />
 				</Card>
 			</div>
 			<H3>undefined</H3>
 			<Card>
-				<CpuTempCardContent cpuType={cpuType} />
+				<CpuTempCardContent warning={cpuWarning} />
 			</Card>
 			<H3>NaN</H3>
 			<Card>
-				<CpuTempCardContent cpuType={cpuType} tempInCelcius={NaN} defaultUnit='c' />
+				<CpuTempCardContent warning={cpuWarning} tempInCelcius={NaN} defaultUnit='c' />
 			</Card>
 			<H3>Infinity</H3>
 			<Card>
-				<CpuTempCardContent cpuType={cpuType} tempInCelcius={Infinity} defaultUnit='c' />
+				<CpuTempCardContent warning={cpuWarning} tempInCelcius={Infinity} defaultUnit='c' />
 			</Card>
 			<H3>69</H3>
 			<Card>
-				<CpuTempCardContent cpuType={cpuType} tempInCelcius={69} defaultUnit='c' />
+				<CpuTempCardContent warning={cpuWarning} tempInCelcius={69} defaultUnit='c' />
 			</Card>
 			<Card>
-				<CpuTempCardContent cpuType={cpuType} tempInCelcius={20.5} defaultUnit='f' />
+				<CpuTempCardContent warning={cpuWarning} tempInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
-			<TempThresholds />
 		</div>
 	)
-}
-
-export function TempThresholds() {
-	return (
-		<div className='flex flex-row gap-2'>
-			{cpuTypes.map((type) => (
-				<div key={type} className='space-y-2'>
-					<H3>{type}</H3>
-					{tempThresholds(type).map((temp) => (
-						<Card key={temp}>
-							<CpuTempCardContent cpuType={type} tempInCelcius={temp} />
-						</Card>
-					))}
-				</div>
-			))}
-		</div>
-	)
-}
-
-function tempThresholds(cpuType: CpuType) {
-	const TEMP_TOO_COLD = TEMP_THRESHOLDS[cpuType].cold
-	const TEMP_NORMAL_MIN = TEMP_THRESHOLDS[cpuType].cold
-	const TEMP_NORMAL_MAX = TEMP_THRESHOLDS[cpuType].throttle
-	const TEMP_THROTTLE = TEMP_THRESHOLDS[cpuType].throttle
-	const TEMP_TOO_HOT = TEMP_THRESHOLDS[cpuType].hot
-
-	return [
-		TEMP_TOO_COLD - 1,
-		// TEMP_TOO_COLD,
-		TEMP_NORMAL_MIN,
-		TEMP_NORMAL_MAX,
-		TEMP_THROTTLE + 1,
-		TEMP_TOO_HOT,
-		TEMP_TOO_HOT + 1,
-	]
 }

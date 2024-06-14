@@ -1,5 +1,4 @@
 import {RouterOutput} from '@/trpc/trpc'
-import {CpuType, TEMP_THRESHOLDS} from '@/utils/temperature'
 
 export function trpcDiskToLocal(data?: RouterOutput['system']['diskUsage']) {
 	if (data === undefined) return undefined
@@ -56,14 +55,9 @@ export function isDiskFull(remaining?: number) {
 	return remaining < 100000000
 }
 
-export function isCpuTooCold(cpuType: CpuType, cpuTemperature?: number) {
-	if (cpuTemperature === undefined) return false
-	return cpuTemperature < TEMP_THRESHOLDS[cpuType].cold
-}
-
-export function isCpuTooHot(cpuType: CpuType, cpuTemperature?: number) {
-	if (cpuTemperature === undefined) return false
-	return cpuTemperature > TEMP_THRESHOLDS[cpuType].hot
+export function isCpuTooHot(warning?: string) {
+	if (warning === undefined) return false
+	return warning === 'hot'
 }
 
 export function isMemoryLow({size, used}: {size?: number; used?: number}) {

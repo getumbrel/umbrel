@@ -124,7 +124,7 @@ export function SettingsContentMobile() {
 				</Link>
 
 				<Card>
-					<CpuTempCardContent cpuType={cpuTemp.cpuType} tempInCelcius={cpuTemp.temp} />
+					<CpuTempCardContent warning={cpuTemp.warning} tempInCelcius={cpuTemp.temp} />
 				</Card>
 			</div>
 
