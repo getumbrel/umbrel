@@ -12,6 +12,7 @@ import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {
 	getCpuTemperature,
+	getSystemDiskUsage,
 	getDiskUsage,
 	getMemoryUsage,
 	getCpuUsage,
@@ -19,6 +20,7 @@ import {
 	shutdown,
 	detectDevice,
 	isUmbrelOS,
+	getSystemMemoryUsage,
 } from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
@@ -210,7 +212,9 @@ export default router({
 	}),
 	device: privateProcedure.query(() => detectDevice()),
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
+	systemDiskUsage: privateProcedure.query(({ctx}) => getSystemDiskUsage(ctx.umbreld)),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
+	systemMemoryUsage: privateProcedure.query(({ctx}) => getSystemMemoryUsage()),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	shutdown: privateProcedure.mutation(async ({ctx}) => {

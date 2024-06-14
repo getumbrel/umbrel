@@ -1,6 +1,8 @@
 import {RouterOutput} from '@/trpc/trpc'
 
-export function trpcDiskToLocal(data?: RouterOutput['system']['diskUsage']) {
+export function trpcDiskToLocal(
+	data?: RouterOutput['system']['diskUsage'] | RouterOutput['system']['systemDiskUsage'],
+) {
 	if (data === undefined) return undefined
 
 	const used = data?.totalUsed
@@ -14,7 +16,9 @@ export function trpcDiskToLocal(data?: RouterOutput['system']['diskUsage']) {
 	}
 }
 
-export function trpcMemoryToLocal(data?: RouterOutput['system']['memoryUsage']) {
+export function trpcMemoryToLocal(
+	data?: RouterOutput['system']['memoryUsage'] | RouterOutput['system']['systemMemoryUsage'],
+) {
 	if (data === undefined) return undefined
 
 	const used = data?.totalUsed
@@ -27,15 +31,15 @@ export function trpcMemoryToLocal(data?: RouterOutput['system']['memoryUsage']) 
 	}
 }
 
-export function isTrpcDiskFull(data?: RouterOutput['system']['diskUsage']) {
+export function isTrpcDiskFull(data?: RouterOutput['system']['systemDiskUsage']) {
 	return isDiskFull(trpcDiskToLocal(data)?.available)
 }
 
-export function isTrpcDiskLow(data?: RouterOutput['system']['diskUsage']) {
+export function isTrpcDiskLow(data?: RouterOutput['system']['systemDiskUsage']) {
 	return isDiskLow(trpcDiskToLocal(data)?.available)
 }
 
-export function isTrpcMemoryLow(data?: RouterOutput['system']['memoryUsage']) {
+export function isTrpcMemoryLow(data?: RouterOutput['system']['systemMemoryUsage']) {
 	return isMemoryLow({size: data?.size, used: data?.totalUsed})
 }
 

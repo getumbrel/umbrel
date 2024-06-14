@@ -37,8 +37,8 @@ export function useSettingsNotificationCount() {
 		const res = Promise.allSettled([
 			trpcClient.system.checkUpdate.query(),
 			trpcClient.system.cpuTemperature.query(),
-			trpcClient.system.memoryUsage.query(),
-			trpcClient.system.diskUsage.query(),
+			trpcClient.system.systemMemoryUsage.query(),
+			trpcClient.system.systemDiskUsage.query(),
 		])
 
 		const toastIds: (string | number)[] = []

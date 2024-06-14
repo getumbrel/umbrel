@@ -1,15 +1,15 @@
 import prettyBytes from 'pretty-bytes'
 
 import type Umbreld from '../index.js'
-import {getDiskUsage, getMemoryUsage, getCpuUsage} from './system.js'
+import {getSystemDiskUsage, getSystemMemoryUsage, getCpuUsage} from './system.js'
 
 export const systemWidgets = {
 	storage: async function (umbreld: Umbreld) {
-		const {size, totalUsed} = await getDiskUsage(umbreld)
+		const {size, totalUsed} = await getSystemDiskUsage(umbreld)
 
 		return {
 			type: 'text-with-progress',
-			link: '?dialog=live-usage',
+			link: '?dialog=live-usage&tab=storage',
 			refresh: '30s',
 			title: 'Storage',
 			text: prettyBytes(totalUsed),
@@ -19,11 +19,11 @@ export const systemWidgets = {
 		}
 	},
 	memory: async function (umbreld: Umbreld) {
-		const {size, totalUsed} = await getMemoryUsage(umbreld)
+		const {size, totalUsed} = await getSystemMemoryUsage()
 
 		return {
 			type: 'text-with-progress',
-			link: '?dialog=live-usage',
+			link: '?dialog=live-usage&tab=memory',
 			refresh: '10s',
 			title: 'Memory',
 			text: prettyBytes(totalUsed),
@@ -35,8 +35,8 @@ export const systemWidgets = {
 	'system-stats': async function (umbreld: Umbreld) {
 		const [cpuUsage, diskUsage, memoryUsage] = await Promise.all([
 			getCpuUsage(umbreld),
-			getDiskUsage(umbreld),
-			getMemoryUsage(umbreld),
+			getSystemDiskUsage(umbreld),
+			getSystemMemoryUsage(),
 		])
 
 		const {totalUsed: cpuTotalUsed} = cpuUsage
@@ -49,9 +49,9 @@ export const systemWidgets = {
 			refresh: '10s',
 			items: [
 				{
-					icon: 'system-widget-storage',
-					subtext: 'Storage',
-					text: `${prettyBytes(diskTotalUsed)}`,
+					icon: 'system-widget-cpu',
+					subtext: 'CPU',
+					text: `${cpuTotalUsed.toPrecision(2)}%`,
 				},
 				{
 					icon: 'system-widget-memory',
@@ -59,9 +59,9 @@ export const systemWidgets = {
 					text: `${prettyBytes(memoryTotalUsed)}`,
 				},
 				{
-					icon: 'system-widget-cpu',
-					subtext: 'CPU',
-					text: `${cpuTotalUsed.toPrecision(2)}%`,
+					icon: 'system-widget-storage',
+					subtext: 'Storage',
+					text: `${prettyBytes(diskTotalUsed)}`,
 				},
 			],
 		}

@@ -1,3 +1,5 @@
+import os from 'node:os'
+
 import systemInformation from 'systeminformation'
 import {$} from 'execa'
 import fse from 'fs-extra'
@@ -37,9 +39,7 @@ type DiskUsage = {
 	used: number
 }
 
-export async function getDiskUsage(
-	umbreld: Umbreld,
-): Promise<{size: number; totalUsed: number; system: number; downloads: number; apps: DiskUsage[]}> {
+export async function getSystemDiskUsage(umbreld: Umbreld): Promise<{size: number; totalUsed: number}> {
 	if (typeof umbreld.dataDirectory !== 'string' || umbreld.dataDirectory === '') {
 		throw new Error('umbreldDataDir must be a non-empty string')
 	}
@@ -59,6 +59,17 @@ export async function getDiskUsage(
 
 	const {size, used} = dataDirectoryFilesystem
 
+	return {
+		size,
+		totalUsed: used,
+	}
+}
+
+export async function getDiskUsage(
+	umbreld: Umbreld,
+): Promise<{size: number; totalUsed: number; system: number; downloads: number; apps: DiskUsage[]}> {
+	const {size, totalUsed} = await getSystemDiskUsage(umbreld)
+
 	// Get app disk usage
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => ({
@@ -76,16 +87,57 @@ export async function getDiskUsage(
 
 	return {
 		size,
-		totalUsed: used,
-		system: Math.max(minSystemUsage, used - (appsTotal + downloads)),
+		totalUsed,
+		system: Math.max(minSystemUsage, totalUsed - (appsTotal + downloads)),
 		downloads,
 		apps,
 	}
 }
 
+// Returns a list of all processes and their memory usage
+async function getProcessesMemory() {
+	// Get a snapshot of system CPU and memory usage
+	const ps = await $`ps -Ao pid,pss --no-header`
+
+	// Format snapshot data
+	const processes = ps.stdout.split('\n').map((line) => {
+		// Parse values
+		const [pid, pss] = line
+			.trim()
+			.split(/\s+/)
+			.map((value) => Number(value))
+		return {
+			pid,
+			// Convert proportional set size from kilobytes to bytes
+			memory: pss * 1000,
+		}
+	})
+
+	return processes
+}
+
 type MemoryUsage = {
 	id: string
 	used: number
+}
+
+export async function getSystemMemoryUsage(): Promise<{
+	size: number
+	totalUsed: number
+}> {
+	// Get total memory size
+	const {total: size} = await systemInformation.mem()
+
+	// Get a snapshot of system memory usage
+	const processes = await getProcessesMemory()
+
+	// Calculate total memory used by all processes
+	const totalUsed = processes.reduce((total, process) => total + process.memory, 0)
+
+	return {
+		size,
+		totalUsed,
+	}
 }
 
 export async function getMemoryUsage(umbreld: Umbreld): Promise<{
@@ -94,23 +146,34 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	system: number
 	apps: MemoryUsage[]
 }> {
-	let {total: size, active: totalUsed} = await systemInformation.mem()
+	// Get a snapshot of system memory usage
+	const processes = await getProcessesMemory()
+
+	// Get total and used memory size
+	const {size, totalUsed} = await getSystemMemoryUsage()
+
+	// Calculate memory used by the processes owned by each app
 	const apps = await Promise.all(
-		umbreld.apps.instances.map(async (app) => ({
-			id: app.id,
-			used: await app.getMemoryUsage(),
-		})),
+		umbreld.apps.instances.map(async (app) => {
+			let appUsed = 0
+			try {
+				const appPids = await app.getPids()
+				appUsed = processes
+					.filter((process) => appPids.includes(process.pid))
+					.reduce((total, process) => total + process.memory, 0)
+			} catch (error) {
+				umbreld.logger.error(`Error getting memory: ${(error as Error).message}`)
+			}
+			return {
+				id: app.id,
+				used: appUsed,
+			}
+		}),
 	)
+
+	// Calculate memory used by the system (total - apps)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
-
-	const minSystemUsage = 100 * 1024 * 1024 // 100MB
-	const system = Math.max(minSystemUsage, totalUsed - appsTotal)
-
-	// Hack to make sure total always adds up and don't overflow.
-	// These values come direct from Docker and don't seem to be very
-	// accurate. We should implement our own custom logic and calculate
-	// these values in a more reliable way.
-	totalUsed = Math.min(size, appsTotal + system)
+	const system = Math.max(0, totalUsed - appsTotal)
 
 	return {
 		size,
@@ -118,6 +181,34 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 		system,
 		apps,
 	}
+}
+
+// Returns a list of all processes and their cpu usage
+async function getProcessesCpu() {
+	// Get a snapshot of system CPU and memory usage
+	const top = await $`top --batch-mode --iterations 1`
+
+	// Get lines
+	const lines = top.stdout.split('\n').map((line) => line.trim().split(/\s+/))
+
+	// Find header and CPU column
+	const headerIndex = lines.findIndex((line) => line[0] === 'PID')
+	const cpuIndex = lines[headerIndex].findIndex((column) => column === '%CPU')
+
+	// Get CPU threads
+	const threads = os.cpus().length
+
+	// Ignore lines before the header
+	const processes = lines.slice(headerIndex + 1).map((line) => {
+		// Parse values
+		return {
+			pid: parseInt(line[0], 10),
+			// Convert to % of total system not % of a single thread
+			cpu: parseFloat(line[cpuIndex]) / threads,
+		}
+	})
+
+	return processes
 }
 
 type CpuUsage = {
@@ -131,18 +222,38 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 	system: number
 	apps: CpuUsage[]
 }> {
-	const cpu = await systemInformation.currentLoad()
-	const threads = cpu.cpus.length
-	const totalUsed = cpu.currentLoad
+	// Get a snapshot of system CPU usage
+	const processes = await getProcessesCpu()
 
+	// Calculate total CPU used by all processes
+	const totalUsed = processes.reduce((total, process) => total + process.cpu, 0)
+
+	// Calculate CPU used by the processes owned by each app
 	const apps = await Promise.all(
-		umbreld.apps.instances.map(async (app) => ({
-			id: app.id,
-			used: (await app.getCpuUsage()) / threads,
-		})),
+		umbreld.apps.instances.map(async (app) => {
+			let appUsed = 0
+			try {
+				const appPids = await app.getPids()
+				appUsed = processes
+					.filter((process) => appPids.includes(process.pid))
+					.reduce((total, process) => total + process.cpu, 0)
+			} catch (error) {
+				umbreld.logger.error(`Error getting cpu: ${(error as Error).message}`)
+			}
+			return {
+				id: app.id,
+				used: appUsed,
+			}
+		}),
 	)
+
+	// Calculate CPU used by the system (total - apps)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 	const system = Math.max(0, totalUsed - appsTotal)
+
+	// Get total CPU threads
+	const threads = os.cpus().length
+
 	return {
 		threads,
 		totalUsed,
