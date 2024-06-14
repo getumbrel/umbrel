@@ -140,7 +140,7 @@
   "tor.enable.description": "Esto puede tardar unos minutos",
   "tor.disable.description": "Esto puede tardar unos minutos",
   "tor.enable.submit": "Activar",
-  "troubleshoot.umbrelos-description": "Ver registros de umbrelOS y del sistema",
+  "troubleshoot.umbrelos-description": "Ver los registros de umbrelOS",
   "troubleshoot.app": "Aplicación",
   "troubleshoot.app-description": "Ver registros de una aplicación instalada en tu Umbrel",
   "troubleshoot.umbrelos-logs": "Registros de umbrelOS",

@@ -140,7 +140,7 @@
   "tor.enable.description": "Cela peut prendre quelques minutes",
   "tor.disable.description": "Cela peut prendre quelques minutes",
   "tor.enable.submit": "Activer",
-  "troubleshoot.umbrelos-description": "Voir les journaux umbrelOS et système",
+  "troubleshoot.umbrelos-description": "Afficher les journaux umbrelOS",
   "troubleshoot.app": "Application",
   "troubleshoot.app-description": "Voir les journaux d'une application installée sur votre Umbrel",
   "troubleshoot.umbrelos-logs": "Journaux umbrelOS",

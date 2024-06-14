@@ -140,7 +140,7 @@
   "tor.enable.description": "Dies kann einige Minuten dauern",
   "tor.disable.description": "Dies kann einige Minuten dauern",
   "tor.enable.submit": "Aktivieren",
-  "troubleshoot.umbrelos-description": "umbrelOS und Systemprotokolle anzeigen",
+  "troubleshoot.umbrelos-description": "umbrelOS-Protokolle anzeigen",
   "troubleshoot.app": "App",
   "troubleshoot.app-description": "Protokolle einer auf deinem Umbrel installierten App anzeigen",
   "troubleshoot.umbrelos-logs": "umbrelOS-Protokolle",

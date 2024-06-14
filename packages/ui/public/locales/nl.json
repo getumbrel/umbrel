@@ -140,7 +140,7 @@
   "tor.enable.description": "Dit kan enkele minuten duren",
   "tor.disable.description": "Dit kan enkele minuten duren",
   "tor.enable.submit": "Inschakelen",
-  "troubleshoot.umbrelos-description": "Bekijk umbrelOS en systeemlogbestanden",
+  "troubleshoot.umbrelos-description": "Bekijk umbrelOS-logboeken",
   "troubleshoot.app": "App",
   "troubleshoot.app-description": "Bekijk logbestanden van een app geïnstalleerd op je Umbrel",
   "troubleshoot.umbrelos-logs": "umbrelOS logbestanden",

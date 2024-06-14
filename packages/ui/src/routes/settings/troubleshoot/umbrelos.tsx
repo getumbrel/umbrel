@@ -1,51 +1,23 @@
-import {useNavigate, useParams} from 'react-router-dom'
-
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
-import {SegmentedControl} from '@/components/ui/segmented-control'
 import {ImmersivePickerDialogContent} from '@/modules/immersive-picker'
-import {
-	downloadUtf8Logs,
-	LogResults,
-	SystemLogType,
-	TroubleshootTitleBackLink,
-} from '@/routes/settings/troubleshoot/_shared'
+import {LogResults, SystemLogType, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export default function TroubleshootUmbrelOs() {
-	const tabs = [
-		{id: 'umbrelos', label: t('troubleshoot.umbrelos-logs')},
-		{id: 'system', label: t('troubleshoot.system-logs')},
-	] as const satisfies readonly {id: SystemLogType; label: string}[]
-
-	const defaultTab = tabs[0].id
-	// const [activeTab, setActiveTab] = useLocalStorage2<SystemLogType>('troubleshoot-system-active-tab', defaultTab)
-
-	const navigate = useNavigate()
-	const params = useParams<{systemTab: SystemLogType}>()
-	const activeTab = params.systemTab ?? defaultTab
-	const setActiveTab = (tab: SystemLogType) => {
-		navigate(`/settings/troubleshoot/umbrelos/${tab}`, {
-			replace: true,
-		})
-	}
-	const logs = useSystemLogs(activeTab ?? defaultTab)
-
-	const activeLabel = tabs.find((tab) => tab.id === activeTab)?.label
+	const logs = useSystemLogs('system')
 
 	return (
 		<ImmersivePickerDialogContent>
-			<div className='flex w-full flex-wrap items-center justify-between'>
+			<div className='flex w-full items-center justify-between'>
 				<TroubleshootTitleBackLink />
-				<SegmentedControl size='lg' tabs={tabs} value={activeTab} onValueChange={setActiveTab} />
 			</div>
-			<LogResults key={activeTab}>{logs}</LogResults>
+			<LogResults>{logs}</LogResults>
 			<ImmersiveDialogFooter className='justify-center'>
-				<Button variant='primary' size='dialog' onClick={() => downloadUtf8Logs(logs, activeTab)}>
-					{t('troubleshoot.system-download', {label: activeLabel})}
+				<Button variant='primary' size='dialog' onClick={() => (window.location.href = '/logs')}>
+					{t('troubleshoot.system-download', {label: t('troubleshoot.umbrelos-logs')})}
 				</Button>
-				{/* <Button size='dialog'>{t('troubleshoot.share-with-umbrel-support')}</Button> */}
 			</ImmersiveDialogFooter>
 		</ImmersivePickerDialogContent>
 	)

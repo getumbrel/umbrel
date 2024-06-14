@@ -139,7 +139,7 @@
   "tor.enable.description": "これには数分かかる場合があります",
   "tor.disable.description": "これには数分かかる場合があります",
   "tor.enable.submit": "有効にする",
-  "troubleshoot.umbrelos-description": "umbrelOSおよびシステムログを表示",
+  "troubleshoot.umbrelos-description": "umbrelOSのログを表示",
   "troubleshoot.app": "アプリ",
   "troubleshoot.app-description": "Umbrelにインストールされているアプリのログを表示",
   "troubleshoot.umbrelos-logs": "umbrelOSログ",
