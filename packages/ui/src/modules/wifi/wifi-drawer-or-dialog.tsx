@@ -189,7 +189,7 @@ export function EnabledContent({
 	return (
 		<ScrollArea
 			scrollbarClass='my-3'
-			className={cn('flex max-h-[380px] flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
+			className={cn('flex h-[380px] flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
 			viewportRef={scrollRef}
 		>
 			{connectedNetwork && (
