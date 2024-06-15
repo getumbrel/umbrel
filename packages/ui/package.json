@@ -78,6 +78,7 @@
 		"react-qr-code": "2.0.12",
 		"react-router-dom": "6.17.0",
 		"react-use": "17.4.0",
+		"recharts": "^2.12.7",
 		"remark-breaks": "^4.0.0",
 		"remark-gfm": "^4.0.0",
 		"remeda": "^1.28.0",

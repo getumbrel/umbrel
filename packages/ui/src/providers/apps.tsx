@@ -4,7 +4,7 @@ import {filter} from 'remeda'
 import {trpcReact, UserApp, UserAppWithoutError} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
-type AppT = {
+export type AppT = {
 	id: string
 	name: string
 	icon: string

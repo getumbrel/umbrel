@@ -51,3 +51,12 @@ export async function signProxyToken(secret: string) {
 
 	return token
 }
+
+export async function verifyProxyToken(token: string, secret: string) {
+	validateSecret(secret)
+	const payload = jwt.verify(token, secret, {algorithms: [JWT_ALGORITHM]}) as any
+
+	if (payload.proxyToken !== true) throw new Error('Invalid JWT')
+
+	return true
+}

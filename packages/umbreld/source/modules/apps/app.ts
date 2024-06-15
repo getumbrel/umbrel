@@ -119,7 +119,7 @@ export default class App {
 			.filter(Boolean) as string[]
 		await pullAll([...defaultImages, ...images], (progress) => {
 			this.stateProgress = Math.max(1, progress * 99)
-			this.logger.verbose(`Downloaded ${this.stateProgress}% of app ${this.id}`)
+			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
 		})
 	}
 
@@ -252,49 +252,38 @@ export default class App {
 		return true
 	}
 
-	async getResourceUsage() {
+	async getPids() {
 		const compose = await this.readCompose()
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
-		const result =
-			await $`docker stats --no-stream --format {"container":"{{.Name}}","CPUPerc":"{{.CPUPerc}}","MemPerc":"{{.MemPerc}}"} ${containers}`
-		const data = result.stdout.split('\n').map((line) => JSON.parse(line))
-		return data
-	}
+		containers.push(`${this.id}_app_proxy_1`)
+		containers.push(`${this.id}_tor_server_1`)
+		const pids = await Promise.all(
+			containers.map(async (container) => {
+				try {
+					const top = await $`docker top ${container}`
+					return top.stdout
+						.split('\n') // Split on newline
+						.slice(1) // Remove header
+						.map((line) => parseInt(line.split(/\s+/)[1], 10)) // Split on whitespace and get second item (PID)
+				} catch (error) {
+					// If we fail to get the PID, return an empty array and continue for the other contianers
+					// We don't log this error cos we'll expect to get it on some misses for the app proxy
+					// and tor server contianers.
+					return []
+				}
+			}),
+		)
 
-	async getMemoryUsage() {
-		try {
-			const containers = await this.getResourceUsage()
-			let totalMemoryPercentage = 0
-			for (const container of containers) {
-				totalMemoryPercentage += Number.parseFloat(container.MemPerc)
-			}
-
-			const {total} = await systemInformation.mem()
-			return total * (totalMemoryPercentage / 100)
-		} catch (error) {
-			this.logger.error(`Failed to get memory usage for app ${this.id}: ${(error as Error).message}`)
-			return 0
-		}
-	}
-
-	async getCpuUsage() {
-		try {
-			const containers = await this.getResourceUsage()
-			let totalCpuUsage = 0
-			for (const container of containers) {
-				totalCpuUsage += Number.parseFloat(container.CPUPerc)
-			}
-
-			return totalCpuUsage
-		} catch (error) {
-			this.logger.error(`Failed to get CPU usage for app ${this.id}: ${(error as Error).message}`)
-			return 0
-		}
+		return pids.flat()
 	}
 
 	async getDiskUsage() {
 		try {
-			return await getDirectorySize(this.dataDirectory)
+			// Disk usage calculations can fail if the app is rapidly moving files around
+			// since files in directories will be listed and then iterated over to have
+			// their size summed up. If a file is moved between these two operations it
+			// will fail. It happens rarely so simply retrying will catch most cases.
+			return await pRetry(() => getDirectorySize(this.dataDirectory), {retries: 2})
 		} catch (error) {
 			this.logger.error(`Failed to get disk usage for app ${this.id}: ${(error as Error).message}`)
 			return 0

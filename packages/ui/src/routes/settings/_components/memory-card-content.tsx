@@ -1,11 +1,11 @@
-import {useMemoryForUi} from '@/hooks/use-memory'
+import {useSystemMemoryForUi} from '@/hooks/use-memory'
 import {t} from '@/utils/i18n'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function MemoryCardContent() {
-	const {value, valueSub, secondaryValue, progress, isMemoryLow} = useMemoryForUi()
+	const {value, valueSub, secondaryValue, progress, isMemoryLow} = useSystemMemoryForUi()
 
 	return (
 		<ProgressStatCardContent

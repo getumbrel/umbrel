@@ -22,5 +22,11 @@ const langCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 
 export function duration(seconds: number | undefined, languageCode: SupportedLanguageCode) {
 	if (seconds === undefined) return UNKNOWN()
-	return formatDistance(0, seconds * 1000, {includeSeconds: true, locale: langCodeToDateLocale[languageCode]})
+
+	// if duration is more than 7 days, then force
+	// to show duration in days instead of months
+	if (seconds > 7 * 24 * 60 * 60) {
+		return formatDistanceStrict(0, seconds * 1000, {unit: 'day', locale: langCodeToDateLocale[languageCode]})
+	}
+	return formatDistanceStrict(0, seconds * 1000, {locale: langCodeToDateLocale[languageCode]})
 }

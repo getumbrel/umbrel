@@ -179,9 +179,9 @@ export const liveUsageWidgets: [
 		example: {
 			items: [
 				{
-					icon: 'system-widget-storage',
-					subtext: 'Storage',
-					text: '1.75 TB',
+					icon: 'system-widget-cpu',
+					subtext: 'CPU',
+					text: '24%',
 				},
 				{
 					icon: 'system-widget-memory',
@@ -189,9 +189,9 @@ export const liveUsageWidgets: [
 					text: '5.8 GB',
 				},
 				{
-					icon: 'system-widget-cpu',
-					subtext: 'CPU',
-					text: '24%',
+					icon: 'system-widget-storage',
+					subtext: 'Storage',
+					text: '1.75 TB',
 				},
 			],
 		},

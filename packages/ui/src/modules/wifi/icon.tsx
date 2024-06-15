@@ -1,4 +1,4 @@
-import {SVGProps} from 'react'
+import {SVGProps, useId} from 'react'
 import {TbWifi, TbWifi0, TbWifi1, TbWifi2, TbWifiOff} from 'react-icons/tb'
 
 import {cn} from '@/shadcn-lib/utils'
@@ -25,42 +25,44 @@ export function WifiIcon({bars = 4, className}: {bars: number; className?: strin
 }
 
 export function WifiIcon2({bars = 4, ...props}: {bars: number} & SVGProps<SVGSVGElement>) {
+	const uniqueId = useId();
+	
 	return (
 		<svg xmlns='http://www.w3.org/2000/svg' width={24} height={24} viewBox='0 0 24 24' fill='currentColor' {...props}>
 			<defs>
 				<path
-					id='a'
+					id={`${uniqueId}-a`}
 					fillRule='evenodd'
 					d='M11.002 17.177a1 1 0 0 1 1-1h.009a1 1 0 1 1 0 2h-.009a1 1 0 0 1-1-1Z'
 					clipRule='evenodd'
 				/>
 				<path
-					id='b'
+					id={`${uniqueId}-b`}
 					fillRule='evenodd'
 					d='M12.002 14.726a2.45 2.45 0 0 0-1.733.718 1 1 0 1 1-1.414-1.415 4.451 4.451 0 0 1 6.294 0 1 1 0 1 1-1.414 1.415 2.45 2.45 0 0 0-1.733-.718Z'
 					clipRule='evenodd'
 				/>
 				<path
-					id='c'
+					id={`${uniqueId}-c`}
 					fillRule='evenodd'
 					d='M12.002 11.274a5.9 5.9 0 0 0-4.174 1.729 1 1 0 1 1-1.414-1.414 7.901 7.901 0 0 1 11.176 0 1 1 0 1 1-1.415 1.414 5.9 5.9 0 0 0-4.173-1.729Z'
 					clipRule='evenodd'
 				/>
 				<path
-					id='d'
+					id={`${uniqueId}-d`}
 					fillRule='evenodd'
 					d='M18.643 10.565c-3.68-3.657-9.603-3.654-13.254-.002a1 1 0 1 1-1.415-1.414c4.435-4.436 11.622-4.432 16.08-.002a1 1 0 1 1-1.41 1.418Z'
 					clipRule='evenodd'
 				/>
 			</defs>
-			<use fillRule='evenodd' clipRule='evenodd' href='#a' className='opacity-20' />
-			{bars >= 1 && <use fillRule='evenodd' clipRule='evenodd' href='#a' />}
-			<use fillRule='evenodd' clipRule='evenodd' href='#b' className='opacity-20' />
-			{bars >= 2 && <use fillRule='evenodd' clipRule='evenodd' href='#b' />}
-			<use fillRule='evenodd' clipRule='evenodd' href='#c' className='opacity-20' />
-			{bars >= 3 && <use fillRule='evenodd' clipRule='evenodd' href='#c' />}
-			<use fillRule='evenodd' clipRule='evenodd' href='#d' className='opacity-20' />
-			{bars >= 4 && <use fillRule='evenodd' clipRule='evenodd' href='#d' />}
+			<use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-a`} className='opacity-20' />
+			{bars >= 1 && <use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-a`} />}
+			<use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-b`} className='opacity-20' />
+			{bars >= 2 && <use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-b`} />}
+			<use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-c`} className='opacity-20' />
+			{bars >= 3 && <use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-c`} />}
+			<use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-d`} className='opacity-20' />
+			{bars >= 4 && <use fillRule='evenodd' clipRule='evenodd' href={`#${uniqueId}-d`} />}
 		</svg>
 	)
 }

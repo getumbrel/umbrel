@@ -66,7 +66,9 @@ export function WifiDrawerOrDialogContent() {
 							<AlertDialogContent>
 								<AlertDialogHeader>
 									<AlertDialogTitle>{t('wifi-dangerous-disable-confirmation-title')}</AlertDialogTitle>
-									<AlertDialogDescription>{t('wifi-dangerous-disable-confirmation-description')}</AlertDialogDescription>
+									<AlertDialogDescription>
+										{t('wifi-dangerous-disable-confirmation-description')}
+									</AlertDialogDescription>
 								</AlertDialogHeader>
 								<AlertDialogFooter>
 									<AlertDialogAction
@@ -187,7 +189,7 @@ export function EnabledContent({
 	return (
 		<ScrollArea
 			scrollbarClass='my-3'
-			className={cn('flex max-h-[380px] flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
+			className={cn('flex h-[380px] flex-col rounded-12 bg-white/5 transition-opacity', isLoading && 'opacity-50')}
 			viewportRef={scrollRef}
 		>
 			{connectedNetwork && (

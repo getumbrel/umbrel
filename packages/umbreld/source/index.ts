@@ -51,6 +51,7 @@ export type UmbreldOptions = {
 export default class Umbreld {
 	version: string = packageJson.version
 	versionName: string = packageJson.versionName
+	developmentMode: boolean
 	dataDirectory: string
 	port: number
 	logLevel: LogLevel
@@ -68,6 +69,7 @@ export default class Umbreld {
 		logLevel = 'normal',
 		defaultAppStoreRepo = 'https://github.com/getumbrel/umbrel-apps.git',
 	}: UmbreldOptions) {
+		this.developmentMode = process?.env?.NODE_ENV === 'development'
 		this.dataDirectory = path.resolve(dataDirectory)
 		this.port = port
 		this.logLevel = logLevel
@@ -170,9 +172,13 @@ export default class Umbreld {
 		// We need to forcefully clean Docker state before being able to safely continue
 		// If an existing container is listening on port 80 we'll crash, if an old version
 		// of Umbrel wasn't shutdown properly, bringing containers up can fail.
-		await this.apps
-			.cleanDockerState()
-			.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+		// Skip this in dev mode otherwise we get very slow reloads since this cleans
+		// up app containers on every source code change.
+		if (!this.developmentMode) {
+			await this.apps
+				.cleanDockerState()
+				.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+		}
 
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])

@@ -57,7 +57,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 
 	const handleClick = (link?: string) => {
 		if (appId === 'live-usage' && systemAppsKeyed['UMBREL_live-usage']) {
-			navigate('/?dialog=live-usage')
+			navigate(link || '?dialog=live-usage')
 		} else if (app) {
 			// Launching directly because it's weird to have credentials show up
 			// Users will likely open the app by clicking the icon before adding a widget associated with the app
