@@ -39,12 +39,10 @@ export function usePaginator(pageCount: number) {
 				setScrollingWithCode(false)
 			}, 200)
 
-			console.log('scroll')
 			if (scrollingWithCode) return
 			if (!el) return
 			const index = Math.round(el.scrollLeft / el.clientWidth)
 			setPage(index)
-			console.log(el.scrollLeft, el.clientWidth)
 		}
 
 		// scrollend doesn't work as well here
