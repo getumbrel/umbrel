@@ -345,6 +345,7 @@
   "temp.warm": "Morno",
   "temperature": "Temperatura",
   "temperature.too-hot-suggestion": "Considere mudar o ambiente do seu dispositivo.",
+  "terminal": "Terminal",
   "terminal-description": "Execute comandos personalizados no umbrelOS ou dentro de um app",
   "terminal.app": "App",
   "terminal.app-description": "Execute comandos personalizados dentro de um app específico",
