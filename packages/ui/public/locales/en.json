@@ -180,6 +180,7 @@
   "linux": "Linux",
   "live-usage": "Live Usage",
   "loading": "Loading",
+  "local-ip": "Local IP",
   "login-2fa.subtitle": "Enter the 2FA code displayed in your authenticator app",
   "login-2fa.title": "Authenticate",
   "login-with-umbrel.description": "Enter your Umbrel password to open {{app}}",

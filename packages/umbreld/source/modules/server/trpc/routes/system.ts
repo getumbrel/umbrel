@@ -21,6 +21,7 @@ import {
 	detectDevice,
 	isUmbrelOS,
 	getSystemMemoryUsage,
+	getIpAddresses,
 } from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
@@ -217,6 +218,7 @@ export default router({
 	systemMemoryUsage: privateProcedure.query(({ctx}) => getSystemMemoryUsage()),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
+	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
 	shutdown: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
 		await ctx.umbreld.stop()

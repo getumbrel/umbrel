@@ -180,6 +180,7 @@
   "linux": "Linux",
   "live-usage": "Live Usage",
   "loading": "Laden",
+  "local-ip": "Lokale IP",
   "login-2fa.subtitle": "Voer de 2FA-code in die wordt weergegeven in je authenticator-app",
   "login-2fa.title": "Authenticeren",
   "login-with-umbrel.description": "Voer je Umbrel wachtwoord in om {{app}} te openen",
