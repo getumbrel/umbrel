@@ -79,11 +79,17 @@ async function removeUnusedTranslations(englishReferenceContent) {
 		let isKeyUsed = false
 		for (const file of tsxFiles) {
 			const content = fs.readFileSync(file, 'utf8')
-			// Checks for the pattern t('key') or t("key")
-			const regex = new RegExp(`t\\(('|")${key.replace(/'/g, "\\'")}('|")`, 'g')
-			// Checks for i18nKey='key' or i18nKey="key" (used in <Trans> components)
-			const i18nRegex = new RegExp(`i18nKey=('|")${key.replace(/'/g, "\\'")}('|")`, 'g')
-			if (regex.test(content) || i18nRegex.test(content)) {
+			// Checks for t('key'), i18nKey='key', t("key"), i18nKey="key"
+			let keyToTest = key
+
+			// https://www.i18next.com/translation-function/plurals
+			if (key.endsWith('_one')) {
+				keyToTest = key.slice(0, -4)
+			} else if (key.endsWith('_other')) {
+				keyToTest = key.slice(0, -6)
+			}
+			const keyPatterns = [`t('${keyToTest}'`, `i18nKey='${keyToTest}'`, `t("${keyToTest}"`, `i18nKey="${keyToTest}"`]
+			if (keyPatterns.some((pattern) => content.includes(pattern))) {
 				isKeyUsed = true
 				break
 			}
