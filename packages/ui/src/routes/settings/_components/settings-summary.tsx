@@ -1,3 +1,5 @@
+import {Link} from 'react-router-dom'
+
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
@@ -10,6 +12,7 @@ export function SettingsSummary() {
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
 	const uptimeQ = trpcReact.system.uptime.useQuery()
+	const ipAddresses = trpcReact.system.getIpAddresses.useQuery()
 
 	return (
 		<dl
@@ -23,6 +26,19 @@ export function SettingsSummary() {
 			<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 			<dt className='opacity-40'>{t('umbrelos')}</dt>
 			<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
+			<dt className='opacity-40'>{t('local-ip')}</dt>
+			<dd>
+				{ipAddresses.data?.length
+					? ipAddresses.data.map((ip: string, index: number) => (
+							<>
+								<Link to={`http://${ip}`} target='_blank'>
+									{ip}
+								</Link>
+								{index < ipAddresses.data.length - 1 && ', '}
+							</>
+					  ))
+					: LOADING_DASH}
+			</dd>
 			<dt className='opacity-40'>{t('uptime')}</dt>
 			<dd>{uptimeQ.isLoading ? LOADING_DASH : duration(uptimeQ.data, languageCode)}</dd>
 		</dl>

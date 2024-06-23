@@ -25,8 +25,8 @@ export function WifiIcon({bars = 4, className}: {bars: number; className?: strin
 }
 
 export function WifiIcon2({bars = 4, ...props}: {bars: number} & SVGProps<SVGSVGElement>) {
-	const uniqueId = useId();
-	
+	const uniqueId = useId()
+
 	return (
 		<svg xmlns='http://www.w3.org/2000/svg' width={24} height={24} viewBox='0 0 24 24' fill='currentColor' {...props}>
 			<defs>

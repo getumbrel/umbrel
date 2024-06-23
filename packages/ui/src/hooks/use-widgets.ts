@@ -62,7 +62,6 @@ export function useWidgets() {
 		} else {
 			enable(widgetId)
 		}
-		console.log(widgetId)
 	}
 
 	const appFromWidgetId = (id: string) => {

@@ -13,9 +13,7 @@ export function useAutoHeightAnimation(deps: any[]): [AnimationControls, React.R
 
 		//console.log( newHeight )
 		if (height.current !== null) {
-			console.log(height.current)
 			controls.set({height: height.current})
-			console.log({height: newHeight, opacity: 1})
 			controls.start({height: newHeight, opacity: 1})
 		}
 

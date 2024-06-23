@@ -44,7 +44,6 @@ export function useSettingsNotificationCount() {
 		const toastIds: (string | number)[] = []
 
 		res.then((allData) => {
-			console.log('allData', allData)
 			const [checkUpdateResult, cpuTempResult, memoryResult, diskResult] = allData ?? []
 
 			let currCount = 0

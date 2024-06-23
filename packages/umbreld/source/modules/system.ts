@@ -438,3 +438,24 @@ export async function connectToWiFiNetwork({ssid, password}: {ssid: string; pass
 		throw new Error('Connection failed')
 	}
 }
+
+// Get IP addresses of the device
+export async function getIpAddresses(): Promise<string[]> {
+	const interfaces =
+		(await systemInformation.networkInterfaces()) as systemInformation.Systeminformation.NetworkInterfacesData[]
+
+	// Filter out virtual interfaces, non-wired/wireless interfaces, bridge
+	// interfaces starting with 'br-', and interfaces without ip4
+	const validInterfaces = interfaces.filter(
+		(iface) =>
+			!iface.virtual &&
+			(iface.type === 'wired' || iface.type === 'wireless') &&
+			!iface.ifaceName.startsWith('br-') &&
+			iface.ip4,
+	)
+
+	// Get the ip4 addresses
+	const ipAddresses = validInterfaces.map((iface) => iface.ip4)
+
+	return ipAddresses
+}
