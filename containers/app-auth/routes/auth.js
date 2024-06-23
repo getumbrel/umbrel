@@ -75,11 +75,10 @@ router.post(
       const ONE_HOUR = 60 * ONE_MINUTE;
       const ONE_DAY = 24 * ONE_HOUR;
       const ONE_WEEK = 7 * ONE_DAY;
-      const expires = new Date(Date.now() + ONE_WEEK);
       res
         .cookie("UMBREL_PROXY_TOKEN", proxyToken, {
           httpOnly: true,
-          expires,
+          maxAge: ONE_WEEK,
           sameSite: "lax",
         })
         .json(await validateToken.redirectState(proxyToken, req));
