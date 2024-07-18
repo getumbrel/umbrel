@@ -9,6 +9,7 @@ import {pipeline} from 'node:stream/promises'
 import {$} from 'execa'
 import express from 'express'
 import cookieParser from 'cookie-parser'
+import helmet from 'helmet'
 import cors from 'cors'
 import pty, {IPty} from 'node-pty'
 
@@ -67,9 +68,23 @@ class Server {
 		// Setup cookie parser
 		app.use(cookieParser())
 
+		// Security hardening, CSP
+		app.use(
+			helmet.contentSecurityPolicy({
+				directives: {
+					// Allow inline scripts ONLY in development for vite dev server
+					scriptSrc: this.umbreld.developmentMode ? ["'self'", "'unsafe-inline'"] : null,
+					// Allow 3rd party app images (remove this if we serve them locally in the future)
+					imgSrc: ['*'],
+					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
+					connectSrc: ["'self'", 'https://apps.umbrel.com'],
+					// Allow plain text access over the local network
+					upgradeInsecureRequests: null,
+				},
+			}),
+		)
+		app.use(helmet.referrerPolicy({policy: 'no-referrer'}))
 		app.disable('x-powered-by')
-
-		// TODO: Security hardening, helmet etc.
 
 		// Attach the umbreld and logger instances so they're accessible to routes
 		app.set('umbreld', this.umbreld)
