@@ -32,6 +32,9 @@ const languageMapping = {
 	ja: 'Japanese',
 	nl: 'Dutch',
 	pt: 'Portuguese',
+	tr: 'Turkish',
+	uk: 'Ukrainian',
+	hu: 'Hungarian',
 }
 
 // Generates translations
