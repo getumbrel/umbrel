@@ -29,7 +29,7 @@ export function CopyableField({
 		<div
 			className={cn(
 				// 'items-stretch' to make sure button is the same height as the field
-				'flex max-w-full items-stretch overflow-hidden rounded-4 border border-dashed border-white/5 bg-white/4 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40',
+				'flex max-w-full items-stretch rounded-4 border border-dashed border-white/5 bg-white/4 text-14 leading-none text-white/40 outline-none focus-visible:border-white/40',
 				className,
 			)}
 		>
@@ -38,7 +38,7 @@ export function CopyableField({
 				ref={ref}
 				onClick={() => setTimeout(() => ref.current?.select())}
 				className={cn(
-					'block flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 font-mono outline-none',
+					'block flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 font-mono outline-none min-w-0',
 					narrow && 'py-0.5',
 				)}
 				type={isPassword && !focused ? 'password' : 'text'}
