@@ -140,7 +140,7 @@
   "desktop.context-menu.change-wallpaper": "Duvar kağıdını değiştir",
   "desktop.context-menu.edit-widgets": "Widget'ları düzenle",
   "desktop.context-menu.logout": "Çıkış yap",
-  "desktop.greeting.afternoon": "İyi öğleden sonra, {{name}}",
+  "desktop.greeting.afternoon": "Tünaydın, {{name}}",
   "desktop.greeting.evening": "İyi akşamlar, {{name}}",
   "desktop.greeting.morning": "Günaydın, {{name}}",
   "desktop.install-first.for-the-bitcoiner": "Bitcoin kullanıcıları için",
