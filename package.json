@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "vm:provision": "multipass launch --name umbrel-dev --cpus 4 --memory 8G --disk 50G --mount $PWD:/opt/umbrel-mount 23.10 && multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm provision",
+    "vm:provision": "multipass launch --name umbrel-dev --cpus 4 --memory 8G --disk 50G 22.04 && npm run vm:stop && multipass mount --type native $PWD umbrel-dev:/opt/umbrel-mount && multipass exec umbrel-dev -- /opt/umbrel-mount/scripts/vm provision",
     "vm:shell": "multipass shell umbrel-dev",
     "vm:exec": "multipass exec --working-directory /home/ubuntu umbrel-dev --",
     "vm:logs": "multipass exec umbrel-dev -- journalctl --unit umbreld-production --unit umbreld --unit ui --follow --lines 100 --output cat",
