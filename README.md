@@ -15,6 +15,8 @@
     <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
     ·
     <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">Any x86 system</a>
+    ·
+    <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-VPS">VPS</a>
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
