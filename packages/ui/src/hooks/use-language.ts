@@ -8,9 +8,12 @@ export function useLanguage() {
 		window.location.reload()
 	}
 
-	const code = i18next.language
-
-	// Default to English
+  	// Retrieve the language code from localStorage if available
+  	const storedCode = localStorage.getItem('i18nextLng') as SupportedLanguageCode | null
+	
+	// Default to English if the code is not supported
+  	const code = storedCode || i18next.language
+	
 	if (!arrayIncludes(supportedLanguageCodes, code)) {
 		return ['en', setCode] as const
 	}

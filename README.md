@@ -15,6 +15,8 @@
     <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
     ·
     <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">Any x86 system</a>
+    ·
+    <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-VPS">VPS</a>
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
@@ -58,6 +60,7 @@ Just like the cloud, but one that you own and control.
 
 - [Instructions to install umbrelOS on a Raspberry Pi 4 and Pi 5](https://umbrel.com/umbrelos#install)
 - [Instructions to install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems)
+- [Instructions on installing umbrelOS on a VPS](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-VPS)
 
 ## Umbrel App Store
 
