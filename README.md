@@ -59,6 +59,8 @@ Just like the cloud, but one that you own and control.
 - [Instructions to install umbrelOS on a Raspberry Pi 4 and Pi 5](https://umbrel.com/umbrelos#install)
 - [Instructions to install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems)
 
+[![Open in DevZero](https://assets.devzero.io/open-in-devzero.svg)](https://www.devzero.io/dashboard/recipes/new?repo-url=https://github.com/getumbrel/umbrel)
+
 ## Umbrel App Store
 
 <br />
