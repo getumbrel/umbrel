@@ -3,6 +3,15 @@
 # We need to add this shim as the main umbreld entrypoint so we can sets up the environmnet we need
 # like adding node_modules/.bin to the PATH so we have access to tsx.
 
+
+# Hook to run development mode
+if [[ -d "/umbrel-dev" ]]
+then
+    echo "Running in development mode"
+    cd /umbrel-dev
+    exec npm run dev container-init
+fi
+
 # Find the project directory and follow symlinks if necessary
 project_directory="$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
 
