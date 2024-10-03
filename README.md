@@ -8,13 +8,7 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
-    Buy an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> or install on:
-    <br />
-    <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 4</a>
-    ·
-    <a href="https://umbrel.com/umbrelos#install">Raspberry Pi 5</a>
-    ·
-    <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">Any x86 system</a>
+    Buy an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> or install on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a>.
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
@@ -34,16 +28,12 @@
 
 <br />
 
-[![Watch the umbrelOS 1.0 reveal](https://github.com/getumbrel/umbrel/assets/10330103/0b99b2b5-f090-464d-a865-a2eddb8d85c9)](https://www.youtube.com/watch?v=Q-vmmboobEM)
-
-<br />
-
 <p align="center">
 At Umbrel, we believe that everyone should be able to enjoy the convenience and benefits of the cloud, without giving up ownership and control of their data.
 </p>
 
 <p align="center">
-To achieve our vision, we're building a new kind of personal server OS. Instead of paying ransoms for storing your data on someone else's computer while they auction it off to advertisers — you can now easily spin up a server and self-host your data and services at home.
+To achieve our vision, we're building a new kind of a home server OS. Instead of paying ransoms for storing your data on someone else's computer while they auction it off to advertisers — you can now easily spin up a server and self-host your data and services at home.
 </p>
 
 <p align="center">
@@ -56,14 +46,34 @@ Just like the cloud, but one that you own and control.
 
 ## Installing umbrelOS
 
-- [Instructions to install umbrelOS on a Raspberry Pi 4 and Pi 5](https://umbrel.com/umbrelos#install)
-- [Instructions to install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems)
+- [Install umbrelOS on a Raspberry Pi 5](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5)
+- [Install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-Systems)
+- [Install umbrelOS in a VM](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Linux-VM)
+
 
 ## Umbrel App Store
 
 <br />
 
 Here are some of the apps available in the Umbrel App Store. For the complete list of apps, visit [apps.umbrel.com](https://apps.umbrel.com/).
+
+#### Files & Productivity
+
+- [Calibre Web](https://apps.umbrel.com/app/calibre-web) — A clean web app for your eBooks
+- [Nextcloud](https://apps.umbrel.com/app/nextcloud) — Productivity platform that keeps you in control
+- [Immich](https://apps.umbrel.com/app/immich) - High performance photo and video backup solution
+- [PhotoPrism](https://apps.umbrel.com/app/photoprism) — Self-host your photo and video library
+- [SyncThing](https://apps.umbrel.com/app/syncthing) — Peer-to-peer file synchronization between your devices
+- [Vaultwarden](https://apps.umbrel.com/app/vaultwarden) — Unofficial Bitwarden® compatible server
+
+#### Media
+
+- [Jellyfin](https://apps.umbrel.com/app/jellyfin) — The Free Software Media System
+- [Lidarr](https://apps.umbrel.com/app/lidarr) — Looks and smells like Sonarr but made for music
+- [Plex](https://apps.umbrel.com/app/plex) — Stream Movies & TV Shows
+- [Prowlarr](https://apps.umbrel.com/app/prowlarr) — Indexer manager/proxy for Sonarr, Radarr, and Lidarr
+- [Radarr](https://apps.umbrel.com/app/radarr) — Your movie collection manager
+- [Sonarr](https://apps.umbrel.com/app/sonarr) — Smart PVR for newsgroup and bittorrent users
 
 #### Bitcoin & Finance
 
@@ -88,24 +98,6 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [LlamaGPT](https://apps.umbrel.com/app/llama-gpt) - Self-hosted, offline ChatGPT-like chatbot powered by Llama 2
 - [ChatBot UI](https://apps.umbrel.com/app/chatbot-ui) - ChatGPT but better
 - [Chatpad AI](https://apps.umbrel.com/app/chatpad-ai) - Premium quality UI for ChatGPT
-
-#### Files & Productivity
-
-- [Calibre Web](https://apps.umbrel.com/app/calibre-web) — A clean web app for your eBooks
-- [Nextcloud](https://apps.umbrel.com/app/nextcloud) — Productivity platform that keeps you in control
-- [Immich](https://apps.umbrel.com/app/immich) - High performance photo and video backup solution
-- [PhotoPrism](https://apps.umbrel.com/app/photoprism) — Self-host your photo and video library
-- [SyncThing](https://apps.umbrel.com/app/syncthing) — Peer-to-peer file synchronization between your devices
-- [Vaultwarden](https://apps.umbrel.com/app/vaultwarden) — Unofficial Bitwarden® compatible server
-
-#### Media
-
-- [Jellyfin](https://apps.umbrel.com/app/jellyfin) — The Free Software Media System
-- [Lidarr](https://apps.umbrel.com/app/lidarr) — Looks and smells like Sonarr but made for music
-- [Plex](https://apps.umbrel.com/app/plex) — Stream Movies & TV Shows
-- [Prowlarr](https://apps.umbrel.com/app/prowlarr) — Indexer manager/proxy for Sonarr, Radarr, and Lidarr
-- [Radarr](https://apps.umbrel.com/app/radarr) — Your movie collection manager
-- [Sonarr](https://apps.umbrel.com/app/sonarr) — Smart PVR for newsgroup and bittorrent users
 
 #### Networking
 
