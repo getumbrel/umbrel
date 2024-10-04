@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-json="{}"
-
-cat /proc/uptime | awk '{print int($1)}'

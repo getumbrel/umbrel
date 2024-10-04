@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# This script is exposed via: curl -sL https://export.umbrel.sh | sudo bash
+# Which resolves to this file at the 1.1.1 tag in this repo
+
 set -euo pipefail
 
 # This script will:

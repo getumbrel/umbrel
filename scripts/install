@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script is exposed via: curl -L https://umbrel.sh | bash
+# Which resolves to this file in the master branch of this repo
+
 cat << "EOF"
 
                 ,;###GGGGGGGGGGl#Sp

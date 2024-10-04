@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script is used to bootstrap the mender update process
+# The update server references it in the form:
+# https://raw.githubusercontent.com/getumbrel/umbrel/<tag>/scripts/update-script
+
 update_url=""
 
 if ! command -v mender &> /dev/null

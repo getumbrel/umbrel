@@ -1,4 +1,5 @@
 {
+  "NOTE": "We must keep this file here forever to allow old umbrelOS 0.5.x Umbrel Homes to find the 1.0.0 update and bootstrap themselves into the new mender based update system.",
   "version": "1.0.0",
   "name": "umbrelOS 1.0",
   "requires": ">=0.5.3",
