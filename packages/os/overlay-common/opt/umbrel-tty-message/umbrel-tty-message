@@ -1,0 +1,36 @@
+#!/bin/bash
+
+get_addresses() {
+    # Get all active wifi and ethernet interfaces
+    local active_interfaces=$(nmcli --terse --fields TYPE,DEVICE con show --active | grep 'ethernet\|wireless' |  cut -d ':' -f 2)
+    for interface in $active_interfaces; do
+        # Get the interface IP
+        local ip=$(nmcli --terse --fields IP4.ADDRESS dev show "${interface}" | grep 'IP4.ADDRESS' | cut -d':' -f2 | cut -d'/' -f1)
+
+        # Return the IP
+        echo "${ip}"
+
+        # Return the avahi address
+        avahi-resolve -a "${ip}" | cut -f 2
+    done
+}
+
+# Wait for addresses to be assigned
+while true
+do
+    addresses=$(get_addresses | sort -r | uniq)
+    [[ "${addresses}" != "" ]] && break
+    sleep 1
+done
+
+# Format addresses for printing
+formatted_addresses=$(echo "${addresses}" | sed 's/^/  http:\/\//')
+
+# Clear TTY
+echo -e "\033c" > /dev/tty1
+
+# Write TTY message
+echo -n "Your Umbrel is now accessible at:
+${formatted_addresses}
+
+umbrel login: " > /dev/tty1

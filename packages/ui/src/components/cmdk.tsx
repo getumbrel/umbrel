@@ -173,6 +173,9 @@ function CmdkContent() {
 			{/* List rows */}
 			<SettingsSearchItem value={t('change-name')} onSelect={() => navigate('settings/account/change-name')} />
 			<SettingsSearchItem value={t('change-password')} onSelect={() => navigate('settings/account/change-password')} />
+			<SettingsSearchItem value={'wifi'} onSelect={() => navigate('/settings/wifi')}>
+				{t('wifi')}
+			</SettingsSearchItem>
 			<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
 				{t('2fa')}
 			</SettingsSearchItem>

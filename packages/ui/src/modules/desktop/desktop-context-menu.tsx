@@ -26,7 +26,6 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 					</ContextMenuItem>
 					<ContextMenuItem
 						onSelect={() => {
-							console.log(contentRef.current)
 							// get bounding box
 							const {top, left} = contentRef.current!.getBoundingClientRect()
 							anchorRef.current!.style.top = `${top}px`

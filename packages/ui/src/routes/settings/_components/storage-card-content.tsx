@@ -1,11 +1,11 @@
-import {useDiskForUi} from '@/hooks/use-disk'
+import {useSystemDiskForUi} from '@/hooks/use-disk'
 import {t} from '@/utils/i18n'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function StorageCardContent() {
-	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useDiskForUi()
+	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useSystemDiskForUi()
 
 	return (
 		<ProgressStatCardContent

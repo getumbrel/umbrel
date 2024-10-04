@@ -18,6 +18,7 @@ import {TorIcon2} from '@/assets/tor-icon2'
 import {Alert, ErrorAlert} from '@/components/ui/alert'
 import {sizeMap} from '@/components/ui/icon'
 import {IconButton} from '@/components/ui/icon-button'
+import {listItemClass} from '@/components/ui/list'
 import {Loading} from '@/components/ui/loading'
 import {NumberedList, NumberedListItem} from '@/components/ui/numbered-list'
 import {SegmentedControl} from '@/components/ui/segmented-control'
@@ -113,6 +114,15 @@ export default function Stories() {
 					the king's pillow, in his soup, even in the royal toilet. The king was furious, but he couldn't seem to stop
 					Jokester. And then, one day, the people of the kingdom discovered that the jokes left by Jokester were so
 					funny that they couldn't help but laugh. And once they started laughing, they couldn't stop.
+				</div>
+			</ScrollArea>
+			<ScrollArea className='h-[200px] w-[350px] rounded-12 bg-white/6' scrollbarClass='my-3'>
+				<div className='divide-y divide-white/6 '>
+					{Array.from({length: 20}).map((_, i) => (
+						<div key={i} className={listItemClass}>
+							hello {i}
+						</div>
+					))}
 				</div>
 			</ScrollArea>
 		</div>

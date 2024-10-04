@@ -1,0 +1,10 @@
+[Unit]
+Description=Display Umbrel access information on TTY
+After=umbrel.service
+
+[Service]
+ExecStart=/opt/umbrel-tty-message/umbrel-tty-message
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

@@ -63,7 +63,6 @@ export function useLaunchApp() {
 function openApp(app: UserApp, path?: string) {
 	trackAppOpen(app.id)
 	// Don't prefix by default because this is called from widgets
-	// https://discord.com/channels/936693236339183716/940192361743540245/1212269980066779197
 	// We don't wanna be prefixing every time
 	const url = path ? urlJoin(appToUrl(app), path) : appToUrlWithAppPath(app)
 	window.open(url, '_blank')?.focus()

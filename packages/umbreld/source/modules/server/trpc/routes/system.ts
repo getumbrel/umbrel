@@ -12,6 +12,7 @@ import type {ProgressStatus} from '../../../apps/schema.js'
 import {factoryResetDemoState, startReset} from '../../../factory-reset.js'
 import {
 	getCpuTemperature,
+	getSystemDiskUsage,
 	getDiskUsage,
 	getMemoryUsage,
 	getCpuUsage,
@@ -19,6 +20,8 @@ import {
 	shutdown,
 	detectDevice,
 	isUmbrelOS,
+	getSystemMemoryUsage,
+	getIpAddresses,
 } from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
@@ -166,7 +169,7 @@ export default router({
 						menderInstallDots++
 						// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
 						const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
-						ctx.umbreld.logger.verbose(`Update progress: ${progress}%`)
+						ctx.umbreld.logger.log(`Update progress: ${progress}%`)
 						setUpdateStatus({progress})
 					}
 				}
@@ -210,9 +213,12 @@ export default router({
 	}),
 	device: privateProcedure.query(() => detectDevice()),
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
+	systemDiskUsage: privateProcedure.query(({ctx}) => getSystemDiskUsage(ctx.umbreld)),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
+	systemMemoryUsage: privateProcedure.query(({ctx}) => getSystemMemoryUsage()),
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
+	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
 	shutdown: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
 		await ctx.umbreld.stop()

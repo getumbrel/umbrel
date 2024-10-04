@@ -9,7 +9,7 @@ export function useCpu(options: {poll?: boolean} = {}) {
 		// Sometimes we won't be able to get disk usage, so prevent retry
 		retry: false,
 		// We do want refetching to happen on a schedule though
-		refetchInterval: options.poll ? 500 : undefined,
+		refetchInterval: options.poll ? 1000 : undefined,
 	})
 
 	return {
@@ -18,13 +18,21 @@ export function useCpu(options: {poll?: boolean} = {}) {
 		//
 		percentUsed: cpuQ.data?.totalUsed ?? 0,
 		threads: cpuQ.data?.threads ?? 0,
-		system: cpuQ.data?.system ?? 0,
-		apps: sort(cpuQ.data?.apps ?? [], (a, b) => b.used - a.used),
+		apps: sort(
+			[
+				...(cpuQ.data?.apps ?? []),
+				{
+					id: 'umbreld-system',
+					used: cpuQ.data?.system ?? 0,
+				},
+			],
+			(a, b) => b.used - a.used,
+		),
 	}
 }
 
 export function useCpuForUi(options: {poll?: boolean} = {}) {
-	const {isLoading, percentUsed, threads, system, apps} = useCpu({poll: options.poll})
+	const {isLoading, percentUsed, threads, apps} = useCpu({poll: options.poll})
 
 	if (isLoading) {
 		return {
@@ -40,7 +48,6 @@ export function useCpuForUi(options: {poll?: boolean} = {}) {
 		value: Math.ceil(percentUsed) + '%',
 		progress: percentUsed / 100,
 		secondaryValue: t('cpu-core-count', {cores: threads}),
-		system,
 		apps,
 	} as const
 }

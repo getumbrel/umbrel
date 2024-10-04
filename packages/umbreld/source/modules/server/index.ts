@@ -3,9 +3,13 @@ import process from 'node:process'
 import {promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
 import {dirname, join} from 'node:path'
+import {createGzip} from 'node:zlib'
+import {pipeline} from 'node:stream/promises'
 
 import {$} from 'execa'
 import express from 'express'
+import cookieParser from 'cookie-parser'
+import helmet from 'helmet'
 import cors from 'cors'
 import pty, {IPty} from 'node-pty'
 
@@ -50,17 +54,37 @@ class Server {
 		return jwt.verify(token, await this.getJwtSecret())
 	}
 
+	async verifyProxyToken(token: string) {
+		return jwt.verifyProxyToken(token, await this.getJwtSecret())
+	}
+
 	async start() {
 		// Ensure the JWT secret exists
 		await this.getJwtSecret()
 
 		// Create the handler
-
 		const app = express()
 
-		app.disable('x-powered-by')
+		// Setup cookie parser
+		app.use(cookieParser())
 
-		// TODO: Security hardening, helmet etc.
+		// Security hardening, CSP
+		app.use(
+			helmet.contentSecurityPolicy({
+				directives: {
+					// Allow inline scripts ONLY in development for vite dev server
+					scriptSrc: this.umbreld.developmentMode ? ["'self'", "'unsafe-inline'"] : null,
+					// Allow 3rd party app images (remove this if we serve them locally in the future)
+					imgSrc: ['*'],
+					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
+					connectSrc: ["'self'", 'https://apps.umbrel.com'],
+					// Allow plain text access over the local network
+					upgradeInsecureRequests: null,
+				},
+			}),
+		)
+		app.use(helmet.referrerPolicy({policy: 'no-referrer'}))
+		app.disable('x-powered-by')
 
 		// Attach the umbreld and logger instances so they're accessible to routes
 		app.set('umbreld', this.umbreld)
@@ -80,6 +104,27 @@ class Server {
 
 		// Handle tRPC routes
 		app.use('/trpc', trpcHandler)
+
+		// Handle log file downloads
+		app.get('/logs/', async (request, response) => {
+			// Check the user is logged in
+			try {
+				// We shouldn't really use the proxy token for this but it's
+				// fine until we have subdomains and refactor to session cookies
+				await this.verifyProxyToken(request?.cookies?.UMBREL_PROXY_TOKEN)
+			} catch (error) {
+				return response.status(401).send('Unauthorized')
+			}
+
+			try {
+				// Force the browser to treat the request as a file download
+				response.set('Content-Disposition', `attachment;filename=umbrel-${Date.now()}.log.gz`)
+				const journal = $`journalctl`
+				await pipeline(journal.stdout!, createGzip(), response)
+			} catch (error) {
+				this.logger.error(`Error streaming logs: ${(error as Error).message}`)
+			}
+		})
 
 		// If we have no API route hits then serve the ui at the root.
 		// We proxy through to the ui dev server during development with

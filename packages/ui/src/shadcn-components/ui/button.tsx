@@ -25,6 +25,7 @@ const buttonVariants = cva(
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
 				'md-squared': 'rounded-8 h-[36px] px-[10px] text-13 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
+				'input-short': 'rounded-full h-9 px-4 text-13 font-medium min-w-[80px]',
 				dialog:
 					'rounded-full h-[42px] md:h-[30px] min-w-[80px] px-4 font-semibold w-full md:w-auto md:font-medium text-13',
 				lg: 'rounded-full h-[40px] px-[15px] text-15',

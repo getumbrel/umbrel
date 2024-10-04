@@ -134,7 +134,7 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 				onCheckedChange={(c) => handleShowCredentialsBeforeOpenChange(!!c)}
 			/>
 			<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
-				{t('default-credentials..dont-show-again')}
+				{t('default-credentials.dont-show-again')}
 			</label>
 		</div>
 	)

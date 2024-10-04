@@ -40,6 +40,7 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 				a: (props) => (
 					<a
 						className='decoration-white/30 underline-offset-2 outline-none transition-opacity hover:opacity-80 focus:opacity-80'
+						target='_blank'
 						{...props}
 					/>
 				),

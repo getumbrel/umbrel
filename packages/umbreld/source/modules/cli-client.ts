@@ -1,5 +1,4 @@
 import process from 'node:process'
-import os from 'node:os'
 
 import {createTRPCProxyClient, httpLink} from '@trpc/client'
 import fse from 'fs-extra'
@@ -9,7 +8,7 @@ import * as jwt from './jwt.js'
 import type {AppRouter} from './server/trpc/index.js'
 
 // TODO: Maybe just read the endpoint from the data dir
-const dataDir = process.env.UMBREL_DATA_DIR ?? `${os.homedir()}/umbrel`
+const dataDir = process.env.UMBREL_DATA_DIR ?? '/home/umbrel/umbrel'
 const trpcEndpoint = process.env.UMBREL_TRPC_ENDPOINT ?? `http://localhost/trpc`
 
 async function signJwt() {

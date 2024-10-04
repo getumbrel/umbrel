@@ -1,15 +1,11 @@
 import {TbTerminal2} from 'react-icons/tb'
 
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useSoftwareUpdate} from '@/hooks/use-software-update'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -85,10 +81,12 @@ export default function AdvancedSettingsDrawerOrDialog() {
 function useIsBetaChannel() {
 	const releaseChannelQ = trpcReact.system.getReleaseChannel.useQuery()
 	const isChecked = releaseChannelQ.data === 'beta'
+	const {checkLatest} = useSoftwareUpdate()
 
 	const releaseChannelMut = trpcReact.system.setReleaseChannel.useMutation({
 		onSuccess: () => {
 			releaseChannelQ.refetch()
+			checkLatest()
 		},
 	})
 

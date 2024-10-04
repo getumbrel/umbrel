@@ -3,6 +3,7 @@ import tailwindTypography from '@tailwindcss/typography'
 import {mapValues} from 'remeda'
 import tailwindCssAnimate from 'tailwindcss-animate'
 import defaultTheme from 'tailwindcss/defaultTheme'
+import {PluginAPI} from 'tailwindcss/types/config'
 
 import {screens} from './src/utils/tw'
 
@@ -178,5 +179,16 @@ export default {
 			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography],
+	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography, utilPlugin],
+}
+
+function utilPlugin(plugin: PluginAPI) {
+	plugin.addUtilities({
+		'.absolute-center': {
+			position: 'absolute',
+			left: '50%',
+			top: '50%',
+			transform: 'translate(-50%, -50%)',
+		},
+	})
 }

@@ -15,6 +15,7 @@ import SheetStory from '@stories/routes/stories/sheet'
 import TailwindStory from '@stories/routes/stories/tailwind'
 import Trpc from '@stories/routes/stories/trpc'
 import WidgetsStory from '@stories/routes/stories/widgets'
+import WifiStory from '@stories/routes/stories/wifi'
 
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {AvailableAppsProvider} from '@/providers/available-apps'
@@ -95,6 +96,11 @@ export const storyLinks: StoryRoute[] = [
 				<MigrateStory />
 			</EnsureLoggedIn>
 		),
+	},
+	{
+		name: 'Wifi',
+		path: '/wifi',
+		Component: WifiStory,
 	},
 	{
 		name: 'Markdown',

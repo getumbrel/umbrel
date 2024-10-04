@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# The instance id is used to namespace the dev environment to allow for multiple instances to run
+# without conflicts. e.g:
+#   npm run dev start
+#   UMBREL_DEV_INSTANCE='apps' npm run dev start
+#
+# Will spin up two separate umbrel-dev instances accessible at:
+#   http://umbrel-dev.local
+#   http://umbrel-dev-apps.local
+INSTANCE_ID_PREFIX="umbrel-dev"
+INSTANCE_ID="${INSTANCE_ID_PREFIX}${UMBREL_DEV_INSTANCE:+-$UMBREL_DEV_INSTANCE}"
+
+show_help() {
+  cat << EOF
+umbrel-dev
+
+Automatically initialize and manage an umbrelOS development environment.
+
+Usage: npm run dev <command> [-- <args>]
+
+Commands:
+    help                      Show this help message
+    start                     Either start an existing dev environment or create and start a new one
+    logs                      Stream umbreld logs
+    shell                     Get a shell inside the running dev environment
+    exec -- <command>         Execute a command inside the running dev environment
+    client -- <rpc> [<args>]  Query the umbreld RPC server via a CLI client
+    rebuild                   Rebuild the operating system image from source and reboot the dev environment into it
+    restart                   Restart the dev environment
+    stop                      Stop the dev environment
+    reset                     Reset the dev environment to a fresh state
+    destroy                   Destroy the dev environment
+
+Environment Variables:
+    UMBREL_DEV_INSTANCE       The instance id of the dev environment. Allows running multiple instances of
+                              umbrel-dev in different namespaces.
+
+Note: umbrel-dev requires a Docker environment that exposes container IPs to the host. This is how Docker
+natively works on Linux and can be done with OrbStack on macOS. On Windows this should work with WSL 2.
+
+EOF
+}
+
+build_os_image() {
+  docker buildx build --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
+}
+
+create_instance() {
+  # --privileged is needed for systemd to work inside the container.
+  #
+  # We mount a named volume namespaced to the instance id at /data to immitate
+  # the data partition of a physical install.
+  #
+  # We mount the monorepo inside the container at /umbrel-dev as readonly. We
+  # setup a writeable fs overlay later to allow the container to install dependencies
+  # without modifying the hosts source code dir.
+  #
+  # --label "dev.orbstack.http-port=80" stops OrbStack from trying to guess which port
+  # we're trying to expose which causes some weirdness since it often gets it wrong.
+  #
+  # --label "dev.orbstack.domains=${INSTANCE_ID}.local" makes the instance accessble at
+  # umbrel-dev.local on OrbStack installs.
+  #
+  # /sbin/init kicks of systemd as the container entrypoint.
+  docker run \
+    --detach \
+    --interactive \
+    --tty \
+    --privileged \
+    --name "${INSTANCE_ID}" \
+    --hostname "${INSTANCE_ID}" \
+    --volume "${INSTANCE_ID}:/data" \
+    --volume "${PWD}:/umbrel-dev:ro" \
+    --label "dev.orbstack.http-port=80" \
+    --label "dev.orbstack.domains=${INSTANCE_ID}.local" \
+    "${INSTANCE_ID}" \
+    /sbin/init
+}
+
+start_instance() {
+  docker start "${INSTANCE_ID}"
+}
+
+exec_in_instance() {
+  docker exec --interactive --tty "${INSTANCE_ID}" "${@}"
+}
+
+stop_instance() {
+  # We first need to execute poweroff inside the instance so systemd gracefully stops services before we kill the container
+  exec_in_instance poweroff
+  docker stop "${INSTANCE_ID}"
+}
+
+remove_instance() {
+  docker rm --force "${INSTANCE_ID}"
+}
+
+remove_volume() {
+  docker volume rm "${INSTANCE_ID}"
+}
+
+get_instance_ip() {
+  docker inspect --format '{{ .NetworkSettings.IPAddress }}' "${INSTANCE_ID}"
+}
+
+# Get the command
+if [ -z ${1+x} ]; then
+  command=""
+else
+  command="$1"
+fi
+
+if [[ "${command}" = "start" ]] || [[ "${command}" = "" ]]
+then
+  echo "Starting umbrel-dev instance..."
+  if ! start_instance > /dev/null
+  then
+    echo "Instance not found, creating a new one..."
+    if ! docker image inspect "${INSTANCE_ID}" > /dev/null
+    then
+      build_os_image
+    fi
+    create_instance
+  fi
+  echo
+  echo "umbrel-dev instance is booting up..."
+
+  # Stream systemd logs until boot has completed
+  docker logs --tail 100 --follow "${INSTANCE_ID}" 2> /dev/null &
+  logs_pid=$!
+  exec_in_instance systemctl is-active --wait multi-user.target > /dev/null|| true
+  sleep 2
+  kill "${logs_pid}" || true
+  wait
+
+  # Stream umbreld logs until web server is up
+  docker exec "${INSTANCE_ID}" journalctl --unit umbrel --follow --lines 100 --output cat 2> /dev/null &
+  logs_pid=$!
+  docker exec "${INSTANCE_ID}" curl --silent --retry 300 --retry-delay 1 --retry-connrefused http://localhost > /dev/null 2>&1 || true
+  sleep 0.1
+  kill "${logs_pid}" || true
+  wait
+
+  # Done!
+  cat << 'EOF'
+
+
+            ,;###GGGGGGGGGGl#Sp
+         ,##GGGlW""^'  '`""%GGGG#S,
+       ,#GGG"                  "lGG#o
+      #GGl^                      '$GG#
+    ,#GGb                          \GGG,
+    lGG"                            "GGG
+   #GGGlGGGl##p,,p##lGGl##p,,p###ll##GGGG
+  !GGGlW"""*GGGGGGG#""""WlGGGGG#W""*WGGGGS
+   ""          "^          '"          ""
+
+EOF
+  echo "  Your umbrel-dev instance is ready at:"
+  echo
+  echo "    http://${INSTANCE_ID}.local"
+  echo "    http://$(get_instance_ip)"
+
+  exit
+fi
+
+if [[ "${command}" = "help" ]]
+then
+    show_help
+
+    exit
+fi
+
+if [[ "${command}" = "shell" ]]
+then
+    exec_in_instance bash
+
+    exit
+fi
+
+if [[ "${command}" = "exec" ]]
+then
+    shift
+    exec_in_instance "${@}"
+
+    exit
+fi
+
+if [[ "${command}" = "logs" ]]
+then
+    exec_in_instance journalctl --unit umbrel --follow --lines 100 --output cat
+
+    exit
+fi
+
+if [[ "${command}" = "client" ]]
+then
+    shift
+    exec_in_instance npm --prefix /umbrel-dev/packages/umbreld run start -- client ${@}
+
+    exit
+fi
+
+if [[ "${command}" = "rebuild" ]]
+then
+    echo "Rebuilding the operating system image from source..."
+    build_os_image
+    echo "Restarting the dev environment with the new image..."
+    stop_instance || true
+    remove_instance || true
+    create_instance
+
+    exit
+fi
+
+if [[ "${command}" = "destroy" ]]
+then
+    echo "Destroying the dev environment..."
+    remove_instance || true
+    remove_volume || true
+
+    exit
+fi
+
+if [[ "${command}" = "reset" ]]
+then
+    echo "Resetting the dev environment state..."
+    stop_instance || true
+    remove_instance || true
+    remove_volume || true
+    create_instance
+
+    exit
+fi
+
+if [[ "${command}" = "restart" ]]
+then
+    echo "Restarting the dev environment..."
+    stop_instance
+    start_instance
+
+    exit
+fi
+
+if [[ "${command}" = "stop" ]]
+then
+    echo "Stopping the dev environment..."
+    stop_instance
+
+    exit
+fi
+
+# This is a special command that runs directly inside the container to setup the environment
+# It is not intended to be run on the host machine!
+if [[ "${command}" = "container-init" ]]
+then
+    # Check if this is the first boot
+    first_boot=false
+    if [[ ! -d "/data/umbrel-dev-overlay" ]]
+    then
+        first_boot=true
+    fi
+
+    # Setup fs overlay so we can write to the source code dir without modifying it on the host
+    echo "Setting up fs overlay..."
+    mkdir -p /data/umbrel-dev-overlay/upperdir
+    mkdir -p /data/umbrel-dev-overlay/workdir
+    mount -t overlay overlay -o lowerdir=/umbrel-dev,upperdir=/data/umbrel-dev-overlay/upperdir,workdir=/data/umbrel-dev-overlay/workdir /umbrel-dev || true
+
+    # If this is the first boot we should nuke node_modules if they exist so we get fresh Linux deps instead
+    # of trying to reuse deps installed from the host. (causes issues with macos native deps)
+    if [[ "${first_boot}" = true ]]
+    then
+        echo "Nuking node_modules inherited from host..."
+        rm -rf /umbrel-dev/packages/ui/node_modules || true
+        rm -rf /umbrel-dev/packages/umbreld/node_modules || true
+    fi
+
+    # Install dependencies
+    echo "Installing dependencies..."
+    npm --prefix /umbrel-dev/packages/umbreld install
+    npm --prefix /umbrel-dev/packages/ui install
+
+    # Run umbreld and ui
+    echo "Starting umbreld and ui..."
+    npm --prefix /umbrel-dev/packages/umbreld run dev &
+    CHOKIDAR_USEPOLLING=true npm --prefix /umbrel-dev/packages/ui run dev &
+    wait
+
+    exit
+fi
+
+show_help
+exit

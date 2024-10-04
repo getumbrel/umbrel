@@ -42,7 +42,6 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const ctx = trpcReact.useContext()
 
 	const onSuccess = (didWork: boolean) => {
-		console.log('global-system-state: onSuccess')
 		// Cancel last query in case it returns as still running
 		ctx.system.status.cancel()
 		// alert('shouldLogoutOnRunning: true')
@@ -68,7 +67,6 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 
 	if (!IS_DEV) {
 		if (systemStatusQ.error && !triggered) {
-			console.log('global-system-state: systemStatusQ.error')
 			// This error should get caught by a parent error boundary component
 			// TODO: figure out what to do about network errors
 			throw systemStatusQ.error
@@ -88,11 +86,9 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}, [setShouldLogout, shouldLogoutOnRunning, status, triggered])
 
 	useEffect(() => {
-		console.log('global-system-state: useEffect')
 		if (status === 'running' && shouldLogoutOnRunning === true) {
 			// Rely on page reload to reset `triggered` state
 			// setTriggered(false)
-			console.log('global-system-state: go to login')
 			setShouldLogout(false)
 			// Delay the stuff after `setShouldLogout(false)` to ensure that local storage is updated. We wouldn't want to take the user through this again
 			setTimeout(() => {
