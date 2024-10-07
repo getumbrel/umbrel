@@ -1,0 +1,6 @@
+# On Windows, Git defaults to checkout Windows-style and commit Unix-style.
+# As such, line endings of bash scripts are converted from LF to CRLF, with
+# the effect that when mounting the checkout into a Linux container, the
+# bash scripts can't execute because bash does not handle CR. To mitigate,
+# conservatively force ALL line endings to be retained.
+* -text
