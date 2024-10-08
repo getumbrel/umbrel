@@ -39,9 +39,8 @@ export default class User {
 	// Set the users password
 	async setPassword(password: string) {
 		// Hash the password with the current recommended default
-		// of 10 bcrypt rounds
-		// https://security.stackexchange.com/a/83382
-		const saltRounds = 10
+		// As of 2023: https://wiki.php.net/rfc/bcrypt_cost_2023
+		const saltRounds = 12
 		const hashedPassword = await bcrypt.hash(password, saltRounds)
 
 		return this.setHashedPassword(hashedPassword)
