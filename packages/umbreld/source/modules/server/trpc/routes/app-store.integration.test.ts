@@ -16,27 +16,27 @@ afterAll(async () => {
 
 // The following tests are stateful and must be run in order
 
-test('registry() throws invalid error when no user is registered', async () => {
+test.sequential('registry() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.appStore.registry.query()).rejects.toThrow('Invalid token')
 })
 
-test('addRepository() throws invalid error when no user is registered', async () => {
+test.sequential('addRepository() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.appStore.addRepository.mutate({url: communityAppStoreGitServer.url})).rejects.toThrow(
 		'Invalid token',
 	)
 })
 
-test('removeRepository() throws invalid error when no user is registered', async () => {
+test.sequential('removeRepository() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.appStore.removeRepository.mutate({url: communityAppStoreGitServer.url})).rejects.toThrow(
 		'Invalid token',
 	)
 })
 
-test('login', async () => {
+test.sequential('login', async () => {
 	await expect(umbreld.registerAndLogin()).resolves.toBe(true)
 })
 
-test('registry() returns app registry', async () => {
+test.sequential('registry() returns app registry', async () => {
 	await expect(umbreld.client.appStore.registry.query()).resolves.toStrictEqual([
 		{
 			url: umbreld.instance.appStore.defaultAppStoreRepo,
@@ -69,7 +69,6 @@ test('registry() returns app registry', async () => {
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
-					installSize: 10_000,
 					defaultUsername: '',
 					defaultPassword: '',
 				},
@@ -78,11 +77,11 @@ test('registry() returns app registry', async () => {
 	])
 })
 
-test('addRepository() adds a second repository', async () => {
+test.sequential('addRepository() adds a second repository', async () => {
 	await expect(umbreld.client.appStore.addRepository.mutate({url: communityAppStoreGitServer.url})).resolves.toBe(true)
 })
 
-test('registry() returns both app repositories in registry', async () => {
+test.sequential('registry() returns both app repositories in registry', async () => {
 	await expect(umbreld.client.appStore.registry.query()).resolves.toStrictEqual([
 		{
 			url: umbreld.instance.appStore.defaultAppStoreRepo,
@@ -115,7 +114,6 @@ test('registry() returns both app repositories in registry', async () => {
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
-					installSize: 10_000,
 					defaultUsername: '',
 					defaultPassword: '',
 				},
@@ -152,7 +150,6 @@ test('registry() returns both app repositories in registry', async () => {
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
-					installSize: 10_000,
 					defaultUsername: '',
 					defaultPassword: '',
 				},
@@ -161,19 +158,19 @@ test('registry() returns both app repositories in registry', async () => {
 	])
 })
 
-test('addRepository() throws adding a repository that has already been added', async () => {
+test.sequential('addRepository() throws adding a repository that has already been added', async () => {
 	await expect(umbreld.client.appStore.addRepository.mutate({url: communityAppStoreGitServer.url})).rejects.toThrow(
 		'already exists',
 	)
 })
 
-test('removeRepository() removes a reposoitory', async () => {
+test.sequential('removeRepository() removes a reposoitory', async () => {
 	await expect(umbreld.client.appStore.removeRepository.mutate({url: communityAppStoreGitServer.url})).resolves.toBe(
 		true,
 	)
 })
 
-test('registry() no longer returns an app repository that has been removed', async () => {
+test.sequential('registry() no longer returns an app repository that has been removed', async () => {
 	await expect(umbreld.client.appStore.registry.query()).resolves.toStrictEqual([
 		{
 			url: umbreld.instance.appStore.defaultAppStoreRepo,
@@ -206,7 +203,6 @@ test('registry() no longer returns an app repository that has been removed', asy
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
-					installSize: 10_000,
 					defaultUsername: '',
 					defaultPassword: '',
 				},
@@ -215,13 +211,13 @@ test('registry() no longer returns an app repository that has been removed', asy
 	])
 })
 
-test('removeRepository() throws removing a reposoitory that does not exist', async () => {
+test.sequential('removeRepository() throws removing a reposoitory that does not exist', async () => {
 	await expect(umbreld.client.appStore.removeRepository.mutate({url: communityAppStoreGitServer.url})).rejects.toThrow(
 		'does not exist',
 	)
 })
 
-test('removeRepository() throws removing the default reposoitory', async () => {
+test.sequential('removeRepository() throws removing the default reposoitory', async () => {
 	await expect(
 		umbreld.client.appStore.removeRepository.mutate({url: umbreld.instance.appStore.defaultAppStoreRepo}),
 	).rejects.toThrow('Cannot remove default repository')

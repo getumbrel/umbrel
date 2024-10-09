@@ -11,6 +11,7 @@ import {$} from 'execa'
 import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {type AppRepositoryMeta, type AppManifest} from './schema.js'
+import {UMBREL_APP_STORE_REPO} from '../../index.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
@@ -138,7 +139,7 @@ export default class AppRepository {
 		// Handle official repo which does not have meta
 		// TODO: Instead of this hack we can probably just add this to the official repo
 		// before we ship this code.
-		if (this.url === this.#umbreld.appStore.defaultAppStoreRepo) {
+		if (this.url === UMBREL_APP_STORE_REPO) {
 			meta = {
 				id: 'umbrel-app-store',
 				name: 'Umbrel App Store',

@@ -8,24 +8,13 @@ import runGitServer from '../test-utilities/run-git-server.js'
 import temporaryDirectory from '../utilities/temporary-directory.js'
 
 import AppRepository from './app-repository.js'
+import Umbreld from '../../index.js'
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 
 const directory = temporaryDirectory()
 
 let gitServer: Awaited<ReturnType<typeof runGitServer>>
-
-const mockUmbreld = {
-	logger: {
-		createChildLogger() {
-			return {
-				log() {},
-				verbose() {},
-				error() {},
-			}
-		},
-	},
-}
 
 beforeAll(async () => {
 	await directory.createRoot()
@@ -43,47 +32,52 @@ describe('AppRepository', async () => {
 	})
 
 	test('return an instance on valid URL', async () => {
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
 		const url = 'http://github.com/getumbrel/umbrel-apps.git'
-		const appRepo = new AppRepository(mockUmbreld as any, url)
+		const appRepo = new AppRepository(umbreld, url)
 		expect(appRepo.url).toBe(url)
 	})
 
 	test('throws error on invalid URL', async () => {
-		expect(() => new AppRepository(mockUmbreld as any, 'invalid-url')).toThrow('Invalid URL')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		expect(() => new AppRepository(umbreld, 'invalid-url')).toThrow('Invalid URL')
 	})
 })
 
 describe('appRepository.cleanUrl()', () => {
 	test('cleans HTTP URLs', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, 'http://github.com/getumbrel/umbrel-apps.git')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'http://github.com/getumbrel/umbrel-apps.git')
 		expect(appRepo.cleanUrl()).toBe('getumbrel-umbrel-apps-github-98f08343')
 	})
 
 	test('cleans HTTPS URLs', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, 'https://github.com/getumbrel/umbrel-apps.git')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'https://github.com/getumbrel/umbrel-apps.git')
 		expect(appRepo.cleanUrl()).toBe('getumbrel-umbrel-apps-github-53f74447')
 	})
 
 	test('cleans token URLs', async () => {
-		const appRepo = new AppRepository(
-			mockUmbreld as any,
-			'https://somerandomtoken@github.com/getumbrel/umbrel-apps.git',
-		)
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'https://somerandomtoken@github.com/getumbrel/umbrel-apps.git')
 		expect(appRepo.cleanUrl()).toBe('getumbrel-umbrel-apps-github-5db4a3e5')
 	})
 
 	test('cleans GitLab URL', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, 'https://gitlab.com/getumbrel/umbrel-apps.git')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'https://gitlab.com/getumbrel/umbrel-apps.git')
 		expect(appRepo.cleanUrl()).toBe('getumbrel-umbrel-apps-gitlab-8895504e')
 	})
 
 	test('cleans non user/repo urls', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, 'https://example.com')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'https://example.com')
 		expect(appRepo.cleanUrl()).toBe('example-100680ad')
 	})
 
 	test('removes dangerous characters', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, `https://example.com/-+_)(*&^%$!~\`,<>?;:'"[{]}\\|=/`)
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, `https://example.com/-+_)(*&^%$!~\`,<>?;:'"[{]}\\|=/`)
 		expect(appRepo.cleanUrl()).toBe('example-fcd4912b')
 	})
 })
@@ -91,7 +85,8 @@ describe('appRepository.cleanUrl()', () => {
 describe('appRepository.update()', () => {
 	test("does initial install from URL if there's no local repo", async () => {
 		const dataDirectory = await directory.create()
-		const appRepository = new AppRepository({...mockUmbreld, dataDirectory} as any, gitServer.url)
+		const umbreld = new Umbreld({dataDirectory})
+		const appRepository = new AppRepository(umbreld, gitServer.url)
 		expect(await fse.exists(`${appRepository.path}/.git`)).toBe(false)
 		expect(await fse.exists(`${appRepository.path}/umbrel-app-store.yml`)).toBe(false)
 		await appRepository.update()
@@ -101,7 +96,8 @@ describe('appRepository.update()', () => {
 
 	test('updates when the remote repo has changed', async () => {
 		const dataDirectory = await directory.create()
-		const appRepository = new AppRepository({...mockUmbreld, dataDirectory} as any, gitServer.url)
+		const umbreld = new Umbreld({dataDirectory})
+		const appRepository = new AppRepository(umbreld, gitServer.url)
 
 		// Initial install
 		await appRepository.update()
@@ -127,7 +123,8 @@ describe('appRepository.update()', () => {
 
 	test('does not update when both repos are the same', async () => {
 		const dataDirectory = await directory.create()
-		const appRepository = new AppRepository({...mockUmbreld, dataDirectory} as any, gitServer.url)
+		const umbreld = new Umbreld({dataDirectory})
+		const appRepository = new AppRepository(umbreld, gitServer.url)
 
 		// Initial install
 		await appRepository.update()
@@ -148,10 +145,12 @@ describe('appRepository.update()', () => {
 
 describe('appRepository.readRegistry()', () => {
 	test('reads community registry', async () => {
-		const appRepo = new AppRepository(mockUmbreld as any, 'http://github.com/getumbrel/umbrel-apps.git')
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		const appRepo = new AppRepository(umbreld, 'http://github.com/getumbrel/umbrel-apps.git')
 
 		// Forcefully set app repo path to the community repo fixture
 		appRepo.path = `${currentDirectory}/../test-utilities/fixtures/community-repo`
+		umbreld.appStore.defaultAppStoreRepo = appRepo.path
 
 		// Read registry
 		const registry = await appRepo.readRegistry()
@@ -186,7 +185,6 @@ describe('appRepository.readRegistry()', () => {
 					releaseNotes: "Add what's new in the latest version of your app here.",
 					dependencies: [],
 					path: '',
-					installSize: 10_000,
 					defaultUsername: '',
 					defaultPassword: '',
 				},

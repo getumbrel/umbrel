@@ -2,9 +2,10 @@ import {describe, expect, test} from 'vitest'
 import systeminformation from 'systeminformation'
 
 import system from './system.js'
+import Umbreld from '../../../../index.js'
 
 const context = {
-	umbreld: {dataDirectory: '/tmp'},
+	umbreld: new Umbreld({dataDirectory: '/tmp'}),
 	logger: {error() {}},
 }
 

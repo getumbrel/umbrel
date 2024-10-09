@@ -15,12 +15,12 @@ jobs:
           - format:check
           # - lint
           - typecheck
-          # - test:unit -- --coverage
-          # - test:integration -- --coverage
+          - test:unit -- --coverage --watch=false
+          - test:integration -- --coverage --watch=false
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm clean-install
-      - run: npm run ${{ matrix.task }}
+      - run: sudo npm clean-install
+      - run: sudo npm run ${{ matrix.task }}

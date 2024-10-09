@@ -51,7 +51,7 @@ describe('store.get()', () => {
 	})
 
 	test("throws if it can't read the store file", async () => {
-		const store = new FileStore({filePath: `/this/file/doesnt/exist/store-throws.json`})
+		const store = new FileStore({filePath: `/`})
 		expect(store.get()).rejects.toThrow('Unable to create initial file')
 	})
 })

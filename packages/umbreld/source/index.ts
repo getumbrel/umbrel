@@ -48,6 +48,8 @@ export type UmbreldOptions = {
 	defaultAppStoreRepo?: string
 }
 
+export const UMBREL_APP_STORE_REPO = 'https://github.com/getumbrel/umbrel-apps.git'
+
 export default class Umbreld {
 	version: string = packageJson.version
 	versionName: string = packageJson.versionName
@@ -67,7 +69,7 @@ export default class Umbreld {
 		dataDirectory,
 		port = 80,
 		logLevel = 'normal',
-		defaultAppStoreRepo = 'https://github.com/getumbrel/umbrel-apps.git',
+		defaultAppStoreRepo = UMBREL_APP_STORE_REPO,
 	}: UmbreldOptions) {
 		this.developmentMode = process?.env?.NODE_ENV === 'development'
 		this.dataDirectory = path.resolve(dataDirectory)

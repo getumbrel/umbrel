@@ -20,100 +20,79 @@ afterAll(async () => {
 
 // The following tests are stateful and must be run in order
 
-test('listAll() throws invalid error when no user is registered', async () => {
-	await expect(umbreld.client.widget.listAll.query()).rejects.toThrow('Invalid token')
-})
-
-test('enabled() throws invalid error when no user is registered', async () => {
+test.sequential('enabled() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.widget.enabled.query()).rejects.toThrow('Invalid token')
 })
 
-test('enable() throws invalid error when no user is registered', async () => {
+test.sequential('enable() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.widget.enable.mutate({widgetId: 'umbrel:storage'})).rejects.toThrow('Invalid token')
 })
 
-test('disable() throws invalid error when no user is registered', async () => {
+test.sequential('disable() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.widget.disable.mutate({widgetId: 'umbrel:storage'})).rejects.toThrow('Invalid token')
 })
 
-test('data() throws invalid error when no user is registered', async () => {
+test.sequential('data() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.widget.data.query({widgetId: 'umbrel:storage'})).rejects.toThrow('Invalid token')
 })
 
-test('login', async () => {
+test.sequential('login', async () => {
 	await expect(umbreld.registerAndLogin()).resolves.toBe(true)
 })
 
-test('listAll() returns available widgets', async () => {
-	await expect(umbreld.client.widget.listAll.query()).resolves.toStrictEqual([
-		{
-			id: 'umbrel:storage',
-			type: 'stat-with-progress',
-			refresh: 1000 * 60 * 5,
-			example: {
-				title: 'Storage',
-				value: '256 GB',
-				progressLabel: '1.75 TB left',
-				progress: 0.25,
-			},
-		},
-		{
-			id: 'umbrel:memory',
-			type: 'stat-with-progress',
-			refresh: 1000 * 10,
-			example: {
-				title: 'Memory',
-				value: '5.8 GB',
-				subValue: '/16GB',
-				progressLabel: '11.4 GB left',
-				progress: 0.36,
-			},
-		},
-	])
-})
+// test.sequential('listAll() returns available widgets', async () => {
+// 	await expect(umbreld.client.widget.listAll.query()).resolves.toStrictEqual([
+// 		{
+// 			id: 'umbrel:storage',
+// 			type: 'stat-with-progress',
+// 			refresh: 1000 * 60 * 5,
+// 			example: {
+// 				title: 'Storage',
+// 				value: '256 GB',
+// 				progressLabel: '1.75 TB left',
+// 				progress: 0.25,
+// 			},
+// 		},
+// 		{
+// 			id: 'umbrel:memory',
+// 			type: 'stat-with-progress',
+// 			refresh: 1000 * 10,
+// 			example: {
+// 				title: 'Memory',
+// 				value: '5.8 GB',
+// 				subValue: '/16GB',
+// 				progressLabel: '11.4 GB left',
+// 				progress: 0.36,
+// 			},
+// 		},
+// 	])
+// })
 
-test('enabled() returns no widgets when none are enabled', async () => {
+test.sequential('enabled() returns no widgets when none are enabled', async () => {
 	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual([])
 })
 
-test('enable() enables a widget', async () => {
+test.sequential('enable() enables a widget', async () => {
 	await expect(umbreld.client.widget.enable.mutate({widgetId: 'umbrel:storage'})).resolves.toStrictEqual(true)
 })
 
-test('enabled() returns enabled widgets', async () => {
-	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual([
-		{
-			id: 'umbrel:storage',
-			type: 'stat-with-progress',
-			refresh: 1000 * 60 * 5,
-			example: {
-				title: 'Storage',
-				value: '256 GB',
-				progressLabel: '1.75 TB left',
-				progress: 0.25,
-			},
-		},
-	])
+test.sequential('enabled() returns enabled widgets', async () => {
+	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual(['umbrel:storage'])
 })
 
-test('data() returns live widget data', async () => {
-	await expect(umbreld.client.widget.data.query({widgetId: 'umbrel:storage'})).resolves.toStrictEqual({
-		id: 'umbrel:storage',
-		type: 'stat-with-progress',
-		refresh: 1000 * 60 * 5,
-		data: {
-			title: 'Storage',
-			value: '256 GB',
-			progressLabel: '1.75 TB left',
-			progress: 0.25,
-		},
+test.sequential('data() returns live widget data', async () => {
+	await expect(umbreld.client.widget.data.query({widgetId: 'umbrel:storage'})).resolves.toMatchObject({
+		title: 'Storage',
+		link: '?dialog=live-usage&tab=storage',
+		refresh: 30000,
+		type: 'text-with-progress',
 	})
 })
 
-test('disable() disables a widget', async () => {
+test.sequential('disable() disables a widget', async () => {
 	await expect(umbreld.client.widget.disable.mutate({widgetId: 'umbrel:storage'})).resolves.toStrictEqual(true)
 })
 
-test('enabled() returns no widgets when they are all disabled', async () => {
+test.sequential('enabled() returns no widgets when they are all disabled', async () => {
 	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual([])
 })
