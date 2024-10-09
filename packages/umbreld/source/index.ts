@@ -163,6 +163,9 @@ export default class Umbreld {
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
 
+		// Synchronize the system password after OTA update
+		this.user.syncSystemPassword()
+
 		// Restore WiFi connection after OTA update
 		this.restoreWiFi()
 
