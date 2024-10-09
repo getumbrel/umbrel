@@ -89,7 +89,7 @@ export default async function provision() {
 	await fse.remove('/tmp/install-docker.sh')
 	await $({
 		stdio: 'inherit',
-	})`apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns procps whois`
+	})`apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns procps whois bluez`
 	await downloadAndInstallYq()
 	await installService()
 }
