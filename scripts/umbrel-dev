@@ -302,7 +302,8 @@ then
     # Install dependencies
     echo "Installing dependencies..."
     npm --prefix /umbrel-dev/packages/umbreld install
-    npm --prefix /umbrel-dev/packages/ui install
+    npm install -g pnpm@8
+    pnpm --dir /umbrel-dev/packages/ui install
 
     # Run umbreld and ui
     echo "Starting umbreld and ui..."
