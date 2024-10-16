@@ -90,7 +90,7 @@ RUN systemctl enable acpid
 RUN apt-get install --yes network-manager systemd-timesyncd openssh-server
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode usbutils avahi-utils
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates dmidecode usbutils avahi-utils python3-yaml
 
 # Add Umbrel user
 RUN adduser --gecos "" --disabled-password umbrel
@@ -101,7 +101,7 @@ RUN usermod -aG sudo umbrel
 # and need to re-run that step every time we change umbreld we just manually install all those packages here.
 # It makes OS rebuilds way quicker. We should remove this at some point in the future to ensure that umbreld
 # is the single source of truth for OS provisioning.
-RUN apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base python3 gnupg avahi-daemon avahi-discover libnss-mdns
+RUN apt-get install --yes network-manager python3 fswatch jq rsync curl git gettext-base gnupg avahi-daemon avahi-discover libnss-mdns
 
 # Preload images
 RUN sudo apt-get install --yes skopeo
