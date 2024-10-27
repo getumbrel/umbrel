@@ -11,6 +11,7 @@ set -euo pipefail
 #   http://umbrel-dev-apps.local
 INSTANCE_ID_PREFIX="umbrel-dev"
 INSTANCE_ID="${INSTANCE_ID_PREFIX}${UMBREL_DEV_INSTANCE:+-$UMBREL_DEV_INSTANCE}"
+INSTANCE_OPTIONS="${UMBREL_DEV_OPTIONS:-}"
 
 show_help() {
   cat << EOF
@@ -28,6 +29,7 @@ Commands:
     exec -- <command>         Execute a command inside the running dev environment
     client -- <rpc> [<args>]  Query the umbreld RPC server via a CLI client
     rebuild                   Rebuild the operating system image from source and reboot the dev environment into it
+    recreate                  Recreate the dev environment using the existing operating system image
     restart                   Restart the dev environment
     stop                      Stop the dev environment
     reset                     Reset the dev environment to a fresh state
@@ -36,6 +38,7 @@ Commands:
 Environment Variables:
     UMBREL_DEV_INSTANCE       The instance id of the dev environment. Allows running multiple instances of
                               umbrel-dev in different namespaces.
+    UMBREL_DEV_OPTIONS        Optional custom parameters passed to 'docker run' when creating the dev environment.
 
 Note: umbrel-dev requires a Docker environment that exposes container IPs to the host. This is how Docker
 natively works on Linux and can be done with OrbStack on macOS. On Windows this should work with WSL 2.
@@ -48,6 +51,13 @@ build_os_image() {
 }
 
 create_instance() {
+  # --network host is used when running Docker within WSL, effectively undoing one
+  # level of encapsulation, with umbrelOS accessible at `wsl.exe hostname -i`.
+  if grep --quiet "WSL" /proc/sys/kernel/osrelease 2> /dev/null
+  then
+    INSTANCE_OPTIONS="${INSTANCE_OPTIONS:-"--network host"}"
+  fi
+
   # --privileged is needed for systemd to work inside the container.
   #
   # We mount a named volume namespaced to the instance id at /data to immitate
@@ -75,6 +85,7 @@ create_instance() {
     --volume "${PWD}:/umbrel-dev:ro" \
     --label "dev.orbstack.http-port=80" \
     --label "dev.orbstack.domains=${INSTANCE_ID}.local" \
+    ${INSTANCE_OPTIONS} \
     "${INSTANCE_ID}" \
     /sbin/init
 }
@@ -102,7 +113,12 @@ remove_volume() {
 }
 
 get_instance_ip() {
-  docker inspect --format '{{ .NetworkSettings.IPAddress }}' "${INSTANCE_ID}"
+  if [[ "$(docker inspect --format '{{ .HostConfig.NetworkMode }}' "${INSTANCE_ID}")" = "host" ]]
+  then
+    hostname -I | awk '{print $1}'
+  else
+    docker inspect --format '{{ .NetworkSettings.IPAddress }}' "${INSTANCE_ID}"
+  fi
 }
 
 # Get the command
@@ -215,6 +231,16 @@ then
     exit
 fi
 
+if [[ "${command}" = "recreate" ]]
+then
+    echo "Recreating the dev environment with the existing image..."
+    stop_instance || true
+    remove_instance || true
+    create_instance
+
+    exit
+fi
+
 if [[ "${command}" = "destroy" ]]
 then
     echo "Destroying the dev environment..."
@@ -281,7 +307,8 @@ then
     # Install dependencies
     echo "Installing dependencies..."
     npm --prefix /umbrel-dev/packages/umbreld install
-    npm --prefix /umbrel-dev/packages/ui install
+    npm install -g pnpm@8
+    pnpm --dir /umbrel-dev/packages/ui install
 
     # Run umbreld and ui
     echo "Starting umbreld and ui..."
