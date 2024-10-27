@@ -23,11 +23,15 @@ function bootstrap() {
         dev="true"
     fi
 
-    if [ -z "${SKIP_ARM64:-}" ]; then 
+    # Enable QEMU/binfmt-based multi-platform support for building arm64 on
+    # amd64 or vice versa, e.g. to build for Pi 5 on an x86 system.
+    docker run --privileged --rm tonistiigi/binfmt --install all
+
+    if [ -z "${SKIP_ARM64:-}" ]; then
         build_root_fs arm64 "${release}"
         build_rugpi_images
     fi
-    if [ -z "${SKIP_AMD64:-}" ]; then 
+    if [ -z "${SKIP_AMD64:-}" ]; then
         build_root_fs amd64 "${release}"
     fi
 
@@ -87,36 +91,32 @@ function build_rugpi_images() {
     mkdir -p rugpi/build
     # Copy the root filesystem previously build with Docker.
     cp build/umbrelos-arm64.tar rugpi/build/umbrelos-base.tar
-    
-    # Enable `binfmt`-based emulation for `arm64`.
-    docker run --privileged --rm tonistiigi/binfmt --install all
-
     # Copy `/etc/hostname` and `/etc/hosts` such that Rugpi can fix them.
     cp overlay-common/etc/{hostname,hosts} rugpi/recipes/fix-overlay/files
 
     pushd rugpi
     # Clean Rugpi cache to get a clean build.
-    rm -rf .rugpi
+    rm -rf .rugpi || true
     # Bake both images.
     if [ -z "${SKIP_PI4:-}" ]; then 
         ./run-bakery bake image pi4 build/umbrelos-pi4.img
         # Move image to global build directory.
-        mv build/umbrelos-pi4.img ../build/umbrelos-pi4.img
+        mv -f build/umbrelos-pi4.img ../build/umbrelos-pi4.img
     fi
     if [ -z "${SKIP_PI5:-}" ]; then 
         ./run-bakery bake image tryboot build/umbrelos-tryboot.img
         # Move image to global build directory.
-        mv build/umbrelos-tryboot.img ../build/umbrelos-pi5.img
+        mv -f build/umbrelos-tryboot.img ../build/umbrelos-pi5.img
     fi
     popd
 }
 
 # This will run inside a container when the --bootstrapped flag is passed
 function bootstrapped() {
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_MENDER:-}" ]; then 
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_MENDER:-}" ]; then
         build_raspberrypi_mender_artifact
     fi
-    if [ -z "${SKIP_AMD64:-}" ]; then 
+    if [ -z "${SKIP_AMD64:-}" ]; then
         build_x86_artifacts
     fi
 }
