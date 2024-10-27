@@ -37,9 +37,9 @@ const Dependency = ({app, installed = false}: {app: RegistryApp; installed: bool
 		{installed ? (
 			<TbCircleCheckFilled className='h-[18px] w-[18px] text-success-light' />
 		) : (
-			<Link to={`/app-store/${app.id}`} className='text-15 font-medium text-brand-lighter'>
+			<span className='text-15 font-medium text-brand-lighter'>
 				{t('app.view')}
-			</Link>
+			</span>
 		)}
 	</Link>
 )
