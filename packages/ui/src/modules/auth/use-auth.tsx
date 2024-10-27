@@ -51,8 +51,15 @@ export function useAuth() {
 		},
 		loginWithJwt(jwt: string) {
 			setJwt(jwt)
-			// Hard navigate to `/` to force all parent layouts to re-render
-			window.location.href = redirect.getRedirectPath()
+
+			// Ensure we only treat the redirect path as a relative URL
+			const safeUrl = new URL(window.location.href)
+			safeUrl.hash = ''
+			safeUrl.search = ''
+			safeUrl.pathname = redirect.getRedirectPath()
+
+			// Hard navigate to force all parent layouts to re-render
+			window.location.href = safeUrl.toString()
 		},
 		signUpWithJwt(jwt: string) {
 			setJwt(jwt)
