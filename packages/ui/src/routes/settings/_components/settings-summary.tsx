@@ -1,3 +1,4 @@
+import {Fragment} from 'react'
 import {Link} from 'react-router-dom'
 
 import {LOADING_DASH, UNKNOWN} from '@/constants'
@@ -30,12 +31,12 @@ export function SettingsSummary() {
 			<dd>
 				{ipAddresses.data?.length
 					? ipAddresses.data.map((ip: string, index: number) => (
-							<>
+							<Fragment key={ip}>
 								<Link to={`http://${ip}`} target='_blank'>
 									{ip}
 								</Link>
 								{index < ipAddresses.data.length - 1 && ', '}
-							</>
+							</Fragment>
 					  ))
 					: LOADING_DASH}
 			</dd>
