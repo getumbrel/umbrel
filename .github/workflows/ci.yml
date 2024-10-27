@@ -4,7 +4,11 @@ on: push
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # TODO: Rollout of 24.04 as ubuntu-latest has been put on hold, but we want
+    # 24.04 because integration tests depend on it, e.g. for `pss` support. Pin
+    # what we need for now, but switch back once ubuntu-latest has been updated.
+    # https://github.com/actions/runner-images/issues/10636
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: packages/umbreld
