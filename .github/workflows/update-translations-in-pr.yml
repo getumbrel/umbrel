@@ -26,12 +26,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Use bun
-      uses: oven-sh/setup-bun@f4d14e03ff726c06358e5557344e1da148b56cf7 # v1.2.2
-    
+    - name: Setup node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
     - name: Install dependencies
-      run:
-        bun install
+      run: |
+        npm ci
       working-directory: packages/ui
 
     - name: Update translations
@@ -41,8 +43,7 @@ jobs:
         TRANSLATIONS_SYSTEM_PROMPT: ${{ secrets.TRANSLATIONS_SYSTEM_PROMPT }}
         TRANSLATIONS_USER_PROMPT: ${{ secrets.TRANSLATIONS_USER_PROMPT }}
       run: |
-        bun update-translations.js
-        rm -f bun.lockb
+        node update-translations.js
       working-directory: packages/ui
     
     - name: Push changes
