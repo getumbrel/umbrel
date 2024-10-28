@@ -1,58 +1,65 @@
 import {useEffect} from 'react'
-import {useLocation, useNavigation} from 'react-router-dom'
+import {NavigationType, useLocation, useNavigation, useNavigationType} from 'react-router-dom'
 import {usePrevious} from 'react-use'
 
-// TODO: Probably use this after it's merged:
-// https://github.com/remix-run/react-router/pull/10468
+/** Whether to restore, reset to zero or ignore scroll position. */
+export type ScrollRestorationAction = 'restore' | 'reset' | 'ignore'
+
+/**
+ * Handler function testing if scroll position should be restored, reset to zero
+ * or ignored.
+ */
+export type ScrollRestorationHandler = (thisPathname: string, prevPathname: string, navigationType: NavigationType) => ScrollRestorationAction
 
 /**
  * Given a ref to a scrolling container element, keep track of its scroll
  * position before navigation and restore it on return (e.g., back/forward nav).
- * Note that `location.pathname` is used in the cache key, not `location.key`. This means that query strings do not affect scroll restoration. This is mainly to avoid scrolling for the `dialog` query param.
+ * Behavior is determined by the provided {@link ScrollRestorationHandler}.
  */
-export function useScrollRestoration(container: React.RefObject<HTMLElement>) {
+export function useScrollRestoration(container: React.RefObject<HTMLElement>, handler: ScrollRestorationHandler) {
 	const location = useLocation()
-	const prevPathname = usePrevious(location.pathname)
-	// Checking against settings for now because settings pages doesn't have subpages and app store does.
-	// Settings page only has dialogs for now, but because they add to the history, each page transition automatically causes
-	// a scroll to top. This is a workaround for that.
-	// Always scroll to top for settings page itself, but don't do that for sub-pages
-	const keyPart = location.pathname.startsWith('/settings') ? '/settings' : location.key
-	const key = `scroll-position-${keyPart}`
+	const thisPathname = location.pathname
+	const prevPathname = usePrevious(thisPathname)
+	// `location.pathname` is used in the cache key, not `location.key`. This
+	// means that query strings do not affect scroll restoration. This is mainly
+	// to avoid scrolling for the `dialog` query param.
+	const cacheKey = `scroll-position-${thisPathname}`
 	const {state} = useNavigation()
+	const navigationType = useNavigationType()
 
 	useEffect(() => {
-		const el = container.current
-		const handleScrollEnd = () => {
-			const y = Math.round(el?.scrollTop ?? 0)
-			// console.log('scroll end', key, y ?? 0)
-			setScrollPosition(key, y ?? 0)
-		}
-		// handleScrollEnd()
-
-		// Add scrollend listener when supported in Safari
-		// https://caniuse.com/?search=scrollend
-		// el?.addEventListener('scrollend', handleScrollEnd)
-		el?.addEventListener('scroll', handleScrollEnd)
-		return () => {
-			// el?.removeEventListener('scrollend', handleScrollEnd)
-			el?.addEventListener('scroll', handleScrollEnd)
-		}
-	}, [container, key])
-
-	useEffect(() => {
+		const scrollElement = container.current
 		if (state === 'idle') {
-			// Always reset scroll to top if going to settings page from non-settings page
-			if (location.pathname.startsWith('/settings') && !prevPathname?.startsWith('/settings')) {
-				// Reset scroll position
-				setScrollPosition(key, 0)
-				container.current?.scrollTo(0, 0)
-			} else {
-				// console.log('scrolling to', key, getScrollPosition(key))
-				container.current?.scrollTo(0, getScrollPosition(key))
+			if (!prevPathname) {
+				// Clear cache when first entering a scroll restoration context
+				clearScrollPositions()
+			} else if (thisPathname !== prevPathname) {
+				// Restore or reset cached scroll position where applicable
+				const action = handler(thisPathname, prevPathname, navigationType)
+				if (action === 'restore') {
+					const y = getScrollPosition(cacheKey)
+					scrollElement?.scrollTo(0, y)
+					setScrollPosition(cacheKey, y)
+				} else if (action === 'reset') {
+					scrollElement?.scrollTo(0, 0)
+					setScrollPosition(cacheKey, 0)
+				} else {
+					// ignore
+				}
 			}
 		}
-	}, [key, state, container, location.pathname, prevPathname])
+
+		// Cache last known scroll position. TODO: Use 'scrollend' listener when
+		// supported in Safari: https://caniuse.com/?search=scrollend
+		const handleScrollEnd = () => {
+			const y = Math.round(scrollElement?.scrollTop ?? 0)
+			setScrollPosition(cacheKey, y ?? 0)
+		}
+		scrollElement?.addEventListener('scroll'/*end*/, handleScrollEnd)
+		return () => {
+			scrollElement?.removeEventListener('scroll'/*end*/, handleScrollEnd)
+		}
+	}, [cacheKey, state, container, thisPathname, prevPathname, navigationType])
 }
 
 function getScrollPosition(key: string) {
@@ -61,5 +68,21 @@ function getScrollPosition(key: string) {
 }
 
 function setScrollPosition(key: string, pos: number) {
-	window.sessionStorage.setItem(key, pos.toString())
+	if (pos) {
+		window.sessionStorage.setItem(key, pos.toString())
+	} else {
+		window.sessionStorage.removeItem(key)
+	}
+}
+
+function clearScrollPositions() {
+	let index = 0
+	while (index < window.sessionStorage.length) {
+		const key = window.sessionStorage.key(index)
+		if (key?.startsWith('scroll-position-')) {
+			window.sessionStorage.removeItem(key)
+		} else {
+			index++
+		}
+	}
 }

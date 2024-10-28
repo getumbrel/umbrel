@@ -1,5 +1,5 @@
 import {Suspense, useRef, useState} from 'react'
-import {Outlet, useNavigate} from 'react-router-dom'
+import {NavigationType, Outlet, useNavigate} from 'react-router-dom'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
@@ -10,6 +10,30 @@ import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
 import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
+// Determine if scroll position should be restored (`true`), reset (`false`) or
+// ignored (`undefined`). SheetLayout is shared accross settings, app store and
+// so on, so we are handling multiple paths here, with the option to precisely
+// handle scroll restoration between any two paths using SheetLayout.
+const scrollRestorationHandler = (thisPathname: string, prevPathname: string, navigationType: NavigationType) => {
+	// Ignore scroll restoration in settings (only has dialogs)
+	const isSettings = /^\/settings(\/|$)/.test(thisPathname)
+	if (isSettings) {
+		return 'ignore'
+	}
+	// Reset scroll position to zero unless going back in history
+	if (navigationType !== "POP") {
+		return 'reset'
+	}
+	// In app store, restore position when navigating back from an app
+	const isAppStore = /^\/app-store(\/|$)/.test(thisPathname)
+	if (isAppStore) {
+		const cameFromApp = /^\/app-store\/[^/]+$/.test(prevPathname)
+		return cameFromApp ? 'restore' : 'reset'
+	}
+	// Otherwise reset scroll position to zero
+	return 'reset'
+}
+
 export function SheetLayout() {
 	const navigate = useNavigate()
 
@@ -17,7 +41,7 @@ export function SheetLayout() {
 
 	const scrollRef = useRef<HTMLDivElement>(null)
 
-	useScrollRestoration(scrollRef)
+	useScrollRestoration(scrollRef, scrollRestorationHandler)
 
 	useAfterDelayedClose(open, () => navigate('/'))
 
