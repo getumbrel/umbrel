@@ -18,7 +18,7 @@ import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
-import {useCpuTemp} from '@/hooks/use-cpu-temp'
+import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
@@ -31,7 +31,7 @@ import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
-import {CpuTempCardContent} from './cpu-temp-card-content'
+import {CpuTemperatureCardContent} from './cpu-temperature-card-content'
 import {ListRowMobile} from './list-row'
 import {MemoryCardContent} from './memory-card-content'
 import {ContactSupportLink} from './shared'
@@ -41,7 +41,7 @@ export function SettingsContentMobile() {
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()
-	const cpuTemp = useCpuTemp()
+	const cpuTemperature = useCpuTemperature()
 	const deviceInfo = useDeviceInfo()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
 	const tor = useTorEnabled()
@@ -124,7 +124,7 @@ export function SettingsContentMobile() {
 				</Link>
 
 				<Card>
-					<CpuTempCardContent warning={cpuTemp.warning} tempInCelcius={cpuTemp.temp} />
+					<CpuTemperatureCardContent warning={cpuTemperature.warning} temperatureInCelcius={cpuTemperature.temperature} />
 				</Card>
 			</div>
 

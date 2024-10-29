@@ -5,6 +5,7 @@ import {initTokenRenewal} from '@/modules/auth/shared'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
 import {RemoteWallpaperInjector, WallpaperProviderConnected} from './providers/wallpaper'
+import {RemoteLanguageInjector} from './providers/language'
 import {router} from './router'
 import {TrpcProvider} from './trpc/trpc-provider'
 
@@ -12,6 +13,7 @@ initTokenRenewal()
 
 init(
 	<TrpcProvider>
+		<RemoteLanguageInjector />
 		{/* Wallpaper inside trpc because it requires backend call */}
 		<WallpaperProviderConnected>
 			<RemoteWallpaperInjector />

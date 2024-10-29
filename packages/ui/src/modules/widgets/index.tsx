@@ -4,7 +4,7 @@ import {map} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
 import {useLaunchApp} from '@/hooks/use-launch-app'
-import {tempDescriptionsKeyed, useTempUnit} from '@/hooks/use-temp-unit'
+import {temperatureDescriptionsKeyed, useTemperatureUnit} from '@/hooks/use-temperature-unit'
 import {
 	DEFAULT_REFRESH_MS,
 	ExampleWidgetConfig,
@@ -86,7 +86,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 		}
 		case 'three-stats': {
 			const w = widget as WidgetConfig<'three-stats'>
-			// TODO: figure out how to show the user's desired temp unit from local storage in a way that isn't brittle
+			// TODO: figure out how to show the user's desired temp unit in a way that isn't brittle
 			if (manifestConfig.id === 'umbrel:system-statss') {
 				return <SystemThreeUpWidget {...w} onClick={handleClick} />
 			}
@@ -107,18 +107,18 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	}
 }
 
-// Hacky way to get the right temp unit based on user preferences
+// Hacky way to get the right temperature unit based on user preferences
 export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeStatsWidget>) {
-	const [tempUnit] = useTempUnit()
+	const [temperatureUnit] = useTemperatureUnit()
 
 	if (!items) return <ErrorWidget error='No data.' />
 
 	const modifiedItems = map.strict(items, (item) => {
 		if (!item.text?.includes('℃')) return item
 		const celciusNumber = parseInt(item.text.replace('℃', ''))
-		const tempNumber = tempUnit === 'f' ? celciusToFahrenheit(celciusNumber) : celciusNumber
-		const tempUnitLabel = tempDescriptionsKeyed[tempUnit].label
-		const newValue = tempNumber + tempUnitLabel
+		const temperatureNumber = temperatureUnit === 'f' ? celciusToFahrenheit(celciusNumber) : celciusNumber
+		const temperatureUnitLabel = temperatureDescriptionsKeyed[temperatureUnit].label
+		const newValue = temperatureNumber + temperatureUnitLabel
 		return {...item, text: newValue}
 	})
 	return <ThreeStatsWidget items={modifiedItems} {...props} />

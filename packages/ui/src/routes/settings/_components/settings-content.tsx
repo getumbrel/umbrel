@@ -18,7 +18,7 @@ import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
-import {useCpuTemp} from '@/hooks/use-cpu-temp'
+import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
@@ -33,7 +33,7 @@ import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
-import {CpuTempCardContent} from './cpu-temp-card-content'
+import {CpuTemperatureCardContent} from './cpu-temperature-card-content'
 import {ListRow} from './list-row'
 import {MemoryCardContent} from './memory-card-content'
 import {ContactSupportLink} from './shared'
@@ -44,10 +44,10 @@ import {WallpaperPicker} from './wallpaper-picker'
 export function SettingsContent() {
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
-	const [langOpen, setLangOpen] = useState(false)
+	const [languageOpen, setLanguageOpen] = useState(false)
 
 	const tor = useTorEnabled()
-	const cpuTemp = useCpuTemp()
+	const cpuTemp = useCpuTemperature()
 
 	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
@@ -112,7 +112,7 @@ export function SettingsContent() {
 						<CpuCardContent />
 					</Card>
 					<Card>
-						<CpuTempCardContent warning={cpuTemp.warning} tempInCelcius={cpuTemp.temp} />
+						<CpuTemperatureCardContent warning={cpuTemp.warning} temperatureInCelcius={cpuTemp.temperature} />
 					</Card>
 					<div className='mx-auto'>
 						<IconButtonLink icon={RiPulseLine} to={linkToDialog('live-usage')}>
@@ -179,10 +179,10 @@ export function SettingsContent() {
 					<ListRow
 						title={t('language')}
 						description={t('language-description')}
-						onClick={() => setLangOpen(true)}
+						onClick={() => setLanguageOpen(true)}
 						isActive={settingsDialog === 'language'}
 					>
-						<DropdownMenu open={langOpen} onOpenChange={setLangOpen}>
+						<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
 							<LanguageDropdownTrigger />
 							<LanguageDropdownContent />
 						</DropdownMenu>

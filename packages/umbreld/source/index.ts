@@ -30,6 +30,8 @@ type StoreSchema = {
 		hashedPassword: string
 		totpUri?: string
 		wallpaper?: string
+		language?: string
+		temperatureUnit?: string
 	}
 	settings: {
 		releaseChannel: 'stable' | 'beta'

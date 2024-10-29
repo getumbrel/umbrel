@@ -137,4 +137,14 @@ export default class User {
 	async disable2fa() {
 		return this.#store.delete('user.totpUri')
 	}
+
+	// Set language preference
+	async setLanguage(language: string) {
+		return this.#store.set('user.language', language)
+	}
+
+	// Set temperature unit preference
+	async setTemperatureUnit(temperatureUnit: string) {
+		return this.#store.set('user.temperatureUnit', temperatureUnit)
+	}
 }

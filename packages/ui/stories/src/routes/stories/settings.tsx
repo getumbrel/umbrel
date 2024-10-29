@@ -7,7 +7,7 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreview} from '@/modules/desktop/desktop-preview-basic'
 import {wallpaperIds} from '@/providers/wallpaper'
-import {CpuTempCardContent} from '@/routes/settings/_components/cpu-temp-card-content'
+import {CpuTemperatureCardContent} from '@/routes/settings/_components/cpu-temperature-card-content'
 import {DeviceInfoContent, HostEnvironmentIcon} from '@/routes/settings/_components/device-info-content'
 import {ProgressStatCardContent} from '@/routes/settings/_components/progress-card-content'
 import {Button} from '@/shadcn-components/ui/button'
@@ -124,32 +124,32 @@ export default function SettingsStory() {
 			<H3>Extreme</H3>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent warning={cpuWarning} tempInCelcius={-999999} />
+					<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={-999999} />
 				</Card>
 			</div>
 			<div className='w-[300px] resize-x overflow-auto bg-red-500/10 p-4'>
 				<Card>
-					<CpuTempCardContent warning={cpuWarning} tempInCelcius={999999} />
+					<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={999999} />
 				</Card>
 			</div>
 			<H3>undefined</H3>
 			<Card>
-				<CpuTempCardContent warning={cpuWarning} />
+				<CpuTemperatureCardContent warning={cpuWarning} />
 			</Card>
 			<H3>NaN</H3>
 			<Card>
-				<CpuTempCardContent warning={cpuWarning} tempInCelcius={NaN} defaultUnit='c' />
+				<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={NaN} defaultUnit='c' />
 			</Card>
 			<H3>Infinity</H3>
 			<Card>
-				<CpuTempCardContent warning={cpuWarning} tempInCelcius={Infinity} defaultUnit='c' />
+				<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={Infinity} defaultUnit='c' />
 			</Card>
 			<H3>69</H3>
 			<Card>
-				<CpuTempCardContent warning={cpuWarning} tempInCelcius={69} defaultUnit='c' />
+				<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={69} defaultUnit='c' />
 			</Card>
 			<Card>
-				<CpuTempCardContent warning={cpuWarning} tempInCelcius={20.5} defaultUnit='f' />
+				<CpuTemperatureCardContent warning={cpuWarning} temperatureInCelcius={20.5} defaultUnit='f' />
 			</Card>
 			<Separator />
 		</div>

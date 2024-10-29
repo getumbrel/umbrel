@@ -1,39 +1,29 @@
 import i18next from 'i18next'
-import {map} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
+import {trpcReact} from '@/trpc/trpc'
+import {SupportedLanguageCode, supportedLanguageCodes} from '@/utils/language'
 
-export function useLanguage() {
-	const setCode = (code: SupportedLanguageCode) => {
-		localStorage.setItem('i18nextLng', code)
-		window.location.reload()
+export function useLanguage(): [code: SupportedLanguageCode, setCode: (code: SupportedLanguageCode) => void] {
+	const ctx = trpcReact.useContext()
+	const userSetMut = trpcReact.user.set.useMutation({
+		onSuccess() {
+			ctx.user.get.invalidate()
+			ctx.user.language.invalidate()
+		}
+	})
+
+	const setCode = (language: SupportedLanguageCode) => {
+		// Update the preferred language on the backend, which in turn notifies
+		// RemoteLanguageInjector that the preferred language has changed. When
+		// this happens, and the preferred language differs from the active
+		// language, the injector sets the new language and reloads the page.
+		if (arrayIncludes(supportedLanguageCodes, language)) {
+			userSetMut.mutate({language})
+		}
 	}
 
-	const code = i18next.language
+	// Default to English if active code is not supported
+	const code = arrayIncludes(supportedLanguageCodes, i18next.language) ? i18next.language : 'en'
 
-	// Default to English
-	if (!arrayIncludes(supportedLanguageCodes, code)) {
-		return ['en', setCode] as const
-	}
-
-	// Return `as const` so it's typed as a tuple
-	return [code, setCode] as const
+	return [code, setCode]
 }
-
-// TODO: consider moving to `@/utils`
-export const languages = [
-	{name: 'English', code: 'en'},
-	{name: 'Deutsch', code: 'de'},
-	{name: 'Español', code: 'es'},
-	{name: 'Français', code: 'fr'},
-	{name: 'Italiano', code: 'it'},
-	{name: 'Magyar', code: 'hu'},
-	{name: 'Nederlands', code: 'nl'},
-	{name: 'Português', code: 'pt'},
-	{name: 'Українська', code: 'uk'},
-	{name: 'Türkçe', code: 'tr'},
-	{name: '日本語', code: 'ja'},
-] as const
-
-const supportedLanguageCodes = map(languages, (entry) => entry.code)
-
-export type SupportedLanguageCode = (typeof supportedLanguageCodes)[number]

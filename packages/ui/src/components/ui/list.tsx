@@ -8,11 +8,13 @@ export function ListRadioItem({
 	checked,
 	name,
 	onSelect,
+	disabled = false,
 }: {
 	children: React.ReactNode
 	checked: boolean
 	name?: string
 	onSelect: () => void
+	disabled: boolean
 }) {
 	return (
 		<div className={cn(listItemClass, 'relative')}>
@@ -22,6 +24,7 @@ export function ListRadioItem({
 				type='radio'
 				name={name}
 				checked={checked}
+				disabled={disabled}
 				onChange={onSelect}
 				// Red so it's obvious when opacity is not zero and that it takes the whole space
 				// Not using inset-0 because it's not supported in mobile Safari

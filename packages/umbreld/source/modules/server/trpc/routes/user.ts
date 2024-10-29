@@ -188,6 +188,8 @@ export default router({
 		return {
 			name: user.name,
 			wallpaper: user.wallpaper,
+			language: user.language,
+			temperatureUnit: user.temperatureUnit,
 		}
 	}),
 
@@ -198,12 +200,16 @@ export default router({
 				.object({
 					name: z.string().optional(),
 					wallpaper: z.string().optional(),
+					language: z.string().optional(),
+					temperatureUnit: z.string().optional(),
 				})
 				.strict(),
 		)
 		.mutation(async ({ctx, input}) => {
 			if (input.name) await ctx.user.setName(input.name)
 			if (input.wallpaper) await ctx.user.setWallpaper(input.wallpaper)
+			if (input.language) await ctx.user.setLanguage(input.language)
+			if (input.temperatureUnit) await ctx.user.setTemperatureUnit(input.temperatureUnit)
 
 			return true
 		}),
@@ -218,5 +224,12 @@ export default router({
 		}
 
 		return user.wallpaper
+	}),
+
+	// Returns the preferred language, if any
+	// This endpoint is public so it can be used on the login screen
+	language: publicProcedure.query(async ({ctx}) => {
+		const user = await ctx.user.get()
+		return user?.language
 	}),
 })
