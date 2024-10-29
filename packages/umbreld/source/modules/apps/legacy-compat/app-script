@@ -33,14 +33,16 @@ CLI (v${VERSION}) for managing Umbrel apps
 Usage: app <command> <app> [<arguments>]
 
 Commands:
-    install                    Pulls down images for an app and starts it
-    uninstall                  Removes images and destroys all data for an app
-    reinstall                  Calls 'uninstall', followed by 'install' for an app
-    start                      Starts an installed app
-    stop                       Stops an installed app
-    restart                    Restarts an installed app
-    compose                    Passes all arguments to docker-compose
-    ls-installed               Lists installed apps
+    install                     Pulls down images for an app and starts it
+    uninstall                   Removes images and destroys all data for an app
+    reinstall                   Calls 'uninstall', followed by 'install' for an app
+    start                       Starts an installed app
+    stop                        Stops an installed app
+    restart                     Restarts an installed app
+    compose                     Passes all arguments to docker-compose
+    ls-installed                Lists installed apps
+    ls-dependencies             Lists dependencies of an app
+    ls-transitive-dependencies  Lists transitive dependencies of an app
 EOF
 }
 
@@ -62,8 +64,59 @@ check_dependencies () {
 
 list_installed_apps() {
   # cat "${USER_FILE}" 2> /dev/null | jq -r 'if has("installedApps") then .installedApps else [] end | join("\n")' || true
-  YAML_FILE="${UMBREL_ROOT}/umbrel.yaml"
-  yq e '.apps[]' "${YAML_FILE}" 2> /dev/null || true
+  local yaml_file="${UMBREL_ROOT}/umbrel.yaml"
+  yq e '.apps[]' "${yaml_file}" 2> /dev/null || true
+}
+
+list_dependencies_of() {
+  local app="$1"
+  local app_data_dir="${UMBREL_ROOT}/app-data/${app}"
+  local app_yaml_file="${app_data_dir}/umbrel-app.yml"
+  yq e '.dependencies[]' "${app_yaml_file}" 2> /dev/null || true
+}
+
+list_transitive_dependencies_of() {
+  local app="$1"
+  local -A processed=()
+  local -A processing=()
+  local output=()
+
+  process_dependencies_in_post_order() {
+    local current_app="$1"
+
+    # Skip if already processed
+    if [[ -n "${processed[$current_app]:-}" ]]; then
+      return
+    fi
+
+    # Skip on circular dependencies
+    if [[ -n "${processing[$current_app]:-}" ]]; then
+      return 1
+    fi
+
+    processing["$current_app"]=1
+    local deps=($(list_dependencies_of "$current_app"))
+
+    # Process dependencies before processing the app itself
+    for dep in "${deps[@]}"; do
+      if ! process_dependencies_in_post_order "$dep"; then
+        echo "Error: Circular dependency in app $app: $current_app -> $dep" >&2
+        processing["$current_app"]=0
+        return 1
+      fi
+    done
+
+    processed["$current_app"]=1
+    processing["$current_app"]=0
+    output+=("$current_app")
+  }
+
+  process_dependencies_in_post_order "$app"
+
+  # Omit the app itself
+  for ((i = 0; i < ${#output[@]} - 1; i++)); do
+    echo "${output[i]}"
+  done
 }
 
 # Deterministically derives 128 bits of cryptographically secure entropy
@@ -105,12 +158,12 @@ source_app() {
   export DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "umbrel")"
   export DEVICE_DOMAIN_NAME="${DEVICE_HOSTNAME}.local"
 
-  # Set env using all installed apps exports.sh
+  # Set env using all transitive dependencies exports.sh
   # Do this first so that no app exports can
   # Override any app specific exports defined below
   EXPORTS_TOR_DATA_DIR="${UMBREL_ROOT}/tor/data"
 
-  APPS_TO_SOURCE="$(list_installed_apps)"
+  APPS_TO_SOURCE="$(list_transitive_dependencies_of "$app")"
 
   # $app might not be in the 'installed apps list' yet
   # i.e. If it is currently being installed
@@ -195,12 +248,21 @@ if [ -z ${2+x} ]; then
 else
   app="$2"
 
+  # Lists (transitive) dependencies
+  if [[ "$command" = "ls-dependencies" ]]; then
+    list_dependencies_of "$app"
+    exit
+  elif [[ "$command" = "ls-transitive-dependencies" ]]; then
+    list_transitive_dependencies_of "$app"
+    exit
+  fi
+
   # repo=$(cat "${USER_FILE}" 2> /dev/null | jq -r ".appOrigin.\"${app}\"" || true)
-#   repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
-#   app_repo_dir="${repo_path}/${app}"
+  # repo_path=$("${UMBREL_ROOT}/scripts/repo" "path" "${repo}")
+  # app_repo_dir="${repo_path}/${app}"
   app_repo_dir="${SCRIPT_APP_REPO_DIR}"
   app_data_dir="${UMBREL_ROOT}/app-data/${app}"
-  
+
   app_hidden_service_file="${UMBREL_ROOT}/tor/data/app-${app}/hostname"
   
   if [[ "${app}" == "installed" ]]; then
