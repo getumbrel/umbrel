@@ -43,6 +43,13 @@ export const systemWidgets = {
 		const {totalUsed: diskTotalUsed} = diskUsage
 		const {totalUsed: memoryTotalUsed} = memoryUsage
 
+		// Formats CPU usage to avoid scientific notation for usage >= 99.5% (e.g., 1.0e+2%)
+		// and sets upper limit to 100% because we are calculating usage as a % of total system, not % of a single thread
+		const formatCpuUsage = (usage: number) => {
+			if (usage >= 99.5) return '100%'
+			return `${usage.toPrecision(2)}%`
+		}
+
 		return {
 			type: 'three-stats',
 			link: '?dialog=live-usage',
@@ -51,7 +58,7 @@ export const systemWidgets = {
 				{
 					icon: 'system-widget-cpu',
 					subtext: 'CPU',
-					text: `${cpuTotalUsed.toPrecision(2)}%`,
+					text: formatCpuUsage(cpuTotalUsed),
 				},
 				{
 					icon: 'system-widget-memory',
