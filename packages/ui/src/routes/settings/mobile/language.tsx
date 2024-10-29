@@ -1,7 +1,6 @@
 import {useId, useState} from 'react'
 
 import {listClass, ListRadioItem} from '@/components/ui/list'
-import {languages, SupportedLanguageCode} from '@/utils/language'
 import {useLanguage} from '@/hooks/use-language'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
@@ -13,6 +12,7 @@ import {
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {t} from '@/utils/i18n'
+import {languages, SupportedLanguageCode} from '@/utils/language'
 import {sleep} from '@/utils/misc'
 
 export function LanguageDrawer() {

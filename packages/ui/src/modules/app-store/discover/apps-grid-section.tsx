@@ -17,7 +17,7 @@ import {RegistryApp} from '@/trpc/trpc'
 
 export function AppsGridSection({overline, title, apps}: {overline: string; title: ReactNode; apps?: RegistryApp[]}) {
 	const isMobile = useIsMobile()
-	const appsToShow = isMobile ? (apps ?? []).slice(0, 6) : apps ?? []
+	const appsToShow = isMobile ? (apps ?? []).slice(0, 6) : (apps ?? [])
 	return (
 		<div className={cardClass}>
 			<SectionTitle overline={overline} title={title} />

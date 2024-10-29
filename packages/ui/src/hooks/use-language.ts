@@ -1,5 +1,6 @@
 import i18next from 'i18next'
 import {arrayIncludes} from 'ts-extras'
+
 import {trpcReact} from '@/trpc/trpc'
 import {SupportedLanguageCode, supportedLanguageCodes} from '@/utils/language'
 
@@ -9,7 +10,7 @@ export function useLanguage(): [code: SupportedLanguageCode, setCode: (code: Sup
 		onSuccess() {
 			ctx.user.get.invalidate()
 			ctx.user.language.invalidate()
-		}
+		},
 	})
 
 	const setCode = (language: SupportedLanguageCode) => {

@@ -1,9 +1,8 @@
+import {useState} from 'react'
 import {TbLanguage} from 'react-icons/tb'
 
-import {useState} from 'react'
 import {ChevronDown} from '@/assets/chevron-down'
 import {IconButton} from '@/components/ui/icon-button'
-import {languages, SupportedLanguageCode} from '@/utils/language'
 import {useLanguage} from '@/hooks/use-language'
 import {
 	DropdownMenu,
@@ -11,6 +10,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuTrigger,
 } from '@/shadcn-components/ui/dropdown-menu'
+import {languages, SupportedLanguageCode} from '@/utils/language'
 
 export function LanguageDropdown() {
 	return (
@@ -47,7 +47,12 @@ export function LanguageDropdownContent() {
 	return (
 		<DropdownMenuContent align='end'>
 			{languages.map(({code, name}) => (
-				<DropdownMenuCheckboxItem key={code} checked={temporaryCode === code} onSelect={() => changeLanguage(code)} disabled={temporaryCode !== activeCode}>
+				<DropdownMenuCheckboxItem
+					key={code}
+					checked={temporaryCode === code}
+					onSelect={() => changeLanguage(code)}
+					disabled={temporaryCode !== activeCode}
+				>
 					{name}
 				</DropdownMenuCheckboxItem>
 			))}

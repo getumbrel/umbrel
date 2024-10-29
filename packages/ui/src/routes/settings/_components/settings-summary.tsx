@@ -26,7 +26,7 @@ export function SettingsSummary() {
 			<dt className='opacity-40'>{t('device')}</dt>
 			<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 			<dt className='opacity-40'>{t('umbrelos')}</dt>
-			<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
+			<dd>{osVersionQ.isLoading ? LOADING_DASH : (`${osVersionQ.data?.name}` ?? UNKNOWN())}</dd>
 			<dt className='opacity-40'>{t('local-ip')}</dt>
 			<dd>
 				{ipAddresses.data?.length
@@ -37,7 +37,7 @@ export function SettingsSummary() {
 								</Link>
 								{index < ipAddresses.data.length - 1 && ', '}
 							</Fragment>
-					  ))
+						))
 					: LOADING_DASH}
 			</dd>
 			<dt className='opacity-40'>{t('uptime')}</dt>

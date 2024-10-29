@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "dev": "./scripts/umbrel-dev",
     "dev:help": "npm run dev help"

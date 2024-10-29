@@ -33,14 +33,6 @@
 		"generate-release-notes": "tsx scripts/generate-release-notes.ts",
 		"todo": "git grep --line-number TODO -- ':!package.json'"
 	},
-	"prettier": {
-		"printWidth": 120,
-		"semi": false,
-		"useTabs": true,
-		"trailingComma": "all",
-		"singleQuote": true,
-		"bracketSpacing": false
-	},
 	"xo": {
 		"prettier": true,
 		"rules": {
@@ -86,7 +78,7 @@
 		"node-git-server": "^1.0.0",
 		"nodemon": "^2.0.20",
 		"opentimestamps": "^0.4.9",
-		"prettier": "^2.8.1",
+		"prettier": "3.3.3",
 		"typescript": "^5.3.3",
 		"vitest": "^2.1.2",
 		"wait-port": "^1.0.4",

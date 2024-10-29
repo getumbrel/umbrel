@@ -130,9 +130,9 @@ export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetC
 
 export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'text-with-buttons'
 	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
-	  Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
+		Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
 	: // Otherwise, just omit the `type`
-	  Omit<WidgetConfig<T>, 'type'>
+		Omit<WidgetConfig<T>, 'type'>
 
 // Adding `= WidgetType` to `T` makes it so that if `T` is not provided, it defaults to `WidgetType`. Prevents us from always having to write `RegistryWidget<WidgetType>` when referring to the type.
 export type RegistryWidget<T extends WidgetType = WidgetType> = {

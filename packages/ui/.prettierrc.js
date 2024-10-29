@@ -1,15 +1,12 @@
+import baseConfig from '../../.prettierrc.js'
+
 /**
  * @type {import('prettier').Config & import("@ianvs/prettier-plugin-sort-imports").PluginConfig}
  */
 export default {
-	printWidth: 120,
-	semi: false,
-	useTabs: true,
-	trailingComma: 'all', // better for git diffs
-	singleQuote: true,
-	bracketSpacing: false,
-	jsxSingleQuote: true,
+	...baseConfig,
 	plugins: [
+		...(baseConfig.plugins || []),
 		'@ianvs/prettier-plugin-sort-imports',
 		'prettier-plugin-css-order',
 		'prettier-plugin-style-order',

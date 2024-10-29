@@ -3,11 +3,7 @@ name: Node.js CI
 on: push
 
 jobs:
-  ci:
-    # TODO: Rollout of 24.04 as ubuntu-latest has been put on hold, but we want
-    # 24.04 because integration tests depend on it, e.g. for `pss` support. Pin
-    # what we need for now, but switch back once ubuntu-latest has been updated.
-    # https://github.com/actions/runner-images/issues/10636
+  umbreld:
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -28,3 +24,23 @@ jobs:
           node-version: 18
       - run: sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
+  ui:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/ui
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - format:check
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+      - run: pnpm install
+      - run: pnpm run ${{ matrix.task }}

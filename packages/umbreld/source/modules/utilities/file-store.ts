@@ -12,8 +12,8 @@ type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 		? DotProp<T[K], R>
 		: never
 	: P extends keyof T
-	? T[P]
-	: never
+		? T[P]
+		: never
 
 type StorePath<T, P extends string> = DotProp<T, P> extends never ? 'The provided path does not exist in the store' : P
 

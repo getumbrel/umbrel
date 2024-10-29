@@ -124,7 +124,10 @@ export function SettingsContentMobile() {
 				</Link>
 
 				<Card>
-					<CpuTemperatureCardContent warning={cpuTemperature.warning} temperatureInCelcius={cpuTemperature.temperature} />
+					<CpuTemperatureCardContent
+						warning={cpuTemperature.warning}
+						temperatureInCelcius={cpuTemperature.temperature}
+					/>
 				</Card>
 			</div>
 

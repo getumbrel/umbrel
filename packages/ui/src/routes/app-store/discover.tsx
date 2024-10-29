@@ -14,7 +14,7 @@ import {t} from '@/utils/i18n'
 
 import {useDiscoverQuery} from './use-discover-query'
 
-const getAppById = (appId, apps) => apps.find(app => app.id === appId);
+const getAppById = (appId, apps) => apps.find((app) => app.id === appId)
 
 export default function Discover() {
 	return (
@@ -53,7 +53,7 @@ function DiscoverContent() {
 							key={section.heading + section.subheading}
 							title={section.heading}
 							overline={section.subheading}
-							apps={section.apps.map(appId => getAppById(appId, apps)).filter(app => app !== undefined)}
+							apps={section.apps.map((appId) => getAppById(appId, apps)).filter((app) => app !== undefined)}
 						/>
 					)
 				}
@@ -64,7 +64,7 @@ function DiscoverContent() {
 							key={section.heading + section.subheading}
 							overline={section.subheading}
 							title={section.heading}
-							apps={section.apps.map(appId => getAppById(appId, apps)).filter(app => app !== undefined)}
+							apps={section.apps.map((appId) => getAppById(appId, apps)).filter((app) => app !== undefined)}
 						/>
 					)
 				}
@@ -73,7 +73,7 @@ function DiscoverContent() {
 					return (
 						<AppsThreeColumnSection
 							key={section.heading + section.subheading}
-							apps={section.apps.map(appId => getAppById(appId, apps)).filter(app => app !== undefined)}
+							apps={section.apps.map((appId) => getAppById(appId, apps)).filter((app) => app !== undefined)}
 							overline={section.subheading}
 							title={section.heading}
 							textLocation={section.textLocation}

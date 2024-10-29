@@ -4,8 +4,8 @@ import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
-import {RemoteWallpaperInjector, WallpaperProviderConnected} from './providers/wallpaper'
 import {RemoteLanguageInjector} from './providers/language'
+import {RemoteWallpaperInjector, WallpaperProviderConnected} from './providers/wallpaper'
 import {router} from './router'
 import {TrpcProvider} from './trpc/trpc-provider'
 

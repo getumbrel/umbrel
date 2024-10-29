@@ -30,3 +30,6 @@ dist-ssr
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# UI uses pnpm instead of npm
+package-lock.json

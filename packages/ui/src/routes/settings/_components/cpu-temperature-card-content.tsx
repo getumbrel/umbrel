@@ -1,7 +1,12 @@
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {temperatureDescriptions, temperatureDescriptionsKeyed, TemperatureUnit, useTemperatureUnit} from '@/hooks/use-temperature-unit'
+import {
+	temperatureDescriptions,
+	temperatureDescriptionsKeyed,
+	TemperatureUnit,
+	useTemperatureUnit,
+} from '@/hooks/use-temperature-unit'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {isCpuTooHot} from '@/utils/system'

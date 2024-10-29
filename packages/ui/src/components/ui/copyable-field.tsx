@@ -38,7 +38,7 @@ export function CopyableField({
 				ref={ref}
 				onClick={() => setTimeout(() => ref.current?.select())}
 				className={cn(
-					'block flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 font-mono outline-none min-w-0',
+					'block min-w-0 flex-1 appearance-none truncate bg-transparent py-1.5 pl-2.5 font-mono outline-none',
 					narrow && 'py-0.5',
 				)}
 				type={isPassword && !focused ? 'password' : 'text'}

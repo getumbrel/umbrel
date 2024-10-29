@@ -30,7 +30,7 @@ const WallpaperItem = forwardRef(
 					'h-6 shrink-0 bg-white/10 bg-cover bg-center outline-none ring-white/50 transition-all duration-200 focus-visible:ring-1',
 					active
 						? // NOTE: `mx-3` or whatever horizontal marging needs to be big enough to not cause the ring to get clipped from scrolling container
-						  'mx-3 rounded-5 ring-2 ring-white/50'
+							'mx-3 rounded-5 ring-2 ring-white/50'
 						: 'rounded-3',
 					className,
 				)}

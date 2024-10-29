@@ -1,6 +1,7 @@
 import i18next from 'i18next'
-import {trpcReact} from "@/trpc/trpc";
-import {supportedLanguageCodes} from '@/utils/language';
+
+import {trpcReact} from '@/trpc/trpc'
+import {supportedLanguageCodes} from '@/utils/language'
 
 export function RemoteLanguageInjector() {
 	const languageQ = trpcReact.user.language.useQuery()

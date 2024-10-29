@@ -97,7 +97,7 @@ export function DockItem({
 					backgroundImage: bg
 						? `url(${bg})`
 						: // TODO: use a better default
-						  `linear-gradient(to bottom right, white, black)`,
+							`linear-gradient(to bottom right, white, black)`,
 					scale: transform,
 					...style,
 				}}

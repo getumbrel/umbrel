@@ -21,7 +21,7 @@ const scrollRestorationHandler = (thisPathname: string, prevPathname: string, na
 		return 'ignore'
 	}
 	// Reset scroll position to zero unless going back in history
-	if (navigationType !== "POP") {
+	if (navigationType !== 'POP') {
 		return 'reset'
 	}
 	// In app store, restore position when navigating back from an app

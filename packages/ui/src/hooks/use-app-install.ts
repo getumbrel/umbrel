@@ -124,7 +124,7 @@ export function useAppInstall(id: string) {
 	const restart = async () => restartMut.mutate({appId: id})
 
 	// Ready means the app can be installed
-	const state: AppStateOrLoading = appStateQ.isLoading ? 'loading' : appState ?? 'not-installed'
+	const state: AppStateOrLoading = appStateQ.isLoading ? 'loading' : (appState ?? 'not-installed')
 
 	return {
 		start,

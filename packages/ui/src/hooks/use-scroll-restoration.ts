@@ -9,7 +9,11 @@ export type ScrollRestorationAction = 'restore' | 'reset' | 'ignore'
  * Handler function testing if scroll position should be restored, reset to zero
  * or ignored.
  */
-export type ScrollRestorationHandler = (thisPathname: string, prevPathname: string, navigationType: NavigationType) => ScrollRestorationAction
+export type ScrollRestorationHandler = (
+	thisPathname: string,
+	prevPathname: string,
+	navigationType: NavigationType,
+) => ScrollRestorationAction
 
 /**
  * Given a ref to a scrolling container element, keep track of its scroll
@@ -55,9 +59,9 @@ export function useScrollRestoration(container: React.RefObject<HTMLElement>, ha
 			const y = Math.round(scrollElement?.scrollTop ?? 0)
 			setScrollPosition(cacheKey, y ?? 0)
 		}
-		scrollElement?.addEventListener('scroll'/*end*/, handleScrollEnd)
+		scrollElement?.addEventListener('scroll' /*end*/, handleScrollEnd)
 		return () => {
-			scrollElement?.removeEventListener('scroll'/*end*/, handleScrollEnd)
+			scrollElement?.removeEventListener('scroll' /*end*/, handleScrollEnd)
 		}
 	}, [cacheKey, state, container, thisPathname, prevPathname, navigationType])
 }

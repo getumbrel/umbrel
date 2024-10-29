@@ -2,7 +2,7 @@ import chalkTemplate from 'chalk-template'
 
 const logLevels = ['silent', 'normal', 'verbose'] as const
 
-export type LogLevel = typeof logLevels[number]
+export type LogLevel = (typeof logLevels)[number]
 
 function value(logLevel: LogLevel) {
 	return logLevels.indexOf(logLevel)

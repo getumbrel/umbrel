@@ -60,11 +60,11 @@ export function useDeviceInfo(): DeviceInfoT {
 			? {
 					icon: hostEnvironmentMap[umbrelHostEnvironment].icon,
 					title: device || LOADING_DASH,
-			  }
+				}
 			: {
 					icon: undefined,
 					title: UNKNOWN(),
-			  },
+				},
 	}
 }
 

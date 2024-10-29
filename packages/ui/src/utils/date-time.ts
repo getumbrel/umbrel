@@ -1,5 +1,5 @@
 import {formatDistanceStrict, Locale} from 'date-fns'
-import {de, enUS, es, fr, hu, it, ja, nl, pt, uk, tr} from 'date-fns/locale'
+import {de, enUS, es, fr, hu, it, ja, nl, pt, tr, uk} from 'date-fns/locale'
 
 import {UNKNOWN} from '@/constants'
 import {SupportedLanguageCode} from '@/utils/language'

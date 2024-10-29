@@ -125,7 +125,7 @@ export function AppDropdown({
 		: {
 				icon: undefined,
 				name: t('app-picker.select-app'),
-		  }
+			}
 
 	const appResults = matchSorter(apps.userApps, query, {
 		keys: ['name'],
