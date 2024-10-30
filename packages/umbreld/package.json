@@ -19,7 +19,6 @@
 		"format:check": "prettier --check .",
 		"lint": "xo",
 		"typecheck": "tsc --noEmit",
-		"typecheck:ci": "npm run typecheck || true",
 		"test": "vitest --testTimeout 60000 --hookTimeout 60000 --maxConcurrency 1 --poolOptions.threads.singleThread true",
 		"test:unit": "npm run test -- unit",
 		"test:integration": "npm run test -- integration",

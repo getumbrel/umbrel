@@ -18,11 +18,14 @@ jobs:
           - test:unit -- --coverage --watch=false
           - test:integration -- --coverage --watch=false
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: sudo npm clean-install
+      - name: Install dependencies
+        run: sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
   ui:
     runs-on: ubuntu-24.04
@@ -34,13 +37,21 @@ jobs:
       matrix:
         task:
           - format:check
+          - typecheck
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
         with:
           node-version: 18
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 8
-      - run: pnpm install
+      - name: Install Umbreld dependencies
+        if: ${{ matrix.task == 'typecheck' }}
+        run: npm --prefix ../umbreld clean-install
+      - name: Install dependencies
+        run: pnpm install
       - run: pnpm run ${{ matrix.task }}

@@ -15,6 +15,7 @@
 		"app-auth:build": "vite build --config app-auth/vite.config.js && mv dist-app-auth/app-auth/index.html dist-app-auth/index.html",
 		"app-auth:start": "serve -p 2003 dist-app-auth",
 		"lint": "eslint .",
+		"typecheck": "tsc --noEmit",
 		"preview": "vite preview",
 		"build-remote": "ssh root@mark-dev './pull.sh'",
 		"format": "prettier --write .",

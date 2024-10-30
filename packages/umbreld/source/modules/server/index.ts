@@ -10,8 +10,6 @@ import {$} from 'execa'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
-import cors from 'cors'
-import pty, {IPty} from 'node-pty'
 
 import {WebSocketServer} from 'ws'
 import {createProxyMiddleware} from 'http-proxy-middleware'

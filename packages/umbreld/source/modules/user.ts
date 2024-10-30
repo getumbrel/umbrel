@@ -8,12 +8,10 @@ import * as totp from './utilities/totp.js'
 
 export default class User {
 	#store: Umbreld['store']
-	#umbreld: Umbreld
 	logger: Umbreld['logger']
 
 	constructor(umbreld: Umbreld) {
 		this.#store = umbreld.store
-		this.#umbreld = umbreld
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
 	}

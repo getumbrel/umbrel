@@ -5,7 +5,6 @@ import checkDiskSpace from 'check-disk-space'
 import drivelist from 'drivelist'
 import fse from 'fs-extra'
 import {execa} from 'execa'
-import pRetry from 'p-retry'
 import {globby} from 'globby'
 import yaml from 'js-yaml'
 import semver from 'semver'
@@ -173,8 +172,8 @@ export async function runPreMigrationChecks(
 	// Check enough storage is available
 	const temporaryData = `${currentInstall}/.temporary-migration`
 	await fse.remove(temporaryData)
-	// @ts-expect-error We don't have types for checkDiskSpace
-	const {free} = await checkDiskSpace(currentInstall)
+	// TODO: check-disk-space typings are broken ('This expression is not callable.')
+	const {free} = await (checkDiskSpace as any)(currentInstall)
 	const buffer = 1024 * 1024 * 1024 // 1GB
 	const required = (await getDirectorySize(externalUmbrelInstall)) + buffer
 	if (free < required) {

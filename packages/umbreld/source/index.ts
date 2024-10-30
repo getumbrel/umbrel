@@ -3,9 +3,8 @@ import {setTimeout} from 'node:timers/promises'
 
 import {$} from 'execa'
 
-// @ts-expect-error I can't get tsconfig setup in a way that allows this without breaking other things.
-// However we execute with tsx and it's able to resolve the import without issues.
-import packageJson from '../package.json' assert {type: 'json'}
+// TODO: import packageJson from '../package.json' assert {type: 'json'}
+const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
 
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
