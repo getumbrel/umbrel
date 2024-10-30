@@ -1,9 +1,9 @@
-FROM node:18 as build
+FROM node:18 AS build
 
 WORKDIR /app
 
 # Cache dependencies for faster builds
-COPY package.json package-lock.json .
+COPY package.json package-lock.json ./
 RUN npm ci
 
 # Build the binary

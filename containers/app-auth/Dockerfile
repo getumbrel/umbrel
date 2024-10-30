@@ -1,5 +1,5 @@
 # UI build stage
-FROM node:18.19.1-buster-slim as umbrel-app-auth-ui-builder
+FROM node:18.19.1-buster-slim AS umbrel-app-auth-ui-builder
 
 # Install pnpm
 RUN npm install -g pnpm@8
@@ -27,7 +27,7 @@ EXPOSE 2003
 CMD ["pnpm", "run", "app-auth:start"]
 
 # Build Stage
-FROM node:16-buster-slim as umbrel-app-auth-builder
+FROM node:16-buster-slim AS umbrel-app-auth-builder
 
 # Create app directory
 WORKDIR /app

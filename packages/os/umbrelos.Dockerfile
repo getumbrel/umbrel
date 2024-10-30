@@ -2,7 +2,7 @@
 # ui build stage
 #########################################################################
 
-FROM node:18.19.1-buster-slim as ui-build
+FROM node:18.19.1-buster-slim AS ui-build
 
 # Install pnpm
 RUN npm install -g pnpm@8
@@ -25,7 +25,7 @@ RUN pnpm run build
 # umbrelos-base-amd64 build stage
 #########################################################################
 
-FROM debian:bookworm as umbrelos-base-amd64
+FROM debian:bookworm AS umbrelos-base-amd64
 
 COPY packages/os/build-steps /build-steps
 
@@ -48,7 +48,7 @@ RUN rm -rf /build-steps
 # umbrelos-base-arm64 build stage
 #########################################################################
 
-FROM debian:bookworm as umbrelos-base-arm64
+FROM debian:bookworm AS umbrelos-base-arm64
 
 COPY packages/os/build-steps /build-steps
 
