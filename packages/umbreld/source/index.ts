@@ -8,15 +8,14 @@ const packageJson = (await import('../package.json', {assert: {type: 'json'}})).
 
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
-
 import Migration from './modules/migration/index.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
-
 import {commitOsPartition} from './modules/system.js'
+import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
 	version: string
@@ -38,6 +37,9 @@ type StoreSchema = {
 			ssid: string
 			password?: string
 		}
+	}
+	development: {
+		hostname?: string
 	}
 	recentlyOpenedApps: string[]
 }
@@ -165,6 +167,10 @@ export default class Umbreld {
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
+
+		// Override hostname in development when set
+		const developmentHostname = await this.store.get('development.hostname')
+		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
 
 		// Synchronize the system password after OTA update
 		this.user.syncSystemPassword()
