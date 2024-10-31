@@ -55,7 +55,11 @@ export default function createTerminalWebSocketHandler({
 						?.container_name as string
 				}
 
-				// launch terminal with interactive docker shell
+				// Launch terminal with interactive docker shell
+				// We set a consistent '$ ' prompt across different containers regardless of the shell environment (bash or sh)
+				// by overriding any existing PS1 settings.
+				// We prioritize bash for better feature support but fall back to sh if bash is not available.
+				// We disable bashrc with `--norc` to make sure the prompt isn't overridden.
 				ptyProcess = pty.spawn(
 					'docker',
 					[
@@ -64,7 +68,14 @@ export default function createTerminalWebSocketHandler({
 						container,
 						'/bin/sh',
 						'-c',
-						'if [ -x /bin/bash ]; then exec /bin/bash; else exec /bin/sh; fi',
+						`
+						export PS1='$ '
+						if command -v bash >/dev/null 2>&1; then
+							exec bash --norc
+						else
+							exec sh
+						fi
+						`,
 					],
 					{
 						name: 'xterm-color',
