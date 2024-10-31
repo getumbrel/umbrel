@@ -186,6 +186,8 @@ function CmdkContent() {
 			<SettingsSearchItem value={t('terminal')} onSelect={() => navigate('/settings/terminal')} />
 			<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 			<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
+			<SettingsSearchItem value={t('advanced-settings')} onSelect={() => navigate('/settings/advanced')} />
+			<SettingsSearchItem value={t('beta-program')} onSelect={() => navigate('/settings/advanced/beta-program')} />
 			{/* TODO: Enable after factory reset is hooked with umbreld */}
 			{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
 			{/* ---- */}

@@ -128,7 +128,7 @@ export function Settings() {
 						<Route path='/terminal/*' Component={TerminalDialog} />
 						{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
-						<Route path='/advanced' Component={AdvancedSettingsDrawerOrDialog} />
+						<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
 					</Routes>
 					<QueryStringDialog />
 				</Suspense>

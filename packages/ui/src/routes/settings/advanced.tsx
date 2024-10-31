@@ -1,4 +1,5 @@
 import {TbTerminal2} from 'react-icons/tb'
+import {useParams} from 'react-router-dom'
 
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -7,6 +8,7 @@ import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
+import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -18,6 +20,8 @@ export default function AdvancedSettingsDrawerOrDialog() {
 	const isBetaChannel = useIsBetaChannel()
 
 	const isMobile = useIsMobile()
+
+	const {advancedSelection} = useParams<{advancedSelection?: 'beta-program' | 'local-dns'}>()
 
 	if (isMobile) {
 		return (
@@ -34,7 +38,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 									{t('open')}
 								</IconButtonLink>
 							</label>
-							<label className={cardClass}>
+							<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
 								<CardText title={t('beta-program')} description={t('beta-program-description')} />
 								<Switch
 									checked={isBetaChannel.isChecked}
@@ -63,7 +67,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								{t('open')}
 							</IconButtonLink>
 						</label>
-						<label className={cardClass}>
+						<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
 							<CardText title={t('beta-program')} description={t('beta-program-description')} />
 							<Switch
 								checked={isBetaChannel.isChecked}
