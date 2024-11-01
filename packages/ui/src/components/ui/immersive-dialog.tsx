@@ -1,8 +1,6 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
 import {motion} from 'framer-motion'
-import {LucideIcon} from 'lucide-react'
 import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
-import type {IconType} from 'react-icons'
 import {RiCloseLine} from 'react-icons/ri'
 
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
@@ -15,6 +13,7 @@ import {
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
+import {IconTypes} from './icon'
 import {IconButton} from './icon-button'
 
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`
@@ -183,7 +182,7 @@ export function ImmersiveDialogIconMessage({
 	className,
 	iconClassName,
 }: {
-	icon: IconType | LucideIcon
+	icon: IconTypes
 	title: ReactNode
 	description?: ReactNode
 	className?: string
@@ -221,7 +220,7 @@ export function ImmersiveDialogIconMessageKeyValue({
 	className,
 	iconClassName,
 }: {
-	icon: IconType | LucideIcon
+	icon: IconTypes
 	k: ReactNode
 	v: ReactNode
 	className?: string

@@ -1,17 +1,15 @@
 import {type VariantProps} from 'class-variance-authority'
-import type {LucideIcon} from 'lucide-react'
 import * as React from 'react'
-import type {IconType} from 'react-icons'
 
 import {buttonVariants} from '@/shadcn-components/ui/button'
 import {cn} from '@/shadcn-lib/utils'
 
-import {Icon} from './icon'
+import {Icon, IconTypes} from './icon'
 
 export interface ButtonProps
 	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
 		VariantProps<typeof buttonVariants> {
-	icon: IconType | LucideIcon
+	icon: IconTypes
 }
 
 const IconButton = React.forwardRef<HTMLButtonElement, ButtonProps>(

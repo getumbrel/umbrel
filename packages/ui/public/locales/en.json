@@ -83,7 +83,7 @@
   "auth.failed-checking-if-user-logged-in": "Error: Auth login check failed",
   "auth.failed-to-check-if-user-exists": "Error: Auth existence check failes",
   "beta-program": "umbrelOS Beta Program",
-  "beta-program-description": "Opt in to receiving umbrelOS beta updates, gain early access to new features, and help us refine them by providing your feedback. Beta updates might be unstable, and troubleshooting may require familiarity with terminal.",
+  "beta-program-description": "Opt in to receive umbrelOS beta updates, gain early access to new features, and help us refine them by providing your feedback. Beta updates might be unstable, and troubleshooting may require familiarity with terminal.",
   "cancel": "Cancel",
   "change": "Change",
   "change-name": "Change name",

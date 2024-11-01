@@ -1,16 +1,16 @@
 import {cva, VariantProps} from 'class-variance-authority'
-import {LucideIcon} from 'lucide-react'
 import {forwardRef} from 'react'
-import {IconType} from 'react-icons'
 
 import {cn} from '@/shadcn-lib/utils'
+
+import {IconTypes} from './icon'
 
 export function ErrorAlert({
 	icon,
 	description,
 	className,
 }: {
-	icon?: IconType | LucideIcon
+	icon?: IconTypes
 	description: React.ReactNode
 	className?: string
 }) {
@@ -48,7 +48,7 @@ const alertVariants = cva(
 
 type AlertProps = React.HTMLAttributes<HTMLDivElement> &
 	VariantProps<typeof alertVariants> & {
-		icon?: IconType | LucideIcon
+		icon?: IconTypes
 	}
 
 export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant, icon, children, ...props}, ref) => {

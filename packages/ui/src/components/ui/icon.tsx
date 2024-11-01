@@ -8,8 +8,10 @@ import {cn} from '@/shadcn-lib/utils'
 type SizeVariant = VariantProps<typeof buttonVariants>['size']
 type Size = NonNullable<SizeVariant>
 
+export type IconTypes = IconType | LucideIcon
+
 type IconProps = {
-	component: IconType | LucideIcon
+	component: IconTypes
 	style?: React.CSSProperties
 	size?: SizeVariant
 } & Omit<React.ComponentPropsWithoutRef<'svg'>, 'size'>

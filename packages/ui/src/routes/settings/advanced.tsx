@@ -1,6 +1,7 @@
-import {TbTerminal2} from 'react-icons/tb'
+import {PiFlaskFill} from 'react-icons/pi'
 import {useParams} from 'react-router-dom'
 
+import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
@@ -34,12 +35,16 @@ export default function AdvancedSettingsDrawerOrDialog() {
 						<div className='flex flex-col gap-y-3'>
 							<label className={cardClass}>
 								<CardText title={t('terminal')} description={t('terminal-description')} />
-								<IconButtonLink className='self-center' to={'/settings/terminal'} icon={TbTerminal2}>
+								<IconButtonLink className='self-center' to={'/settings/terminal'}>
 									{t('open')}
 								</IconButtonLink>
 							</label>
 							<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
-								<CardText title={t('beta-program')} description={t('beta-program-description')} />
+								<CardText
+									title={t('beta-program')}
+									description={t('beta-program-description')}
+									trailingIcon={PiFlaskFill}
+								/>
 								<Switch
 									checked={isBetaChannel.isChecked}
 									onCheckedChange={isBetaChannel.change}
@@ -63,12 +68,16 @@ export default function AdvancedSettingsDrawerOrDialog() {
 					<div className='flex flex-col gap-y-3'>
 						<label className={cardClass}>
 							<CardText title={t('terminal')} description={t('terminal-description')} />
-							<IconButtonLink className='self-center' to={'/settings/terminal'} icon={TbTerminal2}>
+							<IconButtonLink className='self-center' to={'/settings/terminal'}>
 								{t('open')}
 							</IconButtonLink>
 						</label>
 						<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
-							<CardText title={t('beta-program')} description={t('beta-program-description')} />
+							<CardText
+								title={t('beta-program')}
+								description={t('beta-program-description')}
+								trailingIcon={PiFlaskFill}
+							/>
 							<Switch
 								checked={isBetaChannel.isChecked}
 								onCheckedChange={isBetaChannel.change}
@@ -107,10 +116,13 @@ function useIsBetaChannel() {
 	return {isChecked, change, isLoading}
 }
 
-function CardText({title, description}: {title: string; description: string}) {
+function CardText({title, description, trailingIcon}: {title: string; description: string; trailingIcon?: IconTypes}) {
 	return (
 		<div className='flex-1 space-y-1'>
-			<h3 className='text-14 font-medium leading-tight'>{title}</h3>
+			<h3 className='text-14 font-medium leading-tight'>
+				{title}
+				{trailingIcon && <Icon component={trailingIcon} className='ml-2 inline-block opacity-50' />}
+			</h3>
 			<p className='text-13 leading-tight opacity-45'>{description}</p>
 		</div>
 	)
