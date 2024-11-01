@@ -116,6 +116,7 @@ export const router = createBrowserRouter([
 						children: [
 							{
 								path: ':settingsDialog',
+								Component: Settings,
 							},
 						],
 					},
