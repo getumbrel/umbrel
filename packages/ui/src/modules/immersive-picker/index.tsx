@@ -56,13 +56,13 @@ export function ImmersivePickerItem({
 		)
 	}
 	return (
-		<button className={radioButtonClass} onClick={onClick}>
+		<div className={cn(radioButtonClass, 'cursor-pointer')} onClick={onClick}>
 			<div>
 				<div className={radioTitleClass}>{title}</div>
 				<div className={radioDescriptionClass}>{description}</div>
 			</div>
 			{children}
-		</button>
+		</div>
 	)
 }
 
