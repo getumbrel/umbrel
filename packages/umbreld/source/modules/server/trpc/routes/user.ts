@@ -218,18 +218,13 @@ export default router({
 	// This endpoint is public so it can be shown on the login screen
 	wallpaper: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
-
-		if (user?.wallpaper === undefined) {
-			return DEFAULT_WALLPAPER
-		}
-
-		return user.wallpaper
+		return user?.wallpaper ?? DEFAULT_WALLPAPER
 	}),
 
 	// Returns the preferred language, if any
 	// This endpoint is public so it can be used on the login screen
 	language: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
-		return user?.language
+		return user?.language ?? null
 	}),
 })
