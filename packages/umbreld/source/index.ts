@@ -37,6 +37,7 @@ type StoreSchema = {
 			ssid: string
 			password?: string
 		}
+		externalDns?: boolean
 	}
 	development: {
 		hostname?: string

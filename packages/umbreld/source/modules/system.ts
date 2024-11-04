@@ -1,8 +1,10 @@
 import os from 'node:os'
+import {setTimeout} from 'node:timers/promises'
 
 import systemInformation from 'systeminformation'
 import {$} from 'execa'
 import fse from 'fs-extra'
+import PQueue from 'p-queue'
 
 import type Umbreld from '../index.js'
 
@@ -458,4 +460,23 @@ export async function getIpAddresses(): Promise<string[]> {
 	const ipAddresses = validInterfaces.map((iface) => iface.ip4)
 
 	return ipAddresses
+}
+
+const syncDnsQueue = new PQueue({concurrency: 1})
+
+// Update DNS configuration to match user settings
+export async function syncDns() {
+	return await syncDnsQueue.add(async () => {
+		const {mtimeMs: mtimeBefore} = await fse.promises.stat('/etc/resolv.conf')
+		await $`systemctl restart umbrel-dns-sync`
+		await setTimeout(1000) // evade restart limits
+		await $`systemctl restart NetworkManager`
+		let retries = 2
+		do {
+			await setTimeout(1000)
+			const {mtimeMs: mtimeAfter} = await fse.promises.stat('/etc/resolv.conf')
+			if (mtimeAfter > mtimeBefore) return true
+		} while (retries--)
+		return false
+	})
 }

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+UMBREL_YAML=/home/umbrel/umbrel/umbrel.yaml
+
+CLOUDFLARE_CONF=/etc/NetworkManager/conf.d/10-cloudflaredns.conf
+CLOUDFLARE_CONF_DISABLED=/etc/NetworkManager/conf.d/10-cloudflaredns.conf.disabled
+
+# Use CloudFlare DNS unless the setting is explicitly set to `false`
+EXTERNAL_DNS=$(yq eval ".settings.externalDns != false" "$UMBREL_YAML" 2>/dev/null || echo "true")
+
+if [[ "$EXTERNAL_DNS" == "false" ]]; then
+    if [[ -f "$CLOUDFLARE_CONF" ]]; then
+        mv -f "$CLOUDFLARE_CONF" "$CLOUDFLARE_CONF_DISABLED" || {
+            echo "Failed to move $CLOUDFLARE_CONF to $CLOUDFLARE_CONF_DISABLED"
+            exit 1
+        }
+    fi
+else
+    if [[ ! -f "$CLOUDFLARE_CONF" ]]; then
+        mv -f "$CLOUDFLARE_CONF_DISABLED" "$CLOUDFLARE_CONF" || {
+            echo "Failed to move $CLOUDFLARE_CONF_DISABLED to $CLOUDFLARE_CONF"
+            exit 1
+        }
+    fi
+fi

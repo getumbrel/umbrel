@@ -22,6 +22,7 @@ import {
 	isUmbrelOS,
 	getSystemMemoryUsage,
 	getIpAddresses,
+	syncDns,
 } from '../../../system.js'
 
 import {privateProcedure, publicProcedure, router} from '../trpc.js'
@@ -130,6 +131,22 @@ export default router({
 		.mutation(async ({ctx, input}) => {
 			return ctx.umbreld.store.set('settings.releaseChannel', input.channel)
 		}),
+	isExternalDns: privateProcedure.query(async ({ctx}) => {
+		return await ctx.umbreld.store.get('settings.externalDns', true)
+	}),
+	setExternalDns: privateProcedure.input(z.boolean()).mutation(async ({ctx, input}) => {
+		const previousExternalDns = await ctx.umbreld.store.get('settings.externalDns', true)
+		if (previousExternalDns === input) return true
+		await ctx.umbreld.store.set('settings.externalDns', input)
+		try {
+			const success = await syncDns()
+			if (!success) throw new Error('Failed to synchronize external DNS setting')
+			return true
+		} catch (error) {
+			await ctx.umbreld.store.set('settings.externalDns', previousExternalDns)
+			throw error
+		}
+	}),
 	update: privateProcedure.mutation(async ({ctx}) => {
 		systemStatus = 'updating'
 		setUpdateStatus({running: true, progress: 5, description: 'Updating...', error: false})

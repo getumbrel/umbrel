@@ -157,6 +157,8 @@
   "device-info.view-info": "Információ megtekintése",
   "disable": "Letiltás",
   "download-logs": "Naplók letöltése",
+  "external-dns": "Cloudflare DNS",
+  "external-dns-description": "Az umbrelOS alapértelmezés szerint a Cloudflare DNS-t használja, mivel néhány felhasználó problémát tapasztal az internetszolgáltató által biztosított DNS-sel. Ezt letilthatod, hogy a helyi hálózat által biztosított DNS-beállításokat örököld.",
   "factory-reset": "Gyári beállítások visszaállítása",
   "factory-reset.confirm.body": "Erősítsd meg az Umbrel jelszavad a visszaállításhoz",
   "factory-reset.confirm.password-label": "Jelszó megadása",

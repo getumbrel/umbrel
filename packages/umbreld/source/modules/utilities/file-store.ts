@@ -70,10 +70,10 @@ export default class FileStore<T> {
 		return this.#write(store)
 	}
 
-	async get<P extends string>(property?: StorePath<T, P>) {
+	async get<P extends string>(property?: StorePath<T, P>, defaultValue?: DotProp<T, P>) {
 		const store = await this.#read()
 
-		return getProperty(store, property as string) as DotProp<T, P>
+		return getProperty(store, property as string, defaultValue) as DotProp<T, P>
 	}
 
 	async set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>): Promise<boolean> {

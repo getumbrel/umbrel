@@ -157,6 +157,8 @@
   "device-info.view-info": "情報を見る",
   "disable": "無効にする",
   "download-logs": "ログをダウンロード",
+  "external-dns": "Cloudflare DNS",
+  "external-dns-description": "umbrelOSはデフォルトでCloudflare DNSを使用します。一部のユーザーはISPが提供するDNSに問題があるためです。これを無効にして、ローカルネットワークが提供するDNS設定を引き継ぐことができます。",
   "factory-reset": "工場出荷時リセット",
   "factory-reset.confirm.body": "リセットするためにUmbrelパスワードを確認してください",
   "factory-reset.confirm.password-label": "パスワードを入力",

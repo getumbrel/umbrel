@@ -3,6 +3,7 @@ import {useParams} from 'react-router-dom'
 
 import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {useIsExternalDns} from '@/hooks/use-is-externaldns'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -20,9 +21,11 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	const isBetaChannel = useIsBetaChannel()
 
+	const isExternalDns = useIsExternalDns()
+
 	const isMobile = useIsMobile()
 
-	const {advancedSelection} = useParams<{advancedSelection?: 'beta-program' | 'local-dns'}>()
+	const {advancedSelection} = useParams<{advancedSelection?: 'beta-program' | 'external-dns'}>()
 
 	if (isMobile) {
 		return (
@@ -49,6 +52,14 @@ export default function AdvancedSettingsDrawerOrDialog() {
 									checked={isBetaChannel.isChecked}
 									onCheckedChange={isBetaChannel.change}
 									disabled={isBetaChannel.isLoading}
+								/>
+							</label>
+							<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
+								<CardText title={t('external-dns')} description={t('external-dns-description')} />
+								<Switch
+									checked={isExternalDns.isChecked}
+									onCheckedChange={isExternalDns.change}
+									disabled={isExternalDns.isLoading}
 								/>
 							</label>
 						</div>
@@ -82,6 +93,14 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								checked={isBetaChannel.isChecked}
 								onCheckedChange={isBetaChannel.change}
 								disabled={isBetaChannel.isLoading}
+							/>
+						</label>
+						<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
+							<CardText title={t('external-dns')} description={t('external-dns-description')} />
+							<Switch
+								checked={isExternalDns.isChecked}
+								onCheckedChange={isExternalDns.change}
+								disabled={isExternalDns.isLoading}
 							/>
 						</label>
 					</div>

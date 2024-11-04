@@ -157,6 +157,8 @@
   "device-info.view-info": "Переглянути інформацію",
   "disable": "Вимкнути",
   "download-logs": "Завантажити журнали",
+  "external-dns": "Cloudflare DNS",
+  "external-dns-description": "umbrelOS за замовчуванням використовує Cloudflare DNS, оскільки деякі користувачі мають проблеми з DNS, наданими їхнім Інтернет-провайдером. Ви можете вимкнути це, щоб успадкувати налаштування DNS, надані вашою локальною мережею.",
   "factory-reset": "Скидання до заводських налаштувань",
   "factory-reset.confirm.body": "Підтвердьте пароль Umbrel для скидання",
   "factory-reset.confirm.password-label": "Введіть пароль",

@@ -157,6 +157,8 @@
   "device-info.view-info": "Bilgileri görüntüle",
   "disable": "Devre dışı bırak",
   "download-logs": "Günlükleri indir",
+  "external-dns": "Cloudflare DNS",
+  "external-dns-description": "Bazı kullanıcıların ISS tarafından sağlanan DNS ile sorun yaşadıkları için umbrelOS varsayılan olarak Cloudflare DNS kullanıyor. Yerel ağınız tarafından sağlanan DNS ayarlarını devralmak için bunu devre dışı bırakabilirsiniz.",
   "factory-reset": "Fabrika ayarlarına sıfırla",
   "factory-reset.confirm.body": "Sıfırlamak için Umbrel şifresini onaylayın",
   "factory-reset.confirm.password-label": "Şifreyi girin",
