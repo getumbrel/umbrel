@@ -26,6 +26,7 @@
 		"test-everything": "npm run format && npm run test -- --run && npm run lint",
 		"watch": "NODE_ENV=development nodemon --legacy-watch --ext js,json,ts --watch source --exec npm run",
 		"dev": "FORCE_COLOR=1 UMBREL_UI_PROXY=http://localhost:3000 npm run watch -- start -- -- --data-directory /home/umbrel/umbrel --log-level verbose",
+		"dev:production-mode": "FORCE_COLOR=1 npm run start -- --data-directory /home/umbrel/umbrel",
 		"build": "tsx scripts/build.ts",
 		"prepare-release": "tsx scripts/prepare-release.ts",
 		"timestamp-release": "ots-cli.js stamp release/SHA256SUMS",

@@ -13,6 +13,8 @@ INSTANCE_ID_PREFIX="umbrel-dev"
 INSTANCE_ID="${INSTANCE_ID_PREFIX}${UMBREL_DEV_INSTANCE:+-$UMBREL_DEV_INSTANCE}"
 INSTANCE_OPTIONS="${UMBREL_DEV_OPTIONS:-}"
 
+PRODUCTION_MODE_FLAG_FILE="/umbrel-dev/.production-mode"
+
 show_help() {
   cat << EOF
 umbrel-dev
@@ -34,6 +36,8 @@ Commands:
     stop                      Stop the dev environment
     reset                     Reset the dev environment to a fresh state
     destroy                   Destroy the dev environment
+    production-mode           Disables dev server, live reload and umbreld > ui proxy. Resembles close to production behaviour.
+    development-mode          Disables production mode.
 
 Environment Variables:
     UMBREL_DEV_INSTANCE       The instance id of the dev environment. Allows running multiple instances of
@@ -102,6 +106,11 @@ stop_instance() {
   # We first need to execute poweroff inside the instance so systemd gracefully stops services before we kill the container
   exec_in_instance poweroff
   docker stop "${INSTANCE_ID}"
+}
+
+restart_instance() {
+  stop_instance
+  start_instance
 }
 
 remove_instance() {
@@ -264,8 +273,25 @@ fi
 if [[ "${command}" = "restart" ]]
 then
     echo "Restarting the dev environment..."
-    stop_instance
-    start_instance
+    restart_instance
+
+    exit
+fi
+
+if [[ "${command}" = "production-mode" ]]
+then
+    echo "Enabling production mode..."
+    exec_in_instance touch "${PRODUCTION_MODE_FLAG_FILE}"
+    restart_instance
+
+    exit
+fi
+
+if [[ "${command}" = "development-mode" ]]
+then
+    echo "Disabling production mode..."
+    exec_in_instance rm -f "${PRODUCTION_MODE_FLAG_FILE}"
+    restart_instance
 
     exit
 fi
@@ -310,11 +336,23 @@ then
     npm install -g pnpm@8
     pnpm --dir /umbrel-dev/packages/ui install
 
-    # Run umbreld and ui
-    echo "Starting umbreld and ui..."
-    npm --prefix /umbrel-dev/packages/umbreld run dev &
-    CHOKIDAR_USEPOLLING=true npm --prefix /umbrel-dev/packages/ui run dev &
-    wait
+    # Check if we're in production mode
+    if [[ ! -f "${PRODUCTION_MODE_FLAG_FILE}" ]]
+    then
+        # Run umbreld and ui in development mode with live reload
+        echo "Starting umbreld and ui..."
+        npm --prefix /umbrel-dev/packages/umbreld run dev &
+        CHOKIDAR_USEPOLLING=true npm --prefix /umbrel-dev/packages/ui run dev &
+        wait
+    else
+        # Build static production ui bundle and serve from umbreld
+        echo "Building production ui..."
+        pnpm --dir /umbrel-dev/packages/ui run build
+        rm -rf "/umbrel-dev/packages/umbreld/ui" || true
+        mv "/umbrel-dev/packages/ui/dist" "/umbrel-dev/packages/umbreld/ui"
+        echo "Starting umbreld in production mode..."
+        npm --prefix /umbrel-dev/packages/umbreld run dev:production-mode
+    fi
 
     exit
 fi
