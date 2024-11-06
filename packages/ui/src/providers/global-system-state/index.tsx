@@ -10,11 +10,12 @@ import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
 import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
 import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
-import {RouterOutput, trpcReact} from '@/trpc/trpc'
+import {RouterError, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
+import {ResettingCover, useReset} from './reset'
 import {UpdatingCover, useUpdate} from './update'
 
 type SystemStatus = RouterOutput['system']['status']
@@ -24,42 +25,64 @@ const GlobalSystemStateContext = createContext<{
 	restart: () => void
 	update: () => void
 	migrate: () => void
+	reset: (password: string) => void
+	getError(): RouterError | null
+	clearError(): void
 } | null>(null)
 
-// TODO: split up logic so restart, shutdown, update are done in separate components?
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
-	const [shouldLogoutOnRunning, setShouldLogout] = useLocalStorage2<true | false>('should-logout-on-running', false)
+	const [failure, setFailure] = useState(false)
+	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = useLocalStorage2('should-logout-on-running', false)
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
+	const [routerError, setRouterError] = useState<RouterError | null>(null)
 
+	// Start over fresh when any of the supported actions is triggered
 	const onMutate = async () => {
 		setTriggered(true)
+		setFailure(false)
+		setShouldLogoutOnRunning(false)
+		setStartShutdownTimer(false)
+		setShutdownComplete(false)
+		setRouterError(null)
 	}
+
+	// Intercept router errors so the triggering component can handle them,
+	// for example when the confirmation password of a factory reset is invalid
+	// and the router returns an 'UNAUTHORIZED' response.
+	const onError = async (error: RouterError) => {
+		setRouterError(error)
+		setTriggered(false)
+	}
+	const getError = () => routerError
+	const clearError = () => setRouterError(null)
 
 	const queryClient = useQueryClient()
 	const ctx = trpcReact.useContext()
 
-	const onSuccess = (didWork: boolean) => {
-		// Cancel last query in case it returns as still running
-		ctx.system.status.cancel()
-		// alert('shouldLogoutOnRunning: true')
-		if (!didWork) {
-			// TODO: Consider showing a toast here, especially right after triggering the action
-			// toast.error('Failed to perform action')
+	// When the action completes, remember whether it was a success or a failure
+	// and potentially clean up left-over state so the failed action can be
+	// attempted again. We use `failure` below to trigger the error cover.
+	const onSuccess = (success: boolean) => {
+		setFailure(!success)
+		ctx.system.status.cancel() // avoid receiving an outdated status
+		if (!success) {
 			setTriggered(false)
-			setShouldLogout(false)
+			setShouldLogoutOnRunning(false)
 			setStartShutdownTimer(false)
 		}
 	}
 
-	// TODO: handle `onError`
+	// TODO: handle `onError` for other actions than reset?
 	const restart = useRestart({onMutate, onSuccess})
 	const shutdown = useShutdown({onMutate, onSuccess})
 	const update = useUpdate({onMutate, onSuccess})
 	const migrate = useMigrate({onMutate, onSuccess})
+	const reset = useReset({onMutate, onSuccess, onError})
 
+	// Force swift and fresh status updates when an action is in progress
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		cacheTime: 0,
@@ -69,41 +92,50 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		if (systemStatusQ.error && !triggered) {
 			// This error should get caught by a parent error boundary component
 			// TODO: figure out what to do about network errors
+			// TODO: Do we need this production-only case at all?
 			throw systemStatusQ.error
 		}
 	}
 
+	// Status is `undefined` upon mount, then updating to the status reported by
+	// the backend, plus when the system reboots, the first status query to fail
+	// will report `undefined` again. Handle these cases explicitly below.
 	const status = systemStatusQ.data
-	const prevStatus: SystemStatus = usePreviousDistinct(status) ?? 'running'
+	const prevStatus: SystemStatus | undefined = usePreviousDistinct(status)
 
+	// When global system state is triggered and status switches to anything but
+	// 'running', we know that the action is now in progress. So we'll now wait
+	// until the system becomes 'running' again before logging the user out.
+	// Here, `undefined` is a valid non-running status in that it indicates that
+	// the system has stopped responding, so is likely rebooting.
 	useEffect(() => {
 		if (status !== 'running' && triggered && !shouldLogoutOnRunning) {
-			// This means a shutdown/restart or similar process has started
-			// So we'll now wait until the system is back up and running
-			// before we can log the user out
-			setShouldLogout(true)
+			setShouldLogoutOnRunning(true)
 		}
-	}, [setShouldLogout, shouldLogoutOnRunning, status, triggered])
+	}, [setShouldLogoutOnRunning, shouldLogoutOnRunning, status, triggered])
 
+	// When the system becomes running again after setting shouldLogoutOnRunning
+	// above, log the user out and redirect them to the follow-up page, in turn
+	// resetting global system state provider incl. its various state vars.
 	useEffect(() => {
-		if (status === 'running' && shouldLogoutOnRunning === true) {
-			// Rely on page reload to reset `triggered` state
-			// setTriggered(false)
-			setShouldLogout(false)
-			// Delay the stuff after `setShouldLogout(false)` to ensure that local storage is updated. We wouldn't want to take the user through this again
+		if (status === 'running' && shouldLogoutOnRunning) {
+			// shouldLogoutOnRunning is stored in local storage for when the user
+			// manually reloads the page even though they shouldn't. Hence we unset it
+			// explicitly here and delay for a moment to be sure that local storage
+			// has been updated.
+			setShouldLogoutOnRunning(false)
 			setTimeout(() => {
-				// Let the page transition update the `triggered` state
-				// setTriggered(false)
-				// Canceling queries to prevent them from causing auth errors
-				queryClient.cancelQueries()
+				queryClient.cancelQueries() // prevent auth errors
 				jwt.removeJwt()
-				window.location.href = '/'
-			}, 1000)
+				const targetPage = prevStatus === 'resetting' ? '/factory-reset/success' : '/'
+				location.href = targetPage
+			}, 500)
 			return
 		}
-	}, [status, shouldLogoutOnRunning, jwt, setShouldLogout, queryClient])
+	}, [status, prevStatus, shouldLogoutOnRunning, jwt, setShouldLogoutOnRunning, queryClient, triggered])
 
-	// Start shutdown timer when status endpoint starts failing
+	// Start shutdown timer when status endpoint starts failing, showing the
+	// shutdown complete cover after a sensible delay.
 	useEffect(() => {
 		if (
 			status === 'shutting-down' &&
@@ -115,9 +147,11 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		}
 	}, [startShutdownTimer, status, systemStatusQ.failureCount, systemStatusQ.isError, triggered])
 
-	// When we come back online, we should continue to show the previous state until we've logged out
-	const statusToShow = triggered === true && status === 'running' ? prevStatus : status
+	// When we come back online, we should continue to show the previous state until we've logged out,
+	// plus, when the action failed, we should show the failure cover until the user interacts with it.
+	const statusToShow = (triggered || failure) && (!status || status === 'running') ? prevStatus : status
 
+	// Debug info can be activated by adding the local storage key 'debug' with a value of `true`
 	const debugInfo = (
 		<DebugOnlyBare>
 			<div className='fixed bottom-0 right-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
@@ -147,32 +181,32 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		)
 	}
 
-	if (statusToShow === 'shutting-down' && shutdownComplete) {
-		return (
-			<BareCoverMessage>
-				{t('shut-down.complete')}
-				<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
-			</BareCoverMessage>
-		)
-	}
-
 	switch (statusToShow) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate}}>
+				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate, reset, getError, clearError}}>
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>
 			)
 		}
 		case 'shutting-down': {
-			return (
-				<>
-					<ShuttingDownCover />
-					{debugInfo}
-				</>
-			)
+			if (shutdownComplete) {
+				return (
+					<BareCoverMessage>
+						{t('shut-down.complete')}
+						<CoverMessageParagraph>{t('shut-down.complete-text')}</CoverMessageParagraph>
+					</BareCoverMessage>
+				)
+			} else {
+				return (
+					<>
+						<ShuttingDownCover />
+						{debugInfo}
+					</>
+				)
+			}
 		}
 		case 'restarting': {
 			return (
@@ -194,6 +228,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			return (
 				<>
 					<MigratingCover onRetry={migrate} />
+					{debugInfo}
+				</>
+			)
+		}
+		case 'resetting': {
+			return (
+				<>
+					<ResettingCover />
 					{debugInfo}
 				</>
 			)

@@ -11,7 +11,7 @@ import {$} from 'execa'
 import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
 import {type AppRepositoryMeta, type AppManifest} from './schema.js'
-import {UMBREL_APP_STORE_REPO} from '../../index.js'
+import {UMBREL_APP_STORE_REPO} from '../../constants.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))

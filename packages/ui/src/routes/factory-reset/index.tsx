@@ -1,33 +1,29 @@
-import {useState} from 'react'
 import {TbRotate2} from 'react-icons/tb'
 import {Route, Routes, useNavigate} from 'react-router-dom'
-import {toast} from 'sonner'
 
 import {ImmersiveDialog, ImmersiveDialogSplitContent} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
-import {trpcReact} from '@/trpc/trpc'
+import {useGlobalSystemState} from '@/providers/global-system-state'
+import {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {ConfirmWithPassword} from './_components/confirm-with-password'
-import {Failed} from './_components/failed'
 import {backPath} from './_components/misc'
-import {Resetting} from './_components/resetting'
 import {ReviewData} from './_components/review-data'
 import {Success} from './_components/success'
 
 export default function FactoryReset() {
 	// TODO: if the route is `/failed` and we don't have a password, redirect to `/confirm`
-	const [password, setPassword] = useState('')
+	const {reset, getError, clearError} = useGlobalSystemState()
 
-	const factoryResetMut = trpcReact.system.factoryReset.useMutation({
-		onError: (err) => {
-			if (err.data?.code === 'UNAUTHORIZED') {
-				setPassword('')
-			} else {
-				toast.error(err.message)
-			}
-		},
-	})
+	const isPasswordError = (error: RouterError) => {
+		return error?.data?.code === 'UNAUTHORIZED'
+	}
+
+	const getPasswordError = () => {
+		const error = getError()
+		return error && isPasswordError(error) ? error.message : ''
+	}
 
 	// Handling routes in this weird way because:
 	// - Standard router approach won't work because `<Outlet />` is generic and we want this parent to have state
@@ -54,14 +50,12 @@ export default function FactoryReset() {
 					element={
 						<EnsureLoggedIn>
 							<SplitDialog>
-								<ConfirmWithPassword password={password} onPasswordChange={setPassword} mut={factoryResetMut} />
+								<ConfirmWithPassword onSubmit={reset} error={getPasswordError()} clearError={clearError} />
 							</SplitDialog>
 						</EnsureLoggedIn>
 					}
 				/>
-				<Route path='/resetting' element={<Resetting />} />
 				<Route path='/success' element={<Success />} />
-				<Route path='/failed' element={<Failed />} />
 			</Routes>
 		</>
 	)

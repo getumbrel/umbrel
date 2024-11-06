@@ -6,6 +6,7 @@ import {$} from 'execa'
 // TODO: import packageJson from '../package.json' assert {type: 'json'}
 const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
 
+import {UMBREL_APP_STORE_REPO} from './constants.js'
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
 import Migration from './modules/migration/index.js'
@@ -51,8 +52,6 @@ export type UmbreldOptions = {
 	logLevel?: LogLevel
 	defaultAppStoreRepo?: string
 }
-
-export const UMBREL_APP_STORE_REPO = 'https://github.com/getumbrel/umbrel-apps.git'
 
 export default class Umbreld {
 	version: string = packageJson.version

@@ -186,12 +186,10 @@ function CmdkContent() {
 			<SettingsSearchItem value={t('terminal')} onSelect={() => navigate('/settings/terminal')} />
 			<SettingsSearchItem value={t('device-info')} onSelect={() => navigate('/settings/device-info')} />
 			<SettingsSearchItem value={t('software-update.title')} onSelect={() => navigate('/settings/software-update')} />
+			<SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} />
 			<SettingsSearchItem value={t('advanced-settings')} onSelect={() => navigate('/settings/advanced')} />
 			<SettingsSearchItem value={t('beta-program')} onSelect={() => navigate('/settings/advanced/beta-program')} />
 			<SettingsSearchItem value={t('external-dns')} onSelect={() => navigate('/settings/advanced/external-dns')} />
-			{/* TODO: Enable after factory reset is hooked with umbreld */}
-			{/* <SettingsSearchItem value={t('factory-reset')} onSelect={() => navigate('/factory-reset')} /> */}
-			{/* ---- */}
 			{readyApps.map((app) => (
 				<SearchItem
 					value={app.name}

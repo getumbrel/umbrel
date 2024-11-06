@@ -40,7 +40,15 @@ export function ReviewData() {
 				<ImmersiveDialogIconMessageKeyValue
 					icon={TbUser}
 					k={t('factory-reset.review.account-info')}
-					v={userQ.data?.name}
+					v={
+						<>
+							<span>{userQ.data?.name}</span>
+							<span className='select-none max-sm:hidden'>
+								<span className='ml-2 mr-2 opacity-50'>⋅</span>
+								••••••••
+							</span>
+						</>
+					}
 				/>
 				<ImmersiveDialogIconMessageKeyValue
 					icon={TbShoppingBag}

@@ -62,6 +62,12 @@ export default function AdvancedSettingsDrawerOrDialog() {
 									disabled={isExternalDns.isLoading}
 								/>
 							</label>
+							<label className={cardClass}>
+								<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
+								<IconButtonLink className='self-center' to={'/factory-reset'} variant='destructive'>
+									{t('reset')}
+								</IconButtonLink>
+							</label>
 						</div>
 					</div>
 				</DrawerContent>
@@ -102,6 +108,12 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								onCheckedChange={isExternalDns.change}
 								disabled={isExternalDns.isLoading}
 							/>
+						</label>
+						<label className={cardClass}>
+							<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
+							<IconButtonLink className='self-center' to={'/factory-reset'} variant='destructive'>
+								{t('reset')}
+							</IconButtonLink>
 						</label>
 					</div>
 				</div>

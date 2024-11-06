@@ -1,4 +1,4 @@
-import {createTRPCProxyClient, createTRPCReact, httpLink, loggerLink} from '@trpc/react-query'
+import {createTRPCProxyClient, createTRPCReact, httpLink, loggerLink, TRPCClientErrorLike} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
@@ -39,6 +39,7 @@ export const trpcClient = createTRPCProxyClient<AppRouter>({links})
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
+export type RouterError = TRPCClientErrorLike<AppRouter>
 
 // ---
 
