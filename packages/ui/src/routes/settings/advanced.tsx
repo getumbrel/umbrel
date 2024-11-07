@@ -38,7 +38,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 						<div className='flex flex-col gap-y-3'>
 							<label className={cardClass}>
 								<CardText title={t('terminal')} description={t('terminal-description')} />
-								<IconButtonLink className='self-center' to={'/settings/terminal'}>
+								<IconButtonLink className='pointer-events-auto self-center' to={'/settings/terminal'}>
 									{t('open')}
 								</IconButtonLink>
 							</label>
@@ -49,6 +49,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 									trailingIcon={PiFlaskFill}
 								/>
 								<Switch
+									className='pointer-events-auto'
 									checked={isBetaChannel.isChecked}
 									onCheckedChange={isBetaChannel.change}
 									disabled={isBetaChannel.isLoading}
@@ -57,6 +58,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 							<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
 								<CardText title={t('external-dns')} description={t('external-dns-description')} />
 								<Switch
+									className='pointer-events-auto'
 									checked={isExternalDns.isChecked}
 									onCheckedChange={isExternalDns.change}
 									disabled={isExternalDns.isLoading}
@@ -64,7 +66,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 							</label>
 							<label className={cardClass}>
 								<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
-								<IconButtonLink className='self-center' to={'/factory-reset'} variant='destructive'>
+								<IconButtonLink className='pointer-events-auto self-center' to={'/factory-reset'} variant='destructive'>
 									{t('reset')}
 								</IconButtonLink>
 							</label>
@@ -85,7 +87,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 					<div className='flex flex-col gap-y-3'>
 						<label className={cardClass}>
 							<CardText title={t('terminal')} description={t('terminal-description')} />
-							<IconButtonLink className='self-center' to={'/settings/terminal'}>
+							<IconButtonLink className='self-center, pointer-events-auto' to={'/settings/terminal'}>
 								{t('open')}
 							</IconButtonLink>
 						</label>
@@ -96,6 +98,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								trailingIcon={PiFlaskFill}
 							/>
 							<Switch
+								className='pointer-events-auto'
 								checked={isBetaChannel.isChecked}
 								onCheckedChange={isBetaChannel.change}
 								disabled={isBetaChannel.isLoading}
@@ -104,6 +107,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 						<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
 							<CardText title={t('external-dns')} description={t('external-dns-description')} />
 							<Switch
+								className='pointer-events-auto'
 								checked={isExternalDns.isChecked}
 								onCheckedChange={isExternalDns.change}
 								disabled={isExternalDns.isLoading}
@@ -111,7 +115,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 						</label>
 						<label className={cardClass}>
 							<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
-							<IconButtonLink className='self-center' to={'/factory-reset'} variant='destructive'>
+							<IconButtonLink className='pointer-events-auto self-center' to={'/factory-reset'} variant='destructive'>
 								{t('reset')}
 							</IconButtonLink>
 						</label>
@@ -159,4 +163,4 @@ function CardText({title, description, trailingIcon}: {title: string; descriptio
 	)
 }
 
-const cardClass = tw`flex items-start gap-x-2 rounded-12 bg-white/6 p-4`
+const cardClass = tw`flex items-start gap-x-2 rounded-12 bg-white/6 p-4 pointer-events-none`
