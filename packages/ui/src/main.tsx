@@ -5,6 +5,7 @@ import {initTokenRenewal} from '@/modules/auth/shared'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
 import {RemoteLanguageInjector} from './providers/language'
+import {Prefetcher} from './providers/prefetch'
 import {RemoteWallpaperInjector, WallpaperProviderConnected} from './providers/wallpaper'
 import {router} from './router'
 import {TrpcProvider} from './trpc/trpc-provider'
@@ -21,5 +22,6 @@ init(
 				<RouterProvider router={router} />
 			</GlobalSystemStateProvider>
 		</WallpaperProviderConnected>
+		<Prefetcher />
 	</TrpcProvider>,
 )

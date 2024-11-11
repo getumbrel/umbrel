@@ -122,6 +122,10 @@ export const wallpapers = [
 	},
 ] as const satisfies readonly WallpaperBase[]
 
+export function getWallpaperThumbUrl(wallpaper: WallpaperBase) {
+	return `/wallpapers/generated-thumbs/${wallpaper.id}.jpg`
+}
+
 export type Wallpaper = (typeof wallpapers)[number]
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
@@ -256,7 +260,7 @@ export function Wallpaper({
 		<>
 			<FadeInImg
 				key={wallpaper.url + '-loading'}
-				src={`/wallpapers/generated-thumbs/${wallpaper.id}.jpg`}
+				src={getWallpaperThumbUrl(wallpaper)}
 				className={cn(
 					'pointer-events-none fixed inset-0 w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-700',
 					isPreview && 'absolute h-full',
