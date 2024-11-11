@@ -40,6 +40,9 @@ export const InfoSection = ({app}: {app: RegistryApp}) => (
 			/>
 		)}
 		<KV k={t('app-page.section.info.compatibility')} v={t('app-page.section.info.compatibility-compatible')} />
+		<a href={app.support} target='_blank' className='self-start text-14 font-medium text-brand-lighter'>
+			{t('app-page.section.info.support')}
+		</a>
 	</div>
 )
 

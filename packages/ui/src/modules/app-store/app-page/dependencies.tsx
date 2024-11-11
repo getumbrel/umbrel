@@ -22,9 +22,6 @@ export const DependenciesSection = ({app}: {app: RegistryApp}) => {
 			{app.dependencies?.map((dep) => (
 				<Dependency key={dep} app={appsKeyed[dep]} installed={!!userApps?.find((app) => app.id === dep)} />
 			))}
-			<a href={app.support} target='_blank' className='self-start font-medium text-brand-lighter'>
-				{t('app-page.section.requires.support')}
-			</a>
 		</div>
 	)
 }
