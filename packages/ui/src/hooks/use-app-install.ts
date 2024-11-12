@@ -1,6 +1,6 @@
 import {useMutation} from '@tanstack/react-query'
-import {useCallback, useEffect} from 'react'
-import {useInterval} from 'react-use'
+import {useEffect} from 'react'
+import {useInterval, usePrevious} from 'react-use'
 import {uniq} from 'remeda'
 import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
@@ -18,18 +18,6 @@ export const pollStates = [
 	'restarting',
 	'stopping',
 ] as const satisfies readonly AppState[]
-
-export function useInvalidateDeps(appId: string) {
-	const ctx = trpcReact.useContext()
-
-	return useCallback(() => {
-		ctx.apps.state.invalidate({appId})
-		// Invalidate desktop
-		ctx.apps.list.invalidate()
-		// Invalidate latest app opens
-		ctx.user.get.invalidate()
-	}, [appId, ctx.apps.state, ctx.apps.list, ctx.user.get])
-}
 
 export function useUninstallAllApps() {
 	const apps = trpcReact.apps.list.useQuery().data
@@ -54,42 +42,54 @@ export function useUninstallAllApps() {
 
 // TODO: rename to something that covers more than install
 export function useAppInstall(id: string) {
-	const invalidateInstallDependencies = useInvalidateDeps(id)
-
 	const ctx = trpcReact.useContext()
 	const appStateQ = trpcReact.apps.state.useQuery({appId: id})
 
-	const startMut = trpcReact.apps.start.useMutation({onSuccess: invalidateInstallDependencies})
-	const stopMut = trpcReact.apps.stop.useMutation({
-		onSuccess: invalidateInstallDependencies,
-		onMutate() {
-			ctx.apps.state.cancel()
-			ctx.apps.state.setData({appId: id}, {state: 'stopping', progress: 0})
-		},
-	})
-	const start = async () => startMut.mutate({appId: id})
-	const stop = async () => stopMut.mutate({appId: id})
+	const refreshAppStates = () => {
+		// Invalidate this app's state
+		ctx.apps.state.invalidate({appId: id})
+		// Invalidate list of apps on desktop
+		ctx.apps.list.invalidate()
+		// Invalidate latest app opens
+		ctx.user.get.invalidate()
+	}
 
-	// Refetch so that we can update the `appState` variable, which then triggers the useEffect below
-	// Also doing optimistic updates here:
-	// https://create.t3.gg/en/usage/trpc#optimistic-updates
-	// Optimistic because `trpcReact.apps.install` doesn't return until the app is installed
+	const makeOptimisticOnMutate = (optimisticState: (typeof pollStates)[number], onMutate?: () => void) => () => {
+		// Optimistic because actions do not return until complete
+		// see: https://create.t3.gg/en/usage/trpc#optimistic-updates
+		ctx.apps.state.cancel()
+		ctx.apps.state.setData({appId: id}, {state: optimisticState, progress: 0})
+		onMutate?.()
+		// TODO: The interval below starts ticking now, so the app's state will be
+		// first updated in 2000ms. Should we refactor the backend to set the state,
+		// return early and run the action asynchronously to make sure instead?
+	}
+
+	const startMut = trpcReact.apps.start.useMutation({
+		onMutate: makeOptimisticOnMutate('starting'),
+		onSettled: refreshAppStates,
+	})
+	const stopMut = trpcReact.apps.stop.useMutation({
+		onMutate: makeOptimisticOnMutate('stopping'),
+		onSettled: refreshAppStates,
+	})
 	const installMut = trpcReact.apps.install.useMutation({
-		onMutate() {
-			ctx.apps.state.cancel()
-			ctx.apps.state.setData({appId: id}, {state: 'installing', progress: 0})
-			// Fixes issue where installing the first app doesn't immediately invalidate the app list
-			setTimeout(() => {
-				invalidateInstallDependencies()
-			}, 1000)
-		},
-		onSuccess: invalidateInstallDependencies,
+		onMutate: makeOptimisticOnMutate('installing', () => {
+			// When there are no apps yet, this component is not guaranteed to remain
+			// referenced, so the interval below might not execute. At the expense of
+			// redundancy, make sure that the refresh happens in any case.
+			setTimeout(refreshAppStates, 2000)
+		}),
+		onSettled: refreshAppStates,
 	})
 	const uninstallMut = trpcReact.apps.uninstall.useMutation({
-		onMutate: invalidateInstallDependencies,
-		onSuccess: invalidateInstallDependencies,
+		onMutate: makeOptimisticOnMutate('uninstalling'),
+		onSettled: refreshAppStates,
 	})
-	const restartMut = trpcReact.apps.restart.useMutation({onSuccess: invalidateInstallDependencies})
+	const restartMut = trpcReact.apps.restart.useMutation({
+		onMutate: makeOptimisticOnMutate('restarting'),
+		onSettled: refreshAppStates,
+	})
 
 	const appState = appStateQ.data?.state
 	const progress = appStateQ.data?.progress
@@ -97,12 +97,18 @@ export function useAppInstall(id: string) {
 	// Poll for install status if we're installing or uninstalling
 	const shouldPollForStatus = appState && arrayIncludes(pollStates, appState)
 	useInterval(appStateQ.refetch, shouldPollForStatus ? 2000 : null)
-	useEffect(() => {
-		if (appState && !arrayIncludes(pollStates, appState)) {
-			invalidateInstallDependencies()
-		}
-	}, [appState, appStateQ, invalidateInstallDependencies])
 
+	// Also refresh app states when polling ends in case this tab isn't the one
+	// owning the mutation and hence isn't notified when it settles
+	const prevShouldPollForStatus = usePrevious(shouldPollForStatus)
+	useEffect(() => {
+		if (!shouldPollForStatus && prevShouldPollForStatus === true) {
+			refreshAppStates()
+		}
+	}, [shouldPollForStatus, prevShouldPollForStatus])
+
+	const start = async () => startMut.mutate({appId: id})
+	const stop = async () => stopMut.mutate({appId: id})
 	const install = async () => installMut.mutate({appId: id})
 	const getAppsToUninstallFirst = async () => {
 		const appsToUninstallFirst = await getRequiredBy(id)
