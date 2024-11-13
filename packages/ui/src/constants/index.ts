@@ -6,11 +6,8 @@ export const LOADING_DASH = '–'
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-const hostEnvironments = ['umbrel-home', 'raspberry-pi', 'linux'] as const
+const hostEnvironments = ['umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
 export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
-
-// NOTE: ensure this is in sync with the `hostEnvironments` array
-;[t('umbrel-home'), t('raspberry-pi'), t('linux')]
 
 export const hostEnvironmentMap = {
 	'umbrel-home': {
@@ -19,8 +16,11 @@ export const hostEnvironmentMap = {
 	'raspberry-pi': {
 		icon: '/figma-exports/system-pi.svg',
 	},
-	linux: {
-		icon: '/figma-exports/system-tux.svg',
+	'docker-container': {
+		icon: '/figma-exports/system-docker.svg',
+	},
+	unknown: {
+		icon: '/figma-exports/system-generic-device.svg',
 	},
 } satisfies Record<
 	UmbrelHostEnvironment,

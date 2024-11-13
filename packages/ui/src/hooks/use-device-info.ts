@@ -83,6 +83,10 @@ function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnviron
 		return 'raspberry-pi'
 	}
 
-	// Assume Linux
-	return 'linux'
+	if (deviceInfo.productName.toLowerCase().includes('docker')) {
+		return 'docker-container'
+	}
+
+	// We return unknown and render a generic server icon
+	return 'unknown'
 }

@@ -66,13 +66,15 @@ export default function SettingsStory() {
 				<HostEnvironmentIcon />
 				<HostEnvironmentIcon environment='umbrel-home' />
 				<HostEnvironmentIcon environment='raspberry-pi' />
-				<HostEnvironmentIcon environment='linux' />
+				<HostEnvironmentIcon environment='unknown' />
+				<HostEnvironmentIcon environment='docker-container' />
 			</div>
 			<div className='flex flex-wrap gap-2 bg-red-500/10'>
 				<DeviceInfoContent />
 				<DeviceInfoContent umbrelHostEnvironment='umbrel-home' modelNumber='U130121' serialNumber='U230300078' />
 				<DeviceInfoContent umbrelHostEnvironment='raspberry-pi' />
-				<DeviceInfoContent umbrelHostEnvironment='linux' />
+				<DeviceInfoContent umbrelHostEnvironment='unknown' />
+				<DeviceInfoContent umbrelHostEnvironment='docker-container' />
 			</div>
 			<H2>Progress Card</H2>
 			<Card>

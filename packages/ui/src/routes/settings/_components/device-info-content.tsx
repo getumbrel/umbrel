@@ -53,24 +53,32 @@ const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medi
 const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
 
 export const HostEnvironmentIcon = ({environment}: {environment?: UmbrelHostEnvironment}) => {
-	switch (environment) {
-		case 'umbrel-home':
-			return <FadeInImg src={hostEnvironmentMap[environment].icon} width={128} height={128} />
-		case 'raspberry-pi':
-		case 'linux':
-			return (
-				<IconContainer>
-					<FadeInImg src={hostEnvironmentMap[environment].icon} width={64} height={64} />
-				</IconContainer>
-			)
-		default:
-			return (
-				<IconContainer>
-					<TbQuestionMark className='h-12 w-12 text-white/50' />
-				</IconContainer>
-			)
+	const iconDimensions = {
+		'umbrel-home': 128,
+		'raspberry-pi': 64,
+		'docker-container': 72,
+		unknown: 128,
 	}
+
+	const icon =
+		environment && hostEnvironmentMap[environment]?.icon ? (
+			<FadeInImg
+				src={hostEnvironmentMap[environment].icon}
+				width={iconDimensions[environment]}
+				height={iconDimensions[environment]}
+			/>
+		) : (
+			<TbQuestionMark className='h-12 w-12 text-white/50' />
+		)
+
+	// Only wrap in IconContainer for raspberry-pi and docker-container
+	if (environment === 'raspberry-pi' || environment === 'docker-container') {
+		return <IconContainer>{icon}</IconContainer>
+	}
+
+	return icon
 }
+
 const IconContainer = ({children}: {children: React.ReactNode}) => (
 	<div
 		className='grid h-32 w-32 place-items-center rounded-[27px] bg-[#52525252]'
