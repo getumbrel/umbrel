@@ -1,8 +1,12 @@
 import {RegistryApp, trpcClient} from '@/trpc/trpc'
 import {preloadImage} from '@/utils/misc'
 
+const alreadyPreloadedFirstFewGalleryImages = new Set<string>()
+
 export function preloadFirstFewGalleryImages(app: RegistryApp) {
-	return app.gallery.slice(0, 3).map(preloadImage)
+	if (alreadyPreloadedFirstFewGalleryImages.has(app.id)) return
+	alreadyPreloadedFirstFewGalleryImages.add(app.id)
+	app.gallery.slice(0, 3).map(preloadImage)
 }
 
 export async function getAppStoreAppFromInstalledApp(appId: string) {
