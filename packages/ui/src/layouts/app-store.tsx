@@ -1,6 +1,5 @@
 import {motion} from 'framer-motion'
-import {matchSorter} from 'match-sorter'
-import {memo, useDeferredValue, useEffect, useRef, useState} from 'react'
+import {memo, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
 import {useKeyPressEvent} from 'react-use'
@@ -26,6 +25,7 @@ import {
 } from '@/shadcn-components/ui/dropdown-menu'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
+import {createSearch} from '@/utils/search'
 
 export function AppStoreLayout() {
 	const title = t('app-store.title')
@@ -126,10 +126,30 @@ function SearchResults({query}: {query: string}) {
 		return <Loading />
 	}
 
-	const appResults = matchSorter(apps, query, {
-		keys: ['name', 'tagline', 'developer', 'website', 'description'],
-		threshold: matchSorter.rankings.WORD_STARTS_WITH,
-	})
+	const search = useMemo(
+		() =>
+			createSearch(apps, [
+				{
+					name: 'name',
+					weight: 3,
+				},
+				{
+					name: 'tagline',
+					weight: 1,
+				},
+				{
+					name: 'description',
+					weight: 1,
+				},
+				{
+					name: 'website',
+					weight: 1,
+				},
+			]),
+		[apps],
+	)
+
+	const appResults = search(query)
 
 	const title = (
 		<span>
