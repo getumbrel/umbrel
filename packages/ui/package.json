@@ -27,7 +27,6 @@
 		"postinstall": "npm run copy-tabler-icons"
 	},
 	"dependencies": {
-		"@radix-ui/react-alert-dialog": "1.0.4",
 		"@radix-ui/react-checkbox": "^1.0.4",
 		"@radix-ui/react-context-menu": "2.1.4",
 		"@radix-ui/react-dialog": "1.0.4",
@@ -42,7 +41,6 @@
 		"@radix-ui/react-slot": "1.0.2",
 		"@radix-ui/react-switch": "1.0.3",
 		"@radix-ui/react-tooltip": "1.0.7",
-		"@sindresorhus/slugify": "^2.2.1",
 		"@tanstack/react-query": "4.36.1",
 		"@tanstack/react-query-devtools": "4.36.1",
 		"@trpc/client": "10.34.0",
@@ -84,7 +82,6 @@
 		"remark-breaks": "^4.0.0",
 		"remark-gfm": "^4.0.0",
 		"remeda": "^1.28.0",
-		"remove": "^0.1.5",
 		"sonner": "github:markmiro/sonner#fix-unstyled-umbrel",
 		"tailwind-merge": "1.14.0",
 		"ts-extras": "^0.11.0",
