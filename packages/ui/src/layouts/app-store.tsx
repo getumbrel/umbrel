@@ -1,8 +1,8 @@
 import {motion} from 'framer-motion'
 import {matchSorter} from 'match-sorter'
-import {memo, useDeferredValue, useRef, useState} from 'react'
+import {memo, useDeferredValue, useEffect, useRef, useState} from 'react'
 import {TbDots, TbSearch} from 'react-icons/tb'
-import {Link, Outlet} from 'react-router-dom'
+import {Link, Outlet, useSearchParams} from 'react-router-dom'
 import {useKeyPressEvent} from 'react-use'
 
 import {Loading} from '@/components/ui/loading'
@@ -30,10 +30,18 @@ import {t} from '@/utils/i18n'
 export function AppStoreLayout() {
 	const title = t('app-store.title')
 
-	const [searchQuery, setSearchQuery] = useState('')
+	const [searchParams, setSearchParams] = useSearchParams()
+	const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '')
 	const deferredSearchQuery = useDeferredValue(searchQuery)
 
 	const inputRef = useRef<HTMLInputElement>(null)
+
+	// Remember query as part of the URL so we can navigate back to the results
+	useEffect(() => {
+		if (deferredSearchQuery) searchParams.set('q', deferredSearchQuery)
+		else searchParams.delete('q')
+		setSearchParams(searchParams, {replace: true})
+	}, [deferredSearchQuery])
 
 	useKeyPressEvent(
 		(e) => e.key === '/',
