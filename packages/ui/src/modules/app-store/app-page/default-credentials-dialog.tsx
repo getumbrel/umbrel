@@ -75,7 +75,7 @@ export function DefaultCredentialsDialog() {
 						)}
 						<Separator />
 						<div className='flex items-center justify-between'>
-							{direct && <ShowCredentialsBeforeOpenCheckbox appId={appId} />}
+							<ShowCredentialsBeforeOpenCheckbox appId={appId} direct={direct} />
 							{direct ? (
 								<Button
 									variant='primary'
@@ -103,21 +103,20 @@ export function DefaultCredentialsDialog() {
 	)
 }
 
-function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
+function ShowCredentialsBeforeOpenCheckbox({appId, direct}: {appId: string; direct: boolean}) {
 	const checkboxId = useId()
 	const {app, isLoading} = useUserApp(appId)
 
-	const showCredentials = app?.showCredentialsBeforeOpen ?? false
+	const showCredentials = app?.credentials?.showBeforeOpen ?? false
 
 	const ctx = trpcReact.useContext()
 
-	// @ts-expect-error `showCredentialsBeforeOpen`
-	const showCredentialsBeforeOpenMut = trpcReact.apps.showCredentialsBeforeOpen.useMutation({
+	const hideCredentialsBeforeOpenMut = trpcReact.apps.hideCredentialsBeforeOpen.useMutation({
 		onSuccess: () => ctx.apps.invalidate(),
 	})
 
-	const handleShowCredentialsBeforeOpenChange = (checked: boolean) => {
-		showCredentialsBeforeOpenMut.mutate({appId, showCredentialsBeforeOpen: !checked})
+	const handleHideCredentialsBeforeOpenChange = (value: boolean) => {
+		hideCredentialsBeforeOpenMut.mutate({appId, value})
 	}
 
 	return (
@@ -125,16 +124,16 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 			className={cn(
 				checkboxContainerClass,
 				// prevent interaction when loading
-				(isLoading || showCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
+				(isLoading || hideCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
 			)}
 		>
 			<Checkbox
 				id={checkboxId}
 				checked={!showCredentials}
-				onCheckedChange={(c) => handleShowCredentialsBeforeOpenChange(!!c)}
+				onCheckedChange={(checked) => handleHideCredentialsBeforeOpenChange(!!checked)}
 			/>
 			<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
-				{t('default-credentials.dont-show-again')}
+				{direct ? t('default-credentials.dont-show-again') : t('default-credentials.dont-show-on-open')}
 			</label>
 		</div>
 	)

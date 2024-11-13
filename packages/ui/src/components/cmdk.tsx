@@ -90,7 +90,7 @@ function CmdkContent() {
 
 	return (
 		<CommandList ref={scrollRef}>
-			<FrequentApps />
+			<FrequentApps onLaunchApp={() => setOpen(false)} />
 			<CommandEmpty>{t('no-results-found')}</CommandEmpty>
 			<CommandItem
 				icon={systemAppsKeyed['UMBREL_settings'].icon}
@@ -246,7 +246,7 @@ function CmdkContent() {
 	)
 }
 
-function FrequentApps() {
+function FrequentApps({onLaunchApp}: {onLaunchApp: () => void}) {
 	const lastAppsQ = trpcReact.apps.recentlyOpened.useQuery(undefined, {
 		retry: false,
 	})
@@ -277,6 +277,7 @@ function FrequentApps() {
 							appId={appId}
 							icon={userAppsKeyed[appId]?.icon}
 							name={userAppsKeyed[appId]?.name}
+							onLaunch={onLaunchApp}
 						/>
 					))}
 				</FadeScroller>
@@ -306,13 +307,26 @@ function appsByFrequency(lastOpenedApps: string[], count: number) {
 	return sortedAppIds
 }
 
-function FrequentApp({appId, icon, name}: {appId: string; icon: string; name: string}) {
+function FrequentApp({
+	appId,
+	icon,
+	name,
+	onLaunch,
+}: {
+	appId: string
+	icon: string
+	name: string
+	onLaunch?: () => void
+}) {
 	const launchApp = useLaunchApp()
 	const isMobile = useIsMobile()
 	return (
 		<button
 			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
-			onClick={() => launchApp(appId)}
+			onClick={() => {
+				onLaunch?.()
+				launchApp(appId)
+			}}
 			onKeyDown={(e) => {
 				if (e.key === 'Enter') {
 					// Prevent triggering first selected cmdk item

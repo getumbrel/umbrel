@@ -48,3 +48,7 @@ export type AppManifest = {
 	widgets?: any[] // TODO: Define this type
 	defaultShell?: string
 }
+
+export type AppSettings = {
+	hideCredentialsBeforeOpen?: boolean
+}

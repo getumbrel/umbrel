@@ -130,6 +130,7 @@
   "default-credentials.close": "Compris",
   "default-credentials.description": "Voici les identifiants dont vous aurez besoin pour vous connecter à l'application.",
   "default-credentials.dont-show-again": "Ne plus afficher",
+  "default-credentials.dont-show-on-open": "Ne pas afficher à l'ouverture",
   "default-credentials.open": "Ouvrir {{app}}",
   "default-credentials.password": "Mot de passe par défaut",
   "default-credentials.title": "Identifiants pour {{app}}",

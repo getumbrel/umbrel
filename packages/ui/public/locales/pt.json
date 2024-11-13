@@ -130,6 +130,7 @@
   "default-credentials.close": "Entendi",
   "default-credentials.description": "Aqui estão as credenciais que você precisará para fazer login no aplicativo.",
   "default-credentials.dont-show-again": "Não mostrar isso novamente",
+  "default-credentials.dont-show-on-open": "Não mostrar ao abrir",
   "default-credentials.open": "Abrir {{app}}",
   "default-credentials.password": "Senha padrão",
   "default-credentials.title": "Credenciais para {{app}}",

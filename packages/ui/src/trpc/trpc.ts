@@ -95,11 +95,6 @@ export type WifiStatusUi = WifiStatus | 'loading'
  */
 export type YamlApp = Pick<RegistryApp, 'id'> & {
 	registryId: string
-	showNotifications: boolean
-	autoUpdate: boolean
-	// Should always be true unless set to `false`
-	// If no deterministic password, we don't show this
-	showCredentialsBeforeOpen: boolean
 }
 
 /**
@@ -111,6 +106,7 @@ export type UserApp = YamlApp &
 		credentials: {
 			defaultUsername: string
 			defaultPassword: string
+			showBeforeOpen: boolean
 		}
 		hiddenService?: string
 		// ---

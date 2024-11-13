@@ -130,6 +130,7 @@
   "default-credentials.close": "Capito",
   "default-credentials.description": "Ecco le credenziali che ti serviranno per accedere all'app.",
   "default-credentials.dont-show-again": "Non mostrare di nuovo",
+  "default-credentials.dont-show-on-open": "Non mostrare all'apertura",
   "default-credentials.open": "Apri {{app}}",
   "default-credentials.password": "Password predefinita",
   "default-credentials.title": "Credenziali per {{app}}",

@@ -28,6 +28,8 @@ export default router({
 					if (deterministicPassword) {
 						defaultPassword = await app.deriveDeterministicPassword()
 					}
+					const hasCredentials = !!defaultUsername || !!defaultPassword
+					const showCredentialsBeforeOpen = hasCredentials && !(await app.store.get('hideCredentialsBeforeOpen'))
 					return {
 						id: app.id,
 						name,
@@ -39,6 +41,7 @@ export default router({
 						credentials: {
 							defaultUsername,
 							defaultPassword,
+							showBeforeOpen: showCredentialsBeforeOpen,
 						},
 						hiddenService,
 						widgets,
@@ -155,4 +158,13 @@ export default router({
 
 	setTorEnabled: privateProcedure.input(z.boolean()).mutation(({ctx, input}) => ctx.apps.setTorEnabled(input)),
 	getTorEnabled: privateProcedure.query(({ctx}) => ctx.apps.getTorEnabled()),
+
+	hideCredentialsBeforeOpen: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				value: z.boolean(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.apps.setHideCredentialsBeforeOpen(input.appId, input.value)),
 })

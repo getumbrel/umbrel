@@ -331,4 +331,9 @@ export default class Apps {
 	async getTorEnabled() {
 		return this.#umbreld.store.get('torEnabled')
 	}
+
+	async setHideCredentialsBeforeOpen(appId: string, value: boolean) {
+		const app = this.getApp(appId)
+		return app.store.set('hideCredentialsBeforeOpen', value)
+	}
 }

@@ -10,9 +10,10 @@ import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 import {pullAll} from '../utilities/docker-pull.js'
+import FileStore from '../utilities/file-store.js'
 
 import type Umbreld from '../../index.js'
-import {type AppManifest} from './schema.js'
+import type {AppManifest, AppSettings} from './schema.js'
 
 import appScript from './legacy-compat/app-script.js'
 
@@ -48,6 +49,7 @@ export default class App {
 	dataDirectory: string
 	state: AppState = 'unknown'
 	stateProgress = 0
+	store: FileStore<AppSettings>
 
 	constructor(umbreld: Umbreld, appId: string) {
 		// Throw on invalid appId
@@ -58,6 +60,7 @@ export default class App {
 		this.dataDirectory = `${umbreld.dataDirectory}/app-data/${this.id}`
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+		this.store = new FileStore({filePath: `${this.dataDirectory}/settings.yml`})
 	}
 
 	readManifest() {

@@ -1,11 +1,10 @@
 import {useNavigate} from 'react-router-dom'
 
 import {useApps} from '@/providers/apps'
-import {UserApp} from '@/trpc/trpc'
+import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {appToUrl, appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
-import {trackAppOpen} from '@/utils/track-app-open'
 
 /**
  * There's a strong temptation to make launching an app just a link to the app's URL:
@@ -31,6 +30,12 @@ export function useLaunchApp() {
 	const userApp = useApps()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
+	const ctx = trpcReact.useContext()
+	const trackOpenMut = trpcReact.apps.trackOpen.useMutation({
+		onSuccess() {
+			ctx.apps.recentlyOpened.invalidate()
+		},
+	})
 
 	const handleLaunch = (appId: string, options?: {path?: string; direct?: boolean}) => {
 		const app = userApp.userAppsKeyed?.[appId]
@@ -40,30 +45,28 @@ export function useLaunchApp() {
 			throw new Error(t('app-not-found', {app: appId}))
 		}
 
+		const open = (path?: string) => {
+			trackOpenMut.mutate({appId})
+			const url = path ? urlJoin(appToUrl(app), path) : appToUrlWithAppPath(app)
+			window.open(url, '_blank')?.focus()
+		}
+
 		// If we're already in the credentials dialog, don't show the dialog again.
-		if (app.showCredentialsBeforeOpen && !options?.direct) {
+		if (app.credentials?.showBeforeOpen && !options?.direct) {
 			navigate(linkToDialog('default-credentials', {for: appId, direct: 'true'}))
 		} else {
 			if (app.torOnly) {
 				if (isOnionPage()) {
-					openApp(app, options?.path)
+					open(options?.path)
 				} else {
 					// return linkToDialog('tor-error', {id: appId})
 					alert(t('app-only-over-tor', {app: app.name}))
 				}
 			} else {
-				openApp(app, options?.path)
+				open(options?.path)
 			}
 		}
 	}
 
 	return handleLaunch
-}
-
-function openApp(app: UserApp, path?: string) {
-	trackAppOpen(app.id)
-	// Don't prefix by default because this is called from widgets
-	// We don't wanna be prefixing every time
-	const url = path ? urlJoin(appToUrl(app), path) : appToUrlWithAppPath(app)
-	window.open(url, '_blank')?.focus()
 }

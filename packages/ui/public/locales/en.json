@@ -130,6 +130,7 @@
   "default-credentials.close": "Got it",
   "default-credentials.description": "Here are credentials you'll need to log into the app.",
   "default-credentials.dont-show-again": "Don't show this again",
+  "default-credentials.dont-show-on-open": "Don't show on open",
   "default-credentials.open": "Open {{app}}",
   "default-credentials.password": "Default password",
   "default-credentials.title": "Credentials for {{app}}",
