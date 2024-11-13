@@ -147,8 +147,23 @@ class Server {
 			const currentFilename = fileURLToPath(import.meta.url)
 			const currentDirname = dirname(currentFilename)
 			const uiPath = join(currentDirname, '../../../ui')
-			app.use('/', express.static(uiPath))
-			app.use('*', express.static(`${uiPath}/index.html`))
+
+			// Built assets include a hash of the contents in the filename and
+			// wallpapers do not ever change, so we can cache these aggressively
+			const cacheAggressively: express.RequestHandler = (_, response, next) => {
+				const approximatelyOneYearInSeconds = 365 * 24 * 60 * 60 // RFC 2616, 14.21
+				response.set('Cache-Control', `public, max-age=${approximatelyOneYearInSeconds}, immutable`)
+				next()
+			}
+			app.get('/assets/*', cacheAggressively)
+			app.get('/wallpapers/*', cacheAggressively)
+
+			// Other files without a hash in their filename should revalidate based on
+			// ETag and Last-Modified instead to force the browser to automatically
+			// refresh their contents after an OTA update for example.
+			const staticOptions = {cacheControl: true, etag: true, lastModified: true, maxAge: 0}
+			app.use('/', express.static(uiPath, staticOptions))
+			app.use('*', express.static(`${uiPath}/index.html`, staticOptions))
 		}
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
