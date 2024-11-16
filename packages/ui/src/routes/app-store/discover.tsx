@@ -12,10 +12,9 @@ import {AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {useAvailableApps} from '@/providers/available-apps'
 import {t} from '@/utils/i18n'
 
-import {type AppManifest} from '../../../../umbreld/source/modules/apps/schema'
 import {useDiscoverQuery} from './use-discover-query'
 
-const getAppById = (appId: string, apps: NonNullable<ReturnType<typeof useAvailableApps>['apps']>): AppManifest => {
+const getAppById = (appId: string, apps: NonNullable<ReturnType<typeof useAvailableApps>['apps']>) => {
 	const app = apps.find((app) => app.id === appId)
 	if (!app) throw new Error(`No such app: ${appId}`)
 	return app

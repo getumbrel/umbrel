@@ -55,6 +55,7 @@ function InstallExample() {
 					onInstallClick={install}
 					onOpenClick={() => alert('open agora')}
 					state={state}
+					compatible={true}
 					progress={progress}
 				/>
 			</div>

@@ -46,7 +46,7 @@ test.sequential('registry() returns app registry', async () => {
 			},
 			apps: [
 				{
-					manifestVersion: 1,
+					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
 					tagline: "Replace this tagline with your app's tagline",
@@ -91,7 +91,7 @@ test.sequential('registry() returns both app repositories in registry', async ()
 			},
 			apps: [
 				{
-					manifestVersion: 1,
+					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
 					tagline: "Replace this tagline with your app's tagline",
@@ -127,7 +127,7 @@ test.sequential('registry() returns both app repositories in registry', async ()
 			},
 			apps: [
 				{
-					manifestVersion: 1,
+					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
 					tagline: "Replace this tagline with your app's tagline",
@@ -180,7 +180,7 @@ test.sequential('registry() no longer returns an app repository that has been re
 			},
 			apps: [
 				{
-					manifestVersion: 1,
+					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
 					tagline: "Replace this tagline with your app's tagline",

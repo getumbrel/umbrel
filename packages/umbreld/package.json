@@ -122,7 +122,7 @@
 		"pify": "^6.1.0",
 		"pretty-bytes": "^6.1.1",
 		"read-pkg-up": "^9.1.0",
-		"semver": "^7.6.0",
+		"semver": "^7.6.3",
 		"session-file-store": "^1.5.0",
 		"strip-ansi": "^7.1.0",
 		"systeminformation": "^5.18.6",

@@ -2,13 +2,9 @@ import {createTRPCProxyClient, createTRPCReact, httpLink, loggerLink, TRPCClient
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
-import {RegistryWidget} from '@/modules/widgets/shared/constants'
 import {IS_DEV} from '@/utils/misc'
 
-import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
-
-export type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
 
 export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 
@@ -78,8 +74,6 @@ export const progressBarStates = ['installing', 'updating'] satisfies AppState[]
 // `loading` means the frontend is currently fetching the state from the backend
 export type AppStateOrLoading = 'loading' | AppState
 
-export type UserAppWithoutError = Exclude<RouterOutput['apps']['list'][number], {id: string; error: string}>
-
 // Omitting `active` because we get the connection status from `WifiStatus` since it's more detailed and
 // don't wanna get confused on the frontend with two different ways of getting the connection status
 export type WifiNetwork = Omit<RouterOutput['wifi']['networks'][number], 'active'>
@@ -90,29 +84,16 @@ export type WifiStatusUi = WifiStatus | 'loading'
 // ---
 
 /**
- * App to store in yaml.
- * Stuff that can be retrieved from the app repository is not stored here.
+ * App in the registry as returned by the backend.
  */
-export type YamlApp = Pick<RegistryApp, 'id'> & {
-	registryId: string
-}
+export type RegistryApp = RouterOutput['appStore']['registry'][number]['apps'][number]
 
 /**
- * App to return to frontend after installing.
- * Usually pull stuff from app repository for names, etc
+ * Installed app as returned by the backend, no error.
  */
-export type UserApp = YamlApp &
-	Pick<RegistryApp, 'name' | 'icon' | 'port' | 'path' | 'version' | 'torOnly'> & {
-		credentials: {
-			defaultUsername: string
-			defaultPassword: string
-			showBeforeOpen: boolean
-		}
-		hiddenService?: string
-		// ---
-		state: AppState
-		// TODO: if state is installing, this should be 0-100, otherwise undefined
-		/** From 0 to 100 */
-		installProgress?: number
-		widgets?: RegistryWidget[]
-	}
+export type UserApp = Exclude<RouterOutput['apps']['list'][number], {error: string}>
+
+/**
+ * Installed app as returned by the backend, with error.
+ */
+export type UserAppError = Extract<RouterOutput['apps']['list'][number], {error: string}>

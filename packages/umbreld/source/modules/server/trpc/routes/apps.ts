@@ -22,6 +22,7 @@ export default router({
 						defaultPassword,
 						deterministicPassword,
 						dependencies,
+						torOnly,
 					} = await app.readManifest()
 
 					const hiddenService = torEnabled ? await app.readHiddenService() : ''
@@ -46,6 +47,7 @@ export default router({
 						hiddenService,
 						widgets,
 						dependencies,
+						torOnly,
 					}
 				} catch (error) {
 					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)

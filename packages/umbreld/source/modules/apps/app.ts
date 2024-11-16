@@ -13,7 +13,7 @@ import {pullAll} from '../utilities/docker-pull.js'
 import FileStore from '../utilities/file-store.js'
 
 import type Umbreld from '../../index.js'
-import type {AppManifest, AppSettings} from './schema.js'
+import {validateManifest, type AppSettings} from './schema.js'
 
 import appScript from './legacy-compat/app-script.js'
 
@@ -23,6 +23,11 @@ async function readYaml(path: string) {
 
 async function writeYaml(path: string, data: any) {
 	return fse.writeFile(path, yaml.dump(data))
+}
+
+export async function readManifestInDirectory(dataDirectory: string) {
+	const parseYaml = readYaml(`${dataDirectory}/umbrel-app.yml`)
+	return parseYaml.then(validateManifest)
 }
 
 type AppState =
@@ -64,7 +69,7 @@ export default class App {
 	}
 
 	readManifest() {
-		return readYaml(`${this.dataDirectory}/umbrel-app.yml`) as Promise<AppManifest>
+		return readManifestInDirectory(this.dataDirectory)
 	}
 
 	readCompose() {

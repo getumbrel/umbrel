@@ -1,13 +1,16 @@
 import prettyBytes from 'pretty-bytes'
 import {useState} from 'react'
 import {useTimeout} from 'react-use'
+import semver from 'semver'
 import {arrayIncludes} from 'ts-extras'
 
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {useVersion} from '@/hooks/use-version'
 import {AppPermissionsDialog} from '@/modules/app-store/app-permissions-dialog'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
+import {OSUpdateRequiredDialog} from '@/modules/app-store/os-update-required'
 import {useApps} from '@/providers/apps'
 import {installedStates, RegistryApp} from '@/trpc/trpc'
 
@@ -23,12 +26,13 @@ export function InstallButtonConnected({
 	const appInstall = useAppInstall(app.id)
 	const [showDepsDialog, setShowDepsDialog] = useState(false)
 	const [showAppPermissionsDialog, setShowAppPermissionsDialog] = useState(false)
+	const [showOSUpdateRequiredDialog, setShowOSUpdateRequiredDialog] = useState(false)
 	const {userAppsKeyed, isLoading} = useApps()
 	const openApp = useLaunchApp()
-
+	const os = useVersion()
 	const [show] = useTimeout(400)
 
-	if (!show() || isLoading || !userAppsKeyed) {
+	if (!show() || isLoading || !userAppsKeyed || os.isLoading) {
 		return (
 			<InstallButton
 				key={app.id}
@@ -44,7 +48,13 @@ export function InstallButtonConnected({
 	const deps = app.dependencies ?? []
 	const areDepsAllInstalled = deps.every((dep) => arrayIncludes(installedStates, userAppsKeyed[dep]?.state))
 
+	const compatible = semver.lte(app.manifestVersion, os.version)
+
 	const install = () => {
+		if (!compatible) {
+			setShowOSUpdateRequiredDialog(true)
+			return
+		}
 		if (deps.length > 0) {
 			if (areDepsAllInstalled) {
 				setShowAppPermissionsDialog(true)
@@ -66,6 +76,7 @@ export function InstallButtonConnected({
 				// state={userApp?.state || 'initial'}
 				progress={appInstall.progress}
 				state={appInstall.state}
+				compatible={compatible}
 				onInstallClick={install}
 				onOpenClick={() => openApp(app.id)}
 			/>
@@ -82,6 +93,11 @@ export function InstallButtonConnected({
 				open={showAppPermissionsDialog}
 				onOpenChange={setShowAppPermissionsDialog}
 				onNext={() => appInstall.install()}
+			/>
+			<OSUpdateRequiredDialog
+				app={app}
+				open={showOSUpdateRequiredDialog}
+				onOpenChange={setShowOSUpdateRequiredDialog}
 			/>
 		</>
 	)

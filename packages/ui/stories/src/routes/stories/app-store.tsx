@@ -177,6 +177,7 @@ function InstallButtonExamples() {
 					installSize='1.5GB'
 					progress={progress}
 					state={state}
+					compatible={true}
 					onInstallClick={install}
 					onOpenClick={() => alert('foobar')}
 				/>
@@ -186,6 +187,7 @@ function InstallButtonExamples() {
 					installSize='1.5GB'
 					progress={demoUpdateProgress.progress}
 					state='loading'
+					compatible={true}
 					onInstallClick={demoUpdateProgress.install}
 					onOpenClick={() => alert('foobar')}
 				/>
@@ -196,6 +198,7 @@ function InstallButtonExamples() {
 							installSize='1.5GB'
 							progress={50}
 							state={state}
+							compatible={true}
 							onInstallClick={() => {
 								alert('install ' + state)
 							}}

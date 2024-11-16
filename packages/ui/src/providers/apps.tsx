@@ -1,7 +1,7 @@
 import {createContext, useContext} from 'react'
 import {filter} from 'remeda'
 
-import {trpcReact, UserApp, UserAppWithoutError} from '@/trpc/trpc'
+import {trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 export type AppT = {
@@ -88,7 +88,7 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 
 	// Remove apps that have an error
 	// TODO: consider passing these down in some places (like the desktop)
-	const userApps = filter(appsQ.data ?? [], (app): app is UserAppWithoutError => !('error' in app))
+	const userApps = filter(appsQ.data ?? [], (app): app is UserApp => !('error' in app))
 	const userAppsKeyed = keyBy(userApps, 'id')
 
 	const allApps = [...userApps, ...systemApps]
@@ -97,9 +97,7 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 	return (
 		<AppsContext.Provider
 			value={{
-				// @ts-expect-error `userApps`
 				userApps,
-				// @ts-expect-error `userAppsKeyed`
 				userAppsKeyed,
 				systemApps,
 				systemAppsKeyed,

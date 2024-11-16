@@ -1,3 +1,6 @@
+import {z} from 'zod'
+import semver from 'semver'
+
 // TODO: this is used outside of the apps module, move it somewhere more appropriate
 export type ProgressStatus = {
 	running: boolean
@@ -7,48 +10,87 @@ export type ProgressStatus = {
 	error: boolean | string
 }
 
-export type AppRepositoryMeta = {
-	id: string
-	name: string
+export const AppRepositoryMetaSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+})
+
+export type AppRepositoryMeta = z.infer<typeof AppRepositoryMetaSchema>
+
+const validateSemanticVersion = z.string().refine(semver.valid, {
+	message: 'invalid semantic version',
+})
+
+// We might want to describe this further so we can do runtime valdiation with
+// useful errors like tagline max length etc.
+export const AppManifestSchema = z.object({
+	manifestVersion: validateSemanticVersion,
+	id: z.string(),
+	disabled: z.boolean().optional(),
+	name: z.string(),
+	tagline: z.string(),
+	icon: z.string().optional(),
+	category: z.string(),
+	// TODO (apps refactor): switch to semantic versions?
+	version: z.string(),
+	port: z.number().int(),
+	description: z.string(),
+	developer: z.string(),
+	website: z.string().url(),
+	submitter: z.string(),
+	submission: z.string().url(),
+	// TODO: some apps have an empty repo string
+	repo: z.union([z.string().url(), z.string().length(0)]).optional(),
+	support: z.string(),
+	gallery: z.array(z.string()).min(3),
+	releaseNotes: z.string().optional(),
+	dependencies: z.array(z.string()).optional(),
+	permissions: z.array(z.string()).optional(),
+	path: z.string().optional(),
+	defaultUsername: z.string().optional(),
+	defaultPassword: z.string().optional(),
+	deterministicPassword: z.boolean().optional(),
+	optimizedForUmbrelHome: z.boolean().optional(),
+	torOnly: z.boolean().optional(),
+	// In bytes
+	installSize: z.number().int().optional(),
+	// TODO: Define this type
+	widgets: z.array(z.any()).optional(),
+	defaultShell: z.string().optional(),
+})
+
+export type AppManifest = z.infer<typeof AppManifestSchema>
+
+function isRecord(value: unknown): value is Record<string, any> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-// TODO: just added this to quickly get types, come back to this and
-// add strciter validation. We might also want to describe this with
-// zod so we can do runtime valdiation with useful errors like tagline
-// max length etc.
-export type AppManifest = {
-	manifestVersion: number
-	id: string
-	disabled?: boolean
-	name: string
-	tagline: string
-	icon: string
-	category: string
-	version: string
-	port: number
-	description: string
-	developer: string
-	website: string
-	submitter: string
-	submission: string
-	repo?: string
-	support: string
-	gallery: string[]
-	releaseNotes?: string
-	dependencies?: string[]
-	permissions?: string[]
-	path?: string
-	defaultUsername?: string
-	defaultPassword?: string
-	deterministicPassword?: boolean
-	optimizedForUmbrelHome?: boolean
-	torOnly?: boolean
-	/** In bytes */
-	installSize?: number
-	widgets?: any[] // TODO: Define this type
-	defaultShell?: string
+function tryNormalizeVersion(version: number | string) {
+	// Convert versions parsed as a number, e.g. `1` or `1.2`
+	if (typeof version === 'number') {
+		version = String(version)
+	}
+	// Retain valid version
+	if (semver.valid(version)) {
+		return version
+	}
+	// Otherwise try to coerce, e.g. 1 to 1.0.0
+	const coerced = semver.coerce(version)
+	return coerced ? coerced.toString() : version
 }
 
-export type AppSettings = {
-	hideCredentialsBeforeOpen?: boolean
+export function validateManifest(parsed: unknown): AppManifest {
+	if (!isRecord(parsed)) {
+		throw new Error('invalid manifest')
+	}
+	parsed.manifestVersion = tryNormalizeVersion(parsed.manifestVersion)
+	// TODO (apps refactor): switch to semantic versions?
+	// parsed.version = tryNormalizeVersion(parsed.version)
+	return AppManifestSchema.parse(parsed)
 }
+
+export const AppSettingsSchema = z.object({
+	hideCredentialsBeforeOpen: z.boolean().optional(),
+})
+
+export type AppSettings = z.infer<typeof AppSettingsSchema>

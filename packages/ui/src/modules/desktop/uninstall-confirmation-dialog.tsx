@@ -18,7 +18,6 @@ export function UninstallConfirmationDialog({
 	onConfirm,
 }: {
 	appId: string
-	registryId?: string
 	open: boolean
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void

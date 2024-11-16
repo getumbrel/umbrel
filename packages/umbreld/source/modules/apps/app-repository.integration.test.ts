@@ -162,7 +162,7 @@ describe('appRepository.readRegistry()', () => {
 			},
 			apps: [
 				{
-					manifestVersion: 1,
+					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
 					tagline: "Replace this tagline with your app's tagline",

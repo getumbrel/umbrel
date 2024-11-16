@@ -241,7 +241,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 					{showUninstallDialog && (
 						<UninstallConfirmationDialog
 							appId={appId}
-							registryId={userApp.app.registryId}
 							open={showUninstallDialog}
 							onOpenChange={setShowUninstallDialog}
 							onConfirm={uninstall}
