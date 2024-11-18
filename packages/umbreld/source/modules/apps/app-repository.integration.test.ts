@@ -162,6 +162,7 @@ describe('appRepository.readRegistry()', () => {
 			},
 			apps: [
 				{
+					appStoreId: 'sparkles',
 					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',

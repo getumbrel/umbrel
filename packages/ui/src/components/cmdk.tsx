@@ -74,6 +74,8 @@ function CmdkContent() {
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
+	// We only show installed community apps here, effectively limiting available
+	// apps to those present in the official app store
 	const availableApps = useAvailableApps()
 
 	const isLoading = userQ.isLoading || availableApps.isLoading || userApps.isLoading

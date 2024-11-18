@@ -47,7 +47,7 @@ function InstallExample() {
 
 	return (
 		<div>
-			<Button onClick={install}>Install Agora</Button>
+			<Button onClick={() => install()}>Install Agora</Button>
 			<Button onClick={uninstall}>Uninstall Agora</Button>
 			<Button onClick={uninstallAll}>Uninstall All</Button>
 			<div>

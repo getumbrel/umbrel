@@ -11,19 +11,23 @@ export default router({
 		const appData = await Promise.all(
 			apps.map(async (app) => {
 				try {
-					let {
-						name,
-						version,
-						icon,
-						port,
-						path,
-						widgets,
-						defaultUsername,
-						defaultPassword,
-						deterministicPassword,
-						dependencies,
-						torOnly,
-					} = await app.readManifest()
+					let [
+						{
+							name,
+							version,
+							icon,
+							port,
+							path,
+							widgets,
+							defaultUsername,
+							defaultPassword,
+							deterministicPassword,
+							dependencies,
+							implements: implements_,
+							torOnly,
+						},
+						selectedDependencies,
+					] = await Promise.all([app.readManifest(), app.getSelectedDependencies()])
 
 					const hiddenService = torEnabled ? await app.readHiddenService() : ''
 					if (deterministicPassword) {
@@ -47,6 +51,8 @@ export default router({
 						hiddenService,
 						widgets,
 						dependencies,
+						selectedDependencies,
+						implements: implements_,
 						torOnly,
 					}
 				} catch (error) {
@@ -66,9 +72,10 @@ export default router({
 		.input(
 			z.object({
 				appId: z.string(),
+				alternatives: z.record(z.string()).optional(),
 			}),
 		)
-		.mutation(async ({ctx, input}) => ctx.apps.install(input.appId)),
+		.mutation(async ({ctx, input}) => ctx.apps.install(input.appId, input.alternatives)),
 
 	// Get state
 	// Temporarily used for polling the state of app mutations until we implement subscriptions
@@ -160,6 +167,17 @@ export default router({
 
 	setTorEnabled: privateProcedure.input(z.boolean()).mutation(({ctx, input}) => ctx.apps.setTorEnabled(input)),
 	getTorEnabled: privateProcedure.query(({ctx}) => ctx.apps.getTorEnabled()),
+
+	setSelectedDependencies: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+				dependencies: z.record(z.string()),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.apps.setSelectedDependencies(input.appId, input.dependencies)),
+
+	dependents: privateProcedure.input(z.string()).query(async ({ctx, input}) => ctx.apps.getDependents(input)),
 
 	hideCredentialsBeforeOpen: privateProcedure
 		.input(

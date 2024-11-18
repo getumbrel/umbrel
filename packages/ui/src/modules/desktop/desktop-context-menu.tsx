@@ -14,12 +14,13 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 	const [show, setShow] = useState(false)
 	const contentRef = useRef<HTMLDivElement>(null)
 	const anchorRef = useRef<HTMLDivElement>(null)
-	const {addLinkSearchParams} = useQueryParams()
+	const {params, addLinkSearchParams} = useQueryParams()
+	const isShowingDialog = params.get('dialog') !== null
 
 	return (
 		<>
 			<ContextMenu modal={false}>
-				<ContextMenuTrigger>{children}</ContextMenuTrigger>
+				<ContextMenuTrigger disabled={isShowingDialog}>{children}</ContextMenuTrigger>
 				<ContextMenuContent ref={contentRef}>
 					<ContextMenuItem asChild>
 						<Link to='/edit-widgets'>{t('desktop.context-menu.edit-widgets')}</Link>

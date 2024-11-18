@@ -1,6 +1,7 @@
 import {useEffect} from 'react'
 
 import {useCmdkOpen} from '@/components/cmdk'
+import {AppSettingsDialog} from '@/modules/app-store/app-page/app-settings-dialog'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
@@ -54,6 +55,7 @@ function DesktopPage() {
 				<DesktopWifiButtonConnected className={topRightPositionerClass} />
 			</div>
 			<DefaultCredentialsDialog />
+			<AppSettingsDialog />
 		</>
 	)
 }

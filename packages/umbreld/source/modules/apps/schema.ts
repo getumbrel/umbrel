@@ -35,14 +35,15 @@ export const AppManifestSchema = z.object({
 	version: z.string(),
 	port: z.number().int(),
 	description: z.string(),
-	developer: z.string(),
 	website: z.string().url(),
-	submitter: z.string(),
-	submission: z.string().url(),
+	// TODO: one developer/submitter is an integer
+	developer: z.union([z.string(), z.number()]).optional(),
+	submitter: z.union([z.string(), z.number()]).optional(),
+	submission: z.string().url().optional(),
 	// TODO: some apps have an empty repo string
 	repo: z.union([z.string().url(), z.string().length(0)]).optional(),
 	support: z.string(),
-	gallery: z.array(z.string()).min(3),
+	gallery: z.array(z.string()),
 	releaseNotes: z.string().optional(),
 	dependencies: z.array(z.string()).optional(),
 	permissions: z.array(z.string()).optional(),
@@ -57,6 +58,7 @@ export const AppManifestSchema = z.object({
 	// TODO: Define this type
 	widgets: z.array(z.any()).optional(),
 	defaultShell: z.string().optional(),
+	implements: z.array(z.string()).optional(),
 })
 
 export type AppManifest = z.infer<typeof AppManifestSchema>
@@ -84,13 +86,19 @@ export function validateManifest(parsed: unknown): AppManifest {
 		throw new Error('invalid manifest')
 	}
 	parsed.manifestVersion = tryNormalizeVersion(parsed.manifestVersion)
+
 	// TODO (apps refactor): switch to semantic versions?
 	// parsed.version = tryNormalizeVersion(parsed.version)
-	return AppManifestSchema.parse(parsed)
+
+	// TODO (apps refactor): enable schema validation
+	// return AppManifestSchema.parse(parsed)
+
+	return parsed as AppManifest
 }
 
 export const AppSettingsSchema = z.object({
 	hideCredentialsBeforeOpen: z.boolean().optional(),
+	dependencies: z.record(z.string()).optional(),
 })
 
 export type AppSettings = z.infer<typeof AppSettingsSchema>

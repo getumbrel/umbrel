@@ -9,7 +9,7 @@ import {sleep} from '@/utils/misc'
 export const EXIT_DURATION_MS = 200
 
 export type GlobalDialogKey = 'logout' | 'live-usage'
-export type AppStoreDialogKey = 'updates' | 'add-community-store' | 'default-credentials'
+export type AppStoreDialogKey = 'updates' | 'add-community-store' | 'default-credentials' | 'app-settings'
 export type DialogKey = GlobalDialogKey | AppStoreDialogKey | SettingsDialogKey
 
 // TODO: make dialog query params typesafe

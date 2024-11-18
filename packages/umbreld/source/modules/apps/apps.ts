@@ -9,6 +9,8 @@ import semver from 'semver'
 import randomToken from '../../modules/utilities/random-token.js'
 import type Umbreld from '../../index.js'
 import appEnvironment from './legacy-compat/app-environment.js'
+
+import type {AppSettings} from './schema.js'
 import App, {readManifestInDirectory} from './app.js'
 import type {AppManifest} from './schema.js'
 
@@ -202,7 +204,7 @@ export default class Apps {
 		return app
 	}
 
-	async install(appId: string) {
+	async install(appId: string, alternatives?: AppSettings['dependencies']) {
 		if (await this.isInstalled(appId)) throw new Error(`App ${appId} is already installed`)
 
 		this.logger.log(`Installing app ${appId}`)
@@ -233,6 +235,7 @@ export default class Apps {
 
 		// Save reference to app instance
 		const app = new App(this.#umbreld, appId)
+		app.store.set('dependencies', alternatives || {})
 		this.instances.push(app)
 
 		// Complete the install process via the app script
@@ -259,11 +262,9 @@ export default class Apps {
 	}
 
 	async uninstall(appId: string) {
-		// If we can't read a manifest for any reason just skip that app, don't abort the uninstall
-		let installedManifests = await Promise.all(this.instances.map((app) => app.readManifest().catch(() => null)))
-		installedManifests = installedManifests.filter((manifest) => manifest !== null)
-		const isDependency = installedManifests.some((manifest) => manifest!.dependencies?.includes(appId))
-
+		// If we can't read an app's dependencies for any reason just skip that app, don't abort the uninstall
+		const allDependencies = await Promise.all(this.instances.map((app) => app.getDependencies().catch(() => null)))
+		const isDependency = allDependencies.some((dependencies) => dependencies?.includes(appId))
 		if (isDependency) throw new Error(`App ${appId} is a dependency of another app and cannot be uninstalled`)
 
 		const app = this.getApp(appId)
@@ -342,6 +343,21 @@ export default class Apps {
 
 	async getTorEnabled() {
 		return this.#umbreld.store.get('torEnabled')
+	}
+
+	async setSelectedDependencies(appId: string, dependencies: Record<string, string>) {
+		const app = this.getApp(appId)
+		return app.setSelectedDependencies(dependencies)
+	}
+
+	async getDependents(appId: string) {
+		const allDependencies = await Promise.all(
+			this.instances.map(async (app) => ({
+				id: app.id,
+				dependencies: await app.getDependencies(),
+			})),
+		)
+		return allDependencies.filter(({dependencies}) => dependencies.includes(appId)).map(({id}) => id)
 	}
 
 	async setHideCredentialsBeforeOpen(appId: string, value: boolean) {

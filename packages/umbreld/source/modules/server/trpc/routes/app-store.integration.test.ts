@@ -46,6 +46,7 @@ test.sequential('registry() returns app registry', async () => {
 			},
 			apps: [
 				{
+					appStoreId: 'sparkles',
 					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
@@ -91,6 +92,7 @@ test.sequential('registry() returns both app repositories in registry', async ()
 			},
 			apps: [
 				{
+					appStoreId: 'sparkles',
 					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
@@ -127,6 +129,7 @@ test.sequential('registry() returns both app repositories in registry', async ()
 			},
 			apps: [
 				{
+					appStoreId: 'sparkles',
 					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',
@@ -180,6 +183,7 @@ test.sequential('registry() no longer returns an app repository that has been re
 			},
 			apps: [
 				{
+					appStoreId: 'sparkles',
 					manifestVersion: '1.0.0',
 					id: 'sparkles-hello-world',
 					name: 'Hello World',

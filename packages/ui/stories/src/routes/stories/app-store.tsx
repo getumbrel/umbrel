@@ -10,10 +10,9 @@ import {ProgressButton} from '@/components/progress-button'
 import {GenericErrorText} from '@/components/ui/generic-error-text'
 import {Loading} from '@/components/ui/loading'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
-import {AppPermissionsDialog} from '@/modules/app-store/app-permissions-dialog'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
-import {InstallTheseFirstDialog} from '@/modules/app-store/install-these-first-dialog'
+import {SelectDependenciesDialog} from '@/modules/app-store/select-dependencies-dialog'
 import {UpdatesDialog} from '@/modules/app-store/updates-dialog'
 import {AppsProvider} from '@/providers/apps'
 import {AvailableAppsProvider, useAvailableApps} from '@/providers/available-apps'
@@ -71,7 +70,6 @@ function Inner() {
 			<AppUpdatesManyExample />
 			<InstallFirstExample />
 			<InstallFirst2Example />
-			<AppPermissionsExample />
 			<TorOnlyApps />
 			<AppsGallerySection banners={banners} />
 			<AppGallerySection
@@ -216,7 +214,13 @@ function InstallFirstExample() {
 	return (
 		<>
 			<Button onClick={() => setOpen(true)}>Install Lightning App (show dialog only)</Button>
-			<InstallTheseFirstDialog appId='lightning' dependencies={['bitcoin']} open={open} onOpenChange={setOpen} />
+			<SelectDependenciesDialog
+				appId='lightning'
+				dependencies={[[{dependencyId: 'bitcoin', appId: 'bitcoin'}]]}
+				open={open}
+				onOpenChange={setOpen}
+				onNext={() => {}}
+			/>
 		</>
 	)
 }
@@ -226,27 +230,15 @@ function InstallFirst2Example() {
 	return (
 		<>
 			<Button onClick={() => setOpen(true)}>Install Electrs App (show dialog only)</Button>
-			<InstallTheseFirstDialog
+			<SelectDependenciesDialog
 				appId='lightning'
-				dependencies={['bitcoin', 'lightning']}
+				dependencies={[
+					[{dependencyId: 'bitcoin', appId: 'bitcoin'}],
+					[{dependencyId: 'lightning', appId: 'lightning'}],
+				]}
 				open={open}
 				onOpenChange={setOpen}
-			/>
-		</>
-	)
-}
-
-function AppPermissionsExample() {
-	const [open, setOpen] = useState(false)
-	return (
-		<>
-			<Button onClick={() => setOpen(true)}>Install Electrs App (show dialog only)</Button>
-			<AppPermissionsDialog
-				appId='lightning'
-				appsUsed={['bitcoin', 'lightning']}
-				open={open}
-				onOpenChange={setOpen}
-				onNext={() => alert('next')}
+				onNext={() => {}}
 			/>
 		</>
 	)

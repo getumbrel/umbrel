@@ -1,7 +1,6 @@
 import {useMutation} from '@tanstack/react-query'
 import {useEffect} from 'react'
 import {useInterval, usePrevious} from 'react-use'
-import {uniq} from 'remeda'
 import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
@@ -54,15 +53,17 @@ export function useAppInstall(id: string) {
 		ctx.user.get.invalidate()
 	}
 
-	const makeOptimisticOnMutate = (optimisticState: (typeof pollStates)[number], onMutate?: () => void) => () => {
+	const makeOptimisticOnMutate = (optimisticState: (typeof pollStates)[number]) => () => {
 		// Optimistic because actions do not return until complete
 		// see: https://create.t3.gg/en/usage/trpc#optimistic-updates
 		ctx.apps.state.cancel()
 		ctx.apps.state.setData({appId: id}, {state: optimisticState, progress: 0})
-		onMutate?.()
-		// TODO: The interval below starts ticking now, so the app's state will be
-		// first updated in 2000ms. Should we refactor the backend to set the state,
-		// return early and run the action asynchronously to make sure instead?
+
+		// Make sure apps list reflects the change in time. This is necessary
+		// because a request to, say, install an app does not return until the
+		// action is complete. TODO: Refactor the backend to set the state, return
+		// early and run the actual action asynchronously.
+		setTimeout(() => ctx.apps.list.invalidate(), 2000)
 	}
 
 	const startMut = trpcReact.apps.start.useMutation({
@@ -74,12 +75,7 @@ export function useAppInstall(id: string) {
 		onSettled: refreshAppStates,
 	})
 	const installMut = trpcReact.apps.install.useMutation({
-		onMutate: makeOptimisticOnMutate('installing', () => {
-			// When there are no apps yet, this component is not guaranteed to remain
-			// referenced, so the interval below might not execute. At the expense of
-			// redundancy, make sure that the refresh happens in any case.
-			setTimeout(refreshAppStates, 2000)
-		}),
+		onMutate: makeOptimisticOnMutate('installing'),
 		onSettled: refreshAppStates,
 	})
 	const uninstallMut = trpcReact.apps.uninstall.useMutation({
@@ -109,16 +105,14 @@ export function useAppInstall(id: string) {
 
 	const start = async () => startMut.mutate({appId: id})
 	const stop = async () => stopMut.mutate({appId: id})
-	const install = async () => installMut.mutate({appId: id})
+	const install = async (alternatives?: Record<string, string>) => {
+		return installMut.mutate({appId: id, alternatives})
+	}
 	const getAppsToUninstallFirst = async () => {
-		const appsToUninstallFirst = await getRequiredBy(id)
+		const appsToUninstallFirst = await trpcClient.apps.dependents.query(id)
 		// We expect to have an array, even if it's empty
 		if (!appsToUninstallFirst) throw new Error(t('apps.uninstall.failed-to-get-required-apps'))
-		if (appsToUninstallFirst.length > 0) {
-			// TODO: clean up logic around multiple registries so we don't need to use `uniq`?
-			return uniq(appsToUninstallFirst.map((app) => app.id))
-		}
-		return []
+		return appsToUninstallFirst
 	}
 	const uninstall = async () => {
 		const uninstallTheseFirst = await getAppsToUninstallFirst()
@@ -142,22 +136,4 @@ export function useAppInstall(id: string) {
 		progress,
 		state,
 	} as const
-}
-
-async function getRequiredBy(targetAppId: string) {
-	// "installed"  really means they're user apps, because they can be in other states
-	const installedApps = await trpcClient.apps.list.query()
-
-	const availableApps = await trpcClient.appStore.registry.query()
-	// Flatted apps from all registries
-	const availableAppsFlat = availableApps.flatMap((group) => group.apps)
-	// Filter out non-installed apps
-	const availableAppsFlatAndInstalled = availableAppsFlat.filter((app) =>
-		installedApps.find((userApp) => userApp.id === app.id),
-	)
-
-	// Look in array to see if `targetAppId` is a dependency of any of the apps
-	const requiredByApps = availableAppsFlatAndInstalled.filter((app) => app.dependencies?.includes(targetAppId))
-
-	return requiredByApps
 }

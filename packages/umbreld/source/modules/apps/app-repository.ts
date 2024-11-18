@@ -173,9 +173,10 @@ export default class AppRepository {
 			.filter((app) => app.disabled !== true)
 			// Filter out invalid IDs
 			.filter((app) => meta.id === 'umbrel-app-store' || app.id.startsWith(meta.id))
-			// Add icons
+			// Add icons and hydrate app store id
 			.map((app) => ({
 				...app,
+				appStoreId: meta.id,
 				gallery:
 					meta.id === 'umbrel-app-store'
 						? app.gallery.map((file) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${file}`)

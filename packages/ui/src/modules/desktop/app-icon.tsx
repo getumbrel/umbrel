@@ -203,7 +203,6 @@ export function AppIconConnected({appId}: {appId: string}) {
 							/>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
-							<ContextMenuItemLink appId={appId} />
 							{userApp.app.credentials &&
 								(userApp.app.credentials.defaultUsername || userApp.app.credentials.defaultPassword) && (
 									<ContextMenuItem asChild>
@@ -214,6 +213,12 @@ export function AppIconConnected({appId}: {appId: string}) {
 								)}
 							{!inProgress && (
 								<>
+									{/* App settings only cover dependencies currently */}
+									{!!userApp.app.dependencies?.length && (
+										<ContextMenuItem asChild>
+											<Link to={linkToDialog('app-settings', {for: appId})}>{t('desktop.app.context.settings')}</Link>
+										</ContextMenuItem>
+									)}
 									{appInstall.state !== 'stopped' ? (
 										<ContextMenuItem onSelect={appInstall.stop}>{t('stop')}</ContextMenuItem>
 									) : (
@@ -223,10 +228,13 @@ export function AppIconConnected({appId}: {appId: string}) {
 									<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
 										{t('troubleshoot')}
 									</ContextMenuItem>
-									<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
-										{t('desktop.app.context.uninstall')}
-									</ContextMenuItem>
 								</>
+							)}
+							<ContextMenuItemLinkToAppStore appId={appId} />
+							{!inProgress && (
+								<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
+									{t('desktop.app.context.uninstall')}
+								</ContextMenuItem>
 							)}
 						</ContextMenuContent>
 					</ContextMenu>
@@ -252,7 +260,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 	}
 }
 
-function ContextMenuItemLink({appId}: {appId: string}) {
+function ContextMenuItemLinkToAppStore({appId}: {appId: string}) {
 	const navigate = useNavigate()
 	return (
 		<ContextMenuItem asChild>

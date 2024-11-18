@@ -54,13 +54,15 @@ export function AppWithName({
 	icon,
 	appName,
 	childrenRight,
+	className,
 }: {
 	icon: string
 	appName: ReactNode
 	childrenRight?: ReactNode
+	className?: string
 }) {
 	return (
-		<div className='flex w-full items-center gap-2.5'>
+		<div className={cn('flex w-full items-center gap-2.5', className)}>
 			<AppIcon src={icon} size={36} className='rounded-8' />
 			<h3 className='flex-1 truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
 			{childrenRight}

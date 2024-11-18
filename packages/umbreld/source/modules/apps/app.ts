@@ -353,4 +353,37 @@ export default class App {
 			}
 		}
 	}
+
+	// Get the app's dependencies with selected dependencies applied
+	async getDependencies() {
+		const [{dependencies}, selectedDependencies] = await Promise.all([
+			this.readManifest(),
+			this.getSelectedDependencies(),
+		])
+		return dependencies?.map((dependencyId) => selectedDependencies?.[dependencyId] ?? dependencyId) ?? []
+	}
+
+	// Get the app's selected dependencies
+	async getSelectedDependencies() {
+		return this.store.get('dependencies')
+	}
+
+	// Set the app's selected dependencies
+	async setSelectedDependencies(selectedDependencies: Record<string, string>) {
+		const {dependencies} = await this.readManifest()
+		const selections = (dependencies ?? []).reduce(
+			(selections, dependencyId) => {
+				selections[dependencyId] = selectedDependencies[dependencyId] ?? dependencyId
+				return selections
+			},
+			{} as Record<string, string>,
+		)
+		const success = await this.store.set('dependencies', selections)
+		if (success) {
+			this.restart().catch((error) => {
+				this.logger.error(`Failed to restart '${this.id}': ${error.message}`)
+			})
+		}
+		return success
+	}
 }

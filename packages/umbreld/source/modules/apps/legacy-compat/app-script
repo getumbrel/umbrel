@@ -71,8 +71,14 @@ list_installed_apps() {
 list_dependencies_of() {
   local app="$1"
   local app_data_dir="${UMBREL_ROOT}/app-data/${app}"
-  local app_yaml_file="${app_data_dir}/umbrel-app.yml"
-  yq e '.dependencies[]' "${app_yaml_file}" 2> /dev/null || true
+  local app_manifest_file="${app_data_dir}/umbrel-app.yml"
+  local app_settings_file="${app_data_dir}/settings.yml"
+
+  # Get the app's dependencies and substitute with alternatives if present
+  local dependencies=$(yq e '.dependencies[]' "${app_manifest_file}" 2> /dev/null || true)
+  for dep in $dependencies; do
+    yq e ".dependencies.${dep} // \"${dep}\"" "${app_settings_file}" 2> /dev/null || echo "${dep}"
+  done
 }
 
 list_transitive_dependencies_of() {

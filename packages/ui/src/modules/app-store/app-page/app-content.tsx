@@ -18,11 +18,13 @@ export function AppContent({
 	app,
 	userApp,
 	recommendedApps = [],
+	showDependencies,
 }: {
 	app: RegistryApp
 	/** When the user initiates an install, we now have a user app, even before install */
 	userApp?: UserApp
 	recommendedApps?: RegistryApp[]
+	showDependencies?: (dependencyId?: string) => void
 }) {
 	const hasDependencies = app.dependencies && app.dependencies.length > 0
 	return (
@@ -39,7 +41,7 @@ export function AppContent({
 				<div className='flex flex-col gap-5 md:max-w-sm'>
 					{userApp && <SettingsSection userApp={userApp} />}
 					<InfoSection app={app} />
-					{hasDependencies && <DependenciesSection app={app} />}
+					{hasDependencies && <DependenciesSection app={app} showDependencies={showDependencies} />}
 					{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
 				</div>
 			</div>
@@ -48,7 +50,7 @@ export function AppContent({
 				{userApp && <SettingsSection userApp={userApp} />}
 				<AboutSection app={app} />
 				<InfoSection app={app} />
-				{hasDependencies && <DependenciesSection app={app} />}
+				{hasDependencies && <DependenciesSection app={app} showDependencies={showDependencies} />}
 				<ReleaseNotesSection app={app} />
 				{!isEmpty(recommendedApps) && <RecommendationsSection apps={recommendedApps} />}
 			</div>

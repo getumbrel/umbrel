@@ -30,7 +30,7 @@ export default function CommunityAppPage() {
 				app={app}
 				childrenRight={
 					<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
-						<InstallButtonConnected app={app} registryId={appStoreId} />
+						<InstallButtonConnected app={app} />
 					</ErrorBoundary>
 				}
 			/>
