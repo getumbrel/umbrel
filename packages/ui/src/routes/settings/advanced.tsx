@@ -49,7 +49,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 									trailingIcon={PiFlaskFill}
 								/>
 								<Switch
-									className='pointer-events-auto'
+									className={cn('pointer-events-auto', isBetaChannel.isLoading && 'umbrel-pulse')}
 									checked={isBetaChannel.isChecked}
 									onCheckedChange={isBetaChannel.change}
 									disabled={isBetaChannel.isLoading}
@@ -58,7 +58,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 							<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
 								<CardText title={t('external-dns')} description={t('external-dns-description')} />
 								<Switch
-									className='pointer-events-auto'
+									className={cn('pointer-events-auto', isExternalDns.isLoading && 'umbrel-pulse')}
 									checked={isExternalDns.isChecked}
 									onCheckedChange={isExternalDns.change}
 									disabled={isExternalDns.isLoading}
@@ -98,7 +98,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								trailingIcon={PiFlaskFill}
 							/>
 							<Switch
-								className='pointer-events-auto'
+								className={cn('pointer-events-auto', isBetaChannel.isLoading && 'umbrel-pulse')}
 								checked={isBetaChannel.isChecked}
 								onCheckedChange={isBetaChannel.change}
 								disabled={isBetaChannel.isLoading}
@@ -107,7 +107,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 						<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
 							<CardText title={t('external-dns')} description={t('external-dns-description')} />
 							<Switch
-								className='pointer-events-auto'
+								className={cn('pointer-events-auto', isExternalDns.isLoading && 'umbrel-pulse')}
 								checked={isExternalDns.isChecked}
 								onCheckedChange={isExternalDns.change}
 								disabled={isExternalDns.isLoading}
