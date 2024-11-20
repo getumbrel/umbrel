@@ -1,5 +1,6 @@
 import path from 'node:path'
 import {describe, beforeAll, afterAll, expect, test} from 'vitest'
+import fse from 'fs-extra'
 
 import temporaryDirectory from './temporary-directory.js'
 
@@ -166,5 +167,28 @@ describe('store.getWriteLock()', () => {
 			await methods.delete('one')
 			expect(await methods.get('one')).toBe(undefined)
 		})
+	})
+})
+
+const createFaultyStore = async () => {
+	const filePath = path.join(await directory.create(), 'store.yaml')
+
+	// Create a faulty store where the store file is empty, in turn
+	// deserializing as `undefined` if not explicitly handled
+	await fse.ensureFile(filePath)
+
+	type LooseSchema = Record<string, any>
+	const store = new FileStore<LooseSchema>({filePath})
+
+	return store
+}
+
+describe('Filestore', () => {
+	test('recovers from faulty store', async () => {
+		const store = await createFaultyStore()
+		expect(await store.get()).toStrictEqual({})
+
+		await store.set('test', 123)
+		expect(await store.get('test')).toStrictEqual(123)
 	})
 })

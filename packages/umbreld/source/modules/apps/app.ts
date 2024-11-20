@@ -11,10 +11,9 @@ import pRetry from 'p-retry'
 import getDirectorySize from '../utilities/get-directory-size.js'
 import {pullAll} from '../utilities/docker-pull.js'
 import FileStore from '../utilities/file-store.js'
-
+import {fillSelectedDependencies} from '../utilities/dependencies.js'
 import type Umbreld from '../../index.js'
 import {validateManifest, type AppSettings} from './schema.js'
-
 import appScript from './legacy-compat/app-script.js'
 
 async function readYaml(path: string) {
@@ -365,20 +364,18 @@ export default class App {
 
 	// Get the app's selected dependencies
 	async getSelectedDependencies() {
-		return this.store.get('dependencies')
+		const [{dependencies}, selectedDependencies] = await Promise.all([
+			this.readManifest(),
+			this.store.get('dependencies'),
+		])
+		return fillSelectedDependencies(dependencies, selectedDependencies)
 	}
 
 	// Set the app's selected dependencies
 	async setSelectedDependencies(selectedDependencies: Record<string, string>) {
 		const {dependencies} = await this.readManifest()
-		const selections = (dependencies ?? []).reduce(
-			(selections, dependencyId) => {
-				selections[dependencyId] = selectedDependencies[dependencyId] ?? dependencyId
-				return selections
-			},
-			{} as Record<string, string>,
-		)
-		const success = await this.store.set('dependencies', selections)
+		const filledSelectedDependencies = fillSelectedDependencies(dependencies, selectedDependencies)
+		const success = await this.store.set('dependencies', filledSelectedDependencies)
 		if (success) {
 			this.restart().catch((error) => {
 				this.logger.error(`Failed to restart '${this.id}': ${error.message}`)

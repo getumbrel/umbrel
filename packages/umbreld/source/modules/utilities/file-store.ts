@@ -17,7 +17,12 @@ type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 
 type StorePath<T, P extends string> = DotProp<T, P> extends never ? 'The provided path does not exist in the store' : P
 
-export default class FileStore<T> {
+type Primitive = number | string | boolean | null | undefined
+type Serializable = {
+	[key: string]: Serializable | Serializable[] | Primitive | Primitive[]
+}
+
+export default class FileStore<T extends Serializable> {
 	filePath: string
 
 	#parser
@@ -37,9 +42,10 @@ export default class FileStore<T> {
 	}
 
 	async #read() {
-		const rawData = await getOrCreateFile(this.filePath, this.#parser.encode({}))
+		const defaultValue: Serializable = {}
+		const rawData = await getOrCreateFile(this.filePath, this.#parser.encode(defaultValue))
 
-		const store = this.#parser.decode(rawData) as T
+		const store = (this.#parser.decode(rawData) || defaultValue) as T
 
 		return store
 	}

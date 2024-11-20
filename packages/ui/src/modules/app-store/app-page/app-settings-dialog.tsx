@@ -47,9 +47,9 @@ export function AppSettingsDialog() {
 }
 
 function areSelectionsEqual(a?: Record<string, string>, b?: Record<string, string>) {
-	if (!a || !b || a === b) return true
-	const keys1 = Object.keys(a)
-	const keys2 = Object.keys(b)
+	if (a === b) return true
+	const keys1 = Object.keys((a ||= {}))
+	const keys2 = Object.keys((b ||= {}))
 	if (keys1.length !== keys2.length) return false
 	for (const key of keys1) {
 		if (b[key] !== a[key]) return false
@@ -71,9 +71,7 @@ function AppSettingsDialogForApp({
 	openDependency?: string
 }) {
 	const dialogProps = useDialogOpenProps('app-settings')
-	const [selectedDependencies, setSelectedDependencies] = useState<Record<string, string>>(
-		app.selectedDependencies ?? {},
-	)
+	const [selectedDependencies, setSelectedDependencies] = useState(app.selectedDependencies)
 	const [hadChanges, setHadChanges] = useState(false)
 	const ctx = trpcReact.useContext()
 	const setSelectedDependenciesMut = trpcReact.apps.setSelectedDependencies.useMutation({

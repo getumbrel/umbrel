@@ -9,10 +9,10 @@ import semver from 'semver'
 import randomToken from '../../modules/utilities/random-token.js'
 import type Umbreld from '../../index.js'
 import appEnvironment from './legacy-compat/app-environment.js'
-
 import type {AppSettings} from './schema.js'
 import App, {readManifestInDirectory} from './app.js'
 import type {AppManifest} from './schema.js'
+import {fillSelectedDependencies} from '../utilities/dependencies.js'
 
 export default class Apps {
 	#umbreld: Umbreld
@@ -210,13 +210,13 @@ export default class Apps {
 		this.logger.log(`Installing app ${appId}`)
 		const appTemplatePath = await this.#umbreld.appStore.getAppTemplateFilePath(appId)
 
-		let manifestVersion: AppManifest['manifestVersion']
+		let manifest: AppManifest
 		try {
-			manifestVersion = (await readManifestInDirectory(appTemplatePath)).manifestVersion
+			manifest = await readManifestInDirectory(appTemplatePath)
 		} catch {
 			throw new Error('App template not found')
 		}
-		const manifestVersionValid = semver.valid(manifestVersion)
+		const manifestVersionValid = semver.valid(manifest.manifestVersion)
 		if (!manifestVersionValid) {
 			throw new Error('App manifest version is invalid')
 		}
@@ -235,7 +235,8 @@ export default class Apps {
 
 		// Save reference to app instance
 		const app = new App(this.#umbreld, appId)
-		app.store.set('dependencies', alternatives || {})
+		const filledSelectedDependencies = fillSelectedDependencies(manifest.dependencies, alternatives)
+		await app.store.set('dependencies', filledSelectedDependencies)
 		this.instances.push(app)
 
 		// Complete the install process via the app script
