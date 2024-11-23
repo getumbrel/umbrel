@@ -173,6 +173,7 @@
   "factory-reset": "Скидання до заводських налаштувань",
   "factory-reset-description": "Видаліть усі дані та програми umbrelOS і скиньте систему до заводського стану",
   "factory-reset.confirm.body": "Підтвердьте пароль Umbrel для скидання",
+  "factory-reset.confirm.ethernet-required-warning": "Переконайтеся, що ваш пристрій підключений безпосередньо до Ethernet (не Wi-Fi), і ви отримуєте доступ до його веб-інтерфейсу з локальної мережі (наприклад, http://umbrel.local або локальна IP-адреса вашого пристрою).",
   "factory-reset.confirm.password-label": "Введіть пароль",
   "factory-reset.confirm.submit": "Стерти все і скинути",
   "factory-reset.confirm.submit-callout": "Цю дію не можна скасувати.",

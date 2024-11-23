@@ -173,6 +173,7 @@
   "factory-reset": "Werkseinstellungen",
   "factory-reset-description": "Lösche alle deine umbrelOS-Daten und -Apps und setze das System auf den Werkszustand zurück",
   "factory-reset.confirm.body": "Bestätige Umbrel-Passwort zum Zurücksetzen",
+  "factory-reset.confirm.ethernet-required-warning": "Stelle sicher, dass dein Gerät direkt mit dem Ethernet (nicht über Wi-Fi) verbunden ist und dass du auf die Weboberfläche von deinem lokalen Netzwerk aus zugreifst (z. B. http://umbrel.local oder die lokale IP-Adresse deines Geräts).",
   "factory-reset.confirm.password-label": "Passwort eingeben",
   "factory-reset.confirm.submit": "Alles löschen und zurücksetzen",
   "factory-reset.confirm.submit-callout": "Diese Aktion kann nicht rückgängig gemacht werden.",

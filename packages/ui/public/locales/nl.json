@@ -173,6 +173,7 @@
   "factory-reset": "Fabrieksinstellingen",
   "factory-reset-description": "Verwijder alle gegevens en apps van je umbrelOS en zet het systeem terug naar de fabrieksinstellingen",
   "factory-reset.confirm.body": "Bevestig Umbrel wachtwoord om te resetten",
+  "factory-reset.confirm.ethernet-required-warning": "Zorg ervoor dat je apparaat direct is verbonden met Ethernet (niet via Wi-Fi) en dat je toegang hebt tot de webinterface vanaf je lokale netwerk (bijv. http://umbrel.local of het lokale IP-adres van je apparaat).",
   "factory-reset.confirm.password-label": "Voer wachtwoord in",
   "factory-reset.confirm.submit": "Alles wissen en resetten",
   "factory-reset.confirm.submit-callout": "Deze actie kan niet ongedaan worden gemaakt.",

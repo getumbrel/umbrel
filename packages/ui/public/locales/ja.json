@@ -173,6 +173,7 @@
   "factory-reset": "工場出荷時リセット",
   "factory-reset-description": "umbrelOSのデータとアプリをすべて削除し、システムを工場出荷状態にリセットします",
   "factory-reset.confirm.body": "リセットするためにUmbrelパスワードを確認してください",
+  "factory-reset.confirm.ethernet-required-warning": "デバイスがイーサネットに直接接続されていること（Wi-Fiは不可）を確認し、ローカルネットワーク（例：http://umbrel.local またはデバイスのローカルIPアドレス）からWebインターフェースにアクセスしていることを確認してください。",
   "factory-reset.confirm.password-label": "パスワードを入力",
   "factory-reset.confirm.submit": "すべてを消去してリセット",
   "factory-reset.confirm.submit-callout": "この操作は元に戻せません。",

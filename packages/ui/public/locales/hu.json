@@ -173,6 +173,7 @@
   "factory-reset": "Gyári beállítások visszaállítása",
   "factory-reset-description": "Az összes umbrelOS adat és alkalmazás törlése, és a rendszer visszaállítása gyári állapotba",
   "factory-reset.confirm.body": "Erősítsd meg az Umbrel jelszavad a visszaállításhoz",
+  "factory-reset.confirm.ethernet-required-warning": "Győződj meg róla, hogy az eszközöd közvetlenül Etherneten keresztül van csatlakozva (nem Wi-Fi-n), és a helyi hálózatodról éred el a webes felületét (például: http://umbrel.local vagy az eszközöd helyi IP-címén).",
   "factory-reset.confirm.password-label": "Jelszó megadása",
   "factory-reset.confirm.submit": "Mindent törölni és visszaállítani",
   "factory-reset.confirm.submit-callout": "Ez a művelet nem vonható vissza.",

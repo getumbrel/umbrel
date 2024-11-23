@@ -48,7 +48,7 @@ export function ConfirmWithPassword({
 				}
 			>
 				<label>
-					<div className='mb-1 text-14 leading-tight'>{t('factory-reset.confirm.password-label')}</div>
+					<div className='mb-1 mt-5 text-14 leading-tight'>{t('factory-reset.confirm.password-label')}</div>
 					<PasswordInput
 						autoFocus
 						inputRef={passwordRef}
@@ -58,6 +58,9 @@ export function ConfirmWithPassword({
 						error={error}
 					/>
 				</label>
+				<div className='mt-5 rounded-8 bg-yellow-700/50 p-3 text-13 text-yellow-300/80'>
+					⚠️ {t('factory-reset.confirm.ethernet-required-warning')}
+				</div>
 			</ImmersiveDialogBody>
 		</form>
 	)

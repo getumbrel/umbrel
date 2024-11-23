@@ -173,6 +173,7 @@
   "factory-reset": "Réinitialisation d'usine",
   "factory-reset-description": "Supprimez toutes vos données et applications umbrelOS et réinitialisez le système à l'état d'usine",
   "factory-reset.confirm.body": "Confirmez le mot de passe Umbrel pour réinitialiser",
+  "factory-reset.confirm.ethernet-required-warning": "Assurez-vous que votre appareil est connecté directement à Ethernet (pas au Wi-Fi) et que vous accédez à son interface web depuis votre réseau local (par exemple, http://umbrel.local ou l'adresse IP locale de votre appareil).",
   "factory-reset.confirm.password-label": "Entrer le mot de passe",
   "factory-reset.confirm.submit": "Effacer tout et réinitialiser",
   "factory-reset.confirm.submit-callout": "Cette action est irréversible.",

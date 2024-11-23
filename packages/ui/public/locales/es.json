@@ -173,6 +173,7 @@
   "factory-reset": "Restablecimiento de fábrica",
   "factory-reset-description": "Eliminar todos tus datos y aplicaciones de umbrelOS y restablecer el sistema a su estado de fábrica",
   "factory-reset.confirm.body": "Confirma la contraseña de Umbrel para restablecer",
+  "factory-reset.confirm.ethernet-required-warning": "Asegúrate de que tu dispositivo esté conectado directamente a Ethernet (no Wi-Fi) y de acceder a su interfaz web desde tu red local (por ejemplo, http://umbrel.local o la dirección IP local de tu dispositivo).",
   "factory-reset.confirm.password-label": "Ingresar contraseña",
   "factory-reset.confirm.submit": "Borrar todo y restablecer",
   "factory-reset.confirm.submit-callout": "Esta acción no se puede deshacer.",

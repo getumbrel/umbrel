@@ -173,6 +173,7 @@
   "factory-reset": "Fabrika ayarlarına sıfırla",
   "factory-reset-description": "Tüm umbrelOS verilerinizi ve uygulamalarınızı silin ve sistemi fabrika ayarlarına sıfırlayın",
   "factory-reset.confirm.body": "Sıfırlamak için Umbrel şifresini onaylayın",
+  "factory-reset.confirm.ethernet-required-warning": "Cihazınızın doğrudan Ethernet'e (Wi-Fi değil) bağlı olduğundan ve yerel ağınızdan (örneğin, http://umbrel.local veya cihazınızın yerel IP adresi) web arayüzüne eriştiğinizden emin olun.",
   "factory-reset.confirm.password-label": "Şifreyi girin",
   "factory-reset.confirm.submit": "Her şeyi sil ve sıfırla",
   "factory-reset.confirm.submit-callout": "Bu işlem geri alınamaz.",
