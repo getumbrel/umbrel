@@ -263,24 +263,21 @@ export default class App {
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
 		containers.push(`${this.id}_app_proxy_1`)
 		containers.push(`${this.id}_tor_server_1`)
-		const pids = await Promise.all(
-			containers.map(async (container) => {
-				try {
-					const top = await $`docker top ${container}`
-					return top.stdout
-						.split('\n') // Split on newline
-						.slice(1) // Remove header
-						.map((line) => parseInt(line.split(/\s+/)[1], 10)) // Split on whitespace and get second item (PID)
-				} catch (error) {
-					// If we fail to get the PID, return an empty array and continue for the other contianers
-					// We don't log this error cos we'll expect to get it on some misses for the app proxy
-					// and tor server contianers.
-					return []
-				}
-			}),
-		)
-
-		return pids.flat()
+		try {
+			// If we fail to get the PIDs of one container, skip it and continue for
+			// the other containers. We'll expect to get it on some misses for the app
+			// proxy and tor server containers.
+			const cmd = containers.map((container) => `docker top ${container} -o pid 2>/dev/null || true`).join('\n')
+			const {stdout} = await $({shell: true})`${cmd}`
+			return stdout
+				.split('\n') // Split on newline
+				.map((line) => line.trim()) // Trim whitespace
+				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
+				.map((line) => parseInt(line, 10)) // And convert
+		} catch (error) {
+			this.logger.error(`Failed to get pids for app ${this.id}: ${(error as Error).message}`)
+			return []
+		}
 	}
 
 	async getDiskUsage() {
