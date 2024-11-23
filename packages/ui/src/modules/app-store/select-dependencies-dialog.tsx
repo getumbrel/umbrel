@@ -252,21 +252,25 @@ function DependencyDropdown({
 	return (
 		<DropdownMenu open={openDropdowns[dependencyId] ?? false} onOpenChange={onOpenChange}>
 			<DropdownMenuTrigger asChild className={cn(highlightDependency === dependencyId && 'umbrel-pulse-a-few-times')}>
-				<Button className='h-[40px] min-w-[256px] px-4'>
-					<span className='flex flex-1 flex-row items-center gap-2 text-[14px]'>
+				<Button className='h-[40px] w-[256px] max-w-[calc(100%-90px)] px-4'>
+					<div className='flex min-w-0 flex-1 items-center gap-2 text-left'>
 						{selectedApp ? (
 							<>
-								{selectedApp.icon && <AppIcon size={26} src={selectedApp.icon} className='rounded-6' />}
-								{selectedApp.name}
+								{selectedApp.icon && <AppIcon size={26} src={selectedApp.icon} className='shrink-0 rounded-6' />}
+								<div className='min-w-0 flex-1'>
+									<span className='block truncate text-[14px]'>{selectedApp.name}</span>
+								</div>
 							</>
 						) : (
-							t('app-picker.select-app')
+							<div className='min-w-0 flex-1'>
+								<span className='block truncate text-[14px]'>{t('app-picker.select-app')}</span>
+							</div>
 						)}
-					</span>
+					</div>
 					<ChevronDown />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className='flex max-h-72 min-w-[256px] flex-col gap-3' align='start'>
+			<DropdownMenuContent className='flex max-h-72 w-[256px] flex-col gap-3' align='start'>
 				<ScrollArea className='relative -mx-2.5 flex h-full flex-col px-2.5'>
 					{alternatives.map(({app}) => (
 						<DropdownMenuCheckboxItem
