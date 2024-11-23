@@ -3,43 +3,64 @@ name: Create release on tag
 on:
   push:
     tags:
-      - "*"
-
-defaults:
-  run:
-    working-directory: packages/os
+      - '*'
 
 jobs:
-  build-os:
-    runs-on: ${{ matrix.task == 'build:amd64' && 'ubicloud-standard-16' || 'ubicloud-standard-16-arm' }}
+  create-release:
+    runs-on: 64-core-amd64
     defaults:
       run:
         working-directory: packages/os
-    strategy:
-      fail-fast: false
-      matrix:
-        task:
-          - build:amd64
-          - build:arm64
     steps:
+      # Checkout
       - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v2
+
+      # Build Docker images
+      - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      # We need this to namespace Docker images on forks
+      - run: echo "PREFIX=$(if [ '${{ github.repository }}' = 'getumbrel/umbrel' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
+      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+      - run: docker buildx create --use
+      - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push ../../
+      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
+
+      # Build OS images
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm run ${{ matrix.task }}
+        # Awkward hack to run in parallel but correctly handle errors
+      - run: |
+          npm run build:amd64 &
+          pid1=$!
+          npm run build:arm64 &
+          pid2=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
 
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
-      - name: Prepare arm64 release assets
-        if: matrix.task == 'build:arm64'
-        run: cd build && (zip umbrelos-pi4.img.zip umbrelos-pi4.img & zip umbrelos-pi5.img.zip umbrelos-pi5.img & wait)
-      - name: Prepare amd64 release assets
-        if: matrix.task == 'build:amd64'
-        run: cd build && sudo xz --keep --threads=0 umbrelos-amd64.img
+      - name: Compress release assets
+        # Awkward hack to run in parallel but correctly handle errors
+        run: |
+          cd build
+          zip umbrelos-pi4.img.zip umbrelos-pi4.img &
+          pid1=$!
+          zip umbrelos-pi5.img.zip umbrelos-pi5.img &
+          pid2=$!
+          sudo xz --keep --threads=0 umbrelos-amd64.img &
+          pid3=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
+          wait $pid3 || exit 1
 
       - name: Create USB installer
-        if: matrix.task == 'build:amd64'
         run: npm run build:amd64:usb-installer
+
+      - name: Create SHASUM
+        run: shasum -a 256 build/* | tee build/SHA256SUMS
+
+      - name: OpenTimestamps
+        run: npm ci && npx ots-cli.js stamp build/SHA256SUMS
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
@@ -47,6 +68,7 @@ jobs:
           draft: true
           name: umbrelOS ${{ github.ref_name }}
           files: |
+            packages/os/build/SHA256SUMS*
             packages/os/build/*.update
             packages/os/build/*.img.zip
             packages/os/build/*.img.xz

@@ -5,5 +5,8 @@
     "build:amd64:usb-installer": "cd usb-installer && ./run.sh",
     "build:arm64": "SKIP_AMD64=true npm run build",
     "build:pi5": "SKIP_AMD64=true SKIP_PI4=true npm run build"
+  },
+  "devDependencies": {
+    "opentimestamps": "^0.4.9"
   }
 }
