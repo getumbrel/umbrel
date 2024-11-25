@@ -169,7 +169,7 @@
   "disable": "Deaktivieren",
   "download-logs": "Protokolle herunterladen",
   "external-dns": "Cloudflare DNS",
-  "external-dns-description": "umbrelOS verwendet standardmäßig Cloudflare DNS, da einige Nutzer Probleme mit den von ihrem Internetanbieter bereitgestellten DNS haben. Du kannst dies deaktivieren, um die DNS-Einstellungen deines lokalen Netzwerks zu übernehmen.",
+  "external-dns-description": "Cloudflare DNS bietet eine bessere Netzwerkzuverlässigkeit. Deaktiviere es, um die DNS-Einstellungen deines Routers zu verwenden.",
   "factory-reset": "Werkseinstellungen",
   "factory-reset-description": "Lösche alle deine Daten und Apps, um umbrelOS auf die Standardeinstellungen zurückzusetzen",
   "factory-reset.confirm.body": "Bestätige dein Passwort, um zurückzusetzen",

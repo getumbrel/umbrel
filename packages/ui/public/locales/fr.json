@@ -169,7 +169,7 @@
   "disable": "Désactiver",
   "download-logs": "Télécharger les journaux",
   "external-dns": "DNS Cloudflare",
-  "external-dns-description": "umbrelOS utilise par défaut DNS Cloudflare car certains utilisateurs rencontrent des problèmes avec le DNS fourni par leur FAI. Vous pouvez désactiver cela pour hériter des paramètres DNS fournis par votre réseau local.",
+  "external-dns-description": "Le DNS Cloudflare offre une meilleure fiabilité du réseau. Désactivez pour utiliser les paramètres DNS de votre routeur.",
   "factory-reset": "Réinitialisation d'usine",
   "factory-reset-description": "Effacez toutes vos données et applications, et rétablissez umbrelOS aux paramètres par défaut",
   "factory-reset.confirm.body": "Confirmez votre mot de passe pour réinitialiser",

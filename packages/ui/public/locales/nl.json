@@ -169,7 +169,7 @@
   "disable": "Uitschakelen",
   "download-logs": "Logbestanden downloaden",
   "external-dns": "Cloudflare DNS",
-  "external-dns-description": "umbrelOS gebruikt standaard Cloudflare DNS omdat sommige gebruikers problemen hebben met de door hun ISP geleverde DNS. Je kunt dit uitschakelen om de DNS-instellingen van je lokale netwerk over te nemen.",
+  "external-dns-description": "Cloudflare DNS biedt betere netwerkbetrouwbaarheid. Uitschakelen om de DNS-instellingen van je router te gebruiken.",
   "factory-reset": "Fabrieksinstellingen",
   "factory-reset-description": "Wis al je data en apps en herstel umbrelOS naar de standaardinstellingen",
   "factory-reset.confirm.body": "Bevestig je wachtwoord om te resetten",
