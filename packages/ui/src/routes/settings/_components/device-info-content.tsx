@@ -7,6 +7,8 @@ import {cn} from '@/shadcn-lib/utils'
 import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
+import AnimatedUmbrelHomeIcon from './device-info-umbrel-home'
+
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
 	device,
@@ -21,12 +23,16 @@ export function DeviceInfoContent({
 	return (
 		<div className='space-y-6'>
 			<div className='flex justify-center py-2'>
-				<HostEnvironmentIcon environment={umbrelHostEnvironment} />
+				<HostEnvironmentIcon
+					environment={umbrelHostEnvironment}
+					modelNumber={modelNumber}
+					serialNumber={serialNumber}
+				/>
 			</div>
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>{t('device-info.device')}</span>
-					<span className='pr-6 font-normal'>{maybeT(device)}</span>
+					<span className={cn('font-normal', (modelNumber || serialNumber) && 'pr-6')}>{maybeT(device)}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>
@@ -52,12 +58,24 @@ const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white
 const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`
 const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
 
-export const HostEnvironmentIcon = ({environment}: {environment?: UmbrelHostEnvironment}) => {
+export const HostEnvironmentIcon = ({
+	environment,
+	modelNumber,
+	serialNumber,
+}: {
+	environment?: UmbrelHostEnvironment
+	modelNumber?: string
+	serialNumber?: string
+}) => {
 	const iconDimensions = {
 		'umbrel-home': 128,
 		'raspberry-pi': 64,
 		'docker-container': 72,
 		unknown: 128,
+	}
+
+	if (environment === 'umbrel-home') {
+		return <AnimatedUmbrelHomeIcon modelNumber={modelNumber} serialNumber={serialNumber} />
 	}
 
 	const icon =
