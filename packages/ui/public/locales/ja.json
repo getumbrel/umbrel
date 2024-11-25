@@ -11,7 +11,7 @@
   "account": "アカウント",
   "account-description": "あなたの名前とパスワード",
   "advanced-settings": "詳細設定",
-  "advanced-settings-description": "Terminalを開くか、umbrelOSベータプログラムに登録する",
+  "advanced-settings-description": "ターミナル、umbrelOSベータプログラム、Cloudflare DNSなど",
   "app-not-found": "アプリが見つかりません: {{app}}",
   "app-only-over-tor": "{{app}}はTor経由でのみ使用できます。このアプリを開くには、TorブラウザでリモートアクセスURL（設定 > リモートTorアクセス）にアクセスしてください。",
   "app-page.section.about": "約",

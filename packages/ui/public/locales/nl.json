@@ -11,7 +11,7 @@
   "account": "Account",
   "account-description": "Je naam en wachtwoord",
   "advanced-settings": "Geavanceerde instellingen",
-  "advanced-settings-description": "Open de terminal of meld je aan voor het umbrelOS Beta Programma",
+  "advanced-settings-description": "Terminal, umbrelOS Beta Programma, Cloudflare DNS en meer",
   "app-not-found": "App niet gevonden: {{app}}",
   "app-only-over-tor": "{{app}} kan alleen worden gebruikt over Tor. Gebruik een Tor-browser op je externe toegangs-URL (Instellingen > Toegang op afstand via Tor) om deze app te openen.",
   "app-page.section.about": "Over",

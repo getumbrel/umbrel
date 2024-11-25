@@ -11,7 +11,7 @@
   "account": "Compte",
   "account-description": "Votre nom et mot de passe",
   "advanced-settings": "Paramètres avancés",
-  "advanced-settings-description": "Ouvrez le terminal ou inscrivez-vous au programme bêta d'umbrelOS",
+  "advanced-settings-description": "Terminal, Programme Beta umbrelOS, DNS Cloudflare, et plus",
   "app-not-found": "Application non trouvée : {{app}}",
   "app-only-over-tor": "{{app}} ne peut être utilisée que via Tor. Veuillez accéder à votre Umbrel dans un navigateur Tor sur votre URL d'accès à distance (Paramètres > Accès Tor à distance) pour ouvrir cette application.",
   "app-page.section.about": "À propos",

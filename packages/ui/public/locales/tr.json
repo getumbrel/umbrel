@@ -11,7 +11,7 @@
   "account": "Hesap",
   "account-description": "Adınız ve şifreniz",
   "advanced-settings": "Gelişmiş ayarlar",
-  "advanced-settings-description": "Terminali açın veya umbrelOS Beta Programına katılın",
+  "advanced-settings-description": "Terminal, umbrelOS Beta Programı, Cloudflare DNS ve daha fazlası",
   "app-not-found": "Uygulama bulunamadı: {{app}}",
   "app-only-over-tor": "{{app}} yalnızca Tor üzerinden kullanılabilir. Bu uygulamayı açmak için uzaktan erişim URL'inizde (Ayarlar > Uzaktan Tor erişimi) bir Tor tarayıcısında Umbrel'inize erişin.",
   "app-page.section.about": "Hakkında",

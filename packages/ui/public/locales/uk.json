@@ -11,7 +11,7 @@
   "account": "Акаунт",
   "account-description": "Ваше ім'я та пароль",
   "advanced-settings": "Розширені налаштування",
-  "advanced-settings-description": "Відкрити термінал або зареєструватися в Beta Program umbrelOS",
+  "advanced-settings-description": "Термінал, програма бета-тестування umbrelOS, Cloudflare DNS та інше",
   "app-not-found": "Програму не знайдено: {{app}}",
   "app-only-over-tor": "{{app}} можна використовувати тільки через Tor. Доступ до вашого Umbrel за допомогою Tor браузера за віддаленою URL-адресою (Налаштування > Віддалений доступ Tor), щоб відкрити цю програму.",
   "app-page.section.about": "Про",

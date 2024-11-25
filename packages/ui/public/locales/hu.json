@@ -11,7 +11,7 @@
   "account": "Fiók",
   "account-description": "A neved és jelszavad",
   "advanced-settings": "Haladó beállítások",
-  "advanced-settings-description": "Terminál megnyitása vagy feliratkozás az umbrelOS Beta Programba",
+  "advanced-settings-description": "Terminál, umbrelOS Béta Program, Cloudflare DNS, és még sok más",
   "app-not-found": "Alkalmazás nem található: {{app}}",
   "app-only-over-tor": "A {{app}} csak Tor-on keresztül használható. Kérjük, az alkalmazás megnyitásához lépj be az Umbrel-be egy Tor böngészőben a távoli hozzáférési URL-en (Beállítások > Távoli Tor hozzáférés).",
   "app-page.section.about": "Rólunk",
