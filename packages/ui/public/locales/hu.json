@@ -139,7 +139,7 @@
   "default-credentials.close": "Rendben",
   "default-credentials.description": "Itt találod a bejelentkezéshez szükséges hitelesítési adatokat.",
   "default-credentials.dont-show-again": "Ne mutasd újra ezt",
-  "default-credentials.dont-show-on-open": "Ne mutassa meg nyitáskor",
+  "default-credentials.dont-show-again-notice": "A jövőben bármikor hozzáférhetsz ezekhez a hitelesítő adatokhoz az alkalmazás ikonra jobb egérgombbal kattintva.",
   "default-credentials.open": "Nyisd meg a(z) {{app}} alkalmazást",
   "default-credentials.password": "Alapértelmezett jelszó",
   "default-credentials.title": "{{app}} hitelesítési adatai",

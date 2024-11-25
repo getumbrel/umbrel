@@ -139,7 +139,7 @@
   "default-credentials.close": "Зрозуміло",
   "default-credentials.description": "Ось облікові дані, які вам знадобляться для входу в програму.",
   "default-credentials.dont-show-again": "Більше не показувати це",
-  "default-credentials.dont-show-on-open": "Не показувати при відкритті",
+  "default-credentials.dont-show-again-notice": "Ви можете отримати доступ до цих облікових даних у будь-який час, натиснувши правою кнопкою миші на значок програми.",
   "default-credentials.open": "Відкрити {{app}}",
   "default-credentials.password": "Пароль за замовчуванням",
   "default-credentials.title": "Облікові дані для {{app}}",

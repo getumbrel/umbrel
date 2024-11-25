@@ -139,7 +139,7 @@
   "default-credentials.close": "Verstanden",
   "default-credentials.description": "Hier sind die Anmeldeinformationen, die du benötigst, um dich bei der App anzumelden.",
   "default-credentials.dont-show-again": "Nicht mehr anzeigen",
-  "default-credentials.dont-show-on-open": "Beim Öffnen nicht anzeigen",
+  "default-credentials.dont-show-again-notice": "Du kannst diese Anmeldedaten jederzeit zukünftig abrufen, indem du mit der rechten Maustaste auf das App-Symbol klickst.",
   "default-credentials.open": "{{app}} öffnen",
   "default-credentials.password": "Standardpasswort",
   "default-credentials.title": "Anmeldeinformationen für {{app}}",

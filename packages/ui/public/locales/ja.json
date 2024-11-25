@@ -139,7 +139,7 @@
   "default-credentials.close": "了解",
   "default-credentials.description": "アプリにログインするために必要な資格情報です。",
   "default-credentials.dont-show-again": "これを再度表示しない",
-  "default-credentials.dont-show-on-open": "開いたときに表示しない",
+  "default-credentials.dont-show-again-notice": "将来いつでもアプリアイコンを右クリックすることで、これらの資格情報にアクセスできます。",
   "default-credentials.open": "{{app}}を開く",
   "default-credentials.password": "デフォルトパスワード",
   "default-credentials.title": "{{app}}の資格情報",

@@ -75,13 +75,16 @@ export function DefaultCredentialsDialog() {
 						)}
 						<Separator />
 						<div className='flex items-center justify-between'>
-							<ShowCredentialsBeforeOpenCheckbox appId={appId} direct={direct} />
+							{direct && <ShowCredentialsBeforeOpenCheckbox appId={appId} />}
 							{direct ? (
 								<Button
 									variant='primary'
 									size='dialog'
 									className='w-auto'
-									onClick={() => launchApp(appId, {direct: true})}
+									onClick={() => {
+										launchApp(appId, {direct: true})
+										dialogProps.onOpenChange(false)
+									}}
 								>
 									{t('default-credentials.open', {app: appName})}
 								</Button>
@@ -103,7 +106,7 @@ export function DefaultCredentialsDialog() {
 	)
 }
 
-function ShowCredentialsBeforeOpenCheckbox({appId, direct}: {appId: string; direct: boolean}) {
+function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 	const checkboxId = useId()
 	const {app, isLoading} = useUserApp(appId)
 
@@ -120,23 +123,28 @@ function ShowCredentialsBeforeOpenCheckbox({appId, direct}: {appId: string; dire
 	}
 
 	return (
-		<div
-			className={cn(
-				checkboxContainerClass,
-				// prevent interaction when loading
-				(isLoading || hideCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
+		<div className='flex flex-col'>
+			<div
+				className={cn(
+					checkboxContainerClass,
+					// prevent interaction when loading
+					(isLoading || hideCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
+				)}
+			>
+				<Checkbox
+					id={checkboxId}
+					checked={!showCredentials}
+					onCheckedChange={(checked) => handleHideCredentialsBeforeOpenChange(!!checked)}
+				/>
+				<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
+					{t('default-credentials.dont-show-again')}
+				</label>
+			</div>
+			{!showCredentials && (
+				<div className='pr-2 pt-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
 			)}
-		>
-			<Checkbox
-				id={checkboxId}
-				checked={!showCredentials}
-				onCheckedChange={(checked) => handleHideCredentialsBeforeOpenChange(!!checked)}
-			/>
-			<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
-				{direct ? t('default-credentials.dont-show-again') : t('default-credentials.dont-show-on-open')}
-			</label>
 		</div>
 	)
 }
 
-const textClass = tw`text-13 font-normal text-white/40`
+const textClass = tw`text-13 font-normal text-white/40 block pb-1`

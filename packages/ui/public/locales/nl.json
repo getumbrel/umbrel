@@ -139,7 +139,7 @@
   "default-credentials.close": "Begrepen",
   "default-credentials.description": "Hier zijn de inloggegevens die je nodig hebt om in te loggen op de app.",
   "default-credentials.dont-show-again": "Niet meer tonen",
-  "default-credentials.dont-show-on-open": "Niet tonen bij openen",
+  "default-credentials.dont-show-again-notice": "Je kunt deze inloggegevens op elk moment in de toekomst inzien door met de rechtermuisknop op het app-pictogram te klikken.",
   "default-credentials.open": "Open {{app}}",
   "default-credentials.password": "Standaard wachtwoord",
   "default-credentials.title": "Inloggegevens voor {{app}}",

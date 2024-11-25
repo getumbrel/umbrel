@@ -139,7 +139,7 @@
   "default-credentials.close": "Anladım",
   "default-credentials.description": "Uygulamaya giriş yapmak için gerekli kimlik bilgileri burada.",
   "default-credentials.dont-show-again": "Bunu bir daha gösterme",
-  "default-credentials.dont-show-on-open": "Açıldığında gösterme",
+  "default-credentials.dont-show-again-notice": "Bu kimlik bilgilerine gelecekte herhangi bir zamanda uygulama simgesine sağ tıklayarak erişebilirsiniz.",
   "default-credentials.open": "{{app}}'i aç",
   "default-credentials.password": "Varsayılan şifre",
   "default-credentials.title": "{{app}} için kimlik bilgileri",
