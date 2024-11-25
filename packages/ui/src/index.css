@@ -216,11 +216,6 @@ a {
 	overflow-x: clip;
 }
 
-/* By default, `[data-sonner-toaster]` `z-index` is high enough that we can't put anything over it  */
-[data-sonner-toaster] {
-	@apply !z-50;
-}
-
 /* Fixes action button not aligning to the right when content is too short */
 [data-sonner-toaster] [data-content] {
 	@apply w-full;
