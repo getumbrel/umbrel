@@ -48,7 +48,6 @@ export function ConfirmWithPassword({
 				}
 			>
 				<label>
-					<div className='mb-1 mt-5 text-14 leading-tight'>{t('factory-reset.confirm.password-label')}</div>
 					<PasswordInput
 						autoFocus
 						inputRef={passwordRef}

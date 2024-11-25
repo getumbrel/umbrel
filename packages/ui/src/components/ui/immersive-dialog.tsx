@@ -135,14 +135,14 @@ export function ImmersiveDialogBody({
 	footer: React.ReactNode
 }) {
 	return (
-		<div className='flex h-full h-full flex-col items-start gap-5'>
+		<div className='flex h-full flex-col items-start gap-5'>
 			<div className='space-y-2'>
 				<h1 className={immersiveDialogTitleClass}>{title}</h1>
 				<p className={immersiveDialogDescriptionClass}>{description}</p>
 			</div>
 			<ImmersiveDialogSeparator />
 			<div className='w-full space-y-2.5'>
-				<div className={bodyTextClass}>{bodyText}</div>
+				<div className={cn('mb-4', bodyTextClass)}>{bodyText}</div>
 				<AnimateIn>{children}</AnimateIn>
 			</div>
 			<div className='flex-1' />
