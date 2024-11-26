@@ -36,8 +36,9 @@ export function WifiDrawerOrDialogContent() {
 	const networkStatus = statusQ.data
 
 	const disconnectMut = trpcReact.wifi.disconnect.useMutation({
-		onSuccess: () => {
+		onSettled: () => {
 			ctx.wifi.connected.invalidate()
+			ctx.system.getIpAddresses.invalidate()
 		},
 	})
 
@@ -240,6 +241,7 @@ function Network({
 		},
 		onSettled: () => {
 			ctx.wifi.connected.invalidate()
+			ctx.system.getIpAddresses.invalidate()
 		},
 	})
 
