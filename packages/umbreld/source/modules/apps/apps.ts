@@ -270,12 +270,12 @@ export default class Apps {
 
 		const app = this.getApp(appId)
 
-		await app.uninstall()
-
-		// Remove app instance
-		this.instances = this.instances.filter((app) => app.id !== appId)
-
-		return true
+		const uninstalled = await app.uninstall()
+		if (uninstalled) {
+			// Remove app instance
+			this.instances = this.instances.filter((app) => app.id !== appId)
+		}
+		return uninstalled
 	}
 
 	async restart(appId: string) {
