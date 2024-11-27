@@ -1,4 +1,5 @@
 import os from 'node:os'
+import {isIPv4} from 'node:net'
 import {setTimeout} from 'node:timers/promises'
 
 import systemInformation from 'systeminformation'
@@ -442,24 +443,45 @@ export async function connectToWiFiNetwork({ssid, password}: {ssid: string; pass
 }
 
 // Get IP addresses of the device
-export async function getIpAddresses(): Promise<string[]> {
-	const interfaces =
-		(await systemInformation.networkInterfaces()) as systemInformation.Systeminformation.NetworkInterfacesData[]
-
-	// Filter out virtual interfaces, non-wired/wireless interfaces, bridge
-	// interfaces starting with 'br-', and interfaces without ip4
-	const validInterfaces = interfaces.filter(
-		(iface) =>
-			!iface.virtual &&
-			(iface.type === 'wired' || iface.type === 'wireless') &&
-			!iface.ifaceName.startsWith('br-') &&
-			iface.ip4,
+export function getIpAddresses(): string[] {
+	// Known good interfaces:
+	// - Umbrel Home 2024: enp1s0, wlo1 (predictable naming)
+	// - Raspberry Pi 4/5: end0, wlan0 (custom naming)
+	// - Docker Dev: eth0 (traditional naming)
+	const excludeInterfaceNames = [
+		// Bridge interfaces
+		/^br\-/,
+		// Known Docker-specific interfaces
+		/^docker/,
+		/^services/,
+		// Virtual ethernet (pairs)
+		/^veth/,
+		// TODO: Tunnel interfaces?
+		// /^tun/,
+	]
+	// Known good IPv4 ranges:
+	// - Class A private: 10.0.0.0/8 := /^10\./
+	// - Class B private: 172.16.0.0/12 := /^172\.(1[6-9]|2[0-9]|3[0-1])\./
+	// - Class C private: 192.168.0.0/16 := /^192\.168\./
+	const excludeAddressRanges = [
+		// Local loopback (127.0.0.0/8)
+		/^127\./,
+		// Non-routable APIPA (169.254.0.0/16), e.g. misconfigured DHCP
+		/^169\.254\./,
+	]
+	return (
+		Object.entries(os.networkInterfaces())
+			// Omit interfaces with excluded names
+			.filter(([name]) => !excludeInterfaceNames.some((expression) => expression.test(name)))
+			// Flatten interface map to an array of addresses
+			.flatMap(([name, addresses = []]) => addresses.map((address) => ({name, ...address})))
+			// Select valid non-loopback IPv4 addresses
+			.filter((entry) => entry.family === 'IPv4' && !entry.internal && isIPv4(entry.address))
+			// Omit addresses within excluded ranges
+			.filter((entry) => !excludeAddressRanges.some((expression) => expression.test(entry.address)))
+			// Return remaining addresses
+			.map((entry) => entry.address)
 	)
-
-	// Get the ip4 addresses
-	const ipAddresses = validInterfaces.map((iface) => iface.ip4)
-
-	return ipAddresses
 }
 
 const syncDnsQueue = new PQueue({concurrency: 1})
