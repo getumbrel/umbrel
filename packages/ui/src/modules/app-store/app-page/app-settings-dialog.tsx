@@ -146,7 +146,7 @@ function AppSettingsDialogForApp({
 				>
 					<DialogHeader>
 						<DialogTitle className='flex items-center gap-2'>
-							<AppIcon src={app.icon} size={24} className='ounded-6 sm:rounded-8' />
+							<AppIcon src={app.icon} size={24} className='rounded-6' />
 							{t('app-settings.title')}
 						</DialogTitle>
 					</DialogHeader>
