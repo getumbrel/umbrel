@@ -32,8 +32,7 @@ apt-get install -y \
     linux-image-rpi-v8 \
     linux-headers-rpi-v8 \
     linux-image-rpi-2712 \
-    linux-headers-rpi-2712 \
-    bluez-firmware
+    linux-headers-rpi-2712
 
 
 # Install boot configuration files.
