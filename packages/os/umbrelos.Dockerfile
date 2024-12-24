@@ -91,7 +91,7 @@ RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi
 
 # Install bluetooth stack
 # The default configuration enables all bluetooth controllers/adapters present on boot and plugged in after boot
-RUN apt-get install --yes bluez
+RUN apt-get install --yes bluez bluez-firmware
 
 # Install essential system utilities
 RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois
