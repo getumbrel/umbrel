@@ -2,7 +2,4 @@ node_modules
 coverage
 .DS_Store
 data
-build
-release
-release-notes.md
 ui
