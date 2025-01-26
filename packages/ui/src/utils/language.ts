@@ -6,6 +6,7 @@ export const languages = [
 	{name: 'Español', code: 'es'},
 	{name: 'Français', code: 'fr'},
 	{name: 'Italiano', code: 'it'},
+	{name: '한국어', code: 'ko'},
 	{name: 'Magyar', code: 'hu'},
 	{name: 'Nederlands', code: 'nl'},
 	{name: 'Português', code: 'pt'},

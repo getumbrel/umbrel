@@ -35,6 +35,7 @@ const languageMapping = {
 	tr: 'Turkish',
 	uk: 'Ukrainian',
 	hu: 'Hungarian',
+	ko: 'Korean',
 }
 
 // Generates translations
