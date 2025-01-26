@@ -92,7 +92,13 @@ async function removeUnusedTranslations(englishReferenceContent) {
 			} else if (key.endsWith('_other')) {
 				keyToTest = key.slice(0, -6)
 			}
-			const keyPatterns = [`t('${keyToTest}'`, `i18nKey='${keyToTest}'`, `t("${keyToTest}"`, `i18nKey="${keyToTest}"`]
+			const keyPatterns = [
+				`t('${keyToTest}'`,
+				`i18nKey='${keyToTest}'`,
+				`t("${keyToTest}"`,
+				`i18nKey="${keyToTest}"`,
+				`TKey: '${keyToTest}'`,
+			]
 			if (keyPatterns.some((pattern) => content.includes(pattern))) {
 				isKeyUsed = true
 				break
