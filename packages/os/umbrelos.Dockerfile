@@ -154,7 +154,7 @@ COPY packages/umbreld /opt/umbreld
 COPY --from=ui-build /app/dist /opt/umbreld/ui
 WORKDIR /opt/umbreld
 RUN rm -rf node_modules || true
-RUN npm install --omit dev && npm link
+RUN npm clean-install --omit dev && npm link
 WORKDIR /
 
 # Copy in filesystem overlay
