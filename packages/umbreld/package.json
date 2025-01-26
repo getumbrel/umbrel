@@ -45,7 +45,7 @@
 	"dependencies": {
 		"@trpc/client": "^10.34.0",
 		"@trpc/server": "^10.34.0",
-		"@tsconfig/node22": "^22.0.0",
+		"@tsconfig/node18": "^18.2.2",
 		"@types/cookie-parser": "^1.4.7",
 		"arg": "^5.0.2",
 		"bcryptjs": "^2.4.3",
@@ -57,7 +57,7 @@
 		"cors": "2.8.5",
 		"dockerode": "^4.0.2",
 		"dot-prop": "^7.2.0",
-		"drivelist": "^12.0.2",
+		"drivelist": "^11.1.0",
 		"execa": "^7.1.1",
 		"express": "^4.18.2",
 		"express-async-handler": "^1.2.0",
