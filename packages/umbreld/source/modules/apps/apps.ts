@@ -77,7 +77,7 @@ export default class Apps {
 		if (!(await fse.exists(umbrelSeedFile))) {
 			this.logger.log('Creating Umbrel seed')
 			await fse.ensureFile(umbrelSeedFile)
-			await fse.writeFile(umbrelSeedFile, randomToken(256))
+			await fse.writeFile(umbrelSeedFile, await randomToken(256))
 		}
 
 		// Setup bin dir

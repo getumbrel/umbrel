@@ -69,7 +69,7 @@ export default class AppRepository {
 	// or not cloned at all, it will never be in a partial state while the clone is in progress.
 	// Can also be used to atomically update instead of a pull.
 	async atomicClone() {
-		const temporaryPath = `${this.#umbreld.dataDirectory}/app-stores/.tmp/${randomToken(64)}`
+		const temporaryPath = `${this.#umbreld.dataDirectory}/app-stores/.tmp/${await randomToken(64)}`
 
 		await git.clone({
 			fs: fse,

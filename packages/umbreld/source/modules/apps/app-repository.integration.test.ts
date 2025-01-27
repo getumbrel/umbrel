@@ -17,11 +17,11 @@ const directory = temporaryDirectory()
 let gitServer: Awaited<ReturnType<typeof runGitServer>>
 
 beforeAll(async () => {
-	await directory.createRoot()
+	await directory.create()
 	gitServer = await runGitServer()
 })
 afterAll(async () => {
-	await directory.destroyRoot()
+	await directory.destroy()
 	await gitServer.close()
 })
 
@@ -84,7 +84,7 @@ describe('appRepository.cleanUrl()', () => {
 
 describe('appRepository.update()', () => {
 	test("does initial install from URL if there's no local repo", async () => {
-		const dataDirectory = await directory.create()
+		const dataDirectory = await directory.createInner()
 		const umbreld = new Umbreld({dataDirectory})
 		const appRepository = new AppRepository(umbreld, gitServer.url)
 		expect(await fse.exists(`${appRepository.path}/.git`)).toBe(false)
@@ -95,7 +95,7 @@ describe('appRepository.update()', () => {
 	})
 
 	test('updates when the remote repo has changed', async () => {
-		const dataDirectory = await directory.create()
+		const dataDirectory = await directory.createInner()
 		const umbreld = new Umbreld({dataDirectory})
 		const appRepository = new AppRepository(umbreld, gitServer.url)
 
@@ -122,7 +122,7 @@ describe('appRepository.update()', () => {
 	})
 
 	test('does not update when both repos are the same', async () => {
-		const dataDirectory = await directory.create()
+		const dataDirectory = await directory.createInner()
 		const umbreld = new Umbreld({dataDirectory})
 		const appRepository = new AppRepository(umbreld, gitServer.url)
 

@@ -2,6 +2,7 @@ import path from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
 import {$} from 'execa'
+import fse from 'fs-extra'
 
 // TODO: import packageJson from '../package.json' assert {type: 'json'}
 const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
@@ -14,6 +15,8 @@ import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
+import Files from './modules/files/files.js'
+import Notifications from './modules/notifications.js'
 import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
 import {commitOsPartition} from './modules/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
@@ -44,6 +47,18 @@ type StoreSchema = {
 		hostname?: string
 	}
 	recentlyOpenedApps: string[]
+	files: {
+		view?: 'list' | 'icons'
+		sortBy?: 'name' | 'type' | 'created' | 'modified' | 'size'
+		sortOrder?: 'asc' | 'desc'
+		shares?: {
+			name: string
+			path: string
+		}[]
+		favorites?: string[]
+		recents?: string[]
+	}
+	notifications: string[]
 }
 
 export type UmbreldOptions = {
@@ -58,6 +73,7 @@ export default class Umbreld {
 	versionName: string = packageJson.versionName
 	developmentMode: boolean
 	dataDirectory: string
+	temporaryDirectory: string
 	port: number
 	logLevel: LogLevel
 	logger: ReturnType<typeof createLogger>
@@ -67,7 +83,8 @@ export default class Umbreld {
 	user: User
 	appStore: AppStore
 	apps: Apps
-
+	files: Files
+	notifications: Notifications
 	constructor({
 		dataDirectory,
 		port = 80,
@@ -76,6 +93,7 @@ export default class Umbreld {
 	}: UmbreldOptions) {
 		this.developmentMode = process?.env?.NODE_ENV === 'development'
 		this.dataDirectory = path.resolve(dataDirectory)
+		this.temporaryDirectory = path.join(this.dataDirectory, 'temp')
 		this.port = port
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)
@@ -85,6 +103,8 @@ export default class Umbreld {
 		this.user = new User(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 		this.apps = new Apps(this)
+		this.files = new Files(this)
+		this.notifications = new Notifications(this)
 	}
 
 	// TODO: Move this to a system module
@@ -189,17 +209,29 @@ export default class Umbreld {
 		if (!this.developmentMode) {
 			await this.apps
 				.cleanDockerState()
-				.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+				.catch((error) => this.logger.error(`Failed to clean Docker state: ${error.message}`))
 		}
+
+		// Clean temporary directory before modules make use of it. The temporary
+		// directory should already be empty because temporary files are removed
+		// again right away, but make sure that we are not accumulating anything.
+		await fse
+			.remove(this.temporaryDirectory)
+			.catch((error) => this.logger.error(`Failed to clean temporary directory: ${error.message}`))
+		await fse
+			.ensureDir(this.temporaryDirectory)
+			.catch((error) => this.logger.error(`Failed to ensure temporary directory: ${error.message}`))
 
 		// Initialise modules
 		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
+		await this.files.start() // needs apps.instances, integrates with server
+		// TODO: Allow listening for other modules readyness so we can initialise everything async
 	}
 
 	async stop() {
 		try {
 			// Stop modules
-			await Promise.all([this.apps.stop(), this.appStore.stop()])
+			await Promise.all([this.apps.stop(), this.appStore.stop(), this.files.stop()])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false

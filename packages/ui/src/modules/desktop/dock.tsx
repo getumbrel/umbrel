@@ -3,6 +3,7 @@ import React, {Suspense} from 'react'
 import {useLocation} from 'react-router-dom'
 
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
 import {systemAppsKeyed} from '@/providers/apps'
@@ -14,12 +15,6 @@ import {LogoutDialog} from './logout-dialog'
 
 const LiveUsageDialog = React.lazy(() => import('@/routes/live-usage'))
 
-export const ICON_SIDE = 50
-export const ICON_SIDE_ZOOMED = 80
-const PADDING = 12
-export const DOCK_HEIGHT = ICON_SIDE + PADDING * 2
-export const FROM_BOTTOM = 10
-
 export function Dock() {
 	const {pathname} = useLocation()
 	const {addLinkSearchParams} = useQueryParams()
@@ -27,7 +22,20 @@ export function Dock() {
 	const settingsNotificationCount = useSettingsNotificationCount()
 	const {appsWithUpdates} = useAppsWithUpdates()
 
+	const isMobile = useIsMobile()
+
+	const iconSize = isMobile ? 48 : 50
+	const iconSizeZoomed = isMobile ? 60 : 80
+	const padding = isMobile ? 8 : 12
+	const dockHeight = iconSize + padding * 2
+
 	const appUpdateCount = appsWithUpdates.length
+
+	// TODO: THIS IS A HACK
+	// We need a better approach to track the last visited path (possibly scroll position too?)
+	// inside every page. We do this right now for the File app because it's has the most
+	// UX-advantage (eg. user accidentally clicking close while they're in a deeply nested path)
+	const lastFilesPath = sessionStorage.getItem('lastFilesPath')
 
 	return (
 		<>
@@ -36,19 +44,23 @@ export function Dock() {
 				animate={{y: 0, opacity: 1}}
 				onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.pageX)}
 				onPointerLeave={() => mouseX.set(Infinity)}
-				className={dockClass}
+				className={cn(dockClass, isMobile && 'gap-2')}
 				style={{
-					height: DOCK_HEIGHT,
-					paddingBottom: PADDING,
+					height: dockHeight,
+					paddingBottom: padding,
 				}}
 			>
 				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
 					to={systemAppsKeyed['UMBREL_home'].systemAppTo}
 					open={pathname === '/'}
 					bg={systemAppsKeyed['UMBREL_home'].icon}
 					mouseX={mouseX}
 				/>
 				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
 					to={systemAppsKeyed['UMBREL_app-store'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['UMBREL_app-store'].systemAppTo)}
 					bg={systemAppsKeyed['UMBREL_app-store'].icon}
@@ -56,6 +68,19 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+					to={lastFilesPath || systemAppsKeyed['UMBREL_files'].systemAppTo}
+					// TODO: This is hack, we should use the systemAppTo but currently systemAppTo is /files/Home
+					// so this fails the check when the path is /files/Recents, /files/Trash, etc.
+					// We need a proper redirect to /files/Home when the user navigates to /files
+					open={pathname.startsWith('/files')}
+					bg={systemAppsKeyed['UMBREL_files'].icon}
+					mouseX={mouseX}
+				/>
+				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
 					to={systemAppsKeyed['UMBREL_settings'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['UMBREL_settings'].systemAppTo)}
 					bg={systemAppsKeyed['UMBREL_settings'].icon}
@@ -63,12 +88,16 @@ export function Dock() {
 					mouseX={mouseX}
 				/>
 				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
 					to={{search: addLinkSearchParams({dialog: 'live-usage'})}}
 					open={pathname.startsWith(systemAppsKeyed['UMBREL_live-usage'].systemAppTo)}
 					bg={systemAppsKeyed['UMBREL_live-usage'].icon}
 					mouseX={mouseX}
 				/>
 				<DockItem
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
 					to={systemAppsKeyed['UMBREL_widgets'].systemAppTo}
 					open={pathname.startsWith(systemAppsKeyed['UMBREL_widgets'].systemAppTo)}
 					bg={systemAppsKeyed['UMBREL_widgets'].icon}
@@ -85,42 +114,51 @@ export function Dock() {
 
 export function DockPreview() {
 	const mouseX = useMotionValue(Infinity)
+	const iconSize = 50
+	const padding = 12
+	const dockHeight = iconSize + padding * 2
 
 	return (
 		<div
 			className={dockPreviewClass}
 			style={{
-				height: DOCK_HEIGHT,
-				paddingBottom: PADDING,
+				height: dockHeight,
+				paddingBottom: padding,
 			}}
 		>
-			<DockItem bg={systemAppsKeyed['UMBREL_home'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['UMBREL_app-store'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['UMBREL_settings'].icon} mouseX={mouseX} />
-			<DockDivider />
-			<DockItem bg={systemAppsKeyed['UMBREL_live-usage'].icon} mouseX={mouseX} />
-			<DockItem bg={systemAppsKeyed['UMBREL_widgets'].icon} mouseX={mouseX} />
+			<DockItem bg={systemAppsKeyed['UMBREL_home'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockItem bg={systemAppsKeyed['UMBREL_app-store'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockItem bg={systemAppsKeyed['UMBREL_files'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockItem bg={systemAppsKeyed['UMBREL_settings'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockDivider iconSize={iconSize} />
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_live-usage'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={80}
+			/>
+			<DockItem bg={systemAppsKeyed['UMBREL_widgets'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
 		</div>
 	)
 }
 
 export function DockSpacer({className}: {className?: string}) {
-	return <div className={cn('w-full shrink-0', className)} style={{height: DOCK_HEIGHT + FROM_BOTTOM}} />
+	return <div className={cn('w-full shrink-0', className)} />
 }
 
-export function DockBottomPositioner({children}: {children: React.ReactNode}) {
+export function DockBottomPositioner({children, fromBottom = 10}: {children: React.ReactNode; fromBottom?: number}) {
 	return (
-		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: FROM_BOTTOM}}>
+		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: fromBottom}}>
 			{children}
 		</div>
 	)
 }
 
-const dockClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
+const dockClass = tw`mx-auto flex items-end gap-3 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-neutral-900/80 px-3 shadow-dock shrink-0 border-hpx border-white/10`
 
-const DockDivider = () => (
-	<div className='br grid w-1 place-items-center' style={{height: ICON_SIDE}}>
+const DockDivider = ({iconSize}: {iconSize: number}) => (
+	<div className='br grid w-1 place-items-center' style={{height: iconSize}}>
 		<div className='h-7 border-r border-white/10' />
 	</div>
 )

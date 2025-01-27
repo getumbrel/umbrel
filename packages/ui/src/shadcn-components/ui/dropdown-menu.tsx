@@ -18,8 +18,6 @@ const DropdownMenuSub = DropdownMenuPrimitive.Sub
 
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
 
-// TODO: fix the `dark:` styling and possibly others once we start using this
-/** @deprecated until styles are fixed */
 const DropdownMenuSubTrigger = React.forwardRef<
 	React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
 	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
@@ -28,11 +26,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
 >(({className, inset, children, ...props}, ref) => (
 	<DropdownMenuPrimitive.SubTrigger
 		ref={ref}
-		className={cn(
-			'flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-neutral-100 data-[state=open]:bg-neutral-100 dark:focus:bg-neutral-800 dark:data-[state=open]:bg-neutral-800',
-			inset && 'pl-8',
-			className,
-		)}
+		className={cn(dropdownClasses.item.root, inset && 'pl-8', className)}
 		{...props}
 	>
 		{children}
@@ -140,18 +134,18 @@ DropdownMenuShortcut.displayName = 'DropdownMenuShortcut'
 
 export {
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
+	DropdownMenuTrigger,
 	DropdownMenuContent,
-	DropdownMenuGroup,
 	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuPortal,
-	DropdownMenuRadioGroup,
+	DropdownMenuCheckboxItem,
 	DropdownMenuRadioItem,
+	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuShortcut,
+	DropdownMenuGroup,
+	DropdownMenuPortal,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
+	DropdownMenuRadioGroup,
 }

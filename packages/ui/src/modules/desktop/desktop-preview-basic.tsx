@@ -132,6 +132,7 @@ export function DesktopPreview({
 					<div className={dockPreviewClass}>
 						<DockItemPreview icon={systemAppsKeyed['UMBREL_home'].icon} />
 						<DockItemPreview icon={systemAppsKeyed['UMBREL_app-store'].icon} />
+						<DockItemPreview icon={systemAppsKeyed['UMBREL_files'].icon} />
 						<DockItemPreview icon={systemAppsKeyed['UMBREL_settings'].icon} />
 						{/* <div className='border-r border-white/10' /> */}
 						<DockItemPreview icon={systemAppsKeyed['UMBREL_live-usage'].icon} />

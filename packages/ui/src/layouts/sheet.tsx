@@ -66,7 +66,7 @@ export function SheetLayout() {
 					<SheetFixedTarget />
 					<SheetStickyHeaderTarget />
 					<ScrollArea className='h-full rounded-t-20' viewportRef={scrollRef}>
-						<div className='flex flex-col gap-5 px-3 pt-6 md:px-[70px] md:pt-12'>
+						<div className='flex flex-col gap-5 px-3 pt-6 md:px-[40px] md:pt-12 xl:px-[70px]'>
 							<Suspense>
 								<Outlet />
 							</Suspense>

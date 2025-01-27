@@ -1,0 +1,39 @@
+.files-list-view-file-item {
+	@apply rounded-lg;
+}
+/* Alternate background for list view items */
+.files-list-view-file-item:nth-child(even) {
+	@apply bg-white/3;
+}
+/* Selected item */
+.files-list-view-file-item[data-selected='true'] {
+	@apply bg-brand/10 shadow-[0_0_0_1px_theme(colors.brand)];
+}
+/* First selected item in a sequence */
+/* Has top left radius, top right radius, top border, and side borders */
+.files-list-view-file-item:not([data-selected='true']) + [data-selected='true']:has(+ [data-selected='true']),
+.files-list-view-file-item[data-selected='true']:first-child:has(+ [data-selected='true']) {
+	@apply rounded-b-none rounded-t-lg shadow-[inset_0_1px_0_theme(colors.brand),inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand)];
+}
+
+/* Middle items in a sequence */
+/* Only side borders */
+.files-list-view-file-item[data-selected='true'] + [data-selected='true']:has(+ [data-selected='true']) {
+	@apply rounded-none shadow-[inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand)];
+}
+
+/* Last selected item in a sequence */
+/* Has bottom left radius, bottom right radius, bottom border, and side borders */
+.files-list-view-file-item[data-selected='true']:has(+ :not([data-selected='true'])),
+.files-list-view-file-item[data-selected='true']:last-child {
+	@apply rounded-b-lg rounded-t-none shadow-[inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand),inset_0_-1px_0_theme(colors.brand)];
+}
+
+/* Standalone selected item (including first item in list) */
+/* Has top left radius, top right radius, top border, and side borders */
+.files-list-view-file-item[data-selected='true']:not(:has(+ [data-selected='true'])):where(
+		:first-child,
+		:not([data-selected='true']) + *
+	) {
+	@apply rounded-lg shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_1px_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
+}

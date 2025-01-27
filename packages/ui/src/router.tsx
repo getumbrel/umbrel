@@ -3,6 +3,7 @@ import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
 import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
+import {filesRoutes} from '@/features/files/routes'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 
 import {ErrorBoundaryPageFallback} from './components/ui/error-boundary-page-fallback'
@@ -13,10 +14,12 @@ import {SheetLayout} from './layouts/sheet'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
+import {FloatingIslandContainer} from './modules/floating-island/container'
 import {AppsProvider} from './providers/apps'
 import {AvailableAppsProvider} from './providers/available-apps'
 import {Wallpaper} from './providers/wallpaper'
 import {NotFound} from './routes/not-found'
+import {Notifications} from './routes/notifications'
 import {Settings} from './routes/settings'
 
 const AppPage = React.lazy(() => import('./routes/app-store/app-page'))
@@ -39,6 +42,8 @@ export const router = createBrowserRouter([
 		element: (
 			<EnsureLoggedIn>
 				<Wallpaper />
+				{/* Get any notifications from umbreld and render them as alert dialogs */}
+				<Notifications />
 				<AvailableAppsProvider>
 					<AppsProvider>
 						<CmdkProvider>
@@ -50,6 +55,7 @@ export const router = createBrowserRouter([
 						<Suspense>
 							<Outlet />
 						</Suspense>
+						<FloatingIslandContainer />
 						<DockBottomPositioner>
 							<Dock />
 						</DockBottomPositioner>
@@ -67,6 +73,7 @@ export const router = createBrowserRouter([
 			{
 				Component: SheetLayout,
 				children: [
+					...filesRoutes,
 					{
 						path: 'app-store',
 						element: (

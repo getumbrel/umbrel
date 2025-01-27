@@ -8,6 +8,7 @@ export const createContext = ({req, res}: CreateExpressContextOptions) => {
 	const user = umbreld.user
 	const appStore = umbreld.appStore
 	const apps = umbreld.apps
+	const files = umbreld.files
 	return {
 		request: req,
 		response: res,
@@ -16,6 +17,7 @@ export const createContext = ({req, res}: CreateExpressContextOptions) => {
 		user,
 		appStore,
 		apps,
+		files,
 		logger,
 		dangerouslyBypassAuthentication: false,
 	}

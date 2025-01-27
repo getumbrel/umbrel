@@ -1,7 +1,8 @@
-import crypto from 'node:crypto'
+import randomBytes from './random-bytes.js'
 
-function randomToken(bitLength: number) {
-	return crypto.randomBytes(bitLength / 8).toString('hex')
+async function randomToken(bitLength: number) {
+	const buffer = await randomBytes(bitLength >>> 3)
+	return buffer.toString('hex')
 }
 
 export default randomToken

@@ -9,6 +9,8 @@ import user from './routes/user.js'
 import appStore from './routes/app-store.js'
 import apps from './routes/apps.js'
 import widget from './routes/widget.js'
+import files from './routes/files.js'
+import notifications from './routes/notifications.js'
 
 const appRouter = router({
 	migration,
@@ -18,6 +20,8 @@ const appRouter = router({
 	appStore,
 	apps,
 	widget,
+	files,
+	notifications,
 })
 
 export type AppRouter = typeof appRouter

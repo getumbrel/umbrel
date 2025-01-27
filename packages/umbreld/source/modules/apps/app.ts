@@ -96,19 +96,26 @@ export default class App {
 		return writeYaml(`${this.dataDirectory}/docker-compose.yml`, compose)
 	}
 
-	async patchComposeServices() {
-		// Temporary patch to fix contianer names for modern docker-compose installs.
-		// The contianer name scheme used to be <project-name>_<service-name>_1 but
-		// recent versions of docker-compose use <project-name>-<service-name>-1
-		// swapping underscores for dashes. This breaks Umbrel in places where the
-		// containers are referenced via name and it also breaks referring to other
-		// containers via DNS since the hostnames are derived with the same method.
-		// We manually force all container names to the old scheme to maintain compatibility.
+	async patchComposeFile() {
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
+			// Temporary patch to fix contianer names for modern docker-compose installs.
+			// The contianer name scheme used to be <project-name>_<service-name>_1 but
+			// recent versions of docker-compose use <project-name>-<service-name>-1
+			// swapping underscores for dashes. This breaks Umbrel in places where the
+			// containers are referenced via name and it also breaks referring to other
+			// containers via DNS since the hostnames are derived with the same method.
+			// We manually force all container names to the old scheme to maintain compatibility.
 			if (!compose.services![serviceName].container_name) {
 				compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
 			}
+
+			// Migrate downloads volume from old `${UMBREL_ROOT}/data/storage/downloads` path to new
+			// `${UMBREL_ROOT}/home/Downloads` path.
+			// We need to do this here to handle any future app updates
+			compose.services![serviceName].volumes = compose.services![serviceName].volumes?.map((volume) => {
+				return (volume as string)?.replace('/data/storage/downloads', `/home/Downloads`)
+			})
 		}
 
 		await this.writeCompose(compose)
@@ -133,7 +140,7 @@ export default class App {
 		this.state = 'installing'
 		this.stateProgress = 1
 
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await this.pull()
 
 		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
@@ -167,7 +174,7 @@ export default class App {
 
 		// Update the app, patching the compose file half way through
 		await appScript(this.#umbreld, 'pre-patch-update', this.id)
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await this.pull()
 		await appScript(this.#umbreld, 'post-patch-update', this.id)
 
@@ -188,7 +195,7 @@ export default class App {
 		this.state = 'starting'
 		// We re-run the patch here to fix an edge case where 0.5.x imported apps
 		// wont run because they haven't been patched.
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(

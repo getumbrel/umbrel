@@ -8,7 +8,7 @@ export const MS_PER_SECOND: number = 1000
 export const MS_PER_MINUTE: number = MS_PER_SECOND * 60
 export const MS_PER_HOUR: number = MS_PER_MINUTE * 60
 
-const languageCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
+export const languageCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 	en: enUS,
 	de: de,
 	es: es,

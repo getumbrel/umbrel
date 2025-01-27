@@ -1,10 +1,19 @@
 import fse from 'fs-extra'
 import {z} from 'zod'
+import yaml from 'js-yaml'
 
 import type Umbreld from '../../index.js'
 
 import {detectDevice} from '../system.js'
 import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration.js'
+
+async function readYaml(path: string) {
+	return yaml.load(await fse.readFile(path, 'utf8'))
+}
+
+async function writeYaml(path: string, data: any) {
+	return fse.writeFile(path, yaml.dump(data))
+}
 
 class Migration {
 	umbreld: Umbreld
@@ -105,7 +114,44 @@ class Migration {
 		this.logger.log('Migration successful')
 	}
 
+	async migrateBackThatMacUpPort() {
+		// Check if the Back That Mac Up app is installed
+		const isBackThatMacUpInstalled = ((await this.umbreld.store.get('apps')) || []).includes('back-that-mac-up')
+		if (!isBackThatMacUpInstalled) return
+
+		// Check if app has already been migrated
+		const composePath = `${this.umbreld.dataDirectory}/app-data/back-that-mac-up/docker-compose.yml`
+		const newSambaPortMapping = '1445:445'
+		const compose = (await readYaml(composePath)) as any
+		if (compose.services.timemachine.ports[0] === newSambaPortMapping) return
+		this.logger.log('Old Back That Mac Up app found, migrating...')
+
+		// Update the docker-compose.yml file to use the new samba port mapping
+		// to avoid collisions with umbrelOS Samba port
+		compose.services.timemachine.ports = [newSambaPortMapping]
+		await writeYaml(composePath, compose)
+		this.logger.log('Back That Mac Up app migrated')
+
+		// Add notification
+		await this.umbreld.notifications.add('migrated-back-that-mac-up')
+	}
+
+	async migrateDownloadsDirectory() {
+		const legacyDownloadsPath = `${this.umbreld.dataDirectory}/data/storage/downloads`
+		const newDownloadsPath = `${this.umbreld.files.homeDirectory}/Downloads`
+		const legacyDownloadsPathExists = await fse.exists(legacyDownloadsPath)
+		const newDownloadsPathHasData =
+			(await fse.exists(newDownloadsPath)) && (await fse.readdir(newDownloadsPath)).length > 0
+		if (!legacyDownloadsPathExists || newDownloadsPathHasData) return
+		this.logger.log('Found legacy Downloads directory, migrating...')
+		await fse.ensureDir(newDownloadsPath)
+		await fse.move(legacyDownloadsPath, newDownloadsPath, {overwrite: true})
+		this.logger.log('Downloads directory migrated')
+	}
+
 	async start() {
+		this.logger.log('Checking if any migrations are needed...')
+
 		// Ensure data directory exists
 		await fse.ensureDir(this.umbreld.dataDirectory)
 
@@ -130,9 +176,25 @@ class Migration {
 			this.logger.error(`Failed to migrate legacy Linux data: ${(error as Error).message}`)
 		}
 
+		// Check for the Back That Mac Up app and migrate it if it exists
+		try {
+			await this.migrateBackThatMacUpPort()
+		} catch (error) {
+			this.logger.error(`Failed to migrate Back That Mac Up app: ${(error as Error).message}`)
+		}
+
+		// Migrate Downloads directory to Home/Downloads
+		try {
+			await this.migrateDownloadsDirectory()
+		} catch (error) {
+			this.logger.error(`Failed to migrate Downloads directory: ${(error as Error).message}`)
+		}
+
 		// Write the current version to signal what version we've migrated up to.
 		// This also serves as a read/write permission check on the first run.
 		await this.umbreld.store.set('version', this.umbreld.version)
+
+		this.logger.log('Migrations complete')
 	}
 }
 

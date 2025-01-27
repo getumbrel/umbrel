@@ -18,8 +18,6 @@ const ContextMenuSub = ContextMenuPrimitive.Sub
 
 const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup
 
-// TODO: fix the `dark:` styling and possibly others once we start using this
-/** @deprecated until styles are fixed */
 const ContextMenuSubTrigger = React.forwardRef<
 	React.ElementRef<typeof ContextMenuPrimitive.SubTrigger>,
 	React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubTrigger> & {
@@ -28,11 +26,7 @@ const ContextMenuSubTrigger = React.forwardRef<
 >(({className, inset, children, ...props}, ref) => (
 	<ContextMenuPrimitive.SubTrigger
 		ref={ref}
-		className={cn(
-			'flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-neutral-100 focus:text-neutral-900 data-[state=open]:bg-neutral-100 data-[state=open]:text-neutral-900 dark:focus:bg-neutral-800 dark:focus:text-neutral-50 dark:data-[state=open]:bg-neutral-800 dark:data-[state=open]:text-neutral-50',
-			inset && 'pl-8',
-			className,
-		)}
+		className={cn(contextMenuClasses.item.root, inset && 'pl-8', className)}
 		{...props}
 	>
 		{children}
@@ -52,14 +46,9 @@ ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
 const ContextMenuContent = React.forwardRef<
 	React.ElementRef<typeof ContextMenuPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({className, loop = true, ...props}, ref) => (
+>(({className, ...props}, ref) => (
 	<ContextMenuPrimitive.Portal>
-		<ContextMenuPrimitive.Content
-			ref={ref}
-			className={cn(contextMenuClasses.content, className)}
-			loop={loop}
-			{...props}
-		/>
+		<ContextMenuPrimitive.Content ref={ref} className={cn(contextMenuClasses.content, className)} {...props} />
 	</ContextMenuPrimitive.Portal>
 ))
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
@@ -88,11 +77,12 @@ const ContextMenuCheckboxItem = React.forwardRef<
 		checked={checked}
 		{...props}
 	>
+		<span className={contextMenuClasses.checkboxItem.indicatorWrapper}>
+			<ContextMenuPrimitive.ItemIndicator>
+				<Check className='h-4 w-4' />
+			</ContextMenuPrimitive.ItemIndicator>
+		</span>
 		{children}
-
-		<ContextMenuPrimitive.ItemIndicator className={contextMenuClasses.checkboxItem.indicatorWrapper}>
-			<Check className='h-4 w-4' />
-		</ContextMenuPrimitive.ItemIndicator>
 	</ContextMenuPrimitive.CheckboxItem>
 ))
 ContextMenuCheckboxItem.displayName = ContextMenuPrimitive.CheckboxItem.displayName
@@ -104,7 +94,7 @@ const ContextMenuRadioItem = React.forwardRef<
 	<ContextMenuPrimitive.RadioItem ref={ref} className={cn(contextMenuClasses.radioItem.root, className)} {...props}>
 		<span className={contextMenuClasses.radioItem.indicatorWrapper}>
 			<ContextMenuPrimitive.ItemIndicator>
-				<Circle className='h-2 w-2 fill-current' />
+				<Circle className='h-4 w-4 fill-current' />
 			</ContextMenuPrimitive.ItemIndicator>
 		</span>
 		{children}
@@ -150,18 +140,18 @@ ContextMenuShortcut.displayName = 'ContextMenuShortcut'
 
 export {
 	ContextMenu,
-	ContextMenuCheckboxItem,
+	ContextMenuTrigger,
 	ContextMenuContent,
-	ContextMenuGroup,
 	ContextMenuItem,
-	ContextMenuLabel,
-	ContextMenuPortal,
-	ContextMenuRadioGroup,
+	ContextMenuCheckboxItem,
 	ContextMenuRadioItem,
+	ContextMenuLabel,
 	ContextMenuSeparator,
 	ContextMenuShortcut,
+	ContextMenuGroup,
+	ContextMenuPortal,
 	ContextMenuSub,
 	ContextMenuSubContent,
 	ContextMenuSubTrigger,
-	ContextMenuTrigger,
+	ContextMenuRadioGroup,
 }

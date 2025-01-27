@@ -124,19 +124,51 @@ function AppsDump() {
 
 function DockExample() {
 	const mouseX = useMotionValue(Infinity)
+	const iconSize = 50
+	const iconSizeZoomed = 80
 
 	return (
 		<>
 			<div className='flex items-center gap-4 rounded-15 bg-neutral-800 p-3'>
-				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={0} />
-				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={1} />
-				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={2} />
-				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={99} />
-				<DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} notificationCount={999} />
+				<DockItem
+					bg='/figma-exports/dock-home.png'
+					mouseX={mouseX}
+					notificationCount={0}
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+				/>
+				<DockItem
+					bg='/figma-exports/dock-home.png'
+					mouseX={mouseX}
+					notificationCount={1}
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+				/>
+				<DockItem
+					bg='/figma-exports/dock-home.png'
+					mouseX={mouseX}
+					notificationCount={2}
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+				/>
+				<DockItem
+					bg='/figma-exports/dock-home.png'
+					mouseX={mouseX}
+					notificationCount={99}
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+				/>
+				<DockItem
+					bg='/figma-exports/dock-home.png'
+					mouseX={mouseX}
+					notificationCount={999}
+					iconSize={iconSize}
+					iconSizeZoomed={iconSizeZoomed}
+				/>
 				<H2>Interactive:</H2>
 				<DockItemInteractive />
 				<H2>No bg:</H2>
-				<DockItem mouseX={mouseX} notificationCount={2} />
+				<DockItem mouseX={mouseX} notificationCount={2} iconSize={iconSize} iconSizeZoomed={iconSizeZoomed} />
 			</div>
 		</>
 	)
@@ -145,8 +177,19 @@ function DockExample() {
 function DockItemInteractive() {
 	const [open, setOpen] = useState(false)
 	const mouseX = useMotionValue(-1000)
+	const iconSize = 50
+	const iconSizeZoomed = 80
 
-	return <DockItem bg='/figma-exports/dock-home.png' mouseX={mouseX} open={open} onClick={() => setOpen(true)} />
+	return (
+		<DockItem
+			bg='/figma-exports/dock-home.png'
+			mouseX={mouseX}
+			open={open}
+			onClick={() => setOpen(true)}
+			iconSize={iconSize}
+			iconSizeZoomed={iconSizeZoomed}
+		/>
+	)
 }
 
 function AppGridExamples() {

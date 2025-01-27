@@ -43,6 +43,11 @@ export function Prefetcher() {
 			// Advanced settings switches
 			ctx.system.getReleaseChannel,
 			ctx.system.isExternalDns,
+
+			// Files
+			ctx.files.preferences,
+			ctx.files.favorites,
+			ctx.files.shares,
 		]
 
 		Promise.allSettled(prefetchQueries.map((q) => q.prefetch()))

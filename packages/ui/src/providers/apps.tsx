@@ -45,6 +45,13 @@ export const systemApps = [
 		systemAppTo: '/app-store',
 	},
 	{
+		id: 'UMBREL_files',
+		name: 'Files',
+		icon: '/figma-exports/dock-files.png',
+		systemApp: true,
+		systemAppTo: '/files/Home',
+	},
+	{
 		id: 'UMBREL_settings',
 		name: 'Settings',
 		icon: '/figma-exports/dock-settings.png',

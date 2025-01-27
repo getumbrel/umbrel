@@ -1,12 +1,13 @@
-import crypto from 'node:crypto'
 import {URL} from 'node:url'
 
 import {totp} from 'notp'
 // @ts-expect-error no @types/thirty-two available
 import base32 from 'thirty-two'
 
-export function generateUri(label: string, issuer: string) {
-	const secret = crypto.randomBytes(32)
+import randomBytes from './random-bytes.js'
+
+export async function generateUri(label: string, issuer: string) {
+	const secret = await randomBytes(32)
 	const encodedSecret = base32.encode(secret).toString('utf8').replace(/=/g, '')
 	const uri = `otpauth://totp/${label}?secret=${encodedSecret}&period=30&digits=6&algorithm=SHA1&issuer=${issuer}`
 

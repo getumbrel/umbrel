@@ -4,6 +4,7 @@ import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
+import {GlobalFilesProvider} from './providers/global-files'
 import {RemoteLanguageInjector} from './providers/language'
 import {Prefetcher} from './providers/prefetch'
 import {RemoteWallpaperInjector, WallpaperProviderConnected} from './providers/wallpaper'
@@ -19,7 +20,9 @@ init(
 		<WallpaperProviderConnected>
 			<RemoteWallpaperInjector />
 			<GlobalSystemStateProvider>
-				<RouterProvider router={router} />
+				<GlobalFilesProvider>
+					<RouterProvider router={router} />
+				</GlobalFilesProvider>
 			</GlobalSystemStateProvider>
 		</WallpaperProviderConnected>
 		<Prefetcher />

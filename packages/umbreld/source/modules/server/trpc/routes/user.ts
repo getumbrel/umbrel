@@ -127,7 +127,7 @@ export default router({
 		}),
 
 	// Generates a new random 2FA TOTP URI
-	generateTotpUri: privateProcedure.query(async () => totp.generateUri('Umbrel', 'getumbrel.com')),
+	generateTotpUri: privateProcedure.query(() => totp.generateUri('Umbrel', 'getumbrel.com')),
 
 	// Enables 2FA
 	enable2fa: privateProcedure

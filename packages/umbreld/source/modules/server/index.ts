@@ -2,7 +2,7 @@ import http from 'node:http'
 import process from 'node:process'
 import {promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
-import {dirname, join} from 'node:path'
+import nodePath from 'node:path'
 import {createGzip} from 'node:zlib'
 import {pipeline} from 'node:stream/promises'
 
@@ -21,6 +21,7 @@ import type Umbreld from '../../index.js'
 import * as jwt from '../jwt.js'
 import {trpcHandler} from './trpc/index.js'
 import createTerminalWebSocketHandler from './terminal-socket.js'
+import {installFilesMiddleware} from './trpc/routes/files.js'
 
 export type ServerOptions = {umbreld: Umbreld}
 
@@ -37,7 +38,7 @@ class Server {
 
 	async getJwtSecret() {
 		const jwtSecretPath = `${this.umbreld.dataDirectory}/secrets/jwt`
-		return getOrCreateFile(jwtSecretPath, randomToken(256))
+		return getOrCreateFile(jwtSecretPath, await randomToken(256))
 	}
 
 	async signToken() {
@@ -124,6 +125,9 @@ class Server {
 			}
 		})
 
+		// Handle file downloads and uploads
+		installFilesMiddleware(this.umbreld, app)
+
 		// If we have no API route hits then serve the ui at the root.
 		// We proxy through to the ui dev server during development with
 		// process.env.UMBREL_UI_PROXY otherwise in production we
@@ -145,8 +149,8 @@ class Server {
 			)
 		} else {
 			const currentFilename = fileURLToPath(import.meta.url)
-			const currentDirname = dirname(currentFilename)
-			const uiPath = join(currentDirname, '../../../ui')
+			const currentDirname = nodePath.dirname(currentFilename)
+			const uiPath = nodePath.join(currentDirname, '../../../ui')
 
 			// Built assets include a hash of the contents in the filename and
 			// wallpapers do not ever change, so we can cache these aggressively

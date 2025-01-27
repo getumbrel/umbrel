@@ -64,6 +64,8 @@ export default {
 			},
 			boxShadow: {
 				dock: '1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1.06058px 0px 0px rgba(255, 255, 255, 0.20) inset, 0px 0.53029px 0px 0px rgba(255, 255, 255, 0.10) inset, 0px 4.04029px 24.24174px 0px rgba(0, 0, 0, 0.56)',
+				'floating-island':
+					'1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1.06058px 0px 0px rgba(255, 255, 255, 0.14) inset, 0px 0.53029px 0px 0px rgba(255, 255, 255, 0.07) inset, 0px 4.04029px 24.24174px 0px rgba(0, 0, 0, 0.56)',
 				'glass-button':
 					'1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1px 0px 0px rgba(255, 255, 255, 0.20) inset, 0px 0.5px 0px 0px rgba(255, 255, 255, 0.10) inset',
 				widget:
@@ -91,6 +93,7 @@ export default {
 				6: '0.06',
 			},
 			fontSize: {
+				9: '9px',
 				11: '11px',
 				12: '12px',
 				13: '13px',
@@ -162,12 +165,27 @@ export default {
 						left: '100%',
 					},
 				},
+				'files-drop-zone-ripple': {
+					'0%, 100%': {
+						transform: 'translate(-50%, -50%) scale(1)',
+					},
+					'50%': {
+						transform: 'translate(-50%, -50%) scale(0.9)',
+					},
+				},
+				'files-folder-blink-on-drag-hover': {
+					'0%, 100%': {backgroundColor: 'hsl(var(--color-brand))'},
+					'25%, 75%': {backgroundColor: 'transparent'},
+					'50%': {backgroundColor: 'hsl(var(--color-brand))'},
+				},
 			},
 			animation: {
+				'files-drop-zone-ripple': 'files-drop-zone-ripple var(--duration,2s) ease calc(var(--i, 0)*.2s) infinite',
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
 				'sliding-loader': 'sliding-loader 1s ease infinite',
+				'files-folder-blink-on-drag-hover': 'files-folder-blink-on-drag-hover 0.4s linear',
 			},
 			typography: () => ({
 				neutral: {

@@ -25,7 +25,9 @@ jobs:
         with:
           node-version: 18
       - name: Install dependencies
-        run: sudo npm clean-install
+        run: |
+          sudo apt-get install -y imagemagick
+          sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
   ui:
     runs-on: ubuntu-24.04

@@ -8,7 +8,7 @@ import runGitServer from './run-git-server.js'
 
 export default async function createTestUmbreld() {
 	const directory = temporaryDirectory()
-	await directory.createRoot()
+	await directory.create()
 	let jwt = ''
 
 	function setJwt(newJwt: string) {
@@ -17,7 +17,7 @@ export default async function createTestUmbreld() {
 
 	const gitServer = await runGitServer()
 
-	const dataDirectory = await directory.create()
+	const dataDirectory = await directory.createInner()
 	const umbreld = new Umbreld({
 		dataDirectory,
 		port: 0,
@@ -50,9 +50,24 @@ export default async function createTestUmbreld() {
 		return true
 	}
 
+	async function ensureLoggedIn() {
+		await client.user.register.mutate(userCredentials).catch(() => {})
+		const token = await client.user.login.mutate(userCredentials)
+		setJwt(token)
+
+		return true
+	}
+
+	async function ensureLoggedOut() {
+		await client.user.logout.mutate().catch(() => {})
+		setJwt('')
+
+		return true
+	}
+
 	async function cleanup() {
 		await gitServer.close()
-		await directory.destroyRoot()
+		await directory.destroy()
 	}
 
 	return {
@@ -60,6 +75,8 @@ export default async function createTestUmbreld() {
 		client,
 		setJwt,
 		registerAndLogin,
+		ensureLoggedIn,
+		ensureLoggedOut,
 		cleanup,
 	}
 }

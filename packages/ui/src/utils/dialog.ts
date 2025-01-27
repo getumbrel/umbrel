@@ -10,7 +10,12 @@ export const EXIT_DURATION_MS = 200
 
 export type GlobalDialogKey = 'logout' | 'live-usage'
 export type AppStoreDialogKey = 'updates' | 'add-community-store' | 'default-credentials' | 'app-settings'
-export type DialogKey = GlobalDialogKey | AppStoreDialogKey | SettingsDialogKey
+export type FilesDialogKey =
+	| 'files-share-info'
+	| 'files-empty-trash-confirmation'
+	| 'files-extension-change-confirmation'
+	| 'files-permanently-delete-confirmation'
+export type DialogKey = GlobalDialogKey | AppStoreDialogKey | SettingsDialogKey | FilesDialogKey
 
 // TODO: make dialog query params typesafe
 
