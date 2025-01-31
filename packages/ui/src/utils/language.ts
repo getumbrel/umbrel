@@ -13,6 +13,7 @@ export const languages = [
 	{name: 'Українська', code: 'uk'},
 	{name: 'Türkçe', code: 'tr'},
 	{name: '日本語', code: 'ja'},
+	{name: 'Русский', code: 'ru'},
 ] as const
 
 export const supportedLanguageCodes = map(languages, (entry) => entry.code)
