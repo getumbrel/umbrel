@@ -18,7 +18,7 @@ export function PathBar() {
 
 	return (
 		<ContextMenu>
-			<ContextMenuTrigger className='min-w-0 flex-1'>
+			<ContextMenuTrigger className='w-0 flex-1'>
 				<PathBarContent
 					isEditing={isEditing}
 					isMobile={isMobile}

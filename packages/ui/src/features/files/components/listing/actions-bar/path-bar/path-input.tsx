@@ -56,13 +56,10 @@ export function PathInput({path, onClose}: PathInputProps) {
 						'p-0 [border:none] [outline:none]',
 						'focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0',
 						'[&:active]:bg-transparent [&:focus]:bg-transparent [&:hover]:bg-transparent',
+						'w-full',
 					)}
 					spellCheck={false}
 					aria-label={t('files-path.input-label')}
-					style={{
-						width: '40ch',
-						maxWidth: 'calc(100vw - 150px)',
-					}}
 				/>
 			</div>
 		</div>
