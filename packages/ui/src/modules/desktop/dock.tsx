@@ -15,19 +15,54 @@ import {LogoutDialog} from './logout-dialog'
 
 const LiveUsageDialog = React.lazy(() => import('@/routes/live-usage'))
 
+const DOCK_BOTTOM_PADDING_PX = 10
+
+const DOCK_DIMENSIONS_PX = {
+	preview: {
+		iconSize: 50,
+		iconSizeZoomed: 80,
+		padding: 12,
+	},
+	desktop: {
+		iconSize: 50,
+		iconSizeZoomed: 80,
+		padding: 12,
+	},
+	mobile: {
+		iconSize: 48,
+		iconSizeZoomed: 60,
+		padding: 8,
+	},
+} as const
+
+type DockDimensionsPx = {
+	iconSize: number
+	iconSizeZoomed: number
+	padding: number
+	dockHeight: number
+}
+
+function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
+	const isMobile = useIsMobile()
+
+	if (options?.isPreview) {
+		const {iconSize, iconSizeZoomed, padding} = DOCK_DIMENSIONS_PX.preview
+		return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2}
+	}
+
+	const dimensions = isMobile ? DOCK_DIMENSIONS_PX.mobile : DOCK_DIMENSIONS_PX.desktop
+	const {iconSize, iconSizeZoomed, padding} = dimensions
+	return {iconSize, iconSizeZoomed, padding, dockHeight: iconSize + padding * 2}
+}
+
 export function Dock() {
 	const {pathname} = useLocation()
 	const {addLinkSearchParams} = useQueryParams()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
 	const {appsWithUpdates} = useAppsWithUpdates()
-
 	const isMobile = useIsMobile()
-
-	const iconSize = isMobile ? 48 : 50
-	const iconSizeZoomed = isMobile ? 60 : 80
-	const padding = isMobile ? 8 : 12
-	const dockHeight = iconSize + padding * 2
+	const {iconSize, iconSizeZoomed, padding, dockHeight} = useDockDimensions()
 
 	const appUpdateCount = appsWithUpdates.length
 
@@ -114,9 +149,7 @@ export function Dock() {
 
 export function DockPreview() {
 	const mouseX = useMotionValue(Infinity)
-	const iconSize = 50
-	const padding = 12
-	const dockHeight = iconSize + padding * 2
+	const {iconSize, iconSizeZoomed, padding, dockHeight} = useDockDimensions({isPreview: true})
 
 	return (
 		<div
@@ -126,29 +159,55 @@ export function DockPreview() {
 				paddingBottom: padding,
 			}}
 		>
-			<DockItem bg={systemAppsKeyed['UMBREL_home'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
-			<DockItem bg={systemAppsKeyed['UMBREL_app-store'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
-			<DockItem bg={systemAppsKeyed['UMBREL_files'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
-			<DockItem bg={systemAppsKeyed['UMBREL_settings'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_home'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={iconSizeZoomed}
+			/>
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_app-store'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={iconSizeZoomed}
+			/>
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_files'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={iconSizeZoomed}
+			/>
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_settings'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={iconSizeZoomed}
+			/>
 			<DockDivider iconSize={iconSize} />
 			<DockItem
 				bg={systemAppsKeyed['UMBREL_live-usage'].icon}
 				mouseX={mouseX}
 				iconSize={iconSize}
-				iconSizeZoomed={80}
+				iconSizeZoomed={iconSizeZoomed}
 			/>
-			<DockItem bg={systemAppsKeyed['UMBREL_widgets'].icon} mouseX={mouseX} iconSize={iconSize} iconSizeZoomed={80} />
+			<DockItem
+				bg={systemAppsKeyed['UMBREL_widgets'].icon}
+				mouseX={mouseX}
+				iconSize={iconSize}
+				iconSizeZoomed={iconSizeZoomed}
+			/>
 		</div>
 	)
 }
 
 export function DockSpacer({className}: {className?: string}) {
-	return <div className={cn('w-full shrink-0', className)} />
+	const {dockHeight} = useDockDimensions()
+	return <div className={cn('w-full shrink-0', className)} style={{height: dockHeight + DOCK_BOTTOM_PADDING_PX}} />
 }
 
-export function DockBottomPositioner({children, fromBottom = 10}: {children: React.ReactNode; fromBottom?: number}) {
+export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	return (
-		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: fromBottom}}>
+		<div className='fixed bottom-0 left-1/2 z-50 -translate-x-1/2' style={{paddingBottom: DOCK_BOTTOM_PADDING_PX}}>
 			{children}
 		</div>
 	)
