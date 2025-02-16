@@ -24,10 +24,10 @@ export function ListingContextMenu({children, menuItems}: ListingContextMenuProp
 	const {preferences, setView, setSortBy} = usePreferences()
 
 	return (
-		<ContextMenu>
+		<ContextMenu modal={false}>
 			<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 			{/* Hide listing context menu on mobile as all the actions are in the actions bar's dropdown menu */}
-			<ContextMenuContent className='hidden w-44 md:block'>
+			<ContextMenuContent className='w-44'>
 				{menuItems ? (
 					<>
 						{menuItems}

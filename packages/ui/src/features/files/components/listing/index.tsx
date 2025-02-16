@@ -96,29 +96,15 @@ export function Listing({
 				DesktopActions={additionalDesktopActions}
 				ExtraMobileDropdownItems={additionalMobileActions}
 			/>
-			{isTouchDevice ? (
-				<ListingContent
-					items={items}
-					totalItems={totalItems}
-					scrollAreaRef={scrollAreaRef}
-					isLoading={isLoading}
-					error={error}
-					isEmpty={isEmpty}
-					CustomEmptyView={CustomEmptyView}
-				/>
-			) : (
-				<ListingContextMenu menuItems={additionalContextMenuItems}>
-					<ListingContent
-						items={items}
-						totalItems={totalItems}
-						scrollAreaRef={scrollAreaRef}
-						isLoading={isLoading}
-						error={error}
-						isEmpty={isEmpty}
-						CustomEmptyView={CustomEmptyView}
-					/>
-				</ListingContextMenu>
-			)}
+			<ListingContent
+				items={items}
+				totalItems={totalItems}
+				scrollAreaRef={scrollAreaRef}
+				isLoading={isLoading}
+				error={error}
+				isEmpty={isEmpty}
+				CustomEmptyView={CustomEmptyView}
+			/>
 		</div>
 	)
 
@@ -128,6 +114,8 @@ export function Listing({
 	}
 
 	// For desktop, wrap in marquee selection, optionally enable file upload drop zone and droppable
+	const wrappedContent = <ListingContextMenu menuItems={additionalContextMenuItems}>{content}</ListingContextMenu>
+
 	return (
 		<MarqueeSelection scrollAreaRef={scrollAreaRef} items={selectableItems}>
 			{enableFileDrop ? (
@@ -138,11 +126,11 @@ export function Listing({
 						className='relative flex h-full flex-col outline-none'
 						dropOverClassName='bg-transparent'
 					>
-						{content}
+						{wrappedContent}
 					</Droppable>
 				</FileUploadDropZone>
 			) : (
-				content
+				wrappedContent
 			)}
 		</MarqueeSelection>
 	)
