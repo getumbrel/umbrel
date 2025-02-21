@@ -2,6 +2,7 @@ import {AnimatePresence, motion} from 'framer-motion'
 import {useEffect, useState} from 'react'
 import {useSearchParams} from 'react-router-dom'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {PlatformInstructions} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions'
 import {
 	Platform,
@@ -22,7 +23,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerScroller,
+	DrawerTitle,
+} from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -171,12 +179,12 @@ export default function ShareInfoDialog() {
 	if (isMobile) {
 		return (
 			<Drawer {...dialogProps}>
-				<DrawerContent>
+				<DrawerContent fullHeight>
 					<DrawerHeader>
 						<DrawerTitle>{title}</DrawerTitle>
 						<DrawerDescription>{description}</DrawerDescription>
 					</DrawerHeader>
-					{content}
+					<DrawerScroller>{content}</DrawerScroller>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -189,7 +197,9 @@ export default function ShareInfoDialog() {
 					<DialogTitle>{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
-				{content}
+				<FadeScroller direction='y' className='umbrel-hide-scrollbar flex-1 overflow-y-auto'>
+					{content}
+				</FadeScroller>
 				<DialogFooter>
 					{!firstEverSharePrompt && (
 						<Button variant='default' onClick={dialogProps.onOpenChange.bind(null, false)}>
