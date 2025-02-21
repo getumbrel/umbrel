@@ -89,6 +89,9 @@ export default router({
 		.query(async ({ctx, input: {path, start, count, sortBy, sortOrder}}) => {
 			const {stats, items, truncatedAt} = await ctx.files.listDirectory(path)
 
+			// We filter out system-specific metadatafiles like .DS_Store (macOS) and .directory (KDE Dolphin)
+			const userVisibleFiles = items.filter((item) => item.name !== '.DS_Store' && item.name !== '.directory')
+
 			// Sort according to provided parameters. Select the comparator
 			// before the loop to avoid unnecessary work per iteration.
 			const ascending = sortOrder === 'asc'
@@ -103,7 +106,7 @@ export default router({
 								? compareBySize
 								: compareByName
 
-			const sortedItems = items.sort((a, b) => {
+			const sortedItems = userVisibleFiles.sort((a, b) => {
 				// Fall back to compare by name when comparing equal. When already
 				// comparing by name, this won't compare twice because no two files
 				// can have the same name.

@@ -84,3 +84,10 @@ test.sequential('recents() ignores .DS_Store files', async () => {
 	const recents = await umbreld.client.files.recents.query()
 	expect(recents.some((file) => file.path.endsWith('.DS_Store'))).toBe(false)
 })
+
+test.sequential('recents() ignores .directory files', async () => {
+	await $`touch ${umbreld.instance.files.homeDirectory}/.directory`
+	await sleep(waitForWatcherMs)
+	const recents = await umbreld.client.files.recents.query()
+	expect(recents.some((file) => file.path.endsWith('.directory'))).toBe(false)
+})

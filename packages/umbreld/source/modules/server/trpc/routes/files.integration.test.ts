@@ -377,6 +377,24 @@ describe.sequential('list', () => {
 
 		await expectNoted()
 	})
+
+	test.sequential('ignores .DS_Store in directory listings', async () => {
+		await fse.writeFile(`${umbreld.instance.files.homeDirectory}/.DS_Store`, 'DS_Store content')
+
+		const query = umbreld.client.files.list.query({path: '/Home'})
+		await expect(query).resolves.not.toMatchObject({
+			items: expect.arrayContaining([expect.objectContaining({name: '.DS_Store'})]),
+		})
+	})
+
+	test.sequential('ignores .directory in directory listings', async () => {
+		await fse.writeFile(`${umbreld.instance.files.homeDirectory}/.directory`, 'directory content')
+
+		const query = umbreld.client.files.list.query({path: '/Home'})
+		await expect(query).resolves.not.toMatchObject({
+			items: expect.arrayContaining([expect.objectContaining({name: '.directory'})]),
+		})
+	})
 })
 
 describe.sequential('createDirectory', () => {

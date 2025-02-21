@@ -35,6 +35,8 @@ export const FileItem = ({item, items}: FileItemProps) => {
 		setIsEditingName(false)
 	}
 
+	const isDotfile = (filename: string) => filename.startsWith('.')
+
 	const isItemCut = clipboardMode === 'cut' && clipboardItems.find((i) => i.path === item.path)
 
 	const isEditingFileName = isEditingName || !!('isNew' in item && item.isNew)
@@ -64,20 +66,23 @@ export const FileItem = ({item, items}: FileItemProps) => {
 							className={cn(isItemCut && 'opacity-50')}
 							role='button'
 						>
-							{view === 'icons' ? (
-								<IconsViewFileItem
-									item={item}
-									isEditingName={isEditingFileName}
-									onEditingNameComplete={handlNameEditingComplete}
-								/>
-							) : null}
-							{view === 'list' ? (
-								<ListViewFileItem
-									item={item}
-									isEditingName={isEditingFileName}
-									onEditingNameComplete={handlNameEditingComplete}
-								/>
-							) : null}
+							{/* If the item is a dotfile, we decrease the brightness and opacity for the icon and text for a faded look */}
+							<div className={cn(isDotfile(item.name) && 'opacity-50 brightness-75')}>
+								{view === 'icons' ? (
+									<IconsViewFileItem
+										item={item}
+										isEditingName={isEditingFileName}
+										onEditingNameComplete={handlNameEditingComplete}
+									/>
+								) : null}
+								{view === 'list' ? (
+									<ListViewFileItem
+										item={item}
+										isEditingName={isEditingFileName}
+										onEditingNameComplete={handlNameEditingComplete}
+									/>
+								) : null}
+							</div>
 						</div>
 					</Draggable>
 				</Droppable>

@@ -64,7 +64,7 @@ class Recents {
 		if (!stats?.isFile()) {
 			return // skip inexistent and non-files
 		}
-		if (path.endsWith('/.DS_Store')) return // Prevent loads of .DS_Store results from macOS Samba clients
+		if (path.endsWith('/.DS_Store') || path.endsWith('/.directory')) return // Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
 		this.files = this.files.filter((recent) => recent !== virtualPath)
 		this.files.unshift(virtualPath)
 		this.files = this.files.slice(0, maxRecents)
