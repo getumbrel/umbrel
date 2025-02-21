@@ -26,7 +26,9 @@ export default function DownloadDialog() {
 			<AlertDialogContent>
 				<AlertDialogHeader icon={RiFile2Fill}>
 					<AlertDialogTitle>{t('files-download.title', {name: viewerItem.name})}</AlertDialogTitle>
-					<AlertDialogDescription>{t('files-download.description')}</AlertDialogDescription>
+					<AlertDialogDescription className='whitespace-normal break-words'>
+						{t('files-download.description')}
+					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction
