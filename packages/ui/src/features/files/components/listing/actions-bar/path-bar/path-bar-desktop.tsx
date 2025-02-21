@@ -132,7 +132,7 @@ export function PathBarDesktop({path}: {path: string}) {
 
 	return (
 		<FadeScroller direction='x' className='umbrel-hide-scrollbar overflow-x-auto' ref={fadeScrollerRef}>
-			<ul className='flex items-center whitespace-nowrap' ref={breadcrumbsRef}>
+			<ul className='flex h-8 items-center whitespace-nowrap border border-transparent py-1' ref={breadcrumbsRef}>
 				{segments.map((segment, i) => {
 					/* First and last two segments are static, they always be fully visible */
 					const isStatic = i === 0 || i > segments.length - 3 ? true : undefined

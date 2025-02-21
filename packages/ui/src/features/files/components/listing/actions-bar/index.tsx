@@ -16,7 +16,7 @@ export function ActionsBar({
 	ExtraMobileDropdownItems?: React.ReactNode
 }) {
 	return (
-		<nav className='flex w-full min-w-0 gap-3 lg:mt-[-3.5rem]' aria-label='File browser actions'>
+		<nav className='flex h-8 w-full min-w-0 gap-3 lg:mt-[-3.5rem]' aria-label='File browser actions'>
 			{/* Left side: Navigation and Path */}
 			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-hidden'>
 				<NavigationControls />
@@ -24,7 +24,7 @@ export function ActionsBar({
 			</div>
 
 			{/* Right side: View Controls and Actions */}
-			<div className='ml-auto'>
+			<div className='ml-auto flex items-center'>
 				{/* Desktop view - show toggle for view and separate buttons for each action */}
 				<div className='hidden items-center gap-2 md:flex'>
 					{/* TODO: Add search here */}
