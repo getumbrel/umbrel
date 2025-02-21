@@ -112,6 +112,11 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 			// Ignore if we're in an input or if using modifier keys
 			if (isInInput(e) || e.metaKey || e.ctrlKey || e.altKey) return
 
+			// Skip handling the spacebar as a search input if it's the first key pressed.
+			// This ensures the spacebar can be used to open the viewer immediately without waiting for the search buffer to clear.
+			// If the spacebar is pressed during an ongoing search (i.e., not the first key), it will be included in the search input.
+			if (e.key === ' ' && searchBuffer.current.length === 0) return
+
 			// Only handle printable characters
 			if (e.key.length === 1) {
 				e.preventDefault()
