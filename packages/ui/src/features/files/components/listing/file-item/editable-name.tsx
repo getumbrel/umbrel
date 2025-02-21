@@ -6,8 +6,21 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {Button} from '@/shadcn-components/ui/button'
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+} from '@/shadcn-components/ui/drawer'
+import {Input, Labeled} from '@/shadcn-components/ui/input'
 import {cn} from '@/shadcn-lib/utils'
+import {t} from '@/utils/i18n'
 
 interface EditableNameProps {
 	item: FileSystemItem
@@ -17,10 +30,11 @@ interface EditableNameProps {
 
 export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const {name: initialName, path} = item
-
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [name, setName] = useState(initialName)
 	const isTouchDevice = useIsTouchDevice()
+	const isMobile = useIsMobile()
+	const dialogProps = useSettingsDialogProps()
 
 	const {renameItem} = useFilesOperations()
 	const {cancelNewFolder, createFolder} = useNewFolder()
@@ -29,6 +43,24 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const {addLinkSearchParams} = useQueryParams()
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
+	const isFolder = item.type === 'directory'
+
+	// Wording for the mobile drawer for naming/renaming a folder or file
+	const drawerTitle = isCreatingNewFolder
+		? t('files-name-drawer.new-folder')
+		: isFolder
+			? t('files-name-drawer.rename-folder')
+			: t('files-name-drawer.rename-file')
+	const drawerDescription = isCreatingNewFolder
+		? t('files-name-drawer.new-folder-description')
+		: isFolder
+			? t('files-name-drawer.rename-folder-description')
+			: t('files-name-drawer.rename-file-description')
+	const inputLabel = isCreatingNewFolder
+		? t('files-name-drawer.new-folder-input')
+		: isFolder
+			? t('files-name-drawer.rename-folder-input')
+			: t('files-name-drawer.rename-file-input')
 
 	// Focus the input after the component mounts
 	useEffect(() => {
@@ -105,18 +137,22 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		}
 	}
 
-	const handleBlur = () => {
+	const preventClickPropagation = (e: React.MouseEvent) => {
+		// stop propagation of the click event so it doesn't trigger an action (eg. extract archive, open, etc.)
+		e.stopPropagation()
+	}
+
+	const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault()
 		handleSubmit(name)
 	}
 
-	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setName(e.target.value)
-	}
-
-	const handleClick = (e: React.MouseEvent<HTMLInputElement>) => {
-		// stop propagation of the click event so it doesn't trigger an action (eg. extract archive, open, etc.)
-		// in case the user clicks on the input to select text
-		e.stopPropagation()
+	const handleClose = () => {
+		if (isCreatingNewFolder) {
+			cancelNewFolder()
+		} else {
+			onFinish()
+		}
 	}
 
 	const inputStyles = cn(
@@ -130,16 +166,60 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		view === 'list' && 'text-12 w-full min-w-0 truncate',
 	)
 
+	if (isMobile) {
+		return (
+			<Drawer
+				{...dialogProps}
+				// ensure state is reset properly when the drawer is closed
+				onOpenChange={(isOpen) => {
+					if (!isOpen) {
+						handleClose()
+					}
+				}}
+			>
+				{/* prevent clicks inside the drawer from triggering actions */}
+				<DrawerContent onClick={preventClickPropagation} onDoubleClick={preventClickPropagation}>
+					<DrawerHeader>
+						<DrawerTitle>{drawerTitle}</DrawerTitle>
+						<DrawerDescription>{drawerDescription}</DrawerDescription>
+					</DrawerHeader>
+					<form onSubmit={handleFormSubmit} onClick={preventClickPropagation} className='flex flex-1 flex-col'>
+						<fieldset className='flex flex-1 flex-col gap-5'>
+							<Labeled label={inputLabel}>
+								<Input
+									value={name}
+									onClick={preventClickPropagation}
+									onDoubleClick={preventClickPropagation}
+									onValueChange={setName}
+									onKeyDown={handleKeyDown}
+								/>
+							</Labeled>
+							<div className='flex-1' />
+							<DrawerFooter>
+								<Button type='button' size='dialog' onClick={handleClose}>
+									{t('cancel')}
+								</Button>
+								<Button type='submit' size='dialog' variant='primary'>
+									{t('ok')}
+								</Button>
+							</DrawerFooter>
+						</fieldset>
+					</form>
+				</DrawerContent>
+			</Drawer>
+		)
+	}
+
 	return (
 		<input
 			ref={inputRef}
 			type='text'
 			value={name}
-			onChange={handleChange}
+			onChange={(e) => setName(e.target.value)}
 			onKeyDown={handleKeyDown}
-			onClick={handleClick}
-			onDoubleClick={handleClick}
-			onBlur={handleBlur}
+			onClick={preventClickPropagation}
+			onDoubleClick={preventClickPropagation}
+			onBlur={() => handleSubmit(name)}
 			className={inputStyles}
 		/>
 	)
