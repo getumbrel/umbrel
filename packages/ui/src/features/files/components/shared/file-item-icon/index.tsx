@@ -33,9 +33,10 @@ interface FileItemIcon {
 	onlySVG?: boolean
 	className?: string
 	useAnimatedIcon?: boolean
+	isHovered?: boolean
 }
 
-export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false}: FileItemIcon) => {
+export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false, isHovered = false}: FileItemIcon) => {
 	const {isPathShared} = useShares()
 	const isShared = isPathShared(item.path)
 
@@ -52,7 +53,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false}
 
 		return (
 			<div className='relative'>
-				<FolderIcon className={className} path={item.path} useAnimatedIcon={useAnimatedIcon} />
+				<FolderIcon className={className} path={item.path} useAnimatedIcon={useAnimatedIcon} isHovered={isHovered} />
 				{isAppFolder ? <AppFolderBottomIcon appId={item.path.split(APPS_PATH).pop() || ''} /> : null}
 
 				{/* we add it here because only folders can be shared */}
@@ -98,10 +99,12 @@ const FolderIcon = ({
 	className = '',
 	path,
 	useAnimatedIcon,
+	isHovered = false,
 }: {
 	className?: string
 	path: string
 	useAnimatedIcon: boolean
+	isHovered?: boolean
 }) => {
 	if (path === HOME_PATH) {
 		return <HomeIcon className={className} />
@@ -119,18 +122,18 @@ const FolderIcon = ({
 	const FolderComponent = useAnimatedIcon ? AnimatedFolderIcon : SimpleFolderIcon
 
 	if (path === `${HOME_PATH}/Videos`) {
-		return <FolderComponent className={className} overlayIcon={VideosIcon} />
+		return <FolderComponent className={className} overlayIcon={VideosIcon} isHovered={isHovered} />
 	}
 	if (path === `${HOME_PATH}/Downloads`) {
-		return <FolderComponent className={className} overlayIcon={DownloadsIcon} />
+		return <FolderComponent className={className} overlayIcon={DownloadsIcon} isHovered={isHovered} />
 	}
 	if (path === `${HOME_PATH}/Documents`) {
-		return <FolderComponent className={className} overlayIcon={DocumentsIcon} />
+		return <FolderComponent className={className} overlayIcon={DocumentsIcon} isHovered={isHovered} />
 	}
 	if (path === `${HOME_PATH}/Photos`) {
-		return <FolderComponent className={className} overlayIcon={PhotosIcon} />
+		return <FolderComponent className={className} overlayIcon={PhotosIcon} isHovered={isHovered} />
 	}
-	return <FolderComponent className={className} />
+	return <FolderComponent className={className} isHovered={isHovered} />
 }
 
 const AppFolderBottomIcon = ({appId}: {appId: string}) => {

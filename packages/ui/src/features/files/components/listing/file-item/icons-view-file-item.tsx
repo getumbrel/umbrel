@@ -1,3 +1,5 @@
+import {useState} from 'react'
+
 import {CircularProgress} from '@/features/files/components/listing/file-item/circular-progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
@@ -18,10 +20,17 @@ export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: 
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 	const isTouchDevice = useIsTouchDevice()
 
+	const [isHovered, setIsHovered] = useState(false)
+
 	return (
-		<div className='relative flex flex-col items-center gap-1 overflow-hidden text-ellipsis break-all p-2 text-center'>
+		<div
+			className='relative flex flex-col items-center gap-1 overflow-hidden text-ellipsis break-all p-2 text-center'
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+		>
 			{/* Do not use animated icon for touch devices where hover doesn't make sense */}
-			<FileItemIcon item={item} className='h-14 w-14' useAnimatedIcon={!isTouchDevice} />
+			{/* We pass in isHovered so that the trigger for hovering can be on a parent div */}
+			<FileItemIcon item={item} className='h-14 w-14' useAnimatedIcon={!isTouchDevice} isHovered={isHovered} />
 			<div className='relative flex-col items-center'>
 				{isEditingName ? (
 					<EditableName item={item} view='icons' onFinish={onEditingNameComplete} />
