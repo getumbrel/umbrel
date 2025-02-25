@@ -5,8 +5,6 @@ import yaml from 'js-yaml'
 import {getProperty, setProperty, deleteProperty} from 'dot-prop'
 import PQueue from 'p-queue'
 
-import getOrCreateFile from './get-or-create-file.js'
-
 type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 	? K extends keyof T
 		? DotProp<T[K], R>
@@ -42,11 +40,22 @@ export default class FileStore<T extends Serializable> {
 	}
 
 	async #read() {
-		const defaultValue: Serializable = {}
-		const rawData = await getOrCreateFile(this.filePath, this.#parser.encode(defaultValue))
+		// Set default store value
+		let store = {} as T
 
-		const store = (this.#parser.decode(rawData) || defaultValue) as T
+		try {
+			// Attempt to read and parse the store file
+			const rawData = await fs.readFile(this.filePath, 'utf8')
+			const data = this.#parser.decode(rawData)
 
+			// If we get a result, set the store value
+			if (data) store = data as T
+		} catch (error) {
+			// Prevent errors if the file doesn't exist, we'll just use the default value
+			if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error
+		}
+
+		// Return the store
 		return store
 	}
 
