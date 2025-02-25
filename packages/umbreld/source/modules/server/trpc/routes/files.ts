@@ -291,6 +291,20 @@ export default router({
 	pollThumbnails: privateProcedure
 		.input(z.object({paths: z.array(z.string())}))
 		.query(async ({ctx, input: {paths}}) => ctx.files.thumbnails.pollThumbnails(paths)),
+
+	// List external disks and partitions
+	externalStorage: privateProcedure.query(({ctx}) => ctx.files.externalStorage.get()),
+
+	// Eject an external disk
+	eject: privateProcedure
+		.input(z.object({id: z.string()}))
+		.mutation(({ctx, input: {id}}) => ctx.files.externalStorage.eject(id)),
+
+	// Check if an external drive is connected on non-Umbrel Home hardware
+	// This is used to notify non-Home users why they can't see their hardware.
+	isExternalDriveConnectedOnNonUmbrelHome: privateProcedure.query(({ctx}) =>
+		ctx.files.externalStorage.isExternalDriveConnectedOnNonUmbrelHome(),
+	),
 })
 
 export function installFilesMiddleware(umbreld: Umbreld, expressApp: express.Application) {

@@ -17,6 +17,7 @@ import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 import Files from './modules/files/files.js'
 import Notifications from './modules/notifications.js'
+import DBus from './modules/dbus/index.js'
 import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
 import {commitOsPartition} from './modules/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
@@ -85,6 +86,7 @@ export default class Umbreld {
 	apps: Apps
 	files: Files
 	notifications: Notifications
+	dbus: DBus
 	constructor({
 		dataDirectory,
 		port = 80,
@@ -105,6 +107,7 @@ export default class Umbreld {
 		this.apps = new Apps(this)
 		this.files = new Files(this)
 		this.notifications = new Notifications(this)
+		this.dbus = new DBus(this)
 	}
 
 	// TODO: Move this to a system module
@@ -223,7 +226,7 @@ export default class Umbreld {
 			.catch((error) => this.logger.error(`Failed to ensure temporary directory: ${error.message}`))
 
 		// Initialise modules
-		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
+		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start(), this.dbus.start()])
 		await this.files.start() // needs apps.instances, integrates with server
 		// TODO: Allow listening for other modules readyness so we can initialise everything async
 	}
@@ -231,7 +234,7 @@ export default class Umbreld {
 	async stop() {
 		try {
 			// Stop modules
-			await Promise.all([this.apps.stop(), this.appStore.stop(), this.files.stop()])
+			await Promise.all([this.apps.stop(), this.appStore.stop(), this.files.stop(), this.dbus.stop()])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false

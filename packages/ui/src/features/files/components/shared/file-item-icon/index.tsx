@@ -3,6 +3,7 @@ import {BsTrash2} from 'react-icons/bs'
 import {IoPlay} from 'react-icons/io5'
 
 import {AppsIcon} from '@/features/files/assets/apps-icon'
+import {ExternalStorageIcon} from '@/features/files/assets/external-storage-icon'
 import {HomeIcon} from '@/features/files/assets/home-icon'
 import {RecentsIcon} from '@/features/files/assets/recents-icon'
 import {SharedFolderBadge} from '@/features/files/assets/shared-folder-badge'
@@ -27,6 +28,7 @@ import {
 import {useShares} from '@/features/files/hooks/use-shares'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
+import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 
 interface FileItemIcon {
 	item: FileSystemItem
@@ -44,6 +46,16 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 		item.path.startsWith(APPS_PATH) &&
 		// check if it's not a nested app directory, eg. we want to return true for /Apps/bitcoin but false for /Apps/bitcoin/data
 		item.path.slice(APPS_PATH.length).split('/').length === 2
+
+	// External storage icon if the user directly navigates to umbrel.local/files/External
+	if (item.type === 'directory' && isDirectoryAnExternalDrivePartition(item.path)) {
+		return <ExternalStorageIcon className={className} />
+	}
+
+	// External storage for sidebar and pathbar
+	if (item.type === 'external-storage') {
+		return <ExternalStorageIcon className={className} />
+	}
 
 	// Folder
 	if (item.type === 'directory') {

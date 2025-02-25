@@ -18,6 +18,9 @@ const ExtensionChangeConfirmationDialog = lazy(
 const PermanentlyDeleteConfirmationDialog = lazy(
 	() => import('@/features/files/components/dialogs/permanently-delete-confirmation-dialog'),
 )
+const ExternalStorageUnsupportedDialog = lazy(
+	() => import('@/features/files/components/dialogs/external-storage-unsupported-dialog'),
+)
 
 // TODO: Add error boundaries like the other features (e.g., app store)
 export default function FilesLayout() {
@@ -91,6 +94,9 @@ export default function FilesLayout() {
 			</Suspense>
 			<Suspense>
 				<PermanentlyDeleteConfirmationDialog />
+			</Suspense>
+			<Suspense>
+				<ExternalStorageUnsupportedDialog />
 			</Suspense>
 		</FilesDndWrapper>
 	)

@@ -120,8 +120,16 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
 RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode samba wsdd2 p7zip-full imagemagick ffmpeg
+
+# Support for alternate filesystems
+RUN apt-get install --yes ntfs-3g
+
+# TODO: udisks2 recommends eject (2.38.1-5+deb12u3) which is currently missing
+RUN apt-get install --yes --no-install-recommends udisks2
+
 # Disable automatically starting smbd at boot so umbreld can initialize it first
 RUN systemctl disable smbd.service
+
 # Install Node.js
 RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode
 RUN NODE_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \

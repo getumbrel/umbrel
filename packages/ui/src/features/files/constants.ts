@@ -29,6 +29,7 @@ export const HOME_PATH = '/Home' as const
 export const RECENTS_PATH = '/Recents' as const
 export const TRASH_PATH = '/Trash' as const
 export const APPS_PATH = '/Apps' as const
+export const EXTERNAL_STORAGE_PATH = '/External' as const
 export const ITEMS_PER_PAGE = 100 as const
 
 // TODO: define it in a common place for client and server

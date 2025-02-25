@@ -7,6 +7,7 @@ import type {FileSystemItem} from '@/features/files/types'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
 import {Progress} from '@/shadcn-components/ui/progress'
@@ -53,7 +54,11 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 						</span>
 					</div>
 					<span className='text-11 text-white/40'>
-						{item.type === 'directory' ? t('files-type.directory') : formatFilesystemSize(item.size ?? null)}
+						{item.type === 'directory'
+							? isDirectoryAnExternalDrivePartition(item.path)
+								? t('files-type.external-drive')
+								: t('files-type.directory')
+							: formatFilesystemSize(item.size ?? null)}
 					</span>
 				</div>
 			</div>
@@ -99,7 +104,9 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 					? uploadingProgress !== 0
 						? t('files-state.uploading')
 						: t('files-state.waiting')
-					: translatedFileType}
+					: item.type === 'directory' && isDirectoryAnExternalDrivePartition(item.path)
+						? t('files-type.external-drive')
+						: translatedFileType}
 			</div>
 		</div>
 	)

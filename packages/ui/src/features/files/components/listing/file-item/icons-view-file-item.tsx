@@ -7,6 +7,7 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import type {FileSystemItem} from '@/features/files/types'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {t} from '@/utils/i18n'
 
 interface IconsViewFileItemProps {
@@ -45,7 +46,9 @@ export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: 
 							? t('files-state.waiting')
 							: `${uploadingProgress}%`
 						: item.type === 'directory'
-							? t('files-type.directory')
+							? isDirectoryAnExternalDrivePartition(item.path)
+								? t('files-type.external-drive')
+								: t('files-type.directory')
 							: formatFilesystemSize(item.size)}
 				</span>
 			</div>

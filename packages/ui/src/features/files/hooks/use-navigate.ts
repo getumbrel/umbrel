@@ -1,6 +1,13 @@
 import {useLocation, useNavigate as useNavigateReactRouter} from 'react-router-dom'
 
-import {APPS_PATH, BASE_ROUTE_PATH, HOME_PATH, RECENTS_PATH, TRASH_PATH} from '@/features/files/constants'
+import {
+	APPS_PATH,
+	BASE_ROUTE_PATH,
+	EXTERNAL_STORAGE_PATH,
+	HOME_PATH,
+	RECENTS_PATH,
+	TRASH_PATH,
+} from '@/features/files/constants'
 
 export function toFsPath(urlPath: string): string {
 	return decodeURIComponent(urlPath).replace(BASE_ROUTE_PATH, '')
@@ -32,6 +39,8 @@ export const useNavigate = () => {
 
 	const isBrowsingApps = currentPath.startsWith(APPS_PATH)
 
+	const isBrowsingExternalStorage = currentPath.startsWith(EXTERNAL_STORAGE_PATH)
+
 	return {
 		navigateToDirectory,
 		currentPath,
@@ -39,5 +48,6 @@ export const useNavigate = () => {
 		isInHome,
 		isBrowsingRecents,
 		isBrowsingApps,
+		isBrowsingExternalStorage,
 	}
 }

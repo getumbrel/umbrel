@@ -176,6 +176,15 @@ describe.sequential('list', () => {
 					ops: expect.any(Number),
 				},
 				{
+					name: 'External',
+					path: '/External',
+					type: 'directory',
+					size: expect.any(Number),
+					created: expect.any(String),
+					modified: expect.any(String),
+					ops: expect.any(Number),
+				},
+				{
 					name: 'Home',
 					path: '/Home',
 					type: 'directory',
@@ -201,7 +210,7 @@ describe.sequential('list', () => {
 				type: 'directory',
 				ops: 0,
 			},
-			total: 3,
+			total: 4,
 		}
 		const query = umbreld.client.files.list.query({path: '/'})
 		await expect(query).resolves.toMatchObject(expected)

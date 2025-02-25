@@ -1,4 +1,5 @@
 // TODO: This is a temporary hack until we have fixed ops in umbreld
+import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 
 type Operation =
 	| 'copy'
@@ -36,6 +37,24 @@ export function isOperationAllowed(path: string, operation: Operation): boolean 
 		path.startsWith('/Apps/') &&
 		path.split('/').length === 3 &&
 		(operation === 'move' || operation === 'rename' || operation === 'archive' || operation === 'trash')
+	) {
+		return false
+	}
+
+	// Disable share and favorite operations for external storage devices
+	if (path.startsWith('/External/') && (operation === 'share' || operation === 'favorite')) {
+		return false
+	}
+
+	// Disable all operations for external drive partitions (eg. if the user directly navigates to umbrel.local/files/External)
+	if (
+		isDirectoryAnExternalDrivePartition(path) &&
+		(operation === 'copy' ||
+			operation === 'move' ||
+			operation === 'rename' ||
+			operation === 'trash' ||
+			operation === 'archive' ||
+			operation === 'extract')
 	) {
 		return false
 	}

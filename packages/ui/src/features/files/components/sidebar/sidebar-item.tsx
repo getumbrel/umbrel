@@ -14,7 +14,7 @@ const selectedClass = tw`
 type SidebarItem = {
 	name: string
 	path: string
-	type: 'directory' | 'external-storage'
+	type: 'directory'
 }
 
 export interface SidebarItemProps {

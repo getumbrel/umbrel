@@ -67,7 +67,10 @@ test.sequential('download() can download multiple files as zip', async () => {
 	expect(response.headers.get('content-disposition')).toContain("attachment; filename*=UTF-8''umbrel-files.zip")
 
 	const zip = new AdmZip(Buffer.from(await response.arrayBuffer()))
-	expect(zip.getEntries().map((entry) => entry.entryName)).toEqual(['file1.txt', 'file2.txt'])
+	const entries = zip.getEntries().map((entry) => entry.entryName)
+	expect(entries).toHaveLength(2)
+	expect(entries).toContain('file1.txt')
+	expect(entries).toContain('file2.txt')
 })
 
 test.sequential('download() can download a directory as zip', async () => {

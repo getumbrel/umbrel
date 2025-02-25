@@ -15,6 +15,7 @@ import {UMBREL_GID, UMBREL_UID} from '../../constants.js'
 import FilesWatcher from './files-watcher.js'
 import Recents from './recents.js'
 import Thumbnails from './thumbnails.js'
+import ExternalStorage from './external-storage.js'
 
 export const DEFAULT_UID = UMBREL_UID
 export const DEFAULT_GID = UMBREL_GID
@@ -23,8 +24,8 @@ export const DEFAULT_DIRECTORY_MODE = 0o755
 export const SUFFIX_SEARCH_MAX_ITERATIONS = 100
 
 export const DEFAULT_DIRECTORIES = ['Documents', 'Downloads', 'Photos', 'Videos'] as const
-export const PROTECTED_VIRTUAL_PATHS = ['/Apps/*', '/Home/Downloads'] as const
-export const UNSHAREABLE_VIRTUAL_PATHS = ['/Apps', '/Apps/*'] as const
+export const PROTECTED_VIRTUAL_PATHS = ['/Apps/*', '/Home/Downloads', '/External/*'] as const
+export const UNSHAREABLE_VIRTUAL_PATHS = ['/Apps', '/Apps/*', '/External', '/External/**'] as const
 
 const enum Operations {
 	none = 0,
@@ -75,11 +76,13 @@ export default class Files {
 	trashDirectory: string
 	trashMetaDirectory: string
 	appsDirectory: string
+	mediaDirectory: string
 	baseDirectories: Map<string, string>
 	watcher: FilesWatcher
 	recents: Recents
 	thumbnails: Thumbnails
 	samba: Samba
+	externalStorage: ExternalStorage
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
@@ -88,12 +91,15 @@ export default class Files {
 		this.trashDirectory = nodePath.join(umbreld.dataDirectory, 'trash')
 		this.trashMetaDirectory = nodePath.join(umbreld.dataDirectory, 'trash-meta')
 		this.appsDirectory = nodePath.join(umbreld.dataDirectory, 'app-data')
+		this.mediaDirectory = nodePath.join(umbreld.dataDirectory, 'external')
 		this.baseDirectories = new Map([
 			[this.homeDirectory, 'Home'],
 			[this.trashDirectory, 'Trash'],
 			[this.appsDirectory, 'Apps'],
+			[this.mediaDirectory, 'External'],
 		])
 
+		this.externalStorage = new ExternalStorage(umbreld)
 		this.watcher = new FilesWatcher(umbreld)
 		this.recents = new Recents(umbreld)
 		this.thumbnails = new Thumbnails(umbreld)
@@ -118,6 +124,9 @@ export default class Files {
 			),
 			this.ensureDirectoryWithPermissions(this.appsDirectory, defaultPermissions).catch((error) =>
 				this.logger.error(`Failed to ensure apps directory: ${error.message}`),
+			),
+			this.ensureDirectoryWithPermissions(this.mediaDirectory, defaultPermissions).catch((error) =>
+				this.logger.error(`Failed to ensure media directory: ${error.message}`),
 			),
 		])
 
@@ -147,6 +156,7 @@ export default class Files {
 		await this.recents.start()
 		await this.thumbnails.start()
 		await this.watcher.start()
+		await this.externalStorage.start()
 
 		// Make sure the share password exists and is applied and start samba daemon
 		await this.samba.start()
@@ -156,6 +166,7 @@ export default class Files {
 		this.logger.log('Stopping files')
 
 		// Stop watching for filesystem changes
+		await this.externalStorage.stop()
 		await this.watcher.stop()
 		await this.recents.stop()
 		await this.thumbnails.stop()
@@ -892,14 +903,18 @@ export default class Files {
 							}
 							return favorite
 						} catch (error) {
-							this.logger.log(`Cleaned up invalid favorite '${favorite}': ${(error as Error).message}`)
+							// We no longer auto cleanup, see comment below.
+							// this.logger.log(`Cleaned up invalid favorite '${favorite}': ${(error as Error).message}`)
 							return null
 						}
 					}),
 				)
 			).filter((favorite) => favorite !== null) as string[]
-			if (validFavorites.length === favorites.length) return
-			await set('files.favorites', validFavorites)
+			// Temporarily disable this to avoid deleting favourites on external storage
+			// when the device isn't attached.
+			// TODO: Come up with a proper solution for this in the refactor.
+			// if (validFavorites.length === favorites.length) return
+			// await set('files.favorites', validFavorites)
 			favorites = validFavorites
 		})
 		return favorites!.map((favorite) => ({

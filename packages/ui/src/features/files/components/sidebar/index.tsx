@@ -5,12 +5,14 @@
 import {AnimatePresence, motion} from 'framer-motion'
 
 import {SidebarApps} from '@/features/files/components/sidebar/sidebar-apps'
+import {SidebarExternalStorage} from '@/features/files/components/sidebar/sidebar-external-storage'
 import {SidebarFavorites} from '@/features/files/components/sidebar/sidebar-favorites'
 import {SidebarHome} from '@/features/files/components/sidebar/sidebar-home'
 import {SidebarRecents} from '@/features/files/components/sidebar/sidebar-recents'
 import {SidebarShares} from '@/features/files/components/sidebar/sidebar-shares'
 import {SidebarTrash} from '@/features/files/components/sidebar/sidebar-trash'
 import {HOME_PATH} from '@/features/files/constants'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
@@ -20,6 +22,7 @@ import {t} from '@/utils/i18n'
 export function Sidebar({className}: {className?: string}) {
 	const {shares, isLoadingShares} = useShares()
 	const {favorites, isLoadingFavorites} = useFavorites()
+	const {disks, isLoadingExternalStorage, isUmbrelHome} = useExternalStorage()
 
 	const displayShares = shares?.filter((share) => share.path !== HOME_PATH)
 
@@ -64,6 +67,24 @@ export function Sidebar({className}: {className?: string}) {
 						</motion.div>
 					)}
 				</AnimatePresence>
+
+				{/* External Storage */}
+				<AnimatePresence initial={!isLoadingExternalStorage}>
+					{isUmbrelHome && !isLoadingExternalStorage && disks && disks.length > 0 && (
+						<motion.div
+							initial={isLoadingExternalStorage ? {opacity: 0, height: 0} : false}
+							animate={{opacity: 1, height: 'auto'}}
+							exit={{opacity: 0, height: 0}}
+							transition={{duration: 0.2}}
+						>
+							<SidebarDivider />
+							<SidebarSection label={t('files-sidebar.external-storage')}>
+								<SidebarExternalStorage />
+							</SidebarSection>
+						</motion.div>
+					)}
+				</AnimatePresence>
+
 				{/* Spacer */}
 				<div className='h-6' />
 			</ScrollArea>
