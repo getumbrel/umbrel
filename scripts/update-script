@@ -15,12 +15,12 @@ fi
 
 if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
 then
-	update_url="https://download.umbrel.com/release/1.4.0-beta.1/umbrelos-pi.update"
+	update_url="https://download.umbrel.com/release/1.4.0-beta.2/umbrelos-pi.update"
 fi
 
 if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
 then
-	update_url="https://download.umbrel.com/release/1.4.0-beta.1/umbrelos-amd64.update"
+	update_url="https://download.umbrel.com/release/1.4.0-beta.2/umbrelos-amd64.update"
 fi
 
 # Fix /etc/mender/artifact_info not existing in some OS builds
