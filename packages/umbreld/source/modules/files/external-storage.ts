@@ -253,7 +253,14 @@ class ExternalStorage {
 		const isHome = await isUmbrelHome()
 		const {disks} = await getDisksAndPartitions()
 
-		return !isHome && disks.length > 0
+		// Exclude any external disks that include the current data directory.
+		// This prevents USB storage based Raspberry Pi's detecting their main
+		// USB storage drive as a connected external drive.
+		const df = await $`df ${this.#umbreld.dataDirectory} --output=source`
+		const dataDirDisk = df.stdout.split('\n').pop()?.split('/').pop()?.replace(/\d+$/, '')
+		const externalDisks = disks.filter((disk) => disk.id !== dataDirDisk)
+
+		return !isHome && externalDisks.length > 0
 	}
 }
 
