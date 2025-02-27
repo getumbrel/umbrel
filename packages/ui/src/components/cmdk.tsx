@@ -7,6 +7,11 @@ import {range} from 'remeda'
 
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {LOADING_DASH} from '@/constants'
+import {
+	APPS_PATH as FILES_APPS_PATH,
+	RECENTS_PATH as FILES_RECENTS_PATH,
+	TRASH_PATH as FILES_TRASH_PATH,
+} from '@/features/files/constants'
 import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
@@ -158,6 +163,52 @@ function CmdkContent() {
 				}}
 			>
 				{systemAppsKeyed['UMBREL_app-store'].name}
+			</SearchItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				value={systemAppsKeyed['UMBREL_files'].name}
+				onSelect={() => {
+					// TODO: THIS IS A HACK
+					// We need a better approach to track the last visited path (possibly scroll position too?)
+					// inside every page. We do this right now for the File app because it's has the most
+					// UX-advantage (eg. user accidentally clicking close while they're in a deeply nested path)
+					const lastFilesPath = sessionStorage.getItem('lastFilesPath')
+
+					navigate(lastFilesPath || systemAppsKeyed['UMBREL_files'].systemAppTo)
+					setOpen(false)
+				}}
+			>
+				{systemAppsKeyed['UMBREL_files'].name}
+			</SearchItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				value={t('files-sidebar.recents')}
+				onSelect={() => {
+					navigate(`/files${FILES_RECENTS_PATH}`)
+					setOpen(false)
+				}}
+			>
+				{t('files-sidebar.recents')}
+			</SearchItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				value={t('files-sidebar.apps')}
+				onSelect={() => {
+					navigate(`/files${FILES_APPS_PATH}`)
+					setOpen(false)
+				}}
+			>
+				{t('files-sidebar.apps')}
+			</SearchItem>
+			<SearchItem
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				value={t('files-sidebar.trash')}
+				onSelect={() => {
+					navigate(`/files${FILES_TRASH_PATH}`)
+					setOpen(false)
+				}}
+			>
+				{t('files-sidebar.trash')}
 			</SearchItem>
 			<SettingsSearchItem
 				value={systemAppsKeyed['UMBREL_settings'].name}
