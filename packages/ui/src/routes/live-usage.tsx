@@ -173,7 +173,7 @@ function StorageSection() {
 					}
 				/>
 			</div>
-			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system, systemAppsKeyed.UMBREL_downloads]} />}
+			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system, systemAppsKeyed.UMBREL_files]} />}
 			<AppList apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
 		</>
 	)
@@ -331,9 +331,9 @@ function AppList({apps, formatValue}: {apps?: {id: string; used: number}[]; form
 					icon = systemAppsKeyed.UMBREL_system.icon
 					title = systemAppsKeyed.UMBREL_system.name
 				}
-				if (id === 'umbreld-downloads') {
-					icon = systemAppsKeyed.UMBREL_downloads.icon
-					title = systemAppsKeyed.UMBREL_downloads.name
+				if (id === 'umbreld-files') {
+					icon = systemAppsKeyed.UMBREL_files.icon
+					title = systemAppsKeyed.UMBREL_files.name
 				}
 				return <AppListRow key={id} icon={icon} title={title} value={formatValue(used)} />
 			})}

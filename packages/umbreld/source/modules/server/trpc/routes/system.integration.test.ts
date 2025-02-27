@@ -37,7 +37,7 @@ describe('getDiskUsage', () => {
 		const result = await router.diskUsage()
 		expect(result.size).toBeTypeOf('number')
 		expect(result.totalUsed).toBeTypeOf('number')
-		expect(result.downloads).toBeTypeOf('number')
+		expect(result.files).toBeTypeOf('number')
 	})
 
 	test('should be behind authentication', async () => {

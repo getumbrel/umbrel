@@ -22,13 +22,6 @@ export const systemApps = [
 		systemApp: true,
 		systemAppTo: '/',
 	},
-	{
-		id: 'UMBREL_downloads',
-		name: 'Downloads',
-		icon: '/figma-exports/downloads-app.png',
-		systemApp: true,
-		systemAppTo: '/',
-	},
 	// For the dock...
 	{
 		id: 'UMBREL_home',

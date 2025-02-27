@@ -32,8 +32,8 @@ export function useDisk(options: {poll?: boolean} = {}) {
 					used: diskQ.data?.system ?? 0,
 				},
 				{
-					id: 'umbreld-downloads',
-					used: diskQ.data?.downloads ?? 0,
+					id: 'umbreld-files',
+					used: diskQ.data?.files ?? 0,
 				},
 			],
 			(a, b) => b.used - a.used,

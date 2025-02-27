@@ -70,7 +70,7 @@ export async function getSystemDiskUsage(umbreld: Umbreld): Promise<{size: numbe
 
 export async function getDiskUsage(
 	umbreld: Umbreld,
-): Promise<{size: number; totalUsed: number; system: number; downloads: number; apps: DiskUsage[]}> {
+): Promise<{size: number; totalUsed: number; system: number; files: number; apps: DiskUsage[]}> {
 	const {size, totalUsed} = await getSystemDiskUsage(umbreld)
 
 	// Get app disk usage
@@ -82,17 +82,24 @@ export async function getDiskUsage(
 	)
 	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
 
-	const downloadsDirectory = `${umbreld.files.homeDirectory}/Downloads/`
-	let downloads = 0
-	if (await fse.pathExists(downloadsDirectory)) downloads = await getDirectorySize(downloadsDirectory)
+	const filesTotalUsage = (
+		await Promise.all(
+			[
+				umbreld.files.homeDirectory,
+				umbreld.files.trashDirectory,
+				umbreld.files.trashMetaDirectory,
+				umbreld.files.thumbnails.thumbnailsDirectory,
+			].map((directory) => getDirectorySize(directory).catch(() => 0)),
+		)
+	).reduce((total, usage) => total + usage, 0)
 
 	const minSystemUsage = 2 * 1024 * 1024 * 1024 // 2GB
 
 	return {
 		size,
 		totalUsed,
-		system: Math.max(minSystemUsage, totalUsed - (appsTotal + downloads)),
-		downloads,
+		system: Math.max(minSystemUsage, totalUsed - (appsTotal + filesTotalUsage)),
+		files: filesTotalUsage,
 		apps,
 	}
 }
