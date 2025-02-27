@@ -1,6 +1,8 @@
 import {useEffect} from 'react'
 import {toast} from 'sonner'
 
+import {HOME_PATH} from '@/features/files/constants'
+import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsUmbrelHome} from '@/hooks/use-is-umbrel-home'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {trpcReact} from '@/trpc/trpc'
@@ -39,6 +41,8 @@ export function useExternalStorage() {
 		},
 	)
 
+	const {currentPath, navigateToDirectory} = useNavigate()
+
 	// Show dialog when external drive detected on non-Umbrel Home
 	useEffect(() => {
 		if (hasExternalDriveOnNonUmbrelHome) {
@@ -56,6 +60,19 @@ export function useExternalStorage() {
 
 	// Eject disk mutation
 	const {mutateAsync: ejectDisk, isLoading: isEjecting} = trpcReact.files.eject.useMutation({
+		onMutate: (id) => {
+			// snapshot the ejected disk
+			return {
+				ejectedDisk: disks?.find((disk) => disk.id === id.id),
+			}
+		},
+		onSuccess: (_, id, context) => {
+			// redirect to home path on ejection if the current path is in the ejected disk
+			const ejectedDisk = context?.ejectedDisk
+			if (ejectedDisk && ejectedDisk.partitions.some((partition) => currentPath.startsWith(partition.mountpoint))) {
+				navigateToDirectory(HOME_PATH)
+			}
+		},
 		onError: (error: RouterError) => {
 			toast.error(t('files-error.eject-disk', {message: error.message}))
 		},
