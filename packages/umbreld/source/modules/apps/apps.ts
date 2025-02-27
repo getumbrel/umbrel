@@ -355,7 +355,8 @@ export default class Apps {
 		const allDependencies = await Promise.all(
 			this.instances.map(async (app) => ({
 				id: app.id,
-				dependencies: await app.getDependencies(),
+				// If we can't read an app's dependencies for any reason just skip that app, don't abort
+				dependencies: await app.getDependencies().catch(() => [] as string[]),
 			})),
 		)
 		return allDependencies.filter(({dependencies}) => dependencies.includes(appId)).map(({id}) => id)
