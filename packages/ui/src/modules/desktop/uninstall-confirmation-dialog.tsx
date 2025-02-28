@@ -1,4 +1,4 @@
-import {useAllAvailableApps} from '@/providers/available-apps'
+import { useUserApp } from '@/providers/apps'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -22,14 +22,10 @@ export function UninstallConfirmationDialog({
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void
 }) {
-	const {appsKeyed, isLoading} = useAllAvailableApps()
-	const app = appsKeyed?.[appId]
+	const {app, isLoading} = useUserApp(appId)
 
 	if (isLoading) return null
-	// The app may have been removed from the app store
-	// so we just allow to continue uninstallation
-	// TODO: refactor to check for the app against the
-	// installed apps instead of apps in the app store
+
 	if (!app) {
 		console.error(`${appId} not found`)
 	}
