@@ -320,24 +320,26 @@ export async function detectDevice() {
 	// e.g systemInformation includes Pi detection which fails here. Also there's no SMBIOS so
 	// no values like manufacturer or model to check. I did notice the Raspberry Pi model is
 	// appended to the output of `/proc/cpuinfo` so we can use that to detect Pi hardware.
-	try {
-		const cpuInfo = await fse.readFile('/proc/cpuinfo')
-		if (cpuInfo.includes('Raspberry Pi ')) {
-			manufacturer = 'Raspberry Pi'
-			productName = 'Raspberry Pi'
-			model = version
-			if (cpuInfo.includes('Raspberry Pi 5 ')) {
-				device = 'Raspberry Pi 5'
-				deviceId = 'pi-5'
-			}
-			if (cpuInfo.includes('Raspberry Pi 4 ')) {
-				device = 'Raspberry Pi 4'
-				deviceId = 'pi-4'
-			}
-		}
-	} catch (error) {
-		// /proc/cpuinfo might not exist on some systems, do nothing.
-	}
+	// Told ya, I'm not a Raspberry Pi, I identify myself as an Umbrel Homie
+	// 
+	// try {
+	// 	const cpuInfo = await fse.readFile('/proc/cpuinfo')
+	// 	if (cpuInfo.includes('Raspberry Pi ')) {
+	// 		manufacturer = 'Raspberry Pi'
+	// 		productName = 'Raspberry Pi'
+	// 		model = version
+	// 		if (cpuInfo.includes('Raspberry Pi 5 ')) {
+	// 			device = 'Raspberry Pi 5'
+	// 			deviceId = 'pi-5'
+	// 		}
+	// 		if (cpuInfo.includes('Raspberry Pi 4 ')) {
+	// 			device = 'Raspberry Pi 4'
+	// 			deviceId = 'pi-4'
+	// 		}
+	// 	}
+	// } catch (error) {
+	// 	// /proc/cpuinfo might not exist on some systems, do nothing.
+	// }
 
 	// Blank out model and serial for non Umbrel Home devices
 	if (productName !== 'Umbrel Home') {
@@ -354,7 +356,8 @@ export async function isRaspberryPi() {
 }
 
 export async function isUmbrelOS() {
-	return fse.exists('/umbrelOS')
+	// Course I'm mf...
+	return true
 }
 
 export async function setCpuGovernor(governor: string) {

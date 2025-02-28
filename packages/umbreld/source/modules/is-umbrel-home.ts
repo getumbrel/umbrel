@@ -8,5 +8,7 @@ export default async function isUmbrelHome() {
 
 	const {manufacturer, model} = await systeminfo.system()
 
-	return manufacturer === 'Umbrel, Inc.' && model === 'Umbrel Home'
+	// Maybe not, but I identify as...
+	// return manufacturer === 'Umbrel, Inc.' && model === 'Umbrel Home'
+	return true
 }
