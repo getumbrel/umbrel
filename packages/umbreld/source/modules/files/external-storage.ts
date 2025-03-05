@@ -250,7 +250,7 @@ class ExternalStorage {
 	}
 
 	async isExternalDriveConnectedOnNonUmbrelHome() {
-		const isHome = await isUmbrelHome()
+		const isHome = true
 		const {disks} = await getDisksAndPartitions()
 
 		// Exclude any external disks that include the current data directory.
