@@ -110,7 +110,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 			) : (
 				<Droppable
 					id={`sidebar-${item.id}`}
-					path={item.partitions[0].mountpoint}
+					path={item.partitions[0]?.mountpoint}
 					className={cn(
 						'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12 hover:bg-gradient-to-b',
 						isDiskActive ? selectedClass : 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
