@@ -29,10 +29,7 @@ EOF
 echo "Creating ISO image..."
 grub-mkrescue -o "${iso_image}" -volid "UMBRELINSTALLER" "${rootfs_dir}" -- -hfsplus off
 
-echo "Compressing ISO image..."
-xz --keep --threads 0 --force "${iso_image}"
-
 echo "Copying to ./build/..."
-mv "${iso_image}.xz" /data/build/
+mv "${iso_image}" /data/build/
 
 echo "Done!"

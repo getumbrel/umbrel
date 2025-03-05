@@ -18,12 +18,13 @@ jobs:
       # Build Docker images
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       # We need this to namespace Docker images on forks
-      - run: echo "PREFIX=$(if [ '${{ github.repository }}' = 'getumbrel/umbrel' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
+      - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
+      - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
       - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
       - run: docker buildx create --use
       - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push ../../
-      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
+      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
 
       # Build OS images
       - uses: actions/setup-node@v3
@@ -56,11 +57,34 @@ jobs:
       - name: Create USB installer
         run: npm run build:amd64:usb-installer
 
+      - name: Create release directory
+        run: |
+          mkdir -p release
+          mv build/docker-umbrelos-* release/
+          mv build/*.update release/
+          mv build/*.img.zip release/
+          mv build/*.img.xz release/
+          mv build/*.img release/
+          mv usb-installer/build/*.iso release/
+
       - name: Create SHASUM
-        run: shasum -a 256 build/* | tee build/SHA256SUMS
+        run: cd release && shasum -a 256 * | tee SHA256SUMS
 
       - name: OpenTimestamps
-        run: npm ci && npx ots-cli.js stamp build/SHA256SUMS
+        run: npm ci && npx ots-cli.js stamp release/SHA256SUMS
+
+      - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
+        run: rm -rf release/*.img
+
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: packages/os/release
+          destination-dir: ./${{ env.VERSION }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
@@ -68,8 +92,4 @@ jobs:
           draft: true
           name: umbrelOS ${{ github.ref_name }}
           files: |
-            packages/os/build/SHA256SUMS*
-            packages/os/build/*.update
-            packages/os/build/*.img.zip
-            packages/os/build/*.img.xz
-            packages/os/usb-installer/build/*.iso.xz
+            packages/os/release/SHA256SUMS*
