@@ -8,7 +8,7 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
-    Buy an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> or install on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a>.
+       Get an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> for the full experience, or install umbrelOS on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a> for free.
     <br />
     <br />
     <a href="https://twitter.com/umbrel">
@@ -46,14 +46,17 @@ Just like the cloud, but one that you own and control.
 
 ## Installing umbrelOS
 
+umbrelOS is designed for the [Umbrel Home](https://umbrel.com/umbrel-home), where it includes all features like external storage support and Migration Assistant. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
+
+For a detailed feature breakdown, see our [comparison guide](https://github.com/getumbrel/umbrel/wiki/umbrelOS-on-Umbrel-Home-vs.-DIY).
+
+### Installation guides
 - [Install umbrelOS on a Raspberry Pi 5](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5)
 - [Install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-Systems)
 - [Install umbrelOS in a VM](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Linux-VM)
 
 
 ## Umbrel App Store
-
-<br />
 
 Here are some of the apps available in the Umbrel App Store. For the complete list of apps, visit [apps.umbrel.com](https://apps.umbrel.com/).
 
@@ -128,6 +131,7 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Code Server](https://apps.umbrel.com/app/code-server) — Run VS Code on your Umbrel
 - [Gitea](https://apps.umbrel.com/app/gitea) — A painless self-hosted Git service
 
+> [!TIP]
 > If an app you're looking for isn't available on our app store yet, feel free to open an issue on the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) respository to request it.
 
 ## Building apps for umbrelOS
