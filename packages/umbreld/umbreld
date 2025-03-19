@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-# We need to add this shim as the main umbreld entrypoint so we can sets up the environmnet we need
+# We need to add this shim as the main umbreld entrypoint so we can set up the environment we need
 # like adding node_modules/.bin to the PATH so we have access to tsx.
 
 
@@ -22,8 +22,8 @@ entrypoint=$(npm --prefix "${project_directory}" pkg get scripts.start)
 entrypoint="${entrypoint#\"}"
 entrypoint="${entrypoint%\"}"
 
-# Setup PATH so we can resolve tsx and local node
+# Set up PATH so we can resolve tsx and local node
 export PATH="${project_directory}/node_modules/.bin:${PATH}"
 
-# Execute the entrpoint and pass through any arguments
+# Execute the entrypoint and pass through any arguments
 exec "${project_directory}/${entrypoint}" "$@"
