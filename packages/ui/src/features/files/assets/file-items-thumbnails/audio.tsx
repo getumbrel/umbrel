@@ -29,24 +29,34 @@ const SvgAudio = (props: SVGProps<SVGSVGElement>) => (
 			<path fill='url(#audio_svg__l)' d='M34.96 28.838a.862.862 0 1 1 1.723 0v5.904a.862.862 0 1 1-1.723 0z' />
 			<path fill='url(#audio_svg__m)' d='M37.683 30.598a.862.862 0 0 1 1.723 0v2.384a.862.862 0 1 1-1.723 0z' />
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='audio_svg__c' x1={30.374} x2={30.374} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#FAC' />
 				<stop offset={0.469} stopColor='#E5BEEB' />
 				<stop offset={1} stopColor='#957EDA' />
 			</linearGradient>
+
 			<linearGradient id='audio_svg__d' x1={30.374} x2={30.374} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* corner */}
 			<linearGradient id='audio_svg__e' x1={32.357} x2={44.789} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#A66AF5' />
 				<stop offset={1} stopColor='#E6B1C4' />
 			</linearGradient>
+
+			{/* reflection on folded corner */}
 			<linearGradient id='audio_svg__f' x1={41.366} x2={32.357} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Sound wave bars */}
 			<linearGradient id='audio_svg__g' x1={30.375} x2={30.375} y1={24.73} y2={38.85} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.385} stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
@@ -75,9 +85,12 @@ const SvgAudio = (props: SVGProps<SVGSVGElement>) => (
 				<stop offset={0.385} stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
 			</linearGradient>
+
 			<clipPath id='audio_svg__a'>
 				<path fill='#fff' d='M.375 0h60v60h-60z' />
 			</clipPath>
+
+			{/* Border reflection and shading - this is expensive */}
 			<filter
 				id='audio_svg__b'
 				width={41.5}

@@ -30,7 +30,12 @@ export const RECENTS_PATH = '/Recents' as const
 export const TRASH_PATH = '/Trash' as const
 export const APPS_PATH = '/Apps' as const
 export const EXTERNAL_STORAGE_PATH = '/External' as const
-export const ITEMS_PER_PAGE = 100 as const
+
+// Directory listing constants
+export const USE_LIST_DIRECTORY_LOAD_ITEMS = {
+	INITIAL: 250, // Number of items to load when first viewing a directory
+	ON_SCROLL_END: 250, // Number of items to load when user scrolls near the end
+} as const
 
 // TODO: define it in a common place for client and server
 export const SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS = [

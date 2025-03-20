@@ -39,23 +39,34 @@ const SvgPsd = (props: SVGProps<SVGSVGElement>) => (
 				d='M15.685 50.937c-.51.013-.764-.6-.403-.96 1.244-1.242 2.098-3.098 2.57-4.675.715-2.394 1.454-4.869 5.14-5.07a.4.4 0 0 1 .252.075l3.183 2.264a.4.4 0 0 1 .17.328c0 6.36-3.744 7.855-10.912 8.038'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main Body */}
 			<linearGradient id='psd_svg__c' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#5C70B6' />
 				<stop offset={1} stopColor='#45579A' />
 			</linearGradient>
+
+			{/* Border reflection */}
 			<linearGradient id='psd_svg__d' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='psd_svg__f' x1={32.107} x2={44.539} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#CBCBCB' />
 				<stop offset={1} stopColor='#95A6E6' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='psd_svg__g' x1={41.116} x2={32.107} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Pain brush */}
 			<linearGradient id='psd_svg__h' x1={33.582} x2={24.074} y1={28.912} y2={43.234} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' stopOpacity={0.3} />
 				<stop offset={0.683} stopColor='#fff' />
@@ -64,6 +75,8 @@ const SvgPsd = (props: SVGProps<SVGSVGElement>) => (
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
 			</linearGradient>
+
+			{/* Border shading - expensive */}
 			<filter
 				id='psd_svg__b'
 				width={41.5}
@@ -88,7 +101,9 @@ const SvgPsd = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0' />
 				<feBlend in2='effect1_innerShadow_1032_7762' result='effect2_innerShadow_1032_7762' />
 			</filter>
-			<filter
+
+			{/* Filter for PSD text - expensive and not noticeable */}
+			{/* <filter
 				id='psd_svg__e'
 				width={8.395}
 				height={18.35}
@@ -111,7 +126,8 @@ const SvgPsd = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect2_innerShadow_1032_7762' />
-			</filter>
+			</filter> */}
+
 			<clipPath id='psd_svg__a'>
 				<path fill='#fff' d='M.125 0h60v60h-60z' />
 			</clipPath>

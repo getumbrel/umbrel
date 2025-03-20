@@ -40,7 +40,10 @@ const SvgEbook = (props: SVGProps<SVGSVGElement>) => (
 				d='M32.982 53.126 49.72 36.389h-11.11a5.625 5.625 0 0 0-5.624 5.624z'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Reflection and shadows on border */}
 			<filter
 				id='ebook_svg__b'
 				width={41.5}
@@ -65,7 +68,9 @@ const SvgEbook = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0.364011 0 0 0 0 0.395117 0 0 0 0 0.388896 0 0 0 1 0' />
 				<feBlend in2='effect1_innerShadow_1032_7677' result='effect2_innerShadow_1032_7677' />
 			</filter>
-			<filter
+
+			{/* Filters for text lines - expensive, and not noticeable */}
+			{/* <filter
 				id='ebook_svg__e'
 				width={29.792}
 				height={2.892}
@@ -244,24 +249,33 @@ const SvgEbook = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect3_innerShadow_1032_7677' />
-			</filter>
+			</filter> */}
+
+			{/* Main body */}
 			<linearGradient id='ebook_svg__c' x1={30.624} x2={30.624} y1={55} y2={5} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#ADADAD' />
 				<stop offset={0.245} stopColor='#D4D4D4' />
 				<stop offset={1} stopColor='#E9E9E9' />
 			</linearGradient>
+
+			{/* More border shading */}
 			<linearGradient id='ebook_svg__d' x1={30.624} x2={30.624} y1={55} y2={5} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='ebook_svg__k' x1={32.607} x2={45.039} y1={36.014} y2={48.095} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#E5E5E5' />
 				<stop offset={1} stopColor='#717171' />
 			</linearGradient>
+
+			{/* Reflection on folded corner */}
 			<linearGradient id='ebook_svg__l' x1={41.616} x2={32.607} y1={45.654} y2={36.014} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
 			<clipPath id='ebook_svg__a'>
 				<path fill='#fff' d='M.625 0h60v60h-60z' />
 			</clipPath>

@@ -43,6 +43,7 @@ const SvgTxt = (props: SVGProps<SVGSVGElement>) => (
 			<path stroke='url(#txt_svg__m)' strokeWidth={0.5} d='M15.807 15.021v39.01' />
 		</g>
 		<defs>
+			{/* Border shading - expensive */}
 			<filter
 				id='txt_svg__b'
 				width={41.5}
@@ -67,7 +68,9 @@ const SvgTxt = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0.364011 0 0 0 0 0.395117 0 0 0 0 0.388896 0 0 0 1 0' />
 				<feBlend in2='effect1_innerShadow_1032_7713' result='effect2_innerShadow_1032_7713' />
 			</filter>
-			<filter
+
+			{/* Filters for text skeleton - expensive and not noticeable */}
+			{/* <filter
 				id='txt_svg__e'
 				width={29.792}
 				height={2.892}
@@ -246,28 +249,39 @@ const SvgTxt = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect3_innerShadow_1032_7713' />
-			</filter>
+			</filter> */}
+
+			{/* Main white body */}
 			<linearGradient id='txt_svg__c' x1={30.374} x2={30.374} y1={55} y2={5} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#ADADAD' />
 				<stop offset={0.245} stopColor='#D4D4D4' />
 				<stop offset={1} stopColor='#E9E9E9' />
 			</linearGradient>
+
+			{/* Border shadow */}
 			<linearGradient id='txt_svg__d' x1={30.374} x2={30.374} y1={55} y2={5} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='txt_svg__k' x1={32.357} x2={44.789} y1={36.014} y2={48.095} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#E5E5E5' />
 				<stop offset={1} stopColor='#717171' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='txt_svg__l' x1={41.366} x2={32.357} y1={45.654} y2={36.014} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Vertical line on left */}
 			<linearGradient id='txt_svg__m' x1={15.057} x2={15.057} y1={15.021} y2={54.031} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#B7B7B7' />
 				<stop offset={1} stopColor='#B7B7B7' stopOpacity={0} />
 			</linearGradient>
+
 			<clipPath id='txt_svg__a'>
 				<path fill='#fff' d='M.375 0h60v60h-60z' />
 			</clipPath>

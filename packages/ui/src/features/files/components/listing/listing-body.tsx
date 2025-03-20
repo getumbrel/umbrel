@@ -1,32 +1,36 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 
+import {VirtualizedList} from '@/features/files/components/listing/virtualized-list'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
+import type {FileSystemItem} from '@/features/files/types'
 import {Table, TableCell, TableHeader, TableRow} from '@/shadcn-components/ui/table'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListingBodyProps {
-	children: React.ReactNode
+	children?: React.ReactNode
 	scrollAreaRef: React.RefObject<HTMLDivElement> // used by marquee selection for scrolling
+	items: FileSystemItem[]
+	hasMore: boolean
+	isLoading: boolean
+	onLoadMore: (startIndex: number) => Promise<boolean>
 }
 
-export const ListingBody = ({children, scrollAreaRef}: ListingBodyProps) => {
+export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMore}: ListingBodyProps) => {
 	const {preferences, setSortBy} = usePreferences()
 
 	// Icons view
 	if (preferences?.view === 'icons') {
 		return (
-			<ScrollArea viewportRef={scrollAreaRef} className='h-full'>
-				<div
-					role='grid'
-					className='mx-auto grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3 p-3 focus:outline-none md:p-6'
-					aria-label='Files and folders grid'
-				>
-					{children}
-				</div>
-			</ScrollArea>
+			<VirtualizedList
+				scrollAreaRef={scrollAreaRef}
+				items={items}
+				hasMore={hasMore}
+				isLoading={isLoading}
+				onLoadMore={onLoadMore}
+				view='icons'
+			/>
 		)
 	}
 
@@ -71,9 +75,14 @@ export const ListingBody = ({children, scrollAreaRef}: ListingBodyProps) => {
 				</div>
 
 				<div className='flex-1 overflow-hidden'>
-					<ScrollArea viewportRef={scrollAreaRef} className='h-full'>
-						<div className='p-3 focus:outline-none md:px-6 md:pb-6 md:pt-0'>{children}</div>
-					</ScrollArea>
+					<VirtualizedList
+						scrollAreaRef={scrollAreaRef}
+						items={items}
+						hasMore={hasMore}
+						isLoading={isLoading}
+						onLoadMore={onLoadMore}
+						view='list'
+					/>
 				</div>
 			</div>
 		)

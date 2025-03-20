@@ -11,7 +11,8 @@ export function RecentsListing() {
 			selectableItems={items}
 			isLoading={isLoading}
 			error={error}
-			totalItems={items.length} // we only track 50 max recents, so no need to paginate
+			hasMore={false} // we only track 50 max recents, which is less than the initial batch size
+			onLoadMore={async () => false} // no-op since we don't need to load more
 			enableFileDrop={false}
 		/>
 	)

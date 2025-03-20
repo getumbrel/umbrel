@@ -60,29 +60,39 @@ const SvgCsv = (props: SVGProps<SVGSVGElement>) => (
 			</g>
 		</g>
 		<defs>
+			{/* Main body */}
 			<linearGradient id='csv_svg__c' x1={30.874} x2={30.874} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#D4F4E9' />
 				<stop offset={0.328} stopColor='#5ACEA7' />
 				<stop offset={1} stopColor='#056D4A' />
 			</linearGradient>
+
+			{/* Some reflection on border */}
 			<linearGradient id='csv_svg__d' x1={30.874} x2={30.874} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='csv_svg__e' x1={32.857} x2={45.289} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#1FAD7D' />
 				<stop offset={1} stopColor='#ABFFE2' />
 			</linearGradient>
+
+			{/* Reflection on folded corner */}
 			<linearGradient id='csv_svg__f' x1={41.866} x2={32.857} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
 			<clipPath id='csv_svg__a'>
 				<path fill='#fff' d='M.875 0h60v60h-60z' />
 			</clipPath>
 			<clipPath id='csv_svg__g'>
 				<path fill='#fff' d='M14.518 25.92h32V54h-32z' />
 			</clipPath>
+
+			{/* Border reflection and shading - this is expensive */}
 			<filter
 				id='csv_svg__b'
 				width={41.5}

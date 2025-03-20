@@ -36,15 +36,22 @@ const SvgImage = (props: SVGProps<SVGSVGElement>) => (
 				d='M33.232 6.78 49.97 23.518h-11.11a5.625 5.625 0 0 1-5.624-5.623z'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='image_svg__c' x1={30.874} x2={30.874} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#A2C5E0' />
 				<stop offset={1} stopColor='#C7DAEE' />
 			</linearGradient>
+
+			{/* Shading on border */}
 			<linearGradient id='image_svg__d' x1={30.874} x2={30.874} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* background mountain */}
 			<linearGradient id='image_svg__f' x1={22.517} x2={22.517} y1={63.378} y2={24.738} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#155CDE' />
 				<stop offset={0.278} stopColor='#1F7FE5' />
@@ -52,6 +59,8 @@ const SvgImage = (props: SVGProps<SVGSVGElement>) => (
 				<stop offset={0.82} stopColor='#2CAFEF' />
 				<stop offset={1} stopColor='#2EB5F0' />
 			</linearGradient>
+
+			{/* foreground mountain */}
 			<linearGradient id='image_svg__g' x1={35.573} x2={35.573} y1={77.292} y2={22.212} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#155CDE' />
 				<stop offset={0.278} stopColor='#1F7FE5' />
@@ -59,20 +68,27 @@ const SvgImage = (props: SVGProps<SVGSVGElement>) => (
 				<stop offset={0.82} stopColor='#2CAFEF' />
 				<stop offset={1} stopColor='#2EB5F0' />
 			</linearGradient>
+
+			{/* Corner */}
 			<linearGradient id='image_svg__h' x1={32.857} x2={45.289} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#49A5E3' />
 				<stop offset={1} stopColor='#B1CEE6' />
 			</linearGradient>
+
+			{/* reflection on corner border */}
 			<linearGradient id='image_svg__i' x1={41.866} x2={32.857} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
 			<clipPath id='image_svg__a'>
 				<path fill='#fff' d='M.875 0h60v60h-60z' />
 			</clipPath>
 			<clipPath id='image_svg__e'>
 				<rect width={40} height={26} x={10.819} y={29} fill='#fff' rx={8} />
 			</clipPath>
+
+			{/* Shadow on border - expensive */}
 			<filter
 				id='image_svg__b'
 				width={41.5}

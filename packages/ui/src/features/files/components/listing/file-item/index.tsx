@@ -18,6 +18,7 @@ interface FileItemProps {
 export const FileItem = ({item, items}: FileItemProps) => {
 	const {handleClick, handleDoubleClick} = useItemClick()
 	const isItemSelected = useFilesStore((state) => state.isItemSelected)
+	const selectedItems = useFilesStore((state) => state.selectedItems)
 	const clipboardItems = useFilesStore((state) => state.clipboardItems)
 	const clipboardMode = useFilesStore((state) => state.clipboardMode)
 
@@ -26,6 +27,64 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const isSelected = isItemSelected(item)
 	const {preferences} = usePreferences()
 	const view = preferences?.view
+
+	// Calculate the selection position (first, middle, last, or standalone)
+	let selectionPosition = ''
+	if (isSelected && view === 'list') {
+		// Get the indices of all selected items
+		const selectedPaths = selectedItems.map((i) => i.path)
+		const sortedItemIndices = items
+			.map((i, index) => (selectedPaths.includes(i.path) ? index : -1))
+			.filter((index) => index !== -1)
+			.sort((a, b) => a - b)
+
+		// Find the current item's index
+		const currentIndex = items.findIndex((i) => i.path === item.path)
+
+		// Split the sorted indices into groups of contiguous indices
+		const groups: number[][] = []
+		let currentGroup: number[] = []
+
+		sortedItemIndices.forEach((index, i) => {
+			if (i === 0 || index !== sortedItemIndices[i - 1] + 1) {
+				// Start a new group if this is the first item or there's a gap
+				if (currentGroup.length > 0) {
+					groups.push(currentGroup)
+				}
+				currentGroup = [index]
+			} else {
+				// Continue the current group for contiguous indices
+				currentGroup.push(index)
+			}
+		})
+
+		// Add the last group
+		if (currentGroup.length > 0) {
+			groups.push(currentGroup)
+		}
+
+		// Find which group contains the current item
+		const groupIndex = groups.findIndex((group) => group.includes(currentIndex))
+
+		if (groupIndex !== -1) {
+			const group = groups[groupIndex]
+
+			// Determine position within the group
+			if (group.length === 1) {
+				// Only item in the group
+				selectionPosition = 'standalone'
+			} else if (group[0] === currentIndex) {
+				// First item in the group
+				selectionPosition = 'first'
+			} else if (group[group.length - 1] === currentIndex) {
+				// Last item in the group
+				selectionPosition = 'last'
+			} else {
+				// Middle item in the group
+				selectionPosition = 'middle'
+			}
+		}
+	}
 
 	const handleRenameClick = () => {
 		setIsEditingName(true)
@@ -44,6 +103,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	return (
 		<div
 			data-selected={isItemSelected(item) ? 'true' : 'false'}
+			data-selection-position={selectionPosition}
 			className={cn(
 				`files-${view}-view-file-item`, // .files-list-view-file-item styles are applied via CSS using combinator classes
 				'rounded-lg transition-colors duration-100',

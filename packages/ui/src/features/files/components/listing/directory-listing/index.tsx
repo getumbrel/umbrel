@@ -1,14 +1,12 @@
 import {Upload} from 'lucide-react'
 import {useRef} from 'react'
 import {RiClipboardLine} from 'react-icons/ri'
-import {useSearchParams} from 'react-router-dom'
 
 import {IconButton} from '@/components/ui/icon-button'
 import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
 import {Listing} from '@/features/files/components/listing'
 import {EmptyStateDirectory} from '@/features/files/components/listing/directory-listing/empty-state'
 import {UploadInput} from '@/features/files/components/shared/upload-input'
-import {ITEMS_PER_PAGE} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
@@ -20,14 +18,9 @@ import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function DirectoryListing() {
-	const [searchParams] = useSearchParams()
-	const currentPage = parseInt(searchParams.get('page') || '1')
 	const {currentPath} = useNavigate()
 
-	const {listing, isLoading, error} = useListDirectory(currentPath, {
-		start: (currentPage - 1) * ITEMS_PER_PAGE,
-		count: ITEMS_PER_PAGE,
-	})
+	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 
 	// Grab the potential "new folder" item from store
 	const newFolder = useFilesStore((state: FilesStore) => state.newFolder)
@@ -110,7 +103,8 @@ export function DirectoryListing() {
 				selectableItems={selectableItems}
 				isLoading={isLoading}
 				error={error}
-				totalItems={listing?.total ?? 0}
+				hasMore={listing?.hasMore ?? false}
+				onLoadMore={fetchMoreItems}
 				additionalDesktopActions={DesktopActions}
 				additionalMobileActions={MobileDropdownActions}
 				additionalContextMenuItems={additionalContextMenuItems}

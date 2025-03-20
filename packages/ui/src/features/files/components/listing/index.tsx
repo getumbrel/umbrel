@@ -4,10 +4,8 @@ import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
 import {ActionsBar} from '@/features/files/components/listing/actions-bar'
-import {FileItem} from '@/features/files/components/listing/file-item'
 import {ListingBody} from '@/features/files/components/listing/listing-body'
 import {ListingContextMenu} from '@/features/files/components/listing/listing-context-menu'
-import {ListingFooter} from '@/features/files/components/listing/listing-footer'
 import {MarqueeSelection} from '@/features/files/components/listing/marquee-selection'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileUploadDropZone} from '@/features/files/components/shared/file-upload-drop-zone'
@@ -22,7 +20,8 @@ export interface ListingProps {
 	selectableItems?: FileSystemItem[] // array of items that are selectable, eg. for keyboard shortcuts we want to ignore uploading items
 	isLoading: boolean // if the items are still loading
 	error?: unknown // if there is an error loading the items
-	totalItems: number // total number of items (not just the ones on the current page)
+	hasMore: boolean // if there are more items to load
+	onLoadMore: (startIndex: number) => Promise<boolean> // callback to load more items
 	CustomEmptyView?: ComponentType // custom empty placeholder component
 	additionalContextMenuItems?: React.ReactNode // additional items for the context menu
 	enableFileDrop?: boolean // if file upload drop zone is enabled
@@ -32,7 +31,8 @@ export interface ListingProps {
 
 function ListingContent({
 	items,
-	totalItems,
+	hasMore,
+	onLoadMore,
 	scrollAreaRef,
 	isLoading,
 	error,
@@ -40,7 +40,8 @@ function ListingContent({
 	CustomEmptyView,
 }: {
 	items: FileSystemItem[]
-	totalItems: number
+	hasMore: boolean
+	onLoadMore: (startIndex: number) => Promise<boolean>
 	scrollAreaRef: React.RefObject<HTMLDivElement>
 	isLoading: boolean
 	error: unknown
@@ -55,14 +56,13 @@ function ListingContent({
 				if (isEmpty) return CustomEmptyView ? <CustomEmptyView /> : <EmptyView />
 
 				return (
-					<>
-						<ListingBody scrollAreaRef={scrollAreaRef}>
-							{items.map((item) => (
-								<FileItem key={getItemKey(item)} item={item} items={items} />
-							))}
-						</ListingBody>
-						<ListingFooter totalItems={totalItems} />
-					</>
+					<ListingBody
+						scrollAreaRef={scrollAreaRef}
+						items={items}
+						hasMore={hasMore}
+						isLoading={isLoading}
+						onLoadMore={onLoadMore}
+					/>
 				)
 			})()}
 		</Card>
@@ -74,7 +74,8 @@ export function Listing({
 	selectableItems = [],
 	isLoading,
 	error,
-	totalItems,
+	hasMore = false,
+	onLoadMore = async () => false,
 	CustomEmptyView,
 	additionalContextMenuItems,
 	additionalDesktopActions,
@@ -98,7 +99,8 @@ export function Listing({
 			/>
 			<ListingContent
 				items={items}
-				totalItems={totalItems}
+				hasMore={hasMore}
+				onLoadMore={onLoadMore}
 				scrollAreaRef={scrollAreaRef}
 				isLoading={isLoading}
 				error={error}
@@ -168,9 +170,4 @@ function EmptyView() {
 			<div className='text-12 text-white/40'>{t('files-listing.empty')}</div>
 		</div>
 	)
-}
-
-function getItemKey(item: FileSystemItem): string {
-	const isUploading = 'isUploading' in item && item.isUploading
-	return `${item.path}${isUploading ? '-uploading' : ''}`
 }

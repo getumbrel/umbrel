@@ -38,7 +38,10 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				</g>
 			</g>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Border shading */}
 			<filter
 				id='exe_svg__b'
 				width={41.5}
@@ -63,6 +66,8 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0' />
 				<feBlend in2='effect1_innerShadow_1032_7701' mode='overlay' result='effect2_innerShadow_1032_7701' />
 			</filter>
+
+			{/* Shading for the gear icon */}
 			<filter
 				id='exe_svg__e'
 				width={24.887}
@@ -93,7 +98,9 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect3_innerShadow_1032_7701' />
 			</filter>
-			<filter
+
+			{/* Filter for exe text box - expensive and not noticeable */}
+			{/* <filter
 				id='exe_svg__h'
 				width={33}
 				height={17}
@@ -106,8 +113,10 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				<feGaussianBlur in='BackgroundImageFix' stdDeviation={1} />
 				<feComposite in2='SourceAlpha' operator='in' result='effect1_backgroundBlur_1032_7701' />
 				<feBlend in='SourceGraphic' in2='effect1_backgroundBlur_1032_7701' result='shape' />
-			</filter>
-			<filter
+			</filter> */}
+
+			{/* Filter for exe text - expensive and not noticeable */}
+			{/* <filter
 				id='exe_svg__i'
 				width={17.37}
 				height={7.954}
@@ -136,19 +145,27 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect3_innerShadow_1032_7701' />
-			</filter>
+			</filter> */}
+
+			{/* Border reflection */}
 			<linearGradient id='exe_svg__d' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Gear icon */}
 			<linearGradient id='exe_svg__f' x1={24.251} x2={24.251} y1={8.941} y2={30.849} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#999' />
 			</linearGradient>
+
+			{/*  Right triangle icon */}
 			<linearGradient id='exe_svg__g' x1={25.026} x2={25.026} y1={15.008} y2={24.784} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
 			</linearGradient>
+
+			{/* Main body */}
 			<radialGradient
 				id='exe_svg__c'
 				cx={0}
@@ -160,6 +177,7 @@ const SvgExe = (props: SVGProps<SVGSVGElement>) => (
 				<stop stopColor='#1976AB' />
 				<stop offset={1} stopColor='#87B1F6' />
 			</radialGradient>
+
 			<clipPath id='exe_svg__a'>
 				<path fill='#fff' d='M.125 0h60v60h-60z' />
 			</clipPath>

@@ -29,19 +29,28 @@ const SvgPdf = (props: SVGProps<SVGSVGElement>) => (
 				d='M32.732 6.78 49.47 23.518h-11.11a5.625 5.625 0 0 1-5.624-5.623z'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Border shading and reflection */}
 			<linearGradient id='pdf_svg__d' x1={30.374} x2={30.374} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded Corner */}
 			<linearGradient id='pdf_svg__f' x1={32.357} x2={44.789} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#F56A6A' />
 				<stop offset={1} stopColor='#E6B1B1' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='pdf_svg__g' x1={41.366} x2={32.357} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Border shading - expensive */}
 			<filter
 				id='pdf_svg__b'
 				width={41.5}
@@ -66,7 +75,9 @@ const SvgPdf = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0.534993 0 0 0 0 0.171905 0 0 0 0 0.171905 0 0 0 1 0' />
 				<feBlend in2='effect1_innerShadow_1032_7665' result='effect2_innerShadow_1032_7665' />
 			</filter>
-			<filter
+
+			{/* Filter on PDF text - expensive and not noticeable */}
+			{/* <filter
 				id='pdf_svg__e'
 				width={17.53}
 				height={7.954}
@@ -95,7 +106,9 @@ const SvgPdf = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect3_innerShadow_1032_7665' />
-			</filter>
+			</filter> */}
+
+			{/* Main body */}
 			<radialGradient
 				id='pdf_svg__c'
 				cx={0}
@@ -108,6 +121,7 @@ const SvgPdf = (props: SVGProps<SVGSVGElement>) => (
 				<stop offset={0.576} stopColor='#E3E3E3' />
 				<stop offset={1} stopColor='#F8F8F8' />
 			</radialGradient>
+
 			<clipPath id='pdf_svg__a'>
 				<path fill='#fff' d='M.375 0h60v60h-60z' />
 			</clipPath>

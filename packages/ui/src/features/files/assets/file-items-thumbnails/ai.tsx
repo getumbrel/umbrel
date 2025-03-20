@@ -40,31 +40,46 @@ const SvgAi = (props: SVGProps<SVGSVGElement>) => (
 				opacity={0.5}
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='ai_svg__c' x1={30.374} x2={30.374} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#E7B886' />
 				<stop offset={1} stopColor='#DE8F6B' />
 			</linearGradient>
+
+			{/* Border reflection */}
 			<linearGradient id='ai_svg__d' x1={30.374} x2={30.374} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='ai_svg__f' x1={32.357} x2={44.789} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#CBCBCB' />
 				<stop offset={1} stopColor='#D4B28E' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='ai_svg__g' x1={41.366} x2={32.357} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Water droplet */}
 			<linearGradient id='ai_svg__h' x1={27.781} x2={14.225} y1={30.352} y2={45.398} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' stopOpacity={0.3} />
 				<stop offset={0.683} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Water droplet reflection */}
 			<linearGradient id='ai_svg__i' x1={25.956} x2={25.956} y1={41.752} y2={48.213} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' stopOpacity={0.3} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Border shading */}
 			<filter
 				id='ai_svg__b'
 				width={41.5}
@@ -89,7 +104,9 @@ const SvgAi = (props: SVGProps<SVGSVGElement>) => (
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.3 0' />
 				<feBlend in2='effect1_innerShadow_1032_7774' result='effect2_innerShadow_1032_7774' />
 			</filter>
-			<filter
+
+			{/* Filter for AI text - expensive and not noticeable */}
+			{/* <filter
 				id='ai_svg__e'
 				width={8.034}
 				height={10.43}
@@ -112,7 +129,8 @@ const SvgAi = (props: SVGProps<SVGSVGElement>) => (
 				<feComposite in2='hardAlpha' k2={-1} k3={1} operator='arithmetic' />
 				<feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0' />
 				<feBlend in2='shape' mode='overlay' result='effect2_innerShadow_1032_7774' />
-			</filter>
+			</filter> */}
+
 			<clipPath id='ai_svg__a'>
 				<path fill='#fff' d='M.375 0h60v60h-60z' />
 			</clipPath>

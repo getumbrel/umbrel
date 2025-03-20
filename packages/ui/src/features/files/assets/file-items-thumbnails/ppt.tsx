@@ -58,24 +58,35 @@ const SvgPpt = (props: SVGProps<SVGSVGElement>) => (
 			<rect width={22.849} height={14.733} x={18.874} y={26} fill='url(#ppt_svg__i)' rx={1} />
 			<path fill='url(#ppt_svg__j)' d='M42.723 28.201a1 1 0 0 1 1-1h5.75v12.331h-5.75a1 1 0 0 1-1-1z' opacity={0.6} />
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='ppt_svg__c' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#FFB794' />
 				<stop offset={0.328} stopColor='#D4928A' />
 				<stop offset={1} stopColor='#CE675A' />
 			</linearGradient>
+
+			{/* Border shading */}
 			<linearGradient id='ppt_svg__d' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='ppt_svg__e' x1={32.107} x2={44.539} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#BC4333' />
 				<stop offset={1} stopColor='#FFB794' />
 			</linearGradient>
+
+			{/* Folderd corner reflection  */}
 			<linearGradient id='ppt_svg__f' x1={41.116} x2={32.107} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* ppt skeleton items */}
 			<linearGradient id='ppt_svg__h' x1={11.125} x2={17.874} y1={33.367} y2={33.367} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
@@ -88,12 +99,15 @@ const SvgPpt = (props: SVGProps<SVGSVGElement>) => (
 				<stop stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
 			<clipPath id='ppt_svg__a'>
 				<path fill='#fff' d='M.125 0h60v60h-60z' />
 			</clipPath>
 			<clipPath id='ppt_svg__g'>
 				<path fill='#fff' d='M11.125 46.842v-4h38v4z' />
 			</clipPath>
+
+			{/* Border shading - expensive */}
 			<filter
 				id='ppt_svg__b'
 				width={41.5}

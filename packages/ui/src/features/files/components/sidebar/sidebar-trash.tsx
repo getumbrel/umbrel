@@ -17,7 +17,10 @@ export function SidebarTrash() {
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const isTrash = currentPath === TRASH_PATH
 	const [isHovering, setIsHovering] = useState(false)
-	const {listing} = useListDirectory(TRASH_PATH, {start: 0, count: 3})
+	const {listing} = useListDirectory(TRASH_PATH, {
+		itemsOnScrollEnd: 3,
+		initialItems: 3,
+	})
 	const isTrashEmpty = listing?.items?.length === 0
 	const linkToDialog = useLinkToDialog()
 	const id = useId()

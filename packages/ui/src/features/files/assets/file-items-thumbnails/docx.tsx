@@ -40,24 +40,35 @@ const SvgDocx = (props: SVGProps<SVGSVGElement>) => (
 				/>
 			</g>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='docx_svg__c' x1={30.624} x2={30.624} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#D2DAFF' />
 				<stop offset={0.328} stopColor='#AABAFF' />
 				<stop offset={1} stopColor='#3F57D8' />
 			</linearGradient>
+
+			{/* Border reflection */}
 			<linearGradient id='docx_svg__d' x1={30.624} x2={30.624} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded coner */}
 			<linearGradient id='docx_svg__e' x1={32.607} x2={45.039} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#4859D3' />
 				<stop offset={1} stopColor='#A3AEF8' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='docx_svg__f' x1={41.616} x2={32.607} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* document skeleton boxes */}
 			<linearGradient id='docx_svg__g' x1={28.935} x2={28.935} y1={19} y2={50.25} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
@@ -74,9 +85,12 @@ const SvgDocx = (props: SVGProps<SVGSVGElement>) => (
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
 			</linearGradient>
+
 			<clipPath id='docx_svg__a'>
 				<path fill='#fff' d='M.625 0h60v60h-60z' />
 			</clipPath>
+
+			{/* Border reflection - expensive */}
 			<filter
 				id='docx_svg__b'
 				width={41.5}

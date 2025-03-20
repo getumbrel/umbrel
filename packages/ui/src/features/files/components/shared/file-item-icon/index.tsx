@@ -134,18 +134,38 @@ const FolderIcon = ({
 	const FolderComponent = useAnimatedIcon ? AnimatedFolderIcon : SimpleFolderIcon
 
 	if (path === `${HOME_PATH}/Videos`) {
-		return <FolderComponent className={className} overlayIcon={VideosIcon} isHovered={isHovered} />
+		return useAnimatedIcon ? (
+			<FolderComponent className={className} overlayIcon={VideosIcon} isHovered={isHovered} />
+		) : (
+			<FolderComponent className={className} overlayIcon={VideosIcon} />
+		)
 	}
 	if (path === `${HOME_PATH}/Downloads`) {
-		return <FolderComponent className={className} overlayIcon={DownloadsIcon} isHovered={isHovered} />
+		return useAnimatedIcon ? (
+			<FolderComponent className={className} overlayIcon={DownloadsIcon} isHovered={isHovered} />
+		) : (
+			<FolderComponent className={className} overlayIcon={DownloadsIcon} />
+		)
 	}
 	if (path === `${HOME_PATH}/Documents`) {
-		return <FolderComponent className={className} overlayIcon={DocumentsIcon} isHovered={isHovered} />
+		return useAnimatedIcon ? (
+			<FolderComponent className={className} overlayIcon={DocumentsIcon} isHovered={isHovered} />
+		) : (
+			<FolderComponent className={className} overlayIcon={DocumentsIcon} />
+		)
 	}
 	if (path === `${HOME_PATH}/Photos`) {
-		return <FolderComponent className={className} overlayIcon={PhotosIcon} isHovered={isHovered} />
+		return useAnimatedIcon ? (
+			<FolderComponent className={className} overlayIcon={PhotosIcon} isHovered={isHovered} />
+		) : (
+			<FolderComponent className={className} overlayIcon={PhotosIcon} />
+		)
 	}
-	return <FolderComponent className={className} isHovered={isHovered} />
+	return useAnimatedIcon ? (
+		<FolderComponent className={className} isHovered={isHovered} />
+	) : (
+		<FolderComponent className={className} />
+	)
 }
 
 const AppFolderBottomIcon = ({appId}: {appId: string}) => {

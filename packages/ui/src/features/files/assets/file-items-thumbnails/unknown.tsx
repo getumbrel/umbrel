@@ -22,15 +22,22 @@ const SvgUnknown = (props: SVGProps<SVGSVGElement>) => (
 				d='M32.982 6.78 49.72 23.518h-11.11a5.625 5.625 0 0 1-5.624-5.623z'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='unknown_svg__c' x1={30.624} x2={30.624} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#A2AAE0' />
 				<stop offset={1} stopColor='#C7CCEE' />
 			</linearGradient>
+
+			{/* Border reflection */}
 			<linearGradient id='unknown_svg__d' x1={30.624} x2={30.624} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient
 				id='unknown_svg__e'
 				x1={32.607}
@@ -42,6 +49,8 @@ const SvgUnknown = (props: SVGProps<SVGSVGElement>) => (
 				<stop stopColor='#838EDD' />
 				<stop offset={1} stopColor='#DDE1F7' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient
 				id='unknown_svg__f'
 				x1={41.616}
@@ -53,9 +62,12 @@ const SvgUnknown = (props: SVGProps<SVGSVGElement>) => (
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
 			<clipPath id='unknown_svg__a'>
 				<path fill='#fff' d='M.625 0h60v60h-60z' />
 			</clipPath>
+
+			{/* Border shading - expensive */}
 			<filter
 				id='unknown_svg__b'
 				width={41.5}

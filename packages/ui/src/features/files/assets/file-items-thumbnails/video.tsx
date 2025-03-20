@@ -42,34 +42,48 @@ const SvgVideo = (props: SVGProps<SVGSVGElement>) => (
 				d='M25.104 25.267c-.823.032-1.58.704-1.58 1.609v11.067c0 1.206 1.345 1.998 2.4 1.413l9.987-5.534c1.086-.601 1.086-2.225 0-2.826l-9.987-5.533a1.56 1.56 0 0 0-.82-.196'
 			/>
 		</g>
+
+		{/* -- Defs -- */}
 		<defs>
+			{/* Main body */}
 			<linearGradient id='video_svg__c' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#EEC7C7' />
 				<stop offset={0.245} stopColor='#EBBEBE' />
 				<stop offset={1} stopColor='#DA7E7E' />
 			</linearGradient>
+
+			{/* Border reflection */}
 			<linearGradient id='video_svg__d' x1={30.124} x2={30.124} y1={5} y2={55} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Folded corner */}
 			<linearGradient id='video_svg__e' x1={32.107} x2={44.539} y1={23.892} y2={11.811} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#F56A6A' />
 				<stop offset={1} stopColor='#E6B1B1' />
 			</linearGradient>
+
+			{/* Folded corner reflection */}
 			<linearGradient id='video_svg__f' x1={41.116} x2={32.107} y1={14.252} y2={23.892} gradientUnits='userSpaceOnUse'>
 				<stop offset={0.146} stopColor='#fff' stopOpacity={0} />
 				<stop offset={1} stopColor='#fff' />
 			</linearGradient>
+
+			{/* Play button */}
 			<linearGradient id='video_svg__h' x1={30.125} x2={30.125} y1={25.266} y2={39.553} gradientUnits='userSpaceOnUse'>
 				<stop stopColor='#fff' />
 				<stop offset={1} stopColor='#fff' stopOpacity={0.3} />
 			</linearGradient>
+
 			<clipPath id='video_svg__a'>
 				<path fill='#fff' d='M.125 0h60v60h-60z' />
 			</clipPath>
 			<clipPath id='video_svg__g'>
 				<path fill='#fff' d='M42.847 24h4v26h-4z' />
 			</clipPath>
+
+			{/* Border shading - expensive */}
 			<filter
 				id='video_svg__b'
 				width={41.5}

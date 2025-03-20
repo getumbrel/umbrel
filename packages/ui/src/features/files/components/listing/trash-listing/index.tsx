@@ -1,9 +1,8 @@
-import {useNavigate as useRouterNavigate, useSearchParams} from 'react-router-dom'
+import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
 import {Listing} from '@/features/files/components/listing'
-import {ITEMS_PER_PAGE} from '@/features/files/constants'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {ContextMenuItem} from '@/shadcn-components/ui/context-menu'
@@ -14,13 +13,8 @@ import {t} from '@/utils/i18n'
 export function TrashListing() {
 	const navigate = useRouterNavigate()
 	const {currentPath} = useNavigate()
-	const [searchParams] = useSearchParams()
-	const currentPage = parseInt(searchParams.get('page') || '1')
 
-	const {listing, isLoading, error} = useListDirectory(currentPath, {
-		start: (currentPage - 1) * ITEMS_PER_PAGE,
-		count: ITEMS_PER_PAGE,
-	})
+	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 
 	const items = listing?.items || []
 	const isTrashEmpty = items.length === 0
@@ -67,7 +61,8 @@ export function TrashListing() {
 			selectableItems={items}
 			isLoading={isLoading}
 			error={error}
-			totalItems={listing?.total ?? 0}
+			hasMore={listing?.hasMore ?? false}
+			onLoadMore={fetchMoreItems}
 			enableFileDrop={false}
 			additionalDesktopActions={DesktopActions}
 			additionalMobileActions={MobileActions}
