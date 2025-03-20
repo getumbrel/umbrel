@@ -39,7 +39,16 @@ const DropdownMenuSubContent = React.forwardRef<
 	React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
 	React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
 >(({className, ...props}, ref) => (
-	<DropdownMenuPrimitive.SubContent ref={ref} className={cn(dropdownClasses.content, className)} {...props} />
+	<DropdownMenuPrimitive.SubContent
+		ref={ref}
+		className={cn(dropdownClasses.content, className)}
+		{...props}
+		// Prevent right-clicks within subcontent from triggering parent context menus
+		onContextMenu={(e) => {
+			e.preventDefault() // Prevent default browser context menu
+			e.stopPropagation()
+		}}
+	/>
 ))
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
 
@@ -53,6 +62,11 @@ const DropdownMenuContent = React.forwardRef<
 			sideOffset={sideOffset}
 			className={cn(dropdownClasses.content, className)}
 			{...props}
+			// Prevent right-clicks within content from triggering parent context menus
+			onContextMenu={(e) => {
+				e.preventDefault() // Prevent default browser context menu
+				e.stopPropagation()
+			}}
 		/>
 	</DropdownMenuPrimitive.Portal>
 ))

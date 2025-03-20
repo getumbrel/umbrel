@@ -16,6 +16,16 @@ import {monkeyPatchConsoleLog} from '@/utils/logs'
 
 monkeyPatchConsoleLog()
 
+// Disable default browser context menu
+document.addEventListener(
+	'contextmenu',
+	(event) => {
+		event.preventDefault()
+		return false
+	},
+	{passive: false},
+)
+
 export function init(element: React.ReactNode) {
 	i18next.on('initialized', () => {
 		ReactDOM.createRoot(document.getElementById('root')!).render(

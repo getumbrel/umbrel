@@ -39,7 +39,16 @@ const ContextMenuSubContent = React.forwardRef<
 	React.ElementRef<typeof ContextMenuPrimitive.SubContent>,
 	React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent>
 >(({className, ...props}, ref) => (
-	<ContextMenuPrimitive.SubContent ref={ref} className={cn(contextMenuClasses.content, className)} {...props} />
+	<ContextMenuPrimitive.SubContent
+		ref={ref}
+		className={cn(contextMenuClasses.content, className)}
+		{...props}
+		// Prevent right-clicks within subcontent from triggering parent context menus
+		onContextMenu={(e) => {
+			e.preventDefault() // Prevent default browser context menu
+			e.stopPropagation()
+		}}
+	/>
 ))
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
 
@@ -48,7 +57,16 @@ const ContextMenuContent = React.forwardRef<
 	React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
 >(({className, ...props}, ref) => (
 	<ContextMenuPrimitive.Portal>
-		<ContextMenuPrimitive.Content ref={ref} className={cn(contextMenuClasses.content, className)} {...props} />
+		<ContextMenuPrimitive.Content
+			ref={ref}
+			className={cn(contextMenuClasses.content, className)}
+			{...props}
+			// Prevent right-clicks within content from triggering parent context menus
+			onContextMenu={(e) => {
+				e.preventDefault() // Prevent default browser context menu
+				e.stopPropagation()
+			}}
+		/>
 	</ContextMenuPrimitive.Portal>
 ))
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
