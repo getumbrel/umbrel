@@ -170,12 +170,14 @@ export function useFilesOperations() {
 
 	// Rename item
 	const renameItemMutation = trpcReact.files.rename.useMutation({
-		onSuccess: async () => {
-			await utils.files.list.invalidate()
-			await utils.files.recents.invalidate()
-		},
 		onError: (error) => {
 			toast.error(t('files-error.rename', {message: error.message}))
+		},
+		onSettled: async () => {
+			await utils.files.list.invalidate()
+			await utils.files.recents.invalidate()
+			await utils.files.favorites.invalidate()
+			await utils.files.shares.invalidate()
 		},
 	}).mutateAsync
 
@@ -201,6 +203,8 @@ export function useFilesOperations() {
 		onSettled: () => {
 			utils.files.list.invalidate()
 			utils.files.recents.invalidate()
+			utils.files.favorites.invalidate()
+			utils.files.shares.invalidate()
 		},
 	}).mutateAsync
 
@@ -307,18 +311,16 @@ export function useFilesOperations() {
 				throw new Error('ALREADY_IN_TRASH')
 			}
 		},
-		onSuccess: async (_, {path}) => {
-			// invalidate the parent directory of the item
-			await utils.files.list.invalidate({path: path.split('/').slice(0, -1).join('/')})
-			// invalidate the recents list
-			await utils.files.recents.invalidate()
-			// invalidate the trash directory
-			await utils.files.list.invalidate({path: TRASH_PATH})
-		},
 		onError: (error) => {
 			if (error.message !== 'ALREADY_IN_TRASH') {
 				toast.error(t('files-error.trash', {message: error.message}))
 			}
+		},
+		onSettled: async () => {
+			await utils.files.list.invalidate()
+			await utils.files.recents.invalidate()
+			await utils.files.favorites.invalidate()
+			await utils.files.shares.invalidate()
 		},
 	}).mutateAsync
 
