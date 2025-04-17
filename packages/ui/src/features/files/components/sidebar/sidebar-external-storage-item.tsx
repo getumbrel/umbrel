@@ -51,7 +51,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 			className={cn('flex w-full items-center gap-1.5 px-2 py-1.5')}
 		>
 			<FileItemIcon
-				item={{...item, path: item.id, type: 'external-storage', ops: 0}}
+				item={{...item, path: item.id, type: 'external-storage', operations: [], size: 0, modified: 0}}
 				className='h-5 w-5 flex-shrink-0'
 			/>
 			<div className='flex min-w-0 flex-1 items-center justify-between gap-1'>
@@ -61,7 +61,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 					<button
 						onClick={(e) => {
 							e.stopPropagation() // Prevent the click from triggering a navigation
-							ejectDisk({id: item.id})
+							ejectDisk({deviceId: item.id})
 						}}
 						aria-label={t('files-action.eject-disk')}
 					>

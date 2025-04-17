@@ -179,7 +179,14 @@ const PathSegment = ({segment, hasArrow, onClick, isStatic, path, type}: PathSeg
 			className='group inline-flex w-[--item-width] min-w-[42px] items-center gap-1 rounded p-1 transition-[width] duration-300 ease-in-out hover:w-[--natural-width]'
 		>
 			<FileItemIcon
-				item={{path, type: type === 'external-storage' ? 'external-storage' : 'directory', name: segment, ops: 0}}
+				item={{
+					path,
+					type: type === 'external-storage' ? 'external-storage' : 'directory',
+					name: segment,
+					operations: [],
+					size: 0,
+					modified: 0,
+				}}
 				className='h-4 w-4'
 			/>
 			<span

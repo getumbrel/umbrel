@@ -12,16 +12,18 @@ import {FileUploadDropZone} from '@/features/files/components/shared/file-upload
 import {useFilesKeyboardShortcuts} from '@/features/files/hooks/use-files-keyboard-shortcuts'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {t} from '@/utils/i18n'
 
 export interface ListingProps {
 	items: FileSystemItem[] // array of items to display
+	totalItems?: number // total number of items in the listing
 	selectableItems?: FileSystemItem[] // array of items that are selectable, eg. for keyboard shortcuts we want to ignore uploading items
 	isLoading: boolean // if the items are still loading
 	error?: unknown // if there is an error loading the items
 	hasMore: boolean // if there are more items to load
-	onLoadMore: (startIndex: number) => Promise<boolean> // callback to load more items
+	onLoadMore: () => Promise<boolean> // callback to load more items (removed startIndex)
 	CustomEmptyView?: ComponentType // custom empty placeholder component
 	additionalContextMenuItems?: React.ReactNode // additional items for the context menu
 	enableFileDrop?: boolean // if file upload drop zone is enabled
@@ -31,6 +33,7 @@ export interface ListingProps {
 
 function ListingContent({
 	items,
+	totalItems,
 	hasMore,
 	onLoadMore,
 	scrollAreaRef,
@@ -40,14 +43,16 @@ function ListingContent({
 	CustomEmptyView,
 }: {
 	items: FileSystemItem[]
+	totalItems?: number
 	hasMore: boolean
-	onLoadMore: (startIndex: number) => Promise<boolean>
+	onLoadMore: () => Promise<boolean>
 	scrollAreaRef: React.RefObject<HTMLDivElement>
 	isLoading: boolean
 	error: unknown
 	isEmpty: boolean
 	CustomEmptyView?: ComponentType
 }) {
+	const selectedItems = useFilesStore((s) => s.selectedItems)
 	return (
 		<Card className='h-[calc(100svh-214px)] !p-0 !pt-4 lg:h-[calc(100vh-300px)]'>
 			{(() => {
@@ -65,12 +70,23 @@ function ListingContent({
 					/>
 				)
 			})()}
+			{totalItems && !selectedItems.length ? (
+				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+					{t('files-listing.item-count', {count: totalItems})}
+				</span>
+			) : null}
+			{totalItems && !!selectedItems.length ? (
+				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+					{t('files-listing.selected-count', {selectedCount: selectedItems.length, totalCount: totalItems})}
+				</span>
+			) : null}
 		</Card>
 	)
 }
 
 export function Listing({
 	items,
+	totalItems = 0,
 	selectableItems = [],
 	isLoading,
 	error,
@@ -99,6 +115,7 @@ export function Listing({
 			/>
 			<ListingContent
 				items={items}
+				totalItems={totalItems}
 				hasMore={hasMore}
 				onLoadMore={onLoadMore}
 				scrollAreaRef={scrollAreaRef}

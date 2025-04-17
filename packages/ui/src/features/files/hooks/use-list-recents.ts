@@ -1,4 +1,5 @@
 import {usePreferences} from '@/features/files/hooks/use-preferences'
+import type {FileSystemItem} from '@/features/files/types'
 import {sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -24,7 +25,11 @@ export function useListRecents() {
 	// because unlike useListDirectory, we know the max recent items is 50
 	// so they're all already on the client side.
 	const sortedListing = data
-		? sortFilesystemItems(data, preferences?.sortBy ?? 'name', preferences?.sortOrder ?? 'asc')
+		? sortFilesystemItems(
+				data.filter((item): item is FileSystemItem => item !== null),
+				preferences?.sortBy ?? 'name',
+				preferences?.sortOrder ?? 'ascending',
+			)
 		: []
 
 	return {

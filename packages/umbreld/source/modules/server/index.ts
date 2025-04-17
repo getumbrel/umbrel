@@ -2,7 +2,7 @@ import http from 'node:http'
 import process from 'node:process'
 import {promisify} from 'node:util'
 import {fileURLToPath} from 'node:url'
-import nodePath from 'node:path'
+import {dirname, join} from 'node:path'
 import {createGzip} from 'node:zlib'
 import {pipeline} from 'node:stream/promises'
 
@@ -21,9 +21,37 @@ import type Umbreld from '../../index.js'
 import * as jwt from '../jwt.js'
 import {trpcHandler} from './trpc/index.js'
 import createTerminalWebSocketHandler from './terminal-socket.js'
-import {installFilesMiddleware} from './trpc/routes/files.js'
+
+import fileApi from '../files/api.js'
 
 export type ServerOptions = {umbreld: Umbreld}
+
+export type ApiOptions = {
+	publicApi: express.Router
+	privateApi: express.Router
+	umbreld: Umbreld
+}
+
+// Safely wrapps async request handlers in logic to catch errors and pass them to the errror handling middleware
+const asyncHandler = (
+	handler: (request: express.Request, response: express.Response, next: express.NextFunction) => Promise<any>,
+) =>
+	function asyncHandlerWrapper(request: express.Request, response: express.Response, next: express.NextFunction) {
+		return Promise.resolve(handler(request, response, next)).catch(next)
+	}
+
+// Iterate over all routes and wrap them in an async handler
+const wrapHandlersWithAsyncHandler = (router: express.Router) => {
+	// Loop over each layer of the router stack
+	for (const layer of router.stack) {
+		// If we have a nested router, recursively wrap its handlers
+		if (layer.name === 'router') wrapHandlersWithAsyncHandler(layer.handle)
+		// If we have a route, wrap its handlers
+		else if (layer.route) {
+			for (const routeLayer of layer.route.stack) routeLayer.handle = asyncHandler(routeLayer.handle)
+		}
+	}
+}
 
 class Server {
 	umbreld: Umbreld
@@ -38,7 +66,7 @@ class Server {
 
 	async getJwtSecret() {
 		const jwtSecretPath = `${this.umbreld.dataDirectory}/secrets/jwt`
-		return getOrCreateFile(jwtSecretPath, await randomToken(256))
+		return getOrCreateFile(jwtSecretPath, randomToken(256))
 	}
 
 	async signToken() {
@@ -104,6 +132,31 @@ class Server {
 		// Handle tRPC routes
 		app.use('/trpc', trpcHandler)
 
+		// Handle API routes
+		const createApi = (registerApi: ({publicApi, privateApi, umbreld}: ApiOptions) => void) => {
+			// Create public and private routers
+			const publicApi = express.Router()
+			const privateApi = express.Router()
+			privateApi.use(async (request, response, next) => {
+				const token = request?.cookies?.UMBREL_PROXY_TOKEN
+				const isValid = await this.verifyProxyToken(token).catch(() => false)
+				if (!isValid) return response.status(401).json({error: 'unauthorized'})
+
+				next()
+			})
+
+			// Register API handlers
+			registerApi({publicApi, privateApi, umbreld: this.umbreld})
+
+			// Mount the public and private on a single router
+			const api = express.Router()
+			api.use(publicApi)
+			api.use(privateApi)
+
+			return api
+		}
+		app.use('/api/files', createApi(fileApi))
+
 		// Handle log file downloads
 		app.get('/logs/', async (request, response) => {
 			// Check the user is logged in
@@ -124,9 +177,6 @@ class Server {
 				this.logger.error(`Error streaming logs: ${(error as Error).message}`)
 			}
 		})
-
-		// Handle file downloads and uploads
-		installFilesMiddleware(this.umbreld, app)
 
 		// If we have no API route hits then serve the ui at the root.
 		// We proxy through to the ui dev server during development with
@@ -149,8 +199,8 @@ class Server {
 			)
 		} else {
 			const currentFilename = fileURLToPath(import.meta.url)
-			const currentDirname = nodePath.dirname(currentFilename)
-			const uiPath = nodePath.join(currentDirname, '../../../ui')
+			const currentDirname = dirname(currentFilename)
+			const uiPath = join(currentDirname, '../../../ui')
 
 			// Built assets include a hash of the contents in the filename and
 			// wallpapers do not ever change, so we can cache these aggressively
@@ -174,9 +224,13 @@ class Server {
 		// them here and log them.
 		app.use((error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
 			this.logger.error(`${request.method} ${request.path} ${error.message}`)
-			if (response.headersSent) return next(error)
+			if (response.headersSent) return
 			response.status(500).json({error: true})
 		})
+
+		// Wrap all request handlers with a safe async handler
+		// TODO: We can remove this if we move to express 5
+		wrapHandlersWithAsyncHandler(app._router)
 
 		// Start the server
 		const server = http.createServer(app)

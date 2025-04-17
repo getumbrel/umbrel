@@ -70,7 +70,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 
 	return (
 		<div className={cn('flex items-center', isUploading && 'opacity-70')}>
-			<div className={`flex-[3] ${tableStyles}`}>
+			<div className={`flex-[5] ${tableStyles}`}>
 				<div className='flex items-center gap-1.5'>
 					<div className='flex-shrink-0'>
 						<FileItemIcon item={item} className='h-5 w-5' />
@@ -95,9 +95,10 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 					: formatFilesystemSize(item.size ?? null)}
 			</div>
 
-			<div className={`flex-[2] lg:hidden xl:flex ${tableStyles} text-white/60`}>
+			{/* TODO: Add this back in when we have a file system index in umbreld. The name header was previously flex-[3] */}
+			{/* <div className={`flex-[2] lg:hidden xl:flex ${tableStyles} text-white/60`}>
 				{isUploading ? `${formatFilesystemSize(item.speed ?? 0)}/s` : formatFilesystemDate(item.created, languageCode)}
-			</div>
+			</div> */}
 
 			<div className={`flex-[2] ${tableStyles} text-white/60`}>
 				{isUploading

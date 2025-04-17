@@ -45,7 +45,7 @@ export function Prefetcher() {
 			ctx.system.isExternalDns,
 
 			// Files
-			ctx.files.preferences,
+			ctx.files.viewPreferences,
 			ctx.files.favorites,
 			ctx.files.shares,
 		]

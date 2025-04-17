@@ -8,11 +8,11 @@ import FileStore from './file-store.js'
 
 const directory = temporaryDirectory()
 
-beforeAll(() => directory.create())
-afterAll(() => directory.destroy())
+beforeAll(directory.createRoot)
+afterAll(directory.destroyRoot)
 
 const createStore = async () => {
-	const filePath = path.join(await directory.createInner(), 'store.yaml')
+	const filePath = path.join(await directory.create(), 'store.yaml')
 	// Define a loose schema that will allow any key or value so
 	// we don't need to define all the test store schemas
 	type LooseSchema = Record<string, any>
@@ -171,7 +171,7 @@ describe('store.getWriteLock()', () => {
 })
 
 const createFaultyStore = async () => {
-	const filePath = path.join(await directory.createInner(), 'store.yaml')
+	const filePath = path.join(await directory.create(), 'store.yaml')
 
 	// Create a faulty store where the store file is empty, in turn
 	// deserializing as `undefined` if not explicitly handled

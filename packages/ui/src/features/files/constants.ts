@@ -53,7 +53,7 @@ export const SORT_BY_OPTIONS = [
 	{sortBy: 'name', labelTKey: 'files-sort.name'},
 	{sortBy: 'modified', labelTKey: 'files-sort.modified'},
 	{sortBy: 'size', labelTKey: 'files-sort.size'},
-	{sortBy: 'created', labelTKey: 'files-sort.created'},
+	// {sortBy: 'created', labelTKey: 'files-sort.created'},
 	{sortBy: 'type', labelTKey: 'files-sort.type'},
 ] as const
 

@@ -16,6 +16,7 @@ export function AppsListing() {
 			hasMore={listing?.hasMore ?? false}
 			onLoadMore={fetchMoreItems}
 			enableFileDrop={false}
+			totalItems={listing?.totalFiles}
 		/>
 	)
 }

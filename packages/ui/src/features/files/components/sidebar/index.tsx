@@ -24,7 +24,7 @@ export function Sidebar({className}: {className?: string}) {
 	const {favorites, isLoadingFavorites} = useFavorites()
 	const {disks, isLoadingExternalStorage, isUmbrelHome} = useExternalStorage()
 
-	const displayShares = shares?.filter((share) => share.path !== HOME_PATH)
+	const displayShares = shares?.filter((share) => share && share.path !== HOME_PATH)
 
 	return (
 		<nav className={cn('flex flex-col', className)} aria-label={t('files-sidebar.navigation')}>

@@ -119,21 +119,17 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode samba wsdd2 p7zip-full imagemagick ffmpeg
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2
+
+# Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
+RUN systemctl disable smbd wsdd2
 
 # Support for alternate filesystems
 # For some reason this always fails on arm64 but it's ok since we
 # don't support external storage on Pi anyway.
 RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true
 
-# TODO: udisks2 recommends eject (2.38.1-5+deb12u3) which is currently missing
-RUN apt-get install --yes --no-install-recommends udisks2
-
-# Disable automatically starting smbd at boot so umbreld can initialize it first
-RUN systemctl disable smbd.service
-
 # Install Node.js
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode
 RUN NODE_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
     NODE_SHA256=$(eval echo \$NODE_SHA256_${TARGETARCH}) && \
     curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz -o node.tar.gz && \
@@ -153,12 +149,12 @@ RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
 RUN rm /tmp/install-docker.sh
 
 # Add Umbrel user
-RUN addgroup --gid 1000 umbrel && adduser --uid 1000 --gid 1000 --gecos "" --disabled-password umbrel
+RUN adduser --gecos "" --disabled-password umbrel
 RUN echo "umbrel:umbrel" | chpasswd
-RUN usermod -aG sudo,sambashare umbrel
+RUN usermod -aG sudo umbrel
 
 # Preload images
-RUN apt-get install --yes skopeo
+RUN sudo apt-get install --yes skopeo
 RUN mkdir -p /images
 RUN skopeo copy docker://getumbrel/tor@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a docker-archive:/images/tor
 RUN skopeo copy docker://getumbrel/auth-server@sha256:b4a4b37896911a85fb74fa159e010129abd9dff751a40ef82f724ae066db3c2a docker-archive:/images/auth

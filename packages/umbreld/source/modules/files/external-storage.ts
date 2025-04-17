@@ -1,331 +1,326 @@
 import nodePath from 'node:path'
+import pWaitFor from 'p-wait-for'
 
-import {$} from 'execa'
 import fse from 'fs-extra'
+import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../../index.js'
 import isUmbrelHome from '../is-umbrel-home.js'
 
-type LsblkDevice = {
+import type Umbreld from '../../index.js'
+
+type BlockDevice = {
+	id: string
 	name: string
-	kname: string
-	label?: string | null
-	type?: string
-	mountpoints?: string[] | null
-	tran?: string | null
-	model?: string | null
-	size?: number | null
-	children?: LsblkDevice[]
-	parttypename?: string
-	serial?: string
-}
-
-type Disk = {
-	id: string
-	label: string
+	// Type more values here as we use them like emmc or sdcard
+	transport: 'unknown' | 'usb' | 'nvme'
 	size: number
+	partitions: {
+		id: string
+		type: string
+		size: number
+		mountpoints: string[]
+		label: string
+	}[]
 }
 
-type Partition = {
-	id: string
-	diskId: string
-	mountpoints: string[]
-	label: string
-	size: number
+// Get block devices
+// TODO: This should probably be in a system module once we have a proper one
+export async function getBlockDevices() {
+	type LsBlkDevice = {
+		name: string
+		label?: string
+		type?: string
+		mountpoints?: string[]
+		tran?: BlockDevice['transport']
+		model?: string
+		size?: number
+		children?: LsBlkDevice[]
+		parttypename?: string
+	}
+	const {stdout} = await $`lsblk --output-all --json --bytes`
+	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
+
+	// Loop over block devices
+	const externalStorageDevices: BlockDevice[] = []
+	for (const blockDevice of blockdevices) {
+		// Skip non-disk block devices
+		if (blockDevice.type !== 'disk') continue
+
+		// Create a new external storage device
+		const device: BlockDevice = {
+			id: blockDevice.name,
+			name: blockDevice.model ?? 'Untitled',
+			transport: blockDevice.tran ?? 'unknown',
+			size: blockDevice.size ?? 0,
+			partitions: [],
+		}
+
+		// Create partitions
+		for (const partition of blockDevice.children ?? []) {
+			// Skip any non-partition block devices
+			if (partition.type !== 'part') continue
+
+			// Add the partition to the device
+			device.partitions.push({
+				id: partition.name,
+				type: partition.parttypename ?? 'unknown',
+				label: partition.label?.trim() ?? 'Untitled',
+				size: partition.size ?? 0,
+				mountpoints: partition.mountpoints?.filter(Boolean) ?? [],
+			})
+		}
+
+		// Add the device to the list
+		externalStorageDevices.push(device)
+	}
+
+	return externalStorageDevices
 }
 
-type Mount = {
-	diskId: string
-	partitionId: string
-	mountpoint: string
-	label: string
-	size: number
-}
-
-const mountQueue = new PQueue({concurrency: 1})
-
-async function isSupported() {
-	return await isUmbrelHome()
-}
-
-class ExternalStorage {
+export default class ExternalStorage {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
-	disks: Map<string, Disk> = new Map()
-	mounts: Map<string, Mount> = new Map()
-	running = false
+	#mountQueue = new PQueue({concurrency: 1})
+	#removeDeviceChangeListener?: () => void
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
-		this.logger = umbreld.logger.createChildLogger(name.toLocaleLowerCase())
+		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
 	}
 
+	// Only enable this module on Umbrel Home
+	async enabled() {
+		return await isUmbrelHome()
+	}
+
+	// Add listener
 	async start() {
-		const supported = await isSupported()
-		if (!supported) return
-		this.logger.log(`Starting external storage`)
-		this.#umbreld.dbus.udisks.addListener('change', this.#onUdisksChange)
-		await this.updateMounts().catch((error) => this.logger.error(`Failed to update mounts: ${error.message}`))
-		this.running = true
+		// Don't run through start process if we're not enabled
+		const isEnabled = await this.enabled()
+		if (!isEnabled) return
+
+		this.logger.log('Starting external storage')
+
+		// Safely clean up any left over mount points
+		await this.#cleanLeftOverMountPoints()
+
+		// Auto mount any external devices
+		await this.#mountExternalDevices().catch((error) => {
+			this.logger.error(`Failed to mount external devices on startup: ${error}`)
+		})
+
+		// Attach disk change listener and auto mount any new external devices
+		this.#removeDeviceChangeListener = this.#umbreld.eventBus.on('system:disk:change', async () => {
+			this.logger.log('Device change detected')
+			await this.#mountExternalDevices()
+		})
 	}
 
+	// Remove listener
 	async stop() {
-		if (!this.running) return
-		this.running = false
-		this.logger.log(`Stopping external storage`)
-		this.#umbreld.dbus.udisks.removeListener('change', this.#onUdisksChange)
+		// Don't run through stop process if we're not enabled
+		const isEnabled = await this.enabled()
+		if (!isEnabled) return
 
-		// Unmount external partitions if possible. When an unmount fails, report
-		// the error but still inform listeners so the mount no longer shows up.
-		await mountQueue.add(async () => {
-			for (const [id, {mountpoint}] of this.mounts) {
-				const success = await unmountPartition(mountpoint)
-				if (success) {
-					this.logger.log(`Unmounted partition '${id}' at mountpoint '${mountpoint}'`)
-					await fse
-						.rmdir(mountpoint)
-						.catch((error) => this.logger.error(`Failed to remove mountpoint '${mountpoint}': ${error.message}`))
-				} else {
-					this.logger.log(`Unable to unmount partition '${id}' at mountpoint '${mountpoint}', leaving as-is`)
-				}
-			}
-			this.mounts.clear()
-			this.disks.clear()
-		})
+		this.logger.log('Stopping external storage')
+		this.#removeDeviceChangeListener?.()
+
+		// Unmount all external devices
+		await this.#unmountAllMountedExternalDevices()
 	}
 
-	get() {
-		const disks = [...this.disks.entries()].map(([id, {label, size}]) => ({id, label, size}))
-		return disks.map((disk) => {
-			return {
-				...disk,
-				partitions: [...this.mounts.values()]
-					.filter(({diskId}) => diskId === disk.id)
-					.map(({mountpoint, label, size}) => ({
-						mountpoint: this.#umbreld.files.mapSystemToVirtualPath(mountpoint),
-						label,
-						size,
-					})),
-			}
-		})
-	}
-
-	async updateMounts() {
-		await mountQueue.add(async () => {
-			const {disks, partitions} = await getDisksAndPartitions()
-
-			// Update list of external disks
-			const disksWithPartitions = disks.filter((disk) => partitions.some((partition) => partition.diskId === disk.id))
-			this.disks = new Map(disksWithPartitions.map((disk) => [disk.id, disk]))
-
-			// Try to auto-mount any new partitions
-			const seenPartitions = new Set<string>()
-			for (let {id, diskId, mountpoints, label, size} of partitions) {
-				const sanitisedLabel = label.replace(/[^a-zA-Z0-9 '\\!\\-]/g, '')
-				let mountpoint = nodePath.join(this.#umbreld.files.mediaDirectory, sanitisedLabel)
-				let mountIndex = 1
-				while (Array.from(this.mounts.values()).some((mount) => mount.mountpoint === mountpoint)) {
-					mountIndex++
-					mountpoint = nodePath.join(this.#umbreld.files.mediaDirectory, `${sanitisedLabel} (${mountIndex})`)
-				}
-				seenPartitions.add(id)
-
-				// If the partition is already mounted, check if we already mounted it
-				// and register its presence. If it's mounted elsewhere, skip this
-				// partition as it is not managed by us.
-				if (mountpoints.length) {
-					if (!this.mounts.has(id) && mountpoints.includes(mountpoint)) {
-						this.mounts.set(id, {partitionId: id, diskId, mountpoint, label, size})
-						this.logger.log(`Registering partition '${id}' at mountpoint '${mountpoint}'`)
-					}
-					continue
-				}
-
-				// Otherwise attempt to mount the partition. It is expected that not all
-				// partitions can be mounted, so we are not reporting mount errors here.
-				await fse
-					.ensureDir(mountpoint)
-					.catch((error) =>
-						this.logger.error(`Failed to create mountpoint '${mountpoint}' for partition '${id}': ${error.message}`),
+	// Mount external disks
+	async #mountExternalDevices() {
+		// Run through single threaded queue so we don't try to mount concurrently
+		return this.#mountQueue.add(async () => {
+			// Get external devices
+			// Sometimes it takes a while until partition labels and types show up so we wait if we have an
+			// unknown partition type. We check type not partition label since partition label sometimes doesn't
+			// exist at all due to nothing being set.
+			// We stop waiting after 2 seconds just incase everything has loaded but we have some weird partition
+			// type that is always unknown.
+			// If we don't do this we'll end up mounting all partitions as "Untitled".
+			let externalStorageDevices: BlockDevice[] = []
+			await pWaitFor(
+				async () => {
+					externalStorageDevices = await this.#getExternalDevices()
+					const hasMissingData = externalStorageDevices.some((device) =>
+						device.partitions.some((partition) => partition.type === 'unknown'),
 					)
-				const success = await mountPartition(id, mountpoint)
-				if (success) {
-					this.mounts.set(id, {partitionId: id, diskId, mountpoint, label, size})
-					this.logger.log(`Mounted partition '${id}' at mountpoint '${mountpoint}'`)
-				} else {
-					await fse.rmdir(mountpoint).catch(() => {})
-				}
-			}
-
-			// Clean up mountpoints that have been removed
-			for (const [id, {mountpoint}] of this.mounts) {
-				if (seenPartitions.has(id)) continue
-				let isMounted = await mountExists(mountpoint)
-				if (isMounted) {
-					const success = await unmountPartition(mountpoint)
-					if (success) {
-						isMounted = false
-						await fse
-							.rmdir(mountpoint)
-							.catch((error) => this.logger.error(`Failed to remove mountpoint '${mountpoint}': ${error.message}`))
-					}
-				}
-				if (!isMounted) {
-					this.mounts.delete(id)
-					this.logger.log(`Cleaned up partition '${id}' at mountpoint '${mountpoint}'`)
-				}
-			}
-
-			// Clean up orphaned mountpoints
-			const mountpointNames = await fse.readdir(this.#umbreld.files.mediaDirectory).catch(() => [])
-			await Promise.all(
-				mountpointNames.map(async (name) => {
-					const mountpoint = nodePath.join(this.#umbreld.files.mediaDirectory, name)
-					const isMounted = await mountExists(mountpoint)
-					if (!isMounted) {
-						await fse
-							.rmdir(mountpoint)
-							.catch((error) =>
-								this.logger.error(`Failed to remove orphaned mountpoint '${mountpoint}': ${error.message}`),
-							)
-					}
-				}),
+					return !hasMissingData
+				},
+				{interval: 100, timeout: {milliseconds: 2000, fallback: () => {}}},
 			)
-		})
-	}
 
-	async eject(diskId: string) {
-		return await mountQueue.add(async () => {
-			const disk = this.disks.get(diskId)
-			if (!disk) return false
+			// Loop over external devices
+			for (const device of externalStorageDevices) {
+				// Loop over partitions
+				for (const partition of device.partitions) {
+					// Skip partitions that are already mounted
+					if (partition.mountpoints.length > 0) continue
 
-			this.logger.log(`Ejecting disk '${disk.id}'...`)
+					// Skip EFI partitions since they're just confusing for users
+					if (partition.type === 'EFI System') continue
 
-			// Unmount the disk's partitions
-			let anyStillMounted = false
-			for (const [id, {diskId, mountpoint}] of this.mounts) {
-				if (diskId !== disk.id) continue
-				let isMounted = await mountExists(mountpoint)
-				if (isMounted) {
-					const success = await unmountPartition(mountpoint)
-					if (success) {
-						this.logger.log(`Unmounted partition '${id}' of disk '${diskId}' at mountpoint '${mountpoint}'`)
-						await fse
-							.rmdir(mountpoint)
-							.catch((error) => this.logger.error(`Failed to remove mountpoint '${mountpoint}': ${error.message}`))
-						isMounted = false
-					} else {
-						this.logger.error(`Unable to unmount partition '${id}' of disk '${diskId}' at mountpoint '${mountpoint}'`)
+					// We have a new partition to mount
+					this.logger.log(`Mounting new partition ${device.name} ${partition.label}`)
+					try {
+						// Derive mountpoint
+						const externalBaseSystemPath = this.#umbreld.files.getBaseDirectory('/External')
+						const sanitisedLabel = partition.label.replace(/[^a-zA-Z0-9 '\_\-]/g, '')
+						let systemMountpoint = nodePath.join(externalBaseSystemPath, sanitisedLabel)
+						systemMountpoint = await this.#umbreld.files.getUniqueName(systemMountpoint)
+
+						// Mount partition
+						await fse.ensureDir(systemMountpoint)
+						await this.#umbreld.files.chownSystemPath(systemMountpoint)
+						await $`mount /dev/${partition.id} ${systemMountpoint}`
+
+						// Log on success
+						const virtualMountPoint = this.#umbreld.files.systemToVirtualPath(systemMountpoint)
+						this.logger.log(`Mounted partition ${device.name} ${partition.label} as ${virtualMountPoint}`)
+					} catch (error) {
+						// Just log the error and continue to the next partition
+						this.logger.error(`Failed to mount partition ${device.name} ${partition.label}: ${error}`)
 					}
-				} else {
-					this.logger.verbose(`Partition '${id}' of disk '${diskId}' is already unmounted`)
-				}
-				if (!isMounted) {
-					this.mounts.delete(id)
-				} else {
-					anyStillMounted = true
 				}
 			}
-
-			// Discard the disk when all partitions have been unmounted
-			if (!anyStillMounted) {
-				const success = await discardDisk(disk.id)
-				if (success) {
-					this.disks.delete(disk.id)
-					this.logger.log(`Discarded disk '${disk.id}'`)
-				} else {
-					this.logger.error(`Failed to discard disk '${disk.id}', assuming that it no longer exists`)
-				}
-				return true
-			}
-			this.logger.error(`Failed to eject disk '${disk.id}': Some partitions are still mounted`)
-			return false
 		})
 	}
 
-	#onUdisksChange = () => {
-		this.updateMounts().catch((error) => this.logger.error(`Failed to update mounts: ${error.message}`))
+	// Unmount partition from external disk
+	async unmountExternalDevice(deviceId: string, {remove = true} = {}) {
+		// We run this through the mount queue so we don't clean up mount
+		// points that are in the process of being mounted.
+		// This can happen if the user unmounts a device while attaching another.
+		return await this.#mountQueue.add(async () => {
+			// Get mount points for block device
+			const externalBlockDevices = await this.#getExternalDevices()
+			const blockDevice = externalBlockDevices.find((device) => device.id === deviceId)
+			if (!blockDevice) throw new Error('[invalid-device-id]')
+			this.logger.log(`Unmounting device ${deviceId}`)
+
+			// Loop over partitions
+			let failedUnmounts = false
+			for (const partition of blockDevice.partitions) {
+				// Skip partitions that aren't mounted
+				if (partition.mountpoints.length == 0) continue
+
+				// Unmount device
+				this.logger.log(`Unmounting partition ${partition.id}`)
+				await $`umount --all-targets /dev/${partition.id}`.catch((error) => {
+					// Just log the error and continue to next partition
+					this.logger.error(`Failed to unmount partition ${partition.id}: ${error}`)
+					failedUnmounts = true
+				})
+			}
+
+			// Clean up any left over mount points
+			await this.#cleanLeftOverMountPoints()
+
+			// Remove the block device so we don't auto mount it until it's
+			// been removed and re-attached
+			if (remove) await fse.writeFile(`/sys/block/${deviceId}/device/delete`, '1')
+
+			// Signal that some unmounts failed
+			if (failedUnmounts) throw new Error('[failed-unmounts]')
+
+			return true
+		})
 	}
 
-	async isExternalDriveConnectedOnNonUmbrelHome() {
+	// Get external devices
+	async #getExternalDevices() {
+		// Get all block devices
+		const blockDevices = await getBlockDevices()
+
+		// Filter out any non-USB devices
+		return blockDevices.filter((device) => device.transport === 'usb')
+	}
+
+	// Get all umbreld mounted external devices
+	// This will only return block devices that have partitions mounted at /External
+	// This will only return the mounted partitions for those block devices
+	// This will only return the virtual path of the /External mount point
+	async getMountedExternalDevices() {
+		// Get all block devices
+		const externalBlockDevices = await this.#getExternalDevices()
+
+		// Loop over devices
+		const externalBaseSystemPath = this.#umbreld.files.getBaseDirectory('/External')
+		for (const device of externalBlockDevices) {
+			// Loop over partitions
+			for (const partition of device.partitions) {
+				// Format partitions to only contain /External mount points
+				partition.mountpoints = partition.mountpoints
+					.filter((mountpoint) => mountpoint.startsWith(externalBaseSystemPath))
+					.map((mountpoint) => this.#umbreld.files.systemToVirtualPath(mountpoint))
+			}
+
+			// Filter out partitions without mount points from device
+			device.partitions = device.partitions.filter((partition) => partition.mountpoints.length > 0)
+		}
+
+		// Filter out block devices without partitions
+		const mountedExternalDevices = externalBlockDevices.filter((device) => device.partitions.length > 0)
+
+		return mountedExternalDevices
+	}
+
+	// Unmount all mounted external devices
+	async #unmountAllMountedExternalDevices() {
+		// Loop over all mounted external devices
+		for (const device of await this.getMountedExternalDevices()) {
+			// Unmount the device
+			// We don't want to remove the device since this isn't a hard eject.
+			// We want the device to be detected if we start again.
+			await this.unmountExternalDevice(device.id, {remove: false}).catch(() => {
+				// Just log the error and continue to next device
+				this.logger.error(`Failed to unmount external device ${device.id}`)
+			})
+		}
+	}
+
+	// Clean left over mount points
+	async #cleanLeftOverMountPoints() {
+		// Loop over all mount points in /External
+		const externalBaseSystemPath = this.#umbreld.files.getBaseDirectory('/External')
+		const mountPoints = await fse.readdir(externalBaseSystemPath)
+		for (const mountPoint of mountPoints) {
+			try {
+				// Check if any are not currently used and safe to remove
+				const mountPointSystemPath = nodePath.join(externalBaseSystemPath, mountPoint)
+				const isMountPointEmpty = (await fse.readdir(mountPointSystemPath)).length === 0
+				const isMountPointUnmounted = (await $({reject: false})`mountpoint ${mountPointSystemPath}`).exitCode !== 0
+				const isSafeToRemove = isMountPointEmpty && isMountPointUnmounted
+
+				// Remove the mount point if it's safe to do so
+				if (isSafeToRemove) {
+					this.logger.log(`Cleaning up left over mount point ${mountPoint}`)
+					await fse.remove(mountPointSystemPath)
+				}
+			} catch (error) {
+				// Just log the error and continue to next mount point
+				this.logger.error(`Failed to clean up left over mount point ${mountPoint}: ${error}`)
+			}
+		}
+	}
+
+	// Check if an external drive is connected on non-Umbrel Home hardware
+	// This is used to notify non-Home users why they can't see their hardware.
+	async isExternalDeviceConnectedOnNonUmbrelHome() {
 		const isHome = await isUmbrelHome()
-		const {disks} = await getDisksAndPartitions()
+		let externalBlockDevices = await this.#getExternalDevices()
 
 		// Exclude any external disks that include the current data directory.
 		// This prevents USB storage based Raspberry Pi's detecting their main
 		// USB storage drive as a connected external drive.
 		const df = await $`df ${this.#umbreld.dataDirectory} --output=source`
 		const dataDirDisk = df.stdout.split('\n').pop()?.split('/').pop()?.replace(/\d+$/, '')
-		const externalDisks = disks.filter((disk) => disk.id !== dataDirDisk)
+		externalBlockDevices = externalBlockDevices.filter((blockDevice) => blockDevice.id !== dataDirDisk)
 
-		return !isHome && externalDisks.length > 0
-	}
-}
-
-export default ExternalStorage
-
-async function getDisksAndPartitions() {
-	const {stdout} = await $`lsblk --output-all --json --bytes`
-	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsblkDevice[]}
-
-	const disks: Disk[] = []
-	const partitions: Partition[] = []
-
-	function traverse(devices: LsblkDevice[], parentDisk?: LsblkDevice) {
-		for (const device of devices) {
-			const isUsb = parentDisk !== undefined || device.tran === 'usb'
-			// We only want to deal with external devices, not internal ones
-			if (!isUsb) continue
-
-			// Skip EFI partitions since they're just confusing for users
-			if (device?.parttypename === 'EFI System') continue
-
-			if (device.type === 'disk') {
-				disks.push({
-					id: device.kname,
-					label: device.model?.trim() || 'USB Disk',
-					size: device.size ?? 0,
-				})
-				if (device.children && device.children.length > 0) {
-					traverse(device.children, device)
-				}
-			} else if (parentDisk && device.type === 'part' && device.size) {
-				partitions.push({
-					id: device.kname,
-					diskId: parentDisk.kname,
-					mountpoints: device.mountpoints?.filter(Boolean) ?? [],
-					label: device.label?.trim() || 'Untitled',
-					size: device.size,
-				})
-			}
-		}
-	}
-	traverse(blockdevices)
-	return {disks, partitions}
-}
-
-async function mountExists(mountpoint: string) {
-	const {exitCode} = await $({reject: false})`findmnt --noheadings ${mountpoint}`
-	return exitCode === 0
-}
-
-async function mountPartition(id: string, mountpoint: string) {
-	const {exitCode} = await $({reject: false})`mount /dev/${id} ${mountpoint}`
-	return exitCode === 0
-}
-
-async function unmountPartition(mountpoint: string) {
-	const {exitCode} = await $({reject: false})`umount --all-targets ${mountpoint}`
-	return exitCode === 0
-}
-
-async function discardDisk(diskId: string) {
-	try {
-		await fse.writeFile(`/sys/block/${diskId}/device/delete`, '1')
-		return true
-	} catch {
-		return false
+		return !isHome && externalBlockDevices.length > 0
 	}
 }

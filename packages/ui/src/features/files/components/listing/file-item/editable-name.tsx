@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
-import {useNavigate} from 'react-router-dom'
+import {AiOutlineFileExclamation} from 'react-icons/ai'
 
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
@@ -8,6 +8,7 @@ import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useConfirmation} from '@/providers/confirmation'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -38,9 +39,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 
 	const {renameItem} = useFilesOperations()
 	const {cancelNewFolder, createFolder} = useNewFolder()
-
-	const navigate = useNavigate()
-	const {addLinkSearchParams} = useQueryParams()
+	const confirm = useConfirmation()
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
 	const isFolder = item.type === 'directory'
@@ -85,10 +84,14 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		return () => clearTimeout(timer)
 	}, [])
 
-	const handleSubmit = (submittedName: string) => {
+	const handleSubmit = async (submittedName: string) => {
 		const trimmedName = submittedName.trim()
+		let performRename = true
 		if (isCreatingNewFolder) {
-			createFolder.mutate({path: path.split('/').slice(0, -1).join('/'), name: trimmedName})
+			// Calculate parent path and the full path for the new folder
+			const parentPath = path.split('/').slice(0, -1).join('/')
+			const fullPath = `${parentPath}/${trimmedName}`
+			createFolder.mutate({path: fullPath})
 		} else {
 			// check if the user is changing the extension of a file
 			if (item.type !== 'directory') {
@@ -98,18 +101,33 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 				// if the extension is changing, show the extension change confirmation dialog
 				// and let it handle the renaming
 				if (currentNameExtension !== toNameExtension) {
-					return navigate({
-						search: addLinkSearchParams({
-							dialog: 'files-extension-change-confirmation',
-							currentName: item.name,
-							currentPath: item.path,
-							renameTo: trimmedName,
-						}),
-					})
+					try {
+						await confirm({
+							title: toNameExtension
+								? t('files-extension-change.title-add', {extension: toNameExtension})
+								: t('files-extension-change.title-remove'),
+							message: toNameExtension
+								? t('files-extension-change.description-add', {
+										fileName: initialName,
+										extension: toNameExtension,
+									})
+								: t('files-extension-change.description-remove', {fileName: initialName}),
+							actions: [
+								{label: t('files-extension-change.confirm'), value: 'confirm', variant: 'destructive'},
+								{label: t('cancel'), value: 'cancel', variant: 'default'},
+							],
+							icon: AiOutlineFileExclamation,
+						})
+						// Confirmation passed, proceed with rename (handled below)
+					} catch (error) {
+						// User cancelled confirmation
+						performRename = false
+					}
 				}
 			}
-
-			renameItem({item, toName: trimmedName})
+			if (performRename) {
+				renameItem({item, newName: trimmedName})
+			}
 		}
 		onFinish()
 	}

@@ -14,14 +14,23 @@ interface IconsViewFileItemProps {
 	item: FileSystemItem
 	isEditingName: boolean
 	onEditingNameComplete: () => void
+	isContextMenuOpen: boolean
 }
 
-export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: IconsViewFileItemProps) => {
+export const IconsViewFileItem = ({
+	item,
+	isEditingName,
+	onEditingNameComplete,
+	isContextMenuOpen,
+}: IconsViewFileItemProps) => {
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 	const isTouchDevice = useIsTouchDevice()
 
 	const [isHovered, setIsHovered] = useState(false)
+
+	// Item is active if hovered or context menu is open
+	const isActive = isHovered || isContextMenuOpen
 
 	return (
 		<div
@@ -31,9 +40,9 @@ export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: 
 			onMouseLeave={() => setIsHovered(false)}
 		>
 			{/* Do not use animated icon for touch devices where hover doesn't make sense */}
-			{/* We pass in isHovered so that the trigger for hovering can be on a parent div */}
+			{/* We pass in isActive so that the trigger for hovering can be on a parent div, and it also considers context menu state */}
 			<div className='flex justify-center'>
-				<FileItemIcon item={item} className='h-14 w-14' useAnimatedIcon={!isTouchDevice} isHovered={isHovered} />
+				<FileItemIcon item={item} className='h-14 w-14' useAnimatedIcon={!isTouchDevice} isHovered={isActive} />
 			</div>
 			<div className='relative w-full flex-col items-center'>
 				{isEditingName ? (

@@ -2,7 +2,6 @@ import path from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
 import {$} from 'execa'
-import fse from 'fs-extra'
 
 // TODO: import packageJson from '../package.json' assert {type: 'json'}
 const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
@@ -16,8 +15,10 @@ import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 import Files from './modules/files/files.js'
-import Notifications from './modules/notifications.js'
-import DBus from './modules/dbus/index.js'
+import Notifications from './modules/notifications/notifications.js'
+import EventBus from './modules/event-bus/event-bus.js'
+import Dbus from './modules/dbus/dbus.js'
+
 import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
 import {commitOsPartition} from './modules/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
@@ -49,15 +50,17 @@ type StoreSchema = {
 	}
 	recentlyOpenedApps: string[]
 	files: {
-		view?: 'list' | 'icons'
-		sortBy?: 'name' | 'type' | 'created' | 'modified' | 'size'
-		sortOrder?: 'asc' | 'desc'
-		shares?: {
+		preferences: {
+			view: 'icons' | 'list'
+			sortBy: 'name' | 'type' | 'modified' | 'size'
+			sortOrder: 'ascending' | 'descending'
+		}
+		favorites: string[]
+		recents: string[]
+		shares: {
 			name: string
 			path: string
 		}[]
-		favorites?: string[]
-		recents?: string[]
 	}
 	notifications: string[]
 }
@@ -74,7 +77,6 @@ export default class Umbreld {
 	versionName: string = packageJson.versionName
 	developmentMode: boolean
 	dataDirectory: string
-	temporaryDirectory: string
 	port: number
 	logLevel: LogLevel
 	logger: ReturnType<typeof createLogger>
@@ -86,7 +88,9 @@ export default class Umbreld {
 	apps: Apps
 	files: Files
 	notifications: Notifications
-	dbus: DBus
+	eventBus: EventBus
+	dbus: Dbus
+
 	constructor({
 		dataDirectory,
 		port = 80,
@@ -95,7 +99,6 @@ export default class Umbreld {
 	}: UmbreldOptions) {
 		this.developmentMode = process?.env?.NODE_ENV === 'development'
 		this.dataDirectory = path.resolve(dataDirectory)
-		this.temporaryDirectory = path.join(this.dataDirectory, 'temp')
 		this.port = port
 		this.logLevel = logLevel
 		this.logger = createLogger('umbreld', this.logLevel)
@@ -107,7 +110,8 @@ export default class Umbreld {
 		this.apps = new Apps(this)
 		this.files = new Files(this)
 		this.notifications = new Notifications(this)
-		this.dbus = new DBus(this)
+		this.eventBus = new EventBus(this)
+		this.dbus = new Dbus(this)
 	}
 
 	// TODO: Move this to a system module
@@ -212,29 +216,23 @@ export default class Umbreld {
 		if (!this.developmentMode) {
 			await this.apps
 				.cleanDockerState()
-				.catch((error) => this.logger.error(`Failed to clean Docker state: ${error.message}`))
+				.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
 		}
 
-		// Clean temporary directory before modules make use of it. The temporary
-		// directory should already be empty because temporary files are removed
-		// again right away, but make sure that we are not accumulating anything.
-		await fse
-			.remove(this.temporaryDirectory)
-			.catch((error) => this.logger.error(`Failed to clean temporary directory: ${error.message}`))
-		await fse
-			.ensureDir(this.temporaryDirectory)
-			.catch((error) => this.logger.error(`Failed to ensure temporary directory: ${error.message}`))
-
 		// Initialise modules
-		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start(), this.dbus.start()])
-		await this.files.start() // needs apps.instances, integrates with server
-		// TODO: Allow listening for other modules readyness so we can initialise everything async
+		await Promise.all([
+			this.files.start(),
+			this.apps.start(),
+			this.appStore.start(),
+			this.dbus.start(),
+			this.server.start(),
+		])
 	}
 
 	async stop() {
 		try {
 			// Stop modules
-			await Promise.all([this.apps.stop(), this.appStore.stop(), this.files.stop(), this.dbus.stop()])
+			await Promise.all([this.files.stop(), this.apps.stop(), this.appStore.stop(), this.dbus.stop()])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false

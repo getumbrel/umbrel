@@ -138,7 +138,7 @@ class Migration {
 
 	async migrateDownloadsDirectory() {
 		const legacyDownloadsPath = `${this.umbreld.dataDirectory}/data/storage/downloads`
-		const newDownloadsPath = `${this.umbreld.files.homeDirectory}/Downloads`
+		const newDownloadsPath = `${this.umbreld.files.getBaseDirectory('/Home')}/Downloads`
 		const legacyDownloadsPathExists = await fse.exists(legacyDownloadsPath)
 		const newDownloadsPathHasData =
 			(await fse.exists(newDownloadsPath)) && (await fse.readdir(newDownloadsPath)).length > 0

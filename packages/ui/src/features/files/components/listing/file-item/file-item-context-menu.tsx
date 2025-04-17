@@ -8,7 +8,6 @@ import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-naviga
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
-import {isOperationAllowed} from '@/features/files/utils/allowed-filesystem-operation'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useGlobalFiles} from '@/providers/global-files'
 import {
@@ -27,9 +26,10 @@ interface FileItemContextMenuProps {
 	item: FileSystemItem
 	children: React.ReactNode
 	onRenameClick: () => void
+	onStateChange?: (isOpen: boolean) => void
 }
 
-export const FileItemContextMenu = ({item, children, onRenameClick}: FileItemContextMenuProps) => {
+export const FileItemContextMenu = ({item, children, onRenameClick, onStateChange}: FileItemContextMenuProps) => {
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
 	const {isBrowsingTrash, isBrowsingRecents, navigateToDirectory} = useFilesNavigate()
@@ -117,24 +117,23 @@ export const FileItemContextMenu = ({item, children, onRenameClick}: FileItemCon
 
 		// allow/disallow actions based on backend operations
 		const canOpen = hasOneSelectedItem
-		const canRename = hasOneSelectedItem && isOperationAllowed(item.path, 'rename')
+		const canRename = hasOneSelectedItem && item.operations.includes('rename')
 		const canDownload = true // always allowed
-		const canCut = selectedItems.every((itm) => isOperationAllowed(itm.path, 'move'))
-		const canCopy = selectedItems.every((itm) => isOperationAllowed(itm.path, 'copy'))
+		const canCut = selectedItems.every((itm) => itm.operations.includes('move'))
+		const canCopy = selectedItems.every((itm) => itm.operations.includes('copy'))
 		const canPaste =
-			hasItemsInClipboard() && hasOneSelectedItem && !isItemInClipboard(item) && isOperationAllowed(item.path, 'paste')
-		const canTrash = isOperationAllowed(item.path, 'trash')
-		const canArchive = selectedItems.every((itm) => isOperationAllowed(itm.path, 'archive'))
+			hasItemsInClipboard() && hasOneSelectedItem && !isItemInClipboard(item) && item.type === 'directory'
+		const canTrash = item.operations.includes('trash')
 		const canExtract = selectedItems.every(
 			(itm) =>
-				isOperationAllowed(itm.path, 'extract') &&
+				itm.operations.includes('unarchive') &&
 				SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS.some((ext) => itm.name.toLowerCase().endsWith(ext)),
 		)
 		const canShare =
-			hasOneSelectedItem && !isPathShared(item.path) && !isAddingShare && isOperationAllowed(item.path, 'share')
+			hasOneSelectedItem && !isPathShared(item.path) && !isAddingShare && item.operations.includes('share')
 		const canRemoveShare = hasOneSelectedItem && isPathShared(item.path) && !isRemovingShare
 		const canFavorite =
-			hasOneSelectedItem && !isPathFavorite(item.path) && !isAddingFavorite && isOperationAllowed(item.path, 'favorite')
+			hasOneSelectedItem && !isPathFavorite(item.path) && !isAddingFavorite && item.operations.includes('favorite')
 		const canRemoveFavorite = hasOneSelectedItem && isPathFavorite(item.path) && !isRemovingFavorite
 
 		// Full context menu
@@ -178,7 +177,6 @@ export const FileItemContextMenu = ({item, children, onRenameClick}: FileItemCon
 				id: 'compress',
 				label: t('files-action.compress'),
 				onClick: archiveSelectedItems,
-				disabled: !canArchive,
 			},
 			{
 				id: 'uncompress',
@@ -224,6 +222,8 @@ export const FileItemContextMenu = ({item, children, onRenameClick}: FileItemCon
 					if (isOpen && !isItemSelected(item)) {
 						setSelectedItems([item])
 					}
+					// Notify the parent component about the state change
+					onStateChange?.(isOpen)
 				}}
 			>
 				<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>

@@ -23,6 +23,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const clipboardMode = useFilesStore((state) => state.clipboardMode)
 
 	const [isEditingName, setIsEditingName] = useState(false)
+	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
 	const isUploading = 'isUploading' in item && item.isUploading
 	const isSelected = isItemSelected(item)
 	const {preferences} = usePreferences()
@@ -112,7 +113,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			)}
 			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items
 		>
-			<FileItemContextMenu item={item} onRenameClick={handleRenameClick}>
+			<FileItemContextMenu item={item} onRenameClick={handleRenameClick} onStateChange={setIsContextMenuOpen}>
 				<Droppable
 					id={`${view}-view-file-item-${item.path}`}
 					path={item.path}
@@ -133,6 +134,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 										item={item}
 										isEditingName={isEditingFileName}
 										onEditingNameComplete={handlNameEditingComplete}
+										isContextMenuOpen={isContextMenuOpen}
 									/>
 								) : null}
 								{view === 'list' ? (

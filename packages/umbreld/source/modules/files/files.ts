@@ -1,1011 +1,806 @@
-import nodePath, {posix as posixPath} from 'node:path'
+/**
+ * Note: ext4 Filesystem Directory Entry Limit
+ * ------------------------------------------
+ * The current ext4 filesystem in umbrelOS is created with the `dir_index` feature
+ * enabled (for faster name lookups in large directories), but *without* the `large_dir`
+ * feature enabled (which would increase the limit on the number of files per directory).
+ * See https://man7.org/linux/man-pages/man5/ext4.5.html
+ *
+ * Without `large_dir`, the `dir_index` hash tree has a limited depth, restricting the number of entries
+ * in a single directory. In testing, the limit is on the order of a few hundreds of thousands, but not millions, of files.
+ *
+ * Exceeding this limit will cause file creation/write errors, visible in `dmesg` as:
+ *   `EXT4-fs warning ... ext4_dx_add_entry: Directory ... index full, reach max htree level`
+ *   `EXT4-fs warning ... ext4_dx_add_entry: Large directory feature is not enabled...`
+ * It stems from the `dir_index` htree reaching its maximum depth without `large_dir`.
+ */
 
-import fse from 'fs-extra'
-import {$} from 'execa'
+import nodePath from 'node:path'
+
 import mime from 'mime-types'
-import PQueue from 'p-queue'
+import fse from 'fs-extra'
 import {minimatch} from 'minimatch'
+import isValidFilename from 'valid-filename'
 
-import type Umbreld from '../../index.js'
-import Samba from './samba.js'
-import temporaryDirectory from '../utilities/temporary-directory.js'
-import resolveSafe from '../utilities/resolve-safe.js'
-import normalizeFsExtraError from '../utilities/normalize-fs-extra-error.js'
-import {UMBREL_GID, UMBREL_UID} from '../../constants.js'
-import FilesWatcher from './files-watcher.js'
+import Watcher from './watcher.js'
 import Recents from './recents.js'
+import Favorites from './favorites.js'
+import Archive from './archive.js'
 import Thumbnails from './thumbnails.js'
+import Samba from './samba.js'
 import ExternalStorage from './external-storage.js'
+import type Umbreld from '../../index.js'
 
-export const DEFAULT_UID = UMBREL_UID
-export const DEFAULT_GID = UMBREL_GID
-export const DEFAULT_FILE_MODE = 0o644
-export const DEFAULT_DIRECTORY_MODE = 0o755
-export const SUFFIX_SEARCH_MAX_ITERATIONS = 100
+const ALL_OPERATIONS = [
+	'copy',
+	'move',
+	'rename',
+	'trash',
+	'restore',
+	'delete',
+	'favorite',
+	'unarchive',
+	'share',
+] as const
 
-export const DEFAULT_DIRECTORIES = ['Documents', 'Downloads', 'Photos', 'Videos'] as const
-export const PROTECTED_VIRTUAL_PATHS = ['/Apps/*', '/Home/Downloads', '/External/*'] as const
-export const UNSHAREABLE_VIRTUAL_PATHS = ['/Apps', '/Apps/*', '/External', '/External/**'] as const
+type FileOperation = (typeof ALL_OPERATIONS)[number]
 
-const enum Operations {
-	none = 0,
-	createWithin = 1 << 0,
-	rename = 1 << 1,
-	copy = 1 << 2,
-	copyTo = 1 << 3,
-	move = 1 << 4,
-	moveTo = 1 << 5,
-	delete = 1 << 6,
-	trash = 1 << 7,
-	restore = 1 << 8,
-	share = 1 << 9,
-	favorite = 1 << 10,
-	archive = 1 << 11,
-	extract = 1 << 12,
-}
-
-export type Stats = {
+type File = {
 	name: string
 	path: string
-	error?: string
-	type?: string
-	size?: number
-	created?: Date
-	modified?: Date
-	ops: Operations
+	type: string
+	size: number
+	modified: number
+	operations: FileOperation[]
+	thumbnail?: string
+}
+
+type DirectoryListing = File & {
+	files: File[]
+	truncatedAt?: number
 }
 
 type Trashmeta = {
 	path: string
 }
 
-type Permissions = {
-	uid: number
-	gid: number
-	mode: number
+type BaseDirectory = '/Home' | '/Trash' | '/Apps' | '/External'
+
+type ViewPreferences = {
+	view: 'icons' | 'list'
+	sortBy: 'name' | 'type' | 'modified' | 'size'
+	sortOrder: 'ascending' | 'descending'
 }
 
-const statQueue = new PQueue({concurrency: 10})
-const deleteQueue = new PQueue({concurrency: 10})
-const maxFilesInDirectory = 10000
+const DEFAULT_VIEW_PREFERENCES: ViewPreferences = {
+	view: 'list',
+	sortBy: 'name',
+	sortOrder: 'ascending',
+}
 
 export default class Files {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
-	homeDirectory: string
-	trashDirectory: string
-	trashMetaDirectory: string
-	appsDirectory: string
-	mediaDirectory: string
 	baseDirectories: Map<string, string>
-	watcher: FilesWatcher
+	trashMetaDirectory: string
+	fileOwner = {userId: 1000, groupId: 1000}
+	maxDirectoryListing = 10000
+	// Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
+	hiddenFiles = ['.DS_Store', '.directory']
+	watcher: Watcher
 	recents: Recents
+	favorites: Favorites
+	archive: Archive
 	thumbnails: Thumbnails
 	samba: Samba
 	externalStorage: ExternalStorage
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
-		this.logger = umbreld.logger.createChildLogger(name.toLocaleLowerCase())
-		this.homeDirectory = nodePath.join(umbreld.dataDirectory, 'home')
-		this.trashDirectory = nodePath.join(umbreld.dataDirectory, 'trash')
-		this.trashMetaDirectory = nodePath.join(umbreld.dataDirectory, 'trash-meta')
-		this.appsDirectory = nodePath.join(umbreld.dataDirectory, 'app-data')
-		this.mediaDirectory = nodePath.join(umbreld.dataDirectory, 'external')
-		this.baseDirectories = new Map([
-			[this.homeDirectory, 'Home'],
-			[this.trashDirectory, 'Trash'],
-			[this.appsDirectory, 'Apps'],
-			[this.mediaDirectory, 'External'],
+		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+
+		this.baseDirectories = new Map<BaseDirectory, string>([
+			['/Home', `${umbreld.dataDirectory}/home`],
+			['/Trash', `${umbreld.dataDirectory}/trash`],
+			['/Apps', `${umbreld.dataDirectory}/app-data`],
+			['/External', `${umbreld.dataDirectory}/external`],
 		])
 
-		this.externalStorage = new ExternalStorage(umbreld)
-		this.watcher = new FilesWatcher(umbreld)
-		this.recents = new Recents(umbreld)
+		this.watcher = new Watcher(umbreld, {paths: ['/Home', '/Trash', '/Apps']})
+		this.recents = new Recents(umbreld, {paths: ['/Home']})
+		this.favorites = new Favorites(umbreld)
+		this.archive = new Archive(umbreld)
 		this.thumbnails = new Thumbnails(umbreld)
 		this.samba = new Samba(umbreld)
+		this.externalStorage = new ExternalStorage(umbreld)
+
+		// TODO: This should really be in a proper DB, refactor this once we've moved to SQLite
+		this.trashMetaDirectory = `${umbreld.dataDirectory}/trash-meta`
 	}
 
 	async start() {
 		this.logger.log('Starting files')
 
-		const defaultPermissions = {uid: DEFAULT_UID, gid: DEFAULT_GID, mode: DEFAULT_DIRECTORY_MODE}
+		// Ensure all base directories exist
+		await Promise.all(
+			[...this.baseDirectories.keys()].map((baseDirectory) =>
+				this.createDirectory(baseDirectory).catch((error) => {
+					this.logger.error(`Failed to ensure directory '${baseDirectory}' exists: ${error.message}`)
+				}),
+			),
+		)
 
-		// Make sure that required directories exist with sane permissions
-		await Promise.all([
-			this.ensureDirectoryWithPermissions(this.homeDirectory, defaultPermissions).catch((error) =>
-				this.logger.error(`Failed to ensure home directory: ${error.message}`),
-			),
-			this.ensureDirectoryWithPermissions(this.trashDirectory, defaultPermissions).catch((error) =>
-				this.logger.error(`Failed to ensure trash directory: ${error.message}`),
-			),
-			this.ensureDirectoryWithPermissions(this.trashMetaDirectory, defaultPermissions).catch((error) =>
-				this.logger.error(`Failed to ensure trash meta directory: ${error.message}`),
-			),
-			this.ensureDirectoryWithPermissions(this.appsDirectory, defaultPermissions).catch((error) =>
-				this.logger.error(`Failed to ensure apps directory: ${error.message}`),
-			),
-			this.ensureDirectoryWithPermissions(this.mediaDirectory, defaultPermissions).catch((error) =>
-				this.logger.error(`Failed to ensure media directory: ${error.message}`),
-			),
-		])
+		// Ensure the trash meta directory exists
+		await fse.ensureDir(this.trashMetaDirectory).catch((error) => {
+			this.logger.error(`Failed to ensure directory '${this.trashMetaDirectory}' exists: ${error.message}`)
+			console.error(error)
+		})
+		await this.chownSystemPath(this.trashMetaDirectory)
 
-		// Initialize favorites with default directories on first run
-		const favoritesInitialized = (await this.#umbreld.store.get('files.favorites')) !== undefined
-		if (!favoritesInitialized) {
-			const favorites = (
-				await Promise.all(
-					DEFAULT_DIRECTORIES.map(async (defaultDirectoryName) => {
-						const defaultDirectoryPath = nodePath.join(this.homeDirectory, defaultDirectoryName)
-						try {
-							await this.ensureDirectoryWithPermissions(defaultDirectoryPath, defaultPermissions)
-							return this.mapSystemToVirtualPath(defaultDirectoryPath)
-						} catch (error) {
-							this.logger.error(
-								`Failed to ensure default directory '${defaultDirectoryName}': ${(error as Error).message}`,
-							)
-							return null
-						}
-					}),
-				)
-			).filter((favorite) => favorite !== null) as string[]
-			await this.#umbreld.store.set('files.favorites', favorites)
+		// Do any required one time setup tasks.
+		await this.firstRun()
+
+		// Start submodules
+		await this.watcher.start().catch((error) => this.logger.error(`Failed to start watcher: ${error.message}`))
+		await this.externalStorage
+			.start()
+			.catch((error) => this.logger.error(`Failed to start external storage: ${error.message}`))
+		await this.recents.start().catch((error) => this.logger.error(`Failed to start recents: ${error.message}`))
+		await this.favorites.start().catch((error) => this.logger.error(`Failed to start favorites: ${error.message}`))
+		await this.thumbnails.start().catch((error) => this.logger.error(`Failed to start thumbnails: ${error.message}`))
+		await this.samba.start().catch((error) => this.logger.error(`Failed to start samba: ${error.message}`))
+	}
+
+	async firstRun() {
+		// Check if we've already setup favorites
+		const isFavoritesInitialized = (await this.#umbreld.store.get('files.favorites')) === undefined
+		if (!isFavoritesInitialized) return
+
+		// Initialize default favorites
+		const defaultFavourites = ['/Home/Documents', '/Home/Downloads', '/Home/Movies', '/Home/Music', '/Home/Photos']
+		for (const favorite of defaultFavourites) {
+			await this.createDirectory(favorite).catch((error) =>
+				this.logger.error(`Failed to ensure directory '${favorite}' exists: ${error.message}`),
+			)
+			await this.favorites
+				.addFavorite(favorite)
+				.catch((error) => this.logger.error(`Failed to initialize favorite '${favorite}': ${error.message}`))
 		}
-
-		// Start watching for filesystem changes
-		await this.recents.start()
-		await this.thumbnails.start()
-		await this.watcher.start()
-		await this.externalStorage.start()
-
-		// Make sure the share password exists and is applied and start samba daemon
-		await this.samba.start()
 	}
 
 	async stop() {
 		this.logger.log('Stopping files')
 
-		// Stop watching for filesystem changes
+		// Stop submodules
+		await this.recents.stop()
+		await this.favorites.stop()
+		await this.thumbnails.stop()
+		await this.samba.stop()
 		await this.externalStorage.stop()
 		await this.watcher.stop()
-		await this.recents.stop()
-		await this.thumbnails.stop()
-
-		// Stop samba daemon
-		await this.samba.stop()
 	}
 
-	// === Helpers (non-virtual) ===
-
-	async setPermissions(path: string, {uid, gid, mode}: Permissions) {
-		await fse.chmod(path, mode)
-		await fse.chown(path, uid, gid)
+	// Typesafe wrapper to get the system path of a base directory
+	getBaseDirectory(virtualPath: BaseDirectory) {
+		const path = this.baseDirectories.get(virtualPath)
+		if (!path) throw new Error(`[base-directory-not-found] ${virtualPath}`)
+		return path
 	}
 
-	async inheritPermissions(path: string, fromPath: string, modeMask = 0o777) {
-		const parentStats = await fse.stat(fromPath)
-		const uid = parentStats.uid
-		const gid = parentStats.gid
-		const mode = parentStats.mode & modeMask
-		await this.setPermissions(path, {uid, gid, mode})
+	// Creates a new directory at the given virtual path.
+	// Returns true if the directory already exists.
+	async createDirectory(virtualPath: string) {
+		// Get system path
+		const path = await this.virtualToSystemPath(virtualPath)
+
+		// Check if the directory already exists
+		if (await fse.pathExists(path)) return true
+
+		// Create the directory
+		await fse.mkdir(path).catch((error) => {
+			if (error?.message?.includes('ENOENT')) throw new Error('[parent-not-exist]')
+			if (error?.message?.includes('ENOTDIR')) throw new Error('[parent-not-directory]')
+			throw new Error(`[mkdir-failed] ${error?.message}`)
+		})
+
+		// Set owner to the umbrel user
+		// We do nothing on fail because this isn't supported on all filesystems.
+		// e.g this is expected to throw on external exFAT drives.
+		await this.chownSystemPath(path).catch(() => {})
+
+		return true
 	}
 
-	async ensureDirectory(path: string) {
-		path = nodePath.resolve(path)
-		const segments = path.split(nodePath.sep).filter(Boolean)
-		let current = nodePath.parse(path).root
-		for (const segment of segments) {
-			current = nodePath.join(current, segment)
-			const parentPath = nodePath.dirname(current)
-			try {
-				await fse.mkdir(current)
-				await this.inheritPermissions(current, parentPath).catch((error) =>
-					this.logger.error(
-						`Failed to inherit parent permissions when ensuring directory '${current}': ${error.message}`,
-					),
-				)
-			} catch (error) {
-				if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-					// When current exists, make sure it's a directory
-					const stats = await fse.lstat(current).catch(() => null)
-					if (!stats?.isDirectory()) {
-						throw new Error('ENOTDIR: Cannot ensure directory at non-directory')
-					}
-				} else {
-					throw error
-				}
-			}
-		}
+	// Set owner of system path to umbrel user
+	async chownSystemPath(systemPath: string) {
+		await fse.chown(systemPath, this.fileOwner.userId, this.fileOwner.groupId)
 	}
 
-	async ensureDirectoryWithPermissions(path: string, permissions: Permissions) {
-		await this.ensureDirectory(path) // inherit from interjacent parent first
-		await this.setPermissions(path, permissions)
-	}
+	// Gets file status given a system path.
+	// We use a system path here because everywhere we call this
+	// we already have a system path so we know it's safe. Also
+	// converting a system path back into a virtual path for the
+	// return value is cheap but converting a virtual path into a
+	// system path is expensive and we call this on every file in
+	// a directory.
+	async status(systemPath: string): Promise<File> {
+		// Get the path and filename
+		const path = this.systemToVirtualPath(systemPath)
+		const name = nodePath.basename(path)
 
-	isBaseDirectory(path: string) {
-		return this.baseDirectories.has(path)
-	}
+		// Get stats, operations, and thumbnail concurrently
+		// This will ensure that we complete these as fast as the slowest operation
+		const [stats, operations, thumbnail] = await Promise.all([
+			// We use lstat to ensure we don't follow symlinks
+			fse.lstat(systemPath),
 
-	isTrash(path: string) {
-		return path === this.trashDirectory || path.startsWith(`${this.trashDirectory}${nodePath.sep}`)
-	}
+			// Get the allowed operations
+			this.getAllowedOperations(path),
 
-	async mapVirtualToSystemPath(virtualPath: string) {
-		if (!posixPath.isAbsolute(virtualPath)) {
-			throw new Error('EPERM: Path must be absolute')
-		}
-		for (const [path, name] of this.baseDirectories) {
-			const virtualBase = `/${name}`
-			if (virtualPath === virtualBase || virtualPath.startsWith(`${virtualBase}/`)) {
-				return await resolveSafe(path, posixPath.relative(virtualBase, virtualPath))
-			}
-		}
-		throw new Error(`Cannot map '${virtualPath}' to a system path`)
-	}
+			// Get the thumbnail for supported file types only if the thumbnail already exists (does not generate a missing thumbnail)
+			this.thumbnails.getExistingThumbnail(systemPath).catch(() => undefined),
+		])
 
-	mapSystemToVirtualPath(systemPath: string) {
-		for (const [path, name] of this.baseDirectories) {
-			if (systemPath === path || systemPath.startsWith(`${path}${nodePath.sep}`)) {
-				return posixPath.join('/', name, nodePath.relative(path, systemPath))
-			}
-		}
-		throw new Error(`Cannot map '${systemPath}' to a virtual path`)
-	}
+		// Get the type
+		let type
+		if (stats.isDirectory()) type = 'directory'
+		else if (stats.isSymbolicLink()) type = 'symbolic-link'
+		else if (stats.isSocket()) type = 'socket'
+		else if (stats.isBlockDevice()) type = 'block-device'
+		else if (stats.isCharacterDevice()) type = 'character-device'
+		else if (stats.isFIFO()) type = 'fifo'
+		else type = mime.lookup(name) || 'application/octet-stream'
 
-	validateVirtualPath(virtualPath: string) {
-		// Since virtual paths aren't used to create files or directories, but
-		// to point to existing files or directories, they are not subject to
-		// the same restrictions as new file names below. The requirement here
-		// is that any possible Unix path can be referenced, even those that
-		// are all spaces, have trailing spaces etc., as long as they exist.
-		if (virtualPath.includes('\0')) {
-			throw new Error('EPERM: Path must not contain invalid characters')
-		}
-		// Reduce `.`, `..` and multiple slashes to their canonical form, in
-		// turn eliminating traversal patterns and redundant characters.
-		const normalized = posixPath.normalize(virtualPath)
-		// Trim trailing slash, except for the root directory
-		if (normalized === '/') return normalized
-		return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
-	}
+		// Get the size in bytes
+		let size = stats.size
+		// Set dir size to zero for now
+		// TODO: Implement directory size index for efficient lookups
+		if (type === 'directory') size = 0
 
-	validateFilename(filename: string) {
-		// We are only interested in a file name here, not in a path, so we can
-		// drop everything but the base name and check the outcome.
-		const trimmedBasename = nodePath.basename(filename.trim())
-		if (!trimmedBasename.length) {
-			throw new Error('EPERM: Filename must not be empty')
-		}
-		if (filename !== trimmedBasename) {
-			throw new Error('EPERM: Filename must not contain redundant characters')
-		}
-		// Check that the now known-to-be file name is not `.` or `..`
-		const traversalPatterns = /^\.{1,2}$/
-		if (traversalPatterns.test(trimmedBasename)) {
-			throw new Error('EPERM: Filename must not contain traversal patterns')
-		}
-		// Reject "reserved" characters. Unix paths actually allow most
-		// characters, but we want to prevent potential issues with them.
-		const reservedCharacters = /[<>:"/\\|?*\u0000-\u001F]/g
-		if (reservedCharacters.test(trimmedBasename)) {
-			throw new Error('EPERM: Filename must not contain reserved characters')
-		}
-		return trimmedBasename
-	}
+		// Get the modified time
+		const modified = stats.mtime.getTime()
 
-	getSupportedDirectoryOperations(path: string, isBaseDirectoryRoot: boolean) {
-		const isTrash = this.isTrash(path)
-		const isInTrashRoot = nodePath.dirname(path) === this.trashDirectory
-		let operations = Operations.copy | Operations.copyTo | Operations.moveTo
-		if (!isBaseDirectoryRoot) {
-			operations |= Operations.move
-			operations |= Operations.delete
-		}
-		if (!isTrash) {
-			operations |= Operations.createWithin
-			operations |= Operations.trash
-			operations |= Operations.share
-			operations |= Operations.favorite
-			if (!isBaseDirectoryRoot) {
-				operations |= Operations.rename
-				operations |= Operations.archive
-			}
-		}
-		if (isInTrashRoot) {
-			operations |= Operations.restore
-		}
-		return operations
-	}
-
-	getSupportedOperations(path: string, virtualPath: string, type: string) {
-		const isBaseDirectory = this.isBaseDirectory(path)
-		if (type === 'directory' || isBaseDirectory) {
-			// Checking for isBaseDirectory separately above in case `type` is unknown
-			return this.getSupportedDirectoryOperations(path, isBaseDirectory)
-		}
-		const isTrash = this.isTrash(path)
-		const isInTrashRoot = nodePath.dirname(path) === this.trashDirectory
-		let operations = Operations.copy | Operations.move | Operations.delete
-		if (!isTrash) {
-			operations |= Operations.rename
-			operations |= Operations.trash
-			const pathLower = path.toLowerCase()
-			const hasSupportedArchiveExtension = this.supportedArchiveExtensions.some((extension) =>
-				pathLower.endsWith(extension),
-			)
-			if (hasSupportedArchiveExtension) {
-				operations |= Operations.extract
-			}
-		}
-		if (isInTrashRoot) {
-			operations |= Operations.restore
-		}
-		if (this.isProtected(virtualPath)) {
-			operations &= ~(Operations.move | Operations.rename | Operations.delete | Operations.trash)
-		}
-		if (this.isUnshareable(virtualPath)) {
-			operations &= ~Operations.share
-		}
-		return operations
-	}
-
-	async stat(path: string, virtualPath: string): Promise<Stats> {
-		const name = this.baseDirectories.get(path) ?? nodePath.basename(path)
-		try {
-			const stats = await fse.lstat(path)
-			const type = stats.isDirectory()
-				? 'directory'
-				: stats.isBlockDevice()
-					? 'block-device'
-					: stats.isCharacterDevice()
-						? 'character-device'
-						: stats.isSymbolicLink()
-							? 'symbolic-link'
-							: stats.isFIFO()
-								? 'fifo'
-								: stats.isSocket()
-									? 'socket'
-									: mime.lookup(name) || 'application/octet-stream'
-			return {
-				name,
-				path: virtualPath,
-				type,
-				size: stats.size,
-				created: stats.birthtime,
-				modified: stats.mtime,
-				ops: this.getSupportedOperations(path, virtualPath, type),
-			}
-		} catch (error) {
-			const errno = (error as NodeJS.ErrnoException).code
-			return {
-				name,
-				path: virtualPath,
-				error: errno,
-				ops: errno !== 'ENOENT' ? this.getSupportedOperations(path, virtualPath, '') : 0,
-			}
-		}
-	}
-
-	getFileTargetName(path: string, suffix?: number) {
-		const extension = getFileExtension(path)
-		let targetName = nodePath.basename(path, extension)
-		if (suffix) targetName += ` (${suffix})`
-		if (extension.length) targetName += extension
-		return targetName
-	}
-
-	getDirectoryTargetName(path: string, suffix?: number) {
-		let targetName = nodePath.basename(path)
-		if (suffix) targetName += ` (${suffix})`
-		return targetName
-	}
-
-	// === Virtual filesystem operations ===
-
-	isProtected(virtualPath: string) {
-		return PROTECTED_VIRTUAL_PATHS.some((rule) => minimatch(virtualPath, rule))
-	}
-
-	isUnshareable(virtualPath: string) {
-		return UNSHAREABLE_VIRTUAL_PATHS.some((rule) => minimatch(virtualPath, rule))
-	}
-
-	async listDirectory(virtualPath: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-
-		// Virtual root directory lists virtual base directories
-		if (virtualPath === '/') {
-			const stats = {
-				name: '',
-				path: '/',
-				type: 'directory',
-				ops: Operations.none,
-			} satisfies Stats
-			const items = await Promise.all(
-				[...this.baseDirectories.entries()].map(([path, name]) => this.stat(path, `/${name}`)),
-			)
-			return {stats, items}
-		}
-
-		// Map any other virtual path to its corresponding system path
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-		const stats = await this.stat(path, virtualPath)
-
-		// Limit the maximum number of files in a directory as a precaution and
-		// use a global queue with a sensible concurrency to obtain file stats.
-		// TODO: Figure out a proper way to browse all files, always.
-		const items = new Array<Stats>()
-		const dir = await fse.opendir(path, {encoding: 'utf8'})
-		let truncatedAt: number | undefined = undefined
-		try {
-			let count = 0
-			for await (const dirent of dir) {
-				if (++count > maxFilesInDirectory) {
-					truncatedAt = maxFilesInDirectory
-					break
-				}
-				await statQueue.add(async () => {
-					const filePath = nodePath.join(path, dirent.name)
-					const virtualFilePath = posixPath.join(virtualPath, dirent.name)
-					items.push(await this.stat(filePath, virtualFilePath))
-				})
-			}
-		} finally {
-			// Make sure the directory is closed in any case
-			dir.close().catch(() => undefined)
-		}
 		return {
-			stats,
-			items,
+			name,
+			path,
+			type,
+			size,
+			modified,
+			operations,
+			thumbnail,
+		}
+	}
+
+	// Lists the contents of the root directory.
+	// This is a special case since the root directory doesn't map to a system path.
+	async #listRoot() {
+		const files = await Promise.all([...this.baseDirectories.values()].map((systemPath) => this.status(systemPath)))
+		return {
+			name: '',
+			path: '/',
+			type: 'directory',
+			size: 0,
+			modified: 0,
+			operations: [],
+			files,
+		}
+	}
+
+	// Lists the contents of a directory given a virtual path.
+	// Will return all files in the directory up to this.maxDirectoryListing
+	// We safely stream the directory to avoid blowing up Node.js if the directory is large.
+	async list(virtualPath: string): Promise<DirectoryListing> {
+		virtualPath = normalizePath(virtualPath)
+
+		// Special handling for the root directory since it doesn't map to a system parth
+		if (virtualPath === '/') return this.#listRoot()
+
+		// Get the system path and directory details
+		const systemPath = await this.virtualToSystemPath(virtualPath)
+		const directoryDetails = await this.status(systemPath).catch((error) => {
+			if (error?.message?.includes('ENOENT')) throw new Error('[does-not-exist]')
+			throw error
+		})
+
+		// List the contents of the directory
+		const fileJobs = []
+		let truncatedAt: number | undefined = undefined
+		// We open an async iterator to the directory so we can safely stream a large directory
+		// and exit if it gets too big.
+		// Iterate over the directory contents
+		let count = 0
+		for await (const fileSystemPath of getDirectoryStream(systemPath)) {
+			// Skip hidden files
+			if (this.hiddenFiles.includes(nodePath.basename(fileSystemPath))) continue
+
+			// Push the file details job to the queue to limit concurrency
+			fileJobs.push(
+				this.status(fileSystemPath).catch(() => {
+					this.logger.error(`Failed to get status for '${fileSystemPath}'`)
+					return undefined
+				}),
+			)
+			count++
+			// If we've reached the maximum number of files, set the truncatedAt property
+			// and break out of the loop.
+			if (count >= this.maxDirectoryListing) {
+				truncatedAt = this.maxDirectoryListing
+				break
+			}
+		}
+
+		// Filter out any files that failed to get status
+		const files = (await Promise.all(fileJobs)).filter((file) => file !== undefined) as File[]
+
+		return {
+			...directoryDetails,
+			files,
 			truncatedAt,
 		}
 	}
 
-	async createDirectory(virtualPath: string, name: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		name = this.validateFilename(name)
-		const path = await this.mapVirtualToSystemPath(virtualPath)
+	// Copies a file or directory from one virtual path to another.
+	async copy(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
+		// Get the system paths
+		const sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
+		const destinationSystemDirectory = await this.virtualToSystemPath(destinationVirtualDirectory)
 
-		if (this.isTrash(path)) {
-			throw new Error('ENOTSUP: Cannot create a directory in trash')
+		// Error if the destination directory doesn't exist
+		const targetExists = await fse.exists(destinationSystemDirectory)
+		if (!targetExists) throw new Error(`[destination-not-exist]`)
+
+		// TODO: Check we have enough free space on the destination
+
+		// Set up the destination path
+		let destinationSystemPath = nodePath.join(destinationSystemDirectory, nodePath.basename(sourceSystemPath))
+
+		// Always use 'keep-both' collision handling for same directory copies
+		const isSameDirectory = nodePath.dirname(sourceVirtualPath) === destinationVirtualDirectory
+		if (isSameDirectory) collision = 'keep-both'
+
+		// Handle name collisions
+		if (collision === 'error') {
+			const destinationExists = await fse.pathExists(destinationSystemPath)
+			if (destinationExists) throw new Error('[destination-already-exists]')
+		} else if (collision === 'keep-both') {
+			destinationSystemPath = await this.getUniqueName(destinationSystemPath)
+		} else if (collision === 'replace') {
+			// Remove the destination file/directory so that in the case of a directory, the contents are fully replaced
+			// This entire fse.remove and subsequent fse.copy action is not atomic. If the copy fails, the original destination content will not be restored.
+			await fse.remove(destinationSystemPath)
 		}
 
-		const parentStats = await fse.lstat(path).catch(() => null)
-		if (!parentStats) {
-			throw new Error('ENOENT: Parent directory does not exist')
-		}
-		if (!parentStats.isDirectory()) {
-			throw new Error('ENOTDIR: Parent is not a directory')
-		}
+		// Perform the copy operation
+		// TODO: Preserve file permissions and timestamps
+		// TODO: Report progress
+		await fse.copy(sourceSystemPath, destinationSystemPath).catch((error) => {
+			if (error?.message?.includes('subdirectory of itself')) throw new Error('[subdir-of-self]')
+			throw new Error(`[copy-failed] ${error?.message}`)
+		})
 
-		const targetPath = nodePath.join(path, name)
-		await this.ensureDirectory(targetPath)
-		return this.mapSystemToVirtualPath(targetPath)
+		// Return the virtual path of the new copy
+		return this.systemToVirtualPath(destinationSystemPath)
 	}
 
-	async copy(virtualPath: string, toVirtualDirectory: string, overwrite = false) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-		toVirtualDirectory = this.validateVirtualPath(toVirtualDirectory)
-		const toDirectory = await this.mapVirtualToSystemPath(toVirtualDirectory)
+	// Moves a file or directory from one virtual path to another.
+	async move(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
+		// If the destination is the current containing folder then the file is already in the correct location
+		// so we don't need to do anything.
+		if (nodePath.dirname(sourceVirtualPath) === destinationVirtualDirectory) return sourceVirtualPath
 
-		// Copying a base directory is technically possible, but would require
-		// special logic because these have virtual names for example. Disallow
-		// for now and revisit in case the UI ever needs to support it.
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot copy a base directory')
-		}
+		// Check if operation is allowed
+		const allowedOperations = await this.getAllowedOperations(sourceVirtualPath)
+		if (!allowedOperations.includes('move')) throw new Error('[operation-not-allowed]')
 
-		if (toDirectory === this.trashDirectory) {
-			// Handle copy to trash root by calling through to the trash route so it
-			// also creates the respective meta file. It's technically OK to copy to
-			// a trash subdirectory as well, so there's no need to disallow it.
-			return await this.trash(virtualPath, {keepOriginal: true})
-		}
+		// Get the system paths
+		const sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
+		const destinationSystemDirectory = await this.virtualToSystemPath(destinationVirtualDirectory)
 
-		const basename = nodePath.basename(path)
-		const wantedPath = nodePath.join(toDirectory, basename)
+		// Error if the destination directory doesn't exist
+		const targetExists = await fse.exists(destinationSystemDirectory)
+		if (!targetExists) throw new Error('[destination-not-exist]')
 
-		// Obtain a unique name for the file in case the path already exists
-		let targetPath = wantedPath
-		const targetDirectory = nodePath.dirname(targetPath)
-		let targetBasename = this.getFileTargetName(targetPath)
-		let nextSuffix = 2
-		while (await fse.pathExists(targetPath)) {
-			if (nextSuffix > SUFFIX_SEARCH_MAX_ITERATIONS) {
-				throw new Error('EEXIST: Gave up searching for a suffix')
-			}
-			targetBasename = this.getFileTargetName(wantedPath, nextSuffix++)
-			targetPath = nodePath.join(targetDirectory, targetBasename)
-		}
+		// Set up the destination path
+		let destinationSystemPath = nodePath.join(destinationSystemDirectory, nodePath.basename(sourceSystemPath))
 
-		if (!overwrite) {
-			// When the source is a directory, `fse.copy` copies everything inside
-			// of the directory to the destination, but that's not what we want when
-			// the target already exists. Hence, perform an additional check.
-			const targetExists = await fse.pathExists(targetPath)
-			if (targetExists) throw new Error(`EEXIST: Target already exists`)
-		}
+		// Handle name collisions
+		if (collision === 'keep-both') destinationSystemPath = await this.getUniqueName(destinationSystemPath)
+		const moveOptions = collision === 'replace' ? {overwrite: true} : {}
+
+		// Perform the move with appropriate overwrite option
+		// TODO: Report progress (moves across filesystems will be slow)
+		await move(sourceSystemPath, destinationSystemPath, moveOptions)
+
+		// Return the virtual path of the new location
+		return this.systemToVirtualPath(destinationSystemPath)
+	}
+
+	// Rename a file or directory
+	async rename(sourceVirtualPath: string, newName: string): Promise<string> {
+		// Check if operation is allowed.
+		const allowedOperations = await this.getAllowedOperations(sourceVirtualPath)
+		if (!allowedOperations.includes('rename')) throw new Error(`[operation-not-allowed]`)
+
+		// Ensure that a new name is valid.
+		if (!isValidFilename(newName)) throw new Error(`[invalid-filename] Invalid filename: '${newName}'`)
+
+		// Convert the source virtual path into a system path.
+		const sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
+
+		// If the new name is identical to the current base name, do nothing.
+		const currentName = nodePath.basename(sourceSystemPath)
+		if (currentName === newName) return sourceVirtualPath
+
+		// Determine the parent directory (system path) and compute the new candidate system path.
+		const parentDirectory = nodePath.dirname(sourceSystemPath)
+		const targetSystemPath = nodePath.join(parentDirectory, newName)
+
+		// Perform the renaming operation by moving the file/directory.
+		await move(sourceSystemPath, targetSystemPath)
+
+		// Convert the target system path back into a virtual path and return it.
+		return this.systemToVirtualPath(targetSystemPath)
+	}
+
+	// Trash a file or directory
+	async trash(virtualPath: string) {
+		// Check if operation is allowed
+		const allowedOperations = await this.getAllowedOperations(virtualPath)
+		if (!allowedOperations.includes('trash')) throw new Error('[operation-not-allowed]')
+
+		// Get the system path
+		// This is important to piggy back on for validation logic
+		const systemPath = await this.virtualToSystemPath(virtualPath)
+
+		// Calculate the target trash system path
+		const trashSystemRoot = await this.virtualToSystemPath('/Trash')
+		let trashSystemPath = await nodePath.join(trashSystemRoot, nodePath.basename(systemPath))
+		trashSystemPath = await this.getUniqueName(trashSystemPath, {maxIndex: 1000})
+
+		// Move the file or directory to the trash
+		await move(systemPath, trashSystemPath)
+
+		// Write the meta data for the trashed file or directory
+		// TODO: Migrate this to SQLite
+		const trashMetaSystemPath = nodePath.join(this.trashMetaDirectory, `${nodePath.basename(trashSystemPath)}.json`)
+		await fse.writeFile(trashMetaSystemPath, JSON.stringify({path: virtualPath} satisfies Trashmeta))
+
+		// Return the virtual path of the trashed file or directory
+		return this.systemToVirtualPath(trashSystemPath)
+	}
+
+	// Restore a file or directory from the trash
+	async restore(trashVirtualPath: string, {collision = 'error'} = {}) {
+		// Check if operation is allowed
+		const allowedOperations = await this.getAllowedOperations(trashVirtualPath)
+		if (!allowedOperations.includes('restore')) throw new Error('[operation-not-allowed]')
+
+		// Get the system path
+		const trashSystemPath = await this.virtualToSystemPath(trashVirtualPath)
+		if (!(await fse.pathExists(trashSystemPath))) throw new Error('[source-not-exists]')
+
+		// Read the meta data for the trashed file or directory
+		const pathSegments = trashVirtualPath.split('/').filter(Boolean)
+		const isChild = pathSegments.length > 2
+		// Always use the second path segment so we can recover child files and directories
+		const trashMetaSystemPath = nodePath.join(this.trashMetaDirectory, `${pathSegments[1]}.json`)
+		let targetSystemPath: string
 		try {
-			await fse.copy(path, targetPath, {overwrite, errorOnExist: true})
+			const trashMeta = (await fse.readJson(trashMetaSystemPath)) as Trashmeta
+			targetSystemPath = await this.virtualToSystemPath(trashMeta.path)
+			// Calculate full path if we're recovering a child file or directory
+			if (isChild) targetSystemPath = nodePath.join(targetSystemPath, pathSegments.slice(2).join('/'))
 		} catch (error) {
-			throw normalizeFsExtraError(error)
+			if ((error as Error)?.message?.includes('ENOENT')) throw new Error('[trash-meta-not-exists]')
+			throw error
 		}
-		return true
+
+		// Handle name conflicts
+		if (collision === 'keep-both') targetSystemPath = await this.getUniqueName(targetSystemPath)
+		const moveOptions = collision === 'replace' ? {overwrite: true} : {}
+
+		// Move the file or directory to the new location
+		await move(trashSystemPath, targetSystemPath, moveOptions)
+
+		// Delete the meta data if we're recovering a root file or directory
+		if (!isChild) await fse.remove(trashMetaSystemPath)
+
+		// Return the virtual path of the restored file or directory
+		return this.systemToVirtualPath(targetSystemPath)
 	}
 
-	async move(virtualPath: string, toVirtualDirectory: string, overwrite = false) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-
-		if (this.isProtected(virtualPath)) {
-			throw new Error('ENOTSUP: Cannot move a protected file or directory')
-		}
-
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-		toVirtualDirectory = this.validateVirtualPath(toVirtualDirectory)
-		const toDirectory = await this.mapVirtualToSystemPath(toVirtualDirectory)
-
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot move a base directory')
-		}
-
-		if (toDirectory === this.trashDirectory) {
-			// Handle move to trash root by calling through to the trash route so it
-			// also creates the respective meta file. It's technically OK to move to
-			// a trash subdirectory as well, so there's no need to disallow it.
-			return await this.trash(virtualPath)
-		}
-
-		const basename = nodePath.basename(path)
-		const targetPath = nodePath.join(toDirectory, basename)
-		await this.ensureDirectory(toDirectory)
-		try {
-			await fse.move(path, targetPath, {overwrite})
-		} catch (error) {
-			throw normalizeFsExtraError(error)
-		}
-		const movedFromTrashRoot = nodePath.dirname(path) === this.trashDirectory
-		if (movedFromTrashRoot) {
-			const metaPath = nodePath.join(this.trashMetaDirectory, `${nodePath.basename(path)}.json`)
-			await fse
-				.remove(metaPath)
-				.catch((error) =>
-					this.logger.error(
-						`Failed to remove trash meta file '${metaPath}' when moving from trash root: ${error.message}`,
-					),
-				)
-		}
-		await this.samba.replaceOrDeleteShare(virtualPath, targetPath)
-		await this.#replaceOrDeleteFavorite(virtualPath, targetPath)
-		return true
-	}
-
-	async rename(virtualPath: string, toName: string, overwrite = false) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-
-		if (this.isProtected(virtualPath)) {
-			throw new Error('ENOTSUP: Cannot rename a protected file or directory')
-		}
-
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-		toName = this.validateFilename(toName)
-
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot rename a base directory')
-		}
-
-		if (this.isTrash(path)) {
-			throw new Error('ENOTSUP: Cannot rename in trash')
-		}
-
-		const parentPath = nodePath.dirname(path)
-		const targetPath = nodePath.join(parentPath, toName)
-		if (!overwrite) {
-			// fs.rename overwrites the target file if it exists but throws
-			// when the target is a directory. So check manually instead.
-			const targetExists = await fse.pathExists(targetPath)
-			if (targetExists) throw new Error('EEXIST: Target already exists')
-		}
-		await fse.rename(path, targetPath)
-		await this.samba.replaceOrDeleteShare(virtualPath, targetPath)
-		await this.#replaceOrDeleteFavorite(virtualPath, targetPath)
-		return this.mapSystemToVirtualPath(targetPath)
-	}
-
-	async delete(virtualPath: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-
-		if (this.isProtected(virtualPath)) {
-			throw new Error('ENOTSUP: Cannot delete a protected file or directory')
-		}
-
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot delete a base directory')
-		}
-
-		await fse.remove(path)
-		if (this.isTrash(path)) {
-			// When deleting from trash, delete the respective meta file if it exists.
-			// It's expected that this fails when deleting inside a trashed directory.
-			const relativePathInTrash = nodePath.relative(this.trashDirectory, path)
-			const metaPath = nodePath.join(this.trashMetaDirectory, `${relativePathInTrash}.json`)
-			await fse.remove(metaPath).catch(() => {})
-		} else {
-			await this.samba.deleteShare(virtualPath).catch(() => false)
-			await this.deleteFavorite(virtualPath).catch(() => false)
-		}
-		return true
-	}
-
-	async trash(virtualPath: string, {keepOriginal = false}: {keepOriginal?: boolean} = {}) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-
-		if (this.isProtected(virtualPath)) {
-			throw new Error('ENOTSUP: Cannot trash a protected file or directory')
-		}
-
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot trash a base directory')
-		}
-
-		if (this.isTrash(path)) {
-			throw new Error('ENOTSUP: Cannot trash trash')
-		}
-
-		const stats = await fse.stat(path)
-		const isDirectory = stats.isDirectory()
-
-		// Obtain a unique name for the file in case multiple files of the same name,
-		// at the same place or not, have been trashed.
-		let targetName = isDirectory ? this.getDirectoryTargetName(path) : this.getFileTargetName(path)
-		let targetPath = nodePath.join(this.trashDirectory, targetName)
-		let nextSuffix = 2
-		while (await fse.pathExists(targetPath)) {
-			if (nextSuffix > SUFFIX_SEARCH_MAX_ITERATIONS) {
-				throw new Error('EEXIST: Gave up searching for a suffix')
-			}
-			targetName = isDirectory
-				? this.getDirectoryTargetName(path, nextSuffix++)
-				: this.getFileTargetName(path, nextSuffix++)
-			targetPath = nodePath.join(this.trashDirectory, targetName)
-		}
-
-		// Only move (or copy) the file when creating the meta file succeeded
-		const targetMetaPath = nodePath.join(this.trashMetaDirectory, `${targetName}.json`)
-		await fse.writeFile(targetMetaPath, JSON.stringify({path: virtualPath} satisfies Trashmeta))
-		try {
-			await fse[keepOriginal ? 'copy' : 'move'](path, targetPath)
-		} catch (error) {
-			await fse
-				.remove(targetMetaPath)
-				.catch((error) => this.logger.error(`Failed to undo trash meta file '${targetMetaPath}': ${error.message}`))
-			throw normalizeFsExtraError(error)
-		}
-		return true
-	}
-
-	async restore(virtualPath: string, overwrite = false) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-
-		if (!this.isTrash(path)) {
-			throw new Error('ENOTSUP: Can only restore from trash')
-		}
-
-		if (this.isBaseDirectory(path)) {
-			throw new Error('ENOTSUP: Cannot restore trash base directory')
-		}
-
-		const relativePathInTrash = nodePath.relative(this.trashDirectory, path)
-		const metaPath = nodePath.join(this.trashMetaDirectory, `${relativePathInTrash}.json`)
-		const meta = JSON.parse(await fse.readFile(metaPath, 'utf-8')) as Trashmeta
-		const originalPath = await this.mapVirtualToSystemPath(meta.path)
-
-		// Obtain a unique name for the file in case the path already exists
-		const targetDirectory = nodePath.dirname(originalPath)
-		let targetBasename = this.getFileTargetName(originalPath)
-		let targetPath = nodePath.join(targetDirectory, targetBasename)
-		let nextSuffix = 2
-		while (await fse.pathExists(targetPath)) {
-			if (nextSuffix > SUFFIX_SEARCH_MAX_ITERATIONS) {
-				throw new Error('EEXIST: Gave up searching for a suffix')
-			}
-			targetBasename = this.getFileTargetName(originalPath, nextSuffix++)
-			targetPath = nodePath.join(targetDirectory, targetBasename)
-		}
-
-		const targetPathExists = await fse.pathExists(targetPath)
-
-		if (targetPathExists && !overwrite) {
-			throw new Error(`EEXIST: Target already exists`)
-		}
-		await this.ensureDirectory(nodePath.dirname(targetPath))
-		try {
-			await fse.move(path, targetPath, {overwrite: true})
-		} catch (error) {
-			throw normalizeFsExtraError(error)
-		}
-		await fse.remove(metaPath)
-		return true
-	}
-
+	// Empty the trash
 	async emptyTrash() {
-		let deleted = 0
-		let failed = 0
-		const dir = await fse.opendir(this.trashDirectory)
-		for await (const dirent of dir) {
-			const itemName = dirent.name
-			const itemPath = nodePath.join(this.trashDirectory, itemName)
-			const metaPath = nodePath.join(this.trashMetaDirectory, `${itemName}.json`)
-			await deleteQueue.add(async () => {
-				try {
-					await fse.remove(itemPath)
-					deleted += 1
-					await fse
-						.remove(metaPath)
-						.catch((error) => this.logger.error(`Failed to delete trash meta file of '${itemName}': ${error.message}`))
-				} catch (error) {
-					if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-						failed += 1
-						this.logger.error(`Failed to delete '${itemName}' from trash: ${(error as Error).message}`)
-					}
-				}
+		let success = true
+
+		// Get the system path for the trash directory
+		const trashDirectory = await this.virtualToSystemPath('/Trash')
+
+		// Stream the trash directory contents
+		for await (const systemPath of getDirectoryStream(trashDirectory)) {
+			await fse.remove(systemPath).catch((error) => {
+				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash: ${error.message}`)
+				success = false
 			})
 		}
-		return {deleted, failed}
+		for await (const systemPath of getDirectoryStream(this.trashMetaDirectory)) {
+			await fse.remove(systemPath).catch((error) => {
+				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash meta: ${error.message}`)
+				success = false
+			})
+		}
+
+		return success
 	}
 
-	supportedArchiveExtensions = ['.tar.gz', '.tgz', '.tar.bz2', '.tar.xz', '.tar', '.zip', '.7z']
+	// Permanently delete a file or directory
+	async delete(virtualPath: string) {
+		// Check if operation is allowed
+		const allowedOperations = await this.getAllowedOperations(virtualPath)
+		if (!allowedOperations.includes('delete')) throw new Error('[operation-not-allowed]')
 
-	async archive(virtualPaths: string[]) {
-		if (virtualPaths.length === 0) {
-			throw new Error('EINVAL: No paths provided')
-		}
+		// Get the system path
+		const systemPath = await this.virtualToSystemPath(virtualPath)
 
-		// Validate and map all paths serially
-		const systemPaths: string[] = []
-		for (const virtualPath of virtualPaths) {
-			const validPath = this.validateVirtualPath(virtualPath)
-			const path = await this.mapVirtualToSystemPath(validPath)
-
-			if (this.isBaseDirectory(path)) {
-				throw new Error('ENOTSUP: Cannot archive a base directory')
-			}
-
-			if (this.isTrash(path)) {
-				throw new Error('ENOTSUP: Cannot archive within trash')
-			}
-
-			// Check that the path exists
-			const stats = await fse.stat(path).catch(() => null)
-			if (!stats) {
-				throw new Error('ENOENT: Path does not exist')
-			}
-
-			systemPaths.push(path)
-		}
-
-		// For multiple files, use archive.zip in the parent directory of first path
-		// For single file/dir, use its name with .zip extension
-		const targetDirectory = nodePath.dirname(systemPaths[0])
-		const targetBasename = virtualPaths.length === 1 ? nodePath.basename(systemPaths[0]) : 'Archive'
-		let targetPath = nodePath.join(targetDirectory, `${targetBasename}.zip`)
-		let nextSuffix = 2
-
-		while (await fse.pathExists(targetPath)) {
-			if (nextSuffix > SUFFIX_SEARCH_MAX_ITERATIONS) {
-				throw new Error('EEXIST: Gave up searching for a suffix')
-			}
-			targetPath = nodePath.join(targetDirectory, `${targetBasename} (${nextSuffix++}).zip`)
-		}
-
-		// Create zip archive with 7z
-		await $({
-			cwd: targetDirectory,
-		})`7z a ${targetPath} ${systemPaths}`
-
-		return this.mapSystemToVirtualPath(targetPath)
-	}
-
-	async extract(virtualPath: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-
-		if (this.isTrash(path)) {
-			throw new Error('ENOTSUP: Cannot extract within trash')
-		}
-
-		// Check that the path is a file we can extract
-		const pathLower = path.toLowerCase()
-		const extension = this.supportedArchiveExtensions.find((extension) => pathLower.endsWith(extension))
-		if (!extension) {
-			throw new Error('ENOTSUP: Not a supported archive type')
-		}
-		const stats = await fse.stat(path).catch(() => null)
-		if (!stats?.isFile()) {
-			throw new Error('ENOTSUP: Not an archive file')
-		}
-
-		// We want to extract the file to a directory of the same name placed next to
-		// it. When the target directory already exists, try an incremental suffix.
-		const targetDirectory = nodePath.dirname(path)
-		const targetBasename = nodePath.basename(path, extension)
-		let targetPath = nodePath.join(targetDirectory, targetBasename)
-		let nextSuffix = 2
-		while (await fse.pathExists(targetPath)) {
-			if (nextSuffix > SUFFIX_SEARCH_MAX_ITERATIONS) {
-				throw new Error('EEXIST: Gave up searching for a suffix')
-			}
-			targetPath = nodePath.join(targetDirectory, `${targetBasename} (${nextSuffix++})`)
-		}
-
-		// Extract the archive to a temporary directory first so we can inspect
-		// whether it includes a single top-level directory we can normalize. This
-		// directory is located on the data partition so files can be moved swiftly.
-		const temporary = temporaryDirectory(this.#umbreld.temporaryDirectory)
-		const containingTemporaryDirectory = await temporary.create()
+		// Delete the file or directory
 		try {
-			const isTarArchive = /^\.tar|\.tgz$/.test(extension)
-			if (isTarArchive) {
-				// Preserve permissions when extracting a tar archive so we don't break
-				// backups of apps that rely on certain permissions to be set.
-				await $`tar -xpf ${path} -C ${containingTemporaryDirectory}`
-			} else {
-				// Otherwise rely on 7z's wide archive format support
-				await $`7z x ${path} -o${containingTemporaryDirectory}`
-			}
-
-			// Find out whether this archive contained a single top-level directory.
-			// It it did, move the top-level directory itself to the target path.
-			// Otherwise create the target directory and move the archive's contents
-			// there. If the check fails, assume that there is no top-level directory.
-			const checkSingleTopLevelDirectory = async () => {
-				const entries = await fse.readdir(containingTemporaryDirectory).catch((error) => {
-					this.logger.error(`Failed to read temporary archive directory: ${error.message}`)
-					return []
-				})
-				if (entries.length !== 1) return null
-				const topLevel = nodePath.join(containingTemporaryDirectory, entries[0])
-				const stats = await fse.stat(topLevel).catch((error) => {
-					this.logger.error(`Failed to stat top-level archive entry: ${error.message}`)
-					return null
-				})
-				if (!stats?.isDirectory()) return null
-				return topLevel
-			}
-			const singleTopLevelDirectory = await checkSingleTopLevelDirectory()
-			await fse.move(singleTopLevelDirectory ?? containingTemporaryDirectory, targetPath)
-		} finally {
-			temporary.destroy().catch((error) => {
-				this.logger.error(`Failed to clean up temporary directory: ${error.message}`)
-			})
-		}
-		return this.mapSystemToVirtualPath(targetPath)
-	}
-
-	async getFavorites() {
-		let favorites: string[]
-		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
-			favorites = (await get('files.favorites'))?.slice() ?? []
-			const validFavorites = (
-				await Promise.all(
-					favorites.map(async (favorite) => {
-						try {
-							const path = await this.mapVirtualToSystemPath(favorite)
-							const stats = await fse.stat(path)
-							if (!stats.isDirectory()) {
-								throw new Error('ENOTDIR: Favorite path is not a directory')
-							}
-							return favorite
-						} catch (error) {
-							// We no longer auto cleanup, see comment below.
-							// this.logger.log(`Cleaned up invalid favorite '${favorite}': ${(error as Error).message}`)
-							return null
-						}
-					}),
-				)
-			).filter((favorite) => favorite !== null) as string[]
-			// Temporarily disable this to avoid deleting favourites on external storage
-			// when the device isn't attached.
-			// TODO: Come up with a proper solution for this in the refactor.
-			// if (validFavorites.length === favorites.length) return
-			// await set('files.favorites', validFavorites)
-			favorites = validFavorites
-		})
-		return favorites!.map((favorite) => ({
-			path: favorite,
-			name: nodePath.basename(favorite),
-		}))
-	}
-
-	async addFavorite(virtualPath: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		const path = await this.mapVirtualToSystemPath(virtualPath)
-
-		if (this.isTrash(path)) {
-			throw new Error('ENOTSUP: Cannot favorite trash')
-		}
-
-		// Check that the path is a directory
-		const stats = await fse.stat(path).catch(() => null)
-		if (!stats?.isDirectory()) {
-			throw new Error('ENOTDIR: Favorite path is not a directory')
-		}
-		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
-			const favorites = (await get('files.favorites'))?.slice() ?? []
-			let favorite = favorites.find((favorite) => favorite === virtualPath)
-			if (favorite) return
-			favorites.push(virtualPath)
-			await set('files.favorites', favorites)
-		})
-		return true
-	}
-
-	async deleteFavorite(virtualPath: string) {
-		virtualPath = this.validateVirtualPath(virtualPath)
-		await this.mapVirtualToSystemPath(virtualPath) // for consistency
-
-		let deleted = false
-		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
-			const favorites = (await get('files.favorites')) ?? []
-			const newFavorites = favorites.filter((favorite) => favorite !== virtualPath)
-			deleted = newFavorites.length < favorites.length
-			if (deleted) await set('files.favorites', newFavorites)
-		})
-		return deleted
-	}
-
-	async #replaceFavorite(knownGoodVirtualPath: string, newPath: string) {
-		const newVirtualPath = await this.mapSystemToVirtualPath(newPath)
-
-		if (this.isTrash(newPath)) {
-			throw new Error('ENOTSUP: Cannot favorite trash')
-		}
-
-		// Check that newPath is a directory
-		const stats = await fse.stat(newPath).catch(() => null)
-		if (!stats?.isDirectory()) {
-			throw new Error('ENOTDIR: New favorite path is not a directory')
-		}
-		let replaced = false
-		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
-			const favorites = (await get('files.favorites'))?.slice() ?? []
-			const favoriteIndex = favorites.findIndex((favorite) => favorite === knownGoodVirtualPath)
-			if (favoriteIndex < 0) return
-			favorites[favoriteIndex] = newVirtualPath
-			await set('files.favorites', favorites)
-			replaced = true
-		})
-		return replaced
-	}
-
-	async #replaceOrDeleteFavorite(knownGoodVirtualPath: string, newPath: string) {
-		const replaced = await this.#replaceFavorite(knownGoodVirtualPath, newPath).catch((error) => {
-			this.logger.log(`Cannot replace favorite at '${knownGoodVirtualPath}': ${error.message}`)
+			await fse.remove(systemPath)
+			return true
+		} catch (error) {
+			this.logger.error(`Failed to delete '${systemPath}': ${(error as Error).message}`)
 			return false
+		}
+	}
+
+	// Get allowed operations for a given path
+	async getAllowedOperations(virtualPath: string): Promise<FileOperation[]> {
+		// Get file status
+		let isFile = false
+		let isDirectory = false
+		try {
+			const file = await fse.lstat(await this.virtualToSystemPath(virtualPath))
+			isFile = file.isFile()
+			isDirectory = file.isDirectory()
+		} catch {}
+
+		// Start with all operations
+		const operations = new Set(ALL_OPERATIONS)
+
+		// Remove non-default operations
+		operations.delete('restore')
+		operations.delete('delete')
+		operations.delete('favorite')
+		operations.delete('unarchive')
+		operations.delete('share')
+
+		// Add file specific operations
+		if (isFile) {
+			if (this.archive.isUnarchiveable(virtualPath)) operations.add('unarchive')
+		}
+
+		// Add directory specific operations
+		if (isDirectory) {
+			operations.add('favorite')
+			operations.add('share')
+		}
+
+		// Remove destructive operations if the path is protected
+		// Note only the exact paths are protected, not necessarily the children.
+		// e.g /Home/Downloads is protected but /Home/Downloads/file.txt is not.
+		// Children could be protected with /Home/Downloads/**
+		const isProtected = match(virtualPath, ['/*', '/Apps/*', '/Home/Downloads', '/External/*'])
+		if (isProtected) {
+			operations.delete('move')
+			operations.delete('rename')
+			operations.delete('trash')
+			operations.delete('delete')
+		}
+
+		// Unshareable paths
+		const isUnshareable = match(virtualPath, ['/Apps', '/Apps/*', '/External', '/External/**'])
+		if (isUnshareable) operations.delete('share')
+
+		// External files (not external root or top level mount points)
+		const isExternal = match(virtualPath, ['/External/*/**'])
+		if (isExternal) {
+			// Only allow hard delete so we don't copy to internal storage
+			operations.delete('trash')
+			operations.add('delete')
+		}
+
+		// Add trash specific operations
+		const isTrash = match(virtualPath, ['/Trash/**'])
+		if (isTrash) {
+			operations.delete('unarchive')
+			operations.delete('share')
+			operations.delete('favorite')
+			operations.delete('trash')
+			operations.add('restore')
+			operations.add('delete')
+		}
+
+		return Array.from(operations)
+	}
+
+	// Split the extension from the file name
+	// Handles complex extensions like archive.tar.gz and file.txt.gz
+	splitExtension(path: string) {
+		// TODO: Handle complex extensions like .tar.gz
+		let extension = nodePath.extname(path)
+		let name = nodePath.basename(path)
+		if (extension) name = name.slice(0, -extension.length)
+
+		// Handle tar.* extensions
+		const tar = '.tar'
+		if (name.endsWith(tar)) {
+			name = name.slice(0, -tar.length)
+			extension = `${tar}${extension}`
+		}
+
+		return {name, extension}
+	}
+
+	// Get unique name for a file or directory
+	// If the path doesn't exist we return the original path.
+	// If the path exists we will append a number to the end of the file name
+	// until we find a unique name.
+	// Note that if two operations call this soon after each other with the
+	// the same path before the first one has created the file at the unique path
+	// it's possible that we will return the same "unique" name for both calls.
+	// We could implement some kind of cache to avoid this but it's unlikely to be an issue.
+	async getUniqueName(systemPath: string, {maxIndex = 100} = {}) {
+		// TODO: Handle complex extensions like .tar.gz
+		const {name, extension} = this.splitExtension(systemPath)
+		const path = nodePath.dirname(systemPath)
+
+		let index = 2
+		let uniquePath = systemPath
+		while (await fse.pathExists(uniquePath)) {
+			if (index > maxIndex) throw new Error(`[unique-name-index-exceeded]`)
+			uniquePath = nodePath.join(path, `${name} (${index})${extension ? extension : ''}`)
+			index++
+		}
+
+		return uniquePath
+	}
+
+	// Converts a virtual path to a system path.
+	// Ensures that the path is safe and does not escape the expected base directory.
+	// If the full path doesn't exist it validates symlinks up to the deepest existing path.
+	async virtualToSystemPath(virtualPath: string) {
+		// Normalize virtual path before lookup so directory traversal attacks cannot be resolved.
+		// e.g: /Home/../../../../etc/passwd normalizes to /etc/passwd which won't get a match in the base directories lookup.
+		virtualPath = normalizePath(virtualPath)
+
+		// Ensure the path is absolute, we can't resolve relative paths.
+		// e.g /Home/file.pdf can be resolved but Home/file.pdf can't.
+		if (!nodePath.posix.isAbsolute(virtualPath)) throw new Error(`[path-not-absolute]`)
+
+		// Split the path into segments and lookup the system path for the base directory
+		const segments = virtualPath.split('/').filter(Boolean)
+		const basePath = this.baseDirectories.get(`/${segments[0]}`)
+
+		// Error if we don't find a matching base directory
+		if (!basePath) throw new Error(`[invalid-base] No valid base directory found for path: ${virtualPath}`)
+
+		// Swap out the base directory with it's system path and resolve any symlinks
+		// or directory traversals to get the real path.
+		segments[0] = basePath
+		const systemPath = segments.join('/')
+
+		// Ensure the deepest existing real path doesn't resolve to a directory outside
+		// of the expected base path. We use realpath to resolve symlinks. This prevents
+		// escaping the base directory if a symlink is in the path.
+		// e.g:
+		// /Home/symlink-to-root/etc/passwd
+		const deepestExistingPath = await getDeepestExistingPath(systemPath)
+		const deepestExistingRealPath = await fse.realpath(deepestExistingPath)
+		const realPath = systemPath.replace(deepestExistingPath, deepestExistingRealPath)
+		if (!realPath.startsWith(basePath)) throw new Error(`[escapes-base] '${virtualPath}' escapes '${basePath}'`)
+
+		// We return the system path not the real path because at this point we know
+		// the path is safe and we want to return the path as it was passed in.
+		// Otherwise we'd resolve symlinks in the path and weird stuff would happen
+		// like copying a symlink to a file resulting in copying the file instead of the symlink.
+		// e.g:
+		// /Home/symlink-to-documents
+		// would resolve to system path for /Home/Documents not the actual symlink path.
+		return systemPath
+	}
+
+	// Converts a system path to a virtual path.
+	// Ensures that the path is safe and does not escape the expected base directory.
+	systemToVirtualPath(systemPath: string) {
+		// Normalize the system path to handle any directory traversals
+		systemPath = normalizePath(systemPath)
+
+		// Find the base directory this path belongs to by checking if it starts with any of the base paths
+		for (const [baseDirectory, basePath] of this.baseDirectories) {
+			if (systemPath.startsWith(basePath)) {
+				// Replace the system base path with the virtual base directory name
+				const virtualPath = systemPath.replace(basePath, baseDirectory)
+				// Normalize to handle any remaining path oddities
+				return normalizePath(virtualPath)
+			}
+		}
+
+		throw new Error(`[invalid-path] Path '${systemPath}' is not within any base directory`)
+	}
+
+	// Get view preferences
+	async getViewPreferences(): Promise<ViewPreferences> {
+		const viewPreferences = await this.#umbreld.store.get('files.preferences')
+		return viewPreferences || DEFAULT_VIEW_PREFERENCES
+	}
+
+	// Update view preferences
+	async updateViewPreferences(newViewPreferences: Partial<ViewPreferences>): Promise<ViewPreferences> {
+		let updatedViewPreferences: ViewPreferences
+
+		// Save the new preferences to the store
+		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
+			const currentViewPreferences = await this.getViewPreferences()
+			updatedViewPreferences = {...currentViewPreferences, ...newViewPreferences}
+			await set('files.preferences', updatedViewPreferences)
 		})
-		if (replaced) return true
-		return await this.deleteFavorite(knownGoodVirtualPath).catch((error) => {
-			this.logger.error(`Failed to delete favorite at '${knownGoodVirtualPath}' instead: ${error.message}`)
-		})
+
+		return updatedViewPreferences!
 	}
 }
 
-/**
- * Like `path.extname`, but considering a second level, so when determining a
- * filename with a suffix, we get `.xyz-2.tar.gz` instead of `.xyz.tar-2.gz`.
- * Return value includes the leading dot. Returns an empty string when there
- * is no extension or the extension is a dot.
- */
-function getFileExtension(name: string) {
-	const secondLevelExtensions = ['.tar']
-	const extension = nodePath.extname(name)
-	const remainder = name.substring(0, name.length - extension.length)
-	const secondLevel = secondLevelExtensions.find((extension) => remainder.endsWith(extension))
-	return secondLevel ? `${secondLevel}${extension}` : extension
+// Match a path against a list of glob patterns
+function match(path: string, patterns: string[]) {
+	// TODO: Cache Regex creation if perf becomes an issue
+	return patterns.some((pattern) => minimatch(path, pattern, {dot: true}))
+}
+
+// Resolve traversals and always trim trailing trash
+function normalizePath(path: string) {
+	// Reduce `.`, `..` and multiple slashes to their canonical form
+	const normalized = nodePath.posix.normalize(path)
+
+	// Trim trailing slash, except for the root directory
+	if (normalized === '/') return normalized
+	return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized
+}
+
+// Given a file path will return the deepest existing path.
+async function getDeepestExistingPath(path: string) {
+	// Resolve the input to an absolute path
+	let currentPath = nodePath.resolve(path)
+
+	while (true) {
+		// Check if the current path exists
+		if (await fse.pathExists(currentPath)) return currentPath
+
+		// Move up one level in the path hierarchy
+		const parentPath = nodePath.dirname(currentPath)
+
+		// If we're at the root and it doesn't exist, throw an error cos
+		// something really bad has happened and we're gonna infinite loop.
+		if (parentPath === currentPath) throw new Error(`[cant-find-root] Can't validate path if entire tree doesn't exist`)
+
+		currentPath = parentPath
+	}
+}
+
+// Wrap with our own method with nicer error handling
+async function move(sourceSystemPath: string, targetSystemPath: string, {overwrite = false} = {}) {
+	return fse.move(sourceSystemPath, targetSystemPath, {overwrite}).catch((error) => {
+		const message = error?.message || ''
+		if (message.includes('ENOENT')) throw new Error('[source-not-exists]')
+		if (message.includes('dest already exists')) throw new Error('[destination-already-exists]')
+		if (message.includes('subdirectory of itself')) throw new Error('[subdir-of-self]')
+		throw new Error(`[move-failed] ${error?.message}`)
+	})
+}
+
+export async function* getDirectoryStream(directory: string) {
+	const directoryListing = await fse.opendir(directory)
+	try {
+		for await (const file of directoryListing) yield nodePath.join(directory, file.name)
+	} finally {
+		// Ensure the directory is closed if we error
+		directoryListing.close().catch(() => {})
+	}
 }

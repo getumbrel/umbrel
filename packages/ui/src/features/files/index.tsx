@@ -10,11 +10,7 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 
-const EmptyTrashDialog = lazy(() => import('@/features/files/components/dialogs/empty-trash-dialog'))
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))
-const ExtensionChangeConfirmationDialog = lazy(
-	() => import('@/features/files/components/dialogs/extension-change-confirmation-dialog'),
-)
 const PermanentlyDeleteConfirmationDialog = lazy(
 	() => import('@/features/files/components/dialogs/permanently-delete-confirmation-dialog'),
 )
@@ -83,12 +79,6 @@ export default function FilesLayout() {
 			</div>
 
 			{/* Lazy loaded dialogs */}
-			<Suspense>
-				<EmptyTrashDialog />
-			</Suspense>
-			<Suspense>
-				<ExtensionChangeConfirmationDialog />
-			</Suspense>
 			<Suspense>
 				<ShareInfoDialog />
 			</Suspense>

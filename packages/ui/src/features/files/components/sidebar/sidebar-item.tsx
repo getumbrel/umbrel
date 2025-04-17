@@ -35,7 +35,8 @@ export function SidebarItem({item, isActive, onClick}: SidebarItemProps) {
 			disabled={item.path === RECENTS_PATH} // Disable dropping on recents
 		>
 			<button onClick={onClick} className={cn('flex w-full items-center gap-1.5 px-2 py-1.5')}>
-				<FileItemIcon item={{...item, ops: 0}} className='h-5 w-5' />
+				{/* We add default modified, size, and operations to satisfy FileItemIcon's expected FileSystemItem type */}
+				<FileItemIcon item={{...item, modified: 0, size: 0, operations: []}} className='h-5 w-5' />
 				<span className='truncate'>{formatItemName({name: item.name, maxLength: 21})}</span>
 			</button>
 		</Droppable>

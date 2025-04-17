@@ -1,287 +1,356 @@
 import nodePath from 'node:path'
-import {createHash} from 'node:crypto'
+import crypto from 'node:crypto'
+import os from 'node:os'
 
 import fse from 'fs-extra'
 import {$} from 'execa'
+import PQueue from 'p-queue'
+import {debounce, type DebouncedFunction} from 'es-toolkit'
 
 import type Umbreld from '../../index.js'
-import PQueue from 'p-queue'
+import type {FileChangeEvent} from './watcher.js'
+import {getDirectoryStream} from './files.js'
 
-/** Maximum thumbnail width. */
-const width = 104
-/** Maximum thumbnail height. */
-const height = 104
-/** Thumbnail format. */
-const format = 'webp'
-/** Thumbnail quality. */
-const quality = 70
-/** Generator concurrency. */
-const concurrency = 1
-/** Supported image extensions. */
-const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.heic'])
-/** Supported video extensions. */
-const videoExtensions = new Set(['.mov', '.mp4', '.3gp', '.mkv', '.avi'])
-/** Maximum number of thumbnails to maintain. */
-const maxThumbnails = 10000
-/** Threshold for pruning old thumbnails when exceeding maxThumbnails. */
-const pruneThreshold = 1000
+const SUPPORTED_THUMBNAIL_EXTENSIONS = [
+	// Image formats
+	'.webp',
+	'.png',
+	'.jpg',
+	'.jpeg',
+	'.gif',
+	'.avif',
+	'.heic',
+	// Video formats
+	'.mkv',
+	'.mov',
+	'.mp4',
+	'.3gp',
+	'.avi',
+]
 
-const queue = new PQueue({concurrency})
-
-class Thumbnails {
+export default class Thumbnails {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
-	thumbnailsDirectory: string
-	running: boolean = false
-	thumbnails = new Map<string, Date>()
+	thumbnailDirectory: string
+	// Maximum number of thumbnails to keep on disk
+	maxThumbnailCount = 100000
+	// Trigger cleanup when this many new thumbnails are generated; counter resets after cleanup
+	pruningThreshold = 1000
+	thumbnailsSinceLastPruning = 0
+	// Thumbnail properties - optimized for UI display sizes (20px list view, 56px icons view)
+	// 112px = 2x the largest UI size for high-DPI displays; 75% quality balances size/quality for webp
+	width = 112
+	height = 112
+	quality = 75
+	format = 'webp'
+	// The queue for background thumbnail generation that occurs on file change
+	backgroundQueue = new PQueue({concurrency: 1})
+	// The queue for on-demand thumbnail generation.
+	// We use a concurrency equal to the number of CPU threads to generate thumbnails relatively quickly without overloading the CPU
+	onDemandQueue = new PQueue({concurrency: os.cpus().length})
+	// The queue for filesystem UUID lookup requests
+	filesystemUuidQueue = new PQueue({concurrency: 1})
+	deviceIdtoUuidMap = new Map<number, string>()
+	// Map to store debounced background thumbnail tasks per filepath
+	#backgroundThumbnailDebouncers = new Map<string, DebouncedFunction<() => Promise<void>>>()
+	#removeFileChangeListener?: () => void
+	#removeDiskChangeListener?: () => void
+	#isPruning = false
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
-		this.logger = umbreld.logger.createChildLogger(name.toLocaleLowerCase())
-		this.thumbnailsDirectory = `${umbreld.dataDirectory}/thumbnails`
+		this.logger = umbreld.logger.createChildLogger(`files:${name.toLowerCase()}`)
+		this.thumbnailDirectory = `${umbreld.dataDirectory}/thumbnails`
 	}
 
 	async start() {
-		this.logger.log(`Starting thumbnails`)
-		this.running = true
+		this.logger.log('Starting thumbnails')
 
-		// Make sure that the thumbnails directory exists
-		await fse.ensureDir(this.thumbnailsDirectory, {mode: 0o755})
+		// Ensure thumbnail directory exists
+		await fse.ensureDir(this.thumbnailDirectory).catch((error) => {
+			this.logger.error(`Failed to ensure directory '${this.thumbnailDirectory}' exists: ${error.message}`)
+		})
 
-		// Rebuild the internal map of managed thumbnails. The map is keyed by the
-		// thumbnail name and the value is the last time the source was accessed,
-		// which is remembered as the thumbnail's modification time.
-		const dir = await fse.opendir(this.thumbnailsDirectory)
-		const nameExpression = new RegExp(`^[0-9a-z]{64}\\.${format}$`)
-		this.thumbnails.clear()
-		for await (const dirent of dir) {
-			const thumbnailName = dirent.name
-			const thumbnailPath = nodePath.join(this.thumbnailsDirectory, thumbnailName)
-			const thumbnailStats = await fse.stat(thumbnailPath).catch(() => null)
-			if (!thumbnailStats?.isFile() || !nameExpression.test(thumbnailName)) {
-				continue
+		// TODO: Enable PDF support in ImageMagick in a safe way
+
+		// Initial non-blocking cleanup on startup
+		this.#pruneOldestThumbnails()
+
+		// Attach listener for file changes
+		this.#removeFileChangeListener = this.#umbreld.eventBus.on('file:change', this.#handleFileChange.bind(this))
+
+		// Attach disk change listener so the UUID cache is cleared when a disk is mounted
+		this.#removeDiskChangeListener = this.#umbreld.eventBus.on('system:disk:change', () =>
+			this.deviceIdtoUuidMap.clear(),
+		)
+	}
+
+	// The debounced background thumbnail generation task for a given systemPath.
+	// Uses #backgroundThumbnailDebouncers map for per-path debouncing.
+	// Calling this ensures the actual #generateThumbnail task runs only after 1 second of file change inactivity for the path.
+	// This avoids rapid regeneration of invalid files while they are in the process of being written.
+	// Includes self-cleanup from the map.
+	#debouncedGenerateThumbnail(systemPath: string): void {
+		let debouncer = this.#backgroundThumbnailDebouncers.get(systemPath)
+
+		if (!debouncer) {
+			const generateThumbnailAndCleanup = async () => {
+				// Destroy the debouncer now that it's fired to avoid memory leaks
+				this.#backgroundThumbnailDebouncers.delete(systemPath)
+
+				// Generate the thumbnail
+				await this.#generateThumbnail(systemPath, {background: true}).catch((error) => {
+					// We catch errors here to prevent unhandled rejections, since this debounced function runs later and outside the original call context.
+					this.logger.error(`Failed to generate thumbnail for ${systemPath}: ${(error as Error).message}`)
+				})
 			}
-			this.thumbnails.set(thumbnailName, thumbnailStats.mtime)
-		}
-		if (!this.thumbnails.size) {
-			// When we don't have any thumbnails yet, scan existing files in the
-			// background and ensure that the cache is filled up with thumbnails for
-			// the most recently modified files present in base directories. Does
-			// nothing for new installs, but is useful for existing installs where
-			// there are existing media files in `data/storage/`.
-			this.logger.log(`No thumbnails yet, populating the cache...`)
-			this.populateCache().catch((error) => this.logger.error(`Failed to scan for most recent files: ${error.message}`))
-		} else {
-			// Prune old thumbnails in the background
-			this.logger.log(`Found ${this.thumbnails.size} thumbnails`)
-			this.maybePrune().catch((error) => this.logger.error(`Failed to prune old thumbnails: ${error.message}`))
+
+			// Create a debounced version with a 1-second delay
+			debouncer = debounce(generateThumbnailAndCleanup, 1000)
+
+			// Store the debouncer in the map by file path
+			this.#backgroundThumbnailDebouncers.set(systemPath, debouncer)
 		}
 
-		// Watch for filesystem changes
-		const {watcher} = this.#umbreld.files
-		watcher.addListener('create', this.#change)
-		watcher.addListener('update', this.#change)
-		watcher.addListener('delete', this.#delete)
+		this.logger.verbose(`Debouncing thumbnail generation for ${systemPath}`)
+		debouncer()
 	}
 
-	async stop() {
-		this.logger.log(`Stopping thumbnails`)
-		this.running = false
+	// Handle file change events from watcher
+	async #handleFileChange(event: FileChangeEvent) {
+		const systemPath = event.path
 
-		// Stop watching for filesystem changes
-		const {watcher} = this.#umbreld.files
-		watcher.removeListener('create', this.#change)
-		watcher.removeListener('update', this.#change)
-		watcher.removeListener('delete', this.#delete)
+		// Skip directories and file types that are not supported for thumbnails
+		if (!(await this.#isValidFileForThumbnail(systemPath))) return
 
-		this.thumbnails.clear()
+		// Only handle create and update events
+		// We don't need to handle delete events. We could explicitly remove the thumbnail here, but the LRU cleanup job will remove the thumbnail eventually.
+		// We don't need to handle rename or move events because we name the thumbnail based on the file's inode, filesystem ID, and date modified, which don't change when the file is renamed or moved.
+		if (event.type === 'create' || event.type === 'update') {
+			// Generate the thumbnail in the background queue
+			// We use a debouncer to prevent multiple thumbnail creations for the same file when it is being actively written to (e.g., during upload, unarchiving, etc)
+			this.#debouncedGenerateThumbnail(systemPath)
+		}
 	}
 
-	#change = async (path: string) => await this.access(path, false)
+	// Check if a file type is supported for thumbnails
+	async #isValidFileForThumbnail(systemPath: string): Promise<boolean> {
+		// Check if file has a supported extension
+		const ext = nodePath.extname(systemPath).toLowerCase()
+		if (!SUPPORTED_THUMBNAIL_EXTENSIONS.includes(ext)) return false
 
-	#delete = async (path: string) => {
-		const thumbnailName = getThumbnailName(path)
-		if (!this.thumbnails.delete(thumbnailName)) return
-		this.logger.verbose(`Deleted thumbnail of '${path}' (${this.thumbnails.size} thumbnails)`)
-		const thumbnailPath = nodePath.join(this.thumbnailsDirectory, thumbnailName)
-		await fse.unlink(thumbnailPath).catch(() => {})
+		// Sanity check to make sure it exists and is actually a file (not a directory)
+		const stats = await fse.stat(systemPath).catch(() => null)
+		return Boolean(stats?.isFile())
 	}
 
-	get(path: string) {
-		const thumbnailName = getThumbnailName(path)
-		return nodePath.join(this.thumbnailsDirectory, thumbnailName)
+	// Gets the unique, persistent identifier for the filesystem that contains a file
+	// This will not change across reboots or device reassignments
+	// We return an empty string for filesystems that don't support a uuid (e.g., docker bind mounts, fs overlays, network shares)
+	async getFilesystemUuid(systemPath: string, deviceId: number): Promise<string> {
+		// If we have a cached UUID for this device, return it
+		const cachedUuid = this.deviceIdtoUuidMap.get(deviceId)
+		if (cachedUuid) return cachedUuid
+
+		// If we don't have a cached UUID, we need to get the UUID for the filesystem.
+		// This is added to a queue to prevent spawning too many processes in parallel.
+		const {stdout} = await this.filesystemUuidQueue.add(
+			() => $`findmnt --noheadings --output UUID --target ${systemPath}`,
+		)
+
+		// We set uuid to the actual UUID if it was found or an empty string if the filesystem doesn't support a uuid
+		// If no uuid is found, stdout will already be an empty string
+		const uuid = stdout.trim()
+
+		// Cache the UUID for this device
+		// If no uuid is found, this will cache an empty string as the value
+		this.deviceIdtoUuidMap.set(deviceId, uuid)
+
+		return uuid
 	}
 
-	async access(path: string, updateTime = true) {
-		// Skip files that don't have a supported extension
-		const extension = nodePath.extname(path).toLowerCase()
-		const isImage = imageExtensions.has(extension)
-		const isVideo = !isImage && videoExtensions.has(extension)
-		if (!isImage && !isVideo) return
+	// Returns a hash from a combination of source file metadata that we can use as a unique thumbnail filename
+	async getThumbnailHash(systemPath: string): Promise<string> {
+		// Get source file's metadata
+		const stats = await fse.stat(systemPath)
 
-		// Check that the source file exists
-		const stats = await fse.stat(path).catch(() => null)
-		if (!stats?.isFile()) return
+		// Get the numeric identity of the device where the file is stored
+		// This value can change across system reboots or device reassignments so we can't use it directly as a persistent identifier
+		const deviceId = stats.dev
 
-		// Check if the thumbnail needs to be (re-)generated. A thumbnail needs to
-		// be (re-)generated when it doesn't exist yet or when its modification
-		// time is older than the source file's last modification time.
-		const thumbnailName = getThumbnailName(path)
-		const thumbnailTime = this.thumbnails.get(thumbnailName) ?? null
-		const thumbnailPath = nodePath.join(this.thumbnailsDirectory, thumbnailName)
-		const accessTime = new Date()
-		const shouldGenerate = !thumbnailTime || Math.ceil(thumbnailTime.getTime()) < Math.floor(stats.mtimeMs)
-		if (shouldGenerate) {
-			try {
-				await queue.add(() => generateThumbnail(path, thumbnailPath))
-			} catch (error) {
-				// It's possible that there are a bunch of files we can't generate a
-				// thumbnail for, hence we don't log errors during production here.
-				// If the file previously had a thumbnail already, we keep it.
-				this.logger.verbose(`Failed to generate thumbnail of '${path}': ${(error as Error).message}`)
+		// Convert the device ID to a persistent filesystem UUID
+		// This UUID stays the same regardless of how the filesystem is mounted (i.e., it is consistent across system reboots and device reassignments)
+		const uuid = await this.getFilesystemUuid(systemPath, deviceId)
+
+		// Create a unique identifier by combining:
+		// - The filesystem's UUID (stays consistent across reboots and device reassignments)
+		// - The file's inode number (stays the same if moved/renamed on same filesystem)
+		// - The file's modification time (changes when content is modified)
+		const identifier = `${uuid}-${stats.ino}-${stats.mtime.getTime()}`
+
+		const hash = crypto.createHash('sha256').update(identifier).digest('hex')
+
+		return hash
+	}
+
+	// Get thumbnail system path for a file by its hash
+	hashToThumbnailSystemPath(hash: string): string {
+		const filename = `${hash}.${this.format}`
+		const systemPath = nodePath.normalize(nodePath.join(this.thumbnailDirectory, filename))
+
+		return systemPath
+	}
+
+	// TODO: Look into using sharp instead of ImageMagick for performance gains at the possible cost of simplicity
+	// Generate a thumbnail for a file
+	async #generateThumbnail(systemPath: string, {background = true}: {background?: boolean} = {}): Promise<string> {
+		const hash = await this.getThumbnailHash(systemPath)
+
+		// Check if thumbnail already exists
+		// If it does, it means we don't need to generate a new one
+		const thumbnailSystemPath = this.hashToThumbnailSystemPath(hash)
+		if (await fse.pathExists(thumbnailSystemPath)) return hash
+
+		// Process through a queue to prevent spawning too many thumbnail generation processes in parallel
+		// We use the background queue for file watcher events and the on-demand queue for explicit requests
+		const queue = background ? this.backgroundQueue : this.onDemandQueue
+
+		// Passing [0] to ImageMagick selects only the first frame/page (videos, PDFs, etc.)
+		// This flag is ignored for regular images, so we always include it for simplicity
+		await queue.add(async () => {
+			this.logger.verbose(`Generating thumbnail for ${systemPath}`)
+			await $`convert ${systemPath}[0] -resize ${this.width}x${this.height} -quality ${this.quality} -auto-orient ${thumbnailSystemPath}`
+		})
+
+		// Count generated thumbnails and trigger cleanup if needed
+		// Cleanup is non-blocking and will run in the background
+		this.thumbnailsSinceLastPruning++
+		if (this.thumbnailsSinceLastPruning >= this.pruningThreshold) {
+			this.thumbnailsSinceLastPruning = 0
+			this.#pruneOldestThumbnails()
+		}
+
+		return hash
+	}
+
+	// Gets a thumbnail hash for a file on demand (generating a thumbnail if needed)
+	// This is used by the files.getThumbnail() trpc endpoint
+	async getThumbnailOnDemand(virtualPath: string): Promise<string> {
+		// First validate the path and check if thumbnail type is supported
+		const systemPath = await this.#umbreld.files.virtualToSystemPath(virtualPath)
+		if (!(await this.#isValidFileForThumbnail(systemPath))) {
+			throw new Error(`Unsupported file type for thumbnail: ${nodePath.extname(virtualPath).toLowerCase()}`)
+		}
+
+		// Generate the thumbnail in the on-demand queue
+		const hash = await this.#generateThumbnail(systemPath, {background: false})
+
+		// Return the relative api endpoint URL of the thumbnail
+		return `/api/files/thumbnail/${hash}.${this.format}`
+	}
+
+	// Get an existing thumbnail if it exists, without generating a new one
+	// This is used by this.umbreld.files.status() to attach an existing thumbnail to a file (as an api endpoint URL)
+	// We pass in a safe system path from files.status()
+	async getExistingThumbnail(systemPath: string): Promise<string | undefined> {
+		// Check if thumbnail type is supported
+		if (!(await this.#isValidFileForThumbnail(systemPath))) return undefined
+
+		// Return undefined if no thumbnail exists
+		const hash = await this.getThumbnailHash(systemPath)
+		const thumbnailSystemPath = this.hashToThumbnailSystemPath(hash)
+		const exists = await fse.pathExists(thumbnailSystemPath)
+		if (!exists) return undefined
+
+		// We set the thumbnail's date modified to the current time to bump it in the LRU cache
+		const now = new Date()
+		await fse.utimes(thumbnailSystemPath, now, now).catch((error) => {
+			// Even if updating the date modified fails, the thumbnail is still valid and we should return the hash
+			this.logger.error(`Failed to touch thumbnail ${thumbnailSystemPath}: ${(error as Error).message}`)
+		})
+
+		// Return the relative api endpoint URL of the thumbnail
+		return `/api/files/thumbnail/${hash}.${this.format}`
+	}
+
+	// Delete oldest thumbnails if we exceed the maxThumbnailCount
+	async #pruneOldestThumbnails(): Promise<void> {
+		// Skip if a pruning operation is already in progress
+		if (this.#isPruning) return
+
+		try {
+			this.#isPruning = true
+			this.logger.log('Pruning oldest thumbnails')
+
+			const thumbnails: {path: string; mtime: number}[] = []
+			let initialThumbnailCount = 0
+
+			// We open an async iterator to the thumbnails directory so we can stream a large directory and not process the entire directory in memory all at once
+			for await (const thumbnailPath of getDirectoryStream(this.thumbnailDirectory)) {
+				initialThumbnailCount++
+
+				// stat each file serially
+				const stats = await fse.stat(thumbnailPath).catch((error) => {
+					this.logger.error(`Failed to stat thumbnail ${thumbnailPath}: ${(error as Error).message}`)
+
+					// If we can't stat a file, we can't process it.
+					return undefined
+				})
+
+				if (!stats) continue
+				thumbnails.push({path: thumbnailPath, mtime: stats.mtime.getTime()})
+			}
+
+			// Skip pruning if we are under the maxThumbnailCount
+			// We can't check this until we've streamed the entire directory. So we need to do the relatively expensive stat() for each file, but we'll skip the blocking sort() and the removal task if we're under the limit.
+			if (initialThumbnailCount <= this.maxThumbnailCount) {
+				this.logger.log(
+					`Thumbnail cache has ${initialThumbnailCount}/${this.maxThumbnailCount} thumbnails. No pruning needed`,
+				)
+				// The outer 'finally' block will still set #isPruning = false.
 				return
 			}
-			this.thumbnails.set(thumbnailName, accessTime)
-			this.logger.verbose(`Generated thumbnail of '${path}' (${this.thumbnails.size} thumbnails)`)
 
-			// It's possible that the source file has been modified while we were
-			// generating its thumbnail, so set the modification time to when we
-			// decided to generate the new thumbnail to aid future comparisons.
-			await fse
-				.utimes(thumbnailPath, accessTime, accessTime)
-				.catch((error) => this.logger.error(`Failed to set access time on thumbnail of '${path}': ${error.message}`))
+			// Sort successfully stat'd thumbnails by modification time (oldest first)
+			thumbnails.sort((a, b) => a.mtime - b.mtime)
 
-			// Prune old thumbnails in the background when exceeding the limit
-			this.maybePrune().catch((error) => this.logger.error(`Failed to prune thumbnails: ${error.message}`))
-		} else {
-			const shouldRefresh = updateTime && this.thumbnails.has(thumbnailName)
-			if (shouldRefresh) {
-				this.thumbnails.set(thumbnailName, accessTime)
-				this.logger.verbose(`Refreshed thumbnail of '${path}' (${this.thumbnails.size} thumbnails)`)
+			// Calculate how many we need to remove based on the initial count vs. the limit
+			const excessCount = initialThumbnailCount - this.maxThumbnailCount
+			let filesRemoved = 0
 
-				// Touch the thumbnail to remember the file's access time over restarts
-				await fse
-					.utimes(thumbnailPath, accessTime, accessTime)
-					.catch((error) =>
-						this.logger.error(`Failed to update access time on thumbnail of '${path}': ${error.message}`),
-					)
-			}
-		}
-	}
-
-	async maybePrune() {
-		const limitExceeded = this.thumbnails.size >= maxThumbnails + pruneThreshold
-		if (!limitExceeded) return
-
-		this.logger.log(`Pruning old thumbnails...`)
-
-		// Sort the internal map by access time and prune the oldest thumbnails
-		const thumbnailsToPrune = [...this.thumbnails.entries()]
-			.sort((a, b) => b[1].getTime() - a[1].getTime())
-			.slice(maxThumbnails)
-		let pruned = 0
-		for (const [thumbnailName, time] of thumbnailsToPrune) {
-			if (!this.running) return
-			const currentTime = this.thumbnails.get(thumbnailName)
-			// Pruning is performed in the background, so thumbnails may have
-			// been concurrently deleted or accessed. Skip these cases.
-			if (!currentTime || currentTime.getTime() > time.getTime()) continue
-			this.thumbnails.delete(thumbnailName)
-			const thumbnailPath = nodePath.join(this.thumbnailsDirectory, thumbnailName)
-			await fse.unlink(thumbnailPath).catch(() => {})
-			pruned += 1
-		}
-		if (!this.running) return
-		this.logger.log(`Pruned ${pruned} thumbnails (${this.thumbnails.size} thumbnails)`)
-	}
-
-	async populateCache() {
-		// Scan for image and video files in base directories and keep track of the
-		// most recently modified files found.
-		const mostRecent: {path: string; time: number}[] = []
-		const scanner = this.#umbreld.files.watcher.scan()
-		let scannedFiles = 0
-		for await (const {path, dirent} of scanner) {
-			if (!this.running) break
-
-			// Skip non-files
-			if (!dirent.isFile()) continue
-
-			// Skip files that don't have a supported extension
-			const ext = nodePath.extname(dirent.name).toLowerCase()
-			if (!(imageExtensions.has(ext) || videoExtensions.has(ext))) continue
-
-			// Skip inexistent or inaccessible files
-			const stats = await fse.stat(path).catch(() => null)
-			if (!stats?.isFile()) continue
-
-			scannedFiles += 1
-
-			// Determine the file's update time and skip it if it's older than
-			// the least recent file when the limit has already been reached.
-			const time = Math.floor(stats.mtimeMs)
-			if (mostRecent.length >= maxThumbnails) {
-				const oldestTime = mostRecent[mostRecent.length - 1].time
-				if (time <= oldestTime) continue
+			// Remove oldest thumbnails (from the successfully stat-ed list) until we're under the limit
+			// Iterate up to excessCount, but stop if we run out of stat-ed thumbnails
+			for (let i = 0; i < excessCount && i < thumbnails.length; i++) {
+				const thumbnail = thumbnails[i]
+				try {
+					await fse.remove(thumbnail.path)
+					filesRemoved++
+				} catch (error) {
+					this.logger.error(`Failed to remove thumbnail ${thumbnail.path}: ${(error as Error).message}`)
+				}
 			}
 
-			// Perform a binary search, insert the file and pop the oldest file
-			// when the limit is exceeded.
-			const index = findInsertionIndexDescending(mostRecent, time)
-			mostRecent.splice(index, 0, {path, time})
-			if (mostRecent.length > maxThumbnails) mostRecent.pop()
+			this.logger.log(
+				`Removed ${filesRemoved} thumbnails. The thumbnail cache is now at ${initialThumbnailCount - filesRemoved}/${this.maxThumbnailCount}`,
+			)
+		} catch (error) {
+			// We just log and don't rethrow here
+			this.logger.error(`Failed to clean up thumbnails: ${(error as Error).message}`)
+		} finally {
+			// We reset the pruning flag regardless of whether the operation succeeded or failed
+			this.#isPruning = false
 		}
-
-		// Generate thumbnails for the most recent files we've found, but only
-		// until the cache has been filled up as we don't want to supersede more
-		// recent thumbnails that have been generated in the meantime. It's
-		// possible that there are less than maxThumbnails managed thumbnails
-		// afterwards when some thumbnails fail to generate, but we assume that
-		// it will be close enough to the limit.
-		let populated = 0
-		for (const {path} of mostRecent) {
-			if (!this.running) return
-			if (this.thumbnails.size >= maxThumbnails) break
-			await this.access(path, /* updateTime */ false)
-			populated += 1
-		}
-
-		if (!this.running) return
-		this.logger.log(`Populated cache with ${populated} thumbnails (${this.thumbnails.size} thumbnails)`)
 	}
 
-	async pollThumbnail(virtualPath: string) {
-		virtualPath = this.#umbreld.files.validateVirtualPath(virtualPath)
-		const path = await this.#umbreld.files.mapVirtualToSystemPath(virtualPath)
-		const thumbnailName = getThumbnailName(path)
-		const thumbnailTime = this.thumbnails.get(thumbnailName)?.toISOString() ?? null
-		return {path: virtualPath, time: thumbnailTime ?? null}
+	// Remove listeners
+	// Any queued thumbnail generations will be cancelled. These would be generated on-demand in the future or in the background if the file were to be modified again.
+	async stop() {
+		this.logger.log('Stopping thumbnails')
+		this.#removeFileChangeListener?.()
+		this.#removeDiskChangeListener?.()
+
+		// Cancel debounced background thumbnail tasks
+		this.#backgroundThumbnailDebouncers.forEach((debouncer) => debouncer.cancel())
 	}
-
-	async pollThumbnails(virtualPaths: string[]) {
-		return await Promise.all(virtualPaths.map((path) => this.pollThumbnail(path)))
-	}
-}
-
-export default Thumbnails
-
-async function generateThumbnail(path: string, thumbnailPath: string) {
-	await $`convert ${path}[0] -resize ${width}x${height} -quality ${quality} -auto-orient ${format}:${thumbnailPath}`
-}
-
-function getThumbnailName(path: string) {
-	const hash = createHash('sha256').update(path).digest('hex')
-	return `${hash}.${format}` // doesn't harm to give it an extension for inspection
-}
-
-function findInsertionIndexDescending(files: {time: number}[], time: number): number {
-	let low = 0
-	let high = files.length
-	while (low < high) {
-		const mid = (low + high) >>> 1
-		if (files[mid].time > time) low = mid + 1
-		else high = mid
-	}
-	return low
 }

@@ -2,6 +2,7 @@ import {RouterProvider} from 'react-router-dom'
 
 import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
+import {ConfirmationProvider} from '@/providers/confirmation'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
 
 import {GlobalFilesProvider} from './providers/global-files'
@@ -19,11 +20,13 @@ init(
 		{/* Wallpaper inside trpc because it requires backend call */}
 		<WallpaperProviderConnected>
 			<RemoteWallpaperInjector />
-			<GlobalSystemStateProvider>
-				<GlobalFilesProvider>
-					<RouterProvider router={router} />
-				</GlobalFilesProvider>
-			</GlobalSystemStateProvider>
+			<ConfirmationProvider>
+				<GlobalSystemStateProvider>
+					<GlobalFilesProvider>
+						<RouterProvider router={router} />
+					</GlobalFilesProvider>
+				</GlobalSystemStateProvider>
+			</ConfirmationProvider>
 		</WallpaperProviderConnected>
 		<Prefetcher />
 	</TrpcProvider>,

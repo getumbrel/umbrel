@@ -1,6 +1,5 @@
 import {toast} from 'sonner'
 
-import type {Favorite} from '@/features/files/types'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -12,7 +11,7 @@ import {t} from '@/utils/i18n'
 export function useFavorites() {
 	const utils = trpcReact.useContext()
 
-	// Query to fetch favorites
+	// Query to fetch favorites (an array of virtual path strings)
 	const {data: favorites, isLoading: isLoadingFavorites} = trpcReact.files.favorites.useQuery(undefined, {
 		keepPreviousData: true,
 		staleTime: 15_000,
@@ -22,7 +21,7 @@ export function useFavorites() {
 	})
 
 	// Check if item is favorited
-	const isPathFavorite = (path: string) => favorites?.some((favorite: Favorite) => favorite.path === path)
+	const isPathFavorite = (path: string) => favorites?.some((favorite) => favorite && favorite === path)
 
 	// Add favorite mutation
 	const {mutateAsync: addFavorite, isLoading: isAddingFavorite} = trpcReact.files.addFavorite.useMutation({
@@ -35,7 +34,7 @@ export function useFavorites() {
 	})
 
 	// Remove favorite mutation
-	const {mutateAsync: removeFavorite, isLoading: isRemovingFavorite} = trpcReact.files.deleteFavorite.useMutation({
+	const {mutateAsync: removeFavorite, isLoading: isRemovingFavorite} = trpcReact.files.removeFavorite.useMutation({
 		onSuccess: async () => {
 			await utils.files.favorites.invalidate()
 		},

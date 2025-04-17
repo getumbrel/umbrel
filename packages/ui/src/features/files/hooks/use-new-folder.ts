@@ -15,24 +15,29 @@ export function useNewFolder() {
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 
 	const createFolder = trpcReact.files.createDirectory.useMutation({
-		onMutate: ({name}: {name: FileSystemItem['name']}) => {
+		onMutate: ({path}: {path: FileSystemItem['path']}) => {
 			if (listing?.items) {
+				// Extract name from path
+				const name = path.split('/').pop() || ''
+				// Best-effort check for duplicate name
 				checkForDuplicateName(name, listing.items)
 			}
 		},
-		onSuccess: (_, {path, name}: {path: FileSystemItem['path']; name: FileSystemItem['name']}) => {
+		onSuccess: (_, {path}: {path: FileSystemItem['path']}) => {
 			setNewFolder(null)
+
+			// Extract name from path
+			const name = path.split('/').pop() || ''
 
 			// Set the new folder as selected
 			setSelectedItems([
 				{
 					name,
-					path: `${path}/${name}`,
+					path,
 					type: 'directory',
-					ops: 0,
 					size: 0,
-					created: new Date().toISOString(),
-					modified: new Date().toISOString(),
+					modified: new Date().getTime(),
+					operations: [],
 				},
 			])
 		},
@@ -44,33 +49,19 @@ export function useNewFolder() {
 		},
 	})
 
-	// TODO: remove or redo this since we can't check for duplicate names across all pages
-	const getNextAvailableName = () => {
-		const existingNames = new Set(listing?.items.map((item) => item.name) ?? [])
-		const baseName = t('files-folder')
-
-		if (!existingNames.has(baseName)) {
-			return baseName
-		}
-
-		let index = 2
-		while (existingNames.has(`${baseName} (${index})`)) {
-			index++
-		}
-		return `${baseName} (${index})`
-	}
-
+	// NOTE: We can't reliably calculate the "next available name" (e.g., "Folder (2)")
+	// with infinite loading, as we don't have the full list of existing names.
+	// So, we always start with the base name (e.g., "Folder").
 	const startNewFolder = () => {
-		const name = getNextAvailableName()
-		const timeStamp = new Date().toISOString()
+		const name = t('files-folder')
+		const timeStamp = new Date().getTime()
 		const newFolder = {
 			name,
 			path: currentPath + '/' + name,
 			type: 'directory',
 			size: 0,
-			ops: 0,
-			created: timeStamp,
 			modified: timeStamp,
+			operations: [],
 			isNew: true,
 		}
 		setNewFolder(newFolder)
@@ -90,9 +81,10 @@ export function useNewFolder() {
 	}
 }
 
-// We throw an error if the name is already taken, but don't need to do any cleanup.
-// umbreld handles the cleanup of the folder.
-// We need to throw an error here because umbreld silently fails on EEXIST error.
+// This is a best-effort check as it only compares against the currently loaded items.
+// umbreld still returns true if EEXIST, but doesn't create the folder.
+// So even if we don't throw an error here, umbreld will still handle the duplicate name.
+// But when we do throw an error, the user will see a toast
 function checkForDuplicateName(name: string, existingItems: FileSystemItem[]) {
 	const existingNames = new Set(existingItems.map((item) => item.name))
 	if (existingNames.has(name)) {

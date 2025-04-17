@@ -8,6 +8,7 @@ export function RecentsListing() {
 	return (
 		<Listing
 			items={items}
+			totalItems={items.length} // Since there's no pagination for recents, as it's capped at 50
 			selectableItems={items}
 			isLoading={isLoading}
 			error={error}

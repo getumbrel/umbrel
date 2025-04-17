@@ -43,26 +43,28 @@ export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMor
 					<Table>
 						<TableHeader>
 							<TableRow className='cursor-default border-none'>
-								<TableCell colSpan={5} className='p-0'>
+								<TableCell colSpan={5} className='py-0 pl-0 pr-[12px]'>
+									{/* pr-[12px] to align the column headers with the table cells due to the scrollbar consuming 24px/2 space in virtualized-list component */}
 									<div className='flex'>
 										{SORT_BY_OPTIONS.map((option) => (
 											<button
 												key={option.sortBy}
 												className={cn(
 													'flex items-center justify-between overflow-hidden text-ellipsis whitespace-nowrap p-2.5 text-12 text-white/70',
-													option.sortBy === 'name' && 'flex-[3]',
+													option.sortBy === 'name' && 'flex-[5]',
 													option.sortBy === 'modified' && 'flex-[2]',
 													option.sortBy === 'size' && 'flex-[1]',
-													option.sortBy === 'created' && 'flex-[2] lg:hidden xl:flex',
+													// TODO: Add this back in when we have a file system index in umbreld. The name column was previously flex-[3]
+													// option.sortBy === 'created' && 'flex-[2] lg:hidden xl:flex',
 													option.sortBy === 'type' && 'flex-[2]',
 												)}
 												onClick={() => setSortBy(option.sortBy)}
 											>
 												{t(option.labelTKey)}
-												{option.sortBy === preferences.sortBy && preferences.sortOrder === 'asc' && (
+												{option.sortBy === preferences.sortBy && preferences.sortOrder === 'ascending' && (
 													<RiArrowDropUpLine className='h-5 w-5' />
 												)}
-												{option.sortBy === preferences.sortBy && preferences.sortOrder === 'desc' && (
+												{option.sortBy === preferences.sortBy && preferences.sortOrder === 'descending' && (
 													<RiArrowDropDownLine className='h-5 w-5' />
 												)}
 											</button>

@@ -85,10 +85,9 @@ export async function getDiskUsage(
 	const filesTotalUsage = (
 		await Promise.all(
 			[
-				umbreld.files.homeDirectory,
-				umbreld.files.trashDirectory,
-				umbreld.files.trashMetaDirectory,
-				umbreld.files.thumbnails.thumbnailsDirectory,
+				umbreld.files.getBaseDirectory('/Home'),
+				umbreld.files.getBaseDirectory('/Trash'),
+				umbreld.files.thumbnails.thumbnailDirectory,
 			].map((directory) => getDirectorySize(directory).catch(() => 0)),
 		)
 	).reduce((total, usage) => total + usage, 0)

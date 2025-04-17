@@ -111,10 +111,13 @@ export default class App {
 			}
 
 			// Migrate downloads volume from old `${UMBREL_ROOT}/data/storage/downloads` path to new
-			// `${UMBREL_ROOT}/home/Downloads` path.
-			// We need to do this here to handle any future app updates
+			// `${UMBREL_ROOT}/home/Downloads` path. Also handle raw data directory migration from
+			// `${UMBREL_ROOT}/data/storage` to `${UMBREL_ROOT}/home`.
+			// We need to do this here to handle any future app updates.
 			compose.services![serviceName].volumes = compose.services![serviceName].volumes?.map((volume) => {
-				return (volume as string)?.replace('/data/storage/downloads', `/home/Downloads`)
+				return (volume as string)
+					?.replace('/data/storage/downloads', `/home/Downloads`)
+					?.replace('/data/storage', `/home`)
 			})
 		}
 

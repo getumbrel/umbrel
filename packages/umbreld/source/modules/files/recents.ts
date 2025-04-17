@@ -1,102 +1,113 @@
+import nodePath from 'node:path'
+
 import PQueue from 'p-queue'
 import fse from 'fs-extra'
+import {debounce} from 'es-toolkit'
+
 import type Umbreld from '../../index.js'
-import type {Stats} from './files.js'
 
-const maxRecents = 50
-const saveDelay = 10000
-const queue = new PQueue({concurrency: 1})
+import type {FileChangeEvent} from './watcher.js'
 
-class Recents {
+export default class Recents {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
-	files: string[] = []
-	saveTimeout: NodeJS.Timeout | null = null
+	#removeFileChangeListener?: () => void
+	// Debounce the write to disk to prevent excessive writes when many events are triggered
+	#debouncedWrite = debounce(this.#directWrite.bind(this), 1000)
+	recentFiles: string[] = []
+	maxRecents = 50
+	paths: string[]
+	queue = new PQueue({concurrency: 1})
 
-	constructor(umbreld: Umbreld) {
+	constructor(umbreld: Umbreld, {paths}: {paths: string[]}) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
-		this.logger = umbreld.logger.createChildLogger(name.toLocaleLowerCase())
+		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
+		this.paths = paths
 	}
 
+	// Add listener
 	async start() {
-		this.files = (await this.#umbreld.store.get('files.recents')) ?? []
-		const {watcher} = this.#umbreld.files
-		watcher.addListener('create', this.#change)
-		watcher.addListener('update', this.#change)
-		watcher.addListener('delete', this.#delete)
+		this.logger.log('Starting recents')
+
+		// Read recent files from disk and set initial value if undefined
+		// TODO: This should really be stored in a proper database.
+		// Migrate this to SQLite once we have it. Or ideally query this
+		// directly from a live filesystem index.
+		this.recentFiles = await this.#umbreld.store.get('files.recents')
+		if (this.recentFiles === undefined) {
+			this.logger.log('Creating initial recents entry in store')
+			this.recentFiles = []
+			await this.#umbreld.store.set('files.recents', this.recentFiles)
+		}
+
+		// Attach listener
+		this.#removeFileChangeListener = this.#umbreld.eventBus.on('file:change', this.#handleFileChange.bind(this))
 	}
 
-	async stop() {
-		const {watcher} = this.#umbreld.files
-		watcher.removeListener('create', this.#change)
-		watcher.removeListener('update', this.#change)
-		watcher.removeListener('delete', this.#delete)
-		await this.saveNow()
-	}
-
-	#change = (path: string) => queue.add(() => this.touch(path))
-
-	#delete = (path: string) => queue.add(() => this.prune(path))
-
+	// Get recents
 	async get() {
-		return (
-			await Promise.all(
-				this.files.map(async (virtualPath) => {
-					const path = await this.#umbreld.files.mapVirtualToSystemPath(virtualPath).catch(() => null)
-					if (!path) return null
-					const stats = await this.#umbreld.files.stat(path, virtualPath).catch(() => null)
-					if (!stats || stats.error || stats.type === 'directory') return null
-					return stats
-				}),
-			)
-		).filter((stats) => stats !== null) as Stats[]
+		const recents = await Promise.all(
+			this.recentFiles.map(async (virtualPath) => {
+				const systemPath = await this.#umbreld.files.virtualToSystemPath(virtualPath)
+				return this.#umbreld.files.status(systemPath).catch(() => undefined)
+			}),
+		)
+
+		// Filter out any files that don't exist
+		const filteredRecents = recents.filter((file) => file !== undefined)
+
+		return filteredRecents
 	}
 
-	async touch(path: string) {
-		let virtualPath: string
-		try {
-			virtualPath = this.#umbreld.files.mapSystemToVirtualPath(path)
-		} catch {
-			return // skip unmappable files
-		}
-		const stats = await fse.stat(path).catch(() => null)
-		if (!stats?.isFile()) {
-			return // skip inexistent and non-files
-		}
-		if (path.endsWith('/.DS_Store') || path.endsWith('/.directory')) return // Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
-		this.files = this.files.filter((recent) => recent !== virtualPath)
-		this.files.unshift(virtualPath)
-		this.files = this.files.slice(0, maxRecents)
-		this.save()
+	// Write recents
+	async #directWrite() {
+		await this.#umbreld.store.set('files.recents', this.recentFiles)
 	}
 
-	async prune(path: string) {
-		let virtualPath: string
-		try {
-			virtualPath = this.#umbreld.files.mapSystemToVirtualPath(path)
-		} catch {
-			return // skip unmappable files
-		}
-		this.files = this.files.filter((recent) => recent !== virtualPath)
-		this.save()
+	// Handle file change
+	async #handleFileChange(event: FileChangeEvent) {
+		// Pipe through a queue to ensure we handle events in order
+		return this.queue
+			.add(async () => {
+				// Calculate paths
+				const systemPath = event.path
+				const path = this.#umbreld.files.systemToVirtualPath(systemPath)
+
+				// Ignore files outside of the watched paths
+				const isWatched = this.paths.some((watchedPath) => path.startsWith(`${watchedPath}/`))
+				if (!isWatched) return
+
+				// Ignore hidden files
+				if (this.#umbreld.files.hiddenFiles.includes(nodePath.basename(path))) return
+
+				// Remove the path from the list if it exists
+				// This is to prevent duplicates when adding or to remove with a deletion
+				this.recentFiles = this.recentFiles.filter((item) => item !== path)
+
+				// Add the path back to the beginning of the list if it's an update or create
+				if (['update', 'create'].includes(event.type)) {
+					// Check file is not a directory or non standard file type
+					const stats = await fse.stat(systemPath)
+					if (!stats.isFile()) return
+
+					this.recentFiles.unshift(path)
+				}
+
+				// Keep the list at maxRecents length
+				this.recentFiles = this.recentFiles.slice(0, this.maxRecents)
+
+				// Write the recent files to disk
+				this.#debouncedWrite()
+			})
+			.catch((error) => this.logger.error(`Failed to handle file change: ${error.message}`))
 	}
 
-	save() {
-		// Debounce store to disk to avoid excessive writes
-		if (this.saveTimeout) clearTimeout(this.saveTimeout)
-		this.saveTimeout = setTimeout(() => this.saveNow(), saveDelay)
-	}
-
-	async saveNow() {
-		if (this.saveTimeout) {
-			clearTimeout(this.saveTimeout)
-			this.saveTimeout = null
-		}
-		await this.#umbreld.store
-			.set('files.recents', this.files)
-			.catch((error) => this.logger.error(`Failed to save recents: ${error.message}`))
+	// Remove listener
+	async stop() {
+		this.logger.log('Stopping recents')
+		this.#removeFileChangeListener?.()
+		this.#debouncedWrite.cancel()
+		await this.#directWrite()
 	}
 }
-
-export default Recents

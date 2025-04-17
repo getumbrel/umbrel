@@ -164,7 +164,6 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	const loadMoreItems = useCallback(
 		async (startIndex: number) => {
 			await onLoadMore(startIndex)
-			return
 		},
 		[onLoadMore],
 	)

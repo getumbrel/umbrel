@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useEffect, useState} from 'react'
 import {BsTrash2} from 'react-icons/bs'
 import {IoPlay} from 'react-icons/io5'
 
@@ -29,6 +29,7 @@ import {useShares} from '@/features/files/hooks/use-shares'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
+import {trpcReact} from '@/trpc/trpc'
 
 interface FileItemIcon {
 	item: FileSystemItem
@@ -169,8 +170,8 @@ const FolderIcon = ({
 }
 
 const AppFolderBottomIcon = ({appId}: {appId: string}) => {
-	const [error, setError] = React.useState(false)
-	const [loaded, setLoaded] = React.useState(false)
+	const [error, setError] = useState(false)
+	const [loaded, setLoaded] = useState(false)
 
 	return (
 		<img
@@ -185,57 +186,106 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 	)
 }
 
-const ImageThumbnail = ({
+// Thumbnail component with on‑demand fetch + exponential backoff
+function useOnDemandThumbnail(item: FileSystemItem) {
+	const MAX_RETRIES = 4 // limit at 4 times, to not continually spam umbreld with on-demand thumnail requests if they error because it could be an ImageMagick error and we'd be continually spawning convert processes (in a queue)
+	const INITIAL_DELAY_MS = 500 // wait for 500ms to begin with
+
+	const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(item.thumbnail)
+	const [attempt, setAttempt] = useState(0)
+
+	const getThumbnailMutation = trpcReact.files.getThumbnail.useMutation()
+
+	// Reset when file changes
+	useEffect(() => {
+		setThumbnailUrl(item.thumbnail)
+		setAttempt(0)
+	}, [item.path, item.thumbnail])
+
+	// Fetch with exponential backoff
+	useEffect(() => {
+		if (thumbnailUrl || attempt > MAX_RETRIES) return
+
+		const delay = INITIAL_DELAY_MS * 2 ** attempt
+		const timer = setTimeout(() => {
+			getThumbnailMutation
+				.mutateAsync({path: item.path})
+				.then(setThumbnailUrl)
+				.catch(() => setAttempt((a) => a + 1))
+		}, delay)
+
+		return () => clearTimeout(timer)
+	}, [thumbnailUrl, attempt, item.path])
+
+	const handleImageError = () => {
+		setThumbnailUrl(undefined)
+		setAttempt((a) => a + 1)
+	}
+
+	return {thumbnailUrl, handleImageError}
+}
+
+const Thumbnail = ({
 	item,
 	fallback: Fallback,
 	className,
+	overlay,
 }: {
 	item: FileSystemItem
 	fallback: React.ComponentType<{className?: string}>
 	className?: string
+	overlay?: React.ReactNode
 }) => {
-	const [error, setError] = React.useState(false)
+	const {thumbnailUrl, handleImageError} = useOnDemandThumbnail(item)
 
-	if (error) {
+	if (!thumbnailUrl) {
 		return <Fallback className={className} />
 	}
 
-	return (
+	const imageElement = (
 		<img
-			src={`/api/files/thumbnail?path=${encodeURIComponent(item.path)}`}
+			src={thumbnailUrl}
 			alt={item.name}
-			onError={() => setError(true)}
+			onError={handleImageError}
 			className={`rounded-sm object-contain ${className || ''}`}
 		/>
 	)
+
+	if (!overlay) return imageElement
+
+	return (
+		<div className='relative'>
+			{imageElement}
+			{overlay}
+		</div>
+	)
 }
 
+// Image thumbnail
+const ImageThumbnail = (props: {
+	item: FileSystemItem
+	fallback: React.ComponentType<{className?: string}>
+	className?: string
+}) => <Thumbnail {...props} />
+
+// Video thumbnail
 const VideoThumbnail = ({
 	item,
-	fallback: Fallback,
+	fallback,
 	className,
 }: {
 	item: FileSystemItem
 	fallback: React.ComponentType<{className?: string}>
 	className?: string
-}) => {
-	const [error, setError] = React.useState(false)
-
-	if (error) {
-		return <Fallback className={className} />
-	}
-
-	return (
-		<div className='relative'>
-			<img
-				src={`/api/files/thumbnail?path=${encodeURIComponent(item.path)}`}
-				alt={item.name}
-				onError={() => setError(true)}
-				className={`rounded-sm object-contain ${className || ''}`}
-			/>
+}) => (
+	<Thumbnail
+		item={item}
+		fallback={fallback}
+		className={className}
+		overlay={
 			<div className='absolute left-1/2 top-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 items-center justify-center'>
 				<IoPlay className='h-1/3 w-1/3 text-white shadow-md' />
 			</div>
-		</div>
-	)
-}
+		}
+	/>
+)

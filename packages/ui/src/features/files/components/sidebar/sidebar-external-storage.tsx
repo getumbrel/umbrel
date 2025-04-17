@@ -33,16 +33,21 @@ export function SidebarExternalStorage() {
 							<div>
 								<SidebarExternalStorageItem
 									item={{
-										name: disk.label,
+										name: disk.name,
 										id: disk.id,
-										partitions: disk.partitions,
+										partitions: disk.partitions.map((partition) => ({
+											...partition,
+											mountpoint: partition.mountpoints?.[0] ?? '',
+										})),
 										size: disk.size,
 									}}
 								/>
 							</div>
 						</ContextMenuTrigger>
 						<ContextMenuContent>
-							<ContextMenuItem onClick={() => ejectDisk({id: disk.id})}>{t('files-action.eject-disk')}</ContextMenuItem>
+							<ContextMenuItem onClick={() => ejectDisk({deviceId: disk.id})}>
+								{t('files-action.eject-disk')}
+							</ContextMenuItem>
 						</ContextMenuContent>
 					</ContextMenu>
 				</motion.div>

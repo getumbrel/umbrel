@@ -21,7 +21,9 @@ export function PathBarMobile({path}: PathBarMobileProps) {
 					path,
 					type: isBrowsingExternalStorage ? 'external-storage' : 'directory',
 					name: segments[segments.length - 1] || t('files-sidebar.home'),
-					ops: 0,
+					operations: [],
+					size: 0,
+					modified: 0,
 				}}
 				className='h-5 w-5'
 			/>

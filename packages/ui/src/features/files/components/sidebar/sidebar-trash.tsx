@@ -1,16 +1,16 @@
 import {motion, MotionConfig} from 'framer-motion'
 import {useId, useState} from 'react'
 
-import {ButtonLink} from '@/components/ui/button-link'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {TRASH_PATH} from '@/features/files/constants'
+import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useConfirmation} from '@/providers/confirmation'
 import {Button} from '@/shadcn-components/ui/button'
-import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 export function SidebarTrash() {
@@ -22,9 +22,29 @@ export function SidebarTrash() {
 		initialItems: 3,
 	})
 	const isTrashEmpty = listing?.items?.length === 0
-	const linkToDialog = useLinkToDialog()
+	const {emptyTrash} = useFilesOperations()
+	const confirm = useConfirmation()
 	const id = useId()
 	const isMobile = useIsMobile()
+
+	const handleEmptyTrash = async () => {
+		if (isTrashEmpty) return
+		try {
+			await confirm({
+				title: t('files-empty-trash.title'),
+				message: t('files-empty-trash.description'),
+				actions: [
+					{label: t('files-empty-trash.confirm'), value: 'confirm', variant: 'destructive'},
+					{label: t('cancel'), value: 'cancel', variant: 'default'},
+				],
+				icon: FlameIcon,
+			})
+			emptyTrash()
+		} catch (error) {
+			// User cancelled
+		}
+	}
+
 	return (
 		<MotionConfig transition={{duration: 0.2, ease: [0.29, 0.01, 0, 1]}}>
 			<Droppable
@@ -272,13 +292,14 @@ export function SidebarTrash() {
 												<Button variant='default' onClick={() => navigateToDirectory(TRASH_PATH)}>
 													{t('files-sidebar.trash.open')}
 												</Button>
-												<ButtonLink
-													to={isTrashEmpty ? '#' : linkToDialog('files-empty-trash-confirmation')}
+												<Button
+													onClick={handleEmptyTrash}
 													variant='default'
+													disabled={isTrashEmpty}
 													className={isTrashEmpty ? 'pointer-events-none opacity-50' : ''}
 												>
 													<FlameIcon />
-												</ButtonLink>
+												</Button>
 											</>
 										)}
 									</motion.div>

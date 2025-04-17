@@ -100,6 +100,7 @@ export function DirectoryListing() {
 			<UploadInput ref={uploadInputRef} />
 			<Listing
 				items={items}
+				totalItems={listing?.totalFiles}
 				selectableItems={selectableItems}
 				isLoading={isLoading}
 				error={error}

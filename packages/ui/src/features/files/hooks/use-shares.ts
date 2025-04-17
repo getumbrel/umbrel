@@ -23,10 +23,10 @@ export function useShares() {
 	})
 
 	// Check if item is shared
-	const isPathShared = (path: string) => shares?.some((share: Share) => share.path === path)
+	const isPathShared = (path: string) => shares?.some((share: Share) => share && share.path === path)
 
 	// Check if the entire home directory is shared
-	const isHomeShared = () => shares?.some((share: Share) => share.path === HOME_PATH)
+	const isHomeShared = () => shares?.some((share: Share) => share && share.path === HOME_PATH)
 
 	// Query to get share password
 	const {data: sharePassword, isLoading: isLoadingSharesPassword} = trpcReact.files.sharePassword.useQuery(undefined, {
@@ -37,7 +37,7 @@ export function useShares() {
 	})
 
 	// Add share mutation
-	const {mutateAsync: addShare, isLoading: isAddingShare} = trpcReact.files.share.useMutation({
+	const {mutateAsync: addShare, isLoading: isAddingShare} = trpcReact.files.addShare.useMutation({
 		onSuccess: async () => {
 			await utils.files.shares.invalidate()
 		},
@@ -47,7 +47,7 @@ export function useShares() {
 	})
 
 	// Remove share mutation
-	const {mutateAsync: removeShare, isLoading: isRemovingShare} = trpcReact.files.unshare.useMutation({
+	const {mutateAsync: removeShare, isLoading: isRemovingShare} = trpcReact.files.removeShare.useMutation({
 		onSuccess: async () => {
 			await utils.files.shares.invalidate()
 		},

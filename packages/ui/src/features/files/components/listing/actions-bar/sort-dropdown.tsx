@@ -33,7 +33,7 @@ export function SortDropdown() {
 						{t(option.labelTKey)}
 						{option.sortBy === preferences?.sortBy && (
 							<>
-								{preferences.sortOrder === 'asc' ? (
+								{preferences.sortOrder === 'ascending' ? (
 									<RiArrowDropUpLine className='h-5 w-5' />
 								) : (
 									<RiArrowDropDownLine className='h-5 w-5' />

@@ -1,14 +1,25 @@
+import {AiOutlineFileExclamation} from 'react-icons/ai'
 import {toast} from 'sonner'
 
 import {TRASH_PATH} from '@/features/files/constants'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
-import {isOperationAllowed} from '@/features/files/utils/allowed-filesystem-operation'
+import {splitFileName} from '@/features/files/utils/format-filesystem-name'
+import {useConfirmation} from '@/providers/confirmation'
+import type {ConfirmationResult} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
+// Define a type for the operation function signature used by the helper
+type OperationAsyncFn<TArgs extends object, TResult = any> = (args: TArgs) => Promise<TResult>
+// Define a type for the function that generates arguments for the operation
+type GetOperationArgsFn<TArgs extends object> = (path: string) => TArgs
+// Define a type for the error toaster function
+type ErrorToastFn = (message: string) => void
+
 export function useFilesOperations() {
 	const utils = trpcReact.useContext()
+	const confirm = useConfirmation()
 
 	const clipboardMode = useFilesStore((s) => s.clipboardMode)
 	const clipboardItems = useFilesStore((s) => s.clipboardItems)
@@ -17,6 +28,142 @@ export function useFilesOperations() {
 	const draggedItems = useFilesStore((s) => s.draggedItems)
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 	const clearDraggedItems = useFilesStore((s) => s.clearDraggedItems)
+
+	// Internal helper for batch operations (move, copy, restore) with collision handling
+	// ----------------------------------------------------------
+	const _executeBatchOperationWithCollisionHandling = async <TArgs extends object>({
+		paths,
+		operationAsyncFn,
+		operationType,
+		getOperationArgsFn,
+		targetDirectory,
+		onErrorToastFn,
+		onSuccessAll,
+	}: {
+		paths: string[]
+		operationAsyncFn: OperationAsyncFn<TArgs>
+		operationType: 'move' | 'copy' | 'restore'
+		getOperationArgsFn: GetOperationArgsFn<TArgs>
+		targetDirectory?: string
+		onErrorToastFn: ErrorToastFn
+		onSuccessAll?: () => void
+	}) => {
+		let allSucceededWithoutCollision = true
+		const initialOperationPromises = paths.map(async (path) => {
+			try {
+				const args = getOperationArgsFn(path)
+				await operationAsyncFn({...args, collision: undefined})
+				return {status: 'success', itemPath: path}
+			} catch (error: any) {
+				if (error.message === '[destination-already-exists]') {
+					allSucceededWithoutCollision = false
+					return {status: 'collision', itemPath: path, error}
+				}
+				allSucceededWithoutCollision = false
+				onErrorToastFn(error.message)
+				console.error(`Failed initial ${operationType} ${path}:`, error)
+				return {status: 'error', itemPath: path, error}
+			}
+		})
+
+		const initialResults = await Promise.allSettled(initialOperationPromises)
+
+		const collisionItemsPaths = initialResults.reduce<string[]>((acc, result) => {
+			if (result.status === 'fulfilled' && result.value.status === 'collision') {
+				acc.push(result.value.itemPath)
+			}
+			return acc
+		}, [])
+
+		if (collisionItemsPaths.length > 0) {
+			const remainingCollisionPaths = [...collisionItemsPaths]
+			let applyDecisionToAll: 'replace' | 'keep-both' | 'skip' | null = null
+			let applyToAllChecked = false
+
+			while (remainingCollisionPaths.length > 0) {
+				const currentPath = remainingCollisionPaths[0]
+				const fromName = splitFileName(currentPath.split('/').pop() || '').name
+				const destinationName =
+					operationType === 'restore'
+						? t('files-collision.destination.original-location')
+						: `"${splitFileName(targetDirectory?.split('/').pop() || '').name}"`
+
+				let collisionChoice: ConfirmationResult['actionValue'] = 'skip'
+
+				if (!applyToAllChecked) {
+					try {
+						const result = await confirm({
+							title: t('files-collision.title', {itemName: fromName, destinationName: destinationName}),
+							message: t('files-collision.message'),
+							actions: [
+								{label: t('files-collision.action.keep-both'), value: 'keep-both', variant: 'primary'},
+								{label: t('files-collision.action.replace'), value: 'replace', variant: 'default'},
+								{label: t('files-collision.action.skip'), value: 'skip', variant: 'default'},
+							],
+							showApplyToAll: remainingCollisionPaths.length > 1,
+							icon: AiOutlineFileExclamation,
+						})
+
+						collisionChoice = result.actionValue
+						applyToAllChecked = result.applyToAll
+						if (applyToAllChecked) {
+							applyDecisionToAll = collisionChoice as 'replace' | 'keep-both' | 'skip'
+						}
+					} catch (error) {
+						// Collision confirmation dismissed by user
+						allSucceededWithoutCollision = false
+						applyDecisionToAll = 'skip'
+						applyToAllChecked = true
+						collisionChoice = 'skip'
+					}
+				} else {
+					collisionChoice = applyDecisionToAll!
+				}
+
+				const pathsToProcess = applyToAllChecked ? [...remainingCollisionPaths] : [currentPath]
+				const mutationPromises = []
+
+				for (const path of pathsToProcess) {
+					let mutationFn: typeof moveItemMutation | typeof copyItemMutation | typeof restoreFromTrash
+					let mutationArgs: any
+
+					if (collisionChoice !== 'skip') {
+						const collisionStrategy = collisionChoice as 'replace' | 'keep-both'
+						if (operationType === 'move' && targetDirectory) {
+							mutationFn = moveItemMutation
+							mutationArgs = {path, toDirectory: targetDirectory, collision: collisionStrategy}
+						} else if (operationType === 'copy' && targetDirectory) {
+							mutationFn = copyItemMutation
+							mutationArgs = {path, toDirectory: targetDirectory, collision: collisionStrategy}
+						} else if (operationType === 'restore') {
+							mutationFn = restoreFromTrash
+							mutationArgs = {path, collision: collisionStrategy}
+						} else {
+							console.error(`Invalid state for collision resolution: op=${operationType}, target=${targetDirectory}`)
+							continue
+						}
+						mutationPromises.push(
+							mutationFn(mutationArgs).catch((err) => {
+								allSucceededWithoutCollision = false
+								onErrorToastFn(`Failed during ${collisionChoice}: ${err.message}`)
+								console.error(`Failed ${operationType} ${path} with collision ${collisionChoice}:`, err)
+							}),
+						)
+					}
+				}
+
+				await Promise.allSettled(mutationPromises)
+
+				if (applyToAllChecked) {
+					remainingCollisionPaths.length = 0
+				} else {
+					remainingCollisionPaths.shift()
+				}
+			}
+		} else if (allSucceededWithoutCollision) {
+			onSuccessAll?.()
+		}
+	}
 
 	// Basic file operations
 	// --------------------
@@ -32,111 +179,90 @@ export function useFilesOperations() {
 		},
 	}).mutateAsync
 
-	const renameItem = async ({item, toName}: {item: FileSystemItem; toName: string}) => {
+	const renameItem = async ({item, newName}: {item: FileSystemItem; newName: string}) => {
 		const currentName = item.path.split('/').pop() || ''
 
 		// do nothing if the name hasn't changed
-		if (currentName === toName) {
+		if (currentName === newName) {
 			return
 		}
 
-		// Check if the operation is allowed
-		if (!isOperationAllowed(item.path, 'rename')) {
-			throw new Error('Cannot rename this item')
-		}
+		// Wait for the rename mutation to complete and trigger list invalidation.
+		await renameItemMutation({path: item.path, newName})
 
-		// Wait for the rename to complete successfully
-		await renameItemMutation({path: item.path, toName})
-
-		// Set the newly renamed item as selected
-		setSelectedItems([
-			{
-				...item,
-				name: toName,
-				path: `${item.path.split('/').slice(0, -1).join('/')}/${toName}`,
-			},
-		])
+		// NOTE: Re-select the item after rename.
 	}
 
 	// File movement operations
 	// -----------------------
 
-	// Move item
-	const moveItem = trpcReact.files.move.useMutation({
-		onMutate: async ({path, toDirectory}) => {
-			const currentDirectory = path.split('/').slice(0, -1).join('/')
-			if (currentDirectory === toDirectory) {
-				throw new Error('SAME_PATH')
-			}
-		},
-		onSuccess: async (_, {path, toDirectory}) => {
-			// invalidate the path where the item was moved to
-			await utils.files.list.invalidate({path: toDirectory})
-			// invalidate the parent directory of the item
-			await utils.files.list.invalidate({path: path.split('/').slice(0, -1).join('/')})
-			// invalidate the recents list
-			await utils.files.recents.invalidate()
-		},
-		onError: (error) => {
-			if (error.message !== 'SAME_PATH') {
-				toast.error(t('files-error.move', {message: error.message}))
-			}
+	// Move item mutation hook
+	const moveItemMutation = trpcReact.files.move.useMutation({
+		onSettled: () => {
+			utils.files.list.invalidate()
+			utils.files.recents.invalidate()
 		},
 	}).mutateAsync
-	// Move selected items
-	const moveSelectedItems = ({toDirectory}: {toDirectory: string}) => {
-		for (const item of selectedItems) {
-			if (isOperationAllowed(item.path, 'move') && isOperationAllowed(toDirectory, 'paste')) {
-				moveItem({path: item.path, toDirectory})
-			}
-		}
+
+	const moveItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
+		await _executeBatchOperationWithCollisionHandling({
+			paths: fromPaths,
+			operationAsyncFn: moveItemMutation,
+			operationType: 'move',
+			getOperationArgsFn: (path) => ({path, toDirectory}),
+			targetDirectory: toDirectory,
+			onErrorToastFn: (message) => toast.error(t('files-error.move', {message})),
+			onSuccessAll: () => {},
+		})
+	}
+
+	const moveSelectedItems = async ({toDirectory}: {toDirectory: string}) => {
+		await moveItems({fromPaths: selectedItems.map((item) => item.path), toDirectory})
 		setSelectedItems([])
 	}
 
-	// Move dragged items
-	const moveDraggedItems = ({toDirectory}: {toDirectory: string}) => {
-		for (const item of draggedItems) {
-			if (isOperationAllowed(item.path, 'move') && isOperationAllowed(toDirectory, 'paste')) {
-				moveItem({path: item.path, toDirectory})
-			}
-		}
+	const moveDraggedItems = async ({toDirectory}: {toDirectory: string}) => {
+		await moveItems({fromPaths: draggedItems.map((item) => item.path), toDirectory})
 		clearDraggedItems()
 	}
 
-	// Copy item
-	const copyItem = trpcReact.files.copy.useMutation({
-		onSuccess: async (_, {path, toDirectory}) => {
-			// invalidate the path where the item was copied to
-			await utils.files.list.invalidate({path: toDirectory})
-			// invalidate the parent directory of the item
-			await utils.files.list.invalidate({path: path.split('/').slice(0, -1).join('/')})
-			// invalidate the recents list
-			await utils.files.recents.invalidate()
-		},
-		onError: (error) => {
-			toast.error(t('files-error.copy', {message: error.message}))
+	// Copy item mutation hook
+	const copyItemMutation = trpcReact.files.copy.useMutation({
+		onSettled: () => {
+			utils.files.list.invalidate()
+			utils.files.recents.invalidate()
 		},
 	}).mutateAsync
 
+	const copyItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
+		await _executeBatchOperationWithCollisionHandling({
+			paths: fromPaths,
+			operationAsyncFn: copyItemMutation,
+			operationType: 'copy',
+			getOperationArgsFn: (path) => ({path, toDirectory}),
+			targetDirectory: toDirectory,
+			onErrorToastFn: (message) => toast.error(t('files-error.copy', {message})),
+			onSuccessAll: () => {},
+		})
+	}
+
 	// Paste (copy or move) items from clipboard
-	const pasteItemsFromClipboard = ({toDirectory}: {toDirectory: string}) => {
-		for (const item of clipboardItems) {
-			if (isOperationAllowed(toDirectory, 'paste')) {
-				if (clipboardMode === 'copy') {
-					copyItem({path: item.path, toDirectory: toDirectory})
-				} else if (clipboardMode === 'cut') {
-					moveItem({path: item.path, toDirectory: toDirectory})
-				}
-			}
+	const pasteItemsFromClipboard = async ({toDirectory}: {toDirectory: string}) => {
+		const paths = clipboardItems.map((item) => item.path)
+		if (clipboardMode === 'copy') {
+			await copyItems({fromPaths: paths, toDirectory})
+		} else if (clipboardMode === 'cut') {
+			await moveItems({fromPaths: paths, toDirectory})
+			// only clear the clipboard on move, not copy
+			clearClipboard()
 		}
-		clearClipboard()
 	}
 
 	// Compression operations
 	// ---------------------
 
-	// Extract archive
-	const extract = trpcReact.files.extract.useMutation({
+	// Extract archive (umbreld always extracts archive contents into a new folder named after the archive)
+	const extract = trpcReact.files.unarchive.useMutation({
 		onSuccess: async () => {
 			await utils.files.list.invalidate()
 		},
@@ -198,36 +324,40 @@ export function useFilesOperations() {
 
 	const trashSelectedItems = () => {
 		for (const item of selectedItems) {
-			if (isOperationAllowed(item.path, 'trash')) {
-				trashItem({path: item.path})
-			}
+			trashItem({path: item.path})
 		}
 		setSelectedItems([])
 	}
 
 	const trashDraggedItems = () => {
 		for (const item of draggedItems) {
-			if (isOperationAllowed(item.path, 'trash')) {
-				trashItem({path: item.path})
-			}
+			trashItem({path: item.path})
 		}
 		clearDraggedItems()
 	}
 
 	// Restore from trash
 	const restoreFromTrash = trpcReact.files.restore.useMutation({
-		onSuccess: async () => {
-			await utils.files.list.invalidate()
-		},
-		onError: (error) => {
-			toast.error(t('files-error.restore', {message: error.message}))
+		onSettled: () => {
+			utils.files.list.invalidate()
+			utils.files.recents.invalidate()
 		},
 	}).mutateAsync
 
+	// Updated batch restore function
+	const restoreItems = async ({paths}: {paths: string[]}) => {
+		await _executeBatchOperationWithCollisionHandling({
+			paths,
+			operationAsyncFn: restoreFromTrash,
+			operationType: 'restore',
+			getOperationArgsFn: (path) => ({path}),
+			onErrorToastFn: (message) => toast.error(t('files-error.restore', {message})),
+			onSuccessAll: () => {},
+		})
+	}
+
 	const restoreSelectedItems = () => {
-		for (const item of selectedItems) {
-			restoreFromTrash({path: item.path})
-		}
+		restoreItems({paths: selectedItems.map((item) => item.path)})
 		setSelectedItems([])
 	}
 
@@ -267,13 +397,25 @@ export function useFilesOperations() {
 	const downloadSelectedItems = () => {
 		// For multiple items, construct URL with multiple path parameters
 		const paths = selectedItems.map((item) => `path=${encodeURIComponent(item.path)}`).join('&')
-		window.open(`/api/files/download?${paths}`, '_blank')
+		const url = `/api/files/download?${paths}`
+		// create a temporary anchor element to download the files
+		const anchor = document.createElement('a')
+		anchor.href = url
+		anchor.setAttribute('download', '')
+		// add the anchor to the body
+		document.body.appendChild(anchor)
+		// click the anchor to download the files
+		anchor.click()
+		// remove the anchor from the body
+		document.body.removeChild(anchor)
 	}
 
 	return {
 		// Basic operations
 		renameItem,
 		// Movement operations
+		copyItems,
+		moveItems,
 		moveDraggedItems,
 		moveSelectedItems,
 		pasteItemsFromClipboard,
@@ -283,6 +425,7 @@ export function useFilesOperations() {
 		// Trash operations
 		trashDraggedItems,
 		trashSelectedItems,
+		restoreFromTrash,
 		restoreSelectedItems,
 		deleteSelectedItems,
 		emptyTrash,
