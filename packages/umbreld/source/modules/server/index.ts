@@ -102,7 +102,8 @@ class Server {
 					// Allow inline scripts ONLY in development for vite dev server
 					scriptSrc: this.umbreld.developmentMode ? ["'self'", "'unsafe-inline'"] : null,
 					// Allow 3rd party app images (remove this if we serve them locally in the future)
-					imgSrc: ['*'],
+					// Also allow blob: URLs for images being uploaded in Files (since their thumbnails don't exist yet)
+					imgSrc: ['*', 'blob:'],
 					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
 					connectSrc: ["'self'", 'https://apps.umbrel.com'],
 					// Allow plain text access over the local network

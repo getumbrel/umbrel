@@ -446,8 +446,8 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 				const tempId = `upload-${path}-${Date.now()}` // Add timestamp for potential retries
 				const type = file.type || 'file'
 				const size = file.size
-				const created = Date.now()
 				const modified = Date.now()
+				const thumbnail = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
 
 				return {
 					tempId,
@@ -455,8 +455,8 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 					path,
 					type,
 					size,
+					thumbnail,
 					operations: [],
-					created,
 					modified,
 					isUploading: true,
 					status: 'uploading',
