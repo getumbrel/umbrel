@@ -1,3 +1,5 @@
+import {keepPreviousData} from '@tanstack/react-query'
+
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import type {FileSystemItem} from '@/features/files/types'
 import {sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
@@ -11,11 +13,8 @@ import {trpcReact} from '@/trpc/trpc'
 export function useListRecents() {
 	// Fetch the directory contents
 	const {data, isLoading, isError, error} = trpcReact.files.recents.useQuery(undefined, {
-		keepPreviousData: true,
+		placeholderData: keepPreviousData,
 		staleTime: 5_000,
-		onError: (error) => {
-			console.error('Failed to fetch recent items:', error)
-		},
 	})
 
 	const {preferences} = usePreferences()

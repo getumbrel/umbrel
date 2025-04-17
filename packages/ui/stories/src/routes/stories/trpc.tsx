@@ -54,15 +54,15 @@ function NormalUseQueryExample2() {
 }
 
 function ContextExample() {
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const [data, setData] = useState<RouterOutput['user']['get'] | null>(null)
 
 	useEffect(() => {
-		ctx.user.get.fetch().then((res) => {
+		utils.user.get.fetch().then((res) => {
 			console.log(res)
 			setData(res)
 		})
-	}, [ctx.user.get])
+	}, [utils.user.get])
 
 	return <JSONTree data={data} />
 }

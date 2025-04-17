@@ -5,11 +5,11 @@ import {trpcReact} from '@/trpc/trpc'
 import {SupportedLanguageCode, supportedLanguageCodes} from '@/utils/language'
 
 export function useLanguage(): [code: SupportedLanguageCode, setCode: (code: SupportedLanguageCode) => void] {
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const userSetMut = trpcReact.user.set.useMutation({
 		onSuccess() {
-			ctx.user.get.invalidate()
-			ctx.user.language.invalidate()
+			utils.user.get.invalidate()
+			utils.user.language.invalidate()
 		},
 	})
 

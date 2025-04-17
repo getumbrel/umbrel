@@ -19,7 +19,7 @@ export function useIsExternalDns({onSuccess}: {onSuccess?: (enabled: boolean) =>
 		externalDnsMut.mutate(checked)
 	}
 
-	const isLoading = externalDnsMut.isLoading || externalDnsQ.isLoading
+	const isLoading = externalDnsMut.isPending || externalDnsQ.isLoading
 
 	return {isChecked, change, isLoading}
 }

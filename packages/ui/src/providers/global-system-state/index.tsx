@@ -60,14 +60,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const clearError = () => setRouterError(null)
 
 	const queryClient = useQueryClient()
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
 	// When the action completes, remember whether it was a success or a failure
 	// and potentially clean up left-over state so the failed action can be
 	// attempted again. We use `failure` below to trigger the error cover.
 	const onSuccess = (success: boolean) => {
 		setFailure(!success)
-		ctx.system.status.cancel() // avoid receiving an outdated status
+		utils.system.status.cancel() // avoid receiving an outdated status
 		if (!success) {
 			setTriggered(false)
 			setShouldLogoutOnRunning(false)
@@ -85,7 +85,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// Force swift and fresh status updates when an action is in progress
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
-		cacheTime: 0,
+		gcTime: 0,
 	})
 
 	if (!IS_DEV) {

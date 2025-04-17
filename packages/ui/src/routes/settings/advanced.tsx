@@ -146,7 +146,7 @@ function useIsBetaChannel() {
 		}
 	}
 
-	const isLoading = releaseChannelMut.isLoading || releaseChannelQ.isLoading
+	const isLoading = releaseChannelMut.isPending || releaseChannelQ.isLoading
 
 	return {isChecked, change, isLoading}
 }

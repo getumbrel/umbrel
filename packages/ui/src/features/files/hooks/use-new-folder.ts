@@ -8,7 +8,7 @@ import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export function useNewFolder() {
-	const trpc = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const {currentPath} = useNavigate()
 	const {listing} = useListDirectory(currentPath)
 	const setNewFolder = useFilesStore((s) => s.setNewFolder)
@@ -45,7 +45,7 @@ export function useNewFolder() {
 			toast.error(t('files-error.create-folder', {message: error.message}))
 		},
 		onSettled: () => {
-			trpc.files.list.invalidate()
+			utils.files.list.invalidate()
 		},
 	})
 
@@ -77,7 +77,7 @@ export function useNewFolder() {
 		createFolder,
 		startNewFolder,
 		cancelNewFolder,
-		isLoading: createFolder.isLoading,
+		isLoading: createFolder.isPending,
 	}
 }
 

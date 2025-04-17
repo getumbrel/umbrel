@@ -102,7 +102,7 @@ export function CommunityAppStoreDialog() {
 							{t('community-app-stores.warning')}
 						</p>
 						<form onSubmit={handleSubmit}>
-							<fieldset disabled={addAppStoreMut.isLoading} className='flex flex-col gap-5'>
+							<fieldset disabled={addAppStoreMut.isPending} className='flex flex-col gap-5'>
 								<Input
 									placeholder='URL'
 									value={url}

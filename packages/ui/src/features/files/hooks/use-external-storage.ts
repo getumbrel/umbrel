@@ -1,3 +1,4 @@
+import {keepPreviousData} from '@tanstack/react-query'
 import {useEffect} from 'react'
 import {toast} from 'sonner'
 
@@ -15,26 +16,23 @@ import {t} from '@/utils/i18n'
  * Also handles showing warning dialog for non-Umbrel Home devices.
  */
 export function useExternalStorage() {
-	const utils = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const {isUmbrelHome} = useIsUmbrelHome()
 	const {add} = useQueryParams()
 
 	// Query for external storage on Umbrel Home
 	const {data: disks, isLoading: isLoadingDisks} = trpcReact.files.mountedExternalDevices.useQuery(undefined, {
-		keepPreviousData: true,
+		placeholderData: keepPreviousData,
 		staleTime: 0, // Don't cache the data
 		refetchInterval: isUmbrelHome ? 5000 : false, // Only poll on Umbrel Home
 		enabled: isUmbrelHome, // Only run query on Umbrel Home
-		onError: (error: RouterError) => {
-			console.error('Failed to fetch external storage:', error)
-		},
 	})
 
 	// Query to check for external drives on non-Umbrel Home
 	const {data: hasExternalDriveOnNonUmbrelHome} = trpcReact.files.isExternalDeviceConnectedOnNonUmbrelHome.useQuery(
 		undefined,
 		{
-			keepPreviousData: true,
+			placeholderData: keepPreviousData,
 			staleTime: 0,
 			refetchInterval: !isUmbrelHome ? 5000 : false, // Only poll on non-Umbrel Home
 			enabled: !isUmbrelHome, // Only run query on non-Umbrel Home
@@ -59,7 +57,7 @@ export function useExternalStorage() {
 	}, [hasExternalDriveOnNonUmbrelHome, add])
 
 	// Eject disk mutation
-	const {mutateAsync: ejectDisk, isLoading: isEjecting} = trpcReact.files.unmountExternalDevice.useMutation({
+	const {mutateAsync: ejectDisk, isPending: isEjecting} = trpcReact.files.unmountExternalDevice.useMutation({
 		onMutate: (id) => {
 			// snapshot the ejected disk
 			return {

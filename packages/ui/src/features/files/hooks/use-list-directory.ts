@@ -1,3 +1,4 @@
+import {keepPreviousData} from '@tanstack/react-query'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
@@ -21,7 +22,7 @@ export function useListDirectory(
 ) {
 	const {preferences} = usePreferences()
 	const {uploadingItems} = useGlobalFiles()
-	const utils = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
 	const sortBy = preferences?.sortBy ?? 'name'
 	const sortOrder = preferences?.sortOrder ?? 'ascending'
@@ -51,7 +52,7 @@ export function useListDirectory(
 		{path, limit: initialItems, sortBy, sortOrder},
 		{
 			enabled: !!path && !skipBackendRequest,
-			keepPreviousData: true, // prevents flicker
+			placeholderData: keepPreviousData,
 			staleTime: 5_000,
 		},
 	)
@@ -108,7 +109,7 @@ export function useListDirectory(
 			// O( n ) dedupe
 			setItems((prev) => {
 				const map = new Map(prev.map((f) => [f.path, f]))
-				result.files.forEach((f) => map.set(f.path, f))
+				result.files.forEach((f: FileSystemItem) => map.set(f.path, f))
 				return Array.from(map.values())
 			})
 			setHasMore(result.hasMore)

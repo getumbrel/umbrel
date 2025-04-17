@@ -1,11 +1,13 @@
+import {keepPreviousData} from '@tanstack/react-query'
+
 import {ViewPreferences} from '@/features/files/types'
-import {RouterError, RouterInput, trpcReact} from '@/trpc/trpc'
+import {RouterInput, trpcReact} from '@/trpc/trpc'
 
 /**
  * Hook to list favorite directories in the file system.
  */
 export function usePreferences() {
-	const utils = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
 	// Query to fetch favorites
 	const {
@@ -14,10 +16,7 @@ export function usePreferences() {
 		isError,
 		error,
 	} = trpcReact.files.viewPreferences.useQuery(undefined, {
-		keepPreviousData: true,
-		onError: (error: RouterError) => {
-			console.error('Failed to fetch preferences:', error)
-		},
+		placeholderData: keepPreviousData,
 	})
 
 	const setPreferences = trpcReact.files.updateViewPreferences.useMutation({

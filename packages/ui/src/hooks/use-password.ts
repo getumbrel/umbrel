@@ -76,6 +76,6 @@ export function usePassword({onSuccess}: {onSuccess: () => void}) {
 		handleSubmit,
 		formError,
 		fieldErrors,
-		isLoading: changePasswordMut.isLoading,
+		isLoading: changePasswordMut.isPending,
 	}
 }

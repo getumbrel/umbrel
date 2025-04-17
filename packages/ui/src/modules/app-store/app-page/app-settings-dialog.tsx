@@ -73,13 +73,13 @@ function AppSettingsDialogForApp({
 	const dialogProps = useDialogOpenProps('app-settings')
 	const [selectedDependencies, setSelectedDependencies] = useState(app.selectedDependencies)
 	const [hadChanges, setHadChanges] = useState(false)
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const setSelectedDependenciesMut = trpcReact.apps.setSelectedDependencies.useMutation({
 		onSuccess() {
 			// Invalidate this app's state
-			ctx.apps.state.invalidate({appId: app.id})
+			utils.apps.state.invalidate({appId: app.id})
 			// Invalidate list of apps on desktop
-			ctx.apps.list.invalidate()
+			utils.apps.list.invalidate()
 		},
 	})
 

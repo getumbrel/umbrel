@@ -91,16 +91,16 @@ function AppItem({app}: {app: RegistryApp}) {
 		},
 	)
 	const [showAll, setShowAll] = useState(false)
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const updateMut = trpcReact.apps.update.useMutation({
 		onMutate: () => {
 			// Optimistic updates because otherwise it's too slow and feels like nothing is happening
-			ctx.apps.state.cancel()
-			ctx.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
+			utils.apps.state.cancel()
+			utils.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
 		},
 		onSuccess: () => {
 			// This should cause the app to be removed from the list
-			ctx.apps.list.invalidate()
+			utils.apps.list.invalidate()
 		},
 	})
 	const updateApp = () => updateMut.mutate({appId: app.id})
@@ -121,7 +121,7 @@ function AppItem({app}: {app: RegistryApp}) {
 				<ProgressButton
 					size='sm'
 					onClick={updateApp}
-					disabled={inProgress || updateMut.isLoading}
+					disabled={inProgress || updateMut.isPending}
 					state={appState}
 					progress={progress}
 					style={{

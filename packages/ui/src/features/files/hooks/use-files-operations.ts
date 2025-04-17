@@ -18,7 +18,7 @@ type GetOperationArgsFn<TArgs extends object> = (path: string) => TArgs
 type ErrorToastFn = (message: string) => void
 
 export function useFilesOperations() {
-	const utils = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
 
 	const clipboardMode = useFilesStore((s) => s.clipboardMode)

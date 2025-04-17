@@ -104,7 +104,7 @@ const calculateUploadStats = (items: UploadingFileSystemItem[]): UploadStats => 
 
 // The Provider
 export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
-	const utils = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
 
 	// Directory creation mutation

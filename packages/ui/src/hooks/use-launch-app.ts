@@ -30,10 +30,10 @@ export function useLaunchApp() {
 	const userApp = useApps()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const trackOpenMut = trpcReact.apps.trackOpen.useMutation({
 		onSuccess() {
-			ctx.apps.recentlyOpened.invalidate()
+			utils.apps.recentlyOpened.invalidate()
 		},
 	})
 

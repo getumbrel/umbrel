@@ -48,15 +48,15 @@
 		"prettier": "3.3.3",
 		"tcp-port-used": "^1.0.2",
 		"tough-cookie": "^5.1.2",
-		"typescript": "^5.3.3",
+		"typescript": "^5.8.3",
 		"vitest": "^2.1.2",
 		"wait-port": "^1.0.4"
 	},
 	"dependencies": {
 		"@homebridge/dbus-native": "github:getumbrel/dbus-native#types",
 		"@parcel/watcher": "^2.5.1",
-		"@trpc/client": "^10.34.0",
-		"@trpc/server": "^10.34.0",
+		"@trpc/client": "^11.1.0",
+		"@trpc/server": "^11.1.0",
 		"@tsconfig/node22": "^22.0.0",
 		"@types/cookie-parser": "^1.4.7",
 		"archiver": "^7.0.1",

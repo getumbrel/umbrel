@@ -112,10 +112,10 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 
 	const showCredentials = app?.credentials?.showBeforeOpen ?? false
 
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
 	const hideCredentialsBeforeOpenMut = trpcReact.apps.hideCredentialsBeforeOpen.useMutation({
-		onSuccess: () => ctx.apps.invalidate(),
+		onSuccess: () => utils.apps.invalidate(),
 	})
 
 	const handleHideCredentialsBeforeOpenChange = (value: boolean) => {
@@ -128,7 +128,7 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 				className={cn(
 					checkboxContainerClass,
 					// prevent interaction when loading
-					(isLoading || hideCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
+					(isLoading || hideCredentialsBeforeOpenMut.isPending) && 'pointer-events-none',
 				)}
 			>
 				<Checkbox

@@ -7,7 +7,7 @@ import {t} from '@/utils/i18n'
 export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-available' | 'upgrading'
 
 export function useSoftwareUpdate() {
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery(undefined, {
 		retry: false,
 		refetchOnReconnect: false,
@@ -20,8 +20,8 @@ export function useSoftwareUpdate() {
 
 	const checkLatest = useCallback(async () => {
 		try {
-			ctx.system.checkUpdate.invalidate()
-			const latestVersion = await ctx.system.checkUpdate.fetch()
+			utils.system.checkUpdate.invalidate()
+			const latestVersion = await utils.system.checkUpdate.fetch()
 
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
@@ -29,7 +29,7 @@ export function useSoftwareUpdate() {
 		} catch (error) {
 			toast.error(t('software-update.failed-to-check'))
 		}
-	}, [ctx.system.checkUpdate])
+	}, [utils.system.checkUpdate])
 
 	let state: UpdateState = 'initial'
 	if (latestVersionQ.isLoading) {
@@ -38,7 +38,7 @@ export function useSoftwareUpdate() {
 		state = 'checking'
 	} else if (latestVersionQ.error) {
 		state = 'initial'
-	} else if (!latestVersionQ.data.available) {
+	} else if (!latestVersionQ.data?.available) {
 		state = 'at-latest'
 	} else {
 		state = 'update-available'

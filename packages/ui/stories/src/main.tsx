@@ -16,7 +16,7 @@ init(
 		<TrpcProvider>
 			<RouterProvider router={storiesRouter} />
 			<TrpcMarker />
-			<ReactQueryDevtools initialIsOpen={false} position='bottom-right' />
+			<ReactQueryDevtools initialIsOpen={false} position='bottom' />
 		</TrpcProvider>
 	</SimpleWallpaperProvider>,
 )

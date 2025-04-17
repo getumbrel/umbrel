@@ -57,7 +57,7 @@ export default function CreateAccount() {
 
 	const remoteFormError = !registerMut.error?.data?.zodError && registerMut.error?.message
 	const formError = localError || remoteFormError
-	const isLoading = registerMut.isLoading || loginMut.isLoading || isNavigating
+	const isLoading = registerMut.isPending || loginMut.isPending || isNavigating
 
 	return (
 		<Layout

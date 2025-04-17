@@ -101,27 +101,27 @@ export function useWidgets() {
 }
 
 function useEnableWidgets() {
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const widgetQ = trpcReact.widget.enabled.useQuery()
 
 	const enableMut = trpcReact.widget.enable.useMutation({
 		onSuccess: () => {
-			ctx.user.invalidate()
-			ctx.widget.enabled.invalidate()
+			utils.user.invalidate()
+			utils.widget.enabled.invalidate()
 		},
 	})
 
 	const disableMut = trpcReact.widget.disable.useMutation({
 		onSuccess: () => {
-			ctx.user.invalidate()
-			ctx.widget.enabled.invalidate()
+			utils.user.invalidate()
+			utils.widget.enabled.invalidate()
 		},
 	})
 
 	const selected = widgetQ.data ?? []
 	// const setSelected = (widgets: WidgetT[]) => enableMut.mutate({widgets})
 
-	const isLoading = widgetQ.isLoading || enableMut.isLoading
+	const isLoading = widgetQ.isLoading || enableMut.isPending
 
 	return {
 		isLoading,

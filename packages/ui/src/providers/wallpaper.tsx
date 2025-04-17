@@ -308,19 +308,21 @@ function useRemoteWallpaper(onSuccess?: (id: WallpaperId) => void) {
 	// Refetching causes lots of failed calls to the backend on bare pages before we're logged in.
 	const userQ = trpcReact.user.wallpaper.useQuery(undefined, {
 		retry: false,
-		onSuccess: (wallpaperId) => {
-			if (arrayIncludes(wallpaperIds, wallpaperId)) {
-				onSuccess?.(wallpaperId)
-			}
-		},
 	})
 	const wallpaperQId = userQ.data
 
-	const ctx = trpcReact.useContext()
+	// Handle the onSuccess side effect
+	useEffect(() => {
+		if (userQ.isSuccess && wallpaperQId && arrayIncludes(wallpaperIds, wallpaperQId)) {
+			onSuccess?.(wallpaperQId)
+		}
+	}, [userQ.isSuccess, wallpaperQId, onSuccess])
+
+	const utils = trpcReact.useUtils()
 	const userMut = trpcReact.user.set.useMutation({
 		onSuccess: () => {
-			ctx.user.get.invalidate()
-			ctx.user.wallpaper.invalidate()
+			utils.user.get.invalidate()
+			utils.user.wallpaper.invalidate()
 		},
 	})
 	const setWallpaperId = useCallback((id: WallpaperId) => userMut.mutate({wallpaper: id}), [userMut])

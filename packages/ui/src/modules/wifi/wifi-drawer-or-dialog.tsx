@@ -31,14 +31,14 @@ import {tw} from '@/utils/tw'
 type NetworkStatus = RouterOutput['wifi']['connected']
 
 export function WifiDrawerOrDialogContent() {
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const statusQ = trpcReact.wifi.connected.useQuery()
 	const networkStatus = statusQ.data
 
 	const disconnectMut = trpcReact.wifi.disconnect.useMutation({
 		onSettled: () => {
-			ctx.wifi.connected.invalidate()
-			ctx.system.getIpAddresses.invalidate()
+			utils.wifi.connected.invalidate()
+			utils.system.getIpAddresses.invalidate()
 		},
 	})
 
@@ -61,7 +61,7 @@ export function WifiDrawerOrDialogContent() {
 							className='mt-0 disabled:pointer-events-none'
 							checked={statusQ.data?.status === 'connected'}
 							onCheckedChange={(toCheck) => !toCheck && setDisableAlertOpen(true)}
-							disabled={disconnectMut.isLoading || statusQ.isFetching || statusQ.data?.status !== 'connected'}
+							disabled={disconnectMut.isPending || statusQ.isFetching || statusQ.data?.status !== 'connected'}
 						/>
 						<AlertDialog open={disableAlertOpen} onOpenChange={setDisableAlertOpen}>
 							<AlertDialogContent>
@@ -76,7 +76,7 @@ export function WifiDrawerOrDialogContent() {
 										variant='destructive'
 										onClick={() => {
 											// Invalidate queries so other parts of the interface can update
-											ctx.wifi.connected.invalidate()
+											utils.wifi.connected.invalidate()
 											disconnectMut.mutate()
 											setDisableAlertOpen(false)
 										}}
@@ -227,10 +227,10 @@ function Network({
 }) {
 	const passwordInputRef = useRef<HTMLInputElement>(null)
 
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const connectMut = trpcReact.wifi.connect.useMutation({
 		onMutate: () => {
-			ctx.wifi.connected.cancel()
+			utils.wifi.connected.cancel()
 		},
 		onSuccess: () => setIsOpen(false),
 		onError: () => {
@@ -240,8 +240,8 @@ function Network({
 			}, 200)
 		},
 		onSettled: () => {
-			ctx.wifi.connected.invalidate()
-			ctx.system.getIpAddresses.invalidate()
+			utils.wifi.connected.invalidate()
+			utils.system.getIpAddresses.invalidate()
 		},
 	})
 
@@ -256,7 +256,7 @@ function Network({
 		connectMut.mutate({ssid, password})
 	}
 
-	const statusUi = connectMut.isLoading ? 'loading' : status
+	const statusUi = connectMut.isPending ? 'loading' : status
 
 	// Show password error under the password input and other errors in a differnt place
 	const errorMessage = connectMut.error?.message
@@ -278,7 +278,7 @@ function Network({
 		>
 			<WifiListItemContent network={network} status={statusUi} error={otherError} />
 			<AnimatePresence>
-				{isOpen && !connectMut.isLoading && (
+				{isOpen && !connectMut.isPending && (
 					<AnimateHeight>
 						<ConnectComponent
 							passwordInputRef={passwordInputRef}
