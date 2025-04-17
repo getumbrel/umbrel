@@ -188,41 +188,52 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 
 // Thumbnail component with on‑demand fetch + exponential backoff
 function useOnDemandThumbnail(item: FileSystemItem) {
-	const MAX_RETRIES = 4 // limit at 4 times, to not continually spam umbreld with on-demand thumnail requests if they error because it could be an ImageMagick error and we'd be continually spawning convert processes (in a queue)
-	const INITIAL_DELAY_MS = 500 // wait for 500ms to begin with
+	// retry timing: 0.5s, 1s, 2s, 4s => four retries max
+	// so we don't continually spam umbreld with on-demand thumnail requests
+	// if they error because it could be an ImageMagick error and
+	// we'd be continually spawning convert processes (in a queue)
+	const MAX_RETRIES = 4
+	const INITIAL_DELAY_MS = 500
 
-	const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(item.thumbnail)
+	const [url, setUrl] = useState<string | undefined>(item.thumbnail)
 	const [attempt, setAttempt] = useState(0)
 
 	const getThumbnailMutation = trpcReact.files.getThumbnail.useMutation()
 
-	// Reset when file changes
+	// Reset state when the file item changes
 	useEffect(() => {
-		setThumbnailUrl(item.thumbnail)
+		setUrl(item.thumbnail)
 		setAttempt(0)
 	}, [item.path, item.thumbnail])
 
-	// Fetch with exponential backoff
+	// Exponential‑back‑off fetch
 	useEffect(() => {
-		if (thumbnailUrl || attempt > MAX_RETRIES) return
+		if (url !== undefined || attempt >= MAX_RETRIES) return
 
-		const delay = INITIAL_DELAY_MS * 2 ** attempt
+		const delay = INITIAL_DELAY_MS * (attempt === 0 ? 1 : 2 ** attempt)
 		const timer = setTimeout(() => {
 			getThumbnailMutation
 				.mutateAsync({path: item.path})
-				.then(setThumbnailUrl)
+				.then((res) => {
+					if (res) {
+						setUrl(res)
+					} else {
+						setAttempt((a) => a + 1)
+					}
+				})
 				.catch(() => setAttempt((a) => a + 1))
 		}, delay)
 
 		return () => clearTimeout(timer)
-	}, [thumbnailUrl, attempt, item.path])
+	}, [url, attempt, item.path])
 
+	// When the browser fails to load the image we bump the attempt counter
 	const handleImageError = () => {
-		setThumbnailUrl(undefined)
+		setUrl(undefined)
 		setAttempt((a) => a + 1)
 	}
 
-	return {thumbnailUrl, handleImageError}
+	return {thumbnailUrl: url, handleImageError}
 }
 
 const Thumbnail = ({
@@ -238,27 +249,28 @@ const Thumbnail = ({
 }) => {
 	const {thumbnailUrl, handleImageError} = useOnDemandThumbnail(item)
 
-	if (!thumbnailUrl) {
-		return <Fallback className={className} />
-	}
-
-	const imageElement = (
+	const imageNode = thumbnailUrl ? (
 		<img
 			src={thumbnailUrl}
 			alt={item.name}
 			onError={handleImageError}
 			className={`rounded-sm object-contain ${className || ''}`}
 		/>
-	)
+	) : null
 
-	if (!overlay) return imageElement
+	const content = imageNode ?? <Fallback className={className} />
 
-	return (
-		<div className='relative'>
-			{imageElement}
-			{overlay}
-		</div>
-	)
+	// Only display overlay when we have a real thumbnail to show
+	if (overlay && imageNode) {
+		return (
+			<div className='relative'>
+				{imageNode}
+				{overlay}
+			</div>
+		)
+	}
+
+	return content
 }
 
 // Image thumbnail
