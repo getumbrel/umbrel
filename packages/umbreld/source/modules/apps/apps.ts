@@ -175,9 +175,9 @@ export default class Apps {
 		await Promise.all(
 			this.instances.map((app) =>
 				app.stop().catch((error) => {
-					// We handle individual errors here to prevent apps start from throwing
+					// We handle individual errors here to prevent apps stop from throwing
 					// if a single app fails.
-					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
+					this.logger.error(`Failed to stop app ${app.id}: ${error.message}`)
 				}),
 			),
 		)
