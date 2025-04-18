@@ -599,4 +599,52 @@ test('copy() copies files inside a symlink', async () => {
 	await fse.remove(testDirectory)
 })
 
-test.todo('copy() preserves file permissions and timestamps')
+test('copy() preserves file permissions, ownership and timestamps', async () => {
+	// Create test directory and file
+	const testDirectory = `${umbreld.instance.dataDirectory}/home/copy-permissions-test`
+	await fse.mkdir(testDirectory)
+	await fse.mkdir(`${testDirectory}/source`)
+	const sourceFile = `${testDirectory}/source/file.txt`
+	await fse.writeFile(sourceFile, 'test content')
+	await fse.mkdir(`${testDirectory}/destination`)
+
+	// Set specific permissions (0o644 = rw-r--r--) and timestamps
+	const originalPermissions = 0o644
+	await fse.chmod(sourceFile, originalPermissions)
+
+	// Set specific ownership (use umbrel user ID from files class)
+	const uid = 1234
+	const gid = 1234
+	await fse.chown(sourceFile, uid, gid)
+
+	// Set a specific timestamp (1 day ago)
+	const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000)
+	await fse.utimes(sourceFile, pastDate, pastDate)
+
+	// Get original stats for later comparison
+	const originalStats = await fse.stat(sourceFile)
+
+	// Copy the file
+	const result = await umbreld.client.files.copy.mutate({
+		path: '/Home/copy-permissions-test/source/file.txt',
+		toDirectory: '/Home/copy-permissions-test/destination',
+	})
+	expect(result).toBe('/Home/copy-permissions-test/destination/file.txt')
+
+	// Get stats of the copied file
+	const copiedFile = `${testDirectory}/destination/file.txt`
+	const copiedStats = await fse.stat(copiedFile)
+
+	// Verify the permissions are preserved
+	expect(copiedStats.mode).toBe(originalStats.mode)
+
+	// Verify ownership is preserved
+	expect(copiedStats.uid).toBe(originalStats.uid)
+	expect(copiedStats.gid).toBe(originalStats.gid)
+
+	// Verify the timestamps are preserved
+	expect(copiedStats.mtime.getTime()).toBe(originalStats.mtime.getTime())
+
+	// Clean up
+	await fse.remove(testDirectory)
+})

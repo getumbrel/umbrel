@@ -91,6 +91,9 @@ export default router({
 			ctx.umbreld.files.move(input.path, input.toDirectory, {collision: input.collision}),
 		),
 
+	// Get progress of file operations
+	operationProgress: privateProcedure.query(async ({ctx}) => ctx.umbreld.files.operationsInProgress),
+
 	// Rename a file or directory
 	rename: privateProcedure
 		.input(z.object({path: z.string(), newName: z.string().nonempty()}))

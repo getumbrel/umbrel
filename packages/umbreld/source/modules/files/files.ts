@@ -21,6 +21,7 @@ import mime from 'mime-types'
 import fse from 'fs-extra'
 import {minimatch} from 'minimatch'
 import isValidFilename from 'valid-filename'
+import {execa} from 'execa'
 
 import Watcher from './watcher.js'
 import Recents from './recents.js'
@@ -78,6 +79,15 @@ const DEFAULT_VIEW_PREFERENCES: ViewPreferences = {
 	sortOrder: 'ascending',
 }
 
+type OperationProgress = {
+	type: 'copy' | 'move'
+	file: File
+	destinationPath: string
+	progress: number
+}
+
+export type OperationsInProgress = OperationProgress[]
+
 export default class Files {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
@@ -94,6 +104,8 @@ export default class Files {
 	thumbnails: Thumbnails
 	samba: Samba
 	externalStorage: ExternalStorage
+	operationsInProgress: OperationsInProgress = []
+
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
@@ -339,11 +351,78 @@ export default class Files {
 		}
 	}
 
+	// Internal utility to copy (or copy and delete (psuedo-move)) a file or directory using rsync and report progress
+	async #copyWithProgress(sourceSystemPath: string, destinationSystemPath: string, {move = false} = {}) {
+		// Error handling consistent with fse.copy and move
+		const destinationExists = await fse.exists(destinationSystemPath)
+		if (destinationExists) throw new Error('[destination-already-exists]')
+		if (destinationSystemPath.startsWith(sourceSystemPath)) throw new Error('[subdir-of-self]')
+
+		// Create initial progress tracker and emit copy event
+		const operationProgress: OperationProgress = {
+			type: move ? 'move' : 'copy',
+			file: await this.status(sourceSystemPath),
+			destinationPath: this.systemToVirtualPath(destinationSystemPath),
+			progress: 0,
+		}
+		this.operationsInProgress.push(operationProgress)
+		this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+
+		try {
+			const rsyncExtraOptions = []
+
+			// Force 100 KB/s for test suite
+			if (process.env.UMBRELD_FORCE_100KBS_COPY === 'true') rsyncExtraOptions.push('--bwlimit=100')
+
+			// Start rsync copy
+			const rsync = execa('rsync', [
+				// Give detailed progress output we can easily parse
+				'--info=progress2',
+				// Archive mode, recursive and preserve permissions etc
+				'--archive',
+				// Inplace mode, update files in place instead of temporary files with a random suffix
+				// which confuses recents tracking.
+				'--inplace',
+				// Drop in extra options
+				...rsyncExtraOptions,
+				// Absolute source and target
+				sourceSystemPath,
+				destinationSystemPath,
+			])
+
+			// Process output from rsync to handle copy progress
+			rsync.stdout!.on('data', (chunk) => {
+				// Grab progress update from --info=progress2 output
+				const progressUpdate = chunk.toString().match(/.* (\d*)% .*/)
+				if (progressUpdate) {
+					// Convert percentage to number and pass to callback
+					const percent = Number.parseInt(progressUpdate[1], 10)
+					// Update the progress tracker emit copy event
+					operationProgress.progress = percent
+					this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+				}
+			})
+
+			// Wait for rsync to finish and throw if rsync exits with a non-zero exit code
+			await rsync
+
+			// If we're moving, delete the source file or directory on completion
+			if (move) await fse.remove(sourceSystemPath)
+		} finally {
+			// Remove the progress tracker and emit copy event
+			this.operationsInProgress = this.operationsInProgress.filter((operation) => operation !== operationProgress)
+			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+		}
+	}
 	// Copies a file or directory from one virtual path to another.
 	async copy(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
 		// Get the system paths
-		const sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
+		let sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
 		const destinationSystemDirectory = await this.virtualToSystemPath(destinationVirtualDirectory)
+
+		// Error if the source doesn't exist
+		const sourceExists = await fse.exists(sourceSystemPath)
+		if (!sourceExists) throw new Error('[source-not-exists]')
 
 		// Error if the destination directory doesn't exist
 		const targetExists = await fse.exists(destinationSystemDirectory)
@@ -351,7 +430,10 @@ export default class Files {
 
 		// TODO: Check we have enough free space on the destination
 
-		// Set up the destination path
+		// Add trailing slash to source path if it's a directoryso we only copy the contents
+		if ((await fse.lstat(sourceSystemPath)).isDirectory()) sourceSystemPath = `${sourceSystemPath}/`
+
+		// Build absolute destination path
 		let destinationSystemPath = nodePath.join(destinationSystemDirectory, nodePath.basename(sourceSystemPath))
 
 		// Always use 'keep-both' collision handling for same directory copies
@@ -371,12 +453,7 @@ export default class Files {
 		}
 
 		// Perform the copy operation
-		// TODO: Preserve file permissions and timestamps
-		// TODO: Report progress
-		await fse.copy(sourceSystemPath, destinationSystemPath).catch((error) => {
-			if (error?.message?.includes('subdirectory of itself')) throw new Error('[subdir-of-self]')
-			throw new Error(`[copy-failed] ${error?.message}`)
-		})
+		await this.#copyWithProgress(sourceSystemPath, destinationSystemPath)
 
 		// Return the virtual path of the new copy
 		return this.systemToVirtualPath(destinationSystemPath)
@@ -393,23 +470,41 @@ export default class Files {
 		if (!allowedOperations.includes('move')) throw new Error('[operation-not-allowed]')
 
 		// Get the system paths
-		const sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
+		let sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
 		const destinationSystemDirectory = await this.virtualToSystemPath(destinationVirtualDirectory)
 
-		// Error if the destination directory doesn't exist
-		const targetExists = await fse.exists(destinationSystemDirectory)
-		if (!targetExists) throw new Error('[destination-not-exist]')
+		// Error if the source doesn't exist
+		const sourceStats = await fse.stat(sourceSystemPath).catch(() => {
+			throw new Error('[source-not-exists]')
+		})
 
-		// Set up the destination path
+		// Error if the destination directory doesn't exist
+		const targetDirectoryStats = await fse.stat(destinationSystemDirectory).catch(() => {
+			throw new Error('[destination-not-exist]')
+		})
+
+		// Add trailing slash to source path if it's a directoryso we only copy the contents
+		if ((await fse.lstat(sourceSystemPath)).isDirectory()) sourceSystemPath = `${sourceSystemPath}/`
+
+		// Build absolute destination path
 		let destinationSystemPath = nodePath.join(destinationSystemDirectory, nodePath.basename(sourceSystemPath))
 
 		// Handle name collisions
 		if (collision === 'keep-both') destinationSystemPath = await this.getUniqueName(destinationSystemPath)
-		const moveOptions = collision === 'replace' ? {overwrite: true} : {}
+		if (collision === 'replace') await fse.remove(destinationSystemPath)
 
-		// Perform the move with appropriate overwrite option
-		// TODO: Report progress (moves across filesystems will be slow)
-		await move(sourceSystemPath, destinationSystemPath, moveOptions)
+		// Toggle move operation based on for cross fs moves.
+		// Also allow overriding this so we can test both variants in the test suite.
+		const forceSlowMoveWithProgress = process.env.UMBRELD_FORCE_SLOW_MOVE_WITH_PROGRESS === 'true'
+		const isMovingAcrossFilesystems = sourceStats.dev !== targetDirectoryStats.dev
+		if (isMovingAcrossFilesystems || forceSlowMoveWithProgress) {
+			// If we're moving across filesystems there will be a slow copy and delete so
+			// we'll use our own implementation that reports progress.
+			await this.#copyWithProgress(sourceSystemPath, destinationSystemPath, {move: true})
+		} else {
+			// Otherwise we can use native system move for instant atomic move on the same filesystem.
+			await move(sourceSystemPath, destinationSystemPath)
+		}
 
 		// Return the virtual path of the new location
 		return this.systemToVirtualPath(destinationSystemPath)

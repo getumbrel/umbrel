@@ -2,11 +2,15 @@ import Emittery from 'emittery'
 
 import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from '../files/watcher.js'
+import type {OperationsInProgress} from '../files/files.js'
 
 // Statically define event types
 type EventTypes = {
 	// Fires when a watched file changes
 	'file:change': FileChangeEvent
+	// Fires repeatedly while file operations (copy/move) are in progress
+	// with the current progress of each operation
+	'files:operation-progress': OperationsInProgress
 	// Fires when the connected block devices change
 	// e.g attaching/removing a USB drive
 	'system:disk:change': undefined
