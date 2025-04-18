@@ -368,9 +368,15 @@ export function useFilesOperations() {
 
 	// (Permanently) delete item
 	const deleteItem = trpcReact.files.delete.useMutation({
-		onSuccess: async () => {
-			// invalidate the trash directory
-			await utils.files.list.invalidate({path: TRASH_PATH})
+		onSuccess: async (_data, {path}) => {
+			// If the deleted item's path starts with "/External/" we invalidate
+			// the generic list considering the item was on external storage and,
+			// not in the trash, otherwise we only invalidate the trash list
+			if (path.startsWith('/External/')) {
+				await utils.files.list.invalidate()
+			} else {
+				await utils.files.list.invalidate({path: TRASH_PATH})
+			}
 		},
 		onError: (error) => {
 			toast.error(t('files-error.delete', {message: error.message}))

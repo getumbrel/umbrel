@@ -75,6 +75,7 @@ export const FileItemContextMenu = ({item, children, onRenameClick, onStateChang
 		destructive?: boolean
 		type?: 'separator'
 		disabled?: boolean
+		hidden?: boolean
 	}
 
 	let contextMenuItems: ContextMenuItem[] = []
@@ -124,6 +125,7 @@ export const FileItemContextMenu = ({item, children, onRenameClick, onStateChang
 		const canPaste =
 			hasItemsInClipboard() && hasOneSelectedItem && !isItemInClipboard(item) && item.type === 'directory'
 		const canTrash = item.operations.includes('trash')
+		const canPermanentlyDelete = item.operations.includes('delete')
 		const canExtract = selectedItems.every(
 			(itm) =>
 				itm.operations.includes('unarchive') &&
@@ -171,6 +173,15 @@ export const FileItemContextMenu = ({item, children, onRenameClick, onStateChang
 				shortcut: '⌘⌫',
 				destructive: true,
 				disabled: !canTrash,
+				hidden: !canTrash && canPermanentlyDelete,
+			},
+			{
+				id: 'delete',
+				label: t('files-action.delete'),
+				onClick: () => navigate(linkToDialog('files-permanently-delete-confirmation')),
+				destructive: true,
+				disabled: !canPermanentlyDelete,
+				hidden: canTrash && !canPermanentlyDelete,
 			},
 			{id: 'separator', type: 'separator'},
 			{
@@ -228,21 +239,23 @@ export const FileItemContextMenu = ({item, children, onRenameClick, onStateChang
 			>
 				<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 				<ContextMenuContent className='w-48'>
-					{contextMenuItems.map((menuItem) =>
-						menuItem.type === 'separator' ? (
-							<ContextMenuSeparator key={menuItem.id} />
-						) : (
-							<ContextMenuItem
-								key={menuItem.id}
-								onClick={menuItem.onClick}
-								className={menuItem.destructive ? contextMenuClasses.item.rootDestructive : undefined}
-								disabled={menuItem.disabled}
-							>
-								{menuItem.label}
-								{menuItem.shortcut && <ContextMenuShortcut>{menuItem.shortcut}</ContextMenuShortcut>}
-							</ContextMenuItem>
-						),
-					)}
+					{contextMenuItems
+						.filter((menuItem) => !menuItem.hidden)
+						.map((menuItem) =>
+							menuItem.type === 'separator' ? (
+								<ContextMenuSeparator key={menuItem.id} />
+							) : (
+								<ContextMenuItem
+									key={menuItem.id}
+									onClick={menuItem.onClick}
+									className={menuItem.destructive ? contextMenuClasses.item.rootDestructive : undefined}
+									disabled={menuItem.disabled}
+								>
+									{menuItem.label}
+									{menuItem.shortcut && <ContextMenuShortcut>{menuItem.shortcut}</ContextMenuShortcut>}
+								</ContextMenuItem>
+							),
+						)}
 				</ContextMenuContent>
 			</ContextMenu>
 		</>
