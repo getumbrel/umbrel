@@ -192,7 +192,10 @@ export function useFilesOperations() {
 		// Wait for the rename mutation to complete and trigger list invalidation.
 		await renameItemMutation({path: item.path, newName})
 
-		// NOTE: Re-select the item after rename.
+		// After a successful rename, update the selection so the *new* item remains selected.
+		const renamedPath = `${item.path.substring(0, item.path.lastIndexOf('/') + 1)}${newName}`
+
+		setSelectedItems([{...item, name: newName, path: renamedPath}])
 	}
 
 	// File movement operations
