@@ -6,26 +6,26 @@ import {cn} from '@/shadcn-lib/utils'
 type AppIconProps = {src?: string; size?: number} & HTMLProps<HTMLImageElement>
 
 function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps, ref: React.Ref<HTMLImageElement>) {
-	const [loaded, setLoaded] = useState(false)
+	const [imgSrc, setImgSrc] = useState(src || APP_ICON_PLACEHOLDER_SRC)
 
 	// Not using `FadeImg` because we have a placeholder and `FadeImg` doesn't support placeholder images
 	// Also not fading any other way because we want color-thief to work by picking up the color
 	return (
 		<img
-			src={src || APP_ICON_PLACEHOLDER_SRC}
+			src={imgSrc}
 			alt=''
 			ref={ref}
-			className={cn('aspect-square shrink-0 bg-cover bg-center', !loaded && 'bg-white/10', className)}
-			onLoad={() => src && setLoaded(true)}
+			className={cn(
+				'aspect-square shrink-0 border-[1px] border-slate-100/10 bg-white/10 bg-cover bg-center',
+				className,
+			)}
+			onError={() => setImgSrc(APP_ICON_PLACEHOLDER_SRC)}
 			style={{
 				...style,
 				width: size,
 				height: size,
 				minWidth: size,
 				minHeight: size,
-				// borderRadius: (size * 15) / 50, // 15px for 50px size
-				backgroundImage: !loaded ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
-				// backgroundColor: !loaded ? 'transparent' : undefined,
 			}}
 			{...props}
 		/>
