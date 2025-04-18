@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {FileItemContextMenu} from '@/features/files/components/listing/file-item/file-item-context-menu'
 import {IconsViewFileItem} from '@/features/files/components/listing/file-item/icons-view-file-item'
@@ -23,6 +23,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const clipboardMode = useFilesStore((state) => state.clipboardMode)
 
 	const [isEditingName, setIsEditingName] = useState(false)
+
 	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
 	const isUploading = 'isUploading' in item && item.isUploading
 	const isSelected = isItemSelected(item)
@@ -100,6 +101,47 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const isItemCut = clipboardMode === 'cut' && clipboardItems.find((i) => i.path === item.path)
 
 	const isEditingFileName = isEditingName || !!('isNew' in item && item.isNew)
+
+	// Handle rename on Enter
+	useEffect(() => {
+		// do some checks to avoid attaching multiple listeners
+
+		// ensure that the item is selected
+		if (!isSelected) return
+
+		// ensure that this is the only selected item
+		if (selectedItems.length !== 1) return
+
+		// check if the rename operation is allowed for this item
+		if (!item.operations?.includes('rename')) return
+
+		// helper function to check if the event target is an input
+		function isInInput(event: KeyboardEvent) {
+			const target = event.target as HTMLElement | null
+			if (!target) return false
+			return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable
+		}
+
+		function handleKeyDown(event: KeyboardEvent) {
+			if (event.key !== 'Enter') {
+				return
+			}
+
+			// don't trigger the rename if the user Entered in the input
+			if (isInInput(event)) return
+
+			event.preventDefault()
+			setIsEditingName(true)
+		}
+
+		// attach the listener
+		window.addEventListener('keydown', handleKeyDown)
+
+		// remove the listener on cleanup
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown)
+		}
+	}, [isSelected, selectedItems.length])
 
 	return (
 		<div
