@@ -32,7 +32,7 @@ export function AppIcon({
 	label: string
 	src: string
 	onClick?: () => void
-	state?: AppState
+	state?: AppStateOrLoading
 	progress?: number
 }) {
 	const [url, setUrl] = useState(src)
@@ -132,7 +132,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'updating':
 			return t('app.updating') + '...'
 		case 'loading':
-			return t('loading') + '...'
+			return label
 		case 'stopped':
 			return t('app.stopped')
 		case 'unknown':
@@ -156,6 +156,8 @@ export function AppIconConnected({appId}: {appId: string}) {
 		if (res?.uninstallTheseFirst) {
 			setToUninstallFirstIds(res.uninstallTheseFirst)
 			setOpenDepsDialog(true)
+		} else {
+			setShowUninstallDialog(false)
 		}
 	}
 
@@ -171,93 +173,106 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 	if (!userApp || !userApp.app) return <AppIcon label='' src='' />
 
-	const inProgress = arrayIncludes(progressStates, appInstall.state)
+	const state = appInstall.state
 
-	// TODO: consider showing context menu in other states too
-	switch (appInstall.state) {
-		case 'loading':
-			return <AppIcon label='' src={userApp.app.icon} state='ready' />
-		case 'restarting':
-		case 'starting':
-		case 'stopping':
-		case 'unknown':
-		case 'uninstalling':
-			return <AppIcon label='' src={userApp.app.icon} state={appInstall.state} />
-		case 'not-installed':
-			return <AppIcon label='' src={userApp.app.icon} state='ready' />
-		case 'installing':
-		case 'updating':
-		case 'running':
-		case 'ready':
-		case 'stopped': {
-			return (
-				<>
-					<ContextMenu>
-						<ContextMenuTrigger className='group'>
-							<AppIcon
-								label={userApp.app.name}
-								src={userApp.app.icon}
-								onClick={() => launchApp(appId)}
-								state={appInstall.state}
-								progress={appInstall.progress}
-							/>
-						</ContextMenuTrigger>
-						<ContextMenuContent>
-							{userApp.app.credentials &&
-								(userApp.app.credentials.defaultUsername || userApp.app.credentials.defaultPassword) && (
-									<ContextMenuItem asChild>
-										<Link to={linkToDialog('default-credentials', {for: appId})}>
-											{t('desktop.app.context.show-default-credentials')}
-										</Link>
-									</ContextMenuItem>
-								)}
-							{!inProgress && (
-								<>
-									{/* App settings only cover dependencies currently */}
-									{!!userApp.app.dependencies?.length && (
-										<ContextMenuItem asChild>
-											<Link to={linkToDialog('app-settings', {for: appId})}>{t('desktop.app.context.settings')}</Link>
-										</ContextMenuItem>
-									)}
-									{appInstall.state !== 'stopped' ? (
-										<ContextMenuItem onSelect={appInstall.stop}>{t('stop')}</ContextMenuItem>
-									) : (
-										<ContextMenuItem onSelect={appInstall.start}>{t('start')}</ContextMenuItem>
-									)}
-									<ContextMenuItem onSelect={appInstall.restart}>{t('restart')}</ContextMenuItem>
-									<ContextMenuItem onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}>
-										{t('troubleshoot')}
-									</ContextMenuItem>
-								</>
-							)}
-							<ContextMenuItemLinkToAppStore appId={appId} />
-							{!inProgress && (
-								<ContextMenuItem className={contextMenuClasses.item.rootDestructive} onSelect={uninstallPrecheck}>
-									{t('desktop.app.context.uninstall')}
-								</ContextMenuItem>
-							)}
-						</ContextMenuContent>
-					</ContextMenu>
-					{toUninstallFirstIds.length > 0 && (
-						<UninstallTheseFirstDialog
-							appId={appId}
-							toUninstallFirstIds={toUninstallFirstIds}
-							open={openDepsDialog}
-							onOpenChange={setOpenDepsDialog}
-						/>
+	// Start is disabled if the app is not stopped or unknown
+	const startDisabled = !arrayIncludes(['stopped', 'unknown'], state)
+	// Stop is disabled if the app is not running or ready
+	const stopDisabled = !arrayIncludes(['running', 'ready'], state)
+	// Restart is disabled if the app is not running or ready or unknown
+	const restartDisabled = !arrayIncludes(['running', 'ready', 'unknown'], state)
+	// Troubleshoot is disabled if the app is not running or ready or unknown
+	const troubleshootDisabled = !arrayIncludes(['running', 'ready', 'unknown'], state)
+	// Uninstall is never disabled just so the user can always retry uninstalling if the app
+	// ever gets stuck in an uninstalling state.
+	const uninstallDisabled = false
+
+	return (
+		<>
+			<ContextMenu>
+				<ContextMenuTrigger className='group'>
+					<AppIcon
+						label={userApp.app.name}
+						src={userApp.app.icon}
+						onClick={() => launchApp(appId)}
+						state={state}
+						progress={appInstall.progress}
+					/>
+				</ContextMenuTrigger>
+				<ContextMenuContent>
+					{userApp.app.credentials &&
+						(userApp.app.credentials.defaultUsername || userApp.app.credentials.defaultPassword) && (
+							<ContextMenuItem asChild>
+								<Link to={linkToDialog('default-credentials', {for: appId})}>
+									{t('desktop.app.context.show-default-credentials')}
+								</Link>
+							</ContextMenuItem>
+						)}
+
+					{/* App settings (currently dependencies only) */}
+					{!!userApp.app.dependencies?.length && (
+						<ContextMenuItem asChild>
+							<Link to={linkToDialog('app-settings', {for: appId})}>{t('desktop.app.context.settings')}</Link>
+						</ContextMenuItem>
 					)}
-					{showUninstallDialog && (
-						<UninstallConfirmationDialog
-							appId={appId}
-							open={showUninstallDialog}
-							onOpenChange={setShowUninstallDialog}
-							onConfirm={uninstall}
-						/>
+
+					{/* Start / Stop */}
+					{state !== 'stopped' ? (
+						<ContextMenuItem disabled={stopDisabled} onSelect={stopDisabled ? undefined : appInstall.stop}>
+							{t('stop')}
+						</ContextMenuItem>
+					) : (
+						<ContextMenuItem onSelect={appInstall.start} disabled={startDisabled}>
+							{t('start')}
+						</ContextMenuItem>
 					)}
-				</>
-			)
-		}
-	}
+
+					{/* Restart */}
+					<ContextMenuItem disabled={restartDisabled} onSelect={restartDisabled ? undefined : appInstall.restart}>
+						{t('restart')}
+					</ContextMenuItem>
+
+					{/* Troubleshoot */}
+					<ContextMenuItem
+						disabled={troubleshootDisabled}
+						onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}
+					>
+						{t('troubleshoot')}
+					</ContextMenuItem>
+
+					{/* Go to app store page */}
+					<ContextMenuItemLinkToAppStore appId={appId} />
+
+					{/* Uninstall */}
+					<ContextMenuItem
+						className={contextMenuClasses.item.rootDestructive}
+						disabled={uninstallDisabled}
+						onSelect={uninstallDisabled ? undefined : uninstallPrecheck}
+					>
+						{t('desktop.app.context.uninstall')}
+					</ContextMenuItem>
+				</ContextMenuContent>
+			</ContextMenu>
+
+			{/* Dialogs */}
+			{toUninstallFirstIds.length > 0 && (
+				<UninstallTheseFirstDialog
+					appId={appId}
+					toUninstallFirstIds={toUninstallFirstIds}
+					open={openDepsDialog}
+					onOpenChange={setOpenDepsDialog}
+				/>
+			)}
+			{showUninstallDialog && (
+				<UninstallConfirmationDialog
+					appId={appId}
+					open={showUninstallDialog}
+					onOpenChange={setShowUninstallDialog}
+					onConfirm={uninstall}
+				/>
+			)}
+		</>
+	)
 }
 
 function ContextMenuItemLinkToAppStore({appId}: {appId: string}) {
