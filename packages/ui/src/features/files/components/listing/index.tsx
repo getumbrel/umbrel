@@ -4,8 +4,8 @@ import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
 import {ActionsBar} from '@/features/files/components/listing/actions-bar'
+import {ListingAndFileItemContextMenu} from '@/features/files/components/listing/listing-and-file-item-context-menu'
 import {ListingBody} from '@/features/files/components/listing/listing-body'
-import {ListingContextMenu} from '@/features/files/components/listing/listing-context-menu'
 import {MarqueeSelection} from '@/features/files/components/listing/marquee-selection'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileUploadDropZone} from '@/features/files/components/shared/file-upload-drop-zone'
@@ -127,14 +127,16 @@ export function Listing({
 		</div>
 	)
 
+	const contentWithContextMenu = (
+		<ListingAndFileItemContextMenu menuItems={additionalContextMenuItems}>{content}</ListingAndFileItemContextMenu>
+	)
+
 	// For touch devices, disable marquee selection + file upload drop zone and droppable
 	if (isTouchDevice) {
-		return <div className='relative flex h-full flex-col outline-none'>{content}</div>
+		return contentWithContextMenu
 	}
 
-	// For desktop, wrap in marquee selection, optionally enable file upload drop zone and droppable
-	const wrappedContent = <ListingContextMenu menuItems={additionalContextMenuItems}>{content}</ListingContextMenu>
-
+	// For desktop, wrap in marquee selection, enable file upload drop zone and droppable
 	return (
 		<MarqueeSelection scrollAreaRef={scrollAreaRef} items={selectableItems}>
 			{enableFileDrop ? (
@@ -145,11 +147,11 @@ export function Listing({
 						className='relative flex h-full flex-col outline-none'
 						dropOverClassName='bg-transparent'
 					>
-						{wrappedContent}
+						{contentWithContextMenu}
 					</Droppable>
 				</FileUploadDropZone>
 			) : (
-				wrappedContent
+				contentWithContextMenu
 			)}
 		</MarqueeSelection>
 	)

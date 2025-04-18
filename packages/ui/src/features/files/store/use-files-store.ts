@@ -4,9 +4,15 @@ import {ClipboardSlice, createClipboardSlice} from '@/features/files/store/slice
 import {createDragAndDropSlice, DragAndDropSlice} from '@/features/files/store/slices/drag-and-drop-slice'
 import {createFileViewerSlice, FileViewerSlice} from '@/features/files/store/slices/file-viewer-slice'
 import {createNewFolderSlice, NewFolderSlice} from '@/features/files/store/slices/new-folder-slice'
+import {createRenameSlice, RenameSlice} from '@/features/files/store/slices/rename-slice'
 import {createSelectionSlice, SelectionSlice} from '@/features/files/store/slices/selection-slice'
 
-export type FilesStore = SelectionSlice & ClipboardSlice & NewFolderSlice & DragAndDropSlice & FileViewerSlice
+export type FilesStore = SelectionSlice &
+	ClipboardSlice &
+	NewFolderSlice &
+	DragAndDropSlice &
+	FileViewerSlice &
+	RenameSlice
 
 export const useFilesStore = create<FilesStore>()((...a) => ({
 	...createSelectionSlice(...a),
@@ -14,4 +20,5 @@ export const useFilesStore = create<FilesStore>()((...a) => ({
 	...createNewFolderSlice(...a),
 	...createDragAndDropSlice(...a),
 	...createFileViewerSlice(...a),
+	...createRenameSlice(...a),
 }))

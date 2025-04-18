@@ -23,8 +23,7 @@ export default function FilesLayout() {
 	const {pathname} = useLocation()
 	const {setSelectedItems} = useFilesStore()
 
-	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
-	const toggleIsSelectingOnMobile = useFilesStore((state) => state.toggleIsSelectingOnMobile)
+	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
 	const isMobile = useIsMobile()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
@@ -35,9 +34,7 @@ export default function FilesLayout() {
 		setSelectedItems([])
 
 		// set selecting on mobile to false when navigating to a different path
-		if (isSelectingOnMobile) {
-			toggleIsSelectingOnMobile()
-		}
+		setIsSelectingOnMobile(false)
 
 		// Close mobile sidebar on navigation
 		setIsMobileSidebarOpen(false)

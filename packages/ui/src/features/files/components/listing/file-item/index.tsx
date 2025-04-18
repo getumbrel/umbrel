@@ -1,6 +1,5 @@
-import {useEffect, useState} from 'react'
+import {useCallback, useEffect, useRef, useState} from 'react'
 
-import {FileItemContextMenu} from '@/features/files/components/listing/file-item/file-item-context-menu'
 import {IconsViewFileItem} from '@/features/files/components/listing/file-item/icons-view-file-item'
 import {ListViewFileItem} from '@/features/files/components/listing/file-item/list-view-file-item'
 import {Draggable, Droppable} from '@/features/files/components/shared/drag-and-drop'
@@ -15,20 +14,48 @@ interface FileItemProps {
 	items: FileSystemItem[]
 }
 
+// Helper function to detect touch or pen events
+function whenTouchOrPen<E>(handler: React.PointerEventHandler<E>): React.PointerEventHandler<E> {
+	return (event) => (event.pointerType !== 'mouse' ? handler(event) : undefined)
+}
+
 export const FileItem = ({item, items}: FileItemProps) => {
 	const {handleClick, handleDoubleClick} = useItemClick()
 	const isItemSelected = useFilesStore((state) => state.isItemSelected)
 	const selectedItems = useFilesStore((state) => state.selectedItems)
+	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 	const clipboardItems = useFilesStore((state) => state.clipboardItems)
 	const clipboardMode = useFilesStore((state) => state.clipboardMode)
 
 	const [isEditingName, setIsEditingName] = useState(false)
 
-	const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
+	const renamingItemPath = useFilesStore((state) => state.renamingItemPath)
+	const setRenamingItemPath = useFilesStore((state) => state.setRenamingItemPath)
 	const isUploading = 'isUploading' in item && item.isUploading
 	const isSelected = isItemSelected(item)
 	const {preferences} = usePreferences()
 	const view = preferences?.view
+	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
+
+	// Long press detection to select the item on mobile
+	// since onContextMenu isn't triggered on mobile
+	const longPressTimerRef = useRef(0)
+	const clearLongPress = useCallback(() => {
+		window.clearTimeout(longPressTimerRef.current)
+	}, [])
+
+	const handleOpenContextMenu = useCallback(() => {
+		setIsSelectingOnMobile(true)
+		// Select the item if it's not already selected
+		if (!isItemSelected(item)) {
+			setSelectedItems([item])
+		}
+	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item])
+
+	// Cleanup timer on unmount
+	useEffect(() => {
+		return () => clearLongPress()
+	}, [clearLongPress])
 
 	// Calculate the selection position (first, middle, last, or standalone)
 	let selectionPosition = ''
@@ -88,12 +115,16 @@ export const FileItem = ({item, items}: FileItemProps) => {
 		}
 	}
 
-	const handleRenameClick = () => {
-		setIsEditingName(true)
-	}
+	// Trigger inline rename when the global state is set for this item.
+	useEffect(() => {
+		if (renamingItemPath === item.path) {
+			setIsEditingName(true)
+		}
+	}, [renamingItemPath, item.path])
 
 	const handlNameEditingComplete = () => {
 		setIsEditingName(false)
+		setRenamingItemPath(null)
 	}
 
 	const isDotfile = (filename: string) => filename.startsWith('.')
@@ -155,42 +186,54 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			)}
 			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items
 		>
-			<FileItemContextMenu item={item} onRenameClick={handleRenameClick} onStateChange={setIsContextMenuOpen}>
-				<Droppable
-					id={`${view}-view-file-item-${item.path}`}
-					path={item.path}
-					disabled={!!isUploading || item.type !== 'directory'}
-					className='rounded-lg'
-				>
-					<Draggable id={`${view}-view-file-item-${item.path}`} item={item} disabled={!!isUploading}>
-						<div
-							onClick={(e) => handleClick(e, item, items)}
-							onDoubleClick={() => handleDoubleClick(item)}
-							className={cn(isItemCut && 'opacity-50')}
-							role='button'
-						>
-							{/* If the item is a dotfile, we decrease the brightness and opacity for the icon and text for a faded look */}
-							<div className={cn(isDotfile(item.name) && 'opacity-50 brightness-75')}>
-								{view === 'icons' ? (
-									<IconsViewFileItem
-										item={item}
-										isEditingName={isEditingFileName}
-										onEditingNameComplete={handlNameEditingComplete}
-										isContextMenuOpen={isContextMenuOpen}
-									/>
-								) : null}
-								{view === 'list' ? (
-									<ListViewFileItem
-										item={item}
-										isEditingName={isEditingFileName}
-										onEditingNameComplete={handlNameEditingComplete}
-									/>
-								) : null}
-							</div>
+			<Droppable
+				id={`${view}-view-file-item-${item.path}`}
+				path={item.path}
+				disabled={!!isUploading || item.type !== 'directory'}
+				className='rounded-lg'
+			>
+				<Draggable id={`${view}-view-file-item-${item.path}`} item={item} disabled={!!isUploading}>
+					<div
+						onClick={(e) => handleClick(e, item, items)}
+						onDoubleClick={() => handleDoubleClick(item)}
+						onContextMenu={() => {
+							handleOpenContextMenu()
+						}}
+						// Add pointer events for long press detection on mobile
+						onPointerDown={whenTouchOrPen(() => {
+							// Clear any previous timer
+							clearLongPress()
+							// Start a new timer
+							longPressTimerRef.current = window.setTimeout(() => handleOpenContextMenu(), 700)
+						})}
+						onPointerMove={whenTouchOrPen(clearLongPress)}
+						onPointerCancel={whenTouchOrPen(clearLongPress)}
+						onPointerUp={whenTouchOrPen(clearLongPress)}
+						// Prevent native iOS context menu/callout
+						style={{WebkitTouchCallout: 'none'}}
+						className={cn(isItemCut && 'opacity-50')}
+						role='button'
+					>
+						{/* If the item is a dotfile, we decrease the brightness and opacity for the icon and text for a faded look */}
+						<div className={cn(isDotfile(item.name) && 'opacity-50 brightness-75')}>
+							{view === 'icons' ? (
+								<IconsViewFileItem
+									item={item}
+									isEditingName={isEditingFileName}
+									onEditingNameComplete={handlNameEditingComplete}
+								/>
+							) : null}
+							{view === 'list' ? (
+								<ListViewFileItem
+									item={item}
+									isEditingName={isEditingFileName}
+									onEditingNameComplete={handlNameEditingComplete}
+								/>
+							) : null}
 						</div>
-					</Draggable>
-				</Droppable>
-			</FileItemContextMenu>
+					</div>
+				</Draggable>
+			</Droppable>
 		</div>
 	)
 }

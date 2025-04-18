@@ -23,7 +23,7 @@ import {t} from '@/utils/i18n'
 export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {
 	const {preferences, setView, setSortBy} = usePreferences()
 	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
-	const toggleIsSelectingOnMobile = useFilesStore((state) => state.toggleIsSelectingOnMobile)
+	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
 	return (
 		<div className='flex items-center gap-2'>
@@ -36,7 +36,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 				variant={isSelectingOnMobile ? 'secondary' : 'default'}
 				size='default'
 				aria-label={t('files-action.select')}
-				onClick={toggleIsSelectingOnMobile}
+				onClick={() => setIsSelectingOnMobile(!isSelectingOnMobile)}
 			>
 				{isSelectingOnMobile ? t('done') : t('files-action.select')}
 			</Button>
