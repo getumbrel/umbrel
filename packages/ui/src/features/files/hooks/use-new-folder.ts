@@ -20,7 +20,9 @@ export function useNewFolder() {
 				// Extract name from path
 				const name = path.split('/').pop() || ''
 				// Best-effort check for duplicate name
-				checkForDuplicateName(name, listing.items)
+				if (!isNameAvailable(name, listing.items)) {
+					throw new Error('A folder with this name already exists')
+				}
 			}
 		},
 		onSuccess: (_, {path}: {path: FileSystemItem['path']}) => {
@@ -49,11 +51,25 @@ export function useNewFolder() {
 		},
 	})
 
-	// NOTE: We can't reliably calculate the "next available name" (e.g., "Folder (2)")
+	// NOTE: We can't reliably calculate the "next available name"
 	// with infinite loading, as we don't have the full list of existing names.
-	// So, we always start with the base name (e.g., "Folder").
-	const startNewFolder = () => {
-		const name = t('files-folder')
+	// So, we just check against the currently loaded items and start with the base name (e.g., "Folder").
+	// and keep incrementing the index until we find an available name.
+	// (e.g., "Folder (2)", "Folder (3)", etc.)
+	const startNewFolder = async () => {
+		let name = t('files-folder')
+		if (listing?.items) {
+			// Check if the base name already exists
+			if (!isNameAvailable(name, listing.items)) {
+				// If it does, find the next available name
+				let index = 2
+				while (!isNameAvailable(`${name} (${index})`, listing.items)) {
+					index++
+				}
+				name = `${name} (${index})`
+			}
+		}
+
 		const timeStamp = new Date().getTime()
 		const newFolder = {
 			name,
@@ -85,9 +101,7 @@ export function useNewFolder() {
 // umbreld still returns true if EEXIST, but doesn't create the folder.
 // So even if we don't throw an error here, umbreld will still handle the duplicate name.
 // But when we do throw an error, the user will see a toast
-function checkForDuplicateName(name: string, existingItems: FileSystemItem[]) {
+function isNameAvailable(name: string, existingItems: FileSystemItem[]) {
 	const existingNames = new Set(existingItems.map((item) => item.name))
-	if (existingNames.has(name)) {
-		throw new Error('A folder with this name already exists')
-	}
+	return !existingNames.has(name)
 }
