@@ -12,7 +12,7 @@ import {useUserApp} from '@/providers/apps'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {cn} from '@/shadcn-lib/utils'
-import {AppState, AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
+import {AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -35,18 +35,15 @@ export function AppIcon({
 	state?: AppStateOrLoading
 	progress?: number
 }) {
-	const [url, setUrl] = useState(src)
-
-	const disabled = state !== 'ready'
+	const [appIconSrc, setAppIconSrc] = useState(src)
 
 	const inProgress = arrayIncludes(progressStates, state)
 
 	return (
 		<motion.button
-			onClick={disabled ? undefined : onClick}
+			onClick={onClick}
 			className={cn(
 				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none',
-				disabled && 'disabled pointer-events-none',
 			)}
 			layout
 			initial={{
@@ -71,15 +68,12 @@ export function AppIcon({
 				className={cn(
 					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
 				)}
-				style={{
-					backgroundImage: state === 'ready' ? `url(${APP_ICON_PLACEHOLDER_SRC})` : undefined,
-				}}
 			>
-				{url && (
+				{appIconSrc && (
 					<FadeInImg
-						src={url}
+						src={appIconSrc}
 						alt={label}
-						onError={() => setUrl('')}
+						onError={() => setAppIconSrc(APP_ICON_PLACEHOLDER_SRC)}
 						className={cn(
 							'h-full w-full duration-500',
 							inProgress && 'brightness-50',
@@ -187,6 +181,21 @@ export function AppIconConnected({appId}: {appId: string}) {
 	// ever gets stuck in an uninstalling state.
 	const uninstallDisabled = false
 
+	const handleAppClick = async () => {
+		// Launch the app if it's ready
+		if (state === 'ready') {
+			return launchApp(appId)
+		}
+		// Start the app if it's stopped
+		if (state === 'stopped') {
+			return appInstall.start()
+		}
+		// Try restarting the app if it's 'unknown'
+		if (state === 'unknown') {
+			return appInstall.restart()
+		}
+	}
+
 	return (
 		<>
 			<ContextMenu>
@@ -194,7 +203,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 					<AppIcon
 						label={userApp.app.name}
 						src={userApp.app.icon}
-						onClick={() => launchApp(appId)}
+						onClick={handleAppClick}
 						state={state}
 						progress={appInstall.progress}
 					/>
