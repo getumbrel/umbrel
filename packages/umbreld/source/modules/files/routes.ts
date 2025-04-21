@@ -194,4 +194,9 @@ export default router({
 	isExternalDeviceConnectedOnNonUmbrelHome: privateProcedure.query(({ctx}) =>
 		ctx.umbreld.files.externalStorage.isExternalDeviceConnectedOnNonUmbrelHome(),
 	),
+
+	// Search for a file
+	search: privateProcedure
+		.input(z.object({query: z.string()}))
+		.query(async ({ctx, input}) => ctx.umbreld.files.search.search(input.query)),
 })

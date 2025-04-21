@@ -77,6 +77,7 @@
 		"express": "^4.18.2",
 		"express-jwt": "^8.4.1",
 		"express-session": "^1.17.3",
+		"fast-fuzzy": "^1.12.0",
 		"fs-extra": "^11.1.1",
 		"globby": "^13.2.1",
 		"helmet": "^7.1.0",

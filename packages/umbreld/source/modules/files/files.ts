@@ -30,6 +30,8 @@ import Archive from './archive.js'
 import Thumbnails from './thumbnails.js'
 import Samba from './samba.js'
 import ExternalStorage from './external-storage.js'
+import Search from './search.js'
+
 import type Umbreld from '../../index.js'
 
 const ALL_OPERATIONS = [
@@ -97,6 +99,7 @@ export default class Files {
 	maxDirectoryListing = 10000
 	// Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
 	hiddenFiles = ['.DS_Store', '.directory']
+	operationsInProgress: OperationsInProgress = []
 	watcher: Watcher
 	recents: Recents
 	favorites: Favorites
@@ -104,7 +107,7 @@ export default class Files {
 	thumbnails: Thumbnails
 	samba: Samba
 	externalStorage: ExternalStorage
-	operationsInProgress: OperationsInProgress = []
+	search: Search
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -125,6 +128,7 @@ export default class Files {
 		this.thumbnails = new Thumbnails(umbreld)
 		this.samba = new Samba(umbreld)
 		this.externalStorage = new ExternalStorage(umbreld)
+		this.search = new Search(umbreld)
 
 		// TODO: This should really be in a proper DB, refactor this once we've moved to SQLite
 		this.trashMetaDirectory = `${umbreld.dataDirectory}/trash-meta`
@@ -349,6 +353,13 @@ export default class Files {
 			files,
 			truncatedAt,
 		}
+	}
+
+	// Recursively stream the contents of a virtual directory
+	async *streamContents(virtualPath: string) {
+		const systemPath = await this.virtualToSystemPath(virtualPath)
+		const directoryStream = getDirectoryStream(systemPath, {recursive: true})
+		for await (const systemPath of directoryStream) yield systemPath
 	}
 
 	// Internal utility to copy (or copy and delete (psuedo-move)) a file or directory using rsync and report progress
@@ -890,10 +901,14 @@ async function move(sourceSystemPath: string, targetSystemPath: string, {overwri
 	})
 }
 
-export async function* getDirectoryStream(directory: string) {
-	const directoryListing = await fse.opendir(directory)
+// Stream the contents of a directory
+// Optionally recurse into subdirectories
+export async function* getDirectoryStream(directory: string, options?: {recursive?: boolean}) {
+	// We have to use any here because @tsconfig/node22 types are incorrect and don't recognise options.recursive
+	const directoryListing = await fse.opendir(directory, options as any)
 	try {
-		for await (const file of directoryListing) yield nodePath.join(directory, file.name)
+		// Again we need any due to incorrect types
+		for await (const file of directoryListing) yield nodePath.join((file as any).parentPath, file.name)
 	} finally {
 		// Ensure the directory is closed if we error
 		directoryListing.close().catch(() => {})
