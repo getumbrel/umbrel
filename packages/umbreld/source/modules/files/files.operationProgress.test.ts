@@ -40,11 +40,10 @@ describe(`operationProgress()`, () => {
 		await fse.mkdir(`${testDirectory}/destination`)
 
 		// Listen for all copy events
-		// TODO: use actual tRPC subscriptions for this
 		const collectedEvents: any[] = []
-		const removeListener = umbreld.instance.eventBus.on(
-			'files:operation-progress',
-			(operations) => void collectedEvents.push(JSON.parse(JSON.stringify(operations))),
+		const subscription = umbreld.client.eventBus.listen.subscribe(
+			{event: 'files:operation-progress'},
+			{onData: (operations) => collectedEvents.push(JSON.parse(JSON.stringify(operations)))},
 		)
 		// Test we start with no operations in progress
 		await expect(umbreld.client.files.operationProgress.query()).resolves.toMatchObject([])
@@ -102,7 +101,7 @@ describe(`operationProgress()`, () => {
 		expect(collectedEvents.at(-1)).toMatchObject([])
 
 		// Clean up
-		removeListener()
+		subscription.unsubscribe()
 		await fse.remove(testDirectory)
 	})
 
@@ -115,12 +114,11 @@ describe(`operationProgress()`, () => {
 		await fse.writeFile(`${testDirectory}/source/source.bin`, Buffer.alloc(100 * KB))
 		await fse.mkdir(`${testDirectory}/destination`)
 
-		// Listen for all copy events
-		// TODO: use actual tRPC subscriptions for this
+		// Listen for all move events
 		const collectedEvents: any[] = []
-		const removeListener = umbreld.instance.eventBus.on(
-			'files:operation-progress',
-			(operations) => void collectedEvents.push(JSON.parse(JSON.stringify(operations))),
+		const subscription = umbreld.client.eventBus.listen.subscribe(
+			{event: 'files:operation-progress'},
+			{onData: (operations) => collectedEvents.push(JSON.parse(JSON.stringify(operations)))},
 		)
 		// Test we start with no operations in progress
 		await expect(umbreld.client.files.operationProgress.query()).resolves.toMatchObject([])
@@ -178,7 +176,7 @@ describe(`operationProgress()`, () => {
 		expect(collectedEvents.at(-1)).toMatchObject([])
 
 		// Clean up
-		removeListener()
+		subscription.unsubscribe()
 		await fse.remove(testDirectory)
 	})
 })

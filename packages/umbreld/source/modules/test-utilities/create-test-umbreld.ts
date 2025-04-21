@@ -1,4 +1,4 @@
-import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
+import {createTRPCClient, httpBatchLink, splitLink, httpLink, wsLink, createWSClient} from '@trpc/client'
 import got from 'got'
 import {CookieJar} from 'tough-cookie'
 
@@ -28,18 +28,24 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 	})
 	if (autoStart) await umbreld.start()
 
-	const client = createTRPCProxyClient<AppRouter>({
+	const client = createTRPCClient<AppRouter>({
 		links: [
-			httpBatchLink({
-				url: `http://localhost:${umbreld.server.port}/trpc`,
-				headers: async () => ({
-					Authorization: `Bearer ${jwt}`,
+			splitLink({
+				condition: (operation) => operation.type !== 'subscription',
+				true: httpLink({
+					url: `http://localhost:${umbreld.server.port}/trpc`,
+					headers: async () => ({
+						Authorization: `Bearer ${jwt}`,
+					}),
+				}),
+				false: wsLink({
+					client: createWSClient({url: async () => `http://localhost:${umbreld.server.port}/trpc?token=${jwt}`}),
 				}),
 			}),
 		],
 	})
 
-	const unauthenticatedClient = createTRPCProxyClient<AppRouter>({
+	const unauthenticatedClient = createTRPCClient<AppRouter>({
 		links: [
 			httpBatchLink({
 				url: `http://localhost:${umbreld.server.port}/trpc`,
