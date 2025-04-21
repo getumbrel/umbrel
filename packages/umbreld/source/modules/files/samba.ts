@@ -97,7 +97,10 @@ export default class Samba {
 		})
 
 		// Attach listener
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on('file:change', this.#handleFileChange.bind(this))
+		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
+			'files:watcher:change',
+			this.#handleFileChange.bind(this),
+		)
 	}
 
 	// Remove listener

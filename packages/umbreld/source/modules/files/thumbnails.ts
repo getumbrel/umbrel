@@ -78,7 +78,10 @@ export default class Thumbnails {
 		this.#pruneOldestThumbnails()
 
 		// Attach listener for file changes
-		this.#removeFileChangeListener = this.#umbreld.eventBus.on('file:change', this.#handleFileChange.bind(this))
+		this.#removeFileChangeListener = this.#umbreld.eventBus.on(
+			'files:watcher:change',
+			this.#handleFileChange.bind(this),
+		)
 
 		// Attach disk change listener so the UUID cache is cleared when a disk is mounted
 		this.#removeDiskChangeListener = this.#umbreld.eventBus.on('system:disk:change', () =>

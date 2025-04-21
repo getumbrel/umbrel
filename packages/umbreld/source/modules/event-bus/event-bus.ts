@@ -11,7 +11,7 @@ const _eventsIncludesAllKeys: _AssertEveryKeyIsListed = true
 
 // Statically define event names for use in rpc argument validation
 export const events = [
-	'file:change',
+	'files:watcher:change',
 	'files:operation-progress',
 	'system:disk:change',
 	'files:external-storage:change',
@@ -20,7 +20,7 @@ export const events = [
 // Statically define event types
 export type EventTypes = {
 	// Fires when a watched file changes
-	'file:change': FileChangeEvent
+	'files:watcher:change': FileChangeEvent
 	// Fires repeatedly while file operations (copy/move) are in progress
 	// with the current progress of each operation
 	'files:operation-progress': OperationsInProgress

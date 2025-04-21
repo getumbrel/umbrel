@@ -51,7 +51,7 @@ export default class Watcher {
 			const systemPath = await this.#umbreld.files.virtualToSystemPath(virtualPath)
 			const subscription = await watcher.subscribe(systemPath, (error, events) => {
 				if (error) return this.logger.error(`Failed to watch directory '${virtualPath}': ${error.message}`)
-				for (const event of events) this.#umbreld.eventBus.emit('file:change', event)
+				for (const event of events) this.#umbreld.eventBus.emit('files:watcher:change', event)
 			})
 			this.subscriptions.set(virtualPath, subscription)
 			this.logger.log(`Started watching directory '${virtualPath}'`)

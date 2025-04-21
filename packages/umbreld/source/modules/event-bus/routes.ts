@@ -18,10 +18,10 @@ export default router({
 			// We pass in the AbortSignal so the stream can be immediately cleaned up
 			// when the client disconnects to avoid memory leaks.
 			for await (let event of ctx.umbreld.eventBus.stream(input.event, {signal})) {
-				// Reformat the file:change event so it's suitable to be consumed by the client
-				if (input.event === 'file:change') {
+				// Reformat the files:watcher:change event so it's suitable to be consumed by the client
+				if (input.event === 'files:watcher:change') {
 					// Clone event to avoid mutating the original event object
-					event = cloneDeep(event) as EventTypes['file:change']
+					event = cloneDeep(event) as EventTypes['files:watcher:change']
 
 					// Convert the system path to a virtual path
 					event.path = ctx.umbreld.files.systemToVirtualPath(event.path)
