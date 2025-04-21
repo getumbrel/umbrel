@@ -21,3 +21,16 @@ declare module 'colorthief' {
 		) => RGBColor[] | null
 	}
 }
+
+// Since we import transformed images like ./ai.svg?w=120&format=webp&imagetools
+// this declaration allows TypeScript to correctly recognize them as modules providing a
+// string source URL.
+declare module '*&imagetools' {
+	/**
+	 * actual types
+	 * - code https://github.com/JonasKruckenberg/imagetools/blob/main/packages/core/src/output-formats.ts
+	 * - docs https://github.com/JonasKruckenberg/imagetools/blob/main/docs/guide/getting-started.md#metadata
+	 */
+	const out
+	export default out
+}

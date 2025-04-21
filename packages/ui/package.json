@@ -138,7 +138,8 @@
 		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript": "^5.8.3",
 		"vite": "^4.4.5",
-		"vite-bundle-visualizer": "^0.11.0"
+		"vite-bundle-visualizer": "^0.11.0",
+		"vite-imagetools": "^7.0.5"
 	},
 	"packageManager": "pnpm@8.9.2"
 }

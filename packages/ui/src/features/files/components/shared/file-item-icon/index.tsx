@@ -89,7 +89,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	}
 
 	// Get the thumbnail component
-	const Thumbnail = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP].thumbnail as React.ComponentType<{
+	const Thumbnail = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP].thumbnail as unknown as React.ComponentType<{
 		className?: string
 	}>
 
