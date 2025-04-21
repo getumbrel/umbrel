@@ -5,7 +5,7 @@ import type {FileChangeEvent} from '../files/watcher.js'
 import type {OperationsInProgress} from '../files/files.js'
 
 // Statically define event types
-type EventTypes = {
+export type EventTypes = {
 	// Fires when a watched file changes
 	'file:change': FileChangeEvent
 	// Fires repeatedly while file operations (copy/move) are in progress
@@ -31,6 +31,18 @@ export default class EventBus {
 		this.#umbreld = umbreld
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLocaleLowerCase())
+	}
+
+	// Stream events
+	stream(event: keyof EventTypes, {signal}: {signal?: AbortSignal} = {}) {
+		const iterator = this.#emitter.events(event)
+
+		// An optional AbortSignal instance can be passed in to immediately
+		// abort the stream. This is useful to avoid memory leaks when clients
+		// subscribe to events and then disconnect without unsubscribing first.
+		signal?.addEventListener('abort', () => iterator.return?.(), {once: true})
+
+		return iterator
 	}
 
 	// Emit an event

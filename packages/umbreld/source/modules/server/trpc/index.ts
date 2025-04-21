@@ -12,6 +12,7 @@ import apps from './routes/apps.js'
 import widget from './routes/widget.js'
 import files from '../../files/routes.js'
 import notifications from '../../notifications/routes.js'
+import eventBus from '../../event-bus/routes.js'
 
 import {type WebSocketServer} from 'ws'
 import type Umbreld from '../../../index.js'
@@ -26,6 +27,7 @@ const appRouter = router({
 	widget,
 	files,
 	notifications,
+	eventBus,
 })
 
 export type AppRouter = typeof appRouter
