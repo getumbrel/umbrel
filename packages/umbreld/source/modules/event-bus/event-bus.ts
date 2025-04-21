@@ -14,6 +14,9 @@ export type EventTypes = {
 	// Fires when the connected block devices change
 	// e.g attaching/removing a USB drive
 	'system:disk:change': undefined
+	// Fires when the accessible external storage devices change
+	// e.g mounting/unmounting a USB drive
+	'files:external-storage:change': undefined
 }
 
 export default class EventBus {

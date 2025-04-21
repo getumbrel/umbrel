@@ -178,6 +178,9 @@ export default class ExternalStorage {
 						await this.#umbreld.files.chownSystemPath(systemMountpoint)
 						await $`mount /dev/${partition.id} ${systemMountpoint}`
 
+						// Broadcast event signalling that the external storage devices have changed
+						this.#umbreld.eventBus.emit('files:external-storage:change')
+
 						// Log on success
 						const virtualMountPoint = this.#umbreld.files.systemToVirtualPath(systemMountpoint)
 						this.logger.log(`Mounted partition ${device.name} ${partition.label} as ${virtualMountPoint}`)
@@ -223,6 +226,9 @@ export default class ExternalStorage {
 			// Remove the block device so we don't auto mount it until it's
 			// been removed and re-attached
 			if (remove) await fse.writeFile(`/sys/block/${deviceId}/device/delete`, '1')
+
+			// Broadcast event signalling that the external storage devices have changed
+			this.#umbreld.eventBus.emit('files:external-storage:change')
 
 			// Signal that some unmounts failed
 			if (failedUnmounts) throw new Error('[failed-unmounts]')
