@@ -186,51 +186,31 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 	)
 }
 
-// Thumbnail component with on‑demand fetch + exponential backoff
+// Thumbnail component with on‑demand fetch
 function useOnDemandThumbnail(item: FileSystemItem) {
-	// retry timing: 0.5s, 1s, 2s, 4s => four retries max
-	// so we don't continually spam umbreld with on-demand thumnail requests
-	// if they error because it could be an ImageMagick error and
-	// we'd be continually spawning convert processes (in a queue)
-	const MAX_RETRIES = 4
-	const INITIAL_DELAY_MS = 500
-
 	const [url, setUrl] = useState<string | undefined>(item.thumbnail)
-	const [attempt, setAttempt] = useState(0)
 
 	const getThumbnailMutation = trpcReact.files.getThumbnail.useMutation()
 
 	// Reset state when the file item changes
 	useEffect(() => {
 		setUrl(item.thumbnail)
-		setAttempt(0)
 	}, [item.path, item.thumbnail])
 
 	// Exponential‑back‑off fetch
 	useEffect(() => {
-		if (url !== undefined || attempt >= MAX_RETRIES) return
+		if (url !== undefined) return
 
-		const delay = INITIAL_DELAY_MS * (attempt === 0 ? 1 : 2 ** attempt)
-		const timer = setTimeout(() => {
-			getThumbnailMutation
-				.mutateAsync({path: item.path})
-				.then((res) => {
-					if (res) {
-						setUrl(res)
-					} else {
-						setAttempt((a) => a + 1)
-					}
-				})
-				.catch(() => setAttempt((a) => a + 1))
-		}, delay)
-
-		return () => clearTimeout(timer)
-	}, [url, attempt, item.path])
+		getThumbnailMutation.mutateAsync({path: item.path}).then((res) => {
+			if (res) {
+				setUrl(res)
+			}
+		})
+	}, [url, item.path])
 
 	// When the browser fails to load the image we bump the attempt counter
 	const handleImageError = () => {
 		setUrl(undefined)
-		setAttempt((a) => a + 1)
 	}
 
 	return {thumbnailUrl: url, handleImageError}
