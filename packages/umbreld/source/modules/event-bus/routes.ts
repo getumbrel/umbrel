@@ -8,7 +8,16 @@ import type {EventTypes} from './event-bus.js'
 export default router({
 	// Listen for events
 	listen: privateProcedure
-		.input(z.object({event: z.enum(['file:change', 'files:operation-progress', 'system:disk:change'])}))
+		.input(
+			z.object({
+				event: z.enum([
+					'file:change',
+					'files:operation-progress',
+					'system:disk:change',
+					'files:external-storage:change',
+				]),
+			}),
+		)
 		.subscription(async function* ({ctx, input, signal}) {
 			// Stream the events
 			// We pass in the AbortSignal so the stream can be immediately cleaned up
