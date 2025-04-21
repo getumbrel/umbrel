@@ -3,19 +3,14 @@ import {cloneDeep} from 'es-toolkit'
 
 import {router, privateProcedure} from '../server/trpc/trpc.js'
 
-import type {EventTypes} from './event-bus.js'
+import {type EventTypes, events} from './event-bus.js'
 
 export default router({
 	// Listen for events
 	listen: privateProcedure
 		.input(
 			z.object({
-				event: z.enum([
-					'file:change',
-					'files:operation-progress',
-					'system:disk:change',
-					'files:external-storage:change',
-				]),
+				event: z.enum(events),
 			}),
 		)
 		.subscription(async function* ({ctx, input, signal}) {

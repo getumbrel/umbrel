@@ -4,6 +4,19 @@ import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from '../files/watcher.js'
 import type {OperationsInProgress} from '../files/files.js'
 
+// Type assertion to ensure all events in EventTypes are defined in events
+type MissingInEvents = Exclude<keyof EventTypes, (typeof events)[number]>
+type _AssertEveryKeyIsListed = MissingInEvents extends never ? true : [`✘ Add these to events →`, MissingInEvents]
+const _eventsIncludesAllKeys: _AssertEveryKeyIsListed = true
+
+// Statically define event names for use in rpc argument validation
+export const events = [
+	'file:change',
+	'files:operation-progress',
+	'system:disk:change',
+	'files:external-storage:change',
+] as const satisfies readonly (keyof EventTypes)[]
+
 // Statically define event types
 export type EventTypes = {
 	// Fires when a watched file changes
