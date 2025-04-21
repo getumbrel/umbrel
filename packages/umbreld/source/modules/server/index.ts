@@ -19,7 +19,7 @@ import randomToken from '../utilities/random-token.js'
 
 import type Umbreld from '../../index.js'
 import * as jwt from '../jwt.js'
-import {trpcHandler} from './trpc/index.js'
+import {trpcExpressHandler, trpcWssHandler} from './trpc/index.js'
 import createTerminalWebSocketHandler from './terminal-socket.js'
 
 import fileApi from '../files/api.js'
@@ -57,6 +57,9 @@ class Server {
 	umbreld: Umbreld
 	logger: Umbreld['logger']
 	port: number | undefined
+	app?: express.Express
+	server?: http.Server
+	webSocketRouter = new Map<string, WebSocketServer>()
 
 	constructor({umbreld}: ServerOptions) {
 		this.umbreld = umbreld
@@ -85,18 +88,32 @@ class Server {
 		return jwt.verifyProxyToken(token, await this.getJwtSecret())
 	}
 
+	// Creates an isolated WebSocket server and mounts it at a specific path
+	// All WebSocket servers require a valid auth token to connect
+	mountWebSocketServer(path: string, setupHandler: (wss: WebSocketServer) => void) {
+		// Create the WebSocket server
+		const wss = new WebSocketServer({noServer: true})
+
+		// Pass the WebSocket server to the setup handler so it can do whatever it needs
+		setupHandler(wss)
+
+		// Add the WebSocket server to the router
+		this.webSocketRouter.set(path, wss)
+	}
+
 	async start() {
 		// Ensure the JWT secret exists
 		await this.getJwtSecret()
 
-		// Create the handler
-		const app = express()
+		// Create the handler and server
+		this.app = express()
+		this.server = http.createServer(this.app)
 
 		// Setup cookie parser
-		app.use(cookieParser())
+		this.app.use(cookieParser())
 
 		// Security hardening, CSP
-		app.use(
+		this.app.use(
 			helmet.contentSecurityPolicy({
 				directives: {
 					// Allow inline scripts ONLY in development for vite dev server
@@ -111,27 +128,77 @@ class Server {
 				},
 			}),
 		)
-		app.use(helmet.referrerPolicy({policy: 'no-referrer'}))
-		app.disable('x-powered-by')
+		this.app.use(helmet.referrerPolicy({policy: 'no-referrer'}))
+		this.app.disable('x-powered-by')
 
 		// Attach the umbreld and logger instances so they're accessible to routes
-		app.set('umbreld', this.umbreld)
-		app.set('logger', this.logger)
+		this.app.set('umbreld', this.umbreld)
+		this.app.set('logger', this.logger)
 
 		// Log requests
-		app.use((request, response, next) => {
+		this.app.use((request, response, next) => {
 			this.logger.verbose(`${request.method} ${request.path}`)
 			next()
 		})
 
+		// Handle WebSocket upgrade requests
+		// We add a single upgrade handler for all WebSocket servers and check
+		// for their existence in a router so we can be sure we destroy the socket
+		// immediately if a match isn't found instead of keeping it open. This prevents
+		// slowloris style DoS attacks.
+		this.server?.on('upgrade', async (request, socket, head) => {
+			try {
+				// Grab the path and search params from the request
+				const {pathname, searchParams} = new URL(`https://localhost${request.url}`)
+
+				// See if we have a WebSocket server for this path in our router
+				const wss = this.webSocketRouter.get(pathname)
+
+				// If this path isn't in the router stop and destroy the socket to prevent
+				// DoS attacks.
+				if (!wss) {
+					// However we don't destroy the socket in development mode because
+					// we want to allow WebSocket connections to be proxied through to
+					// the vite HMR client.
+					if (!this.umbreld.developmentMode) return
+
+					throw new Error(`No WebSocket server mounted for ${pathname}`)
+				}
+
+				// Verify the auth token before doing anything
+				// We require passing the token like this because it's unsafe to rely on cookies
+				// since they get leaked to other apps running on different ports on the same hostname
+				// due to relaxed browser sandboxing.
+				// We can't set custom headers because that not allowed by the WebSocket browser spec.
+				const token = searchParams.get('token')
+				if (await this.verifyToken(token!)) {
+					this.logger.verbose(`WS upgrade for ${pathname}`)
+					// Upgrade connection to WebSocket and fire the connection handler
+					wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request))
+				}
+			} catch (error) {
+				this.logger.error(`Error upgrading websocket: ${(error as Error).message}`)
+				socket.destroy()
+			}
+		})
+
 		// This is needed for legacy reasons when 0.5.x users OTA update to 1.0.
 		// 0.5.x polls this endpoint during update to know when it's completed.
-		app.get('/manager-api/v1/system/update-status', (request, response) => {
+		this.app.get('/manager-api/v1/system/update-status', (request, response) => {
 			response.json({state: 'success', progress: 100, description: '', updateTo: ''})
 		})
 
 		// Handle tRPC routes
-		app.use('/trpc', trpcHandler)
+		this.app.use('/trpc', trpcExpressHandler)
+		this.mountWebSocketServer('/trpc', (wss) => {
+			trpcWssHandler({wss, umbreld: this.umbreld, logger: this.logger})
+		})
+
+		// Handle terminal WebSocket routes
+		this.mountWebSocketServer('/terminal', (wss) => {
+			const logger = this.logger.createChildLogger('terminal')
+			wss.on('connection', createTerminalWebSocketHandler({umbreld: this.umbreld, logger}))
+		})
 
 		// Handle API routes
 		const createApi = (registerApi: ({publicApi, privateApi, umbreld}: ApiOptions) => void) => {
@@ -156,10 +223,10 @@ class Server {
 
 			return api
 		}
-		app.use('/api/files', createApi(fileApi))
+		this.app.use('/api/files', createApi(fileApi))
 
 		// Handle log file downloads
-		app.get('/logs/', async (request, response) => {
+		this.app.get('/logs/', async (request, response) => {
 			// Check the user is logged in
 			try {
 				// We shouldn't really use the proxy token for this but it's
@@ -184,7 +251,7 @@ class Server {
 		// process.env.UMBREL_UI_PROXY otherwise in production we
 		// statically serve the built ui.
 		if (process.env.UMBREL_UI_PROXY) {
-			app.use(
+			this.app.use(
 				'/',
 				createProxyMiddleware({
 					target: process.env.UMBREL_UI_PROXY,
@@ -210,59 +277,36 @@ class Server {
 				response.set('Cache-Control', `public, max-age=${approximatelyOneYearInSeconds}, immutable`)
 				next()
 			}
-			app.get('/assets/*', cacheAggressively)
-			app.get('/wallpapers/*', cacheAggressively)
+			this.app.get('/assets/*', cacheAggressively)
+			this.app.get('/wallpapers/*', cacheAggressively)
 
 			// Other files without a hash in their filename should revalidate based on
 			// ETag and Last-Modified instead to force the browser to automatically
 			// refresh their contents after an OTA update for example.
 			const staticOptions = {cacheControl: true, etag: true, lastModified: true, maxAge: 0}
-			app.use('/', express.static(uiPath, staticOptions))
-			app.use('*', express.static(`${uiPath}/index.html`, staticOptions))
+			this.app.use('/', express.static(uiPath, staticOptions))
+			this.app.use('*', express.static(`${uiPath}/index.html`, staticOptions))
 		}
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch
 		// them here and log them.
-		app.use((error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
-			this.logger.error(`${request.method} ${request.path} ${error.message}`)
-			if (response.headersSent) return
-			response.status(500).json({error: true})
-		})
+		this.app.use(
+			(error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
+				this.logger.error(`${request.method} ${request.path} ${error.message}`)
+				if (response.headersSent) return
+				response.status(500).json({error: true})
+			},
+		)
 
 		// Wrap all request handlers with a safe async handler
 		// TODO: We can remove this if we move to express 5
-		wrapHandlersWithAsyncHandler(app._router)
+		wrapHandlersWithAsyncHandler(this.app._router)
 
 		// Start the server
-		const server = http.createServer(app)
-		const listen = promisify(server.listen.bind(server)) as (port: number) => Promise<void>
+		const listen = promisify(this.server.listen.bind(this.server)) as (port: number) => Promise<void>
 		await listen(this.umbreld.port)
-		this.port = (server.address() as any).port
+		this.port = (this.server.address() as any).port
 		this.logger.log(`Listening on port ${this.port}`)
-
-		// Create the terminal WebSocket server
-		const terminalLogger = this.logger.createChildLogger('terminal')
-		const wss = new WebSocketServer({noServer: true})
-		wss.on('connection', createTerminalWebSocketHandler({umbreld: this.umbreld, logger: terminalLogger}))
-
-		// Handle WebSocket upgrade requests
-		server.on('upgrade', async (request, socket, head) => {
-			// Only handle requests to /terminal
-			const {pathname} = new URL(`https://localhost${request.url}`)
-			if (pathname === '/terminal') {
-				// Verify the auth token before doing anything
-				const token = new URL(`https://localhost/${request.url}`).searchParams.get('token')
-				try {
-					if (await this.verifyToken(token!)) {
-						// Upgrade connection to WebSocket and fire the connection handler
-						wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request))
-					}
-				} catch (error) {
-					terminalLogger.error(`Error creating socket: ${(error as Error).message}`)
-					socket.destroy()
-				}
-			}
-		})
 
 		return this
 	}

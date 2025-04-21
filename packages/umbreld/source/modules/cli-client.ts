@@ -1,11 +1,11 @@
 import process from 'node:process'
 
-import {createTRPCProxyClient, httpLink} from '@trpc/client'
+import {createTRPCClient, httpLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import fse from 'fs-extra'
 
 import * as jwt from './jwt.js'
 
-import type {AppRouter} from './server/trpc/index.js'
+import {type AppRouter, httpPaths} from './server/trpc/common.js'
 
 // TODO: Maybe just read the endpoint from the data dir
 const dataDir = process.env.UMBREL_DATA_DIR ?? '/home/umbrel/umbrel'
@@ -17,12 +17,18 @@ async function signJwt() {
 	return token
 }
 
-const trpc = createTRPCProxyClient<AppRouter>({
+const trpc = createTRPCClient<AppRouter>({
 	links: [
-		httpLink({
-			url: trpcEndpoint,
-			headers: async () => ({
-				Authorization: `Bearer ${await signJwt()}`,
+		splitLink({
+			condition: (operation) => httpPaths.includes(operation.path as (typeof httpPaths)[number]),
+			true: httpLink({
+				url: trpcEndpoint,
+				headers: async () => ({
+					Authorization: `Bearer ${await signJwt()}`,
+				}),
+			}),
+			false: wsLink({
+				client: createWSClient({url: async () => `${trpcEndpoint}?token=${await signJwt()}`}),
 			}),
 		}),
 	],
@@ -69,14 +75,25 @@ type CliClientOptions = {
 }
 
 export const cliClient = async ({query, args}: CliClientOptions) => {
+	// Parse flags into an object
 	const parsedArgs = parseArgs(args)
 
+	// Split the query into parts and grab the procedure via dot notation
+	const parts = query.split('.')
 	let procedure: any = trpc
-	for (const part of query.split('.')) procedure = procedure[part]
+	for (const part of parts) procedure = procedure[part]
 
-	try {
-		console.log(await procedure(parsedArgs))
-	} catch (error) {
-		console.log(error)
+	// Subscription
+	if (parts.at(-1) === 'subscribe') {
+		return await new Promise((resolve, reject) => {
+			procedure(parsedArgs, {
+				onData: (data: any) => console.log(JSON.stringify(data, null, 2)),
+				onError: (error: any) => reject(error),
+				onComplete: () => resolve(void 0),
+			})
+		})
 	}
+
+	// Query or Mutation
+	console.log(JSON.stringify(await procedure(parsedArgs), null, 2))
 }

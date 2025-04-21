@@ -1,26 +1,37 @@
-import {createTRPCClient, createTRPCReact, httpLink, loggerLink, TRPCClientErrorLike} from '@trpc/react-query'
+import {
+	createTRPCClient,
+	createTRPCReact,
+	createWSClient,
+	httpLink,
+	loggerLink,
+	splitLink,
+	TRPCClientErrorLike,
+	wsLink,
+} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {IS_DEV} from '@/utils/misc'
 
-import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
+import {httpPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
 
 export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
+const getJwt = () => localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
 export const links = [
 	loggerLink({
 		enabled: () => IS_DEV,
 	}),
-	httpLink({
-		url: trpcUrl,
-		headers: async () => {
-			const jwt = localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
-			return {
-				Authorization: `Bearer ${jwt}`,
-			}
-		},
+	splitLink({
+		condition: (operation) => httpPaths.includes(operation.path as (typeof httpPaths)[number]),
+		true: httpLink({
+			url: trpcUrl,
+			headers: () => ({Authorization: `Bearer ${getJwt()}`}),
+		}),
+		false: wsLink({
+			client: createWSClient({url: () => `${trpcUrl}?token=${getJwt()}`}),
+		}),
 	}),
 ]
 
