@@ -160,7 +160,7 @@ class Server {
 					// However we don't destroy the socket in development mode because
 					// we want to allow WebSocket connections to be proxied through to
 					// the vite HMR client.
-					if (!this.umbreld.developmentMode) return
+					if (this.umbreld.developmentMode) return
 
 					throw new Error(`No WebSocket server mounted for ${pathname}`)
 				}
