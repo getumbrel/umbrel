@@ -208,7 +208,7 @@ function CpuSection() {
 				<UsageCard value={value} progressLabel={secondaryValue} progress={progress} />
 			</div>
 			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system]} />}
-			<AppList apps={apps} formatValue={(v) => formatNumberI18n(v) + '%'} />
+			<AppList apps={apps} formatValue={(n) => formatNumberI18n({n}) + '%'} />
 		</>
 	)
 }

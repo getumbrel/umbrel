@@ -15,6 +15,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {t} from '@/utils/i18n'
+import {formatNumberI18n} from '@/utils/number'
 
 export interface ListingProps {
 	items: FileSystemItem[] // array of items to display
@@ -78,8 +79,13 @@ function ListingContent({
 			{totalItems && !selectedItems.length ? (
 				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
 					{truncatedAt
-						? t('files-listing.item-count-truncated', {count: truncatedAt})
-						: t('files-listing.item-count', {count: totalItems})}
+						? t('files-listing.item-count-truncated', {
+								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false}),
+							})
+						: t('files-listing.item-count', {
+								count: totalItems,
+								formattedCount: formatNumberI18n({n: totalItems, showDecimals: false}),
+							})}
 				</span>
 			) : null}
 
