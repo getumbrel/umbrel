@@ -19,6 +19,7 @@ import {t} from '@/utils/i18n'
 export interface ListingProps {
 	items: FileSystemItem[] // array of items to display
 	totalItems?: number // total number of items in the listing
+	truncatedAt?: number // if the listing is truncated at this number
 	selectableItems?: FileSystemItem[] // array of items that are selectable, eg. for keyboard shortcuts we want to ignore uploading items
 	isLoading: boolean // if the items are still loading
 	error?: unknown // if there is an error loading the items
@@ -34,6 +35,7 @@ export interface ListingProps {
 function ListingContent({
 	items,
 	totalItems,
+	truncatedAt,
 	hasMore,
 	onLoadMore,
 	scrollAreaRef,
@@ -44,6 +46,7 @@ function ListingContent({
 }: {
 	items: FileSystemItem[]
 	totalItems?: number
+	truncatedAt?: number
 	hasMore: boolean
 	onLoadMore: () => Promise<boolean>
 	scrollAreaRef: React.RefObject<HTMLDivElement>
@@ -70,16 +73,30 @@ function ListingContent({
 					/>
 				)
 			})()}
+
+			{/* Display total item count (or truncated count) when no items are selected */}
 			{totalItems && !selectedItems.length ? (
 				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
-					{t('files-listing.item-count', {count: totalItems})}
+					{truncatedAt
+						? t('files-listing.item-count-truncated', {count: truncatedAt})
+						: t('files-listing.item-count', {count: totalItems})}
 				</span>
 			) : null}
-			{totalItems && !!selectedItems.length ? (
+
+			{/* Display selected count vs total (or truncated count) when items are selected */}
+			{selectedItems.length > 0 && (
 				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
-					{t('files-listing.selected-count', {selectedCount: selectedItems.length, totalCount: totalItems})}
+					{truncatedAt
+						? t('files-listing.selected-count-truncated', {
+								selectedCount: selectedItems.length,
+								totalCount: truncatedAt,
+							})
+						: t('files-listing.selected-count', {
+								selectedCount: selectedItems.length,
+								totalCount: totalItems,
+							})}
 				</span>
-			) : null}
+			)}
 		</Card>
 	)
 }
@@ -87,6 +104,7 @@ function ListingContent({
 export function Listing({
 	items,
 	totalItems = 0,
+	truncatedAt,
 	selectableItems = [],
 	isLoading,
 	error,
@@ -116,6 +134,7 @@ export function Listing({
 			<ListingContent
 				items={items}
 				totalItems={totalItems}
+				truncatedAt={truncatedAt}
 				hasMore={hasMore}
 				onLoadMore={onLoadMore}
 				scrollAreaRef={scrollAreaRef}

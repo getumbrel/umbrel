@@ -101,6 +101,7 @@ export function DirectoryListing() {
 			<Listing
 				items={items}
 				totalItems={listing?.totalFiles}
+				truncatedAt={listing?.truncatedAt}
 				selectableItems={selectableItems}
 				isLoading={isLoading}
 				error={error}

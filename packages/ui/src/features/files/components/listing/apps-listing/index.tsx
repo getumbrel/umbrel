@@ -17,6 +17,7 @@ export function AppsListing() {
 			onLoadMore={fetchMoreItems}
 			enableFileDrop={false}
 			totalItems={listing?.totalFiles}
+			truncatedAt={listing?.truncatedAt}
 		/>
 	)
 }

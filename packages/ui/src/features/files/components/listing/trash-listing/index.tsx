@@ -64,6 +64,7 @@ export function TrashListing() {
 		<Listing
 			items={items}
 			totalItems={listing?.totalFiles}
+			truncatedAt={listing?.truncatedAt}
 			selectableItems={items}
 			isLoading={isLoading}
 			error={error}
