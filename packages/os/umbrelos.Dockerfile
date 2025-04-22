@@ -26,6 +26,11 @@ WORKDIR /app
 # Copy the package.json and package-lock.json
 COPY packages/ui/ .
 
+# The ui-build stage only has 'packages/ui' in '/app', but the ui imports runtime values
+# via a relative path ('../../../umbreld/source/modules/server/trpc/common') that resolves outside '/app'.
+# We copy the target file to the expected path for the build to succeed.
+COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modules/server/trpc/common.ts
+
 # Install the dependencies
 RUN rm -rf node_modules || true
 RUN pnpm install
