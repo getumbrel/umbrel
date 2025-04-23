@@ -22,6 +22,7 @@ import fse from 'fs-extra'
 import {minimatch} from 'minimatch'
 import isValidFilename from 'valid-filename'
 import {execa} from 'execa'
+import bytes from 'bytes'
 
 import Watcher from './watcher.js'
 import Recents from './recents.js'
@@ -85,7 +86,9 @@ type OperationProgress = {
 	type: 'copy' | 'move'
 	file: File
 	destinationPath: string
-	progress: number
+	percent: number
+	bytesPerSecond: number
+	secondsRemaining?: number
 }
 
 export type OperationsInProgress = OperationProgress[]
@@ -369,12 +372,13 @@ export default class Files {
 		if (destinationExists) throw new Error('[destination-already-exists]')
 		if (destinationSystemPath.startsWith(sourceSystemPath)) throw new Error('[subdir-of-self]')
 
-		// Create initial progress tracker and emit copy event
+		// Create initial progress tracker and emit operation progress event
 		const operationProgress: OperationProgress = {
 			type: move ? 'move' : 'copy',
 			file: await this.status(sourceSystemPath),
 			destinationPath: this.systemToVirtualPath(destinationSystemPath),
-			progress: 0,
+			percent: 0,
+			bytesPerSecond: 0,
 		}
 		this.operationsInProgress.push(operationProgress)
 		this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
@@ -389,6 +393,7 @@ export default class Files {
 			const rsync = execa('rsync', [
 				// Give detailed progress output we can easily parse
 				'--info=progress2',
+				'--no-human-readable',
 				// Archive mode, recursive and preserve permissions etc
 				'--archive',
 				// Inplace mode, update files in place instead of temporary files with a random suffix
@@ -404,12 +409,26 @@ export default class Files {
 			// Process output from rsync to handle copy progress
 			rsync.stdout!.on('data', (chunk) => {
 				// Grab progress update from --info=progress2 output
-				const progressUpdate = chunk.toString().match(/.* (\d*)% .*/)
+				const output = chunk.toString()
+
+				// Check if we have a % update
+				const progressUpdate = output.match(/.* (\d*)% .*/)
 				if (progressUpdate) {
-					// Convert percentage to number and pass to callback
-					const percent = Number.parseInt(progressUpdate[1], 10)
-					// Update the progress tracker emit copy event
-					operationProgress.progress = percent
+					// Parse values from rsync output
+					const values = output.trim().split(/\s+/)
+					const bytesCopied = Number(values[0])
+					const percent = Number(values[1].replace('%', ''))
+					const bytesPerSecond = bytes.parse(values[2].replace('/s', '')) ?? 0
+
+					// Calculate time remaining
+					const totalBytes = Math.round((bytesCopied / percent) * 100)
+					let secondsRemaining: number | undefined = Math.round((totalBytes - bytesCopied) / bytesPerSecond)
+					if (secondsRemaining === Infinity) secondsRemaining = undefined
+
+					// Update the progress tracker and emit operation progress event
+					operationProgress.percent = percent
+					operationProgress.bytesPerSecond = bytesPerSecond
+					operationProgress.secondsRemaining = secondsRemaining
 					this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 				}
 			})
@@ -420,7 +439,7 @@ export default class Files {
 			// If we're moving, delete the source file or directory on completion
 			if (move) await fse.remove(sourceSystemPath)
 		} finally {
-			// Remove the progress tracker and emit copy event
+			// Remove the progress tracker and emit operation progress event
 			this.operationsInProgress = this.operationsInProgress.filter((operation) => operation !== operationProgress)
 			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 		}

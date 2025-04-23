@@ -66,7 +66,8 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-copy-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-copy-progress/destination/source.bin',
-				progress: expect.any(Number),
+				percent: expect.any(Number),
+				bytesPerSecond: expect.any(Number),
 			},
 		])
 
@@ -86,7 +87,8 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-copy-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-copy-progress/destination/source.bin',
-				progress: 0,
+				percent: 0,
+				bytesPerSecond: 0,
 			},
 		])
 		expect(collectedEvents.at(-2)).toMatchObject([
@@ -96,7 +98,9 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-copy-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-copy-progress/destination/source.bin',
-				progress: 100,
+				percent: 100,
+				bytesPerSecond: expect.any(Number),
+				secondsRemaining: 0,
 			},
 		])
 		expect(collectedEvents.at(-1)).toMatchObject([])
@@ -142,7 +146,8 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-move-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-move-progress/destination/source.bin',
-				progress: expect.any(Number),
+				percent: expect.any(Number),
+				bytesPerSecond: expect.any(Number),
 			},
 		])
 
@@ -162,7 +167,8 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-move-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-move-progress/destination/source.bin',
-				progress: 0,
+				percent: 0,
+				bytesPerSecond: 0,
 			},
 		])
 		expect(collectedEvents.at(-2)).toMatchObject([
@@ -172,7 +178,9 @@ describe(`operationProgress()`, () => {
 					path: '/Home/test-move-progress/source/source.bin',
 				}),
 				destinationPath: '/Home/test-move-progress/destination/source.bin',
-				progress: 100,
+				percent: 100,
+				bytesPerSecond: expect.any(Number),
+				secondsRemaining: 0,
 			},
 		])
 		expect(collectedEvents.at(-1)).toMatchObject([])
