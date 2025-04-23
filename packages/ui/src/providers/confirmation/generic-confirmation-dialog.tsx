@@ -73,7 +73,7 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 				</AlertDialogHeader>
 
 				{/* Action Buttons */}
-				<div className='flex justify-center gap-x-2'>
+				<div className='flex flex-col justify-center gap-y-2 md:flex-row md:gap-x-2 md:gap-y-0'>
 					{actions.map((action, index) => (
 						<AlertDialogAction
 							key={action.label}
