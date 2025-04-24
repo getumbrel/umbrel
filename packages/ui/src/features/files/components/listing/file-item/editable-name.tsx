@@ -188,6 +188,10 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 		return (
 			<Drawer
 				{...dialogProps}
+				// We set non-modal for this Drawer only on touch devices to prevent an issue where tapping the overlay to close the drawer causes a residual click event to
+				// propagate to the underlying FileItem (where this drawer component is rendered) and tiggers unwanted actions like navigation or reopening the drawer.
+				// We should investigate further in the future and potentially fix this somewhere higher in the layout tree.
+				modal={!isTouchDevice}
 				// ensure state is reset properly when the drawer is closed
 				onOpenChange={(isOpen) => {
 					if (!isOpen) {

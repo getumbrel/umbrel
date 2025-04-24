@@ -539,9 +539,16 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		if (e.button !== 0) return
 
 		// If the click is on an interactive element, don't start marquee selection
+		// [vaul-overlay] is the modal overlay for the shadcn Drawer component that we use for the editable name modal (gets clicked when blurring the Drawer)
 		const target = e.target as HTMLElement
-		if (target.closest('button, a, input, [role="button"], [role="link"], [role="menuitem"]')) {
+		if (target.closest('button, a, input, [role="button"], [role="link"], [role="menuitem"], [vaul-overlay]')) {
 			return
+		}
+
+		// If there's an active input (eg. new folder name input), blur it
+		const activeElement = document.activeElement as HTMLElement | null
+		if (activeElement && activeElement.tagName === 'INPUT') {
+			activeElement.blur()
 		}
 
 		// We do not allow selection in scrollbar areas
