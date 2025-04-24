@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Map hernoemen",
   "files-name-drawer.rename-folder-description": "Voer een nieuwe naam in voor deze map.",
   "files-name-drawer.rename-folder-input": "Mapnaam",
+  "files-operations-island.copying": "Kopiëren van \"{{from}}\" naar \"{{to}}\"",
+  "files-operations-island.moving": "Verplaatsen van \"{{from}}\" naar \"{{to}}\"",
   "files-path.input-group": "Padinvoer",
   "files-path.input-label": "Huidig pad",
   "files-permanently-delete.confirm": "Definitief verwijderen",

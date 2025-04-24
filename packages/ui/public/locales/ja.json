@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "フォルダ名の変更",
   "files-name-drawer.rename-folder-description": "このフォルダの新しい名前を入力してください。",
   "files-name-drawer.rename-folder-input": "フォルダ名",
+  "files-operations-island.copying": "「{{from}}」を「{{to}}」にコピーしています",
+  "files-operations-island.moving": "「{{from}}」を「{{to}}」に移動しています",
   "files-path.input-group": "パス入力",
   "files-path.input-label": "現在のパス",
   "files-permanently-delete.confirm": "完全に削除",

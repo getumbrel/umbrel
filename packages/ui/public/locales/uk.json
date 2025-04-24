@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Перейменувати папку",
   "files-name-drawer.rename-folder-description": "Введіть нову назву для цієї папки.",
   "files-name-drawer.rename-folder-input": "Назва папки",
+  "files-operations-island.copying": "Копіювання \"{{from}}\" до \"{{to}}\"",
+  "files-operations-island.moving": "Переміщення \"{{from}}\" до \"{{to}}\"",
   "files-path.input-group": "Введення шляху",
   "files-path.input-label": "Поточний шлях",
   "files-permanently-delete.confirm": "Видалити назавжди",

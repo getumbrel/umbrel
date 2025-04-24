@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Ordner umbenennen",
   "files-name-drawer.rename-folder-description": "Gib einen neuen Namen für diesen Ordner ein.",
   "files-name-drawer.rename-folder-input": "Ordnername",
+  "files-operations-island.copying": "Kopieren von \"{{from}}\" nach \"{{to}}\"",
+  "files-operations-island.moving": "Verschieben von \"{{from}}\" nach \"{{to}}\"",
   "files-path.input-group": "Pfadeingabe",
   "files-path.input-label": "Aktueller Pfad",
   "files-permanently-delete.confirm": "Endgültig löschen",

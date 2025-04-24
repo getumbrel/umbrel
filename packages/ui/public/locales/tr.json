@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Klasörü Yeniden Adlandır",
   "files-name-drawer.rename-folder-description": "Bu klasör için yeni bir ad girin.",
   "files-name-drawer.rename-folder-input": "Klasör Adı",
+  "files-operations-island.copying": "\"{{from}}\" öğesi \"{{to}}\" konumuna kopyalanıyor",
+  "files-operations-island.moving": "\"{{from}}\" öğesi \"{{to}}\" konumuna taşınıyor",
   "files-path.input-group": "Yol girişi",
   "files-path.input-label": "Geçerli yol",
   "files-permanently-delete.confirm": "Kalıcı olarak sil",

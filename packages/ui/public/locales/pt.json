@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Renomear pasta",
   "files-name-drawer.rename-folder-description": "Digite um novo nome para esta pasta.",
   "files-name-drawer.rename-folder-input": "Nome da pasta",
+  "files-operations-island.copying": "Copiando \"{{from}}\" para \"{{to}}\"",
+  "files-operations-island.moving": "Movendo \"{{from}}\" para \"{{to}}\"",
   "files-path.input-group": "Campo de caminho",
   "files-path.input-label": "Caminho atual",
   "files-permanently-delete.confirm": "Excluir permanentemente",

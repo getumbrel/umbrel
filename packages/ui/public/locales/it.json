@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Rinomina cartella",
   "files-name-drawer.rename-folder-description": "Inserisci un nuovo nome per questa cartella.",
   "files-name-drawer.rename-folder-input": "Nome cartella",
+  "files-operations-island.copying": "Copiando \"{{from}}\" in \"{{to}}\"",
+  "files-operations-island.moving": "Spostando \"{{from}}\" in \"{{to}}\"",
   "files-path.input-group": "Campo percorso",
   "files-path.input-label": "Percorso attuale",
   "files-permanently-delete.confirm": "Elimina definitivamente",

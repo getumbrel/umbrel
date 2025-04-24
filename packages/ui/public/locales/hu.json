@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Mappa átnevezése",
   "files-name-drawer.rename-folder-description": "Adj meg egy új nevet ehhez a mappához.",
   "files-name-drawer.rename-folder-input": "Mappa neve",
+  "files-operations-island.copying": "Másolás \"{{from}}\" ide: \"{{to}}\"",
+  "files-operations-island.moving": "Áthelyezés \"{{from}}\" ide: \"{{to}}\"",
   "files-path.input-group": "Elérési út mező",
   "files-path.input-label": "Aktuális elérés",
   "files-permanently-delete.confirm": "Végleges törlés",

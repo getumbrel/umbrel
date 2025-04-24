@@ -6,8 +6,10 @@ import {toast} from 'sonner'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
+import type {RouterOutput} from '@/trpc/trpc'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
+import {secondsToEta} from '@/utils/seconds-to-eta'
 
 // Types
 interface AudioState {
@@ -30,6 +32,12 @@ interface UploadingFileSystemItem extends FileSystemItem {
 	// progress, speed, etc. are already optional in FileSystemItem
 }
 
+// ---------------- Long-running filesystem operations ----------------
+// Copy and move currently (could be extended to other operations, such as archive and unarchive)
+// Used for the operations floating island
+type OperationProgress = RouterOutput['files']['operationProgress'][number]
+type OperationsInProgress = OperationProgress[]
+
 interface GlobalFilesContextValue {
 	// Audio
 	audio: AudioState
@@ -40,6 +48,9 @@ interface GlobalFilesContextValue {
 	uploadStats: UploadStats
 	startUpload: (files: File[] | FileList, destinationPath: string) => void
 	cancelUpload: (tempId: string) => void
+
+	// Long-running filesystem operations (copy, move, archive, etc.)
+	operations: OperationsInProgress
 }
 
 // Create the context
@@ -76,16 +87,7 @@ const calculateUploadStats = (items: UploadingFileSystemItem[]): UploadStats => 
 	if (totalSpeed > 0) {
 		const remaining = totalSize - totalUploaded
 		const secondsRemaining = Math.round(remaining / totalSpeed)
-
-		if (secondsRemaining >= 0 && Number.isFinite(secondsRemaining)) {
-			if (secondsRemaining < 60) eta = `${secondsRemaining}s`
-			else if (secondsRemaining < 3600) eta = `${Math.round(secondsRemaining / 60)}m`
-			else {
-				const hours = Math.floor(secondsRemaining / 3600)
-				const minutes = Math.round((secondsRemaining % 3600) / 60)
-				eta = `${hours}hr ${minutes}m`
-			}
-		}
+		eta = secondsToEta(secondsRemaining)
 	}
 
 	// Handle case where totalSize becomes 0 due to cancellations
@@ -158,6 +160,23 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 	const [uploadingItems, setUploadingItems] = useState<UploadingFileSystemItem[]>([])
 	const [uploadStats, setUploadStats] = useState<UploadStats>(calculateUploadStats([]))
 	const activeXHRsRef = useRef<Map<string, XMLHttpRequest>>(new Map())
+
+	// -- 3. Operations-in-progress state (copy and move currently)
+	const [operations, setOperations] = useState<OperationsInProgress>([])
+
+	// Subscribe to "files:operation-progress" events that stream progress of copy/move operations
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'files:operation-progress'},
+		{
+			onData(data) {
+				// data is an array of operations currently in progress
+				setOperations(data as OperationsInProgress)
+			},
+			onError(err) {
+				console.error('eventBus.listen(files:operation-progress) subscription error', err)
+			},
+		},
+	)
 	const collisionQueueRef = useRef<Map<string, {item: UploadingFileSystemItem; file: File | FileWithPath}>>(new Map())
 	const isConfirmationActiveRef = useRef(false) // Prevent multiple simultaneous prompts
 	const applyDecisionToAllRef = useRef<'replace' | 'keep-both' | 'skip' | null>(null)
@@ -548,6 +567,9 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 		uploadStats,
 		startUpload,
 		cancelUpload,
+
+		// operations progress
+		operations,
 	}
 
 	return <GlobalFilesContext.Provider value={value}>{children}</GlobalFilesContext.Provider>

@@ -273,6 +273,8 @@
   "files-name-drawer.rename-folder": "Renombrar carpeta",
   "files-name-drawer.rename-folder-description": "Ingresa un nuevo nombre para esta carpeta.",
   "files-name-drawer.rename-folder-input": "Nombre de carpeta",
+  "files-operations-island.copying": "Copiando \"{{from}}\" a \"{{to}}\"",
+  "files-operations-island.moving": "Moviendo \"{{from}}\" a \"{{to}}\"",
   "files-path.input-group": "Entrada de ruta",
   "files-path.input-label": "Ruta actual",
   "files-permanently-delete.confirm": "Eliminar permanentemente",
