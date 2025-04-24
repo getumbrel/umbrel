@@ -58,15 +58,7 @@ export const SORT_BY_OPTIONS = [
 ] as const
 
 // ENSURE THESE 2 SETS MATCH THE ONES IN umbreld/source/modules/files/thumbnails.ts
-export const IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS = new Set([
-	'.jpg',
-	'.jpeg',
-	'.png',
-	'.gif',
-	'.webp',
-	'.avif',
-	'.heic',
-])
+export const IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif'])
 export const VIDEO_EXTENSIONS_WITH_IMAGE_THUMBNAILS = new Set(['.mov', '.mp4', '.3gp', '.mkv', '.avi'])
 
 export const FILE_TYPE_MAP = {

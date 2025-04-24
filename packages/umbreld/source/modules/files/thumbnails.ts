@@ -11,6 +11,8 @@ import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from './watcher.js'
 import {getDirectoryStream} from './files.js'
 
+// TODO: Add support for .heic files
+// ImageMagick 6.9.11-60 (latest version available in Debian apt repos) supports older heic files but does not support more recent heic files which are now common on most devices
 const SUPPORTED_THUMBNAIL_EXTENSIONS = [
 	// Image formats
 	'.webp',
@@ -19,7 +21,6 @@ const SUPPORTED_THUMBNAIL_EXTENSIONS = [
 	'.jpeg',
 	'.gif',
 	'.avif',
-	'.heic',
 	// Video formats
 	'.mkv',
 	'.mov',
