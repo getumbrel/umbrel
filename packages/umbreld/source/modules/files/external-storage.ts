@@ -108,7 +108,7 @@ export default class ExternalStorage {
 
 		// Auto mount any external devices
 		await this.#mountExternalDevices().catch((error) => {
-			this.logger.error(`Failed to mount external devices on startup: ${error}`)
+			this.logger.error(`Failed to mount external devices on startup`, error)
 		})
 
 		// Attach disk change listener and auto mount any new external devices
@@ -186,7 +186,7 @@ export default class ExternalStorage {
 						this.logger.log(`Mounted partition ${device.name} ${partition.label} as ${virtualMountPoint}`)
 					} catch (error) {
 						// Just log the error and continue to the next partition
-						this.logger.error(`Failed to mount partition ${device.name} ${partition.label}: ${error}`)
+						this.logger.error(`Failed to mount partition ${device.name} ${partition.label}`, error)
 					}
 				}
 			}
@@ -215,7 +215,7 @@ export default class ExternalStorage {
 				this.logger.log(`Unmounting partition ${partition.id}`)
 				await $`umount --all-targets /dev/${partition.id}`.catch((error) => {
 					// Just log the error and continue to next partition
-					this.logger.error(`Failed to unmount partition ${partition.id}: ${error}`)
+					this.logger.error(`Failed to unmount partition ${partition.id}`, error)
 					failedUnmounts = true
 				})
 			}
@@ -282,9 +282,9 @@ export default class ExternalStorage {
 			// Unmount the device
 			// We don't want to remove the device since this isn't a hard eject.
 			// We want the device to be detected if we start again.
-			await this.unmountExternalDevice(device.id, {remove: false}).catch(() => {
+			await this.unmountExternalDevice(device.id, {remove: false}).catch((error) => {
 				// Just log the error and continue to next device
-				this.logger.error(`Failed to unmount external device ${device.id}`)
+				this.logger.error(`Failed to unmount external device ${device.id}`, error)
 			})
 		}
 	}
@@ -309,7 +309,7 @@ export default class ExternalStorage {
 				}
 			} catch (error) {
 				// Just log the error and continue to next mount point
-				this.logger.error(`Failed to clean up left over mount point ${mountPoint}: ${error}`)
+				this.logger.error(`Failed to clean up left over mount point ${mountPoint}`, error)
 			}
 		}
 	}

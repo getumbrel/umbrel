@@ -177,7 +177,7 @@ class Server {
 					wss.handleUpgrade(request, socket, head, (ws) => wss.emit('connection', ws, request))
 				}
 			} catch (error) {
-				this.logger.error(`Error upgrading websocket: ${(error as Error).message}`)
+				this.logger.error(`Error upgrading websocket`, error)
 				socket.destroy()
 			}
 		})
@@ -242,7 +242,7 @@ class Server {
 				const journal = $`journalctl`
 				await pipeline(journal.stdout!, createGzip(), response)
 			} catch (error) {
-				this.logger.error(`Error streaming logs: ${(error as Error).message}`)
+				this.logger.error(`Error streaming logs`, error)
 			}
 		})
 
@@ -292,7 +292,7 @@ class Server {
 		// them here and log them.
 		this.app.use(
 			(error: Error, request: express.Request, response: express.Response, next: express.NextFunction): void => {
-				this.logger.error(`${request.method} ${request.path} ${error.message}`)
+				this.logger.error(`${request.method} ${request.path}`, error)
 				if (response.headersSent) return
 				response.status(500).json({error: true})
 			},

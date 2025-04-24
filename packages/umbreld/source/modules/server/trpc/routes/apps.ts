@@ -56,7 +56,7 @@ export default router({
 						torOnly,
 					}
 				} catch (error) {
-					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}: ${(error as Error).message}`)
+					ctx.apps.logger.error(`Failed to read manifest for app ${app.id}`, error)
 					return {id: app.id, error: (error as Error).message}
 				}
 			}),

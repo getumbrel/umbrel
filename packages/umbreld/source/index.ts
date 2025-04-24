@@ -127,7 +127,7 @@ export default class Umbreld {
 				this.logger.log(`WiFi connection restored!`)
 				break
 			} catch (error) {
-				this.logger.error(`Failed to restore WiFi connection "${(error as Error).message}". Retrying in 1 minute...`)
+				this.logger.error(`Failed to restore WiFi connection, retrying in 1 minute`, error)
 				await setTimeout(1000 * 60)
 			}
 		}
@@ -143,7 +143,7 @@ export default class Umbreld {
 				this.logger.log(`Set ondemand cpu governor`)
 			}
 		} catch (error) {
-			this.logger.error(`Failed to set ondemand cpu governor: ${(error as Error).message}`)
+			this.logger.error(`Failed to set ondemand cpu governor`, error)
 		}
 	}
 
@@ -172,7 +172,7 @@ export default class Umbreld {
 			}
 			this.logger.error('System time is not synced but timeout was reached. Continuing...')
 		} catch (error) {
-			this.logger.error(`Failed to check system time: ${(error as Error).message}`)
+			this.logger.error(`Failed to check system time`, error)
 		}
 	}
 
@@ -214,9 +214,7 @@ export default class Umbreld {
 		// Skip this in dev mode otherwise we get very slow reloads since this cleans
 		// up app containers on every source code change.
 		if (!this.developmentMode) {
-			await this.apps
-				.cleanDockerState()
-				.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+			await this.apps.cleanDockerState().catch((error) => this.logger.error(`Failed to clean Docker state`, error))
 		}
 
 		// Initialise modules
@@ -237,7 +235,7 @@ export default class Umbreld {
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false
 			// so it can be handled elsewhere if needed
-			this.logger.error(`Failed to stop umbreld: ${(error as Error).message}`)
+			this.logger.error(`Failed to stop umbreld`, error)
 			return false
 		}
 	}

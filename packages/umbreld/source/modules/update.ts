@@ -30,7 +30,7 @@ export async function getLatestRelease(umbreld: Umbreld) {
 	try {
 		deviceId = (await detectDevice()).deviceId
 	} catch (error) {
-		umbreld.logger.error(`Failed to detect device type: ${(error as Error).message}`)
+		umbreld.logger.error(`Failed to detect device type`, error)
 	}
 
 	let platform = 'unknown'
@@ -39,14 +39,14 @@ export async function getLatestRelease(umbreld: Umbreld) {
 			platform = 'umbrelOS'
 		}
 	} catch (error) {
-		umbreld.logger.error(`Failed to detect platform: ${(error as Error).message}`)
+		umbreld.logger.error(`Failed to detect platform`, error)
 	}
 
 	let channel = 'stable'
 	try {
 		channel = (await umbreld.store.get('settings.releaseChannel')) || 'stable'
 	} catch (error) {
-		umbreld.logger.error(`Failed to get release channel: ${(error as Error).message}`)
+		umbreld.logger.error(`Failed to get release channel`, error)
 	}
 
 	const updateUrl = new URL('https://api.umbrel.com/latest-release')
@@ -127,7 +127,7 @@ export async function performUpdate(umbreld: Umbreld) {
 		resetUpdateStatus()
 		setUpdateStatus({error: errorStatus})
 
-		umbreld.logger.error(`Update script failed: ${(error as Error).message}`)
+		umbreld.logger.error(`Update script failed`, error)
 
 		return false
 	}

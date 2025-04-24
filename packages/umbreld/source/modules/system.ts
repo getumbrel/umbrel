@@ -3,7 +3,7 @@ import {isIPv4} from 'node:net'
 import {setTimeout} from 'node:timers/promises'
 
 import systemInformation from 'systeminformation'
-import {$} from 'execa'
+import {$, type ExecaError} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
@@ -171,7 +171,7 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 					.filter((process) => appPids.includes(process.pid))
 					.reduce((total, process) => total + process.memory, 0)
 			} catch (error) {
-				umbreld.logger.error(`Error getting memory: ${(error as Error).message}`)
+				umbreld.logger.error(`Error getting memory`, error)
 			}
 			return {
 				id: app.id,
@@ -247,7 +247,7 @@ export async function getCpuUsage(umbreld: Umbreld): Promise<{
 					.filter((process) => appPids.includes(process.pid))
 					.reduce((total, process) => total + process.cpu, 0)
 			} catch (error) {
-				umbreld.logger.error(`Error getting cpu: ${(error as Error).message}`)
+				umbreld.logger.error(`Error getting cpu`, error)
 			}
 			return {
 				id: app.id,
@@ -291,12 +291,18 @@ export async function reboot(): Promise<boolean> {
 
 export async function commitOsPartition(umbreld: Umbreld): Promise<boolean> {
 	try {
+		umbreld.logger.log('Committing OS partition...')
 		await $`mender commit`
 		umbreld.logger.log('Successfully commited to new OS partition.')
 		return true
 	} catch (error) {
-		// TODO: We should detect if we're running in umbrelOS and make a bigger deal about this if it fails.
-		umbreld.logger.error(`Failed to commit OS partition: ${(error as Error).message}`)
+		if (
+			(error as ExecaError).stderr?.includes('level=error msg="Could not commit Artifact: There is nothing to commit"')
+		) {
+			umbreld.logger.log('No new OS partition to commit.')
+			return true
+		}
+		umbreld.logger.error(`Failed to commit OS partition`, error)
 		return false
 	}
 }

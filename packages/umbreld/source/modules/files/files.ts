@@ -144,15 +144,14 @@ export default class Files {
 		await Promise.all(
 			[...this.baseDirectories.keys()].map((baseDirectory) =>
 				this.createDirectory(baseDirectory).catch((error) => {
-					this.logger.error(`Failed to ensure directory '${baseDirectory}' exists: ${error.message}`)
+					this.logger.error(`Failed to ensure directory '${baseDirectory}' exists`, error)
 				}),
 			),
 		)
 
 		// Ensure the trash meta directory exists
 		await fse.ensureDir(this.trashMetaDirectory).catch((error) => {
-			this.logger.error(`Failed to ensure directory '${this.trashMetaDirectory}' exists: ${error.message}`)
-			console.error(error)
+			this.logger.error(`Failed to ensure directory ${this.trashMetaDirectory} exists`, error)
 		})
 		await this.chownSystemPath(this.trashMetaDirectory)
 
@@ -160,14 +159,12 @@ export default class Files {
 		await this.firstRun()
 
 		// Start submodules
-		await this.watcher.start().catch((error) => this.logger.error(`Failed to start watcher: ${error.message}`))
-		await this.externalStorage
-			.start()
-			.catch((error) => this.logger.error(`Failed to start external storage: ${error.message}`))
-		await this.recents.start().catch((error) => this.logger.error(`Failed to start recents: ${error.message}`))
-		await this.favorites.start().catch((error) => this.logger.error(`Failed to start favorites: ${error.message}`))
-		await this.thumbnails.start().catch((error) => this.logger.error(`Failed to start thumbnails: ${error.message}`))
-		await this.samba.start().catch((error) => this.logger.error(`Failed to start samba: ${error.message}`))
+		await this.watcher.start().catch((error) => this.logger.error(`Failed to start watcher`, error))
+		await this.externalStorage.start().catch((error) => this.logger.error(`Failed to start external storage`, error))
+		await this.recents.start().catch((error) => this.logger.error(`Failed to start recents`, error))
+		await this.favorites.start().catch((error) => this.logger.error(`Failed to start favorites`, error))
+		await this.thumbnails.start().catch((error) => this.logger.error(`Failed to start thumbnails`, error))
+		await this.samba.start().catch((error) => this.logger.error(`Failed to start samba`, error))
 	}
 
 	async firstRun() {
@@ -179,11 +176,11 @@ export default class Files {
 		const defaultFavourites = ['/Home/Documents', '/Home/Downloads', '/Home/Movies', '/Home/Music', '/Home/Photos']
 		for (const favorite of defaultFavourites) {
 			await this.createDirectory(favorite).catch((error) =>
-				this.logger.error(`Failed to ensure directory '${favorite}' exists: ${error.message}`),
+				this.logger.error(`Failed to ensure directory '${favorite}' exists`, error),
 			)
 			await this.favorites
 				.addFavorite(favorite)
-				.catch((error) => this.logger.error(`Failed to initialize favorite '${favorite}': ${error.message}`))
+				.catch((error) => this.logger.error(`Failed to initialize favorite '${favorite}'`, error))
 		}
 	}
 
@@ -334,8 +331,8 @@ export default class Files {
 
 			// Push the file details job to the queue to limit concurrency
 			fileJobs.push(
-				this.status(fileSystemPath).catch(() => {
-					this.logger.error(`Failed to get status for '${fileSystemPath}'`)
+				this.status(fileSystemPath).catch((error) => {
+					this.logger.error(`Failed to get status for '${fileSystemPath}'`, error)
 					return undefined
 				}),
 			)
@@ -644,13 +641,13 @@ export default class Files {
 		// Stream the trash directory contents
 		for await (const systemPath of getDirectoryStream(trashDirectory)) {
 			await fse.remove(systemPath).catch((error) => {
-				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash: ${error.message}`)
+				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash`, error)
 				success = false
 			})
 		}
 		for await (const systemPath of getDirectoryStream(this.trashMetaDirectory)) {
 			await fse.remove(systemPath).catch((error) => {
-				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash meta: ${error.message}`)
+				this.logger.error(`Failed to remove '${nodePath.basename(systemPath)}' from trash meta`, error)
 				success = false
 			})
 		}
@@ -672,7 +669,7 @@ export default class Files {
 			await fse.remove(systemPath)
 			return true
 		} catch (error) {
-			this.logger.error(`Failed to delete '${systemPath}': ${(error as Error).message}`)
+			this.logger.error(`Failed to delete '${systemPath}'`, error)
 			return false
 		}
 	}

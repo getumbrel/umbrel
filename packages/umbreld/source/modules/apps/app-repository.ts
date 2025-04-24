@@ -154,11 +154,11 @@ export default class AppRepository {
 		const parsedManifestsPromises = appManifests.map((manifest) =>
 			readYaml(manifest)
 				.catch((error) => {
-					this.logger.error(`Manifest parsing of ${manifest} failed: ${error.reason} on line ${error.mark.line}`)
+					this.logger.error(`Manifest parsing of ${manifest} failed`, error)
 				})
 				.then(validateManifest)
 				.catch((error) => {
-					this.logger.error(`Manifest validation of ${manifest} failed: ${error.message}`)
+					this.logger.error(`Manifest validation of ${manifest} failed`, error)
 				}),
 		)
 

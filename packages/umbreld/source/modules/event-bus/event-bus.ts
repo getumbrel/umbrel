@@ -66,8 +66,7 @@ export default class EventBus {
 		this.logger.verbose(`${event} ${data === undefined ? '' : JSON.stringify(data)}`)
 		return this.#emitter.emit(event, data).catch((error) => {
 			// Make sure we catch any unhandled errors so they don't crash the process
-			this.logger.error(`Handler failed for event ${event}: ${error.message}`)
-			console.log(error.stack)
+			this.logger.error(`Handler failed for event ${event}`, error)
 		})
 	}
 }

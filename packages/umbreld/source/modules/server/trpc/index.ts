@@ -36,8 +36,7 @@ export const trpcExpressHandler = createExpressMiddleware({
 	router: appRouter,
 	createContext: createContextExpress,
 	onError({error, ctx}) {
-		ctx?.logger.error(`${ctx?.request?.method} ${ctx?.request?.path} ${error.message}`)
-		console.log(error)
+		ctx?.logger.error(`${ctx?.request?.method} ${ctx?.request?.path}`, error)
 	},
 })
 
@@ -55,8 +54,7 @@ export const trpcWssHandler = ({
 		router: appRouter,
 		createContext: () => createContextWss({umbreld, logger}),
 		onError({error, ctx, path}) {
-			logger.error(`WS ${path} ${error.message}`)
-			console.log(error)
+			logger.error(`WS ${path}`, error)
 		},
 	})
 }

@@ -23,7 +23,7 @@ export async function overrideDevelopmentHostname(umbreld: Umbreld, hostname: st
 		umbreld.logger.log(`Applied development hostname '${hostname}'`)
 		return true
 	} catch (error) {
-		umbreld.logger.error(`Failed to apply development hostname: ${(error as Error).message}`)
+		umbreld.logger.error(`Failed to apply development hostname`, error)
 	}
 	return false
 }

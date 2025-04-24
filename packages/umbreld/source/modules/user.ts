@@ -83,7 +83,7 @@ export default class User {
 			}
 		} catch (error) {
 			// If the system password update fails, log it but continue
-			this.logger.error(`Failed to update system password: ${(error as Error).message}`)
+			this.logger.error(`Failed to update system password`, error)
 		}
 	}
 

@@ -19,7 +19,7 @@ export default router({
 				if (previousWifiCredentials) {
 					ctx.umbreld.logger.error(`Failed to connect to WiFi network, attempting to restore previous credentials...`)
 					connectToWiFiNetwork(previousWifiCredentials).catch((error) => {
-						ctx.umbreld.logger.error(`Failed to restore previous WiFi connection: ${(error as Error).message}`)
+						ctx.umbreld.logger.error(`Failed to restore previous WiFi connection`, error)
 					})
 				}
 

@@ -42,13 +42,13 @@ export default class Apps {
 				await $({stdio: 'inherit'})`docker rm ${containerIds}`
 			}
 		} catch (error) {
-			this.logger.error(`Failed to clean containers: ${(error as Error).message}`)
+			this.logger.error(`Failed to clean containers`, error)
 		}
 		try {
 			this.logger.log('Cleaning up old networks...')
 			await $({stdio: 'inherit'})`docker network prune -f`
 		} catch (error) {
-			this.logger.error(`Failed to clean networks: ${(error as Error).message}`)
+			this.logger.error(`Failed to clean networks`, error)
 		}
 	}
 
@@ -96,7 +96,7 @@ export default class Apps {
 				await fse.copyFile(source, dest)
 			}
 		} catch (error) {
-			this.logger.error(`Failed to copy bins: ${(error as Error).message}`)
+			this.logger.error(`Failed to copy bins`, error)
 		}
 
 		// Create app instances
@@ -119,12 +119,12 @@ export default class Apps {
 						this.logger.log(`Pre-loading local Docker image ${image}`)
 						await $({stdio: 'inherit'})`docker load --input /images/${image}`
 					} catch (error) {
-						this.logger.error(`Failed to pre-load local Docker image ${image}: ${(error as Error).message}`)
+						this.logger.error(`Failed to pre-load local Docker image ${image}`, error)
 					}
 				}),
 			)
 		} catch (error) {
-			this.logger.error(`Failed to pre-load local Docker images: ${(error as Error).message}`)
+			this.logger.error(`Failed to pre-load local Docker images`, error)
 		}
 
 		// Start app environment
@@ -132,7 +132,7 @@ export default class Apps {
 			try {
 				await appEnvironment(this.#umbreld, 'up')
 			} catch (error) {
-				this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
+				this.logger.error(`Failed to start app environment`, error)
 				this.logger.log('Attempting to clean Docker state before retrying...')
 				await this.cleanDockerState()
 			}
@@ -140,20 +140,21 @@ export default class Apps {
 				onFailedAttempt: (error) => {
 					this.logger.error(
 						`Attempt ${error.attemptNumber} starting app environmnet failed. There are ${error.retriesLeft} retries left.`,
+						error,
 					)
 				},
 				retries: 2, // This will do exponential backoff for 1s, 2s
 			})
 		} catch (error) {
 			// Log the error but continue to try to bring apps up to make it a less bad failure
-			this.logger.error(`Failed to start app environment: ${(error as Error).message}`)
+			this.logger.error(`Failed to start app environment`, error)
 		}
 
 		try {
 			// Set permissions for tor data directory
 			await $`sudo chown -R 1000:1000 ${this.#umbreld.dataDirectory}/tor`
 		} catch (error) {
-			this.logger.error(`Failed to set permissions for Tor data directory: ${(error as Error).message}`)
+			this.logger.error(`Failed to set permissions for Tor data directory`, error)
 		}
 
 		// Start apps
@@ -164,7 +165,7 @@ export default class Apps {
 					// We handle individual errors here to prevent apps start from throwing
 					// if a dingle app fails.
 					app.state = 'unknown'
-					this.logger.error(`Failed to start app ${app.id}: ${error.message}`)
+					this.logger.error(`Failed to start app ${app.id}`, error)
 				}),
 			),
 		)
@@ -177,7 +178,7 @@ export default class Apps {
 				app.stop().catch((error) => {
 					// We handle individual errors here to prevent apps stop from throwing
 					// if a single app fails.
-					this.logger.error(`Failed to stop app ${app.id}: ${error.message}`)
+					this.logger.error(`Failed to stop app ${app.id}`, error)
 				}),
 			),
 		)
@@ -247,7 +248,7 @@ export default class Apps {
 			await appEnvironment(this.#umbreld, 'up')
 			await app.install()
 		} catch (error) {
-			this.logger.error(`Failed to install app ${appId}: ${(error as Error).message}`)
+			this.logger.error(`Failed to install app ${appId}`, error)
 			this.instances = this.instances.filter((app) => app.id !== appId)
 			return false
 		}

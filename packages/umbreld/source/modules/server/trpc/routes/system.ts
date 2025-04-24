@@ -98,7 +98,7 @@ export default router({
 		try {
 			return await fse.readFile(`${ctx.umbreld.dataDirectory}/tor/data/web/hostname`, 'utf-8')
 		} catch (error) {
-			ctx.umbreld.logger.error(`Failed to read hidden service for ui: ${(error as Error).message}`)
+			ctx.umbreld.logger.error(`Failed to read hidden service for ui`, error)
 			return ''
 		}
 	}),

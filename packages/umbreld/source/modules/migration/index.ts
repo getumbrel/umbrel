@@ -159,35 +159,35 @@ class Migration {
 		try {
 			await this.activateImportedDataDirectory()
 		} catch (error) {
-			this.logger.error(`Failed to activate imported Umbrel data: ${(error as Error).message}`)
+			this.logger.error(`Failed to activate imported Umbrel data`, error)
 		}
 
 		// Check for a legacy <1.0 Umbrel data directory and migrate to 1.0 format if found
 		try {
 			await this.migrateLegacyData()
 		} catch (error) {
-			this.logger.error(`Failed to migrate legacy data: ${(error as Error).message}`)
+			this.logger.error(`Failed to migrate legacy data`, error)
 		}
 
 		// Check for first boot of an unknown device and migrate legacy Linux install data if it exists
 		try {
 			await this.migrateLegacyLinuxData()
 		} catch (error) {
-			this.logger.error(`Failed to migrate legacy Linux data: ${(error as Error).message}`)
+			this.logger.error(`Failed to migrate legacy Linux data`, error)
 		}
 
 		// Check for the Back That Mac Up app and migrate it if it exists
 		try {
 			await this.migrateBackThatMacUpPort()
 		} catch (error) {
-			this.logger.error(`Failed to migrate Back That Mac Up app: ${(error as Error).message}`)
+			this.logger.error(`Failed to migrate Back That Mac Up app`, error)
 		}
 
 		// Migrate Downloads directory to Home/Downloads
 		try {
 			await this.migrateDownloadsDirectory()
 		} catch (error) {
-			this.logger.error(`Failed to migrate Downloads directory: ${(error as Error).message}`)
+			this.logger.error(`Failed to migrate Downloads directory`, error)
 		}
 
 		// Write the current version to signal what version we've migrated up to.

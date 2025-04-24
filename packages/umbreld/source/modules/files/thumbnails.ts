@@ -70,7 +70,7 @@ export default class Thumbnails {
 
 		// Ensure thumbnail directory exists
 		await fse.ensureDir(this.thumbnailDirectory).catch((error) => {
-			this.logger.error(`Failed to ensure directory '${this.thumbnailDirectory}' exists: ${error.message}`)
+			this.logger.error(`Failed to ensure directory '${this.thumbnailDirectory}' exists`, error)
 		})
 
 		// TODO: Enable PDF support in ImageMagick in a safe way
@@ -106,7 +106,7 @@ export default class Thumbnails {
 				// Generate the thumbnail
 				await this.#generateThumbnail(systemPath, {background: true}).catch((error) => {
 					// We catch errors here to prevent unhandled rejections, since this debounced function runs later and outside the original call context.
-					this.logger.error(`Failed to generate thumbnail for ${systemPath}: ${(error as Error).message}`)
+					this.logger.error(`Failed to generate thumbnail for ${systemPath}`, error)
 				})
 			}
 
@@ -271,7 +271,7 @@ export default class Thumbnails {
 		const now = new Date()
 		await fse.utimes(thumbnailSystemPath, now, now).catch((error) => {
 			// Even if updating the date modified fails, the thumbnail is still valid and we should return the hash
-			this.logger.error(`Failed to touch thumbnail ${thumbnailSystemPath}: ${(error as Error).message}`)
+			this.logger.error(`Failed to touch thumbnail ${thumbnailSystemPath}`, error)
 		})
 
 		// Return the relative api endpoint URL of the thumbnail
@@ -296,7 +296,7 @@ export default class Thumbnails {
 
 				// stat each file serially
 				const stats = await fse.stat(thumbnailPath).catch((error) => {
-					this.logger.error(`Failed to stat thumbnail ${thumbnailPath}: ${(error as Error).message}`)
+					this.logger.error(`Failed to stat thumbnail ${thumbnailPath}`, error)
 
 					// If we can't stat a file, we can't process it.
 					return undefined
@@ -331,7 +331,7 @@ export default class Thumbnails {
 					await fse.remove(thumbnail.path)
 					filesRemoved++
 				} catch (error) {
-					this.logger.error(`Failed to remove thumbnail ${thumbnail.path}: ${(error as Error).message}`)
+					this.logger.error(`Failed to remove thumbnail ${thumbnail.path}`, error)
 				}
 			}
 
@@ -340,7 +340,7 @@ export default class Thumbnails {
 			)
 		} catch (error) {
 			// We just log and don't rethrow here
-			this.logger.error(`Failed to clean up thumbnails: ${(error as Error).message}`)
+			this.logger.error(`Failed to clean up thumbnails`, error)
 		} finally {
 			// We reset the pruning flag regardless of whether the operation succeeded or failed
 			this.#isPruning = false

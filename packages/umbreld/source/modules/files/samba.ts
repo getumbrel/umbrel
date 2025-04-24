@@ -88,12 +88,12 @@ export default class Samba {
 
 		// Make sure the share password exists and is applied
 		await this.applySharePassword().catch((error) => {
-			this.logger.error(`Failed to apply share password: ${(error as Error).message}`)
+			this.logger.error(`Failed to apply share password`, error)
 		})
 
 		// Apply shares (and start Samba/wsdd2 if needed)
 		await this.applyShares().catch((error) => {
-			this.logger.error(`Failed to apply shares: ${(error as Error).message}`)
+			this.logger.error(`Failed to apply shares`, error)
 		})
 
 		// Attach listener
@@ -107,12 +107,8 @@ export default class Samba {
 	async stop() {
 		this.logger.log('Stopping samba')
 		this.#removeFileChangeListener?.()
-		await $`systemctl stop smbd`.catch((error) =>
-			this.logger.error(`Failed to stop samba: ${(error as Error).message}`),
-		)
-		await $`systemctl stop wsdd2`.catch((error) =>
-			this.logger.error(`Failed to stop wsdd2: ${(error as Error).message}`),
-		)
+		await $`systemctl stop smbd`.catch((error) => this.logger.error(`Failed to stop samba`, error))
+		await $`systemctl stop wsdd2`.catch((error) => this.logger.error(`Failed to stop wsdd2`, error))
 	}
 
 	// Gets the share password

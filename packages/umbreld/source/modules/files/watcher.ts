@@ -30,15 +30,15 @@ export default class Watcher {
 		this.logger.log('Setting system inotify limits')
 		// How many root directories can be watched
 		await $`sysctl fs.inotify.max_user_instances=256`.catch((error) =>
-			this.logger.error(`Failed to set max user instances: ${error.message}`),
+			this.logger.error(`Failed to set max user instances`, error),
 		)
 		// How many directories can be watched across all watched roots
 		await $`sysctl fs.inotify.max_user_watches=122404`.catch((error) =>
-			this.logger.error(`Failed to set max user watches: ${error.message}`),
+			this.logger.error(`Failed to set max user watches`, error),
 		)
 		// How many events can be queued (smaller number = more likely to have notification overflow)
 		await $`sysctl fs.inotify.max_queued_events=16384`.catch((error) =>
-			this.logger.error(`Failed to set max queued events: ${error.message}`),
+			this.logger.error(`Failed to set max queued events`, error),
 		)
 
 		// Watch all paths in the pathsToWatch set
@@ -50,14 +50,14 @@ export default class Watcher {
 		try {
 			const systemPath = await this.#umbreld.files.virtualToSystemPath(virtualPath)
 			const subscription = await watcher.subscribe(systemPath, (error, events) => {
-				if (error) return this.logger.error(`Failed to watch directory '${virtualPath}': ${error.message}`)
+				if (error) return this.logger.error(`Failed to watch directory '${virtualPath}'`, error)
 				for (const event of events) this.#umbreld.eventBus.emit('files:watcher:change', event)
 			})
 			this.subscriptions.set(virtualPath, subscription)
 			this.logger.log(`Started watching directory '${virtualPath}'`)
 			return true
 		} catch (error) {
-			this.logger.error(`Failed to watch directory '${virtualPath}': ${(error as Error).message}`)
+			this.logger.error(`Failed to watch directory '${virtualPath}'`, error)
 			return false
 		}
 	}
@@ -71,7 +71,7 @@ export default class Watcher {
 				this.subscriptions.delete(virtualPath)
 				this.logger.log(`Stopped watching directory '${virtualPath}'`)
 			} catch (error) {
-				this.logger.error(`Failed to unsubscribe from directory: ${(error as Error).message}`)
+				this.logger.error(`Failed to unsubscribe from directory`, error)
 			}
 		}
 	}

@@ -106,7 +106,7 @@ export default function createTerminalWebSocketHandler({
 			// Kill process when WebSocket is closed
 			ws.on('close', () => ptyProcess.kill())
 		} catch (error) {
-			logger.error(`Terminal socket: ${(error as Error).message}`)
+			logger.error(`Terminal socket`, error)
 			ws?.close()
 		}
 	}

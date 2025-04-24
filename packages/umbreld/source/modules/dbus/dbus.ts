@@ -20,7 +20,7 @@ export default class Dbus {
 		this.logger.log('Starting dbus')
 
 		await this.addDiskEventListeners().catch((error) => {
-			this.logger.error(`Failed to add disk event listeners: ${error.message}`)
+			this.logger.error(`Failed to add disk event listeners`, error)
 		})
 	}
 

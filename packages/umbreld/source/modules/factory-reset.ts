@@ -41,7 +41,7 @@ export async function performReset(umbreld: Umbreld) {
 
 	function failWithError(error: string) {
 		try {
-			umbreld.logger.error(`Factory reset failed at ${resetStatus.progress}%: ${error}`)
+			umbreld.logger.error(`Factory reset failed at ${resetStatus.progress}%`, error)
 		} catch {}
 		resetResetStatus()
 		setResetStatus({error})

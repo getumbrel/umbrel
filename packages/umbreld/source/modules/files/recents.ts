@@ -103,7 +103,7 @@ export default class Recents {
 				// Write the recent files to disk
 				this.#debouncedWrite()
 			})
-			.catch((error) => this.logger.error(`Failed to handle file change: ${error.message}`))
+			.catch((error) => this.logger.error(`Failed to handle file change`, error))
 	}
 
 	// Remove listener

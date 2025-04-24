@@ -79,7 +79,7 @@ export default class App {
 		try {
 			return await fse.readFile(`${this.#umbreld.dataDirectory}/tor/data/app-${this.id}/hostname`, 'utf-8')
 		} catch (error) {
-			this.logger.error(`Failed to read hidden service for app ${this.id}: ${(error as Error).message}`)
+			this.logger.error(`Failed to read hidden service for app ${this.id}`, error)
 			return ''
 		}
 	}
@@ -150,6 +150,7 @@ export default class App {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} installing app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -203,6 +204,7 @@ export default class App {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -218,6 +220,7 @@ export default class App {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -242,6 +245,7 @@ export default class App {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -285,7 +289,7 @@ export default class App {
 				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
 				.map((line) => parseInt(line, 10)) // And convert
 		} catch (error) {
-			this.logger.error(`Failed to get pids for app ${this.id}: ${(error as Error).message}`)
+			this.logger.error(`Failed to get pids for app ${this.id}`, error)
 			return []
 		}
 	}
@@ -298,7 +302,7 @@ export default class App {
 			// will fail. It happens rarely so simply retrying will catch most cases.
 			return await pRetry(() => getDirectorySize(this.dataDirectory), {retries: 2})
 		} catch (error) {
-			this.logger.error(`Failed to get disk usage for app ${this.id}: ${(error as Error).message}`)
+			this.logger.error(`Failed to get disk usage for app ${this.id}`, error)
 			return 0
 		}
 	}
@@ -385,7 +389,7 @@ export default class App {
 		const success = await this.store.set('dependencies', filledSelectedDependencies)
 		if (success) {
 			this.restart().catch((error) => {
-				this.logger.error(`Failed to restart '${this.id}': ${error.message}`)
+				this.logger.error(`Failed to restart '${this.id}'`, error)
 			})
 		}
 		return success

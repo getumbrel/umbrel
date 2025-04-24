@@ -10,23 +10,28 @@ function value(logLevel: LogLevel) {
 
 let longestScope = 0
 
+type LogOptions = {
+	logLevel?: LogLevel
+	error?: any
+}
+
 function createLogger(scope: string, globalLogLevel: LogLevel = 'normal') {
 	if (scope.length > longestScope) longestScope = scope.length
-	const log = (message = '', logLevel: LogLevel = 'normal') => {
+	const log = (message = '', {logLevel, error}: LogOptions = {}) => {
+		if (!logLevel) logLevel = 'normal'
 		if (value(globalLogLevel) >= value(logLevel)) {
 			scope = scope.padEnd(longestScope, ' ')
 
 			console.log(chalkTemplate`{white {blue [${scope}]} ${message}}`)
+			if (error) console.log(error)
 		}
 	}
 
 	return {
-		log,
-		verbose: (message: string) => log(chalkTemplate`{grey ${message}}`, 'verbose'),
-		error: (message: string) => log(chalkTemplate`{red [error]} ${message}`),
-		createChildLogger(scope: string) {
-			return createLogger(scope, globalLogLevel)
-		},
+		log: (message?: string) => log(message),
+		verbose: (message: string) => log(chalkTemplate`{grey ${message}}`, {logLevel: 'verbose'}),
+		error: (message: string, error?: any) => log(chalkTemplate`{red [error]} ${message}`, {error}),
+		createChildLogger: (scope: string) => createLogger(scope, globalLogLevel),
 	}
 }
 
