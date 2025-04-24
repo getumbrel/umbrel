@@ -1,6 +1,9 @@
+import {useEffect} from 'react'
+
 import {IconButton} from '@/components/ui/icon-button'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
 import {Listing} from '@/features/files/components/listing'
+import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
@@ -14,6 +17,7 @@ export function TrashListing() {
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 	const {emptyTrash} = useFilesOperations()
 	const confirm = useConfirmation()
+	const setActionsBarConfig = useSetActionsBarConfig()
 
 	const items = listing?.items || []
 	const isTrashEmpty = items.length === 0
@@ -36,8 +40,10 @@ export function TrashListing() {
 		}
 	}
 
+	const disableActionsAndHidePath = isTrashEmpty || !!error
+
 	const additionalContextMenuItems = (
-		<ContextMenuItem onClick={handleEmptyTrash} disabled={isTrashEmpty}>
+		<ContextMenuItem onClick={handleEmptyTrash} disabled={disableActionsAndHidePath}>
 			{t('files-action.empty-trash')}
 		</ContextMenuItem>
 	)
@@ -46,19 +52,27 @@ export function TrashListing() {
 		<IconButton
 			icon={FlameIcon}
 			onClick={handleEmptyTrash}
-			disabled={isTrashEmpty}
-			className={isTrashEmpty ? 'pointer-events-none opacity-60' : ''}
+			disabled={disableActionsAndHidePath}
+			className={disableActionsAndHidePath ? 'pointer-events-none opacity-60' : ''}
 		>
 			{t('files-action.empty-trash')}
 		</IconButton>
 	)
 
 	const MobileActions = (
-		<DropdownMenuItem onClick={handleEmptyTrash} disabled={isTrashEmpty}>
+		<DropdownMenuItem onClick={handleEmptyTrash} disabled={disableActionsAndHidePath}>
 			<FlameIcon className='mr-2 h-4 w-4 opacity-50' />
 			{t('files-action.empty-trash')}
 		</DropdownMenuItem>
 	)
+
+	useEffect(() => {
+		setActionsBarConfig({
+			desktopActions: DesktopActions,
+			mobileActions: MobileActions,
+			hidePath: disableActionsAndHidePath,
+		})
+	}, [disableActionsAndHidePath])
 
 	return (
 		<Listing
@@ -71,8 +85,6 @@ export function TrashListing() {
 			hasMore={listing?.hasMore ?? false}
 			onLoadMore={fetchMoreItems}
 			enableFileDrop={false}
-			additionalDesktopActions={DesktopActions}
-			additionalMobileActions={MobileActions}
 			additionalContextMenuItems={additionalContextMenuItems}
 		/>
 	)

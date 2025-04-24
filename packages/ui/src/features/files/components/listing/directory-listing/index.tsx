@@ -1,10 +1,11 @@
 import {Upload} from 'lucide-react'
-import {useRef} from 'react'
+import {useEffect, useRef} from 'react'
 import {RiClipboardLine} from 'react-icons/ri'
 
 import {IconButton} from '@/components/ui/icon-button'
 import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
 import {Listing} from '@/features/files/components/listing'
+import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {EmptyStateDirectory} from '@/features/files/components/listing/directory-listing/empty-state'
 import {UploadInput} from '@/features/files/components/shared/upload-input'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
@@ -19,7 +20,7 @@ import {t} from '@/utils/i18n'
 
 export function DirectoryListing() {
 	const {currentPath} = useNavigate()
-
+	const setActionsBarConfig = useSetActionsBarConfig()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 
 	// Grab the potential "new folder" item from store
@@ -95,6 +96,14 @@ export function DirectoryListing() {
 		</>
 	)
 
+	useEffect(() => {
+		setActionsBarConfig({
+			desktopActions: DesktopActions,
+			mobileActions: MobileDropdownActions,
+			hidePath: hidePathAndDisableActions,
+		})
+	}, [hidePathAndDisableActions])
+
 	return (
 		<>
 			<UploadInput ref={uploadInputRef} />
@@ -107,8 +116,6 @@ export function DirectoryListing() {
 				error={error}
 				hasMore={listing?.hasMore ?? false}
 				onLoadMore={fetchMoreItems}
-				additionalDesktopActions={DesktopActions}
-				additionalMobileActions={MobileDropdownActions}
 				additionalContextMenuItems={additionalContextMenuItems}
 				enableFileDrop={true}
 				CustomEmptyView={EmptyStateDirectory}

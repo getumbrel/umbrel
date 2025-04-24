@@ -1,9 +1,19 @@
+import {useEffect} from 'react'
+
 import {Listing} from '@/features/files/components/listing'
+import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {useListRecents} from '@/features/files/hooks/use-list-recents'
 
 export function RecentsListing() {
 	const {listing, isLoading, error} = useListRecents()
 	const items = listing || []
+	const setActionsBarConfig = useSetActionsBarConfig()
+
+	useEffect(() => {
+		setActionsBarConfig({
+			hidePath: !!error,
+		})
+	}, [error])
 
 	return (
 		<Listing

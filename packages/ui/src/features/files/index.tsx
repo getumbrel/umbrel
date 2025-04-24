@@ -4,6 +4,8 @@ import {Outlet, useLocation} from 'react-router-dom'
 
 import {FileViewer} from '@/features/files/components/file-viewer'
 import {FilesDndWrapper} from '@/features/files/components/files-dnd-wrapper'
+import {ActionsBar} from '@/features/files/components/listing/actions-bar'
+import {ActionsBarProvider} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {Sidebar} from '@/features/files/components/sidebar'
 import {MobileSidebarWrapper} from '@/features/files/components/sidebar/mobile-sidebar-wrapper'
 import {useFilesStore} from '@/features/files/store/use-files-store'
@@ -63,7 +65,7 @@ export default function FilesLayout() {
 			<FileViewer />
 
 			<div className='mt-[-0.5rem] grid select-none grid-cols-1 lg:mt-0 lg:grid-cols-[188px_1fr]'>
-				{/* Desktop Sidebar */}
+				{/* Sidebar */}
 				{isMobile ? (
 					<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>
 						<Sidebar className='h-[calc(100svh-140px)]' />
@@ -71,8 +73,14 @@ export default function FilesLayout() {
 				) : (
 					<Sidebar className='h-[calc(100vh-300px)]' />
 				)}
-				{/* Renders either DirectoryListing, RecentsListing, or TrashListing */}
-				<Outlet />
+
+				<div className='flex flex-col gap-3 lg:gap-6'>
+					<ActionsBarProvider>
+						<ActionsBar />
+						{/* Renders either DirectoryListing, AppsListing, RecentsListing, or TrashListing */}
+						<Outlet />
+					</ActionsBarProvider>
+				</div>
 			</div>
 
 			{/* Lazy loaded dialogs */}

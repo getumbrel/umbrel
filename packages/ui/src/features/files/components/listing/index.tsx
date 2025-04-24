@@ -3,7 +3,6 @@ import {ComponentType, useRef} from 'react'
 import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
-import {ActionsBar} from '@/features/files/components/listing/actions-bar'
 import {ListingAndFileItemContextMenu} from '@/features/files/components/listing/listing-and-file-item-context-menu'
 import {ListingBody} from '@/features/files/components/listing/listing-body'
 import {MarqueeSelection} from '@/features/files/components/listing/marquee-selection'
@@ -29,8 +28,6 @@ export interface ListingProps {
 	CustomEmptyView?: ComponentType // custom empty placeholder component
 	additionalContextMenuItems?: React.ReactNode // additional items for the context menu
 	enableFileDrop?: boolean // if file upload drop zone is enabled
-	additionalDesktopActions?: React.ReactNode // additional actions in the ActionsBar for the desktop view
-	additionalMobileActions?: React.ReactNode // additional dropdown items in the ActionsBar for the mobile view
 }
 
 function ListingContent({
@@ -118,8 +115,6 @@ export function Listing({
 	onLoadMore = async () => false,
 	CustomEmptyView,
 	additionalContextMenuItems,
-	additionalDesktopActions,
-	additionalMobileActions,
 	enableFileDrop = true,
 }: ListingProps) {
 	const isTouchDevice = useIsTouchDevice()
@@ -131,12 +126,8 @@ export function Listing({
 	const isEmpty = !isLoading && items.length === 0
 
 	const content = (
-		<div className='flex flex-col gap-3 lg:gap-6'>
-			<ActionsBar
-				hidePath={Boolean(isLoading || error)}
-				DesktopActions={additionalDesktopActions}
-				ExtraMobileDropdownItems={additionalMobileActions}
-			/>
+		// Wrap in a flex column to ensure the context menu works
+		<div className='flex flex-col'>
 			<ListingContent
 				items={items}
 				totalItems={totalItems}

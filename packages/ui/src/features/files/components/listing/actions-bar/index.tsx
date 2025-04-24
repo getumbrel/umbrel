@@ -1,4 +1,5 @@
 // import {SearchIcon} from '@/features/files/assets/search-icon'
+import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {MobileActions} from '@/features/files/components/listing/actions-bar/mobile-actions'
 import {NavigationControls} from '@/features/files/components/listing/actions-bar/navigation-controls'
 import {PathBar} from '@/features/files/components/listing/actions-bar/path-bar'
@@ -6,15 +7,12 @@ import {SortDropdown} from '@/features/files/components/listing/actions-bar/sort
 import {ViewToggle} from '@/features/files/components/listing/actions-bar/view-toggle'
 import {Separator} from '@/shadcn-components/ui/separator'
 
-export function ActionsBar({
-	hidePath = false,
-	DesktopActions = null,
-	ExtraMobileDropdownItems = null,
-}: {
-	hidePath?: boolean
-	DesktopActions?: React.ReactNode
-	ExtraMobileDropdownItems?: React.ReactNode
-}) {
+// Actions/navigation bar displayed above every files listing.  Its
+// contents are driven by the configuration exposed via the
+// <ActionsBarProvider /> (see actions-bar-context.tsx).
+export function ActionsBar() {
+	const {hidePath, desktopActions, mobileActions} = useActionsBarConfig()
+
 	return (
 		<nav className='flex h-8 w-full min-w-0 gap-3 lg:mt-[-3.5rem]' aria-label='File browser actions'>
 			{/* Left side: Navigation and Path */}
@@ -30,9 +28,9 @@ export function ActionsBar({
 					{/* TODO: Add search here */}
 					{/* <SearchIcon />
 					<Separator orientation='vertical' className='h-6' /> */}
-					{DesktopActions ? (
+					{desktopActions ? (
 						<>
-							{DesktopActions}
+							{desktopActions}
 							<Separator orientation='vertical' className='h-6' />
 						</>
 					) : null}
@@ -42,7 +40,7 @@ export function ActionsBar({
 
 				{/* Mobile view - show menu with all actions */}
 				<div className='md:hidden'>
-					<MobileActions DropdownItems={ExtraMobileDropdownItems} />
+					<MobileActions DropdownItems={mobileActions} />
 				</div>
 			</div>
 		</nav>
