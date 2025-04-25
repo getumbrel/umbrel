@@ -109,6 +109,15 @@ class Server {
 		this.app = express()
 		this.server = http.createServer(this.app)
 
+		// Don't timeout for slow uploads/downloads
+		// TODO: Ideally we'd only remove timeout for authed upload/download
+		// requests not globally to better protect against potential DoS attacks.
+		// However Node.js only allows us to set the timeout globally. Risk is also
+		// very low since this server is not exposed publically.
+		// Looks like Bun supports per request timeout so if we move we could lock this
+		// down a little tighter: https://bun.sh/docs/api/http#server-timeout-request-seconds-custom-request-timeouts
+		this.server.requestTimeout = 0
+
 		// Setup cookie parser
 		this.app.use(cookieParser())
 
