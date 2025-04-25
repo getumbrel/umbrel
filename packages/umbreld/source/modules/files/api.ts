@@ -148,7 +148,11 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		await fse.ensureDir(nodePath.dirname(temporarySystemPath))
 
 		// Write the file
-		await pipeline(request, fse.createWriteStream(temporarySystemPath)).catch((error) => {
+		await pipeline(request, fse.createWriteStream(temporarySystemPath)).catch(async (error) => {
+			// Clean up the temporary file
+			await fse.remove(temporarySystemPath).catch(() => {})
+
+			// Return an error
 			response.setHeader('Connection', 'close')
 			response.status(500).json({error: 'error writing file'})
 			throw error
