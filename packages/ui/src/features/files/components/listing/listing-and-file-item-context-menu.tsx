@@ -60,7 +60,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	const linkToDialog = useLinkToDialog()
 
-	const {isBrowsingTrash, isBrowsingRecents, navigateToDirectory} = useFilesNavigate()
+	const {isBrowsingTrash, isBrowsingRecents, isBrowsingSearch, navigateToDirectory} = useFilesNavigate()
 
 	const {isPathShared, isAddingShare, isRemovingShare} = useShares()
 	const {isPathFavorite, addFavorite, removeFavorite, isAddingFavorite, isRemovingFavorite} = useFavorites()
@@ -134,8 +134,8 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 			contextMenuContent = (
 				<>
-					{/* if browsing recents, show the show in folder item */}
-					{isBrowsingRecents && (
+					{/* if browsing recents or search, show the "show in enclosing folder" option */}
+					{(isBrowsingRecents || isBrowsingSearch) && (
 						<ContextMenuItem onClick={() => navigateToDirectory(item.path.slice(0, -item.name.length))}>
 							{t('files-action.show-in-folder')}
 						</ContextMenuItem>

@@ -19,7 +19,7 @@ import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function DirectoryListing() {
-	const {currentPath} = useNavigate()
+	const {currentPath, isBrowsingApps, isBrowsingExternalStorage} = useNavigate()
 	const setActionsBarConfig = useSetActionsBarConfig()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 
@@ -101,8 +101,9 @@ export function DirectoryListing() {
 			desktopActions: DesktopActions,
 			mobileActions: MobileDropdownActions,
 			hidePath: hidePathAndDisableActions,
+			hideSearch: isBrowsingApps || isBrowsingExternalStorage, // hide search if browsing apps or external storage
 		})
-	}, [hidePathAndDisableActions])
+	}, [hidePathAndDisableActions, isBrowsingApps, isBrowsingExternalStorage])
 
 	return (
 		<>

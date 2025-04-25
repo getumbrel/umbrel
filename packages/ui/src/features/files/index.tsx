@@ -40,11 +40,6 @@ export default function FilesLayout() {
 
 		// Close mobile sidebar on navigation
 		setIsMobileSidebarOpen(false)
-
-		// TODO: THIS IS A HACK
-		// Save the current path to session storage
-		// The Dock then uses this to restore the last visited path
-		sessionStorage.setItem('lastFilesPath', pathname)
 	}, [pathname])
 
 	return (

@@ -13,6 +13,7 @@ export function AppsListing() {
 	useEffect(() => {
 		setActionsBarConfig({
 			hidePath: !!error,
+			hideSearch: true,
 		})
 	}, [error])
 

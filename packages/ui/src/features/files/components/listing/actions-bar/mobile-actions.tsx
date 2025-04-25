@@ -1,6 +1,8 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {TbDots} from 'react-icons/tb'
 
+import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
+import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useFilesStore} from '@/features/files/store/use-files-store'
@@ -24,12 +26,17 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 	const {preferences, setView, setSortBy} = usePreferences()
 	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
+	const {hideSearch} = useActionsBarConfig()
 
 	return (
 		<div className='flex items-center gap-2'>
+			{/* Search */}
+			{hideSearch ? null : <SearchInput />}
+
+			{/* Select toggle button */}
 			<Button
 				className={cn(
-					'h-8 rounded-full px-3 text-13',
+					'h-[1.9rem] rounded-full px-3 text-13',
 					'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0',
 					'focus:outline-none focus-visible:outline-none',
 				)}

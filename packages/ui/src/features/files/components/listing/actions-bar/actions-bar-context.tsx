@@ -8,9 +8,14 @@ import React, {createContext, useContext, useState} from 'react'
 export interface ActionsBarConfig {
 	// Whether to hide the path
 	hidePath?: boolean
+
+	// Whether to hide the search input
+	hideSearch?: boolean
+
 	// Additional buttons displayed on desktop resolutions (≥ md breakpoint)
 	// eg. "New Folder", "Upload", "Empty Trash", etc.
 	desktopActions?: React.ReactNode
+
 	// Additional dropdown items displayed on mobile resolutions (< md breakpoint)
 	mobileActions?: React.ReactNode
 }

@@ -175,11 +175,12 @@ export function useFilesOperations() {
 		onError: (error) => {
 			toast.error(t('files-error.rename', {message: error.message}))
 		},
-		onSettled: async () => {
-			await utils.files.list.invalidate()
-			await utils.files.recents.invalidate()
-			await utils.files.favorites.invalidate()
-			await utils.files.shares.invalidate()
+		onSettled: () => {
+			utils.files.list.invalidate()
+			utils.files.recents.invalidate()
+			utils.files.favorites.invalidate()
+			utils.files.shares.invalidate()
+			utils.files.search.invalidate()
 		},
 	}).mutateAsync
 
@@ -210,6 +211,7 @@ export function useFilesOperations() {
 			utils.files.recents.invalidate()
 			utils.files.favorites.invalidate()
 			utils.files.shares.invalidate()
+			utils.files.search.invalidate()
 		},
 	}).mutateAsync
 
@@ -240,6 +242,7 @@ export function useFilesOperations() {
 		onSettled: () => {
 			utils.files.list.invalidate()
 			utils.files.recents.invalidate()
+			utils.files.search.invalidate()
 		},
 	}).mutateAsync
 
@@ -272,8 +275,9 @@ export function useFilesOperations() {
 
 	// Extract archive (umbreld always extracts archive contents into a new folder named after the archive)
 	const extract = trpcReact.files.unarchive.useMutation({
-		onSuccess: async () => {
-			await utils.files.list.invalidate()
+		onSuccess: () => {
+			utils.files.list.invalidate()
+			utils.files.search.invalidate()
 		},
 		onError: (error) => {
 			toast.error(t('files-error.extract', {message: error.message}))
@@ -289,11 +293,13 @@ export function useFilesOperations() {
 
 	// Archive
 	const archive = trpcReact.files.archive.useMutation({
-		onSuccess: async (_, {paths}) => {
+		onSuccess: (_, {paths}) => {
 			// invalidate the parent directory of the item
-			await utils.files.list.invalidate({path: paths[0].split('/').slice(0, -1).join('/')})
+			utils.files.list.invalidate({path: paths[0].split('/').slice(0, -1).join('/')})
 			// invalidate the recents list
-			await utils.files.recents.invalidate()
+			utils.files.recents.invalidate()
+			// invalidate the search list
+			utils.files.search.invalidate()
 		},
 		onError: (error) => {
 			toast.error(t('files-error.compress', {message: error.message}))
@@ -321,11 +327,12 @@ export function useFilesOperations() {
 				toast.error(t('files-error.trash', {message: error.message}))
 			}
 		},
-		onSettled: async () => {
-			await utils.files.list.invalidate()
-			await utils.files.recents.invalidate()
-			await utils.files.favorites.invalidate()
-			await utils.files.shares.invalidate()
+		onSettled: () => {
+			utils.files.list.invalidate()
+			utils.files.recents.invalidate()
+			utils.files.favorites.invalidate()
+			utils.files.shares.invalidate()
+			utils.files.search.invalidate()
 		},
 	}).mutateAsync
 
@@ -348,6 +355,7 @@ export function useFilesOperations() {
 		onSettled: () => {
 			utils.files.list.invalidate()
 			utils.files.recents.invalidate()
+			utils.files.search.invalidate()
 		},
 	}).mutateAsync
 
@@ -370,14 +378,14 @@ export function useFilesOperations() {
 
 	// (Permanently) delete item
 	const deleteItem = trpcReact.files.delete.useMutation({
-		onSuccess: async (_data, {path}) => {
+		onSuccess: (_data, {path}) => {
 			// If the deleted item's path starts with "/External/" we invalidate
 			// the generic list considering the item was on external storage and,
 			// not in the trash, otherwise we only invalidate the trash list
 			if (path.startsWith('/External/')) {
-				await utils.files.list.invalidate()
+				utils.files.list.invalidate()
 			} else {
-				await utils.files.list.invalidate({path: TRASH_PATH})
+				utils.files.list.invalidate({path: TRASH_PATH})
 			}
 		},
 		onError: (error) => {
@@ -394,9 +402,9 @@ export function useFilesOperations() {
 
 	// Empty trash
 	const emptyTrash = trpcReact.files.emptyTrash.useMutation({
-		onSuccess: async () => {
+		onSuccess: () => {
 			// invalidate the trash directory
-			await utils.files.list.invalidate({path: TRASH_PATH})
+			utils.files.list.invalidate({path: TRASH_PATH})
 		},
 		onError: (error) => {
 			toast.error(t('files-error.empty-trash', {message: error.message}))

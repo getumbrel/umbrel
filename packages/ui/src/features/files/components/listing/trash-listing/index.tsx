@@ -71,6 +71,7 @@ export function TrashListing() {
 			desktopActions: DesktopActions,
 			mobileActions: MobileActions,
 			hidePath: disableActionsAndHidePath,
+			hideSearch: true,
 		})
 	}, [disableActionsAndHidePath])
 

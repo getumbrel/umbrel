@@ -6,6 +6,7 @@ import {
 	EXTERNAL_STORAGE_PATH,
 	HOME_PATH,
 	RECENTS_PATH,
+	SEARCH_PATH,
 	TRASH_PATH,
 } from '@/features/files/constants'
 
@@ -39,6 +40,8 @@ export const useNavigate = () => {
 
 	const isBrowsingApps = currentPath.startsWith(APPS_PATH)
 
+	const isBrowsingSearch = currentPath.startsWith(SEARCH_PATH)
+
 	const isBrowsingExternalStorage = currentPath.startsWith(EXTERNAL_STORAGE_PATH)
 
 	return {
@@ -48,6 +51,7 @@ export const useNavigate = () => {
 		isInHome,
 		isBrowsingRecents,
 		isBrowsingApps,
+		isBrowsingSearch,
 		isBrowsingExternalStorage,
 	}
 }

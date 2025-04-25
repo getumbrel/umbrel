@@ -5,6 +5,7 @@ import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-com
 import {AppsListing} from '@/features/files/components/listing/apps-listing'
 import {DirectoryListing} from '@/features/files/components/listing/directory-listing'
 import {RecentsListing} from '@/features/files/components/listing/recents-listing'
+import {SearchListing} from '@/features/files/components/listing/search-listing'
 import {TrashListing} from '@/features/files/components/listing/trash-listing'
 import {BASE_ROUTE_PATH, HOME_PATH} from '@/features/files/constants'
 
@@ -25,6 +26,11 @@ export const filesRoutes: RouteObject[] = [
 			{
 				path: 'Recents',
 				element: <RecentsListing />,
+			},
+			{
+				// "Search" and not "Search/*" because folders aren't tracked in the search by the server
+				path: 'Search',
+				element: <SearchListing />,
 			},
 			{
 				// "Apps" and not "Apps/*" because we want to allow uploads, new folders, etc. in "Apps/<app-data>/*""
