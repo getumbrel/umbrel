@@ -6,7 +6,6 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
-import type {ConfirmationResult} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -48,119 +47,122 @@ export function useFilesOperations() {
 		onErrorToastFn: ErrorToastFn
 		onSuccessAll?: () => void
 	}) => {
-		let allSucceededWithoutCollision = true
-		const initialOperationPromises = paths.map(async (path) => {
+		// track if any operation ended with an unrecoverable error so we can avoid
+		// firing the global success callback in that case.
+		let encounteredError = false
+
+		let globalCollisionDecision: 'replace' | 'keep-both' | 'skip' | null = null
+		let applyDecisionToAllRemaining = false
+
+		// a simple FIFO queue so that only one confirmation dialog is shown at a
+		// time even though multiple collisions may be detected concurrently.
+		const collisionQueue: {
+			path: string
+			resolve: (decision: 'replace' | 'keep-both' | 'skip') => void
+		}[] = []
+		let processingQueue = false
+
+		const processNextInQueue = async () => {
+			if (processingQueue || collisionQueue.length === 0) return
+			processingQueue = true
+
+			const {path, resolve} = collisionQueue.shift()!
+
+			// if the user has already chosen to apply a decision to all remaining
+			// collisions, we can resolve immediately without prompting.
+			if (applyDecisionToAllRemaining && globalCollisionDecision) {
+				resolve(globalCollisionDecision)
+				processingQueue = false
+				// process any queued items synchronously with the same decision
+				processNextInQueue()
+				return
+			}
+
+			const fromName = splitFileName(path.split('/').pop() || '').name
+			const destinationName =
+				operationType === 'restore'
+					? t('files-collision.destination.original-location')
+					: `"${splitFileName(targetDirectory?.split('/').pop() || '').name}"`
+
+			let decision: 'replace' | 'keep-both' | 'skip' = 'skip'
 			try {
-				const args = getOperationArgsFn(path)
-				await operationAsyncFn({...args, collision: undefined})
-				return {status: 'success', itemPath: path}
-			} catch (error: any) {
-				if (error.message === '[destination-already-exists]') {
-					allSucceededWithoutCollision = false
-					return {status: 'collision', itemPath: path, error}
+				const result = await confirm({
+					title: t('files-collision.title', {
+						itemName: fromName,
+						destinationName,
+					}),
+					message: t('files-collision.message'),
+					actions: [
+						{label: t('files-collision.action.keep-both'), value: 'keep-both', variant: 'primary'},
+						{label: t('files-collision.action.replace'), value: 'replace', variant: 'default'},
+						{label: t('files-collision.action.skip'), value: 'skip', variant: 'default'},
+					],
+					showApplyToAll: collisionQueue.length > 0, // i.e. when more collisions waiting
+					icon: AiOutlineFileExclamation,
+				})
+				decision = result.actionValue as 'replace' | 'keep-both' | 'skip'
+				if (result.applyToAll) {
+					applyDecisionToAllRemaining = true
+					globalCollisionDecision = decision
 				}
-				allSucceededWithoutCollision = false
+			} catch (_err) {
+				// dialog dismissed, default to skipping the file.
+				decision = 'skip'
+			}
+
+			// resolve the promise for the item currently being processed.
+			resolve(decision)
+			processingQueue = false
+			// process subsequent queued collisions (if any).
+			processNextInQueue()
+		}
+
+		// helper to enqueue a collision resolution and wait for the user's choice.
+		const getCollisionDecision = (path: string) =>
+			new Promise<'replace' | 'keep-both' | 'skip'>((resolve) => {
+				// if a global decision has been set, we honour it immediately.
+				if (applyDecisionToAllRemaining && globalCollisionDecision) {
+					resolve(globalCollisionDecision)
+					return
+				}
+
+				collisionQueue.push({path, resolve})
+				processNextInQueue()
+			})
+
+		// individual path handler
+		const tasks = paths.map(async (path) => {
+			const baseArgs = getOperationArgsFn(path) as Record<string, unknown>
+			try {
+				await operationAsyncFn({...baseArgs, collision: undefined} as any)
+				return
+			} catch (error: any) {
+				// handle collision errors specially, everything else is a hard error.
+				if (error?.message === '[destination-already-exists]') {
+					const decision = await getCollisionDecision(path)
+					if (decision === 'skip') {
+						return
+					}
+					try {
+						await operationAsyncFn({...baseArgs, collision: decision} as any)
+					} catch (err: any) {
+						encounteredError = true
+						onErrorToastFn(err.message)
+						console.error(`Failed ${operationType} ${path} after collision (${decision}):`, err)
+					}
+					return
+				}
+
+				// unrecoverable error
+				encounteredError = true
 				onErrorToastFn(error.message)
-				console.error(`Failed initial ${operationType} ${path}:`, error)
-				return {status: 'error', itemPath: path, error}
+				console.error(`Failed ${operationType} ${path}:`, error)
 			}
 		})
 
-		const initialResults = await Promise.allSettled(initialOperationPromises)
+		await Promise.allSettled(tasks)
 
-		const collisionItemsPaths = initialResults.reduce<string[]>((acc, result) => {
-			if (result.status === 'fulfilled' && result.value.status === 'collision') {
-				acc.push(result.value.itemPath)
-			}
-			return acc
-		}, [])
-
-		if (collisionItemsPaths.length > 0) {
-			const remainingCollisionPaths = [...collisionItemsPaths]
-			let applyDecisionToAll: 'replace' | 'keep-both' | 'skip' | null = null
-			let applyToAllChecked = false
-
-			while (remainingCollisionPaths.length > 0) {
-				const currentPath = remainingCollisionPaths[0]
-				const fromName = splitFileName(currentPath.split('/').pop() || '').name
-				const destinationName =
-					operationType === 'restore'
-						? t('files-collision.destination.original-location')
-						: `"${splitFileName(targetDirectory?.split('/').pop() || '').name}"`
-
-				let collisionChoice: ConfirmationResult['actionValue'] = 'skip'
-
-				if (!applyToAllChecked) {
-					try {
-						const result = await confirm({
-							title: t('files-collision.title', {itemName: fromName, destinationName: destinationName}),
-							message: t('files-collision.message'),
-							actions: [
-								{label: t('files-collision.action.keep-both'), value: 'keep-both', variant: 'primary'},
-								{label: t('files-collision.action.replace'), value: 'replace', variant: 'default'},
-								{label: t('files-collision.action.skip'), value: 'skip', variant: 'default'},
-							],
-							showApplyToAll: remainingCollisionPaths.length > 1,
-							icon: AiOutlineFileExclamation,
-						})
-
-						collisionChoice = result.actionValue
-						applyToAllChecked = result.applyToAll
-						if (applyToAllChecked) {
-							applyDecisionToAll = collisionChoice as 'replace' | 'keep-both' | 'skip'
-						}
-					} catch (error) {
-						// Collision confirmation dismissed by user
-						allSucceededWithoutCollision = false
-						applyDecisionToAll = 'skip'
-						applyToAllChecked = true
-						collisionChoice = 'skip'
-					}
-				} else {
-					collisionChoice = applyDecisionToAll!
-				}
-
-				const pathsToProcess = applyToAllChecked ? [...remainingCollisionPaths] : [currentPath]
-				const mutationPromises = []
-
-				for (const path of pathsToProcess) {
-					let mutationFn: typeof moveItemMutation | typeof copyItemMutation | typeof restoreFromTrash
-					let mutationArgs: any
-
-					if (collisionChoice !== 'skip') {
-						const collisionStrategy = collisionChoice as 'replace' | 'keep-both'
-						if (operationType === 'move' && targetDirectory) {
-							mutationFn = moveItemMutation
-							mutationArgs = {path, toDirectory: targetDirectory, collision: collisionStrategy}
-						} else if (operationType === 'copy' && targetDirectory) {
-							mutationFn = copyItemMutation
-							mutationArgs = {path, toDirectory: targetDirectory, collision: collisionStrategy}
-						} else if (operationType === 'restore') {
-							mutationFn = restoreFromTrash
-							mutationArgs = {path, collision: collisionStrategy}
-						} else {
-							console.error(`Invalid state for collision resolution: op=${operationType}, target=${targetDirectory}`)
-							continue
-						}
-						mutationPromises.push(
-							mutationFn(mutationArgs).catch((err) => {
-								allSucceededWithoutCollision = false
-								onErrorToastFn(`Failed during ${collisionChoice}: ${err.message}`)
-								console.error(`Failed ${operationType} ${path} with collision ${collisionChoice}:`, err)
-							}),
-						)
-					}
-				}
-
-				await Promise.allSettled(mutationPromises)
-
-				if (applyToAllChecked) {
-					remainingCollisionPaths.length = 0
-				} else {
-					remainingCollisionPaths.shift()
-				}
-			}
-		} else if (allSucceededWithoutCollision) {
+		if (!encounteredError) {
 			onSuccessAll?.()
 		}
 	}
