@@ -3,6 +3,9 @@
 // disables the request so we don't spam the backend with needless calls while
 // the user is still typing or after they clear the search input.
 
+import {useState} from 'react'
+import {useDebounce} from 'react-use'
+
 import type {FileSystemItem} from '@/features/files/types'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -15,12 +18,23 @@ export interface UseSearchFilesReturn {
 
 export function useSearchFiles(query: string): UseSearchFilesReturn {
 	const trimmedQuery = query.trim()
+	const [debouncedQuery, setDebouncedQuery] = useState(trimmedQuery)
+
+	// debounce the query param so we only hit the backend at most once every
+	// 350ms while the user is typing their search term
+	useDebounce(
+		() => {
+			setDebouncedQuery(trimmedQuery)
+		},
+		350,
+		[trimmedQuery],
+	)
 
 	const {data, isLoading, isError, error} = trpcReact.files.search.useQuery(
-		{query: trimmedQuery},
+		{query: debouncedQuery},
 		{
 			// disable the query if there is no search term
-			enabled: trimmedQuery.length > 0,
+			enabled: debouncedQuery.length > 0,
 			// keep the data in the cache for a minute
 			gcTime: 60 * 1000,
 		},

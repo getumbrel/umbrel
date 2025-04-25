@@ -107,9 +107,12 @@ const CommandSeparator = React.forwardRef<
 ))
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName
 
+// Accept either a string (image source URL) or a React node for the icon
+type CommandItemIcon = string | React.ReactNode
+
 const CommandItem = React.forwardRef<
 	React.ElementRef<typeof CommandPrimitive.Item>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {icon?: string}
+	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {icon?: CommandItemIcon}
 >(({className, icon, children, ...props}, ref) => {
 	const isMobile = useIsMobile()
 	return (
@@ -121,7 +124,22 @@ const CommandItem = React.forwardRef<
 			)}
 			{...props}
 		>
-			{icon && <AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-6 sm:rounded-8' />}
+			{icon &&
+				(typeof icon === 'string' ? (
+					<AppIcon src={icon} size={isMobile ? 24 : 36} className='rounded-6 sm:rounded-8' />
+				) : (
+					// When a custom React node is provided, we still want to constrain its
+					// dimensions so spacing stays consistent across command items.
+					<span
+						className='flex items-center justify-center'
+						style={{
+							width: isMobile ? '24px' : '36px',
+							height: isMobile ? '24px' : '36px',
+						}}
+					>
+						{icon}
+					</span>
+				))}
 			{children}
 			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
 		</CommandPrimitive.Item>

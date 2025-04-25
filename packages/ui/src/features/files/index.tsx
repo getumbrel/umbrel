@@ -33,6 +33,9 @@ export default function FilesLayout() {
 	useEffect(() => {
 		// TODO: Find a better place to do this
 		// clear selected items when navigating to a different path
+		// NOTE: when we remove/change this, we need to update
+		// packages/ui/src/features/files/cmdk-search-provider.tsx
+		// to set the selected item correctly
 		setSelectedItems([])
 
 		// set selecting on mobile to false when navigating to a different path

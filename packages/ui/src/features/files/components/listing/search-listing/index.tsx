@@ -4,9 +4,8 @@
 // - The browser back-button naturally returns the user to the results after
 //   they navigate into a file or folder.
 
-import {useEffect, useState} from 'react'
+import {useEffect} from 'react'
 import {useSearchParams} from 'react-router-dom'
-import {useDebounce} from 'react-use'
 
 import {Listing} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
@@ -23,21 +22,11 @@ export function SearchListing() {
 	const [params] = useSearchParams()
 	const queryParam = params.get('q') ?? ''
 
-	// debounce the query param so we only hit the backend at most once every
-	// 300ms while the user is typing their search term
-	const [debouncedQuery, setDebouncedQuery] = useState(queryParam)
-
-	// update the local state after a delay which in turn triggers the TRPC query
-	useDebounce(
-		() => {
-			setDebouncedQuery(queryParam)
-			// clear any selected items that the user may have selected from the
-			// previous search results
-			clearSelectedItems()
-		},
-		300,
-		[queryParam],
-	)
+	useEffect(() => {
+		// clear any selected items that the user may have selected from the
+		// previous search results
+		clearSelectedItems()
+	}, [queryParam])
 
 	useEffect(() => {
 		setActionsBarConfig({
@@ -48,7 +37,7 @@ export function SearchListing() {
 
 	// query the backend – the hook internally short-circuits when provided an
 	// empty string, so clearing the search box stops the requests
-	const {results, isLoading, isError, error} = useSearchFiles(debouncedQuery)
+	const {results, isLoading, isError, error} = useSearchFiles(queryParam)
 
 	// search results are currently returned in a single batch so we keep
 	// pagination disabled
@@ -61,7 +50,7 @@ export function SearchListing() {
 			error={isError ? error : undefined}
 			hasMore={false}
 			onLoadMore={async () => false}
-			CustomEmptyView={() => <EmptySearchView query={debouncedQuery} />}
+			CustomEmptyView={() => <EmptySearchView query={queryParam} />}
 			enableFileDrop={false} // disable dropping files
 		/>
 	)

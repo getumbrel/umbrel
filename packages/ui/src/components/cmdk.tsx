@@ -5,6 +5,9 @@ import {useNavigate} from 'react-router-dom'
 import {useKey} from 'react-use'
 import {range} from 'remeda'
 
+// Pluggable search providers rendered inside the command palette
+// Currently only /features/files uses this
+import {cmdkSearchProviders} from '@/components/cmdk-providers'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {LOADING_DASH} from '@/constants'
 import {
@@ -76,6 +79,10 @@ function CmdkContent() {
 	const {addLinkSearchParams} = useQueryParams()
 	const userApps = useApps()
 	const scrollRef = useRef<HTMLDivElement>(null)
+
+	// The current search query from the command input. We pass this down to all
+	// external search providers so they can surface their own results.
+	const searchQuery = useCommandState((state) => state.search)
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
@@ -283,9 +290,14 @@ function CmdkContent() {
 					}}
 				>
 					<span>
-						{app.name} <span className='opacity-50'>{t('cmdk.install-from-app-store')}</span>
+						{app.name} <span className='opacity-50'>{t('generic-in')} App Store</span>
 					</span>
 				</SearchItem>
+			))}
+
+			{/* Pluggable search providers */}
+			{cmdkSearchProviders.map((Provider, idx) => (
+				<Provider key={idx} query={searchQuery} close={() => setOpen(false)} />
 			))}
 			<DebugOnlyBare>
 				<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
