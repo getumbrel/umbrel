@@ -219,7 +219,9 @@ test('POST /api/files/upload correctly handles streaming data in chunks', async 
 	// Test file path
 	const filePath = '/Home/streaming-test.txt'
 	const systemPath = `${umbreld.instance.dataDirectory}/home/streaming-test.txt`
-	const temporarySystemPath = `${systemPath}.umbrel-upload`
+	const directory = nodePath.dirname(systemPath)
+	const fileName = nodePath.basename(systemPath)
+	const temporarySystemPath = nodePath.join(directory, `.${fileName}.umbrel-upload`)
 
 	// Get a stream for the request
 	const uploadStream = umbreld.api.stream.post(`files/upload?path=${filePath}`)
@@ -265,11 +267,13 @@ test('POST /api/files/upload correctly handles streaming data in chunks', async 
 	await expect(fse.readFile(systemPath, 'utf8')).resolves.toBe(chunks.join(''))
 })
 
-test('POST /api/files/upload persists progress when client aborts partially uploaded file', async () => {
+test('POST /api/files/upload cleans up temporary files when client aborts partially uploaded file', async () => {
 	// Test file path
 	const filePath = '/Home/aborted-upload.txt'
 	const systemPath = `${umbreld.instance.dataDirectory}/home/aborted-upload.txt`
-	const temporarySystemPath = `${systemPath}.umbrel-upload`
+	const directory = nodePath.dirname(systemPath)
+	const fileName = nodePath.basename(systemPath)
+	const temporarySystemPath = nodePath.join(directory, `.${fileName}.umbrel-upload`)
 
 	// Get a stream for the request
 	const uploadStream = umbreld.api.stream.post(`files/upload?path=${filePath}`)
@@ -295,7 +299,7 @@ test('POST /api/files/upload persists progress when client aborts partially uplo
 	await sleep(100)
 
 	// Verify temporary file is left partiall uploaded
-	await expect(fse.pathExists(temporarySystemPath)).resolves.toBe(true)
+	await expect(fse.pathExists(temporarySystemPath)).resolves.toBe(false)
 	await expect(fse.pathExists(systemPath)).resolves.toBe(false)
 })
 
