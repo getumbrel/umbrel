@@ -137,10 +137,12 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		// completed upload.
 		// It also sets the groundwork for resuming uploads in the future.
 		// It also means that fs change events during upload are fired for
-		// somefile.jpg.umbrel-upload not somefile.jpg so we don't trigger loads of
+		// .somefile.jpg.umbrel-upload not somefile.jpg so we don't trigger loads of
 		// thumbnail generation attempts (matching the .jpg suffix) until the file is fully uploaded.
-		// TODO: We probably want to hide partially uploaded files from files listings
-		const temporarySystemPath = `${systemPath}.umbrel-upload`
+		// Using a dotfile also automatically hides these temporary files from most file listings
+		const fileName = nodePath.basename(systemPath)
+		const directory = nodePath.dirname(systemPath)
+		const temporarySystemPath = nodePath.join(directory, `.${fileName}.umbrel-upload`)
 
 		// Ensure containing directories exist
 		await fse.ensureDir(nodePath.dirname(temporarySystemPath))
