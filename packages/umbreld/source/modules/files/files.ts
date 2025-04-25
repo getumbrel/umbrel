@@ -23,6 +23,7 @@ import {minimatch} from 'minimatch'
 import isValidFilename from 'valid-filename'
 import {execa} from 'execa'
 import bytes from 'bytes'
+import pRetry from 'p-retry'
 
 import Watcher from './watcher.js'
 import Recents from './recents.js'
@@ -576,19 +577,37 @@ export default class Files {
 
 		// Calculate the target trash system path
 		const trashSystemRoot = await this.virtualToSystemPath('/Trash')
-		let trashSystemPath = await nodePath.join(trashSystemRoot, nodePath.basename(systemPath))
-		trashSystemPath = await this.getUniqueName(trashSystemPath, {maxIndex: 1000})
+		const trashSystemPath = await nodePath.join(trashSystemRoot, nodePath.basename(systemPath))
 
-		// Move the file or directory to the trash
-		await move(systemPath, trashSystemPath)
+		// Retry on error to work around collision race condition
+		// TODO: Add better handling in getUniqueName() for this.
+		let uniqueTrashSystemPath = ''
+		await pRetry(
+			async () => {
+				// Get a unique trash system path
+				uniqueTrashSystemPath = await this.getUniqueName(trashSystemPath, {maxIndex: 1000})
+
+				// Move the file or directory to the trash
+				await move(systemPath, uniqueTrashSystemPath)
+			},
+			{
+				retries: 10,
+				minTimeout: 100,
+				maxTimeout: 100,
+				shouldRetry: (error) => error.message === '[destination-already-exists]',
+			},
+		)
 
 		// Write the meta data for the trashed file or directory
 		// TODO: Migrate this to SQLite
-		const trashMetaSystemPath = nodePath.join(this.trashMetaDirectory, `${nodePath.basename(trashSystemPath)}.json`)
+		const trashMetaSystemPath = nodePath.join(
+			this.trashMetaDirectory,
+			`${nodePath.basename(uniqueTrashSystemPath)}.json`,
+		)
 		await fse.writeFile(trashMetaSystemPath, JSON.stringify({path: virtualPath} satisfies Trashmeta))
 
 		// Return the virtual path of the trashed file or directory
-		return this.systemToVirtualPath(trashSystemPath)
+		return this.systemToVirtualPath(uniqueTrashSystemPath)
 	}
 
 	// Restore a file or directory from the trash

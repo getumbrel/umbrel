@@ -203,6 +203,48 @@ test('trash() handles name conflicts by appending numbers', async () => {
 	await fse.remove(metaPath2)
 })
 
+test('trash() handles trashing two files of the same name at the same time', async () => {
+	// Create test directory and files
+	const testDirectory = `${umbreld.instance.dataDirectory}/home/trash-conflict-async-test`
+	await fse.mkdir(testDirectory)
+	await fse.writeFile(`${testDirectory}/file.txt`, 'content1')
+	await fse.mkdir(`${testDirectory}/subdir`)
+	await fse.writeFile(`${testDirectory}/subdir/file.txt`, 'content2')
+
+	// Trash both files concurrently
+	await expect(
+		Promise.all([
+			umbreld.client.files.trash.mutate({
+				path: '/Home/trash-conflict-async-test/file.txt',
+			}),
+			umbreld.client.files.trash.mutate({
+				path: '/Home/trash-conflict-async-test/subdir/file.txt',
+			}),
+		]),
+	).resolves.toMatchObject(['/Trash/file.txt', '/Trash/file (2).txt'])
+
+	// Verify the file is moved to trash with a unique name
+	await expect(fse.pathExists(`${testDirectory}/file.txt`)).resolves.toBe(false)
+	await expect(fse.pathExists(`${testDirectory}/subdir/file.txt`)).resolves.toBe(false)
+
+	// Verify both files exist in trash
+	await expect(fse.pathExists(`${umbreld.instance.dataDirectory}/trash/file.txt`)).resolves.toBe(true)
+	await expect(fse.pathExists(`${umbreld.instance.dataDirectory}/trash/file (2).txt`)).resolves.toBe(true)
+
+	// Verify metadata files exist with the correct name
+	const metaPath = `${umbreld.instance.dataDirectory}/trash-meta/file.txt.json`
+	await expect(fse.pathExists(metaPath)).resolves.toBe(true)
+	const metaPath2 = `${umbreld.instance.dataDirectory}/trash-meta/file (2).txt.json`
+	await expect(fse.pathExists(metaPath2)).resolves.toBe(true)
+
+	// Clean up
+	await fse.remove(testDirectory)
+	await fse.remove(`${umbreld.instance.dataDirectory}/trash/file.txt`)
+	await fse.remove(`${umbreld.instance.dataDirectory}/trash/file (2).txt`)
+	await fse.remove(metaPath)
+	await fse.remove(metaPath2)
+})
+
 test('trash() preserves symlinks when trashing', async () => {
 	// Create a target file and symlink
 	await fse.mkdir(`${umbreld.instance.dataDirectory}/home/trash-symlink-test`, {recursive: true})
