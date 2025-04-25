@@ -1,3 +1,4 @@
+import {useEffect, useRef} from 'react'
 import {toast} from 'sonner'
 
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
@@ -14,13 +15,29 @@ export function useNewFolder() {
 	const setNewFolder = useFilesStore((s) => s.setNewFolder)
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 
+	// These refs maintain a stable reference to the latest values of currentPath and listing.
+	// This ensures that when startNewFolder is called, it will always have access to the
+	// most up-to-date values for accurate folder creation and name validation.
+	const currentPathRef = useRef(currentPath)
+	const listingRef = useRef(listing)
+
+	// keep the ref updated with the latest currentPath
+	useEffect(() => {
+		currentPathRef.current = currentPath
+	}, [currentPath])
+
+	// keep the ref updated with the latest listing
+	useEffect(() => {
+		listingRef.current = listing
+	}, [listing])
+
 	const createFolder = trpcReact.files.createDirectory.useMutation({
 		onMutate: ({path}: {path: FileSystemItem['path']}) => {
-			if (listing?.items) {
+			if (listingRef.current?.items) {
 				// Extract name from path
 				const name = path.split('/').pop() || ''
 				// Best-effort check for duplicate name
-				if (!isNameAvailable(name, listing.items)) {
+				if (!isNameAvailable(name, listingRef.current.items)) {
 					throw new Error('A folder with this name already exists')
 				}
 			}
@@ -58,12 +75,12 @@ export function useNewFolder() {
 	// (e.g., "Folder (2)", "Folder (3)", etc.)
 	const startNewFolder = async () => {
 		let name = t('files-folder')
-		if (listing?.items) {
+		if (listingRef.current?.items) {
 			// Check if the base name already exists
-			if (!isNameAvailable(name, listing.items)) {
+			if (!isNameAvailable(name, listingRef.current.items)) {
 				// If it does, find the next available name
 				let index = 2
-				while (!isNameAvailable(`${name} (${index})`, listing.items)) {
+				while (!isNameAvailable(`${name} (${index})`, listingRef.current.items)) {
 					index++
 				}
 				name = `${name} (${index})`
@@ -73,7 +90,7 @@ export function useNewFolder() {
 		const timeStamp = new Date().getTime()
 		const newFolder = {
 			name,
-			path: currentPath + '/' + name,
+			path: currentPathRef.current + '/' + name,
 			type: 'directory',
 			size: 0,
 			modified: timeStamp,
