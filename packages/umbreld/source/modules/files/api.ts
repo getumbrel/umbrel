@@ -91,17 +91,27 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 
 	// Uploads a file
 	// POST /api/files/upload?path=/Home/file.txt&collision=error|keep-both|replace
+	// Note: We must set the `Connection: close` header on error to prevent the XHR upload logic
+	// from uploading the entire file before checking for errors in the response. cURL handles this
+	// without the extra header, I'm not sure why it's only needed in the browser.
 	privateApi.post('/upload', async (request, response) => {
 		// Check we have a path
-		if (typeof request.query.path !== 'string') return response.status(400).json({error: 'path is required'})
+		if (typeof request.query.path !== 'string') {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'path is required'})
+		}
 
 		// Get the collision strategy
 		const collision = typeof request.query.collision === 'string' ? request.query.collision : 'error'
 		const isValidCollisionParameter = ['error', 'keep-both', 'replace'].includes(collision)
-		if (!isValidCollisionParameter) return response.status(400).json({error: 'invalid collision parameter'})
+		if (!isValidCollisionParameter) {
+			response.setHeader('Connection', 'close')
+			return response.status(400).json({error: 'invalid collision parameter'})
+		}
 
 		// Check path is valid
 		let systemPath = await umbreld.files.virtualToSystemPath(request.query.path).catch((error) => {
+			response.setHeader('Connection', 'close')
 			response.status(400).json({error: 'invalid path'})
 			throw error
 		})
@@ -110,9 +120,11 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		// TODO: Implement resume support
 		const exists = await fse.pathExists(systemPath)
 		if (exists) {
-			if (collision === 'error') return response.status(400).json({error: '[destination-already-exists]'})
-			// For 'keep-both' we generate a unique name for the file
-			else if (collision === 'keep-both') systemPath = await umbreld.files.getUniqueName(systemPath)
+			if (collision === 'error') {
+				response.setHeader('Connection', 'close')
+				return response.status(400).json({error: '[destination-already-exists]'})
+				// For 'keep-both' we generate a unique name for the file
+			} else if (collision === 'keep-both') systemPath = await umbreld.files.getUniqueName(systemPath)
 			// For 'replace' we simply continue with the upload over the original file
 		}
 
@@ -135,6 +147,7 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 
 		// Write the file
 		await pipeline(request, fse.createWriteStream(temporarySystemPath)).catch((error) => {
+			response.setHeader('Connection', 'close')
 			response.status(500).json({error: 'error writing file'})
 			throw error
 		})
