@@ -82,7 +82,7 @@ export default class Recents {
 				if (!isWatched) return
 
 				// Ignore hidden files
-				if (this.#umbreld.files.hiddenFiles.includes(nodePath.basename(path))) return
+				if (this.#umbreld.files.isHidden(nodePath.basename(path))) return
 
 				// Remove the path from the list if it exists
 				// This is to prevent duplicates when adding or to remove with a deletion

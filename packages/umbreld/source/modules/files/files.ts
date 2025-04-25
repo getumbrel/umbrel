@@ -103,6 +103,7 @@ export default class Files {
 	maxDirectoryListing = 10000
 	// Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
 	hiddenFiles = ['.DS_Store', '.directory']
+	hiddenExtensions = ['.umbrel-upload']
 	operationsInProgress: OperationsInProgress = []
 	watcher: Watcher
 	recents: Recents
@@ -288,6 +289,13 @@ export default class Files {
 		}
 	}
 
+	// Checks if a filename is hidden
+	isHidden(filename: string) {
+		return (
+			this.hiddenFiles.includes(filename) || this.hiddenExtensions.some((extension) => filename.endsWith(extension))
+		)
+	}
+
 	// Lists the contents of the root directory.
 	// This is a special case since the root directory doesn't map to a system path.
 	async #listRoot() {
@@ -328,7 +336,7 @@ export default class Files {
 		let count = 0
 		for await (const fileSystemPath of getDirectoryStream(systemPath)) {
 			// Skip hidden files
-			if (this.hiddenFiles.includes(nodePath.basename(fileSystemPath))) continue
+			if (this.isHidden(nodePath.basename(fileSystemPath))) continue
 
 			// Push the file details job to the queue to limit concurrency
 			fileJobs.push(
