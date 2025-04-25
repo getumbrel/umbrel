@@ -19,6 +19,8 @@ const testUserCredentials = {
 	password: 'moneyprintergobrrr',
 }
 
+const testUserLanguage = 'ja'
+
 const testTotpUri =
 	'otpauth://totp/Umbrel?secret=63AU7PMWJX6EQJR6G3KTQFG5RDZ2UE3WVUMP3VFJWHSWJ7MMHTIQ&period=30&digits=6&algorithm=SHA1&issuer=getumbrel.com'
 
@@ -167,7 +169,10 @@ test.sequential('disable2fa() disables 2fa on login', async () => {
 })
 
 test.sequential('get() returns user data', async () => {
-	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({name: 'satoshi'})
+	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({
+		name: 'satoshi',
+		language: 'en',
+	})
 })
 
 test.sequential("set() sets the user's name", async () => {
@@ -177,6 +182,11 @@ test.sequential("set() sets the user's name", async () => {
 	// Revert name change
 	await expect(umbreld.client.user.set.mutate({name: testUserCredentials.name})).resolves.toBe(true)
 	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({name: testUserCredentials.name})
+})
+
+test.sequential("set() sets the user's language", async () => {
+	await expect(umbreld.client.user.set.mutate({language: testUserLanguage})).resolves.toBe(true)
+	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({language: testUserLanguage})
 })
 
 test.sequential("set() sets the user's wallpaper", async () => {
@@ -190,6 +200,14 @@ test.sequential("set() sets the user's wallpaper", async () => {
 test.sequential('set() throws on unknown property', async () => {
 	// @ts-expect-error Testing invalid arguments
 	await expect(umbreld.client.user.set.mutate({foo: 'bar'})).rejects.toThrow('unrecognized_keys')
+})
+
+test.sequential('language() is publically available', async () => {
+	await expect(umbreld.unauthenticatedClient.user.language.query()).resolves.toBe(testUserLanguage)
+})
+
+test.sequential("language() returns the user's language", async () => {
+	await expect(umbreld.client.user.language.query()).resolves.toBe(testUserLanguage)
 })
 
 test.sequential('changePassword() throws on inavlid oldPassword', async () => {
@@ -209,4 +227,27 @@ test.sequential("changePassword() changes the user's password", async () => {
 		umbreld.client.user.changePassword.mutate({oldPassword: 'usdtothemoon', newPassword: testUserCredentials.password}),
 	).resolves.toBe(true)
 	await expect(umbreld.client.user.login.mutate(testUserCredentials)).resolves.toBeTypeOf('string')
+})
+
+// NOTE: The test below will wipe the above state and create a new user
+// We need it to test registering a user with language
+test.sequential('register() creates a new user with language', async () => {
+	// Create fresh instance so we can register a new user
+	await umbreld.cleanup()
+	umbreld = await createTestUmbreld()
+
+	// Register a new user with language
+	await expect(umbreld.client.user.register.mutate({...testUserCredentials, language: testUserLanguage})).resolves.toBe(
+		true,
+	)
+
+	// Set jwt
+	const token = await umbreld.client.user.login.mutate(testUserCredentials)
+	umbreld.setJwt(token)
+
+	// Check language is returned in user object
+	await expect(umbreld.client.user.get.query()).resolves.toMatchObject({language: testUserLanguage})
+
+	// Check language is returned in public language endpoint
+	await expect(umbreld.client.user.language.query()).resolves.toBe(testUserLanguage)
 })

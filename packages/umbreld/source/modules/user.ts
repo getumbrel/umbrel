@@ -93,7 +93,7 @@ export default class User {
 	}
 
 	// Register a new user
-	async register(name: string, password: string) {
+	async register(name: string, password: string, language: string) {
 		// Check the user hasn't already signed up
 		if (await this.exists()) {
 			throw new Error('Attempted to register when user is already registered')
@@ -101,6 +101,7 @@ export default class User {
 
 		// Save the user
 		await this.setName(name)
+		await this.setLanguage(language)
 		return this.setPassword(password)
 	}
 

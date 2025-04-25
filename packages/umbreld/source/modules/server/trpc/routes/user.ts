@@ -19,6 +19,7 @@ export default router({
 			z.object({
 				name: z.string(),
 				password: z.string().min(6, 'Password must be at least 6 characters'),
+				language: z.string().optional().default('en'),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
@@ -28,7 +29,7 @@ export default router({
 			}
 
 			// Register new user
-			return ctx.user.register(input.name, input.password)
+			return ctx.user.register(input.name, input.password, input.language)
 		}),
 
 	// Public method to check if a user exists

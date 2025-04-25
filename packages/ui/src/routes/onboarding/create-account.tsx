@@ -2,16 +2,18 @@ import {useState} from 'react'
 import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
+import {useLanguage} from '@/hooks/use-language'
 import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
-// import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export default function CreateAccount() {
 	const title = t('onboarding.create-account')
 	const auth = useAuth()
+	const [language] = useLanguage()
 
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
@@ -52,7 +54,7 @@ export default function CreateAccount() {
 			return
 		}
 
-		registerMut.mutate({name, password})
+		registerMut.mutate({name, password, language})
 	}
 
 	const remoteFormError = !registerMut.error?.data?.zodError && registerMut.error?.message
@@ -68,8 +70,7 @@ export default function CreateAccount() {
 			footer={
 				<div className='flex flex-col items-center gap-3'>
 					{/* TODO: consider adding drawer on mobile */}
-					{/* TODO: Uncomment and enable after fixing translations  */}
-					{/* <LanguageDropdown /> */}
+					<LanguageDropdown />
 					<Link to={links.support} target='_blank' className={footerLinkClass}>
 						{t('onboarding.contact-support')}
 					</Link>
