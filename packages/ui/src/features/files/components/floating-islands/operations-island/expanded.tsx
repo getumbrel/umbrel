@@ -10,6 +10,12 @@ import {secondsToEta} from '@/utils/seconds-to-eta'
 export function ExpandedContent({progress, count, speed}: {progress: number; count: number; speed: number}) {
 	const {operations} = useGlobalFiles()
 
+	// Sort operations so that items with higher progress appear first
+	const operationsSorted = [...operations].sort((a, b) => {
+		// Treat missing values as 0
+		return (b.percent ?? 0) - (a.percent ?? 0)
+	})
+
 	return (
 		<div className='flex h-full w-full flex-col overflow-hidden py-5'>
 			<div className='mb-4 flex items-center justify-between px-5'>
@@ -22,7 +28,7 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 
 			<ScrollArea className='flex-1 px-5 pb-2'>
 				<div className='space-y-3'>
-					{operations.map((operation) => {
+					{operationsSorted.map((operation) => {
 						const parts = operation.destinationPath.split('/')
 						const destinationFolderName = parts.length >= 2 ? parts[parts.length - 2] : parts[0]
 
