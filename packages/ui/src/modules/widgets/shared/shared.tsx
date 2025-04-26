@@ -8,7 +8,7 @@ import {BackdropBlurVariantContext} from './backdrop-blur-context'
 
 export const widgetContainerCva = cva(
 	cn(
-		tw`bg-neutral-800/60 rounded-12 md:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
+		tw`bg-neutral-800/60 rounded-12 sm:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
 		// animations
 		tw`transition-[transform,box-shadow] duration-300 hover:scale-105`,
 	),
@@ -27,7 +27,7 @@ export const widgetContainerCva = cva(
 	},
 )
 
-export const widgetTextCva = cva('text-11 md:text-13 leading-snug font-semibold -tracking-2 truncate', {
+export const widgetTextCva = cva('text-11 sm:text-13 leading-snug font-semibold -tracking-2 truncate', {
 	variants: {
 		opacity: {
 			primary: 'opacity-80',

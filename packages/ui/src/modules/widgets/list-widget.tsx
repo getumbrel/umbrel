@@ -14,7 +14,7 @@ export function ListWidget({
 	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer overflow-hidden p-2 !pb-0 md:p-4'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer overflow-hidden p-2 !pb-0 sm:p-4'>
 			<div
 				className='flex h-full w-full flex-col gap-2 max-sm:gap-0'
 				style={{
@@ -23,7 +23,7 @@ export function ListWidget({
 			>
 				{!items && <ListItem subtext={undefined} text={LOADING_DASH} />}
 				{items?.length === 0 && (
-					<div className='grid h-full w-full place-items-center pb-2 text-center md:pb-4'>{noItemsText}</div>
+					<div className='grid h-full w-full place-items-center pb-2 text-center sm:pb-4'>{noItemsText}</div>
 				)}
 				{/* Slice just in case API sends down too much data */}
 				{items &&
@@ -43,7 +43,7 @@ function ListItem(item?: ListWidgetItem) {
 	return (
 		<div className='text-12 leading-tight'>
 			<div className='truncate opacity-20'>{item?.subtext ?? LOADING_DASH}</div>
-			<p className='line-clamp-2 text-11 opacity-80 md:text-12'>{item?.text}</p>
+			<p className='line-clamp-2 text-11 opacity-80 sm:text-12'>{item?.text}</p>
 		</div>
 	)
 }

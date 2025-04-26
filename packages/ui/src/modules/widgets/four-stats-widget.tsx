@@ -14,7 +14,7 @@ export function FourStatsWidget({
 	return (
 		<WidgetContainer
 			onClick={() => onClick?.(link)}
-			className='grid grid-cols-2 grid-rows-2 gap-0 gap-1 p-1.5 md:gap-2 md:p-2.5'
+			className='grid grid-cols-2 grid-rows-2 gap-1 p-1.5 sm:gap-2 sm:p-2.5'
 		>
 			{items
 				?.slice(0, 4)
@@ -33,13 +33,13 @@ export function FourStatsWidget({
 
 function Item(item?: FourStatsItem) {
 	return (
-		<div className='flex h-full flex-col justify-center rounded-5 bg-white/5 px-1 leading-none md:rounded-12 md:px-5'>
+		<div className='flex h-full flex-col justify-center rounded-5 bg-white/5 px-1 leading-none sm:rounded-12 sm:px-5'>
 			<p
 				className={cn(
 					widgetTextCva({
 						opacity: 'secondary',
 					}),
-					'text-[8px] md:text-11',
+					'text-[8px] sm:text-11',
 				)}
 				title={item?.text}
 			>

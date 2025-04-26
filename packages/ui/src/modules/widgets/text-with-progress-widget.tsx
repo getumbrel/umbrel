@@ -18,7 +18,7 @@ export function TextWithProgressWidget({
 	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer className='p-2 md:p-5' onClick={() => onClick?.(link)}>
+		<WidgetContainer className='p-2 sm:p-5' onClick={() => onClick?.(link)}>
 			<StatText title={title ?? LOADING_DASH} value={text} valueSub={subtext} />
 			<div className='flex-1' />
 			{/* TODO: use shadcn progress component */}

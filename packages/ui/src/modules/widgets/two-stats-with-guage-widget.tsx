@@ -11,7 +11,7 @@ export function TwoStatsWidget({
 	onClick,
 }: TwoStatsWithProgressWidgetProps & {onClick?: (link?: string) => void}) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className=' flex-row items-center justify-center md:gap-[30px]'>
+		<WidgetContainer onClick={() => onClick?.(link)} className=' flex-row items-center justify-center sm:gap-[30px]'>
 			{items?.[0] && (
 				<Item title={items[0].title} text={items[0].text} subtext={items[0].subtext} progress={items[0].progress} />
 			)}
@@ -41,12 +41,12 @@ function Item(item?: TwoStatsWithProgressItem) {
 				// Set width so text fits inside the arc
 				style={{width: size - strokeWidth * 2}}
 			>
-				<div className='truncate text-[9px] font-semibold leading-tight tracking-normal md:text-13'>
+				<div className='truncate text-[9px] font-semibold leading-tight tracking-normal sm:text-13'>
 					{item?.text}
 					{item?.subtext && <span className='opacity-40'>{item?.subtext}</span>}
 				</div>
 				{item?.title && (
-					<div className='truncate text-[9px] font-medium leading-tight -tracking-3 opacity-40 md:text-12'>
+					<div className='truncate text-[9px] font-medium leading-tight -tracking-3 opacity-40 sm:text-12'>
 						{item?.title}
 					</div>
 				)}

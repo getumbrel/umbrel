@@ -15,7 +15,7 @@ export function ThreeStatsWidget({
 	return (
 		<WidgetContainer
 			onClick={() => onClick?.(link)}
-			className='flex flex-col items-stretch justify-stretch gap-1.5 p-1.5 md:flex-row md:gap-2 md:px-4 md:py-3'
+			className='flex flex-col items-stretch justify-stretch gap-1.5 p-1.5 sm:flex-row sm:gap-2 sm:px-4 sm:py-3'
 		>
 			{items?.[0] && <Item icon={items[0].icon} subtext={items[0].subtext} text={items[0].text} />}
 			{items?.[1] && <Item icon={items[1].icon} subtext={items[1].subtext} text={items[1].text} />}
@@ -34,10 +34,10 @@ export function ThreeStatsWidget({
 function Item(item?: ThreeStatsItem) {
 	return (
 		// NOTE: consider reducing rounding if we don't have 3 items
-		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-md:gap-1 max-md:px-1 md:flex-col md:justify-center md:rounded-full'>
+		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-sm:gap-1 max-sm:px-1 sm:flex-col sm:justify-center sm:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
-			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 md:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
-			<div className='flex w-full flex-row justify-between md:flex-col md:text-center'>
+			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 sm:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
+			<div className='flex w-full flex-row justify-between sm:flex-col sm:text-center'>
 				<p className={cn(widgetTextCva({opacity: 'secondary'}), 'max-w-full truncate')}>{item?.subtext}</p>
 				<p className={cn(widgetTextCva(), 'max-w-full truncate')}>{item?.text}</p>
 			</div>
