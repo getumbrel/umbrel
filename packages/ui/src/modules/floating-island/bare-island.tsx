@@ -2,8 +2,6 @@ import {motion, useWillChange} from 'framer-motion'
 import {Children, isValidElement, useEffect, useRef, useState} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
-import {useIsMobile} from '@/hooks/use-is-mobile'
-
 // Animation configurations
 const spring = {
 	type: 'spring' as const,
@@ -46,22 +44,13 @@ export const IslandExpanded = ({children}: IslandChildProps) => {
 
 export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
 	const [isExpanded, setIsExpanded] = useState(true)
-	const timeoutRef = useRef<NodeJS.Timeout>()
 	const islandRef = useRef<HTMLDivElement>(null)
-	const isMobile = useIsMobile()
 	const willChange = useWillChange()
 
-	// Auto-minimize after delay
-	useEffect(() => {
-		timeoutRef.current = setTimeout(() => setIsExpanded(false), 1200)
-		return () => clearTimeout(timeoutRef.current)
-	}, []) // Only runs on mount
-
-	// Handle hover/click interactions
-	const handleInteraction = (shouldExpand: boolean) => {
-		if (!isMobile) {
-			clearTimeout(timeoutRef.current)
-			setIsExpanded(shouldExpand)
+	// Expand the island on click
+	const handleIslandClick = () => {
+		if (!isExpanded) {
+			setIsExpanded(true)
 		}
 	}
 
@@ -73,9 +62,10 @@ export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
 	const expandedChild = childArray.find((child) => isValidElement(child) && child.type === IslandExpanded)
 
 	// Add touch/click outside handler
-	// to minimize the island when tapping outside on mobile
+	// to minimize the island when clicking outside of it
 	useEffect(() => {
-		if (!isMobile || !isExpanded) return
+		// If the island isn't expanded we don't need to listen for outside clicks
+		if (!isExpanded) return
 
 		const handleInteractionOutside = (event: MouseEvent | TouchEvent) => {
 			if (islandRef.current && !islandRef.current.contains(event.target as Node)) {
@@ -90,7 +80,7 @@ export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
 			document.removeEventListener('touchstart', handleInteractionOutside)
 			document.removeEventListener('mousedown', handleInteractionOutside)
 		}
-	}, [isMobile, isExpanded])
+	}, [isExpanded])
 
 	return (
 		<div className='flex justify-center md:block'>
@@ -108,9 +98,7 @@ export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
 					borderRadius: size.borderRadius,
 				}}
 				transition={spring}
-				onClick={() => isMobile && setIsExpanded(!isExpanded)}
-				onHoverStart={() => handleInteraction(true)}
-				onHoverEnd={() => handleInteraction(false)}
+				onClick={handleIslandClick}
 			>
 				<div className='absolute inset-0'>
 					{isExpanded ? expandedChild : minimizedChild}
