@@ -197,7 +197,6 @@ function useOnDemandThumbnail(item: FileSystemItem) {
 		setUrl(item.thumbnail)
 	}, [item.path, item.thumbnail])
 
-	// Exponential‑back‑off fetch
 	useEffect(() => {
 		if (url !== undefined) return
 
@@ -208,12 +207,7 @@ function useOnDemandThumbnail(item: FileSystemItem) {
 		})
 	}, [url, item.path])
 
-	// When the browser fails to load the image we bump the attempt counter
-	const handleImageError = () => {
-		setUrl(undefined)
-	}
-
-	return {thumbnailUrl: url, handleImageError}
+	return {thumbnailUrl: url}
 }
 
 const Thumbnail = ({
@@ -227,16 +221,26 @@ const Thumbnail = ({
 	className?: string
 	overlay?: React.ReactNode
 }) => {
-	const {thumbnailUrl, handleImageError} = useOnDemandThumbnail(item)
+	const {thumbnailUrl} = useOnDemandThumbnail(item)
 
-	const imageNode = thumbnailUrl ? (
-		<img
-			src={thumbnailUrl}
-			alt={item.name}
-			onError={handleImageError}
-			className={`rounded-sm object-contain ${className || ''}`}
-		/>
-	) : null
+	// Track if the image failed to load so we can gracefully fall back to the
+	// default thumbnail component
+	const [hadError, setHadError] = useState(false)
+
+	// Reset the error flag whenever the thumbnail url or file changes
+	useEffect(() => {
+		setHadError(false)
+	}, [thumbnailUrl, item.path])
+
+	const imageNode =
+		thumbnailUrl && !hadError ? (
+			<img
+				src={thumbnailUrl}
+				alt={item.name}
+				onError={() => setHadError(true)}
+				className={`rounded-sm object-contain ${className || ''}`}
+			/>
+		) : null
 
 	const content = imageNode ?? <Fallback className={className} />
 
