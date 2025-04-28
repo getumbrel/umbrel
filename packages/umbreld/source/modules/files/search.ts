@@ -32,8 +32,14 @@ export default class Search {
 
 		// Iterate over all files in the home directory
 		for await (const systemPath of this.#umbreld.files.streamContents('/Home')) {
+			// Grab the filename
+			const filename = nodePath.basename(systemPath)
+
+			// Skip hidden files
+			if (this.#umbreld.files.isHidden(filename)) continue
+
 			// Calculate the fuzzy match score of just the filename
-			const score = fuzzy(query, nodePath.basename(systemPath))
+			const score = fuzzy(query, filename)
 
 			// Save the result if it's a good match
 			if (score > this.matchThreshold) {
