@@ -410,6 +410,7 @@
   "files-view.list": "Lista",
   "files-view.sort-by": "Rendezés",
   "files-view.view-as": "Megjelenítés",
+  "files-widgets.favorites.no-items-text": "Adj hozzá egy mappát a Kedvencekhez, hogy itt megjelenjen",
   "generic-in": "in",
   "hello": "Helló",
   "install-first.install-app": "Telepítsd a(z) {{app}} alkalmazást",

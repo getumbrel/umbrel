@@ -3,6 +3,8 @@ import {useNavigate} from 'react-router-dom'
 import {map} from 'remeda'
 
 import {toast} from '@/components/ui/toast'
+import {BASE_ROUTE_PATH, HOME_PATH} from '@/features/files/constants'
+import {FilesGridWidget, FilesListWidget} from '@/features/files/widgets'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {temperatureDescriptionsKeyed, useTemperatureUnit} from '@/hooks/use-temperature-unit'
 import {
@@ -56,9 +58,16 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 	const isLoading = isLoadingApps || widgetQ.isLoading
 
 	const handleClick = (link?: string) => {
+		// Handle special system/features widgets
 		if (appId === 'live-usage' && systemAppsKeyed['UMBREL_live-usage']) {
 			navigate(link || '?dialog=live-usage')
-		} else if (app) {
+			return
+		}
+		if (appId === 'files' && systemAppsKeyed['UMBREL_files']) {
+			navigate(link || `${BASE_ROUTE_PATH}${HOME_PATH}`)
+			return
+		}
+		if (app) {
 			// Launching directly because it's weird to have credentials show up
 			// Users will likely open the app by clicking the icon before adding a widget associated with the app
 			launchApp(appId, {path: link, direct: true})
@@ -103,6 +112,15 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 		case 'list-emoji': {
 			const w = widget as WidgetConfig<'list-emoji'>
 			return <ListEmojiWidget {...w} onClick={handleClick} />
+		}
+		// features/files widgets
+		case 'files-list': {
+			const w = widget as WidgetConfig<'files-list'>
+			return <FilesListWidget {...w} onClick={handleClick} />
+		}
+		case 'files-grid': {
+			const w = widget as WidgetConfig<'files-grid'>
+			return <FilesGridWidget {...w} onClick={handleClick} />
 		}
 	}
 }
@@ -165,6 +183,15 @@ export function ExampleWidget<T extends WidgetType = WidgetType>({
 			const w = example as WidgetConfig<'list-emoji'>
 			return <ListEmojiWidget {...w} />
 		}
+		// features/files widgets
+		case 'files-list': {
+			const w = example as WidgetConfig<'files-list'>
+			return <FilesListWidget {...w} />
+		}
+		case 'files-grid': {
+			const w = example as WidgetConfig<'files-grid'>
+			return <FilesGridWidget {...w} />
+		}
 	}
 }
 
@@ -190,6 +217,13 @@ export function LoadingWidget<T extends WidgetType = WidgetType>({type, onClick}
 		}
 		case 'list-emoji': {
 			return <ListEmojiWidget onClick={onClick} />
+		}
+		// features/files widgets
+		case 'files-list': {
+			return <FilesListWidget onClick={onClick} />
+		}
+		case 'files-grid': {
+			return <FilesGridWidget onClick={onClick} />
 		}
 	}
 }

@@ -3,8 +3,11 @@ import ms from 'ms'
 
 import {router, privateProcedure} from '../trpc.js'
 import {systemWidgets} from '../../../system-widgets.js'
+import {filesWidgets} from '../../../files/widgets.js'
 
 const MAX_ALLOWED_WIDGETS = 3
+
+const umbrelWidgets = {...systemWidgets, ...filesWidgets}
 
 // Splits a widgetId into appId and widgetName
 // e.g., "transmission:status" => { appId: "transmission", widgetName: "status" }
@@ -34,9 +37,8 @@ export default router({
 
 			// Validate widget
 			if (appId === 'umbrel') {
-				// This is a system widget
-				if (!(widgetName in systemWidgets))
-					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+				// This is an Umbrel widget
+				if (!(widgetName in umbrelWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel widgets`)
 			} else {
 				// This is an app widget
 				// Throws an error if the widget doesn't exist
@@ -96,11 +98,10 @@ export default router({
 			let widgetData: {[key: string]: any}
 
 			if (appId === 'umbrel') {
-				// This is a system widget
-				if (!(widgetName in systemWidgets))
-					throw new Error(`No widget named ${widgetName} found in Umbrel system widgets`)
+				// This is an Umbrel widget
+				if (!(widgetName in umbrelWidgets)) throw new Error(`No widget named ${widgetName} found in Umbrel widgets`)
 
-				widgetData = await systemWidgets[widgetName as keyof typeof systemWidgets](ctx.umbreld)
+				widgetData = await umbrelWidgets[widgetName as keyof typeof umbrelWidgets](ctx.umbreld)
 			} else {
 				// This is an app widget
 				widgetData = await ctx.apps.getApp(appId).getWidgetData(widgetName)

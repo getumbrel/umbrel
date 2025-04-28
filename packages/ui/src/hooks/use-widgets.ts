@@ -1,11 +1,10 @@
 // TODO: move to widgets module
 import {useState} from 'react'
 
-import {MAX_WIDGETS} from '@/modules/widgets/shared/constants'
+import {filesWidgets} from '@/features/files/widgets'
+import {liveUsageWidgets, MAX_WIDGETS} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {AppState, trpcReact} from '@/trpc/trpc'
-
-import {liveUsageWidgets} from './../modules/widgets/shared/constants'
 
 export function useWidgets() {
 	// Consider having `selectedTooMany` outside this hook
@@ -41,7 +40,15 @@ export function useWidgets() {
 			state: 'ready' as const satisfies AppState,
 			widgets: liveUsageWidgets,
 		},
-		// Add others here
+
+		// features/files widgets
+		{
+			appId: 'files',
+			icon: systemAppsKeyed['UMBREL_files'].icon,
+			name: systemAppsKeyed['UMBREL_files'].name,
+			state: 'ready' as const satisfies AppState,
+			widgets: filesWidgets,
+		},
 	]
 
 	const availableWidgets = apps.userApps

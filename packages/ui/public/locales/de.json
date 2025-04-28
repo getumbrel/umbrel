@@ -410,6 +410,7 @@
   "files-view.list": "Liste",
   "files-view.sort-by": "Sortieren nach",
   "files-view.view-as": "Anzeigen als",
+  "files-widgets.favorites.no-items-text": "Füge einen Ordner zu deinen Favoriten hinzu, um ihn hier zu sehen",
   "generic-in": "im",
   "hello": "Hallo",
   "install-first.install-app": "Installiere {{app}}",

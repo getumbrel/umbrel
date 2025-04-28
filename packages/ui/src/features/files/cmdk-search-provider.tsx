@@ -29,6 +29,7 @@ export const FilesCmdkSearchProvider: React.FC<CmdkSearchProviderProps> = ({quer
 	// return early if there is no query
 	if (trimmedQuery.length === 0) return null
 
+	// TODO: Use the new navigateToItem function
 	const openFile = (item: FileSystemItem) => {
 		// folders can be navigated to directly
 		if (item.type === 'directory') {
