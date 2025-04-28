@@ -411,6 +411,7 @@
   "files-view.sort-by": "Trier par",
   "files-view.view-as": "Afficher sous forme de",
   "files-widgets.favorites.no-items-text": "Ajoutez un dossier à vos favoris pour le voir ici",
+  "files-widgets.recents.no-items-text": "Aucun fichier récent",
   "generic-in": "dans l’",
   "hello": "Bonjour",
   "install-first.install-app": "Installez {{app}}",

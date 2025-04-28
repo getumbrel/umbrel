@@ -411,6 +411,7 @@
   "files-view.sort-by": "並び替え",
   "files-view.view-as": "表示形式",
   "files-widgets.favorites.no-items-text": "お気に入りにフォルダを追加すると、ここに表示されます",
+  "files-widgets.recents.no-items-text": "最近使用したファイルはありません",
   "generic-in": "in",
   "hello": "こんにちは",
   "install-first.install-app": "{{app}}をインストール",

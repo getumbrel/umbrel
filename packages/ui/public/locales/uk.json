@@ -411,6 +411,7 @@
   "files-view.sort-by": "Сортувати за",
   "files-view.view-as": "Перегляд як",
   "files-widgets.favorites.no-items-text": "Додайте папку у Вибране, щоб побачити її тут",
+  "files-widgets.recents.no-items-text": "Немає нещодавніх файлів",
   "generic-in": "в",
   "hello": "Привіт",
   "install-first.install-app": "Встановити {{app}}",

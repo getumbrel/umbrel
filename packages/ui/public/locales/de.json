@@ -411,6 +411,7 @@
   "files-view.sort-by": "Sortieren nach",
   "files-view.view-as": "Anzeigen als",
   "files-widgets.favorites.no-items-text": "Füge einen Ordner zu deinen Favoriten hinzu, um ihn hier zu sehen",
+  "files-widgets.recents.no-items-text": "Keine kürzlich verwendeten Dateien",
   "generic-in": "im",
   "hello": "Hallo",
   "install-first.install-app": "Installiere {{app}}",

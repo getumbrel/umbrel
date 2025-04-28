@@ -411,6 +411,7 @@
   "files-view.sort-by": "Şuna göre sırala",
   "files-view.view-as": "Görünüm biçimi",
   "files-widgets.favorites.no-items-text": "Burada görmek için bir klasörü favorilere ekleyin",
+  "files-widgets.recents.no-items-text": "Son kullanılan dosya yok",
   "generic-in": "in",
   "hello": "Merhaba",
   "install-first.install-app": "{{app}} yükle",

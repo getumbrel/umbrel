@@ -411,6 +411,7 @@
   "files-view.sort-by": "Sorteren op",
   "files-view.view-as": "Weergeven als",
   "files-widgets.favorites.no-items-text": "Voeg een map toe aan je favorieten om deze hier te zien",
+  "files-widgets.recents.no-items-text": "Geen recente bestanden",
   "generic-in": "in",
   "hello": "Hallo",
   "install-first.install-app": "Installeer {{app}}",

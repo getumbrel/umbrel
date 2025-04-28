@@ -411,6 +411,7 @@
   "files-view.sort-by": "Ordina per",
   "files-view.view-as": "Visualizza come",
   "files-widgets.favorites.no-items-text": "Aggiungi una cartella ai preferiti per visualizzarla qui",
+  "files-widgets.recents.no-items-text": "Nessun file recente",
   "generic-in": "nell’",
   "hello": "Ciao",
   "install-first.install-app": "Installa {{app}}",

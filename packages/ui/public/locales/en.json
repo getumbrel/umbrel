@@ -411,6 +411,7 @@
   "files-view.sort-by": "Sort by",
   "files-view.view-as": "View as",
   "files-widgets.favorites.no-items-text": "Add a folder to favorites to see it here",
+  "files-widgets.recents.no-items-text": "No recent files",
   "generic-in": "in",
   "hello": "Hello",
   "install-first.install-app": "Install {{app}}",

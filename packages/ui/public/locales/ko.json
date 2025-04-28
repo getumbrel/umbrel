@@ -411,6 +411,7 @@
   "files-view.sort-by": "정렬 기준",
   "files-view.view-as": "보기 방식",
   "files-widgets.favorites.no-items-text": "폴더를 즐겨찾기에 추가하면 여기에서 볼 수 있어요",
+  "files-widgets.recents.no-items-text": "최근에 사용한 파일이 없어요",
   "generic-in": "에서",
   "hello": "안녕하세요",
   "install-first.install-app": "{{app}} 설치",

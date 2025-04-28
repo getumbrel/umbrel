@@ -53,7 +53,7 @@ export const filesWidgets: RegistryWidget<'files-list' | 'files-grid'>[] = [
 					...dummyFileAttributes,
 				},
 			],
-			noItemsText: t('files-widgets.favorites.no-items-text'),
+			noItemsText: t('files-widgets.recents.no-items-text'),
 		},
 	},
 	{
