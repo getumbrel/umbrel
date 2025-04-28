@@ -44,6 +44,8 @@ export const useNavigate = () => {
 
 	const isBrowsingExternalStorage = currentPath.startsWith(EXTERNAL_STORAGE_PATH)
 
+	const isViewingExternalDrives = currentPath === EXTERNAL_STORAGE_PATH
+
 	return {
 		navigateToDirectory,
 		currentPath,
@@ -53,5 +55,6 @@ export const useNavigate = () => {
 		isBrowsingApps,
 		isBrowsingSearch,
 		isBrowsingExternalStorage,
+		isViewingExternalDrives,
 	}
 }

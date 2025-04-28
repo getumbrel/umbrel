@@ -60,7 +60,8 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	const linkToDialog = useLinkToDialog()
 
-	const {isBrowsingTrash, isBrowsingRecents, isBrowsingSearch, navigateToDirectory} = useFilesNavigate()
+	const {isBrowsingTrash, isBrowsingRecents, isBrowsingSearch, isViewingExternalDrives, navigateToDirectory} =
+		useFilesNavigate()
 
 	const {isPathShared, isAddingShare, isRemovingShare} = useShares()
 	const {isPathFavorite, addFavorite, removeFavorite, isAddingFavorite, isRemovingFavorite} = useFavorites()
@@ -92,6 +93,9 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 					</ContextMenuItem>
 				</>
 			)
+		} else if (isViewingExternalDrives) {
+			// if the item is actually a drive in /External
+			contextMenuContent = null
 		} else if ('isUploading' in item && item.isUploading) {
 			// if the item is uploading
 			contextMenuContent = null
@@ -265,6 +269,8 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 			</>
 		)
 	}
+
+	if (!contextMenuContent) return children
 
 	return (
 		<ContextMenu modal={false}>

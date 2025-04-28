@@ -19,7 +19,7 @@ import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function DirectoryListing() {
-	const {currentPath, isBrowsingApps, isBrowsingExternalStorage} = useNavigate()
+	const {currentPath, isBrowsingApps, isBrowsingExternalStorage, isViewingExternalDrives} = useNavigate()
 	const setActionsBarConfig = useSetActionsBarConfig()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 
@@ -43,7 +43,7 @@ export function DirectoryListing() {
 	}
 
 	// Additional items for the directory context menu
-	const additionalContextMenuItems = (
+	const additionalContextMenuItems = isViewingExternalDrives ? null : (
 		<>
 			<ContextMenuItem onClick={startNewFolder}>{t('files-action.new-folder')}</ContextMenuItem>
 			<ContextMenuItem onClick={handleUploadClick}>{t('files-action.upload')}</ContextMenuItem>
@@ -64,7 +64,7 @@ export function DirectoryListing() {
 	const hidePathAndDisableActions = Boolean(isLoading || error)
 
 	// Desktop actions
-	const DesktopActions = (
+	const DesktopActions = isViewingExternalDrives ? null : (
 		<>
 			<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={hidePathAndDisableActions}>
 				{t('files-folder')}
@@ -76,7 +76,7 @@ export function DirectoryListing() {
 	)
 
 	// Mobile actions
-	const MobileDropdownActions = (
+	const MobileDropdownActions = isViewingExternalDrives ? null : (
 		<>
 			<DropdownMenuItem onClick={startNewFolder} disabled={hidePathAndDisableActions}>
 				<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
@@ -103,7 +103,7 @@ export function DirectoryListing() {
 			hidePath: hidePathAndDisableActions,
 			hideSearch: isBrowsingApps || isBrowsingExternalStorage, // hide search if browsing apps or external storage
 		})
-	}, [hidePathAndDisableActions, isBrowsingApps, isBrowsingExternalStorage])
+	}, [hidePathAndDisableActions, isBrowsingApps, isBrowsingExternalStorage, isViewingExternalDrives])
 
 	return (
 		<>
@@ -118,7 +118,7 @@ export function DirectoryListing() {
 				hasMore={listing?.hasMore ?? false}
 				onLoadMore={fetchMoreItems}
 				additionalContextMenuItems={additionalContextMenuItems}
-				enableFileDrop={true}
+				enableFileDrop={!isViewingExternalDrives}
 				CustomEmptyView={EmptyStateDirectory}
 			/>
 		</>
