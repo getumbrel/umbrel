@@ -68,6 +68,20 @@ test.sequential('login', async () => {
 // 	])
 // })
 
+test.sequential('enabled() returns default widgets', async () => {
+	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual([
+		'umbrel:files-favorites',
+		'umbrel:storage',
+		'umbrel:system-stats',
+	])
+})
+
+test.sequential('disable() can disable default widgets', async () => {
+	await expect(umbreld.client.widget.disable.mutate({widgetId: 'umbrel:files-favorites'})).resolves.toStrictEqual(true)
+	await expect(umbreld.client.widget.disable.mutate({widgetId: 'umbrel:storage'})).resolves.toStrictEqual(true)
+	await expect(umbreld.client.widget.disable.mutate({widgetId: 'umbrel:system-stats'})).resolves.toStrictEqual(true)
+})
+
 test.sequential('enabled() returns no widgets when none are enabled', async () => {
 	await expect(umbreld.client.widget.enabled.query()).resolves.toStrictEqual([])
 })

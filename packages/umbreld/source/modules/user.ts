@@ -9,11 +9,12 @@ import * as totp from './utilities/totp.js'
 export default class User {
 	#store: Umbreld['store']
 	logger: Umbreld['logger']
-
+	#umbreld: Umbreld
 	constructor(umbreld: Umbreld) {
 		this.#store = umbreld.store
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+		this.#umbreld = umbreld
 	}
 
 	// Get the user object from the store
@@ -102,6 +103,8 @@ export default class User {
 		// Save the user
 		await this.setName(name)
 		await this.setLanguage(language)
+		// We can do this a cleaner way if we refactor widgets into a proper module
+		await this.#umbreld.store.set('widgets', ['umbrel:files-favorites', 'umbrel:storage', 'umbrel:system-stats'])
 		return this.setPassword(password)
 	}
 
