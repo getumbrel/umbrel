@@ -18,13 +18,7 @@ describe('favorites()', () => {
 
 	test('returns default favorites on first start', async () => {
 		const favorites = await umbreld.client.files.favorites.query()
-		expect(favorites).toStrictEqual([
-			'/Home/Documents',
-			'/Home/Downloads',
-			'/Home/Movies',
-			'/Home/Music',
-			'/Home/Photos',
-		])
+		expect(favorites).toStrictEqual(['/Home/Downloads', '/Home/Documents', '/Home/Photos', '/Home/Videos'])
 	})
 
 	test('only returns existing directories', async () => {

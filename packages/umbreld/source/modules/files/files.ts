@@ -175,7 +175,7 @@ export default class Files {
 		if (!isFavoritesInitialized) return
 
 		// Initialize default favorites
-		const defaultFavourites = ['/Home/Documents', '/Home/Downloads', '/Home/Movies', '/Home/Music', '/Home/Photos']
+		const defaultFavourites = ['/Home/Downloads', '/Home/Documents', '/Home/Photos', '/Home/Videos']
 		for (const favorite of defaultFavourites) {
 			await this.createDirectory(favorite).catch((error) =>
 				this.logger.error(`Failed to ensure directory '${favorite}' exists`, error),
