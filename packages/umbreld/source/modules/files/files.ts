@@ -46,6 +46,7 @@ const ALL_OPERATIONS = [
 	'favorite',
 	'unarchive',
 	'share',
+	'writable',
 ] as const
 
 type FileOperation = (typeof ALL_OPERATIONS)[number]
@@ -208,6 +209,11 @@ export default class Files {
 	// Creates a new directory at the given virtual path.
 	// Returns true if the directory already exists.
 	async createDirectory(virtualPath: string) {
+		// Check if operation is allowed
+		const containingDirectory = nodePath.dirname(virtualPath)
+		const containingDirectoryAllowedOperations = await this.getAllowedOperations(containingDirectory)
+		if (!containingDirectoryAllowedOperations.includes('writable')) throw new Error('[operation-not-allowed]')
+
 		// Get system path
 		const path = await this.virtualToSystemPath(virtualPath)
 
@@ -452,6 +458,10 @@ export default class Files {
 	}
 	// Copies a file or directory from one virtual path to another.
 	async copy(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
+		// Check if operation is allowed
+		const allowedOperations = await this.getAllowedOperations(destinationVirtualDirectory)
+		if (!allowedOperations.includes('writable')) throw new Error('[operation-not-allowed]')
+
 		// Get the system paths
 		let sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
 		const destinationSystemDirectory = await this.virtualToSystemPath(destinationVirtualDirectory)
@@ -501,9 +511,13 @@ export default class Files {
 		// so we don't need to do anything.
 		if (nodePath.dirname(sourceVirtualPath) === destinationVirtualDirectory) return sourceVirtualPath
 
-		// Check if operation is allowed
-		const allowedOperations = await this.getAllowedOperations(sourceVirtualPath)
-		if (!allowedOperations.includes('move')) throw new Error('[operation-not-allowed]')
+		// Check if operation is allowed on source
+		const allowedSourceOperations = await this.getAllowedOperations(sourceVirtualPath)
+		if (!allowedSourceOperations.includes('move')) throw new Error('[operation-not-allowed]')
+
+		// Check if operation is allowed on destination
+		const allowedDestinationOperations = await this.getAllowedOperations(destinationVirtualDirectory)
+		if (!allowedDestinationOperations.includes('writable')) throw new Error('[operation-not-allowed]')
 
 		// Get the system paths
 		let sourceSystemPath = await this.virtualToSystemPath(sourceVirtualPath)
@@ -732,6 +746,10 @@ export default class Files {
 			operations.add('favorite')
 			operations.add('share')
 		}
+
+		// Disable creating files in readonly directories
+		const isReadonly = virtualPath === '/External'
+		if (isReadonly) operations.delete('writable')
 
 		// Remove destructive operations if the path is protected
 		// Note only the exact paths are protected, not necessarily the children.

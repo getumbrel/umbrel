@@ -402,6 +402,26 @@ describe('externalstorage.#mountExternalDevices', () => {
 	})
 })
 
+describe('filesystem permissions', () => {
+	test('/External cannot have new user created directories', async () => {
+		await expect(umbreld.client.files.createDirectory.mutate({path: '/External/test'})).rejects.toThrow(
+			'[operation-not-allowed]',
+		)
+	})
+
+	test('/External cannot have directories copied directly into it', async () => {
+		await expect(umbreld.client.files.copy.mutate({path: '/Home/Documents', toDirectory: '/External'})).rejects.toThrow(
+			'[operation-not-allowed]',
+		)
+	})
+
+	test('/External cannot have directories moved directly into it', async () => {
+		await expect(umbreld.client.files.move.mutate({path: '/Home/Documents', toDirectory: '/External'})).rejects.toThrow(
+			'[operation-not-allowed]',
+		)
+	})
+})
+
 // Mock lsblk output constants
 // Taken from a physical Umbrel Home with:
 //   lsblk --output-all --json --bytes
