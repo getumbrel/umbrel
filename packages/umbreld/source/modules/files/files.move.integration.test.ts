@@ -146,7 +146,7 @@ for (const forceSlowMoveWithProgress of forceSlowMoveWithProgressValues) {
 			await fse.remove(testDirectory)
 		})
 
-		test.each(['/Home', '/Apps', '/Apps/bitcoin', '/Home/Downloads'])(
+		test.each(['/Home', '/Apps', '/Home/Downloads'])(
 			'move() throws when trying to move protected directory %s',
 			async (path) => {
 				testDirectory = `${umbreld.instance.dataDirectory}/home/protected-move-test`
@@ -162,6 +162,43 @@ for (const forceSlowMoveWithProgress of forceSlowMoveWithProgressValues) {
 				await fse.remove(testDirectory)
 			},
 		)
+
+		test('move() throws when trying to move a protected path out of /Apps/', async () => {
+			// Install a test app
+			await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+			testDirectory = `${umbreld.instance.dataDirectory}/home/protected-app-move-test`
+			await fse.mkdir(testDirectory)
+
+			await expect(
+				umbreld.client.files.move.mutate({
+					path: '/Apps/sparkles-hello-world',
+					toDirectory: '/Home/protected-app-move-test',
+				}),
+			).rejects.toThrow('[operation-not-allowed]')
+
+			// Clean up
+			await fse.remove(testDirectory)
+			await umbreld.client.apps.uninstall.mutate({appId: 'sparkles-hello-world'})
+		})
+
+		test('move() does not throw when moving an unprotected path out of /Apps/', async () => {
+			testDirectory = `${umbreld.instance.dataDirectory}/home/unprotected-apps-move-test`
+			await fse.mkdir(testDirectory)
+
+			// create a directory in /Apps/ that is not an installed app id
+			await fse.mkdir(`${umbreld.instance.dataDirectory}/app-data/not-an-app-id`)
+
+			await expect(
+				umbreld.client.files.move.mutate({
+					path: '/Apps/not-an-app-id',
+					toDirectory: '/Home/unprotected-apps-move-test',
+				}),
+			).resolves.toBe('/Home/unprotected-apps-move-test/not-an-app-id')
+
+			// Clean up
+			await fse.remove(testDirectory)
+		})
 
 		test('move() throws when moving to the root directory', async () => {
 			await expect(

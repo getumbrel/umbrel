@@ -755,7 +755,14 @@ export default class Files {
 		// Note only the exact paths are protected, not necessarily the children.
 		// e.g /Home/Downloads is protected but /Home/Downloads/file.txt is not.
 		// Children could be protected with /Home/Downloads/**
-		const isProtected = match(virtualPath, ['/*', '/Apps/*', '/Home/Downloads', '/External/*'])
+		let isProtected = match(virtualPath, ['/*', '/Home/Downloads', '/External/*'])
+
+		// For /Apps/* paths, only protect if the app id is installed
+		if (match(virtualPath, ['/Apps/*'])) {
+			const appId = nodePath.basename(virtualPath)
+			isProtected = await this.#umbreld.apps.isInstalled(appId)
+		}
+
 		if (isProtected) {
 			operations.delete('move')
 			operations.delete('rename')
