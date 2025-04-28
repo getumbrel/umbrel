@@ -6,6 +6,7 @@
 import {useState} from 'react'
 import {useDebounce} from 'react-use'
 
+import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
 import type {FileSystemItem} from '@/features/files/types'
 import {trpcReact} from '@/trpc/trpc'
 
@@ -16,7 +17,13 @@ export interface UseSearchFilesReturn {
 	error: unknown
 }
 
-export function useSearchFiles(query: string): UseSearchFilesReturn {
+export function useSearchFiles({
+	query,
+	maxResults = USE_LIST_DIRECTORY_LOAD_ITEMS.INITIAL,
+}: {
+	query: string
+	maxResults?: number
+}): UseSearchFilesReturn {
 	const trimmedQuery = query.trim()
 	const [debouncedQuery, setDebouncedQuery] = useState(trimmedQuery)
 
@@ -31,7 +38,7 @@ export function useSearchFiles(query: string): UseSearchFilesReturn {
 	)
 
 	const {data, isLoading, isError, error} = trpcReact.files.search.useQuery(
-		{query: debouncedQuery},
+		{query: debouncedQuery, maxResults},
 		{
 			// disable the query if there is no search term
 			enabled: debouncedQuery.length > 0,

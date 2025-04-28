@@ -197,6 +197,11 @@ export default router({
 
 	// Search for a file
 	search: privateProcedure
-		.input(z.object({query: z.string()}))
-		.query(async ({ctx, input}) => ctx.umbreld.files.search.search(input.query)),
+		.input(
+			z.object({
+				query: z.string(),
+				maxResults: z.number().positive().max(1000).default(250).optional(),
+			}),
+		)
+		.query(async ({ctx, input}) => ctx.umbreld.files.search.search(input.query, input.maxResults)),
 })

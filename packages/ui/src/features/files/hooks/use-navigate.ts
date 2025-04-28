@@ -34,6 +34,9 @@ export const useNavigate = () => {
 	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 
 	const navigateToDirectory = (path: string) => {
+		// clear any previous viewer item
+		setViewerItem(null)
+
 		navigate(`${BASE_ROUTE_PATH}${encodePathSegments(path)}`)
 	}
 

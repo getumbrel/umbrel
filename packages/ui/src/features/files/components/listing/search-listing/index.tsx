@@ -37,7 +37,7 @@ export function SearchListing() {
 
 	// query the backend – the hook internally short-circuits when provided an
 	// empty string, so clearing the search box stops the requests
-	const {results, isLoading, isError, error} = useSearchFiles(queryParam)
+	const {results, isLoading, isError, error} = useSearchFiles({query: queryParam})
 
 	// search results are currently returned in a single batch so we keep
 	// pagination disabled

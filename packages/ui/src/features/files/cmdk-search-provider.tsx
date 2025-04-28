@@ -1,5 +1,3 @@
-import {useMemo} from 'react'
-
 import {CmdkSearchProviderProps} from '@/components/cmdk-providers'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
@@ -15,18 +13,14 @@ export const FilesCmdkSearchProvider: React.FC<CmdkSearchProviderProps> = ({quer
 	const {navigateToItem} = useNavigate()
 	const trimmedQuery = query.trim()
 
-	const {results, isLoading} = useSearchFiles(trimmedQuery)
-
-	// we memoise a slice of the results just so we don't constantly re-create the
-	// array on every keystroke
-	const topResults = useMemo(() => results.slice(0, MAX_RESULTS), [results])
+	const {results, isLoading} = useSearchFiles({query: trimmedQuery, maxResults: MAX_RESULTS})
 
 	// return early if there is no query
 	if (trimmedQuery.length === 0) return null
 
-	if (isLoading || topResults.length === 0) return null
+	if (isLoading || results.length === 0) return null
 
-	return topResults.map((item) => (
+	return results.map((item) => (
 		<CommandItem
 			key={item.path}
 			icon={<FileItemIcon item={item} className='h-full w-full' />}

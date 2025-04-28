@@ -8,7 +8,6 @@ export default class Search {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	matchThreshold = 0.66
-	maxResults = 10
 	maxResultsDuringSearch = 10_000
 
 	constructor(umbreld: Umbreld) {
@@ -24,11 +23,11 @@ export default class Search {
 	// Search for fuzzy matches against all files in the home directory
 	// TODO: We should index the entire filesystem and search against a real database
 	// but for now this should work well enough.
-	async search(query: string) {
+	async search(query: string, maxResults = 250) {
 		let results: {score: number; systemPath: string}[] = []
 
 		// Helper to order the results by score and return the top results
-		const getBestResults = () => results.sort((a, b) => b.score - a.score).slice(0, this.maxResults)
+		const getBestResults = () => results.sort((a, b) => b.score - a.score).slice(0, maxResults)
 
 		// Iterate over all files in the home directory
 		for await (const systemPath of this.#umbreld.files.streamContents('/Home')) {

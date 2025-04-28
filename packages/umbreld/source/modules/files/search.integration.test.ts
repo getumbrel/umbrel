@@ -73,7 +73,7 @@ describe('files.search()', () => {
 		)
 	})
 
-	test('returns at most 10 results', async () => {
+	test('respects maxResults', async () => {
 		const limitDir = `${umbreld.instance.dataDirectory}/home/search-limit-test`
 		await fse.mkdir(limitDir)
 
@@ -84,13 +84,30 @@ describe('files.search()', () => {
 		}
 		await Promise.all(fileCreationPromises)
 
-		const results = await umbreld.client.files.search.query({query: 'alpha'})
+		const results = await umbreld.client.files.search.query({query: 'alpha', maxResults: 5})
 
-		expect(results.length).toBe(10)
+		expect(results.length).toBe(5)
 	})
 
 	test('returns an empty array when there are no matches', async () => {
 		const results = await umbreld.client.files.search.query({query: 'completely-nonexistent-query'})
 		expect(results).toStrictEqual([])
+	})
+
+	test('throws when maxResults is unsafely large', async () => {
+		const maxAllowedValue = 1000
+
+		// Works for max value
+		await expect(
+			umbreld.client.files.search.query({
+				query: 'completely-nonexistent-query',
+				maxResults: maxAllowedValue,
+			}),
+		).resolves.toStrictEqual([])
+
+		// Throws for one over max value
+		await expect(
+			umbreld.client.files.search.query({query: 'completely-nonexistent-query', maxResults: maxAllowedValue + 1}),
+		).rejects.toThrow('too_big')
 	})
 })
