@@ -1,5 +1,5 @@
 import {Close} from '@radix-ui/react-dialog'
-import {SetStateAction, useEffect, useState} from 'react'
+import {SetStateAction, useEffect, useMemo, useState} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -121,33 +121,43 @@ export function SelectDependencies({
 	const {isLoading, userApps, userAppsKeyed} = useApps()
 	const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
 
-	if (isLoading || !userApps || !userAppsKeyed || !apps || !appsKeyed) return null
+	// Reify dependency data once we have the list of available apps
+	const reifiedDependencies = useMemo(() => {
+		if (!appsKeyed) return []
+		return dependencies.map((alternatives) =>
+			alternatives.map(({dependencyId, appId}) => ({
+				dependencyId,
+				app: appsKeyed[appId],
+			})),
+		)
+	}, [appsKeyed, dependencies])
 
-	const reifiedDependencies = dependencies.map((alternatives) =>
-		alternatives.map(({dependencyId, appId}) => ({
-			dependencyId,
-			app: appsKeyed[appId],
-		})),
-	)
-
-	// Pre-select installed apps or main alternatives
+	// Pre-select installed apps or main alternatives when dependencies change or
+	// when the list of user/available apps becomes available
 	useEffect(() => {
+		if (!userAppsKeyed || reifiedDependencies.length === 0) return
 		const newSelectedDependencies: Record<string, string> = {
 			...selectedDependencies,
 		}
+
 		reifiedDependencies.forEach((alternatives) => {
 			const dependencyId = alternatives[0].dependencyId
 			if (newSelectedDependencies[dependencyId]) return
+
 			const installedOrInstallingApp = alternatives.find(({app}) => {
 				const userApp = userAppsKeyed?.[app.id]
 				return userApp && (arrayIncludes(installedStates, userApp.state) || userApp.state === 'installing')
 			})
+
 			newSelectedDependencies[dependencyId] = installedOrInstallingApp
 				? installedOrInstallingApp.app.id
 				: alternatives[0].app.id
 		})
+
 		setSelectedDependencies(newSelectedDependencies)
-	}, [dependencies])
+	}, [dependencies, userAppsKeyed, reifiedDependencies])
+
+	if (isLoading || !userApps || !userAppsKeyed || !apps || !appsKeyed) return null
 
 	const selectDependency = (dependencyId: string, appId: string) => {
 		const newSelectedDependencies = {

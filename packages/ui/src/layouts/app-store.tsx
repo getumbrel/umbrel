@@ -122,13 +122,9 @@ function CommunityAppsDropdown() {
 function SearchResults({query}: {query: string}) {
 	const {isLoading, apps} = useAvailableApps()
 
-	if (isLoading) {
-		return <Loading />
-	}
-
 	const search = useMemo(
 		() =>
-			createSearch(apps, [
+			createSearch(apps ?? [], [
 				{
 					name: 'name',
 					weight: 3,
@@ -150,6 +146,10 @@ function SearchResults({query}: {query: string}) {
 	)
 
 	const appResults = search(query)
+
+	if (isLoading) {
+		return <Loading />
+	}
 
 	const title = (
 		<span>

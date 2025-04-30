@@ -23,15 +23,21 @@ export default function AppPage() {
 	const {apps, isLoading: isLoadingApps} = useAvailableApps()
 	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()
 
+	const installButtonRef = useRef<{triggerInstall: (highlightDependency?: string) => void}>(null)
+
+	const recommendedApps = useMemo(() => {
+		if (!apps || !app) return []
+		return getRecommendationsFor(apps, app.id)
+	}, [apps, app])
+
 	if (isLoading || isLoadingApps || isLoadingUserApps) return <Loading />
+
 	if (!app) throw new Error('App not found')
 
 	const userApp = userAppsKeyed?.[app.id]
 
-	const installButtonRef = useRef<{triggerInstall: (highlightDependency?: string) => void}>(null)
-	const recommendedApps = useMemo(() => getRecommendationsFor(apps, app.id), [])
-
 	const showDependencies = (dependencyId?: string) => {
+		if (!app) return
 		const userApp = userAppsKeyed?.[app.id]
 		if (userApp) {
 			// Show app settings dialog when app is installed
@@ -43,6 +49,9 @@ export default function AppPage() {
 			installButtonRef.current.triggerInstall(dependencyId)
 		}
 	}
+
+	if (isLoading || isLoadingApps || isLoadingUserApps) return <Loading />
+	if (!app) throw new Error('App not found')
 
 	return (
 		<div className={appPageWrapperClass}>
