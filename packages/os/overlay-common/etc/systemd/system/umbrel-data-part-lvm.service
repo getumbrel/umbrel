@@ -1,0 +1,11 @@
+[Unit]
+Description=Patch data mount point to use LVM
+Before=local-fs.target
+Wants=network.target
+
+[Service]
+ExecStart=/opt/umbrel-data-part-lvm/umbrel-data-part-lvm
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

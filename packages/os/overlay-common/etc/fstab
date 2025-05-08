@@ -1,6 +1,7 @@
 # <device>                                  <dir>                        <type>      <options>   <dump>  <fsck>
-/                                           /mnt/root                    none        bind        0       0
-/data/umbrel-os/var/log                     /var/log                     none        bind        0       0
-/data/umbrel-os/var/lib/docker              /var/lib/docker              none        bind        0       0
-/data/umbrel-os/home                        /home                        none        bind        0       0
-/data/umbrel-os/var/lib/systemd/timesync    /var/lib/systemd/timesync    none        bind        0       0
+/ /mnt/root none bind 0 0
+/dev/data_vg/data_lv /data ext4 defaults,x-systemd.growfs 0 0
+/data/umbrel-os/var/log /var/log none bind 0 0
+/data/umbrel-os/var/lib/docker /var/lib/docker none bind 0 0
+/data/umbrel-os/home /home none bind 0 0
+/data/umbrel-os/var/lib/systemd/timesync /var/lib/systemd/timesync none bind 0 0

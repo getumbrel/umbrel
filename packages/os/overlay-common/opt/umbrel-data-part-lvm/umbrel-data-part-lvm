@@ -1,0 +1,6 @@
+#!/bin/bash
+
+awk '!($2 == "/data" && $1 != "/dev/data_vg/data_lv")' /etc/fstab >/etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+
+# reload systemd to pick up the changes
+systemctl daemon-reload || true
