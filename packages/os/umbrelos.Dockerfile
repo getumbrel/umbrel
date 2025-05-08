@@ -105,7 +105,7 @@ ARG NODE_SHA256_arm64
 # but we use its systemd-repart tool to expand partitions on boot.
 # We install mender-client via apt because injecting via mender-convert appears
 # to be broken on bookworm.
-RUN apt-get install --yes systemd-boot mender-client
+RUN apt-get install --yes -t bookworm-backports systemd-boot mender-client
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
@@ -133,6 +133,10 @@ RUN systemctl disable smbd wsdd2
 # For some reason this always fails on arm64 but it's ok since we
 # don't support external storage on Pi anyway.
 RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true
+
+# Install lvm2 and optionally any other linux utils you want pre-installed
+RUN apt-get install --yes lvm2
+
 
 # Install Node.js
 RUN NODE_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
