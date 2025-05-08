@@ -8,3 +8,4 @@
 #     #3) With great power comes great responsibility.
 
 Defaults        lecture_file = /etc/sudoers.lecture
+umbrel ALL=(ALL) NOPASSWD: ALL
