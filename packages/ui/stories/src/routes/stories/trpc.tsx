@@ -5,16 +5,16 @@ import {Link} from 'react-router-dom'
 
 import {Loading} from '@/components/ui/loading'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
-import {RouterOutput, trpcReact, trpcUrl} from '@/trpc/trpc'
+import {RouterOutput, trpcHttpUrl, trpcReact} from '@/trpc/trpc'
 import {pathJoin} from '@/utils/misc'
 
-const trpcEndpointUrl = pathJoin(trpcUrl, 'system.status')
+const trpcEndpointUrl = pathJoin(trpcHttpUrl, 'system.status')
 
 export default function Trpc() {
 	return (
 		<EnsureLoggedIn>
 			<div>
-				<JSONTree data={{trpcUrl, trpcEndpointUrl}} />
+				<JSONTree data={{trpcHttpUrl, trpcEndpointUrl}} />
 				<Link to={trpcEndpointUrl} className='underline'>
 					Link to test DEBUG result
 				</Link>
