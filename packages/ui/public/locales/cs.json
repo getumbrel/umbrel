@@ -533,7 +533,7 @@
   "software-update.title": "Aktualizace softwaru",
   "software-update.updating-to": "Aktualizuje se na {{name}}",
   "software-update.view": "Zobrazit",
-  "something-left": "{{left}} vlevo",
+  "something-left": "Zbývá {{left}}",
   "something-went-wrong": "⚠ Něco se pokazilo",
   "start": "Zahájit",
   "stop": "Zastavit",
