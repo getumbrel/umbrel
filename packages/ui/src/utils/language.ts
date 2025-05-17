@@ -2,6 +2,7 @@ import {map} from 'remeda'
 
 export const languages = [
 	{name: 'English', code: 'en'},
+	{name: 'Русский', code: 'ru'},
 	{name: 'Deutsch', code: 'de'},
 	{name: 'Español', code: 'es'},
 	{name: 'Français', code: 'fr'},
