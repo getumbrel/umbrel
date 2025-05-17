@@ -1,5 +1,5 @@
 import {formatDistanceStrict, Locale} from 'date-fns'
-import {de, enUS, es, fr, hu, it, ja, ko, nl, pt, tr, uk} from 'date-fns/locale'
+import {de, enUS, es, fr, hu, it, ja, ko, nl, pt, tr, uk, ru} from 'date-fns/locale' // Added 'ru' here
 
 import {UNKNOWN} from '@/constants'
 import {SupportedLanguageCode} from '@/utils/language'
@@ -10,7 +10,6 @@ export const MS_PER_HOUR: number = MS_PER_MINUTE * 60
 
 export const languageCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 	en: enUS,
-	en: ru,
 	de: de,
 	es: es,
 	fr: fr,
@@ -22,6 +21,7 @@ export const languageCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 	tr: tr,
 	ja: ja,
 	ko: ko,
+	ru: ru,
 }
 
 export function duration(seconds: number | undefined, languageCode: SupportedLanguageCode) {
