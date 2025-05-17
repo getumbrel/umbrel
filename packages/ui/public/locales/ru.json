@@ -1,8 +1,8 @@
 {
-  "2fa": "2FA",
-  "2fa-description": "A second layer of security for your Umbrel login and apps",
-  "2fa.disable.success": "Two-factor authentication disabled",
-  "2fa.disable.title": "Disable two-factor authentication",
+  "2fa": "2ФА",
+  "2fa-description": "Второй уровень безопасности для вашего логина и приложений Umbrel",
+  "2fa.disable.success": "Двухфакторная аутентификация отключена",
+  "2fa.disable.title": "Отключить двухфакторную аутентификацию",
   "2fa.enable.or-paste": "Or paste the following code in your authenticator app",
   "2fa.enable.scan-this": "Scan this QR code using an authenticator app like Google Authenticator or Authy",
   "2fa.enable.success": "Two-factor authentication enabled",
