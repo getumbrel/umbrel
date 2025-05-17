@@ -25,6 +25,7 @@ const englishReferenceFilePath = path.join(localesDirectory, 'en.json')
 
 const languageMapping = {
 	en: 'English',
+	ru: 'Russian',
 	de: 'German',
 	es: 'Spanish',
 	fr: 'French',
