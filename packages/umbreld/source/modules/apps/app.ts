@@ -241,17 +241,15 @@ export default class App {
 
 	async uninstall() {
 		this.state = 'uninstalling'
-		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+		await pRetry(() => appScript(this.#umbreld, 'uninstall', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
-					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					`Attempt ${error.attemptNumber} uninstalling app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
 					error,
 				)
 			},
 			retries: 2,
 		})
-		await appScript(this.#umbreld, 'nuke-images', this.id)
-		await fse.remove(this.dataDirectory)
 
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
 			let apps = (await get('apps')) || []
