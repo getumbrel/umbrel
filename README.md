@@ -116,7 +116,6 @@ Here are some of the apps available in the Umbrel App Store. For the complete li
 - [Element](https://apps.umbrel.com/app/element) — A glossy Matrix client compatible with Synapse
 - [Invidious](https://apps.umbrel.com/app/invidious) — Browse YouTube without tracking or ads
 - [LibReddit](https://apps.umbrel.com/app/libreddit) — An alternative private front-end to Reddit
-- [Nitter](https://apps.umbrel.com/app/nitter) — Browse Twitter without tracking or ads
 - [Nostr Relay](https://apps.umbrel.com/app/nostr-relay) - Backup all your Nostr activity with your private relay
 - [Synapse](https://apps.umbrel.com/app/synapse) — Matrix reference homeserver
 
