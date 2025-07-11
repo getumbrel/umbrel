@@ -4,18 +4,24 @@ import {useParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {ButtonLink} from '@/components/ui/button-link'
+import {useAvailableApps} from '@/providers/available-apps'
 import {useBreakpoint} from '@/utils/tw'
 
-import {Category, Categoryish, categoryishDescriptions} from './constants'
+import {categoryishDescriptions} from './constants'
+import {getAllCategories, getCategoryLabel} from './utils'
 
 export function ConnectedAppStoreNav() {
-	const {categoryishId} = useParams<{categoryishId: Category}>()
-	const activeId: Categoryish = categoryishId || categoryishDescriptions[0].id
+	const {categoryishId} = useParams<{categoryishId: string}>()
+	const {appsGroupedByCategory} = useAvailableApps()
 
-	return <AppStoreNav activeId={activeId} />
+	// Get all categories (predefined + others from actual app data)
+	const allCategories = getAllCategories(appsGroupedByCategory || {})
+	const activeId: string = categoryishId || categoryishDescriptions[0].id
+
+	return <AppStoreNav activeId={activeId} allCategories={allCategories} />
 }
 
-export function AppStoreNav({activeId}: {activeId: Categoryish}) {
+export function AppStoreNav({activeId, allCategories}: {activeId: string; allCategories: string[]}) {
 	const scrollerRef = useRef<HTMLDivElement>(null)
 	const scrollToRef = useRef<HTMLAnchorElement>(null)
 	const breakpoint = useBreakpoint()
@@ -44,23 +50,23 @@ export function AppStoreNav({activeId}: {activeId: Categoryish}) {
 			direction='x'
 			className='umbrel-hide-scrollbar -my-2 flex gap-[5px] overflow-x-auto py-2'
 		>
-			{categoryishDescriptions.map((category) => (
+			{allCategories.map((categoryId) => (
 				<ButtonLink
-					key={category.id}
-					to={categoryIdToPath(category.id)}
-					variant={category.id === activeId ? 'primary' : 'default'}
-					ref={category.id === activeId ? scrollToRef : undefined}
+					key={categoryId}
+					to={categoryIdToPath(categoryId)}
+					variant={categoryId === activeId ? 'primary' : 'default'}
+					ref={categoryId === activeId ? scrollToRef : undefined}
 					size={size}
 					unstable_viewTransition
 				>
-					{category.label()}
+					{getCategoryLabel(categoryId)}
 				</ButtonLink>
 			))}
 		</FadeScroller>
 	)
 }
 
-function categoryIdToPath(categoryId: Category | 'all' | 'discover') {
+function categoryIdToPath(categoryId: string) {
 	if (categoryId === 'discover') {
 		return '/app-store'
 	}

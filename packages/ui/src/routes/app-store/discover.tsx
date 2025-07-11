@@ -4,11 +4,11 @@ import {ButtonLink} from '@/components/ui/button-link'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
-import {categoryDescriptionsKeyed} from '@/modules/app-store/constants'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
 import {AppsThreeColumnSection} from '@/modules/app-store/discover/apps-three-column-section'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
+import {getCategoryLabel} from '@/modules/app-store/utils'
 import {useAvailableApps} from '@/providers/available-apps'
 import {t} from '@/utils/i18n'
 
@@ -86,7 +86,7 @@ function DiscoverContent() {
 							{section.category && (
 								<ButtonLink variant='primary' size='dialog' to={`/app-store/category/${section.category}`}>
 									{t('app-store.browse-category-apps', {
-										category: t(categoryDescriptionsKeyed[section.category].label()),
+										category: getCategoryLabel(section.category),
 									})}
 								</ButtonLink>
 							)}

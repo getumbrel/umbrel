@@ -11,6 +11,7 @@ export const categories = [
 	'finance',
 	'ai',
 	'developer',
+	'crypto',
 ] as const
 
 export type Category = (typeof categories)[number]
@@ -33,6 +34,7 @@ export const categoryishDescriptions = [
 	{id: 'automation', label: () => t('app-store.category.automation')},
 	{id: 'ai', label: () => t('app-store.category.ai')},
 	{id: 'developer', label: () => t('app-store.category.developer')},
+	{id: 'crypto', label: () => t('app-store.category.crypto')},
 ] as const satisfies readonly {id: Categoryish; label: () => string}[]
 
 export const categoryDescriptionsKeyed = keyBy(categoryishDescriptions, 'id')

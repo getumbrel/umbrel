@@ -11,6 +11,7 @@ import {GenericErrorText} from '@/components/ui/generic-error-text'
 import {Loading} from '@/components/ui/loading'
 import {useDemoInstallProgress} from '@/hooks/use-demo-progress'
 import {AppStoreNav} from '@/modules/app-store/app-store-nav'
+import {categoryishDescriptions} from '@/modules/app-store/constants'
 import {AppGallerySection, AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {SelectDependenciesDialog} from '@/modules/app-store/select-dependencies-dialog'
 import {UpdatesDialog} from '@/modules/app-store/updates-dialog'
@@ -22,13 +23,15 @@ import {Separator} from '@/shadcn-components/ui/separator'
 import {appStates, progressStates} from '@/trpc/trpc'
 
 export default function AppStoreStory() {
+	const allCategories = categoryishDescriptions.map((c) => c.id)
+
 	return (
 		<>
 			<InstallButtonExamples />
 			<div className='max-w-sm'>
-				<AppStoreNav activeId='automation' />
-				<AppStoreNav activeId='discover' />
-				<AppStoreNav activeId='developer' />
+				<AppStoreNav activeId='automation' allCategories={allCategories} />
+				<AppStoreNav activeId='discover' allCategories={allCategories} />
+				<AppStoreNav activeId='developer' allCategories={allCategories} />
 			</div>
 
 			<ErrorBoundary fallback={<GenericErrorText />}>
