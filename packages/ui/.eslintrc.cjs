@@ -1,10 +1,20 @@
 module.exports = {
 	root: true,
 	env: {browser: true, es2020: true},
-	extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'plugin:react-hooks/recommended'],
+	extends: [
+		'eslint:recommended',
+		'plugin:@typescript-eslint/recommended',
+		'plugin:react-hooks/recommended',
+		'plugin:tailwindcss/recommended',
+	],
 	ignorePatterns: ['dist', '.eslintrc.cjs'],
 	parser: '@typescript-eslint/parser',
-	settings: {react: {version: '18.2'}},
+	settings: {
+		react: {version: '18.2'},
+		tailwindcss: {
+			callees: ['cn'],
+		},
+	},
 	plugins: ['react', 'react-refresh', '@tanstack/query'],
 	rules: {
 		'react/jsx-key': 'error',
@@ -19,5 +29,7 @@ module.exports = {
 		'@typescript-eslint/no-unused-vars': 'warn',
 		// Allow any
 		'@typescript-eslint/no-explicit-any': 'off',
+
+		'tailwindcss/no-contradicting-classname': 'warn',
 	},
 }
