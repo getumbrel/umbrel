@@ -136,6 +136,7 @@
 		"serve": "14.2.1",
 		"tailwindcss": "3.4.1",
 		"tailwindcss-animate": "1.0.7",
+		"tailwindcss-radix": "^4.0.2",
 		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript": "^5.8.3",
 		"vite": "^4.4.5",

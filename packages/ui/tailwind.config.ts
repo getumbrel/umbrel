@@ -2,6 +2,7 @@ import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindTypography from '@tailwindcss/typography'
 import {mapValues} from 'remeda'
 import tailwindCssAnimate from 'tailwindcss-animate'
+import tailwindRadix from 'tailwindcss-radix'
 import defaultTheme from 'tailwindcss/defaultTheme'
 import {PluginAPI} from 'tailwindcss/types/config'
 
@@ -197,7 +198,13 @@ export default {
 			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography, utilPlugin],
+	plugins: [
+		tailwindCssAnimate,
+		tailwindContainerQueries,
+		tailwindTypography,
+		utilPlugin,
+		tailwindRadix({variantPrefix: 'radix'}),
+	],
 }
 
 function utilPlugin(plugin: PluginAPI) {
