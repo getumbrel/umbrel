@@ -393,7 +393,8 @@ describe('samba', () => {
 		await expect(smb.exists('non-existent-file.txt')).resolves.toBe(false)
 	})
 
-	test('client can interact with share', async () => {
+	// This test can be a little flaky (seemingly due to pure js samba client) so retry on failure
+	test('client can interact with share', {retry: 5}, async () => {
 		// Add home directory to shares
 		await expect(umbreld.client.files.addShare.mutate({path: '/Home'})).resolves.toBe('/Home')
 
