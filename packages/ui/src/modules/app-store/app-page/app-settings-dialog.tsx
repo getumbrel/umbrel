@@ -161,9 +161,7 @@ function AppSettingsDialogForApp({
 							onInstallClick={() => dialogProps.onOpenChange(false)}
 							highlightDependency={openDependency}
 						/>
-					) : (
-						t('app-settings.no-dependencies')
-					)}
+					) : null}
 					{hadChanges && (
 						<DialogFooter>
 							<Close asChild>
