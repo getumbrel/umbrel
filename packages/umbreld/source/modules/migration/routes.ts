@@ -1,4 +1,4 @@
-import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../trpc.js'
+import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../server/trpc/trpc.js'
 
 import {
 	findExternalUmbrelInstall,
@@ -6,8 +6,8 @@ import {
 	migrateData,
 	getMigrationStatus,
 	unmountExternalDrives,
-} from '../../../migration.js'
-import isUmbrelHome from '../../../is-umbrel-home.js'
+} from './migration.js'
+import isUmbrelHome from '../is-umbrel-home.js'
 
 export default router({
 	isUmbrelHome: privateProcedure.query(() => isUmbrelHome()),

@@ -3,7 +3,7 @@ import {applyWSSHandler} from '@trpc/server/adapters/ws'
 
 import {router} from './trpc.js'
 import {createContextExpress, createContextWss} from './context.js'
-import migration from './routes/migration.js'
+import migration from '../../migration/routes.js'
 import system from './routes/system.js'
 import wifi from './routes/wifi.js'
 import user from './routes/user.js'

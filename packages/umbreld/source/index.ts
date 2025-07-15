@@ -9,7 +9,7 @@ const packageJson = (await import('../package.json', {assert: {type: 'json'}})).
 import {UMBREL_APP_STORE_REPO} from './constants.js'
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
-import Migration from './modules/migration/index.js'
+import Migration from './modules/startup-migrations/index.js'
 import Server from './modules/server/index.js'
 import User from './modules/user.js'
 import AppStore from './modules/apps/app-store.js'
