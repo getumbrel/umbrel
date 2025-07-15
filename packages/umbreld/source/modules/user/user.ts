@@ -2,9 +2,9 @@ import bcrypt from 'bcryptjs'
 import fse from 'fs-extra'
 import {$} from 'execa'
 
-import type Umbreld from '../index.js'
+import type Umbreld from '../../index.js'
 
-import * as totp from './utilities/totp.js'
+import * as totp from '../utilities/totp.js'
 
 export default class User {
 	#store: Umbreld['store']

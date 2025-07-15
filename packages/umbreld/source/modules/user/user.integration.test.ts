@@ -1,8 +1,8 @@
 import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 
-import * as totp from '../../../utilities/totp.js'
+import * as totp from '../utilities/totp.js'
 
-import createTestUmbreld from '../../../test-utilities/create-test-umbreld.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 

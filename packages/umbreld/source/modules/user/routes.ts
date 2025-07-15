@@ -1,8 +1,8 @@
 import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 
-import {router, publicProcedure, privateProcedure} from '../trpc.js'
-import * as totp from '../../../utilities/totp.js'
+import {router, publicProcedure, privateProcedure} from '../server/trpc/trpc.js'
+import * as totp from '../utilities/totp.js'
 
 const ONE_SECOND = 1000
 const ONE_MINUTE = 60 * ONE_SECOND
