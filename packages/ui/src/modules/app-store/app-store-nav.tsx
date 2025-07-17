@@ -16,9 +16,19 @@ export function ConnectedAppStoreNav() {
 
 	// Get all categories (predefined + others from actual app data)
 	const allCategories = getAllCategories(appsGroupedByCategory || {})
+
+	// Filter to only show categories that have apps (plus discover/all)
+	const categoriesWithApps = allCategories.filter((categoryId) => {
+		// Always include 'discover' and 'all' regardless of app count
+		if (categoryId === 'discover' || categoryId === 'all') return true
+		// For other categories, only include if they have apps
+		// A category may have no apps if it is a hardcoded one in the OS and we have changed the app manifests to no longer include it.
+		return (appsGroupedByCategory as any)?.[categoryId]?.length > 0
+	})
+
 	const activeId: string = categoryishId || categoryishDescriptions[0].id
 
-	return <AppStoreNav activeId={activeId} allCategories={allCategories} />
+	return <AppStoreNav activeId={activeId} allCategories={categoriesWithApps} />
 }
 
 export function AppStoreNav({activeId, allCategories}: {activeId: string; allCategories: string[]}) {
