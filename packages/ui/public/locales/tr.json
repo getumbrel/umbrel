@@ -50,6 +50,8 @@
   "app-store.category.networking": "Ağ",
   "app-store.category.social": "Sosyal",
   "app-store.description": "Uygulama güncelleme ayarlarınız",
+  "app-store.discover.temporarily-unavailable-description": "Uygulama bulmak için yukarıdaki kategorilere göz atabilir veya arama yapabilirsiniz",
+  "app-store.discover.temporarily-unavailable-title": "Öne çıkan içerik şu anda kullanılamıyor",
   "app-store.menu.community-app-stores": "Topluluk Uygulama Mağazaları",
   "app-store.search-apps": "Uygulama ara",
   "app-store.search.no-results": "Sonuç yok",

@@ -50,6 +50,8 @@
   "app-store.category.networking": "Hálózat",
   "app-store.category.social": "Közösségi",
   "app-store.description": "Az alkalmazásfrissítési beállításaid",
+  "app-store.discover.temporarily-unavailable-description": "Böngészd a fenti kategóriákat, vagy keress, hogy alkalmazásokat találj",
+  "app-store.discover.temporarily-unavailable-title": "A kiemelt tartalom jelenleg nem érhető el",
   "app-store.menu.community-app-stores": "Közösségi alkalmazásboltok",
   "app-store.search-apps": "Alkalmazások keresése",
   "app-store.search.no-results": "Nincs találat",

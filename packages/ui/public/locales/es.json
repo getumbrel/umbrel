@@ -50,6 +50,8 @@
   "app-store.category.networking": "Redes",
   "app-store.category.social": "Social",
   "app-store.description": "Tus configuraciones de actualización de aplicaciones",
+  "app-store.discover.temporarily-unavailable-description": "Explora las categorías de arriba o usa la búsqueda para encontrar aplicaciones",
+  "app-store.discover.temporarily-unavailable-title": "Contenido destacado temporalmente no disponible",
   "app-store.menu.community-app-stores": "Tiendas de Aplicaciones Comunitarias",
   "app-store.search-apps": "Buscar aplicaciones",
   "app-store.search.no-results": "Sin resultados",

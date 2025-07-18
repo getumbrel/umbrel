@@ -8,16 +8,31 @@ import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
 import {AppsThreeColumnSection} from '@/modules/app-store/discover/apps-three-column-section'
 import {AppsGallerySection} from '@/modules/app-store/gallery-section'
+import {cardFaintClass} from '@/modules/app-store/shared'
 import {getCategoryLabel} from '@/modules/app-store/utils'
 import {useAvailableApps} from '@/providers/available-apps'
+import {cn} from '@/shadcn-lib/utils'
+import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {useDiscoverQuery} from './use-discover-query'
 
-const getAppById = (appId: string, apps: NonNullable<ReturnType<typeof useAvailableApps>['apps']>) => {
+const getAppById = (appId: string, apps: RegistryApp[]): RegistryApp | undefined => {
 	const app = apps.find((app) => app.id === appId)
-	if (!app) throw new Error(`No such app: ${appId}`)
+	// Return undefined instead of throwing to allow graceful filtering of missing apps
+	// This can happen if a new app is added to the app store and the discover endpoint, but umbrelOS hasn't pulled down the app store repo changes yet
+	if (!app) return undefined
 	return app
+}
+
+// Fallback component when discover API fails
+function DiscoverUnavailable() {
+	return (
+		<div className={cn(cardFaintClass, 'flex h-40 flex-col items-center justify-center p-8 text-center')}>
+			<p className='text-15 font-medium text-white/80'>{t('app-store.discover.temporarily-unavailable-title')}</p>
+			<p className='mt-2 text-12 text-white/50'>{t('app-store.discover.temporarily-unavailable-description')}</p>
+		</div>
+	)
 }
 
 export default function Discover() {
@@ -33,7 +48,6 @@ export default function Discover() {
 
 function DiscoverContent() {
 	const availableApps = useAvailableApps()
-
 	const discoverQ = useDiscoverQuery()
 
 	if (availableApps.isLoading || discoverQ.isLoading) {
@@ -42,8 +56,9 @@ function DiscoverContent() {
 
 	const {apps} = availableApps
 
-	if (!discoverQ.data) {
-		throw new Error('No data')
+	// Check for error state and show graceful fallback
+	if (discoverQ.isError || !discoverQ.data) {
+		return <DiscoverUnavailable />
 	}
 
 	const {banners, sections} = discoverQ.data

@@ -50,6 +50,8 @@
   "app-store.category.networking": "Мережі",
   "app-store.category.social": "Соціальні мережі",
   "app-store.description": "Налаштування оновлення ваших програм",
+  "app-store.discover.temporarily-unavailable-description": "Перегляньте категорії вище або скористайтеся пошуком, щоб знайти застосунки",
+  "app-store.discover.temporarily-unavailable-title": "Рекомендований контент тимчасово недоступний",
   "app-store.menu.community-app-stores": "Спільнота магазинів програм",
   "app-store.search-apps": "Пошук програм",
   "app-store.search.no-results": "Немає результатів",

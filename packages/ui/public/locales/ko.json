@@ -50,6 +50,8 @@
   "app-store.category.networking": "네트워킹",
   "app-store.category.social": "소셜",
   "app-store.description": "앱 업데이트 설정",
+  "app-store.discover.temporarily-unavailable-description": "위 카테고리를 둘러보거나 검색해서 앱을 찾아보세요",
+  "app-store.discover.temporarily-unavailable-title": "추천 콘텐츠를 일시적으로 이용할 수 없어요",
   "app-store.menu.community-app-stores": "Community App Stores",
   "app-store.search-apps": "앱 검색",
   "app-store.search.no-results": "결과가 없습니다",

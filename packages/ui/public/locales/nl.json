@@ -50,6 +50,8 @@
   "app-store.category.networking": "Netwerken",
   "app-store.category.social": "Sociaal",
   "app-store.description": "Je app-update instellingen",
+  "app-store.discover.temporarily-unavailable-description": "Blader door de categorieën hierboven of zoek om apps te vinden",
+  "app-store.discover.temporarily-unavailable-title": "Uitgelichte inhoud tijdelijk niet beschikbaar",
   "app-store.menu.community-app-stores": "Community App Stores",
   "app-store.search-apps": "Apps zoeken",
   "app-store.search.no-results": "Geen resultaten",

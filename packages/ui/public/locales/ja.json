@@ -50,6 +50,8 @@
   "app-store.category.networking": "ネットワーキング",
   "app-store.category.social": "ソーシャル",
   "app-store.description": "あなたのアプリ更新設定",
+  "app-store.discover.temporarily-unavailable-description": "上のカテゴリをブラウズするか、検索してアプリを見つけてください",
+  "app-store.discover.temporarily-unavailable-title": "特集コンテンツは一時的に利用できません",
   "app-store.menu.community-app-stores": "コミュニティApp Stores",
   "app-store.search-apps": "アプリを検索",
   "app-store.search.no-results": "結果なし",
