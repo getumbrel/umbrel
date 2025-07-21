@@ -32,13 +32,13 @@ export const AppsThreeColumnSection: React.FC<AppsThreeColumnSectionProps> = ({
 		<div
 			className={cn(
 				cardClass,
-				'flex flex-wrap justify-center gap-x-16 gap-y-8 overflow-hidden p-4 text-center xl:flex-nowrap xl:justify-start xl:text-left',
+				'flex flex-wrap justify-center gap-x-16 gap-y-8 overflow-hidden p-4 text-center xl:flex-nowrap xl:text-left',
 			)}
 		>
 			<div
 				className={cn(
 					'flex w-full flex-col items-center justify-center md:w-auto xl:items-start',
-					textLocation === 'right' && 'order-2',
+					textLocation === 'right' && 'xl:order-2',
 				)}
 			>
 				<p className={sectionOverlineClass}>{overline}</p>
