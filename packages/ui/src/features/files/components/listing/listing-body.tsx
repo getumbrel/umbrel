@@ -43,8 +43,7 @@ export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMor
 					<Table>
 						<TableHeader>
 							<TableRow className='cursor-default border-none'>
-								<TableCell colSpan={5} className='py-0 pl-0 pr-[12px]'>
-									{/* pr-[12px] to align the column headers with the table cells due to the scrollbar consuming 24px/2 space in virtualized-list component */}
+								<TableCell colSpan={5} className='py-0 pl-0 pr-0'>
 									<div className='flex'>
 										{SORT_BY_OPTIONS.map((option) => (
 											<button

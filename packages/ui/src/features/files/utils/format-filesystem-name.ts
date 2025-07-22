@@ -7,7 +7,9 @@ export function formatItemName({name, maxLength = 30}: {name: FileSystemItem['na
 	// For files, handle name and extension separately
 	const {name: fileName, extension} = splitFileName(name)
 
-	const truncatedName = truncateName(fileName, maxLength)
+	// Account for extension length when truncating so that truncated files with extensions vs no extensions have the same length
+	const nameMaxLength = extension ? maxLength - extension.length : maxLength
+	const truncatedName = truncateName(fileName, nameMaxLength)
 	return extension ? `${truncatedName}${extension}` : truncatedName
 }
 
@@ -45,8 +47,10 @@ export function splitFileName(fileName: string): {name: string; extension: strin
 function truncateName(name: string, maxLength: number): string {
 	if (name.length <= maxLength) return name
 
-	const startLength = Math.ceil(maxLength * 0.6) // Keep more characters at start
-	const endLength = Math.floor(maxLength * 0.3) // Keep fewer at end
+	// Reserve 3 characters for "..."
+	const availableLength = maxLength - 3
+	const startLength = Math.ceil(availableLength * 0.6) // Keep more characters at start
+	const endLength = availableLength - startLength // Keep remaining at end
 
 	const start = name.slice(0, startLength)
 	const end = name.slice(-endLength)

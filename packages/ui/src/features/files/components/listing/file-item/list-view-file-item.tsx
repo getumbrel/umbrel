@@ -1,11 +1,11 @@
 import '@/features/files/components/listing/file-item/list-view-file-item.css'
 
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
+import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {FILE_TYPE_MAP} from '@/features/files/constants'
 import type {FileSystemItem} from '@/features/files/types'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
-import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -38,14 +38,18 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 				<div className='flex-shrink-0'>
 					<FileItemIcon item={item} className='h-7 w-7' />
 				</div>
-				<div className='flex w-[100%] items-center justify-between'>
-					<div className='flex flex-col'>
+				<div className='flex flex-1 items-center justify-between overflow-hidden'>
+					<div className='flex min-w-0 flex-1 flex-col overflow-hidden'>
 						{isEditingName ? (
 							<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
 						) : (
-							<span className='min-w-0 cursor-text truncate text-12'>{formatItemName({name: item.name})}</span>
+							<TruncatedFilename
+								filename={item.name}
+								view='list'
+								className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap pr-2 text-12'
+							/>
 						)}
-						<span className='text-11 text-white/40'>
+						<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-11 text-white/40'>
 							{isUploading
 								? uploadingProgress === 0
 									? t('files-state.waiting')
@@ -53,7 +57,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 								: formatFilesystemDate(item.modified, languageCode)}
 						</span>
 					</div>
-					<span className='text-11 text-white/40'>
+					<span className='shrink-0 whitespace-nowrap pl-2 text-right text-11 text-white/40'>
 						{item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')
@@ -78,7 +82,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 					{isEditingName ? (
 						<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
 					) : (
-						<span className='min-w-0 truncate text-12'>{formatItemName({name: item.name})}</span>
+						<TruncatedFilename filename={item.name} view='list' className='min-w-0 text-12' />
 					)}
 				</div>
 			</div>
