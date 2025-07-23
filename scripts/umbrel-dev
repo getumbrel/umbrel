@@ -50,8 +50,16 @@ natively works on Linux and can be done with OrbStack on macOS. On Windows this 
 EOF
 }
 
+get_target_arch() {
+    case "$(uname -m)" in
+        x86_64) echo "amd64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        *) echo "amd64" ;;  # Fallback
+    esac
+}
+
 build_os_image() {
-  docker buildx build --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
+  docker buildx build --load --build-arg TARGETARCH="$(get_target_arch)" --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
 }
 
 create_instance() {
