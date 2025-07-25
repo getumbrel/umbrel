@@ -8,7 +8,7 @@ import {describe, afterEach, expect, test, vi} from 'vitest'
 import systemInformation from 'systeminformation'
 import * as execa from 'execa'
 
-import Umbreld from '../index.js'
+import Umbreld from '../../index.js'
 import {getCpuTemperature, getMemoryUsage, getDiskUsage, shutdown, reboot} from './system.js'
 
 vi.mock('systeminformation')

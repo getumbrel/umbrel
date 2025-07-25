@@ -7,9 +7,9 @@ import {$, type ExecaError} from 'execa'
 import fse from 'fs-extra'
 import PQueue from 'p-queue'
 
-import type Umbreld from '../index.js'
+import type Umbreld from '../../index.js'
 
-import getDirectorySize from './utilities/get-directory-size.js'
+import getDirectorySize from '../utilities/get-directory-size.js'
 
 export async function getCpuTemperature(): Promise<{
 	warning: 'normal' | 'warm' | 'hot'
@@ -366,6 +366,17 @@ export async function setCpuGovernor(governor: string) {
 	await fse.writeFile('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', governor)
 }
 
+export async function setupPiCpuGovernor(umbreld: Umbreld): Promise<void> {
+	try {
+		if (await isRaspberryPi()) {
+			await setCpuGovernor('ondemand')
+			umbreld.logger.log(`Set ondemand cpu governor`)
+		}
+	} catch (error) {
+		umbreld.logger.error(`Failed to set ondemand cpu governor`, error)
+	}
+}
+
 export async function hasWifi() {
 	const {stdout} = await $`nmcli --terse --fields TYPE device status`
 	const networkDevices = stdout.split('\n')
@@ -454,6 +465,23 @@ export async function connectToWiFiNetwork({ssid, password}: {ssid: string; pass
 	}
 }
 
+export async function restoreWiFi(umbreld: Umbreld): Promise<void> {
+	const wifiCredentials = await umbreld.store.get('settings.wifi')
+	if (!wifiCredentials) return
+
+	while (true) {
+		umbreld.logger.log(`Attempting to restore WiFi connection to ${wifiCredentials.ssid}...`)
+		try {
+			await connectToWiFiNetwork(wifiCredentials)
+			umbreld.logger.log(`WiFi connection restored!`)
+			break
+		} catch (error) {
+			umbreld.logger.error(`Failed to restore WiFi connection, retrying in 1 minute`, error)
+			await setTimeout(1000 * 60)
+		}
+	}
+}
+
 // Get IP addresses of the device
 export function getIpAddresses(): string[] {
 	// Known good interfaces:
@@ -513,4 +541,29 @@ export async function syncDns() {
 		} while (retries--)
 		return false
 	})
+}
+
+// Wait for Pi system time to be synced for up to the number of seconds passed in.
+export async function waitForSystemTime(umbreld: Umbreld, timeout: number): Promise<void> {
+	try {
+		// Only run on Pi
+		if (!(await isRaspberryPi())) return
+
+		umbreld.logger.log('Checking if system time is synced before continuing...')
+		let tries = 0
+		while (tries < timeout) {
+			tries++
+			const timeStatus = await $`timedatectl status`
+			const isSynced = timeStatus.stdout.includes('System clock synchronized: yes')
+			if (isSynced) {
+				umbreld.logger.log('System time is synced. Continuing...')
+				return
+			}
+			umbreld.logger.log('System time is not currently synced, waiting...')
+			await setTimeout(1000)
+		}
+		umbreld.logger.error('System time is not synced but timeout was reached. Continuing...')
+	} catch (error) {
+		umbreld.logger.error(`Failed to check system time`, error)
+	}
 }

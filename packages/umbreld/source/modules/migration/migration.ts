@@ -13,8 +13,8 @@ import type Umbreld from '../../index.js'
 
 import isUmbrelHome from '../is-umbrel-home.js'
 import type {ProgressStatus} from '../apps/schema.js'
-import {reboot} from '../system.js'
-import {setSystemStatus} from '../server/trpc/routes/system.js'
+import {reboot} from '../system/system.js'
+import {setSystemStatus} from '../system/routes.js'
 
 let migrationStatus: ProgressStatus = {
 	running: false,

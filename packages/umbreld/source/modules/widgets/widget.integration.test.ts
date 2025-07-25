@@ -4,8 +4,8 @@
 // @ts-nocheck
 import {expect, beforeAll, afterAll, test} from 'vitest'
 
-import createTestUmbreld from '../../../test-utilities/create-test-umbreld.js'
-import runGitServer from '../../../test-utilities/run-git-server.js'
+import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import runGitServer from '../test-utilities/run-git-server.js'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 let communityAppStoreGitServer: Awaited<ReturnType<typeof runGitServer>>

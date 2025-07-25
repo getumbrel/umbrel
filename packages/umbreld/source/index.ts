@@ -1,7 +1,4 @@
 import path from 'node:path'
-import {setTimeout} from 'node:timers/promises'
-
-import {$} from 'execa'
 
 // TODO: import packageJson from '../package.json' assert {type: 'json'}
 const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
@@ -19,8 +16,7 @@ import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
 
-import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
-import {commitOsPartition} from './modules/system.js'
+import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime} from './modules/system/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
@@ -114,68 +110,6 @@ export default class Umbreld {
 		this.dbus = new Dbus(this)
 	}
 
-	// TODO: Move this to a system module
-	// Restore WiFi after OTA update
-	async restoreWiFi() {
-		const wifiCredentials = await this.store.get('settings.wifi')
-		if (!wifiCredentials) return
-
-		while (true) {
-			this.logger.log(`Attempting to restore WiFi connection to ${wifiCredentials.ssid}...`)
-			try {
-				await connectToWiFiNetwork(wifiCredentials)
-				this.logger.log(`WiFi connection restored!`)
-				break
-			} catch (error) {
-				this.logger.error(`Failed to restore WiFi connection, retrying in 1 minute`, error)
-				await setTimeout(1000 * 60)
-			}
-		}
-	}
-
-	async setupPiCpuGoverner() {
-		// TODO: Move this to a system module
-		// Set ondemand cpu governer for Raspberry Pi
-		try {
-			const {productName} = await detectDevice()
-			if (productName === 'Raspberry Pi') {
-				await setCpuGovernor('ondemand')
-				this.logger.log(`Set ondemand cpu governor`)
-			}
-		} catch (error) {
-			this.logger.error(`Failed to set ondemand cpu governor`, error)
-		}
-	}
-
-	// Wait for system time to be synced for up to the number of seconds passed in.
-	// We need this on Raspberry Pi since it doesn' have a persistent real time clock.
-	// It avoids race conditions where umbrelOS starts making network requests before
-	// the local time is set which then fail with SSL cert errors.
-	async waitForSystemTime(timeout: number) {
-		try {
-			// Only run on Pi
-			const {deviceId} = await detectDevice()
-			if (!['pi-4', 'pi-5'].includes(deviceId)) return
-
-			this.logger.log('Checking if system time is synced before continuing...')
-			let tries = 0
-			while (tries < timeout) {
-				tries++
-				const timeStatus = await $`timedatectl status`
-				const isSynced = timeStatus.stdout.includes('System clock synchronized: yes')
-				if (isSynced) {
-					this.logger.log('System time is synced. Continuing...')
-					return
-				}
-				this.logger.log('System time is not currently synced, waiting...')
-				await setTimeout(1000)
-			}
-			this.logger.error('System time is not synced but timeout was reached. Continuing...')
-		} catch (error) {
-			this.logger.error(`Failed to check system time`, error)
-		}
-	}
-
 	async start() {
 		this.logger.log(`☂️  Starting Umbrel v${this.version}`)
 		this.logger.log()
@@ -184,11 +118,11 @@ export default class Umbreld {
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
 
-		// If we've successfully booted then commit to the current OS partition
+		// If we've successfully booted then commit to the current OS partition (non-blocking)
 		commitOsPartition(this)
 
-		// Set ondemand cpu governer for Raspberry Pi
-		this.setupPiCpuGoverner()
+		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
+		setupPiCpuGovernor(this)
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
@@ -199,14 +133,17 @@ export default class Umbreld {
 		const developmentHostname = await this.store.get('development.hostname')
 		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
 
-		// Synchronize the system password after OTA update
+		// Synchronize the system password after OTA update (non-blocking)
 		this.user.syncSystemPassword()
 
-		// Restore WiFi connection after OTA update
-		this.restoreWiFi()
+		// Restore WiFi connection after OTA update (non-blocking)
+		restoreWiFi(this)
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
-		await this.waitForSystemTime(10)
+		// We need this on Raspberry Pi since it doesn't have a persistent real time clock.
+		// It avoids race conditions where umbrelOS starts making network requests before
+		// the local time is set which then fail with SSL cert errors.
+		await waitForSystemTime(this, 10)
 
 		// We need to forcefully clean Docker state before being able to safely continue
 		// If an existing container is listening on port 80 we'll crash, if an old version

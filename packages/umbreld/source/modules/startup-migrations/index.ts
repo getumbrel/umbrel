@@ -4,7 +4,7 @@ import yaml from 'js-yaml'
 
 import type Umbreld from '../../index.js'
 
-import {detectDevice} from '../system.js'
+import {detectDevice} from '../system/system.js'
 import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration/migration.js'
 
 async function readYaml(path: string) {

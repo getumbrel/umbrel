@@ -2,11 +2,11 @@ import {setTimeout} from 'node:timers/promises'
 import {$} from 'execa'
 
 // TODO: import packageJson from '../../package.json' assert {type: 'json'}
-const packageJson = (await import('../../package.json', {assert: {type: 'json'}})).default
+const packageJson = (await import('../../../package.json', {assert: {type: 'json'}})).default
 
-import type {ProgressStatus} from './apps/schema.js'
-import type Umbreld from '../index.js'
-import {UMBREL_APP_STORE_REPO} from '../constants.js'
+import type {ProgressStatus} from '../apps/schema.js'
+import type Umbreld from '../../index.js'
+import {UMBREL_APP_STORE_REPO} from '../../constants.js'
 import {performUpdate, getUpdateStatus} from './update.js'
 
 type ResetStatus = ProgressStatus

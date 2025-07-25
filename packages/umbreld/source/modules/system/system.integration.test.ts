@@ -1,8 +1,8 @@
 import {describe, expect, test} from 'vitest'
 import systeminformation from 'systeminformation'
 
-import system from './system.js'
-import Umbreld from '../../../../index.js'
+import system from './routes.js'
+import Umbreld from '../../index.js'
 
 const context = {
 	umbreld: new Umbreld({dataDirectory: '/tmp'}),

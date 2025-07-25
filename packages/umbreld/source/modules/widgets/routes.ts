@@ -1,9 +1,9 @@
 import z from 'zod'
 import ms from 'ms'
 
-import {router, privateProcedure} from '../trpc.js'
-import {systemWidgets} from '../../../system-widgets.js'
-import {filesWidgets} from '../../../files/widgets.js'
+import {router, privateProcedure} from '../server/trpc/trpc.js'
+import {systemWidgets} from '../system/system-widgets.js'
+import {filesWidgets} from '../files/widgets.js'
 
 const MAX_ALLOWED_WIDGETS = 3
 

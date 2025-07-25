@@ -7,9 +7,9 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
-import type {ProgressStatus} from '../../../apps/schema.js'
-import {performReset, getResetStatus} from '../../../factory-reset.js'
-import {getUpdateStatus, performUpdate, getLatestRelease} from '../../../update.js'
+import type {ProgressStatus} from '../apps/schema.js'
+import {performReset, getResetStatus} from './factory-reset.js'
+import {getUpdateStatus, performUpdate, getLatestRelease} from './update.js'
 import {
 	getCpuTemperature,
 	getSystemDiskUsage,
@@ -22,9 +22,9 @@ import {
 	getSystemMemoryUsage,
 	getIpAddresses,
 	syncDns,
-} from '../../../system.js'
+} from './system.js'
 
-import {privateProcedure, publicProcedure, router} from '../trpc.js'
+import {privateProcedure, publicProcedure, router} from '../server/trpc/trpc.js'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting'
 let systemStatus: SystemStatus = 'running'

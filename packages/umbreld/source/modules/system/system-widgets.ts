@@ -1,6 +1,6 @@
 import prettyBytes from 'pretty-bytes'
 
-import type Umbreld from '../index.js'
+import type Umbreld from '../../index.js'
 import {getSystemDiskUsage, getSystemMemoryUsage, getCpuUsage} from './system.js'
 
 export const systemWidgets = {
