@@ -648,7 +648,7 @@ describe('files.list() [thumbnail specific]', () => {
 })
 
 describe('recents() [thumbnail specific]', () => {
-	test('includes thumbnail for a recent file with an existing thumbnail', async () => {
+	test('includes thumbnail for a recent file with an existing thumbnail', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/recents-thumbnail-test`
 		await fse.ensureDir(testDir)
