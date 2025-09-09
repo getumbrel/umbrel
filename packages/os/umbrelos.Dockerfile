@@ -112,6 +112,9 @@ RUN apt-get install --yes systemd-boot mender-client
 RUN apt-get install --yes acpid
 RUN systemctl enable acpid
 
+# Install zram-generator for swap
+RUN apt-get install --yes systemd-zram-generator
+
 # Install essential networking services
 RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi-daemon avahi-discover avahi-utils libnss-mdns
 
