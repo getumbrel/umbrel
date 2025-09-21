@@ -318,6 +318,7 @@ export async function detectDevice() {
 
 	if (model === 'U130120') device = 'Umbrel Home (2023)'
 	if (model === 'U130121') device = 'Umbrel Home (2024)'
+	if (model === 'U130122') device = 'Umbrel Home (2025)'
 	if (productName === 'Umbrel Home') deviceId = model
 
 	// I haven't been able to find another way to reliably detect Pi hardware. Most existing
