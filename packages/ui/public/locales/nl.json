@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "Weet je zeker dat je de extensie van '{{fileName}}' wilt verwijderen?",
   "files-extension-change.title-add": "Extensie wijzigen in '{{extension}}'?",
   "files-extension-change.title-remove": "Extensie verwijderen?",
-  "files-external-storage.unsupported.description": "Je aangesloten externe schijf kan niet worden gebruikt op dit apparaat. Externe opslagfunctionaliteit is uitsluitend beschikbaar op de Umbrel Home.",
+  "files-external-storage.unsupported.description": "Je aangesloten externe schijf kan niet worden gebruikt op een Raspberry Pi. Externe opslag is beschikbaar op Umbrel Home en x86-apparaten.",
   "files-external-storage.unsupported.title": "Externe opslag niet ondersteund",
   "files-folder": "Map",
   "files-listing.empty": "Geen items",

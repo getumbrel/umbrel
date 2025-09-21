@@ -4,7 +4,6 @@ import {toast} from 'sonner'
 
 import {HOME_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {useIsUmbrelHome} from '@/hooks/use-is-umbrel-home'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
@@ -13,48 +12,49 @@ import {t} from '@/utils/i18n'
 /**
  * Hook to manage external storage devices.
  * Provides functionality to fetch and eject external storage devices.
- * Also handles showing warning dialog for non-Umbrel Home devices.
+ * Also handles showing warning dialog for unsupported (Raspberry Pi) devices.
  */
 export function useExternalStorage() {
 	const utils = trpcReact.useUtils()
-	const {isUmbrelHome} = useIsUmbrelHome()
 	const {add} = useQueryParams()
 
-	// Query for external storage on Umbrel Home
+	// Check device information to determine if external storage is supported (currently not supported on Raspberry Pi)
+	const {data: deviceInfo} = trpcReact.system.device.useQuery()
+
+	const isExternalStorageSupported = deviceInfo?.productName !== 'Raspberry Pi'
+
+	// Query for external storage
 	const {data: disks, isLoading: isLoadingDisks} = trpcReact.files.mountedExternalDevices.useQuery(undefined, {
 		placeholderData: keepPreviousData,
 		staleTime: 0, // Don't cache the data
-		refetchInterval: isUmbrelHome ? 5000 : false, // Only poll on Umbrel Home
-		enabled: isUmbrelHome, // Only run query on Umbrel Home
+		refetchInterval: isExternalStorageSupported ? 5000 : false, // Only poll on supported devices
+		enabled: isExternalStorageSupported, // Only run query on supported devices
 	})
 
-	// Query to check for external drives on non-Umbrel Home
-	const {data: hasExternalDriveOnNonUmbrelHome} = trpcReact.files.isExternalDeviceConnectedOnNonUmbrelHome.useQuery(
-		undefined,
-		{
+	// Query to check for external drives on non-supported devices
+	const {data: hasExternalDriveOnUnsupportedDevice} =
+		trpcReact.files.isExternalDeviceConnectedOnUnsupportedDevice.useQuery(undefined, {
 			placeholderData: keepPreviousData,
 			staleTime: 0,
-			refetchInterval: !isUmbrelHome ? 5000 : false, // Only poll on non-Umbrel Home
-			enabled: !isUmbrelHome, // Only run query on non-Umbrel Home
-		},
-	)
+			refetchInterval: !isExternalStorageSupported ? 5000 : false, // Only poll on unsupported devices
+			enabled: !isExternalStorageSupported, // Only run query on unsupported devices
+		})
 
 	const {currentPath, navigateToDirectory} = useNavigate()
 
-	// Show dialog when external drive detected on non-Umbrel Home
+	// Show dialog when external drive detected on unsupported devices
 	useEffect(() => {
-		if (hasExternalDriveOnNonUmbrelHome) {
+		if (hasExternalDriveOnUnsupportedDevice) {
 			// Check if dialog has already been shown in this session
 			const dialogShown = sessionStorage.getItem('files-external-storage-unsupported-dialog-shown')
 
 			if (!dialogShown) {
-				console.log('hasExternalDriveOnNonUmbrelHome', hasExternalDriveOnNonUmbrelHome)
 				add('dialog', 'files-external-storage-unsupported')
 				// Mark dialog as shown for this session
 				sessionStorage.setItem('files-external-storage-unsupported-dialog-shown', 'true')
 			}
 		}
-	}, [hasExternalDriveOnNonUmbrelHome, add])
+	}, [hasExternalDriveOnUnsupportedDevice, add])
 
 	// Eject disk mutation
 	const {mutateAsync: ejectDisk, isPending: isEjecting} = trpcReact.files.unmountExternalDevice.useMutation({
@@ -90,7 +90,7 @@ export function useExternalStorage() {
 		isLoadingExternalStorage: isLoadingDisks,
 		ejectDisk,
 		isEjecting,
-		isUmbrelHome,
-		hasExternalDriveOnNonUmbrelHome,
+		isExternalStorageSupported,
+		hasExternalDriveOnUnsupportedDevice,
 	}
 }

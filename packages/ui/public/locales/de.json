@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "Bist du sicher, dass du die Dateiendung von „{{fileName}}“ entfernen möchtest?",
   "files-extension-change.title-add": "Dateiendung in „{{extension}}“ ändern?",
   "files-extension-change.title-remove": "Dateiendung entfernen?",
-  "files-external-storage.unsupported.description": "Dein angeschlossenes externes Laufwerk kann mit diesem Gerät nicht verwendet werden. Die Funktion für externen Speicher ist ausschließlich auf dem Umbrel Home verfügbar.",
+  "files-external-storage.unsupported.description": "Dein angeschlossenes externes Laufwerk kann auf einem Raspberry Pi nicht verwendet werden. Externer Speicher ist auf Umbrel Home und x86-Geräten verfügbar.",
   "files-external-storage.unsupported.title": "Externer Speicher wird nicht unterstützt",
   "files-folder": "Ordner",
   "files-listing.empty": "Keine Elemente",

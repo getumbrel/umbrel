@@ -6,10 +6,10 @@ import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} fr
 import {t} from '@/utils/i18n'
 
 export function SidebarExternalStorage() {
-	const {disks, isLoadingExternalStorage, ejectDisk, isUmbrelHome} = useExternalStorage()
+	const {disks, isLoadingExternalStorage, ejectDisk, isExternalStorageSupported} = useExternalStorage()
 
-	// Don't render anything for non-Umbrel Home devices
-	if (!isUmbrelHome) {
+	// Don't render anything for non-supported devices
+	if (!isExternalStorageSupported) {
 		return null
 	}
 

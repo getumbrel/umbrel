@@ -5,7 +5,7 @@ import fse from 'fs-extra'
 import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import isUmbrelHome from '../is-umbrel-home.js'
+import {isRaspberryPi} from '../system/system.js'
 
 import type Umbreld from '../../index.js'
 
@@ -90,15 +90,18 @@ export default class ExternalStorage {
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
 	}
 
-	// Only enable this module on Umbrel Home
-	async enabled() {
-		return await isUmbrelHome()
+	// Only enable this module on non raspberry pi devices.
+	// We disable on Pi due to unreliable power issues when running USB storage devices
+	// and also due to complexities with the current mount script.
+	async supported() {
+		const isNotRaspberryPi = !(await isRaspberryPi())
+		return isNotRaspberryPi
 	}
 
 	// Add listener
 	async start() {
 		// Don't run through start process if we're not enabled
-		const isEnabled = await this.enabled()
+		const isEnabled = await this.supported()
 		if (!isEnabled) return
 
 		this.logger.log('Starting external storage')
@@ -121,7 +124,7 @@ export default class ExternalStorage {
 	// Remove listener
 	async stop() {
 		// Don't run through stop process if we're not enabled
-		const isEnabled = await this.enabled()
+		const isEnabled = await this.supported()
 		if (!isEnabled) return
 
 		this.logger.log('Stopping external storage')
@@ -314,10 +317,10 @@ export default class ExternalStorage {
 		}
 	}
 
-	// Check if an external drive is connected on non-Umbrel Home hardware
-	// This is used to notify non-Home users why they can't see their hardware.
-	async isExternalDeviceConnectedOnNonUmbrelHome() {
-		const isHome = await isUmbrelHome()
+	// Check if an external drive is connected on unsupported hardware
+	// This is used to notify unsupported users why they can't see their hardware.
+	async isExternalDeviceConnectedOnUnsupportedDevice() {
+		const isSupported = await this.supported()
 		let externalBlockDevices = await this.#getExternalDevices()
 
 		// Exclude any external disks that include the current data directory.
@@ -327,6 +330,6 @@ export default class ExternalStorage {
 		const dataDirDisk = df.stdout.split('\n').pop()?.split('/').pop()?.replace(/\d+$/, '')
 		externalBlockDevices = externalBlockDevices.filter((blockDevice) => blockDevice.id !== dataDirDisk)
 
-		return !isHome && externalBlockDevices.length > 0
+		return !isSupported && externalBlockDevices.length > 0
 	}
 }

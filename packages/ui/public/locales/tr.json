@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "“{{fileName}}” dosyasının uzantısını kaldırmak istediğinizden emin misiniz?",
   "files-extension-change.title-add": "Uzantı “{{extension}}” olarak değiştirilsin mi?",
   "files-extension-change.title-remove": "Uzantı kaldırılsın mı?",
-  "files-external-storage.unsupported.description": "Bağladığınız harici sürücü bu cihazla kullanılamıyor. Harici depolama özelliği yalnızca Umbrel Home'da mevcuttur.",
+  "files-external-storage.unsupported.description": "Bağlı harici sürücünüz Raspberry Pi’de kullanılamaz. Harici depolama Umbrel Home ve x86 cihazlarda kullanılabilir.",
   "files-external-storage.unsupported.title": "Harici Depolama Desteklenmiyor",
   "files-folder": "Klasör",
   "files-listing.empty": "Öğe yok",

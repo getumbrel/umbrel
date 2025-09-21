@@ -22,7 +22,7 @@ import {t} from '@/utils/i18n'
 export function Sidebar({className}: {className?: string}) {
 	const {shares, isLoadingShares} = useShares()
 	const {favorites, isLoadingFavorites} = useFavorites()
-	const {disks, isLoadingExternalStorage, isUmbrelHome} = useExternalStorage()
+	const {disks, isLoadingExternalStorage, isExternalStorageSupported} = useExternalStorage()
 
 	const displayShares = shares?.filter((share) => share && share.path !== HOME_PATH)
 
@@ -70,7 +70,7 @@ export function Sidebar({className}: {className?: string}) {
 
 				{/* External Storage */}
 				<AnimatePresence initial={!isLoadingExternalStorage}>
-					{isUmbrelHome && !isLoadingExternalStorage && disks && disks.length > 0 && (
+					{isExternalStorageSupported && !isLoadingExternalStorage && disks && disks.length > 0 && (
 						<motion.div
 							initial={isLoadingExternalStorage ? {opacity: 0, height: 0} : false}
 							animate={{opacity: 1, height: 'auto'}}

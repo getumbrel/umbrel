@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "¿Estás seguro de que quieres quitar la extensión de '{{fileName}}'?",
   "files-extension-change.title-add": "¿Cambiar la extensión a '{{extension}}'?",
   "files-extension-change.title-remove": "¿Quitar la extensión?",
-  "files-external-storage.unsupported.description": "La unidad de almacenamiento externo que conectaste no se puede usar con este dispositivo. La funcionalidad de almacenamiento externo está disponible exclusivamente en Umbrel Home.",
+  "files-external-storage.unsupported.description": "La unidad externa que has conectado no puede usarse en un Raspberry Pi. El almacenamiento externo está disponible en Umbrel Home y dispositivos x86.",
   "files-external-storage.unsupported.title": "Almacenamiento externo no compatible",
   "files-folder": "Carpeta",
   "files-listing.empty": "No hay elementos",

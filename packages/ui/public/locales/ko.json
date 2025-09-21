@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "정말 '{{fileName}}'의 확장자를 제거하시겠어요?",
   "files-extension-change.title-add": "확장자를 '{{extension}}'(으)로 바꾸기?",
   "files-extension-change.title-remove": "확장자 제거하기?",
-  "files-external-storage.unsupported.description": "연결된 외장 드라이브는 이 기기에서 사용할 수 없어요. 외장 스토리지 기능은 Umbrel Home에서만 이용할 수 있어요",
+  "files-external-storage.unsupported.description": "연결한 외장 드라이브는 Raspberry Pi에서 사용할 수 없어요. 외장 저장소는 Umbrel Home과 x86 기기에서 이용할 수 있어요.",
   "files-external-storage.unsupported.title": "외장 스토리지를 지원하지 않아요",
   "files-folder": "폴더",
   "files-listing.empty": "항목이 없습니다",

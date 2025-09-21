@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "Biztosan szeretnéd eltávolítani a(z) „{{fileName}}” fájlkiterjesztését?",
   "files-extension-change.title-add": "Kiterjesztés módosítása „{{extension}}”-re?",
   "files-extension-change.title-remove": "Kiterjesztés eltávolítása?",
-  "files-external-storage.unsupported.description": "A csatlakoztatott külső meghajtó nem használható ezen az eszközön. A külső tárhely funkció kizárólag az Umbrel Home-on érhető el.",
+  "files-external-storage.unsupported.description": "A csatlakoztatott külső meghajtó nem használható Raspberry Pi-n. Külső tárhely csak Umbrel Home és x86 eszközökön érhető el.",
   "files-external-storage.unsupported.title": "Külső tárhely nem támogatott",
   "files-folder": "Mappa",
   "files-listing.empty": "Nincsenek elemek",

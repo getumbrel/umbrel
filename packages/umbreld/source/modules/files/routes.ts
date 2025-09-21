@@ -191,8 +191,8 @@ export default router({
 		),
 
 	// Check if an external drive is connected on non-Umbrel Home hardware
-	isExternalDeviceConnectedOnNonUmbrelHome: privateProcedure.query(({ctx}) =>
-		ctx.umbreld.files.externalStorage.isExternalDeviceConnectedOnNonUmbrelHome(),
+	isExternalDeviceConnectedOnUnsupportedDevice: privateProcedure.query(({ctx}) =>
+		ctx.umbreld.files.externalStorage.isExternalDeviceConnectedOnUnsupportedDevice(),
 	),
 
 	// Search for a file

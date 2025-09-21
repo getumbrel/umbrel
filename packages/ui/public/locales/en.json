@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "Are you sure you want to remove the extension of '{{fileName}}'?",
   "files-extension-change.title-add": "Change extension to '{{extension}}'?",
   "files-extension-change.title-remove": "Remove extension?",
-  "files-external-storage.unsupported.description": "Your connected external drive cannot be used with this device. External storage functionality is exclusively available on the Umbrel Home.",
+  "files-external-storage.unsupported.description": "Your connected external drive can't be used on a Raspberry Pi. External storage is available on Umbrel Home and x86 devices.",
   "files-external-storage.unsupported.title": "External Storage Not Supported",
   "files-folder": "Folder",
   "files-listing.empty": "No items",

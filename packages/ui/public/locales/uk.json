@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "Ви впевнені, що хочете вилучити розширення у '{{fileName}}'?",
   "files-extension-change.title-add": "Змінити розширення на '{{extension}}'?",
   "files-extension-change.title-remove": "Вилучити розширення?",
-  "files-external-storage.unsupported.description": "Ваш підключений зовнішній диск не може бути використаний із цим пристроєм. Функціональність зовнішнього сховища доступна виключно на Umbrel Home.",
+  "files-external-storage.unsupported.description": "Ваш підключений зовнішній диск не можна використовувати на Raspberry Pi. Зовнішнє сховище доступне на Umbrel Home та пристроях x86.",
   "files-external-storage.unsupported.title": "Зовнішнє сховище не підтримується",
   "files-folder": "Папка",
   "files-listing.empty": "Немає елементів",

@@ -254,7 +254,7 @@
   "files-extension-change.description-remove": "「{{fileName}}」の拡張子を削除してもよろしいですか？",
   "files-extension-change.title-add": "拡張子を「{{extension}}」に変更しますか？",
   "files-extension-change.title-remove": "拡張子を削除しますか？",
-  "files-external-storage.unsupported.description": "接続された外付けドライブはこのデバイスでは使えません。外部ストレージ機能はUmbrel Homeのみで利用できます。",
+  "files-external-storage.unsupported.description": "接続した外付けドライブはRaspberry Piでは使用できません。外部ストレージはUmbrel Homeおよびx86デバイスで利用できます。",
   "files-external-storage.unsupported.title": "外部ストレージには対応していません",
   "files-folder": "フォルダ",
   "files-listing.empty": "アイテムがありません",
