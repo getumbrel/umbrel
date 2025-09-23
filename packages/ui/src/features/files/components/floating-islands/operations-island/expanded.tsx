@@ -44,10 +44,21 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 									<div className='mb-1 flex items-center justify-between gap-2'>
 										{operation.type === 'copy' && (
 											<span className='block max-w-[16rem] whitespace-nowrap text-xs text-white/90'>
-												{t('files-operations-island.copying', {
-													from: formatItemName({name: operation.file.name, maxLength: 12}),
-													to: formatItemName({name: destinationFolderName, maxLength: 12}),
-												})}
+												{operation.file.path.startsWith('/Backups/') ? (
+													<span className='text-white/60'>
+														{t('files-operations-island.restoring', {
+															from: formatItemName({name: operation.file.name, maxLength: 12}),
+															to: formatItemName({name: destinationFolderName, maxLength: 12}),
+														})}
+													</span>
+												) : (
+													<span className='text-white/60'>
+														{t('files-operations-island.copying', {
+															from: formatItemName({name: operation.file.name, maxLength: 12}),
+															to: formatItemName({name: destinationFolderName, maxLength: 12}),
+														})}
+													</span>
+												)}
 											</span>
 										)}
 										{operation.type === 'move' && (

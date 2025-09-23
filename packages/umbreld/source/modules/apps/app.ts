@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import nodePath from 'node:path'
 
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
@@ -327,6 +328,39 @@ export default class App {
 		return containerIp
 	}
 
+	// Returns a validated list of paths that should be ignored when backing up the app
+	// This allows apps to signal to umbrelOS noncritical high churn or high data files
+	// that can be ignored from backups like logs/cache/blockchain data/etc.
+	async getBackupIgnoredFilePaths() {
+		const manifest = await this.readManifest()
+		if (!manifest.backupIgnore) return []
+
+		// Sanitise paths
+		const backupIgnore = []
+		for (let path of manifest.backupIgnore) {
+			// Only allow a limited subset of chars to strip out globs and traversals
+			// and other weird stuff we don't want to allow
+			if (!/^[a-zA-Z0-9._\/-]+$/.test(path)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip invalid paths
+			}
+
+			// Convert to absolute path and normalise traversals
+			path = nodePath.join(this.dataDirectory, path)
+
+			// Ensure path doesn't escape the app's data directory
+			if (!path.startsWith(this.dataDirectory)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip paths that escape the app's data directory
+			}
+
+			// Save the sanitised path
+			backupIgnore.push(path)
+		}
+
+		return backupIgnore
+	}
+
 	// Returns a specific widget's info from an app's manifest
 	async getWidgetMetadata(widgetName: string) {
 		const manifest = await this.readManifest()
@@ -393,5 +427,15 @@ export default class App {
 			})
 		}
 		return success
+	}
+
+	// Check if app is ignored from backups
+	async isBackupIgnored() {
+		return (await this.store.get('backupIgnore')) || false
+	}
+
+	// Set if app is ignored from backups
+	async setBackupIgnored(backupIgnore: boolean) {
+		return this.store.set('backupIgnore', backupIgnore)
 	}
 }

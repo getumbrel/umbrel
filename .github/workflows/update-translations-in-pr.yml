@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   update-translations:
-    timeout-minutes: 3
+    timeout-minutes: 10
     permissions:
       contents: write
     runs-on: ubuntu-22.04

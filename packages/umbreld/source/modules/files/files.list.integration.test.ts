@@ -66,7 +66,7 @@ test('list() lists the root directory', async () => {
 		size: 0,
 		modified: expect.any(Number),
 		operations: [],
-		files: ['Apps', 'External', 'Home', 'Trash'].map((name) => ({
+		files: ['Apps', 'Backups', 'External', 'Home', 'Network', 'Trash'].map((name) => ({
 			name,
 			path: `/${name}`,
 			type: 'directory',

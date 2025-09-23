@@ -1,4 +1,6 @@
+import {Loader2} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {FaRegSave} from 'react-icons/fa'
 import {
 	RiExpandRightFill,
 	RiKeyLine,
@@ -8,9 +10,10 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbServer, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
+import {TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
+import {ChevronDown} from '@/assets/chevron-down'
 import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
@@ -18,6 +21,7 @@ import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
+import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
@@ -25,7 +29,12 @@ import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
-import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/shadcn-components/ui/dropdown-menu'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -58,6 +67,8 @@ export function SettingsContent() {
 	const hiddenServiceQ = trpcReact.system.hiddenService.useQuery(undefined, {
 		enabled: tor.enabled,
 	})
+
+	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
 
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
@@ -169,6 +180,58 @@ export function SettingsContent() {
 							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
 						</CoverMessage>
 					)}
+					{/* Backups */}
+					<ListRow title={t('backups')} description={t('backups-description')}>
+						<div className='flex flex-wrap gap-2 pt-3'>
+							{/* There are 3 buttons (Set up, Configure, Restore) */}
+							{/* We always render the "Restore" button */}
+							{/* We render the "Set up" button if the user has no backup repo yet, or the "Configure" button if they do*/}
+							{/* If we're still checking for existing backup repos we just show a load spinner in place of the Set up or Configure button */}
+							{isLoadingBackups ? (
+								<div className='flex h-[30px] items-center'>
+									<Loader2 className='size-4 animate-spin text-white/60' aria-label={t('loading')} />
+								</div>
+							) : (backupRepositories?.length ?? 0) === 0 ? (
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<IconButton icon={FaRegSave}>
+											{t('backups-setup')}
+											<ChevronDown />
+										</IconButton>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align='end' className='min-w-[280px]'>
+										<DropdownMenuItem onSelect={() => navigate('backups/setup?backups-setup-tab=nas')}>
+											<div className='flex flex-col'>
+												<div className='text-14 font-medium'>{t('backups-setup-umbrel-or-nas')}</div>
+												<div className='text-12 text-white/40'>{t('backups-setup-nas-or-umbrel-description')}</div>
+											</div>
+										</DropdownMenuItem>
+										<DropdownMenuItem onSelect={() => navigate('backups/setup?backups-setup-tab=external')}>
+											<div className='flex flex-col'>
+												<div className='text-14 font-medium'>{t('external-drive')}</div>
+												<div className='text-12 text-white/40'>{t('backups-setup-external-description')}</div>
+											</div>
+										</DropdownMenuItem>
+										<DropdownMenuItem onSelect={() => navigate('backups/setup?backups-setup-tab=umbrel-private-cloud')}>
+											<div className='flex flex-col'>
+												<div className='text-14 font-medium'>{t('backups-setup-umbrel-private-cloud')}</div>
+												<div className='text-12 text-white/40'>
+													{t('backups-setup-umbrel-private-cloud-description')}
+												</div>
+											</div>
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							) : (
+								<IconButtonLink to={'backups/configure'} icon={TbSettings}>
+									{t('Configure')}
+								</IconButtonLink>
+							)}
+							<IconButtonLink to={'backups/restore'} icon={TbHistory}>
+								{t('backups-restore')}
+							</IconButtonLink>
+						</div>
+					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')}>
 						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
 						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>

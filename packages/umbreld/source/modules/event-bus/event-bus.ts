@@ -3,6 +3,7 @@ import Emittery from 'emittery'
 import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from '../files/watcher.js'
 import type {OperationsInProgress} from '../files/files.js'
+import type {BackupsInProgress, RestoreProgress} from '../backups/backups.js'
 
 // Type assertion to ensure all events in EventTypes are defined in events
 type MissingInEvents = Exclude<keyof EventTypes, (typeof events)[number]>
@@ -13,6 +14,8 @@ const _eventsIncludesAllKeys: _AssertEveryKeyIsListed = true
 export const events = [
 	'files:watcher:change',
 	'files:operation-progress',
+	'backups:backup-progress',
+	'backups:restore-progress',
 	'system:disk:change',
 	'files:external-storage:change',
 ] as const satisfies readonly (keyof EventTypes)[]
@@ -24,6 +27,13 @@ export type EventTypes = {
 	// Fires repeatedly while file operations (copy/move) are in progress
 	// with the current progress of each operation
 	'files:operation-progress': OperationsInProgress
+	// Fires repeatedly while backup operations are in progress
+	// with the current progress of each backup
+	'backups:backup-progress': BackupsInProgress
+	// Fires repeatedly while a restore operation is in progress
+	// with the current progress of the restore. Will fire with null
+	// when the restore is complete.
+	'backups:restore-progress': RestoreProgress
 	// Fires when the connected block devices change
 	// e.g attaching/removing a USB drive
 	'system:disk:change': undefined

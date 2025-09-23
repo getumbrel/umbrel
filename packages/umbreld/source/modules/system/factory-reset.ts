@@ -98,9 +98,23 @@ export async function performReset(umbreld: Umbreld) {
 	// Wipe the user data directory on the data partition, 35..50%. This is a
 	// bind-mounted directory, so cannot be destroyed but must be emptied.
 	setResetStatus({progress: 35})
+
+	// Stop critical services with mounts otherwise the below step will recursively nuke the data
+	// on all mounted network and usb devices. This is error prone and can fail. We should move over
+	// to atomic factory reset once Rugix migration is complete to make this safe.
+	try {
+		await umbreld.backups.stop()
+		await umbreld.files.externalStorage.stop()
+		await umbreld.files.networkStorage.stop()
+	} catch (error) {
+		return failWithError(`Failed to stop umbreld services: ${(error as any).message}`)
+	}
+
 	try {
 		await $`mkdir -p ${dataDirectory}` // just in case
-		await $`find ${dataDirectory} -mindepth 1 -delete` // empty directory
+		// For extra precaution we skip external and network mount dirs here
+		// to make sure we definitely don't nuke them if the above step fails.
+		await $`find ${dataDirectory} -mindepth 1 -not -path ${umbreld.files.getBaseDirectory('/External')} -not -path ${umbreld.files.getBaseDirectory('/External')}/* -not -path ${umbreld.files.getBaseDirectory('/Network')} -not -path ${umbreld.files.getBaseDirectory('/Network')}/* -delete` // empty directory
 		await $`chmod 755 ${dataDirectory}` // restore expected
 	} catch (err) {
 		return failWithError(`Failed to wipe user data: ${(err as any).message}`)

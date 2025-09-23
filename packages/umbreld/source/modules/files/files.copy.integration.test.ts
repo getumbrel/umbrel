@@ -1,6 +1,16 @@
-import {expect, beforeAll, afterAll, test} from 'vitest'
+import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 import {$} from 'execa'
 import fse from 'fs-extra'
+
+let getDiskUsageByPathReturnValue = null as any
+vi.mock('../system/system.js', async (importOriginal) => {
+	const original = (await importOriginal()) as any
+
+	return {
+		...original,
+		getDiskUsageByPath: async (umbreld: any) => getDiskUsageByPathReturnValue ?? original.getDiskUsageByPath(umbreld),
+	}
+})
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 
@@ -124,7 +134,45 @@ test('copy() throws copying to subdir of self', async () => {
 	).rejects.toThrow('[subdir-of-self]')
 })
 
-test.todo('copy() throws if there is not enough free space on the destination')
+test('copy() throws if there is not enough free space on the destination', async () => {
+	// Check copy works as expected when there is enough space
+	await expect(
+		umbreld.client.files.copy.mutate({
+			path: '/Home/Documents',
+			toDirectory: '/Home',
+			collision: 'keep-both',
+		}),
+	).resolves.toBeTruthy()
+
+	// Set up mock to return insufficient free space
+	const ONE_GB = 1024 * 1024 * 1024
+	getDiskUsageByPathReturnValue = {
+		size: ONE_GB * 10,
+		totalUsed: ONE_GB * 10,
+		available: 0,
+	}
+
+	// Check copy fails when there is not enough free space
+	await expect(
+		umbreld.client.files.copy.mutate({
+			path: '/Home/Documents',
+			toDirectory: '/Home',
+			collision: 'keep-both',
+		}),
+	).rejects.toThrow('[not-enough-space]')
+
+	// Reset mock
+	getDiskUsageByPathReturnValue = null
+
+	// Check copy works as expected when there is enough space again
+	await expect(
+		umbreld.client.files.copy.mutate({
+			path: '/Home/Documents',
+			toDirectory: '/Home',
+			collision: 'keep-both',
+		}),
+	).resolves.toBeTruthy()
+})
 
 test('copy() copies a single file to a directory', async () => {
 	// Create test directory and file

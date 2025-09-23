@@ -20,6 +20,7 @@ export default {
 		fontFamily: {
 			sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
 			mono: ['Roboto', ...defaultTheme.fontFamily.mono],
+			sticker: ['"Permanent Marker"', 'cursive'],
 		},
 		container: {
 			center: true,

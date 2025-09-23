@@ -1,6 +1,6 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
 import {motion} from 'framer-motion'
-import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
+import {Children, ComponentPropsWithoutRef, ForwardedRef, forwardRef, ReactNode} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
@@ -31,12 +31,13 @@ export function ImmersiveDialogContent({
 	size = 'default',
 	short = false,
 	showScroll = false,
+	...contentProps
 }: {
 	children: React.ReactNode
 	size?: 'default' | 'md' | 'lg' | 'xl'
 	short?: boolean
 	showScroll?: boolean
-}) {
+} & ComponentPropsWithoutRef<typeof DialogContent>) {
 	return (
 		<DialogContent
 			className={cn(
@@ -50,6 +51,7 @@ export function ImmersiveDialogContent({
 				size === 'xl' && 'max-w-[1440px]',
 				'p-0',
 			)}
+			{...contentProps}
 		>
 			{showScroll ? (
 				<ScrollArea dialogInset className='h-full'>
@@ -63,7 +65,11 @@ export function ImmersiveDialogContent({
 	)
 }
 
-export function ImmersiveDialogSplitContent({children, side}: {children: React.ReactNode; side: React.ReactNode}) {
+export function ImmersiveDialogSplitContent({
+	children,
+	side,
+	...contentProps
+}: {children: React.ReactNode; side: React.ReactNode} & ComponentPropsWithoutRef<typeof DialogContent>) {
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
@@ -76,6 +82,7 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 					immersiveContentTallClass,
 					'flex flex-row justify-between gap-0 p-0',
 				)}
+				{...contentProps}
 			>
 				<section className='hidden w-[210px] flex-col items-center justify-center bg-black/40 md:flex md:rounded-l-20'>
 					{side}

@@ -2,6 +2,7 @@ import {
 	Tb2Fa,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
+	TbHistory,
 	TbLanguage,
 	TbPhoto,
 	TbServer,
@@ -171,6 +172,12 @@ export function SettingsContentMobile() {
 					}
 					description={t('tor-description')}
 					onClick={() => navigate('tor')}
+				/>
+				<ListRowMobile
+					icon={TbHistory}
+					title={t('backups')}
+					description={t('backups-description')}
+					onClick={() => navigate('backups')}
 				/>
 				<ListRowMobile
 					icon={TbArrowBigRightLines}

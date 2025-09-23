@@ -11,6 +11,10 @@ ARG NODE_VERSION=22.13.0
 ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
 ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
 
+ARG KOPIA_VERSION=0.19.0
+ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
+ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
+
 #########################################################################
 # ui build stage
 #########################################################################
@@ -99,6 +103,9 @@ ARG YQ_SHA256_arm64
 ARG NODE_VERSION
 ARG NODE_SHA256_amd64
 ARG NODE_SHA256_arm64
+ARG KOPIA_VERSION
+ARG KOPIA_SHA256_amd64
+ARG KOPIA_SHA256_arm64
 
 # Install boot tooling
 # We don't actually use systemd-boot as a bootloader since Mender injects GRUB
@@ -127,7 +134,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2
@@ -155,6 +162,23 @@ RUN YQ_SHA256=$(eval echo \$YQ_SHA256_${TARGETARCH}) && \
 RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_COMMIT}/install.sh -o /tmp/install-docker.sh
 RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
 RUN rm /tmp/install-docker.sh
+
+# Install kopia from binary
+RUN KOPIA_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
+    KOPIA_SHA256=$(eval echo \$KOPIA_SHA256_${TARGETARCH}) && \
+    curl -L https://github.com/kopia/kopia/releases/download/v${KOPIA_VERSION}/kopia-${KOPIA_VERSION}-linux-${KOPIA_ARCH}.tar.gz -o /tmp/kopia.tar.gz && \
+    echo "${KOPIA_SHA256} /tmp/kopia.tar.gz" | sha256sum -c && \
+    tar -xz -f /tmp/kopia.tar.gz -C /tmp && \
+    mv /tmp/kopia-${KOPIA_VERSION}-linux-${KOPIA_ARCH}/kopia /usr/bin/kopia && \
+    chmod +x /usr/bin/kopia
+
+# kopia also requires fuse3 for mounting snapshots
+# fuse3 install fails because /boot/firmware doesn't exist because
+# Rugpi moves it to /boot. We just create a symlink to /boot so the 
+# install can complete and then nuke it after the install is done.
+RUN ln -s /boot /boot/firmware
+RUN apt-get install --yes fuse3 bindfs
+RUN rm /boot/firmware
 
 # Add Umbrel user
 RUN adduser --gecos "" --disabled-password umbrel

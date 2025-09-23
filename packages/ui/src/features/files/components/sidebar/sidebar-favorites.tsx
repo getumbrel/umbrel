@@ -3,12 +3,14 @@ import {AnimatePresence, motion} from 'framer-motion'
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarFavorites({favorites}: {favorites: (string | null)[]}) {
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const {removeFavorite} = useFavorites()
+	const isReadOnly = useIsFilesReadOnly()
 
 	return (
 		<AnimatePresence initial={false}>
@@ -38,11 +40,13 @@ export function SidebarFavorites({favorites}: {favorites: (string | null)[]}) {
 									/>
 								</div>
 							</ContextMenuTrigger>
-							<ContextMenuContent>
-								<ContextMenuItem onClick={() => removeFavorite({path: favoritePath})}>
-									{t('files-action.remove-favorite')}
-								</ContextMenuItem>
-							</ContextMenuContent>
+							{!isReadOnly ? (
+								<ContextMenuContent>
+									<ContextMenuItem onClick={() => removeFavorite({path: favoritePath})}>
+										{t('files-action.remove-favorite')}
+									</ContextMenuItem>
+								</ContextMenuContent>
+							) : null}
 						</ContextMenu>
 					</motion.div>
 				)

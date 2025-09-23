@@ -54,6 +54,10 @@ export function useListDirectory(
 			enabled: !!path && !skipBackendRequest,
 			placeholderData: keepPreviousData,
 			staleTime: 5_000,
+			// Don't retry on error. Backend errors like ENOENT/EIO/does-not-exist are deterministic, not transient.
+			// This gives us quick feedback to the user.
+			retry: false,
+			refetchOnWindowFocus: false,
 		},
 	)
 
@@ -75,6 +79,13 @@ export function useListDirectory(
 			setHasMore(data.hasMore)
 		}
 	}, [path, data])
+
+	// Stop loading if the query errors so the UI can render the error state
+	useEffect(() => {
+		if (isError) {
+			setIsLoadingItems(false)
+		}
+	}, [isError])
 
 	// Guard against late responses landing in the wrong directory
 	const requestIdRef = useRef(0)

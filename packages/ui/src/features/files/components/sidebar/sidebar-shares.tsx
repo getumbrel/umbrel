@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom'
 
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {Share} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
@@ -12,6 +13,7 @@ export function SidebarShares({shares}: {shares: (Share | null)[]}) {
 	const {navigateToDirectory, currentPath} = useFilesNavigate()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
+	const isReadOnly = useIsFilesReadOnly()
 
 	const openShareInfoDialog = (share: Share) => {
 		navigate({
@@ -49,11 +51,14 @@ export function SidebarShares({shares}: {shares: (Share | null)[]}) {
 									/>
 								</div>
 							</ContextMenuTrigger>
-							<ContextMenuContent>
-								<ContextMenuItem onClick={() => openShareInfoDialog(share)}>
-									{t('files-action.sharing')}
-								</ContextMenuItem>
-							</ContextMenuContent>
+							{/* We don't allow context menu in read-only mode */}
+							{!isReadOnly ? (
+								<ContextMenuContent>
+									<ContextMenuItem onClick={() => openShareInfoDialog(share)}>
+										{t('files-action.sharing')}
+									</ContextMenuItem>
+								</ContextMenuContent>
+							) : null}
 						</ContextMenu>
 					</motion.div>
 				)

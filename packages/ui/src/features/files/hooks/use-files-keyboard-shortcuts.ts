@@ -4,6 +4,7 @@ import {useKey} from 'react-use'
 import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
@@ -13,6 +14,9 @@ import type {FileSystemItem} from '@/features/files/types'
  * We use both command and ctrl for every shortcut to mimic the behaviour of both macOS and windows.
  */
 export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
+	const isReadOnly = useIsFilesReadOnly()
+	// In read-only mode, disable write/selection shortcuts but allow viewer shortcut.
+	const shortcutsEnabled = !isReadOnly
 	const {currentPath} = useNavigate()
 	const copyItemsToClipboard = useFilesStore((s: FilesStore) => s.copyItemsToClipboard)
 	const cutItemsToClipboard = useFilesStore((s: FilesStore) => s.cutItemsToClipboard)
@@ -35,8 +39,9 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Register copy shortcut (⌘C / Ctrl+C)
 	useKey(
-		(e) => (e.metaKey || e.ctrlKey) && e.key === 'c',
+		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'c',
 		(e) => {
+			if (!shortcutsEnabled) return
 			if (isInInput(e)) return
 			e.preventDefault()
 			copyItemsToClipboard()
@@ -45,8 +50,9 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Register cut shortcut (⌘X / Ctrl+X)
 	useKey(
-		(e) => (e.metaKey || e.ctrlKey) && e.key === 'x',
+		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'x',
 		(e) => {
+			if (!shortcutsEnabled) return
 			if (isInInput(e)) return
 			e.preventDefault()
 			cutItemsToClipboard()
@@ -55,8 +61,14 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Register paste shortcut (⌘V / Ctrl+V)
 	useKey(
-		(e) => (e.metaKey || e.ctrlKey) && e.key === 'v',
+		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'v',
 		(e) => {
+			// Simple but hacky:
+			// If Rewind is open (marked via data-rewind on its dialog),
+			// ignore paste to prevent background Files from showing collision dialogs.
+			// This avoids global state or focus plumbing; revisit with scoped shortcuts later.
+			if (document.querySelector('[data-rewind="open"]')) return
+			if (!shortcutsEnabled) return
 			if (isInInput(e)) return
 			e.preventDefault()
 			pasteItemsFromClipboard({toDirectory: currentPath})
@@ -65,8 +77,9 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Register trash shortcut (⌘⌫ / Ctrl+Backspace)
 	useKey(
-		(e) => (e.metaKey || e.ctrlKey) && e.key === 'Backspace',
+		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'Backspace',
 		(e) => {
+			if (!shortcutsEnabled) return
 			if (isInInput(e)) return
 			e.preventDefault()
 			trashSelectedItems()
@@ -75,8 +88,9 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Register select all shortcut (⌘A / Ctrl+A)
 	useKey(
-		(e) => (e.metaKey || e.ctrlKey) && e.key === 'a',
+		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'a',
 		(e) => {
+			if (!shortcutsEnabled) return
 			if (isInInput(e)) return
 			e.preventDefault()
 			// Select all items in the current directory
@@ -84,7 +98,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 		},
 	)
 
-	// Register space bar to view selected item
+	// Register space bar to view selected item (allowed even in read-only)
 	useKey(
 		(e) => e.key === ' ',
 		(e) => {
@@ -108,6 +122,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Handle search functionality
 	useEffect(() => {
+		if (!shortcutsEnabled) return
 		const handleKeyDown = (e: KeyboardEvent) => {
 			// Ignore if we're in an input or if using modifier keys
 			if (isInInput(e) || e.metaKey || e.ctrlKey || e.altKey) return
@@ -130,6 +145,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 				}
 
 				// Set new timer to clear search buffer after 700ms
+				sessionStorage
 				searchTimer.current = setTimeout(() => {
 					searchBuffer.current = ''
 				}, 700)
@@ -145,5 +161,5 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [items, setSelectedItems])
+	}, [items, setSelectedItems, shortcutsEnabled])
 }

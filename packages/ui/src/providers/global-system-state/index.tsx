@@ -16,6 +16,7 @@ import {t} from '@/utils/i18n'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
 import {ResettingCover, useReset} from './reset'
+import {RestoreCover} from './restore'
 import {UpdatingCover, useUpdate} from './update'
 
 type SystemStatus = RouterOutput['system']['status']
@@ -87,6 +88,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
 	})
+
+	// Remove restore polling; we'll show a cover based on system status like other flows
 
 	if (!IS_DEV) {
 		if (systemStatusQ.error && !triggered) {
@@ -172,6 +175,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		</DebugOnlyBare>
 	)
 
+	// Covers are shown based on system status; restore behaves like others now
+
 	if (systemStatusQ.isLoading) {
 		return (
 			<>
@@ -189,6 +194,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>
+			)
+		}
+		case 'restoring': {
+			return (
+				<>
+					<RestoreCover />
+					{debugInfo}
+				</>
 			)
 		}
 		case 'shutting-down': {

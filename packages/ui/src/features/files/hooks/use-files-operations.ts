@@ -2,6 +2,7 @@ import {AiOutlineFileExclamation} from 'react-icons/ai'
 import {toast} from 'sonner'
 
 import {TRASH_PATH} from '@/features/files/constants'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
@@ -17,6 +18,8 @@ type GetOperationArgsFn<TArgs extends object> = (path: string) => TArgs
 type ErrorToastFn = (message: string) => void
 
 export function useFilesOperations() {
+	// if read-only, we return the operations without doing anything
+	const isReadOnly = useIsFilesReadOnly()
 	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
 
@@ -185,6 +188,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const renameItem = async ({item, newName}: {item: FileSystemItem; newName: string}) => {
+		if (isReadOnly) return
 		const currentName = item.path.split('/').pop() || ''
 
 		// do nothing if the name hasn't changed
@@ -216,6 +220,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const moveItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
+		if (isReadOnly) return
 		await _executeBatchOperationWithCollisionHandling({
 			paths: fromPaths,
 			operationAsyncFn: moveItemMutation,
@@ -228,11 +233,13 @@ export function useFilesOperations() {
 	}
 
 	const moveSelectedItems = async ({toDirectory}: {toDirectory: string}) => {
+		if (isReadOnly) return
 		await moveItems({fromPaths: selectedItems.map((item) => item.path), toDirectory})
 		setSelectedItems([])
 	}
 
 	const moveDraggedItems = async ({toDirectory}: {toDirectory: string}) => {
+		if (isReadOnly) return
 		await moveItems({fromPaths: draggedItems.map((item) => item.path), toDirectory})
 		clearDraggedItems()
 	}
@@ -247,6 +254,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const copyItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
+		if (isReadOnly) return
 		await _executeBatchOperationWithCollisionHandling({
 			paths: fromPaths,
 			operationAsyncFn: copyItemMutation,
@@ -260,6 +268,7 @@ export function useFilesOperations() {
 
 	// Paste (copy or move) items from clipboard
 	const pasteItemsFromClipboard = async ({toDirectory}: {toDirectory: string}) => {
+		if (isReadOnly) return
 		const paths = clipboardItems.map((item) => item.path)
 		if (clipboardMode === 'copy') {
 			await copyItems({fromPaths: paths, toDirectory})
@@ -285,6 +294,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const extractSelectedItems = () => {
+		if (isReadOnly) return
 		for (const item of selectedItems) {
 			extract({path: item.path})
 		}
@@ -307,6 +317,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const archiveSelectedItems = () => {
+		if (isReadOnly) return
 		const paths = selectedItems.map((item) => item.path)
 		archive({paths})
 		setSelectedItems([])
@@ -337,6 +348,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const trashSelectedItems = () => {
+		if (isReadOnly) return
 		for (const item of selectedItems) {
 			trashItem({path: item.path})
 		}
@@ -344,6 +356,7 @@ export function useFilesOperations() {
 	}
 
 	const trashDraggedItems = () => {
+		if (isReadOnly) return
 		for (const item of draggedItems) {
 			trashItem({path: item.path})
 		}
@@ -361,6 +374,7 @@ export function useFilesOperations() {
 
 	// Updated batch restore function
 	const restoreItems = async ({paths}: {paths: string[]}) => {
+		if (isReadOnly) return
 		await _executeBatchOperationWithCollisionHandling({
 			paths,
 			operationAsyncFn: restoreFromTrash,
@@ -372,20 +386,23 @@ export function useFilesOperations() {
 	}
 
 	const restoreSelectedItems = () => {
+		if (isReadOnly) return
 		restoreItems({paths: selectedItems.map((item) => item.path)})
 		setSelectedItems([])
 	}
 
 	// (Permanently) delete item
+	// This is only possible in /Trash, /External, and /Network
 	const deleteItem = trpcReact.files.delete.useMutation({
 		onSuccess: (_data, {path}) => {
-			// If the deleted item's path starts with "/External/" we invalidate
-			// the generic list considering the item was on external storage and,
-			// not in the trash, otherwise we only invalidate the trash list
-			if (path.startsWith('/External/')) {
-				utils.files.list.invalidate()
-			} else {
+			// If we're permanently deleting from Trash, we can just invalidate the Trash listing.
+			if (path.startsWith(TRASH_PATH)) {
 				utils.files.list.invalidate({path: TRASH_PATH})
+			} else {
+				// Otherwise invalidate the generic list
+				utils.files.list.invalidate()
+				// And invalidate favorites since they can include External/Network items
+				utils.files.favorites.invalidate()
 			}
 		},
 		onError: (error) => {
@@ -394,6 +411,7 @@ export function useFilesOperations() {
 	}).mutateAsync
 
 	const deleteSelectedItems = () => {
+		if (isReadOnly) return
 		for (const item of selectedItems) {
 			deleteItem({path: item.path})
 		}
@@ -431,6 +449,83 @@ export function useFilesOperations() {
 		document.body.removeChild(anchor)
 	}
 
+	// Some flows need to decide UI state before starting any long-running copy.
+	// e.g., in Rewind feature, we want to:
+	//  - Prompt for name collisions BEFORE showing a progress modal
+	//  - Allow the user to skip all collisions and abort the entire operation cleanly
+	// We fetch the destination listing once, detect per-item collisions, and prompt the
+	// user. We then build and return a list of work items that
+	// encode the chosen collision strategies per item. If the returned list is empty, the
+	// caller should abort and not show any progress UI.
+	type CopyWorkItem = {path: string; toDirectory: string; collision: 'error' | 'replace' | 'keep-both'}
+
+	const resolveCopyCollisionsOrAbort = async ({
+		fromPaths,
+		toDirectory,
+	}: {
+		fromPaths: string[]
+		toDirectory: string
+	}): Promise<CopyWorkItem[]> => {
+		if (isReadOnly) return []
+		// Fetch destination once
+		const listing = await utils.files.list.fetch({path: toDirectory, limit: 10000})
+		const existing = new Set(listing.files.map((f) => f.name))
+
+		const collisionPaths = fromPaths.filter((p) => existing.has(p.split('/').pop() || ''))
+		let applyToAll = false
+		let globalDecision: 'replace' | 'keep-both' | 'skip' | null = null
+
+		const workItems: CopyWorkItem[] = []
+		for (const path of fromPaths) {
+			const base = path.split('/').pop() || ''
+			const isCollision = existing.has(base)
+			if (!isCollision) {
+				workItems.push({path, toDirectory, collision: 'error'})
+				continue
+			}
+
+			let decision: 'replace' | 'keep-both' | 'skip' = 'skip'
+			if (applyToAll && globalDecision) {
+				decision = globalDecision
+			} else {
+				try {
+					const result = await confirm({
+						title: t('files-collision.title', {
+							itemName: base,
+							destinationName: `"${toDirectory.split('/').pop() || ''}"`,
+						}),
+						message: t('files-collision.message'),
+						actions: [
+							{label: t('files-collision.action.keep-both'), value: 'keep-both', variant: 'primary'},
+							{label: t('files-collision.action.replace'), value: 'replace', variant: 'default'},
+							{label: t('files-collision.action.skip'), value: 'skip', variant: 'default'},
+						],
+						showApplyToAll: collisionPaths.length > 1,
+						icon: AiOutlineFileExclamation,
+					})
+					decision = result.actionValue as 'replace' | 'keep-both' | 'skip'
+					if (result.applyToAll) {
+						applyToAll = true
+						globalDecision = decision
+					}
+				} catch (_err) {
+					decision = 'skip'
+				}
+			}
+
+			if (decision !== 'skip') workItems.push({path, toDirectory, collision: decision})
+		}
+
+		return workItems
+	}
+
+	const executeCopyWorkItems = async ({workItems}: {workItems: CopyWorkItem[]}) => {
+		if (isReadOnly) return
+		for (const item of workItems) {
+			await copyItemMutation({path: item.path, toDirectory: item.toDirectory, collision: item.collision})
+		}
+	}
+
 	return {
 		// Basic operations
 		renameItem,
@@ -452,5 +547,8 @@ export function useFilesOperations() {
 		emptyTrash,
 		// Download operations
 		downloadSelectedItems,
+		// Copy planning helpers for flows that must resolve collisions before starting (e.g. Rewind feature)
+		resolveCopyCollisionsOrAbort,
+		executeCopyWorkItems,
 	}
 }

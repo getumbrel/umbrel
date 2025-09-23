@@ -34,6 +34,7 @@ const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troublesho
 const TerminalDialog = React.lazy(() => import('@/routes/settings/terminal/index'))
 const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
+const BackupsRestoreDialog = React.lazy(() => import('@/features/backups/index'))
 
 // drawers
 const StartMigrationDrawerOrDialog = React.lazy(() =>
@@ -60,6 +61,9 @@ const AppStorePreferencesDrawer = React.lazy(() =>
 )
 const DeviceInfoDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/device-info').then((m) => ({default: m.DeviceInfoDrawer})),
+)
+const BackupsMobileDrawer = React.lazy(() =>
+	import('@/routes/settings/mobile/backups-mobile-drawer').then((m) => ({default: m.BackupsMobileDrawer})),
 )
 const SoftwareUpdateDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
@@ -121,6 +125,9 @@ export function Settings() {
 						<Route path='/wifi' Component={Wifi} />
 						<Route path='/wifi-unsupported' Component={WifiUnsupported} />
 						<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
+						{/* Backup: mobile drawer (/backups) opens first on mobile to give same options as desktop */}
+						{isMobile && <Route path='/backups' Component={BackupsMobileDrawer} />}
+						<Route path='/backups/*' Component={BackupsRestoreDialog} />
 						{/* Not choosing based on `isMobile` because we don't want the dialog state to get reset if you resize the browser window. But also we want the same `/settings/migration-assistant` path for the first dialog/drawer you see */}
 						<Route path='/migration-assistant' Component={StartMigrationDrawerOrDialog} />
 						{isMobile && <Route path='/language' Component={LanguageDrawer} />}

@@ -145,7 +145,7 @@ async function generateAndWriteTranslations(englishReferenceContent, localeFile)
 	// Get missing translations
 	const missingTranslations = Object.keys(englishReferenceContent).reduce((missing, key) => {
 		if (!Object.prototype.hasOwnProperty.call(localeFileContent, key)) {
-			console.log(`Missing translation for key '${key}' in file '${localeFile}'`)
+			// console.log(`Missing translation for key '${key}' in file '${localeFile}'`)
 			missing[key] = englishReferenceContent[key]
 		}
 		return missing

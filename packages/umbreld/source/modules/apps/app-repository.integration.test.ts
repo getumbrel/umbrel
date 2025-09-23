@@ -188,6 +188,7 @@ describe('appRepository.readRegistry()', () => {
 					path: '',
 					defaultUsername: '',
 					defaultPassword: '',
+					backupIgnore: ['data', 'logs', 'cache'],
 				},
 			],
 		}

@@ -34,9 +34,9 @@ interface UploadingFileSystemItem extends FileSystemItem {
 
 // ---------------- Long-running filesystem operations ----------------
 // Copy and move currently (could be extended to other operations, such as archive and unarchive)
-// Used for the operations floating island
+// Used for the operations floating island, and the rewind restore progress dialog
 type OperationProgress = RouterOutput['files']['operationProgress'][number]
-type OperationsInProgress = OperationProgress[]
+export type OperationsInProgress = OperationProgress[]
 
 interface GlobalFilesContextValue {
 	// Audio

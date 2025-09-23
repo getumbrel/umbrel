@@ -21,20 +21,34 @@ export interface SidebarItemProps {
 	item: SidebarItem
 	isActive: boolean
 	onClick: () => void
+	disabled?: boolean
 }
 
-export function SidebarItem({item, isActive, onClick}: SidebarItemProps) {
+export function SidebarItem({item, isActive, onClick, disabled = false}: SidebarItemProps) {
 	return (
 		<Droppable
 			id={`sidebar-${item.path}`}
 			path={item.path}
 			className={cn(
-				'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08]  text-12 hover:bg-gradient-to-b',
-				isActive ? selectedClass : 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+				'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08]  text-12',
+				disabled ? 'cursor-default opacity-50' : 'hover:bg-gradient-to-b',
+				isActive && !disabled
+					? selectedClass
+					: disabled
+						? 'text-white/40'
+						: 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
 			)}
-			disabled={item.path === RECENTS_PATH} // Disable dropping on recents
+			disabled={disabled || item.path === RECENTS_PATH} // Disable dropping on recents and when disabled
 		>
-			<button onClick={onClick} className={cn('flex w-full items-center gap-1.5 px-2 py-1.5')}>
+			<button
+				onClick={() => {
+					if (disabled) return
+					onClick()
+				}}
+				aria-disabled={disabled}
+				disabled={disabled}
+				className={cn('flex w-full items-center gap-1.5 px-2 py-1.5', disabled && 'cursor-default')}
+			>
 				{/* We add default modified, size, and operations to satisfy FileItemIcon's expected FileSystemItem type */}
 				<FileItemIcon item={{...item, modified: 0, size: 0, operations: []}} className='h-5 w-5' />
 				<span className='truncate'>{formatItemName({name: item.name, maxLength: 21})}</span>

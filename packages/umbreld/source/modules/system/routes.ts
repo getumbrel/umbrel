@@ -26,7 +26,7 @@ import {
 
 import {privateProcedure, publicProcedure, router} from '../server/trpc/trpc.js'
 
-type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting'
+type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'
 
 // Quick hack so we can set system status from migration module until we refactor this

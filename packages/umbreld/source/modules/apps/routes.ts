@@ -210,4 +210,21 @@ export const apps = router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.apps.setHideCredentialsBeforeOpen(input.appId, input.value)),
+
+	isBackupIgnored: privateProcedure
+		.input(z.object({appId: z.string()}))
+		.query(async ({ctx, input}) => ctx.apps.getApp(input.appId).isBackupIgnored()),
+
+	backupIgnore: privateProcedure
+		.input(z.object({appId: z.string(), value: z.boolean()}))
+		.mutation(async ({ctx, input}) => ctx.apps.getApp(input.appId).setBackupIgnored(input.value)),
+
+	// Get backupIgnored paths for an app
+	getBackupIgnoredPaths: privateProcedure
+		.input(
+			z.object({
+				appId: z.string(),
+			}),
+		)
+		.query(async ({ctx, input}) => ctx.apps.getApp(input.appId).getBackupIgnoredFilePaths()),
 })

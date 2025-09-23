@@ -5,6 +5,7 @@ import {useActionsBarConfig} from '@/features/files/components/listing/actions-b
 import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {Button} from '@/shadcn-components/ui/button'
 import {
@@ -27,11 +28,12 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 	const {hideSearch} = useActionsBarConfig()
+	const isReadOnly = useIsFilesReadOnly()
 
 	return (
 		<div className='flex items-center gap-2'>
-			{/* Search */}
-			{hideSearch ? null : <SearchInput />}
+			{/* Search (hide in read-only or when explicitly hidden) */}
+			{!hideSearch && !isReadOnly ? <SearchInput /> : null}
 
 			{/* Select toggle button */}
 			<Button

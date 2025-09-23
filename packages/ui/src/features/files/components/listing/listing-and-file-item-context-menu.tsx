@@ -7,9 +7,16 @@ import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useItemClick} from '@/features/files/hooks/use-item-click'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useShares} from '@/features/files/hooks/use-shares'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {
+	isDirectoryANetworkDevice,
+	isDirectoryANetworkShare,
+} from '@/features/files/utils/is-directory-a-network-device-or-share'
+import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {
 	ContextMenu,
@@ -33,6 +40,7 @@ interface ListingAndFileItemContextMenuProps {
 }
 
 export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndFileItemContextMenuProps) {
+	const isReadOnly = useIsFilesReadOnly()
 	const {preferences, setView, setSortBy} = usePreferences()
 
 	// Files related state
@@ -60,12 +68,23 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 
 	const linkToDialog = useLinkToDialog()
 
-	const {isBrowsingTrash, isBrowsingRecents, isBrowsingSearch, isViewingExternalDrives, navigateToDirectory} =
-		useFilesNavigate()
+	const {
+		isBrowsingTrash,
+		isBrowsingRecents,
+		isBrowsingSearch,
+		isViewingExternalDrives,
+		isViewingNetworkDevices,
+		isViewingNetworkShares,
+		navigateToDirectory,
+	} = useFilesNavigate()
 
 	const {isPathShared, isAddingShare, isRemovingShare} = useShares()
 	const {isPathFavorite, addFavorite, removeFavorite, isAddingFavorite, isRemovingFavorite} = useFavorites()
+	const {removeHostOrShare, isRemovingShare: isRemovingNetworkShare, doesHostHaveMountedShares} = useNetworkStorage()
 	const isTouchDevice = useIsTouchDevice()
+
+	// If read-only, just render children without wrapping menu
+	if (isReadOnly) return <>{children}</>
 
 	const hasSelectedItems = selectedItems.length > 0
 
@@ -104,11 +123,13 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 			const hasOneSelectedItem = selectedItems.length === 1
 
 			// allow/disallow actions based on backend operations
-			const canOpen = hasOneSelectedItem
-			const canRename = hasOneSelectedItem && item.operations.includes('rename')
-			const canDownload = true // always allowed
+			const isUnmountedNetworkHost = isDirectoryANetworkDevice(item.path) && !doesHostHaveMountedShares(item.path)
+			const canOpen = hasOneSelectedItem && !isUnmountedNetworkHost && !isDirectoryAnUmbrelBackup(item.name)
+			const canRename =
+				hasOneSelectedItem && item.operations.includes('rename') && !isDirectoryAnUmbrelBackup(item.name)
+			const canDownload = !isUnmountedNetworkHost // disable for unmounted network hosts
 			const canCut = selectedItems.every((itm) => itm.operations.includes('move'))
-			const canCopy = selectedItems.every((itm) => itm.operations.includes('copy'))
+			const canCopy = selectedItems.every((itm) => itm.operations.includes('copy')) && !isUnmountedNetworkHost
 			const canPaste =
 				hasItemsInClipboard() && hasOneSelectedItem && !isItemInClipboard(item) && item.type === 'directory'
 			const canTrash = item.operations.includes('trash')
@@ -120,11 +141,25 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 			)
 
 			const canShare =
-				hasOneSelectedItem && !isPathShared(item.path) && !isAddingShare && item.operations.includes('share')
+				hasOneSelectedItem &&
+				!isPathShared(item.path) &&
+				!isAddingShare &&
+				item.operations.includes('share') &&
+				!isDirectoryAnUmbrelBackup(item.name)
 			const canRemoveShare = hasOneSelectedItem && isPathShared(item.path) && !isRemovingShare
 			const canFavorite =
-				hasOneSelectedItem && !isPathFavorite(item.path) && !isAddingFavorite && item.operations.includes('favorite')
+				hasOneSelectedItem &&
+				!isPathFavorite(item.path) &&
+				!isAddingFavorite &&
+				item.operations.includes('favorite') &&
+				!isDirectoryAnUmbrelBackup(item.name)
 			const canRemoveFavorite = hasOneSelectedItem && isPathFavorite(item.path) && !isRemovingFavorite
+			const canArchive = !(isViewingNetworkDevices || isViewingNetworkShares || isDirectoryAnUmbrelBackup(item.name))
+
+			// Network eject logic
+			const isNetworkHost = isDirectoryANetworkDevice(item.path) // /Network/hostname
+			const isNetworkShare = isDirectoryANetworkShare(item.path) // /Network/hostname/share
+			const canEjectNetwork = (isNetworkHost || isNetworkShare) && !isRemovingNetworkShare
 
 			const openShareInfoDialog = () => {
 				navigate({
@@ -196,7 +231,9 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 						</ContextMenuItem>
 					)}
 					<ContextMenuSeparator />
-					<ContextMenuItem onClick={archiveSelectedItems}>{t('files-action.compress')}</ContextMenuItem>
+					<ContextMenuItem disabled={!canArchive} onClick={archiveSelectedItems}>
+						{t('files-action.compress')}
+					</ContextMenuItem>
 					<ContextMenuItem disabled={!canExtract} onClick={extractSelectedItems}>
 						{t('files-action.uncompress')}
 					</ContextMenuItem>
@@ -218,6 +255,14 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 						<ContextMenuItem disabled={!canFavorite} onClick={() => addFavorite({path: item.path})}>
 							{t('files-action.add-favorite')}
 						</ContextMenuItem>
+					)}
+					{canEjectNetwork && (
+						<>
+							<ContextMenuSeparator />
+							<ContextMenuItem disabled={!canEjectNetwork} onClick={() => removeHostOrShare(item.path)}>
+								{isNetworkHost ? t('files-action.remove-network-host') : t('files-action.remove-network-share')}
+							</ContextMenuItem>
+						</>
 					)}
 				</>
 			)

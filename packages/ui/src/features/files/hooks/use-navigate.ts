@@ -6,12 +6,15 @@ import {
 	EXTERNAL_STORAGE_PATH,
 	FILE_TYPE_MAP,
 	HOME_PATH,
+	NETWORK_STORAGE_PATH,
 	RECENTS_PATH,
 	SEARCH_PATH,
 	TRASH_PATH,
 } from '@/features/files/constants'
+import {useFilesCapabilities} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
-import {FileSystemItem} from '@/features/files/types'
+import type {FileSystemItem} from '@/features/files/types'
+import {uiToVirtualPath, virtualToUiPath} from '@/features/files/utils/path-alias'
 
 export function toFsPath(urlPath: string): string {
 	return decodeURIComponent(urlPath).replace(BASE_ROUTE_PATH, '')
@@ -29,7 +32,14 @@ export function encodePathSegments(fsPath: string): string {
 export const useNavigate = () => {
 	const navigate = useNavigateReactRouter()
 	const location = useLocation()
-	const currentPath = toFsPath(location.pathname)
+	const config = useFilesCapabilities()
+	// Normalize path so '/Network/<host>/' === '/Network/<host>'.
+	// This ensures network host-level detection works even if users add a trailing slash,
+	// which we rely on to hide write UI when a NAS host is offline.
+	const currentPathFromRouter = toFsPath(location.pathname).replace(/\/+$/, '') || '/'
+	const uiPath = (config.currentPath ?? currentPathFromRouter) as string
+	// Map UI → virtual for internal consumers
+	const currentPath = uiToVirtualPath(uiPath, config.pathAliases)
 	const setViewerItem = useFilesStore((state) => state.setViewerItem)
 	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 
@@ -37,7 +47,14 @@ export const useNavigate = () => {
 		// clear any previous viewer item
 		setViewerItem(null)
 
-		navigate(`${BASE_ROUTE_PATH}${encodePathSegments(path)}`)
+		// Map virtual → UI for outbound navigation
+		const outUi = virtualToUiPath(path, config.pathAliases)
+
+		if (config.onNavigate) {
+			config.onNavigate(outUi)
+		} else {
+			navigate(`${BASE_ROUTE_PATH}${encodePathSegments(outUi)}`)
+		}
 	}
 
 	const navigateToItem = (item: FileSystemItem) => {
@@ -82,10 +99,25 @@ export const useNavigate = () => {
 
 	const isViewingExternalDrives = currentPath === EXTERNAL_STORAGE_PATH
 
+	// Anywhere within /Network
+	const isBrowsingNetworkStorage = currentPath.startsWith(NETWORK_STORAGE_PATH)
+
+	// Is at /Network exactly (meaning we are viewing network devices if any)
+	const isViewingNetworkDevices = currentPath === NETWORK_STORAGE_PATH
+
+	// Is at /Network/<host> (meaning we are viewing network shares for that host)
+	const isViewingNetworkShares =
+		currentPath.startsWith(NETWORK_STORAGE_PATH + '/') && currentPath.split('/').length === 3
+
+	// Backups root or any path under it
+	const isBrowsingBackups = currentPath.startsWith('/Backups')
+
 	return {
 		navigateToDirectory,
 		navigateToItem,
 		currentPath,
+		// Expose the UI path for components that need UI-space comparisons (e.g., isActive)
+		uiPath,
 		isBrowsingTrash,
 		isInHome,
 		isBrowsingRecents,
@@ -93,5 +125,9 @@ export const useNavigate = () => {
 		isBrowsingSearch,
 		isBrowsingExternalStorage,
 		isViewingExternalDrives,
+		isBrowsingNetworkStorage,
+		isViewingNetworkDevices,
+		isViewingNetworkShares,
+		isBrowsingBackups,
 	}
 }

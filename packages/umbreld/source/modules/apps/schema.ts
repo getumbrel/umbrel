@@ -59,6 +59,7 @@ export const AppManifestSchema = z.object({
 	widgets: z.array(z.any()).optional(),
 	defaultShell: z.string().optional(),
 	implements: z.array(z.string()).optional(),
+	backupIgnore: z.array(z.string()).optional(),
 })
 
 export type AppManifest = z.infer<typeof AppManifestSchema>
@@ -99,6 +100,7 @@ export function validateManifest(parsed: unknown): AppManifest {
 export const AppSettingsSchema = z.object({
 	hideCredentialsBeforeOpen: z.boolean().optional(),
 	dependencies: z.record(z.string()).optional(),
+	backupIgnore: z.boolean().optional(),
 })
 
 export type AppSettings = z.infer<typeof AppSettingsSchema>

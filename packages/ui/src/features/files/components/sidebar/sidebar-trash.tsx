@@ -67,8 +67,10 @@ export function SidebarTrash() {
 					return (
 						<motion.div
 							layout
-							className={`flex flex-col items-center bg-gradient-to-b from-white/[0.01] to-white/[0.04] ${
-								isExpanded ? 'rounded-xl border border-white/6 p-3' : 'h-[35px] cursor-pointer rounded-lg'
+							className={`flex flex-col items-center ${
+								isExpanded
+									? 'rounded-xl border border-white/6 bg-gradient-to-b from-white/[0.04] to-white/[0.08] p-3'
+									: 'h-[35px] cursor-pointer rounded-lg'
 							} ${isTrash && 'border-white/6 bg-gradient-to-b !from-white/[0.04] !to-white/[0.08] shadow-button-highlight-soft-hpx'}`}
 							initial={false}
 							onClick={() => {
@@ -84,7 +86,7 @@ export function SidebarTrash() {
 								{/* "Trash" text */}
 								<motion.div
 									layout='position'
-									className={`text-12 text-white/60 ${isExpanded ? 'mb-2' : 'ml-[-15px] mt-2'}`}
+									className={`text-12 text-white/60 ${isExpanded ? 'mb-2' : 'ml-[-18px] mt-[10px]'}`}
 								>
 									{t('files-sidebar.trash')}
 								</motion.div>
@@ -107,7 +109,7 @@ export function SidebarTrash() {
 								{/* Trash SVG */}
 								<motion.div
 									layout='position'
-									className={`${isExpanded ? 'mt-4' : 'ml-[-13px] mt-[-18px]'} flex-shrink-0`}
+									className={`${isExpanded ? 'mt-4' : 'ml-[-16px] mt-[-18px]'} flex-shrink-0`}
 									animate={{
 										scale: isExpanded ? 1 : 0.3,
 									}}

@@ -1,6 +1,6 @@
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
-import {ExternalStorageIcon} from '@/features/files/assets/external-storage-icon'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -24,7 +24,7 @@ export default function ExternalStorageUnsupportedDialog() {
 				</AlertDialogHeader>
 				<div className='mt-2 flex justify-center'>
 					<div className='relative'>
-						<ExternalStorageIcon className='h-16 w-16' />
+						<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
 						<div className='absolute -right-2 -top-2'>
 							<TbAlertTriangleFilled className='h-8 w-8 text-yellow-400' />
 						</div>

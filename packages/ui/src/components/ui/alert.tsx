@@ -62,3 +62,27 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant
 	)
 })
 Alert.displayName = 'Alert'
+
+export function WarningAlert({
+	icon,
+	description,
+	className,
+}: {
+	icon?: IconTypes
+	description: React.ReactNode
+	className?: string
+}) {
+	const IconComponent = icon
+
+	return (
+		<div
+			className={cn(
+				'flex items-center gap-2 rounded-8 bg-[#4B2D00] p-2.5 text-13 leading-tight -tracking-2 text-[#ffb46e]',
+				className,
+			)}
+		>
+			{IconComponent && <IconComponent className='h-5 w-5 shrink-0' />}
+			<span className='opacity-90'>{description}</span>
+		</div>
+	)
+}

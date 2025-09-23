@@ -15,6 +15,7 @@ import Files from './modules/files/files.js'
 import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
+import Backups from './modules/backups/backups.js'
 
 import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime} from './modules/system/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
@@ -57,8 +58,24 @@ type StoreSchema = {
 			name: string
 			path: string
 		}[]
+		networkStorage: {
+			host: string
+			share: string
+			username: string
+			password: string
+			mountPath: string
+		}[]
 	}
 	notifications: string[]
+	backups: {
+		repositories: {
+			id: string
+			path: string
+			password: string
+			lastBackup?: number
+		}[]
+		ignore: string[]
+	}
 }
 
 export type UmbreldOptions = {
@@ -86,6 +103,7 @@ export default class Umbreld {
 	notifications: Notifications
 	eventBus: EventBus
 	dbus: Dbus
+	backups: Backups
 
 	constructor({
 		dataDirectory,
@@ -108,6 +126,7 @@ export default class Umbreld {
 		this.notifications = new Notifications(this)
 		this.eventBus = new EventBus(this)
 		this.dbus = new Dbus(this)
+		this.backups = new Backups(this)
 	}
 
 	async start() {
@@ -162,10 +181,16 @@ export default class Umbreld {
 			this.dbus.start(),
 			this.server.start(),
 		])
+
+		// Start backups last because it depends on files
+		this.backups.start()
 	}
 
 	async stop() {
 		try {
+			// Stop backups first because it depends on files
+			await this.backups.stop()
+
 			// Stop modules
 			await Promise.all([this.files.stop(), this.apps.stop(), this.appStore.stop(), this.dbus.stop()])
 			return true

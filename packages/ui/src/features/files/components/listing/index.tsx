@@ -11,6 +11,7 @@ import {FileUploadDropZone} from '@/features/files/components/shared/file-upload
 import {useFilesKeyboardShortcuts} from '@/features/files/hooks/use-files-keyboard-shortcuts'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {t} from '@/utils/i18n'
@@ -120,6 +121,7 @@ export function Listing({
 	const isTouchDevice = useIsTouchDevice()
 	const scrollAreaRef = useRef<HTMLDivElement>(null)
 	const {currentPath} = useNavigate()
+	const isReadOnly = useIsFilesReadOnly()
 
 	useFilesKeyboardShortcuts({items: selectableItems})
 
@@ -143,8 +145,11 @@ export function Listing({
 		</div>
 	)
 
-	const contentWithContextMenu = (
+	// if read-only, return the content without the context menu
+	const contentWithContextMenu = !isReadOnly ? (
 		<ListingAndFileItemContextMenu menuItems={additionalContextMenuItems}>{content}</ListingAndFileItemContextMenu>
+	) : (
+		content
 	)
 
 	// For touch devices, disable marquee selection + file upload drop zone and droppable
@@ -155,7 +160,8 @@ export function Listing({
 	// For desktop, wrap in marquee selection, enable file upload drop zone and droppable
 	return (
 		<MarqueeSelection scrollAreaRef={scrollAreaRef} items={selectableItems}>
-			{enableFileDrop ? (
+			{/* if read-only, return the content without the file upload drop zone */}
+			{enableFileDrop && !isReadOnly ? (
 				<FileUploadDropZone>
 					<Droppable
 						id={`files-listing-${currentPath}`}
@@ -179,7 +185,10 @@ function ErrorView({error}: {error: unknown}) {
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
 			{/* TODO: use error codes once the backend supports them */}
-			{message.startsWith('ENOENT') || message.startsWith('Cannot map') ? (
+			{message.startsWith('ENOENT') ||
+			message.startsWith('Cannot map') ||
+			message.startsWith('[does-not-exist]') ||
+			message.startsWith('EIO') ? (
 				<div className='flex flex-col items-center gap-2'>
 					<FolderX className='h-6 w-6 opacity-50' />
 					<span className='text-12 text-white/40'>{t('files-listing.no-such-file')}</span>

@@ -1,8 +1,12 @@
 import {setTimeout} from 'node:timers/promises'
+import path from 'node:path'
 import {expect, beforeAll, afterAll, test} from 'vitest'
+import fse from 'fs-extra'
+import yaml from 'js-yaml'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import runGitServer from '../test-utilities/run-git-server.js'
+import type {AppManifest} from './schema.js'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 let communityAppStoreGitServer: Awaited<ReturnType<typeof runGitServer>>
@@ -45,6 +49,12 @@ test.sequential('trackOpen() throws invalid error when no user is registered', a
 	await expect(umbreld.client.apps.setTorEnabled.mutate(true)).rejects.toThrow('Invalid token')
 })
 
+test.sequential('getBackupIgnoredPaths() throws invalid error when no user is registered', async () => {
+	await expect(umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})).rejects.toThrow(
+		'Invalid token',
+	)
+})
+
 test.sequential('login', async () => {
 	await expect(umbreld.registerAndLogin()).resolves.toBe(true)
 })
@@ -72,6 +82,12 @@ test.sequential('update() throws error on unknown app id', async () => {
 
 test.sequential('trackOpen() throws invalid error when no user is registered', async () => {
 	await expect(umbreld.client.apps.trackOpen.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow('not found')
+})
+
+test.sequential('getBackupIgnoredPaths() throws error on unknown app id', async () => {
+	await expect(umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})).rejects.toThrow(
+		'not found',
+	)
 })
 
 test.sequential('install() installs an app', async () => {
@@ -113,6 +129,26 @@ test.sequential('list() lists installed apps', async () => {
 			version: '1.0.0',
 		},
 	])
+})
+
+test.sequential('getBackupIgnoredPaths() returns sanitised absolute paths for installed app', async () => {
+	const dataDir = umbreld.instance.dataDirectory
+	const expected = ['data', 'logs', 'cache'].map((p) => path.join(dataDir, 'app-data', 'sparkles-hello-world', p))
+	await expect(umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(
+		expected,
+	)
+})
+
+test.sequential('getBackupIgnoredPaths() returns empty array when app has no backupIgnore paths', async () => {
+	// Remove backupIgnore from installed app's manifest
+	const manifestPath = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world', 'umbrel-app.yml')
+	const original = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
+	delete original.backupIgnore
+	await fse.writeFile(manifestPath, yaml.dump(original))
+
+	await expect(umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(
+		[],
+	)
 })
 
 test.sequential('restart() restarts an installed app', async () => {

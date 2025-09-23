@@ -42,30 +42,20 @@ type DiskUsage = {
 	used: number
 }
 
-export async function getSystemDiskUsage(umbreld: Umbreld): Promise<{size: number; totalUsed: number}> {
-	if (typeof umbreld.dataDirectory !== 'string' || umbreld.dataDirectory === '') {
-		throw new Error('umbreldDataDir must be a non-empty string')
-	}
+export async function getDiskUsageByPath(path: string): Promise<{size: number; totalUsed: number; available: number}> {
+	if (typeof path !== 'string' || path === '') throw new Error('path must be a non-empty string')
 
-	// to calculate the disk usage of each app
-	const fileSystemSize = await systemInformation.fsSize()
+	// Piggy back on df and get the result in bytes
+	const df = await $`df --output=size,used,avail --block-size=1 ${path}`
+	const [size, totalUsed, available] = df.stdout.split('\n').slice(-1)[0].split(' ').map(Number)
 
-	// Get the disk usage information for the file system containing the Umbreld data dir.
-	// Sort by mount length to get the most specific mount point
-	const df = await $`df -h ${umbreld.dataDirectory}`
-	const partition = df.stdout.split('\n').slice(-1)[0].split(' ')[0]
-	const dataDirectoryFilesystem = fileSystemSize.find((filesystem) => filesystem.fs === partition)
+	return {size, totalUsed, available}
+}
 
-	if (!dataDirectoryFilesystem) {
-		throw new Error('Could not find file system containing Umbreld data directory')
-	}
-
-	const {size, used} = dataDirectoryFilesystem
-
-	return {
-		size,
-		totalUsed: used,
-	}
+export async function getSystemDiskUsage(
+	umbreld: Umbreld,
+): Promise<{size: number; totalUsed: number; available: number}> {
+	return await getDiskUsageByPath(umbreld.dataDirectory)
 }
 
 export async function getDiskUsage(
@@ -567,4 +557,9 @@ export async function waitForSystemTime(umbreld: Umbreld, timeout: number): Prom
 	} catch (error) {
 		umbreld.logger.error(`Failed to check system time`, error)
 	}
+}
+
+export async function getHostname() {
+	const hostname = await fse.readFile('/etc/hostname', 'utf8')
+	return hostname.trim()
 }

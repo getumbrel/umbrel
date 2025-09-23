@@ -32,7 +32,7 @@ function NotificationContent({children}: {children: string}) {
 				ref={contentRef}
 				initial={false}
 				animate={{
-					height: isExpanded ? 'auto' : '11em',
+					height: isExpanded ? 'auto' : '3em',
 				}}
 				transition={{
 					duration: 0.4,
@@ -79,6 +79,11 @@ export function Notifications() {
 					description:
 						'umbrelOS 1.4 introduces Shared Folders over your network, which can also serve as a Time Machine backup location.\nYour current macOS backups using the Back That Mac Up app will no longer work.\nYou can uninstall Back That Mac Up and instead create a new Shared Folder using Files for Time Machine.\nIf you’d still prefer to continue using the Back That Mac Up app:\n1. Go to Time Machine settings.\n2. Remove the backup destination.\n3. Go to Finder.\n4. Press CMD+K and add smb://umbrel.local:1445.\n5. Enter "timemachine" (without quotes) as the username and password.\n6. Go back to Time Machine settings.\n7. Add a new location.\n8. Select Umbrel.\nNote: If you previously used encryption, you will need to enter your encryption password. Time Machine will then resume backups with all your previous data intact.',
 				}
+			case 'backups-failing':
+				return {
+					title: t('notifications.backups-failing.title'),
+					description: t('notifications.backups-failing.description'),
+				}
 			default:
 				return {
 					title: 'Notification',
@@ -96,7 +101,7 @@ export function Notifications() {
 						<AlertDialogContent>
 							<AlertDialogHeader>
 								<AlertDialogTitle>{content.title}</AlertDialogTitle>
-								<div className='mt-4'>
+								<div className='pt-2'>
 									<NotificationContent>{content.description}</NotificationContent>
 								</div>
 							</AlertDialogHeader>

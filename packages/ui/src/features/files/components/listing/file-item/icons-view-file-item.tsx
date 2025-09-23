@@ -7,16 +7,25 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import type {FileSystemItem} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
+import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
+import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 interface IconsViewFileItemProps {
 	item: FileSystemItem
 	isEditingName: boolean
 	onEditingNameComplete: () => void
+	fadedContent?: boolean
 }
 
-export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: IconsViewFileItemProps) => {
+export const IconsViewFileItem = ({
+	item,
+	isEditingName,
+	onEditingNameComplete,
+	fadedContent,
+}: IconsViewFileItemProps) => {
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 	const isTouchDevice = useIsTouchDevice()
@@ -36,7 +45,7 @@ export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: 
 			<div className='flex justify-center'>
 				<FileItemIcon item={item} className='h-14 w-14' useAnimatedIcon={!isTouchDevice} isHovered={isHovered} />
 			</div>
-			<div className='relative w-full flex-col items-center'>
+			<div className={cn('relative w-full flex-col items-center', fadedContent && 'opacity-50')}>
 				{isEditingName ? (
 					<EditableName item={item} view='icons' onFinish={onEditingNameComplete} />
 				) : (
@@ -54,7 +63,11 @@ export const IconsViewFileItem = ({item, isEditingName, onEditingNameComplete}: 
 						: item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')
-								: t('files-type.directory')
+								: isDirectoryANetworkDevice(item.path)
+									? t('files-type.network-drive')
+									: isDirectoryAnUmbrelBackup(item.name)
+										? t('files-type.umbrel-backup')
+										: t('files-type.directory')
 							: formatFilesystemSize(item.size)}
 				</span>
 			</div>

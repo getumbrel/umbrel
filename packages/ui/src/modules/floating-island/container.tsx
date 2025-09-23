@@ -1,9 +1,11 @@
 import {AnimatePresence, motion} from 'framer-motion'
 
+import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {AudioIsland} from '@/features/files/components/floating-islands/audio-island'
 import {OperationsIsland} from '@/features/files/components/floating-islands/operations-island'
 import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
 import {useGlobalFiles} from '@/providers/global-files'
+import {trpcReact} from '@/trpc/trpc'
 
 const spring = {
 	type: 'spring' as const,
@@ -14,6 +16,8 @@ const spring = {
 export function FloatingIslandContainer() {
 	// Grab global audio and uploading items state
 	const {audio, uploadingItems, operations} = useGlobalFiles()
+	// Backups progress
+	const backupProgressQ = trpcReact.backups.backupProgress.useQuery(undefined, {refetchInterval: 1000})
 
 	// Show audio island if there's an audio file playing
 	const showAudio = audio.path && audio.name
@@ -23,6 +27,8 @@ export function FloatingIslandContainer() {
 
 	// Show operations island if there are any operations in progress
 	const showOperations = operations.length > 0
+	// Show backups island if any backups are running
+	const showBackups = (backupProgressQ.data?.length || 0) > 0
 
 	// Common animation props
 	const commonProps = {
@@ -45,6 +51,11 @@ export function FloatingIslandContainer() {
 				{showOperations && (
 					<motion.div key='operations-island' layout {...commonProps}>
 						<OperationsIsland />
+					</motion.div>
+				)}
+				{showBackups && (
+					<motion.div key='backups-island' layout {...commonProps}>
+						<BackupsIsland />
 					</motion.div>
 				)}
 				{showAudio && (

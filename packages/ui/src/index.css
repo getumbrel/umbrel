@@ -266,3 +266,12 @@ a {
 	-ms-overflow-style: none; /* IE and Edge */
 	scrollbar-width: none; /* Firefox */
 }
+
+/* Permanent Marker self-hosted font */
+@font-face {
+	font-weight: 400;
+	font-family: 'Permanent Marker';
+	font-style: normal;
+	src: url('/fonts/permanent-marker.woff2') format('woff2');
+	font-display: swap;
+}

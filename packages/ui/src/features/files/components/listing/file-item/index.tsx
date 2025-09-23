@@ -4,9 +4,12 @@ import {IconsViewFileItem} from '@/features/files/components/listing/file-item/i
 import {ListViewFileItem} from '@/features/files/components/listing/file-item/list-view-file-item'
 import {Draggable, Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {useItemClick} from '@/features/files/hooks/use-item-click'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
+import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {cn} from '@/shadcn-lib/utils'
 
 interface FileItemProps {
@@ -36,6 +39,12 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const {preferences} = usePreferences()
 	const view = preferences?.view
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
+
+	const {doesHostHaveMountedShares} = useNetworkStorage()
+
+	// If the item is a network device that isn't actually mounted then we disable and fade the text content but not the icon.
+	const isNetworkHost = isDirectoryANetworkDevice(item.path)
+	const isItemInteractive = isNetworkHost ? doesHostHaveMountedShares(item.path) : true
 
 	// Long press detection to select the item on mobile
 	// since onContextMenu isn't triggered on mobile
@@ -158,10 +167,14 @@ export const FileItem = ({item, items}: FileItemProps) => {
 				return
 			}
 
+			// don't allow renaming Umbrel Backup directory
+			if (isDirectoryAnUmbrelBackup(item.name)) return
+
 			// don't trigger the rename if the user Entered in the input
 			if (isInInput(event)) return
 
 			event.preventDefault()
+
 			setIsEditingName(true)
 		}
 
@@ -189,10 +202,14 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			<Droppable
 				id={`${view}-view-file-item-${item.path}`}
 				path={item.path}
-				disabled={!!isUploading || item.type !== 'directory'}
+				disabled={!!isUploading || item.type !== 'directory' || !isItemInteractive}
 				className='rounded-lg'
 			>
-				<Draggable id={`${view}-view-file-item-${item.path}`} item={item} disabled={!!isUploading}>
+				<Draggable
+					id={`${view}-view-file-item-${item.path}`}
+					item={item}
+					disabled={!!isUploading || !isItemInteractive}
+				>
 					<div
 						onClick={(e) => handleClick(e, item, items)}
 						onDoubleClick={() => handleDoubleClick(item)}
@@ -221,6 +238,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 									item={item}
 									isEditingName={isEditingFileName}
 									onEditingNameComplete={handlNameEditingComplete}
+									fadedContent={!isItemInteractive}
 								/>
 							) : null}
 							{view === 'list' ? (
@@ -228,6 +246,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 									item={item}
 									isEditingName={isEditingFileName}
 									onEditingNameComplete={handlNameEditingComplete}
+									fadedContent={!isItemInteractive}
 								/>
 							) : null}
 						</div>

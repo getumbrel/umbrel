@@ -103,6 +103,18 @@ export default class Apps {
 		const appIds = await this.#umbreld.store.get('apps')
 		this.instances = appIds.map((appId) => new App(this.#umbreld, appId))
 
+		// Don't save references to any apps that don't have a data directory on
+		// startup. This will allow apps that were excluded from backups to be
+		// reinstalled when the system is restored. Otherwise they'll have an id
+		// entry but no data dir and will be stuck in a `not-running` state.
+		for (const app of this.instances) {
+			const appDataDirectoryExists = await fse.pathExists(app.dataDirectory).catch(() => false)
+			if (!appDataDirectoryExists) {
+				this.logger.error(`App ${app.id} does not have a data directory, removing from instances`)
+				this.instances = this.instances.filter((instanceApp) => instanceApp.id !== app.id)
+			}
+		}
+
 		// Force the app state to starting so users don't get confused.
 		// They aren't actually starting yet, we need to make sure the app env is up first.
 		// But if that takes a long time users see all their apps listed as not running and
@@ -255,8 +267,11 @@ export default class Apps {
 
 		// Save installed app
 		await this.#umbreld.store.getWriteLock(async ({get, set}) => {
-			const apps = await get('apps')
+			let apps = await get('apps')
 			apps.push(appId)
+			// Make sure we never add dupes
+			// This can happen after restoring a backup with an excluded app and then reinstalling it
+			apps = [...new Set(apps)]
 			await set('apps', apps)
 		})
 
