@@ -54,7 +54,7 @@ For a detailed feature breakdown, see our [comparison guide](https://github.com/
 - [Install umbrelOS on a Raspberry Pi 5](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5)
 - [Install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-Systems)
 - [Install umbrelOS in a VM](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Linux-VM)
-
+- [Install umbrelOS in a Docker container](https://github.com/dockur/umbrel)
 
 ## Umbrel App Store
 
