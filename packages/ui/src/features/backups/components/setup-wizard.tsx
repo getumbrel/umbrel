@@ -504,8 +504,8 @@ function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: Bac
 					)}
 				</div>
 			) : tab === 'umbrel-private-cloud' ? (
-				<div className='flex flex-col items-center justify-center gap-7 rounded-20 border border border-white/10 bg-black/30 pb-10 pt-8'>
-					<div className='flex flex-col items-center justify-center gap-1'>
+				<div className='flex flex-col items-center justify-center gap-7 rounded-20 border border border-white/10 bg-black/30 px-3 pb-10 pt-8'>
+					<div className='flex flex-col items-center justify-center gap-1 text-center'>
 						<h2 className='mb-0 text-2xl text-white'>{t('backups-setup-umbrel-private-cloud')}</h2>
 						<span className='mt-0  text-sm text-white/80'>{t('backups-setup-umbrel-private-cloud-subtitle')}</span>
 					</div>
