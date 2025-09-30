@@ -46,6 +46,7 @@ export default class Backups {
 	backupsInProgress: BackupsInProgress = []
 	restoreProgress: RestoreProgress = null
 	running = false
+	startedAt?: number
 	backupInterval = 1000 * 60 * 60 // 1 hour
 	backupJobPromise?: Promise<void>
 	kopiaQueue = new pQueue({concurrency: 1})
@@ -62,6 +63,7 @@ export default class Backups {
 	async start() {
 		this.logger.log('Starting backups')
 		this.running = true
+		this.startedAt = Date.now()
 
 		// Cleanup any left over backup mounts
 		await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
@@ -124,7 +126,7 @@ export default class Backups {
 
 				// Alert the user if backups have failed for over 24 hours
 				const {lastBackup} = await this.getRepository(repository.id)
-				const hoursSinceLastBackup = (Date.now() - (lastBackup || 0)) / (1000 * 60 * 60)
+				const hoursSinceLastBackup = (Date.now() - (lastBackup || this.startedAt!)) / (1000 * 60 * 60)
 				if (hoursSinceLastBackup > 24) {
 					this.logger.error(`Backup for ${repository.path} has not run in over 24 hours`)
 					await this.#umbreld.notifications.add('backups-failing').catch(() => {})

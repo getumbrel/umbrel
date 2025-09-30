@@ -606,11 +606,26 @@ test('backups sets user notification if backups have not run in over 24 hours', 
 	// Set frequent backup interval
 	umbreld.instance.backups.backupInterval = 100 // 100ms
 
+	// Wait for some backup attempts
+	await setTimeout(30000)
+
+	// Verify we still have no notifications
+	// (we shouldn't have a notification unless 24 hours has passed)
+	await expect(umbreld.client.notifications.get.query()).resolves.toHaveLength(0)
+
+	// Mock time 24 hours in the future to trigger the notification
+	const now = Date.now()
+	const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
+	const viNow = vi.spyOn(Date, 'now').mockImplementation(() => now + TWENTY_FOUR_HOURS)
+
 	// Verify we have a notification
 	await pRetry(() => expect(umbreld.client.notifications.get.query()).resolves.toStrictEqual(['backups-failing']), {
 		retries: 30,
 		factor: 1,
 	})
+
+	// Unmock time
+	viNow.mockRestore()
 
 	// Stop excessive backups
 	umbreld.instance.backups.backupInterval = 1000000
