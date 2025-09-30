@@ -42,8 +42,6 @@ Just like the cloud, but one that you own and control.
 
 <br />
 
-<br />
-
 ## Installing umbrelOS
 
 umbrelOS is designed for the [Umbrel Home](https://umbrel.com/umbrel-home), where it includes first-class support for all features. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
@@ -62,14 +60,9 @@ For a detailed feature breakdown, see our [comparison guide](https://github.com/
 [![Backups in umbrelOS](https://github.com/user-attachments/assets/39778824-ed18-4f6f-a865-1d77bbfce833)](https://umbrel.com/umbrelos)
 [![External Storage & NAS in umbrelOS](https://github.com/user-attachments/assets/4841c2dc-4ba4-4d47-bf0a-0e342bf60166)](https://umbrel.com/umbrelos)
 
-
 ## Building apps for umbrelOS
 
 If you're interested in building an app for umbrelOS or packaging an existing one, please refer to the [Umbrel App Framework documentation](https://github.com/getumbrel/umbrel-apps/blob/master/README.md).
-
-## Setting up a development environment
-
-With the release of umbrelOS 1.0, a lot of the underlying architecture of the project has changed. This section will be re-written with up-to-date development instructions.
 
 ## License
 
