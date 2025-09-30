@@ -1,4 +1,4 @@
-[![umbrelOS](https://github.com/getumbrel/umbrel/assets/10330103/56be7b95-0c24-4dee-ad3a-e5947bc2ee07)](https://umbrel.com/umbrelos)
+[![umbrelOS](https://github.com/user-attachments/assets/cabf8af7-51ce-45df-ad3a-a664cc91c610)](https://umbrel.com/umbrelos)
 
 <p align="center">
   <h1 align="center">umbrelOS</h1>
@@ -46,7 +46,7 @@ Just like the cloud, but one that you own and control.
 
 ## Installing umbrelOS
 
-umbrelOS is designed for the [Umbrel Home](https://umbrel.com/umbrel-home), where it includes all features like external storage support and Migration Assistant. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
+umbrelOS is designed for the [Umbrel Home](https://umbrel.com/umbrel-home), where it includes first-class support for all features. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
 
 For a detailed feature breakdown, see our [comparison guide](https://github.com/getumbrel/umbrel/wiki/umbrelOS-on-Umbrel-Home-vs.-DIY).
 
@@ -55,84 +55,13 @@ For a detailed feature breakdown, see our [comparison guide](https://github.com/
 - [Install umbrelOS on any x86 system](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-Systems)
 - [Install umbrelOS in a VM](https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Linux-VM)
 
+[![umbrelOS use cases](https://github.com/user-attachments/assets/284feee7-15a1-48f2-a694-c968f1cc702f)](https://umbrel.com/umbrelos)
+[![Umbrel App Store](https://github.com/user-attachments/assets/3d7846c7-d896-48f5-8a30-3578554702fa)](https://apps.umbrel.com)
+[![Files on umbrelOS](https://github.com/user-attachments/assets/6c501256-47a0-4ce1-89ad-4ba02f4c9f2d)](https://umbrel.com/umbrelos)
+[![umbrelOS Features](https://github.com/user-attachments/assets/6828da74-2b64-4b56-a7b7-5db603d023c8)](https://umbrel.com/umbrelos)
+[![Backups in umbrelOS](https://github.com/user-attachments/assets/31001ab6-6fa9-41fe-b8ff-5a8f23be3dcc)](https://umbrel.com/umbrelos)
+[![External Storage & NAS in umbrelOS](https://github.com/user-attachments/assets/4841c2dc-4ba4-4d47-bf0a-0e342bf60166)](https://umbrel.com/umbrelos)
 
-## Umbrel App Store
-
-Here are some of the apps available in the Umbrel App Store. For the complete list of apps, visit [apps.umbrel.com](https://apps.umbrel.com/).
-
-#### Files & Productivity
-
-- [Calibre Web](https://apps.umbrel.com/app/calibre-web) — A clean web app for your eBooks
-- [Nextcloud](https://apps.umbrel.com/app/nextcloud) — Productivity platform that keeps you in control
-- [Immich](https://apps.umbrel.com/app/immich) - High performance photo and video backup solution
-- [PhotoPrism](https://apps.umbrel.com/app/photoprism) — Self-host your photo and video library
-- [SyncThing](https://apps.umbrel.com/app/syncthing) — Peer-to-peer file synchronization between your devices
-- [Vaultwarden](https://apps.umbrel.com/app/vaultwarden) — Unofficial Bitwarden® compatible server
-
-#### Media
-
-- [Jellyfin](https://apps.umbrel.com/app/jellyfin) — The Free Software Media System
-- [Lidarr](https://apps.umbrel.com/app/lidarr) — Looks and smells like Sonarr but made for music
-- [Plex](https://apps.umbrel.com/app/plex) — Stream Movies & TV Shows
-- [Prowlarr](https://apps.umbrel.com/app/prowlarr) — Indexer manager/proxy for Sonarr, Radarr, and Lidarr
-- [Radarr](https://apps.umbrel.com/app/radarr) — Your movie collection manager
-- [Sonarr](https://apps.umbrel.com/app/sonarr) — Smart PVR for newsgroup and bittorrent users
-
-#### Bitcoin & Finance
-
-- [Bitcoin Node](https://apps.umbrel.com/app/bitcoin) — Run your personal node powered by Bitcoin Core
-- [Electrs](https://apps.umbrel.com/app/electrs) — A simple and efficient Electrum Server
-- [Mempool](https://apps.umbrel.com/app/mempool) — A self-hosted explorer for the Bitcoin community
-- [Bitfeed](https://apps.umbrel.com/app/bitfeed) — A beautiful mempool visualizer and block explorer
-- [BTCPay Server](https://apps.umbrel.com/app/btcpay-server) — Accept Bitcoin payments with zero fees & no 3rd party
-- [RoboSats](https://apps.umbrel.com/app/robosats) — Simple and Private Bitcoin P2P Exchange
-- [Jam](https://apps.umbrel.com/app/jam) — Your sats. Your privacy. Your profit.
-- [Samourai Server](https://apps.umbrel.com/app/samourai-server) — Your private backing server for Samourai Wallet
-- [Lightning Node](https://apps.umbrel.com/app/lightning) — Run your personal Lightning Network node
-- [Core Lightning](https://apps.umbrel.com/app/core-lightning) — Run your personal Core Lightning node
-- [Lightning Terminal](https://apps.umbrel.com/app/lightning-terminal) — The easiest way to manage channel liquidity
-- [LNBits](https://apps.umbrel.com/app/lnbits) — Multi-user wallet management system
-- [Ride The Lightning](https://apps.umbrel.com/app/ride-the-lightning) — A powerful dashboard for the Lightning Network
-- [ThunderHub](https://apps.umbrel.com/app/thunderhub) — Take full control of your Lightning node
-- [Invoice Ninja](https://apps.umbrel.com/app/invoice-ninja) - We'll help with the invoicing
-
-#### AI
-
-- [LlamaGPT](https://apps.umbrel.com/app/llama-gpt) - Self-hosted, offline ChatGPT-like chatbot powered by Llama 2
-- [ChatBot UI](https://apps.umbrel.com/app/chatbot-ui) - ChatGPT but better
-- [Chatpad AI](https://apps.umbrel.com/app/chatpad-ai) - Premium quality UI for ChatGPT
-
-#### Networking
-
-- [Pi-hole](https://apps.umbrel.com/app/pi-hole) — Block ads on your entire network
-- [Tailscale](https://apps.umbrel.com/app/tailscale) — Zero config VPN to access your Umbrel from anywhere
-- [Transmission](https://apps.umbrel.com/app/transmission) — A fast, easy and free BitTorrent client
-- [Uptime Kuma](https://apps.umbrel.com/app/uptime-kuma) — Self-hosted uptime monitoring tool
-- [Urbit](https://apps.umbrel.com/app/urbit) — Run Urbit on your Umbrel
-- [Whoogle Search](https://apps.umbrel.com/app/whoogle-search) — A self-hosted, ad-free, privacy-respecting metasearch engine
-
-#### Social
-
-- [Element](https://apps.umbrel.com/app/element) — A glossy Matrix client compatible with Synapse
-- [Invidious](https://apps.umbrel.com/app/invidious) — Browse YouTube without tracking or ads
-- [LibReddit](https://apps.umbrel.com/app/libreddit) — An alternative private front-end to Reddit
-- [Nitter](https://apps.umbrel.com/app/nitter) — Browse Twitter without tracking or ads
-- [Nostr Relay](https://apps.umbrel.com/app/nostr-relay) - Backup all your Nostr activity with your private relay
-- [Synapse](https://apps.umbrel.com/app/synapse) — Matrix reference homeserver
-
-#### Automation
-
-- [Home Assistant](https://apps.umbrel.com/app/home-assistant) — Home automation that puts local control & privacy first
-- [n8n](https://apps.umbrel.com/app/n8n) - Build complex workflows, really fast
-- [Node-RED](https://apps.umbrel.com/app/node-red-standalone) — Wire together the Internet of Things
-
-#### Developer Tools
-
-- [Code Server](https://apps.umbrel.com/app/code-server) — Run VS Code on your Umbrel
-- [Gitea](https://apps.umbrel.com/app/gitea) — A painless self-hosted Git service
-
-> [!TIP]
-> If an app you're looking for isn't available on our app store yet, feel free to open an issue on the [umbrel-apps](https://github.com/getumbrel/umbrel-apps) respository to request it.
 
 ## Building apps for umbrelOS
 
