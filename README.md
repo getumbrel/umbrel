@@ -59,7 +59,7 @@ For a detailed feature breakdown, see our [comparison guide](https://github.com/
 [![Umbrel App Store](https://github.com/user-attachments/assets/3d7846c7-d896-48f5-8a30-3578554702fa)](https://apps.umbrel.com)
 [![Files on umbrelOS](https://github.com/user-attachments/assets/6c501256-47a0-4ce1-89ad-4ba02f4c9f2d)](https://umbrel.com/umbrelos)
 [![umbrelOS Features](https://github.com/user-attachments/assets/6828da74-2b64-4b56-a7b7-5db603d023c8)](https://umbrel.com/umbrelos)
-[![Backups in umbrelOS](https://github.com/user-attachments/assets/31001ab6-6fa9-41fe-b8ff-5a8f23be3dcc)](https://umbrel.com/umbrelos)
+[![Backups in umbrelOS](https://github.com/user-attachments/assets/6abeef95-364a-45b4-ba1a-341b70435ab3)](https://umbrel.com/umbrelos)
 [![External Storage & NAS in umbrelOS](https://github.com/user-attachments/assets/4841c2dc-4ba4-4d47-bf0a-0e342bf60166)](https://umbrel.com/umbrelos)
 
 
