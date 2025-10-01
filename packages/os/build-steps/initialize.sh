@@ -11,6 +11,8 @@ deb http://deb.debian.org/debian-security bookworm-security main non-free-firmwa
 deb-src http://deb.debian.org/debian-security bookworm-security main non-free-firmware
 deb http://deb.debian.org/debian bookworm-updates main non-free-firmware
 deb-src http://deb.debian.org/debian bookworm-updates main non-free-firmware
+deb http://deb.debian.org/debian bookworm-backports main non-free-firmware
+deb-src http://deb.debian.org/debian bookworm-backports main non-free-firmware
 EOF
 
 apt-get update --yes
