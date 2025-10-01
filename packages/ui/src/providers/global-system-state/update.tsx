@@ -18,7 +18,7 @@ export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSucce
 export function UpdatingCover({onRetry}: {onRetry: () => void}) {
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
-		refetchInterval: 500,
+		refetchInterval: 2500,
 	})
 	const latestVersion = latestVersionQ.data
 
