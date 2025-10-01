@@ -10,6 +10,7 @@ import {systemAppsKeyed} from '@/providers/apps'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
+import {BookmarkDialog} from './bookmark-dialog'
 import {DockItem} from './dock-item'
 import {LogoutDialog} from './logout-dialog'
 
@@ -138,13 +139,14 @@ export function Dock() {
 					bg={systemAppsKeyed['UMBREL_widgets'].icon}
 					mouseX={mouseX}
 				/>
-			</motion.div>
-			<LogoutDialog />
-			<Suspense>
-				<LiveUsageDialog />
-			</Suspense>
-		</>
-	)
+		</motion.div>
+		<LogoutDialog />
+		<BookmarkDialog />
+		<Suspense>
+			<LiveUsageDialog />
+		</Suspense>
+	</>
+)
 }
 
 export function DockPreview() {

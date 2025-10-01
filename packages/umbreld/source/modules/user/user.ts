@@ -149,4 +149,14 @@ export default class User {
 	async setTemperatureUnit(temperatureUnit: string) {
 		return this.#store.set('user.temperatureUnit', temperatureUnit)
 	}
+
+	// Get user bookmarks
+	async getBookmarks() {
+		return (await this.#store.get('user.bookmarks')) || []
+	}
+
+	// Set user bookmarks
+	async setBookmarks(bookmarks: any[]) {
+		return this.#store.set('user.bookmarks', bookmarks)
+	}
 }

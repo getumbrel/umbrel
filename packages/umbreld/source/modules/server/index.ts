@@ -129,7 +129,8 @@ class Server {
 					scriptSrc: this.umbreld.developmentMode ? ["'self'", "'unsafe-inline'"] : null,
 					// Allow 3rd party app images (remove this if we serve them locally in the future)
 					// Also allow blob: URLs for images being uploaded in Files (since their thumbnails don't exist yet)
-					imgSrc: ['*', 'blob:'],
+					// Also allow data: URLs for base64-encoded images (e.g., bookmark favicons)
+					imgSrc: ['*', 'blob:', 'data:'],
 					// Allow fetching data from our apps API (e.g., for Discover page in App Store)
 					connectSrc: ["'self'", 'https://apps.umbrel.com'],
 					// Allow plain text access over the local network

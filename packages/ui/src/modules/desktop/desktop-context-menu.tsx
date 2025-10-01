@@ -25,6 +25,9 @@ export function DesktopContextMenu({children}: {children: React.ReactNode}) {
 					<ContextMenuItem asChild>
 						<Link to='/edit-widgets'>{t('desktop.context-menu.edit-widgets')}</Link>
 					</ContextMenuItem>
+					<ContextMenuItem asChild>
+						<Link to={{search: addLinkSearchParams({dialog: 'add-bookmark'})}}>{t('desktop.bookmark.add')}</Link>
+					</ContextMenuItem>
 					<ContextMenuItem
 						onSelect={() => {
 							// get bounding box
