@@ -54,11 +54,13 @@ COPY packages/os/build-steps /build-steps
 RUN /build-steps/initialize.sh
 
 # Install Linux kernel and non-free firmware.
-RUN apt-get install --yes \
+# Install kernel 6.12+ from backports for Intel Alder Lake-N GPU support.
+RUN apt-get install --yes -t bookworm-backports \
     linux-image-amd64 \
     intel-microcode \
     amd64-microcode \
-    firmware-linux \
+    firmware-linux-nonfree \
+    firmware-misc-nonfree \
     firmware-realtek \
     firmware-iwlwifi
 
