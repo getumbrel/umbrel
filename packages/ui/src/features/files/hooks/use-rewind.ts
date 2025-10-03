@@ -30,6 +30,7 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 	// repos/backups
 	const repositories = useMemo(() => (repositoriesRaw as BackupRepository[]) || [], [repositoriesRaw])
 	const backupsRaw = useMemo(() => (listBackupsQ.data as Backup[]) || [], [listBackupsQ.data])
+	const backupsLoading = listBackupsQ.isLoading
 	const backupsForTimeline = useMemo(() => {
 		const items = backupsRaw.map((b) => ({id: b.id as string, time: b.time as number})).sort((a, b) => a.time - b.time)
 		return [...items, {id: 'current', time: Date.now()}]
@@ -142,6 +143,7 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 		// entities
 		repositories,
 		backupsRaw,
+		backupsLoading,
 		backupsForTimeline,
 		activeIndex,
 		earliestDateLabel,

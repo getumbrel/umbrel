@@ -82,6 +82,7 @@ export function RewindOverlay() {
 		view,
 		repositories,
 		backupsRaw,
+		backupsLoading,
 		backupsForTimeline,
 		activeIndex,
 		earliestDateLabel,
@@ -144,9 +145,10 @@ export function RewindOverlay() {
 	}
 
 	const snapshotsCount = backupsRaw.length
-	const countLabel =
-		snapshotsCount === 0
-			? t('backups-floating-island.backup_other', {count: snapshotsCount})
+	const countLabel = backupsLoading
+		? ''
+		: snapshotsCount === 0
+			? t('backups-restore.no-backups-yet')
 			: t('rewind.snapshots-count', {count: snapshotsCount})
 
 	const handleOpenChange = async (isOpen: boolean) => {
@@ -273,7 +275,12 @@ export function RewindOverlay() {
 											</div>
 										</div>
 										<div className='mt-1 flex min-w-0 items-center gap-1 text-xs text-white/70 md:block'>
-											<span>{countLabel}</span>
+											{backupsLoading ? (
+												// invisible placeholder to prevent layout shift
+												<span className='invisible'>{t('backups-restore.no-backups-yet')}</span>
+											) : (
+												<span>{countLabel}</span>
+											)}
 											{snapshotsCount > 0 && earliestDateLabel ? (
 												<span className='truncate md:mt-0.5 md:block'>{earliestDateLabel}</span>
 											) : null}
