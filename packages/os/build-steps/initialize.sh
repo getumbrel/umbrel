@@ -2,16 +2,26 @@
 
 set -euo pipefail
 
+SNAPSHOT_DATE=${1:-}
+
 rm /etc/apt/sources.list.d/debian.sources
 
+# All apt packages are pinned to a specific date to ensure reproducibility.
+# This means building the same umbrelOS git tag always results in the same
+# package versions.
+# We should update this to the current date with each release to ensure we
+# are always using the latest packages.
 cat >/etc/apt/sources.list <<EOF
-deb http://deb.debian.org/debian bookworm main non-free-firmware
-deb-src http://deb.debian.org/debian bookworm main non-free-firmware
-deb http://deb.debian.org/debian-security bookworm-security main non-free-firmware
-deb-src http://deb.debian.org/debian-security bookworm-security main non-free-firmware
-deb http://deb.debian.org/debian bookworm-updates main non-free-firmware
-deb-src http://deb.debian.org/debian bookworm-updates main non-free-firmware
+deb http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} bookworm main non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} bookworm main non-free-firmware
+deb http://snapshot.debian.org/archive/debian-security/${SNAPSHOT_DATE} bookworm-security main non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian-security/${SNAPSHOT_DATE} bookworm-security main non-free-firmware
+deb http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} bookworm-updates main non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} bookworm-updates main non-free-firmware
 EOF
+
+# This is also needed to avoid issues with apt refusing to install old packages from snapshot repos.
+echo 'Acquire::Check-Valid-Until "false";' | tee /etc/apt/apt.conf.d/90snapshot-validuntil
 
 apt-get update --yes
 

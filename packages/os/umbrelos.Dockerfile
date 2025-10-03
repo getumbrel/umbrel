@@ -1,4 +1,5 @@
 ARG DEBIAN_VERSION=bookworm
+ARG SNAPSHOT_DATE=20250929
 
 ARG DOCKER_VERSION=25.0.4
 ARG DOCKER_COMMIT=0efeea282625c87d28fa1f0d7aace794be2ce3cd
@@ -47,11 +48,13 @@ RUN pnpm run build
 # umbrelos-base-amd64 build stage
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION} AS umbrelos-base-amd64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-amd64
+
+ARG SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh
+RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
 # Install Linux kernel and non-free firmware.
 RUN apt-get install --yes \
@@ -70,11 +73,13 @@ RUN rm -rf /build-steps
 # umbrelos-base-arm64 build stage
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION} AS umbrelos-base-arm64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-arm64
+
+ARG SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh
+RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
 RUN /build-steps/setup-raspberrypi.sh
 
