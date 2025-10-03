@@ -459,7 +459,7 @@ function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: Bac
 										selected={!!selected}
 										onClick={() => onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})}
 									>
-										<BackupDeviceIcon path={`/Network/${host}`} className='mb-2 size-12 opacity-90' />
+										<BackupDeviceIcon path={`/Network/${host}`} connected className='mb-2 size-12 opacity-90' />
 										<span className='w-full truncate text-center text-[12px]' title={host}>
 											{host}
 										</span>
@@ -494,7 +494,7 @@ function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: Bac
 										onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
 									>
 										<div className='mb-2 flex h-12 w-12 items-center justify-center'>
-											<BackupDeviceIcon path={firstMount} className='size-8 opacity-80' />
+											<BackupDeviceIcon path={firstMount} connected className='size-8 opacity-80' />
 										</div>
 										<div className='truncate text-center text-[12px]'>{label}</div>
 									</ServerCard>,

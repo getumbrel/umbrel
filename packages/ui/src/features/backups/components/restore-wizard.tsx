@@ -22,6 +22,7 @@ import {
 	useRestoreBackup as useBackupsRestore,
 	useRepositoryBackups,
 } from '@/features/backups/hooks/use-backups'
+import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
 import {
 	BACKUP_FILE_NAME,
 	getDisplayRepositoryPath,
@@ -30,6 +31,8 @@ import {
 } from '@/features/backups/utils/filepath-helpers'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useLanguage} from '@/hooks/use-language'
@@ -372,7 +375,14 @@ function RepositoryStep({
 	manualPassword: string
 	onManualPasswordChange: (v: string) => void
 }) {
-	const renderIcon = (path: string) => <BackupDeviceIcon path={path} className='h-8 w-8 opacity-90' />
+	const {doesHostHaveMountedShares} = useNetworkStorage()
+	const {disks} = useExternalStorage()
+	const isConnected = (path: string) => isRepoConnected(path, doesHostHaveMountedShares, disks as any)
+	const renderIcon = (path: string) => (
+		<>
+			<BackupDeviceIcon path={path} connected={isConnected(path)} className='h-8 w-8 opacity-90' />
+		</>
+	)
 
 	const repoName = (path: string) => getRepositoryDisplayName(path) || t('unknown')
 
@@ -398,15 +408,38 @@ function RepositoryStep({
 									{repositories.map((repo) => {
 										const selected = repo.id === selectedId
 										return (
+											// We do not allow continuing with a disconnected device. If not connected,the row is visually disabled and non-interactive.
 											<div
 												key={repo.id}
 												className={[
-													'flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors',
-													selected ? 'border-brand bg-brand/15' : 'border-white/10 bg-white/5 hover:bg-white/10',
+													'flex w-full min-w-0 items-center gap-3 rounded-xl border p-4 transition-colors',
+													selected
+														? 'border-brand bg-brand/15'
+														: isConnected(repo.path)
+															? 'cursor-pointer border-white/10 bg-white/5 hover:bg-white/10'
+															: 'cursor-not-allowed border-white/10 bg-white/5 opacity-60',
 												].join(' ')}
-												onClick={() => onSelect(repo.id)}
+												onClick={() => {
+													if (!isConnected(repo.path)) return
+													onSelect(repo.id)
+												}}
+												aria-disabled={!isConnected(repo.path)}
+												tabIndex={isConnected(repo.path) ? 0 : -1}
+												title={!isConnected(repo.path) ? t('backups-configure.not-connected') : undefined}
 											>
-												{renderIcon(repo.path)}
+												<div className='flex items-center gap-2'>
+													{/* Connection dot like Configure */}
+													<div
+														className='grid size-3 place-items-center rounded-full'
+														style={{backgroundColor: isConnected(repo.path) ? '#299E163D' : '#DF1F1F3D'}}
+													>
+														<div
+															className='size-1.5 rounded-full'
+															style={{backgroundColor: isConnected(repo.path) ? '#299E16' : '#DF1F1F'}}
+														/>
+													</div>
+													{renderIcon(repo.path)}
+												</div>
 												<div className='min-w-0 flex-1'>
 													<div className='whitespace-normal break-words text-sm' title={repo.path}>
 														<span className='font-medium'>{repoName(repo.path)}</span>

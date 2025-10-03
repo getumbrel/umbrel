@@ -231,7 +231,7 @@ function LocationsSection({
 								<div className='flex flex-col gap-0 p-3' key={repo.id}>
 									<div className='flex items-center gap-2'>
 										<ConnectivityDot connected={isConnected} />
-										<BackupDeviceIcon path={repo.path} className='size-8 opacity-90' />
+										<BackupDeviceIcon path={repo.path} connected={isConnected} className='size-8 opacity-90' />
 										<div className='min-w-0 flex-1 truncate'>
 											<span className='block text-sm font-medium'>{deviceName}</span>
 											{isConnected && repo.lastBackup ? (
