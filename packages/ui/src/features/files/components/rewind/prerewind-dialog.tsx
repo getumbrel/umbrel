@@ -1,15 +1,22 @@
 import {ChevronDown, Server} from 'lucide-react'
-import {useState} from 'react'
 import {TbHistory} from 'react-icons/tb'
 
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
 import {getRepositoryDisplayName} from '@/features/backups/utils/filepath-helpers'
 import {RewindIcon} from '@/features/files/assets/rewind-icon'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useLanguage} from '@/hooks/use-language'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Popover, PopoverContent, PopoverTrigger} from '@/shadcn-components/ui/popover'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 // We show this dialog when the user clicks Rewind in Files to select a backup repository
@@ -29,12 +36,12 @@ export function PreRewindDialog({
 	onStart: (repoId: string) => void
 }) {
 	const [lang] = useLanguage()
-	const [popoverOpen, setPopoverOpen] = useState(false)
+	const {doesHostHaveMountedShares} = useNetworkStorage()
+	const {disks} = useExternalStorage()
 	const list = repos || []
 	const activeId = pendingRepoId ?? list[0]?.id ?? ''
 	const active = list.find((r) => r.id === activeId) || null
 	const path: string = active?.path || ''
-	const iconNode = path ? <BackupDeviceIcon path={path} className='size-8' /> : <Server className='size-8 opacity-80' />
 	const makeName = (p: string) => {
 		const name = getRepositoryDisplayName(p)
 		if (name) return name
@@ -47,6 +54,18 @@ export function PreRewindDialog({
 		if (!lastBackup) return t('backups-restore.no-backups-yet')
 		return `${t('backups-configure.last-backup')}: ${formatFilesystemDate(Number(lastBackup), lang)}`
 	}
+
+	const connectedById = new Map<string, boolean>(
+		list.map((r) => [r.id, isRepoConnected(r.path, doesHostHaveMountedShares, disks as any)]),
+	)
+	// Selected repo connectivity: when false, we disable entering Rewind and show inactive indicators
+	const isActiveConnected = active ? Boolean(connectedById.get(active.id)) : false
+
+	const iconNode = path ? (
+		<BackupDeviceIcon path={path} connected={isActiveConnected} className='size-8' />
+	) : (
+		<Server className='size-8 opacity-80' />
+	)
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,8 +100,8 @@ export function PreRewindDialog({
 					) : (
 						<>
 							<div className='mb-2 text-13 font-medium text-white/90'>{t('backups.backup-location')}</div>
-							<Popover modal open={popoverOpen} onOpenChange={setPopoverOpen}>
-								<PopoverTrigger asChild>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
 									<button
 										type='button'
 										className='flex w-full min-w-0 items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10'
@@ -92,62 +111,92 @@ export function PreRewindDialog({
 											<span className='min-w-0 truncate'>
 												<span className='block text-sm font-medium'>{makeName(path)}</span>
 												{active ? (
-													<span className='block text-11 opacity-60'>{makeLastBackupText(active.lastBackup)}</span>
+													<>
+														<span className='block text-11 leading-tight opacity-60'>
+															{makeLastBackupText(active.lastBackup)}
+														</span>
+														{!isActiveConnected ? (
+															<span className='mt-1 block text-11 leading-tight opacity-60'>
+																<span className='inline-flex items-center gap-1'>
+																	{t('backups-configure.not-connected')}
+																	<span
+																		className='grid size-3 place-items-center rounded-full'
+																		style={{backgroundColor: '#DF1F1F3D'}}
+																	>
+																		<span className='size-1.5 rounded-full' style={{backgroundColor: '#DF1F1F'}} />
+																	</span>
+																</span>
+															</span>
+														) : null}
+													</>
 												) : null}
 											</span>
 										</span>
 										<ChevronDown className='size-4 opacity-70' />
 									</button>
-								</PopoverTrigger>
-								<PopoverContent
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
 									align='start'
-									className='z-[60] w-[var(--radix-popover-trigger-width)] max-w-[92vw] rounded-xl p-1'
+									className='z-[60] w-[var(--radix-dropdown-menu-trigger-width)] max-w-[92vw] rounded-xl p-1'
 									data-ft-repo-popover
-									onOpenAutoFocus={(e) => e.preventDefault()}
-									onCloseAutoFocus={(e) => e.preventDefault()}
 								>
 									<div className='space-y-1'>
 										{list.map((r) => {
 											const p = r.path || ''
 											const sel = r.id === activeId
+											const connected = Boolean(connectedById.get(r.id))
 											const icon = p ? (
-												<BackupDeviceIcon path={p} className='size-8' />
+												<BackupDeviceIcon path={p} connected={connected} className='size-8' />
 											) : (
 												<Server className='size-8 opacity-80' />
 											)
 											return (
-												<button
-													type='button'
+												<DropdownMenuItem
 													key={r.id}
 													className={[
-														'flex w-full min-w-0 items-center gap-3 rounded-xl border p-2 text-left',
-														sel ? 'border-brand bg-brand/15' : 'border-none hover:bg-white/10 focus:bg-white/10',
+														'w-full px-2 py-1.5',
+														sel ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
+														!connected ? 'opacity-60' : '',
 													].join(' ')}
 													onClick={() => {
 														setPendingRepoId(r.id)
-														setPopoverOpen(false)
 													}}
 												>
-													{icon}
-													<span className='min-w-0 truncate'>
-														<span className='block text-sm font-medium'>{makeName(p)}</span>
-														<span className='block text-11 opacity-60'>{makeLastBackupText(r.lastBackup)}</span>
+													<span className='flex min-w-0 items-center gap-3'>
+														{icon}
+														<span className='min-w-0 truncate'>
+															<span className='block text-sm font-medium'>{makeName(p)}</span>
+															<span className='block text-11 opacity-60'>{makeLastBackupText(r.lastBackup)}</span>
+															{!connected ? (
+																<span className='inline-flex items-center gap-1 text-11 opacity-60'>
+																	{t('backups-configure.not-connected')}
+																	<span
+																		className='grid size-3 place-items-center rounded-full'
+																		style={{backgroundColor: '#DF1F1F3D'}}
+																	>
+																		<span className='size-1.5 rounded-full' style={{backgroundColor: '#DF1F1F'}} />
+																	</span>
+																</span>
+															) : null}
+														</span>
 													</span>
-												</button>
+												</DropdownMenuItem>
 											)
 										})}
 									</div>
-								</PopoverContent>
-							</Popover>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						</>
 					)}
 				</div>
 				<DialogFooter className='mt-2 gap-2 pt-2'>
+					{/* We disable the Start Rewind button if the selected repo's device isn't connected */}
 					<Button
 						variant='primary'
 						size='dialog'
-						disabled={!list.length}
+						disabled={!list.length || !isActiveConnected}
 						onClick={() => {
+							if (!isActiveConnected) return
 							const repo = pendingRepoId ?? list[0]?.id ?? null
 							if (!repo) return
 							onStart(repo)
