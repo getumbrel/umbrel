@@ -1,16 +1,18 @@
-ARG DEBIAN_VERSION=bookworm
+ARG DEBIAN_VERSION=trixie
 ARG SNAPSHOT_DATE=20250929
 
-ARG DOCKER_VERSION=25.0.4
-ARG DOCKER_COMMIT=0efeea282625c87d28fa1f0d7aace794be2ce3cd
+ARG DOCKER_VERSION=28.5.0
+ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
 
 ARG YQ_VERSION=4.24.5
 ARG YQ_SHA256_amd64=c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760
 ARG YQ_SHA256_arm64=8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9
 
-ARG NODE_VERSION=22.13.0
-ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
-ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
+ARG UI_BUILD_NODE_VERSION=22.13.0
+
+ARG NODE_VERSION=22.20.0
+ARG NODE_SHA256_amd64=eeaccb0378b79406f2208e8b37a62479c70595e20be6b659125eb77dd1ab2a29  
+ARG NODE_SHA256_arm64=4181609e03dcb9880e7e5bf956061ecc0503c77a480c6631d868cb1f65a2c7dd
 
 ARG KOPIA_VERSION=0.19.0
 ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
@@ -20,7 +22,7 @@ ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e7566
 # ui build stage
 #########################################################################
 
-FROM node:${NODE_VERSION}-${DEBIAN_VERSION}-slim AS ui-build
+FROM node:${UI_BUILD_NODE_VERSION}-bookworm-slim AS ui-build
 
 # Install pnpm
 RUN npm install -g pnpm@8
@@ -93,7 +95,7 @@ RUN rm -rf /build-steps
 
 ARG TARGETARCH
 
-# TODO: Instead of using the debian:bookworm image as a base we should
+# TODO: Instead of using the debian:trixie image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
 FROM umbrelos-base-${TARGETARCH} AS umbrelos
@@ -101,7 +103,7 @@ FROM umbrelos-base-${TARGETARCH} AS umbrelos
 # We need to duplicate this such that we can also use the argument below.
 ARG TARGETARCH
 ARG DOCKER_VERSION
-ARG DOCKER_COMMIT
+ARG DOCKER_INSTALL_SCRIPT_COMMIT
 ARG YQ_VERSION
 ARG YQ_SHA256_amd64
 ARG YQ_SHA256_arm64
@@ -164,7 +166,7 @@ RUN YQ_SHA256=$(eval echo \$YQ_SHA256_${TARGETARCH}) && \
     echo "${YQ_SHA256} /usr/bin/yq" | sha256sum -c && \
     chmod +x /usr/bin/yq
 
-RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_COMMIT}/install.sh -o /tmp/install-docker.sh
+RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_INSTALL_SCRIPT_COMMIT}/install.sh -o /tmp/install-docker.sh
 RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
 RUN rm /tmp/install-docker.sh
 

@@ -12,7 +12,7 @@ mkdir -p /boot/firmware
 
 # Configure APT with Raspberry Pi sources.
 install -m 644 "/build-steps/setup-raspberrypi/raspberrypi.list" "/etc/apt/sources.list.d/"
-sed -i "s/RELEASE/bookworm/g" "/etc/apt/sources.list.d/raspberrypi.list"
+sed -i "s/RELEASE/trixie/g" "/etc/apt/sources.list.d/raspberrypi.list"
 
 gpg --dearmor \
     < "/build-steps/setup-raspberrypi/raspberrypi.gpg.key" \
@@ -27,6 +27,7 @@ apt-get install -y raspberrypi-archive-keyring
 # Install kernel and firmware for Pi 4 and 5.
 apt-get install -y \
     initramfs-tools \
+    e2fsprogs \
     raspi-firmware \
     firmware-brcm80211 \
     linux-image-rpi-v8 \
