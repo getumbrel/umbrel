@@ -1,4 +1,3 @@
-// packages/ui/src/features/backups/setup-wizard.tsx
 import {zodResolver} from '@hookform/resolvers/zod'
 import {t} from 'i18next'
 import {ChevronDown, Copy, Eye, EyeOff, HardDrive, Loader2, LockKeyhole} from 'lucide-react'
@@ -17,12 +16,15 @@ import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
 import umbrelPrivateCloudIcon from '@/features/backups/assets/umbrel-private-cloud-icon.png'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
+import {AlreadyConfiguredModal} from '@/features/backups/components/modals/already-configured-modal'
+import {ConnectExistingModal} from '@/features/backups/components/modals/connect-existing-modal'
 import {ReviewCard} from '@/features/backups/components/review-card'
 import {TabSwitcher} from '@/features/backups/components/tab-switcher'
 import {LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
 import {useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
+import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
 import {getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
@@ -136,7 +138,7 @@ export function BackupsSetupWizard() {
 		mode: 'onChange',
 	})
 
-	const {setupBackup, isSettingUpBackup, repositories} = useBackups()
+	const {setupBackup, isSettingUpBackup, repositories, connectExistingRepository, isConnectingExisting} = useBackups()
 	const {disks} = useExternalStorage()
 	const showExclusionsStep = (repositories?.length ?? 0) === 0
 
@@ -144,6 +146,14 @@ export function BackupsSetupWizard() {
 	const destination = form.watch('destination')
 	const folder = form.watch('folder')
 	const enc = form.watch('encryption')
+
+	// modals when connecting existing/configured repositories
+	const [alreadyConfiguredOpen, setAlreadyConfiguredOpen] = useState(false)
+	const [connectExistingOpen, setConnectExistingOpen] = useState(false)
+	const [connectPassword, setConnectPassword] = useState('')
+
+	// Detect if the selected folder contains an Umbrel backup and whether it's already configured
+	const {status: repoStatus} = useExistingBackupDetection(folder, repositories)
 
 	const canNext =
 		step === Step.Destination
@@ -166,6 +176,18 @@ export function BackupsSetupWizard() {
 		const fields = fieldsByStep[step] ?? []
 		const ok = await form.trigger(fields as any, {shouldFocus: true})
 		if (!ok) return
+
+		// Intercept Folder step for existing repositories UX
+		if (step === Step.Folder) {
+			if (repoStatus === 'already-configured') {
+				setAlreadyConfiguredOpen(true)
+				return
+			}
+			if (repoStatus === 'exists-not-configured') {
+				setConnectExistingOpen(true)
+				return
+			}
+		}
 
 		// Before advancing from Encryption, show a confirmation alert
 		if (step === Step.Encryption) {
@@ -220,11 +242,15 @@ export function BackupsSetupWizard() {
 		if (!parsed.success) return
 
 		try {
-			await setupBackup({
-				destination: parsed.data.destination,
-				folder: parsed.data.folder,
-				encryptionPassword: parsed.data.encryption.password,
-			})
+			if (repoStatus === 'exists-not-configured') {
+				await connectExistingRepository({path: parsed.data.folder, password: parsed.data.encryption.password})
+			} else {
+				await setupBackup({
+					destination: parsed.data.destination,
+					folder: parsed.data.folder,
+					encryptionPassword: parsed.data.encryption.password,
+				})
+			}
 			// On success, close the dialog by navigating to Configure
 			navigate('/settings/backups/configure', {preventScrollReset: true})
 		} catch {
@@ -328,6 +354,31 @@ export function BackupsSetupWizard() {
 						</Button>
 					)}
 				</div>
+
+				{/* Modal: shown when the chosen folder already has a backup configured on this Umbrel */}
+				<AlreadyConfiguredModal
+					open={alreadyConfiguredOpen}
+					folderPath={folder}
+					onClose={() => setAlreadyConfiguredOpen(false)}
+					onManage={() => {
+						setAlreadyConfiguredOpen(false)
+						navigate('/settings/backups/configure', {preventScrollReset: true})
+					}}
+				/>
+				{/* Modal: shown when the chosen folder contains a backup that is not yet connected here */}
+				<ConnectExistingModal
+					open={connectExistingOpen}
+					folderPath={folder}
+					password={connectPassword}
+					onPasswordChange={setConnectPassword}
+					onClose={() => setConnectExistingOpen(false)}
+					onConnect={async () => {
+						await connectExistingRepository({path: folder!, password: connectPassword})
+						setConnectExistingOpen(false)
+						navigate('/settings/backups/configure', {preventScrollReset: true})
+					}}
+					isConnecting={isConnectingExisting}
+				/>
 			</div>
 		</FormProvider>
 	)
@@ -342,7 +393,6 @@ function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: Bac
 	const {params, addLinkSearchParams} = useQueryParams()
 	const initialTabParam = params.get('backups-setup-tab')
 	const isMobile = useIsMobile()
-	const navigate = useNavigate()
 
 	const [tab, setTab] = useState<'nas' | 'external' | 'umbrel-private-cloud'>(
 		initialTabParam === 'external'

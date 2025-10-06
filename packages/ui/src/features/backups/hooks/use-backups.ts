@@ -36,6 +36,7 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	const createRepoMutation = trpcReact.backups.createRepository.useMutation()
 	const backupMutation = trpcReact.backups.backup.useMutation()
 	const forgetRepoMutation = trpcReact.backups.forgetRepository.useMutation()
+	const connectToRepoMutation = trpcReact.backups.connectToExistingRepository.useMutation()
 
 	// Pending state so the wizards have access to it to show loading indicators throughout the flow
 	const [isSettingUpBackup, setIsSettingUpBackup] = useState(false)
@@ -44,17 +45,6 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	const setupBackup = async (input: SetupBackupInput) => {
 		const path = input.folder
 		const password = input.encryptionPassword?.trim() ?? ''
-
-		if (!path) {
-			const msg = t('Please choose a folder')
-			toast.error(msg)
-			throw new Error(msg)
-		}
-		if (!password) {
-			const msg = t('Password is required')
-			toast.error(msg)
-			throw new Error(msg)
-		}
 
 		setIsSettingUpBackup(true)
 		try {
@@ -68,22 +58,39 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			}
 
 			// Start first backup (don't wait for completion so we can close the wizard and progress will be shown elsewhere)
-			backupMutation.mutateAsync({repositoryId}).catch((error) => {
-				// We allow wizard to close show error toast
-				const message = error?.message ?? t('Unknown error')
-				toast.error(t('Failed to start initial backup: {{message}}', {message}))
-			})
+			backupNow(repositoryId).catch(() => {})
 
 			// Keep queries fresh
 			await utils.backups.getRepositories.invalidate()
 
 			return {repositoryId, path}
 		} catch (error: any) {
-			const message = error?.message ?? t('Unknown error')
+			const message = error?.message ?? t('unknown-error')
 			toast.error(t('backups-setup.error', {message}))
 			throw error
 		} finally {
 			setIsSettingUpBackup(false)
+		}
+	}
+
+	// Connect to an existing repository at the selected folder and immediately start a backup.
+	const connectExistingRepository = async (input: {path: string; password: string}) => {
+		const path = input.path
+		const password = input.password?.trim() ?? ''
+
+		try {
+			const repositoryId = await connectToRepoMutation.mutateAsync({path, password})
+
+			// Start first backup (don't wait)
+			backupNow(repositoryId).catch(() => {})
+
+			// invalidate repositories to keep data fresh across views
+			await utils.backups.getRepositories.invalidate()
+			return {repositoryId, path}
+		} catch (error: any) {
+			const message = error?.message ?? t('unknown-error')
+			toast.error(t('backups-setup.error', {message}))
+			throw error
 		}
 	}
 
@@ -93,7 +100,7 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			await backupMutation.mutateAsync({repositoryId})
 			// No success toast since we show progress indicators throughout the UI (floating island, wizards, etc.)
 		} catch (error: any) {
-			const message = error?.message ?? t('Unknown error')
+			const message = error?.message ?? t('unknown-error')
 			toast.error(t('Failed to start backup: {{message}}', {message}))
 			throw error
 		}
@@ -106,7 +113,7 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			await utils.backups.getRepositories.invalidate()
 			// No success toast since we show progress indicators throughout the UI (floating island, wizards, etc.)
 		} catch (error: any) {
-			const message = error?.message ?? t('Unknown error')
+			const message = error?.message ?? t('unknown-error')
 			toast.error(t('Failed to remove repository: {{message}}', {message}))
 			throw error
 		}
@@ -116,6 +123,8 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 		// setup flow
 		setupBackup,
 		isSettingUpBackup,
+		connectExistingRepository,
+		isConnectingExisting: connectToRepoMutation.isPending,
 
 		// repos
 		repositories,
