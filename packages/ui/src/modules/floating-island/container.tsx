@@ -1,11 +1,11 @@
 import {AnimatePresence, motion} from 'framer-motion'
 
 import {BackupsIsland} from '@/features/backups/components/floating-island'
+import {useBackupProgress} from '@/features/backups/hooks/use-backups'
 import {AudioIsland} from '@/features/files/components/floating-islands/audio-island'
 import {OperationsIsland} from '@/features/files/components/floating-islands/operations-island'
 import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
 import {useGlobalFiles} from '@/providers/global-files'
-import {trpcReact} from '@/trpc/trpc'
 
 const spring = {
 	type: 'spring' as const,
@@ -17,7 +17,7 @@ export function FloatingIslandContainer() {
 	// Grab global audio and uploading items state
 	const {audio, uploadingItems, operations} = useGlobalFiles()
 	// Backups progress
-	const backupProgressQ = trpcReact.backups.backupProgress.useQuery(undefined, {refetchInterval: 1000})
+	const backupProgressQ = useBackupProgress(1000)
 
 	// Show audio island if there's an audio file playing
 	const showAudio = audio.path && audio.name

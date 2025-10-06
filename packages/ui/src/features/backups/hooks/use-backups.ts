@@ -1,5 +1,5 @@
 import {keepPreviousData} from '@tanstack/react-query'
-import {useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import {toast} from 'sonner'
 
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
@@ -131,9 +131,33 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 // Convenience wrappers for queries
 
 export function useBackupProgress(refetchIntervalMs = 1000) {
-	return trpcReact.backups.backupProgress.useQuery(undefined, {
+	const utils = trpcReact.useUtils()
+	const previousProgressRef = useRef<Array<{repositoryId: string; percent: number}>>([])
+
+	const query = trpcReact.backups.backupProgress.useQuery(undefined, {
 		refetchInterval: refetchIntervalMs,
 	})
+
+	// Detect when backups complete and invalidate relevant queries
+	useEffect(() => {
+		const currentProgress = query.data ?? []
+		const previousProgress = previousProgressRef.current
+
+		// Check if any backup completed (disappeared from progress array)
+		const hasCompletedBackups = previousProgress.length > 0 && currentProgress.length < previousProgress.length
+
+		if (hasCompletedBackups) {
+			// Invalidate queries that should be refreshed after backup completion
+			utils.backups.getRepositories.invalidate()
+			utils.backups.listBackups.invalidate()
+			utils.backups.getRepositorySize.invalidate()
+		}
+
+		// Update the ref for next comparison
+		previousProgressRef.current = currentProgress
+	}, [query.data, utils])
+
+	return query
 }
 
 export function useRestoreProgress(refetchIntervalMs = 500) {

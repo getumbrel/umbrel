@@ -1,3 +1,4 @@
+import {useBackupProgress} from '@/features/backups/hooks/use-backups'
 import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -14,10 +15,7 @@ function deviceNameFromPath(path: string) {
 
 export function BackupsIsland() {
 	// Poll backup progress; island visibility is controlled by container
-	const progressQ = trpcReact.backups.backupProgress.useQuery(undefined, {
-		refetchInterval: 1000,
-		staleTime: 0,
-	})
+	const progressQ = useBackupProgress(1000)
 	const reposQ = trpcReact.backups.getRepositories.useQuery()
 
 	const progresses = progressQ.data ?? []
