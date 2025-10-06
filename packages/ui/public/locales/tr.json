@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Emin misin?",
   "backups-configure.remove-backup-location-confirmation-description": "Bu, '{{device}}' öğesini yedek konumlarınızdan kaldıracaktır. Bu cihazdaki mevcut yedekler silinmeyecek, ancak otomatik yedeklemeler duracaktır.",
   "backups-configure.status": "Durum",
+  "backups-configure.total-backups": "Toplam Backups",
   "backups-configure.used": "Kullanılan",
   "backups-configure.view": "Görüntüle",
   "backups-description": "Dosyalarınızı, uygulamalarınızı ve verilerinizi başka bir Umbrel'e, NAS'a veya harici sürücüye yedekleyin",

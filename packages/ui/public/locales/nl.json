@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Weet je het zeker?",
   "backups-configure.remove-backup-location-confirmation-description": "Hierdoor wordt '{{device}}' verwijderd uit je back-uplocaties. Bestaande back-ups op dit apparaat worden niet verwijderd, maar automatische back-ups stoppen.",
   "backups-configure.status": "Status",
+  "backups-configure.total-backups": "Totaal Backups",
   "backups-configure.used": "Gebruikt",
   "backups-configure.view": "Bekijken",
   "backups-description": "Maak back-ups van je bestanden, apps en gegevens naar een andere Umbrel, NAS of externe schijf",

@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Biztos vagy benne?",
   "backups-configure.remove-backup-location-confirmation-description": "Ez eltávolítja a '{{device}}' eszközt a backup helyek közül. A meglévő backupjaid ezen az eszközön nem törlődnek, de az automatikus backupok leállnak.",
   "backups-configure.status": "Állapot",
+  "backups-configure.total-backups": "Backups összesen",
   "backups-configure.used": "Használt",
   "backups-configure.view": "Megtekintés",
   "backups-description": "Készíts backupot a fájljaidról, alkalmazásaidról és adataidról egy másik Umbrelre, NAS-ra vagy külső meghajtóra",

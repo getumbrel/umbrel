@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Are you sure?",
   "backups-configure.remove-backup-location-confirmation-description": "This will remove '{{device}}' from your backup locations. Your existing backups on this device will not be deleted, but automatic backups will stop.",
   "backups-configure.status": "Status",
+  "backups-configure.total-backups": "Total backups",
   "backups-configure.used": "Used",
   "backups-configure.view": "View",
   "backups-description": "Back up your files, apps, and data to another Umbrel, NAS, or external drive",

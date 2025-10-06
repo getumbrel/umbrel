@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Ви впевнені?",
   "backups-configure.remove-backup-location-confirmation-description": "Це видалить «{{device}}» зі списку місць для резервного копіювання. Існуючі резервні копії на цьому пристрої не будуть видалені, але автоматичне резервне копіювання припиниться.",
   "backups-configure.status": "Статус",
+  "backups-configure.total-backups": "Всього Backups",
   "backups-configure.used": "Використано",
   "backups-configure.view": "Переглянути",
   "backups-description": "Зберігайте файли, програми та дані на іншому Umbrel, NAS або зовнішньому диску",

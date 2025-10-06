@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "Bist du sicher?",
   "backups-configure.remove-backup-location-confirmation-description": "Dadurch wird '{{device}}' aus deinen Backup-Standorten entfernt. Deine vorhandenen Backups auf diesem Gerät werden nicht gelöscht, aber automatische Backups werden eingestellt.",
   "backups-configure.status": "Status",
+  "backups-configure.total-backups": "Backups insgesamt",
   "backups-configure.used": "Belegt",
   "backups-configure.view": "Ansehen",
   "backups-description": "Sichere deine Dateien, Apps und Daten auf einem anderen Umbrel, NAS oder einem externen Laufwerk",

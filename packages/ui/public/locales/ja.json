@@ -113,6 +113,7 @@
   "backups-configure.remove-backup-location-confirmation": "本当に削除しますか？",
   "backups-configure.remove-backup-location-confirmation-description": "これにより '{{device}}' がバックアップ先から削除されます。このデバイス上の既存のバックアップは削除されませんが、自動バックアップは停止します。",
   "backups-configure.status": "状態",
+  "backups-configure.total-backups": "Backupsの合計",
   "backups-configure.used": "使用済み",
   "backups-configure.view": "表示",
   "backups-description": "ファイル、アプリ、データを別の Umbrel、NAS、または外付けドライブにバックアップします",

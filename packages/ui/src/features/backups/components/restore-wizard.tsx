@@ -634,7 +634,7 @@ function BackupsStep({
 									<div
 										key={id || Math.random()}
 										className={[
-											'group relative flex w-full cursor-pointer items-center gap-4 rounded-12 px-3 py-2 transition-all duration-200 md:px-4 md:py-3.5',
+											'group relative flex w-full cursor-pointer items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
 											selected
 												? 'bg-gradient-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',
@@ -647,7 +647,7 @@ function BackupsStep({
 											{/* Outer ring */}
 											<div
 												className={[
-													'absolute inset-0 rounded-full transition-all duration-300',
+													'absolute inset-0 rounded-full',
 													selected
 														? 'bg-gradient-to-br from-brand to-brand/60 shadow-[0_0_20px_rgba(var(--color-brand-rgb),0.3)]'
 														: 'bg-white/10 group-hover:bg-white/15',
@@ -657,7 +657,7 @@ function BackupsStep({
 											{/* Inner dot */}
 											<div
 												className={[
-													'relative size-4 rounded-full transition-all duration-300',
+													'relative size-4 rounded-full',
 													selected
 														? 'bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)]'
 														: 'bg-white/20 group-hover:bg-white/30',
