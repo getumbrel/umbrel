@@ -1,9 +1,12 @@
 import {motion} from 'framer-motion'
+import {useState} from 'react'
 import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
 import stickerBgUrl from '@/features/files/assets/rewind-sticker-bg.svg'
 import {EmbeddedFiles} from '@/features/files/components/embedded'
+import {APPS_PATH, HOME_PATH} from '@/features/files/constants'
+import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemDateOnly} from '@/features/files/utils/format-filesystem-date'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
@@ -32,6 +35,16 @@ export function SnapshotCarousel({
 }) {
 	const windowStart = noCarousel ? activeIndex : Math.max(0, activeIndex - 2)
 	const windowEnd = noCarousel ? activeIndex : Math.min(backupsForTimeline.length - 1, activeIndex + 2)
+
+	// Derive initial path for the embedded Files explorer:
+	// - If the user is currently in /Home or /Apps, keep that path
+	// - Otherwise, fall back to /Home
+	const {currentPath} = useFilesNavigate()
+	const safeInitialPath =
+		currentPath.startsWith(APPS_PATH) || currentPath.startsWith(HOME_PATH) ? currentPath : HOME_PATH
+
+	// Persist the user's in‑Rewind navigation across snapshot switches.
+	const [rewindPath, setRewindPath] = useState<string>(safeInitialPath)
 
 	return backupsForTimeline.slice(windowStart, windowEnd + 1).map((b, i) => {
 		const index = windowStart + i
@@ -115,9 +128,10 @@ export function SnapshotCarousel({
 									}
 								>
 									<EmbeddedFiles
-										key={mountedDir || 'current'}
 										mode='read-only'
-										initialPath='/Home'
+										initialPath={safeInitialPath}
+										currentPath={rewindPath}
+										onNavigate={setRewindPath}
 										pathAliases={
 											mountedDir
 												? {['/Home']: `/Backups/${mountedDir}/Home`, ['/Apps']: `/Backups/${mountedDir}/Apps`}

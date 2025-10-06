@@ -21,23 +21,31 @@ export function EmbeddedFiles({
 	onNavigate,
 	className = '',
 	pathAliases,
+	currentPath: controlledPath,
 }: {
 	mode?: 'full' | 'read-only'
 	initialPath?: string
 	onNavigate?: (path: string) => void
 	className?: string
 	pathAliases?: Record<string, string>
+	currentPath?: string
 }) {
 	const [path, setPath] = useState(initialPath)
 	const isMobile = useIsMobile()
 	const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
+	// Always update local path state on navigation; notify external listener if provided.
+	const handleNavigate = (nextPath: string) => {
+		if (controlledPath === undefined) setPath(nextPath)
+		onNavigate?.(nextPath)
+	}
+
 	return (
 		<FilesCapabilitiesProvider
 			value={{
 				mode,
-				currentPath: path,
-				onNavigate: onNavigate ?? setPath,
+				currentPath: controlledPath ?? path,
+				onNavigate: handleNavigate,
 				// Forward optional aliasing so nested consumers (like use-navigate)
 				// can transparently remap logical roots to alternate physical roots.
 				pathAliases,

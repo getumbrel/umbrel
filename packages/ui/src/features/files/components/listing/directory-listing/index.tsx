@@ -1,5 +1,5 @@
 import {Upload} from 'lucide-react'
-import {useEffect, useRef} from 'react'
+import {useEffect, useLayoutEffect, useRef} from 'react'
 import {RiClipboardLine} from 'react-icons/ri'
 import {TbWorldPlus} from 'react-icons/tb'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
@@ -14,6 +14,7 @@ import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
+import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import {ContextMenuItem, ContextMenuShortcut} from '@/shadcn-components/ui/context-menu'
@@ -24,13 +25,16 @@ import {t} from '@/utils/i18n'
 export function DirectoryListing() {
 	const {
 		currentPath,
+		uiPath,
 		isBrowsingApps,
 		isBrowsingExternalStorage,
 		isViewingExternalDrives,
 		isViewingNetworkDevices,
 		isViewingNetworkShares,
 		isBrowsingNetworkStorage,
+		navigateToDirectory,
 	} = useNavigate()
+	const isEmbedded = useIsFilesEmbedded()
 	const setActionsBarConfig = useSetActionsBarConfig()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 	const routerNavigate = useRouterNavigate()
@@ -77,6 +81,18 @@ export function DirectoryListing() {
 
 	// Hide the path bar and disable actions if there's an error or loading state
 	const hidePathAndDisableActions = Boolean(isLoading || error)
+
+	// In embedded contexts (e.g., Rewind), if the current directory doesn't exist in a snapshot,
+	// we automatically fall back to the nearest existing parent.
+	// We use useLayoutEffect to navigate before paint to avoid a visible flicker of the error screen ("No such file or folder").
+	useLayoutEffect(() => {
+		if (!isEmbedded || !error) return
+		// climb the logical UI path to the nearest existing parent
+		const logicalBase = uiPath.startsWith('/Apps') ? '/Apps' : '/Home'
+		const lastSlash = uiPath.lastIndexOf('/')
+		const parentUi = lastSlash > 0 ? uiPath.slice(0, lastSlash) : logicalBase
+		if (parentUi && parentUi !== uiPath) navigateToDirectory(parentUi)
+	}, [isEmbedded, error, uiPath, navigateToDirectory])
 
 	// Desktop actions
 	// - At /Network (devices view): show "Add share" action
