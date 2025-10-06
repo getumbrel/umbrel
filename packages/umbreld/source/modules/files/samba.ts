@@ -145,14 +145,7 @@ export default class Samba {
 		let config = SMB_CONFIG
 		for (const share of shares) {
 			// Make Umbrel shares easily detectable in clients
-			share.name = `${share.name} (Umbrel)`
-
-			// Share /Home as "username's Umbrel"
-			if (share.path === '/Home') {
-				const user = await this.#umbreld.user.get()
-				const username = user?.name
-				if (username) share.name = `${username}'s Umbrel`
-			}
+			share.name = await this.#computeSharename(share.name, share.path)
 
 			// Convert to system path
 			share.path = await this.#umbreld.files.virtualToSystemPath(share.path)
@@ -176,6 +169,19 @@ export default class Samba {
 		// enabled but without samba it will shutdown when it sees samba isn't running.
 		// It won't then auto start if a share is added later.
 		await $`systemctl start wsdd2`
+	}
+
+	// Compute a client-facing sharename so that shares are easily detectable in clients
+	async #computeSharename(name: string, path: string) {
+		// Default to "name (Umbrel)"
+		let sharename = `${name} (Umbrel)`
+		if (path === '/Home') {
+			// But Share /Home as "username's Umbrel"
+			const user = await this.#umbreld.user.get()
+			const username = user?.name
+			if (username) sharename = `${username}'s Umbrel`
+		}
+		return sharename
 	}
 
 	// Read current shares from the store
@@ -212,7 +218,14 @@ export default class Samba {
 		)
 		const filteredShares = mappedShares.filter((share) => share !== undefined)
 
-		return filteredShares
+		// Compute client-facing sharenames using the same logic used when generating smb.conf.
+		const sharesWithSharenames = await Promise.all(
+			filteredShares.map(async (share) => ({
+				...share,
+				sharename: await this.#computeSharename(share.name, share.path),
+			})),
+		)
+		return sharesWithSharenames
 	}
 
 	// Share a new directory

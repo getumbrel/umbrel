@@ -48,6 +48,30 @@ describe('shares()', () => {
 		expect(paths).not.toContain('/Home/samba-existing-test1')
 		expect(paths).toContain('/Home/samba-existing-test2')
 	})
+
+	test('returns proper client-facing sharename for non /Home shares', async () => {
+		// Create test directory
+		const dir = `${umbreld.instance.dataDirectory}/home/samba-clientname-test`
+		await fse.mkdir(dir)
+
+		// Add to shares
+		await umbreld.client.files.addShare.mutate({path: '/Home/samba-clientname-test'})
+
+		// Verify sharename is returned
+		const shares = await umbreld.client.files.shares.query()
+		const entry = shares.find((s) => s.path === '/Home/samba-clientname-test') as any
+		expect(entry?.sharename).toBe('samba-clientname-test (Umbrel)')
+	})
+
+	test('returns sharename for Home share', async () => {
+		// Add home directory to shares
+		await umbreld.client.files.addShare.mutate({path: '/Home'})
+
+		// Verify sharename matches username's Umbrel
+		const shares = await umbreld.client.files.shares.query()
+		const entry = shares.find((s) => s.path === '/Home') as any
+		expect(entry?.sharename).toBe("satoshi's Umbrel")
+	})
 })
 
 describe('#handleFileChange()', () => {

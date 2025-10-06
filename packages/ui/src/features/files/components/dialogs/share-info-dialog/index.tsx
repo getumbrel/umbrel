@@ -1,5 +1,5 @@
 import {AnimatePresence, motion} from 'framer-motion'
-import {useEffect, useState} from 'react'
+import {useEffect, useRef, useState} from 'react'
 import {useSearchParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
@@ -41,11 +41,14 @@ export default function ShareInfoDialog() {
 	const name = searchParams.get('files-share-info-name') || ''
 	const path = searchParams.get('files-share-info-path') || ''
 	const dialogProps = useDialogOpenProps('files-share-info')
-	const [firstEverSharePrompt, setShowFirstEverSharePrompt] = useState(false)
-	const [hasHadShares, setHasHadShares] = useState(false)
+	// Controls the initial "share scope" choice (share just this folder vs. share Home).
+	// We show this on every dialog open for non /Home and currently unshared paths to remind users
+	// that they can choose to share their entire Home folder instead of only the selected folder.
+	const [showShareScopePrompt, setShowShareScopePrompt] = useState(false)
 
 	const {
 		shares,
+		isLoadingShares,
 		sharePassword,
 		addShare,
 		removeShare,
@@ -59,28 +62,24 @@ export default function ShareInfoDialog() {
 
 	const isShared = isPathShared(path) ?? false
 	const isSharingHome = path === HOME_PATH
+	const sharename = shares?.find((s) => s.path === path)?.sharename
 
+	// Initialize scope prompt once per dialog open and path (after shares load),
+	// so unsharing within the session doesn't bounce back to the scope view.
+	const lastInitializedPathRef = useRef<string | null>(null)
 	useEffect(() => {
-		// If we see any shares, remember that we've had shares before
-		// because we don't want to show the first ever share prompt if the user just toggled off the last share
-		if (shares && shares.length > 0) {
-			setHasHadShares(true)
+		if (dialogProps.open) {
+			if (!isLoadingShares && lastInitializedPathRef.current !== path) {
+				const initiallyShared = isPathShared(path) ?? false
+				setShowShareScopePrompt(path !== HOME_PATH && !initiallyShared)
+				lastInitializedPathRef.current = path
+			}
+		} else {
+			setShowShareScopePrompt(false)
+			lastInitializedPathRef.current = null
 		}
-	}, [shares])
-
-	// Show the first ever share prompt if:
-	// 1. User doesn't have any shares
-	// 2. Didn't just toggle off the last
-	// 3. Is not trying to share the home directory
-	useEffect(() => {
-		if (shares && shares.length === 0 && !hasHadShares && path !== HOME_PATH) {
-			setShowFirstEverSharePrompt(true)
-		}
-
-		return () => {
-			setShowFirstEverSharePrompt(false)
-		}
-	}, [shares, path, hasHadShares])
+		return () => {}
+	}, [dialogProps.open, path, isLoadingShares, isPathShared])
 
 	const handleShareToggle = (checked: boolean) => {
 		if (checked) {
@@ -95,7 +94,7 @@ export default function ShareInfoDialog() {
 		? t('files-share.home-description', {homeDirectoryName})
 		: t('files-share.regular-description')
 
-	if (firstEverSharePrompt) {
+	if (showShareScopePrompt) {
 		title = t('files-share.first-prompt-title')
 		description = t('files-share.first-prompt-description', {folderName: name, homeDirectoryName})
 	}
@@ -107,13 +106,13 @@ export default function ShareInfoDialog() {
 
 	const content = (
 		<div className='space-y-6'>
-			{/* First ever share prompt buttons */}
-			{firstEverSharePrompt ? (
+			{/* Share scope choice prompt */}
+			{showShareScopePrompt ? (
 				<div className='flex gap-3'>
 					<Button
 						variant='primary'
 						onClick={() => {
-							setShowFirstEverSharePrompt(false)
+							setShowShareScopePrompt(false)
 						}}
 					>
 						{t('files-share.first-prompt-share-folder', {folderName: name})}
@@ -165,6 +164,7 @@ export default function ShareInfoDialog() {
 											username={username}
 											password={password}
 											name={name}
+											sharename={sharename}
 										/>
 									</div>
 								</motion.div>
@@ -201,7 +201,7 @@ export default function ShareInfoDialog() {
 					{content}
 				</FadeScroller>
 				<DialogFooter>
-					{!firstEverSharePrompt && (
+					{!showShareScopePrompt && (
 						<Button variant='default' onClick={dialogProps.onOpenChange.bind(null, false)}>
 							<span>{t('done')}</span>
 						</Button>
