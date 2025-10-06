@@ -263,8 +263,8 @@ export function RewindOverlay() {
 									</Button>
 								</div>
 							</div>
-							{/* Bottom controls: repo selector row + timeline row */}
-							<div className='flex flex-1 flex-col gap-3 px-4 pb-0 md:px-6'>
+							{/* Bottom controls (snapshot # summary + timeline + control buttons). Mobile: use safe-area bottom padding and hide snapshot metadata to avoid browser UI overlap */}
+							<div className='flex flex-1 flex-col gap-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:px-6 md:pb-0'>
 								<div className='flex items-center justify-between' />
 								<div className='flex w-full flex-col items-stretch gap-3 md:flex-row md:items-center'>
 									<div className='flex flex-col items-center text-center md:items-start md:text-left'>
@@ -274,7 +274,7 @@ export function RewindOverlay() {
 												{t('backups-rewind')}
 											</div>
 										</div>
-										<div className='mt-1 flex min-w-0 items-center gap-1 text-xs text-white/70 md:block'>
+										<div className='mt-1 hidden min-w-0 items-center gap-1 text-xs text-white/70 md:block'>
 											{backupsLoading ? (
 												// invisible placeholder to prevent layout shift
 												<span className='invisible'>{t('backups-restore.no-backups-yet')}</span>
