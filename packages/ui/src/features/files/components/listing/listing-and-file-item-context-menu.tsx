@@ -9,6 +9,7 @@ import {useItemClick} from '@/features/files/hooks/use-item-click'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useRewindAction} from '@/features/files/hooks/use-rewind-action'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
@@ -47,6 +48,9 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 	const selectedItems = useFilesStore((state) => state.selectedItems)
 	const hasItemsInClipboard = useFilesStore((state) => state.hasItemsInClipboard)
 	const isItemInClipboard = useFilesStore((state) => state.isItemInClipboard)
+
+	// Rewind action, including logic for when it can be shown and how to navigate
+	const {canShowRewind, label: rewindLabel, onClick: onRewind} = useRewindAction(selectedItems)
 
 	// Global rename helper
 	const setRenamingItemPath = useFilesStore((state) => state.setRenamingItemPath)
@@ -196,6 +200,10 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 						{selectedItems.length > 1
 							? t('files-action.download-items', {count: selectedItems.length})
 							: t('files-action.download')}
+					</ContextMenuItem>
+					{/* Restore previous version (Rewind) */}
+					<ContextMenuItem disabled={!canShowRewind} onClick={onRewind}>
+						{rewindLabel}
 					</ContextMenuItem>
 					<ContextMenuSeparator />
 					<ContextMenuItem disabled={!canCut} onClick={() => useFilesStore.getState().cutItemsToClipboard()}>

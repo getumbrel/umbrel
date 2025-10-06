@@ -334,6 +334,8 @@
   "files-action.remove-network-share": "Eject network share",
   "files-action.rename": "Rename",
   "files-action.restore": "Restore",
+  "files-action.restore-previous-version_one": "Restore previous version",
+  "files-action.restore-previous-version_other": "Restore previous versions",
   "files-action.select": "Select",
   "files-action.share": "Share over network...",
   "files-action.sharing": "Sharing...",

@@ -334,6 +334,8 @@
   "files-action.remove-network-share": "Ağ paylaşımını çıkar",
   "files-action.rename": "Yeniden adlandır",
   "files-action.restore": "Geri yükle",
+  "files-action.restore-previous-version_one": "Önceki sürümü geri yükle",
+  "files-action.restore-previous-version_other": "Önceki sürümleri geri yükle",
   "files-action.select": "Seç",
   "files-action.share": "Ağ üzerinden paylaş...",
   "files-action.sharing": "Paylaşılıyor...",

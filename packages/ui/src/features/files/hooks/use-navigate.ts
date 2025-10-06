@@ -89,6 +89,8 @@ export const useNavigate = () => {
 
 	const isInHome = currentPath === HOME_PATH
 
+	const isBrowsingHome = currentPath.startsWith(HOME_PATH)
+
 	const isBrowsingRecents = currentPath.startsWith(RECENTS_PATH)
 
 	const isBrowsingApps = currentPath.startsWith(APPS_PATH)
@@ -120,6 +122,7 @@ export const useNavigate = () => {
 		uiPath,
 		isBrowsingTrash,
 		isInHome,
+		isBrowsingHome,
 		isBrowsingRecents,
 		isBrowsingApps,
 		isBrowsingSearch,

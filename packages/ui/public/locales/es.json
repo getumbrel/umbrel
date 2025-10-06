@@ -334,6 +334,8 @@
   "files-action.remove-network-share": "Expulsar recurso compartido de red",
   "files-action.rename": "Renombrar",
   "files-action.restore": "Restaurar",
+  "files-action.restore-previous-version_one": "Restaurar versión anterior",
+  "files-action.restore-previous-version_other": "Restaurar versiones anteriores",
   "files-action.select": "Seleccionar",
   "files-action.share": "Compartir en la red...",
   "files-action.sharing": "Compartiendo...",

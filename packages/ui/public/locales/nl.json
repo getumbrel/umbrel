@@ -334,6 +334,8 @@
   "files-action.remove-network-share": "Netwerkshare uitwerpen",
   "files-action.rename": "Hernoemen",
   "files-action.restore": "Herstellen",
+  "files-action.restore-previous-version_one": "Vorige versie herstellen",
+  "files-action.restore-previous-version_other": "Vorige versies herstellen",
   "files-action.select": "Selecteren",
   "files-action.share": "Delen over het netwerk...",
   "files-action.sharing": "Bezig met delen...",
