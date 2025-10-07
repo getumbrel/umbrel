@@ -3,6 +3,8 @@ import {useEffect, useMemo, useRef, useState} from 'react'
 
 import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import {EmptyFolderIcon} from '@/features/files/assets/empty-folder-icon'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
+import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
@@ -27,6 +29,8 @@ type MiniBrowserProps = {
 	// Disabled paths
 	disabledPaths?: string[]
 	title?: string
+	// Optional faded description below the title
+	subtitle?: React.ReactNode
 	// optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog
 	actions?: React.ReactNode
 }
@@ -59,6 +63,7 @@ export function MiniBrowser({
 	onSelect,
 	selectionMode = 'files-and-folders',
 	title = t('mini-browser.default-title'),
+	subtitle,
 	actions,
 }: MiniBrowserProps) {
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
@@ -83,6 +88,7 @@ export function MiniBrowser({
 			<DialogContent className='max-w-[720px]'>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>
+					{subtitle ? <p className='mt-1 text-xs text-white/60'>{subtitle}</p> : null}
 				</DialogHeader>
 
 				<div className='h-[min(60vh,480px)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-white/5 p-2'>
@@ -129,6 +135,25 @@ function Tree({
 }) {
 	const {listing, isLoading} = useListDirectory(initialPath)
 
+	// Tailored empty state message and icon for known roots
+	const emptyStateText = useMemo(() => {
+		if (initialPath.startsWith('/Network')) return t('mini-browser.empty-network')
+		if (initialPath.startsWith('/External')) return t('mini-browser.empty-external')
+		return t('files-empty.directory')
+	}, [initialPath])
+
+	const EmptyIcon = useMemo(() => {
+		if (initialPath.startsWith('/Network'))
+			return (props: {className?: string}) => (
+				<img src={activeNasIcon} alt={t('nas')} className={props.className} draggable={false} />
+			)
+		if (initialPath.startsWith('/External'))
+			return (props: {className?: string}) => (
+				<img src={externalStorageIcon} alt={t('external-drive')} className={props.className} draggable={false} />
+			)
+		return EmptyFolderIcon
+	}, [initialPath])
+
 	const entries: FileSystemItem[] = useMemo(() => {
 		return (listing?.items as FileSystemItem[]) ?? []
 	}, [listing])
@@ -140,8 +165,10 @@ function Tree({
 			) : entries.length === 0 ? (
 				<div className='mt-28 flex flex-col items-center justify-center gap-3 text-center'>
 					<div className='flex flex-col items-center gap-3'>
-						<EmptyFolderIcon className='h-15 w-15' />
-						<div className='w-3/4 text-12 text-white/80'>{t('backups.location-root-folder-empty')}</div>
+						<div className='inline-flex size-[60px] items-center justify-center'>
+							<EmptyIcon className={'max-h-full max-w-full opacity-40'} />
+						</div>
+						<div className='w-3/4 text-12 text-white/40'>{emptyStateText}</div>
 					</div>
 				</div>
 			) : (
