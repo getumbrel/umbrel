@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "パスワードが一致しません",
   "backups.please-choose-folder": "フォルダを選択してください",
   "backups.restoring": "Umbrelを復元しています",
+  "backups.restoring-completing": "最終処理中です。Umbrelはまもなく再起動します…",
   "backups.restoring-progress": "復元済み {{percent}}%",
   "backups.restoring-time-remaining": "残り {{time}}",
   "backups.restoring-warning": "復元中は Umbrel の電源を切ったり、バックアップ先の接続を切断したりしないでください",

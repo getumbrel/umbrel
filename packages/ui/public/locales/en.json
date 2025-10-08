@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "Passwords do not match",
   "backups.please-choose-folder": "Please choose a folder",
   "backups.restoring": "Restoring your Umbrel",
+  "backups.restoring-completing": "Finishing up. Your Umbrel will restart shortly...",
   "backups.restoring-progress": "Restored {{percent}}%",
   "backups.restoring-time-remaining": "{{time}} remaining",
   "backups.restoring-warning": "Do not power off your Umbrel or disconnect your backup location during restore",

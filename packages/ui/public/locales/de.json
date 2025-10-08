@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "Passwörter stimmen nicht überein",
   "backups.please-choose-folder": "Bitte wähle einen Ordner",
   "backups.restoring": "Deinen Umbrel wiederherstellen",
+  "backups.restoring-completing": "Fast fertig. Dein Umbrel startet in Kürze neu...",
   "backups.restoring-progress": "{{percent}}% wiederhergestellt",
   "backups.restoring-time-remaining": "{{time}} verbleibend",
   "backups.restoring-warning": "Schalte deinen Umbrel während der Wiederherstellung nicht aus und trenne den Backup-Standort nicht",

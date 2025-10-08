@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "Parolalar eşleşmiyor",
   "backups.please-choose-folder": "Lütfen bir klasör seçin",
   "backups.restoring": "Umbrel'iniz geri yükleniyor",
+  "backups.restoring-completing": "İşlemler tamamlanıyor. Birazdan Umbrel'iniz yeniden başlatılacak...",
   "backups.restoring-progress": "{{percent}}% geri yüklendi",
   "backups.restoring-time-remaining": "{{time}} kaldı",
   "backups.restoring-warning": "Geri yükleme sırasında Umbrel'inizin güç kaynağını kapatmayın veya yedek konumunuzun bağlantısını kesmeyin",

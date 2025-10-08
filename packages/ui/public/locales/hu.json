@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "A jelszavak nem egyeznek",
   "backups.please-choose-folder": "Kérlek, válassz egy mappát",
   "backups.restoring": "Umbrel visszaállítása",
+  "backups.restoring-completing": "Épp befejezzük. Az Umbrel rövidesen újraindul...",
   "backups.restoring-progress": "{{percent}}% visszaállítva",
   "backups.restoring-time-remaining": "{{time}} hátra",
   "backups.restoring-warning": "Ne kapcsold ki az Umbrel-t, és ne válaszd le a backup helyet visszaállítás közben",

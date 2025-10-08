@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "Паролі не збігаються",
   "backups.please-choose-folder": "Будь ласка, оберіть папку",
   "backups.restoring": "Відновлення вашого Umbrel",
+  "backups.restoring-completing": "Майже готово. Ваш Umbrel незабаром перезавантажиться...",
   "backups.restoring-progress": "Відновлено {{percent}}%",
   "backups.restoring-time-remaining": "Залишилось: {{time}}",
   "backups.restoring-warning": "Не вимикайте Umbrel і не відключайте місце резервного копіювання під час відновлення",

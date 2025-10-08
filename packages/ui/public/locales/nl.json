@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "Wachtwoorden komen niet overeen",
   "backups.please-choose-folder": "Kies een map",
   "backups.restoring": "Je Umbrel wordt hersteld",
+  "backups.restoring-completing": "Bezig met afronden. Je Umbrel wordt binnenkort opnieuw opgestart...",
   "backups.restoring-progress": "Hersteld {{percent}}%",
   "backups.restoring-time-remaining": "Nog {{time}}",
   "backups.restoring-warning": "Zet je Umbrel niet uit en ontkoppel je back-uplocatie niet tijdens het terugzetten",

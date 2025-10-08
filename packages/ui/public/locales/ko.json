@@ -204,6 +204,7 @@
   "backups.passwords-do-not-match": "비밀번호가 일치하지 않습니다",
   "backups.please-choose-folder": "폴더를 선택하세요",
   "backups.restoring": "Umbrel 복원 중",
+  "backups.restoring-completing": "마무리 중이에요. Umbrel이 곧 재시작될 거예요...",
   "backups.restoring-progress": "복원됨 {{percent}}%",
   "backups.restoring-time-remaining": "{{time}} 남음",
   "backups.restoring-warning": "복원 중에는 Umbrel의 전원을 끄거나 백업 위치의 연결을 끊지 마세요",
