@@ -33,6 +33,8 @@ type MiniBrowserProps = {
 	subtitle?: React.ReactNode
 	// optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog
 	actions?: React.ReactNode
+	// Optional function to determine which items are selectable
+	selectableFilter?: (entry: FileSystemItem) => boolean
 }
 
 // Visual indentation cap the Tree so it doesn't get too wide and overflow
@@ -65,6 +67,7 @@ export function MiniBrowser({
 	title = t('mini-browser.default-title'),
 	subtitle,
 	actions,
+	selectableFilter,
 }: MiniBrowserProps) {
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
 
@@ -78,10 +81,17 @@ export function MiniBrowser({
 
 	const selectButtonLabel =
 		selectionMode === 'files-and-folders' ? t('files-action.select') : t('mini-browser.select-folder')
+	// Validate selection: must have selection, not be disabled, and pass selectableFilter (if provided)
 	const isSelectionValid =
 		!!selected &&
-		(selectionMode === 'files-and-folders' || selected.isDirectory) &&
-		!disabledPaths.includes(selected.path)
+		!disabledPaths.includes(selected.path) &&
+		(selectableFilter
+			? selectableFilter({
+					path: selected.path,
+					type: selected.isDirectory ? 'directory' : 'file',
+					name: selected.path.split('/').pop() || '',
+				} as FileSystemItem)
+			: selected.isDirectory)
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,6 +112,7 @@ export function MiniBrowser({
 						onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
 						selectedPath={selected?.path ?? null}
 						selectionMode={selectionMode}
+						selectableFilter={selectableFilter}
 					/>
 				</div>
 
@@ -126,12 +137,14 @@ function Tree({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	selectableFilter,
 }: {
 	initialPath: string
 	onSelect: (p: string, isDirectory: boolean) => void
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	selectableFilter?: (entry: FileSystemItem) => boolean
 }) {
 	const {listing, isLoading} = useListDirectory(initialPath)
 
@@ -182,6 +195,7 @@ function Tree({
 						selectedPath={selectedPath}
 						expandTo={expandTo}
 						selectionMode={selectionMode}
+						selectableFilter={selectableFilter}
 					/>
 				))
 			)}
@@ -197,6 +211,7 @@ function Node({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	selectableFilter,
 }: {
 	entry: FileSystemItem
 	depth: number
@@ -204,6 +219,7 @@ function Node({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	selectableFilter?: (entry: FileSystemItem) => boolean
 }) {
 	const [expanded, setExpanded] = useState(false)
 	const userInteractedRef = useRef(false)
@@ -228,8 +244,14 @@ function Node({
 
 	const isSelected = selectedPath === entry.path
 	const isRepositoryDir = entry.type === 'directory' && entry.name === BACKUP_FILE_NAME
-	const isSelectable = entry.type === 'directory' || selectionMode === 'files-and-folders'
-	const isDisabled = isRepositoryDir || !isSelectable
+
+	// Selection logic: when selectableFilter is provided we use it; otherwise use default directory/file rules
+	const isSelectable = selectableFilter
+		? selectableFilter(entry)
+		: entry.type === 'directory' || selectionMode === 'files-and-folders'
+
+	// Visual disabling: only show disabled state when NOT using selectableFilter (preserves expand/collapse UX)
+	const isDisabled = !selectableFilter && (isRepositoryDir || !isSelectable)
 
 	return (
 		<div className='select-none'>
@@ -238,10 +260,11 @@ function Node({
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
 					isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
+					selectableFilter && !isSelectable && 'opacity-50',
 				)}
 				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}
 				onClick={() => {
-					if (isDisabled) return
+					if (isDisabled || !isSelectable) return
 					onSelect(entry.path, entry.type === 'directory')
 				}}
 			>
@@ -270,6 +293,7 @@ function Node({
 					selectedPath={selectedPath}
 					expandTo={expandTo}
 					selectionMode={selectionMode}
+					selectableFilter={selectableFilter}
 				/>
 			)}
 		</div>
@@ -284,6 +308,7 @@ function Subtree({
 	selectedPath,
 	expandTo,
 	selectionMode,
+	selectableFilter,
 }: {
 	path: string
 	depth: number
@@ -291,6 +316,7 @@ function Subtree({
 	selectedPath: string | null
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
+	selectableFilter?: (entry: FileSystemItem) => boolean
 }) {
 	const {listing, isLoading, fetchMoreItems} = useListDirectory(path)
 	const children: FileSystemItem[] = useMemo(() => (listing?.items as FileSystemItem[]) ?? [], [listing])
@@ -316,6 +342,7 @@ function Subtree({
 					selectedPath={selectedPath}
 					expandTo={expandTo}
 					selectionMode={selectionMode}
+					selectableFilter={selectableFilter}
 				/>
 			))}
 			{/* We render the "Load more" control when listing is paginated */}

@@ -151,7 +151,7 @@ export function BackupsRestoreWizard() {
 		step === Step.Repository
 			? repoMode === 'known'
 				? !!repositoryId
-				: manualPath.trim().length > 0 && manualPassword.trim().length > 0
+				: manualPath.trim().length > 0 && manualPassword.trim().length > 0 && manualPath.endsWith(BACKUP_FILE_NAME)
 			: step === Step.Backups
 				? !!backupId
 				: true
@@ -173,7 +173,12 @@ export function BackupsRestoreWizard() {
 			// Attempt to connect to a manually specified repository
 			try {
 				// Route enforces auth when a user exists; otherwise allowed during recovery
-				const id = await connectMutation.mutateAsync({path: manualPath.trim(), password: manualPassword})
+				// Extract parent directory from backup file path
+				const path = manualPath.trim()
+				const repositoryPath = path.endsWith(BACKUP_FILE_NAME)
+					? path.slice(0, -BACKUP_FILE_NAME.length).replace(/\/$/, '') || '/'
+					: path
+				const id = await connectMutation.mutateAsync({path: repositoryPath, password: manualPassword})
 				form.setValue('repositoryId', id, {shouldValidate: true})
 				setStep(Step.Backups)
 				return
@@ -492,9 +497,6 @@ function RepositoryStep({
 						</div>
 						<div>
 							<div className='mb-2 text-sm font-medium'>{t('backups-restore.backup-location')}</div>
-							<div className='mb-2 mt-1 text-[12px] opacity-60'>
-								{t('backups-restore.select-folder-contains-backup', {backupFileName: BACKUP_FILE_NAME})}
-							</div>
 							<div className='relative'>
 								<Input
 									type='text'
@@ -552,7 +554,18 @@ function RepositoryStep({
 							onOpenPath={manualPath || browserRoot || '/'}
 							preselectOnOpen={true}
 							selectionMode='folders'
-							title={t('backups.select-backup-folder')}
+							title={t('backups-restore.select-backup-file')}
+							subtitle={
+								<Trans
+									i18nKey='backups-restore.select-backup-file-only'
+									values={{backupFileName: BACKUP_FILE_NAME}}
+									components={{
+										bold: <span className='text-brand-lightest' />,
+									}}
+								/>
+							}
+							// only allow selecting the backup file
+							selectableFilter={(entry) => entry.name === BACKUP_FILE_NAME}
 							onSelect={(p) => {
 								onManualPathChange(p)
 								setBrowserOpen(false)
