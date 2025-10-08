@@ -701,6 +701,7 @@
   "retry": "Erneut versuchen",
   "rewind": "Rewind",
   "rewind.files-as-of": "Deine Dateien vom",
+  "rewind.loading-snapshots": "Snapshots werden geladen...",
   "rewind.now": "Jetzt",
   "rewind.preflight.description": "Finde Dateien und Ordner aus deinen vergangenen Backups und stelle sie in die Gegenwart wieder her.",
   "rewind.preflight.enable-backups": "Richte Backups in den Einstellungen ein, um Rewind zu verwenden",

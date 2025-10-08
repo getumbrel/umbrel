@@ -701,6 +701,7 @@
   "retry": "Újrapróbálás",
   "rewind": "Rewind",
   "rewind.files-as-of": "Fájljaid állapota erre a dátumra:",
+  "rewind.loading-snapshots": "Pillanatképek betöltése...",
   "rewind.now": "Most",
   "rewind.preflight.description": "Találd meg a fájlokat és mappákat a korábbi backupjaidból, és állítsd vissza őket a jelenbe.",
   "rewind.preflight.enable-backups": "Állítsd be a Backups-t a Beállításokban, hogy elkezdhessed a Rewind használatát",

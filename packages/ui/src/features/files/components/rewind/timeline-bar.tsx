@@ -14,14 +14,17 @@ export function TimelineBar({
 	onSelect: (id: string) => void
 }) {
 	const [lang] = useLanguage()
-	if (!backups || backups.length === 0) {
-		return <div className='h-2 w-full rounded-full bg-white/5' />
-	}
-	const min = backups[0].time
-	const max = backups[backups.length - 1].time
+
+	// Determine if we have actual backup data (more than just "current")
+	const hasBackups = backups && backups.length > 1
+
+	// Calculate timeline positioning
+	const min = hasBackups ? backups[0].time : 0
+	const max = hasBackups ? backups[backups.length - 1].time : 1
 	const span = Math.max(1, max - min)
 
-	const selected = selectedId ? backups.find((b) => b.id === selectedId) || null : null
+	// Find selected backup and calculate its position
+	const selected = selectedId && hasBackups ? backups.find((b) => b.id === selectedId) || null : null
 	const selectedPct = selected ? ((selected.time - min) / span) * 100 : null
 
 	return (
@@ -34,8 +37,10 @@ export function TimelineBar({
 				) : null}
 
 				{backups.map((b) => {
-					const pct = ((b.time - min) / span) * 100
+					// For loading state (only "current"), position on the right
+					const pct = hasBackups ? ((b.time - min) / span) * 100 : b.id === 'current' ? 100 : 0
 					const isSel = selectedId === b.id
+
 					return (
 						<Tooltip key={b.id}>
 							<TooltipTrigger asChild>

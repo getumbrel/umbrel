@@ -146,7 +146,7 @@ export function RewindOverlay() {
 
 	const snapshotsCount = backupsRaw.length
 	const countLabel = backupsLoading
-		? ''
+		? t('rewind.loading-snapshots')
 		: snapshotsCount === 0
 			? t('backups-restore.no-backups-yet')
 			: t('rewind.snapshots-count', {count: snapshotsCount})
@@ -274,16 +274,13 @@ export function RewindOverlay() {
 												{t('backups-rewind')}
 											</div>
 										</div>
-										<div className='mt-1 hidden min-w-0 items-center gap-1 text-xs text-white/70 md:block'>
-											{backupsLoading ? (
-												// invisible placeholder to prevent layout shift
-												<span className='invisible'>{t('backups-restore.no-backups-yet')}</span>
-											) : (
-												<span>{countLabel}</span>
-											)}
-											{snapshotsCount > 0 && earliestDateLabel ? (
-												<span className='truncate md:mt-0.5 md:block'>{earliestDateLabel}</span>
-											) : null}
+										<div className='mt-1 hidden min-w-0 items-center gap-1 text-xs text-white/70 md:block md:h-8'>
+											<div className='flex flex-col'>
+												<span className={backupsLoading ? 'opacity-50' : ''}>{countLabel}</span>
+												{snapshotsCount > 0 && earliestDateLabel && !backupsLoading ? (
+													<span className='truncate'>{earliestDateLabel}</span>
+												) : null}
+											</div>
 										</div>
 									</div>
 									<div className='relative order-2 mx-0 w-full min-w-0 flex-1 px-0 md:order-none md:mx-2 md:w-auto md:px-0'>
@@ -301,8 +298,8 @@ export function RewindOverlay() {
 									<div className='order-3 hidden w-full items-center justify-center gap-2 md:order-none md:flex md:w-auto md:justify-end'>
 										{(() => {
 											const idx = selectedBackupId ? backupsForTimeline.findIndex((b) => b.id === selectedBackupId) : -1
-											const canPrev = idx > 0
-											const canNext = idx >= 0 && idx < backupsForTimeline.length - 1
+											const canPrev = !backupsLoading && idx > 0
+											const canNext = !backupsLoading && idx >= 0 && idx < backupsForTimeline.length - 1
 											return (
 												<>
 													<button

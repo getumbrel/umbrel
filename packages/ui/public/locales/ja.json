@@ -701,6 +701,7 @@
   "retry": "再試行",
   "rewind": "Rewind",
   "rewind.files-as-of": "時点のファイル",
+  "rewind.loading-snapshots": "スナップショットを読み込み中…",
   "rewind.now": "今",
   "rewind.preflight.description": "過去のバックアップからファイルやフォルダを見つけ、現在に復元できます。",
   "rewind.preflight.enable-backups": "Rewind を使い始めるには設定でバックアップをセットアップしてください",

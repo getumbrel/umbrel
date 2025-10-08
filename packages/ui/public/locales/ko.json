@@ -701,6 +701,7 @@
   "retry": "다시 시도",
   "rewind": "Rewind",
   "rewind.files-as-of": "기준 시점의 파일",
+  "rewind.loading-snapshots": "스냅샷을 불러오는 중...",
   "rewind.now": "지금",
   "rewind.preflight.description": "과거 백업에서 파일과 폴더를 찾아 현재로 복원하세요.",
   "rewind.preflight.enable-backups": "Rewind를 사용하려면 설정에서 Backups를 설정하세요",

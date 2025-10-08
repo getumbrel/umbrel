@@ -701,6 +701,7 @@
   "retry": "Tekrar dene",
   "rewind": "Rewind",
   "rewind.files-as-of": "Dosyalarınız şu tarihteki hali:",
+  "rewind.loading-snapshots": "Anlık görüntüler yükleniyor...",
   "rewind.now": "Şimdi",
   "rewind.preflight.description": "Geçmiş yedeklerinizdeki dosya ve klasörleri bulun ve bunları güncel hâle geri getirin.",
   "rewind.preflight.enable-backups": "Rewind kullanmaya başlamak için Ayarlar'da Backups'ı kurun",

@@ -701,6 +701,7 @@
   "retry": "Opnieuw proberen",
   "rewind": "Rewind",
   "rewind.files-as-of": "Je bestanden per",
+  "rewind.loading-snapshots": "Snapshots laden...",
   "rewind.now": "Nu",
   "rewind.preflight.description": "Vind bestanden en mappen uit je eerdere back-ups en zet ze terug naar het heden.",
   "rewind.preflight.enable-backups": "Stel Back-ups in via Instellingen om Rewind te gebruiken",

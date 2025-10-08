@@ -701,6 +701,7 @@
   "retry": "Reintentar",
   "rewind": "Rewind",
   "rewind.files-as-of": "Tus archivos a fecha de",
+  "rewind.loading-snapshots": "Cargando instantáneas...",
   "rewind.now": "Ahora",
   "rewind.preflight.description": "Encuentra archivos y carpetas de tus copias de seguridad anteriores y recupéralos al presente.",
   "rewind.preflight.enable-backups": "Configura Backups en Ajustes para empezar a usar Rewind",
