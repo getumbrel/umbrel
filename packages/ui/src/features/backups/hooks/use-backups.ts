@@ -3,7 +3,8 @@ import {useEffect, useRef, useState} from 'react'
 import {toast} from 'sonner'
 
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
+
+import {getUserFriendlyErrorMessage} from '../utils/error-messages'
 
 export type BackupDestination =
 	| {type: 'nas'; host: string; rootPath: string} // e.g. /Network/<host>
@@ -40,6 +41,8 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 
 	// Pending state so the wizards have access to it to show loading indicators throughout the flow
 	const [isSettingUpBackup, setIsSettingUpBackup] = useState(false)
+	const [isForgettingRepository, setIsForgettingRepository] = useState(false)
+	const [isBackingUp, setIsBackingUp] = useState(false)
 
 	// Create a repository at the selected folder and immediately start a backup.
 	const setupBackup = async (input: SetupBackupInput) => {
@@ -51,12 +54,6 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			// Create repository
 			const repositoryId = await createRepoMutation.mutateAsync({path, password})
 
-			if (!repositoryId) {
-				const msg = t('Unable to locate repository after creation')
-				toast.error(msg)
-				throw new Error(msg)
-			}
-
 			// Start first backup (don't wait for completion so we can close the wizard and progress will be shown elsewhere)
 			backupNow(repositoryId).catch(() => {})
 
@@ -65,8 +62,8 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 
 			return {repositoryId, path}
 		} catch (error: any) {
-			const message = error?.message ?? t('unknown-error')
-			toast.error(t('backups-setup.error', {message}))
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
 			throw error
 		} finally {
 			setIsSettingUpBackup(false)
@@ -88,34 +85,40 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			await utils.backups.getRepositories.invalidate()
 			return {repositoryId, path}
 		} catch (error: any) {
-			const message = error?.message ?? t('unknown-error')
-			toast.error(t('backups-setup.error', {message}))
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
 			throw error
 		}
 	}
 
 	// Manually trigger a backup for a known repository.
 	const backupNow = async (repositoryId: string) => {
+		setIsBackingUp(true)
 		try {
 			await backupMutation.mutateAsync({repositoryId})
 			// No success toast since we show progress indicators throughout the UI (floating island, wizards, etc.)
 		} catch (error: any) {
-			const message = error?.message ?? t('unknown-error')
-			toast.error(t('Failed to start backup: {{message}}', {message}))
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
 			throw error
+		} finally {
+			setIsBackingUp(false)
 		}
 	}
 
 	// Forget a repository and refresh the repositories list.
 	const forgetRepository = async (repositoryId: string) => {
+		setIsForgettingRepository(true)
 		try {
 			await forgetRepoMutation.mutateAsync({repositoryId})
 			await utils.backups.getRepositories.invalidate()
 			// No success toast since we show progress indicators throughout the UI (floating island, wizards, etc.)
 		} catch (error: any) {
-			const message = error?.message ?? t('unknown-error')
-			toast.error(t('Failed to remove repository: {{message}}', {message}))
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
 			throw error
+		} finally {
+			setIsForgettingRepository(false)
 		}
 	}
 
@@ -134,6 +137,8 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 		// manual backup trigger
 		backupNow,
 		forgetRepository,
+		isForgettingRepository,
+		isBackingUp,
 	}
 }
 
@@ -200,17 +205,82 @@ export function useRepositoryBackups(
 }
 
 export function useRestoreBackup() {
-	return trpcReact.backups.restoreBackup.useMutation()
+	const mutation = trpcReact.backups.restoreBackup.useMutation()
+
+	const restoreBackup = async (backupId: string) => {
+		try {
+			return await mutation.mutateAsync({backupId})
+		} catch (error: any) {
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
+			throw error
+		}
+	}
+
+	return {
+		...mutation,
+		restoreBackup,
+	}
 }
 
 export function useConnectToRepository() {
-	return trpcReact.backups.connectToExistingRepository.useMutation()
+	const mutation = trpcReact.backups.connectToExistingRepository.useMutation()
+	const [isConnecting, setIsConnecting] = useState(false)
+
+	const connectToRepository = async (input: {path: string; password: string}) => {
+		setIsConnecting(true)
+		try {
+			return await mutation.mutateAsync(input)
+		} catch (error: any) {
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
+			throw error
+		} finally {
+			setIsConnecting(false)
+		}
+	}
+
+	return {
+		...mutation,
+		connectToRepository,
+		isPending: isConnecting,
+	}
 }
 
 export function useMountBackup() {
-	return trpcReact.backups.mountBackup.useMutation()
+	const mutation = trpcReact.backups.mountBackup.useMutation()
+
+	const mountBackup = async (backupId: string) => {
+		try {
+			return await mutation.mutateAsync({backupId})
+		} catch (error: any) {
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
+			throw error
+		}
+	}
+
+	return {
+		...mutation,
+		mountBackup,
+	}
 }
 
 export function useUnmountBackup() {
-	return trpcReact.backups.unmountBackup.useMutation()
+	const mutation = trpcReact.backups.unmountBackup.useMutation()
+
+	const unmountBackup = async (directoryName: string) => {
+		try {
+			await mutation.mutateAsync({directoryName})
+		} catch (error: any) {
+			// Silent failure for unmount operations
+			// Don't show error toast - unmount is cleanup, not user-facing action
+			console.warn('Unmount failed:', error.message)
+		}
+	}
+
+	return {
+		...mutation,
+		unmountBackup,
+	}
 }

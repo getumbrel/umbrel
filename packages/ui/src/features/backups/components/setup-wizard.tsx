@@ -350,7 +350,8 @@ export function BackupsSetupWizard() {
 							onClick={form.handleSubmit(onSubmit)}
 							className='min-w-0 max-md:w-full'
 						>
-							{isSettingUpBackup ? <Loader2 className='h-4 w-4 animate-spin' /> : t('backups-setup-confirm')}
+							<span className={isSettingUpBackup ? 'opacity-0' : 'opacity-100'}>{t('backups-setup-confirm')}</span>
+							{isSettingUpBackup && <Loader2 className='absolute h-4 w-4 animate-spin' />}
 						</Button>
 					)}
 				</div>

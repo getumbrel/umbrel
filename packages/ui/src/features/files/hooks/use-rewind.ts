@@ -20,8 +20,8 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 		enabled: overlayOpen && !!selectedRepoId,
 		staleTime: 10_000,
 	})
-	const mountBackupM = useMountBackup()
-	const unmountBackupM = useUnmountBackup()
+	const {mountBackup} = useMountBackup()
+	const {unmountBackup} = useUnmountBackup()
 	const utils = trpcReact.useUtils()
 	const {copyItems} = useFilesOperations()
 	const selectedItems = useFilesStore((s) => s.selectedItems)
@@ -94,36 +94,48 @@ export function useRewind({overlayOpen, repoOpen}: {overlayOpen: boolean; repoOp
 
 	const unmountIfNeeded = async () => {
 		if (!mountedDir) return
-		try {
-			await unmountBackupM.mutateAsync({directoryName: mountedDir})
-		} finally {
-			setMountedDir(null)
-		}
+		await unmountBackup(mountedDir)
+		// No try/catch needed here since useUnmountBackup handles errors silently
+		// We only clear mountedDir on successful unmount
+		// If unmount fails, the new mount still succeeds, so user sees the selected snapshot
+		setMountedDir(null)
 	}
 
 	const selectSnapshot = async (targetId: string) => {
 		// We intentionally clear interaction state when switching snapshots.
 		// This avoids carrying over selection or an open viewer from a previous snapshot into the next one
 		resetInteractionState()
+
+		// Store previous selection for potential revert if the mount fails
+		const previousBackupId = selectedBackupId
+
+		// We start animation immediately for visual feedback
 		setSelectedBackupId(targetId)
 		setView('switching-snapshot')
 
-		// If this snapshot already has a leftover mount, reuse it
-		if (targetId !== 'current') {
-			const existingDir = await getExistingMountedDirForSnapshot(targetId)
-			if (existingDir) {
-				setMountedDir(existingDir)
-				setView('browsing')
-				return
+		try {
+			// If this snapshot already has a leftover mount, reuse it
+			if (targetId !== 'current') {
+				const existingDir = await getExistingMountedDirForSnapshot(targetId)
+				if (existingDir) {
+					setMountedDir(existingDir)
+					setView('browsing')
+					return
+				}
 			}
-		}
 
-		await unmountIfNeeded()
-		if (targetId !== 'current') {
-			const dir = await mountBackupM.mutateAsync({backupId: targetId})
-			setMountedDir(dir)
+			await unmountIfNeeded()
+			if (targetId !== 'current') {
+				const dir = await mountBackup(targetId)
+				setMountedDir(dir)
+			}
+			setView('browsing')
+		} catch {
+			// Error toasts are handled in the hooks
+			// Revert the animation by going back to previous backup
+			setSelectedBackupId(previousBackupId)
+			setView('browsing')
 		}
-		setView('browsing')
 	}
 
 	const canRecover = useMemo(() => {

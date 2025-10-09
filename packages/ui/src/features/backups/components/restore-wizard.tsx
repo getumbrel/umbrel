@@ -1,12 +1,11 @@
 import {zodResolver} from '@hookform/resolvers/zod'
 import {formatDistanceToNow} from 'date-fns'
-import {AlertOctagon, ArrowLeft, ChevronDown, Plus, Server} from 'lucide-react'
+import {AlertOctagon, ArrowLeft, ChevronDown, Loader2, Plus, Server} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {FormProvider, useForm, type Resolver, type SubmitHandler} from 'react-hook-form'
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {TbCalendarTime, TbDatabase} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
-import {toast} from 'sonner'
 import {z} from 'zod'
 
 import {ErrorAlert} from '@/components/ui/alert'
@@ -113,6 +112,7 @@ export function BackupsRestoreWizard() {
 	const [confirmOpen, setConfirmOpen] = useState(false)
 	const [confirmPassword, setConfirmPassword] = useState('')
 	const [confirmError, setConfirmError] = useState('')
+	const [isStartingRestore, setIsStartingRestore] = useState(false)
 
 	const form = useForm<RestoreWizardValues>({
 		resolver: zodResolver(wizardExistingSchema as any) as unknown as Resolver<RestoreWizardValues>,
@@ -157,8 +157,8 @@ export function BackupsRestoreWizard() {
 				: true
 
 	// Start restore mutation
-	const restoreMutation = useBackupsRestore()
-	const connectMutation = useBackupsConnect()
+	const {restoreBackup} = useBackupsRestore()
+	const {connectToRepository, isPending: isConnecting} = useBackupsConnect()
 	const verifyPasswordMutation = trpcReact.user.login.useMutation()
 
 	// Step-scoped validation before next
@@ -178,12 +178,12 @@ export function BackupsRestoreWizard() {
 				const repositoryPath = path.endsWith(BACKUP_FILE_NAME)
 					? path.slice(0, -BACKUP_FILE_NAME.length).replace(/\/$/, '') || '/'
 					: path
-				const id = await connectMutation.mutateAsync({path: repositoryPath, password: manualPassword})
+				const id = await connectToRepository({path: repositoryPath, password: manualPassword})
 				form.setValue('repositoryId', id, {shouldValidate: true})
 				setStep(Step.Backups)
 				return
-			} catch (error: any) {
-				toast.error(error?.message || t('backups-restore.failed-to-connect'))
+			} catch {
+				// Error toasts are handled in the hook; remain on this step
 				return
 			}
 		}
@@ -211,12 +211,12 @@ export function BackupsRestoreWizard() {
 
 	// Final submit: start restore
 	const onSubmit: SubmitHandler<RestoreWizardValues> = async (values) => {
+		const {backupId} = values
+		if (!backupId) return
 		try {
-			const {backupId} = values
-			if (!backupId) return
-			await restoreMutation.mutateAsync({backupId})
-		} catch (error: any) {
-			toast.error(error?.message || t('backups-restore.failed-to-start'))
+			await restoreBackup(backupId)
+		} catch {
+			// Error toasts are handled in the hook; remain on this step
 		}
 	}
 
@@ -224,13 +224,18 @@ export function BackupsRestoreWizard() {
 		try {
 			setConfirmError('')
 			if (!confirmPassword.trim()) return
+
+			setIsStartingRestore(true)
 			// Verify password without altering auth state
 			await verifyPasswordMutation.mutateAsync({password: confirmPassword})
+			await onSubmit({repositoryId: '', backupId: backupId || ''})
+			// Only close dialog on successful restore
 			setConfirmOpen(false)
 			setConfirmPassword('')
-			await onSubmit({repositoryId: '', backupId: backupId || ''})
 		} catch (error: any) {
 			setConfirmError(error?.message || t('backups-restore.invalid-password'))
+		} finally {
+			setIsStartingRestore(false)
 		}
 	}
 
@@ -294,20 +299,20 @@ export function BackupsRestoreWizard() {
 							variant='primary'
 							size='dialog'
 							onClick={next}
-							disabled={!canNext}
+							disabled={!canNext || isConnecting}
 							className='min-w-0 max-md:w-full'
 						>
-							{t('continue')}
+							<span className={isConnecting ? 'opacity-0' : 'opacity-100'}>{t('continue')}</span>
+							{isConnecting && <Loader2 className='absolute h-4 w-4 animate-spin' />}
 						</Button>
 					) : (
 						<Button
 							variant='destructive'
 							size='dialog'
 							onClick={() => setConfirmOpen(true)}
-							disabled={restoreMutation.isPending}
 							className='min-w-0 max-md:w-full'
 						>
-							{restoreMutation.isPending ? t('backups-restore.restoring') : t('backups-restore.restore-umbrel')}
+							{t('backups-restore.restore-umbrel')}
 						</Button>
 					)}
 				</div>
@@ -340,10 +345,13 @@ export function BackupsRestoreWizard() {
 							<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 							<AlertDialogAction
 								variant='destructive'
-								disabled={!confirmPassword.trim()}
+								disabled={!confirmPassword.trim() || isStartingRestore}
 								onClick={handleConfirmRestore}
 							>
-								{t('backups-restore.restore-umbrel')}
+								<span className={isStartingRestore ? 'opacity-0' : 'opacity-100'}>
+									{t('backups-restore.restore-umbrel')}
+								</span>
+								{isStartingRestore && <Loader2 className='absolute h-4 w-4 animate-spin' />}
 							</AlertDialogAction>
 						</AlertDialogFooter>
 					</AlertDialogContent>
