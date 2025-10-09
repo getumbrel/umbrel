@@ -1,4 +1,4 @@
-import {Loader2} from 'lucide-react'
+import {ChevronDown, Loader2} from 'lucide-react'
 import {useCallback} from 'react'
 import {FaRegSave} from 'react-icons/fa'
 import {TbHistory, TbSettings} from 'react-icons/tb'
@@ -17,6 +17,12 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function BackupsMobileDrawer() {
@@ -32,10 +38,6 @@ export function BackupsMobileDrawer() {
 		navigate('/settings/backups/configure', {preventScrollReset: true})
 	}, [navigate])
 
-	const goToRestore = useCallback(() => {
-		navigate('/settings/backups/restore', {preventScrollReset: true})
-	}, [navigate])
-
 	return (
 		<Drawer {...dialogProps}>
 			<DrawerContent>
@@ -47,8 +49,8 @@ export function BackupsMobileDrawer() {
 					<DrawerDescription>{t('backups-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
-					{/* There are 3 buttons (Set up, Configure, Restore) */}
-					{/* We always render the "Restore" button */}
+					{/* There are 2 buttons (Set up/Configure, Restore) */}
+					{/* We always render the "Restore" dropdown with Full Restore and Rewind options */}
 					{/* We render the "Set up" button if the user has no backup repo yet, or the "Configure" button if they do*/}
 					{/* If we're still checking for existing backup repos we just show a load spinner in place of the Set up or Configure button */}
 					{isLoadingBackups ? (
@@ -67,10 +69,29 @@ export function BackupsMobileDrawer() {
 							{t('Configure')}
 						</Button>
 					)}
-					<Button onClick={goToRestore} size='dialog'>
-						<TbHistory className='size-4' />
-						{t('backups-restore')}
-					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button size='dialog' className='flex items-center justify-center gap-2'>
+								<TbHistory className='size-4' />
+								{t('backups-restore')}
+								<ChevronDown className='size-4' />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align='center' className='min-w-[280px]'>
+							<DropdownMenuItem onSelect={() => navigate('/settings/backups/restore', {preventScrollReset: true})}>
+								<div className='flex flex-col'>
+									<div className='text-14 font-medium'>{t('backups-restore-full')}</div>
+									<div className='text-12 text-white/40'>{t('backups-restore-full-description')}</div>
+								</div>
+							</DropdownMenuItem>
+							<DropdownMenuItem onSelect={() => navigate('/files/Home?rewind=open', {preventScrollReset: true})}>
+								<div className='flex flex-col'>
+									<div className='text-14 font-medium'>{t('backups-rewind')}</div>
+									<div className='text-12 text-white/40'>{t('backups-rewind-description')}</div>
+								</div>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>

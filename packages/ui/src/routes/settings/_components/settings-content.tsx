@@ -183,9 +183,9 @@ export function SettingsContent() {
 					{/* Backups */}
 					<ListRow title={t('backups')} description={t('backups-description')}>
 						<div className='flex flex-wrap gap-2 pt-3'>
-							{/* There are 3 buttons (Set up, Configure, Restore) */}
-							{/* We always render the "Restore" button */}
-							{/* We render the "Set up" button if the user has no backup repo yet, or the "Configure" button if they do*/}
+							{/* There are 2 buttons/dropdowns (Set up/Configure dropdown, Restore dropdown) */}
+							{/* We always render the "Restore" dropdown with Full Restore and Rewind options */}
+							{/* We render the "Set up" dropdown if the user has no backup repo yet, or the "Configure" button if they do*/}
 							{/* If we're still checking for existing backup repos we just show a load spinner in place of the Set up or Configure button */}
 							{isLoadingBackups ? (
 								<div className='flex h-[30px] items-center'>
@@ -227,9 +227,28 @@ export function SettingsContent() {
 									{t('Configure')}
 								</IconButtonLink>
 							)}
-							<IconButtonLink to={'backups/restore'} icon={TbHistory}>
-								{t('backups-restore')}
-							</IconButtonLink>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<IconButton icon={TbHistory}>
+										{t('backups-restore')}
+										<ChevronDown />
+									</IconButton>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align='end' className='min-w-[280px]'>
+									<DropdownMenuItem onSelect={() => navigate('backups/restore')}>
+										<div className='flex flex-col'>
+											<div className='text-14 font-medium'>{t('backups-restore-full')}</div>
+											<div className='text-12 text-white/40'>{t('backups-restore-full-description')}</div>
+										</div>
+									</DropdownMenuItem>
+									<DropdownMenuItem onSelect={() => navigate('/files/Home?rewind=open')}>
+										<div className='flex flex-col'>
+											<div className='text-14 font-medium'>{t('backups-rewind')}</div>
+											<div className='text-12 text-white/40'>{t('backups-rewind-description')}</div>
+										</div>
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						</div>
 					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')}>
