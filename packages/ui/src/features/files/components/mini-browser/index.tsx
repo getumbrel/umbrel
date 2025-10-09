@@ -369,6 +369,10 @@ function Node({
 					if (isDisabled || !isSelectable) return
 					onSelect(entry.path, entry.type === 'directory')
 				}}
+				onDoubleClick={() => {
+					if (isRepositoryDir || entry.type !== 'directory') return
+					toggle()
+				}}
 			>
 				<ChevronRight
 					className={cn(
