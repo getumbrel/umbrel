@@ -345,6 +345,7 @@ function Node({
 	}, [newFolder, expanded, entry.path, entry.type])
 
 	const isSelected = selectedPath === entry.path
+	// TODO: get rid of this, and have the backend return the repository directory as a file type instead
 	const isRepositoryDir = entry.type === 'directory' && entry.name === BACKUP_FILE_NAME
 
 	// Selection logic: when selectableFilter is provided we use it; otherwise use default directory/file rules
@@ -354,6 +355,7 @@ function Node({
 
 	// Visual disabling: only show disabled state when NOT using selectableFilter (preserves expand/collapse UX)
 	const isDisabled = !selectableFilter && (isRepositoryDir || !isSelectable)
+	const isFaded = (isDisabled || !isSelectable) && entry.type !== 'directory'
 
 	return (
 		<div className='select-none'>
@@ -362,7 +364,7 @@ function Node({
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
 					isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
-					selectableFilter && !isSelectable && 'opacity-50',
+					isFaded && 'opacity-50',
 				)}
 				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}
 				onClick={() => {
