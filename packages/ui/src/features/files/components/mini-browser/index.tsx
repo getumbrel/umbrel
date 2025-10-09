@@ -1,5 +1,6 @@
-import {ChevronRight, Loader2} from 'lucide-react'
+import {ChevronRight, FolderPlus, Loader2} from 'lucide-react'
 import {useEffect, useMemo, useRef, useState} from 'react'
+import {toast} from 'sonner'
 
 import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import {EmptyFolderIcon} from '@/features/files/assets/empty-folder-icon'
@@ -8,10 +9,11 @@ import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
-import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {cn} from '@/shadcn-lib/utils'
+import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 type MiniBrowserProps = {
@@ -35,6 +37,8 @@ type MiniBrowserProps = {
 	actions?: React.ReactNode
 	// Optional function to determine which items are selectable
 	selectableFilter?: (entry: FileSystemItem) => boolean
+	// Allow creating new folders
+	allowNewFolderCreation?: boolean
 }
 
 // Visual indentation cap the Tree so it doesn't get too wide and overflow
@@ -68,8 +72,12 @@ export function MiniBrowser({
 	subtitle,
 	actions,
 	selectableFilter,
+	allowNewFolderCreation = false,
 }: MiniBrowserProps) {
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
+	const [newFolder, setNewFolder] = useState<(FileSystemItem & {isNew: boolean}) | null>(null)
+	const utils = trpcReact.useUtils()
+	const isMobile = useIsMobile()
 
 	// Set selection on open if preselectOnOpen is true
 	// e.g., if we want to show a previously selected path when the mini browser is opened
@@ -77,6 +85,7 @@ export function MiniBrowser({
 		if (!open) return
 		if (preselectOnOpen) setSelected({path: onOpenPath, isDirectory: true})
 		else setSelected(null)
+		setNewFolder(null) // Clear any pending new folder when dialog opens
 	}, [open, onOpenPath, preselectOnOpen])
 
 	const selectButtonLabel =
@@ -93,12 +102,65 @@ export function MiniBrowser({
 				} as FileSystemItem)
 			: selected.isDirectory)
 
+	const createFolder = trpcReact.files.createDirectory.useMutation({
+		onSuccess: (_, {path}: {path: string}) => {
+			setNewFolder(null)
+			utils.files.list.invalidate()
+			// Select the newly created folder
+			setSelected({path, isDirectory: true})
+		},
+		onError: (error) => {
+			toast.error(t('files-error.create-folder', {message: error.message}))
+			setNewFolder(null)
+		},
+	})
+
+	const handleNewFolder = () => {
+		const parentPath = selected?.isDirectory ? selected.path : rootPath
+
+		const name = t('files-folder')
+
+		const timestamp = new Date().getTime()
+		const newFolderItem: FileSystemItem & {isNew: boolean} = {
+			name,
+			path: parentPath + '/' + name,
+			type: 'directory',
+			size: 0,
+			modified: timestamp,
+			operations: [],
+			isNew: true,
+		}
+
+		setNewFolder(newFolderItem)
+		// Clear selection so the parent folder doesn't show selected while editing the new folder
+		setSelected(null)
+	}
+
+	const newFolderButton = allowNewFolderCreation ? (
+		<Button
+			variant='default'
+			onClick={handleNewFolder}
+			disabled={!!newFolder}
+			size='default'
+			className={isMobile ? '' : 'mr-auto'}
+		>
+			<FolderPlus className={isMobile ? 'size-4' : 'mr-2 size-4'} />
+			{t('files-action.new-folder')}
+		</Button>
+	) : null
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className='max-w-[720px]'>
 				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
-					{subtitle ? <p className='mt-1 text-xs text-white/60'>{subtitle}</p> : null}
+					<div className='flex items-center justify-between gap-2'>
+						<div className='min-w-0 flex-1'>
+							<DialogTitle>{title}</DialogTitle>
+							{subtitle ? <p className='mt-1 text-xs text-white/60'>{subtitle}</p> : null}
+						</div>
+						{/* Show new folder button on mobile in header */}
+						{isMobile && newFolderButton}
+					</div>
 				</DialogHeader>
 
 				<div className='h-[min(60vh,480px)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-white/5 p-2'>
@@ -113,10 +175,15 @@ export function MiniBrowser({
 						selectedPath={selected?.path ?? null}
 						selectionMode={selectionMode}
 						selectableFilter={selectableFilter}
+						newFolder={newFolder}
+						onCancelNewFolder={() => setNewFolder(null)}
+						onCreateFolder={(path) => createFolder.mutate({path})}
 					/>
 				</div>
 
 				<DialogFooter className='mt-4'>
+					{/* Show new folder button on desktop in footer */}
+					{!isMobile && newFolderButton}
 					<Button variant='primary' onClick={() => selected && onSelect?.(selected.path)} disabled={!isSelectionValid}>
 						{selectButtonLabel}
 					</Button>
@@ -138,6 +205,9 @@ function Tree({
 	expandTo,
 	selectionMode,
 	selectableFilter,
+	newFolder,
+	onCancelNewFolder,
+	onCreateFolder,
 }: {
 	initialPath: string
 	onSelect: (p: string, isDirectory: boolean) => void
@@ -145,6 +215,9 @@ function Tree({
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
 	selectableFilter?: (entry: FileSystemItem) => boolean
+	newFolder: (FileSystemItem & {isNew: boolean}) | null
+	onCancelNewFolder: () => void
+	onCreateFolder: (path: string) => void
 }) {
 	const {listing, isLoading} = useListDirectory(initialPath)
 
@@ -171,11 +244,16 @@ function Tree({
 		return (listing?.items as FileSystemItem[]) ?? []
 	}, [listing])
 
+	// Check if the new folder should be rendered at this level
+	const shouldRenderNewFolder = newFolder && newFolder.path.startsWith(initialPath + '/')
+	const newFolderParent = newFolder ? newFolder.path.split('/').slice(0, -1).join('/') : ''
+	const isNewFolderAtThisLevel = shouldRenderNewFolder && newFolderParent === initialPath
+
 	return (
 		<div className='space-y-1'>
 			{isLoading ? (
 				<div className='py-6 text-center text-white/60'>{t('files-listing.loading')}</div>
-			) : entries.length === 0 ? (
+			) : entries.length === 0 && !isNewFolderAtThisLevel ? (
 				<div className='mt-28 flex flex-col items-center justify-center gap-3 text-center'>
 					<div className='flex flex-col items-center gap-3'>
 						<div className='inline-flex size-[60px] items-center justify-center'>
@@ -185,19 +263,27 @@ function Tree({
 					</div>
 				</div>
 			) : (
-				entries.map((d) => (
-					<Node
-						key={d.path}
-						entry={d}
-						// depth=0 means root-level nodes
-						depth={0}
-						onSelect={onSelect}
-						selectedPath={selectedPath}
-						expandTo={expandTo}
-						selectionMode={selectionMode}
-						selectableFilter={selectableFilter}
-					/>
-				))
+				<>
+					{entries.map((d) => (
+						<Node
+							key={d.path}
+							entry={d}
+							// depth=0 means root-level nodes
+							depth={0}
+							onSelect={onSelect}
+							selectedPath={selectedPath}
+							expandTo={expandTo}
+							selectionMode={selectionMode}
+							selectableFilter={selectableFilter}
+							newFolder={newFolder}
+							onCancelNewFolder={onCancelNewFolder}
+							onCreateFolder={onCreateFolder}
+						/>
+					))}
+					{isNewFolderAtThisLevel && (
+						<NewFolderNode entry={newFolder} depth={0} onCancel={onCancelNewFolder} onCreate={onCreateFolder} />
+					)}
+				</>
 			)}
 		</div>
 	)
@@ -212,6 +298,9 @@ function Node({
 	expandTo,
 	selectionMode,
 	selectableFilter,
+	newFolder,
+	onCancelNewFolder,
+	onCreateFolder,
 }: {
 	entry: FileSystemItem
 	depth: number
@@ -220,6 +309,9 @@ function Node({
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
 	selectableFilter?: (entry: FileSystemItem) => boolean
+	newFolder: (FileSystemItem & {isNew: boolean}) | null
+	onCancelNewFolder: () => void
+	onCreateFolder: (path: string) => void
 }) {
 	const [expanded, setExpanded] = useState(false)
 	const userInteractedRef = useRef(false)
@@ -241,6 +333,16 @@ function Node({
 			setExpanded(true)
 		}
 	}, [expandTo, expanded, entry.path, entry.type])
+
+	// Auto-expand when a new folder is being created inside this directory
+	useEffect(() => {
+		if (!newFolder) return
+		const newFolderParent = newFolder.path.split('/').slice(0, -1).join('/')
+		const isDir = entry.type === 'directory'
+		if (newFolderParent === entry.path && !expanded && isDir) {
+			setExpanded(true)
+		}
+	}, [newFolder, expanded, entry.path, entry.type])
 
 	const isSelected = selectedPath === entry.path
 	const isRepositoryDir = entry.type === 'directory' && entry.name === BACKUP_FILE_NAME
@@ -294,6 +396,9 @@ function Node({
 					expandTo={expandTo}
 					selectionMode={selectionMode}
 					selectableFilter={selectableFilter}
+					newFolder={newFolder}
+					onCancelNewFolder={onCancelNewFolder}
+					onCreateFolder={onCreateFolder}
 				/>
 			)}
 		</div>
@@ -309,6 +414,9 @@ function Subtree({
 	expandTo,
 	selectionMode,
 	selectableFilter,
+	newFolder,
+	onCancelNewFolder,
+	onCreateFolder,
 }: {
 	path: string
 	depth: number
@@ -317,6 +425,9 @@ function Subtree({
 	expandTo?: string
 	selectionMode: 'folders' | 'files-and-folders'
 	selectableFilter?: (entry: FileSystemItem) => boolean
+	newFolder: (FileSystemItem & {isNew: boolean}) | null
+	onCancelNewFolder: () => void
+	onCreateFolder: (path: string) => void
 }) {
 	const {listing, isLoading, fetchMoreItems} = useListDirectory(path)
 	const children: FileSystemItem[] = useMemo(() => (listing?.items as FileSystemItem[]) ?? [], [listing])
@@ -331,6 +442,10 @@ function Subtree({
 
 	const [isLoadingMore, setIsLoadingMore] = useState(false)
 
+	// Check if the new folder should be rendered at this level
+	const newFolderParent = newFolder ? newFolder.path.split('/').slice(0, -1).join('/') : ''
+	const isNewFolderAtThisLevel = newFolder && newFolderParent === path
+
 	return (
 		<div className='mt-1 space-y-1'>
 			{children.map((c) => (
@@ -343,8 +458,14 @@ function Subtree({
 					expandTo={expandTo}
 					selectionMode={selectionMode}
 					selectableFilter={selectableFilter}
+					newFolder={newFolder}
+					onCancelNewFolder={onCancelNewFolder}
+					onCreateFolder={onCreateFolder}
 				/>
 			))}
+			{isNewFolderAtThisLevel && (
+				<NewFolderNode entry={newFolder} depth={depth} onCancel={onCancelNewFolder} onCreate={onCreateFolder} />
+			)}
 			{/* We render the "Load more" control when listing is paginated */}
 			{!isLoading && children.length > 0 && hasMore && (
 				<button
@@ -369,6 +490,86 @@ function Subtree({
 					</span>
 				</button>
 			)}
+		</div>
+	)
+}
+
+// NewFolderNode renders an inline editable input for creating a new folder
+function NewFolderNode({
+	entry,
+	depth,
+	onCancel,
+	onCreate,
+}: {
+	entry: FileSystemItem & {isNew: boolean}
+	depth: number
+	onCancel: () => void
+	onCreate: (path: string) => void
+}) {
+	const [name, setName] = useState(entry.name)
+	const inputRef = useRef<HTMLInputElement>(null)
+	const isMobile = useIsSmallMobile()
+	const maxIndentLevels = isMobile ? MOBILE_MAX_INDENT_LEVELS : MAX_INDENT_LEVELS
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			if (inputRef.current) {
+				inputRef.current.focus()
+				inputRef.current.select()
+			}
+		}, 100)
+		return () => clearTimeout(timer)
+	}, [])
+
+	const handleSubmit = () => {
+		const trimmedName = name.trim()
+		if (!trimmedName) {
+			onCancel()
+			return
+		}
+
+		const parentPath = entry.path.split('/').slice(0, -1).join('/')
+		const fullPath = `${parentPath}/${trimmedName}`
+		onCreate(fullPath)
+	}
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			e.preventDefault()
+			e.stopPropagation()
+			handleSubmit()
+		}
+		if (e.key === 'Escape') {
+			e.preventDefault()
+			e.stopPropagation()
+			onCancel()
+		}
+	}
+
+	const handleBlur = () => {
+		handleSubmit()
+	}
+
+	return (
+		<div className='select-none'>
+			<div
+				className={cn('flex min-w-0 items-center gap-2 rounded-md border border-brand bg-brand/15 p-2')}
+				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}
+			>
+				<ChevronRight className='size-4 shrink-0 opacity-0' />
+				<FileItemIcon item={entry} className='size-5' />
+				<input
+					ref={inputRef}
+					type='text'
+					value={name}
+					onChange={(e) => setName(e.target.value)}
+					onKeyDown={handleKeyDown}
+					onBlur={handleBlur}
+					onClick={(e) => e.stopPropagation()}
+					onDoubleClick={(e) => e.stopPropagation()}
+					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-none'
+				/>
+			</div>
 		</div>
 	)
 }

@@ -679,6 +679,7 @@ function FolderPickerStep({
 					onChange(p)
 					setBrowserOpen(false)
 				}}
+				allowNewFolderCreation={true}
 			/>
 		</div>
 	)
