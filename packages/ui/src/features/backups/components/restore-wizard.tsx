@@ -347,6 +347,7 @@ export function BackupsRestoreWizard() {
 								variant='destructive'
 								disabled={!confirmPassword.trim() || isStartingRestore}
 								onClick={handleConfirmRestore}
+								hideEnterIcon={true}
 							>
 								<span className={isStartingRestore ? 'opacity-0' : 'opacity-100'}>
 									{t('backups-restore.restore-umbrel')}
