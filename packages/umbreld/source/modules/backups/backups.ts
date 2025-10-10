@@ -314,12 +314,16 @@ export default class Backups {
 		try {
 			// Copy over data dir from previous install to temp dir while preserving permissions
 			await fse.remove(temporaryData)
+			let previousPercent: number
 			await copyWithProgress(`${internalBackupMountpoint}/`, temporaryData, (progress) => {
 				this.restoreProgress!.percent = progress.progress
 				this.restoreProgress!.bytesPerSecond = progress.bytesPerSecond
 				this.restoreProgress!.secondsRemaining = progress.secondsRemaining
 				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreProgress)
-				this.logger.log(`Restored ${this.restoreProgress!.percent}% of backup`)
+				if (previousPercent !== this.restoreProgress!.percent) {
+					previousPercent = this.restoreProgress!.percent
+					this.logger.log(`Restored ${this.restoreProgress!.percent}% of backup`)
+				}
 			})
 			await fse.move(temporaryData, finalData, {overwrite: true})
 			success = true
