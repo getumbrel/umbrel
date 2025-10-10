@@ -39,6 +39,8 @@ type MiniBrowserProps = {
 	selectableFilter?: (entry: FileSystemItem) => boolean
 	// Allow creating new folders
 	allowNewFolderCreation?: boolean
+	// Custom button label (overrides default based on selectionMode)
+	selectButtonLabel?: string
 }
 
 // Visual indentation cap the Tree so it doesn't get too wide and overflow
@@ -73,6 +75,7 @@ export function MiniBrowser({
 	actions,
 	selectableFilter,
 	allowNewFolderCreation = false,
+	selectButtonLabel,
 }: MiniBrowserProps) {
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
 	const [newFolder, setNewFolder] = useState<(FileSystemItem & {isNew: boolean}) | null>(null)
@@ -88,19 +91,34 @@ export function MiniBrowser({
 		setNewFolder(null) // Clear any pending new folder when dialog opens
 	}, [open, onOpenPath, preselectOnOpen])
 
-	const selectButtonLabel =
-		selectionMode === 'files-and-folders' ? t('files-action.select') : t('mini-browser.select-folder')
-	// Validate selection: must have selection, not be disabled, and pass selectableFilter (if provided)
-	const isSelectionValid =
-		!!selected &&
-		!disabledPaths.includes(selected.path) &&
-		(selectableFilter
-			? selectableFilter({
-					path: selected.path,
-					type: selected.isDirectory ? 'directory' : 'file',
-					name: selected.path.split('/').pop() || '',
-				} as FileSystemItem)
-			: selected.isDirectory)
+	const finalSelectButtonLabel = selectButtonLabel ?? t('mini-browser.select')
+
+	const isSelectionValid = (() => {
+		// Must have a selection
+		if (!selected) return false
+
+		// Must not be in disabled paths
+		if (disabledPaths.includes(selected.path)) return false
+
+		// Use custom filter if provided
+		if (selectableFilter) {
+			return selectableFilter({
+				path: selected.path,
+				type: selected.isDirectory ? 'directory' : 'file',
+				name: selected.path.split('/').pop() || '',
+			} as FileSystemItem)
+		}
+
+		// Default validation based on selection mode
+		// Allow both files and folders
+		if (selectionMode === 'files-and-folders') return true
+
+		// Only allow folders
+		if (selectionMode === 'folders') return selected.isDirectory
+
+		// Fallback: no valid selection
+		return false
+	})()
 
 	const createFolder = trpcReact.files.createDirectory.useMutation({
 		onSuccess: (_, {path}: {path: string}) => {
@@ -185,7 +203,7 @@ export function MiniBrowser({
 					{/* Show new folder button on desktop in footer */}
 					{!isMobile && newFolderButton}
 					<Button variant='primary' onClick={() => selected && onSelect?.(selected.path)} disabled={!isSelectionValid}>
-						{selectButtonLabel}
+						{finalSelectButtonLabel}
 					</Button>
 					<Button variant='default' onClick={() => onOpenChange(false)}>
 						{t('cancel')}

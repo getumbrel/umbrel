@@ -201,7 +201,7 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 				rootPath={'/Home'}
 				onOpenPath={'/Home'}
 				preselectOnOpen={false}
-				title={t('backups-exclusions.select-folder-to-exclude')}
+				title={t('backups-exclusions.select-item-to-exclude')}
 				// we allow selecting both files and folders
 				selectionMode='files-and-folders'
 				onSelect={(p) => {

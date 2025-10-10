@@ -687,6 +687,7 @@ function FolderPickerStep({
 				preselectOnOpen={true}
 				selectionMode='folders'
 				title={t('backups.select-backup-folder')}
+				selectButtonLabel={t('mini-browser.select-folder')}
 				onSelect={(p) => {
 					onChange(p)
 					setBrowserOpen(false)

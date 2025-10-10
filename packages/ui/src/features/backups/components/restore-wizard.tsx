@@ -511,9 +511,13 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className='cursor-pointer select-none pr-28'
+									className={(manualPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
 									title={manualPath || ''}
+									aria-disabled={!manualPath}
+									tabIndex={manualPath ? 0 : -1}
 									onClick={() => {
+										// We don't allow opening the browser by clicking the input if it is blank (user must click the dropdown to choose nas/external)
+										if (!manualPath) return
 										// Default to Network if no path is set, otherwise determine from current path
 										const root = manualPath?.startsWith('/Network') ? '/Network' : '/External'
 										setBrowserRoot(root)
