@@ -2,11 +2,13 @@ import {setTimeout} from 'node:timers/promises'
 
 import {expect, test, beforeEach, afterEach, vi} from 'vitest'
 import fse from 'fs-extra'
+import yaml from 'js-yaml'
 import {execa} from 'execa'
 import pRetry from 'p-retry'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import * as system from '../system/system.js'
+import type {AppManifest} from '../apps/schema.js'
 
 let umbreld: Awaited<ReturnType<typeof createTestUmbreld>>
 
@@ -483,6 +485,63 @@ test('backups respect user ignored paths', async () => {
 	expect(backups).toHaveLength(3)
 	files = await umbreld.client.backups.listBackupFiles.query({backupId: backups[2].id})
 	expect(files).toContain('home')
+})
+
+test.only('backups respect app backupIgnore glob patterns', async () => {
+	// Install app
+	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// Create files in the app's data directory
+	const appDataDir = `${umbreld.instance.dataDirectory}/app-data/sparkles-hello-world`
+	await fse.mkdir(`${appDataDir}/logs`, {recursive: true})
+	await fse.mkdir(`${appDataDir}/important-data`, {recursive: true})
+	await fse.writeFile(`${appDataDir}/logs/app.log`, 'log content')
+	await fse.writeFile(`${appDataDir}/important-data/config.json`, 'important config')
+
+	// Modify the app's manifest to include a logs/* glob pattern for backupIgnore
+	const manifestPath = `${appDataDir}/umbrel-app.yml`
+	const manifest = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
+	manifest.backupIgnore = ['logs/*']
+	await fse.writeFile(manifestPath, yaml.dump(manifest))
+
+	// Create a network share and mount it
+	const backupNetworkSharePath = await createBackupShare(umbreld)
+
+	// Create a new backup repository
+	const repositoryId = await umbreld.client.backups.createRepository.mutate({
+		path: backupNetworkSharePath,
+		password: 'test-password',
+	})
+
+	// Do the backup
+	await expect(umbreld.client.backups.backup.mutate({repositoryId})).resolves.toBe(true)
+
+	// Verify backup was created and includes app-data
+	let backups = await umbreld.client.backups.listBackups.query({repositoryId})
+	expect(backups).toHaveLength(1)
+	let files = await umbreld.client.backups.listBackupFiles.query({backupId: backups[0].id})
+	expect(files).toContain('app-data')
+
+	// Verify logs directory exists but its contents are ignored by the glob
+	const appDirFiles = await umbreld.client.backups.listBackupFiles.query({
+		backupId: backups[0].id,
+		path: '/app-data/sparkles-hello-world',
+	})
+	expect(appDirFiles).toContain('logs')
+	expect(appDirFiles).toContain('important-data')
+
+	const logsDirFiles = await umbreld.client.backups.listBackupFiles.query({
+		backupId: backups[0].id,
+		path: '/app-data/sparkles-hello-world/logs',
+	})
+	expect(logsDirFiles).not.toContain('app.log')
+
+	// Verify that non-globbed files are included in the backup
+	const importantDirFiles = await umbreld.client.backups.listBackupFiles.query({
+		backupId: backups[0].id,
+		path: '/app-data/sparkles-hello-world/important-data',
+	})
+	expect(importantDirFiles).toContain('config.json')
 })
 
 test('backups adds Downloads to ignore on first run but allows users to remove it', async () => {

@@ -350,9 +350,10 @@ export default class App {
 		// Sanitise paths
 		const backupIgnore = []
 		for (let path of manifest.backupIgnore) {
-			// Only allow a limited subset of chars to strip out globs and traversals
-			// and other weird stuff we don't want to allow
-			if (!/^[a-zA-Z0-9._\/-]+$/.test(path)) {
+			// Only allow a limited subset of chars to strip out traversals and other weird stuff we don't want to allow
+			// while supporting simple '*' globbing that Kopia understands in .kopiaignore
+			// TODO: consider adding other globbing chars like '?' (single-char wildcard) and '**' (recursive wildcard).
+			if (!/^[-a-zA-Z0-9._\/*]+$/.test(path)) {
 				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
 				continue // Skip invalid paths
 			}

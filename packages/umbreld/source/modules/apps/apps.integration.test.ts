@@ -139,6 +139,44 @@ test.sequential('getBackupIgnoredPaths() returns sanitised absolute paths for in
 	)
 })
 
+test.sequential("getBackupIgnoredPaths() supports '*' globs", async () => {
+	// Modify manifest to include glob patterns
+	const manifestPath = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world', 'umbrel-app.yml')
+	const manifest = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
+	manifest.backupIgnore = ['data/*', 'logs/*']
+	await fse.writeFile(manifestPath, yaml.dump(manifest))
+
+	// Compute expected absolute paths for valid entries
+	const base = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world')
+	const expected = [path.join(base, 'data/*'), path.join(base, 'logs/*')]
+
+	const result = await umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})
+
+	// Should include valid globbed paths
+	expect(result).toEqual(expected)
+})
+
+test.sequential('getBackupIgnoredPaths() ignores unsupported globbing characters', async () => {
+	// Modify manifest to include unsupported glob patterns
+	const manifestPath = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world', 'umbrel-app.yml')
+	const manifest = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
+	manifest.backupIgnore = [
+		'logs/*', // valid simple glob we support
+		'logs/?', // unsupported single-char glob
+		'logs/[a]', // unsupported character class
+		'logs/{a}', // unsupported brace expansion
+	]
+	await fse.writeFile(manifestPath, yaml.dump(manifest))
+
+	// Expect only the valid '*' glob to be returned (sanitised absolute path)
+	const base = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world')
+	const expected = [path.join(base, 'logs/*')]
+
+	const result = await umbreld.client.apps.getBackupIgnoredPaths.query({appId: 'sparkles-hello-world'})
+
+	expect(result).toEqual(expected)
+})
+
 test.sequential('getBackupIgnoredPaths() returns empty array when app has no backupIgnore paths', async () => {
 	// Remove backupIgnore from installed app's manifest
 	const manifestPath = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world', 'umbrel-app.yml')
