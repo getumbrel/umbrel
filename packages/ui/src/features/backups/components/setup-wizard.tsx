@@ -295,7 +295,7 @@ export function BackupsSetupWizard() {
 
 				{/* Body */}
 				<div className='min-h-0 flex-1 overflow-y-auto'>
-					{step === Step.Destination && <DestinationStep onChangeDestination={handleDestinationChange} />}
+					{step === Step.Destination && <DestinationStep onChangeDestination={handleDestinationChange} onNext={next} />}
 					{step === Step.Folder && folderRootPath && (
 						<FolderPickerStep
 							rootPath={folderRootPath}
@@ -389,7 +389,13 @@ export function BackupsSetupWizard() {
 // Step 0 — Destination (NAS or External Drive)
 // ---------------------------------------------
 
-function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: BackupDestination) => void}) {
+function DestinationStep({
+	onChangeDestination,
+	onNext,
+}: {
+	onChangeDestination: (dest: BackupDestination) => void
+	onNext: () => void
+}) {
 	const form = useFormContext<FormValues>()
 	const {params, addLinkSearchParams} = useQueryParams()
 	const initialTabParam = params.get('backups-setup-tab')
@@ -589,8 +595,14 @@ function DestinationStep({onChangeDestination}: {onChangeDestination: (dest: Bac
 				open={isAddNasOpen}
 				onOpenChange={(v) => setAddNasOpen(v)}
 				suppressNavigateOnAdd
-				onAdded={() => {
+				onAdded={(host) => {
+					// Keep shares fresh so the NAS list stays up to date in the UI
 					refetchShares()
+					// If we know which host was added, select it as the destination and advance
+					if (host) {
+						onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})
+						onNext()
+					}
 				}}
 			/>
 		</div>

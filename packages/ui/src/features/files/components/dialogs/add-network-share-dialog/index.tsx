@@ -58,11 +58,14 @@ enum Step {
 /* MAIN COMPONENT                                                     */
 /* ------------------------------------------------------------------ */
 export default function AddNetworkShareDialog(props?: {
-	// These optional props allow us to control this dialog from the backup/restore wizards.
+	// These optional props allow us to control this dialog from other flows (e.g., backup/setup wizards).
+	// When a share is successfully added, we extract the host from the returned mountPath and
+	// invoke onAdded(host). Callers can then use that host to immediately select the device and
+	// proceed without requiring an extra click.
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
 	suppressNavigateOnAdd?: boolean
-	onAdded?: () => void
+	onAdded?: (host?: string) => void
 }) {
 	const internalDialog = useDialogOpenProps('files-add-network-share')
 	const dialogProps = {
@@ -150,8 +153,11 @@ export default function AddNetworkShareDialog(props?: {
 		if (!parsed.success) return
 
 		try {
-			await addShare(parsed.data)
-			props?.onAdded?.()
+			const mountPath = await addShare(parsed.data)
+			// Extract host from the returned mountPath (e.g., "/Network/<host>/<share>")
+			const host = mountPath.split('/')[2]
+			// Notify parent flows so they can auto-select this NAS and advance
+			props?.onAdded?.(host)
 			dialogProps.onOpenChange(false)
 		} catch {
 			// the network storage hook handles toast
