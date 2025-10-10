@@ -16,6 +16,7 @@ import {setSystemStatus} from '../system/routes.js'
 import {reboot} from '../system/system.js'
 
 import type Umbreld from '../../index.js'
+import type {ProgressStatus} from '../apps/schema.js'
 
 type Backup = {
 	// Our internal id in the format: <repositoryId>:<snapshotId>
@@ -29,12 +30,13 @@ type BackupProgress = {
 	percent: number
 }
 
-export type RestoreProgress = {
-	backupId: string
-	percent: number
-	bytesPerSecond: number
+// RestoreStatus extends ProgressStatus with optional restore-specific fields
+// ProgressStatus includes: running: boolean, progress: number (0-100), description: string, error: boolean | string
+export type RestoreStatus = ProgressStatus & {
+	backupId?: string
+	bytesPerSecond?: number
 	secondsRemaining?: number
-} | null
+}
 
 export type BackupsInProgress = BackupProgress[]
 
@@ -44,7 +46,13 @@ export default class Backups {
 	internalMountPath: string
 	backupRoot: string
 	backupsInProgress: BackupsInProgress = []
-	restoreProgress: RestoreProgress = null
+	restoreStatus: RestoreStatus = {
+		running: false,
+		progress: 0,
+		description: '',
+		error: false,
+		// backupId, bytesPerSecond, and secondsRemaining are undefined by default
+	}
 	running = false
 	startedAt?: number
 	backupInterval = 1000 * 60 * 60 // 1 hour
@@ -290,7 +298,7 @@ export default class Backups {
 
 	// Restore a backup
 	async restoreBackup(backupId: string) {
-		if (this.restoreProgress) throw new Error('[in-progress] Restore already in progress')
+		if (this.restoreStatus.running) throw new Error('[in-progress] Restore already in progress')
 		let success = false
 
 		// Check we have enough free space to restore the backup
@@ -302,46 +310,79 @@ export default class Backups {
 
 		this.logger.log(`Restoring backup ${backupId}`)
 		setSystemStatus('restoring')
-		const backupDirectoryName = await this.mountBackup(backupId)
-		const internalBackupMountpoint = nodePath.join(this.internalMountPath, backupDirectoryName)
 		const temporaryData = `${this.#umbreld.dataDirectory}/.temporary-migration`
 		const finalData = `${this.#umbreld.dataDirectory}/import`
 
-		// Create initial progress tracker and emit operation progress event
-		this.restoreProgress = {backupId, percent: 0, bytesPerSecond: 0}
-		this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreProgress)
+		// Set restore status to running and emit operation status event
+		this.restoreStatus = {
+			running: true,
+			progress: 0,
+			description: 'Restoring backup',
+			error: false,
+			backupId,
+			bytesPerSecond: 0,
+		}
+		this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
 
 		try {
+			// If mount fails, finally will emit failure state that UI can handle in the restore cover
+			const backupDirectoryName = await this.mountBackup(backupId)
+			const internalBackupMountpoint = nodePath.join(this.internalMountPath, backupDirectoryName)
+
 			// Copy over data dir from previous install to temp dir while preserving permissions
 			await fse.remove(temporaryData)
-			let previousPercent: number
+			let previousProgress: number
 			await copyWithProgress(`${internalBackupMountpoint}/`, temporaryData, (progress) => {
-				this.restoreProgress!.percent = progress.progress
-				this.restoreProgress!.bytesPerSecond = progress.bytesPerSecond
-				this.restoreProgress!.secondsRemaining = progress.secondsRemaining
-				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreProgress)
-				if (previousPercent !== this.restoreProgress!.percent) {
-					previousPercent = this.restoreProgress!.percent
-					this.logger.log(`Restored ${this.restoreProgress!.percent}% of backup`)
+				this.restoreStatus.progress = progress.progress
+				this.restoreStatus.bytesPerSecond = progress.bytesPerSecond
+				this.restoreStatus.secondsRemaining = progress.secondsRemaining
+				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
+				if (previousProgress !== this.restoreStatus.progress) {
+					previousProgress = this.restoreStatus.progress
+					this.logger.log(`Restored ${this.restoreStatus.progress}% of backup`)
 				}
 			})
 			await fse.move(temporaryData, finalData, {overwrite: true})
 			success = true
 		} finally {
-			// Reset status on failure, or always in test mode (no reboot)
-			if (!success || process.env.UMBRELD_RESTORE_SKIP_REBOOT === 'true') setSystemStatus('running')
+			if (!success) {
+				// Best-effort cleanup on failure (non-blocking to not delay status updates)
+				// - Remove temp data to prevent disk space leaks if user never retries
+				// - Remove any mounts to avoid any issues with retries
+				fse.remove(temporaryData).catch(() => {})
+				this.unmountAll().catch(() => {})
 
-			// Remove the progress tracker and emit operation progress event
-			this.restoreProgress = null
-			this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreProgress)
+				// Emit failure status
+				this.restoreStatus = {
+					running: false,
+					progress: 0,
+					description: 'Restore failed',
+					error: 'Restore failed',
+					// backupId, bytesPerSecond, secondsRemaining are undefined
+				}
+				this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
+			}
+
+			// Reset system status to 'running' on failure, or always in test mode (no reboot)
+			if (!success || process.env.UMBRELD_RESTORE_SKIP_REBOOT === 'true') setSystemStatus('running')
 		}
 
-		// Dirty hack to allow us to test restore without rebooting
-		if (process.env.UMBRELD_RESTORE_SKIP_REBOOT !== 'true') {
-			this.logger.log(`Rebooting into newly recovered data`)
-			setSystemStatus('restarting')
-			await this.#umbreld.stop().catch(() => {})
-			await reboot()
+		if (success) {
+			this.restoreStatus = {
+				running: false,
+				progress: 100,
+				description: 'Restore complete',
+				error: false,
+			}
+			this.#umbreld.eventBus.emit('backups:restore-progress', this.restoreStatus)
+
+			// Dirty hack to allow us to test restore without rebooting
+			if (process.env.UMBRELD_RESTORE_SKIP_REBOOT !== 'true') {
+				this.logger.log(`Rebooting into newly recovered data`)
+				setSystemStatus('restarting')
+				await this.#umbreld.stop().catch(() => {})
+				await reboot()
+			}
 		}
 
 		return

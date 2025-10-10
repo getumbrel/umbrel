@@ -174,8 +174,8 @@ export function useBackupProgress(refetchIntervalMs = 1000) {
 	return query
 }
 
-export function useRestoreProgress(refetchIntervalMs = 500) {
-	return trpcReact.backups.restoreProgress.useQuery(undefined, {
+export function useRestoreStatus(refetchIntervalMs = 500) {
+	return trpcReact.backups.restoreStatus.useQuery(undefined, {
 		refetchInterval: refetchIntervalMs,
 	})
 }

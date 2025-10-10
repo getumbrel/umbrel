@@ -86,6 +86,6 @@ export default router({
 		.input(z.object({backupId: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.backups.restoreBackup(input.backupId)),
 
-	// Get progress of restore operations
-	restoreProgress: publicProcedureWhenNoUserExists.query(async ({ctx}) => ctx.umbreld.backups.restoreProgress),
+	// Get status of restore operations
+	restoreStatus: publicProcedureWhenNoUserExists.query(async ({ctx}) => ctx.umbreld.backups.restoreStatus),
 })

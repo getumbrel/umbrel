@@ -745,16 +745,21 @@ test('backup can be restored on the current Umbrel install', async () => {
 	await umbreld.client.backups.restoreBackup.mutate({backupId: latestBackup.id})
 
 	// Verify we received progress events
-	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, percent: 0})
+	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, progress: 0, running: true})
 	expect(restoreProgressEvents.at(-2)).toMatchObject({
 		backupId: latestBackup.id,
-		percent: expect.any(Number),
+		progress: expect.any(Number),
 		bytesPerSecond: expect.any(Number),
+		running: true,
 	})
-	expect(restoreProgressEvents.at(-1)).toBeNull()
+	expect(restoreProgressEvents.at(-1)).toMatchObject({running: false, progress: 100, error: false})
 
-	// Verify current progress is undefined
-	await expect(umbreld.client.backups.restoreProgress.query()).resolves.toBe(null)
+	// Verify current progress is not running (final status is 100% after success)
+	await expect(umbreld.client.backups.restoreStatus.query()).resolves.toMatchObject({
+		running: false,
+		progress: 100,
+		error: false,
+	})
 
 	// Check we have no marker file
 	expect(await fse.pathExists(`${umbreld.instance.dataDirectory}/home/original-umbrel`)).toBe(false)
@@ -818,16 +823,21 @@ test('backup can be restored on a fresh umbrel during setup', async () => {
 	await newUmbreld.client.backups.restoreBackup.mutate({backupId: latestBackup.id})
 
 	// Verify we received progress events
-	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, percent: 0})
+	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, progress: 0, running: true})
 	expect(restoreProgressEvents.at(-2)).toMatchObject({
 		backupId: latestBackup.id,
-		percent: expect.any(Number),
+		progress: expect.any(Number),
 		bytesPerSecond: expect.any(Number),
+		running: true,
 	})
-	expect(restoreProgressEvents.at(-1)).toBeNull()
+	expect(restoreProgressEvents.at(-1)).toMatchObject({running: false, progress: 100, error: false})
 
-	// Verify current progress is undefined
-	await expect(newUmbreld.client.backups.restoreProgress.query()).resolves.toBe(null)
+	// Verify current progress is not running (final status is 100% after success)
+	await expect(newUmbreld.client.backups.restoreStatus.query()).resolves.toMatchObject({
+		running: false,
+		progress: 100,
+		error: false,
+	})
 
 	// Check we have no user and no marker file
 	await expect(newUmbreld.client.user.exists.query()).resolves.toBe(false)

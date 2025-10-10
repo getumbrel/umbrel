@@ -35,6 +35,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)
+	const [restoreFailure, setRestoreFailure] = useState(false)
 	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = useLocalStorage2('should-logout-on-running', false)
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
@@ -44,6 +45,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const onMutate = async () => {
 		setTriggered(true)
 		setFailure(false)
+		setRestoreFailure(false)
 		setShouldLogoutOnRunning(false)
 		setStartShutdownTimer(false)
 		setShutdownComplete(false)
@@ -88,8 +90,6 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
 	})
-
-	// Remove restore polling; we'll show a cover based on system status like other flows
 
 	if (!IS_DEV) {
 		if (systemStatusQ.error && !triggered) {
@@ -150,9 +150,28 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		}
 	}, [startShutdownTimer, status, systemStatusQ.failureCount, systemStatusQ.isError, triggered])
 
+	// We poll for restore errors only while the system is 'restoring' (not during other non-running states)
+	// - After we just transitioned from 'restoring' -> 'running', we do one more fetch to catch an error reported at the boundary
+	// - If a failure is already latched, keep enabled so the button remains available, but
+	//   we won't poll (refetchInterval is 0 when not restoring)
+	const isRestoring = status === 'restoring'
+	const justFinishedRestoring = prevStatus === 'restoring' && status === 'running'
+	const shouldPollRestoreError = isRestoring || restoreFailure || (justFinishedRestoring && !restoreFailure)
+
+	const restoreErrorQ = trpcReact.backups.restoreStatus.useQuery(undefined, {
+		enabled: shouldPollRestoreError,
+		refetchInterval: isRestoring ? 500 : 0,
+		select: (d) => !!d?.error,
+	})
+
+	useEffect(() => {
+		if (restoreErrorQ.data) setRestoreFailure(true)
+	}, [restoreErrorQ.data])
+
 	// When we come back online, we should continue to show the previous state until we've logged out,
 	// plus, when the action failed, we should show the failure cover until the user interacts with it.
-	const statusToShow = (triggered || failure) && (!status || status === 'running') ? prevStatus : status
+	const statusToShow =
+		(triggered || failure || restoreFailure) && (!status || status === 'running') ? prevStatus : status
 
 	// Debug info can be activated by adding the local storage key 'debug' with a value of `true`
 	const debugInfo = (
@@ -164,6 +183,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 						prevStatus,
 						statusToShow,
 						triggered,
+						failure,
+						restoreFailure,
 						shouldLogoutOnRunning,
 						startShutdownTimer,
 						shutdownComplete,

@@ -3,7 +3,7 @@ import Emittery from 'emittery'
 import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from '../files/watcher.js'
 import type {OperationsInProgress} from '../files/files.js'
-import type {BackupsInProgress, RestoreProgress} from '../backups/backups.js'
+import type {BackupsInProgress, RestoreStatus} from '../backups/backups.js'
 
 // Type assertion to ensure all events in EventTypes are defined in events
 type MissingInEvents = Exclude<keyof EventTypes, (typeof events)[number]>
@@ -31,9 +31,8 @@ export type EventTypes = {
 	// with the current progress of each backup
 	'backups:backup-progress': BackupsInProgress
 	// Fires repeatedly while a restore operation is in progress
-	// with the current progress of the restore. Will fire with null
-	// when the restore is complete.
-	'backups:restore-progress': RestoreProgress
+	// with the current status of the restore operation
+	'backups:restore-progress': RestoreStatus
 	// Fires when the connected block devices change
 	// e.g attaching/removing a USB drive
 	'system:disk:change': undefined

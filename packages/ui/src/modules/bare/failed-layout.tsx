@@ -5,7 +5,7 @@ import {buttonClass, secondaryButtonClasss} from '@/layouts/bare/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
-import {bareContainerClass, BareSpacer, bareTextClass, bareTitleClass} from './shared'
+import {bareContainerClass, BareLogoTitle, BareSpacer, bareTextClass} from './shared'
 
 export default function FailedLayout({
 	title,
@@ -22,8 +22,8 @@ export default function FailedLayout({
 }) {
 	return (
 		<div className={cn(bareContainerClass, 'animate-in slide-in-from-bottom-2')}>
-			<h1 className={bareTitleClass}>{title}</h1>
-			<div className='pt-1' />
+			<BareLogoTitle>{title}</BareLogoTitle>
+			<BareSpacer />
 			<p className={bareTextClass}>{description}</p>
 			<BareSpacer />
 			{to && (
