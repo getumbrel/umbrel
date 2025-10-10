@@ -98,6 +98,11 @@ export default class App {
 	}
 
 	async patchComposeFile() {
+		const manifest = await this.readManifest()
+		const appRequestsGpuAccess = manifest.permissions?.includes('GPU')
+		const DRI_DEVICE_PATH = '/dev/dri'
+		const deviceHasGpu = await fse.exists(DRI_DEVICE_PATH).catch(() => false)
+
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
 			// Temporary patch to fix contianer names for modern docker-compose installs.
@@ -120,6 +125,13 @@ export default class App {
 					?.replace('/data/storage/downloads', `/home/Downloads`)
 					?.replace('/data/storage', `/home`)
 			})
+
+			// Pass through host DRI device to all app containers if the app requests it
+			const shouldEnableGpuPassthrough = appRequestsGpuAccess && deviceHasGpu
+			if (shouldEnableGpuPassthrough) {
+				compose.services![serviceName].devices = compose.services![serviceName].devices || []
+				compose.services![serviceName].devices.push(DRI_DEVICE_PATH)
+			}
 		}
 
 		await this.writeCompose(compose)
