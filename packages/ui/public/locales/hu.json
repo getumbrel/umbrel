@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "Válaszd a \"{{addUmbrelOrNas}}\" opciót.",
   "files-share.instructions.umbrelos.backup.select-connected": "Válaszd ki ezt az Umbrel eszközt a csatlakoztatott eszközök listájából.",
   "files-share.instructions.umbrelos.backup.title": "Használd ezt a mappát a másik Umbrel biztonsági mentésének helyeként.",
-  "files-share.instructions.umbrelos.cant-find-note": "Nem találod? Próbáld meg kiválasztani \"Kézzel hozzáadás\" opciót, és használd a \"{{sharename}}\" megosztásnevet. Ha még mindig nem sikerül hozzáadni, ellenőrizd, hogy mindkét eszközöd ugyanazon a hálózaton van-e.",
+  "files-share.instructions.umbrelos.cant-find-note": "Nem találod? Próbáld meg kiválasztani a \"Kézi hozzáadás\" opciót, és használd a következő hitelesítő adatokat. Ha még így sem tudod hozzáadni, győződj meg róla, hogy mindkét eszközöd ugyanazon a hálózaton van.",
   "files-share.instructions.umbrelos.enter-password": "Add meg <field>{{password}}</field> jelszóként.",
   "files-share.instructions.umbrelos.enter-username": "Add meg <field>{{username}}</field> felhasználónévként.",
   "files-share.instructions.umbrelos.open-and-click": "A másik Umbreleden nyisd meg \"Files\"-t, és kattints a <plus/>-ra a \"<deviceIcon/> {{deviceLabel}}\" mellett az oldalsávban.",

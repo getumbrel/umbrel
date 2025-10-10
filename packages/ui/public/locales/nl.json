@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "Selecteer de optie \"{{addUmbrelOrNas}}\".",
   "files-share.instructions.umbrelos.backup.select-connected": "Selecteer dit Umbrel-apparaat in de lijst met verbonden apparaten.",
   "files-share.instructions.umbrelos.backup.title": "Gebruik deze map als back-uplocatie voor je andere Umbrel",
-  "files-share.instructions.umbrelos.cant-find-note": "Kun je het niet vinden? Probeer \"Handmatig toevoegen\" te kiezen en gebruik de gedeelde map met de naam \"{{sharename}}\". Als je het nog steeds niet kunt toevoegen, controleer dan of beide apparaten op hetzelfde netwerk zitten.",
+  "files-share.instructions.umbrelos.cant-find-note": "Kun je het niet vinden? Probeer \"Handmatig toevoegen\" te selecteren en gebruik de volgende inloggegevens. Als je het nog steeds niet kunt toevoegen, controleer dan of beide apparaten op hetzelfde netwerk zitten.",
   "files-share.instructions.umbrelos.enter-password": "Vul <field>{{password}}</field> in als wachtwoord.",
   "files-share.instructions.umbrelos.enter-username": "Vul <field>{{username}}</field> in als gebruikersnaam.",
   "files-share.instructions.umbrelos.open-and-click": "Open op je andere Umbrel \"Files\" en klik op <plus/> naast \"<deviceIcon/> {{deviceLabel}}\" in de zijbalk.",

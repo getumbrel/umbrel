@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "\"{{addUmbrelOrNas}}\"のオプションを選択してください。",
   "files-share.instructions.umbrelos.backup.select-connected": "接続されているデバイスの一覧からこのUmbrelデバイスを選択してください。",
   "files-share.instructions.umbrelos.backup.title": "このフォルダを別のUmbrelのバックアップ先として使用してください。",
-  "files-share.instructions.umbrelos.cant-find-note": "見つからない？「手動で追加」を選んで、共有名に「{{sharename}}」を使ってみて。それでも追加できない場合は、両方のデバイスが同じネットワークに接続されているか確認してね。",
+  "files-share.instructions.umbrelos.cant-find-note": "見つかりませんか？ \"手動で追加\" を選択し、以下の認証情報を使用してみてください。それでも追加できない場合は、両方のデバイスが同じネットワークに接続されていることを確認してください。",
   "files-share.instructions.umbrelos.enter-password": "パスワードとして <field>{{password}}</field> を入力してください。",
   "files-share.instructions.umbrelos.enter-username": "ユーザー名として <field>{{username}}</field> を入力してください。",
   "files-share.instructions.umbrelos.open-and-click": "別のUmbrelで、\"Files\"を開き、サイドバーの\"<deviceIcon/> {{deviceLabel}}\"の横にある<plus/>をクリックしてください。",

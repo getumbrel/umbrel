@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "Seleziona l'opzione \"{{addUmbrelOrNas}}\".",
   "files-share.instructions.umbrelos.backup.select-connected": "Seleziona questo Umbrel dall'elenco dei dispositivi connessi.",
   "files-share.instructions.umbrelos.backup.title": "Usa questa cartella come destinazione di backup per il tuo altro Umbrel",
-  "files-share.instructions.umbrelos.cant-find-note": "Non lo trovi? Prova a selezionare \"Aggiungi manualmente\" e usa il nome della condivisione \"{{sharename}}\". Se non riesci ancora ad aggiungerlo, assicurati che entrambi i dispositivi siano connessi alla stessa rete.",
+  "files-share.instructions.umbrelos.cant-find-note": "Non riesci a trovarlo? Prova a selezionare \"Aggiungi manualmente\" e usa le seguenti credenziali. Se ancora non riesci ad aggiungerlo, assicurati che entrambi i dispositivi siano sulla stessa rete.",
   "files-share.instructions.umbrelos.enter-password": "Inserisci <field>{{password}}</field> come password.",
   "files-share.instructions.umbrelos.enter-username": "Inserisci <field>{{username}}</field> come nome utente.",
   "files-share.instructions.umbrelos.open-and-click": "Sul tuo altro Umbrel, apri \"Files\" e clicca <plus/> accanto a \"<deviceIcon/> {{deviceLabel}}\" nella barra laterale.",

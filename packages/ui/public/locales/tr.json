@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "\"{{addUmbrelOrNas}}\" seçeneğini seç.",
   "files-share.instructions.umbrelos.backup.select-connected": "Bağlı cihazlar listesinden bu Umbrel cihazını seç.",
   "files-share.instructions.umbrelos.backup.title": "Bu klasörü diğer Umbrel'in için yedekleme yeri olarak kullan",
-  "files-share.instructions.umbrelos.cant-find-note": "Bulamıyor musun? \"Elle ekle\" seçmeyi deneyin ve paylaşım adını \"{{sharename}}\" olarak kullanın. Hâlâ ekleyemiyorsanız, her iki cihazınızın da aynı ağda olduğundan emin olun.",
+  "files-share.instructions.umbrelos.cant-find-note": "Bulamıyor musunuz? \"Elle ekle\" seçeneğini deneyin ve aşağıdaki kimlik bilgilerini kullanın. Yine ekleyemiyorsanız, her iki cihazınızın da aynı ağa bağlı olduğundan emin olun.",
   "files-share.instructions.umbrelos.enter-password": "Şifre olarak <field>{{password}}</field> gir.",
   "files-share.instructions.umbrelos.enter-username": "Kullanıcı adı olarak <field>{{username}}</field> gir.",
   "files-share.instructions.umbrelos.open-and-click": "Diğer Umbrel'inde \"Files\"'ı aç ve kenar çubuğunda \"<deviceIcon/> {{deviceLabel}}\"'in yanındaki <plus/> öğesine tıkla.",

@@ -493,7 +493,7 @@
   "files-share.instructions.umbrelos.backup.select-add": "Виберіть опцію \"{{addUmbrelOrNas}}\".",
   "files-share.instructions.umbrelos.backup.select-connected": "Виберіть цей Umbrel у списку підключених пристроїв.",
   "files-share.instructions.umbrelos.backup.title": "Використайте цю папку як місце для резервних копій для вашого іншого Umbrel",
-  "files-share.instructions.umbrelos.cant-find-note": "Не можете знайти? Спробуйте вибрати \"Додати вручну\" і вкажіть назву спільної папки \"{{sharename}}\". Якщо все ще не вдається додати її, переконайтеся, що обидва ваші пристрої підключені до однієї мережі.",
+  "files-share.instructions.umbrelos.cant-find-note": "Не можете знайти? Спробуйте обрати \"Додати вручну\" та використайте наступні облікові дані. Якщо все ще не вдається додати, переконайтеся, що обидва ваші пристрої підключені до тієї самої мережі.",
   "files-share.instructions.umbrelos.enter-password": "Введіть <field>{{password}}</field> як пароль.",
   "files-share.instructions.umbrelos.enter-username": "Введіть <field>{{username}}</field> як ім'я користувача.",
   "files-share.instructions.umbrelos.open-and-click": "На іншому Umbrel відкрийте \"Files\" і натисніть <plus/> поруч із \"<deviceIcon/> {{deviceLabel}}\" у бічній панелі.",
