@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "네트워크 공유 꺼내기",
   "files-action.rename": "이름 바꾸기",
   "files-action.restore": "복원",
-  "files-action.restore-previous-version_one": "이전 버전 복원",
-  "files-action.restore-previous-version_other": "이전 버전들 복원",
   "files-action.select": "선택",
   "files-action.share": "네트워크로 공유...",
   "files-action.sharing": "공유 중...",

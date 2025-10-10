@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "Espelli condivisione di rete",
   "files-action.rename": "Rinomina",
   "files-action.restore": "Ripristina",
-  "files-action.restore-previous-version_one": "Ripristina la versione precedente",
-  "files-action.restore-previous-version_other": "Ripristina le versioni precedenti",
   "files-action.select": "Seleziona",
   "files-action.share": "Condividi sulla rete...",
   "files-action.sharing": "Condivisione in corso...",

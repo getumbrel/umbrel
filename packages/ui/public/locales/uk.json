@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "Від’єднати мережевий ресурс",
   "files-action.rename": "Перейменувати",
   "files-action.restore": "Відновити",
-  "files-action.restore-previous-version_one": "Відновити попередню версію",
-  "files-action.restore-previous-version_other": "Відновити попередні версії",
   "files-action.select": "Вибрати",
   "files-action.share": "Надати спільний доступ через мережу…",
   "files-action.sharing": "Надається спільний доступ…",

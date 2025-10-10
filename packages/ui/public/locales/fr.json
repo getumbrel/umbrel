@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "Éjecter le partage réseau",
   "files-action.rename": "Renommer",
   "files-action.restore": "Restaurer",
-  "files-action.restore-previous-version_one": "Restaurer la version précédente",
-  "files-action.restore-previous-version_other": "Restaurer les versions précédentes",
   "files-action.select": "Sélectionner",
   "files-action.share": "Partager sur le réseau…",
   "files-action.sharing": "Partage en cours…",

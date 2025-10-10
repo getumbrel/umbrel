@@ -5,7 +5,6 @@ import {useNavigate} from 'react-router-dom'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import type {FileSystemItem} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {t} from '@/utils/i18n'
 
 export function useRewindAction(selectedItems: FileSystemItem[]) {
 	const {isBrowsingHome, isBrowsingApps, isBrowsingRecents} = useFilesNavigate()
@@ -18,7 +17,6 @@ export function useRewindAction(selectedItems: FileSystemItem[]) {
 	// Recents will be opened to the enclosing folder of the first selected item
 	const canShowRewind =
 		isBrowsingHome || isBrowsingApps || (isBrowsingRecents && selectedCount > 0 && allUnderSupported)
-	const label = t('files-action.restore-previous-version', {count: selectedCount})
 
 	const onClick = () => {
 		const params: Record<string, string> = {rewind: 'open'}
@@ -33,5 +31,5 @@ export function useRewindAction(selectedItems: FileSystemItem[]) {
 		navigate({search: addLinkSearchParams(params)})
 	}
 
-	return {canShowRewind, label, onClick}
+	return {canShowRewind, onClick}
 }

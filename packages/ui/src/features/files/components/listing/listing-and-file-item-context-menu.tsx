@@ -50,7 +50,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 	const isItemInClipboard = useFilesStore((state) => state.isItemInClipboard)
 
 	// Rewind action, including logic for when it can be shown and how to navigate
-	const {canShowRewind, label: rewindLabel, onClick: onRewind} = useRewindAction(selectedItems)
+	const {canShowRewind, onClick: onRewind} = useRewindAction(selectedItems)
 
 	// Global rename helper
 	const setRenamingItemPath = useFilesStore((state) => state.setRenamingItemPath)
@@ -201,10 +201,6 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 							? t('files-action.download-items', {count: selectedItems.length})
 							: t('files-action.download')}
 					</ContextMenuItem>
-					{/* Restore previous version (Rewind) */}
-					<ContextMenuItem disabled={!canShowRewind} onClick={onRewind}>
-						{rewindLabel}
-					</ContextMenuItem>
 					<ContextMenuSeparator />
 					<ContextMenuItem disabled={!canCut} onClick={() => useFilesStore.getState().cutItemsToClipboard()}>
 						{t('files-action.cut')}
@@ -217,6 +213,9 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 					<ContextMenuItem disabled={!canPaste} onClick={() => pasteItemsFromClipboard({toDirectory: item.path})}>
 						{t('files-action.paste')}
 						<ContextMenuShortcut>⌘V</ContextMenuShortcut>
+					</ContextMenuItem>
+					<ContextMenuItem disabled={!canShowRewind} onClick={onRewind}>
+						{t('rewind')}
 					</ContextMenuItem>
 					{canTrash || canPermanentlyDelete ? <ContextMenuSeparator /> : null}
 					{canTrash && (

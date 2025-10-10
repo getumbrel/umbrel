@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "Netzwerkfreigabe auswerfen",
   "files-action.rename": "Umbenennen",
   "files-action.restore": "Wiederherstellen",
-  "files-action.restore-previous-version_one": "Vorherige Version wiederherstellen",
-  "files-action.restore-previous-version_other": "Vorherige Versionen wiederherstellen",
   "files-action.select": "Auswählen",
   "files-action.share": "Im Netzwerk freigeben...",
   "files-action.sharing": "Wird freigegeben...",

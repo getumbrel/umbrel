@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "ネットワーク共有を取り出す",
   "files-action.rename": "名前の変更",
   "files-action.restore": "復元",
-  "files-action.restore-previous-version_one": "以前のバージョンを復元",
-  "files-action.restore-previous-version_other": "以前のバージョンを復元",
   "files-action.select": "選択",
   "files-action.share": "ネットワークで共有...",
   "files-action.sharing": "共有処理中...",

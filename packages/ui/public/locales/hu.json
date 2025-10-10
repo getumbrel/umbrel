@@ -356,8 +356,6 @@
   "files-action.remove-network-share": "Hálózati megosztás leválasztása",
   "files-action.rename": "Átnevezés",
   "files-action.restore": "Visszaállítás",
-  "files-action.restore-previous-version_one": "Előző verzió visszaállítása",
-  "files-action.restore-previous-version_other": "Előző verziók visszaállítása",
   "files-action.select": "Kiválasztás",
   "files-action.share": "Megosztás a hálózaton...",
   "files-action.sharing": "Megosztás...",
