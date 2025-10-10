@@ -13,9 +13,12 @@ export async function copyWithProgress(
 
 	// Start rsync copy
 	const rsync = execa('rsync', [
-		// Give detailed progress output we can easily parse
+		// Give detailed progress output we can easily parse.
+		// Build the entire file list before starting the transfer instead of incrementally
+		// for more accurate progress reporting.
 		'--info=progress2',
 		'--no-human-readable',
+		'--no-inc-recursive',
 		// Archive mode, recursive and preserve permissions etc
 		'--archive',
 		// Inplace mode, update files in place instead of temporary files with a random suffix
