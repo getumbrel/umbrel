@@ -1,12 +1,13 @@
 import {zodResolver} from '@hookform/resolvers/zod'
 import {AnimatePresence, motion} from 'framer-motion'
-import {Loader, Loader2, RotateCcw} from 'lucide-react'
+import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
 import {z} from 'zod'
 
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
+import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {Button} from '@/shadcn-components/ui/button'
@@ -28,7 +29,8 @@ import {
 } from '@/shadcn-components/ui/drawer'
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/shadcn-components/ui/form'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {RadioGroup, RadioGroupItem} from '@/shadcn-components/ui/radio-group'
+import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
+import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -54,6 +56,12 @@ enum Step {
 	SelectShare = 2,
 }
 
+// Manual mode steps
+enum ManualStep {
+	Credentials = 0,
+	SelectShare = 1,
+}
+
 /* ------------------------------------------------------------------ */
 /* MAIN COMPONENT                                                     */
 /* ------------------------------------------------------------------ */
@@ -77,6 +85,9 @@ export default function AddNetworkShareDialog(props?: {
 	// wizard vs manual entry
 	const [mode, setMode] = useState<'wizard' | 'manual'>('wizard')
 	const [step, setStep] = useState<Step>(Step.Discover)
+	const [manualStep, setManualStep] = useState<ManualStep>(ManualStep.Credentials)
+	// Track selected host in wizard discover step separately from form values typed in manual mode
+	const [selectedHostWizard, setSelectedHostWizard] = useState('')
 
 	const form = useForm({
 		resolver: zodResolver(stepSchema),
@@ -100,11 +111,13 @@ export default function AddNetworkShareDialog(props?: {
 	const [shares, setShares] = useState<string[]>([])
 	const [isLoadingShares, setIsLoadingShares] = useState(false)
 
-	// fetch shares whenever we enter SelectShare
+	// fetch shares whenever we enter SelectShare (wizard or manual)
 	useEffect(() => {
 		let abort = false
 		const fetchShares = async () => {
-			if (step !== Step.SelectShare || !host || !username || !password) return
+			const isSelectShareStep =
+				(mode === 'wizard' && step === Step.SelectShare) || (mode === 'manual' && manualStep === ManualStep.SelectShare)
+			if (!isSelectShareStep || !host || !username || !password) return
 			setIsLoadingShares(true)
 			try {
 				const s = await discoverSharesOnServer(host, username, password)
@@ -114,7 +127,13 @@ export default function AddNetworkShareDialog(props?: {
 						setShares(s)
 					})
 			} catch {
-				if (!abort) setStep(Step.Credentials) // toast already handled inside hook
+				if (!abort) {
+					if (mode === 'wizard') {
+						setStep(Step.Credentials) // toast already handled inside hook
+					} else {
+						setManualStep(ManualStep.Credentials)
+					}
+				}
 			} finally {
 				if (!abort) setIsLoadingShares(false)
 			}
@@ -123,12 +142,14 @@ export default function AddNetworkShareDialog(props?: {
 		return () => {
 			abort = true
 		}
-	}, [step, host, username, password])
+	}, [step, manualStep, mode, host, username, password])
 
 	// form handlers
 	const resetAll = () => {
 		setMode('wizard')
 		setStep(Step.Discover)
+		setManualStep(ManualStep.Credentials)
+		setSelectedHostWizard('')
 		form.reset()
 		discoverServers()
 	}
@@ -145,6 +166,16 @@ export default function AddNetworkShareDialog(props?: {
 	const back = () => {
 		form.clearErrors()
 		setStep((s) => Math.max(s - 1, Step.Discover))
+	}
+
+	const manualNext = () => {
+		form.clearErrors()
+		setManualStep((s) => Math.min(s + 1, ManualStep.SelectShare))
+	}
+
+	const manualBack = () => {
+		form.clearErrors()
+		setManualStep((s) => Math.max(s - 1, ManualStep.Credentials))
 	}
 
 	const handleSubmit = async () => {
@@ -173,7 +204,15 @@ export default function AddNetworkShareDialog(props?: {
 			case Step.Discover:
 				footer = (
 					<DialogFooter className={`${isMobile ? 'flex flex-col items-stretch' : 'flex items-center'} gap-2 pt-4`}>
-						<Button variant='primary' size='dialog' disabled={!host} onClick={next}>
+						<Button
+							variant='primary'
+							size='dialog'
+							disabled={!selectedHostWizard}
+							onClick={() => {
+								form.setValue('host', selectedHostWizard)
+								next()
+							}}
+						>
 							{t('files-add-network-share.continue')}
 						</Button>
 					</DialogFooter>
@@ -210,17 +249,32 @@ export default function AddNetworkShareDialog(props?: {
 		}
 	} else {
 		// Manual mode footer
-		const manualValid = submitSchema.safeParse(form.getValues()).success
-		footer = (
-			<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
-				<Button size='dialog' onClick={() => setMode('wizard')}>
-					{t('files-add-network-share.back')}
-				</Button>
-				<Button variant='primary' size='dialog' disabled={isAddingShare || !manualValid} onClick={handleSubmit}>
-					{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
-				</Button>
-			</DialogFooter>
-		)
+		switch (manualStep) {
+			case ManualStep.Credentials:
+				footer = (
+					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+						<Button size='dialog' onClick={() => setMode('wizard')}>
+							{t('files-add-network-share.back')}
+						</Button>
+						<Button variant='primary' size='dialog' disabled={!(host && username && password)} onClick={manualNext}>
+							{t('files-add-network-share.continue')}
+						</Button>
+					</DialogFooter>
+				)
+				break
+			case ManualStep.SelectShare:
+				footer = (
+					<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+						<Button size='dialog' onClick={manualBack}>
+							{t('files-add-network-share.back')}
+						</Button>
+						<Button variant='primary' size='dialog' disabled={!share || isAddingShare} onClick={handleSubmit}>
+							{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+						</Button>
+					</DialogFooter>
+				)
+				break
+		}
 	}
 
 	const header = (
@@ -250,8 +304,8 @@ export default function AddNetworkShareDialog(props?: {
 							<DiscoverStep
 								servers={servers}
 								isLoading={isLoadingServers}
-								selectedHost={host}
-								onSelectServer={(h) => form.setValue('host', h)}
+								selectedHost={selectedHostWizard}
+								onSelectServer={setSelectedHostWizard}
 								onRetry={discoverServers}
 								onManual={() => {
 									setMode('manual')
@@ -282,54 +336,71 @@ export default function AddNetworkShareDialog(props?: {
 					</Form>
 				) : (
 					/* Manual mode */
-					<motion.div key='manual' initial={{opacity: 0}} animate={{opacity: 1}} transition={{duration: 0.2}}>
-						<div className='space-y-4 py-2'>
-							<p className='text-sm font-medium'>{t('files-add-network-share.enter-details-manually')}</p>
+					<Form {...form}>
+						{manualStep === ManualStep.Credentials && (
+							<motion.div key='manual-creds' initial={{opacity: 0}} animate={{opacity: 1}} transition={{duration: 0.2}}>
+								<div className='space-y-4 py-2'>
+									<p className='text-sm font-medium'>{t('files-add-network-share.enter-details-manually')}</p>
 
-							<Form {...form}>
-								<div className='space-y-4'>
-									{(['host', 'share', 'username', 'password'] as const).map((field) => {
-										const placeholders = {
-											host: '192.168.1.100',
-											share: t('files-add-network-share.share-placeholder'),
-											username: t('files-add-network-share.username-placeholder'),
-											password: '',
-										}
+									<div className='space-y-4'>
+										{(['host', 'username', 'password'] as const).map((field) => {
+											const placeholders = {
+												host: '192.168.1.100',
+												username: t('files-add-network-share.username-placeholder'),
+												password: '',
+											}
 
-										const labels = {
-											host: t('files-add-network-share.host-label'),
-											share: t('files-add-network-share.share-label'),
-											username: t('files-add-network-share.username-label'),
-											password: t('files-add-network-share.password-label'),
-										}
+											const labels = {
+												host: t('files-add-network-share.host-label'),
+												username: t('files-add-network-share.username-label'),
+												password: t('files-add-network-share.password-label'),
+											}
 
-										return (
-											<FormField
-												key={field}
-												control={form.control}
-												name={field}
-												render={({field: f}) => (
-													<FormItem>
-														<FormLabel className='text-13 text-white/60'>{labels[field]}</FormLabel>
-														<FormControl>
-															{field === 'password' ? (
-																<PasswordInput value={f.value} onValueChange={f.onChange} />
-															) : (
-																<Input type='text' placeholder={placeholders[field]} {...f} />
-															)}
-														</FormControl>
-														<div className='relative'>
-															<FormMessage className='absolute -top-1 left-0 text-xs' />
-														</div>
-													</FormItem>
-												)}
-											/>
-										)
-									})}
+											return (
+												<FormField
+													key={field}
+													control={form.control}
+													name={field}
+													render={({field: f}) => (
+														<FormItem>
+															<FormLabel className='text-13 text-white/60'>{labels[field]}</FormLabel>
+															<FormControl>
+																{field === 'password' ? (
+																	<PasswordInput value={f.value} onValueChange={f.onChange} />
+																) : (
+																	<Input type='text' placeholder={placeholders[field]} {...f} />
+																)}
+															</FormControl>
+															<div className='relative'>
+																<FormMessage className='absolute -top-1 left-0 text-xs' />
+															</div>
+														</FormItem>
+													)}
+												/>
+											)
+										})}
+									</div>
 								</div>
-							</Form>
-						</div>
-					</motion.div>
+							</motion.div>
+						)}
+
+						{manualStep === ManualStep.SelectShare && (
+							<motion.div
+								key='manual-shares'
+								initial={{opacity: 0}}
+								animate={{opacity: 1}}
+								transition={{duration: 0.2}}
+							>
+								<SelectShareStep
+									shares={shares}
+									isLoading={isLoadingShares}
+									selectedShare={share}
+									onSelect={(s) => form.setValue('share', s)}
+									disabled={isAddingShare}
+								/>
+							</motion.div>
+						)}
+					</Form>
 				)}
 			</AnimatePresence>
 		</div>
@@ -482,6 +553,23 @@ function SelectShareStep({
 	onSelect: (s: string) => void
 	disabled?: boolean
 }) {
+	const [manualValue, setManualValue] = useState('')
+	const [showManualEntry, setShowManualEntry] = useState(false)
+
+	useEffect(() => {
+		if (selectedShare && !shares.includes(selectedShare)) {
+			setManualValue(selectedShare)
+			setShowManualEntry(true)
+		}
+	}, [selectedShare, shares])
+
+	// Auto-select if there's only 1 share
+	useEffect(() => {
+		if (shares.length === 1 && !selectedShare && !isLoading) {
+			onSelect(shares[0])
+		}
+	}, [shares, selectedShare, isLoading, onSelect])
+
 	return (
 		<div className='space-y-4 py-2'>
 			<p className='text-sm font-medium'>{t('files-add-network-share.select-share')}</p>
@@ -492,24 +580,87 @@ function SelectShareStep({
 					<p className='text-sm text-white/40'>{t('files-add-network-share.retrieving-shares')}</p>
 				</div>
 			) : (
-				// RadioGroup only handles visual state - selection is handled by onClick on parent div so that entire div is clickable
-				<RadioGroup value={selectedShare ?? ''} className='space-y-2'>
-					{shares.map((s) => (
-						<div
-							key={s}
-							onClick={disabled ? undefined : () => onSelect(s)}
-							className={`flex items-center space-x-3 rounded-xl bg-white/5 p-4 ${
-								selectedShare === s ? 'border border-brand bg-brand/15' : 'hover:bg-white/10'
-							}
-							${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-						>
-							<RadioGroupItem value={s} id={s} />
-							<FormLabel htmlFor={s} className='flex-1 cursor-pointer text-sm'>
-								{s}
-							</FormLabel>
+				<div className='space-y-3'>
+					{/* Discovered shares list */}
+					{shares.length > 0 ? (
+						<ScrollArea className={cn('rounded-12 bg-white/6', shares.length > 4 && 'h-[200px]')}>
+							<div className='divide-y divide-white/6'>
+								{shares.map((s) => (
+									<div
+										key={s}
+										onClick={disabled ? undefined : () => onSelect(s)}
+										className={cn(
+											'flex h-[50px] cursor-pointer items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
+											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
+											disabled && 'cursor-not-allowed opacity-50',
+										)}
+									>
+										<FolderIcon className='size-5 shrink-0 opacity-80' />
+										<span className='flex-1 truncate'>{s}</span>
+										{selectedShare === s && (
+											<div className='flex size-5 shrink-0 items-center justify-center rounded-full bg-brand'>
+												<Check className='size-3 text-white' />
+											</div>
+										)}
+									</div>
+								))}
+							</div>
+						</ScrollArea>
+					) : (
+						<div className='flex flex-col items-center justify-center space-y-3 py-8'>
+							<p className='text-sm text-white/40'>{t('files-add-network-share.no-shares-found')}</p>
 						</div>
-					))}
-				</RadioGroup>
+					)}
+
+					{/* Manual entry expandable section */}
+					<button
+						onClick={() => setShowManualEntry(!showManualEntry)}
+						disabled={disabled}
+						className='flex w-full items-center justify-between text-xs font-medium text-brand-lightest transition-opacity duration-300 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50'
+					>
+						{t('files-add-network-share.not-seeing-share')}
+						{showManualEntry ? <ChevronUp className='h-4 w-4' /> : <ChevronDown className='h-4 w-4' />}
+					</button>
+
+					<AnimatePresence>
+						{showManualEntry && (
+							<motion.div
+								initial={{height: 0, opacity: 0}}
+								animate={{height: 'auto', opacity: 1}}
+								exit={{height: 0, opacity: 0}}
+								transition={{duration: 0.3}}
+								className='overflow-hidden'
+							>
+								<div className='space-y-4 py-2'>
+									<FormField
+										control={undefined}
+										name='manual-share'
+										render={() => (
+											<FormItem>
+												<FormLabel className='text-13 text-white/60'>
+													{t('files-add-network-share.manual-share-help')}
+												</FormLabel>
+												<FormControl>
+													<Input
+														type='text'
+														placeholder={t('files-add-network-share.share-placeholder')}
+														value={manualValue}
+														onChange={(e) => {
+															const v = e.target.value
+															setManualValue(v)
+															onSelect(v.trim())
+														}}
+														disabled={disabled}
+													/>
+												</FormControl>
+											</FormItem>
+										)}
+									/>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+				</div>
 			)}
 		</div>
 	)
