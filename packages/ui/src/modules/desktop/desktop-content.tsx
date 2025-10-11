@@ -10,6 +10,7 @@ import {trpcReact} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
 import {AppIconConnected, AppLabel} from './app-icon'
+import {BookmarkIcon} from './bookmark-icon'
 import {Search} from './desktop-misc'
 import {DockSpacer} from './dock'
 import {Header} from './header'
@@ -22,6 +23,8 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 
 	const {userApps, isLoading} = useApps()
 	const widgets = useWidgets()
+	const bookmarksQuery = trpcReact.user.bookmarks.useQuery()
+	const bookmarks = bookmarksQuery.data || []
 
 	if (isLoading || widgets.isLoading) return null
 	if (!userApps) return null
@@ -103,32 +106,59 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 							</WidgetWrapper>
 						</motion.div>
 					))}
-					apps={userApps.map((app, i) => (
-						<motion.div
-							key={app.id}
-							layout
-							initial={{
-								opacity: 0,
-								y: 50,
-							}}
-							animate={{
-								opacity: 1,
-								y: 0,
-								// scale: 1,
-							}}
-							exit={{
-								opacity: 0,
-								scale: 0.5,
-							}}
-							transition={{
-								delay: (widgets.selected.length * 3 + i) * 0.02,
-								duration: 0.4,
-								ease: 'easeOut',
-							}}
-						>
-							<AppIconConnected appId={app.id} />
-						</motion.div>
-					))}
+					apps={[
+						...userApps.map((app, i) => (
+							<motion.div
+								key={app.id}
+								layout
+								initial={{
+									opacity: 0,
+									y: 50,
+								}}
+								animate={{
+									opacity: 1,
+									y: 0,
+									// scale: 1,
+								}}
+								exit={{
+									opacity: 0,
+									scale: 0.5,
+								}}
+								transition={{
+									delay: (widgets.selected.length * 3 + i) * 0.02,
+									duration: 0.4,
+									ease: 'easeOut',
+								}}
+							>
+								<AppIconConnected appId={app.id} />
+							</motion.div>
+						)),
+						...bookmarks.map((bookmark: any, i: number) => (
+							<motion.div
+								key={bookmark.id}
+								layout
+								initial={{
+									opacity: 0,
+									y: 50,
+								}}
+								animate={{
+									opacity: 1,
+									y: 0,
+								}}
+								exit={{
+									opacity: 0,
+									scale: 0.5,
+								}}
+								transition={{
+									delay: (widgets.selected.length * 3 + userApps.length + i) * 0.02,
+									duration: 0.4,
+									ease: 'easeOut',
+								}}
+							>
+								<BookmarkIcon bookmark={bookmark} />
+							</motion.div>
+						)),
+					]}
 				/>
 			</motion.div>
 			<Search onClick={onSearchClick} />

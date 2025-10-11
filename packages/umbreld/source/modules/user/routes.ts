@@ -191,6 +191,7 @@ export default router({
 			wallpaper: user.wallpaper,
 			language: user.language,
 			temperatureUnit: user.temperatureUnit,
+			bookmarks: user.bookmarks || [],
 		}
 	}),
 
@@ -227,5 +228,129 @@ export default router({
 	language: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
 		return user?.language ?? null
+	}),
+
+	// Get user bookmarks
+	bookmarks: privateProcedure.query(async ({ctx}) => {
+		return ctx.user.getBookmarks()
+	}),
+
+	// Add a bookmark
+	addBookmark: privateProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				name: z.string(),
+				url: z.string().url(),
+				openInNewTab: z.boolean(),
+				icon: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			const bookmarks = await ctx.user.getBookmarks()
+			bookmarks.push(input)
+			await ctx.user.setBookmarks(bookmarks)
+			return true
+		}),
+
+	// Update a bookmark
+	updateBookmark: privateProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				name: z.string(),
+				url: z.string().url(),
+				openInNewTab: z.boolean(),
+				icon: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			const bookmarks = await ctx.user.getBookmarks()
+			const index = bookmarks.findIndex((b: any) => b.id === input.id)
+			if (index === -1) {
+				throw new TRPCError({code: 'NOT_FOUND', message: 'Bookmark not found'})
+			}
+			bookmarks[index] = input
+			await ctx.user.setBookmarks(bookmarks)
+			return true
+		}),
+
+	// Delete a bookmark
+	deleteBookmark: privateProcedure.input(z.object({id: z.string()})).mutation(async ({ctx, input}) => {
+		const bookmarks = await ctx.user.getBookmarks()
+		const filtered = bookmarks.filter((b: any) => b.id !== input.id)
+		await ctx.user.setBookmarks(filtered)
+		return true
+	}),
+
+	// Proxy favicon request to avoid CORS issues
+	getFavicon: privateProcedure.input(z.object({domain: z.string()})).query(async ({input}) => {
+		try {
+			const url = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(input.domain)}&sz=128`
+			const response = await fetch(url)
+			const buffer = await response.arrayBuffer()
+			const base64 = Buffer.from(buffer).toString('base64')
+			const contentType = response.headers.get('content-type') || 'image/png'
+			return `data:${contentType};base64,${base64}`
+		} catch (error) {
+			throw new TRPCError({code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch favicon'})
+		}
+	}),
+
+	// Fetch page title from URL
+	getPageTitle: privateProcedure.input(z.object({url: z.string().url()})).query(async ({input}) => {
+		try {
+			const url = new URL(input.url)
+			
+			// Prevent fetching local/internal URLs
+			const hostname = url.hostname.toLowerCase()
+			if (
+				hostname === 'localhost' ||
+				hostname === '127.0.0.1' ||
+				hostname === '::1' ||
+				hostname.endsWith('.local') ||
+				hostname.startsWith('192.168.') ||
+				hostname.startsWith('10.') ||
+				hostname.startsWith('172.16.') ||
+				hostname.startsWith('172.17.') ||
+				hostname.startsWith('172.18.') ||
+				hostname.startsWith('172.19.') ||
+				hostname.startsWith('172.20.') ||
+				hostname.startsWith('172.21.') ||
+				hostname.startsWith('172.22.') ||
+				hostname.startsWith('172.23.') ||
+				hostname.startsWith('172.24.') ||
+				hostname.startsWith('172.25.') ||
+				hostname.startsWith('172.26.') ||
+				hostname.startsWith('172.27.') ||
+				hostname.startsWith('172.28.') ||
+				hostname.startsWith('172.29.') ||
+				hostname.startsWith('172.30.') ||
+				hostname.startsWith('172.31.')
+			) {
+				return null
+			}
+
+			const response = await fetch(input.url, {
+				method: 'GET',
+				redirect: 'follow',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (compatible; UmbrelOS/1.0)',
+				},
+			})
+			const html = await response.text()
+			
+			// Extract title from HTML using regex
+			const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+			if (titleMatch && titleMatch[1]) {
+				// Decode HTML entities and trim
+				return titleMatch[1].trim()
+			}
+			
+			return null
+		} catch (error) {
+			// Return null instead of throwing to handle errors gracefully
+			return null
+		}
 	}),
 })
