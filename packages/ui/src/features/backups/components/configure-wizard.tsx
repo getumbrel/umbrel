@@ -11,6 +11,7 @@ import {
 	useBackups,
 	useRepositoryBackups,
 	useRepositorySize,
+	useTriggerBackupForRepo,
 } from '@/features/backups/hooks/use-backups'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
 import {getDisplayRepositoryPath} from '@/features/backups/utils/filepath-helpers'
@@ -44,7 +45,7 @@ import {t} from '@/utils/i18n'
 
 export function BackupsConfigureWizard() {
 	const navigate = useNavigate()
-	const {repositories, backupNow, forgetRepository, isForgettingRepository, isBackingUp} = useBackups()
+	const {repositories, forgetRepository, isForgettingRepository} = useBackups()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {disks} = useExternalStorage()
 
@@ -110,11 +111,9 @@ export function BackupsConfigureWizard() {
 						disks={disks}
 						backupProgressByRepo={backupProgressByRepo}
 						onViewRepo={setViewRepoId}
-						onBackupNow={backupNow}
 						onAddNas={goToSetupNas}
 						onAddExternal={goToSetupExternal}
 						onAddUmbrelPrivateCloud={goToSetupUmbrelPrivateCloud}
-						isBackingUp={isBackingUp}
 					/>
 
 					<div className='h-2' />
@@ -131,10 +130,8 @@ export function BackupsConfigureWizard() {
 					backups={backups}
 					isLoadingBackups={isLoadingBackups}
 					onBack={() => setViewRepoId(null)}
-					onBackupNow={() => viewRepoId && backupNow(viewRepoId)}
 					onForget={() => viewRepoId && forgetRepository(viewRepoId)}
 					isForgettingRepository={isForgettingRepository}
-					isBackingUp={isBackingUp}
 				/>
 			)}
 		</div>
@@ -188,6 +185,19 @@ function InlineBackupProgress({percent}: {percent: number}) {
 	)
 }
 
+function BackupNowButton({repoId, hidden}: {repoId: string; hidden: boolean}) {
+	const {triggerBackup, isPending} = useTriggerBackupForRepo(repoId)
+
+	if (hidden) return null
+
+	return (
+		<Button size='sm' variant='default' disabled={isPending} className='shrink-0' onClick={triggerBackup}>
+			<span className={isPending ? 'opacity-0' : 'opacity-100'}>{t('backups-configure.back-up-now')}</span>
+			{isPending && <Loader2 className='absolute h-4 w-4 animate-spin' />}
+		</Button>
+	)
+}
+
 // Section for showing all backup repositories
 function LocationsSection({
 	repositories,
@@ -195,22 +205,18 @@ function LocationsSection({
 	disks,
 	backupProgressByRepo,
 	onViewRepo,
-	onBackupNow,
 	onAddNas,
 	onAddExternal,
 	onAddUmbrelPrivateCloud,
-	isBackingUp,
 }: {
 	repositories: Array<{id: string; path: string; lastBackup?: any}>
 	doesHostHaveMountedShares: (rootPath: string) => boolean
 	disks: any[] | undefined
 	backupProgressByRepo: Map<string, number>
 	onViewRepo: (id: string) => void
-	onBackupNow: (id: string) => void
 	onAddNas: () => void
 	onAddExternal: () => void
 	onAddUmbrelPrivateCloud: () => void
-	isBackingUp: boolean
 }) {
 	const isSmallMobile = useIsSmallMobile()
 	const [lang] = useLanguage()
@@ -277,18 +283,7 @@ function LocationsSection({
 												<InlineBackupProgress percent={backupProgressByRepo.get(repo.id) || 0} />
 											) : null}
 											{!isSmallMobile && (
-												<Button
-													size='sm'
-													variant='default'
-													disabled={isBackingUp}
-													className={`shrink-0${backupProgressByRepo.has(repo.id) ? ' hidden' : ''}`}
-													onClick={() => onBackupNow(repo.id)}
-												>
-													<span className={isBackingUp ? 'opacity-0' : 'opacity-100'}>
-														{t('backups-configure.back-up-now')}
-													</span>
-													{isBackingUp && <Loader2 className='absolute h-4 w-4 animate-spin' />}
-												</Button>
+												<BackupNowButton repoId={repo.id} hidden={backupProgressByRepo.has(repo.id)} />
 											)}
 											<Button size='sm' variant='default' className='shrink-0' onClick={() => onViewRepo(repo.id)}>
 												{t('backups-configure.view')}
@@ -315,10 +310,8 @@ function RepositoryDetails({
 	backups,
 	isLoadingBackups,
 	onBack,
-	onBackupNow,
 	onForget,
 	isForgettingRepository,
-	isBackingUp,
 }: {
 	repo: {id: string; path: string; lastBackup?: any}
 	isConnected: boolean
@@ -328,10 +321,8 @@ function RepositoryDetails({
 	backups?: Array<{id: string; time: number; size: number}>
 	isLoadingBackups: boolean
 	onBack: () => void
-	onBackupNow: () => void
 	onForget: () => void
 	isForgettingRepository: boolean
-	isBackingUp: boolean
 }) {
 	const [lang] = useLanguage()
 	const [confirmRemoveOpen, setConfirmRemoveOpen] = React.useState(false)
@@ -462,14 +453,7 @@ function RepositoryDetails({
 			</div>
 
 			<div className='flex justify-end gap-2'>
-				<Button
-					variant='default'
-					disabled={!isConnected || typeof inProgressPercent === 'number' || isBackingUp}
-					onClick={onBackupNow}
-				>
-					<span className={isBackingUp ? 'opacity-0' : 'opacity-100'}>{t('backups-configure.back-up-now')}</span>
-					{isBackingUp && <Loader2 className='absolute h-4 w-4 animate-spin' />}
-				</Button>
+				<BackupNowButton repoId={repo.id} hidden={!isConnected || typeof inProgressPercent === 'number'} />
 				<Button variant='destructive' disabled={isForgettingRepository} onClick={() => setConfirmRemoveOpen(true)}>
 					<span className={isForgettingRepository ? 'opacity-0' : 'opacity-100'}>
 						{t('backups-configure.remove-backup-location')}

@@ -42,7 +42,6 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 	// Pending state so the wizards have access to it to show loading indicators throughout the flow
 	const [isSettingUpBackup, setIsSettingUpBackup] = useState(false)
 	const [isForgettingRepository, setIsForgettingRepository] = useState(false)
-	const [isBackingUp, setIsBackingUp] = useState(false)
 
 	// Create a repository at the selected folder and immediately start a backup.
 	const setupBackup = async (input: SetupBackupInput) => {
@@ -91,9 +90,9 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 		}
 	}
 
-	// Manually trigger a backup for a known repository.
+	// Triggers a backup for a repository.
+	// UI components should use `useTriggerBackupForRepo` so that loading state is isolated.
 	const backupNow = async (repositoryId: string) => {
-		setIsBackingUp(true)
 		try {
 			await backupMutation.mutateAsync({repositoryId})
 			// No success toast since we show progress indicators throughout the UI (floating island, wizards, etc.)
@@ -101,8 +100,6 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
 			toast.error(userFriendlyMessage)
 			throw error
-		} finally {
-			setIsBackingUp(false)
 		}
 	}
 
@@ -134,11 +131,9 @@ export function useBackups(options?: {repositoriesEnabled?: boolean}) {
 		isLoadingRepositories,
 		refetchRepositories,
 
-		// manual backup trigger
-		backupNow,
+		// repository management
 		forgetRepository,
 		isForgettingRepository,
-		isBackingUp,
 	}
 }
 
@@ -282,5 +277,28 @@ export function useUnmountBackup() {
 	return {
 		...mutation,
 		unmountBackup,
+	}
+}
+
+// Triggers a backup for a single repository.
+// Use in UI components to isolate loading state per component (e.g., a button)
+export function useTriggerBackupForRepo(repositoryId: string) {
+	const utils = trpcReact.useUtils()
+	const mutation = trpcReact.backups.backup.useMutation({
+		onSuccess: () => {
+			// Refresh repositories after triggering a backup
+			utils.backups.getRepositories.invalidate()
+		},
+		onError: (error: any) => {
+			const userFriendlyMessage = getUserFriendlyErrorMessage(error)
+			toast.error(userFriendlyMessage)
+		},
+	})
+
+	const triggerBackup = () => mutation.mutate({repositoryId})
+
+	return {
+		triggerBackup,
+		isPending: mutation.isPending,
 	}
 }
