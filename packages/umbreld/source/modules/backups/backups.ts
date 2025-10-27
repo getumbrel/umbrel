@@ -564,6 +564,9 @@ export default class Backups {
 		ignoreFileContents.push('app-stores')
 		ignoreFileContents.push(this.#umbreld.files.thumbnails.thumbnailDirectory)
 
+		// Ignore temporary migration directory
+		ignoreFileContents.push('.temporary-migration')
+
 		// Ignore backup mount points
 		ignoreFileContents.push(this.internalMountPath)
 		ignoreFileContents.push(this.backupRoot)
