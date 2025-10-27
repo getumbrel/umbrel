@@ -113,11 +113,10 @@ ARG KOPIA_SHA256_amd64
 ARG KOPIA_SHA256_arm64
 
 # Install boot tooling
-# We don't actually use systemd-boot as a bootloader since Mender injects GRUB
-# but we use its systemd-repart tool to expand partitions on boot.
+# We use systemd-repart to expand partitions on boot.
 # We install mender-client via apt because injecting via mender-convert appears
 # to be broken on bookworm.
-RUN apt-get install --yes systemd-boot mender-client
+RUN apt-get install --yes systemd-repart mender-client
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
