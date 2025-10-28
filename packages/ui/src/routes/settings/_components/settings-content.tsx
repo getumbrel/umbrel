@@ -224,7 +224,7 @@ export function SettingsContent() {
 								</DropdownMenu>
 							) : (
 								<IconButtonLink to={'backups/configure'} icon={TbSettings}>
-									{t('Configure')}
+									{t('backups-configure')}
 								</IconButtonLink>
 							)}
 							<DropdownMenu>

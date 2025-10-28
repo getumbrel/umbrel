@@ -66,7 +66,7 @@ export function BackupsMobileDrawer() {
 					) : (
 						<Button onClick={goToConfigure} size='dialog'>
 							<TbSettings className='size-4' />
-							{t('Configure')}
+							{t('backups-configure')}
 						</Button>
 					)}
 					<DropdownMenu>
