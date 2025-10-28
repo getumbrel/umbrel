@@ -8,7 +8,7 @@ import {sleep} from '@/utils/misc'
 
 export const EXIT_DURATION_MS = 200
 
-export type GlobalDialogKey = 'logout' | 'live-usage'
+export type GlobalDialogKey = 'logout' | 'live-usage' | 'whats-new'
 export type AppStoreDialogKey = 'updates' | 'add-community-store' | 'default-credentials' | 'app-settings'
 export type FilesDialogKey =
 	| 'files-share-info'

@@ -192,7 +192,13 @@ class Migration {
 
 		// Write the current version to signal what version we've migrated up to.
 		// This also serves as a read/write permission check on the first run.
+		const previousVersion = await this.umbreld.store.get('version')
 		await this.umbreld.store.set('version', this.umbreld.version)
+
+		// Add notification if version changed
+		if (previousVersion && previousVersion !== this.umbreld.version) {
+			await this.umbreld.notifications.add('umbrelos-updated').catch(() => {})
+		}
 
 		this.logger.log('Migrations complete')
 	}

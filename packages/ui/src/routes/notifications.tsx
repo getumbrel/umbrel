@@ -1,5 +1,6 @@
 import {motion} from 'framer-motion'
 import {useEffect, useRef, useState} from 'react'
+import {useNavigate} from 'react-router-dom'
 
 import {useNotifications} from '@/hooks/use-notifications'
 import {
@@ -12,6 +13,7 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {cn} from '@/shadcn-lib/utils'
+import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
 function NotificationContent({children}: {children: string}) {
@@ -70,6 +72,21 @@ function NotificationContent({children}: {children: string}) {
 
 export function Notifications() {
 	const {notifications, clearNotification} = useNotifications()
+	const navigate = useNavigate()
+	const linkToDialog = useLinkToDialog()
+
+	// Separate umbrelos-updated notification from others
+	const standardNotifications = notifications.filter((n) => n !== 'umbrelos-updated')
+	const showWhatsNew = notifications.includes('umbrelos-updated')
+
+	// Navigate to whats-new dialog when the umbrelos-updated notification is present
+	// Clear the notification immediately to prevent re-navigation
+	useEffect(() => {
+		if (showWhatsNew) {
+			clearNotification('umbrelos-updated')
+			navigate(linkToDialog('whats-new'))
+		}
+	}, [showWhatsNew, navigate, linkToDialog, clearNotification])
 
 	const getNotificationContent = (notification: string) => {
 		switch (notification) {
@@ -94,7 +111,7 @@ export function Notifications() {
 
 	return (
 		<>
-			{notifications.map((notification) => {
+			{standardNotifications.map((notification) => {
 				const content = getNotificationContent(notification)
 				return (
 					<AlertDialog key={notification} open={true}>

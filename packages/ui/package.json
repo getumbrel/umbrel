@@ -61,6 +61,7 @@
 		"colorthief": "^2.4.0",
 		"compute-scroll-into-view": "^3.1.0",
 		"date-fns": "^3.0.6",
+		"embla-carousel-react": "^8.6.0",
 		"file-saver": "^2.0.5",
 		"filenamify": "^6.0.0",
 		"framer-motion": "10.16.4",

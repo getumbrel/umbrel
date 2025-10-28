@@ -1,3 +1,6 @@
+import {Trans} from 'react-i18next/TransWithoutContext'
+import {Link} from 'react-router-dom'
+
 import {ButtonLink} from '@/components/ui/button-link'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {LOADING_DASH} from '@/constants'
@@ -12,6 +15,7 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
+import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
@@ -20,6 +24,7 @@ export function SoftwareUpdateDrawer() {
 	const dialogProps = useSettingsDialogProps()
 
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
+	const linkToDialog = useLinkToDialog()
 
 	return (
 		<Drawer {...dialogProps}>
@@ -33,6 +38,14 @@ export function SoftwareUpdateDrawer() {
 					<div className='mb-4' />
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
 					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
+					<p className='text-12 -tracking-2 opacity-50'>
+						<Trans
+							i18nKey='software-update.see-whats-new'
+							components={{
+								linked: <Link to={linkToDialog('whats-new')} className='underline' />,
+							}}
+						/>
+					</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>

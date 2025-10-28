@@ -86,3 +86,68 @@ test('Back That Mac Up app port is migrated from 445 to 1445', async () => {
 	const notifications = await umbreld.instance.notifications.get()
 	expect(notifications.includes('migrated-back-that-mac-up')).toBe(true)
 })
+
+test('first run writes version without adding a notification', async () => {
+	// Ensure no version is set on first run
+	const versionBefore = await umbreld.instance.store.get('version')
+	expect(versionBefore).toBeUndefined()
+
+	// Start umbreld
+	await umbreld.instance.start()
+
+	// Verify version is written to store
+	const versionAfter = await umbreld.instance.store.get('version')
+	expect(versionAfter).toBe(umbreld.instance.version)
+
+	// Verify no notification was created (first run)
+	const notifications = await umbreld.instance.notifications.get()
+	expect(notifications.includes('umbrelos-updated')).toBe(false)
+})
+
+test('OS update adds a notification', async () => {
+	const oldVersion = '1.4.2'
+
+	// Set an old version in the store
+	await umbreld.instance.store.set('version', oldVersion)
+
+	// Verify old version is set
+	const versionBefore = await umbreld.instance.store.get('version')
+	expect(versionBefore).toBe(oldVersion)
+
+	// Start umbreld
+	await umbreld.instance.start()
+
+	// Verify version is updated to current version
+	const versionAfter = await umbreld.instance.store.get('version')
+	expect(versionAfter).toBe(umbreld.instance.version)
+	expect(versionAfter).not.toBe(oldVersion)
+
+	// Verify notification was created
+	const notifications = await umbreld.instance.notifications.get()
+	expect(notifications.includes('umbrelos-updated')).toBe(true)
+})
+
+test('restarting with same version does not add a notification', async () => {
+	const currentVersion = umbreld.instance.version
+
+	// Start umbreld
+	await umbreld.instance.start()
+
+	// Verify version is written after first start
+	const versionAfterFirstStart = await umbreld.instance.store.get('version')
+	expect(versionAfterFirstStart).toBe(currentVersion)
+
+	// Stop umbreld
+	await umbreld.instance.stop()
+
+	// Restart umbreld with the same version
+	await umbreld.instance.start()
+
+	// Verify version remains the same
+	const versionAfterRestart = await umbreld.instance.store.get('version')
+	expect(versionAfterRestart).toBe(currentVersion)
+
+	// Verify no notification was created
+	const notifications = await umbreld.instance.notifications.get()
+	expect(notifications.includes('umbrelos-updated')).toBe(false)
+})

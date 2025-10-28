@@ -26,26 +26,31 @@ export function ImmersiveDialogSeparator() {
 export const ImmersiveDialog = Dialog
 export const ImmersiveDialogTrigger = DialogTrigger
 
-export function ImmersiveDialogContent({
-	children,
-	size = 'default',
-	short = false,
-	showScroll = false,
-	...contentProps
-}: {
-	children: React.ReactNode
-	size?: 'default' | 'md' | 'lg' | 'xl'
-	short?: boolean
-	showScroll?: boolean
-} & ComponentPropsWithoutRef<typeof DialogContent>) {
+function ForwardedImmersiveDialogContent(
+	{
+		children,
+		size = 'default',
+		short = false,
+		showScroll = false,
+		...contentProps
+	}: {
+		children: React.ReactNode
+		size?: 'default' | 'sm' | 'md' | 'lg' | 'xl'
+		short?: boolean
+		showScroll?: boolean
+	} & ComponentPropsWithoutRef<typeof DialogContent>,
+	ref: ForwardedRef<HTMLDivElement>,
+) {
 	return (
 		<DialogContent
+			ref={ref}
 			className={cn(
 				dialogContentClass,
 				dialogContentAnimationClass,
 				dialogContentAnimationSlideClass,
 				short ? immersiveContentShortClass : immersiveContentTallClass,
 				// overrides default size
+				size === 'sm' && 'max-w-[600px]',
 				size === 'md' && 'max-w-[900px]',
 				size === 'lg' && 'max-w-[980px]',
 				size === 'xl' && 'max-w-[1440px]',
@@ -65,15 +70,21 @@ export function ImmersiveDialogContent({
 	)
 }
 
-export function ImmersiveDialogSplitContent({
-	children,
-	side,
-	...contentProps
-}: {children: React.ReactNode; side: React.ReactNode} & ComponentPropsWithoutRef<typeof DialogContent>) {
+export const ImmersiveDialogContent = forwardRef(ForwardedImmersiveDialogContent)
+
+function ForwardedImmersiveDialogSplitContent(
+	{
+		children,
+		side,
+		...contentProps
+	}: {children: React.ReactNode; side: React.ReactNode} & ComponentPropsWithoutRef<typeof DialogContent>,
+	ref: ForwardedRef<HTMLDivElement>,
+) {
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
 			<DialogContent
+				ref={ref}
 				className={cn(
 					dialogContentClass,
 					'bg-transparent shadow-none ring-2 ring-white/3', // remove shadow from `dialogContentClass`
@@ -97,6 +108,8 @@ export function ImmersiveDialogSplitContent({
 		</DialogPortal>
 	)
 }
+
+export const ImmersiveDialogSplitContent = forwardRef(ForwardedImmersiveDialogSplitContent)
 
 const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[calc(100dvh-90px)]`
 const immersiveContentTallClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
