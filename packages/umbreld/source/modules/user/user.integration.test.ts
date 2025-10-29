@@ -22,7 +22,7 @@ const testUserCredentials = {
 const testUserLanguage = 'ja'
 
 const testTotpUri =
-	'otpauth://totp/Umbrel?secret=63AU7PMWJX6EQJR6G3KTQFG5RDZ2UE3WVUMP3VFJWHSWJ7MMHTIQ&period=30&digits=6&algorithm=SHA1&issuer=getumbrel.com'
+	'otpauth://totp/Umbrel?secret=63AU7PMWJX6EQJR6G3KTQFG5RDZ2UE3WVUMP3VFJWHSWJ7MMHTIQ&period=30&digits=6&algorithm=SHA1&issuer=umbrel.local'
 
 // The following tests are stateful and must be run in order
 
