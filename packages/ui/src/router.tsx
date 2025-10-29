@@ -33,6 +33,7 @@ const OnboardingStart = React.lazy(() => import('./routes/onboarding'))
 const CreateAccount = React.lazy(() => import('./routes/onboarding/create-account'))
 const AccountCreated = React.lazy(() => import('./routes/onboarding/account-created'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
+const OnboardingRestore = React.lazy(() => import('./routes/onboarding/restore'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -156,6 +157,14 @@ export const router = createBrowserRouter([
 						element: (
 							<EnsureUserDoesntExist>
 								<OnboardingStart />
+							</EnsureUserDoesntExist>
+						),
+					},
+					{
+						path: 'restore',
+						element: (
+							<EnsureUserDoesntExist>
+								<OnboardingRestore />
 							</EnsureUserDoesntExist>
 						),
 					},

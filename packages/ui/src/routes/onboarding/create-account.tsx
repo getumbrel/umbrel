@@ -1,11 +1,9 @@
 import {useState} from 'react'
-import {Link} from 'react-router-dom'
 
-import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, footerLinkClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
+import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -67,15 +65,7 @@ export default function CreateAccount() {
 			transitionTitle={false}
 			subTitle={t('onboarding.create-account.subtitle')}
 			subTitleMaxWidth={630}
-			footer={
-				<div className='flex flex-col items-center gap-3'>
-					{/* TODO: consider adding drawer on mobile */}
-					<LanguageDropdown />
-					<Link to={links.support} target='_blank' className={footerLinkClass}>
-						{t('onboarding.contact-support')}
-					</Link>
-				</div>
-			}
+			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}
 		>
 			<form onSubmit={onSubmit} className='w-full'>
 				<fieldset disabled={isLoading} className='flex flex-col items-center gap-5'>

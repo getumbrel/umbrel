@@ -89,3 +89,10 @@ export function getRepositoryRelativePath(path: string): string {
 	if (!inner.startsWith('/')) inner = '/' + inner
 	return inner
 }
+
+// Extracts the repository path (parent directory) from a backup file path.
+// e.g., /Network/host/data/Umbrel Backup.backup -> /Network/host/data
+export function getRepositoryPathFromBackupFile(backupFilePath: string): string {
+	const path = backupFilePath.trim()
+	return path.endsWith(BACKUP_FILE_NAME) ? path.slice(0, -BACKUP_FILE_NAME.length).replace(/\/$/, '') || '/' : path
+}

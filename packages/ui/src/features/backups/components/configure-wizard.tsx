@@ -15,6 +15,7 @@ import {
 } from '@/features/backups/hooks/use-backups'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
 import {getDisplayRepositoryPath} from '@/features/backups/utils/filepath-helpers'
+import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
@@ -64,15 +65,10 @@ export function BackupsConfigureWizard() {
 	})
 
 	// Sort backups from latest to oldest
-	const backups = React.useMemo(() => {
-		if (!backupsUnsorted) return undefined
-		return [...backupsUnsorted].sort((a, b) => {
-			// Sort by time in descending order (latest first)
-			const timeA = a.time ? new Date(a.time).getTime() : 0
-			const timeB = b.time ? new Date(b.time).getTime() : 0
-			return timeB - timeA
-		})
-	}, [backupsUnsorted])
+	const backups = React.useMemo(
+		() => (backupsUnsorted ? sortBackupsByTimeDesc(backupsUnsorted as any[]) : undefined),
+		[backupsUnsorted],
+	)
 
 	// Backup progress for disabling buttons and showing inline progress
 	const backupProgressQ = useBackupProgress(1000)

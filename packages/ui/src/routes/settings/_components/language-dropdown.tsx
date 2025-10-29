@@ -1,5 +1,5 @@
+import {Globe} from 'lucide-react'
 import {useState} from 'react'
-import {TbLanguage} from 'react-icons/tb'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {IconButton} from '@/components/ui/icon-button'
@@ -26,7 +26,7 @@ export function LanguageDropdownTrigger() {
 
 	return (
 		<DropdownMenuTrigger asChild>
-			<IconButton icon={TbLanguage}>
+			<IconButton icon={Globe}>
 				{languages.find(({code}) => code === activeCode)?.name}
 				<ChevronDown />
 			</IconButton>

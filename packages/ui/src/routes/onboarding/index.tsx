@@ -1,10 +1,9 @@
 import {useEffect, useRef} from 'react'
 import {Link} from 'react-router-dom'
 
-import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
+import {buttonClass, Layout} from '@/layouts/bare/shared'
+import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {t} from '@/utils/i18n'
 import {supportedLanguageCodes} from '@/utils/language'
 
@@ -53,15 +52,7 @@ export default function OnboardingStart() {
 			transitionTitle={false}
 			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
-			footer={
-				<div className='flex flex-col items-center gap-3'>
-					{/* TODO: consider adding drawer on mobile */}
-					<LanguageDropdown />
-					<Link to={links.support} target='_blank' className={footerLinkClass}>
-						{t('onboarding.contact-support')}
-					</Link>
-				</div>
-			}
+			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}
 		>
 			<Link to='/onboarding/create-account' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
 				{t('onboarding.start.continue')}

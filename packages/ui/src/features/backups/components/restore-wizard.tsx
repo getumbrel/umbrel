@@ -1,6 +1,6 @@
 import {zodResolver} from '@hookform/resolvers/zod'
 import {formatDistanceToNow} from 'date-fns'
-import {AlertOctagon, ArrowLeft, ChevronDown, Loader2, Plus, Server} from 'lucide-react'
+import {AlertOctagon, ArrowLeft, Loader2, Plus, Server} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {FormProvider, useForm, type Resolver, type SubmitHandler} from 'react-hook-form'
 import {Trans} from 'react-i18next/TransWithoutContext'
@@ -11,6 +11,7 @@ import {z} from 'zod'
 import {ErrorAlert} from '@/components/ui/alert'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
 import {ReviewCard} from '@/features/backups/components/review-card'
 import {EmptyTile as EmptyCard, LoadingTile as LoadingCard} from '@/features/backups/components/tiles'
 import {
@@ -26,8 +27,10 @@ import {
 	BACKUP_FILE_NAME,
 	getDisplayRepositoryPath,
 	getRepositoryDisplayName,
+	getRepositoryPathFromBackupFile,
 	getRepositoryRelativePath,
 } from '@/features/backups/utils/filepath-helpers'
+import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
@@ -46,12 +49,6 @@ import {
 	AlertDialogTitle,
 } from '@/shadcn-components/ui/alert-dialog'
 import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {languageCodeToDateLocale} from '@/utils/date-time'
@@ -134,15 +131,10 @@ export function BackupsRestoreWizard() {
 	})
 
 	// Sort backups from latest to oldest
-	const backups = useMemo(() => {
-		if (!backupsUnsorted) return undefined
-		return [...backupsUnsorted].sort((a, b) => {
-			// Sort by time in descending order (latest first)
-			const timeA = a.time ? new Date(a.time).getTime() : 0
-			const timeB = b.time ? new Date(b.time).getTime() : 0
-			return timeB - timeA
-		})
-	}, [backupsUnsorted])
+	const backups = useMemo(
+		() => (backupsUnsorted ? sortBackupsByTimeDesc(backupsUnsorted as Backup[]) : undefined),
+		[backupsUnsorted],
+	)
 
 	// Watches for gating
 	const backupId = form.watch('backupId')
@@ -174,10 +166,7 @@ export function BackupsRestoreWizard() {
 			try {
 				// Route enforces auth when a user exists; otherwise allowed during recovery
 				// Extract parent directory from backup file path
-				const path = manualPath.trim()
-				const repositoryPath = path.endsWith(BACKUP_FILE_NAME)
-					? path.slice(0, -BACKUP_FILE_NAME.length).replace(/\/$/, '') || '/'
-					: path
+				const repositoryPath = getRepositoryPathFromBackupFile(manualPath)
 				const id = await connectToRepository({path: repositoryPath, password: manualPassword})
 				form.setValue('repositoryId', id, {shouldValidate: true})
 				setStep(Step.Backups)
@@ -524,36 +513,12 @@ function RepositoryStep({
 										setBrowserOpen(true)
 									}}
 								/>
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											type='button'
-											size='sm'
-											className='absolute right-5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1'
-										>
-											{t('backups-restore.choose')}
-											<ChevronDown className='h-3 w-3' />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align='end' className='min-w-[240px]'>
-										<DropdownMenuItem
-											onSelect={() => {
-												setBrowserRoot('/Network')
-												setBrowserOpen(true)
-											}}
-										>
-											{t('backups-restore.browse-nas')}
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onSelect={() => {
-												setBrowserRoot('/External')
-												setBrowserOpen(true)
-											}}
-										>
-											{t('backups-restore.browse-external')}
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
+								<RestoreLocationDropdown
+									onSelect={(root) => {
+										setBrowserRoot(root)
+										setBrowserOpen(true)
+									}}
+								/>
 							</div>
 						</div>
 						<div>
