@@ -32,6 +32,7 @@ import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNetworkDeviceType} from '@/features/files/hooks/use-network-device-type'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
+import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useConfirmation} from '@/providers/confirmation'
@@ -523,7 +524,7 @@ function DestinationStep({
 										selected={!!selected}
 										onClick={() => onChangeDestination({type: 'nas', host, rootPath: `/Network/${host}`})}
 									>
-										<BackupDeviceIcon path={`/Network/${host}`} connected className='mb-2 size-12 opacity-90' />
+										<BackupDeviceIcon path={`/Network/${host}`} connected className='mb-2 size-12' />
 										<span className='w-full truncate text-center text-[12px]' title={host}>
 											{host}
 										</span>
@@ -558,9 +559,10 @@ function DestinationStep({
 										onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
 									>
 										<div className='mb-2 flex h-12 w-12 items-center justify-center'>
-											<BackupDeviceIcon path={firstMount} connected className='size-8 opacity-80' />
+											<BackupDeviceIcon path={firstMount} connected className='size-11' />
 										</div>
 										<div className='truncate text-center text-[12px]'>{label}</div>
+										<div className='text-center text-[11px] text-white/40'>{formatFilesystemSize(p.size)}</div>
 									</ServerCard>,
 								]
 							}),

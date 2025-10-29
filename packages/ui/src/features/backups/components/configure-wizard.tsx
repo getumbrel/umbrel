@@ -450,7 +450,12 @@ function RepositoryDetails({
 
 			<div className='flex justify-end gap-2'>
 				<BackupNowButton repoId={repo.id} hidden={!isConnected || typeof inProgressPercent === 'number'} />
-				<Button variant='destructive' disabled={isForgettingRepository} onClick={() => setConfirmRemoveOpen(true)}>
+				<Button
+					size='sm'
+					variant='destructive'
+					disabled={isForgettingRepository}
+					onClick={() => setConfirmRemoveOpen(true)}
+				>
 					<span className={isForgettingRepository ? 'opacity-0' : 'opacity-100'}>
 						{t('backups-configure.remove-backup-location')}
 					</span>
