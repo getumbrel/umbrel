@@ -25,7 +25,7 @@ import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-bac
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
 import {useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
-import {getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
+import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
@@ -374,7 +374,14 @@ export function BackupsSetupWizard() {
 					onPasswordChange={setConnectPassword}
 					onClose={() => setConnectExistingOpen(false)}
 					onConnect={async () => {
-						await connectExistingRepository({path: folder!, password: connectPassword})
+						// Remove the backup file name from the folder path to get the repo path
+						// in case the user selected the backup file itself
+						await connectExistingRepository({
+							path: folder!.endsWith(`/${BACKUP_FILE_NAME}`)
+								? folder!.slice(0, -(BACKUP_FILE_NAME.length + 1))
+								: folder!,
+							password: connectPassword,
+						})
 						setConnectExistingOpen(false)
 						navigate('/settings/backups/configure', {preventScrollReset: true})
 					}}

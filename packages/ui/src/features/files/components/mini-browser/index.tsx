@@ -372,7 +372,7 @@ function Node({
 		: entry.type === 'directory' || selectionMode === 'files-and-folders'
 
 	// Visual disabling: only show disabled state when NOT using selectableFilter (preserves expand/collapse UX)
-	const isDisabled = !selectableFilter && (isRepositoryDir || !isSelectable)
+	const isDisabled = !selectableFilter && !isSelectable
 	const isFaded = (isDisabled || !isSelectable) && entry.type !== 'directory'
 
 	return (

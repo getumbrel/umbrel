@@ -32,17 +32,26 @@ export function useExistingBackupDetection(folder: string | undefined, repositor
 				if (!cancelled) setRepositoryPath(repoPath)
 
 				// 1) First, check if this repository is already configured locally
-				const isAlreadyConfigured = (repositories || []).some((r) => r.path === repoPath)
+				// We check for both the repo path (eg. /External/USB-DISK/Data/Umbrel Backup.backup) and the folder path (eg. /External/USB-DISK/Data)
+				const isAlreadyConfigured = (repositories || []).some((r) => r.path === repoPath || r.path === folder)
 				if (isAlreadyConfigured) {
 					if (!cancelled) setStatus('already-configured')
 					return
 				}
 
-				// 2) Otherwise, directly attempt to list the constructed repo path.
+				// 2) Otherwise, check if the folder itself is the backup file, if so, attempt to list the constructed repo path.
 				// If it succeeds, the repo folder exists (even if empty).
+				if (folder.endsWith(BACKUP_FILE_NAME)) {
+					await utils.files.list.fetch({path: folder, limit: 1, sortBy: 'name', sortOrder: 'ascending'})
+					if (!cancelled) setStatus('exists-not-configured')
+					return
+				}
+
+				// 3) Otherwise, attempt to list the constructed repo path.
 				await utils.files.list.fetch({path: repoPath, limit: 1, sortBy: 'name', sortOrder: 'ascending'})
 				if (!cancelled) setStatus('exists-not-configured')
-			} catch {
+				return
+			} catch (error) {
 				// On any error (e.g., permission or transient listing error), fall back
 				// to a neutral state rather than blocking the flow
 				if (!cancelled) {
