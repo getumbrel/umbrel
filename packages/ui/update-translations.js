@@ -53,14 +53,38 @@ function getBaseEnglishContent(baseBranch) {
 	}
 }
 
-// Get modified keys between current and base en.json
-function getModifiedKeys(currentContent, baseContent) {
+// Get modified keys that were actually changed in this PR
+function getModifiedKeys(currentContent, baseBranch) {
 	const modifiedKeys = {}
 
-	// Find added or modified keys
-	for (const [key, value] of Object.entries(currentContent)) {
-		if (!baseContent || !(key in baseContent) || baseContent[key] !== value) {
-			modifiedKeys[key] = value
+	try {
+		// Get the merge base between HEAD and the base branch
+		// This is the common ancestor, which represents where the PR branch diverged
+		const mergeBase = execSync(`git merge-base HEAD origin/${baseBranch}`, {encoding: 'utf8'}).trim()
+
+		// Get the en.json content from the merge base
+		const baseEnJsonPath = 'packages/ui/public/locales/en.json'
+		const result = execSync(`git show ${mergeBase}:${baseEnJsonPath}`, {encoding: 'utf8'})
+		const mergeBaseContent = JSON.parse(result)
+
+		console.log(`Comparing against merge base: ${mergeBase}`)
+
+		// Find added or modified keys compared to the merge base
+		for (const [key, value] of Object.entries(currentContent)) {
+			if (!(key in mergeBaseContent) || mergeBaseContent[key] !== value) {
+				modifiedKeys[key] = value
+			}
+		}
+	} catch (error) {
+		console.log(`Error getting merge base content: ${error.message}`)
+		console.log('Falling back to comparing against current base branch')
+
+		// Fallback: get current base branch content
+		const baseContent = getBaseEnglishContent(baseBranch)
+		for (const [key, value] of Object.entries(currentContent)) {
+			if (!baseContent || !(key in baseContent) || baseContent[key] !== value) {
+				modifiedKeys[key] = value
+			}
 		}
 	}
 
@@ -322,23 +346,16 @@ async function start() {
 	if (isCI && baseBranch) {
 		console.log(`Running in CI mode with base branch: ${baseBranch}`)
 
-		// Get base en.json and find modified keys
-		const baseEnglishContent = getBaseEnglishContent(baseBranch)
+		// Find modified keys by comparing against merge base
+		const modifiedKeys = getModifiedKeys(englishReferenceContent, baseBranch)
+		const modifiedKeysCount = Object.keys(modifiedKeys).length
 
-		if (baseEnglishContent) {
-			const modifiedKeys = getModifiedKeys(englishReferenceContent, baseEnglishContent)
-			const modifiedKeysCount = Object.keys(modifiedKeys).length
-
-			if (modifiedKeysCount > 0) {
-				console.log(`Found ${modifiedKeysCount} modified/added keys in en.json`)
-				// Only regenerate keys that were modified and not yet translated
-				await checkAndGenerateTranslations(englishReferenceContent, modifiedKeys, baseBranch)
-			} else {
-				console.log('No keys modified in en.json compared to base branch')
-			}
+		if (modifiedKeysCount > 0) {
+			console.log(`Found ${modifiedKeysCount} modified/added keys in en.json`)
+			// Only regenerate keys that were modified and not yet translated
+			await checkAndGenerateTranslations(englishReferenceContent, modifiedKeys, baseBranch)
 		} else {
-			console.log('Could not get base en.json, falling back to standard regeneration')
-			await checkAndGenerateTranslations(englishReferenceContent)
+			console.log('No keys modified in en.json compared to merge base')
 		}
 	} else {
 		console.log('Running in local/manual mode - regenerating all missing translations')
