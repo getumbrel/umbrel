@@ -11,17 +11,17 @@
        Get an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> for the full experience, or install umbrelOS on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a> for free.
     <br />
     <br />
-    <a href="https://twitter.com/umbrel">
+    <a href="https://x.com/umbrel">
       <img src="https://img.shields.io/twitter/follow/umbrel?style=social" />
     </a>
-    <a href="https://t.me/getumbrel">
-      <img src="https://img.shields.io/badge/community-chat-%235351FB">
+    <a href="https://discord.gg/efNtFzqtdx">
+      <img src="https://img.shields.io/discord/936694604231766046?logo=discord&logoColor=5351FB&label=Discord&labelColor=white&color=5351FB&cacheSeconds=60">
     </a>
     <a href="https://reddit.com/r/getumbrel">
       <img src="https://img.shields.io/reddit/subreddit-subscribers/getumbrel?style=social">
     </a>
-    <a href="https://community.getumbrel.com">
-      <img src="https://img.shields.io/badge/community-forum-%235351FB">
+    <a href="https://community.umbrel.com">
+      <img src="https://img.shields.io/discourse/users?server=https%3A%2F%2Fcommunity.umbrel.com&style=flat&label=Community%20Forum&color=5351FB&cacheSeconds=60">
     </a>
   </p>
 </p>
