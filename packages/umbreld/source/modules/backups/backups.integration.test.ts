@@ -487,7 +487,7 @@ test('backups respect user ignored paths', async () => {
 	expect(files).toContain('home')
 })
 
-test.only('backups respect app backupIgnore glob patterns', async () => {
+test('backups respect app backupIgnore glob patterns', async () => {
 	// Install app
 	await expect(umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 
