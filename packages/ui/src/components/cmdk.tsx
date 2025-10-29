@@ -239,7 +239,7 @@ function CmdkContent() {
 			<SettingsSearchItem value={'2fa'} onSelect={() => navigate('/settings/2fa')}>
 				{t('2fa')}
 			</SettingsSearchItem>
-			<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/tor')} />
+			<SettingsSearchItem value={t('remote-tor-access')} onSelect={() => navigate('/settings/advanced/tor')} />
 			<SettingsSearchItem value={t('migration-assistant')} onSelect={() => navigate('/settings/migration-assistant')} />
 			<SettingsSearchItem value={t('language')} onSelect={() => navigate('/settings/language')} />
 			<SettingsSearchItem value={t('troubleshoot')} onSelect={() => navigate('/settings/troubleshoot')} />

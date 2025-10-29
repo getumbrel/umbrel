@@ -15,14 +15,12 @@ import {Link, useNavigate} from 'react-router-dom'
 
 // import {useNavigate} from 'react-router-dom'
 
-import {TorIcon2} from '@/assets/tor-icon2'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
@@ -45,7 +43,6 @@ export function SettingsContentMobile() {
 	const cpuTemperature = useCpuTemperature()
 	const deviceInfo = useDeviceInfo()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
-	const tor = useTorEnabled()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 
@@ -164,16 +161,6 @@ export function SettingsContentMobile() {
 					onClick={() => navigate('2fa')}
 				/>
 				<ListRowMobile
-					icon={TorIcon2}
-					title={
-						<span className='flex items-center gap-2' onClick={() => navigate('tor')}>
-							{t('remote-tor-access')} {tor.enabled && <TorPulse />}
-						</span>
-					}
-					description={t('tor-description')}
-					onClick={() => navigate('tor')}
-				/>
-				<ListRowMobile
 					icon={TbHistory}
 					title={t('backups')}
 					description={t('backups-description')}
@@ -229,7 +216,3 @@ export function SettingsContentMobile() {
 		</div>
 	)
 }
-
-const TorPulse = () => (
-	<div className='inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-[#299E16] ring-3 ring-[#16FF001A]/10' />
-)

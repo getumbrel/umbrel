@@ -32,7 +32,6 @@ const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot/index'))
 const TerminalDialog = React.lazy(() => import('@/routes/settings/terminal/index'))
-const ConfirmEnableTorDialog = React.lazy(() => import('@/routes/settings/tor'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
 const BackupsRestoreDialog = React.lazy(() => import('@/features/backups/index'))
 
@@ -124,7 +123,6 @@ export function Settings() {
 						{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
 						<Route path='/wifi' Component={Wifi} />
 						<Route path='/wifi-unsupported' Component={WifiUnsupported} />
-						<Route path='/tor' Component={isMobile ? TorDrawer : ConfirmEnableTorDialog} />
 						{/* Backup: mobile drawer (/backups) opens first on mobile to give same options as desktop */}
 						{isMobile && <Route path='/backups' Component={BackupsMobileDrawer} />}
 						<Route path='/backups/*' Component={BackupsRestoreDialog} />

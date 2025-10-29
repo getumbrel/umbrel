@@ -15,15 +15,11 @@ import {useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/assets/chevron-down'
 import {Card} from '@/components/ui/card'
-import {CopyableField} from '@/components/ui/copyable-field'
-import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
-import {Loading} from '@/components/ui/loading'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
-import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
@@ -55,7 +51,6 @@ export function SettingsContent() {
 	const linkToDialog = useLinkToDialog()
 	const [languageOpen, setLanguageOpen] = useState(false)
 
-	const tor = useTorEnabled()
 	const cpuTemp = useCpuTemperature()
 
 	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
@@ -63,10 +58,6 @@ export function SettingsContent() {
 		t.wifi.supported(),
 		t.user.is2faEnabled(),
 	])
-
-	const hiddenServiceQ = trpcReact.system.hiddenService.useQuery(undefined, {
-		enabled: tor.enabled,
-	})
 
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
 
@@ -165,21 +156,6 @@ export function SettingsContent() {
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
-					<ListRow title={t('remote-tor-access')} description={t('tor-description')} disabled={tor.isLoading}>
-						<div className='flex flex-wrap gap-3'>
-							{tor.enabled && <CopyableField narrow value={hiddenServiceQ.data ?? ''} />}
-							<Switch
-								checked={tor.enabled}
-								onCheckedChange={(checked) => (checked ? navigate('tor') : tor.setEnabled(false))}
-							/>
-						</div>
-					</ListRow>
-					{tor.isMutLoading && (
-						<CoverMessage>
-							<Loading>{t('tor.disable.progress')}</Loading>
-							<CoverMessageParagraph>{t('tor.disable.description')}</CoverMessageParagraph>
-						</CoverMessage>
-					)}
 					{/* Backups */}
 					<ListRow title={t('backups')} description={t('backups-description')}>
 						<div className='flex flex-wrap gap-2 pt-3'>
