@@ -43,12 +43,27 @@ export default class NetworkStorage {
 		this.logger.log('Stopping network storage')
 		this.isRunning = false
 
+		const ONE_SECOND = 1000
+
 		// Wait for background job to finish
-		this.logger.log('Waiting for background job to finish')
-		if (this.watchJobPromise) await this.watchJobPromise
+		if (this.watchJobPromise) {
+			await Promise.race([
+				setTimeout(ONE_SECOND * 10),
+				(async () => {
+					this.logger.log('Waiting for background job to finish')
+					await this.watchJobPromise!.catch(() => {})
+				})(),
+			])
+		}
 
 		// Cleanup any currently mounted shares
-		await this.#unmountAllShares().catch((error) => this.logger.error('Error unmounting shares', error))
+		await Promise.race([
+			setTimeout(ONE_SECOND * 10),
+			(async () => {
+				this.logger.log('Unmounting shares')
+				await this.#unmountAllShares().catch((error) => this.logger.error('Error unmounting shares', error))
+			})(),
+		])
 	}
 
 	// List all shares from the store

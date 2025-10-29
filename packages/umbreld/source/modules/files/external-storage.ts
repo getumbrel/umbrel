@@ -1,4 +1,6 @@
 import nodePath from 'node:path'
+import {setTimeout} from 'node:timers/promises'
+
 import pWaitFor from 'p-wait-for'
 
 import fse from 'fs-extra'
@@ -131,7 +133,16 @@ export default class ExternalStorage {
 		this.#removeDeviceChangeListener?.()
 
 		// Unmount all external devices
-		await this.#unmountAllMountedExternalDevices()
+		const ONE_SECOND = 1000
+		await Promise.race([
+			setTimeout(ONE_SECOND * 10),
+			(async () => {
+				this.logger.log('Unmounting all external devices')
+				await this.#unmountAllMountedExternalDevices().catch((error) =>
+					this.logger.error('Error unmounting external devices', error),
+				)
+			})(),
+		])
 	}
 
 	// Mount external disks
