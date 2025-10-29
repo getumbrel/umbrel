@@ -34,7 +34,7 @@ export default function ConfirmEnableTorDialog() {
 	if (isMutLoading) {
 		return (
 			<CoverMessage>
-				<Loading>Enabling Tor</Loading>
+				<Loading>{t('enabling-tor')}</Loading>
 				<CoverMessageParagraph>{t('tor.enable.description')}</CoverMessageParagraph>
 			</CoverMessage>
 		)

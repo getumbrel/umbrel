@@ -398,7 +398,7 @@ export function Connect({network, status, onConnect, error, passwordInputRef}: C
 				<PasswordInput
 					inputRef={passwordInputRef}
 					autoFocus
-					label='Password'
+					label={t('password')}
 					sizeVariant={'short'}
 					className='flex-1'
 					value={password}
@@ -406,7 +406,7 @@ export function Connect({network, status, onConnect, error, passwordInputRef}: C
 					error={error}
 				/>
 				<Button type='submit' variant='primary' size='input-short'>
-					Connect
+					{t('connect')}
 				</Button>
 			</form>
 		)

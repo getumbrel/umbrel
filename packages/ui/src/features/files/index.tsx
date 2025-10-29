@@ -14,6 +14,7 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
+import {t} from '@/utils/i18n'
 
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))
 const PermanentlyDeleteConfirmationDialog = lazy(
@@ -62,7 +63,7 @@ export default function FilesLayout() {
 								onClick={() => setIsMobileSidebarOpen(true)}
 							/>
 						) : null}
-						<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[188px]'>Files</SheetTitle>
+						<SheetTitle className='mr-2 leading-none lg:mr-0 lg:min-w-[188px]'>{t('files')}</SheetTitle>
 					</div>
 				</SheetHeader>
 				{/* FileViewer renders the viewerItem from the store */}

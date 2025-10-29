@@ -104,7 +104,7 @@ export function CommunityAppStoreDialog() {
 						<form onSubmit={handleSubmit}>
 							<fieldset disabled={addAppStoreMut.isPending} className='flex flex-col gap-5'>
 								<Input
-									placeholder='URL'
+									placeholder={t('url')}
 									value={url}
 									onValueChange={setUrl}
 									variant={formError ? 'destructive' : 'default'}
