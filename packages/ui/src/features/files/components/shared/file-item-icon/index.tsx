@@ -24,6 +24,7 @@ import {FolderIcon as SimpleFolderIcon} from '@/features/files/components/shared
 import {UnknownFileThumbnail} from '@/features/files/components/shared/file-item-icon/unknown-file-thumbnail'
 import {
 	APPS_PATH,
+	BACKUPS_PATH,
 	FILE_TYPE_MAP,
 	HOME_PATH,
 	IMAGE_EXTENSIONS_WITH_IMAGE_THUMBNAILS,
@@ -53,10 +54,26 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	const {isPathShared} = useShares()
 	const isShared = isPathShared(item.path)
 
-	const isAppFolder =
-		item.path.startsWith(APPS_PATH) &&
-		// check if it's not a nested app directory, eg. we want to return true for /Apps/bitcoin but false for /Apps/bitcoin/data
-		item.path.slice(APPS_PATH.length).split('/').length === 2
+	// Check if this is an app folder in either normal mode or rewind mode
+	// Normal: /Apps/bitcoin
+	// Rewind: /Backups/some-mount-dir/Apps/bitcoin
+	const isAppFolder = (() => {
+		// Match normal app path: /Apps/appId (but not /Apps/appId/data)
+		if (item.path.startsWith(APPS_PATH)) {
+			return item.path.slice(APPS_PATH.length).split('/').length === 2
+		}
+
+		// Match rewind app path: /Backups/xxx/Apps/appId (but not /Backups/xxx/Apps/appId/data)
+		if (item.path.startsWith(BACKUPS_PATH)) {
+			// Example: /Backups/2025-10-29T20:32:32.710Z/Apps/transmission
+			// Split: ['', 'Backups', '2025-10-29T20:32:32.710Z', 'Apps', 'transmission']
+			const parts = item.path.split('/')
+			// Check: parts[0] === '', parts[1] === 'Backups', parts[3] === 'Apps', parts[4] === appId, parts[5] === undefined
+			return parts.length === 5 && parts[1] === 'Backups' && parts[3] === 'Apps'
+		}
+
+		return false
+	})()
 
 	// External storage icon if the user directly navigates to umbrel.local/files/External
 	if (item.type === 'directory' && isDirectoryAnExternalDrivePartition(item.path)) {
@@ -96,7 +113,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 		return (
 			<div className='relative'>
 				<FolderIcon className={className} path={item.path} useAnimatedIcon={useAnimatedIcon} isHovered={isHovered} />
-				{isAppFolder ? <AppFolderBottomIcon appId={item.path.split(APPS_PATH).pop() || ''} /> : null}
+				{isAppFolder ? <AppFolderBottomIcon appId={extractAppIdFromPath(item.path)} /> : null}
 
 				{/* we add it here because only folders can be shared */}
 				{isShared ? (
@@ -343,4 +360,12 @@ const NetworkDeviceIcon = ({path, className}: {path: string; className?: string}
 
 	// Default to generic NAS icon
 	return <img src={isMounted ? activeNasIcon : nasIconInactive} alt='NAS' className={className} draggable={false} />
+}
+
+// Helper function to extract app ID from both normal and rewind paths
+function extractAppIdFromPath(path: string): string {
+	// For /Apps/bitcoin or /Backups/xxx/Apps/bitcoin, extract "bitcoin"
+	const pattern = new RegExp(`${APPS_PATH}/([^/]+)`)
+	const match = path.match(pattern)
+	return match?.[1] || ''
 }
