@@ -74,7 +74,7 @@ export default function TwoFactorEnableDialog() {
 	)
 }
 
-const paragraphClass = tw`text-left text-13 font-normal leading-tight -tracking-2 text-white/40`
+const paragraphClass = tw`text-left text-13 font-normal leading-tight -tracking-2 text-white/60`
 
 function Inner({
 	qrCodeSize = 240,
@@ -96,11 +96,11 @@ function Inner({
 				/>
 			</AnimateInQr>
 			<div className='w-full space-y-2 text-center'>
-				<p className='text-15 font-normal -tracking-2 opacity-60'>{t('2fa.enable.or-paste')}</p>
+				<p className='text-13 font-normal leading-tight -tracking-2 text-white/60'>{t('2fa.enable.or-paste')}</p>
 				<CopyableField value={totpUri} />
 			</div>
 			<Separator />
-			<p className='text-center text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
+			<p className='text-center text-sm font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)

@@ -18,6 +18,7 @@ type IconProps = {
 
 export const sizeMap = {
 	sm: '12px',
+	md: '14px',
 	default: '14px',
 	'input-short': '16px',
 	'md-squared': '16px',

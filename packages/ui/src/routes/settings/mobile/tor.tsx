@@ -46,7 +46,7 @@ export function TorDrawer() {
 						</div>
 					</label>
 				</div>
-				<div>{t('tor.enable.description')}</div>
+				<div className='text-12 font-normal leading-tight -tracking-2 text-white/60'>{t('tor.enable.description')}</div>
 				{enabled && (
 					<div className='space-y-2'>
 						<span className='text-15 font-medium -tracking-4'>{t('tor.hidden-service')}</span>

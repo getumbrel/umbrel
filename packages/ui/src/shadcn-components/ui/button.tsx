@@ -13,16 +13,17 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					'bg-white/6 active:bg-white/3 hover:bg-white/10 focus:bg-white/10 border-[0.5px] border-white/6 ring-white/6 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
+					'bg-white/10 active:bg-white/6 hover:bg-white/10 focus:bg-white/10 border-[0.5px] border-white/20 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
 				primary:
 					'bg-brand hover:bg-brand-lighter focus:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
 				secondary:
-					'bg-white/80 hover:bg-white focus:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
+					'bg-white/90 hover:bg-white focus:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
 				destructive:
 					'bg-destructive2 hover:bg-destructive2-lighter focus:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
 			},
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',
+				md: 'rounded-full h-[30px] min-w-[80px] px-4 text-13',
 				'md-squared': 'rounded-8 h-[36px] px-[10px] text-13 gap-2',
 				default: 'rounded-full h-[30px] px-2.5 text-12',
 				'input-short': 'rounded-full h-9 px-4 text-13 font-medium min-w-[80px]',

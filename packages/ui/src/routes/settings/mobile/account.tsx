@@ -71,6 +71,7 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 						{t('confirm')}
 					</Button>
 				</DrawerFooter>
+				<div className='' />
 			</fieldset>
 		</form>
 	)

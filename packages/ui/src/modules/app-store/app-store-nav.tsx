@@ -64,7 +64,7 @@ export function AppStoreNav({activeId, allCategories}: {activeId: string; allCat
 				<ButtonLink
 					key={categoryId}
 					to={categoryIdToPath(categoryId)}
-					variant={categoryId === activeId ? 'primary' : 'default'}
+					variant={categoryId === activeId ? 'secondary' : 'default'}
 					ref={categoryId === activeId ? scrollToRef : undefined}
 					size={size}
 					unstable_viewTransition

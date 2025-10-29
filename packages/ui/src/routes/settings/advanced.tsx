@@ -8,7 +8,7 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
+import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/shadcn-components/ui/drawer'
 import {Switch} from '@/shadcn-components/ui/switch'
 import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
@@ -30,11 +30,11 @@ export default function AdvancedSettingsDrawerOrDialog() {
 	if (isMobile) {
 		return (
 			<Drawer {...dialogProps}>
-				<DrawerContent>
-					<div className='space-y-6 px-5 py-6'>
-						<DrawerHeader>
-							<DrawerTitle>{title}</DrawerTitle>
-						</DrawerHeader>
+				<DrawerContent fullHeight>
+					<DrawerHeader>
+						<DrawerTitle>{title}</DrawerTitle>
+					</DrawerHeader>
+					<DrawerScroller>
 						<div className='flex flex-col gap-y-3'>
 							<label className={cardClass}>
 								<CardText title={t('terminal')} description={t('terminal-description')} />
@@ -71,7 +71,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 								</IconButtonLink>
 							</label>
 						</div>
-					</div>
+					</DrawerScroller>
 				</DrawerContent>
 			</Drawer>
 		)

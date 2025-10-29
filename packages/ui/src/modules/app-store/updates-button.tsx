@@ -22,7 +22,7 @@ export function UpdatesButton() {
 	return (
 		<>
 			{/* w-auto because 'dialog' size buttons take up full width on mobile */}
-			<ButtonLink to={linkToDialog('updates')} size='dialog' className='relative h-[33px] w-auto bg-white/10'>
+			<ButtonLink to={linkToDialog('updates')} size='md' className='relative w-auto' variant='primary'>
 				<TbCircleArrowUp />
 				{t('app-store.updates')}
 				<NotificationBadge count={appsWithUpdates.length} />

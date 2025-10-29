@@ -32,7 +32,7 @@ export function UpdatesDialogConnected() {
 			appsWithUpdates={appsWithUpdates}
 			titleRightChildren={
 				<Button
-					size='dialog'
+					size='md'
 					variant='primary'
 					onClick={updateAll.updateAll}
 					className='w-auto'

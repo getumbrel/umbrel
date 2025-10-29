@@ -1,14 +1,14 @@
 import {useId, useState} from 'react'
 
-import {listClass, ListRadioItem} from '@/components/ui/list'
+import {ListRadioItem} from '@/components/ui/list'
 import {useLanguage} from '@/hooks/use-language'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
 	DrawerDescription,
-	DrawerFooter,
 	DrawerHeader,
+	DrawerScroller,
 	DrawerTitle,
 } from '@/shadcn-components/ui/drawer'
 import {t} from '@/utils/i18n'
@@ -36,27 +36,27 @@ export function LanguageDrawer() {
 
 	return (
 		<Drawer {...dialogProps}>
-			<DrawerContent>
+			<DrawerContent fullHeight>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{t('language.select-description')}</DrawerDescription>
 				</DrawerHeader>
 
-				<div className={listClass}>
-					{languages.map(({code, name}) => (
-						<ListRadioItem
-							key={code}
-							name={radioName}
-							checked={temporaryCode === code}
-							onSelect={() => changeLanguage(code)}
-							disabled={temporaryCode !== activeCode}
-						>
-							{name}
-						</ListRadioItem>
-					))}
-				</div>
-				{/* empty `DrawerFooter` adding bottom spacing */}
-				<DrawerFooter></DrawerFooter>
+				<DrawerScroller>
+					<div className='divide-y divide-white/6 rounded-12 bg-white/6'>
+						{languages.map(({code, name}) => (
+							<ListRadioItem
+								key={code}
+								name={radioName}
+								checked={temporaryCode === code}
+								onSelect={() => changeLanguage(code)}
+								disabled={temporaryCode !== activeCode}
+							>
+								{name}
+							</ListRadioItem>
+						))}
+					</div>
+				</DrawerScroller>
 			</DrawerContent>
 		</Drawer>
 	)

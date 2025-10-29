@@ -36,7 +36,7 @@ export function ListRow({
 			tabIndex={isActive ? 0 : -1}
 			ref={ref}
 			className={cn(
-				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 py-4 outline-none',
+				'flex items-center justify-between gap-x-4 gap-y-2.5 py-4 outline-none',
 				// Show hover effect by default
 				'bg-gradient-to-r from-transparent to-transparent hover:via-white/4',
 				// Make it clickable if it's a label
@@ -47,9 +47,9 @@ export function ListRow({
 			)}
 			onClick={onClick}
 		>
-			<div className='flex flex-col gap-1'>
+			<div className='flex min-w-0 flex-1 flex-col gap-1'>
 				<h3 className='text-14 font-medium leading-none -tracking-2'>{title}</h3>
-				<p className='text-12 leading-none -tracking-2 text-white/40'>{description}</p>
+				<p className='text-12 leading-tight -tracking-2 text-white/40'>{description}</p>
 			</div>
 			{children}
 		</El>
