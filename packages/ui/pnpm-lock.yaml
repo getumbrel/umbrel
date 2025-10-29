@@ -340,6 +340,9 @@ devDependencies:
   tailwindcss-animate:
     specifier: 1.0.7
     version: 1.0.7(tailwindcss@3.4.1)
+  tailwindcss-radix:
+    specifier: ^4.0.2
+    version: 4.0.2(tailwindcss@3.4.1)
   ts-plugin-sort-import-suggestions:
     specifier: ^1.0.4
     version: 1.0.4
@@ -8040,6 +8043,15 @@ packages:
     resolution: {integrity: sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==}
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders'
+    dependencies:
+      tailwindcss: 3.4.1
+    dev: true
+
+  /tailwindcss-radix@4.0.2(tailwindcss@3.4.1):
+    resolution: {integrity: sha512-Uoa2BUCfWKGCjQPXbj4X4Q4EWAeCsvhj0udn0IupeNcvuLbqRXvC5+bKAqsngIne5mrRUPTy/IqMXGh81YyrCA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      tailwindcss: ^3.0 || ^4.0
     dependencies:
       tailwindcss: 3.4.1
     dev: true

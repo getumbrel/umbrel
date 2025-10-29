@@ -1,18 +1,12 @@
 import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindTypography from '@tailwindcss/typography'
+import {mapValues} from 'remeda'
 import tailwindCssAnimate from 'tailwindcss-animate'
+import tailwindRadix from 'tailwindcss-radix'
 import defaultTheme from 'tailwindcss/defaultTheme'
 import {PluginAPI} from 'tailwindcss/types/config'
 
 import {screens} from './src/utils/tw'
-
-// Tailwind loads this TS config through its own loader (not a full TS transpiler).
-// Since Node.js v22.18, --experimental-strip-types is enabled by default, so .ts configs may execute directly:
-//   - https://nodejs.org/en/blog/release/v22.18.0
-//   - https://nodejs.org/api/typescript.html#type-stripping
-// In ESM projects like ours ("type": "module"), this can surface ESM/CJS export-shape issues (e.g., ERR_REQUIRE_ESM or "plugin is not a function").
-// To avoid issues, we should use native JS transforms (avoid third‑party helpers in config) and avoid ESM-only plugins (or wrap if needed).
-// If we end up hitting issues we could use a CJS tailwind.config.cjs or set NODE_OPTIONS=--no-experimental-strip-types.
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -32,8 +26,7 @@ export default {
 			center: true,
 			padding: '2rem',
 		},
-		// Convert numeric breakpoints to Tailwind's expected px strings
-		screens: Object.fromEntries(Object.entries(screens).map(([key, value]) => [key, value + 'px'])),
+		screens: mapValues(screens, (value) => value + 'px'),
 		extend: {
 			flexShrink: {
 				// Used if you want to shrink the item totally if no room
@@ -206,7 +199,13 @@ export default {
 			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography, utilPlugin],
+	plugins: [
+		tailwindCssAnimate,
+		tailwindContainerQueries,
+		tailwindTypography,
+		utilPlugin,
+		tailwindRadix({variantPrefix: 'radix'}),
+	],
 }
 
 function utilPlugin(plugin: PluginAPI) {
