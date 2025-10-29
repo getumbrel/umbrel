@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto'
 import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
-import {execa, ExecaError} from 'execa'
+import {execa, ExecaError, ExecaChildProcess} from 'execa'
 import fse from 'fs-extra'
 import pQueue from 'p-queue'
 import prettyBytes from 'pretty-bytes'
@@ -59,6 +59,7 @@ export default class Backups {
 	backupJobPromise?: Promise<void>
 	kopiaQueue = new pQueue({concurrency: 1})
 	backupDirectoryName = 'Umbrel Backup.backup'
+	runningKopiaProcesses: ExecaChildProcess[] = []
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -95,12 +96,29 @@ export default class Backups {
 		this.logger.log('Stopping backups')
 		this.running = false
 
-		// Wait for any backup jobs
-		this.logger.log('Waiting for any backup jobs')
-		if (this.backupJobPromise) await this.backupJobPromise
+		const ONE_SECOND = 1000
 
-		// Cleanup any currently mounted backups
-		await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
+		// Kill any running kopia processes
+		for (const process of this.runningKopiaProcesses) process.kill('SIGTERM', {forceKillAfterTimeout: ONE_SECOND * 3})
+
+		// Wait for any backup jobs (up to 5s)
+		await Promise.race([
+			setTimeout(ONE_SECOND * 5),
+			(async () => {
+				this.logger.log('Waiting for any backup job to finish')
+				if (this.backupJobPromise) await this.backupJobPromise.catch(() => {})
+				await Promise.allSettled(this.runningKopiaProcesses)
+			})(),
+		])
+
+		// Cleanup any currently mounted backups (up to 5s)
+		await Promise.race([
+			setTimeout(ONE_SECOND * 5),
+			(async () => {
+				this.logger.log('Cleaning up mounts')
+				await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
+			})(),
+		])
 	}
 
 	// Run backups in background
@@ -122,6 +140,9 @@ export default class Backups {
 
 			// Run each backup
 			for (const repository of repositories) {
+				// Skip if we're shutting down
+				if (!this.running) break
+
 				// Skip if we already have a backup in progress
 				const isAlreadyBackingUp = this.backupsInProgress.some((progress) => progress.repositoryId === repository.id)
 				if (isAlreadyBackingUp) {
@@ -165,6 +186,9 @@ export default class Backups {
 		flags: string[] = [],
 		{onOutput, bypassQueue = true}: {onOutput?: (output: string) => void; bypassQueue?: boolean} = {},
 	) {
+		// Refuse to spawn new kopia processes if we're shutting down
+		if (!this.running) throw new Error('[shutting-down] Refusing to spawn new kopia processes')
+
 		const spawnKopiaProcess = async () => {
 			// Spawn process
 			const env = {
@@ -173,6 +197,11 @@ export default class Backups {
 				XDG_CONFIG_HOME: '/kopia/config',
 			}
 			const process = execa('kopia', flags, {env})
+
+			// Store reference to running process
+			this.runningKopiaProcesses.push(process)
+			// Remove the process reference once the process is no longer running
+			process.finally(() => (this.runningKopiaProcesses = this.runningKopiaProcesses.filter((p) => p !== process)))
 
 			// Pipe output to verbose logger and optional onOutput handler
 			const handleOutput = (data: Buffer) => {
