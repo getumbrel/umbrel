@@ -13,7 +13,7 @@ import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {IS_DEV} from '@/utils/misc'
 
-import {httpPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
+import {httpOnlyPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
 
 const {protocol, hostname, port} = location
 
@@ -31,18 +31,41 @@ const trpcWsUrl = `${wsProtocol}//${hostname}${portPart}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
 const getJwt = () => localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
+
+const wsClient = createWSClient({
+	url: () => {
+		const token = getJwt()
+		return token ? `${trpcWsUrl}?token=${token}` : `${trpcWsUrl}`
+	},
+})
+
 export const links = [
 	loggerLink({
 		enabled: () => IS_DEV,
 	}),
+	// Split 1: subscriptions vs everything else
+	// httpLink is request/response only and cannot carry subscriptions, so we
+	// route ALL subscription operations to WebSocket unconditionally (e.g. `eventBus.listen(files:operation-progress)`)
 	splitLink({
-		condition: (operation) => httpPaths.includes(operation.path as (typeof httpPaths)[number]),
-		true: httpLink({
-			url: trpcHttpUrl,
-			headers: () => ({Authorization: `Bearer ${getJwt()}`}),
-		}),
-		false: wsLink({
-			client: createWSClient({url: () => `${trpcWsUrl}?token=${getJwt()}`}),
+		condition: (op) => op.type === 'subscription',
+		true: wsLink({client: wsClient}),
+		// Split 2: HTTP vs WebSocket for queries/mutations
+		// We route over HTTP when there is no JWT (public/onboarding, no WS auth yet) or the procedure is in `httpOnlyPaths` (needs request/response semantics like cookies/headers)
+		// Otherwise we use WebSocket
+		false: splitLink({
+			condition: (operation) => {
+				const noToken = !getJwt()
+				const isHttpOnlyPath = httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number])
+				return noToken || isHttpOnlyPath
+			},
+			true: httpLink({
+				url: trpcHttpUrl,
+				headers: () => {
+					const token = getJwt()
+					return token ? {Authorization: `Bearer ${token}`} : {}
+				},
+			}),
+			false: wsLink({client: wsClient}),
 		}),
 	}),
 ]

@@ -4,29 +4,18 @@
 // Export the router type for use in clients in other packages
 export type {AppRouter} from './index.js'
 
-// We define these here so all clients can depend on this to route
-// RPCs that require HTTP over the HTTP transport via a split link.
-// RPCs require HTTP if they need to be publically accessible
-// (ws connection is authed during handshake) of if they need to interact
-// with headers/cookies or other request/response stuff directly.
+// RPCs that MUST use HTTP (cookies/headers or other request/response semantics).
+// We define these here so all clients can depend on this to route these over HTTP
+// transport via a split link.
 // Any RPC that has these requirements needs to be added to this list.
 // This sucks but I don't see a better way to do it.
-export const httpPaths = [
-	// Public
-	'migrationStatus',
-	'system.online',
-	'system.version',
-	'system.status',
-	'system.getFactoryResetStatus',
-	// Public (and some get/set cookies)
-	'user.register',
-	'user.exists',
+export const httpOnlyPaths = [
+	// sets cookie
 	'user.login',
+	// reads Authorization header
 	'user.isLoggedIn',
-	'user.is2faEnabled',
-	'user.wallpaper',
-	'user.language',
-	// Private but modify cookies
+	// renews cookie
 	'user.renewToken',
+	// clears cookie
 	'user.logout',
 ] as const

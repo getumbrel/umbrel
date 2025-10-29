@@ -5,7 +5,7 @@ import fse from 'fs-extra'
 
 import * as jwt from './jwt.js'
 
-import {type AppRouter, httpPaths} from './server/trpc/common.js'
+import {type AppRouter, httpOnlyPaths} from './server/trpc/common.js'
 
 // TODO: Maybe just read the endpoint from the data dir
 const dataDir = process.env.UMBREL_DATA_DIR ?? '/home/umbrel/umbrel'
@@ -17,10 +17,12 @@ async function signJwt() {
 	return token
 }
 
+// The CLI client always authenticates by signing a JWT; no unauthenticated mode.
+// We use HTTP only for `httpOnlyPaths` (needs request/response semantics like cookies/headers), and WS otherwise.
 const trpc = createTRPCClient<AppRouter>({
 	links: [
 		splitLink({
-			condition: (operation) => httpPaths.includes(operation.path as (typeof httpPaths)[number]),
+			condition: (operation) => httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number]),
 			true: httpLink({
 				url: trpcEndpoint,
 				headers: async () => ({
