@@ -22,25 +22,25 @@ const VERSION = 'umbrelOS 1.5'
 const FEATURES = [
 	{
 		id: 1,
-		video: '/whats-new/backups.mp4',
+		video: '/whats-new/backups.webm',
 		titleTKey: 'backups',
 		descriptionTKey: 'whats-new.feature-1.description',
 	},
 	{
 		id: 2,
-		video: '/whats-new/rewind.mp4',
+		video: '/whats-new/rewind.webm',
 		titleTKey: 'rewind',
 		descriptionTKey: 'whats-new.feature-2.description',
 	},
 	{
 		id: 3,
-		video: '/whats-new/restore.mp4',
+		video: '/whats-new/restore.webm',
 		titleTKey: 'backups-restore',
 		descriptionTKey: 'whats-new.feature-3.description',
 	},
 	{
 		id: 4,
-		video: '/whats-new/network-mount.mp4',
+		video: '/whats-new/network-devices.webm',
 		titleTKey: 'whats-new.feature-4.title',
 		descriptionTKey: 'whats-new.feature-4.description',
 	},
