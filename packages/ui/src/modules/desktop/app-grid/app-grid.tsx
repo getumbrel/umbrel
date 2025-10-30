@@ -16,14 +16,14 @@ export function AppGrid({
 	widgets?: ReactNode[]
 	onlyFirstPage?: boolean
 }) {
-	const {pageInnerRef, pages, appsPerRow} = usePager({apps, widgets})
+	const {pageInnerRef, pages, appsPerRow, hasMeasurement} = usePager({apps, widgets})
 	const [showMasking, setShowMasking] = useState(false)
 	const pageCount = pages.length
 
 	const {scrollContainer, page, toPage, nextPage, nextPageDisabled, prevPage, prevPageDisabled} =
 		usePaginator(pageCount)
 
-	const noRoom = apps.length > 0 && pages[0].apps.length === 0 && pages[0].widgets.length === 0
+	const noRoom = hasMeasurement && apps.length > 0 && pages[0].apps.length === 0 && pages[0].widgets.length === 0
 
 	const appColumnsStyle: React.CSSProperties = {
 		gridTemplateColumns: `repeat(${appsPerRow}, minmax(0, 1fr))`,

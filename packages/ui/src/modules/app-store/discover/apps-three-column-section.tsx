@@ -62,13 +62,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 	const colors = useColorThief(iconRef)
 
 	return (
-		<div
-			className={cn(
-				'relative',
-				colors &&
-					'opacity-100 duration-200 animate-in fade-in slide-in-from-bottom-3 fill-mode-both [&:nth-child(1)]:delay-100 [&:nth-child(2)]:delay-200 [&:nth-child(3)]:delay-300',
-			)}
-		>
+		<div className={cn('relative', colors)}>
 			<Link
 				to={`/app-store/${app.id}`}
 				className={cn('flex h-[268px] w-40 flex-col justify-stretch rounded-24 bg-white/10 px-3 py-4', className)}

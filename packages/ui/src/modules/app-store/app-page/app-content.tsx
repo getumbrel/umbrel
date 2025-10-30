@@ -8,7 +8,6 @@ import {InfoSection} from '@/modules/app-store/app-page/info-section'
 import {RecommendationsSection} from '@/modules/app-store/app-page/recommendations-section'
 import {ReleaseNotesSection} from '@/modules/app-store/app-page/release-notes-section'
 import {AppGallerySection} from '@/modules/app-store/gallery-section'
-import {slideInFromBottomDelayedClass} from '@/modules/app-store/shared'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp, UserApp} from '@/trpc/trpc'
 
@@ -32,7 +31,7 @@ export function AppContent({
 			<AppGallerySection galleryId={'gallery-' + app.id} gallery={app.gallery} />
 			{/* NOTE: consider conditionally rendering */}
 			{/* Desktop */}
-			<div className={cn(slideInFromBottomDelayedClass, 'hidden flex-row gap-5 lg:flex')}>
+			<div className={cn('hidden flex-row gap-5 lg:flex')}>
 				<div className='flex flex-1 flex-col gap-5'>
 					<AboutSection app={app} />
 					<ReleaseNotesSection app={app} />

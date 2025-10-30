@@ -60,7 +60,7 @@ export function DesktopPreview() {
 					{show && (
 						<div
 							className={
-								'flex h-full flex-col items-center justify-between overflow-hidden duration-1000 animate-in fade-in'
+								'flex h-full flex-col items-center justify-between overflow-hidden duration-300 animate-in fade-in'
 							}
 						>
 							<DesktopContent />

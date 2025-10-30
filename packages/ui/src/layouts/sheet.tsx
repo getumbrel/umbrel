@@ -49,6 +49,7 @@ export function SheetLayout() {
 		<Sheet open={open} onOpenChange={setOpen} modal={false}>
 			<SheetStickyHeaderProvider scrollRef={scrollRef}>
 				<SheetContent
+					side='bottom-zoom'
 					className='mx-auto h-[calc(100dvh-var(--sheet-top))] max-w-[1320px] md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'
 					backdrop={
 						open && (

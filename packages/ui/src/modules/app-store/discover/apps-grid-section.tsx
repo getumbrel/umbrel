@@ -3,14 +3,7 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {
-	appsGridClass,
-	cardClass,
-	cardFaintClass,
-	SectionTitle,
-	sectionTitleClass,
-	slideInFromBottomClass,
-} from '@/modules/app-store/shared'
+import {appsGridClass, cardClass, cardFaintClass, SectionTitle, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
@@ -32,8 +25,7 @@ export function AppsGridSection({overline, title, apps}: {overline: string; titl
 
 export function AppsGridFaintSection({title, apps}: {title?: string; apps?: RegistryApp[]}) {
 	return (
-		// Key to run animation each time
-		<div className={cn(cardFaintClass, slideInFromBottomClass)} key={title}>
+		<div className={cardFaintClass}>
 			{title && <h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>}
 			<div className={appsGridClass}>{apps?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
 		</div>
@@ -44,7 +36,7 @@ export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
 	return (
 		<Link
 			to={to ? to : `/app-store/${app.id}`}
-			className='group flex w-full items-start gap-2.5 rounded-20 p-2.5 outline-none duration-300 hover:bg-white/4 focus:bg-white/4'
+			className='group flex w-full items-start gap-2.5 rounded-20 p-2.5 outline-none hover:bg-white/4 focus:bg-white/4'
 			unstable_viewTransition
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 		>

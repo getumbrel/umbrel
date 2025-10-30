@@ -87,12 +87,9 @@ export function DesktopPreview({
 											width: widgetWidth,
 											height: widgetHeight,
 										}}
-										className={cn(
-											'flex flex-col px-1',
-											'delay-200 duration-300 animate-in fade-in slide-in-from-bottom-1 fill-mode-both',
-										)}
+										className={cn('flex flex-col px-1', 'delay-100 duration-200 animate-in fade-in fill-mode-both')}
 									>
-										<div className='w-full flex-1 shrink-0 rounded-3 border-hpx border-white/10 bg-neutral-900/80 backdrop-blur-sm' />
+										<div className='w-full flex-1 shrink-0 rounded-3 border-hpx border-white/5 bg-neutral-900/70' />
 										{/* <div className='origin-top-left scale-[.15]'>
 											<LoadingWidget type={widget.type} />
 										</div> */}
@@ -113,11 +110,8 @@ export function DesktopPreview({
 						{apps?.map((app, i) => (
 							<div
 								key={app.name}
-								style={{width: appWidth, height: appHeight, animationDelay: `${i * 20 + 200}ms`}}
-								className={cn(
-									'grid place-items-center',
-									'duration-300 animate-in fade-in slide-in-from-bottom-2 fill-mode-both',
-								)}
+								style={{width: appWidth, height: appHeight, animationDelay: `${i * 10 + 100}ms`}}
+								className={cn('grid place-items-center', 'duration-200 animate-in fade-in zoom-in-50 fill-mode-both')}
 							>
 								<div className='flex w-full min-w-0 flex-col items-center'>
 									<div className='overflow-hidden rounded-3 bg-white/20'>
@@ -153,7 +147,7 @@ function DockItemPreview({icon}: {icon: string}) {
 	return <FadeInImg src={icon} className='h-3 w-3' />
 }
 
-const dockPreviewClass = tw`mx-auto flex gap-1 rounded-5 bg-neutral-900/80 p-[3px] shrink-0 border-hpx border-white/10`
+const dockPreviewClass = tw`mx-auto animate-in slide-in-from-bottom-2 flex gap-1 rounded-5 bg-neutral-900/70 p-[3px] shrink-0 border-hpx border-white/10`
 
 function Header({userName}: {userName: string}) {
 	return (

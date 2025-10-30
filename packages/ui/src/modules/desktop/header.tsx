@@ -6,7 +6,7 @@ export function Header({userName}: {userName: string}) {
 	const name = userName
 	// Always rendering the entire component to avoid layout thrashing
 	return (
-		<div className={cn('relative z-10', name ? 'duration-300 animate-in fade-in slide-in-from-bottom-8' : 'invisible')}>
+		<div className={cn('relative z-10', name ? '' : 'invisible')}>
 			<div className='flex flex-col items-center gap-3 px-4 md:gap-4'>
 				<UmbrelLogo
 					className='w-[73px] md:w-auto'
