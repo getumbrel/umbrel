@@ -77,7 +77,6 @@
   "app.os-update-required.title": "Оновити umbrelOS",
   "app.restarting": "Перезапуск",
   "app.starting": "Запуск",
-  "app.stopped": "Зупинено",
   "app.stopping": "Зупинка",
   "app.uninstall.confirm.description": "Всі дані, пов'язані з {{app}}, будуть безповоротно видалені. Ця дія не може бути скасована.",
   "app.uninstall.confirm.submit": "Видалити",

@@ -77,7 +77,6 @@
   "app.os-update-required.title": "Update umbrelOS",
   "app.restarting": "Restarting",
   "app.starting": "Starting",
-  "app.stopped": "Stopped",
   "app.stopping": "Stopping",
   "app.uninstall.confirm.description": "All data associated with {{app}} will be permanently deleted. This action cannot be undone.",
   "app.uninstall.confirm.submit": "Uninstall",

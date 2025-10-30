@@ -77,7 +77,6 @@
   "app.os-update-required.title": "umbrelOSをアップデート",
   "app.restarting": "再起動中",
   "app.starting": "起動中",
-  "app.stopped": "停止済み",
   "app.stopping": "停止中",
   "app.uninstall.confirm.description": "{{app}}に関連するすべてのデータが永久に削除されます。この操作は元に戻せません。",
   "app.uninstall.confirm.submit": "アンインストール",

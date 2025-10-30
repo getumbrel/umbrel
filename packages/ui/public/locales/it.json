@@ -77,7 +77,6 @@
   "app.os-update-required.title": "Aggiorna umbrelOS",
   "app.restarting": "Riavvio in corso",
   "app.starting": "Avvio in corso",
-  "app.stopped": "Fermato",
   "app.stopping": "Fermata in corso",
   "app.uninstall.confirm.description": "Tutti i dati associati a {{app}} verranno eliminati permanentemente. Questa azione non può essere annullata.",
   "app.uninstall.confirm.submit": "Disinstalla",

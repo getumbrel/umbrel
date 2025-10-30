@@ -101,6 +101,7 @@ export const AppSettingsSchema = z.object({
 	hideCredentialsBeforeOpen: z.boolean().optional(),
 	dependencies: z.record(z.string()).optional(),
 	backupIgnore: z.boolean().optional(),
+	autoStart: z.boolean().optional(),
 })
 
 export type AppSettings = z.infer<typeof AppSettingsSchema>

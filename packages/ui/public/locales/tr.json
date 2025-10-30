@@ -77,7 +77,6 @@
   "app.os-update-required.title": "umbrelOS'u güncelle",
   "app.restarting": "Yeniden başlatılıyor",
   "app.starting": "Başlatılıyor",
-  "app.stopped": "Durduruldu",
   "app.stopping": "Durduruluyor",
   "app.uninstall.confirm.description": "{{app}} ile ilgili tüm veriler kalıcı olarak silinecek. Bu işlem geri alınamaz.",
   "app.uninstall.confirm.submit": "Kaldır",

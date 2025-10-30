@@ -257,6 +257,35 @@ test.sequential('update() updates an installed app', async () => {
 	// TODO: Check this actually worked
 })
 
+test.sequential("umbreld restart doesn't start stopped apps", async () => {
+	// Stop the app
+	await expect(umbreld.client.apps.stop.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// Restart umbreld
+	await umbreld.instance.stop()
+	await umbreld.instance.start()
+
+	// Verify the previously stopped app is still stopped
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toMatchObject({
+		state: 'stopped',
+		progress: 0,
+	})
+})
+
+test.sequential('umbreld restart starts all non-stopped apps', async () => {
+	// Start the previosly stopped app
+	await expect(umbreld.client.apps.start.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// Restart umbreld
+	await umbreld.instance.stop()
+	await umbreld.instance.start()
+
+	// Verify the previously stopped app has started
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toSatisfy((value) =>
+		['starting', 'ready'].includes((value as any).state),
+	)
+})
+
 test.sequential('trackOpen() tracks an app open', async () => {
 	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked

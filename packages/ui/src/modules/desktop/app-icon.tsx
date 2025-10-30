@@ -1,5 +1,7 @@
 import {motion} from 'framer-motion'
 import {useState} from 'react'
+import {FaRegPlayCircle} from 'react-icons/fa'
+import {FaRegCirclePause} from 'react-icons/fa6'
 import {Link, useNavigate} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
 
@@ -38,8 +40,9 @@ export function AppIcon({
 	const [appIconSrc, setAppIconSrc] = useState(src)
 
 	const inProgress = arrayIncludes(progressStates, state)
+	const isStopped = state === 'stopped'
 
-	return (
+	const appIcon = (
 		<motion.button
 			onClick={onClick}
 			className={cn(
@@ -76,8 +79,8 @@ export function AppIcon({
 						onError={() => setAppIconSrc(APP_ICON_PLACEHOLDER_SRC)}
 						className={cn(
 							'h-full w-full duration-500',
-							inProgress && 'brightness-50',
-							!inProgress && 'animate-in fade-in',
+							(inProgress || isStopped) && 'brightness-50',
+							!inProgress && !isStopped && 'animate-in fade-in',
 						)}
 						draggable={false}
 					/>
@@ -96,6 +99,12 @@ export function AppIcon({
 						</div>
 					</div>
 				)}
+				{isStopped && (
+					<div className='absolute inset-0 flex items-center justify-center'>
+						<FaRegCirclePause className='h-6 w-6 text-white/90 group-hover:hidden md:h-8 md:w-8' />
+						<FaRegPlayCircle className='hidden h-6 w-6 text-white/90 group-hover:block md:h-8 md:w-8' />
+					</div>
+				)}
 			</div>
 			<div className='max-w-full text-11 leading-normal drop-shadow-desktop-label md:text-13'>
 				<div className='truncate contrast-more:bg-black contrast-more:px-1'>
@@ -104,6 +113,8 @@ export function AppIcon({
 			</div>
 		</motion.button>
 	)
+
+	return appIcon
 }
 
 export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?: string}) {
@@ -113,6 +124,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'installing':
 			return label
 		case 'ready':
+			return label
 		case 'running':
 			return label
 		case 'starting':
@@ -128,7 +140,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 		case 'loading':
 			return label
 		case 'stopped':
-			return t('app.stopped')
+			return label
 		case 'unknown':
 			return t('app.offline')
 	}

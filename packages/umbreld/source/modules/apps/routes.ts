@@ -158,7 +158,7 @@ export const apps = router({
 				appId: z.string(),
 			}),
 		)
-		.mutation(async ({ctx, input}) => ctx.apps.getApp(input.appId).stop()),
+		.mutation(async ({ctx, input}) => ctx.apps.getApp(input.appId).stop({persistState: true})),
 
 	// Update an app
 	update: privateProcedure

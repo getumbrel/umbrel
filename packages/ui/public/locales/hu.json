@@ -77,7 +77,6 @@
   "app.os-update-required.title": "Frissítsd az umbrelOS-t",
   "app.restarting": "Újraindítás",
   "app.starting": "Indítás",
-  "app.stopped": "Leállítva",
   "app.stopping": "Leállítás",
   "app.uninstall.confirm.description": "Az {{app}}-hez tartozó összes adat véglegesen törlésre kerül. Ez a művelet nem vonható vissza.",
   "app.uninstall.confirm.submit": "Eltávolítás",

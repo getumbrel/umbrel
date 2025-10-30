@@ -171,21 +171,26 @@ export default class Apps {
 			this.logger.error(`Failed to set permissions for Tor data directory`, error)
 		}
 
-		// Start apps
 		this.logger.log('Starting apps')
-
 		// Snapshot of currently installed apps (minus apps missing their data directories that will be reinstalled)
 		// We start these apps (save Promise), fire reinstalls without awaiting, then await the starts.
 		const appsToStart = [...this.instances]
 		const startAppsPromise = Promise.all(
-			appsToStart.map((app) =>
-				app.start().catch((error) => {
+			appsToStart.map(async (app) => {
+				const shouldStart = await app.shouldAutoStart()
+				if (!shouldStart) {
+					this.logger.log(`Skipping app ${app.id} (autoStart disabled)`)
+					app.state = 'stopped'
+					return
+				}
+
+				return app.start().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
 					// if a single app fails.
 					app.state = 'unknown'
 					this.logger.error(`Failed to start app ${app.id}`, error)
-				}),
-			),
+				})
+			}),
 		)
 
 		// If this is the first boot after a backup restore, we kick off reinstalls of any apps that are missing their data directory.

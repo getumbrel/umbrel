@@ -204,6 +204,9 @@ export default class App {
 		this.state = 'ready'
 		this.stateProgress = 0
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
@@ -224,10 +227,13 @@ export default class App {
 		})
 		this.state = 'ready'
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
-	async stop() {
+	async stop({persistState = false}: {persistState?: boolean} = {}) {
 		this.state = 'stopping'
 		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
 			onFailedAttempt: (error) => {
@@ -240,6 +246,11 @@ export default class App {
 		})
 		this.state = 'stopped'
 
+		// Disable auto-start on boot
+		if (persistState) {
+			await this.setAutoStart(false)
+		}
+
 		return true
 	}
 
@@ -248,6 +259,9 @@ export default class App {
 		await appScript(this.#umbreld, 'stop', this.id)
 		await appScript(this.#umbreld, 'start', this.id)
 		this.state = 'ready'
+
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
 
 		return true
 	}
@@ -450,5 +464,15 @@ export default class App {
 	// Set if app is ignored from backups
 	async setBackupIgnored(backupIgnore: boolean) {
 		return this.store.set('backupIgnore', backupIgnore)
+	}
+
+	// Set if app should auto start on boot
+	async setAutoStart(autoStart: boolean) {
+		return this.store.set('autoStart', autoStart)
+	}
+
+	// Get if app should auto start on boot
+	async shouldAutoStart() {
+		return (await this.store.get('autoStart')) ?? true
 	}
 }
