@@ -58,6 +58,8 @@ interface MarqueeSelectionProps {
 	items: FileSystemItem[]
 	scrollAreaRef: React.RefObject<HTMLDivElement>
 	children: React.ReactNode
+	// Optional scale factor to compensate when the listing is rendered inside a CSS transform (e.g. Rewind embeds scale the Files UI).
+	scale?: number
 }
 
 /**
@@ -69,14 +71,20 @@ interface MarqueeSelectionProps {
  *  - Scrolls `scrollAreaRef` (top/bottom) when dragging near edges.
  *  - Maintains selection for items that scroll out of view during a drag operation.
  */
-export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scrollAreaRef, children}) => {
+export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({
+	items,
+	scrollAreaRef,
+	children,
+	scale: scaleProp = 1,
+}) => {
+	// Treat zero/undefined as "no scale" while still supporting explicitly passing 1.
+	const effectiveScale = scaleProp || 1
 	const containerRef = useRef<HTMLDivElement | null>(null)
 
 	const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false)
 	const [startX, setStartX] = useState(0)
 	const [startY, setStartY] = useState(0)
-	const [currentX, setCurrentX] = useState(0)
-	const [currentY, setCurrentY] = useState(0)
+	const [, forceRender] = useState(0)
 
 	// Track if we're auto-scrolling
 	const isAutoScrolling = useRef(false)
@@ -127,7 +135,7 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		// For the visual display, we need to show the selection rectangle in the viewport
 		// So we need to apply vector addition and then subtract the current scroll position
 
-		// Get the selection rectangle in content-relative coordinates
+		// Get the selection rectangle in content-relative coordinates.
 		const selectionRect = dragVectorRef.current.add(scrollVectorRef.current).toDOMRect()
 
 		// Now convert to viewport coordinates by subtracting current scroll position
@@ -141,11 +149,13 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 			const scrollRect = scrollAreaRef.current.getBoundingClientRect()
 			const containerRect = containerRef.current.getBoundingClientRect()
 
-			// Calculate bounds in container-relative coordinates
-			const containerLeft = scrollRect.left - containerRect.left
-			const containerRight = scrollRect.right - containerRect.left
-			const containerTop = scrollRect.top - containerRect.top
-			const containerBottom = scrollRect.bottom - containerRect.top
+			// Calculate bounds in container-relative coordinates. Because the content itself may be scaled by
+			// a CSS transform, we divide by `effectiveScale` to translate from physical pixels back into the
+			// logical coordinate space we operate in.
+			const containerLeft = (scrollRect.left - containerRect.left) / effectiveScale
+			const containerRight = (scrollRect.right - containerRect.left) / effectiveScale
+			const containerTop = (scrollRect.top - containerRect.top) / effectiveScale
+			const containerBottom = (scrollRect.bottom - containerRect.top) / effectiveScale
 
 			// Constrain the visual marquee to the scroll container's visible area
 			// Ensure left doesn't go outside the visible area
@@ -185,7 +195,7 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 			width: visualWidth,
 			height: visualHeight,
 		}
-	}, [scrollAreaRef, containerRef, dragVectorRef, scrollVectorRef, currentScrollOffset])
+	}, [scrollAreaRef, containerRef, dragVectorRef, scrollVectorRef, currentScrollOffset, effectiveScale])
 
 	/**
 	 * Perform live selection detection by intersecting
@@ -236,12 +246,13 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 
 			const itemRect = el.getBoundingClientRect()
 
-			// Convert to content-relative coordinates (like in the working example)
+			// Convert to content-relative coordinates (like in the working example). Similar to the visual
+			// calculations above we divide by `effectiveScale` so that hit-testing happens in the unscaled space.
 			const translatedItemRect = new DOMRect(
-				itemRect.x - containerRect.x + scrollAreaRef.current!.scrollLeft,
-				itemRect.y - containerRect.y + scrollAreaRef.current!.scrollTop,
-				itemRect.width,
-				itemRect.height,
+				(itemRect.x - containerRect.x) / effectiveScale + scrollAreaRef.current!.scrollLeft,
+				(itemRect.y - containerRect.y) / effectiveScale + scrollAreaRef.current!.scrollTop,
+				itemRect.width / effectiveScale,
+				itemRect.height / effectiveScale,
 			)
 
 			if (rectsIntersect(combinedRect, translatedItemRect)) {
@@ -290,17 +301,7 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		} else {
 			setSelectedItems(finalSelection.length > 0 ? finalSelection : [])
 		}
-	}, [
-		items,
-		isMarqueeSelecting,
-		setSelectedItems,
-		isModifierPressed,
-		scrollAreaRef,
-		startX,
-		startY,
-		currentX,
-		currentY,
-	])
+	}, [items, isMarqueeSelecting, setSelectedItems, isModifierPressed, scrollAreaRef, effectiveScale])
 
 	/**
 	 * Scrolls the container if the pointer is near edges.
@@ -602,9 +603,10 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		// Reset auto-scrolling flag
 		isAutoScrolling.current = false
 
-		// Convert to container-local coordinates
-		const x = e.clientX - containerRect.left
-		const y = e.clientY - containerRect.top
+		// Convert to container-local coordinates. We divide by `effectiveScale` to undo any transforms
+		// applied to the rendered content so pointer math stays aligned.
+		const x = (e.clientX - containerRect.left) / effectiveScale
+		const y = (e.clientY - containerRect.top) / effectiveScale
 
 		// Initialize drag vector with position and zero magnitude
 		dragVectorRef.current = new DOMVector(x, y, 0, 0)
@@ -620,8 +622,7 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		setIsMarqueeSelecting(true)
 		setStartX(x)
 		setStartY(y)
-		setCurrentX(x)
-		setCurrentY(y)
+		forceRender((tick) => tick + 1)
 	}
 
 	const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -642,12 +643,10 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 		// This is critical for upward scrolling to work properly
 
 		// Create drag vector (from start point to current mouse position)
-		dragVectorRef.current = new DOMVector(
-			startX,
-			startY,
-			e.clientX - containerRect.left - startX, // direct calculation of magnitude
-			e.clientY - containerRect.top - startY, // direct calculation of magnitude
-		)
+		const pointerX = (e.clientX - containerRect.left) / effectiveScale
+		const pointerY = (e.clientY - containerRect.top) / effectiveScale
+
+		dragVectorRef.current = new DOMVector(startX, startY, pointerX - startX, pointerY - startY)
 
 		// Create scroll vector (from initial scroll position)
 		scrollVectorRef.current = new DOMVector(
@@ -657,9 +656,12 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 			currentScrollOffset.current.y - initialScrollOffset.current.y,
 		)
 
-		// Update current position for state
-		setCurrentX(e.clientX - containerRect.left)
-		setCurrentY(e.clientY - containerRect.top)
+		// Update current pointer position to trigger re-render
+		forceRender((tick) => tick + 1)
+
+		if (!isAutoScrolling.current) {
+			detectIntersections()
+		}
 
 		// Auto-scroll if near container edges
 		handleScrollOnDrag(e.clientX, e.clientY)
@@ -710,7 +712,7 @@ export const MarqueeSelection: React.FC<MarqueeSelectionProps> = ({items, scroll
 	return (
 		<div
 			ref={containerRef}
-			className='relative h-full w-full'
+			className='relative size-full'
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
 			onPointerUp={onPointerUp}

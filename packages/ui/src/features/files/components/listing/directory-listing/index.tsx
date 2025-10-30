@@ -22,7 +22,9 @@ import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-export function DirectoryListing() {
+// `marqueeScale` is threaded through so embedded contexts (like Rewind) can tell marquee selection
+// about the CSS transform that shrinks the Files UI.
+export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {}) {
 	const {
 		currentPath,
 		uiPath,
@@ -184,6 +186,7 @@ export function DirectoryListing() {
 				additionalContextMenuItems={additionalContextMenuItems}
 				enableFileDrop={!isViewingExternalDrives && !isViewingNetworkDevices && !isViewingNetworkShares}
 				CustomEmptyView={isViewingNetworkDevices ? EmptyStateNetwork : EmptyStateDirectory}
+				marqueeScale={marqueeScale}
 			/>
 		</>
 	)

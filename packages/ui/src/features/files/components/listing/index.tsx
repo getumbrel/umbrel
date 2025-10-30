@@ -29,6 +29,7 @@ export interface ListingProps {
 	CustomEmptyView?: ComponentType // custom empty placeholder component
 	additionalContextMenuItems?: React.ReactNode // additional items for the context menu
 	enableFileDrop?: boolean // if file upload drop zone is enabled
+	marqueeScale?: number // scale factor applied to marquee math so the overlay stays aligned inside scaled embeds (see Rewind)
 }
 
 function ListingContent({
@@ -117,6 +118,7 @@ export function Listing({
 	CustomEmptyView,
 	additionalContextMenuItems,
 	enableFileDrop = true,
+	marqueeScale = 1,
 }: ListingProps) {
 	const isTouchDevice = useIsTouchDevice()
 	const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -159,7 +161,7 @@ export function Listing({
 
 	// For desktop, wrap in marquee selection, enable file upload drop zone and droppable
 	return (
-		<MarqueeSelection scrollAreaRef={scrollAreaRef} items={selectableItems}>
+		<MarqueeSelection scrollAreaRef={scrollAreaRef} items={selectableItems} scale={marqueeScale}>
 			{/* if read-only, return the content without the file upload drop zone */}
 			{enableFileDrop && !isReadOnly ? (
 				<FileUploadDropZone>
