@@ -545,24 +545,6 @@ test('backups respect app backupIgnore glob patterns', async () => {
 	expect(importantDirFiles).toContain('config.json')
 })
 
-test('backups adds Downloads to ignore on first run but allows users to remove it', async () => {
-	// Check /Home/Downloads is listed as ignored by default
-	await expect(umbreld.client.backups.getIgnoredPaths.query()).resolves.toContain('/Home/Downloads')
-
-	// Manually remove /Home/Downloads from ignore
-	await expect(umbreld.client.backups.removeIgnoredPath.mutate({path: '/Home/Downloads'})).resolves.toBe(true)
-
-	// Check /Home/Downloads is no longer listed as ignored
-	await expect(umbreld.client.backups.getIgnoredPaths.query()).resolves.not.toContain('/Home/Downloads')
-
-	// Restart umbreld
-	await umbreld.instance.stop()
-	await umbreld.instance.start()
-
-	// Check /Home/Downloads is still not listed as ignored and hasn't been added again
-	await expect(umbreld.client.backups.getIgnoredPaths.query()).resolves.not.toContain('/Home/Downloads')
-})
-
 test('backups handle disconnected network shares gracefully', async () => {
 	// Set the share watch interval to 100ms and restart umbreld
 	umbreld.instance.files.networkStorage.shareWatchInterval = 100

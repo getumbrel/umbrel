@@ -77,15 +77,6 @@ export default class Backups {
 		// Cleanup any left over backup mounts
 		await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
 
-		// Ignore Downloads on first run
-		const isFirstRun = (await this.#umbreld.store.get('backups')) === undefined
-		if (isFirstRun) {
-			this.logger.log('Backup first run, adding Downloads to ignore...')
-			await this.addIgnoredPath('/Home/Downloads').catch((error) =>
-				this.logger.error('Error adding Downloads to ignore', error),
-			)
-		}
-
 		// Fire off background backup process
 		this.backupJobPromise = this.backupOnInterval().catch((error) =>
 			this.logger.error('Error running backups on interval', error),
