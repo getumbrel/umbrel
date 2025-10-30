@@ -1,9 +1,24 @@
 import {EXTERNAL_STORAGE_PATH, NETWORK_STORAGE_PATH} from '@/features/files/constants'
+import {t} from '@/utils/i18n'
 
 export type DeviceKind = 'NAS' | 'DRIVE'
 
 export function getDeviceType(path: string): DeviceKind {
 	return path.startsWith(NETWORK_STORAGE_PATH) ? 'NAS' : 'DRIVE'
+}
+
+/**
+ * Extracts a human-readable device name from a backup repository path.
+ * Examples:
+ * - "/Network/nas.local/Backups" -> "nas.local"
+ * - "/External/MyDrive/Backups" -> "MyDrive"
+ * - "/Unknown/path" -> fallback to translated backup location
+ */
+export function getDeviceNameFromPath(path: string): string {
+	const parts = path.split('/').filter(Boolean)
+	if (path.startsWith('/Network/')) return parts[1] || t('nas')
+	if (path.startsWith('/External/')) return parts[1] || t('external-drive')
+	return parts[0] || t('backups.backup-location')
 }
 
 /**

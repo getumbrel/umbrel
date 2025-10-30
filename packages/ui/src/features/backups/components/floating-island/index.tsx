@@ -1,17 +1,11 @@
 import {useBackupProgress} from '@/features/backups/hooks/use-backups'
+import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
 import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {ExpandedContent} from './expanded'
 import {MinimizedContent} from './minimized'
-
-function deviceNameFromPath(path: string) {
-	const parts = path.split('/').filter(Boolean)
-	if (path.startsWith('/Network/')) return parts[1] || t('nas')
-	if (path.startsWith('/External/')) return parts[1] || t('external-drive')
-	return parts[0] || t('backups.backup-location')
-}
 
 export function BackupsIsland() {
 	// Poll backup progress; island visibility is controlled by container
@@ -28,7 +22,7 @@ export function BackupsIsland() {
 
 			return {
 				percent: p.percent ?? 0,
-				name: deviceNameFromPath(repoPath) || t('backups.backup-location'),
+				name: getDeviceNameFromPath(repoPath) || t('backups.backup-location'),
 				path: repoPath,
 			}
 		})

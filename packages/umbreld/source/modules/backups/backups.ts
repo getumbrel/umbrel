@@ -158,7 +158,7 @@ export default class Backups {
 				const hoursSinceLastBackup = (Date.now() - (lastBackup || this.startedAt!)) / (1000 * 60 * 60)
 				if (hoursSinceLastBackup > 24) {
 					this.logger.error(`Backup for ${repository.path} has not run in over 24 hours`)
-					await this.#umbreld.notifications.add('backups-failing').catch(() => {})
+					await this.#umbreld.notifications.add(`backups-failing:${repository.id}`).catch(() => {})
 				}
 			}
 
@@ -529,6 +529,9 @@ export default class Backups {
 					this.#umbreld.eventBus.emit('backups:backup-progress', this.backupsInProgress)
 				},
 			})
+
+			// Clear any backup failure notifications if we get a successful backup
+			await this.#umbreld.notifications.clear(`backups-failing:${repository.id}`).catch(() => {})
 
 			this.logger.log(`Backed up ${repository.path}`)
 
