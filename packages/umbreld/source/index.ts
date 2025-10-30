@@ -1,9 +1,10 @@
 import path from 'node:path'
+import fse from 'fs-extra'
 
 // TODO: import packageJson from '../package.json' assert {type: 'json'}
 const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
 
-import {UMBREL_APP_STORE_REPO} from './constants.js'
+import {UMBREL_APP_STORE_REPO, BACKUP_RESTORE_FIRST_START_FLAG} from './constants.js'
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
 import Migration from './modules/startup-migrations/index.js'
@@ -104,6 +105,7 @@ export default class Umbreld {
 	eventBus: EventBus
 	dbus: Dbus
 	backups: Backups
+	isBackupRestoreFirstStart = false
 
 	constructor({
 		dataDirectory,
@@ -148,6 +150,9 @@ export default class Umbreld {
 		// It might be useful if we add more complicated migrations so we can signal progress.
 		await this.migration.start()
 
+		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
+		await this.setBackupRestoreFirstStartFlag()
+
 		// Override hostname in development when set
 		const developmentHostname = await this.store.get('development.hostname')
 		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
@@ -184,6 +189,19 @@ export default class Umbreld {
 
 		// Start backups last because it depends on files
 		this.backups.start()
+	}
+
+	private async setBackupRestoreFirstStartFlag() {
+		try {
+			const restoreFlagPath = `${this.dataDirectory}/${BACKUP_RESTORE_FIRST_START_FLAG}`
+			if (await fse.pathExists(restoreFlagPath)) {
+				this.logger.log('Detected first start after backup restore')
+				this.isBackupRestoreFirstStart = true
+				await fse.remove(restoreFlagPath).catch(() => {})
+			}
+		} catch (error) {
+			this.logger.error('Failed checking backup restore first-start flag', error)
+		}
 	}
 
 	async stop() {

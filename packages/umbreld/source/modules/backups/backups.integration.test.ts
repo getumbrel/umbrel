@@ -7,6 +7,7 @@ import {execa} from 'execa'
 import pRetry from 'p-retry'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
 import * as system from '../system/system.js'
 import type {AppManifest} from '../apps/schema.js'
 
@@ -756,6 +757,10 @@ test('backup can be restored on the current Umbrel install', async () => {
 	// Now restore should succeed with normal disk usage
 	await umbreld.client.backups.restoreBackup.mutate({backupId: latestBackup.id})
 
+	// After restore (no reboot in tests), the restore marker should exist under /import
+	const importFlagPath = `${umbreld.instance.dataDirectory}/import/${BACKUP_RESTORE_FIRST_START_FLAG}`
+	expect(await fse.pathExists(importFlagPath)).toBe(true)
+
 	// Verify we received progress events
 	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, progress: 0, running: true})
 	expect(restoreProgressEvents.at(-2)).toMatchObject({
@@ -833,6 +838,10 @@ test('backup can be restored on a fresh umbrel during setup', async () => {
 	const latestBackup = backups.at(-1)!
 	expect(latestBackup).toBeDefined()
 	await newUmbreld.client.backups.restoreBackup.mutate({backupId: latestBackup.id})
+
+	// After restore (no reboot in tests), the restore marker should exist under /import
+	const newImportFlagPath = `${newUmbreld.instance.dataDirectory}/import/${BACKUP_RESTORE_FIRST_START_FLAG}`
+	expect(await fse.pathExists(newImportFlagPath)).toBe(true)
 
 	// Verify we received progress events
 	expect(restoreProgressEvents.at(0)).toMatchObject({backupId: latestBackup.id, progress: 0, running: true})

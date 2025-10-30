@@ -107,11 +107,13 @@ export default class Apps {
 		// startup. This will allow apps that were excluded from backups to be
 		// reinstalled when the system is restored. Otherwise they'll have an id
 		// entry but no data dir and will be stuck in a `not-running` state.
+		const appIdsMissingDataDir: string[] = []
 		for (const app of this.instances) {
 			const appDataDirectoryExists = await fse.pathExists(app.dataDirectory).catch(() => false)
 			if (!appDataDirectoryExists) {
 				this.logger.error(`App ${app.id} does not have a data directory, removing from instances`)
 				this.instances = this.instances.filter((instanceApp) => instanceApp.id !== app.id)
+				appIdsMissingDataDir.push(app.id)
 			}
 		}
 
@@ -171,16 +173,70 @@ export default class Apps {
 
 		// Start apps
 		this.logger.log('Starting apps')
-		await Promise.all(
-			this.instances.map((app) =>
+
+		// Snapshot of currently installed apps (minus apps missing their data directories that will be reinstalled)
+		// We start these apps (save Promise), fire reinstalls without awaiting, then await the starts.
+		const appsToStart = [...this.instances]
+		const startAppsPromise = Promise.all(
+			appsToStart.map((app) =>
 				app.start().catch((error) => {
 					// We handle individual errors here to prevent apps start from throwing
-					// if a dingle app fails.
+					// if a single app fails.
 					app.state = 'unknown'
 					this.logger.error(`Failed to start app ${app.id}`, error)
 				}),
 			),
 		)
+
+		// If this is the first boot after a backup restore, we kick off reinstalls of any apps that are missing their data directory.
+		// e.g., due to restoring a backup where the app was excluded.
+		// We fire and forget here so users see apps installing as soon as possible.
+		this.reinstallMissingAppsAfterRestore(appIdsMissingDataDir).catch((error) =>
+			this.logger.error('Failed to schedule app reinstalls after restore', error),
+		)
+
+		// Wait for current installed apps to finish starting
+		await startAppsPromise
+	}
+
+	private async reinstallMissingAppsAfterRestore(appIds: string[]) {
+		// Only run on the first start after a backup restore
+		if (!this.#umbreld.isBackupRestoreFirstStart) return
+
+		// If there are no apps to reinstall, return early
+		if (appIds.length === 0) return
+
+		this.logger.log(`Detected ${appIds.length} app(s) missing a data directory after restore, reinstalling...`)
+		try {
+			// Best effort retry to ensure app repositories are pulled before reinstalling
+			// app stores are excluded from backups so first boot after recovery won't have them.
+			await pRetry(
+				async () => {
+					await this.#umbreld.appStore.update()
+				},
+				{
+					retries: 3,
+					onFailedAttempt: (error) => {
+						this.logger.error(
+							`Failed to update app store before reinstalls (attempt ${error.attemptNumber}, ${error.retriesLeft} retries left).`,
+							error,
+						)
+					},
+				},
+			)
+		} catch (error) {
+			this.logger.error('Exhausted retries updating app store before reinstalls', error)
+
+			// If we fail, we return early because no appstore repos exist and installs will fail
+			// We won't retry on a later boot (marker file already deleted).
+			return
+		}
+
+		for (const appId of appIds) {
+			// Fire off all installs in parallel without blocking
+			// TODO: Consider adding concurrency limiting for app installs to avoid overwhelming system resources
+			this.install(appId).catch((error) => this.logger.error(`Failed to reinstall app ${appId}`, error))
+		}
 	}
 
 	async stop() {

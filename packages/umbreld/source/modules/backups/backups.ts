@@ -14,7 +14,7 @@ import {copyWithProgress} from '../utilities/copy-with-progress.js'
 import {getSystemDiskUsage} from '../system/system.js'
 import {setSystemStatus} from '../system/routes.js'
 import {reboot} from '../system/system.js'
-
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
 import type Umbreld from '../../index.js'
 import type {ProgressStatus} from '../apps/schema.js'
 
@@ -373,6 +373,8 @@ export default class Backups {
 					this.logger.log(`Restored ${this.restoreStatus.progress}% of backup`)
 				}
 			})
+			// We mark that the next boot is the first start after a backup restore.
+			await fse.ensureFile(`${temporaryData}/${BACKUP_RESTORE_FIRST_START_FLAG}`).catch(() => {})
 			await fse.move(temporaryData, finalData, {overwrite: true})
 			success = true
 		} finally {

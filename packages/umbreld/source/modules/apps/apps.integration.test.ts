@@ -1,10 +1,11 @@
 import {setTimeout} from 'node:timers/promises'
 import path from 'node:path'
-import {expect, beforeAll, afterAll, test} from 'vitest'
+import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
 import runGitServer from '../test-utilities/run-git-server.js'
 import type {AppManifest} from './schema.js'
 
@@ -189,7 +190,64 @@ test.sequential('getBackupIgnoredPaths() returns empty array when app has no bac
 	)
 })
 
+test.sequential('auto-reinstalls app when data directory is missing on first boot after restore', async () => {
+	// Ensure the app is currently installed (from previous sequential test)
+	const preApps = await umbreld.client.apps.list.query()
+	expect(preApps.some((a: any) => a.id === 'sparkles-hello-world')).toBe(true)
+
+	// Simulate excluded-from-backup state by removing the app's data directory while keeping the app ID in the store
+	await umbreld.instance.stop()
+	const appDataDir = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world')
+	await fse.remove(appDataDir)
+
+	// Touch the restore-first-start marker to indicate this is a restore boot
+	const restoreFlagPath = path.join(umbreld.instance.dataDirectory, BACKUP_RESTORE_FIRST_START_FLAG)
+	await fse.ensureFile(restoreFlagPath)
+
+	// Start umbreld; missing app should be auto-reinstalled in background
+	await umbreld.instance.start()
+	// Re-install can complete quickly so we skip asserting initial absence to avoid flakiness.
+
+	// Poll until the app reaches ready state (auto-installed and started)
+	let ready = false
+	for (let i = 0; i < 60; i++) {
+		const state: any = await umbreld.client.apps.state.query({appId: 'sparkles-hello-world'}).catch(() => null)
+		if (state?.state === 'ready') {
+			ready = true
+			break
+		}
+		await setTimeout(1000)
+	}
+	expect(ready).toBe(true)
+})
+
+test.sequential('does not missing data-dir app on non-restore boot', async () => {
+	// Remove data dir without creating the restore marker
+	await umbreld.instance.stop()
+	const appDataDir = path.join(umbreld.instance.dataDirectory, 'app-data', 'sparkles-hello-world')
+	await fse.remove(appDataDir)
+
+	// We spy on apps.install to prove "no scheduling occurred" when the marker is absent.
+	const installSpy = vi.spyOn(umbreld.instance.apps, 'install')
+
+	// Reset the per-boot flag that was set to true by the previous test
+	umbreld.instance.isBackupRestoreFirstStart = false
+
+	// Start umbreld; without marker we should NOT auto-reinstall (i.e., install should never be called)
+	await umbreld.instance.start()
+
+	// Wait a few seconds then assert no install was invoked
+	await setTimeout(5000)
+	expect(installSpy).not.toHaveBeenCalled()
+	// And the data directory should still be missing
+	await expect(fse.pathExists(appDataDir)).resolves.toBe(false)
+
+	installSpy.mockRestore()
+})
+
 test.sequential('restart() restarts an installed app', async () => {
+	// Ensure installed for restart (previous tests may leave it uninstalled)
+	await umbreld.client.apps.install.mutate({appId: 'sparkles-hello-world'}).catch(() => {})
 	await expect(umbreld.client.apps.restart.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked
 })
