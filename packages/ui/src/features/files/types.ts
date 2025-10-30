@@ -9,7 +9,7 @@ export type Favorite = RouterOutput['files']['favorites'][number]
 
 export type Share = RouterOutput['files']['shares'][number]
 
-export type ExternalDevice = RouterOutput['files']['mountedExternalDevices'][number]
+export type ExternalStorageDevice = RouterOutput['files']['externalDevices'][number]
 
 export type ViewPreferences = RouterOutput['files']['viewPreferences']
 

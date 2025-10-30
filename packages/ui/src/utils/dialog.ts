@@ -17,6 +17,7 @@ export type FilesDialogKey =
 	| 'files-permanently-delete-confirmation'
 	| 'files-external-storage-unsupported'
 	| 'files-add-network-share'
+	| 'files-format-drive'
 export type DialogKey = GlobalDialogKey | AppStoreDialogKey | SettingsDialogKey | FilesDialogKey
 
 // TODO: make dialog query params typesafe

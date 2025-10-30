@@ -76,7 +76,7 @@ const AlertDialogContent = React.forwardRef<
 				dialogContentClass,
 				dialogContentAnimationClass,
 				dialogContentAnimationSlideClass,
-				'w-full max-w-[calc(100%-40px)] sm:w-auto md:max-w-md',
+				'w-full max-w-[calc(100%-40px)] sm:max-w-md',
 				className,
 			)}
 			{...props}

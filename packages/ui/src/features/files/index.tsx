@@ -24,6 +24,7 @@ const ExternalStorageUnsupportedDialog = lazy(
 	() => import('@/features/files/components/dialogs/external-storage-unsupported-dialog'),
 )
 const AddNetworkShareDialog = lazy(() => import('@/features/files/components/dialogs/add-network-share-dialog'))
+const FormatDriveDialog = lazy(() => import('@/features/files/components/dialogs/format-drive-dialog'))
 
 // TODO: Add error boundaries like the other features (e.g., app store)
 export default function FilesLayout() {
@@ -105,6 +106,9 @@ export default function FilesLayout() {
 						</Suspense>
 						<Suspense>
 							<AddNetworkShareDialog />
+						</Suspense>
+						<Suspense>
+							<FormatDriveDialog />
 						</Suspense>
 					</>
 				) : null}

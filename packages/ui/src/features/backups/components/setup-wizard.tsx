@@ -406,6 +406,7 @@ function DestinationStep({
 }) {
 	const form = useFormContext<FormValues>()
 	const {params, addLinkSearchParams} = useQueryParams()
+	const navigate = useNavigate()
 	const initialTabParam = params.get('backups-setup-tab')
 	const isMobile = useIsMobile()
 
@@ -546,27 +547,58 @@ function DestinationStep({
 							<span className='text-sm text-white/40'>{t('backups.no-external-drives-detected')}</span>
 						</div>
 					) : (
-						disks.flatMap((disk) =>
-							disk.partitions.flatMap((p) => {
-								const firstMount = p.mountpoints?.[0]
-								if (!firstMount) return []
-								const label = p.label || disk.name || t('unknown')
-								const selected = currentDest?.type === 'external' && currentDest.mountpoint === firstMount
-								return [
-									<ServerCard
-										key={`${disk.id}-${p.id}-${firstMount}`}
-										selected={!!selected}
-										onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
-									>
-										<div className='mb-2 flex h-12 w-12 items-center justify-center'>
-											<BackupDeviceIcon path={firstMount} connected className='size-11' />
-										</div>
-										<div className='truncate text-center text-[12px]'>{label}</div>
-										<div className='text-center text-[11px] text-white/40'>{formatFilesystemSize(p.size)}</div>
-									</ServerCard>,
-								]
-							}),
-						)
+						<>
+							{/* Normal external drives that don't need formatting */}
+							{disks
+								.filter((disk) => disk.isMounted && !disk.isFormatting)
+								.flatMap((disk) =>
+									disk.partitions.flatMap((p) => {
+										const firstMount = p.mountpoints?.[0]
+										if (!firstMount) return []
+										const label = p.label || disk.name || t('unknown')
+										const selected = currentDest?.type === 'external' && currentDest.mountpoint === firstMount
+										return [
+											<ServerCard
+												key={`${disk.id}-${p.id}-${firstMount}`}
+												selected={!!selected}
+												onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
+											>
+												<div className='mb-2 flex h-12 w-12 items-center justify-center'>
+													<BackupDeviceIcon path={firstMount} connected className='size-11' />
+												</div>
+												<div className='w-full truncate text-center text-[12px]'>{label}</div>
+												<div className='w-full truncate text-center text-[11px] text-white/40'>
+													{formatFilesystemSize(p.size)}
+												</div>
+											</ServerCard>,
+										]
+									}),
+								)}
+							{/* External drives that need formatting */}
+							{disks
+								.filter((disk) => !disk.isMounted || disk.isFormatting)
+								.map((disk) => {
+									const label = disk.name || t('unknown')
+									return (
+										<ServerCard
+											key={`${disk.id}-requires-format`}
+											selected={false}
+											onClick={() => {
+												if (disk.isFormatting) return
+												navigate(`/files/Home?dialog=files-format-drive&deviceId=${disk.id}`)
+											}}
+										>
+											<div className='mb-2 flex h-12 w-12 items-center justify-center'>
+												<BackupDeviceIcon path='' connected={false} className='size-11' />
+											</div>
+											<div className='w-full truncate text-center text-[12px]'>{label}</div>
+											<div className='w-full truncate text-center text-[11px] text-white/40'>
+												{disk.isFormatting ? t('files-format.formatting') : t('files-format.title-requires-format')}
+											</div>
+										</ServerCard>
+									)
+								})}
+						</>
 					)}
 				</div>
 			) : tab === 'umbrel-private-cloud' ? (

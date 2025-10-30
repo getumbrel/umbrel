@@ -3,8 +3,10 @@ import {AnimatePresence, motion} from 'framer-motion'
 import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {useBackupProgress} from '@/features/backups/hooks/use-backups'
 import {AudioIsland} from '@/features/files/components/floating-islands/audio-island'
+import {FormattingIsland} from '@/features/files/components/floating-islands/formatting-island'
 import {OperationsIsland} from '@/features/files/components/floating-islands/operations-island'
 import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useGlobalFiles} from '@/providers/global-files'
 
 const spring = {
@@ -18,6 +20,8 @@ export function FloatingIslandContainer() {
 	const {audio, uploadingItems, operations} = useGlobalFiles()
 	// Backups progress
 	const backupProgressQ = useBackupProgress(1000)
+	// External storage
+	const {disks} = useExternalStorage()
 
 	// Show audio island if there's an audio file playing
 	const showAudio = audio.path && audio.name
@@ -29,6 +33,8 @@ export function FloatingIslandContainer() {
 	const showOperations = operations.length > 0
 	// Show backups island if any backups are running
 	const showBackups = (backupProgressQ.data?.length || 0) > 0
+	// Show formatting island if any devices are being formatted
+	const showFormatting = (disks?.filter((disk) => disk.isFormatting).length || 0) > 0
 
 	// Common animation props
 	const commonProps = {
@@ -51,6 +57,11 @@ export function FloatingIslandContainer() {
 				{showOperations && (
 					<motion.div key='operations-island' layout {...commonProps}>
 						<OperationsIsland />
+					</motion.div>
+				)}
+				{showFormatting && (
+					<motion.div key='formatting-island' layout {...commonProps}>
+						<FormattingIsland />
 					</motion.div>
 				)}
 				{showBackups && (

@@ -23,11 +23,26 @@ export function useExternalStorage() {
 
 	const isExternalStorageSupported = deviceInfo?.productName !== 'Raspberry Pi'
 
+	// Subscribe to files:external-storage:change events that fire when devices are mounted/unmounted
+	// and invalidate the external storage queries
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'files:external-storage:change'},
+		{
+			onData() {
+				utils.files.externalDevices.invalidate()
+				utils.files.isExternalDeviceConnectedOnUnsupportedDevice.invalidate()
+			},
+			onError(err) {
+				console.error('eventBus.listen(files:external-storage:change) subscription error', err)
+			},
+		},
+	)
+
 	// Query for external storage
-	const {data: disks, isLoading: isLoadingDisks} = trpcReact.files.mountedExternalDevices.useQuery(undefined, {
+	const {data: disks, isLoading: isLoadingDisks} = trpcReact.files.externalDevices.useQuery(undefined, {
 		placeholderData: keepPreviousData,
+		refetchInterval: isExternalStorageSupported ? 5000 : false, // Poll every 5 seconds because files:external-storage:change doesn't fire if a device is removed but all current devices have all their partitions mounted
 		staleTime: 0, // Don't cache the data
-		refetchInterval: isExternalStorageSupported ? 5000 : false, // Only poll on supported devices
 		enabled: isExternalStorageSupported, // Only run query on supported devices
 	})
 
@@ -35,8 +50,8 @@ export function useExternalStorage() {
 	const {data: hasExternalDriveOnUnsupportedDevice} =
 		trpcReact.files.isExternalDeviceConnectedOnUnsupportedDevice.useQuery(undefined, {
 			placeholderData: keepPreviousData,
+			refetchInterval: !isExternalStorageSupported ? 5000 : false, // Poll every 5 seconds because files:external-storage:change doesn't fire if a device is removed but all current devices have all their partitions mounted
 			staleTime: 0,
-			refetchInterval: !isExternalStorageSupported ? 5000 : false, // Only poll on unsupported devices
 			enabled: !isExternalStorageSupported, // Only run query on unsupported devices
 		})
 
@@ -81,15 +96,28 @@ export function useExternalStorage() {
 			toast.error(t('files-error.eject-disk', {message: error.message}))
 		},
 		onSettled: () => {
-			utils.files.mountedExternalDevices.invalidate()
+			utils.files.externalDevices.invalidate()
 		},
 	})
+
+	// Format disk mutation
+	const {mutateAsync: formatExternalStorageDevice, isPending: isFormatting} =
+		trpcReact.files.formatExternalDevice.useMutation({
+			onError: (error: RouterError) => {
+				toast.error(error.message || t('files-format.error'))
+			},
+			onSettled: () => {
+				utils.files.externalDevices.invalidate()
+			},
+		})
 
 	return {
 		disks,
 		isLoadingExternalStorage: isLoadingDisks,
 		ejectDisk,
 		isEjecting,
+		formatExternalStorageDevice,
+		isFormatting,
 		isExternalStorageSupported,
 		hasExternalDriveOnUnsupportedDevice,
 	}

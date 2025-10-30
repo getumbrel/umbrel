@@ -179,9 +179,20 @@ export default router({
 		.input(z.object({path: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.files.samba.removeShare(input.path)),
 
-	// Get mounted external storage devices
-	mountedExternalDevices: publicProcedureWhenNoUserExists.query(async ({ctx}) =>
-		ctx.umbreld.files.externalStorage.getMountedExternalDevices(),
+	// Format an external device
+	formatExternalDevice: privateProcedure
+		.input(
+			z.object({
+				deviceId: z.string(),
+				filesystem: z.enum(['ext4', 'exfat']),
+				label: z.string(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => ctx.umbreld.files.externalStorage.formatExternalDevice(input)),
+
+	// Get external storage devices
+	externalDevices: publicProcedureWhenNoUserExists.query(async ({ctx}) =>
+		ctx.umbreld.files.externalStorage.getExternalDevicesWithVirtualMountPoints(),
 	),
 
 	// Unmount an external device
