@@ -9,6 +9,7 @@ import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
+import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {Button} from '@/shadcn-components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
@@ -133,8 +134,14 @@ export function MiniBrowser({
 		},
 	})
 
+	const currentPath = selected?.isDirectory ? selected.path : rootPath
+
 	const handleNewFolder = () => {
-		const parentPath = selected?.isDirectory ? selected.path : rootPath
+		const parentPath = currentPath
+
+		// Prevent folder creation at Network host level (folders here would be shares, not regular folders)
+		// External device level is allowed
+		if (isDirectoryANetworkDevice(parentPath)) return
 
 		const name = t('files-folder')
 
@@ -158,7 +165,7 @@ export function MiniBrowser({
 		<Button
 			variant='default'
 			onClick={handleNewFolder}
-			disabled={!!newFolder}
+			disabled={!!newFolder || isDirectoryANetworkDevice(currentPath)}
 			size='default'
 			className={isMobile ? '' : 'mr-auto'}
 		>
