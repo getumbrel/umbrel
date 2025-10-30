@@ -106,6 +106,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const status = systemStatusQ.data
 	const prevStatus: SystemStatus | undefined = usePreviousDistinct(status)
 
+	// If status moves away from 'running' without onMutate (e.g., restore),
+	// set `triggered` to enable fast polling and the post-restart redirect.
+	useEffect(() => {
+		if (!triggered && status && status !== 'running') {
+			setTriggered(true)
+		}
+	}, [status, triggered])
+
 	// When global system state is triggered and status switches to anything but
 	// 'running', we know that the action is now in progress. So we'll now wait
 	// until the system becomes 'running' again before logging the user out.
