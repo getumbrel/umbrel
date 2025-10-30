@@ -201,6 +201,11 @@ export default class ExternalStorage {
 					} catch (error) {
 						// Just log the error and continue to the next partition
 						this.logger.error(`Failed to mount partition ${device.name} ${partition.label}`, error)
+
+						// Clean up left over mount points
+						await this.#cleanLeftOverMountPoints().catch((error) => {
+							this.logger.error(`Failed to clean up left over mount points`, error)
+						})
 					}
 				}
 			}
