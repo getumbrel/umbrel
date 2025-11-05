@@ -166,7 +166,18 @@ export function useBackupProgress(refetchIntervalMs = 1000) {
 		previousProgressRef.current = currentProgress
 	}, [query.data, utils])
 
-	return query
+	// Cap progress percentages at 100% as sometimes the backend
+	// reports progress percentages greater than 100%.
+	// TODO: remove this once the backend is fixed.
+	const cappedData = query.data?.map((progress) => ({
+		...progress,
+		percent: Math.min(progress.percent, 100),
+	}))
+
+	return {
+		...query,
+		data: cappedData,
+	}
 }
 
 export function useRestoreStatus(refetchIntervalMs = 500) {
