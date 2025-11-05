@@ -44,6 +44,13 @@ const FEATURES = [
 		titleTKey: 'whats-new.feature-4.title',
 		descriptionTKey: 'whats-new.feature-4.description',
 	},
+	{
+		id: 5,
+		video: '/whats-new/external-storage.webm',
+		titleTKey: 'whats-new.feature-5.title',
+		descriptionTKey: 'whats-new.feature-5.description',
+		helperTextTKey: 'whats-new.feature-5.helper-text',
+	},
 ]
 
 function DotIndicators({
@@ -256,6 +263,9 @@ export function WhatsNewModal() {
 									{t(FEATURES[currentIndex].titleTKey)}
 								</h3>
 								<p className='text-base leading-tight text-white/70'>{t(FEATURES[currentIndex].descriptionTKey)}</p>
+								{FEATURES[currentIndex].helperTextTKey && (
+									<p className='text-xs leading-tight text-white/70'>{t(FEATURES[currentIndex].helperTextTKey)}</p>
+								)}
 							</div>
 						</div>
 					</div>
