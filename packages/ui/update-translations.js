@@ -37,6 +37,7 @@ const languageMapping = {
 	uk: 'Ukrainian',
 	hu: 'Hungarian',
 	ko: 'Korean',
+	ru: 'Русский',
 }
 
 // Get en.json content from the base branch
