@@ -3,7 +3,7 @@ name: Create release on tag
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   create-release:
@@ -25,19 +25,13 @@ jobs:
       - run: docker buildx create --use
       - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push ../../
       - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
-
       # Build OS images
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-        # Awkward hack to run in parallel but correctly handle errors
-      - run: |
-          npm run build:amd64 &
-          pid1=$!
-          npm run build:arm64 &
-          pid2=$!
-          wait $pid1 || exit 1
-          wait $pid2 || exit 1
+        # We need to run as root and clean up permissions after
+      - run: sudo npm run build "${{ env.VERSION }}"
+      - run: sudo chown -R "$(id -u):$(id -g)" .
 
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
       - name: Compress release assets

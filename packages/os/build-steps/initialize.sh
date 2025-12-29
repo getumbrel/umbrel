@@ -4,6 +4,11 @@ set -euo pipefail
 
 SNAPSHOT_DATE=${1:-}
 
+# Disable the resume from SWAP functionality. This takes significant time during the boot
+# process, as it tries to resume using a swap device which never shows up.
+mkdir -p /etc/initramfs-tools/conf.d/
+echo "RESUME=none" >/etc/initramfs-tools/conf.d/resume
+
 rm /etc/apt/sources.list.d/debian.sources
 
 # All apt packages are pinned to a specific date to ensure reproducibility.

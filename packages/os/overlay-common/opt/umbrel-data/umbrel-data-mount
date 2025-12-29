@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -euo pipefail
+
+CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
+CONFIG_FILE="$CONFIG_PARTITION/umbrel-raid.conf"
+
+MOUNT_POINT="$1"
+DEFAULT_PARTITION="${2:-}"
+
+if [ -f "$CONFIG_FILE" ]; then
+    # TODO: Custom mount logic
+    echo ">>> Custom mount logic not implemented yet"
+    exit 1
+else
+    echo ">>> No config file found, falling back to default data partition"
+
+    if [ -z "$DEFAULT_PARTITION" ]; then
+        echo "ERROR: No default partition provided"
+        exit 1
+    fi
+
+    echo ">>> Running fsck on '$DEFAULT_PARTITION'"
+    fsck -p "$DEFAULT_PARTITION"
+
+    echo ">>> Mounting '$DEFAULT_PARTITION' to '$MOUNT_POINT'"
+    mkdir -p "$MOUNT_POINT"
+    mount "$DEFAULT_PARTITION" "$MOUNT_POINT"
+fi

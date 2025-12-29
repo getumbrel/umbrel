@@ -27,7 +27,6 @@ apt-get install -y raspberrypi-archive-keyring
 # Install kernel and firmware for Pi 4 and 5.
 apt-get install -y \
     initramfs-tools \
-    e2fsprogs \
     raspi-firmware \
     firmware-brcm80211 \
     linux-image-rpi-v8 \
@@ -39,10 +38,3 @@ apt-get install -y \
 # Install boot configuration files.
 install -m 644 "/build-steps/setup-raspberrypi/cmdline.txt" "/boot/firmware/"
 install -m 644 "/build-steps/setup-raspberrypi/config.txt" "/boot/firmware/"
-
-# XXX: Currently Rugpi expects the files for the boot partition to be directly in
-# `/boot` as this was the case before Debian Bookworm. Changing this is a breaking
-# change of Rugpi. We may do this with the next major release. If that happens, the
-# following two lines can/must be removed.
-mv /boot/firmware/* /boot
-rm -rf /boot/firmware

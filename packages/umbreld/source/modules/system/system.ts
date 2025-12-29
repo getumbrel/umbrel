@@ -282,16 +282,10 @@ export async function reboot(): Promise<boolean> {
 export async function commitOsPartition(umbreld: Umbreld): Promise<boolean> {
 	try {
 		umbreld.logger.log('Committing OS partition...')
-		await $`mender commit`
+		await $`rugix-ctrl system commit`
 		umbreld.logger.log('Successfully commited to new OS partition.')
 		return true
 	} catch (error) {
-		if (
-			(error as ExecaError).stderr?.includes('level=error msg="Could not commit Artifact: There is nothing to commit"')
-		) {
-			umbreld.logger.log('No new OS partition to commit.')
-			return true
-		}
 		umbreld.logger.error(`Failed to commit OS partition`, error)
 		return false
 	}

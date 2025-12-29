@@ -112,12 +112,6 @@ ARG KOPIA_VERSION
 ARG KOPIA_SHA256_amd64
 ARG KOPIA_SHA256_arm64
 
-# Install boot tooling
-# We use systemd-repart to expand partitions on boot.
-# We install mender-client via apt because injecting via mender-convert appears
-# to be broken on bookworm.
-RUN apt-get install --yes systemd-repart mender-client
-
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
 RUN apt-get install --yes acpid
@@ -134,7 +128,7 @@ RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi
 RUN apt-get install --yes bluez
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
@@ -178,12 +172,7 @@ RUN KOPIA_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") &&
     chmod +x /usr/bin/kopia
 
 # kopia also requires fuse3 for mounting snapshots
-# fuse3 install fails because /boot/firmware doesn't exist because
-# Rugpi moves it to /boot. We just create a symlink to /boot so the 
-# install can complete and then nuke it after the install is done.
-RUN ln -s /boot /boot/firmware
 RUN apt-get install --yes fuse3 bindfs
-RUN rm /boot/firmware
 
 # Add Umbrel user
 RUN adduser --gecos "" --disabled-password umbrel

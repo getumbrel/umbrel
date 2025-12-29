@@ -69,7 +69,7 @@ export async function getLatestRelease(umbreld: Umbreld) {
 }
 
 export async function performUpdate(umbreld: Umbreld) {
-	setUpdateStatus({running: true, progress: 5, description: 'Updating...', error: false})
+	setUpdateStatus({running: true, progress: 0, description: 'Updating...', error: false})
 
 	try {
 		const {updateScript} = await getLatestRelease(umbreld)
@@ -86,7 +86,7 @@ export async function performUpdate(umbreld: Umbreld) {
 
 		// Exectute update script and report progress
 		const process = $`bash -c ${updateSCriptContents}`
-		let menderInstallDots = 0
+		let previousProgress = 0
 		async function handleUpdateScriptOutput(chunk: Buffer) {
 			const text = chunk.toString()
 			const lines = text.split('\n')
@@ -101,13 +101,20 @@ export async function performUpdate(umbreld: Umbreld) {
 					}
 				}
 
-				// Handle mender install progress
-				if (line === '.') {
-					menderInstallDots++
-					// Mender install will stream 70 dots to stdout, lets convert that into 5%-95% of install progress
-					const progress = Math.min(95, Math.floor((menderInstallDots / 70) * 90) + 5)
-					umbreld.logger.log(`Update progress: ${progress}%`)
-					setUpdateStatus({progress})
+				// Handle rugix install progress
+				try {
+					const status = JSON.parse(line) as {event: 'UpdateProgress'; progress: number}
+					if (status.event !== 'UpdateProgress' || typeof status.progress !== 'number') throw new Error('Invalid event')
+
+					// Only log every integer progress increment to avoid spamming events
+					const progress = Math.floor(status.progress)
+					if (progress > previousProgress) {
+						previousProgress = progress
+						umbreld.logger.log(`Update progress: ${progress}%`)
+						setUpdateStatus({progress})
+					}
+				} catch (error) {
+					// Ignore JSON parse errors
 				}
 			}
 		}

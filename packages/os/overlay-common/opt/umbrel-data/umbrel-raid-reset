@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -euo pipefail
+
+CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
+CONFIG_FILE="$CONFIG_PARTITION/umbrel-raid.conf"
+
+echo ">>> Removing RAID configuration from config partition"
+if mountpoint -q "$CONFIG_PARTITION"; then
+    # We need to remove the write-protection on the config partition.
+    cleanup() {
+        mount -o remount,ro "$CONFIG_PARTITION"
+    }
+    trap cleanup EXIT
+    mount -o remount,rw "$CONFIG_PARTITION"
+fi
+rm -f "$CONFIG_FILE"

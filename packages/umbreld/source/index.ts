@@ -18,7 +18,7 @@ import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
 
-import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime} from './modules/system/system.js'
+import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
@@ -76,6 +76,9 @@ type StoreSchema = {
 			lastBackup?: number
 		}[]
 		ignore: string[]
+	}
+	migration: {
+		menderToRugixAttempt?: number
 	}
 }
 
@@ -139,8 +142,8 @@ export default class Umbreld {
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
 
-		// If we've successfully booted then commit to the current OS partition (non-blocking)
-		commitOsPartition(this)
+		// If we've successfully booted then commit to the current OS partition
+		await commitOsPartition(this)
 
 		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
 		setupPiCpuGovernor(this)
@@ -148,7 +151,13 @@ export default class Umbreld {
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
-		await this.migration.start()
+		const migrationResult = await this.migration.start()
+		// If the migration module requests a reboot, halt umbreld startup and reboot the system immediately
+		if (migrationResult.reboot) {
+			this.logger.log('Rebooting to complete migrations...')
+			await reboot()
+			return
+		}
 
 		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
 		await this.setBackupRestoreFirstStartFlag()

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
+
 set -euo pipefail
 
-# Pin the Rugpi Docker image.
-export RUGPI_BAKERY_IMAGE="ghcr.io/silitics/rugpi-bakery@sha256:ed8b522d3511434dc351bc6576bb56d9fbbc4b596f4189bd487ae9db40789901" # v0.6.5
+# Pin the Rugix Docker image.
+export RUGIX_BAKERY_IMAGE="ghcr.io/silitics/rugix-bakery@sha256:1abcf7791548aa441c06a8bc9b97acf170356cca8cd269b3fa8df4cc762d0251" # v0.8.15 + progress reporting for local delta hits (git-0c91222)
+# export RUGIX_VERSION="branch-main"
+# export RUGIX_DEV=true
 
 # Allow running from anywhere
 cd "$(dirname $(readlink -f "${BASH_SOURCE[0]}"))"
@@ -11,10 +14,12 @@ docker_buildx() {
     docker buildx build --load $@
 }
 
-# This will run on the host machine when this script is called.
-# It will setup the Docker build environment and then run this script again inside the container
-# passing the --bootstrapped parameter to run the disk image build process.
-function bootstrap() {
+mender_artifact() {
+    docker run --rm -v "$(pwd):/data" umbrelos:builder /usr/bin/mender-artifact "$@"
+}
+
+# Main entrypoint.
+function main() {
     release="${1:-}"
     dev="false"
     if [[ "${release}" == "" ]]
@@ -24,35 +29,44 @@ function bootstrap() {
     fi
 
     # Enable QEMU/binfmt-based multi-platform support for building arm64 on
-    # amd64 or vice versa, e.g. to build for Pi 5 on an x86 system.
+    # amd64 or vice versa, e.g., to build for Pi 5 on an x86 system.
     docker run --privileged --rm tonistiigi/binfmt --install all
 
-    if [ -z "${SKIP_ARM64:-}" ]; then
-        build_root_fs arm64 "${release}"
-        build_rugpi_images
-    fi
-    if [ -z "${SKIP_AMD64:-}" ]; then
-        build_root_fs amd64 "${release}"
+    if [ -z "${SKIP_ROOTS:-}" ]; then
+        if [ -z "${SKIP_ARM64:-}" ]; then
+            build_root_fs arm64 "${release}"
+        fi
+        if [ -z "${SKIP_AMD64:-}" ]; then
+            build_root_fs amd64 "${release}"
+        fi
     fi
 
-    echo "Building bootable Umbrel OS disk image from tar archive..."
-    docker_buildx --platform "linux/amd64" --cache-from type=gha,scope=builder --cache-to type=gha,mode=max,scope=builder --file builder.Dockerfile --tag umbrelos:builder .
-    docker run \
-        --platform "linux/amd64" \
-        --entrypoint /data/build.sh \
-        --env UMBREL_OS_DEV_BUILD="${dev}" \
-        --env MENDER_ARTIFACT_NAME="${release}" \
-        --env SKIP_ARM64="${SKIP_ARM64:-}" \
-        --env SKIP_AMD64="${SKIP_AMD64:-}" \
-        --env SKIP_PI4="${SKIP_PI4:-}" \
-        --env SKIP_PI5="${SKIP_PI5:-}" \
-        --env SKIP_MENDER="${SKIP_MENDER:-}" \
-        --volume $PWD:/data \
-        --privileged \
-        umbrelos:builder \
-        '--bootstrapped'
+    if [ -z "${SKIP_RUGIX_ARTIFACTS:-}" ]; then
+        build_rugix_artifacts "${release}" "${dev}"
+    fi
 
-    # TODO: Clean up any left behind containers to free up disk space
+    if [ -z "${SKIP_MENDER_ARTIFACTS:-}" ]; then
+        docker_buildx \
+            --platform "linux/amd64" \
+            --cache-from type=gha,scope=builder \
+            --cache-to type=gha,mode=max,scope=builder \
+            --file builder.Dockerfile \
+            --tag umbrelos:builder \
+            .
+        build_mender_artifacts "${release}"
+    fi
+
+    # Rename artifacts
+    # TODO: Maybe do this a cleaner way
+    # *.update are the new rugix native artifacts
+    # *-legacy.update are rugix update artifacts for legacy mender formatted devices
+    # *-legacy-migration.update are mender update artifacts to allow mender based update
+    # systems to migrate to the new rugix based update system.
+    mv build/umbrelos-amd64.rugixb        build/umbrelos-amd64.update                  || true
+    mv build/umbrelos-mender-amd64.mender build/umbrelos-amd64-legacy-migration.update || true
+    mv build/umbrelos-mender-amd64.rugixb build/umbrelos-amd64-legacy.update           || true
+    mv build/umbrelos-pi.mender           build/umbrelos-pi-legacy-migration.update    || true
+    mv build/umbrelos-pi.rugixb           build/umbrelos-pi.update                     || true
 
     # To boot from QEMU
     # qemu-system-x86_64 -net nic -net user,hostfwd=tcp::2222-:22 -machine accel=tcg -cpu max -smp 4 -m 8192 -hda build/umbrelos.img -bios OVMF.fd
@@ -68,6 +82,9 @@ function build_root_fs() {
     echo "Ensuring the build dir exists..."
     mkdir -p build
 
+    # Ensure that the overlay directory exists.
+    mkdir -p "overlay-${arch}"
+
     echo "Building Umbrel OS Docker image..."
     # Note that we run the build context in ../../ so the build process has access to the
     # entire repo to copy in umbreld stuff.
@@ -79,155 +96,137 @@ function build_root_fs() {
         --tag "umbrelos-${arch}" \
         ../../
 
-    echo "Dumping Umbrel OS Docker image filesytem into a tar archive..."
+    echo "Dumping Umbrel OS Docker image filesystem into a tar archive..."
     umbrel_os_container_id=$(docker run --platform "linux/${arch}" --detach "umbrelos-${arch}" /bin/true)
-    docker export --output "build/umbrelos-${arch}.tar" "${umbrel_os_container_id}"
+    docker export --output "build/umbrelos-root-${arch}.tar" "${umbrel_os_container_id}"
     docker rm "${umbrel_os_container_id}"
 }
 
-# Build Rugpi images for Pi 4 and 5.
-function build_rugpi_images() {
-    # Make sure that the Rugpi build directory exists.
-    mkdir -p rugpi/build
-    # Copy the root filesystem previously build with Docker.
-    cp build/umbrelos-arm64.tar rugpi/build/umbrelos-base.tar
-    # Copy `/etc/hostname` and `/etc/hosts` such that Rugpi can fix them.
-    cp overlay-common/etc/{hostname,hosts} rugpi/recipes/fix-overlay/files
+# Build the Rugix artifacts.
+#
+# Arguments: <release> <dev>
+function build_rugix_artifacts() {
+    local release="$1"
+    local dev="$2"
 
-    pushd rugpi
-    # Clean Rugpi cache to get a clean build.
-    rm -rf .rugpi || true
-    # Bake both images.
-    if [ -z "${SKIP_PI4:-}" ]; then 
-        ./run-bakery bake image pi4 build/umbrelos-pi4.img
-        # Move image to global build directory.
-        mv -f build/umbrelos-pi4.img ../build/umbrelos-pi4.img
+    # Make sure that the Rugix build directory exists.
+    mkdir -p rugix/build/umbrelos-root
+    # Copy the root filesystems previously build with Docker.
+    cp build/*.tar rugix/build/umbrelos-root
+    # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them.
+    cp overlay-common/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
+    
+    local compression="compression = { type = \"xz\", level = 9 }"
+    if [ "$dev" == "true" ]; then
+        compression=""
     fi
-    if [ -z "${SKIP_PI5:-}" ]; then 
-        ./run-bakery bake image tryboot build/umbrelos-tryboot.img
-        # Move image to global build directory.
-        mv -f build/umbrelos-tryboot.img ../build/umbrelos-pi5.img
+
+    pushd rugix
+    # Clean Rugix cache to force a clean build.
+    rm -rf .rugix || true
+
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI4:-}" ]; then 
+        build_rugix_system "umbrelos-pi4" "$release" "$dev"
+        mv -f "build/umbrelos-pi4/system.img" "../build/umbrelos-pi4.img"
+    fi
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_TRYBOOT:-}" ]; then 
+        build_rugix_system "umbrelos-pi-tryboot" "$release" "$dev"
+        mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi5.img"
+        mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
+    fi
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_MBR:-}" ]; then 
+        build_rugix_system "umbrelos-pi-mbr" "$release" "$dev"
+        # Truncate the image to the end of the last partition. This is required for
+        # compatibility with the legacy Mender-Rugpi update module.
+        popd
+        docker_buildx \
+            --platform "linux/amd64" \
+            --cache-from type=gha,scope=builder \
+            --cache-to type=gha,mode=max,scope=builder \
+            --file builder.Dockerfile \
+            --tag umbrelos:builder \
+            .
+        docker run --rm -v "$(pwd)/rugix:/data" umbrelos:builder /data/fix-umbrelos-pi-mbr.sh
+        pushd rugix
+    fi
+    if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_RUGIX:-}" ]; then 
+        build_rugix_system "umbrelos-amd64" "$release" "$dev"
+        mv -f "build/umbrelos-amd64/system.img" "../build/umbrelos-amd64.img"
+        mv -f "build/umbrelos-amd64/system.rugixb" "../build/umbrelos-amd64.rugixb"
+    fi
+    if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_MENDER:-}" ]; then
+        ./run-bakery bake image --release-version "$release" "umbrelos-mender-amd64"
+        mkdir -p build/umbrelos-mender-amd64/bundle
+        ln -s ../filesystems build/umbrelos-mender-amd64/bundle/payloads
+        cat >build/umbrelos-mender-amd64/bundle/rugix-bundle.toml <<EOF
+update-type = "full"
+
+hash-algorithm = "sha512-256"
+
+[[payloads]]
+filename = "partition-1.img"
+[payloads.delivery]
+type = "slot"
+slot = "system"
+[payloads.block-encoding]
+hash-algorithm = "sha512-256"
+chunker = "casync-64"
+$compression
+deduplication = true
+EOF
+        ./run-bakery bundler bundle build/umbrelos-mender-amd64/bundle build/umbrelos-mender-amd64/system.rugixb
+        mv -f "build/umbrelos-mender-amd64/system.rugixb" "../build/umbrelos-mender-amd64.rugixb"
     fi
     popd
 }
 
-# This will run inside a container when the --bootstrapped flag is passed
-function bootstrapped() {
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_MENDER:-}" ]; then
-        build_raspberrypi_mender_artifact
+# Build the image and update bundle for a given system.
+#
+# Arguments: <system> <release> <dev>
+function build_rugix_system() {
+    local system="$1"
+    local release="$2"
+    local dev="$3"
+
+    local compression=""
+    if [ "$dev" == "true" ]; then
+        compression="--without-compression"
     fi
-    if [ -z "${SKIP_AMD64:-}" ]; then
-        build_x86_artifacts
+
+    ./run-bakery bake bundle --release-version "$release" $compression "$system"
+}
+
+# Build the Mender update artifacts.
+#
+# Arguments: <release>
+function build_mender_artifacts() {
+    local release="$1"
+
+    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI:-}" ]; then
+        if [ ! -e "rugix/build/umbrelos-pi-mbr/system.img" ]; then
+            echo "'umbrelos-pi-mbr' image is required to build Raspberry Pi Mender artifact."
+            exit 1
+        fi
+        echo "Build Raspberry Pi Mender artifact..."
+        mender_artifact write module-image \
+            --artifact-name "${release}" \
+            -t raspberrypi \
+            -T rugpi-image \
+            -f /data/rugix/build/umbrelos-pi-mbr/system.img \
+            -o /data/build/umbrelos-pi.mender
+    fi
+    if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_MENDER:-}" ]; then
+        if [ ! -e "rugix/build/umbrelos-mender-amd64/filesystems/partition-1.img" ]; then
+            echo "'umbrelos-mender-amd64' image is required to build AMD64 Mender artifact."
+            exit 1
+        fi
+        echo "Build AMD64 Mender artifact..."
+        mender_artifact write rootfs-image \
+            --artifact-name "${release}" \
+            -t amd64 \
+            -f /data/rugix/build/umbrelos-mender-amd64/filesystems/partition-1.img \
+            -o /data/build/umbrelos-mender-amd64.mender
     fi
 }
 
-# Build the Raspberry Pi mender artifact.
-function build_raspberrypi_mender_artifact() {
-    if [ -n "${SKIP_PI5:-}" ]; then
-        echo "Pi 5 image is required for Mender artifact."
-        exit 1
-    fi
-
-    echo "Build Raspberry Pi Mender artifact..."
-    # We use the Pi 5 image as a basis. The only difference to the Pi 4 image is that
-    # it lacks the firmware update, which is not necessary for the update.
-    /usr/bin/mender-artifact write module-image \
-        --artifact-name "${MENDER_ARTIFACT_NAME}" \
-        -t raspberrypi \
-        -T rugpi-image \
-        -f /data/build/umbrelos-pi5.img \
-        -o /data/build/umbrelos-pi.update
-}
-
-# Build the x86 artifacts.
-function build_x86_artifacts() {
-    echo "Creating disk image..."
-    rootfs_tar_size="$(du --block-size 1M /data/build/umbrelos-amd64.tar | awk '{print $1}')"
-    rootfs_buffer="1024"
-    disk_size_mb="$((rootfs_tar_size + rootfs_buffer))"
-    disk_size_sector=$(expr $disk_size_mb \* 1024 \* 1024 / 512)
-    disk_image="/tmp/disk.img"
-    dd if=/dev/zero of="${disk_image}" bs="${disk_size_sector}" count=512
-
-    echo "Creating disk partitions..."
-    gpt_efi="ef00"
-    gpt_root_amd64="8304"
-    sgdisk \
-        --new 1:2048:+200M \
-        --typecode 1:"${gpt_efi}" \
-        --change-name 1:ESP \
-        --new 2:0:0 \
-        --typecode 2:"${gpt_root_amd64}" \
-        --change-name 1:ROOTFS \
-        "${disk_image}"
-
-    disk_layout=$(fdisk -l "${disk_image}")
-    echo "${disk_layout}"
-
-    echo "Attaching partitions to loopback devices..."
-    efi_start=$(echo "${disk_layout}" -l "${disk_image}" | grep EFI | awk '{print $2}')
-    efi_size=$(echo "${disk_layout}" -l "${disk_image}" | grep EFI | awk '{print $4}')
-    root_start=$(echo "${disk_layout}" -l "${disk_image}" | grep root | awk '{print $2}')
-    root_size=$(echo "${disk_layout}" -l "${disk_image}" | grep root | awk '{print $4}')
-    efi_device=$(losetup --offset $((512*efi_start)) --sizelimit $((512*efi_size)) --show --find "${disk_image}")
-    root_device=$(losetup --offset $((512*root_start)) --sizelimit $((512*root_size)) --show --find "${disk_image}")
-
-    echo "Formatting partitions..."
-    mkfs.vfat -n "ESP" "${efi_device}"
-    mkfs.ext4 -L "ROOTFS" "${root_device}"
-
-    echo "Mounting partitions..."
-    efi_mount_point="/mnt/efi"
-    root_mount_point="/mnt/root"
-    mkdir -p "${efi_mount_point}"
-    mkdir -p "${root_mount_point}"
-    mount "${efi_device}" "${efi_mount_point}"
-    mount -t ext4 "${root_device}" "${root_mount_point}"
-
-    echo "Extracting rootfs..."
-    tar -xf /data/build/umbrelos-amd64.tar --directory "${root_mount_point}"
-
-    echo "Setup hostname..."
-    # We need to do this here becuse if we do it in the Dockerfile it gets
-    # clobbered when Docker sets a random hostname during `docker run`. If
-    # you copy any additional files here, please also do so in Rugpi.
-    overlay_dir="/data/overlay-common"
-    cp "${overlay_dir}/etc/hostname" "${root_mount_point}/etc/hostname"
-    cp "${overlay_dir}/etc/hosts" "${root_mount_point}/etc/hosts"
-
-    echo "Remove .dockerenv..."
-    # We also need to remove this to prevent the system from being detected as a contianer
-    rm "${root_mount_point}/.dockerenv"
-
-    echo "Copying boot directory over to ESP partition..."
-    cp -r "${root_mount_point}/boot/." "${efi_mount_point}"
-    tree "${efi_mount_point}"
-    echo
-
-    echo "Unmounting partitions..."
-    umount "${root_mount_point}"
-    umount "${efi_mount_point}"
-
-    echo "Detaching loopback devices..."
-    losetup --detach "${efi_device}"
-    losetup --detach "${root_device}"
-
-    echo "Disk image created!"
-
-    echo "Running disk image through mender-convert..."
-    cd /mender
-    /mender/mender-convert --disk-image "${disk_image}" --config /data/mender.cfg
-
-    echo "Copying to ./build/..."
-    mv /mender/deploy/umbrelos.mender /data/build/umbrelos-amd64.update
-    mv /mender/deploy/umbrelos.img /data/build/umbrelos-amd64.img
-}
-
-arguments=${@:-}
-
-if [[ "${arguments}" = *"--bootstrapped"* ]]
-then
-    bootstrapped
-else
-    bootstrap $@
-fi
+main "$@"
