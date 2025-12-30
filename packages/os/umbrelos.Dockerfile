@@ -132,7 +132,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2

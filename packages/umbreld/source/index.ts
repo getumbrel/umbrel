@@ -13,6 +13,7 @@ import User from './modules/user/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 import Files from './modules/files/files.js'
+import Hardware from './modules/hardware/hardware.js'
 import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
@@ -104,6 +105,7 @@ export default class Umbreld {
 	appStore: AppStore
 	apps: Apps
 	files: Files
+	hardware: Hardware
 	notifications: Notifications
 	eventBus: EventBus
 	dbus: Dbus
@@ -128,6 +130,7 @@ export default class Umbreld {
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 		this.apps = new Apps(this)
 		this.files = new Files(this)
+		this.hardware = new Hardware(this)
 		this.notifications = new Notifications(this)
 		this.eventBus = new EventBus(this)
 		this.dbus = new Dbus(this)
@@ -190,6 +193,7 @@ export default class Umbreld {
 		// Initialise modules
 		await Promise.all([
 			this.files.start(),
+			this.hardware.start(),
 			this.apps.start(),
 			this.appStore.start(),
 			this.dbus.start(),
@@ -219,7 +223,13 @@ export default class Umbreld {
 			await this.backups.stop()
 
 			// Stop modules
-			await Promise.all([this.files.stop(), this.apps.stop(), this.appStore.stop(), this.dbus.stop()])
+			await Promise.all([
+				this.files.stop(),
+				this.hardware.stop(),
+				this.apps.stop(),
+				this.appStore.stop(),
+				this.dbus.stop(),
+			])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false
