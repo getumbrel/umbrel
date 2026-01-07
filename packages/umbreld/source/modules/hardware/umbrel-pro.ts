@@ -22,12 +22,12 @@ import runEvery from '../utilities/run-every.js'
 //
 // All operations must be serialized to prevent corruption.
 
-// EC I/O ports
-const EC_STATUS_COMMAND_PORT = 0x66
-const EC_DATA_PORT = 0x62
+// EC I/O port addresses
+const EC_STATUS_COMMAND_PORT_ADDRESS = 0x66
+const EC_DATA_PORT_ADDRESS = 0x62
 
-// EC status flags
-const EC_INPUT_BUFFER_FULL = 0x02
+// EC status flag values
+const EC_INPUT_BUFFER_FULL_VALUE = 0x02
 
 // Read a byte from an x86 I/O port via /dev/port
 async function readPort(port: number): Promise<number> {
@@ -55,8 +55,8 @@ async function writePort(port: number, value: number): Promise<void> {
 // Wait until EC is ready to receive data (input buffer clear)
 async function waitForEcReady(): Promise<void> {
 	for (let i = 0; i < 20_000; i++) {
-		const status = await readPort(EC_STATUS_COMMAND_PORT)
-		if ((status & EC_INPUT_BUFFER_FULL) === 0) return
+		const status = await readPort(EC_STATUS_COMMAND_PORT_ADDRESS)
+		if ((status & EC_INPUT_BUFFER_FULL_VALUE) === 0) return
 		await setTimeout(0)
 	}
 	throw new Error('EC timeout waiting for input buffer to clear')
@@ -64,18 +64,29 @@ async function waitForEcReady(): Promise<void> {
 
 // Write a byte to an EC register address
 async function writeEcRegister(register: number, value: number): Promise<void> {
-	const EC_WRITE_COMMAND = 0x81
+	const EC_WRITE_COMMAND_VALUE = 0x81
 	await waitForEcReady()
-	await writePort(EC_STATUS_COMMAND_PORT, EC_WRITE_COMMAND) // Send write command
+	await writePort(EC_STATUS_COMMAND_PORT_ADDRESS, EC_WRITE_COMMAND_VALUE) // Send write command
 	await waitForEcReady()
-	await writePort(EC_DATA_PORT, register) // Send register address
+	await writePort(EC_DATA_PORT_ADDRESS, register) // Send register address
 	await waitForEcReady()
-	await writePort(EC_DATA_PORT, value & 0xff) // Send data byte
+	await writePort(EC_DATA_PORT_ADDRESS, value & 0xff) // Send data byte
+}
+
+// Read a byte from an EC register address
+async function readEcRegister(register: number): Promise<number> {
+	const EC_READ_COMMAND_VALUE = 0x80
+	await waitForEcReady()
+	await writePort(EC_STATUS_COMMAND_PORT_ADDRESS, EC_READ_COMMAND_VALUE) // Send read command
+	await waitForEcReady()
+	await writePort(EC_DATA_PORT_ADDRESS, register) // Send register address
+	await waitForEcReady()
+	return readPort(EC_DATA_PORT_ADDRESS) // Read data byte
 }
 
 export default class UmbrelPro {
 	#umbreld: Umbreld
-	#ecRegisterWriteQueue = new PQueue({concurrency: 1})
+	#ecRegisterCommandQueue = new PQueue({concurrency: 1})
 	#stopManagingFan?: () => void
 	#lastFanSpeed?: number
 	logger: Umbreld['logger']
@@ -98,6 +109,10 @@ export default class UmbrelPro {
 
 		this.logger.log('Starting Umbrel Pro')
 
+		// Set light to constant white now we're booted up
+		this.logger.log('Setting LED to default state')
+		await this.setLedDefault().catch((error) => this.logger.error('Failed to set LED to default state', error))
+
 		// Clear min fan speed
 		this.logger.log('Clearing min fan speed')
 		await this.setMinFanSpeed(0).catch((error) => this.logger.error('Failed to clear min fan speed', error))
@@ -110,6 +125,20 @@ export default class UmbrelPro {
 	async stop() {
 		this.logger.log('Stopping Umbrel Pro')
 		this.#stopManagingFan?.()
+	}
+
+	// EC utils
+
+	// Write a byte to an EC register address (queued to prevent concurrent access)
+	async #writeEcRegister(register: number, value: number): Promise<void> {
+		if (!(await this.isUmbrelPro())) throw new Error('Refusing to write EC register on non Umbrel Pro hardware')
+		return this.#ecRegisterCommandQueue.add(async () => writeEcRegister(register, value))
+	}
+
+	// Read a byte from an EC register address (queued to prevent concurrent access)
+	async #readEcRegister(register: number): Promise<number> {
+		if (!(await this.isUmbrelPro())) throw new Error('Refusing to read EC register on non Umbrel Pro hardware')
+		return this.#ecRegisterCommandQueue.add(async () => readEcRegister(register)) as Promise<number>
 	}
 
 	// Automatic Fan Speed Management
@@ -188,25 +217,107 @@ export default class UmbrelPro {
 		}
 	}
 
-	// Write a byte to an EC register address (queued to prevent concurrent access)
-	async #writeEcRegister(register: number, value: number): Promise<void> {
-		return this.#ecRegisterWriteQueue.add(async () => writeEcRegister(register, value))
-	}
-
 	// Set minimum fan speed (0-100%)
 	async setMinFanSpeed(percent: number): Promise<void> {
-		// EC register addresses for fan control
-		const EC_MIN_FAN_SPEED_ENABLE = 0x5e
-		const EC_MIN_FAN_SPEED_VALUE = 0x5f
+		const EC_MIN_FAN_SPEED_ENABLE_ADDRESS = 0x5e
+		const EC_MIN_FAN_SPEED_ADDRESS = 0x5f
 
 		// Clamp to valid range
 		const clampedPercent = Math.max(0, Math.min(100, percent))
 
 		// Convert 0-100% to 0-255 for EC
-		const minFanSpeedValue = Math.round((clampedPercent / 100) * 255)
+		const fanSpeedValue = Math.round((clampedPercent / 100) * 255)
 
 		// Enable minimum fan speed mode and set the value
-		await this.#writeEcRegister(EC_MIN_FAN_SPEED_ENABLE, 1)
-		await this.#writeEcRegister(EC_MIN_FAN_SPEED_VALUE, minFanSpeedValue)
+		await this.#writeEcRegister(EC_MIN_FAN_SPEED_ENABLE_ADDRESS, 1)
+		await this.#writeEcRegister(EC_MIN_FAN_SPEED_ADDRESS, fanSpeedValue)
+	}
+
+	// LED Control
+
+	// TODO: Set LED behaviour during umbrelOS operation.
+
+	EC_LED_STATE_ADDRESS = 0x50
+
+	// Turn off the LED
+	async setLedOff(): Promise<void> {
+		const LED_STATE_OFF_VALUE = 0
+		await this.#writeEcRegister(this.EC_LED_STATE_ADDRESS, LED_STATE_OFF_VALUE)
+	}
+
+	// Set the LED to be static
+	// Note: If the LED was previously blinking or breathing, it will keep it's colour.
+	// If the LED was previously off, it will need to then have it's color set along with being
+	// set to static to beturned on.
+	async setLedStatic(): Promise<void> {
+		const LED_STATE_STATIC_VALUE = 1
+		await this.#writeEcRegister(this.EC_LED_STATE_ADDRESS, LED_STATE_STATIC_VALUE)
+	}
+
+	// Set LED color
+	async setLedColor({red, green, blue}: {red: number; green: number; blue: number}): Promise<void> {
+		const EC_LED_RED_ADDRESS = 0x51
+		const EC_LED_GREEN_ADDRESS = 0x59
+		const EC_LED_BLUE_ADDRESS = 0x55
+
+		// Clamp to valid range
+		red = Math.max(0, Math.min(255, Math.round(red)))
+		green = Math.max(0, Math.min(255, Math.round(green)))
+		blue = Math.max(0, Math.min(255, Math.round(blue)))
+
+		await this.#writeEcRegister(EC_LED_RED_ADDRESS, red)
+		await this.#writeEcRegister(EC_LED_GREEN_ADDRESS, green)
+		await this.#writeEcRegister(EC_LED_BLUE_ADDRESS, blue)
+	}
+
+	// Set LED to white
+	async setLedWhite(): Promise<void> {
+		// We use these values to adjust for brighter LEDs.
+		// 255 across all channels gives us a turquoise color.
+		await this.setLedColor({red: 255, green: 100, blue: 128})
+	}
+
+	// Set LED to default state (static white)
+	async setLedDefault(): Promise<void> {
+		await this.setLedStatic()
+		await this.setLedWhite()
+	}
+
+	// Set LED to blinking
+	async setLedBlinking(): Promise<void> {
+		const LED_STATE_BLINKING_VALUE = 2
+		await this.#writeEcRegister(this.EC_LED_STATE_ADDRESS, LED_STATE_BLINKING_VALUE)
+	}
+
+	// Set LED to breathing mode
+	// duration: 0-19 (higher = longer breathing cycle)
+	async setLedBreathe(duration: number = 14): Promise<void> {
+		const EC_LED_BREATHING_DURATION_ADDRESS = 0x52
+		const LED_STATE_BREATHING_VALUE = 3
+
+		const clampedDuration = Math.max(0, Math.min(19, Math.round(duration)))
+		await this.#writeEcRegister(EC_LED_BREATHING_DURATION_ADDRESS, clampedDuration)
+		await this.#writeEcRegister(this.EC_LED_STATE_ADDRESS, LED_STATE_BREATHING_VALUE)
+	}
+
+	// Reset Boot Key Flag
+	//
+	// The EC sets a flag at register 0xA8 when the device is powered on via
+	// the reset button. This allows software to detect if the reset button
+	// was used for boot (e.g., for recovery mode or special boot options).
+
+	// TODO: Handle reset boot flags and show recovery ui.
+
+	EC_RESET_BOOT_FLAG_ADDRESS = 0xa8
+
+	// Check if device was booted via reset button
+	async wasBootedViaResetButton(): Promise<boolean> {
+		const flag = await this.#readEcRegister(this.EC_RESET_BOOT_FLAG_ADDRESS)
+		return flag === 1
+	}
+
+	// Clear the reset boot flag (should be called on shutdown)
+	async clearResetBootFlag(): Promise<void> {
+		await this.#writeEcRegister(this.EC_RESET_BOOT_FLAG_ADDRESS, 0)
 	}
 }
