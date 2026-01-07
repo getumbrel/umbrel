@@ -20,6 +20,7 @@ import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
 
 import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
+import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
 import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
@@ -150,6 +151,9 @@ export default class Umbreld {
 
 		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
 		setupPiCpuGovernor(this)
+
+		// Cleanup old factory reset state backups early to free up disk space ASAP (non-blocking)
+		cleanupFactoryResetBackups(this)
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.

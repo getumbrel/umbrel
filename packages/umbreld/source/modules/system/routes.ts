@@ -7,8 +7,7 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
-import type {ProgressStatus} from '../apps/schema.js'
-import {performReset, getResetStatus} from './factory-reset.js'
+import {performReset} from './factory-reset.js'
 import {getUpdateStatus, performUpdate, getLatestRelease} from './update.js'
 import {
 	getCpuTemperature,
@@ -152,21 +151,14 @@ export default router({
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
 			}
 			systemStatus = 'resetting'
-			let success = false
 			try {
-				success = await performReset(ctx.umbreld)
-				if (success) {
-					await setTimeout(1000)
-					await ctx.umbreld.stop()
-					await reboot()
-				}
-			} finally {
-				if (!success) systemStatus = 'running'
+				// Wait for UI to poll status (polls every 10s) and see we're resetting
+				await setTimeout(11000)
+				// Triggers an immediate reboot via rugix-ctrl
+				await performReset()
+			} catch (error) {
+				systemStatus = 'running'
+				throw error
 			}
-			return success
 		}),
-	// Public because we delete the user too and want to continue to get status updates
-	getFactoryResetStatus: publicProcedure.query((): ProgressStatus | undefined => {
-		return getResetStatus()
-	}),
 })

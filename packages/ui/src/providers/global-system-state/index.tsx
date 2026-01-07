@@ -5,6 +5,7 @@ import {usePreviousDistinct} from 'react-use'
 
 import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
+import {toast} from '@/components/ui/toast'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
@@ -52,12 +53,19 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		setRouterError(null)
 	}
 
-	// Intercept router errors so the triggering component can handle them,
-	// for example when the confirmation password of a factory reset is invalid
-	// and the router returns an 'UNAUTHORIZED' response.
+	// Intercept router errors so the triggering component can handle them.
+	// Password errors (UNAUTHORIZED) are shown in the form field.
+	// System errors (e.g., factory reset failed) are shown as toasts.
 	const onError = async (error: RouterError) => {
-		setRouterError(error)
+		if (error?.data?.code === 'UNAUTHORIZED') {
+			setRouterError(error)
+		} else {
+			toast.error(error.message)
+		}
 		setTriggered(false)
+
+		// Prevent logout/redirect when error occurs
+		setShouldLogoutOnRunning(false)
 	}
 	const getError = () => routerError
 	const clearError = () => setRouterError(null)
@@ -83,12 +91,16 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const shutdown = useShutdown({onMutate, onSuccess})
 	const update = useUpdate({onMutate, onSuccess})
 	const migrate = useMigrate({onMutate, onSuccess})
-	const reset = useReset({onMutate, onSuccess, onError})
+	const reset = useReset({onMutate, onError})
 
-	// Force swift and fresh status updates when an action is in progress
+	// Force swift and fresh status updates when an action is in progress.
+	// We disable retry to get consistent polling during device reboots - we know
+	// the device is down, we just want to detect when it comes back ASAP rather
+	// than waiting for exponential backoff between retries.
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
+		retry: 0,
 	})
 
 	if (!IS_DEV) {
@@ -138,8 +150,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			setTimeout(() => {
 				queryClient.cancelQueries() // prevent auth errors
 				jwt.removeJwt()
-				const targetPage = prevStatus === 'resetting' ? '/factory-reset/success' : '/'
-				location.href = targetPage
+				location.href = '/'
 			}, 500)
 			return
 		}
