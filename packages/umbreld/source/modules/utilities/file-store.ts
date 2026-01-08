@@ -7,10 +7,10 @@ import PQueue from 'p-queue'
 
 type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 	? K extends keyof T
-		? DotProp<T[K], R>
+		? DotProp<NonNullable<T[K]>, R>
 		: never
 	: P extends keyof T
-		? T[P]
+		? NonNullable<T[P]>
 		: never
 
 type StorePath<T, P extends string> = DotProp<T, P> extends never ? 'The provided path does not exist in the store' : P
@@ -26,9 +26,21 @@ export default class FileStore<T extends Serializable> {
 	#parser
 	#writes = 0
 	#writeQueue
+	#onBeforeWrite?: () => Promise<void>
+	#onAfterWrite?: () => Promise<void>
 
-	constructor({filePath}: {filePath: string}) {
+	constructor({
+		filePath,
+		onBeforeWrite,
+		onAfterWrite,
+	}: {
+		filePath: string
+		onBeforeWrite?: () => Promise<void>
+		onAfterWrite?: () => Promise<void>
+	}) {
 		this.filePath = filePath
+		this.#onBeforeWrite = onBeforeWrite
+		this.#onAfterWrite = onAfterWrite
 
 		// TODO: Allow configuring
 		this.#parser = {
@@ -62,13 +74,21 @@ export default class FileStore<T extends Serializable> {
 	async #write(store: T): Promise<boolean> {
 		const rawData = this.#parser.encode(store)
 
-		// Write atomically
-		const processId = Number(process.pid)
-		const temporaryFilePath = `${this.filePath}.${processId}.${this.#writes++}.tmp`
-		await fs.writeFile(temporaryFilePath, rawData, 'utf8')
-		await fs.rename(temporaryFilePath, this.filePath)
+		// Call pre-write hook if provided
+		if (this.#onBeforeWrite) await this.#onBeforeWrite()
 
-		return true
+		try {
+			// Write atomically
+			const processId = Number(process.pid)
+			const temporaryFilePath = `${this.filePath}.${processId}.${this.#writes++}.tmp`
+			await fs.writeFile(temporaryFilePath, rawData, 'utf8')
+			await fs.rename(temporaryFilePath, this.filePath)
+
+			return true
+		} finally {
+			// Call post-write hook if provided
+			if (this.#onAfterWrite) await this.#onAfterWrite()
+		}
 	}
 
 	async #set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>) {

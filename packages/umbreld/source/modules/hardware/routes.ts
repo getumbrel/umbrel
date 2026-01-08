@@ -7,6 +7,19 @@ const internalStorage = router({
 	getDevices: publicProcedureWhenNoUserExists.query(async ({ctx}) => ctx.umbreld.hardware.internalStorage.getDevices()),
 })
 
+const raid = router({
+	// Setup RAID array from a list of devices
+	// TOOD: Remove this, just exposing for development and testing.
+	setup: privateProcedure
+		.input(z.object({devices: z.array(z.string())}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.setup(input.devices)),
+
+	// Add a device to an existing RAID array
+	addDevice: privateProcedure
+		.input(z.object({device: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addDevice(input.device)),
+})
+
 const umbrelPro = router({
 	// Check if running on Umbrel Pro hardware
 	isUmbrelPro: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.umbrelPro.isUmbrelPro()),
@@ -35,5 +48,6 @@ const umbrelPro = router({
 
 export default router({
 	internalStorage,
+	raid,
 	umbrelPro,
 })

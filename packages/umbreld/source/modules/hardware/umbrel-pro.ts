@@ -2,10 +2,10 @@ import {open} from 'node:fs/promises'
 import {setTimeout} from 'node:timers/promises'
 
 import PQueue from 'p-queue'
-import fse from 'fs-extra'
 
 import type Umbreld from '../../index.js'
 import runEvery from '../utilities/run-every.js'
+import {detectDevice} from '../system/system.js'
 
 // Embedded Controller (EC) Communication
 //
@@ -97,10 +97,10 @@ export default class UmbrelPro {
 		this.logger = umbreld.logger.createChildLogger(`hardware:${name.toLowerCase()}`)
 	}
 
-	// TODO: Implement detection properly once we have SMBIOS/DMI data.
+	// Canonical check for Umbrel Pro hardware
 	async isUmbrelPro(): Promise<boolean> {
-		const cpuInfo = await fse.readFile('/proc/cpuinfo')
-		return cpuInfo.includes('Intel(R) Core(TM) i3-N300')
+		const {productName} = await detectDevice()
+		return productName === 'Umbrel Pro'
 	}
 
 	async start() {
@@ -319,5 +319,28 @@ export default class UmbrelPro {
 	// Clear the reset boot flag (should be called on shutdown)
 	async clearResetBootFlag(): Promise<void> {
 		await this.#writeEcRegister(this.EC_RESET_BOOT_FLAG_ADDRESS, 0)
+	}
+
+	// Get hardware SSD slot number from PCIe Physical Slot Number
+	//
+	// The PCI bus address (pci-0000:01:00.0-nvme-1) and root port address (1c.0, 1d.0) are not stable identifiers.
+	// They appear stable in many situations but change based on which slots are populated.
+	//
+	// Using a single SSD and testing each physical slot individually casuses the bus address to return
+	// inconsistent values. And for the  root port address multiple physical slots share a root port
+	// when not all slots are populated.
+	// For example, physical slots 1 and 2 both appear on root port 1c.0 when only
+	// one is occupied, we can't distinguish which physical slot the SSD is in. Same
+	// for slots 3 and 4 on 1d.0.
+	//
+	// The PCIe Slot Number from lspci appears to uniquely identify each physical slot and has been
+	// tested to be stable in many situations.
+	getSsdSlotFromPciSlotNumber(pciSlotNumber: number | undefined): number | undefined {
+		if (pciSlotNumber === 6) return 1
+		if (pciSlotNumber === 4) return 2
+		if (pciSlotNumber === 14) return 3
+		if (pciSlotNumber === 12) return 4
+
+		return undefined
 	}
 }

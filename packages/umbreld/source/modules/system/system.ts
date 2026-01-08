@@ -305,6 +305,9 @@ export async function detectDevice() {
 	if (model === 'U130122') device = 'Umbrel Home (2025)'
 	if (productName === 'Umbrel Home') deviceId = model
 
+	if (model === 'U4XN1') device = 'Umbrel Pro (2026)'
+	if (productName === 'Umbrel Pro') deviceId = model
+
 	// I haven't been able to find another way to reliably detect Pi hardware. Most existing
 	// solutions don't actually detect Pi hardware but just detect Pi OS which we don't match.
 	// e.g systemInformation includes Pi detection which fails here. Also there's no SMBIOS so
@@ -329,8 +332,8 @@ export async function detectDevice() {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
 	}
 
-	// Blank out model and serial for non Umbrel Home devices
-	if (productName !== 'Umbrel Home') {
+	// Blank out model and serial for non Umbrel devices
+	if (productName !== 'Umbrel Home' && productName !== 'Umbrel Pro') {
 		model = ''
 		serial = ''
 	}

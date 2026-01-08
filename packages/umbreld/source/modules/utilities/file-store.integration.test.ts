@@ -192,3 +192,102 @@ describe('Filestore', () => {
 		expect(await store.get('test')).toStrictEqual(123)
 	})
 })
+
+describe('write hooks', () => {
+	test('onBeforeWrite is called before writing', async () => {
+		const filePath = path.join(await directory.create(), 'store.yaml')
+		type LooseSchema = Record<string, any>
+		let fileExistedBeforeWrite: boolean | undefined
+		const store = new FileStore<LooseSchema>({
+			filePath,
+			onBeforeWrite: async () => {
+				fileExistedBeforeWrite = await fse.pathExists(filePath)
+			},
+		})
+
+		await store.set('one', 1)
+
+		expect(fileExistedBeforeWrite).toBe(false)
+		expect(await fse.pathExists(filePath)).toBe(true)
+	})
+
+	test('onAfterWrite is called after writing', async () => {
+		const filePath = path.join(await directory.create(), 'store.yaml')
+		type LooseSchema = Record<string, any>
+		let valueInHook: number | undefined
+		const store = new FileStore<LooseSchema>({
+			filePath,
+			onAfterWrite: async () => {
+				valueInHook = await store.get('one')
+			},
+		})
+
+		await store.set('one', 1)
+
+		expect(valueInHook).toBe(1)
+	})
+
+	test('both hooks are called in correct order', async () => {
+		const filePath = path.join(await directory.create(), 'store.yaml')
+		type LooseSchema = Record<string, any>
+		let fileExistedBeforeWrite: boolean | undefined
+		let valueAfterWrite: number | undefined
+		const store = new FileStore<LooseSchema>({
+			filePath,
+			onBeforeWrite: async () => {
+				fileExistedBeforeWrite = await fse.pathExists(filePath)
+			},
+			onAfterWrite: async () => {
+				valueAfterWrite = await store.get('one')
+			},
+		})
+
+		await store.set('one', 1)
+
+		expect(fileExistedBeforeWrite).toBe(false)
+		expect(valueAfterWrite).toBe(1)
+	})
+
+	test('onAfterWrite is called even if write fails', async () => {
+		const filePath = '/nonexistent/directory/store.yaml'
+		type LooseSchema = Record<string, any>
+		let beforeCalled = false
+		let afterCalled = false
+		const store = new FileStore<LooseSchema>({
+			filePath,
+			onBeforeWrite: async () => {
+				beforeCalled = true
+			},
+			onAfterWrite: async () => {
+				afterCalled = true
+			},
+		})
+
+		await expect(store.set('one', 1)).rejects.toThrow()
+		expect(beforeCalled).toBe(true)
+		expect(afterCalled).toBe(true)
+	})
+
+	test('hooks are called for each write operation', async () => {
+		let beforeCount = 0
+		let afterCount = 0
+		const filePath = path.join(await directory.create(), 'store.yaml')
+		type LooseSchema = Record<string, any>
+		const store = new FileStore<LooseSchema>({
+			filePath,
+			onBeforeWrite: async () => {
+				beforeCount++
+			},
+			onAfterWrite: async () => {
+				afterCount++
+			},
+		})
+
+		await store.set('one', 1)
+		await store.set('two', 2)
+		await store.delete('one')
+
+		expect(beforeCount).toBe(3)
+		expect(afterCount).toBe(3)
+	})
+})

@@ -196,6 +196,7 @@ export default class Umbreld {
 
 		// Initialise modules
 		await Promise.all([
+			this.user.start(),
 			this.files.start(),
 			this.hardware.start(),
 			this.apps.start(),
@@ -228,6 +229,7 @@ export default class Umbreld {
 
 			// Stop modules
 			await Promise.all([
+				this.user.stop(),
 				this.files.stop(),
 				this.hardware.stop(),
 				this.apps.stop(),

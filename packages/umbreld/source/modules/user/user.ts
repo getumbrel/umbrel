@@ -17,6 +17,36 @@ export default class User {
 		this.#umbreld = umbreld
 	}
 
+	async start() {
+		this.logger.log('Starting user')
+
+		// Create user if we just completed RAID setup process and don't have a user
+		// TODO: Handle this a cleaner way
+		const user = await this.#umbreld.hardware.raid.configStore.get('user')
+		const userExists = await this.exists()
+		if (user?.name && user?.password && !userExists) {
+			this.logger.log('Detected first boot after RAID setup, creating user')
+			try {
+				await this.register(user.name, user.password, user.language ?? 'en')
+
+				// Update the password to the hashed password in the RAID config
+				await this.#umbreld.hardware.raid.configStore
+					.delete('user.password')
+					.catch((error) => this.logger.error('Failed to delete password from RAID config', error))
+				await this.#umbreld.hardware.raid.configStore
+					.set('user.hashedPassword', await this.#store.get('user.hashedPassword'))
+					.catch((error) => this.logger.error('Failed to set hashed password in RAID config', error))
+			} catch (error) {
+				this.logger.error('Failed to create user', error)
+				// TODO: If this fails somehow report to the ui that user creation failed
+			}
+		}
+	}
+
+	async stop() {
+		this.logger.log('Stopping user')
+	}
+
 	// Get the user object from the store
 	async get() {
 		return this.#store.get('user')

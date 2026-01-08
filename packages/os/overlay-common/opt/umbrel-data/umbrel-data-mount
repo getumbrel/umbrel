@@ -3,17 +3,59 @@
 set -euo pipefail
 
 CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
-CONFIG_FILE="$CONFIG_PARTITION/umbrel-raid.conf"
+CONFIG_FILE="$CONFIG_PARTITION/umbrel.yaml"
 
 MOUNT_POINT="$1"
 DEFAULT_PARTITION="${2:-}"
 
+wait_for_devices() {
+    local devices=("$@")
+    echo ">>> Waiting for devices to appear: ${devices[*]}"
+    # 50 checks with 0.1s sleep = 5 second timeout
+    for i in {1..50}; do
+        local all_devices_present="true"
+        for dev in "${devices[@]}"; do
+            if [ ! -b "$dev" ]; then
+                all_devices_present="false"
+                break
+            fi
+        done
+        if [ "$all_devices_present" = "true" ]; then
+            break
+        fi
+        sleep 0.1
+    done
+}
+
+# Parse YAML config to get devices array if config file exists
+DEVICES=()
 if [ -f "$CONFIG_FILE" ]; then
-    # TODO: Custom mount logic
-    echo ">>> Custom mount logic not implemented yet"
-    exit 1
+    mapfile -t DEVICES < <(yq '.raid.devices[]' "$CONFIG_FILE" 2>/dev/null || true)
+fi
+
+if [ ${#DEVICES[@]} -gt 0 ]; then
+    echo ">>> Found RAID config with ${#DEVICES[@]} devices, assembling RAID"
+
+    # Load zfs
+    modprobe zfs
+
+    # Attempt to wait for devices
+    # Continue if timeout is reached to allow mounting array with missing devices
+    wait_for_devices "${DEVICES[@]}"
+
+    # Import the umbrelos pool.
+    #  -o cachefile=none means we don't read/write the cache files since
+    # we only have the read only image at this point.
+    #  -f force import if it thinks the pool is active elsewhere. This often
+    # happens after ota updates where it thinks we're on a new machine.
+    echo ">>> Importing umbrelos pool"
+    zpool import -o cachefile=none -f umbrelos
+
+    echo ">>> Mounting RAID array to '$MOUNT_POINT'"
+    mkdir -p "$MOUNT_POINT"
+    mount -t zfs umbrelos/data "$MOUNT_POINT"
 else
-    echo ">>> No config file found, falling back to default data partition"
+    echo ">>> No RAID config found, falling back to default data partition"
 
     if [ -z "$DEFAULT_PARTITION" ]; then
         echo "ERROR: No default partition provided"

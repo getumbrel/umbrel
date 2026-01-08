@@ -3,6 +3,7 @@ import {z} from 'zod'
 
 import {router, publicProcedure, privateProcedure} from '../server/trpc/trpc.js'
 import * as totp from '../utilities/totp.js'
+import {reboot} from '../system/system.js'
 
 const ONE_SECOND = 1000
 const ONE_MINUTE = 60 * ONE_SECOND
@@ -20,12 +21,30 @@ export default router({
 				name: z.string(),
 				password: z.string().min(6, 'Password must be at least 6 characters'),
 				language: z.string().optional().default('en'),
+				// Currently unused
+				raidDevices: z.array(z.string()).optional(),
+				raidType: z.enum(['storage', 'failsafe']).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
 			// Check the user hasn't already signed up
 			if (await ctx.user.exists()) {
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Attempted to register when user is already registered'})
+			}
+
+			// TODO: Implement this properly by passing RAID config and checking it's allowed from the RPC.
+			// For now we just check if there are any internal storage devices and if so use them for RAID.
+			const internalStorage = await ctx.umbreld.hardware.internalStorage.getDevices()
+			const isUmbrelPro = await ctx.umbreld.hardware.umbrelPro.isUmbrelPro()
+			if (isUmbrelPro && internalStorage.length > 0) {
+				await ctx.umbreld.hardware.raid.setup(internalStorage.map((device) => device.id!))
+				await ctx.umbreld.hardware.raid.configStore.set('user', {
+					name: input.name,
+					password: input.password,
+					language: input.language,
+				})
+				await reboot()
+				return true
 			}
 
 			// Register new user

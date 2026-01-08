@@ -56,8 +56,11 @@ COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
-# Install Linux kernel and non-free firmware.
+# Install Linux kernel, non-free firmware and ZFS.
 RUN apt-get install --yes \
+    zfs-dkms \
+    zfsutils-linux \
+    linux-headers-amd64 \
     linux-image-amd64 \
     intel-microcode \
     amd64-microcode \
@@ -132,7 +135,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli pciutils
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2
