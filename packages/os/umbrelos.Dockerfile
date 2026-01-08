@@ -9,12 +9,15 @@ ARG YQ_SHA256_amd64=c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961
 ARG YQ_SHA256_arm64=8879e61c0b3b70908160535ea358ec67989ac4435435510e1fcb2eda5d74a0e9
 
 ARG NODE_VERSION=22.13.0
-ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
+ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f
 ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
 
 ARG KOPIA_VERSION=0.19.0
 ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
 ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
+
+ARG ZFS_VERSION=2.4.0
+ARG ZFS_SHA256=7bdf13de0a71d95554c0e3e47d5e8f50786c30d4f4b63b7c593b1d11af75c9ee
 
 #########################################################################
 # ui build stage
@@ -45,6 +48,41 @@ RUN pnpm run build
 
 
 #########################################################################
+# zfs-build stage
+#########################################################################
+
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS zfs-build
+
+ARG SNAPSHOT_DATE
+ARG ZFS_VERSION
+ARG ZFS_SHA256
+
+COPY packages/os/build-steps /build-steps
+
+RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
+
+# Install kernel headers (must match the kernel in umbrelos-base-amd64)
+RUN apt-get install --yes linux-headers-generic
+
+# Install ZFS build dependencies
+# https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html#debian-and-ubuntu
+RUN apt-get install --yes alien autoconf automake build-essential debhelper-compat dh-dkms dh-python dkms fakeroot gawk libaio-dev libattr1-dev libblkid-dev libcurl4-openssl-dev libelf-dev libffi-dev libpam0g-dev libssl-dev libtirpc-dev libtool libudev-dev linux-headers-generic po-debconf python3 python3-all-dev python3-cffi python3-dev python3-packaging python3-setuptools python3-sphinx uuid-dev zlib1g-dev
+
+# Download and verify ZFS source
+RUN curl -fsSL https://github.com/openzfs/zfs/releases/download/zfs-${ZFS_VERSION}/zfs-${ZFS_VERSION}.tar.gz -o /tmp/zfs.tar.gz && \
+    echo "${ZFS_SHA256}  /tmp/zfs.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/zfs.tar.gz -C /tmp && \
+    rm /tmp/zfs.tar.gz
+
+# Build ZFS .deb packages
+# https://openzfs.github.io/openzfs-docs/Developer%20Resources/Custom%20Packages.html#kmod-1
+WORKDIR /tmp/zfs-${ZFS_VERSION}
+RUN ./configure
+RUN make -j$(nproc) deb-utils deb-dkms
+RUN mkdir -p /zfs-debs && cp *.deb /zfs-debs/
+
+
+#########################################################################
 # umbrelos-base-amd64 build stage
 #########################################################################
 
@@ -56,10 +94,8 @@ COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
-# Install Linux kernel, non-free firmware and ZFS.
+# Install Linux kernel and non-free firmware
 RUN apt-get install --yes \
-    zfs-dkms \
-    zfsutils-linux \
     linux-headers-amd64 \
     linux-image-amd64 \
     intel-microcode \
@@ -68,7 +104,23 @@ RUN apt-get install --yes \
     firmware-realtek \
     firmware-iwlwifi
 
-# Cleanup build steps.
+# Install ZFS from built .deb packages
+# Install dkms
+RUN apt-get install --yes dkms
+# Copy over prebuilt .debs
+COPY --from=zfs-build /zfs-debs /tmp/zfs-debs
+# Remove development libs
+RUN rm -f /tmp/zfs-debs/*devel*
+# Userspace tools, dkms module and essential runtime libs
+RUN apt-get install --yes /tmp/zfs-debs/zfs_*.deb /tmp/zfs-debs/zfs-dkms_*.deb /tmp/zfs-debs/lib*.deb
+# Cleanup
+RUN rm -rf /tmp/zfs-debs
+# Run dkms installer
+RUN KERNEL_VERSION=$(ls /lib/modules/ | head -1) && \
+    ZFS_VERSION=$(ls /usr/src | grep '^zfs-' | sed 's/^zfs-//') && \
+    dkms install "zfs/${ZFS_VERSION}" -k "$KERNEL_VERSION"
+
+# Cleanup build steps
 RUN rm -rf /build-steps
 
 
