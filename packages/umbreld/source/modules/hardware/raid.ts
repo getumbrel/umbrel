@@ -5,6 +5,80 @@ import {$} from 'execa'
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
 
+export type RaidType = 'storage' | 'failsafe'
+
+// Types for zpool status --json --json-int --json-flat-vdevs output
+type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED'
+type Vdev = {
+	vdev_type: 'root' | 'raidz' | 'mirror' | 'disk'
+	path?: string
+	rep_dev_size?: number
+	phys_space?: number
+	slow_ios?: number
+	name: string
+	guid: number
+	class: string
+	parent?: string
+	state: State
+	alloc_space: number
+	total_space: number
+	def_space: number
+	read_errors: number
+	write_errors: number
+	checksum_errors: number
+}
+type ScanStats = {
+	function: 'SCRUB' | 'RESILVER'
+	state: 'SCANNING' | 'FINISHED' | 'CANCELED'
+	start_time: number
+	end_time: number
+	to_examine: number
+	examined: number
+	skipped: number
+	processed: number
+	errors: number
+	bytes_per_scan: number
+	pass_start: number
+	scrub_pause: number
+	scrub_spent_paused: number
+	issued_bytes_per_scan: number
+	issued: number
+}
+type RaidzExpandStats = {
+	name: string
+	state: 'ACTIVE' | 'FINISHED' | 'CANCELED'
+	expanding_vdev: number
+	start_time: number
+	end_time: number
+	to_reflow: number
+	reflowed: number
+	waiting_for_resilver: number
+}
+type Pool = {
+	name: string
+	state: State
+	pool_guid: number
+	txg: number
+	spa_version: number
+	zpl_version: number
+	error_count: number
+	status?: string
+	action?: string
+	msgid?: string
+	moreinfo?: string
+	scan_stats?: ScanStats
+	raidz_expand_stats?: RaidzExpandStats
+	vdevs: Record<string, Vdev>
+}
+type ZpoolStatusOutput = {
+	output_version: {
+		command: string
+		vers_major: number
+		vers_minor: number
+	}
+	pools: Record<string, Pool>
+}
+
 // TODO: Keep all this data in sync in the config partition when it changes in the OS
 type ConfigStore = {
 	user?: {
@@ -15,6 +89,7 @@ type ConfigStore = {
 	}
 	raid?: {
 		devices: string[]
+		raidType: RaidType
 	}
 }
 
@@ -48,11 +123,74 @@ export default class Raid {
 	async start() {
 		this.logger.log('Starting RAID')
 
+		// TODO: Monitor and report scrub progress
+
+		// TODO: Monitor and report resilver progress
+
+		// TODO: Monitor and report expansion progress
+
 		// TODO: Monthly scrub
 	}
 
 	async stop() {
 		this.logger.log('Stopping RAID')
+	}
+
+	// Get status of the RAID pool
+	async getStatus(): Promise<{
+		exists: boolean
+		raidType?: RaidType
+		totalSpace?: number
+		usableSpace?: number
+		usedSpace?: number
+		freeSpace?: number
+		status?: State
+		devices?: Array<{
+			id: string
+			status: State
+			readErrors: number
+			writeErrors: number
+			checksumErrors: number
+		}>
+	}> {
+		// Get pool status from ZFS
+		let pool
+		try {
+			const {stdout} = await $`zpool status --json --json-int --json-flat-vdevs ${this.poolName}`
+			const zpoolStatus = JSON.parse(stdout) as ZpoolStatusOutput
+			pool = zpoolStatus.pools?.[this.poolName]
+		} catch {}
+		if (!pool) return {exists: false}
+
+		const vdevs = Object.values(pool.vdevs)
+
+		// Determine RAID type from topology
+		const isRaidz = vdevs.some((v) => v.vdev_type === 'raidz')
+		const raidType = isRaidz ? 'failsafe' : 'storage'
+
+		// Filter vdevs by type
+		const rootVdev = vdevs.find((v) => v.vdev_type === 'root')
+		const diskVdevs = vdevs.filter((v) => v.vdev_type === 'disk')
+
+		if (!rootVdev) return {exists: false}
+
+		return {
+			exists: true,
+			raidType,
+			totalSpace: rootVdev.total_space,
+			usableSpace: rootVdev.def_space,
+			usedSpace: rootVdev.alloc_space,
+			freeSpace: rootVdev.def_space - rootVdev.alloc_space,
+			status: pool.state,
+			devices: diskVdevs.map((device) => ({
+				id: device.path!.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, ''),
+				size: device.rep_dev_size,
+				status: device.state,
+				readErrors: device.read_errors,
+				writeErrors: device.write_errors,
+				checksumErrors: device.checksum_errors,
+			})),
+		}
 	}
 
 	// Create GPT partition table and partitions on a device
@@ -96,15 +234,15 @@ export default class Raid {
 	}
 
 	// Create ZFS pool from data partitions
-	async #createPool(dataPartitions: string[]): Promise<void> {
-		// Create pool with no RAID (JBOD/striping) - empty raid type means stripe
+	async #createPool(dataPartitions: string[], raidType: RaidType): Promise<void> {
 		// Pool options (-o):
 		//   ashift=12: 4K sectors (optimal for NVMe SSDs)
 		//   autotrim=on: Enable automatic TRIM for SSDs
 		//   cachefile=none: Don't write to /etc/zfs/zpool.cache since it won't exist before we've mounted the pool
 		//   -m none: Don't mount the pool itself
-		this.logger.log(`Creating ZFS pool '${this.poolName}' with partitions: ${dataPartitions.join(', ')}`)
-		await $`zpool create -f -o ashift=12 -o autotrim=on -o cachefile=none -m none ${this.poolName} ${dataPartitions}`
+		this.logger.log(`Creating ZFS pool '${this.poolName}' (${raidType}) with partitions: ${dataPartitions.join(', ')}`)
+		const vdevType = raidType === 'failsafe' ? ['raidz1'] : []
+		await $`zpool create -f -o ashift=12 -o autotrim=on -o cachefile=none -m none ${this.poolName} ${vdevType} ${dataPartitions}`
 
 		// Create the data dataset with NVMe-optimized options
 		// Dataset options (-o):
@@ -122,11 +260,11 @@ export default class Raid {
 	// Setup RAID array from a list of devices
 	// This will:
 	// 1. Partition each device with a state partition and data partition (remaining space)
-	// 2. Create a ZFS pool from all data partitions in JBOD/stripe mode
+	// 2. Create a ZFS pool from all data partitions
 	// 3. Write RAID config to boot partition to signal the boot process to mount the array
-	// TODO: Add different RAID levels
-	async setup(deviceIds: string[]): Promise<boolean> {
+	async setup(deviceIds: string[], raidType: RaidType): Promise<boolean> {
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
+		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 
 		const devices = deviceIds.map((id) => `/dev/disk/by-id/${id}`)
 		for (const device of devices) {
@@ -141,11 +279,11 @@ export default class Raid {
 		this.logger.log(`All devices partitioned successfully`)
 
 		// Create ZFS pool from all data partitions
-		await this.#createPool(dataPartitions)
+		await this.#createPool(dataPartitions, raidType)
 
 		// Write RAID config to boot partition
 		this.logger.log(`Writing RAID config to config partition`)
-		await this.configStore.set('raid.devices', devices)
+		await this.configStore.set('raid', {devices, raidType})
 
 		this.logger.log('RAID setup complete')
 		return true
@@ -155,7 +293,10 @@ export default class Raid {
 	// This will:
 	// 1. Partition the device with a state partition and data partition
 	// 2. Add the data partition to the existing ZFS pool
+	//    - For storage mode: adds as new top-level vdev (stripe)
+	//    - For failsafe mode: expands the existing raidz1 vdev
 	// 3. Update RAID config in boot partition
+	// TODO: Allow transitioningfrom storage mode to failsafe mode
 	async addDevice(deviceId: string): Promise<boolean> {
 		// Convert device ID to full path and verify it exists
 		const device = `/dev/disk/by-id/${deviceId}`
@@ -168,13 +309,20 @@ export default class Raid {
 		const currentDevices = (await this.configStore.get('raid.devices')) ?? []
 		if (currentDevices.includes(device)) throw new Error(`Device ${device} is already in the RAID array`)
 
+		// Get the pool status
+		const pool = await this.getStatus()
+		if (!pool.exists) throw new Error("RAID array doesn't exist")
+
 		// Partition the new device
 		this.logger.log(`Partitioning device: ${device}`)
 		const {dataPartition} = await this.#partitionDevice(device)
 
 		// Add the data partition to the existing pool
 		this.logger.log(`Adding partition ${dataPartition} to pool '${this.poolName}'`)
-		await $`zpool add ${this.poolName} ${dataPartition}`
+		// For failsafe mode, attach the new device to the existing raidz1 vdev
+		if (pool.raidType === 'failsafe') await $`zpool attach ${this.poolName} raidz1-0 ${dataPartition}`
+		// For storage mode, add the new device as a new top-level vdev
+		else if (pool.raidType === 'storage') await $`zpool add ${this.poolName} ${dataPartition}`
 
 		// Update config with new device
 		const updatedDevices = [...currentDevices, device]

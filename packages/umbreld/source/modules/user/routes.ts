@@ -37,7 +37,9 @@ export default router({
 			const internalStorage = await ctx.umbreld.hardware.internalStorage.getDevices()
 			const isUmbrelPro = await ctx.umbreld.hardware.umbrelPro.isUmbrelPro()
 			if (isUmbrelPro && internalStorage.length > 0) {
-				await ctx.umbreld.hardware.raid.setup(internalStorage.map((device) => device.id!))
+				const raidDevices = input.raidDevices ?? internalStorage.map((device) => device.id!)
+				const raidType = input.raidType ?? 'storage'
+				await ctx.umbreld.hardware.raid.setup(raidDevices, raidType)
 				await ctx.umbreld.hardware.raid.configStore.set('user', {
 					name: input.name,
 					password: input.password,

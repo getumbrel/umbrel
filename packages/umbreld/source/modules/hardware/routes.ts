@@ -8,11 +8,14 @@ const internalStorage = router({
 })
 
 const raid = router({
+	// Get RAID pool status
+	getStatus: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.raid.getStatus()),
+
 	// Setup RAID array from a list of devices
 	// TOOD: Remove this, just exposing for development and testing.
 	setup: privateProcedure
-		.input(z.object({devices: z.array(z.string())}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.setup(input.devices)),
+		.input(z.object({devices: z.array(z.string()), raidType: z.enum(['storage', 'failsafe'])}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.setup(input.devices, input.raidType)),
 
 	// Add a device to an existing RAID array
 	addDevice: privateProcedure
