@@ -15,6 +15,12 @@ jobs:
       # Checkout
       - uses: actions/checkout@v3
 
+      # Set up Docker Buildx with GHA cache support
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+
       # Build Docker images
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       # We need this to namespace Docker images on forks
@@ -22,16 +28,13 @@ jobs:
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
       - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-      - run: docker buildx create --use
-      - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push ../../
+      - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha --cache-to type=gha,mode=max ../../
       - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
       # Build OS images
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-        # We need to run as root and clean up permissions after
-      - run: sudo npm run build "${{ env.VERSION }}"
-      - run: sudo chown -R "$(id -u):$(id -g)" .
+      - run: npm run build "${{ env.VERSION }}"
 
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
       - name: Compress release assets

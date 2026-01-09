@@ -18,6 +18,17 @@ mender_artifact() {
     docker run --rm -v "$(pwd):/data" umbrelos:builder /usr/bin/mender-artifact "$@"
 }
 
+# Run a command with sudo only in GitHub Actions
+# These commands fail in GHA without sudo but they aren't needed locally and it's
+# annoying for the script to get blocked and be prompted.
+maybe_sudo() {
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
+
 # Main entrypoint.
 function main() {
     release="${1:-}"
@@ -48,8 +59,8 @@ function main() {
     if [ -z "${SKIP_MENDER_ARTIFACTS:-}" ]; then
         docker_buildx \
             --platform "linux/amd64" \
-            --cache-from type=gha,scope=builder \
-            --cache-to type=gha,mode=max,scope=builder \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --file builder.Dockerfile \
             --tag umbrelos:builder \
             .
@@ -89,8 +100,8 @@ function build_root_fs() {
     # Note that we run the build context in ../../ so the build process has access to the
     # entire repo to copy in umbreld stuff.
     docker_buildx \
-        --cache-from type=gha,scope=umbrelos \
-        --cache-to type=gha,mode=max,scope=umbrelos \
+        --cache-from type=gha \
+        --cache-to type=gha,mode=max \
         --platform "linux/${arch}" \
         --file umbrelos.Dockerfile \
         --tag "umbrelos-${arch}" \
@@ -127,12 +138,12 @@ function build_rugix_artifacts() {
 
     if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI4:-}" ]; then 
         build_rugix_system "umbrelos-pi4" "$release" "$dev"
-        mv -f "build/umbrelos-pi4/system.img" "../build/umbrelos-pi4.img"
+        maybe_sudo mv -f "build/umbrelos-pi4/system.img" "../build/umbrelos-pi4.img"
     fi
     if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_TRYBOOT:-}" ]; then 
         build_rugix_system "umbrelos-pi-tryboot" "$release" "$dev"
-        mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi5.img"
-        mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
+        maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi5.img"
+        maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
     fi
     if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_MBR:-}" ]; then 
         build_rugix_system "umbrelos-pi-mbr" "$release" "$dev"
@@ -141,8 +152,8 @@ function build_rugix_artifacts() {
         popd
         docker_buildx \
             --platform "linux/amd64" \
-            --cache-from type=gha,scope=builder \
-            --cache-to type=gha,mode=max,scope=builder \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             --file builder.Dockerfile \
             --tag umbrelos:builder \
             .
@@ -151,8 +162,8 @@ function build_rugix_artifacts() {
     fi
     if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_RUGIX:-}" ]; then 
         build_rugix_system "umbrelos-amd64" "$release" "$dev"
-        mv -f "build/umbrelos-amd64/system.img" "../build/umbrelos-amd64.img"
-        mv -f "build/umbrelos-amd64/system.rugixb" "../build/umbrelos-amd64.rugixb"
+        maybe_sudo mv -f "build/umbrelos-amd64/system.img" "../build/umbrelos-amd64.img"
+        maybe_sudo mv -f "build/umbrelos-amd64/system.rugixb" "../build/umbrelos-amd64.rugixb"
     fi
     if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_MENDER:-}" ]; then
         ./run-bakery bake image --release-version "$release" "umbrelos-mender-amd64"
