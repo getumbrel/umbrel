@@ -21,7 +21,8 @@
 		"dev": "FORCE_COLOR=1 UMBREL_UI_PROXY=http://localhost:3000 npm run watch -- start -- -- --data-directory /home/umbrel/umbrel --log-level verbose",
 		"dev:production-mode": "FORCE_COLOR=1 npm run start -- --data-directory /home/umbrel/umbrel",
 		"todo": "git grep --line-number TODO -- ':!package.json'",
-		"test:vm": "cd ../../; npm run dev exec -- bash -c 'systemctl stop umbrel; npm --prefix /umbrel-dev/packages/umbreld install'; npm run dev exec -- npm --prefix /umbrel-dev/packages/umbreld test -- --run"
+		"test:vm": "vitest --testTimeout 360000 --hookTimeout 180000 --reporter verbose vm.test",
+		"test:umbrel-dev": "cd ../../; npm run dev exec -- bash -c 'systemctl stop umbrel; npm --prefix /umbrel-dev/packages/umbreld install'; npm run dev exec -- npm --prefix /umbrel-dev/packages/umbreld test -- --run"
 	},
 	"devDependencies": {
 		"@tryjsky/v9u-smb2": "^1.1.0",

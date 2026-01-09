@@ -39,6 +39,32 @@ jobs:
           sudo systemctl disable smbd wsdd2
           sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
+  umbreld-vm:
+    runs-on: 64-core-amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Install QEMU
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
+      - name: Build OS image
+        working-directory: packages/os
+        run: npm run build:amd64:rugix
+      - name: Install umbreld dependencies
+        working-directory: packages/umbreld
+        run: npm clean-install
+      - name: Run VM tests
+        working-directory: packages/umbreld
+        run: npm run test:vm
   ui:
     runs-on: ubuntu-24.04
     defaults:
