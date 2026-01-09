@@ -3,6 +3,27 @@ name: Node.js CI
 on: push
 
 jobs:
+  # These jobs simply serve as architecture native cache steps to load up the Docker cache for umbrelOS.
+  # We must cache to unique scopes per architecture otherwise only one of the architectures gets cached.
+  umbrelos-amd64-cache:
+    runs-on: 64-core-amd64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build amd64 Docker image
+        working-directory: packages/os
+        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
+  umbrelos-arm64-cache:
+    runs-on: 64-core-arm64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build arm64 Docker image
+        working-directory: packages/os
+        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
+
   umbreld:
     runs-on: ubuntu-24.04
     defaults:
@@ -40,6 +61,7 @@ jobs:
           sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
   umbreld-vm:
+    needs: umbrelos-amd64-cache
     runs-on: 64-core-amd64
     steps:
       - name: Checkout code

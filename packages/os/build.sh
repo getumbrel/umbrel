@@ -59,8 +59,8 @@ function main() {
     if [ -z "${SKIP_MENDER_ARTIFACTS:-}" ]; then
         docker_buildx \
             --platform "linux/amd64" \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=gha,scope=builder \
+            --cache-to type=gha,mode=max,scope=builder \
             --file builder.Dockerfile \
             --tag umbrelos:builder \
             .
@@ -100,8 +100,8 @@ function build_root_fs() {
     # Note that we run the build context in ../../ so the build process has access to the
     # entire repo to copy in umbreld stuff.
     docker_buildx \
-        --cache-from type=gha \
-        --cache-to type=gha,mode=max \
+        --cache-from type=gha,scope=umbrelos-${arch} \
+        --cache-to type=gha,mode=max,scope=umbrelos-${arch} \
         --platform "linux/${arch}" \
         --file umbrelos.Dockerfile \
         --tag "umbrelos-${arch}" \
@@ -152,8 +152,8 @@ function build_rugix_artifacts() {
         popd
         docker_buildx \
             --platform "linux/amd64" \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
+            --cache-from type=gha,scope=builder \
+            --cache-to type=gha,mode=max,scope=builder \
             --file builder.Dockerfile \
             --tag umbrelos:builder \
             .
