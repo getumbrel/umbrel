@@ -167,8 +167,8 @@ function build_rugix_artifacts() {
     fi
     if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_MENDER:-}" ]; then
         ./run-bakery bake image --release-version "$release" "umbrelos-mender-amd64"
-        mkdir -p build/umbrelos-mender-amd64/bundle
-        ln -s ../filesystems build/umbrelos-mender-amd64/bundle/payloads
+        maybe_sudo mkdir -p build/umbrelos-mender-amd64/bundle
+        maybe_sudo ln -s ../filesystems build/umbrelos-mender-amd64/bundle/payloads
         cat >build/umbrelos-mender-amd64/bundle/rugix-bundle.toml <<EOF
 update-type = "full"
 
@@ -186,7 +186,7 @@ $compression
 deduplication = true
 EOF
         ./run-bakery bundler bundle build/umbrelos-mender-amd64/bundle build/umbrelos-mender-amd64/system.rugixb
-        mv -f "build/umbrelos-mender-amd64/system.rugixb" "../build/umbrelos-mender-amd64.rugixb"
+        maybe_sudo mv -f "build/umbrelos-mender-amd64/system.rugixb" "../build/umbrelos-mender-amd64.rugixb"
     fi
     popd
 }
