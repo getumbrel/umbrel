@@ -675,14 +675,15 @@ test('backups sets user notification if backups have not run in over 24 hours', 
 	// Add the share again so backups can complete again
 	await umbreld.client.files.addShare.mutate({path: '/Home/Backups'})
 
+	// Unmock time so the backup interval timer resumes
+	// (when Date.now() returns a constant, Date.now() - lastRun is always 0)
+	viNow.mockRestore()
+
 	// Wait for the notification to be removed
 	await pRetry(() => expect(umbreld.client.notifications.get.query()).resolves.toHaveLength(0), {
 		retries: 65,
 		factor: 1,
 	})
-
-	// Unmock time
-	viNow.mockRestore()
 
 	// Stop excessive backups
 	umbreld.instance.backups.backupInterval = 1000000
