@@ -169,7 +169,7 @@ function build_rugix_artifacts() {
         ./run-bakery bake image --release-version "$release" "umbrelos-mender-amd64"
         maybe_sudo mkdir -p build/umbrelos-mender-amd64/bundle
         maybe_sudo ln -s ../filesystems build/umbrelos-mender-amd64/bundle/payloads
-        cat >build/umbrelos-mender-amd64/bundle/rugix-bundle.toml <<EOF
+        cat <<EOF | maybe_sudo tee build/umbrelos-mender-amd64/bundle/rugix-bundle.toml > /dev/null
 update-type = "full"
 
 hash-algorithm = "sha512-256"
