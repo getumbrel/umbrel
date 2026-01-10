@@ -26,8 +26,8 @@ jobs:
         working-directory: packages/os
         run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
 
-  umbrelos-amd64-vm:
-    name: Run umbrelOS amd64 tests
+  umbrelos-amd64-vm-image-build:
+    name: Build umbrelOS amd64 VM image
     needs: umbrelos-amd64-cache
     runs-on: 64-core-amd64
     steps:
@@ -43,17 +43,62 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Expose GitHub Actions runtime for Docker cache
         uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
-      - name: Install QEMU
-        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       - name: Build OS image
         working-directory: packages/os
         run: npm run build:amd64:rugix
+      - name: Compress OS image
+        run: sudo xz --threads=0 packages/os/build/umbrelos-amd64.img
+      - name: Upload OS image
+        uses: actions/upload-artifact@v4
+        with:
+          name: umbrelos-amd64-image
+          path: packages/os/build/umbrelos-amd64.img.xz
+          retention-days: 1
+
+  discover-vm-tests:
+    name: Discover VM tests
+    runs-on: ubuntu-24.04
+    outputs:
+      tests: ${{ steps.find.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: find
+        run: |
+          tests=$(find packages/umbreld/source -name "*.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "tests=$tests" >> $GITHUB_OUTPUT
+
+  umbrelos-amd64-vm:
+    name: Run umbrelOS amd64 tests
+    needs: [umbrelos-amd64-vm-image-build, discover-vm-tests]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.discover-vm-tests.outputs.tests) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - name: Download OS image
+        uses: actions/download-artifact@v4
+        with:
+          name: umbrelos-amd64-image
+          path: packages/os/build
+      - name: Decompress OS image
+        run: xz --decompress --threads=0 packages/os/build/umbrelos-amd64.img.xz
+      - name: Install QEMU
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       - name: Install umbreld dependencies
         working-directory: packages/umbreld
         run: npm clean-install
-      - name: Run VM tests
+      - name: Run VM test
         working-directory: packages/umbreld
-        run: npm run test:vm
+        run: npm run test -- ${{ matrix.test }}
 
   umbreld:
     name: Run umbreld tests
@@ -68,8 +113,41 @@ jobs:
           - format:check
           # - lint
           - typecheck
-          - test:unit -- --coverage --watch=false
-          - test:integration -- --coverage --watch=false
+          - test:unit -- --coverage
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: sudo npm clean-install
+      - run: sudo npm run ${{ matrix.task }}
+
+  discover-integration-tests:
+    name: Discover integration tests
+    runs-on: ubuntu-24.04
+    outputs:
+      tests: ${{ steps.find.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: find
+        run: |
+          tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "tests=$tests" >> $GITHUB_OUTPUT
+
+  umbreld-integration:
+    name: Run umbreld integration tests
+    needs: discover-integration-tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/umbreld
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.discover-integration-tests.outputs.tests) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -91,7 +169,7 @@ jobs:
           sudo apt-get install -y unar imagemagick ffmpeg samba wsdd2 kopia bindfs cifs-utils smbclient
           sudo systemctl disable smbd wsdd2
           sudo npm clean-install
-      - run: sudo npm run ${{ matrix.task }}
+      - run: sudo npm run test -- --coverage ${{ matrix.test }}
   ui:
     name: Run UI tests
     runs-on: ubuntu-24.04
@@ -132,30 +210,33 @@ jobs:
       run:
         working-directory: packages/os
     steps:
-      # Checkout
       - uses: actions/checkout@v3
-
-      # Set up Docker Buildx with GHA cache support
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Expose GitHub Actions runtime for Docker cache
         uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
-
-      # Build Docker images
       - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       # We need this to namespace Docker images on forks
       - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
       - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
       - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-      - run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha,scope=umbrelos-amd64 --cache-from type=gha,scope=umbrelos-arm64 ../../
+      - name: Build and push Docker image
+        run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha,scope=umbrelos-amd64 --cache-from type=gha,scope=umbrelos-arm64 ../../
       - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
       # Build OS images
       - uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm run build "${{ env.VERSION }}"
-
+      - name: Build OS images
+        # Awkward hack to run in parallel but correctly handle errors
+        run: |
+          npm run build:amd64 "${{ env.VERSION }}" &
+          pid1=$!
+          npm run build:arm64 "${{ env.VERSION }}" &
+          pid2=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
       # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
       - name: Compress release assets
         # Awkward hack to run in parallel but correctly handle errors
@@ -170,10 +251,8 @@ jobs:
           wait $pid1 || exit 1
           wait $pid2 || exit 1
           wait $pid3 || exit 1
-
       - name: Create USB installer
         run: npm run build:amd64:usb-installer
-
       - name: Create release directory
         run: |
           mkdir -p release
@@ -183,16 +262,12 @@ jobs:
           mv build/*.img.xz release/
           mv build/*.img release/
           mv usb-installer/build/*.iso release/
-
       - name: Create SHASUM
         run: cd release && shasum -a 256 * | tee SHA256SUMS
-
       - name: OpenTimestamps
         run: npm ci && npx ots-cli.js stamp release/SHA256SUMS
-
       - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
         run: rm -rf release/*.img
-
       - name: Upload to R2
         uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
         with:
@@ -202,7 +277,6 @@ jobs:
           r2-bucket: ${{ secrets.R2_BUCKET }}
           source-dir: packages/os/release
           destination-dir: ./${{ env.VERSION }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
         with:

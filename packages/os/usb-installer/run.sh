@@ -2,9 +2,9 @@
 set -euo pipefail
 
 mkdir -p build
-docker build -f usb-installer.Dockerfile --platform linux/amd64 -t usb-installer ../
+docker buildx build --load -f usb-installer.Dockerfile --platform linux/amd64 --cache-from type=gha,scope=usb-installer --cache-to type=gha,mode=max,scope=usb-installer -t usb-installer ../
 docker export -o build/rootfs.tar $(docker run -d usb-installer /bin/true)
-docker build -f builder.Dockerfile --platform linux/amd64 -t usb-installer:builder .
+docker buildx build --load -f builder.Dockerfile --platform linux/amd64 --cache-from type=gha,scope=usb-installer-builder --cache-to type=gha,mode=max,scope=usb-installer-builder -t usb-installer:builder .
 docker run --entrypoint /data/build.sh -v $PWD:/data --privileged --platform linux/amd64 usb-installer:builder
 
 # Test CD-ROM boot (used by VMs)
