@@ -3,6 +3,7 @@
     "build": "./build.sh",
     "build:amd64": "SKIP_ARM64=true npm run build",
     "build:amd64:rugix": "SKIP_AMD64_MENDER=true SKIP_MENDER_ARTIFACTS=true npm run build:amd64",
+    "build:amd64:usb-installer:prepare": "xz --keep --threads=0 build/umbrelos-amd64.img",
     "build:amd64:usb-installer": "cd usb-installer && ./run.sh",
     "build:arm64": "SKIP_AMD64=true npm run build",
     "build:pi5": "SKIP_AMD64=true SKIP_PI4=true npm run build",
