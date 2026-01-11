@@ -138,12 +138,9 @@ jobs:
           echo "tests=$tests" >> $GITHUB_OUTPUT
 
   umbreld-integration:
-    name: Run umbreld integration tests
+    name: Integration test
     needs: discover-integration-tests
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: packages/umbreld
+    runs-on: ubuntu-24.04-amd64-4-core
     strategy:
       fail-fast: false
       matrix:
@@ -155,21 +152,26 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      # This is needed for the samba integration tests
-      - name: Setup umbrel user
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Log runner specs
         run: |
-          sudo adduser --gecos "" --disabled-password umbrel
-          echo "umbrel:umbrel" | sudo chpasswd
-          sudo usermod -aG sudo umbrel
-      - name: Install dependencies
-        run: |
-          curl -s https://kopia.io/signing-key | sudo gpg --dearmor -o /etc/apt/keyrings/kopia-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/kopia-keyring.gpg] http://packages.kopia.io/apt/ stable main" | sudo tee /etc/apt/sources.list.d/kopia.list
-          sudo apt-get update
-          sudo apt-get install -y unar imagemagick ffmpeg samba wsdd2 kopia bindfs cifs-utils smbclient
-          sudo systemctl disable smbd wsdd2
-          sudo npm clean-install
-      - run: sudo npm run test -- --coverage ${{ matrix.test }}
+          echo "=== CPU Info ==="
+          nproc
+          lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Core)"
+          echo ""
+          echo "=== Memory Info ==="
+          free -h
+          echo ""
+          echo "=== Disk Info ==="
+          df -h /
+
+      - run: npm run dev rebuild
+      - run: npm run dev start
+      - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
+      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test }}
   ui:
     name: Run UI tests
     runs-on: ubuntu-24.04
