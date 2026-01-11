@@ -233,6 +233,20 @@ export default class UmbrelPro {
 		await this.#writeEcRegister(EC_MIN_FAN_SPEED_ADDRESS, fanSpeedValue)
 	}
 
+	// Enable or disable automatic fan management
+	setFanManagementEnabled(enabled: boolean) {
+		if (enabled) {
+			if (!this.#stopManagingFan) {
+				this.logger.log('Resuming automatic fan management')
+				this.#stopManagingFan = runEvery('1 minute', () => this.#manageFanSpeed())
+			}
+		} else {
+			this.logger.log('Pausing automatic fan management')
+			this.#stopManagingFan?.()
+			this.#stopManagingFan = undefined
+		}
+	}
+
 	// LED Control
 
 	// TODO: Set LED behaviour during umbrelOS operation.

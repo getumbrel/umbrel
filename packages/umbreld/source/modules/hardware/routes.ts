@@ -27,7 +27,7 @@ const umbrelPro = router({
 	// Check if running on Umbrel Pro hardware
 	isUmbrelPro: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.umbrelPro.isUmbrelPro()),
 
-	// TODO: Don't expose these routes, they are only for debugging.
+	// TODO: These are exposed in factory builds for hardware testing. Remove when we have a better solution.
 
 	// LED control
 	setLedOff: privateProcedure.mutation(async ({ctx}) => ctx.umbreld.hardware.umbrelPro.setLedOff()),
@@ -41,6 +41,14 @@ const umbrelPro = router({
 	setLedBreathe: privateProcedure
 		.input(z.object({duration: z.number().optional()}).optional())
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.umbrelPro.setLedBreathe(input?.duration)),
+
+	// Fan control
+	setFanManagementEnabled: privateProcedure
+		.input(z.object({enabled: z.boolean()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.umbrelPro.setFanManagementEnabled(input.enabled)),
+	setMinFanSpeed: privateProcedure
+		.input(z.object({percent: z.number()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.umbrelPro.setMinFanSpeed(input.percent)),
 
 	// Reset boot flag
 	wasBootedViaResetButton: privateProcedure.query(async ({ctx}) =>
