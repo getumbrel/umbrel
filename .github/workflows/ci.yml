@@ -7,7 +7,7 @@ jobs:
   # We must cache to unique scopes per architecture otherwise only one of the architectures gets cached.
   umbrelos-amd64-cache:
     name: Build umbrelOS amd64
-    runs-on: 64-core-amd64
+    runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -17,7 +17,7 @@ jobs:
         run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
   umbrelos-arm64-cache:
     name: Build umbrelOS arm64
-    runs-on: 64-core-arm64
+    runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -26,10 +26,12 @@ jobs:
         working-directory: packages/os
         run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
 
+  # Build the image for the VM tests
+  # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
   umbrelos-amd64-vm-image-build:
     name: Build umbrelOS amd64 VM image
     needs: umbrelos-amd64-cache
-    runs-on: 64-core-amd64
+    runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -46,15 +48,15 @@ jobs:
       - name: Build OS image
         working-directory: packages/os
         run: npm run build:amd64:rugix
-      - name: Compress OS image
-        run: sudo xz --threads=0 packages/os/build/umbrelos-amd64.img
       - name: Upload OS image
         uses: actions/upload-artifact@v4
         with:
           name: umbrelos-amd64-image
-          path: packages/os/build/umbrelos-amd64.img.xz
+          path: packages/os/build/umbrelos-amd64.img
           retention-days: 1
+          compression-level: 0
 
+  # Discover all MV test files so we can run the result as a build matrix
   discover-vm-tests:
     name: Discover VM tests
     runs-on: ubuntu-24.04
@@ -64,11 +66,12 @@ jobs:
       - uses: actions/checkout@v3
       - id: find
         run: |
-          tests=$(find packages/umbreld/source -name "*.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          tests=$(find packages/umbreld/source -name "*.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.vm\\.test\\.ts$"; ""))})')
           echo "tests=$tests" >> $GITHUB_OUTPUT
 
+  # Run each VM test in a different runner
   umbrelos-amd64-vm:
-    name: Run umbrelOS amd64 tests
+    name: VM test (${{ matrix.test.name }})
     needs: [umbrelos-amd64-vm-image-build, discover-vm-tests]
     runs-on: ubuntu-24.04
     strategy:
@@ -89,8 +92,6 @@ jobs:
         with:
           name: umbrelos-amd64-image
           path: packages/os/build
-      - name: Decompress OS image
-        run: xz --decompress --threads=0 packages/os/build/umbrelos-amd64.img.xz
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       - name: Install umbreld dependencies
@@ -98,33 +99,9 @@ jobs:
         run: npm clean-install
       - name: Run VM test
         working-directory: packages/umbreld
-        run: npm run test -- ${{ matrix.test }}
+        run: npm run test -- ${{ matrix.test.path }}
 
-  umbreld:
-    name: Run umbreld tests
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: packages/umbreld
-    strategy:
-      fail-fast: false
-      matrix:
-        task:
-          - format:check
-          # - lint
-          - typecheck
-          - test:unit -- --coverage
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - name: Install dependencies
-        run: sudo npm clean-install
-      - run: sudo npm run ${{ matrix.task }}
-
+  # Discover all integration test files so we can run the result as a build matrix
   discover-integration-tests:
     name: Discover integration tests
     runs-on: ubuntu-24.04
@@ -134,12 +111,13 @@ jobs:
       - uses: actions/checkout@v3
       - id: find
         run: |
-          tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.integration\\.test\\.ts$"; ""))})')
           echo "tests=$tests" >> $GITHUB_OUTPUT
 
+  # Run each integration test in a different runner
   umbreld-integration:
-    name: Integration test
-    needs: discover-integration-tests
+    name: Integration test (${{ matrix.test.name }})
+    needs: [discover-integration-tests, umbrelos-amd64-cache]
     runs-on: ubuntu-24.04-amd64-4-core
     strategy:
       fail-fast: false
@@ -156,24 +134,39 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Expose GitHub Actions runtime for Docker cache
         uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
-      - name: Log runner specs
-        run: |
-          echo "=== CPU Info ==="
-          nproc
-          lscpu | grep -E "^(Model name|CPU\(s\)|Thread|Core)"
-          echo ""
-          echo "=== Memory Info ==="
-          free -h
-          echo ""
-          echo "=== Disk Info ==="
-          df -h /
-
       - run: npm run dev rebuild
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
-      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test }}
+      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+
+  # Run umbreld checks
+  umbreld:
+    name: umbreld checks
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: packages/umbreld
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - format:check
+          - typecheck
+          - test:unit -- --coverage
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: sudo npm clean-install
+      - run: sudo npm run ${{ matrix.task }}
+
+  # Run ui checks
   ui:
-    name: Run UI tests
+    name: ui checks
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -203,11 +196,12 @@ jobs:
         run: pnpm install
       - run: pnpm run ${{ matrix.task }}
 
+  # If the current build is tagged, build all release assets, push to Cloudflare R2 and create a GitHub Release
   create-release:
     name: Create release on tag
     if: startsWith(github.ref, 'refs/tags/')
     needs: [umbrelos-amd64-cache, umbrelos-arm64-cache]
-    runs-on: 64-core-amd64
+    runs-on: ubuntu-24.04-amd64-16-core
     defaults:
       run:
         working-directory: packages/os
