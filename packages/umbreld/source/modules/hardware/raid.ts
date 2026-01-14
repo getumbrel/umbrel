@@ -5,6 +5,8 @@ import {$} from 'execa'
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
 
+import {reboot} from '../system/system.js'
+
 export type RaidType = 'storage' | 'failsafe'
 
 // Types for zpool status --json --json-int --json-flat-vdevs output
@@ -97,7 +99,7 @@ export default class Raid {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	configStore: FileStore<ConfigStore>
-
+	initialRaidSetupError?: Error
 	poolName = 'umbrelos'
 
 	constructor(umbreld: Umbreld) {
@@ -120,8 +122,16 @@ export default class Raid {
 		})
 	}
 
+	async hasConfigStore() {
+		return await fse.pathExists(this.configStore.filePath)
+	}
+
 	async start() {
 		this.logger.log('Starting RAID')
+
+		await this.handlePostBootRaidSetupProcess().catch((error) =>
+			this.logger.error('Failed to handle initial RAID setup boot', error),
+		)
 
 		// TODO: Monitor and report scrub progress
 
@@ -134,6 +144,68 @@ export default class Raid {
 
 	async stop() {
 		this.logger.log('Stopping RAID')
+	}
+
+	// Trigger initial RAID setup boot process
+	async triggerInitialRaidSetupBootFlow(
+		raidDevices: string[],
+		raidType: RaidType,
+		user: {name: string; password: string; language: string},
+	) {
+		// Setup the RAID array
+		await this.setup(raidDevices, raidType)
+
+		// Temporarily store the user setup details
+		// We handle setting up the user on the next boot
+		await this.configStore.set('user', user)
+
+		// Reboot the system into the RAID array
+		await reboot()
+	}
+
+	// Handle initial RAID setup after first boot with the new array
+	async handlePostBootRaidSetupProcess() {
+		// Check if we're on the first boot after RAID setup
+		const raidConfigUser = await this.configStore.get('user')
+		const userExists = await this.#umbreld.user.exists()
+		if (raidConfigUser?.name && raidConfigUser?.password && !userExists) {
+			this.logger.log('Detected first boot after RAID setup, creating user')
+			try {
+				// Create the user which will also update user/hashedPassword in the RAID config
+				await this.#umbreld.user.register(raidConfigUser.name, raidConfigUser.password, raidConfigUser.language ?? 'en')
+
+				// Wipe the plain text password from the RAID config
+				await this.configStore
+					.delete('user.password')
+					.catch((error) => this.logger.error('Failed to delete password from RAID config', error))
+			} catch (error) {
+				this.logger.error('Failed to create user', error)
+				// If this fails we save the error to return over the API to the UI
+				this.initialRaidSetupError = error as Error
+			}
+		}
+	}
+
+	// Check the status of the RAID setup boot process
+	async checkInitialRaidSetupStatus(): Promise<boolean> {
+		// Throw error if we failed to create the user
+		if (this.initialRaidSetupError) throw this.initialRaidSetupError
+
+		// Return false if the RAID array doesn't exist yet
+		const pool = await this.getStatus()
+		if (!pool.exists) return false
+
+		// Return false if the user isn't created yet
+		const userExists = await this.#umbreld.user.exists()
+		if (!userExists) return false
+
+		// Return false if the app store hasn't completed it's initial sync yet
+		const defaultRepository = await this.#umbreld.appStore.getDefaultRepository()
+		const isDefaultRepositoryUpdated = await defaultRepository?.isUpdated()
+		if (!isDefaultRepositoryUpdated) return false
+
+		// Initial RAID setup is complete
+		return true
 	}
 
 	// Get status of the RAID pool

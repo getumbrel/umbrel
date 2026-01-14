@@ -1,4 +1,5 @@
 import {expect, beforeAll, afterAll, describe, test} from 'vitest'
+import pWaitFor from 'p-wait-for'
 
 import {createTestVm} from '../test-utilities/create-test-umbreld.js'
 
@@ -33,8 +34,22 @@ describe.sequential('RAID storage mode', () => {
 		await umbreld.signup({raidDevices: [firstDeviceId], raidType: 'storage'})
 	}, 60000)
 
-	test('waits for VM to come back up and logs in', async () => {
-		await umbreld.waitForStartup({waitForUser: true})
+	test('waits for RAID setup to complete and logs in', async () => {
+		await pWaitFor(
+			async () => {
+				try {
+					return await umbreld.unauthenticatedClient.hardware.raid.checkInitialRaidSetupStatus.query()
+				} catch (error) {
+					// Ignore connection errors while VM is rebooting
+					if (error instanceof Error && error.message.includes('fetch failed')) {
+						return false
+					}
+					// Rethrow server errors (e.g., initialRaidSetupError)
+					throw error
+				}
+			},
+			{interval: 2000, timeout: 120_000},
+		)
 		await umbreld.login()
 	}, 180000)
 

@@ -3,7 +3,6 @@ import {z} from 'zod'
 
 import {router, publicProcedure, privateProcedure} from '../server/trpc/trpc.js'
 import * as totp from '../utilities/totp.js'
-import {reboot} from '../system/system.js'
 
 const ONE_SECOND = 1000
 const ONE_MINUTE = 60 * ONE_SECOND
@@ -32,20 +31,21 @@ export default router({
 				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Attempted to register when user is already registered'})
 			}
 
-			// TODO: Implement this properly by passing RAID config and checking it's allowed from the RPC.
-			// For now we just check if there are any internal storage devices and if so use them for RAID.
-			const internalStorage = await ctx.umbreld.hardware.internalStorage.getDevices()
+			// If we're on Umbrel Pro, check we jave a valid raid setup config
 			const isUmbrelPro = await ctx.umbreld.hardware.umbrelPro.isUmbrelPro()
-			if (isUmbrelPro && internalStorage.length > 0) {
-				const raidDevices = input.raidDevices ?? internalStorage.map((device) => device.id!)
-				const raidType = input.raidType ?? 'storage'
-				await ctx.umbreld.hardware.raid.setup(raidDevices, raidType)
-				await ctx.umbreld.hardware.raid.configStore.set('user', {
+			const hasRaidDetails = input.raidType && input.raidDevices && input.raidDevices.length > 0
+			if (isUmbrelPro && !hasRaidDetails) {
+				throw new TRPCError({code: 'BAD_REQUEST', message: 'RAID devices are required for Umbrel Pro'})
+			}
+
+			// If we have a valid raid setup details, trigger the initial RAID setup boot process
+			// We'll reboot into the RAID filesystem and then the RAID module will setup the user on the next boot
+			if (hasRaidDetails) {
+				await ctx.umbreld.hardware.raid.triggerInitialRaidSetupBootFlow(input.raidDevices!, input.raidType!, {
 					name: input.name,
 					password: input.password,
 					language: input.language,
 				})
-				await reboot()
 				return true
 			}
 

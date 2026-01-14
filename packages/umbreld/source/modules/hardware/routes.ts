@@ -1,6 +1,6 @@
 import {z} from 'zod'
 
-import {router, privateProcedure, publicProcedureWhenNoUserExists} from '../server/trpc/trpc.js'
+import {router, privateProcedure, publicProcedureWhenNoUserExists, publicProcedure} from '../server/trpc/trpc.js'
 
 const internalStorage = router({
 	// Get internal storage devices (NVMe, HDD, eMMC, etc.)
@@ -8,6 +8,11 @@ const internalStorage = router({
 })
 
 const raid = router({
+	// Check status of initial RAID setup boot process
+	checkInitialRaidSetupStatus: publicProcedure.query(async ({ctx}) =>
+		ctx.umbreld.hardware.raid.checkInitialRaidSetupStatus(),
+	),
+
 	// Get RAID pool status
 	getStatus: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.raid.getStatus()),
 

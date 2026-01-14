@@ -19,28 +19,6 @@ export default class User {
 
 	async start() {
 		this.logger.log('Starting user')
-
-		// Create user if we just completed RAID setup process and don't have a user
-		// TODO: Handle this a cleaner way
-		const user = await this.#umbreld.hardware.raid.configStore.get('user')
-		const userExists = await this.exists()
-		if (user?.name && user?.password && !userExists) {
-			this.logger.log('Detected first boot after RAID setup, creating user')
-			try {
-				await this.register(user.name, user.password, user.language ?? 'en')
-
-				// Update the password to the hashed password in the RAID config
-				await this.#umbreld.hardware.raid.configStore
-					.delete('user.password')
-					.catch((error) => this.logger.error('Failed to delete password from RAID config', error))
-				await this.#umbreld.hardware.raid.configStore
-					.set('user.hashedPassword', await this.#store.get('user.hashedPassword'))
-					.catch((error) => this.logger.error('Failed to set hashed password in RAID config', error))
-			} catch (error) {
-				this.logger.error('Failed to create user', error)
-				// TODO: If this fails somehow report to the ui that user creation failed
-			}
-		}
 	}
 
 	async stop() {
@@ -60,7 +38,10 @@ export default class User {
 
 	// Set the users name
 	async setName(name: string) {
-		return this.#store.set('user.name', name)
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.name', name)
+		}
+		return await this.#store.set('user.name', name)
 	}
 
 	// Set the users wallpaper
@@ -120,6 +101,9 @@ export default class User {
 
 	// Directly sets the hashed password value (only exposed for data migration)
 	async setHashedPassword(hashedPassword: string) {
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.hashedPassword', hashedPassword)
+		}
 		return this.#store.set('user.hashedPassword', hashedPassword)
 	}
 
@@ -172,6 +156,9 @@ export default class User {
 
 	// Set language preference
 	async setLanguage(language: string) {
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.language', language)
+		}
 		return this.#store.set('user.language', language)
 	}
 
