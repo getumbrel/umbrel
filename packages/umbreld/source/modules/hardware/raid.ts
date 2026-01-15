@@ -199,10 +199,8 @@ export default class Raid {
 		const userExists = await this.#umbreld.user.exists()
 		if (!userExists) return false
 
-		// Return false if the app store hasn't completed it's initial sync yet
-		const defaultRepository = await this.#umbreld.appStore.getDefaultRepository()
-		const isDefaultRepositoryUpdated = await defaultRepository?.isUpdated()
-		if (!isDefaultRepositoryUpdated) return false
+		// Return false if the app store hasn't attempted to complete it's initial sync yet
+		if (!this.#umbreld.appStore.attemptedInitialAppStoreUpdate) return false
 
 		// Initial RAID setup is complete
 		return true
