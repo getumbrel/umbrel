@@ -3,10 +3,49 @@ name: CI
 on: push
 
 jobs:
+  # Detect if only UI files changed to skip heavy tests
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    outputs:
+      ui-only: ${{ steps.check.outputs.ui-only }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+
+          # On default branch, always run all tests
+          if [[ "${{ github.ref }}" == "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo "ui-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get changed files compared to the previous push event
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+          # Check if all changed files are in packages/ui/
+          UI_ONLY="true"
+          while IFS= read -r file; do
+            if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
+              UI_ONLY="false"
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "UI only: $UI_ONLY"
+          echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
+
   # These jobs simply serve as architecture native cache steps to load up the Docker cache for umbrelOS.
   # We must cache to unique scopes per architecture otherwise only one of the architectures gets cached.
   umbrelos-amd64-cache:
     name: Build umbrelOS amd64
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - uses: actions/checkout@v3
@@ -17,6 +56,8 @@ jobs:
         run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
   umbrelos-arm64-cache:
     name: Build umbrelOS arm64
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - uses: actions/checkout@v3
@@ -30,7 +71,8 @@ jobs:
   # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
   umbrelos-amd64-vm-image-build:
     name: Build umbrelOS amd64 VM image
-    needs: umbrelos-amd64-cache
+    needs: [detect-changes, umbrelos-amd64-cache]
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04-amd64-16-core
     steps:
       - name: Checkout code
@@ -59,6 +101,8 @@ jobs:
   # Discover all MV test files so we can run the result as a build matrix
   discover-vm-tests:
     name: Discover VM tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04
     outputs:
       tests: ${{ steps.find.outputs.tests }}
@@ -72,7 +116,8 @@ jobs:
   # Run each VM test in a different runner
   umbrelos-amd64-vm:
     name: VM test (${{ matrix.test.name }})
-    needs: [umbrelos-amd64-vm-image-build, discover-vm-tests]
+    needs: [detect-changes, umbrelos-amd64-vm-image-build, discover-vm-tests]
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -104,6 +149,8 @@ jobs:
   # Discover all integration test files so we can run the result as a build matrix
   discover-integration-tests:
     name: Discover integration tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04
     outputs:
       tests: ${{ steps.find.outputs.tests }}
@@ -117,7 +164,8 @@ jobs:
   # Run each integration test in a different runner
   umbreld-integration:
     name: Integration test (${{ matrix.test.name }})
-    needs: [discover-integration-tests, umbrelos-amd64-cache]
+    needs: [detect-changes, discover-integration-tests, umbrelos-amd64-cache]
+    if: needs.detect-changes.outputs.ui-only != 'true'
     runs-on: ubuntu-24.04-amd64-4-core
     strategy:
       fail-fast: false
