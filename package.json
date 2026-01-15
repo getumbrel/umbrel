@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "./scripts/umbrel-dev",
-    "dev:help": "npm run dev help"
+    "dev:help": "npm run dev help",
+    "test:vm": "npm --prefix packages/os run build:amd64:rugix && rm -rf packages/os/rugix/build && npm --prefix packages/umbreld run test:vm"
   }
 }
