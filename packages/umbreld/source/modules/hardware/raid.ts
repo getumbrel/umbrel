@@ -391,7 +391,6 @@ export default class Raid {
 	//    - For storage mode: adds as new top-level vdev (stripe)
 	//    - For failsafe mode: expands the existing raidz1 vdev
 	// 3. Update RAID config in boot partition
-	// TODO: Allow transitioningfrom storage mode to failsafe mode
 	async addDevice(deviceId: string): Promise<boolean> {
 		// Convert device ID to full path and verify it exists
 		const device = `/dev/disk/by-id/${deviceId}`
