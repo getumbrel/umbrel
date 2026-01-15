@@ -27,6 +27,50 @@ wait_for_devices() {
     done
 }
 
+# Handle migration from storage to failsafe mode
+# This does the minimum at boot: final sync and pool rename
+# The rest of the migration is completed by umbreld after boot
+handle_migration() {
+    echo ">>> Migration pool detected, performing final sync"
+
+    # Import both pools
+    echo ">>> Importing umbrelos pool"
+    zpool import -o cachefile=none -f umbrelos
+
+    echo ">>> Importing umbrelos-migration pool"
+    zpool import -o cachefile=none -f umbrelos-migration
+
+    # Create final snapshot and sync incrementally
+    echo ">>> Creating final snapshot"
+    zfs snapshot -r umbrelos@migration-final
+
+    echo ">>> Sending incremental changes to migration pool"
+    zfs send -R -i @migration umbrelos@migration-final | zfs receive -Fu umbrelos-migration
+
+    # Rename pools
+    # umbrelos > umbrelos-previous-migration
+    # umbrelos-migration > umbrelos
+    # If anything before this goes wrong, we boot back into the old pool.
+    # After the first rename succeeds, if the second rename fails, we rollback
+    # by renaming umbrelos-previous-migration back to umbrelos.
+    echo ">>> Renaming pools for migration"
+    zpool export umbrelos
+    zpool export umbrelos-migration
+    zpool import -o cachefile=none umbrelos umbrelos-previous-migration
+    if ! zpool import -o cachefile=none umbrelos-migration umbrelos; then
+        echo ">>> ERROR: Failed to rename migration pool, rolling back"
+        zpool export umbrelos-previous-migration
+        zpool import -o cachefile=none umbrelos-previous-migration umbrelos
+        echo ">>> Rollback complete, aborting migration"
+        return 1
+    fi
+
+    # Export the umbrelos pool so we can import it again in the usual mount process
+    zpool export umbrelos
+
+    echo ">>> Pool rename complete, umbreld will finish migration after boot"
+}
+
 # Parse YAML config to get devices array if config file exists
 DEVICES=()
 if [ -f "$CONFIG_FILE" ]; then
@@ -43,7 +87,12 @@ if [ ${#DEVICES[@]} -gt 0 ]; then
     # Continue if timeout is reached to allow mounting array with missing devices
     wait_for_devices "${DEVICES[@]}"
 
-    # Import the umbrelos pool.
+    # Check if migration pool exists
+    if zpool import 2>/dev/null | grep -q "umbrelos-migration"; then
+        handle_migration || true
+    fi
+
+    # Import the umbrelos pool normally
     #  -o cachefile=none means we don't read/write the cache files since
     # we only have the read only image at this point.
     #  -f force import if it thinks the pool is active elsewhere. This often

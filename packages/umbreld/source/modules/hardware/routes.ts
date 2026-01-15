@@ -26,6 +26,11 @@ const raid = router({
 	addDevice: privateProcedure
 		.input(z.object({device: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addDevice(input.device)),
+
+	// Transition a single-disk storage array to a failsafe (raidz1) array
+	transitionToFailsafe: privateProcedure
+		.input(z.object({device: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafe(input.device)),
 })
 
 const umbrelPro = router({

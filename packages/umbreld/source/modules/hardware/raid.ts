@@ -4,8 +4,13 @@ import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
-
 import {reboot} from '../system/system.js'
+
+// Get the size of a block device or partition in bytes
+async function getDeviceSize(device: string): Promise<number> {
+	const {stdout} = await $`lsblk --output SIZE --bytes --nodeps --noheadings ${device}`
+	return parseInt(stdout.trim(), 10)
+}
 
 export type RaidType = 'storage' | 'failsafe'
 
@@ -81,7 +86,6 @@ type ZpoolStatusOutput = {
 	pools: Record<string, Pool>
 }
 
-// TODO: Keep all this data in sync in the config partition when it changes in the OS
 type ConfigStore = {
 	user?: {
 		name: string
@@ -99,8 +103,11 @@ export default class Raid {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	configStore: FileStore<ConfigStore>
+	isTransitioningToFailsafe = false
+	failsafeTransitionError?: Error
 	initialRaidSetupError?: Error
 	poolName = 'umbrelos'
+	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -129,9 +136,16 @@ export default class Raid {
 	async start() {
 		this.logger.log('Starting RAID')
 
+		// Handle initial RAID setup after first boot with the new array
 		await this.handlePostBootRaidSetupProcess().catch((error) =>
 			this.logger.error('Failed to handle initial RAID setup boot', error),
 		)
+
+		// Check if we are currently transitioning to failsafe mode and complete the migration
+		await this.#completeFailsafeTransition().catch((error) => {
+			this.logger.error('Failed to complete FailSafe transition:', error)
+			this.failsafeTransitionError = error as Error
+		})
 
 		// TODO: Monitor and report scrub progress
 
@@ -144,6 +158,72 @@ export default class Raid {
 
 	async stop() {
 		this.logger.log('Stopping RAID')
+	}
+
+	// Get status of the main RAID pool with migration error if any
+	async getStatus() {
+		const status = await this.getPoolStatus(this.poolName)
+		return {
+			...status,
+			failsafeTransitionError: this.failsafeTransitionError?.message,
+		}
+	}
+
+	// Get status of a RAID pool
+	async getPoolStatus(poolName: string): Promise<{
+		exists: boolean
+		raidType?: RaidType
+		totalSpace?: number
+		usableSpace?: number
+		usedSpace?: number
+		freeSpace?: number
+		status?: State
+		devices?: Array<{
+			id: string
+			status: State
+			readErrors: number
+			writeErrors: number
+			checksumErrors: number
+		}>
+	}> {
+		// Get pool status from ZFS
+		let pool
+		try {
+			const {stdout} = await $`zpool status --json --json-int --json-flat-vdevs ${poolName}`
+			const zpoolStatus = JSON.parse(stdout) as ZpoolStatusOutput
+			pool = zpoolStatus.pools?.[poolName]
+		} catch {}
+		if (!pool) return {exists: false}
+
+		const vdevs = Object.values(pool.vdevs)
+
+		// Determine RAID type from topology
+		const isRaidz = vdevs.some((v) => v.vdev_type === 'raidz')
+		const raidType = isRaidz ? 'failsafe' : 'storage'
+
+		// Filter vdevs by type
+		const rootVdev = vdevs.find((v) => v.vdev_type === 'root')
+		const diskVdevs = vdevs.filter((v) => v.vdev_type === 'disk')
+
+		if (!rootVdev) return {exists: false}
+
+		return {
+			exists: true,
+			raidType,
+			totalSpace: rootVdev.total_space,
+			usableSpace: rootVdev.def_space,
+			usedSpace: rootVdev.alloc_space,
+			freeSpace: rootVdev.def_space - rootVdev.alloc_space,
+			status: pool.state,
+			devices: diskVdevs.map((device) => ({
+				id: device.path!.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, ''),
+				size: device.rep_dev_size,
+				status: device.state,
+				readErrors: device.read_errors,
+				writeErrors: device.write_errors,
+				checksumErrors: device.checksum_errors,
+			})),
+		}
 	}
 
 	// Trigger initial RAID setup boot process
@@ -206,63 +286,6 @@ export default class Raid {
 		return true
 	}
 
-	// Get status of the RAID pool
-	async getStatus(): Promise<{
-		exists: boolean
-		raidType?: RaidType
-		totalSpace?: number
-		usableSpace?: number
-		usedSpace?: number
-		freeSpace?: number
-		status?: State
-		devices?: Array<{
-			id: string
-			status: State
-			readErrors: number
-			writeErrors: number
-			checksumErrors: number
-		}>
-	}> {
-		// Get pool status from ZFS
-		let pool
-		try {
-			const {stdout} = await $`zpool status --json --json-int --json-flat-vdevs ${this.poolName}`
-			const zpoolStatus = JSON.parse(stdout) as ZpoolStatusOutput
-			pool = zpoolStatus.pools?.[this.poolName]
-		} catch {}
-		if (!pool) return {exists: false}
-
-		const vdevs = Object.values(pool.vdevs)
-
-		// Determine RAID type from topology
-		const isRaidz = vdevs.some((v) => v.vdev_type === 'raidz')
-		const raidType = isRaidz ? 'failsafe' : 'storage'
-
-		// Filter vdevs by type
-		const rootVdev = vdevs.find((v) => v.vdev_type === 'root')
-		const diskVdevs = vdevs.filter((v) => v.vdev_type === 'disk')
-
-		if (!rootVdev) return {exists: false}
-
-		return {
-			exists: true,
-			raidType,
-			totalSpace: rootVdev.total_space,
-			usableSpace: rootVdev.def_space,
-			usedSpace: rootVdev.alloc_space,
-			freeSpace: rootVdev.def_space - rootVdev.alloc_space,
-			status: pool.state,
-			devices: diskVdevs.map((device) => ({
-				id: device.path!.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, ''),
-				size: device.rep_dev_size,
-				status: device.state,
-				readErrors: device.read_errors,
-				writeErrors: device.write_errors,
-				checksumErrors: device.checksum_errors,
-			})),
-		}
-	}
-
 	// Create GPT partition table and partitions on a device
 	async #partitionDevice(device: string): Promise<{statePartition: string; dataPartition: string}> {
 		const isDiskById = device.startsWith('/dev/disk/by-id/')
@@ -304,27 +327,29 @@ export default class Raid {
 	}
 
 	// Create ZFS pool from data partitions
-	async #createPool(dataPartitions: string[], raidType: RaidType): Promise<void> {
+	async #createPool(poolName: string, dataPartitions: string[], raidType: RaidType): Promise<void> {
 		// Pool options (-o):
 		//   ashift=12: 4K sectors (optimal for NVMe SSDs)
 		//   autotrim=on: Enable automatic TRIM for SSDs
 		//   cachefile=none: Don't write to /etc/zfs/zpool.cache since it won't exist before we've mounted the pool
 		//   -m none: Don't mount the pool itself
-		this.logger.log(`Creating ZFS pool '${this.poolName}' (${raidType}) with partitions: ${dataPartitions.join(', ')}`)
+		this.logger.log(`Creating ZFS pool '${poolName}' (${raidType}) with partitions: ${dataPartitions.join(', ')}`)
 		const vdevType = raidType === 'failsafe' ? ['raidz1'] : []
-		await $`zpool create -f -o ashift=12 -o autotrim=on -o cachefile=none -m none ${this.poolName} ${vdevType} ${dataPartitions}`
+		await $`zpool create -f -o ashift=12 -o autotrim=on -o cachefile=none -m none ${poolName} ${vdevType} ${dataPartitions}`
+		this.logger.log(`ZFS pool '${poolName}' created successfully`)
+	}
 
-		// Create the data dataset with NVMe-optimized options
+	// Create the data dataset on a pool
+	async #createDataset(poolName: string): Promise<void> {
 		// Dataset options (-o):
 		//   mountpoint=legacy: We want to handle mounting manually
 		//   compression=lz4: Fastest compression for minimal overhead
 		//   atime=off: Disable access time updates (significantly reduces writes)
 		//   xattr=sa: Store extended attributes in inodes for significant performance gains.
 		//   acltype=posixacl: Enable POSIX ACLs for proper permission handling.
-		this.logger.log(`Creating data dataset on pool '${this.poolName}'`)
-		await $`zfs create -o mountpoint=legacy -o compression=lz4 -o atime=off -o xattr=sa -o acltype=posixacl ${this.poolName}/data`
-
-		this.logger.log(`ZFS pool '${this.poolName}' created successfully`)
+		this.logger.log(`Creating data dataset on pool '${poolName}'`)
+		await $`zfs create -o mountpoint=legacy -o compression=lz4 -o atime=off -o xattr=sa -o acltype=posixacl ${poolName}/data`
+		this.logger.log(`Main dataset created successfully`)
 	}
 
 	// Setup RAID array from a list of devices
@@ -348,8 +373,9 @@ export default class Raid {
 		const dataPartitions = partitionResults.map((result) => result.dataPartition)
 		this.logger.log(`All devices partitioned successfully`)
 
-		// Create ZFS pool from all data partitions
-		await this.#createPool(dataPartitions, raidType)
+		// Create ZFS pool and data dataset
+		await this.#createPool(this.poolName, dataPartitions, raidType)
+		await this.#createDataset(this.poolName)
 
 		// Write RAID config to boot partition
 		this.logger.log(`Writing RAID config to config partition`)
@@ -380,7 +406,7 @@ export default class Raid {
 		if (currentDevices.includes(device)) throw new Error(`Device ${device} is already in the RAID array`)
 
 		// Get the pool status
-		const pool = await this.getStatus()
+		const pool = await this.getPoolStatus(this.poolName)
 		if (!pool.exists) throw new Error("RAID array doesn't exist")
 
 		// Partition the new device
@@ -401,5 +427,119 @@ export default class Raid {
 
 		this.logger.log(`Device ${device} added to RAID array successfully`)
 		return true
+	}
+
+	// Transition a single-disk storage array to a failsafe (raidz1) array
+	// This creates a degraded raidz1 pool with the new disk and syncs data from the old pool
+	async transitionToFailsafe(newDeviceId: string): Promise<boolean> {
+		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		if (!(await fse.pathExists(newDevice))) throw new Error(`Device not found: ${newDevice}`)
+
+		// Verify we're in a state that can be migrated
+		const pool = await this.getPoolStatus(this.poolName)
+		if (!pool.exists) throw new Error('No RAID array exists')
+		if (pool.raidType !== 'storage') throw new Error('Can only transition from storage mode')
+		if (pool.devices?.length !== 1) throw new Error('Can only transition single-disk arrays')
+
+		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
+		this.isTransitioningToFailsafe = true
+
+		this.logger.log(`Starting transition to failsafe mode with ${newDevice}`)
+		const migrationPoolName = `${this.poolName}-migration`
+		try {
+			// Partition the new device
+			this.logger.log(`Partitioning new device: ${newDevice}`)
+			const {dataPartition: newDataPartition} = await this.#partitionDevice(newDevice)
+
+			// Get the size of the new partition for creating the temp file
+			const partitionSize = await getDeviceSize(newDataPartition)
+			this.logger.log(`New partition size: ${partitionSize} bytes`)
+
+			// Create a sparse temp file the same size as the new partition
+			this.logger.log(`Creating sparse temp file: ${this.temporaryDevicePath} (${partitionSize} bytes)`)
+			await $`truncate -s ${partitionSize} ${this.temporaryDevicePath}`
+
+			// Create the migration pool as raidz1 with new partition + temp file
+			// ZFS can use a file path directly without needing a loopback device
+			await this.#createPool(migrationPoolName, [newDataPartition, this.temporaryDevicePath], 'failsafe')
+
+			// Remove the temp file from the migration pool (making it degraded)
+			this.logger.log(`Removing temp device from pool to create degraded raidz1`)
+			await $`zpool offline ${migrationPoolName} ${this.temporaryDevicePath}`
+			await fse.remove(this.temporaryDevicePath)
+
+			// Create a snapshot of the active pool
+			const baseSnapshot = 'migration'
+			this.logger.log(`Creating snapshot: ${this.poolName}@${baseSnapshot}`)
+			await $`zfs snapshot -r ${this.poolName}@${baseSnapshot}`
+
+			// Send the active pool snapshot to the migration pool
+			this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
+			await $({shell: true})`zfs send -R ${this.poolName}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
+
+			this.logger.log(`Initial sync complete, rebooting to complete migration`)
+			setTimeout(() => reboot(), 1000) // Schedule in 1 second so the api response has time to be sent
+			return true
+		} catch (error) {
+			// Clean up on failure
+			this.logger.error(`Migration failed, cleaning up...`)
+			await $`zpool destroy ${migrationPoolName}`.catch(() => {})
+			await $`zfs destroy -r ${this.poolName}@migration`.catch(() => {})
+			await fse.remove(this.temporaryDevicePath).catch(() => {})
+			throw error
+		} finally {
+			this.isTransitioningToFailsafe = false
+		}
+	}
+
+	// We run this on boot to check if there's an in progress transition and complete it.
+	// The boot script does the minimum: final sync and pool rename
+	// We complete the migration here: destroy old pool, re-partition old device, add it to the new pool
+	async #completeFailsafeTransition(): Promise<void> {
+		const previousPoolName = `${this.poolName}-previous-migration`
+
+		// Check if we have a transition in progress
+		const previousPool = await this.getPoolStatus(previousPoolName)
+		if (!previousPool.exists) return
+
+		this.logger.log('Failsafe transition detected, finishing off migration')
+
+		// Get the old device from the previous pool
+		// We just grab the first device since the pool should only have one
+		const oldDevice = previousPool.devices?.[0]?.id
+		const oldDevicePath = `/dev/disk/by-id/${oldDevice}`
+		if (!oldDevice) throw new Error('Could not determine old device from previous migration pool')
+		this.logger.log(`Old device: ${oldDevice}`)
+
+		// Destroy the old pool
+		this.logger.log('Destroying previous migration pool')
+		await $`zpool destroy ${previousPoolName}`
+
+		// Partition the old device
+		this.logger.log(`Partitioning old device: ${oldDevice}`)
+		const {dataPartition: oldDataPartition} = await this.#partitionDevice(oldDevicePath)
+
+		// Replace the temp device with the old device partition in the new pool
+		this.logger.log('Replacing temp device with old device in pool')
+		await $`zpool replace ${this.poolName} ${this.temporaryDevicePath} ${oldDataPartition}`
+
+		// Update config with new RAID configuration
+		this.logger.log('Updating RAID config')
+		const pool = await this.getPoolStatus(this.poolName)
+		await this.configStore.set('raid', {
+			devices: pool.devices!.map((device) => device.id),
+			raidType: 'failsafe',
+		})
+
+		// Clean up leftover snapshots
+		this.logger.log('Cleaning up leftover snapshots')
+		await $`zfs destroy -r ${this.poolName}@migration`.catch((error) =>
+			this.logger.error('Failed to destroy migration snapshot', error),
+		)
+		await $`zfs destroy -r ${this.poolName}@migration-final`.catch((error) =>
+			this.logger.error('Failed to destroy migration final snapshot', error),
+		)
+
+		this.logger.log('Migration to failsafe mode complete')
 	}
 }
