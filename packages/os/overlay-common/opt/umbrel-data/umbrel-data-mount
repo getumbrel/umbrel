@@ -30,7 +30,7 @@ wait_for_devices() {
 # Handle migration from storage to failsafe mode
 # This does the minimum at boot: final sync and pool rename
 # The rest of the migration is completed by umbreld after boot
-handle_migration() {
+handle_failsafe_transition() {
     echo ">>> Migration pool detected, performing final sync"
 
     # Import both pools
@@ -60,6 +60,7 @@ handle_migration() {
     if zpool import -o cachefile=none umbrelos-migration umbrelos; then
         echo ">>> Pool rename complete, umbreld will finish migration after boot"
     else
+        # TODO: Should we signal some error in the raid config here?
         echo ">>> ERROR: Failed to rename migration pool, rolling back"
         zpool export umbrelos-previous-migration
         zpool import -o cachefile=none umbrelos-previous-migration umbrelos
@@ -76,6 +77,8 @@ if [ -f "$CONFIG_FILE" ]; then
     mapfile -t DEVICES < <(yq '.raid.devices[]' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
+RAID_STATE=$(yq '.raid.state' "$CONFIG_FILE" 2>/dev/null || true)
+
 if [ ${#DEVICES[@]} -gt 0 ]; then
     echo ">>> Found RAID config with ${#DEVICES[@]} devices, assembling RAID"
 
@@ -87,8 +90,8 @@ if [ ${#DEVICES[@]} -gt 0 ]; then
     wait_for_devices "${DEVICES[@]}"
 
     # Check if migration pool exists
-    if zpool import 2>/dev/null | grep -q "umbrelos-migration"; then
-        handle_migration || true
+    if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
+        handle_failsafe_transition || true
     fi
 
     # Import the umbrelos pool normally

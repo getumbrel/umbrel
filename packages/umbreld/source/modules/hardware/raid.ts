@@ -94,6 +94,7 @@ type ConfigStore = {
 		language: string
 	}
 	raid?: {
+		state: 'normal' | 'transitioning-to-failsafe'
 		devices: string[]
 		raidType: RaidType
 	}
@@ -378,7 +379,7 @@ export default class Raid {
 
 		// Write RAID config to boot partition
 		this.logger.log(`Writing RAID config to config partition`)
-		await this.configStore.set('raid', {devices, raidType})
+		await this.configStore.set('raid', {state: 'normal', raidType, devices})
 
 		this.logger.log('RAID setup complete')
 		return true
@@ -475,6 +476,11 @@ export default class Raid {
 			this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
 			await $({shell: true})`zfs send -R ${this.poolName}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
 
+			// Mark RAID config state as transitioning to failsafe
+			// This allows easy detection by the boot script
+			this.logger.log('Updating RAID config')
+			await this.configStore.set('raid.state', 'transitioning-to-failsafe')
+
 			this.logger.log(`Initial sync complete, rebooting to complete migration`)
 			setTimeout(() => reboot(), 1000) // Schedule in 1 second so the api response has time to be sent
 			return true
@@ -525,6 +531,7 @@ export default class Raid {
 		this.logger.log('Updating RAID config')
 		const pool = await this.getPoolStatus(this.poolName)
 		await this.configStore.set('raid', {
+			state: 'normal',
 			devices: pool.devices!.map((device) => device.id),
 			raidType: 'failsafe',
 		})
