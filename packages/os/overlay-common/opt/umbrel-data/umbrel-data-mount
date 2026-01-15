@@ -57,18 +57,17 @@ handle_migration() {
     zpool export umbrelos
     zpool export umbrelos-migration
     zpool import -o cachefile=none umbrelos umbrelos-previous-migration
-    if ! zpool import -o cachefile=none umbrelos-migration umbrelos; then
+    if zpool import -o cachefile=none umbrelos-migration umbrelos; then
+        echo ">>> Pool rename complete, umbreld will finish migration after boot"
+    else
         echo ">>> ERROR: Failed to rename migration pool, rolling back"
         zpool export umbrelos-previous-migration
         zpool import -o cachefile=none umbrelos-previous-migration umbrelos
-        echo ">>> Rollback complete, aborting migration"
-        return 1
+        echo ">>> Rollback complete, migration aborted"
     fi
 
     # Export the umbrelos pool so we can import it again in the usual mount process
     zpool export umbrelos
-
-    echo ">>> Pool rename complete, umbreld will finish migration after boot"
 }
 
 # Parse YAML config to get devices array if config file exists
