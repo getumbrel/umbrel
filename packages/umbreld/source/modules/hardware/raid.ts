@@ -115,7 +115,6 @@ export default class Raid {
 		this.logger = umbreld.logger.createChildLogger(`hardware:${name.toLowerCase()}`)
 
 		// Create a file store for the config file with hooks to handle read-only partition
-		// TODO: Move this to a more appropriate place.
 		const configPartition = '/run/rugix/mounts/config'
 		const configFile = `${configPartition}/umbrel.yaml`
 		this.configStore = new FileStore<ConfigStore>({
