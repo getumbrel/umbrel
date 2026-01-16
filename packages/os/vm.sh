@@ -25,6 +25,7 @@ Usage: $0 <command> [options]
 
 Commands:
     boot <image>                   Boot VM from the given image
+    reflash                        Delete boot disk overlay (simulates reflashing the OS)
     reset                          Delete all VM state (overlay, NVMe disks, UEFI vars)
 
     nvme list                      List all NVMe devices and their status
@@ -374,6 +375,18 @@ boot_vm() {
     $nvme_args
 }
 
+# Reflash (delete overlay to simulate fresh OS install)
+reflash() {
+  local overlay="$STATE_DIR/overlay.qcow2"
+  if [[ -f "$overlay" ]]; then
+    echo "Removing boot disk overlay..."
+    rm -f "$overlay"
+    echo "Done. Next boot will start fresh."
+  else
+    echo "No overlay to remove."
+  fi
+}
+
 # Reset all state
 reset_state() {
   if [[ -d "$STATE_DIR" ]]; then
@@ -397,6 +410,11 @@ shift
 case "$command" in
   help|--help|-h)
     show_help
+    exit 0
+    ;;
+
+  reflash)
+    reflash
     exit 0
     ;;
 

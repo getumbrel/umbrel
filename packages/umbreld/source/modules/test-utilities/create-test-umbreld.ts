@@ -226,6 +226,18 @@ export async function createTestVm() {
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
+	async function disconnectNvme({slot}: {slot: number}) {
+		await $({env})`${vmScript} nvme disconnect ${slot}`
+	}
+
+	async function connectNvme({slot}: {slot: number}) {
+		await $({env})`${vmScript} nvme connect ${slot}`
+	}
+
+	async function reflash() {
+		await $({env})`${vmScript} reflash`
+	}
+
 	const {
 		client,
 		unauthenticatedClient,
@@ -255,6 +267,9 @@ export async function createTestVm() {
 		powerOff,
 		addNvme,
 		removeNvme,
+		disconnectNvme,
+		connectNvme,
+		reflash,
 		async ssh(command: string) {
 			const {stdout} =
 				await $`ssh -p ${sshPort} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null umbrel@localhost ${command}`

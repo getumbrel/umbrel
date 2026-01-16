@@ -31,21 +31,25 @@ wait_for_devices() {
 # This does the minimum at boot: final sync and pool rename
 # The rest of the migration is completed by umbreld after boot
 handle_failsafe_transition() {
+    local pool_name="$1"
+    local migration_pool="${pool_name}-migration"
+    local previous_pool="${pool_name}-previous-migration"
+
     echo ">>> Migration pool detected, performing final sync"
 
     # Import both pools
-    echo ">>> Importing umbrelos pool"
-    zpool import -o cachefile=none -f umbrelos
+    echo ">>> Importing ${pool_name} pool"
+    zpool import -o cachefile=none -f "$pool_name"
 
-    echo ">>> Importing umbrelos-migration pool"
-    zpool import -o cachefile=none -f umbrelos-migration
+    echo ">>> Importing ${migration_pool} pool"
+    zpool import -o cachefile=none -f "$migration_pool"
 
     # Create final snapshot and sync incrementally
     echo ">>> Creating final snapshot"
-    zfs snapshot -r umbrelos@migration-final
+    zfs snapshot -r "${pool_name}@migration-final"
 
     echo ">>> Sending incremental changes to migration pool"
-    zfs send -R -i @migration umbrelos@migration-final | zfs receive -Fu umbrelos-migration
+    zfs send -R -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
 
     # Rename pools
     # umbrelos > umbrelos-previous-migration
@@ -54,33 +58,35 @@ handle_failsafe_transition() {
     # After the first rename succeeds, if the second rename fails, we rollback
     # by renaming umbrelos-previous-migration back to umbrelos.
     echo ">>> Renaming pools for migration"
-    zpool export umbrelos
-    zpool export umbrelos-migration
-    zpool import -o cachefile=none umbrelos umbrelos-previous-migration
-    if zpool import -o cachefile=none umbrelos-migration umbrelos; then
+    zpool export "$pool_name"
+    zpool export "$migration_pool"
+    zpool import -o cachefile=none "$pool_name" "$previous_pool"
+    if zpool import -o cachefile=none "$migration_pool" "$pool_name"; then
         echo ">>> Pool rename complete, umbreld will finish migration after boot"
     else
         # TODO: Should we signal some error in the raid config here?
         echo ">>> ERROR: Failed to rename migration pool, rolling back"
-        zpool export umbrelos-previous-migration
-        zpool import -o cachefile=none umbrelos-previous-migration umbrelos
+        zpool export "$previous_pool"
+        zpool import -o cachefile=none "$previous_pool" "$pool_name"
         echo ">>> Rollback complete, migration aborted"
     fi
 
-    # Export the umbrelos pool so we can import it again in the usual mount process
-    zpool export umbrelos
+    # Export the pool so we can import it again in the usual mount process
+    zpool export "$pool_name"
 }
 
-# Parse YAML config to get devices array if config file exists
+# Parse YAML config to get RAID settings if config file exists
+POOL_NAME=""
 DEVICES=()
+RAID_STATE=""
 if [ -f "$CONFIG_FILE" ]; then
+    POOL_NAME=$(yq '.raid.poolName' "$CONFIG_FILE" 2>/dev/null || true)
     mapfile -t DEVICES < <(yq '.raid.devices[]' "$CONFIG_FILE" 2>/dev/null || true)
+    RAID_STATE=$(yq '.raid.state' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
-RAID_STATE=$(yq '.raid.state' "$CONFIG_FILE" 2>/dev/null || true)
-
-if [ ${#DEVICES[@]} -gt 0 ]; then
-    echo ">>> Found RAID config with ${#DEVICES[@]} devices, assembling RAID"
+if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
+    echo ">>> Found RAID config for pool '${POOL_NAME}' with ${#DEVICES[@]} devices"
 
     # Load zfs
     modprobe zfs
@@ -89,22 +95,22 @@ if [ ${#DEVICES[@]} -gt 0 ]; then
     # Continue if timeout is reached to allow mounting array with missing devices
     wait_for_devices "${DEVICES[@]}"
 
-    # Check if migration pool exists
+    # Check if we're in the middle of a failsafe transition
     if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
-        handle_failsafe_transition || true
+        handle_failsafe_transition "$POOL_NAME" || true
     fi
 
-    # Import the umbrelos pool normally
+    # Import the pool normally
     #  -o cachefile=none means we don't read/write the cache files since
     # we only have the read only image at this point.
     #  -f force import if it thinks the pool is active elsewhere. This often
     # happens after ota updates where it thinks we're on a new machine.
-    echo ">>> Importing umbrelos pool"
-    zpool import -o cachefile=none -f umbrelos
+    echo ">>> Importing ${POOL_NAME} pool"
+    zpool import -o cachefile=none -f "$POOL_NAME"
 
     echo ">>> Mounting RAID array to '$MOUNT_POINT'"
     mkdir -p "$MOUNT_POINT"
-    mount -t zfs umbrelos/data "$MOUNT_POINT"
+    mount -t zfs "${POOL_NAME}/data" "$MOUNT_POINT"
 else
     echo ">>> No RAID config found, falling back to default data partition"
 
