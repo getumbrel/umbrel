@@ -7,6 +7,7 @@ import {$} from 'execa'
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
 import {reboot} from '../system/system.js'
+import runEvery from '../utilities/run-every.js'
 
 // Get the size of a block device or partition in bytes
 async function getDeviceSize(device: string): Promise<number> {
@@ -15,6 +16,11 @@ async function getDeviceSize(device: string): Promise<number> {
 }
 
 export type RaidType = 'storage' | 'failsafe'
+
+export type ExpansionStatus = {
+	state: 'expanding' | 'finished' | 'canceled'
+	progress: number
+}
 
 // Types for zpool status --json --json-int --json-flat-vdevs output
 type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED'
@@ -55,7 +61,7 @@ type ScanStats = {
 }
 type RaidzExpandStats = {
 	name: string
-	state: 'ACTIVE' | 'FINISHED' | 'CANCELED'
+	state: 'SCANNING' | 'FINISHED' | 'CANCELED'
 	expanding_vdev: number
 	start_time: number
 	end_time: number
@@ -112,6 +118,9 @@ export default class Raid {
 	initialRaidSetupError?: Error
 	poolNameBase = 'umbrelos'
 	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
+	#lastExpansionProgress = 0
+	#stopPoolMonitor?: () => void
+	#lastEmittedExpansion?: ExpansionStatus
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -157,17 +166,38 @@ export default class Raid {
 			this.failsafeTransitionError = error as Error
 		})
 
-		// TODO: Monitor and report scrub progress
-
-		// TODO: Monitor and report resilver progress
-
-		// TODO: Monitor and report expansion progress
+		// Start pool monitor to send realtime events
+		this.#startPoolMonitor()
 
 		// TODO: Monthly scrub
 	}
 
 	async stop() {
 		this.logger.log('Stopping RAID')
+		this.#stopPoolMonitor?.()
+	}
+
+	#startPoolMonitor() {
+		this.#stopPoolMonitor = runEvery(
+			'1 second',
+			async () => {
+				try {
+					const pool = await this.getStatus()
+
+					// Emit expansion progress events
+					if (pool.expansion) {
+						const last = this.#lastEmittedExpansion
+						if (last?.state !== pool.expansion.state || last?.progress !== pool.expansion.progress) {
+							this.#lastEmittedExpansion = pool.expansion
+							this.#umbreld.eventBus.emit('raid:expansion-progress', pool.expansion)
+						}
+					}
+				} catch {
+					// Silently ignore errors during monitoring
+				}
+			},
+			{runInstantly: false},
+		)
 	}
 
 	// Get status of the main RAID pool with migration error if any
@@ -197,6 +227,7 @@ export default class Raid {
 			writeErrors: number
 			checksumErrors: number
 		}>
+		expansion?: ExpansionStatus
 	}> {
 		// Get pool status from ZFS
 		let pool
@@ -219,6 +250,31 @@ export default class Raid {
 
 		if (!rootVdev) return {exists: false}
 
+		// Parse expansion progress (only relevant for failsafe/raidz mode)
+		let expansion: ExpansionStatus | undefined
+		if (pool.raidz_expand_stats) {
+			const stats = pool.raidz_expand_stats
+			const stateMap = {SCANNING: 'expanding', FINISHED: 'finished', CANCELED: 'canceled'} as const
+			const state = stateMap[stats.state]
+
+			let progress: number
+			if (state === 'finished' || state === 'canceled') {
+				// Reset tracker when expansion ends so next expansion starts from 0
+				this.#lastExpansionProgress = 0
+				progress = state === 'finished' ? 100 : 0
+			} else {
+				// We need to do some awkward handling here because stats.to_reflow keeps growing forever and messes up the calculations.
+				// Cap progress at 99 while expanding due to overflow bugs
+				const rawProgress = stats.to_reflow > 0 ? Math.floor((stats.reflowed / stats.to_reflow) * 100) : 0
+				const cappedProgress = Math.min(rawProgress, 99)
+				// Never let progress go backwards
+				progress = Math.max(cappedProgress, this.#lastExpansionProgress)
+				this.#lastExpansionProgress = progress
+			}
+
+			expansion = {state, progress}
+		}
+
 		return {
 			exists: true,
 			raidType,
@@ -235,6 +291,7 @@ export default class Raid {
 				writeErrors: device.write_errors,
 				checksumErrors: device.checksum_errors,
 			})),
+			expansion,
 		}
 	}
 

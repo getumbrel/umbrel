@@ -1,6 +1,6 @@
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
+import {createTRPCProxyClient, httpBatchLink, createWSClient, wsLink, splitLink} from '@trpc/client'
 import got from 'got'
 import {CookieJar} from 'tough-cookie'
 import {$} from 'execa'
@@ -10,6 +10,7 @@ import pWaitFor from 'p-wait-for'
 
 import Umbreld from '../../index.js'
 import type {AppRouter} from '../server/trpc/index.js'
+import type {events} from '../event-bus/event-bus.js'
 
 import temporaryDirectory from '../utilities/temporary-directory.js'
 import runGitServer from './run-git-server.js'
@@ -20,12 +21,21 @@ function createTestHelpers(port: number) {
 		jwt = newJwt
 	}
 
+	// Create WebSocket client for subscriptions
+	const wsClient = createWSClient({
+		url: () => `ws://localhost:${port}/trpc?token=${jwt}`,
+	})
+
 	const client = createTRPCProxyClient<AppRouter>({
 		links: [
-			httpBatchLink({
-				url: `http://localhost:${port}/trpc`,
-				headers: async () => ({
-					Authorization: `Bearer ${jwt}`,
+			splitLink({
+				condition: (op) => op.type === 'subscription',
+				true: wsLink({client: wsClient}),
+				false: httpBatchLink({
+					url: `http://localhost:${port}/trpc`,
+					headers: async () => ({
+						Authorization: `Bearer ${jwt}`,
+					}),
 				}),
 			}),
 		],
@@ -94,6 +104,22 @@ function createTestHelpers(port: number) {
 		)
 	}
 
+	// Subscribe to events over WebSocket and collect them
+	function subscribeToEvents<T>(event: (typeof events)[number]) {
+		const collected: T[] = []
+		const subscription = client.eventBus.listen.subscribe(
+			{event},
+			{
+				onData: (data) => collected.push(data as T),
+				onError: (error) => console.error(`Subscription error for ${event}:`, error),
+			},
+		)
+		return {
+			collected,
+			unsubscribe: () => subscription.unsubscribe(),
+		}
+	}
+
 	return {
 		client,
 		unauthenticatedClient,
@@ -104,6 +130,7 @@ function createTestHelpers(port: number) {
 		login,
 		registerAndLogin,
 		waitForStartup,
+		subscribeToEvents,
 	}
 }
 
@@ -132,6 +159,7 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 		login,
 		registerAndLogin,
 		waitForStartup,
+		subscribeToEvents,
 	} = createTestHelpers(umbreld.server.port!)
 
 	async function cleanup() {
@@ -156,6 +184,7 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 		login,
 		registerAndLogin,
 		waitForStartup,
+		subscribeToEvents,
 		cleanup,
 	}
 }
@@ -248,6 +277,7 @@ export async function createTestVm() {
 		login,
 		registerAndLogin,
 		waitForStartup,
+		subscribeToEvents,
 	} = createTestHelpers(httpPort)
 
 	async function cleanup() {
@@ -288,6 +318,7 @@ export async function createTestVm() {
 		login,
 		registerAndLogin,
 		waitForStartup,
+		subscribeToEvents,
 		cleanup,
 	}
 }
