@@ -14,8 +14,8 @@ test('getDevices() returns empty array when no NVMe devices present', async () =
 	expect(devices).toEqual([])
 })
 
-test('getDevices() detects NVMe device in each slot', async () => {
-	for (const slot of [1, 2, 3, 4]) {
+for (const slot of [1, 2, 3, 4]) {
+	test(`getDevices() detects NVMe device in slot ${slot}`, async () => {
 		// Power off and add NVMe device to slot
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot})
@@ -29,5 +29,5 @@ test('getDevices() detects NVMe device in each slot', async () => {
 		// Power off and remove NVMe device from slot
 		await umbreld.vm.powerOff()
 		await umbreld.vm.removeNvme({slot})
-	}
-})
+	})
+}
