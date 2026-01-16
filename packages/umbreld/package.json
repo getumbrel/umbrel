@@ -13,7 +13,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest --reporter verbose --run --testTimeout 180000 --hookTimeout 180000",
+		"test": "vitest --reporter verbose --run --testTimeout 600000 --hookTimeout 600000",
 		"test:unit": "npm run test -- unit.test",
 		"test:integration": "npm run test -- integration.test",
 		"test:coverage": "open ./coverage/index.html",

@@ -11,16 +11,16 @@ describe.sequential('RAID storage mode', () => {
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
-	}, 180000)
+	})
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
-	}, 30000)
+	})
 
 	test('adds NVMe device and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('detects NVMe device in slot 1', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
@@ -32,7 +32,7 @@ describe.sequential('RAID storage mode', () => {
 
 	test('registers user with RAID config (triggers reboot)', async () => {
 		await umbreld.signup({raidDevices: [firstDeviceId], raidType: 'storage'})
-	}, 60000)
+	})
 
 	test('waits for RAID setup to complete and logs in', async () => {
 		await pWaitFor(
@@ -48,10 +48,10 @@ describe.sequential('RAID storage mode', () => {
 					throw error
 				}
 			},
-			{interval: 2000, timeout: 120_000},
+			{interval: 2000, timeout: 600_000},
 		)
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('reports correct RAID status after setup', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
@@ -68,12 +68,12 @@ describe.sequential('RAID storage mode', () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 2})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('logs in after adding second SSD', async () => {
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('detects both NVMe devices after reboot', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()

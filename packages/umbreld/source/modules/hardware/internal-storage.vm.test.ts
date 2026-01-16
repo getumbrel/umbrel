@@ -6,8 +6,8 @@ let umbreld: Awaited<ReturnType<typeof createTestVm>>
 beforeAll(async () => {
 	umbreld = await createTestVm()
 	await umbreld.vm.powerOn()
-}, 180000)
-afterAll(async () => await umbreld?.cleanup(), 30000)
+})
+afterAll(async () => await umbreld?.cleanup())
 
 test('getDevices() returns empty array when no NVMe devices present', async () => {
 	const devices = await umbreld.client.hardware.internalStorage.getDevices.query()

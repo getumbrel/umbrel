@@ -252,7 +252,9 @@ export default class Raid {
 		await this.configStore.set('user', user)
 
 		// Reboot the system into the RAID array
-		await reboot()
+		setTimeout(() => reboot(), 1000) // Schedule in 1 second so the api response has time to be sent
+
+		return true
 	}
 
 	// Handle initial RAID setup after first boot with the new array

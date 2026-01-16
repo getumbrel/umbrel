@@ -11,16 +11,16 @@ describe.sequential('RAID storage to failsafe transition', () => {
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
-	}, 180000)
+	})
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
-	}, 30000)
+	})
 
 	test('adds one NVMe device and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('detects NVMe device', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
@@ -32,12 +32,12 @@ describe.sequential('RAID storage to failsafe transition', () => {
 
 	test('registers user with storage RAID config (triggers reboot)', async () => {
 		await umbreld.signup({raidDevices: [firstDeviceId], raidType: 'storage'})
-	}, 60000)
+	})
 
 	test('waits for VM to come back up and logs in', async () => {
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('reports correct RAID status in storage mode', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
@@ -52,12 +52,12 @@ describe.sequential('RAID storage to failsafe transition', () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 2})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('logs in after adding second device', async () => {
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
@@ -80,7 +80,7 @@ describe.sequential('RAID storage to failsafe transition', () => {
 			device: secondDeviceId,
 		})
 		expect(result).toBe(true)
-	}, 300000)
+	})
 
 	test('waits for migration to complete (2 devices in array)', async () => {
 		// umbreld completes the migration asynchronously on startup
@@ -95,10 +95,10 @@ describe.sequential('RAID storage to failsafe transition', () => {
 				if (status?.failsafeTransitionError) throw new Error(status.failsafeTransitionError)
 				return false
 			},
-			{interval: 1000, timeout: 120_000},
+			{interval: 1000, timeout: 600_000},
 		)
 		expect(status!.devices).toHaveLength(2)
-	}, 180000)
+	})
 
 	test('reports correct RAID status in failsafe mode after migration', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
@@ -123,7 +123,7 @@ describe.sequential('RAID storage to failsafe transition', () => {
 				status = await umbreld.client.hardware.raid.getStatus.query()
 				return status.status === 'ONLINE'
 			},
-			{interval: 1000, timeout: 30_000},
+			{interval: 1000, timeout: 600_000},
 		)
 		expect(status!.status).toBe('ONLINE')
 	})

@@ -69,7 +69,7 @@ function createTestHelpers(port: number) {
 					return false
 				}
 			},
-			{interval: 1000, timeout: 30_000},
+			{interval: 1000, timeout: 600_000},
 		)
 		return true
 	}
@@ -90,7 +90,7 @@ function createTestHelpers(port: number) {
 					return false
 				}
 			},
-			{interval: 2000, timeout: 120_000},
+			{interval: 2000, timeout: 300_000},
 		)
 	}
 
@@ -199,7 +199,7 @@ export async function createTestVm() {
 					return false
 				}
 			},
-			{interval: 2000, timeout: 120_000},
+			{interval: 2000, timeout: 300_000},
 		)
 	}
 

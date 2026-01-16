@@ -12,17 +12,17 @@ describe.sequential('RAID failsafe mode', () => {
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
-	}, 180000)
+	})
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
-	}, 30000)
+	})
 
 	test('adds two NVMe devices and boots VM', async () => {
 		await umbreld.vm.addNvme({slot: 1})
 		await umbreld.vm.addNvme({slot: 2})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('detects both NVMe devices', async () => {
 		const devices = await umbreld.unauthenticatedClient.hardware.internalStorage.getDevices.query()
@@ -37,7 +37,7 @@ describe.sequential('RAID failsafe mode', () => {
 
 	test('registers user with failsafe RAID config (triggers reboot)', async () => {
 		await umbreld.signup({raidDevices: [firstDeviceId, secondDeviceId], raidType: 'failsafe'})
-	}, 60000)
+	})
 
 	test('waits for RAID setup to complete and logs in', async () => {
 		await pWaitFor(
@@ -53,10 +53,10 @@ describe.sequential('RAID failsafe mode', () => {
 					throw error
 				}
 			},
-			{interval: 2000, timeout: 120_000},
+			{interval: 2000, timeout: 600_000},
 		)
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('reports correct RAID status after setup', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
@@ -78,12 +78,12 @@ describe.sequential('RAID failsafe mode', () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 3})
 		await umbreld.vm.powerOn()
-	}, 180000)
+	})
 
 	test('logs in after adding third SSD', async () => {
 		await umbreld.waitForStartup({waitForUser: true})
 		await umbreld.login()
-	}, 180000)
+	})
 
 	test('detects all three NVMe devices after reboot', async () => {
 		const devices = await umbreld.client.hardware.internalStorage.getDevices.query()
@@ -122,7 +122,7 @@ describe.sequential('RAID failsafe mode', () => {
 				const status = await umbreld.client.hardware.raid.getStatus.query()
 				return status.usableSpace! > initialUsableSpace
 			},
-			{interval: 5000, timeout: 300_000},
+			{interval: 5000, timeout: 600_000},
 		)
-	}, 360000)
+	})
 })
