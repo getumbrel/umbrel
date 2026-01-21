@@ -146,26 +146,23 @@ export default class Raid {
 		const configFile = `${configPartition}/umbrel.yaml`
 		this.configStore = new FileStore<ConfigStore>({
 			filePath: configFile,
-			onBeforeWrite: async () => {
-				await $`mount -o remount,rw ${configPartition}`
-			},
-			onAfterWrite: async () => {
-				// This occasionally fails with "mount point is busy" errors. I have no idea why because all writes are
-				// queued so there should be no open file handles and remount should flush writes. Retrying with a delay
-				// makes this extremely unlikely to ever fail but blocks the write queue. It's acceptable since config
-				// writes are rare. On the tiny chance that 5 retries fail we just log the error and move on without failing
-				// to avoid blocking the write queue. This means the config partition would be left in rw state which isn't ideal
-				// but it's very unlikely to happen and less bad than killing the current operation which is probably quite
-				// critical if it's touching the RAID config file like a ZFS dataset migration. The next boot or config udpate
-				// should successfully remount the partition read-only.
-				await pRetry(async () => $`mount -o remount,ro ${configPartition}`, {
+			onBeforeWrite: () => $`mount -o remount,rw ${configPartition}`,
+			// This occasionally fails with "mount point is busy" errors. I have no idea why because all writes are
+			// queued so there should be no open file handles and remount should flush writes. Retrying with a delay
+			// makes this extremely unlikely to ever fail but blocks the write queue. It's acceptable since config
+			// writes are rare. On the tiny chance that 5 retries fail we just log the error and move on without failing
+			// to avoid blocking the write queue. This means the config partition would be left in rw state which isn't ideal
+			// but it's very unlikely to happen and less bad than killing the current operation which is probably quite
+			// critical if it's touching the RAID config file like a ZFS dataset migration. The next boot or config udpate
+			// should successfully remount the partition read-only.
+			onAfterWrite: () =>
+				pRetry(() => $`mount -o remount,ro ${configPartition}`, {
 					retries: 5,
 					factor: 1.1,
 					minTimeout: 100,
 				}).catch((error) => {
 					this.logger.error('Failed to remount config partition read-only', error)
-				})
-			},
+				}),
 		})
 	}
 

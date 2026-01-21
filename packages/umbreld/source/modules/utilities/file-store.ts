@@ -35,8 +35,8 @@ export default class FileStore<T extends Serializable> {
 		onAfterWrite,
 	}: {
 		filePath: string
-		onBeforeWrite?: () => Promise<void>
-		onAfterWrite?: () => Promise<void>
+		onBeforeWrite?: () => Promise<any>
+		onAfterWrite?: () => Promise<any>
 	}) {
 		this.filePath = filePath
 		this.#onBeforeWrite = onBeforeWrite
