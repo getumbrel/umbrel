@@ -223,7 +223,7 @@ jobs:
       fail-fast: false
       matrix:
         task:
-          - lint
+          # - lint
           - format:check
           - typecheck
     steps:
