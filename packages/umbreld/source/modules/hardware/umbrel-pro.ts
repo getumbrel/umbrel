@@ -350,10 +350,10 @@ export default class UmbrelPro {
 	// The PCIe Slot Number from lspci appears to uniquely identify each physical slot and has been
 	// tested to be stable in many situations.
 	getSsdSlotFromPciSlotNumber(pciSlotNumber: number | undefined): number | undefined {
-		if (pciSlotNumber === 6) return 1
-		if (pciSlotNumber === 4) return 2
-		if (pciSlotNumber === 14) return 3
-		if (pciSlotNumber === 12) return 4
+		if (pciSlotNumber === 12) return 1
+		if (pciSlotNumber === 14) return 2
+		if (pciSlotNumber === 4) return 3
+		if (pciSlotNumber === 6) return 4
 
 		return undefined
 	}

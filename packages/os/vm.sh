@@ -7,7 +7,7 @@ NVME_STATE_FILE="$STATE_DIR/nvme.json"
 
 # PCIe Physical Slot Numbers that match Umbrel Pro hardware
 # Maps slot 1-4 to their respective PCIe slot numbers
-declare -A PCI_SLOT_MAP=([1]=6 [2]=4 [3]=14 [4]=12)
+declare -A PCI_SLOT_MAP=([1]=12 [2]=14 [3]=4 [4]=6)
 
 # Defaults
 DEFAULT_MEMORY=2048
