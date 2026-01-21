@@ -49,7 +49,7 @@ handle_failsafe_transition() {
     zfs snapshot -r "${pool_name}@migration-final"
 
     echo ">>> Sending incremental changes to migration pool"
-    zfs send -R -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
+    zfs send --replicate --large-block --compressed --embed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
 
     # Rename pools
     # umbrelos > umbrelos-previous-migration

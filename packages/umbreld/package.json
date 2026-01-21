@@ -26,6 +26,7 @@
 		"test:umbrel-dev": "cd ../../; npm run dev exec:noninteractive -- npm --prefix /umbrel-dev/packages/umbreld test"
 	},
 	"devDependencies": {
+		"@types/ssh2": "^1.15.1",
 		"@tryjsky/v9u-smb2": "^1.1.0",
 		"@types/adm-zip": "^0.5.7",
 		"@types/archiver": "^6.0.3",
@@ -49,6 +50,7 @@
 		"got": "^14.4.6",
 		"node-git-server": "^1.0.0",
 		"nodemon": "^3.1.9",
+		"ssh2": "^1.16.0",
 		"prettier": "3.3.3",
 		"tcp-port-used": "^1.0.2",
 		"tough-cookie": "^5.1.2",

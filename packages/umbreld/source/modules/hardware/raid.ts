@@ -1,8 +1,9 @@
 import crypto from 'node:crypto'
+import {setTimeout} from 'node:timers/promises'
 
 import fse from 'fs-extra'
-
 import {$} from 'execa'
+import pRetry from 'p-retry'
 
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
@@ -19,6 +20,17 @@ export type RaidType = 'storage' | 'failsafe'
 
 export type ExpansionStatus = {
 	state: 'expanding' | 'finished' | 'canceled'
+	progress: number
+}
+
+export type FailsafeTransitionStatus = {
+	state: 'syncing' | 'rebooting' | 'rebuilding' | 'complete' | 'error'
+	progress: number
+	error?: string
+}
+
+export type RebuildStatus = {
+	state: 'rebuilding' | 'finished' | 'canceled'
 	progress: number
 }
 
@@ -114,13 +126,15 @@ export default class Raid {
 	logger: Umbreld['logger']
 	configStore: FileStore<ConfigStore>
 	isTransitioningToFailsafe = false
-	failsafeTransitionError?: Error
+	failsafeTransitionStatus?: FailsafeTransitionStatus
 	initialRaidSetupError?: Error
 	poolNameBase = 'umbrelos'
 	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
 	#lastExpansionProgress = 0
+	#lastRebuildProgress = 0
 	#stopPoolMonitor?: () => void
 	#lastEmittedExpansion?: ExpansionStatus
+	#lastEmittedRebuild?: RebuildStatus
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -155,6 +169,15 @@ export default class Raid {
 	async start() {
 		this.logger.log('Starting RAID')
 
+		// Start pool monitor to send realtime events
+		// This must happen before any operations that trigger rebuild/expansion
+		// so events are captured from the start
+		try {
+			this.#startPoolMonitor()
+		} catch (error) {
+			this.logger.error('Failed to start pool monitor', error)
+		}
+
 		// Handle initial RAID setup after first boot with the new array
 		await this.handlePostBootRaidSetupProcess().catch((error) =>
 			this.logger.error('Failed to handle initial RAID setup boot', error),
@@ -163,11 +186,7 @@ export default class Raid {
 		// Check if we are currently transitioning to failsafe mode and complete the migration
 		await this.#completeFailsafeTransition().catch((error) => {
 			this.logger.error('Failed to complete FailSafe transition:', error)
-			this.failsafeTransitionError = error as Error
 		})
-
-		// Start pool monitor to send realtime events
-		this.#startPoolMonitor()
 
 		// TODO: Monthly scrub
 	}
@@ -192,11 +211,20 @@ export default class Raid {
 							this.#umbreld.eventBus.emit('raid:expansion-progress', pool.expansion)
 						}
 					}
+
+					// Emit rebuild progress events (for normal rebuilds, not failsafe transitions)
+					if (pool.rebuild) {
+						const last = this.#lastEmittedRebuild
+						if (last?.state !== pool.rebuild.state || last?.progress !== pool.rebuild.progress) {
+							this.#lastEmittedRebuild = pool.rebuild
+							this.#umbreld.eventBus.emit('raid:rebuild-progress', pool.rebuild)
+						}
+					}
 				} catch {
 					// Silently ignore errors during monitoring
 				}
 			},
-			{runInstantly: false},
+			{runInstantly: true},
 		)
 	}
 
@@ -207,7 +235,7 @@ export default class Raid {
 		return {
 			name,
 			...status,
-			failsafeTransitionError: this.failsafeTransitionError?.message,
+			failsafeTransitionStatus: this.failsafeTransitionStatus,
 		}
 	}
 
@@ -228,6 +256,7 @@ export default class Raid {
 			checksumErrors: number
 		}>
 		expansion?: ExpansionStatus
+		rebuild?: RebuildStatus
 	}> {
 		// Get pool status from ZFS
 		let pool
@@ -275,6 +304,30 @@ export default class Raid {
 			expansion = {state, progress}
 		}
 
+		// Parse rebuild progress (ZFS calls this "resilver")
+		let rebuild: RebuildStatus | undefined
+		if (pool.scan_stats?.function === 'RESILVER') {
+			const stats = pool.scan_stats
+			const stateMap = {SCANNING: 'rebuilding', FINISHED: 'finished', CANCELED: 'canceled'} as const
+			const state = stateMap[stats.state]
+
+			let progress: number
+			if (state === 'finished' || state === 'canceled') {
+				// Reset tracker when rebuild ends so next rebuild starts from 0
+				this.#lastRebuildProgress = 0
+				progress = state === 'finished' ? 100 : 0
+			} else {
+				// Calculate progress from issued vs to_examine
+				const rawProgress = stats.to_examine > 0 ? Math.floor((stats.issued / stats.to_examine) * 100) : 0
+				const cappedProgress = Math.min(rawProgress, 99)
+				// Never let progress go backwards
+				progress = Math.max(cappedProgress, this.#lastRebuildProgress)
+				this.#lastRebuildProgress = progress
+			}
+
+			rebuild = {state, progress}
+		}
+
 		return {
 			exists: true,
 			raidType,
@@ -292,6 +345,7 @@ export default class Raid {
 				checksumErrors: device.checksum_errors,
 			})),
 			expansion,
+			rebuild,
 		}
 	}
 
@@ -309,7 +363,7 @@ export default class Raid {
 		await this.configStore.set('user', user)
 
 		// Reboot the system into the RAID array
-		setTimeout(() => reboot(), 1000) // Schedule in 1 second so the api response has time to be sent
+		setTimeout(1000).then(() => reboot()) // Schedule in 1 second so the api response has time to be sent
 
 		return true
 	}
@@ -547,24 +601,80 @@ export default class Raid {
 			this.logger.log(`Creating snapshot: ${pool.name}@${baseSnapshot}`)
 			await $`zfs snapshot -r ${pool.name}@${baseSnapshot}`
 
+			// Get the estimated size of the snapshot to send (must match flags used in actual send)
+			this.logger.log('Estimating snapshot size...')
+			const sizeResult =
+				await $`zfs send --dryrun --replicate --parsable --large-block --compressed --embed ${pool.name}@${baseSnapshot}`
+			const sizeOutput = sizeResult.stderr || sizeResult.stdout
+			// --parsable outputs "size\t<bytes>" on the last line
+			const sizeMatch = sizeOutput.match(/^size\s+(\d+)/m)
+			const estimatedSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0
+			this.logger.log(`Estimated snapshot size: ${estimatedSize} bytes`)
+
+			// Initialize transition status
+			this.failsafeTransitionStatus = {state: 'syncing', progress: 0}
+			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+
 			// Send the active pool snapshot to the migration pool
 			this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
-			await $({shell: true})`zfs send -R ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
+			const sendProcess = $({
+				shell: true,
+			})`zfs send --replicate --large-block --compressed --embed ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
+
+			// Poll progress while sending
+			const stopProgressMonitor = runEvery(
+				'1 second',
+				async () => {
+					try {
+						const migrationStatus = await this.getPoolStatus(migrationPoolName)
+						if (migrationStatus.exists && estimatedSize > 0) {
+							// usedSpace is raw allocation including raidz1 parity overhead
+							// Calculate overhead factor (totalSpace/usableSpace) to convert to actual data
+							const overheadFactor =
+								migrationStatus.totalSpace && migrationStatus.usableSpace
+									? migrationStatus.totalSpace / migrationStatus.usableSpace
+									: 2 // Default to 2 for 2-disk raidz1
+							const usedSpace = migrationStatus.usedSpace ?? 0
+							const actualDataWritten = usedSpace / overheadFactor
+							// Scale sync progress to 0-49% (first half of transition)
+							const rawProgress = Math.min(99, Math.floor((actualDataWritten / estimatedSize) * 100))
+							const progress = Math.floor((rawProgress / 100) * 49)
+							if (this.failsafeTransitionStatus && progress > this.failsafeTransitionStatus.progress) {
+								this.logger.log(`Sync progress: ${progress}%`)
+								this.failsafeTransitionStatus = {state: 'syncing', progress}
+								this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+							}
+						}
+					} catch {
+						// Ignore errors during progress polling
+					}
+				},
+				{runInstantly: true},
+			)
+
+			try {
+				await sendProcess
+			} finally {
+				stopProgressMonitor()
+			}
 
 			// Mark RAID config state as transitioning to failsafe
 			// This allows easy detection by the boot script
 			this.logger.log('Updating RAID config')
 			await this.configStore.set('raid.state', 'transitioning-to-failsafe')
 
-			// Mark RAID config state as transitioning to failsafe
-			// This allows easy detection by the boot script
-			this.logger.log('Updating RAID config')
-			await this.configStore.set('raid.state', 'transitioning-to-failsafe')
+			// Emit rebooting state at 50% (rebuild will complete the remaining 50%)
+			this.failsafeTransitionStatus = {state: 'rebooting', progress: 50}
+			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
 			this.logger.log(`Initial sync complete, rebooting to complete migration`)
-			setTimeout(() => reboot(), 1000) // Schedule in 1 second so the api response has time to be sent
+			setTimeout(1000).then(() => reboot()) // Schedule in 1 second so the api response has time to be sent
 			return true
 		} catch (error) {
+			// Emit error state
+			this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
+			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+
 			// Clean up on failure
 			this.logger.error(`Migration failed, cleaning up...`)
 			await $`zpool destroy ${migrationPoolName}`.catch(() => {})
@@ -580,53 +690,105 @@ export default class Raid {
 	// The boot script does the minimum: final sync and pool rename
 	// We complete the migration here: destroy old pool, re-partition old device, add it to the new pool
 	async #completeFailsafeTransition(): Promise<void> {
+		// Check config state first - this is the source of truth for transition status
+		const raidState = await this.configStore.get('raid.state')
+		if (raidState !== 'transitioning-to-failsafe') return
+
 		const pool = await this.getStatus()
 		const previousPoolName = `${pool.name}-previous-migration`
 
-		// Check if we have a transition in progress
+		// Verify the previous pool exists (should always exist if config says transitioning)
 		const previousPool = await this.getPoolStatus(previousPoolName)
-		if (!previousPool.exists) return
+		if (!previousPool.exists) {
+			this.logger.error('Config indicates transition in progress but previous pool not found')
+			return
+		}
 
 		this.logger.log('Failsafe transition detected, finishing off migration')
+		this.isTransitioningToFailsafe = true
 
-		// Get the old device from the previous pool
-		// We just grab the first device since the pool should only have one
-		const oldDevice = previousPool.devices?.[0]?.id
-		const oldDevicePath = `/dev/disk/by-id/${oldDevice}`
-		if (!oldDevice) throw new Error('Could not determine old device from previous migration pool')
-		this.logger.log(`Old device: ${oldDevice}`)
+		// Initialize transition status at 50% (sync phase complete, rebuild phase starting)
+		this.failsafeTransitionStatus = {state: 'rebuilding', progress: 50}
+		this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
-		// Destroy the old pool
-		this.logger.log('Destroying previous migration pool')
-		await $`zpool destroy ${previousPoolName}`
+		try {
+			// Get the old device from the previous pool
+			// We just grab the first device since the pool should only have one
+			const oldDevice = previousPool.devices?.[0]?.id
+			const oldDevicePath = `/dev/disk/by-id/${oldDevice}`
+			if (!oldDevice) throw new Error('Could not determine old device from previous migration pool')
+			this.logger.log(`Old device: ${oldDevice}`)
 
-		// Partition the old device
-		this.logger.log(`Partitioning old device: ${oldDevice}`)
-		const {dataPartition: oldDataPartition} = await this.#partitionDevice(oldDevicePath)
+			// Destroy the old pool
+			this.logger.log('Destroying previous migration pool')
+			await $`zpool destroy ${previousPoolName}`
 
-		// Replace the temp device with the old device partition in the new pool
-		this.logger.log('Replacing temp device with old device in pool')
-		await $`zpool replace ${pool.name} ${this.temporaryDevicePath} ${oldDataPartition}`
+			// Partition the old device
+			this.logger.log(`Partitioning old device: ${oldDevice}`)
+			const {dataPartition: oldDataPartition} = await this.#partitionDevice(oldDevicePath)
 
-		// Update config with new RAID configuration
-		this.logger.log('Updating RAID config')
-		await this.configStore.getWriteLock(async ({set}) => {
-			const pool = await this.getStatus()
-			const devices = pool.devices!.map((device) => device.id)
-			await set('raid.raidType', 'failsafe')
-			await set('raid.devices', devices)
-			await set('raid.state', 'normal')
-		})
+			// Replace the temp device with the old device partition in the new pool
+			this.logger.log('Replacing temp device with old device in pool')
+			await $`zpool replace ${pool.name} ${this.temporaryDevicePath} ${oldDataPartition}`
 
-		// Clean up leftover snapshots
-		this.logger.log('Cleaning up leftover snapshots')
-		await $`zfs destroy -r ${pool.name}@migration`.catch((error) =>
-			this.logger.error('Failed to destroy migration snapshot', error),
-		)
-		await $`zfs destroy -r ${pool.name}@migration-final`.catch((error) =>
-			this.logger.error('Failed to destroy migration final snapshot', error),
-		)
+			// Update config with new RAID configuration
+			this.logger.log('Updating RAID config')
+			await this.configStore.getWriteLock(async ({set}) => {
+				const pool = await this.getStatus()
+				const devices = pool.devices!.map((device) => device.id)
+				const raid = await this.configStore.get('raid')
+				await set('raid', {
+					...raid,
+					raidType: 'failsafe',
+					devices,
+					state: 'normal',
+				})
+			})
 
-		this.logger.log('Migration to failsafe mode complete')
+			// Monitor rebuild progress until complete
+			this.logger.log('Monitoring rebuild progress...')
+			while (true) {
+				try {
+					const status = await this.getPoolStatus(pool.name)
+					if (status.rebuild) {
+						// Scale rebuild progress (0-100) to transition progress (51-99)
+						const scaledProgress = 51 + Math.floor((status.rebuild.progress / 100) * 48)
+						const cappedProgress = Math.min(scaledProgress, 99)
+						if (cappedProgress > (this.failsafeTransitionStatus?.progress ?? 0)) {
+							this.failsafeTransitionStatus = {state: 'rebuilding', progress: cappedProgress}
+							this.logger.log(`Rebuild progress: ${cappedProgress}%`)
+							this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+						}
+						if (status.rebuild.state === 'finished') {
+							this.failsafeTransitionStatus = {state: 'complete', progress: 100}
+							this.logger.log('Rebuild progress: 100%')
+							this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+							break
+						}
+					}
+				} catch (error) {
+					this.logger.error('Error polling rebuild progress', error)
+				}
+				await setTimeout(1000)
+			}
+
+			this.logger.log('Migration to failsafe mode complete')
+		} catch (error) {
+			this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
+			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+			throw error
+		} finally {
+			// Clean up leftover snapshots
+			this.logger.log('Cleaning up leftover snapshots')
+			await $`zfs destroy -r ${pool.name}@migration`.catch((error) =>
+				this.logger.error('Failed to destroy migration snapshot', error),
+			)
+			await $`zfs destroy -r ${pool.name}@migration-final`.catch((error) =>
+				this.logger.error('Failed to destroy migration final snapshot', error),
+			)
+
+			// Reset state
+			this.isTransitioningToFailsafe = false
+		}
 	}
 }

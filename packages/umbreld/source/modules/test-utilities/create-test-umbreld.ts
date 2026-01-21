@@ -7,6 +7,7 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import getPort from 'get-port'
 import pWaitFor from 'p-wait-for'
+import {Client as SshClient} from 'ssh2'
 
 import Umbreld from '../../index.js'
 import type {AppRouter} from '../server/trpc/index.js'
@@ -14,6 +15,11 @@ import type {events} from '../event-bus/event-bus.js'
 
 import temporaryDirectory from '../utilities/temporary-directory.js'
 import runGitServer from './run-git-server.js'
+
+const userCredentials = {
+	name: 'satoshi',
+	password: 'moneyprintergobrrr',
+}
 
 function createTestHelpers(port: number) {
 	let jwt = ''
@@ -24,6 +30,7 @@ function createTestHelpers(port: number) {
 	// Create WebSocket client for subscriptions
 	const wsClient = createWSClient({
 		url: () => `ws://localhost:${port}/trpc?token=${jwt}`,
+		retryDelayMs: () => 100,
 	})
 
 	const client = createTRPCProxyClient<AppRouter>({
@@ -56,11 +63,6 @@ function createTestHelpers(port: number) {
 	})
 	const cookieJar = new CookieJar()
 	const api = unauthenticatedApi.extend({cookieJar})
-
-	const userCredentials = {
-		name: 'satoshi',
-		password: 'moneyprintergobrrr',
-	}
 
 	async function signup({raidDevices, raidType}: {raidDevices?: string[]; raidType?: 'storage' | 'failsafe'} = {}) {
 		await unauthenticatedClient.user.register.mutate({...userCredentials, raidDevices, raidType})
@@ -301,9 +303,32 @@ export async function createTestVm() {
 		connectNvme,
 		reflash,
 		async ssh(command: string) {
-			const {stdout} =
-				await $`ssh -p ${sshPort} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null umbrel@localhost ${command}`
-			return stdout
+			return new Promise<string>((resolve, reject) => {
+				const conn = new SshClient()
+				conn.on('ready', () => {
+					conn.exec(command, (err, stream) => {
+						if (err) {
+							conn.end()
+							return reject(err)
+						}
+						let stdout = ''
+						stream.on('data', (data: Buffer) => (stdout += data.toString()))
+						stream.stderr.on('data', () => {})
+						stream.on('close', () => {
+							conn.end()
+							resolve(stdout)
+						})
+					})
+				})
+				conn.on('error', reject)
+				conn.connect({
+					host: 'localhost',
+					port: sshPort,
+					username: 'umbrel',
+					// Password is synced to match the user's password after registration
+					password: userCredentials.password,
+				})
+			})
 		},
 	}
 
