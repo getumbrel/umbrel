@@ -16,6 +16,11 @@ import type {events} from '../event-bus/event-bus.js'
 import temporaryDirectory from '../utilities/temporary-directory.js'
 import runGitServer from './run-git-server.js'
 
+// Use the data/ directory in the umbreld package root for test temp files
+// This avoids filling up RAM-based tmpfs when running many tests in parallel
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
+const testDataDirectory = path.resolve(currentDirectory, '../../../data')
+
 const userCredentials = {
 	name: 'satoshi',
 	password: 'moneyprintergobrrr',
@@ -137,7 +142,7 @@ function createTestHelpers(port: number) {
 }
 
 export default async function createTestUmbreld({autoLogin = false, autoStart = true} = {}) {
-	const directory = temporaryDirectory()
+	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
 
 	const gitServer = await runGitServer()
@@ -192,7 +197,6 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 }
 
 export async function createTestVm() {
-	const currentDirectory = path.dirname(fileURLToPath(import.meta.url))
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
 	const vmImagePath = path.resolve(currentDirectory, '../../../../os/build/umbrelos-amd64.img')
 
@@ -202,7 +206,7 @@ export async function createTestVm() {
 		)
 	}
 
-	const directory = temporaryDirectory()
+	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
 	const stateDir = await directory.create()
 	const env = {VM_STATE_DIR: stateDir}
