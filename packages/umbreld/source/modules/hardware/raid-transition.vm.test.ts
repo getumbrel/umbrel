@@ -1,11 +1,11 @@
-import {expect, beforeAll, afterAll, describe, test} from 'vitest'
+import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
 import pWaitFor from 'p-wait-for'
 
 import {createTestVm} from '../test-utilities/create-test-umbreld.js'
 import type {FailsafeTransitionStatus} from './raid.js'
 
-describe.sequential('RAID storage to failsafe transition', () => {
+describe('RAID storage to failsafe transition', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
@@ -13,6 +13,7 @@ describe.sequential('RAID storage to failsafe transition', () => {
 	let rebuildSubscription: ReturnType<typeof umbreld.subscribeToEvents<FailsafeTransitionStatus>>
 	// Collect all status endpoint responses for verification
 	const transitionStatusCalls: FailsafeTransitionStatus[] = []
+	let failed = false
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
@@ -20,6 +21,14 @@ describe.sequential('RAID storage to failsafe transition', () => {
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
+	})
+
+	afterEach(({task}) => {
+		if (task.result?.state === 'fail') failed = true
+	})
+
+	beforeEach(({skip}) => {
+		if (failed) skip()
 	})
 
 	test('adds one NVMe device and boots VM', async () => {

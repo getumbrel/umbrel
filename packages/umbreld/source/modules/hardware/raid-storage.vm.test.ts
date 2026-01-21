@@ -1,13 +1,14 @@
-import {expect, beforeAll, afterAll, describe, test} from 'vitest'
+import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 import pWaitFor from 'p-wait-for'
 
 import {createTestVm} from '../test-utilities/create-test-umbreld.js'
 
-describe.sequential('RAID storage mode', () => {
+describe('RAID storage mode', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let firstDeviceId: string
 	let secondDeviceId: string
 	let initialTotalSpace: number
+	let failed = false
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
@@ -15,6 +16,14 @@ describe.sequential('RAID storage mode', () => {
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
+	})
+
+	afterEach(({task}) => {
+		if (task.result?.state === 'fail') failed = true
+	})
+
+	beforeEach(({skip}) => {
+		if (failed) skip()
 	})
 
 	test('adds NVMe device and boots VM', async () => {

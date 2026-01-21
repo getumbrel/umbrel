@@ -1,13 +1,14 @@
-import {expect, beforeAll, afterAll, describe, test} from 'vitest'
+import {expect, beforeAll, beforeEach, afterAll, afterEach, describe, test} from 'vitest'
 
 import {createTestVm} from '../test-utilities/create-test-umbreld.js'
 
 // Tests that SSDs previously used in another Umbrel installation don't interfere
 // with the current installation. The system should mount the correct pool based
 // on the pool name stored in the config, ignoring any foreign pools.
-describe.sequential('RAID with previously used SSDs', () => {
+describe('RAID with previously used SSDs', () => {
 	let umbreld: Awaited<ReturnType<typeof createTestVm>>
 	let currentPoolDevices: string[]
+	let failed = false
 
 	beforeAll(async () => {
 		umbreld = await createTestVm()
@@ -15,6 +16,14 @@ describe.sequential('RAID with previously used SSDs', () => {
 
 	afterAll(async () => {
 		await umbreld?.cleanup()
+	})
+
+	afterEach(({task}) => {
+		if (task.result?.state === 'fail') failed = true
+	})
+
+	beforeEach(({skip}) => {
+		if (failed) skip()
 	})
 
 	// Phase 1: Set up an Umbrel with SSDs in slots 1+2 (simulates a previous installation)
