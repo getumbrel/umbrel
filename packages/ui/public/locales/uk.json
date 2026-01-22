@@ -708,7 +708,6 @@
   "ok": "OK",
   "onboarding.account-created.by-clicking-button-you-agree": "Натискаючи 'Далі', ви погоджуєтеся з <linked>Умовами обслуговування umbrelOS</linked>",
   "onboarding.account-created.next": "Далі",
-  "onboarding.account-created.subtitle": "Ваш Umbrel готовий.",
   "onboarding.account-created.youre-all-set-name": "Ви готові, {{name}}.",
   "onboarding.contact-support": "Підтримка",
   "onboarding.create-account": "Створити акаунт",

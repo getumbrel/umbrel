@@ -294,7 +294,11 @@ class Server {
 			// refresh their contents after an OTA update for example.
 			const staticOptions = {cacheControl: true, etag: true, lastModified: true, maxAge: 0}
 			this.app.use('/', express.static(uiPath, staticOptions))
-			this.app.use('*', express.static(`${uiPath}/index.html`, staticOptions))
+
+			// SPA fallback: serve index.html for all unmatched routes
+			this.app.get('*', (request, response) => {
+				response.sendFile(join(uiPath, 'index.html'), staticOptions)
+			})
 		}
 
 		// All errors should be handled by their own middleware but if they aren't we'll catch

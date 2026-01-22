@@ -2,6 +2,7 @@ import {TRPCError} from '@trpc/server'
 import {z} from 'zod'
 
 import {router, publicProcedure, privateProcedure} from '../server/trpc/trpc.js'
+import {detectDevice} from '../system/system.js'
 import * as totp from '../utilities/totp.js'
 
 const ONE_SECOND = 1000
@@ -10,7 +11,15 @@ const ONE_HOUR = 60 * ONE_MINUTE
 const ONE_DAY = 24 * ONE_HOUR
 const ONE_WEEK = 7 * ONE_DAY
 
-const DEFAULT_WALLPAPER = '18'
+// Returns the default wallpaper based on device type
+// Pro/Home get forest wallpaper (22), others get classic (18)
+async function getDefaultWallpaper(): Promise<string> {
+	const device = await detectDevice()
+	if (device.productName === 'Umbrel Home' || device.productName === 'Umbrel Pro') {
+		return '22'
+	}
+	return '18'
+}
 
 export default router({
 	// Registers a new user
@@ -203,7 +212,7 @@ export default router({
 		const user = await ctx.user.get()
 
 		if (user.wallpaper === undefined) {
-			user.wallpaper = DEFAULT_WALLPAPER
+			user.wallpaper = await getDefaultWallpaper()
 		}
 
 		// Only return non sensitive data
@@ -240,7 +249,7 @@ export default router({
 	// This endpoint is public so it can be shown on the login screen
 	wallpaper: publicProcedure.query(async ({ctx}) => {
 		const user = await ctx.user.get()
-		return user?.wallpaper ?? DEFAULT_WALLPAPER
+		return user?.wallpaper ?? (await getDefaultWallpaper())
 	}),
 
 	// Returns the preferred language, if any

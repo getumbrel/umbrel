@@ -17,10 +17,11 @@ import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {Button} from '@/shadcn-components/ui/button'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
+import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 export default function BackupsRestoreOnboarding() {
@@ -229,9 +230,13 @@ export default function BackupsRestoreOnboarding() {
 					{step < Step.Review ? (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (!canNext || isConnecting ? 'pointer-events-none opacity-50' : '')}
+							className={cn(
+								primaryButtonProps.className,
+								!canNext || (isConnecting && 'pointer-events-none opacity-50'),
+							)}
 							onClick={handleNext}
 							disabled={!canNext || isConnecting}
+							style={primaryButtonProps.style}
 						>
 							<span className={isConnecting ? 'opacity-0' : 'opacity-100'}>{t('continue')}</span>
 							{isConnecting && <Loader2 className='absolute size-4 animate-spin' />}
@@ -239,7 +244,7 @@ export default function BackupsRestoreOnboarding() {
 					) : (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (isRestoring ? 'pointer-events-none opacity-50' : '')}
+							className={cn(primaryButtonProps.className, isRestoring && 'pointer-events-none opacity-50')}
 							onClick={async () => {
 								try {
 									await restoreBackup(selectedBackupId)
@@ -248,6 +253,7 @@ export default function BackupsRestoreOnboarding() {
 								}
 							}}
 							disabled={!selectedBackupId || isRestoring}
+							style={primaryButtonProps.style}
 						>
 							<span className={isRestoring ? 'opacity-0' : 'opacity-100'}>{t('backups-restore')}</span>
 							{isRestoring && <Loader2 className='absolute size-4 animate-spin' />}

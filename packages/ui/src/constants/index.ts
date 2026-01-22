@@ -6,10 +6,14 @@ export const LOADING_DASH = '–'
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-const hostEnvironments = ['umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
+const hostEnvironments = ['umbrel-pro', 'umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
 export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
 
 export const hostEnvironmentMap = {
+	'umbrel-pro': {
+		// TODO: Add system-umbrel-pro.png to figma-exports
+		icon: '/figma-exports/system-umbrel-pro.png',
+	},
 	'umbrel-home': {
 		icon: '/figma-exports/system-umbrel-home.png',
 	},

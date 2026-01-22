@@ -1,3 +1,4 @@
+import {useEffect} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {BareCoverMessage} from '@/components/ui/cover-message'
@@ -24,11 +25,15 @@ export function RedirectOnboarding() {
 	const navigate = useNavigate()
 
 	const path = pageToPath('onboarding')
+	const shouldRedirect = !location.pathname.startsWith(path)
 
-	if (location.pathname.startsWith(path)) return null
+	useEffect(() => {
+		if (shouldRedirect) {
+			sleep(SLEEP_TIME).then(() => navigate(path))
+		}
+	}, [shouldRedirect, navigate, path])
 
-	sleep(SLEEP_TIME).then(() => navigate(path))
-
+	if (!shouldRedirect) return null
 	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-onboarding')}</BareCoverMessage>
 }
@@ -38,16 +43,20 @@ export function RedirectLogin() {
 	const navigate = useNavigate()
 
 	const path = pageToPath('login')
+	const shouldRedirect = !location.pathname.startsWith(path)
 
-	if (location.pathname.startsWith(path)) return null
+	useEffect(() => {
+		if (shouldRedirect) {
+			sleep(SLEEP_TIME).then(() =>
+				navigate({
+					pathname: path,
+					search: redirect.createRedirectSearch(),
+				}),
+			)
+		}
+	}, [shouldRedirect, navigate, path])
 
-	sleep(SLEEP_TIME).then(() =>
-		navigate({
-			pathname: path,
-			search: redirect.createRedirectSearch(),
-		}),
-	)
-
+	if (!shouldRedirect) return null
 	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-login')}</BareCoverMessage>
 }
@@ -57,11 +66,15 @@ export function RedirectHome() {
 	const navigate = useNavigate()
 
 	const path = pageToPath('home')
+	const shouldRedirect = location.pathname !== path
 
-	if (location.pathname === path) return null
+	useEffect(() => {
+		if (shouldRedirect) {
+			sleep(SLEEP_TIME).then(() => navigate(path))
+		}
+	}, [shouldRedirect, navigate, path])
 
-	sleep(SLEEP_TIME).then(() => navigate(path))
-
+	if (!shouldRedirect) return null
 	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-home')}</BareCoverMessage>
 }

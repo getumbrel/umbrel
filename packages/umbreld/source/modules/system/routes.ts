@@ -23,7 +23,7 @@ import {
 	syncDns,
 } from './system.js'
 
-import {privateProcedure, publicProcedure, router} from '../server/trpc/trpc.js'
+import {privateProcedure, publicProcedure, publicProcedureWhenNoUserExists, router} from '../server/trpc/trpc.js'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'
@@ -101,7 +101,8 @@ export default router({
 			return ''
 		}
 	}),
-	device: privateProcedure.query(() => detectDevice()),
+	// Public during onboarding to show device-specific UI (Pro/Home images, video background)
+	device: publicProcedureWhenNoUserExists.query(() => detectDevice()),
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	systemDiskUsage: privateProcedure.query(({ctx}) => getSystemDiskUsage(ctx.umbreld)),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
@@ -109,7 +110,8 @@ export default router({
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
-	shutdown: privateProcedure.mutation(async ({ctx}) => {
+	// Public during onboarding so users can shut down during RAID setup if needed
+	shutdown: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
 		await ctx.umbreld.stop()
 		await shutdown()

@@ -708,7 +708,6 @@
   "ok": "OK",
   "onboarding.account-created.by-clicking-button-you-agree": "Ao clicar em 'Próximo', você concorda com os <linked>Termos de Serviço do umbrelOS</linked>",
   "onboarding.account-created.next": "Próximo",
-  "onboarding.account-created.subtitle": "Seu Umbrel está agora pronto.",
   "onboarding.account-created.youre-all-set-name": "Tudo pronto, {{name}}.",
   "onboarding.contact-support": "Suporte",
   "onboarding.create-account": "Criar conta",

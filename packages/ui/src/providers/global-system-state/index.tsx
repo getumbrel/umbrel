@@ -30,6 +30,9 @@ const GlobalSystemStateContext = createContext<{
 	reset: (password: string) => void
 	getError(): RouterError | null
 	clearError(): void
+	// We call this before triggering a custom restart flow (e.g., RAID setup) to prevent error boundary from showing when requests fail.
+	// Unlike the normal restart flow, this does NOT trigger logout-on-running behavior.
+	suppressErrors: () => void
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
@@ -41,6 +44,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
 	const [routerError, setRouterError] = useState<RouterError | null>(null)
+	// Separate flag for suppressing errors without triggering logout-on-running (e.g., RAID setup)
+	const [errorsSuppressedOnly, setErrorsSuppressedOnly] = useState(false)
 
 	// Start over fresh when any of the supported actions is triggered
 	const onMutate = async () => {
@@ -69,6 +74,9 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	}
 	const getError = () => routerError
 	const clearError = () => setRouterError(null)
+	// Allow external code to suppress errors (e.g., RAID setup doing its own restart flow)
+	// This sets a separate flag so it doesn't trigger logout-on-running behavior
+	const suppressErrors = () => setErrorsSuppressedOnly(true)
 
 	const queryClient = useQueryClient()
 	const utils = trpcReact.useUtils()
@@ -104,7 +112,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	})
 
 	if (!IS_DEV) {
-		if (systemStatusQ.error && !triggered) {
+		if (systemStatusQ.error && !triggered && !errorsSuppressedOnly) {
 			// This error should get caught by a parent error boundary component
 			// TODO: figure out what to do about network errors
 			// TODO: Do we need this production-only case at all?
@@ -230,7 +238,9 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate, reset, getError, clearError}}>
+				<GlobalSystemStateContext.Provider
+					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
+				>
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>
