@@ -27,6 +27,11 @@ const raid = router({
 		.input(z.object({device: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addDevice(input.device)),
 
+	// Replace a device in an existing RAID array
+	replaceDevice: privateProcedure
+		.input(z.object({oldDevice: z.string(), newDevice: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.replaceDevice(input.oldDevice, input.newDevice)),
+
 	// Transition a single-disk storage array to a failsafe (raidz1) array
 	transitionToFailsafe: privateProcedure
 		.input(z.object({device: z.string()}))

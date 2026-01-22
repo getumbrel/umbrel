@@ -4,7 +4,7 @@ import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from '../files/watcher.js'
 import type {OperationsInProgress} from '../files/files.js'
 import type {BackupsInProgress, RestoreStatus} from '../backups/backups.js'
-import type {ExpansionStatus, FailsafeTransitionStatus, RebuildStatus} from '../hardware/raid.js'
+import type {ExpansionStatus, FailsafeTransitionStatus, RebuildStatus, ReplaceStatus} from '../hardware/raid.js'
 
 // Type assertion to ensure all events in EventTypes are defined in events
 type MissingInEvents = Exclude<keyof EventTypes, (typeof events)[number]>
@@ -22,6 +22,7 @@ export const events = [
 	'raid:expansion-progress',
 	'raid:failsafe-transition-progress',
 	'raid:rebuild-progress',
+	'raid:replace-progress',
 ] as const satisfies readonly (keyof EventTypes)[]
 
 // Statically define event types
@@ -49,6 +50,8 @@ export type EventTypes = {
 	'raid:failsafe-transition-progress': FailsafeTransitionStatus
 	// Fires when RAID rebuild progress changes
 	'raid:rebuild-progress': RebuildStatus
+	// Fires when RAID replace progress changes
+	'raid:replace-progress': ReplaceStatus
 }
 
 export default class EventBus {

@@ -90,9 +90,10 @@ set_nvme_state() {
 init_nvme_entry() {
   local slot="$1"
   local size="$2"
+  local serial="$3"
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\" = {\"size\": \"$size\", \"connected\": true, \"exists\": true}" "$NVME_STATE_FILE" > "$tmp" && mv "$tmp" "$NVME_STATE_FILE"
+  jq ".\"$slot\" = {\"size\": \"$size\", \"serial\": \"$serial\", \"connected\": true, \"exists\": true}" "$NVME_STATE_FILE" > "$tmp" && mv "$tmp" "$NVME_STATE_FILE"
 }
 
 # Remove NVMe entry
@@ -169,10 +170,13 @@ nvme_add() {
     exit 1
   fi
 
+  # Generate a unique serial number using timestamp and random suffix
+  local serial="nvme${slot}-$(date +%s)-${RANDOM}"
+
   echo "Creating NVMe device in slot $slot (${size})..."
   qemu-img create -f qcow2 "$disk_path" "$size" >/dev/null
-  init_nvme_entry "$slot" "$size"
-  echo "Done. NVMe device created in slot $slot"
+  init_nvme_entry "$slot" "$size" "$serial"
+  echo "Done. NVMe device created in slot $slot (serial: $serial)"
 }
 
 # Destroy NVMe device
@@ -254,18 +258,23 @@ build_nvme_args() {
   local nvme_args=""
 
   for slot in 1 2 3 4; do
-    local exists connected disk_path pci_slot
+    local exists connected disk_path pci_slot serial
     exists=$(get_nvme_state "$slot" "exists")
     connected=$(get_nvme_state "$slot" "connected")
 
     if [[ "$exists" == "true" && "$connected" == "true" ]]; then
       disk_path=$(get_nvme_disk_path "$slot")
       pci_slot="${PCI_SLOT_MAP[$slot]}"
+      serial=$(get_nvme_state "$slot" "serial")
+      # Fallback for devices created before serial tracking
+      if [[ -z "$serial" ]]; then
+        serial="nvme${slot}"
+      fi
 
       # Create PCIe root port with correct slot number, then attach NVMe
       nvme_args="$nvme_args -device pcie-root-port,id=rp${slot},slot=${pci_slot},chassis=${slot}"
       nvme_args="$nvme_args -drive file=${disk_path},format=qcow2,if=none,id=nvme${slot},cache=none,discard=unmap,aio=threads"
-      nvme_args="$nvme_args -device nvme,drive=nvme${slot},serial=nvme${slot},bus=rp${slot}"
+      nvme_args="$nvme_args -device nvme,drive=nvme${slot},serial=${serial},bus=rp${slot}"
     fi
   done
 

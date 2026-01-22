@@ -34,6 +34,8 @@ export type RebuildStatus = {
 	progress: number
 }
 
+export type ReplaceStatus = RebuildStatus
+
 // Types for zpool status --json --json-int --json-flat-vdevs output
 type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED'
 type Vdev = {
@@ -126,15 +128,18 @@ export default class Raid {
 	logger: Umbreld['logger']
 	configStore: FileStore<ConfigStore>
 	isTransitioningToFailsafe = false
+	isReplacing = false
 	failsafeTransitionStatus?: FailsafeTransitionStatus
 	initialRaidSetupError?: Error
 	poolNameBase = 'umbrelos'
 	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
 	#lastExpansionProgress = 0
 	#lastRebuildProgress = 0
+	#lastReplace?: ReplaceStatus
 	#stopPoolMonitor?: () => void
 	#lastEmittedExpansion?: ExpansionStatus
 	#lastEmittedRebuild?: RebuildStatus
+	#lastEmittedReplace?: ReplaceStatus
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -231,6 +236,15 @@ export default class Raid {
 							this.#umbreld.eventBus.emit('raid:rebuild-progress', pool.rebuild)
 						}
 					}
+
+					// Emit replace progress events
+					if (pool.replace) {
+						const last = this.#lastEmittedReplace
+						if (last?.state !== pool.replace.state || last?.progress !== pool.replace.progress) {
+							this.#lastEmittedReplace = pool.replace
+							this.#umbreld.eventBus.emit('raid:replace-progress', pool.replace)
+						}
+					}
 				} catch {
 					// Silently ignore errors during monitoring
 				}
@@ -243,9 +257,27 @@ export default class Raid {
 	async getStatus() {
 		const name = await this.configStore.get('raid.poolName')
 		const status = await this.getPoolStatus(name)
+
+		// This is important so cancelled/completed is still reported after replacement has finished
+		// and this.isReplacing is false
+		let replace = this.#lastReplace
+		// If we are currently processing a device replacement, use the current rebuild progress
+		// for it's progress reporting
+		if (this.isReplacing) {
+			replace = {state: 'rebuilding', progress: 0}
+			if (status.rebuild) replace = {...status.rebuild}
+
+			// Clear isReplacing state on completion or cancellation
+			if (replace?.progress === 100 || replace?.state === 'canceled') this.isReplacing = false
+
+			// Store a reference to the last replace status so we can report it after completion
+			this.#lastReplace = {...replace}
+		}
+
 		return {
 			name,
 			...status,
+			replace,
 			failsafeTransitionStatus: this.failsafeTransitionStatus,
 		}
 	}
@@ -565,6 +597,59 @@ export default class Raid {
 		await this.configStore.set('raid.devices', updatedDevices)
 
 		this.logger.log(`Device ${device} added to RAID array successfully`)
+		return true
+	}
+
+	// Replace a device in the RAID array with a new device
+	// This will:
+	// 1. Partition the new device with a state partition and data partition
+	// 2. Use zpool replace to swap the old device with the new one
+	// 3. Update RAID config in boot partition
+	// Works for both storage and failsafe modes. ZFS will resilver the new device.
+	async replaceDevice(oldDeviceId: string, newDeviceId: string): Promise<boolean> {
+		const oldDevice = `/dev/disk/by-id/${oldDeviceId}`
+		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+
+		// Verify new device exists
+		if (!(await fse.pathExists(newDevice))) throw new Error(`New device not found: ${newDevice}`)
+
+		// Get the pool status - this is the source of truth for what devices are in the pool
+		const pool = await this.getStatus()
+		if (!pool.exists) throw new Error("RAID array doesn't exist")
+
+		// Verify old device is in the pool
+		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
+		if (!poolDeviceIds.includes(oldDeviceId)) throw new Error(`Device ${oldDeviceId} is not in the RAID array`)
+		if (poolDeviceIds.includes(newDeviceId)) throw new Error(`Device ${newDeviceId} is already in the RAID array`)
+
+		if (this.isReplacing) throw new Error('Already replacing device')
+		this.isReplacing = true
+		this.logger.log(`Replacing device ${oldDevice} with ${newDevice}`)
+
+		try {
+			// Partition the new device
+			this.logger.log(`Partitioning new device: ${newDevice}`)
+			const {dataPartition: newDataPartition} = await this.#partitionDevice(newDevice)
+
+			// Get the old data partition path
+			const oldDataPartition = `${oldDevice}-part2`
+
+			// Replace the device in the pool
+			// ZFS will automatically start resilvering the new device
+			this.logger.log(`Replacing ${oldDataPartition} with ${newDataPartition} in pool '${pool.name}'`)
+			await $`zpool replace ${pool.name} ${oldDataPartition} ${newDataPartition}`
+		} catch (error) {
+			this.isReplacing = false
+			throw error
+		}
+
+		// Update config with new device list
+		const currentDevices = (await this.configStore.get('raid.devices')) ?? []
+		const updatedDevices = currentDevices.map((d: string) => (d === oldDevice ? newDevice : d))
+		this.logger.log(`Updating RAID config with devices: ${updatedDevices.join(', ')}`)
+		await this.configStore.set('raid.devices', updatedDevices)
+
+		this.logger.log(`Device replacement initiated, resilvering in progress`)
 		return true
 	}
 
