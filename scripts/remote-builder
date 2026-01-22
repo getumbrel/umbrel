@@ -11,6 +11,9 @@ if [[ "${1:-}" == "--build-on-host" ]]; then
     USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
     WORK_DIR="${USER_HOME}/${REMOTE_DIR}"
 
+    # Disable spinners and fancy progress output
+    export CI=true
+
     # Install dependencies if missing
     echo "Checking dependencies..."
     export DEBIAN_FRONTEND=noninteractive
@@ -36,6 +39,9 @@ if [[ "${1:-}" == "--test-on-host" ]]; then
     shift
     USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
     WORK_DIR="${USER_HOME}/${REMOTE_DIR}/packages/umbreld"
+
+    # Disable spinners and fancy progress output
+    export CI=true
 
     cd "${WORK_DIR}"
     if [[ $# -eq 0 ]]; then
