@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Remote builder
+# Syncs git-tracked files to a remote host and runs build/test commands there
+
+REMOTE_DIR=".umbrel-builder"
+
+# Subcommands that run on the remote host
+if [[ "${1:-}" == "--build-on-host" ]]; then
+    USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    WORK_DIR="${USER_HOME}/${REMOTE_DIR}"
+
+    # Install dependencies if missing
+    echo "Checking dependencies..."
+    export DEBIAN_FRONTEND=noninteractive
+    command -v npm >/dev/null || (echo "Installing npm..." && apt-get update && apt-get install --yes nodejs npm)
+    command -v docker >/dev/null || (echo "Installing docker..." && apt-get update && apt-get install --yes docker.io)
+    command -v qemu-system-x86_64 >/dev/null || (echo "Installing qemu..." && apt-get update && apt-get install --yes qemu-system-x86)
+
+    # Install umbreld dev dependencies
+    echo ""
+    echo "Installing umbreld dependencies..."
+    cd "${WORK_DIR}/packages/umbreld" && npm install
+
+    # Build OS
+    echo ""
+    echo "Building OS..."
+    cd "${WORK_DIR}"
+    npm --prefix packages/os run build:amd64:rugix
+    rm -rf packages/os/rugix/build
+    exit 0
+fi
+
+if [[ "${1:-}" == "--test-on-host" ]]; then
+    shift
+    USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+    WORK_DIR="${USER_HOME}/${REMOTE_DIR}/packages/umbreld"
+
+    cd "${WORK_DIR}"
+    if [[ $# -eq 0 ]]; then
+        # No args: run test:vm
+        npm run test:vm
+    else
+        # Args provided: pass directly to test
+        npm run test -- "$@"
+    fi
+    exit 0
+fi
+
+# Main script - runs locally
+show_usage() {
+    echo "Usage: $0 <command> <ssh-host> [args]"
+    echo ""
+    echo "Commands:"
+    echo "  build <ssh-host>           Build the OS on the remote host"
+    echo "  test <ssh-host> [args]     Run tests on the remote host"
+    echo "                             No args: runs test:vm (all VM tests)"
+    echo "                             With args: passes args directly to 'npm run test'"
+    echo ""
+    echo "Examples:"
+    echo "  $0 build umbrel@192.168.1.27"
+    echo "  $0 test umbrel@192.168.1.27"
+    echo "  $0 test umbrel@192.168.1.27 vm.test -t 'factory reset'"
+    echo "  $0 test umbrel@192.168.1.27 unit.test"
+    exit 1
+}
+
+if [[ $# -lt 2 ]]; then
+    show_usage
+fi
+
+COMMAND="$1"
+SSH_HOST="$2"
+shift 2
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+sync_files() {
+    echo "Syncing files to ${SSH_HOST}:~/${REMOTE_DIR}..."
+
+    # Create the remote directory and ensure rsync is installed
+    ssh "${SSH_HOST}" "mkdir -p ~/${REMOTE_DIR} && (command -v rsync >/dev/null || (sudo DEBIAN_FRONTEND=noninteractive apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes rsync))"
+
+    # Sync all files except:
+    # - .gitignore'd files (via --filter)
+    # - .git directory
+    # - node_modules (installed fresh on remote)
+    # - build artifacts (created on remote, may have root ownership)
+    # Exit code 23 means partial transfer (e.g. file vanished), which is fine
+    cd "${REPO_ROOT}"
+    rsync -avz --checksum --delete \
+        --filter=':- .gitignore' \
+        --exclude='.git' \
+        --exclude='node_modules' \
+        --exclude='packages/os/build' \
+        --exclude='packages/os/rugix/.rugix' \
+        . "${SSH_HOST}:${REMOTE_DIR}/" || [[ $? -eq 23 ]]
+}
+
+case "${COMMAND}" in
+    build)
+        sync_files
+        echo ""
+        echo "Building on remote host..."
+        ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --build-on-host"
+        ;;
+    test)
+        sync_files
+        echo ""
+        echo "Running tests on remote host..."
+        if [[ $# -eq 0 ]]; then
+            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host"
+        else
+            # Properly escape args for SSH
+            ESCAPED_ARGS=""
+            for arg in "$@"; do
+                ESCAPED_ARGS+=" '${arg}'"
+            done
+            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host${ESCAPED_ARGS}"
+        fi
+        ;;
+    *)
+        show_usage
+        ;;
+esac

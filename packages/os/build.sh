@@ -35,7 +35,9 @@ function main() {
     dev="false"
     if [[ "${release}" == "" ]]
     then
-        release="$(git rev-parse --short HEAD)-$(date +%s)"
+        local git_hash
+        git_hash="$(git rev-parse --short HEAD 2>/dev/null || echo "dev")"
+        release="${git_hash}-$(date +%s)"
         dev="true"
     fi
 
