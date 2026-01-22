@@ -75,11 +75,11 @@ function main() {
     # *-legacy.update are rugix update artifacts for legacy mender formatted devices
     # *-legacy-migration.update are mender update artifacts to allow mender based update
     # systems to migrate to the new rugix based update system.
-    mv build/umbrelos-amd64.rugixb        build/umbrelos-amd64.update                  || true
-    mv build/umbrelos-mender-amd64.mender build/umbrelos-amd64-legacy-migration.update || true
-    mv build/umbrelos-mender-amd64.rugixb build/umbrelos-amd64-legacy.update           || true
-    mv build/umbrelos-pi.mender           build/umbrelos-pi-legacy-migration.update    || true
-    mv build/umbrelos-pi.rugixb           build/umbrelos-pi.update                     || true
+    mv build/umbrelos-amd64.rugixb        build/umbrelos-amd64.update                  2>/dev/null || true
+    mv build/umbrelos-mender-amd64.mender build/umbrelos-amd64-legacy-migration.update 2>/dev/null || true
+    mv build/umbrelos-mender-amd64.rugixb build/umbrelos-amd64-legacy.update           2>/dev/null || true
+    mv build/umbrelos-pi.mender           build/umbrelos-pi-legacy-migration.update    2>/dev/null || true
+    mv build/umbrelos-pi.rugixb           build/umbrelos-pi.update                     2>/dev/null || true
 
     # To boot from QEMU
     # qemu-system-x86_64 -net nic -net user,hostfwd=tcp::2222-:22 -machine accel=tcg -cpu max -smp 4 -m 8192 -hda build/umbrelos.img -bios OVMF.fd
