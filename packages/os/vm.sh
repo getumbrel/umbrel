@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATE_DIR="${VM_STATE_DIR:-$SCRIPT_DIR/vm-state}"
 NVME_STATE_FILE="$STATE_DIR/nvme.json"
+QMP_PORT_FILE="$STATE_DIR/qmp.port"
 
 # PCIe Physical Slot Numbers that match Umbrel Pro hardware
 # Maps slot 1-4 to their respective PCIe slot numbers
@@ -15,6 +16,7 @@ DEFAULT_CORES=4
 DEFAULT_DISK_SIZE="64G"
 DEFAULT_SSH_PORT=2222
 DEFAULT_HTTP_PORT=8080
+DEFAULT_QMP_PORT=4444
 DEFAULT_NVME_SIZE="64G"
 
 show_help() {
@@ -25,6 +27,7 @@ Usage: $0 <command> [options]
 
 Commands:
     boot <image>                   Boot VM from the given image
+    poweroff                       Gracefully shut down the VM via ACPI
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
     reset                          Delete all VM state (overlay, NVMe disks, UEFI vars)
 
@@ -41,6 +44,7 @@ Boot Options:
     --disk-size <size>             Boot disk size (default: ${DEFAULT_DISK_SIZE})
     --ssh-port <port>              Local SSH port forward (default: ${DEFAULT_SSH_PORT})
     --http-port <port>             Local HTTP port forward (default: ${DEFAULT_HTTP_PORT})
+    --qmp-port <port>              QMP control port (default: ${DEFAULT_QMP_PORT})
 
 NVMe Options:
     --size <size>                  NVMe disk size (default: ${DEFAULT_NVME_SIZE})
@@ -348,8 +352,12 @@ boot_vm() {
   local disk_size="$4"
   local ssh_port="$5"
   local http_port="$6"
+  local qmp_port="$7"
 
   init_state
+
+  # Save QMP port for poweroff command to use
+  echo "$qmp_port" > "$QMP_PORT_FILE"
   detect_ovmf
 
   if [[ ! -f "$image" ]]; then
@@ -416,6 +424,7 @@ boot_vm() {
     -m "$memory" \
     -rtc base=utc \
     -nographic -monitor none -chardev stdio,id=char0,signal=off -serial chardev:char0 \
+    -qmp tcp:127.0.0.1:${qmp_port},server,nowait \
     -smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Pro,sku=U4XN1,family=NAS" \
     -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
     -drive if=pflash,format=raw,file="$ovmf_vars" \
@@ -436,6 +445,30 @@ reflash() {
   else
     echo "No overlay to remove."
   fi
+}
+
+# Gracefully power off VM via QMP ACPI shutdown
+poweroff_vm() {
+  if [[ ! -f "$QMP_PORT_FILE" ]]; then
+    echo "Error: QMP port file not found. Is the VM running?" >&2
+    exit 1
+  fi
+
+  local qmp_port
+  qmp_port=$(cat "$QMP_PORT_FILE")
+
+  echo "Sending ACPI shutdown signal to QMP port ${qmp_port}..."
+  # QMP protocol: send capabilities negotiation, then system_powerdown
+  {
+    echo '{"execute": "qmp_capabilities"}'
+    sleep 0.1
+    echo '{"execute": "system_powerdown"}'
+  } | nc 127.0.0.1 "$qmp_port" > /dev/null 2>&1 || {
+    echo "Error: Failed to connect to VM (is it running?)" >&2
+    exit 1
+  }
+
+  echo "Shutdown signal sent. VM will power off gracefully."
 }
 
 # Reset all state
@@ -466,6 +499,11 @@ case "$command" in
 
   reflash)
     reflash
+    exit 0
+    ;;
+
+  poweroff)
+    poweroff_vm
     exit 0
     ;;
 
@@ -562,6 +600,7 @@ case "$command" in
     disk_size="$DEFAULT_DISK_SIZE"
     ssh_port="$DEFAULT_SSH_PORT"
     http_port="$DEFAULT_HTTP_PORT"
+    qmp_port="$DEFAULT_QMP_PORT"
 
     while [[ $# -gt 0 ]]; do
       case "$1" in
@@ -585,6 +624,10 @@ case "$command" in
           http_port="$2"
           shift 2
           ;;
+        --qmp-port)
+          qmp_port="$2"
+          shift 2
+          ;;
         *)
           echo "Error: Unknown option: $1" >&2
           exit 1
@@ -592,7 +635,7 @@ case "$command" in
       esac
     done
 
-    boot_vm "$image" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port"
+    boot_vm "$image" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port" "$qmp_port"
     ;;
 
   *)

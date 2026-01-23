@@ -85,6 +85,12 @@ describe('RAID failsafe mode', () => {
 		expect(deviceIds).toEqual([firstDeviceId, secondDeviceId].sort())
 	})
 
+	test('creates marker directory to verify data consistency', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('shuts down and adds third SSD', async () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 3})
@@ -173,5 +179,10 @@ describe('RAID failsafe mode', () => {
 			},
 			{interval: 1000, timeout: 60_000},
 		)
+	})
+
+	test('marker directory still exists after expansion', async () => {
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 })

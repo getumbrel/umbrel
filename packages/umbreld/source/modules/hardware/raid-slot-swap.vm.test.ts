@@ -71,6 +71,12 @@ describe('RAID survives SSD slot swap', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
+	test('creates marker directory to verify data consistency', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('shuts down VM', async () => {
 		await umbreld.vm.powerOff()
 	})
@@ -118,5 +124,10 @@ describe('RAID survives SSD slot swap', () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		const deviceIds = status.devices!.map((d) => d.id).sort()
 		expect(deviceIds).toEqual([firstDeviceId, secondDeviceId].sort())
+	})
+
+	test('marker directory still exists after slot swap', async () => {
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 })

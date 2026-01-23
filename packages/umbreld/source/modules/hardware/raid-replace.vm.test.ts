@@ -75,9 +75,15 @@ describe('RAID device replacement - storage mode', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
+	test('creates marker directory to verify data consistency', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('writes test data to ensure resilver takes time', async () => {
-		// Write 5GB of random data so resilver takes long enough to capture progress
-		await umbreld.vm.ssh('dd if=/dev/urandom of=~/test-data.bin bs=1M count=5000')
+		// Write 2GB of random data so resilver takes long enough to capture progress
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/test-data.bin bs=1M count=2000')
 	})
 
 	test('shuts down and adds third NVMe device (replacement drive)', async () => {
@@ -188,6 +194,11 @@ describe('RAID device replacement - storage mode', () => {
 		expect(deviceIds).toEqual([firstDeviceId, thirdDeviceId].sort())
 	})
 
+	test('marker directory still exists after replacement', async () => {
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('logs all collected events and status calls', () => {
 		const events = replaceSubscription.collected
 		console.log('Events collected:', events.length)
@@ -268,9 +279,15 @@ describe('RAID device replacement - failsafe mode', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
+	test('creates marker directory to verify data consistency', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('writes test data to ensure resilver takes time', async () => {
-		// Write 5GB of random data so resilver takes long enough to capture progress
-		await umbreld.vm.ssh('dd if=/dev/urandom of=~/test-data.bin bs=1M count=5000')
+		// Write 2GB of random data so resilver takes long enough to capture progress
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/test-data.bin bs=1M count=2000')
 	})
 
 	test('shuts down, nukes second drive, and adds fresh replacement', async () => {
@@ -387,6 +404,11 @@ describe('RAID device replacement - failsafe mode', () => {
 	test('pool is in ONLINE state after failsafe replacement', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.status).toBe('ONLINE')
+	})
+
+	test('marker directory still exists after replacement', async () => {
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 
 	test('logs all collected events and status calls', () => {

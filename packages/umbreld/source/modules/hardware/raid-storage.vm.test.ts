@@ -73,6 +73,12 @@ describe('RAID storage mode', () => {
 		expect(initialTotalSpace).toBeGreaterThan(0)
 	})
 
+	test('creates marker directory to verify data consistency', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
+	})
+
 	test('shuts down and adds second SSD', async () => {
 		await umbreld.vm.powerOff()
 		await umbreld.vm.addNvme({slot: 2})
@@ -116,5 +122,10 @@ describe('RAID storage mode', () => {
 	test('total space increased after adding second device', async () => {
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.totalSpace!).toBeGreaterThan(initialTotalSpace)
+	})
+
+	test('marker directory still exists after expansion', async () => {
+		const listing = await umbreld.client.files.list.query({path: '/Home'})
+		expect(listing.files.some((f) => f.name === 'data-consistency-marker')).toBe(true)
 	})
 })

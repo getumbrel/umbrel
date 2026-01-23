@@ -213,6 +213,7 @@ export async function createTestVm() {
 
 	const sshPort = await getPort()
 	const httpPort = await getPort()
+	const qmpPort = await getPort()
 
 	let vmProcessPid: number | undefined
 
@@ -220,8 +221,7 @@ export async function createTestVm() {
 		const vmProcess = $({
 			env,
 			detached: true,
-			stdio: 'ignore',
-		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort} --qmp-port ${qmpPort}`
 		vmProcess.unref()
 		vmProcessPid = vmProcess.pid
 
@@ -239,14 +239,24 @@ export async function createTestVm() {
 	}
 
 	async function powerOff() {
-		if (vmProcessPid) {
+		if (!vmProcessPid) return
+
+		const pid = vmProcessPid
+
+		// Send ACPI shutdown via QMP
+		await $({env})`${vmScript} poweroff`
+
+		// Wait for process to exit
+		while (true) {
 			try {
-				process.kill(-vmProcessPid, 'SIGTERM')
+				process.kill(pid, 0)
+				await new Promise((r) => setTimeout(r, 100))
 			} catch {
-				// VM process may already be dead
+				break
 			}
-			vmProcessPid = undefined
 		}
+
+		vmProcessPid = undefined
 	}
 
 	async function addNvme({slot, size}: {slot: number; size?: string}) {
@@ -300,6 +310,7 @@ export async function createTestVm() {
 		stateDir,
 		sshPort,
 		httpPort,
+		qmpPort,
 		get pid() {
 			return vmProcessPid
 		},
