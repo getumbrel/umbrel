@@ -69,8 +69,8 @@ describe('RAID storage to failsafe transition', () => {
 	})
 
 	test('writes test data to ensure sync and rebuild take time', async () => {
-		// Write 10GB of random data so sync/rebuild take long enough to capture progress
-		await umbreld.vm.ssh('dd if=/dev/urandom of=/data/test-data.bin bs=1M count=10000')
+		// Write 2GB of random data so sync/rebuild take long enough to capture progress
+		await umbreld.vm.ssh('dd if=/dev/urandom of=~/test-data.bin bs=1M count=2000')
 	})
 
 	test('shuts down and adds second NVMe device', async () => {
