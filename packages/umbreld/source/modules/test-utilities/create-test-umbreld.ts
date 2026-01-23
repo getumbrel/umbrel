@@ -269,6 +269,10 @@ export async function createTestVm() {
 		await $({env})`${vmScript} nvme connect ${slot}`
 	}
 
+	async function moveNvme({fromSlot, toSlot}: {fromSlot: number; toSlot: number}) {
+		await $({env})`${vmScript} nvme move ${fromSlot} ${toSlot}`
+	}
+
 	async function reflash() {
 		await $({env})`${vmScript} reflash`
 	}
@@ -305,6 +309,7 @@ export async function createTestVm() {
 		removeNvme,
 		disconnectNvme,
 		connectNvme,
+		moveNvme,
 		reflash,
 		async ssh(command: string) {
 			return new Promise<string>((resolve, reject) => {

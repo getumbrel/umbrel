@@ -33,6 +33,7 @@ Commands:
     nvme destroy <slot>            Destroy an NVMe device (deletes data)
     nvme connect <slot>            Connect an existing NVMe device to the VM
     nvme disconnect <slot>         Disconnect an NVMe device from the VM
+    nvme move <from> <to>          Move an NVMe device from one slot to another
 
 Boot Options:
     --memory <MiB>                 RAM in MiB (default: ${DEFAULT_MEMORY})
@@ -251,6 +252,47 @@ nvme_disconnect() {
 
   set_nvme_state "$slot" "connected" "false"
   echo "NVMe device in slot $slot disconnected (will be unavailable on next boot)"
+}
+
+# Move NVMe device from one slot to another
+nvme_move() {
+  local from_slot="$1"
+  local to_slot="$2"
+
+  validate_slot "$from_slot"
+  validate_slot "$to_slot"
+  init_state
+
+  if [[ "$from_slot" == "$to_slot" ]]; then
+    echo "Error: Source and destination slots are the same" >&2
+    exit 1
+  fi
+
+  local from_disk_path to_disk_path
+  from_disk_path=$(get_nvme_disk_path "$from_slot")
+  to_disk_path=$(get_nvme_disk_path "$to_slot")
+
+  if [[ ! -f "$from_disk_path" ]]; then
+    echo "Error: No NVMe device in slot $from_slot" >&2
+    exit 1
+  fi
+
+  if [[ -f "$to_disk_path" ]]; then
+    echo "Error: Slot $to_slot already has an NVMe device" >&2
+    echo "Use 'nvme destroy $to_slot' to remove it first" >&2
+    exit 1
+  fi
+
+  # Move the disk file
+  mv "$from_disk_path" "$to_disk_path"
+
+  # Move the state entry
+  local tmp from_state
+  tmp=$(mktemp)
+  from_state=$(get_nvme_state "$from_slot")
+  jq ".\"$to_slot\" = $from_state | del(.\"$from_slot\")" "$NVME_STATE_FILE" > "$tmp" && mv "$tmp" "$NVME_STATE_FILE"
+
+  echo "NVMe device moved from slot $from_slot to slot $to_slot"
 }
 
 # Build QEMU NVMe arguments for connected devices
@@ -489,9 +531,17 @@ case "$command" in
         fi
         nvme_disconnect "$1"
         ;;
+      move)
+        if [[ $# -lt 2 ]]; then
+          echo "Error: nvme move requires source and destination slot numbers" >&2
+          echo "Usage: $0 nvme move <from-slot> <to-slot>" >&2
+          exit 1
+        fi
+        nvme_move "$1" "$2"
+        ;;
       *)
         echo "Error: Unknown nvme subcommand: $subcommand" >&2
-        echo "Usage: $0 nvme <list|add|destroy|connect|disconnect> [args]" >&2
+        echo "Usage: $0 nvme <list|add|destroy|connect|disconnect|move> [args]" >&2
         exit 1
         ;;
     esac
