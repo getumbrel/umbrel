@@ -34,7 +34,10 @@ export type RebuildStatus = {
 	progress: number
 }
 
-export type ReplaceStatus = RebuildStatus
+export type ReplaceStatus = {
+	state: 'rebuilding' | 'expanding' | 'finished' | 'canceled'
+	progress: number
+}
 
 // Types for zpool status --json --json-int --json-flat-vdevs output
 type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED'
@@ -130,12 +133,12 @@ export default class Raid {
 	isTransitioningToFailsafe = false
 	isReplacing = false
 	failsafeTransitionStatus?: FailsafeTransitionStatus
+	replaceStatus?: ReplaceStatus
 	initialRaidSetupError?: Error
 	poolNameBase = 'umbrelos'
 	temporaryDevicePath = '/tmp/umbrelos-temporary-migration-device.img'
 	#lastExpansionProgress = 0
 	#lastRebuildProgress = 0
-	#lastReplace?: ReplaceStatus
 	#stopPoolMonitor?: () => void
 	#lastEmittedExpansion?: ExpansionStatus
 	#lastEmittedRebuild?: RebuildStatus
@@ -236,15 +239,6 @@ export default class Raid {
 							this.#umbreld.eventBus.emit('raid:rebuild-progress', pool.rebuild)
 						}
 					}
-
-					// Emit replace progress events
-					if (pool.replace) {
-						const last = this.#lastEmittedReplace
-						if (last?.state !== pool.replace.state || last?.progress !== pool.replace.progress) {
-							this.#lastEmittedReplace = pool.replace
-							this.#umbreld.eventBus.emit('raid:replace-progress', pool.replace)
-						}
-					}
 				} catch {
 					// Silently ignore errors during monitoring
 				}
@@ -258,26 +252,10 @@ export default class Raid {
 		const name = await this.configStore.get('raid.poolName')
 		const status = await this.getPoolStatus(name)
 
-		// This is important so cancelled/completed is still reported after replacement has finished
-		// and this.isReplacing is false
-		let replace = this.#lastReplace
-		// If we are currently processing a device replacement, use the current rebuild progress
-		// for it's progress reporting
-		if (this.isReplacing) {
-			replace = {state: 'rebuilding', progress: 0}
-			if (status.rebuild) replace = {...status.rebuild}
-
-			// Clear isReplacing state on completion or cancellation
-			if (replace?.progress === 100 || replace?.state === 'canceled') this.isReplacing = false
-
-			// Store a reference to the last replace status so we can report it after completion
-			this.#lastReplace = {...replace}
-		}
-
 		return {
 			name,
 			...status,
-			replace,
+			replace: this.replaceStatus,
 			failsafeTransitionStatus: this.failsafeTransitionStatus,
 		}
 	}
@@ -499,11 +477,12 @@ export default class Raid {
 		// Pool options (-o):
 		//   ashift=12: 4K sectors (optimal for NVMe SSDs)
 		//   autotrim=on: Enable automatic TRIM for SSDs
+		//   autoexpand=on: Automatically expand pool when devices are replaced with larger ones
 		//   cachefile=none: Don't write to /etc/zfs/zpool.cache since it won't exist before we've mounted the pool
 		//   -m none: Don't mount the pool itself
 		this.logger.log(`Creating ZFS pool '${poolName}' (${raidType}) with partitions: ${dataPartitions.join(', ')}`)
 		const vdevType = raidType === 'failsafe' ? ['raidz1'] : []
-		await $`zpool create -f -o ashift=12 -o autotrim=on -o cachefile=none -m none ${poolName} ${vdevType} ${dataPartitions}`
+		await $`zpool create -f -o ashift=12 -o autotrim=on -o autoexpand=on -o cachefile=none -m none ${poolName} ${vdevType} ${dataPartitions}`
 		this.logger.log(`ZFS pool '${poolName}' created successfully`)
 	}
 
@@ -638,6 +617,54 @@ export default class Raid {
 			// ZFS will automatically start resilvering the new device
 			this.logger.log(`Replacing ${oldDataPartition} with ${newDataPartition} in pool '${pool.name}'`)
 			await $`zpool replace ${pool.name} ${oldDataPartition} ${newDataPartition}`
+
+			// Initialize replace status
+			this.replaceStatus = {state: 'rebuilding', progress: 0}
+			this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+
+			// Kick off non-blocking monitoring to avoid blocking the API response
+			this.logger.log('Monitoring replace progress...')
+			Promise.resolve()
+				.then(async () => {
+					// Poll rebuild status until complete
+					while (true) {
+						try {
+							const status = await this.getPoolStatus(pool.name)
+							if (status.rebuild) {
+								// Cap progress at 99% until fully complete (state === 'finished')
+								const cappedProgress = status.rebuild.state === 'finished' ? 100 : Math.min(status.rebuild.progress, 99)
+								if (cappedProgress > (this.replaceStatus?.progress ?? 0)) {
+									this.replaceStatus = {state: 'rebuilding', progress: cappedProgress}
+									this.logger.log(`Replace progress: ${cappedProgress}%`)
+									this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+								}
+								if (status.rebuild.state === 'finished') {
+									break
+								}
+							}
+						} catch (error) {
+							this.logger.error('Error polling replace progress', error)
+						}
+						await setTimeout(1000)
+					}
+
+					// Expand the new device to its full size
+					// This makes sure the new size is recognized if it's larger than the old size
+					this.logger.log('Resilver complete, expanding new device...')
+					await $`zpool online -e ${pool.name} ${newDataPartition}`.catch(() =>
+						this.logger.error('Error expanding new device'),
+					)
+
+					// Mark as finished
+					this.replaceStatus = {state: 'finished', progress: 100}
+					this.logger.log('Replace complete')
+					this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+					this.isReplacing = false
+				})
+				.catch((error) => {
+					this.logger.error('Error monitoring replace progress', error)
+					this.isReplacing = false
+				})
 		} catch (error) {
 			this.isReplacing = false
 			throw error
