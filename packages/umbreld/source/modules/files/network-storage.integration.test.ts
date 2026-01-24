@@ -383,7 +383,10 @@ describe('behaviour', () => {
 		await umbreld.client.files.removeShare.mutate({path: '/Home/reconnect-test'})
 
 		// Verify the share is no longer mounted
-		await expect(umbreld.client.files.list.query({path: mountPath})).rejects.toThrow('EHOSTDOWN')
+		await pRetry(() => expect(umbreld.client.files.list.query({path: mountPath})).rejects.toThrow('EHOSTDOWN'), {
+			retries: 60,
+			factor: 1,
+		})
 
 		// Add the share again
 		await umbreld.client.files.addShare.mutate({path: '/Home/reconnect-test'})
