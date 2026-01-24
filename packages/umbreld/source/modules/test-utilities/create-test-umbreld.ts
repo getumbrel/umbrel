@@ -213,7 +213,19 @@ export async function createTestVm() {
 
 	const sshPort = await getPort()
 	const httpPort = await getPort()
-	const qmpPort = await getPort()
+
+	const {
+		client,
+		unauthenticatedClient,
+		api,
+		unauthenticatedApi,
+		setJwt,
+		signup,
+		login,
+		registerAndLogin,
+		waitForStartup,
+		subscribeToEvents,
+	} = createTestHelpers(httpPort)
 
 	let vmProcessPid: number | undefined
 
@@ -221,7 +233,7 @@ export async function createTestVm() {
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort} --qmp-port ${qmpPort}`
+		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcess.unref()
 		vmProcessPid = vmProcess.pid
 
@@ -243,17 +255,27 @@ export async function createTestVm() {
 
 		const pid = vmProcessPid
 
-		// Send ACPI shutdown via QMP
-		await $({env})`${vmScript} poweroff`
+		// Try graceful shutdown via tRPC (triggers clean umbreld shutdown)
+		await client.system.shutdown.mutate()
 
-		// Wait for process to exit
-		while (true) {
+		// Wait up to 30 seconds for process to exit
+		const timeout = Date.now() + 30_000
+		while (Date.now() < timeout) {
 			try {
 				process.kill(pid, 0)
 				await new Promise((r) => setTimeout(r, 100))
 			} catch {
-				break
+				// Process exited
+				vmProcessPid = undefined
+				return
 			}
+		}
+
+		// Force kill if still running
+		try {
+			process.kill(pid, 'SIGTERM')
+		} catch {
+			// Already dead
 		}
 
 		vmProcessPid = undefined
@@ -287,19 +309,6 @@ export async function createTestVm() {
 		await $({env})`${vmScript} reflash`
 	}
 
-	const {
-		client,
-		unauthenticatedClient,
-		api,
-		unauthenticatedApi,
-		setJwt,
-		signup,
-		login,
-		registerAndLogin,
-		waitForStartup,
-		subscribeToEvents,
-	} = createTestHelpers(httpPort)
-
 	async function cleanup() {
 		await powerOff()
 		await directory.destroyRoot()
@@ -310,7 +319,6 @@ export async function createTestVm() {
 		stateDir,
 		sshPort,
 		httpPort,
-		qmpPort,
 		get pid() {
 			return vmProcessPid
 		},
