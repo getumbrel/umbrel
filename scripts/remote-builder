@@ -4,12 +4,21 @@ set -euo pipefail
 # Remote builder
 # Syncs git-tracked files to a remote host and runs build/test commands there
 
-REMOTE_DIR=".umbrel-builder"
+# Get current git branch name and sanitize it for use in directory name
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_BRANCH="$(git -C "${SCRIPT_DIR}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
+SAFE_BRANCH="$(echo "${GIT_BRANCH}" | tr '/' '-' | tr -cd 'a-zA-Z0-9_-')"
+REMOTE_DIR=".umbrel-builder/${SAFE_BRANCH}"
 
 # Subcommands that run on the remote host
 if [[ "${1:-}" == "--build-on-host" ]]; then
+    REMOTE_DIR_ARG="${2:-}"
+    if [[ -z "${REMOTE_DIR_ARG}" ]]; then
+        echo "Error: --build-on-host requires remote directory argument" >&2
+        exit 1
+    fi
     USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
-    WORK_DIR="${USER_HOME}/${REMOTE_DIR}"
+    WORK_DIR="${USER_HOME}/${REMOTE_DIR_ARG}"
 
     # Disable spinners and fancy progress output
     export CI=true
@@ -36,9 +45,14 @@ if [[ "${1:-}" == "--build-on-host" ]]; then
 fi
 
 if [[ "${1:-}" == "--test-on-host" ]]; then
-    shift
+    REMOTE_DIR_ARG="${2:-}"
+    if [[ -z "${REMOTE_DIR_ARG}" ]]; then
+        echo "Error: --test-on-host requires remote directory argument" >&2
+        exit 1
+    fi
+    shift 2
     USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
-    WORK_DIR="${USER_HOME}/${REMOTE_DIR}/packages/umbreld"
+    WORK_DIR="${USER_HOME}/${REMOTE_DIR_ARG}/packages/umbreld"
 
     # Disable spinners and fancy progress output
     export CI=true
@@ -83,6 +97,7 @@ shift 2
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 sync_files() {
+    echo "Branch: ${GIT_BRANCH}"
     echo "Syncing files to ${SSH_HOST}:~/${REMOTE_DIR}..."
 
     # Create the remote directory and ensure rsync is installed
@@ -109,21 +124,21 @@ case "${COMMAND}" in
         sync_files
         echo ""
         echo "Building on remote host..."
-        ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --build-on-host"
+        ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --build-on-host '${REMOTE_DIR}'"
         ;;
     test)
         sync_files
         echo ""
         echo "Running tests on remote host..."
         if [[ $# -eq 0 ]]; then
-            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host"
+            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host '${REMOTE_DIR}'"
         else
             # Properly escape args for SSH
             ESCAPED_ARGS=""
             for arg in "$@"; do
                 ESCAPED_ARGS+=" '${arg}'"
             done
-            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host${ESCAPED_ARGS}"
+            ssh -tt "${SSH_HOST}" "sudo ~/${REMOTE_DIR}/scripts/remote-builder --test-on-host '${REMOTE_DIR}'${ESCAPED_ARGS}"
         fi
         ;;
     *)
