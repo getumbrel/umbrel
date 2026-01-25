@@ -762,60 +762,79 @@ export default class Raid {
 			this.failsafeTransitionStatus = {state: 'syncing', progress: 0}
 			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
-			// Send the active pool snapshot to the migration pool
-			this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
-			const sendProcess = $({
-				shell: true,
-			})`zfs send --replicate --large-block --compressed --embed ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
+			// Kick off non-blocking data migration to avoid blocking the API response
+			this.logger.log('Starting async data migration...')
+			Promise.resolve()
+				.then(async () => {
+					// Send the active pool snapshot to the migration pool
+					this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
+					const sendProcess = $({
+						shell: true,
+					})`zfs send --replicate --large-block --compressed --embed ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
 
-			// Poll progress while sending
-			const stopProgressMonitor = runEvery(
-				'1 second',
-				async () => {
-					try {
-						const migrationStatus = await this.getPoolStatus(migrationPoolName)
-						if (migrationStatus.exists && estimatedSize > 0) {
-							// usedSpace is raw allocation including raidz1 parity overhead
-							// Calculate overhead factor (totalSpace/usableSpace) to convert to actual data
-							const overheadFactor =
-								migrationStatus.totalSpace && migrationStatus.usableSpace
-									? migrationStatus.totalSpace / migrationStatus.usableSpace
-									: 2 // Default to 2 for 2-disk raidz1
-							const usedSpace = migrationStatus.usedSpace ?? 0
-							const actualDataWritten = usedSpace / overheadFactor
-							// Scale sync progress to 0-49% (first half of transition)
-							const rawProgress = Math.min(99, Math.floor((actualDataWritten / estimatedSize) * 100))
-							const progress = Math.floor((rawProgress / 100) * 49)
-							if (this.failsafeTransitionStatus && progress > this.failsafeTransitionStatus.progress) {
-								this.logger.log(`Sync progress: ${progress}%`)
-								this.failsafeTransitionStatus = {state: 'syncing', progress}
-								this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+					// Poll progress while sending
+					const stopProgressMonitor = runEvery(
+						'1 second',
+						async () => {
+							try {
+								const migrationStatus = await this.getPoolStatus(migrationPoolName)
+								if (migrationStatus.exists && estimatedSize > 0) {
+									// usedSpace is raw allocation including raidz1 parity overhead
+									// Calculate overhead factor (totalSpace/usableSpace) to convert to actual data
+									const overheadFactor =
+										migrationStatus.totalSpace && migrationStatus.usableSpace
+											? migrationStatus.totalSpace / migrationStatus.usableSpace
+											: 2 // Default to 2 for 2-disk raidz1
+									const usedSpace = migrationStatus.usedSpace ?? 0
+									const actualDataWritten = usedSpace / overheadFactor
+									// Scale sync progress to 0-49% (first half of transition)
+									const rawProgress = Math.min(99, Math.floor((actualDataWritten / estimatedSize) * 100))
+									const progress = Math.floor((rawProgress / 100) * 49)
+									if (this.failsafeTransitionStatus && progress > this.failsafeTransitionStatus.progress) {
+										this.logger.log(`Sync progress: ${progress}%`)
+										this.failsafeTransitionStatus = {state: 'syncing', progress}
+										this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+									}
+								}
+							} catch {
+								// Ignore errors during progress polling
 							}
-						}
-					} catch {
-						// Ignore errors during progress polling
+						},
+						{runInstantly: true},
+					)
+
+					try {
+						await sendProcess
+					} finally {
+						stopProgressMonitor()
 					}
-				},
-				{runInstantly: true},
-			)
 
-			try {
-				await sendProcess
-			} finally {
-				stopProgressMonitor()
-			}
+					// Mark RAID config state as transitioning to failsafe
+					// This allows easy detection by the boot script
+					this.logger.log('Updating RAID config')
+					await this.configStore.set('raid.state', 'transitioning-to-failsafe')
 
-			// Mark RAID config state as transitioning to failsafe
-			// This allows easy detection by the boot script
-			this.logger.log('Updating RAID config')
-			await this.configStore.set('raid.state', 'transitioning-to-failsafe')
+					// Emit rebooting state at 50% (rebuild will complete the remaining 50%)
+					this.failsafeTransitionStatus = {state: 'rebooting', progress: 50}
+					this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
-			// Emit rebooting state at 50% (rebuild will complete the remaining 50%)
-			this.failsafeTransitionStatus = {state: 'rebooting', progress: 50}
-			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
+					this.logger.log(`Initial sync complete, rebooting to complete migration`)
+					await setTimeout(1000)
+					reboot()
+				})
+				.catch(async (error) => {
+					// Emit error state
+					this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
+					this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
-			this.logger.log(`Initial sync complete, rebooting to complete migration`)
-			setTimeout(1000).then(() => reboot()) // Schedule in 1 second so the api response has time to be sent
+					// Clean up on failure
+					this.logger.error(`Migration failed, cleaning up...`, error)
+					await $`zpool destroy ${migrationPoolName}`.catch(() => {})
+					await $`zfs destroy -r ${pool.name}@migration`.catch(() => {})
+					await fse.remove(this.temporaryDevicePath).catch(() => {})
+					this.isTransitioningToFailsafe = false
+				})
+
 			return true
 		} catch (error) {
 			// Emit error state
@@ -823,13 +842,12 @@ export default class Raid {
 			this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
 			// Clean up on failure
-			this.logger.error(`Migration failed, cleaning up...`)
+			this.logger.error(`Migration setup failed, cleaning up...`)
 			await $`zpool destroy ${migrationPoolName}`.catch(() => {})
 			await $`zfs destroy -r ${pool.name}@migration`.catch(() => {})
 			await fse.remove(this.temporaryDevicePath).catch(() => {})
-			throw error
-		} finally {
 			this.isTransitioningToFailsafe = false
+			throw error
 		}
 	}
 
