@@ -6,6 +6,7 @@ import {CookieJar} from 'tough-cookie'
 import {$} from 'execa'
 import fse from 'fs-extra'
 import getPort from 'get-port'
+import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 import {Client as SshClient} from 'ssh2'
 
@@ -230,15 +231,29 @@ export async function createTestVm() {
 	let vmProcessPid: number | undefined
 
 	async function powerOn() {
+		let vmOutput = ''
+		let vmExited = false
+
 		const vmProcess = $({
 			env,
 			detached: true,
 		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort}`
-		vmProcess.unref()
 		vmProcessPid = vmProcess.pid
+
+		// Capture output and track if process exits
+		vmProcess.stdout?.on('data', (data: Buffer) => (vmOutput += data.toString()))
+		vmProcess.stderr?.on('data', (data: Buffer) => (vmOutput += data.toString()))
+		vmProcess.on('exit', () => (vmExited = true))
+
+		// Unref so the process doesn't block Node from exiting
+		vmProcess.unref()
 
 		await pWaitFor(
 			async () => {
+				// Check if VM process died
+				if (vmExited) {
+					throw new Error(`VM process exited unexpectedly:\n${vmOutput}`)
+				}
 				try {
 					await unauthenticatedClient.user.exists.query()
 					return true
@@ -250,32 +265,40 @@ export async function createTestVm() {
 		)
 	}
 
+	function isRunning() {
+		if (!vmProcessPid) return false
+		try {
+			process.kill(vmProcessPid, 0)
+			return true
+		} catch {
+			return false
+		}
+	}
+
 	async function powerOff() {
 		if (!vmProcessPid) return
 
 		// Try graceful shutdown via tRPC (triggers clean umbreld shutdown)
-		await client.system.shutdown.mutate()
-
-		// Wait up to 30 seconds for process to exit
-		const timeout = Date.now() + 30_000
-		while (Date.now() < timeout) {
-			try {
-				process.kill(vmProcessPid, 0)
-				await new Promise((r) => setTimeout(r, 100))
-			} catch {
-				// Process exited
-				vmProcessPid = undefined
-				return
-			}
+		try {
+			await client.system.shutdown.mutate().catch(() => unauthenticatedClient.system.shutdown.mutate())
+			// Wait up to 30 seconds for graceful shutdown
+			await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+			vmProcessPid = undefined
+			return
+		} catch {
+			// Graceful shutdown failed, fall through to force kill
 		}
 
 		// Force kill if still running
 		try {
-			process.kill(-vmProcessPid, 'SIGTERM')
+			process.kill(-vmProcessPid!, 'SIGTERM')
+			console.log('VM did not shut down cleanly, sending SIGTERM to process')
 		} catch {
 			// Already dead
 		}
 
+		// Wait up to 10 seconds for force kill to take effect
+		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 10_000})
 		vmProcessPid = undefined
 	}
 
@@ -329,32 +352,48 @@ export async function createTestVm() {
 		moveNvme,
 		reflash,
 		async ssh(command: string) {
-			return new Promise<string>((resolve, reject) => {
-				const conn = new SshClient()
-				conn.on('ready', () => {
-					conn.exec(command, (err, stream) => {
-						if (err) {
-							conn.end()
-							return reject(err)
-						}
-						let stdout = ''
-						stream.on('data', (data: Buffer) => (stdout += data.toString()))
-						stream.stderr.on('data', () => {})
-						stream.on('close', () => {
-							conn.end()
-							resolve(stdout)
+			const attemptSsh = (password: string) =>
+				new Promise<string>((resolve, reject) => {
+					const conn = new SshClient()
+					conn.on('ready', () => {
+						conn.exec(command, (err, stream) => {
+							if (err) {
+								conn.end()
+								return reject(err)
+							}
+							let stdout = ''
+							stream.on('data', (data: Buffer) => (stdout += data.toString()))
+							stream.stderr.on('data', () => {})
+							stream.on('close', () => {
+								conn.end()
+								resolve(stdout)
+							})
 						})
 					})
+					conn.on('error', reject)
+					conn.connect({
+						host: 'localhost',
+						port: sshPort,
+						username: 'umbrel',
+						password,
+					})
 				})
-				conn.on('error', reject)
-				conn.connect({
-					host: 'localhost',
-					port: sshPort,
-					username: 'umbrel',
-					// Password is synced to match the user's password after registration
-					password: userCredentials.password,
-				})
-			})
+
+			// Try default 'umbrel' password first, fall back to user password if already synced
+			// Retry up to 10 times with 1 second wait between attempts
+			return pRetry(
+				async () => {
+					try {
+						return await attemptSsh('umbrel')
+					} catch (error) {
+						if ((error as {level?: string}).level === 'client-authentication') {
+							return await attemptSsh(userCredentials.password)
+						}
+						throw error
+					}
+				},
+				{retries: 10, minTimeout: 1000, maxTimeout: 1000},
+			)
 		},
 	}
 
