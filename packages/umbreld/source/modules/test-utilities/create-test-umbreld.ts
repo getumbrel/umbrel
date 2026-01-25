@@ -253,8 +253,6 @@ export async function createTestVm() {
 	async function powerOff() {
 		if (!vmProcessPid) return
 
-		const pid = vmProcessPid
-
 		// Try graceful shutdown via tRPC (triggers clean umbreld shutdown)
 		await client.system.shutdown.mutate()
 
@@ -262,7 +260,7 @@ export async function createTestVm() {
 		const timeout = Date.now() + 30_000
 		while (Date.now() < timeout) {
 			try {
-				process.kill(pid, 0)
+				process.kill(vmProcessPid, 0)
 				await new Promise((r) => setTimeout(r, 100))
 			} catch {
 				// Process exited
@@ -273,7 +271,7 @@ export async function createTestVm() {
 
 		// Force kill if still running
 		try {
-			process.kill(pid, 'SIGTERM')
+			process.kill(-vmProcessPid, 'SIGTERM')
 		} catch {
 			// Already dead
 		}
