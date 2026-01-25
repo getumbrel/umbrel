@@ -46,7 +46,7 @@ jobs:
     name: Build umbrelOS amd64
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubuntu-24.04-amd64-16-core
+    runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -58,7 +58,7 @@ jobs:
     name: Build umbrelOS arm64
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubuntu-24.04-amd64-16-core
+    runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -73,7 +73,7 @@ jobs:
     name: Build umbrelOS amd64 VM image
     needs: [detect-changes, umbrelos-amd64-cache]
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubuntu-24.04-amd64-16-core
+    runs-on: ubicloud-standard-4-ubuntu-2404
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -90,13 +90,13 @@ jobs:
       - name: Build OS image
         working-directory: packages/os
         run: npm run build:amd64:rugix
-      - name: Upload OS image
-        uses: actions/upload-artifact@v4
+      # Hack to pass the image to the next job. We used to use upload-artifact but network performance
+      # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
+      - name: Cache OS image
+        uses: actions/cache/save@v4
         with:
-          name: umbrelos-amd64-image
           path: packages/os/build/umbrelos-amd64.img
-          retention-days: 1
-          compression-level: 0
+          key: umbrelos-amd64-image-${{ github.run_id }}
 
   # Discover all MV test files so we can run the result as a build matrix
   discover-vm-tests:
@@ -118,7 +118,7 @@ jobs:
     name: VM test (${{ matrix.test.name }})
     needs: [detect-changes, umbrelos-amd64-vm-image-build, discover-vm-tests]
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubicloud-standard-4-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -132,11 +132,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
-      - name: Download OS image
-        uses: actions/download-artifact@v4
+      - name: Restore OS image from cache
+        uses: actions/cache/restore@v4
         with:
-          name: umbrelos-amd64-image
-          path: packages/os/build
+          path: packages/os/build/umbrelos-amd64.img
+          key: umbrelos-amd64-image-${{ github.run_id }}
+          fail-on-cache-miss: true
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
       - name: Install umbreld dependencies
@@ -166,7 +167,7 @@ jobs:
     name: Integration test (${{ matrix.test.name }})
     needs: [detect-changes, discover-integration-tests, umbrelos-amd64-cache]
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubuntu-24.04-amd64-4-core
+    runs-on: ubicloud-standard-4-ubuntu-2404
     strategy:
       fail-fast: false
       matrix:
@@ -249,7 +250,7 @@ jobs:
     name: Create release on tag
     if: startsWith(github.ref, 'refs/tags/')
     needs: [umbrelos-amd64-cache, umbrelos-arm64-cache]
-    runs-on: ubuntu-24.04-amd64-16-core
+    runs-on: ubicloud-standard-16-ubuntu-2404
     defaults:
       run:
         working-directory: packages/os
