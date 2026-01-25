@@ -551,13 +551,13 @@ export default class Raid {
 
 		this.logger.log(`Adding device to RAID array: ${device}`)
 
-		// Get current devices from config
-		const currentDevices = (await this.configStore.get('raid.devices')) ?? []
-		if (currentDevices.includes(device)) throw new Error(`Device ${device} is already in the RAID array`)
-
 		// Get the pool status
 		const pool = await this.getStatus()
 		if (!pool.exists) throw new Error("RAID array doesn't exist")
+
+		// Check if device is already in the array
+		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
+		if (poolDeviceIds.includes(deviceId)) throw new Error('Cannot add a device that is already in the RAID array')
 
 		// Partition the new device
 		this.logger.log(`Partitioning device: ${device}`)
@@ -566,12 +566,12 @@ export default class Raid {
 		// Add the data partition to the existing pool
 		this.logger.log(`Adding partition ${dataPartition} to pool '${pool.name}'`)
 		// For failsafe mode, attach the new device to the existing raidz1 vdev
-		if (pool.raidType === 'failsafe') await $`zpool attach ${pool.name} raidz1-0 ${dataPartition}`
+		if (pool.raidType === 'failsafe') await $`zpool attach -f ${pool.name} raidz1-0 ${dataPartition}`
 		// For storage mode, add the new device as a new top-level vdev
-		else if (pool.raidType === 'storage') await $`zpool add ${pool.name} ${dataPartition}`
+		else if (pool.raidType === 'storage') await $`zpool add -f ${pool.name} ${dataPartition}`
 
 		// Update config with new device
-		const updatedDevices = [...currentDevices, device]
+		const updatedDevices = [...poolDeviceIds, device]
 		this.logger.log(`Updating RAID config with ${updatedDevices.length} device(s)`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
@@ -596,10 +596,11 @@ export default class Raid {
 		const pool = await this.getStatus()
 		if (!pool.exists) throw new Error("RAID array doesn't exist")
 
-		// Verify old device is in the pool
+		// Verify old device is in the pool and new device is not
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
 		if (!poolDeviceIds.includes(oldDeviceId)) throw new Error(`Device ${oldDeviceId} is not in the RAID array`)
-		if (poolDeviceIds.includes(newDeviceId)) throw new Error(`Device ${newDeviceId} is already in the RAID array`)
+		if (poolDeviceIds.includes(newDeviceId))
+			throw new Error('Cannot replace with a device that is already in the RAID array')
 
 		if (this.isReplacing) throw new Error('Already replacing device')
 		this.isReplacing = true
@@ -616,7 +617,7 @@ export default class Raid {
 			// Replace the device in the pool
 			// ZFS will automatically start resilvering the new device
 			this.logger.log(`Replacing ${oldDataPartition} with ${newDataPartition} in pool '${pool.name}'`)
-			await $`zpool replace ${pool.name} ${oldDataPartition} ${newDataPartition}`
+			await $`zpool replace -f ${pool.name} ${oldDataPartition} ${newDataPartition}`
 
 			// Initialize replace status
 			this.replaceStatus = {state: 'rebuilding', progress: 0}
@@ -639,6 +640,14 @@ export default class Raid {
 									this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
 								}
 								if (status.rebuild.state === 'finished') {
+									break
+								}
+							} else {
+								// No rebuild status - check if new device is in pool and online
+								// This handles the case where resilver completes before first poll
+								const newDeviceInPool = status.devices?.some((d) => d.id === newDeviceId && d.status === 'ONLINE')
+								if (newDeviceInPool) {
+									this.logger.log('No rebuild status but new device is online, considering complete')
 									break
 								}
 							}
@@ -691,6 +700,11 @@ export default class Raid {
 		if (!pool.exists) throw new Error('No RAID array exists')
 		if (pool.raidType !== 'storage') throw new Error('Can only transition from storage mode')
 		if (pool.devices?.length !== 1) throw new Error('Can only transition single-disk arrays')
+
+		// Check if device is already in the array
+		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
+		if (poolDeviceIds.includes(newDeviceId))
+			throw new Error('Cannot transition with a device that is already in the RAID array')
 
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
 		this.isTransitioningToFailsafe = true
@@ -852,7 +866,7 @@ export default class Raid {
 
 			// Replace the temp device with the old device partition in the new pool
 			this.logger.log('Replacing temp device with old device in pool')
-			await $`zpool replace ${pool.name} ${this.temporaryDevicePath} ${oldDataPartition}`
+			await $`zpool replace -f ${pool.name} ${this.temporaryDevicePath} ${oldDataPartition}`
 
 			// Update config with new RAID configuration
 			this.logger.log('Updating RAID config')
