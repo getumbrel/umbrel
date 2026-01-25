@@ -706,6 +706,14 @@ export default class Raid {
 		if (poolDeviceIds.includes(newDeviceId))
 			throw new Error('Cannot transition with a device that is already in the RAID array')
 
+		// Check if new device is at least as large as the current device
+		const currentDeviceId = pool.devices![0].id
+		const currentDevice = `/dev/disk/by-id/${currentDeviceId}`
+		const currentDeviceSize = await getDeviceSize(currentDevice)
+		const newDeviceSize = await getDeviceSize(newDevice)
+		if (newDeviceSize < currentDeviceSize)
+			throw new Error('Cannot transition to a device smaller than the current device')
+
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
 		this.isTransitioningToFailsafe = true
 
@@ -716,13 +724,15 @@ export default class Raid {
 			this.logger.log(`Partitioning new device: ${newDevice}`)
 			const {dataPartition: newDataPartition} = await this.#partitionDevice(newDevice)
 
-			// Get the size of the new partition for creating the temp file
-			const partitionSize = await getDeviceSize(newDataPartition)
-			this.logger.log(`New partition size: ${partitionSize} bytes`)
+			// Get the size of the existing data partition for creating the temp file
+			const currentDeviceDataPartition = `${currentDevice}-part2`
+			const currentDeviceDataPartitionSize = await getDeviceSize(currentDeviceDataPartition)
 
-			// Create a sparse temp file the same size as the new partition
-			this.logger.log(`Creating sparse temp file: ${this.temporaryDevicePath} (${partitionSize} bytes)`)
-			await $`truncate -s ${partitionSize} ${this.temporaryDevicePath}`
+			// Create a sparse temp file the same size as the current device partition
+			this.logger.log(
+				`Creating sparse temp file: ${this.temporaryDevicePath} (${currentDeviceDataPartitionSize} bytes)`,
+			)
+			await $`truncate -s ${currentDeviceDataPartitionSize} ${this.temporaryDevicePath}`
 
 			// Create the migration pool as raidz1 with new partition + temp file
 			// ZFS can use a file path directly without needing a loopback device
