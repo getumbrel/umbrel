@@ -8,6 +8,7 @@ import pRetry from 'p-retry'
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
 import {reboot} from '../system/system.js'
+import {setSystemStatus} from '../system/routes.js'
 import runEvery from '../utilities/run-every.js'
 
 // Get the size of a block device or partition in bytes
@@ -872,11 +873,17 @@ export default class Raid {
 					this.failsafeTransitionStatus = {state: 'rebooting', progress: 50}
 					this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
 
+					// Set status and wait 11 seconds before rebooting so the UI has time to poll
+					// and show the restarting state (UI polls every 10 seconds)
 					this.logger.log(`Initial sync complete, rebooting to complete migration`)
-					await setTimeout(1000)
+					setSystemStatus('restarting')
+					await setTimeout(11_000)
 					reboot()
 				})
 				.catch(async (error) => {
+					// Reset system status in case we set it to restarting before the error
+					setSystemStatus('running')
+
 					// Emit error state
 					this.failsafeTransitionStatus = {state: 'error', progress: 0, error: (error as Error).message}
 					this.#umbreld.eventBus.emit('raid:failsafe-transition-progress', this.failsafeTransitionStatus)
