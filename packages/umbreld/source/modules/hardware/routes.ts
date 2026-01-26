@@ -13,6 +13,14 @@ const raid = router({
 		ctx.umbreld.hardware.raid.checkInitialRaidSetupStatus(),
 	),
 
+	// Check if RAID mount failed during boot
+	checkRaidMountFailure: publicProcedure.query(async ({ctx}) => ctx.umbreld.hardware.raid.checkRaidMountFailure()),
+
+	// Get details about why RAID mount failed
+	checkRaidMountFailureDevices: publicProcedureWhenNoUserExists.query(async ({ctx}) =>
+		ctx.umbreld.hardware.raid.checkRaidMountFailureDevices(),
+	),
+
 	// Get RAID pool status
 	getStatus: privateProcedure.query(async ({ctx}) => ctx.umbreld.hardware.raid.getStatus()),
 

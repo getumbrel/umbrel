@@ -335,6 +335,11 @@ export async function createTestVm() {
 		await directory.destroyRoot()
 	}
 
+	async function waitForShutdown() {
+		await pWaitFor(() => !isRunning(), {interval: 100, timeout: 30_000})
+		vmProcessPid = undefined
+	}
+
 	const vm = {
 		dataDirectory: '/data/umbrel',
 		stateDir,
@@ -343,6 +348,8 @@ export async function createTestVm() {
 		get pid() {
 			return vmProcessPid
 		},
+		isRunning,
+		waitForShutdown,
 		powerOn,
 		powerOff,
 		addNvme,

@@ -110,7 +110,7 @@ export default router({
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
-	// Public during onboarding so users can shut down during RAID setup if needed
+	// Public during onboarding and recovery mode so users can shut down during RAID setup or mount failure
 	shutdown: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
 		await ctx.umbreld.stop()
@@ -118,7 +118,8 @@ export default router({
 
 		return true
 	}),
-	restart: privateProcedure.mutation(async ({ctx}) => {
+	// Public during onboarding and recovery mode
+	restart: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'restarting'
 		await ctx.umbreld.stop()
 		await reboot()
@@ -142,15 +143,20 @@ export default router({
 			return stripAnsi(process!.stdout)
 		}),
 	//
-	factoryReset: privateProcedure
+	// Public during onboarding and recovery mode - password required unless in recovery mode
+	factoryReset: publicProcedureWhenNoUserExists
 		.input(
 			z.object({
-				password: z.string(),
+				password: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			if (!(await ctx.user.validatePassword(input.password))) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
+			// Skip password validation in recovery mode (RAID mount failure) since user data is inaccessible
+			const raidMountFailure = await ctx.umbreld.hardware.raid.checkRaidMountFailure()
+			if (!raidMountFailure) {
+				if (!input.password || !(await ctx.user.validatePassword(input.password))) {
+					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
+				}
 			}
 			systemStatus = 'resetting'
 			try {
