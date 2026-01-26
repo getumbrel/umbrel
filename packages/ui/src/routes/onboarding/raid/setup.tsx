@@ -59,6 +59,25 @@ const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	return formatSize(bytes)
 }
 
+// Size variance threshold (10% of smallest drive)
+// Used to determine if drives are "effectively same size" despite GB vs GiB differences
+// e.g., 2000 GB vs 2048 GB drives are considered same size, but 1TB vs 2TB are not
+const SIZE_VARIANCE_THRESHOLD = 0.1
+
+// Check if all drives are effectively the same size (within threshold of smallest)
+const areEffectivelySameSize = (sizes: number[]): boolean => {
+	if (sizes.length < 2) return true
+	const smallest = Math.min(...sizes)
+	const threshold = smallest * SIZE_VARIANCE_THRESHOLD
+	return sizes.every((size) => size - smallest < threshold)
+}
+
+// Returns wasted bytes if significant, or 0 if below visibility threshold
+const getVisibleWastedBytes = (wastedBytes: number, minDriveSize: number): number => {
+	const threshold = minDriveSize * SIZE_VARIANCE_THRESHOLD
+	return wastedBytes >= threshold ? wastedBytes : 0
+}
+
 // ============================================================================
 // Sub-components
 // ============================================================================
@@ -147,7 +166,8 @@ export default function RaidSetup() {
 	// └─────────────────────────┴─────────────┴─────────────┴─────────────────┘
 
 	const canEnableFailSafe = devices.length >= 2
-	const allSameSize = devices.length > 0 && devices.every((d) => d.size === devices[0].size)
+	// Consider drives "same size" if within 10% variance (handles GB vs GiB differences)
+	const allSameSize = devices.length > 0 && areEffectivelySameSize(devices.map((d) => d.size))
 	const defaultFailSafe = canEnableFailSafe && allSameSize
 	const [failSafeEnabled, setFailSafeEnabled] = useState(defaultFailSafe)
 
@@ -336,7 +356,8 @@ export default function RaidSetup() {
 	if (failSafeEnabled && canEnableFailSafe) {
 		failsafeBytes = smallestSize
 		availableBytes = (devices.length - 1) * smallestSize
-		unusedBytes = totalBytes - availableBytes - failsafeBytes
+		const rawUnused = totalBytes - availableBytes - failsafeBytes
+		unusedBytes = getVisibleWastedBytes(rawUnused, smallestSize)
 	} else {
 		failsafeBytes = 0
 		availableBytes = totalBytes
