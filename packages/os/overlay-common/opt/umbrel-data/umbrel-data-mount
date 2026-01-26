@@ -45,11 +45,12 @@ handle_failsafe_transition() {
     zpool import -o cachefile=none -f "$migration_pool"
 
     # Create final snapshot and sync incrementally
+    # Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
     echo ">>> Creating final snapshot"
     zfs snapshot -r "${pool_name}@migration-final"
 
     echo ">>> Sending incremental changes to migration pool"
-    zfs send --replicate --large-block --compressed --embed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
+    zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
 
     # Rename pools
     # umbrelos > umbrelos-previous-migration
@@ -107,6 +108,14 @@ if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
     # happens after ota updates where it thinks we're on a new machine.
     echo ">>> Importing ${POOL_NAME} pool"
     zpool import -o cachefile=none -f "$POOL_NAME"
+
+    # Load the encryption key for the data dataset
+    # We use a hardcoded encryption password for now. This obviously doesn't provide any security.
+	# However initialising encryption now means we can enable full disk encryption in the future
+	# by simply updating the password to something secure without requiring an entire backup and restore
+	# of all data into a new encrypted dataset.
+    echo ">>> Loading encryption key for ${POOL_NAME}/data"
+    echo "umbrelumbrel" | zfs load-key "${POOL_NAME}/data" 2>/dev/null
 
     echo ">>> Mounting RAID array to '$MOUNT_POINT'"
     mkdir -p "$MOUNT_POINT"

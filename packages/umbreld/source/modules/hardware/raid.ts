@@ -488,15 +488,27 @@ export default class Raid {
 
 	// Create the data dataset on a pool
 	async #createDataset(poolName: string): Promise<void> {
+		// We use a hardcoded encryption password for now. This obviously doesn't provide any security.
+		// However initialising encryption now means we can enable full disk encryption in the future
+		// by simply updating the password to something secure without requiring an entire backup and restore
+		// of all data into a new encrypted dataset.
+		// Must be minimum 8 characters so we use umbrelumbrel.
+		const defaultEncryptionPassword = 'umbrelumbrel'
+
 		// Dataset options (-o):
+		//   encryption=aes-256-gcm: Enable encryption with AES-256-GCM
+		//   keyformat=passphrase: Use a passphrase for the encryption key
+		//   keylocation=prompt: Key will be provided via stdin
 		//   mountpoint=legacy: We want to handle mounting manually
 		//   compression=lz4: Fastest compression for minimal overhead
 		//   atime=off: Disable access time updates (significantly reduces writes)
 		//   xattr=sa: Store extended attributes in inodes for significant performance gains.
 		//   acltype=posixacl: Enable POSIX ACLs for proper permission handling.
 		this.logger.log(`Creating data dataset on pool '${poolName}'`)
-		await $`zfs create -o mountpoint=legacy -o compression=lz4 -o atime=off -o xattr=sa -o acltype=posixacl ${poolName}/data`
-		this.logger.log(`Main dataset created successfully`)
+		await $({
+			input: defaultEncryptionPassword,
+		})`zfs create -o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt -o mountpoint=legacy -o compression=lz4 -o atime=off -o xattr=sa -o acltype=posixacl ${poolName}/data`
+		this.logger.log(`Encrypted dataset created successfully`)
 	}
 
 	// Setup RAID array from a list of devices
@@ -749,9 +761,10 @@ export default class Raid {
 			await $`zfs snapshot -r ${pool.name}@${baseSnapshot}`
 
 			// Get the estimated size of the snapshot to send (must match flags used in actual send)
+			// Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
 			this.logger.log('Estimating snapshot size...')
 			const sizeResult =
-				await $`zfs send --dryrun --replicate --parsable --large-block --compressed --embed ${pool.name}@${baseSnapshot}`
+				await $`zfs send --dryrun --raw --replicate --parsable --large-block --compressed ${pool.name}@${baseSnapshot}`
 			const sizeOutput = sizeResult.stderr || sizeResult.stdout
 			// --parsable outputs "size\t<bytes>" on the last line
 			const sizeMatch = sizeOutput.match(/^size\s+(\d+)/m)
@@ -767,10 +780,11 @@ export default class Raid {
 			Promise.resolve()
 				.then(async () => {
 					// Send the active pool snapshot to the migration pool
+					// Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
 					this.logger.log(`Sending snapshot to migration pool (this may take a while)...`)
 					const sendProcess = $({
 						shell: true,
-					})`zfs send --replicate --large-block --compressed --embed ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
+					})`zfs send --raw --replicate --large-block --compressed ${pool.name}@${baseSnapshot} | zfs receive -Fu ${migrationPoolName}`
 
 					// Poll progress while sending
 					const stopProgressMonitor = runEvery(
