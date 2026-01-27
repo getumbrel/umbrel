@@ -17,6 +17,17 @@ async function getDeviceSize(device: string): Promise<number> {
 	return parseInt(stdout.trim(), 10)
 }
 
+// Round device size down to nearest 250GB if over 1TB
+// This ensures drives of slightly different sizes can be used together in RAID
+export function getRoundedDeviceSize(sizeInBytes: number): number {
+	const oneTerabyte = 1_000_000_000_000
+	const twoFiftyGigabytes = 250_000_000_000
+	if (sizeInBytes >= oneTerabyte) {
+		return Math.floor(sizeInBytes / twoFiftyGigabytes) * twoFiftyGigabytes
+	}
+	return sizeInBytes
+}
+
 export type RaidType = 'storage' | 'failsafe'
 
 export type ExpansionStatus = {
@@ -483,18 +494,42 @@ export default class Raid {
 
 		// Create partition table and partitions using sgdisk
 		// Partition 1: State partition (100MB)
-		// Partition 2: Data partition (remaining space, 0 means use all available)
-		// TODO: Check if we need to leave headroom for varying sized drives. It looks like actually they don't vary much
-		// but MB/MiB is the problem.
+		// Partition 2: Data partition (calculated size based on rounded device size)
 		this.logger.log(`Creating partition table on ${device}`)
 		await $`sgdisk --zap-all ${device}`
 
-		const statePartitionSizeMb = 100
-		this.logger.log(`Creating state partition (${statePartitionSizeMb}MB) on ${device}`)
-		await $`sgdisk --new=1:0:+${statePartitionSizeMb}M --change-name=1:umbrel-raid-state ${device}`
+		const oneMiB = 1024 * 1024
 
-		this.logger.log(`Creating data partition on ${device}`)
-		await $`sgdisk --new=2:0:0 ${device}`
+		// Add a 10MiB buffer to allow for partition table
+		const bufferSizeBytes = 10 * oneMiB // 10 MiB
+
+		// Reserve 100MiB for state partition we may use in the future
+		const statePartitionSizeBytes = 100 * oneMiB // 100 MiB
+
+		// Get device size and round down to nearest 250GB if over 1TB
+		// This normalises device sizes. e.g sometimes 4000GB and 4096GB SSDs are sold as 4TB.
+		// If we use their sizes directly then starting with a 4096 GB SSD and then trying to add
+		// a 4000 GB SSD later will fails because ZFS will complain the new device is too small.
+		// This is confusing for the user because they have what they think are two 4TB SSDs.
+		const deviceSize = await getDeviceSize(device)
+		const roundedDeviceSize = getRoundedDeviceSize(deviceSize)
+
+		// Calculate data partition size all free space after state partition and buffer
+		const dataPartitionSizeBytes = roundedDeviceSize - statePartitionSizeBytes - bufferSizeBytes
+
+		// Convert to MiB for sgdisk (M suffix = MiB)
+		const statePartitionSizeMiB = Math.floor(statePartitionSizeBytes / oneMiB)
+		const dataPartitionSizeMiB = Math.floor(dataPartitionSizeBytes / oneMiB)
+
+		this.logger.log(
+			`Device size: ${deviceSize} bytes, rounded: ${roundedDeviceSize} bytes, data partition: ${dataPartitionSizeBytes} bytes (${dataPartitionSizeMiB} MiB)`,
+		)
+
+		this.logger.log(`Creating state partition (${statePartitionSizeMiB} MiB) on ${device}`)
+		await $`sgdisk --new=1:0:+${statePartitionSizeMiB}M --change-name=1:umbrel-raid-state ${device}`
+
+		this.logger.log(`Creating data partition (${dataPartitionSizeMiB} MiB) on ${device}`)
+		await $`sgdisk --new=2:0:+${dataPartitionSizeMiB}M --change-name=2:umbrel-raid-data ${device}`
 
 		// Determine partition naming convention
 		const statePartition = `${device}-part1`
@@ -764,7 +799,7 @@ export default class Raid {
 		const currentDevice = `/dev/disk/by-id/${currentDeviceId}`
 		const currentDeviceSize = await getDeviceSize(currentDevice)
 		const newDeviceSize = await getDeviceSize(newDevice)
-		if (newDeviceSize < currentDeviceSize)
+		if (getRoundedDeviceSize(newDeviceSize) < getRoundedDeviceSize(currentDeviceSize))
 			throw new Error('Cannot transition to a device smaller than the current device')
 
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')

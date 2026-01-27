@@ -4,6 +4,7 @@ import nodePath from 'node:path'
 import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
+import {getRoundedDeviceSize} from './raid.js'
 
 function kelvinToCelsius(kelvin: number): number {
 	return kelvin - 273
@@ -18,6 +19,7 @@ export type NvmeDevice = {
 	model: string
 	serial: string
 	size: number
+	roundedSize: number
 	temperature?: number
 	temperatureWarning?: number
 	temperatureCritical?: number
@@ -190,6 +192,7 @@ export async function getNvmeDevices(): Promise<NvmeDevice[]> {
 				getDevicePciSlotNumber(device.name).catch(() => undefined),
 			])
 
+			const size = device.size ?? 0
 			return {
 				device: device.name,
 				id,
@@ -197,7 +200,8 @@ export async function getNvmeDevices(): Promise<NvmeDevice[]> {
 				name: device.model?.trim() ?? 'Unknown NVMe Device',
 				model: device.model?.trim() ?? 'Unknown',
 				serial: device.serial?.trim() ?? 'Unknown',
-				size: device.size ?? 0,
+				size,
+				roundedSize: getRoundedDeviceSize(size),
 				temperature: smartData.temperature,
 				temperatureWarning: smartData.temperatureWarning,
 				temperatureCritical: smartData.temperatureCritical,
