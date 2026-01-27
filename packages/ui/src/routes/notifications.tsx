@@ -192,10 +192,11 @@ export function Notifications() {
 
 	// Navigate to whats-new dialog when the umbrelos-updated notification is present
 	// Clear the notification immediately to prevent re-navigation
+	// TODO: Re-enable when whats-new content is updated
 	useEffect(() => {
 		if (showWhatsNew) {
 			clearNotification('umbrelos-updated')
-			navigate(linkToDialog('whats-new'))
+			// navigate(linkToDialog('whats-new'))
 		}
 	}, [showWhatsNew, navigate, linkToDialog, clearNotification])
 
