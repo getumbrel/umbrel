@@ -60,8 +60,10 @@ export function SwapDialog({
 
 	// Filter available devices to only show those large enough for replacement.
 	// ZFS requires replacement devices to be at least as large as the device being replaced.
+	// We compare roundedSize (not raw size) because the backend partitions devices using roundedSize,
+	// so ZFS validates based on partition sizes which are determined by roundedSize.
 	const validReplacementDevices = oldDevice
-		? availableDevices.filter((d) => d.size >= oldDevice.size)
+		? availableDevices.filter((d) => (d.roundedSize ?? d.size) >= (oldDevice.roundedSize ?? oldDevice.size))
 		: availableDevices
 
 	const hasAvailableDevices = availableDevices.length > 0
@@ -133,7 +135,9 @@ export function SwapDialog({
 							<div className='flex flex-col gap-2'>
 								{availableDevices.map((device) => {
 									const isSelected = selectedReplacementId === device.id
-									const isTooSmall = oldDevice ? device.size < oldDevice.size : false
+									const isTooSmall = oldDevice
+										? (device.roundedSize ?? device.size) < (oldDevice.roundedSize ?? oldDevice.size)
+										: false
 									return (
 										<button
 											key={device.id}
@@ -173,7 +177,9 @@ export function SwapDialog({
 											</div>
 											{isTooSmall && (
 												<span className='shrink-0 text-11 font-medium text-[#F5A623]'>
-													{t('storage-manager.swap.too-small', {size: formatStorageSize(oldDevice?.size ?? 0)})}
+													{t('storage-manager.swap.too-small', {
+														size: formatStorageSize(oldDevice?.roundedSize ?? oldDevice?.size ?? 0),
+													})}
 												</span>
 											)}
 										</button>
