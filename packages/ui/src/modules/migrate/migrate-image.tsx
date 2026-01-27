@@ -1,6 +1,8 @@
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {trpcReact} from '@/trpc/trpc'
 
+// TODO: Add Umbrel Pro image variant (e.g., migrate-raspberrypi-umbrel-pro.png)
+// and update logic to show correct image based on target device (Home vs Pro)
 const FROM_RASPBERRY_PI_URL = '/figma-exports/migrate-raspberrypi-umbrel-home.png'
 const FROM_UMBREL_URL = '/figma-exports/migrate-umbrel-home-umbrel-home.png'
 

@@ -20,6 +20,7 @@ import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
+import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
@@ -52,6 +53,7 @@ export function SettingsContent() {
 	const [languageOpen, setLanguageOpen] = useState(false)
 
 	const cpuTemp = useCpuTemperature()
+	const {deviceName} = useIsHomeOrPro()
 
 	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
@@ -227,7 +229,7 @@ export function SettingsContent() {
 							</DropdownMenu>
 						</div>
 					</ListRow>
-					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')}>
+					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description', {deviceName})}>
 						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
 						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
 							{t('migrate')}

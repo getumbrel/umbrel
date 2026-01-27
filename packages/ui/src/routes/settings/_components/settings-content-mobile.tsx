@@ -20,6 +20,7 @@ import {Card} from '@/components/ui/card'
 import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
@@ -43,6 +44,7 @@ export function SettingsContentMobile() {
 	const cpuTemperature = useCpuTemperature()
 	const deviceInfo = useDeviceInfo()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
+	const {deviceName} = useIsHomeOrPro()
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
 
@@ -169,7 +171,7 @@ export function SettingsContentMobile() {
 				<ListRowMobile
 					icon={TbArrowBigRightLines}
 					title={t('migration-assistant')}
-					description={t('migration-assistant-description')}
+					description={t('migration-assistant-description', {deviceName})}
 					onClick={() => navigate('migration-assistant')}
 				/>
 				<ListRowMobile

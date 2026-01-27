@@ -10,6 +10,7 @@ import {
 	ImmersiveDialogSplitContent,
 } from '@/components/ui/immersive-dialog'
 import {Loading} from '@/components/ui/loading'
+import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
@@ -30,14 +31,12 @@ const title = t('migration-assistant')
 
 export default function MigrationAssistantDialog() {
 	const dialogProps = useSettingsDialogProps()
+	const {isHomeOrPro, isLoading, deviceName} = useIsHomeOrPro()
 
-	const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
-	const isUmbrelHome = !!isUmbrelHomeQ.data
+	// Don't show anything while loading
+	if (isLoading) return null
 
-	// Don't show anything atm
-	if (isUmbrelHomeQ.isLoading) return null
-
-	if (!isUmbrelHome) {
+	if (!isHomeOrPro) {
 		return (
 			<AlertDialog {...dialogProps}>
 				<AlertDialogContent>
@@ -61,7 +60,7 @@ export default function MigrationAssistantDialog() {
 	return (
 		<ImmersiveDialog {...dialogProps}>
 			<ImmersiveDialogSplitContent side={<MigrateImage />}>
-				<MigrateContent />
+				<MigrateContent deviceName={deviceName} />
 			</ImmersiveDialogSplitContent>
 		</ImmersiveDialog>
 	)
@@ -69,7 +68,7 @@ export default function MigrationAssistantDialog() {
 
 type MigrationState = 'prep' | 'check' | 'error' | 'ready'
 
-function MigrateContent() {
+function MigrateContent({deviceName}: {deviceName: string}) {
 	const {migrate} = useGlobalSystemState()
 
 	const [state, setState] = useState<MigrationState>('prep')
@@ -123,7 +122,7 @@ function MigrateContent() {
 	switch (state) {
 		case 'prep':
 		case 'check':
-			return <MigrationAssistantPrep isLoading={isFetching} onNext={() => setState('check')} />
+			return <MigrationAssistantPrep isLoading={isFetching} onNext={() => setState('check')} deviceName={deviceName} />
 		case 'error':
 			return (
 				<MigrationAssistantError
@@ -131,22 +130,31 @@ function MigrateContent() {
 					errors={error ? [error.message] : []}
 					onCheckAgain={retry}
 					onNext={() => setState('ready')}
+					deviceName={deviceName}
 				/>
 			)
 		case 'ready':
-			return <MigrationAssistantReady onNext={migrate} />
+			return <MigrationAssistantReady onNext={migrate} deviceName={deviceName} />
 	}
 }
 
 // ----
 
-function MigrationAssistantPrep({isLoading, onNext}: {isLoading: boolean; onNext: () => void}) {
+function MigrationAssistantPrep({
+	isLoading,
+	onNext,
+	deviceName,
+}: {
+	isLoading: boolean
+	onNext: () => void
+	deviceName: string
+}) {
 	const buttonContinueText = t('migration-assistant.prep.button-continue')
 
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description={t('migration-assistant-description')}
+			description={t('migration-assistant-description', {deviceName})}
 			bodyText={t('migration-assistant.prep.body')}
 			footer={
 				<>
@@ -164,7 +172,10 @@ function MigrationAssistantPrep({isLoading, onNext}: {isLoading: boolean; onNext
 			}
 		>
 			<ImmersiveDialogIconMessage icon={TbPower} title={t('migration-assistant.prep.shut-down-rpi')} />
-			<ImmersiveDialogIconMessage icon={TbUsb} title={t('migration-assistant.prep.connect-disk-to-home')} />
+			<ImmersiveDialogIconMessage
+				icon={TbUsb}
+				title={t('migration-assistant.prep.connect-disk-to-home', {deviceName})}
+			/>
 			<ImmersiveDialogIconMessage
 				icon={TbArrowBadgeRight}
 				title={t('migration-assistant.prep.prep-done-continue-message', {
@@ -182,18 +193,20 @@ export function MigrationAssistantError({
 	errors,
 	onCheckAgain,
 	onNext,
+	deviceName,
 }: {
 	isLoading: boolean
 	errors: string[]
 	onCheckAgain: () => void
 	onNext: () => void
+	deviceName: string
 }) {
 	const hasErrors = errors && errors.length > 0
 
 	return (
 		<ImmersiveDialogBody
 			title={title}
-			description={t('migration-assistant-description')}
+			description={t('migration-assistant-description', {deviceName})}
 			bodyText={
 				<>
 					{hasErrors && t('migration-assistant.failed')}
@@ -242,11 +255,11 @@ function WarningMessage({title, description}: {title: string; description?: stri
 
 // ----
 
-export function MigrationAssistantReady({onNext}: {onNext: () => void}) {
+export function MigrationAssistantReady({onNext, deviceName}: {onNext: () => void; deviceName: string}) {
 	return (
 		<ImmersiveDialogBody
 			title={t('migration-assistant.ready.title')}
-			description={t('migration-assistant.ready.description')}
+			description={t('migration-assistant.ready.description', {deviceName})}
 			bodyText={t('migration-assistant.ready.hint-header')}
 			footer={
 				<>
@@ -259,7 +272,7 @@ export function MigrationAssistantReady({onNext}: {onNext: () => void}) {
 						description={
 							<div className='-my-1 flex items-center items-baseline gap-1'>
 								<RiAlertFill className='h-3 w-3 shrink-0 translate-y-[1.5px]' />
-								{t('migration-assistant.prep.callout')}
+								{t('migration-assistant.prep.callout', {deviceName})}
 							</div>
 						}
 					/>
@@ -269,7 +282,7 @@ export function MigrationAssistantReady({onNext}: {onNext: () => void}) {
 			<ImmersiveDialogIconMessage
 				icon={TbLock}
 				title={t('migration-assistant.ready.hint-use-same-password.title')}
-				description={t('migration-assistant.ready.hint-use-same-password.description')}
+				description={t('migration-assistant.ready.hint-use-same-password.description', {deviceName})}
 			/>
 			<ImmersiveDialogIconMessage
 				icon={TbPower}
