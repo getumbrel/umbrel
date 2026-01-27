@@ -59,25 +59,6 @@ const formatSizeWithUnit = (bytes: number, referenceBytes: number) => {
 	return formatSize(bytes)
 }
 
-// Size variance threshold (10% of smallest drive)
-// Used to determine if drives are "effectively same size" despite GB vs GiB differences
-// e.g., 2000 GB vs 2048 GB drives are considered same size, but 1TB vs 2TB are not
-const SIZE_VARIANCE_THRESHOLD = 0.1
-
-// Check if all drives are effectively the same size (within threshold of smallest)
-const areEffectivelySameSize = (sizes: number[]): boolean => {
-	if (sizes.length < 2) return true
-	const smallest = Math.min(...sizes)
-	const threshold = smallest * SIZE_VARIANCE_THRESHOLD
-	return sizes.every((size) => size - smallest < threshold)
-}
-
-// Returns wasted bytes if significant, or 0 if below visibility threshold
-const getVisibleWastedBytes = (wastedBytes: number, minDriveSize: number): number => {
-	const threshold = minDriveSize * SIZE_VARIANCE_THRESHOLD
-	return wastedBytes >= threshold ? wastedBytes : 0
-}
-
 // ============================================================================
 // Sub-components
 // ============================================================================
@@ -166,8 +147,10 @@ export default function RaidSetup() {
 	// └─────────────────────────┴─────────────┴─────────────┴─────────────────┘
 
 	const canEnableFailSafe = devices.length >= 2
-	// Consider drives "same size" if within 10% variance (handles GB vs GiB differences)
-	const allSameSize = devices.length > 0 && areEffectivelySameSize(devices.map((d) => d.size))
+	// Check if all drives have the same roundedSize (backend rounds to nearest 250GB for ≥1TB drives)
+	const roundedSizes = devices.map((d) => d.roundedSize)
+	const smallestRounded = roundedSizes.length > 0 ? Math.min(...roundedSizes) : 0
+	const allSameSize = roundedSizes.length > 0 && roundedSizes.every((s) => s === smallestRounded)
 	const defaultFailSafe = canEnableFailSafe && allSameSize
 	const [failSafeEnabled, setFailSafeEnabled] = useState(defaultFailSafe)
 
@@ -310,9 +293,9 @@ export default function RaidSetup() {
 	// --- Derived State & Calculations ---
 
 	// We show the smallest drive as "failsafe" because it determines the usable capacity per drive.
-	// Get the last slot device with the smallest size.
-	const smallestSize = devices.length > 0 ? Math.min(...devices.map((d) => d.size)) : 0
-	const smallestDevices = devices.filter((d) => d.size === smallestSize)
+	// Get the last slot device with the smallest roundedSize.
+	const smallestSize = devices.length > 0 ? Math.min(...devices.map((d) => d.roundedSize)) : 0
+	const smallestDevices = devices.filter((d) => d.roundedSize === smallestSize)
 	const smallestDeviceSlot = smallestDevices.length > 0 ? (smallestDevices[smallestDevices.length - 1].slot ?? -1) : -1
 
 	// Convert devices to slots array for SsdTray visualization
@@ -347,7 +330,7 @@ export default function RaidSetup() {
 	// │ 2TB + 2TB + 4TB        │ 4TB       │ 2TB      │ 2TB    │
 	// └────────────────────────┴───────────┴──────────┴────────┘
 
-	const totalBytes = devices.reduce((sum, d) => sum + d.size, 0)
+	const totalRoundedBytes = devices.reduce((sum, d) => sum + d.roundedSize, 0)
 
 	let availableBytes: number
 	let failsafeBytes: number
@@ -356,11 +339,10 @@ export default function RaidSetup() {
 	if (failSafeEnabled && canEnableFailSafe) {
 		failsafeBytes = smallestSize
 		availableBytes = (devices.length - 1) * smallestSize
-		const rawUnused = totalBytes - availableBytes - failsafeBytes
-		unusedBytes = getVisibleWastedBytes(rawUnused, smallestSize)
+		unusedBytes = Math.max(0, totalRoundedBytes - availableBytes - failsafeBytes)
 	} else {
 		failsafeBytes = 0
-		availableBytes = totalBytes
+		availableBytes = totalRoundedBytes
 		unusedBytes = 0
 	}
 
@@ -600,18 +582,18 @@ export default function RaidSetup() {
 							{failSafeEnabled && (
 								<div className='flex flex-col gap-2'>
 									<div className='flex text-[14px]'>
-										<span style={{width: `${(availableBytes / totalBytes) * 100}%`}}>
+										<span style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}>
 											<span className='text-brand'>Storage</span>{' '}
 											<span className='font-medium text-brand opacity-60'>{availableStorage}</span>
 										</span>
-										<span style={{width: `${(failsafeBytes / totalBytes) * 100}%`}}>
+										<span style={{width: `${(failsafeBytes / totalRoundedBytes) * 100}%`}}>
 											<span style={{color: FAILSAFE_COLOR}}>FailSafe</span>{' '}
 											<span className='font-medium opacity-60' style={{color: FAILSAFE_COLOR}}>
 												{failsafeStorage}
 											</span>
 										</span>
 										{unusedBytes > 0 && (
-											<span style={{width: `${(unusedBytes / totalBytes) * 100}%`}}>
+											<span style={{width: `${(unusedBytes / totalRoundedBytes) * 100}%`}}>
 												<span style={{color: WASTED_COLOR}}>Wasted</span>{' '}
 												<span className='font-medium opacity-60' style={{color: WASTED_COLOR}}>
 													{unusedStorage}
@@ -622,12 +604,15 @@ export default function RaidSetup() {
 									{/* Progress bar */}
 									<div className='flex h-2 w-full overflow-hidden rounded-full'>
 										{/* Storage */}
-										<div className='h-full bg-brand' style={{width: `${(availableBytes / totalBytes) * 100}%`}} />
+										<div
+											className='h-full bg-brand'
+											style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}
+										/>
 										{/* Failsafe */}
 										<div
 											className='h-full'
 											style={{
-												width: `${(failsafeBytes / totalBytes) * 100}%`,
+												width: `${(failsafeBytes / totalRoundedBytes) * 100}%`,
 												backgroundColor: FAILSAFE_COLOR,
 											}}
 										/>
@@ -635,7 +620,7 @@ export default function RaidSetup() {
 										{unusedBytes > 0 && (
 											<div
 												className='h-full'
-												style={{width: `${(unusedBytes / totalBytes) * 100}%`, backgroundColor: WASTED_COLOR}}
+												style={{width: `${(unusedBytes / totalRoundedBytes) * 100}%`, backgroundColor: WASTED_COLOR}}
 											/>
 										)}
 									</div>

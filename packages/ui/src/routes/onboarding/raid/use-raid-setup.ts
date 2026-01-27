@@ -8,8 +8,18 @@ export type StorageDevice = RouterOutput['hardware']['internalStorage']['getDevi
 // Matches backend z.enum(['storage', 'failsafe']) in user.register
 export type RaidType = 'storage' | 'failsafe'
 
-// Format bytes without space, max 1 decimal place (e.g., "4TB", "8.2TB" instead of "4 TB", "8.19TB")
-export const formatSize = (bytes: number) => prettyBytes(bytes, {maximumFractionDigits: 1}).replace(' ', '')
+// Format bytes without space, rounding to integer only for 3+ digit values (>=100) to avoid overflow
+// e.g., "4.5TB", "45.2GB", "256GB" - only 256.1GB gets rounded because 256 >= 100
+export const formatSize = (bytes: number) => {
+	// First format with 1 decimal to determine the numeric value
+	const formatted = prettyBytes(bytes, {maximumFractionDigits: 1})
+	const numericValue = parseFloat(formatted)
+
+	// If 3+ digits (>=100), round to integer to keep string short
+	const fractionDigits = numericValue >= 100 ? 0 : 1
+
+	return prettyBytes(bytes, {maximumFractionDigits: fractionDigits}).replace(' ', '')
+}
 
 // Threshold % for lifetime usage warning (100 = the rated endurance being fully used)
 // Used by both ssd-tray.tsx (indicator dots) and ssd-health-dialog.tsx (warning display)
@@ -69,6 +79,7 @@ const MOCK_DEVICES: StorageDevice[] = [
 		model: 'Samsung SSD 990 EVO Plus 2TB',
 		serial: 'S7U7NU0Y940322F',
 		size: 2000398934016,
+		roundedSize: 2000000000000, // Rounds to 2TB
 		temperature: 29,
 		temperatureWarning: 81,
 		temperatureCritical: 85,
@@ -84,6 +95,7 @@ const MOCK_DEVICES: StorageDevice[] = [
 		model: 'KINGSTON SNV2S2000G',
 		serial: '50026B76869D5137',
 		size: 2000398934016,
+		roundedSize: 2000000000000, // Rounds to 2TB
 		temperature: 30,
 		temperatureWarning: 83,
 		temperatureCritical: 90,
@@ -99,6 +111,7 @@ const MOCK_DEVICES: StorageDevice[] = [
 		model: 'Samsung SSD 990 PRO 2TB',
 		serial: 'S7HENU0Y732728N',
 		size: 2000398934016,
+		roundedSize: 2000000000000, // Rounds to 2TB
 		temperature: 29,
 		temperatureWarning: 82,
 		temperatureCritical: 85,
