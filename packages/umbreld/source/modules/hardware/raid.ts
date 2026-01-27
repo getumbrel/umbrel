@@ -52,9 +52,9 @@ export type ReplaceStatus = {
 }
 
 // Types for zpool status --json --json-int --json-flat-vdevs output
-type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED'
+type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED' | 'CANT_OPEN'
 type Vdev = {
-	vdev_type: 'root' | 'raidz' | 'mirror' | 'disk'
+	vdev_type: 'root' | 'raidz' | 'mirror' | 'disk' | 'file'
 	path?: string
 	rep_dev_size?: number
 	phys_space?: number
@@ -309,6 +309,7 @@ export default class Raid {
 		// Filter vdevs by type
 		const rootVdev = vdevs.find((v) => v.vdev_type === 'root')
 		const diskVdevs = vdevs.filter((v) => v.vdev_type === 'disk')
+		const fileVdevs = vdevs.filter((v) => v.vdev_type === 'file')
 
 		if (!rootVdev) return {exists: false}
 
@@ -361,22 +362,98 @@ export default class Raid {
 			rebuild = {state, progress}
 		}
 
+		const devices = diskVdevs.map((device) => ({
+			id: device.path!.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, ''),
+			size: device.phys_space,
+			status: device.state,
+			readErrors: device.read_errors,
+			writeErrors: device.write_errors,
+			checksumErrors: device.checksum_errors,
+		}))
+
+		// ZFS has an accounting bug where after raidz expansion, it uses the old parity ratio the array was created with
+		// to calculate total usable space, used space and free space. Since most users will upgade SSDs one
+		// at a time this means they'll start with a parity ratio of 50%. Adding a 3rd disk gives
+		// them a parity ratio of 33%. Meaning upgrading from 2 1TB SSDs to 3 1TB SSDs they'd expect to go from
+		// 1TB usable space and 1TB parity, to 2TB usable space and 2TB parity. However ZFS will report the old
+		// parity ratio of 50% and incorrectly say there is 1.5TB usable space and 1.5TB parity. Even after adding more SSDs and increasing
+		// parity ratio further, ZFS will continue to report 50%. It's very confusing and makes it appear as
+		// though multiple TBs of storage are being lost. The used space and free space values are also incorrect
+		// for the same reason. The expected amount of data can still be written, it's just a reporting issue.
+		// - https://github.com/openzfs/zfs/issues/17784
+		//
+		// We fix this by calculating the usable space ourself by doing:
+		//   smallest device size * (number of devices - 1 parity device)
+		// We then take the total space and total raw allocated space (including parity overhead) reported by ZFS
+		// and calculate the used percentage of the array. We then multiply the usable space by the used percentage to
+		// get the actual used space.
+		// This results in the expected usable space, used space and free space values after raidz expansion.
+		//
+		// One quirk of this approach is that we have the opposite accounting issue. Instead of treating all data
+		// as using the old parity ratio, we treat all data as using the new parity ratio. When in fact there is a mix.
+		// This means after expansion the used space will jump up as we're assuming that the raw data was using the new
+		// higher parity ratio. So now total and available space are correct but used space is incorrect. This is much
+		// less confusing. It will also correct itself over time. As those files are deleted or modified they'll be
+		// re-written using the new parity ratio bringing down the used space.
+		// For example starting with 100GB used space and upgrading from 2 devices to 3 will show ~150GB used space.
+		// This effectively means the 100GB in the old inneficient parity ratio is taking up enough space to write 150GB
+		// of data with the new parity ratio. Deleting this 100GB file frees up 150GB of space for new files.
+		let totalSpace = rootVdev.total_space
+		let usableSpace = rootVdev.def_space
+		let usedSpace = rootVdev.alloc_space
+		// Only run this logic with more than 2 devices so we don't run it during the transition which does lots of
+		// complex file vdev replace weirdness which makes the below calculations very complex. We don't need this
+		// if we only have two devices anyway since ZFS default reporting is reliable in that case.
+		if (raidType === 'failsafe' && diskVdevs.length > 2) {
+			// Take file vdevs into account to handle the migration pool correctly which
+			// has a file vdev. Otherwise we can't track FailSafe transition progress since we watch
+			// the migration pools size to calculate snapshot sync progress.
+			let numberOfDevices = diskVdevs.length + fileVdevs.length
+
+			// If we're currently replacing a device, don't count it twice. We just assume there's only ever one
+			// replacement happening at a time to keep things simple.
+			const isReplacing = [...diskVdevs, ...fileVdevs].some((vdev) => vdev.parent?.includes('replacing'))
+			if (isReplacing) numberOfDevices -= 1
+
+			// Calculate usable space based on the smallest device size and accounting for a single parity device
+			const smallestDeviceSize = Math.min(...devices.map((d) => d.size).filter((size) => size !== undefined))
+			usableSpace = smallestDeviceSize * (numberOfDevices - 1)
+
+			// ZFS doesn't update total space until the end of a raidz1 expansion which breaks our calculations.
+			// We need to calculate it as soon as we start a resize by summing all the devices.
+			// We need to use phys_space because rep_dev_size can randomly change during operations.
+			// However sometimes on missing devices phys_space doesn't exist but rep_dev_size does, and in those
+			// situations it's stable so we can rely on it.
+			// If we're replacing a device we skip the missing one so we don't count it twice.
+			totalSpace = [...diskVdevs, ...fileVdevs]
+				.filter((vdev) => !(vdev.state === 'CANT_OPEN' && vdev.parent?.includes('replacing')))
+				.reduce((sum, vdev) => sum + (vdev.phys_space || vdev.rep_dev_size || 0), 0)
+
+			// Now we need to also fix usedSpace calculations otherwise we'll go negative
+			// with the smaller usable space value.
+			// The used space percentage is reliable from (alloc / total)
+			// so we can multiply usableSpace by the percentage
+			const usedPercentage = rootVdev.alloc_space / totalSpace
+			usedSpace = Math.ceil(usableSpace * usedPercentage)
+
+			// TODO: Handle FailSafe replace with old devices online
+
+			// TODO: Handle mixed size devices
+		}
+
+		// Handle failsafe mode with 2 disks (or 1 disk and 1 file) reporting double usage due to
+		// the parity device being included in the total space.
+		if (raidType === 'failsafe' && diskVdevs.length <= 2) usedSpace /= 2
+
 		return {
 			exists: true,
 			raidType,
-			totalSpace: rootVdev.total_space,
-			usableSpace: rootVdev.def_space,
-			usedSpace: rootVdev.alloc_space,
-			freeSpace: rootVdev.def_space - rootVdev.alloc_space,
+			totalSpace,
+			usableSpace,
+			usedSpace,
+			freeSpace: usableSpace - usedSpace,
 			status: pool.state,
-			devices: diskVdevs.map((device) => ({
-				id: device.path!.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, ''),
-				size: device.rep_dev_size,
-				status: device.state,
-				readErrors: device.read_errors,
-				writeErrors: device.write_errors,
-				checksumErrors: device.checksum_errors,
-			})),
+			devices,
 			expansion,
 			rebuild,
 		}
@@ -846,16 +923,9 @@ export default class Raid {
 							try {
 								const migrationStatus = await this.getPoolStatus(migrationPoolName)
 								if (migrationStatus.exists && estimatedSize > 0) {
-									// usedSpace is raw allocation including raidz1 parity overhead
-									// Calculate overhead factor (totalSpace/usableSpace) to convert to actual data
-									const overheadFactor =
-										migrationStatus.totalSpace && migrationStatus.usableSpace
-											? migrationStatus.totalSpace / migrationStatus.usableSpace
-											: 2 // Default to 2 for 2-disk raidz1
 									const usedSpace = migrationStatus.usedSpace ?? 0
-									const actualDataWritten = usedSpace / overheadFactor
 									// Scale sync progress to 0-49% (first half of transition)
-									const rawProgress = Math.min(99, Math.floor((actualDataWritten / estimatedSize) * 100))
+									const rawProgress = Math.min(99, Math.floor((usedSpace / estimatedSize) * 100))
 									const progress = Math.floor((rawProgress / 100) * 49)
 									if (this.failsafeTransitionStatus && progress > this.failsafeTransitionStatus.progress) {
 										this.logger.log(`Sync progress: ${progress}%`)
