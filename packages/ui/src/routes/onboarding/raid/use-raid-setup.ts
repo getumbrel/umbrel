@@ -111,9 +111,8 @@ const MOCK_DEVICES: StorageDevice[] = [
 // Hook to detect storage devices
 export function useDetectStorageDevices() {
 	const query = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {
-		// Only fetch once on initial mount - SSDs don't change during onboarding flow
-		refetchOnWindowFocus: false,
-		refetchOnMount: false,
+		// Poll every 10 seconds to keep temperature and health status up to date
+		refetchInterval: 10_000,
 		// Skip the query when using mock devices
 		enabled: !USE_MOCK_DEVICES,
 	})
@@ -131,7 +130,8 @@ export function useDetectStorageDevices() {
 
 	return {
 		devices: query.data ?? [],
-		isDetecting: query.isLoading || query.isFetching,
+		// We only use isLoading (not isFetching) so polling doesn't trigger the loading scanner
+		isDetecting: query.isLoading,
 		error: query.error?.message ?? null,
 		refetch: query.refetch,
 	}
