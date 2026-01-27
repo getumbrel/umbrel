@@ -452,36 +452,13 @@ export default class Raid {
 	// Get details about why RAID mount failed by running a test import
 	async checkRaidMountFailureDevices(): Promise<Array<{name: string; isOk: boolean}>> {
 		const {stdout} = await $`zpool import -N`
-		const devices: Array<{name: string; isOk: boolean}> = []
-		let inConfig = false
+		const expectedDevices = ((await this.configStore.get('raid.devices')) ?? []) as string[]
 
-		for (const line of stdout.split('\n')) {
-			if (line.startsWith('config:')) {
-				inConfig = true
-			} else if (inConfig && line.trim()) {
-				const parts = line.trim().split(/\s+/)
-				if (parts.length >= 2) {
-					const name = parts[0]
-					const state = parts[1]
-					if (name.includes('nvme') || name.includes('sd') || name.includes('-part')) {
-						const strippedName = name.replace(/-part\d+$/, '')
-						devices.push({name: strippedName, isOk: state === 'ONLINE'})
-					}
-				}
-			}
-		}
-
-		// If zpool import returned nothing, fall back to reading device IDs from config
-		if (devices.length === 0) {
-			const configDevices = ((await this.configStore.get('raid.devices')) ?? []) as string[]
-			for (const device of configDevices) {
-				// Extract device ID from path like /dev/disk/by-id/nvme-...
-				const name = device.replace('/dev/disk/by-id/', '')
-				devices.push({name, isOk: false})
-			}
-		}
-
-		return devices
+		return expectedDevices.map((device) => {
+			const name = device.replace('/dev/disk/by-id/', '')
+			const isOk = stdout.split('\n').some((line) => line.includes(name) && line.includes('ONLINE'))
+			return {name, isOk}
+		})
 	}
 
 	// Create GPT partition table and partitions on a device
