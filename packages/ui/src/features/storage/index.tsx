@@ -24,6 +24,7 @@ import {t} from '@/utils/i18n'
 
 import {AddToRaidDialog} from './components/dialogs/add-to-raid-dialog'
 import {InstallSsdDialog} from './components/dialogs/install-ssd-dialog'
+import {ReplaceFailedDriveDialog} from './components/dialogs/replace-failed-drive-dialog'
 import {SsdHealthDialog, useSsdHealthDialog} from './components/dialogs/ssd-health-dialog'
 import {SwapDialog} from './components/dialogs/swap-dialog'
 import {SsdShape} from './components/ssd-shape'
@@ -137,6 +138,9 @@ export default function StorageManagerDialog() {
 		canChooseMode,
 		raidStatus,
 		isLoading: isStorageLoading,
+		// Degraded replacement
+		failedRaidDevices,
+		canReplaceFailedDevice,
 		// Mutations
 		addDeviceAsync,
 		transitionToFailsafeAsync,
@@ -159,6 +163,8 @@ export default function StorageManagerDialog() {
 	const [deviceToAdd, setDeviceToAdd] = useState<StorageDevice | null>(null)
 	const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false)
 	const [swapSlot, setSwapSlot] = useState<number | null>(null)
+	const [isReplaceFailedDialogOpen, setIsReplaceFailedDialogOpen] = useState(false)
+	const [deviceForReplacement, setDeviceForReplacement] = useState<StorageDevice | null>(null)
 
 	// Pre-compute slot states to avoid logic duplication between mobile and desktop
 	const slotStates = SLOT_INDICES.map((i) => {
@@ -280,17 +286,33 @@ export default function StorageManagerDialog() {
 														{isFailedDrive ? t('storage-manager.replace') : t('storage-manager.swap')}
 													</button>
 												) : isReadyToAdd ? (
-													<button
-														type='button'
-														onClick={() => {
-															setDeviceToAdd(device)
-															setIsAddDialogOpen(true)
-														}}
-														className='flex w-full animate-pulse items-center justify-center gap-1 rounded-full border border-white/20 bg-white/15 py-1 text-[12px] font-medium text-white transition-colors hover:bg-white/20'
-													>
-														<TbPlus className='size-3' strokeWidth={3} />
-														{t('storage-manager.add')}
-													</button>
+													canReplaceFailedDevice ? (
+														// Degraded array - offer to replace failed device
+														<button
+															type='button'
+															onClick={() => {
+																setDeviceForReplacement(device)
+																setIsReplaceFailedDialogOpen(true)
+															}}
+															className='flex w-full items-center justify-center gap-1 rounded-full bg-[#FF3434] py-1 text-[12px] font-medium text-white transition-colors hover:bg-[#FF3434]/90'
+														>
+															<TbRefreshDot className='size-3.5' />
+															{t('storage-manager.replace')}
+														</button>
+													) : (
+														// Normal add flow
+														<button
+															type='button'
+															onClick={() => {
+																setDeviceToAdd(device)
+																setIsAddDialogOpen(true)
+															}}
+															className='flex w-full animate-pulse items-center justify-center gap-1 rounded-full border border-white/20 bg-white/15 py-1 text-[12px] font-medium text-white transition-colors hover:bg-white/20'
+														>
+															<TbPlus className='size-3' strokeWidth={3} />
+															{t('storage-manager.add')}
+														</button>
+													)
 												) : (
 													<button
 														type='button'
@@ -448,19 +470,35 @@ export default function StorageManagerDialog() {
 													{isFailedDrive ? t('storage-manager.replace') : t('storage-manager.swap')}
 												</button>
 											) : isReadyToAdd ? (
-												<button
-													type='button'
-													onClick={() => {
-														setDeviceToAdd(device)
-														setIsAddDialogOpen(true)
-													}}
-													className='flex animate-pulse items-center gap-0.5 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-white/20'
-												>
-													<span className='flex size-3 items-center justify-center rounded-full bg-white/30'>
-														<TbPlus className='size-2 text-white' strokeWidth={3} />
-													</span>
-													{t('storage-manager.add')}
-												</button>
+												canReplaceFailedDevice ? (
+													// Degraded array - offer to replace failed device
+													<button
+														type='button'
+														onClick={() => {
+															setDeviceForReplacement(device)
+															setIsReplaceFailedDialogOpen(true)
+														}}
+														className='flex items-center gap-0.5 rounded-full bg-[#FF3434] px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-[#FF3434]/90'
+													>
+														<TbRefreshDot className='size-3.5' />
+														{t('storage-manager.replace')}
+													</button>
+												) : (
+													// Normal add flow
+													<button
+														type='button'
+														onClick={() => {
+															setDeviceToAdd(device)
+															setIsAddDialogOpen(true)
+														}}
+														className='flex animate-pulse items-center gap-0.5 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-white/20'
+													>
+														<span className='flex size-3 items-center justify-center rounded-full bg-white/30'>
+															<TbPlus className='size-2 text-white' strokeWidth={3} />
+														</span>
+														{t('storage-manager.add')}
+													</button>
+												)
 											) : (
 												<button
 													type='button'
@@ -547,6 +585,19 @@ export default function StorageManagerDialog() {
 				raidDriveCount={raidDriveCount}
 				availableDevices={availableDevices}
 				allDevices={allDevices}
+				replaceDeviceAsync={replaceDeviceAsync}
+			/>
+
+			{/* Replace Failed Drive Dialog (for degraded arrays) */}
+			<ReplaceFailedDriveDialog
+				open={isReplaceFailedDialogOpen}
+				onOpenChange={(open) => {
+					setIsReplaceFailedDialogOpen(open)
+					if (!open) setDeviceForReplacement(null)
+				}}
+				newDevice={deviceForReplacement}
+				failedDevice={failedRaidDevices[0] ?? null}
+				minRoundedDriveSize={minRoundedDriveSize}
 				replaceDeviceAsync={replaceDeviceAsync}
 			/>
 		</ImmersiveDialog>
