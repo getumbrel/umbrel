@@ -55,6 +55,17 @@ export async function getDiskUsageByPath(path: string): Promise<{size: number; t
 export async function getSystemDiskUsage(
 	umbreld: Umbreld,
 ): Promise<{size: number; totalUsed: number; available: number}> {
+	// TODO: Do this a cleaner way
+	if (await umbreld.hardware.umbrelPro.isUmbrelPro()) {
+		const pool = await umbreld.hardware.raid.getStatus()
+		if (pool.exists) {
+			return {
+				size: pool.usableSpace ?? 0,
+				totalUsed: pool.usedSpace ?? 0,
+				available: pool.freeSpace ?? 0,
+			}
+		}
+	}
 	return await getDiskUsageByPath(umbreld.dataDirectory)
 }
 
