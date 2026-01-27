@@ -1,6 +1,8 @@
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat} from 'react-icons/tb'
 
+import {t} from '@/utils/i18n'
+
 import {FAILSAFE_COLOR} from './use-raid-setup'
 
 export type SsdSlot = {
@@ -31,7 +33,12 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 	return (
 		<div className='relative w-full select-none' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
 			{/* Layer 1: Empty tray */}
-			<img src='/onboarding/ssd-tray.webp' alt='SSD Tray' draggable={false} className='absolute inset-0 size-full' />
+			<img
+				src='/onboarding/ssd-tray.webp'
+				alt={t('onboarding.raid.ssd-tray-alt')}
+				draggable={false}
+				className='absolute inset-0 size-full'
+			/>
 
 			{/* Layer 2: Slot labels - white with glow when SSD present */}
 			{[0, 1, 2, 3].map((i) => (
@@ -46,7 +53,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 						...(slots[i] && {textShadow: '0px 0px 6px rgba(255, 255, 255, 0.25)'}),
 					}}
 				>
-					SSD {i + 1}
+					{t('onboarding.raid.ssd-label', {number: i + 1})}
 				</div>
 			))}
 
@@ -61,7 +68,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 						{/* Layer 3: SSD image */}
 						<img
 							src='/onboarding/ssd.webp'
-							alt={`SSD ${i + 1}`}
+							alt={t('onboarding.raid.ssd-label', {number: i + 1})}
 							draggable={false}
 							className='absolute'
 							style={{

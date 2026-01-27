@@ -3,6 +3,7 @@ import {TbAlertTriangleFilled} from 'react-icons/tb'
 import {toast} from '@/components/ui/toast'
 import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 type RaidErrorProps = {
 	title: string
@@ -46,7 +47,7 @@ export function RaidError({title, instructions, image}: RaidErrorProps) {
 					disabled={shutdownMut.isPending}
 					style={{boxShadow: '0px 2px 4px 0px #FFFFFF3D inset'}}
 				>
-					{shutdownMut.isPending ? 'Shutting down...' : 'Shut down'}
+					{shutdownMut.isPending ? t('shut-down.shutting-down') : t('shut-down')}
 				</Button>
 			</div>
 

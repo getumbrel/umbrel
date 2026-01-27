@@ -1,10 +1,9 @@
-// TODO: add all en translation keys and strings to entire RAID onboarding flow.
-
 import {motion} from 'framer-motion'
 import {useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AccountCredentials} from '@/routes/onboarding/create-account'
+import {t} from '@/utils/i18n'
 
 import {RaidError} from './raid-error'
 import {useDetectStorageDevices} from './use-raid-setup'
@@ -66,23 +65,18 @@ export default function Raid() {
 
 	// Show error state if detection failed
 	if (error) {
-		return (
-			<RaidError
-				title={error}
-				instructions='Power off Umbrel Pro, check that your SSDs are properly seated, and try again.'
-			/>
-		)
+		return <RaidError title={error} instructions={t('onboarding.raid.error.detection-instructions')} />
 	}
 
 	// Show no SSDs state if detection complete but no devices found
 	if (detectionComplete && devices.length === 0) {
 		return (
 			<RaidError
-				title='No SSDs detected'
-				instructions='Power off Umbrel Pro and insert at least one SSD to continue.'
+				title={t('onboarding.raid.error.no-ssds-detected')}
+				instructions={t('onboarding.raid.error.no-ssds-instructions')}
 				image={{
 					src: '/onboarding/no-ssd-found.webp',
-					alt: 'No SSDs found',
+					alt: t('onboarding.raid.no-ssds-alt'),
 				}}
 			/>
 		)
@@ -92,7 +86,11 @@ export default function Raid() {
 		<div className='flex flex-1 flex-col items-center justify-center gap-10'>
 			{/* Image with scanning line overlay - the animated line serves as the loading indicator */}
 			<div className='relative flex items-center justify-center'>
-				<img src='/onboarding/ssd-scan.webp' alt='Scanning SSDs' className='aspect-square w-[300px]' />
+				<img
+					src='/onboarding/ssd-scan.webp'
+					alt={t('onboarding.raid.scanning-alt')}
+					className='aspect-square w-[300px]'
+				/>
 				<motion.div
 					className='pointer-events-none absolute w-[340px]'
 					style={{
@@ -115,7 +113,7 @@ export default function Raid() {
 				className='text-[15px] text-white/85'
 				style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 			>
-				Checking your SSD slots
+				{t('onboarding.raid.scanning')}
 			</span>
 		</div>
 	)

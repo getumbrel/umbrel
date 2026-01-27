@@ -46,7 +46,7 @@ import {
 
 // Get warning message for a device (generic message - details shown in health dialog)
 function getHealthWarningMessage(device: StorageDevice): string | null {
-	if (getDeviceHealth(device).hasWarning) return 'This drive is reporting health issues'
+	if (getDeviceHealth(device).hasWarning) return t('onboarding.raid.health-warning')
 	return null
 }
 
@@ -83,11 +83,8 @@ function FailSafeInfo({
 	if (unusedSize > 0) {
 		return (
 			<div className='flex flex-col gap-2 text-[13px] text-white/50'>
-				<p>
-					FailSafe is limited by your smallest SSD ({smallestStr}). Your larger drives are reduced to match, leaving{' '}
-					{unusedStr} wasted.
-				</p>
-				<p className='text-yellow-500'>💡 For zero wasted storage, use same-sized SSDs.</p>
+				<p>{t('onboarding.raid.failsafe.mixed-sizes', {smallest: smallestStr, wasted: unusedStr})}</p>
+				<p className='text-yellow-500'>💡 {t('onboarding.raid.failsafe.tip')}</p>
 			</div>
 		)
 	}
@@ -98,8 +95,12 @@ function FailSafeInfo({
 		const futureWith4 = formatSize(smallestSize * 3)
 		return (
 			<span className='text-[13px] text-white/50'>
-				{protectionStr} is used for data protection. Add another {smallestStr} SSD to increase available storage to{' '}
-				{futureWith3}, or add two more for {futureWith4}. You can add more SSDs at any time.
+				{t('onboarding.raid.failsafe.protection-info-2ssds', {
+					protection: protectionStr,
+					smallest: smallestStr,
+					futureWith3,
+					futureWith4,
+				})}
 			</span>
 		)
 	}
@@ -108,8 +109,11 @@ function FailSafeInfo({
 		const futureWith4 = formatSize(smallestSize * 3)
 		return (
 			<span className='text-[13px] text-white/50'>
-				{protectionStr} is used for data protection. Add another {smallestStr} SSD to increase available storage to{' '}
-				{futureWith4}. You can add more SSDs at any time.
+				{t('onboarding.raid.failsafe.protection-info-3ssds', {
+					protection: protectionStr,
+					smallest: smallestStr,
+					futureWith4,
+				})}
 			</span>
 		)
 	}
@@ -363,11 +367,13 @@ export default function RaidSetup() {
 					className='text-[20px] font-bold text-white/85'
 					style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 				>
-					Storage setup failed
+					{t('onboarding.raid.setup-failed.title')}
 				</h1>
 				<p className='max-w-[300px] text-center text-[15px] text-white/70'>{errorMessage}</p>
 				<p className='max-w-[300px] text-center text-[13px] text-white/50'>
-					{canRetry ? 'Try again, or shut down to check your drives.' : 'Please shut down and try again.'}
+					{canRetry
+						? t('onboarding.raid.setup-failed.description-retry')
+						: t('onboarding.raid.setup-failed.description-no-retry')}
 				</p>
 				<div className='mt-0 flex gap-3'>
 					{canRetry && (
@@ -379,7 +385,7 @@ export default function RaidSetup() {
 							className={primaryButtonProps.className}
 							style={primaryButtonProps.style}
 						>
-							Try again
+							{t('onboarding.raid.try-again')}
 						</button>
 					)}
 					<button
@@ -401,20 +407,23 @@ export default function RaidSetup() {
 	if (setupPhase === 'setting-up' || setupPhase === 'restarting') {
 		return (
 			<Layout
-				title='Configuring your storage'
-				subTitle='This may take a few minutes.'
+				title={t('onboarding.raid.configuring.title')}
+				subTitle={t('onboarding.raid.configuring.subtitle')}
 				subTitleMaxWidth={400}
 				showLogo={false}
 				footer={
 					<div className='w-full max-w-sm'>
-						<p className='text-center text-sm text-white/60'>
-							Please do not refresh this page or turn off your Umbrel while it is configuring your storage.
-						</p>
+						<p className='text-center text-sm text-white/60'>{t('onboarding.raid.configuring.warning')}</p>
 					</div>
 				}
 			>
-				<img src='/onboarding/pro-front.webp' alt='Umbrel Pro' draggable={false} className='w-64 md:w-96' />
-				<p className='-mt-4 text-[13px] font-medium text-white/30'>Umbrel Pro</p>
+				<img
+					src='/onboarding/pro-front.webp'
+					alt={t('storage-manager.umbrel-pro')}
+					draggable={false}
+					className='w-64 md:w-96'
+				/>
+				<p className='-mt-4 text-[13px] font-medium text-white/30'>{t('storage-manager.umbrel-pro')}</p>
 				{/* Progress bar */}
 				<div className='mt-4 w-full max-w-sm'>
 					<Progress />
@@ -453,11 +462,20 @@ export default function RaidSetup() {
 					</div>
 				}
 			>
-				<img src='/onboarding/pro-front.webp' alt='Umbrel Pro' draggable={false} className='w-64 md:w-96' />
-				<p className='-mt-2 text-[20px] font-semibold text-white/85'>Umbrel Pro</p>
+				<img
+					src='/onboarding/pro-front.webp'
+					alt={t('storage-manager.umbrel-pro')}
+					draggable={false}
+					className='w-64 md:w-96'
+				/>
+				<p className='-mt-2 text-[20px] font-semibold text-white/85'>{t('storage-manager.umbrel-pro')}</p>
 				<p className='-mt-5 text-[14px] font-medium text-white/50'>
-					Storage {availableStorage}
-					{failSafeEnabled && ` · FailSafe ${failsafeStorage}`}
+					{failSafeEnabled
+						? t('onboarding.raid.success.storage-info-failsafe', {
+								available: availableStorage,
+								failsafe: failsafeStorage,
+							})
+						: t('onboarding.raid.success.storage-info', {available: availableStorage})}
 				</p>
 
 				<button
@@ -475,7 +493,7 @@ export default function RaidSetup() {
 					className={`mt-4 ${primaryButtonProps.className}`}
 					style={primaryButtonProps.style}
 				>
-					{isLaunching ? 'Launching...' : 'Launch umbrelOS'}
+					{isLaunching ? t('onboarding.raid.launching') : t('onboarding.raid.launch-umbrelos')}
 				</button>
 			</Layout>
 		)
@@ -492,9 +510,9 @@ export default function RaidSetup() {
 						className='text-[20px] font-bold text-white/85 md:text-[24px]'
 						style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 					>
-						Storage
+						{t('onboarding.raid.storage')}
 					</h1>
-					<p className='text-[14px] text-white/50 md:text-[16px]'>The following SSDs were found in your Umbrel Pro</p>
+					<p className='text-[14px] text-white/50 md:text-[16px]'>{t('onboarding.raid.ssds-found')}</p>
 				</div>
 
 				{/* SSD list card */}
@@ -517,8 +535,11 @@ export default function RaidSetup() {
 											<TbCircleCheckFilled className='size-5 text-brand' />
 										)}
 										<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
-											One <span className='text-white'>{formatSize(device.size)}</span> SSD in{' '}
-											<span className='text-white'>Slot {device.slot}</span>
+											<Trans
+												i18nKey='onboarding.raid.ssd-in-slot'
+												values={{size: formatSize(device.size), slot: device.slot}}
+												components={{highlight: <span className='text-white' />}}
+											/>
 										</span>
 									</div>
 									{warning && <p className='ml-7 text-[12px] text-[#F5A623]/80 md:text-[13px]'>{warning}</p>}
@@ -544,7 +565,7 @@ export default function RaidSetup() {
 					onClick={() => setShowShutdownDialog(true)}
 					className='w-fit text-[13px] text-white/50 underline-offset-2 transition-colors hover:text-white/70 hover:underline'
 				>
-					Need to add or change drives?
+					{t('onboarding.raid.change-drives-link')}
 				</button>
 
 				{/* Divider */}
@@ -557,9 +578,9 @@ export default function RaidSetup() {
 							className='text-[18px] font-semibold text-white/85 md:text-[20px]'
 							style={{textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)'}}
 						>
-							FailSafe
+							{t('onboarding.raid.failsafe')}
 						</h2>
-						<p className='text-[14px] text-white/50 md:text-[16px]'>Your data stays safe if any single SSD fails</p>
+						<p className='text-[14px] text-white/50 md:text-[16px]'>{t('onboarding.raid.failsafe.subtitle')}</p>
 					</div>
 
 					{canEnableFailSafe ? (
@@ -568,12 +589,12 @@ export default function RaidSetup() {
 							<div className='flex items-center justify-between'>
 								<div className='flex items-center gap-3'>
 									<Switch checked={failSafeEnabled} onCheckedChange={setFailSafeEnabled} />
-									<span className='text-[15px] text-white/85'>Enable FailSafe</span>
+									<span className='text-[15px] text-white/85'>{t('onboarding.raid.failsafe.enable')}</span>
 								</div>
 								{allSameSize && (
 									<div className='flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1'>
 										<IoShieldHalf className='size-4 text-brand' />
-										<span className='text-[13px] text-brand'>Recommended</span>
+										<span className='text-[13px] text-brand'>{t('onboarding.raid.recommended')}</span>
 									</div>
 								)}
 							</div>
@@ -583,18 +604,18 @@ export default function RaidSetup() {
 								<div className='flex flex-col gap-2'>
 									<div className='flex text-[14px]'>
 										<span style={{width: `${(availableBytes / totalRoundedBytes) * 100}%`}}>
-											<span className='text-brand'>Storage</span>{' '}
+											<span className='text-brand'>{t('onboarding.raid.storage-label')}</span>{' '}
 											<span className='font-medium text-brand opacity-60'>{availableStorage}</span>
 										</span>
 										<span style={{width: `${(failsafeBytes / totalRoundedBytes) * 100}%`}}>
-											<span style={{color: FAILSAFE_COLOR}}>FailSafe</span>{' '}
+											<span style={{color: FAILSAFE_COLOR}}>{t('onboarding.raid.failsafe')}</span>{' '}
 											<span className='font-medium opacity-60' style={{color: FAILSAFE_COLOR}}>
 												{failsafeStorage}
 											</span>
 										</span>
 										{unusedBytes > 0 && (
 											<span style={{width: `${(unusedBytes / totalRoundedBytes) * 100}%`}}>
-												<span style={{color: WASTED_COLOR}}>Wasted</span>{' '}
+												<span style={{color: WASTED_COLOR}}>{t('onboarding.raid.wasted')}</span>{' '}
 												<span className='font-medium opacity-60' style={{color: WASTED_COLOR}}>
 													{unusedStorage}
 												</span>
@@ -637,8 +658,7 @@ export default function RaidSetup() {
 							) : (
 								<p className='text-[13px] text-yellow-500'>
 									<TbAlertTriangle className='mb-0.5 mr-1 inline size-4 align-middle' />
-									Starting with more than one SSD means FailSafe can only be enabled now during initial setup. You will
-									not be able to enable it later.
+									{t('onboarding.raid.failsafe.warning-now-only')}
 								</p>
 							)}
 						</div>
@@ -649,10 +669,11 @@ export default function RaidSetup() {
 								className='size-5 text-[#D7BF44]'
 								style={{filter: 'drop-shadow(0 0 8px rgba(215, 191, 68, 0.46))'}}
 							/>
-							<span className='mt-3 text-[15px] font-medium text-white/85'>Can't enable FailSafe yet</span>
+							<span className='mt-3 text-[15px] font-medium text-white/85'>
+								{t('onboarding.raid.failsafe.cant-enable')}
+							</span>
 							<span className='mt-1 text-[14px] text-white/50'>
-								You only have one SSD. Add at least one more {devices[0] ? formatSize(devices[0].size) : ''} SSD to
-								enable FailSafe protection for your data. You can add more SSDs at any time.
+								{t('onboarding.raid.failsafe.single-ssd-info', {size: devices[0] ? formatSize(devices[0].size) : ''})}
 							</span>
 						</div>
 					)}
@@ -663,7 +684,7 @@ export default function RaidSetup() {
 						{...primaryButtonProps}
 						className={`${primaryButtonProps.className} w-full md:w-fit`}
 					>
-						Continue
+						{t('onboarding.raid.continue')}
 					</button>
 				</div>
 			</div>
@@ -691,13 +712,13 @@ export default function RaidSetup() {
 				</div>
 				<div className='-mt-20 flex w-[95%] translate-x-4 flex-col items-center gap-1'>
 					<p className='text-[20px] font-semibold text-white/50'>
-						Available storage <span className='text-brand'>{availableStorage}</span>
+						{t('onboarding.raid.available-storage')} <span className='text-brand'>{availableStorage}</span>
 					</p>
 					<p className='text-[14px] text-white/50'>
-						Failsafe <span style={{color: FAILSAFE_COLOR}}>{failsafeStorage}</span>
+						{t('onboarding.raid.failsafe')} <span style={{color: FAILSAFE_COLOR}}>{failsafeStorage}</span>
 						{unusedBytes > 0 && (
 							<>
-								{' · Wasted '}
+								{` · ${t('onboarding.raid.wasted')} `}
 								<span style={{color: WASTED_COLOR}}>{unusedStorage}</span>
 							</>
 						)}
@@ -709,17 +730,14 @@ export default function RaidSetup() {
 			<AlertDialog open={showShutdownDialog} onOpenChange={setShowShutdownDialog}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Change drives?</AlertDialogTitle>
-						<AlertDialogDescription>
-							To add or change drives, power off Umbrel Pro. Once done you can power back on and continue with the
-							setup.
-						</AlertDialogDescription>
+						<AlertDialogTitle>{t('onboarding.raid.shutdown-dialog.title')}</AlertDialogTitle>
+						<AlertDialogDescription>{t('onboarding.raid.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction variant='destructive' onClick={handleShutdown} disabled={shutdownMut.isPending}>
-							{shutdownMut.isPending ? 'Shutting down...' : 'Shut down'}
+							{shutdownMut.isPending ? t('shut-down.shutting-down') : t('shut-down')}
 						</AlertDialogAction>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

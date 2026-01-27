@@ -5,6 +5,7 @@ import {TbActivityHeartbeat, TbAlertTriangle} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {formatSize, getDeviceHealth, StorageDevice} from './use-raid-setup'
@@ -27,34 +28,38 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 
 	// Determine health status display label
 	const healthStatus =
-		device.smartStatus === 'healthy' ? 'Healthy' : device.smartStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'
+		device.smartStatus === 'healthy'
+			? t('storage-manager.health.status-healthy')
+			: device.smartStatus === 'unhealthy'
+				? t('storage-manager.health.status-unhealthy')
+				: t('storage-manager.health.status-unknown')
 
 	// Collect all warnings for this device
 	const warnings: Warning[] = []
 
 	if (smartUnhealthy) {
 		warnings.push({
-			message: 'Drive is reporting unhealthy status',
-			advice: 'This drive may fail soon. Consider using a different drive if available.',
+			message: t('storage-manager.health.warning-unhealthy-message'),
+			advice: t('storage-manager.health.warning-unhealthy-advice'),
 		})
 	}
 
 	if (lifeWarning) {
 		warnings.push({
-			message: `Only ${lifeRemaining}% estimated life remaining`,
-			advice: 'Consider using a different drive if available.',
+			message: t('storage-manager.health.warning-life-message', {percent: lifeRemaining}),
+			advice: t('storage-manager.health.warning-life-advice'),
 		})
 	}
 
 	if (tempCritical) {
 		warnings.push({
-			message: `Temperature is critical (${device.temperature}°C)`,
-			advice: 'Ensure Umbrel Pro has adequate ventilation and the drive is properly seated.',
+			message: t('storage-manager.health.warning-temp-critical', {temperature: `${device.temperature}°C`}),
+			advice: t('storage-manager.health.warning-temp-advice'),
 		})
 	} else if (tempWarning) {
 		warnings.push({
-			message: `Drive is overheating (${device.temperature}°C)`,
-			advice: 'Ensure Umbrel Pro has adequate ventilation and the drive is properly seated.',
+			message: t('storage-manager.health.warning-temp-overheating', {temperature: `${device.temperature}°C`}),
+			advice: t('storage-manager.health.warning-temp-advice'),
 		})
 	}
 
@@ -65,7 +70,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 					<DialogHeader>
 						<div className='flex items-center gap-2'>
 							<TbActivityHeartbeat className='size-5' />
-							<DialogTitle>SSD Health</DialogTitle>
+							<DialogTitle>{t('storage-manager.health.title')}</DialogTitle>
 						</div>
 					</DialogHeader>
 
@@ -77,7 +82,12 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 							WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)',
 						}}
 					>
-						<img src='/onboarding/ssd-info.webp' alt='SSD' draggable={false} className='ml-auto w-[95%]' />
+						<img
+							src='/onboarding/ssd-info.webp'
+							alt={t('onboarding.raid.ssd-label', {number: slotNumber})}
+							draggable={false}
+							className='ml-auto w-[95%]'
+						/>
 						{/* Overlay text */}
 						{/* Left side - Size and Slot */}
 						<div className='absolute flex flex-col' style={{left: '20%', top: '50%', transform: 'translateY(-50%)'}}>
@@ -91,7 +101,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 								{formatSize(device.size)}
 							</span>
 							<span className='text-white/50' style={{fontSize: 'clamp(12px, 2.5vw, 14px)'}}>
-								SSD {slotNumber}
+								{t('onboarding.raid.ssd-label', {number: slotNumber})}
 							</span>
 						</div>
 						{/* Right side - Model */}
@@ -108,7 +118,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 						<div className='rounded-12 border border-[#F5A623]/30 bg-[#F5A623]/10 p-4'>
 							<div className='mb-3 flex items-center gap-2 text-[#F5A623]'>
 								<TbAlertTriangle className='size-5' />
-								<span className='font-semibold'>Warnings</span>
+								<span className='font-semibold'>{t('storage-manager.health.warnings')}</span>
 							</div>
 							<div className='divide-y divide-[#F5A623]/20'>
 								{warnings.map((warning, index) => (
@@ -123,18 +133,20 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 
 					{/* General Section */}
 					<div className='space-y-2'>
-						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>General</span>
+						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+							{t('storage-manager.health.general')}
+						</span>
 						{/* Model and serial use select-all for easy copying */}
 						<div className={listClass}>
 							<div className={listItemClass}>
-								<span className='shrink-0'>Model &amp; capacity</span>
+								<span className='shrink-0'>{t('storage-manager.health.model-and-capacity')}</span>
 								<FadeScroller direction='x' className='umbrel-hide-scrollbar min-w-0 overflow-x-auto font-normal'>
 									<span className='select-all whitespace-nowrap'>{device.model}</span>
 									<span className='whitespace-nowrap'> · {formatSize(device.size)}</span>
 								</FadeScroller>
 							</div>
 							<div className={listItemClass}>
-								<span className='shrink-0'>Serial number</span>
+								<span className='shrink-0'>{t('storage-manager.health.serial-number')}</span>
 								<FadeScroller direction='x' className='umbrel-hide-scrollbar min-w-0 overflow-x-auto font-normal'>
 									<span className='select-all whitespace-nowrap'>{device.serial}</span>
 								</FadeScroller>
@@ -144,10 +156,12 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 
 					{/* Wear Section */}
 					<div className='space-y-2'>
-						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>Wear</span>
+						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+							{t('storage-manager.health.wear')}
+						</span>
 						<div className={listClass}>
 							<div className={listItemClass}>
-								<span>Health status</span>
+								<span>{t('storage-manager.health.health-status')}</span>
 								<span className='flex items-center gap-2 font-normal'>
 									<span
 										className='size-[5px] rounded-full ring-3'
@@ -173,7 +187,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 							</div>
 							{lifeRemaining !== undefined && (
 								<div className={listItemClass}>
-									<span>Estimated life remaining</span>
+									<span>{t('storage-manager.health.estimated-life')}</span>
 									<span className='flex items-center gap-2 font-normal'>
 										{lifeWarning && (
 											<span
@@ -186,7 +200,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 												}
 											/>
 										)}
-										{lifeRemaining}%{lifeWarning && ' · Low'}
+										{lifeRemaining}%{lifeWarning && ` · ${t('storage-manager.health.low')}`}
 									</span>
 								</div>
 							)}
@@ -196,10 +210,12 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 					{/* Temperature Section */}
 					{device.temperature !== undefined && (
 						<div className='space-y-2'>
-							<span className='text-xs font-medium uppercase tracking-wider text-white/40'>Temperature</span>
+							<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+								{t('storage-manager.health.temperature')}
+							</span>
 							<div className={listClass}>
 								<div className={listItemClass}>
-									<span>Current temperature</span>
+									<span>{t('storage-manager.health.current-temperature')}</span>
 									<span className='flex items-center gap-2 font-normal'>
 										<span
 											className='size-[5px] rounded-full ring-3'
@@ -215,19 +231,19 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 											}
 										/>
 										{device.temperature}°C
-										{tempCritical && ' · Critical'}
-										{tempWarning && ' · Overheating'}
+										{tempCritical && ` · ${t('storage-manager.health.critical')}`}
+										{tempWarning && ` · ${t('storage-manager.health.overheating')}`}
 									</span>
 								</div>
 								{device.temperatureWarning !== undefined && (
 									<div className={listItemClass}>
-										<span>Warning threshold</span>
+										<span>{t('storage-manager.health.warning-threshold')}</span>
 										<span className='font-normal'>{device.temperatureWarning}°C</span>
 									</div>
 								)}
 								{device.temperatureCritical !== undefined && (
 									<div className={listItemClass}>
-										<span>Critical threshold</span>
+										<span>{t('storage-manager.health.critical-threshold')}</span>
 										<span className='font-normal'>{device.temperatureCritical}°C</span>
 									</div>
 								)}
