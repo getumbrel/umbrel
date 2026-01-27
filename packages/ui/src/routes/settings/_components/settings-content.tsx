@@ -10,7 +10,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
+import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/assets/chevron-down'
@@ -19,8 +19,10 @@ import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
+import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
+import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
@@ -53,15 +55,29 @@ export function SettingsContent() {
 	const [languageOpen, setLanguageOpen] = useState(false)
 
 	const cpuTemp = useCpuTemperature()
+	const {isUmbrelPro} = useIsUmbrelPro()
 	const {deviceName} = useIsHomeOrPro()
 
-	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
+	const [userQ, wifiSupportedQ, is2faEnabledQ, raidStatusQ, devicesQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.wifi.supported(),
 		t.user.is2faEnabled(),
+		// Storage queries only run on Umbrel Pro to avoid unnecessary API calls on other devices
+		t.hardware.raid.getStatus(undefined, {enabled: isUmbrelPro}),
+		t.hardware.internalStorage.getDevices(undefined, {enabled: isUmbrelPro}),
 	])
 
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
+
+	// Check if there's a RAID issue that needs attention
+	const hasRaidIssue = raidStatusQ.data?.exists && raidStatusQ.data?.status && raidStatusQ.data?.status !== 'ONLINE'
+
+	// Check if any SSD has health issues
+	const hasHealthIssue = devicesQ.data?.some((device) => getDeviceHealth(device).hasWarning)
+
+	// Show indicator if any storage issue exists
+	// Note: Storage Manager row only renders on Umbrel Pro, so this indicator is Pro-only
+	const hasStorageIssue = hasRaidIssue || hasHealthIssue
 
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
@@ -158,6 +174,22 @@ export function SettingsContent() {
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
+					{/* Storage Manager - Umbrel Pro only */}
+					{isUmbrelPro && (
+						<ListRow title={t('storage-manager')} description={t('storage-manager.description')}>
+							<div className='relative'>
+								{hasStorageIssue && (
+									<div className='absolute -right-0.5 top-0 h-2.5 w-2.5'>
+										<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
+										<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
+									</div>
+								)}
+								<IconButton icon={TbColumns3} onClick={() => navigate('storage')}>
+									{t('storage-manager.manage')}
+								</IconButton>
+							</div>
+						</ListRow>
+					)}
 					{/* Backups */}
 					<ListRow title={t('backups')} description={t('backups-description')}>
 						<div className='flex flex-wrap gap-2 pt-3'>

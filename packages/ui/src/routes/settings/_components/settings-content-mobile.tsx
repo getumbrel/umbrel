@@ -2,6 +2,7 @@ import {
 	Tb2Fa,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
+	TbColumns3,
 	TbHistory,
 	TbLanguage,
 	TbPhoto,
@@ -18,9 +19,11 @@ import {Link, useNavigate} from 'react-router-dom'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {SETTINGS_SYSTEM_CARDS_ID, UNKNOWN} from '@/constants'
+import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
+import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
@@ -44,9 +47,23 @@ export function SettingsContentMobile() {
 	const cpuTemperature = useCpuTemperature()
 	const deviceInfo = useDeviceInfo()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
+	const {isUmbrelPro} = useIsUmbrelPro()
 	const {deviceName} = useIsHomeOrPro()
+	// Storage queries only run on Umbrel Pro to avoid unnecessary API calls on other devices
+	const raidStatusQ = trpcReact.hardware.raid.getStatus.useQuery(undefined, {enabled: isUmbrelPro})
+	const devicesQ = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {enabled: isUmbrelPro})
 	// const isUmbrelHomeQ = trpcReact.migration.isUmbrelHome.useQuery()
 	// const isUmbrelHome = !!isUmbrelHomeQ.data
+
+	// Check if there's a RAID issue that needs attention
+	const hasRaidIssue = raidStatusQ.data?.exists && raidStatusQ.data?.status && raidStatusQ.data?.status !== 'ONLINE'
+
+	// Check if any SSD has health issues
+	const hasHealthIssue = devicesQ.data?.some((device) => getDeviceHealth(device).hasWarning)
+
+	// Show indicator if any storage issue exists
+	// Note: Storage Manager row only renders on Umbrel Pro, so this indicator is Pro-only
+	const hasStorageIssue = hasRaidIssue || hasHealthIssue
 
 	if (!userQ.data) {
 		return null
@@ -162,6 +179,24 @@ export function SettingsContentMobile() {
 					description={t('2fa-description')}
 					onClick={() => navigate('2fa')}
 				/>
+				{isUmbrelPro && (
+					<ListRowMobile
+						icon={TbColumns3}
+						title={
+							<span className='flex items-center gap-1.5'>
+								{t('storage-manager')}
+								{hasStorageIssue && (
+									<div className='relative h-2 w-2'>
+										<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
+										<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
+									</div>
+								)}
+							</span>
+						}
+						description={t('storage-manager.description')}
+						onClick={() => navigate('storage')}
+					/>
+				)}
 				<ListRowMobile
 					icon={TbHistory}
 					title={t('backups')}

@@ -57,9 +57,17 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
-const DialogScrollableContent = ({children, showClose}: {children: React.ReactNode; showClose?: boolean}) => {
+const DialogScrollableContent = ({
+	children,
+	showClose,
+	onOpenAutoFocus,
+}: {
+	children: React.ReactNode
+	showClose?: boolean
+	onOpenAutoFocus?: (e: Event) => void
+}) => {
 	return (
-		<DialogContent className='flex flex-col p-0'>
+		<DialogContent className='flex flex-col p-0' onOpenAutoFocus={onOpenAutoFocus}>
 			{/* TODO: adjust dialog inset if `showClose` is true so close button isn't too close to scrollbar */}
 			<ScrollArea className='flex flex-col' dialogInset>
 				{children}

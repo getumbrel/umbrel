@@ -11,8 +11,7 @@ export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
 
 export const hostEnvironmentMap = {
 	'umbrel-pro': {
-		// TODO: Add system-umbrel-pro.png to figma-exports
-		icon: '/figma-exports/system-umbrel-pro.png',
+		icon: '/figma-exports/system-umbrel-pro.webp',
 	},
 	'umbrel-home': {
 		icon: '/figma-exports/system-umbrel-home.png',

@@ -7,7 +7,7 @@ import {IS_DEV, sleep} from '@/utils/misc'
 
 const SLEEP_TIME = IS_DEV ? 600 : 0
 
-type Page = 'onboarding' | 'login' | 'home'
+type Page = 'onboarding' | 'login' | 'home' | 'raid-error'
 
 const pageToPath = (page: Page) => {
 	switch (page) {
@@ -17,6 +17,8 @@ const pageToPath = (page: Page) => {
 			return '/login'
 		case 'home':
 			return '/'
+		case 'raid-error':
+			return '/raid-error'
 	}
 }
 
@@ -77,6 +79,24 @@ export function RedirectHome() {
 	if (!shouldRedirect) return null
 	if (SLEEP_TIME === 0) return null
 	return <BareCoverMessage>{t('redirect.to-home')}</BareCoverMessage>
+}
+
+export function RedirectRaidError() {
+	const location = useLocation()
+	const navigate = useNavigate()
+
+	const path = pageToPath('raid-error')
+	const shouldRedirect = !location.pathname.startsWith(path)
+
+	useEffect(() => {
+		if (shouldRedirect) {
+			sleep(SLEEP_TIME).then(() => navigate(path))
+		}
+	}, [shouldRedirect, navigate, path])
+
+	if (!shouldRedirect) return null
+	if (SLEEP_TIME === 0) return null
+	return <BareCoverMessage>{t('redirect.to-raid-error')}</BareCoverMessage>
 }
 
 // Keep redirect after login stuff here because url stuff is stringly typed

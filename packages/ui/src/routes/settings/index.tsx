@@ -1,6 +1,6 @@
 import React, {Suspense, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
-import {Route, Routes} from 'react-router-dom'
+import {Route, Routes, useLocation} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
@@ -16,6 +16,15 @@ import {Button} from '@/shadcn-components/ui/button'
 import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
+
+// Routes that should bypass the Sheet and render fullscreen with their own backdrop
+// Add paths here to have them render outside the Settings sheet
+export const SETTINGS_FULLSCREEN_PATHS = ['/settings/storage'] as const
+// export const SETTINGS_FULLSCREEN_PATHS = [] as const
+
+export function isFullscreenSettingsPath(pathname: string) {
+	return SETTINGS_FULLSCREEN_PATHS.some((path) => pathname.includes(path))
+}
 
 // import {SettingsContent} from './_components/settings-content'
 const SettingsContent = React.lazy(() =>
@@ -67,6 +76,7 @@ const BackupsMobileDrawer = React.lazy(() =>
 const SoftwareUpdateDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/software-update').then((m) => ({default: m.SoftwareUpdateDrawer})),
 )
+const StorageManagerDialog = React.lazy(() => import('@/features/storage/index'))
 
 const routeToDialogDesktop = {
 	'app-store-preferences': AppStorePreferencesDialog,
@@ -101,8 +111,19 @@ function QueryStringDialog() {
 
 export function Settings() {
 	const title = t('settings')
-
+	const location = useLocation()
 	const isMobile = useIsMobile() && !IS_ANDROID
+
+	// When on a fullscreen route, Sheet is bypassed so we can't use Sheet components
+	if (isFullscreenSettingsPath(location.pathname)) {
+		return (
+			<Suspense fallback={<div className='fixed inset-0 z-50 bg-black/30 backdrop-blur-xl' />}>
+				<Routes>
+					<Route path='/storage/*' Component={StorageManagerDialog} />
+				</Routes>
+			</Suspense>
+		)
+	}
 
 	return (
 		<>
@@ -134,6 +155,7 @@ export function Settings() {
 						{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
 						<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
+						<Route path='/storage/*' Component={StorageManagerDialog} />
 					</Routes>
 					<QueryStringDialog />
 				</Suspense>

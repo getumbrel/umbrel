@@ -1,9 +1,11 @@
 import {RouterProvider} from 'react-router-dom'
 
+import {PendingRaidOperationProvider} from '@/features/storage/contexts/pending-operation-context'
 import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
 import {ConfirmationProvider} from '@/providers/confirmation'
 import {GlobalSystemStateProvider} from '@/providers/global-system-state/index'
+import {ImmersiveDialogProvider} from '@/providers/immersive-dialog'
 
 import {AuthBootstrap} from './providers/auth-bootstrap'
 import {GlobalFilesProvider} from './providers/global-files'
@@ -25,7 +27,11 @@ init(
 			<ConfirmationProvider>
 				<GlobalSystemStateProvider>
 					<GlobalFilesProvider>
-						<RouterProvider router={router} />
+						<PendingRaidOperationProvider>
+							<ImmersiveDialogProvider>
+								<RouterProvider router={router} />
+							</ImmersiveDialogProvider>
+						</PendingRaidOperationProvider>
 					</GlobalFilesProvider>
 				</GlobalSystemStateProvider>
 			</ConfirmationProvider>

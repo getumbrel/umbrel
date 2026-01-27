@@ -13,6 +13,7 @@ import {OnboardingLayout} from './layouts/bare/onboarding'
 import {Desktop} from './layouts/desktop'
 import {SheetLayout} from './layouts/sheet'
 import {EnsureLoggedIn, EnsureLoggedOut} from './modules/auth/ensure-logged-in'
+import {EnsureNoRaidMountFailure} from './modules/auth/ensure-no-raid-mount-failure'
 import {EnsureProDevice} from './modules/auth/ensure-pro-device'
 import {EnsureUserDoesntExist, EnsureUserExists} from './modules/auth/ensure-user-exists'
 import {Dock, DockBottomPositioner} from './modules/desktop/dock'
@@ -38,6 +39,7 @@ const Raid = React.lazy(() => import('./routes/onboarding/raid'))
 const RaidSetup = React.lazy(() => import('./routes/onboarding/raid/setup'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 const OnboardingRestore = React.lazy(() => import('./routes/onboarding/restore'))
+const RaidError = React.lazy(() => import('./routes/raid-error'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -45,28 +47,30 @@ export const router = createBrowserRouter([
 	{
 		path: '/',
 		element: (
-			<EnsureLoggedIn>
-				<Wallpaper />
-				{/* Get any notifications from umbreld and render them as alert dialogs */}
-				<Notifications />
-				<AvailableAppsProvider>
-					<AppsProvider>
-						<CmdkProvider>
-							<DesktopContextMenu>
-								<Desktop />
-							</DesktopContextMenu>
-							<CmdkMenu />
-						</CmdkProvider>
-						<Suspense>
-							<Outlet />
-						</Suspense>
-						<FloatingIslandContainer />
-						<DockBottomPositioner>
-							<Dock />
-						</DockBottomPositioner>
-					</AppsProvider>
-				</AvailableAppsProvider>
-			</EnsureLoggedIn>
+			<EnsureNoRaidMountFailure>
+				<EnsureLoggedIn>
+					<Wallpaper />
+					{/* Get any notifications from umbreld and render them as alert dialogs */}
+					<Notifications />
+					<AvailableAppsProvider>
+						<AppsProvider>
+							<CmdkProvider>
+								<DesktopContextMenu>
+									<Desktop />
+								</DesktopContextMenu>
+								<CmdkMenu />
+							</CmdkProvider>
+							<Suspense>
+								<Outlet />
+							</Suspense>
+							<FloatingIslandContainer />
+							<DockBottomPositioner>
+								<Dock />
+							</DockBottomPositioner>
+						</AppsProvider>
+					</AvailableAppsProvider>
+				</EnsureLoggedIn>
+			</EnsureNoRaidMountFailure>
 		),
 		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
@@ -147,11 +151,13 @@ export const router = createBrowserRouter([
 			{
 				path: 'login',
 				element: (
-					<EnsureUserExists>
-						<EnsureLoggedOut>
-							<Login />
-						</EnsureLoggedOut>
-					</EnsureUserExists>
+					<EnsureNoRaidMountFailure>
+						<EnsureUserExists>
+							<EnsureLoggedOut>
+								<Login />
+							</EnsureLoggedOut>
+						</EnsureUserExists>
+					</EnsureNoRaidMountFailure>
 				),
 			},
 			{
@@ -161,11 +167,22 @@ export const router = createBrowserRouter([
 		],
 	},
 
+	// raid-error: shown when RAID mount fails (storage system unavailable)
+	{
+		path: '/raid-error',
+		element: <RaidError />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
+	},
+
 	// onboarding: branded first-time setup experience
 	// Pro/Home: Video background, Other devices: Static wallpaper
 	{
 		path: '/onboarding',
-		Component: OnboardingLayout,
+		element: (
+			<EnsureNoRaidMountFailure>
+				<OnboardingLayout />
+			</EnsureNoRaidMountFailure>
+		),
 		ErrorBoundary: ErrorBoundaryPageFallback,
 		children: [
 			{
