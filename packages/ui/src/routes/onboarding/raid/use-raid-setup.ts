@@ -66,80 +66,12 @@ export function getDeviceHealth(device: StorageDevice) {
 	}
 }
 
-// TODO: remove this after development
-// Set to true to use mock devices for dev testing
-const USE_MOCK_DEVICES = false
-
-const MOCK_DEVICES: StorageDevice[] = [
-	{
-		device: 'nvme2n1',
-		id: 'nvme-eui.0025385951a0f2ea',
-		pciSlotNumber: 6,
-		name: 'Samsung SSD 990 EVO Plus 2TB',
-		model: 'Samsung SSD 990 EVO Plus 2TB',
-		serial: 'S7U7NU0Y940322F',
-		size: 2000398934016,
-		roundedSize: 2000000000000, // Rounds to 2TB
-		temperature: 29,
-		temperatureWarning: 81,
-		temperatureCritical: 85,
-		lifetimeUsed: 0,
-		smartStatus: 'healthy',
-		slot: 1,
-	},
-	{
-		device: 'nvme0n1',
-		id: 'nvme-eui.00000000000000000026b76869d51375',
-		pciSlotNumber: 14,
-		name: 'KINGSTON SNV2S2000G',
-		model: 'KINGSTON SNV2S2000G',
-		serial: '50026B76869D5137',
-		size: 2000398934016,
-		roundedSize: 2000000000000, // Rounds to 2TB
-		temperature: 30,
-		temperatureWarning: 83,
-		temperatureCritical: 90,
-		lifetimeUsed: 90,
-		smartStatus: 'unhealthy',
-		slot: 3,
-	},
-	{
-		device: 'nvme1n1',
-		id: 'nvme-eui.0025384751a1fd1e',
-		pciSlotNumber: 12,
-		name: 'Samsung SSD 990 PRO 2TB',
-		model: 'Samsung SSD 990 PRO 2TB',
-		serial: 'S7HENU0Y732728N',
-		size: 2000398934016,
-		roundedSize: 2000000000000, // Rounds to 2TB
-		temperature: 29,
-		temperatureWarning: 82,
-		temperatureCritical: 85,
-		lifetimeUsed: 0,
-		smartStatus: 'healthy',
-		slot: 4,
-	},
-]
-
 // Hook to detect storage devices
 export function useDetectStorageDevices() {
 	const query = trpcReact.hardware.internalStorage.getDevices.useQuery(undefined, {
 		// Poll every 10 seconds to keep temperature and health status up to date
 		refetchInterval: 10_000,
-		// Skip the query when using mock devices
-		enabled: !USE_MOCK_DEVICES,
 	})
-
-	// TODO: remove this after development
-	// Return mock data for dev testing
-	if (USE_MOCK_DEVICES) {
-		return {
-			devices: MOCK_DEVICES,
-			isDetecting: false,
-			error: null,
-			refetch: () => Promise.resolve({data: MOCK_DEVICES, error: null} as any),
-		}
-	}
 
 	return {
 		devices: query.data ?? [],

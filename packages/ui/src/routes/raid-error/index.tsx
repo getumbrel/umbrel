@@ -28,13 +28,6 @@ import {t} from '@/utils/i18n'
 
 const Highlight = ({children}: {children?: React.ReactNode}) => <span className='text-white'>{children}</span>
 
-// TODO: Remove mocks before merging
-const USE_MOCK = false
-const MOCK_RAID_DEVICES = [
-	{name: 'nvme0n1', isOk: true},
-	{name: 'nvme1n1', isOk: false},
-]
-
 function TroubleshootingStep({
 	number,
 	title,
@@ -111,7 +104,7 @@ export default function RaidErrorScreen() {
 		return <Navigate to='/' replace />
 	}
 
-	const raidDevices = USE_MOCK ? MOCK_RAID_DEVICES : raidDevicesQ.data
+	const raidDevices = raidDevicesQ.data
 
 	// Build list of DETECTED drives only (with accurate slot info)
 	// Filter out any drives without a known slot number

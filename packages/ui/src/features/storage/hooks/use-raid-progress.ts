@@ -31,16 +31,6 @@ export type RaidProgress = {
 	progress: number
 }
 
-// TODO: Remove this after development
-// Set to true to show a mock island for development/testing
-const SHOW_MOCK_ISLAND = false
-
-const MOCK_OPERATION: RaidProgress = {
-	type: 'failsafe-transition',
-	state: 'syncing', // Shows "Syncing data • Restarts at 50%"
-	progress: 35,
-}
-
 // Hook to subscribe to all RAID progress events and return the active operation.
 // Returns null when no operation is in progress.
 export function useRaidProgress(): RaidProgress | null {
@@ -123,12 +113,6 @@ export function useRaidProgress(): RaidProgress | null {
 			},
 		},
 	)
-
-	// TODO: remove this after development
-	// Return mock data for development (after hooks are called)
-	if (SHOW_MOCK_ISLAND) {
-		return MOCK_OPERATION
-	}
 
 	// Determine which operation to display (priority order)
 	// Failsafe transition takes priority as it's a major operation
