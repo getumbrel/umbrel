@@ -718,7 +718,7 @@ export default class Raid {
 		else if (pool.raidType === 'storage') await $`zpool add -f ${pool.name} ${dataPartition}`
 
 		// Update config with new device
-		const updatedDevices = [...poolDeviceIds, device]
+		const updatedDevices = [...poolDeviceIds.map((id) => `/dev/disk/by-id/${id}`), device]
 		this.logger.log(`Updating RAID config with ${updatedDevices.length} device(s)`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
@@ -1048,7 +1048,7 @@ export default class Raid {
 			this.logger.log('Updating RAID config')
 			await this.configStore.getWriteLock(async ({set}) => {
 				const pool = await this.getStatus()
-				const devices = pool.devices!.map((device) => device.id)
+				const devices = pool.devices!.map((device) => `/dev/disk/by-id/${device.id}`)
 				const raid = await this.configStore.get('raid')
 				await set('raid', {
 					...raid,
