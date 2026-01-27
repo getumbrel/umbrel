@@ -11,6 +11,7 @@ import {useGlobalSystemState} from '@/providers/global-system-state'
 import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
 import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
 import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -268,6 +269,11 @@ export default function RaidErrorScreen() {
 						/>
 					</div>
 				</div>
+			</div>
+
+			{/* Language selector - needed for edge case of fresh browser + RAID failure (defaults to English) */}
+			<div className='flex items-center justify-center pb-2'>
+				<LanguageDropdown />
 			</div>
 
 			{/* SSD Health dialog */}
