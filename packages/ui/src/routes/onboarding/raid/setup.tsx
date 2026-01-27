@@ -6,7 +6,6 @@ import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
 
-import {toast} from '@/components/ui/toast'
 import {links} from '@/constants/links'
 import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
@@ -206,14 +205,7 @@ export default function RaidSetup() {
 	const auth = useAuth()
 
 	// Get global system state to suppress errors during our custom restart flow
-	const {suppressErrors} = useGlobalSystemState()
-
-	// Shutdown mutation
-	const shutdownMut = trpcReact.system.shutdown.useMutation({
-		onError: (error) => {
-			toast.error(`Failed to shut down: ${error.message}`)
-		},
-	})
+	const {suppressErrors, shutdown} = useGlobalSystemState()
 
 	// Login mutation for auto-login after setup complete
 	const loginMut = trpcReact.user.login.useMutation({
@@ -291,7 +283,7 @@ export default function RaidSetup() {
 
 	// Handle shutdown
 	const handleShutdown = () => {
-		shutdownMut.mutate()
+		shutdown()
 	}
 
 	// --- Derived State & Calculations ---
@@ -390,11 +382,10 @@ export default function RaidSetup() {
 					)}
 					<button
 						onClick={handleShutdown}
-						disabled={shutdownMut.isPending}
 						className='flex h-[42px] min-w-[112px] items-center justify-center rounded-full bg-destructive2 px-4 text-14 font-medium text-white ring-destructive2/40 transition-all duration-300 hover:bg-destructive2-lighter focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-destructive2 disabled:pointer-events-none disabled:opacity-50'
 						style={{boxShadow: '0px 2px 4px 0px rgba(255, 255, 255, 0.25) inset'}}
 					>
-						{shutdownMut.isPending ? t('shut-down.shutting-down') : t('shut-down')}
+						{t('shut-down')}
 					</button>
 				</div>
 			</div>
@@ -734,8 +725,8 @@ export default function RaidSetup() {
 						<AlertDialogDescription>{t('onboarding.raid.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' onClick={handleShutdown} disabled={shutdownMut.isPending}>
-							{shutdownMut.isPending ? t('shut-down.shutting-down') : t('shut-down')}
+						<AlertDialogAction variant='destructive' onClick={() => shutdown()} hideEnterIcon>
+							{t('shut-down')}
 						</AlertDialogAction>
 						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
