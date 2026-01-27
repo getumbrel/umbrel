@@ -269,6 +269,11 @@ export default class Raid {
 			...status,
 			replace: this.replaceStatus,
 			failsafeTransitionStatus: this.failsafeTransitionStatus,
+			// Supress degraded state when performing failsafe transition
+			status:
+				this.failsafeTransitionStatus?.state === 'rebuilding' && status.status === 'DEGRADED'
+					? 'ONLINE'
+					: status.status,
 		}
 	}
 

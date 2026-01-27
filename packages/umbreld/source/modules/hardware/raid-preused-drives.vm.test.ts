@@ -156,12 +156,14 @@ describe('RAID operations with pre-used ZFS drives', () => {
 		expect(status.devices).toHaveLength(2)
 	})
 
-	test('waits for pool to be ONLINE after transition', async () => {
+	test('waits for transition to complete', async () => {
 		await pWaitFor(
 			async () => {
 				try {
 					const status = await umbreld.client.hardware.raid.getStatus.query()
-					return status.status === 'ONLINE'
+					if (status.failsafeTransitionStatus?.state === 'complete') return true
+					if (!status.failsafeTransitionStatus && status.status === 'ONLINE') return true
+					return false
 				} catch {
 					return false
 				}
