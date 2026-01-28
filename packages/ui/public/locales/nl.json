@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "Plaats nieuwe SSD's in de lege sleuven",
   "storage-manager.install-ssd.step-power-on": "Zet je {{deviceName}} aan",
   "storage-manager.install-ssd.step-remove-bottom-cover": "Verwijder de magnetische bodemkap",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "Plaats de bodemkap terug",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "Plaats de bodemplaat terug",
   "storage-manager.install-ssd.step-return": "Kom hier terug om de SSD's aan je opslag toe te voegen",
   "storage-manager.install-ssd.step-shut-down": "Schakel je {{deviceName}} uit",
   "storage-manager.install-ssd.title": "SSD's toevoegen",

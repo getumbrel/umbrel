@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "Helyezd be az új SSD-ket az üres foglalatokba",
   "storage-manager.install-ssd.step-power-on": "Kapcsold be a {{deviceName}}-t",
   "storage-manager.install-ssd.step-remove-bottom-cover": "Távolítsd el a mágneses alsó fedőlapot",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "Helyezd vissza az alsó fedőlapot",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "Tedd vissza az alsó fedelet",
   "storage-manager.install-ssd.step-return": "Térj vissza ide, hogy hozzáadd az SSD-ket a tárhelyhez",
   "storage-manager.install-ssd.step-shut-down": "Kapcsold ki a {{deviceName}}-t",
   "storage-manager.install-ssd.title": "SSD-k hozzáadása",

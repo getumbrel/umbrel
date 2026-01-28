@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "Inserisci i nuovi SSD negli slot vuoti",
   "storage-manager.install-ssd.step-power-on": "Accendi il tuo {{deviceName}}",
   "storage-manager.install-ssd.step-remove-bottom-cover": "Rimuovi la copertura magnetica inferiore",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "Rimetti la copertura inferiore",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "Rimetti il coperchio inferiore.",
   "storage-manager.install-ssd.step-return": "Torna qui per aggiungere gli SSD alla tua archiviazione",
   "storage-manager.install-ssd.step-shut-down": "Spegni il tuo {{deviceName}}",
   "storage-manager.install-ssd.title": "Aggiunta di SSD",

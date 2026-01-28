@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "空いているスロットに新しいSSDを挿入します",
   "storage-manager.install-ssd.step-power-on": "{{deviceName}}の電源を入れてください",
   "storage-manager.install-ssd.step-remove-bottom-cover": "マグネット式底面カバーを取り外します",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "底面カバーを元に戻す",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "底面カバーを元に戻してください",
   "storage-manager.install-ssd.step-return": "ここに戻ってSSDをストレージに追加してください",
   "storage-manager.install-ssd.step-shut-down": "{{deviceName}}の電源を切ってください",
   "storage-manager.install-ssd.title": "SSDの追加",

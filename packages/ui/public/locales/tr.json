@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "Yeni SSD'leri boş yuvalara tak",
   "storage-manager.install-ssd.step-power-on": "{{deviceName}}'ni aç",
   "storage-manager.install-ssd.step-remove-bottom-cover": "Manyetik alt kapağı çıkar",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "Alt kapağı geri tak",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "Alt kapağı yerine tak",
   "storage-manager.install-ssd.step-return": "Buraya dön ve SSD'leri depolamana ekle",
   "storage-manager.install-ssd.step-shut-down": "{{deviceName}}'ni kapat",
   "storage-manager.install-ssd.title": "SSD Ekleme",

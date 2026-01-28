@@ -64,6 +64,10 @@ export default function RaidErrorScreen() {
 	const [showShutdownDialog, setShowShutdownDialog] = useState(false)
 	const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false)
 
+	// Action triggered states - for immediate UI feedback before overlay appears
+	const [restartTriggered, setRestartTriggered] = useState(false)
+	const [shutdownTriggered, setShutdownTriggered] = useState(false)
+
 	// Check if there's actually a RAID mount failure - we redirect away if not
 	const mountFailureQ = trpcReact.hardware.raid.checkRaidMountFailure.useQuery(undefined, {
 		retry: false,
@@ -220,7 +224,11 @@ export default function RaidErrorScreen() {
 								title={t('raid-error.step-restart.title')}
 								description={t('raid-error.step-restart.description')}
 								buttonText={t('raid-error.step-restart.button')}
-								onClick={() => restart()}
+								onClick={() => {
+									setRestartTriggered(true)
+									restart()
+								}}
+								disabled={restartTriggered}
 							/>
 							<TroubleshootingStep
 								number={2}
@@ -287,10 +295,19 @@ export default function RaidErrorScreen() {
 						<AlertDialogDescription>{t('raid-error.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' onClick={() => shutdown()} hideEnterIcon>
+						<AlertDialogAction
+							variant='destructive'
+							onClick={(e) => {
+								e.preventDefault()
+								setShutdownTriggered(true)
+								shutdown()
+							}}
+							disabled={shutdownTriggered}
+							hideEnterIcon
+						>
 							{t('shut-down')}
 						</AlertDialogAction>
-						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+						<AlertDialogCancel disabled={shutdownTriggered}>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -305,7 +322,10 @@ export default function RaidErrorScreen() {
 					<AlertDialogFooter>
 						<AlertDialogAction
 							variant='destructive'
-							onClick={() => factoryResetMut.mutate({})}
+							onClick={(e) => {
+								e.preventDefault()
+								factoryResetMut.mutate({})
+							}}
 							disabled={factoryResetMut.isPending}
 							hideEnterIcon
 						>

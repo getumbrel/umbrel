@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "Setze neue SSDs in die freien Steckplätze ein",
   "storage-manager.install-ssd.step-power-on": "Schalte dein {{deviceName}} ein",
   "storage-manager.install-ssd.step-remove-bottom-cover": "Entferne die magnetische Bodenabdeckung",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "Setze die Bodenabdeckung wieder auf",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "Setze die untere Abdeckung wieder auf",
   "storage-manager.install-ssd.step-return": "Kehre hierher zurück, um die SSDs zu deinem Speicher hinzuzufügen",
   "storage-manager.install-ssd.step-shut-down": "Fahre dein {{deviceName}} herunter",
   "storage-manager.install-ssd.title": "SSDs hinzufügen",

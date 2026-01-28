@@ -931,7 +931,7 @@
   "storage-manager.install-ssd.step-insert": "빈 슬롯에 새 SSD를 삽입하세요.",
   "storage-manager.install-ssd.step-power-on": "{{deviceName}}의 전원을 켜세요",
   "storage-manager.install-ssd.step-remove-bottom-cover": "자석식 하단 커버를 제거하세요.",
-  "storage-manager.install-ssd.step-replace-bottom-cover": "하단 커버를 다시 장착하세요.",
+  "storage-manager.install-ssd.step-replace-bottom-cover": "하단 커버를 다시 끼워주세요.",
   "storage-manager.install-ssd.step-return": "여기로 돌아와 SSD를 스토리지에 추가하세요.",
   "storage-manager.install-ssd.step-shut-down": "{{deviceName}}의 전원을 끄세요",
   "storage-manager.install-ssd.title": "SSD 추가",
