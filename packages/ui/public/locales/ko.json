@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "SSD 추가",
   "storage-manager.install-tips.image-alt": "SSD 설치 안내",
   "storage-manager.install-tips.instructions": "설치하려면 손나사를 빼고 SSD를 약간 각도로 슬롯에 밀어 넣으세요. SSD를 나사 기둥 위에 얹힌 뒤 손나사로 고정하세요.",
-  "storage-manager.install-tips.toggle": "SSD 넣는 방법이 기억 안 나세요?",
+  "storage-manager.install-tips.toggle": "SSD를 어떻게 넣는지 기억이 안 나세요?",
   "storage-manager.manage": "관리",
   "storage-manager.missing-ssd-warning": "SSD가 없어 보입니다. Umbrel의 전원을 끄고 모든 SSD가 연결되어 있는지 확인하세요. 문제가 계속되면 SSD를 교체해야 할 수 있습니다.",
   "storage-manager.mode": "모드",

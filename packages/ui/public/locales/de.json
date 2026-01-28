@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "SSDs hinzufügen",
   "storage-manager.install-tips.image-alt": "SSD-Installationsanleitung",
   "storage-manager.install-tips.instructions": "Zum Einbauen: Entferne die Daumenschraube und schiebe die SSD schräg in den Steckplatz. Drücke die SSD nach unten, bis sie auf der Schraubensäule aufliegt, und befestige sie dann mit der Daumenschraube.",
-  "storage-manager.install-tips.toggle": "Schon vergessen, wie man eine SSD einsetzt?",
+  "storage-manager.install-tips.toggle": "Vergessen, wie man eine SSD einbaut?",
   "storage-manager.manage": "Verwalten",
   "storage-manager.missing-ssd-warning": "Eine SSD scheint zu fehlen. Fahre dein Umbrel herunter und überprüfe, ob alle SSDs angeschlossen sind. Wenn das Problem weiterhin besteht, muss die SSD möglicherweise ersetzt werden.",
   "storage-manager.mode": "Modus",

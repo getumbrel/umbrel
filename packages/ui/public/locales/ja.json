@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "SSDの追加",
   "storage-manager.install-tips.image-alt": "SSD取り付け手順",
   "storage-manager.install-tips.instructions": "取り付け方法: サムスクリューを外し、SSDを斜めにスロットに差し込みます。SSDをスクリューピラーに当てるまで押し下げ、サムスクリューで固定してください。",
-  "storage-manager.install-tips.toggle": "SSDの挿入方法を忘れましたか？",
+  "storage-manager.install-tips.toggle": "SSDの取り付け方を忘れた？",
   "storage-manager.manage": "管理",
   "storage-manager.missing-ssd-warning": "SSDが見つからないようです。Umbrelをシャットダウンして全てのSSDが接続されているか確認してください。問題が続く場合はSSDを交換する必要があるかもしれません。",
   "storage-manager.mode": "モード",

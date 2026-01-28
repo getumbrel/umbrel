@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "SSD-k hozzáadása",
   "storage-manager.install-tips.image-alt": "SSD beszerelési útmutató",
   "storage-manager.install-tips.instructions": "A telepítéshez csavard ki a kézi csavart, majd ferdén csúsztasd be az SSD-t a foglalatba. Nyomd le az SSD-t, amíg rá nem ül a csavartartóra, majd rögzítsd a kézi csavarral.",
-  "storage-manager.install-tips.toggle": "Elfelejtetted, hogyan kell behelyezni az SSD-t?",
+  "storage-manager.install-tips.toggle": "Elfelejtetted, hogyan kell egy SSD-t behelyezni?",
   "storage-manager.manage": "Kezelés",
   "storage-manager.missing-ssd-warning": "Úgy tűnik, egy SSD hiányzik. Kapcsold ki az Umbrelt, és ellenőrizd, hogy minden SSD csatlakoztatva van-e. Ha a probléma továbbra is fennáll, lehet, hogy ki kell cserélni az SSD-t.",
   "storage-manager.mode": "Mód",

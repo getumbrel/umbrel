@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "SSD Ekleme",
   "storage-manager.install-tips.image-alt": "SSD kurulum talimatı",
   "storage-manager.install-tips.instructions": "Kurmak için başparmak vidasını çıkar ve SSD'yi eğik bir açıyla slota kaydır. SSD'yi vida ayağına oturana kadar bastır, sonra başparmak vidasıyla sabitle.",
-  "storage-manager.install-tips.toggle": "SSD nasıl takıldığını mı unuttun?",
+  "storage-manager.install-tips.toggle": "SSD'yi nasıl takacağınızı mı unuttunuz?",
   "storage-manager.manage": "Yönet",
   "storage-manager.missing-ssd-warning": "Bir SSD eksik gibi görünüyor. Umbrel'inizi kapatıp tüm SSD'lerin bağlı olduğunu kontrol edin. Sorun devam ederse SSD'nin değiştirilmesi gerekebilir.",
   "storage-manager.mode": "Mod",

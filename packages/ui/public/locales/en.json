@@ -937,7 +937,7 @@
   "storage-manager.install-ssd.title": "Adding SSDs",
   "storage-manager.install-tips.image-alt": "SSD installation instruction",
   "storage-manager.install-tips.instructions": "To install, remove the thumb screw and slide the SSD into the slot at an angle. Press the SSD down until it rests on the screw pillar, then secure it with the thumb screw.",
-  "storage-manager.install-tips.toggle": "Forget how to insert an SSD?",
+  "storage-manager.install-tips.toggle": "Forgot how to insert an SSD?",
   "storage-manager.manage": "Manage",
   "storage-manager.missing-ssd-warning": "An SSD appears to be missing. Shut down your Umbrel and check that all SSDs are connected. If the problem continues, the SSD may need to be replaced.",
   "storage-manager.mode": "Mode",
