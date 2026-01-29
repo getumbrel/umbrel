@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react'
 
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -12,6 +13,7 @@ import {
 import {t} from '@/utils/i18n'
 
 import {InstallTipsCollapsible} from './install-tips-collapsible'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 import {ShutdownConfirmationDialog} from './shutdown-confirmation-dialog'
 
 type InstallSsdDialogProps = {
@@ -23,6 +25,10 @@ type InstallSsdDialogProps = {
 export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDialogProps) {
 	const [showInstallTips, setShowInstallTips] = useState(false)
 	const [showShutdownConfirmation, setShowShutdownConfirmation] = useState(false)
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
 
 	// Reset state when dialog closes
 	useEffect(() => {
@@ -68,6 +74,8 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDi
 						{isUmbrelPro && (
 							<InstallTipsCollapsible isOpen={showInstallTips} onToggle={() => setShowInstallTips(!showInstallTips)} />
 						)}
+
+						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
 							<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>

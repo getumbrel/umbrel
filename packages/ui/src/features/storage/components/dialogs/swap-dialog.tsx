@@ -4,6 +4,7 @@ import {TbAlertTriangle, TbInfoCircle} from 'react-icons/tb'
 
 import {toast} from '@/components/ui/toast'
 import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -20,6 +21,7 @@ import {t} from '@/utils/i18n'
 import {StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
 import {InstallTipsCollapsible} from './install-tips-collapsible'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 import {ShutdownConfirmationDialog} from './shutdown-confirmation-dialog'
 
 type SwapDialogProps = {
@@ -46,6 +48,11 @@ export function SwapDialog({
 	replaceDeviceAsync,
 }: SwapDialogProps) {
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
+
 	const [showInstallTips, setShowInstallTips] = useState(false)
 	const [selectedReplacementId, setSelectedReplacementId] = useState<string | null>(null)
 	const [showShutdownConfirmation, setShowShutdownConfirmation] = useState(false)
@@ -207,8 +214,14 @@ export function SwapDialog({
 							</div>
 						</div>
 
+						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 						<DialogFooter>
-							<Button variant='primary' onClick={handleReplace} disabled={!selectedDevice || !oldDevice}>
+							<Button
+								variant='primary'
+								onClick={handleReplace}
+								disabled={!selectedDevice || !oldDevice || isOperationInProgress}
+							>
 								{t('storage-manager.replace')}
 							</Button>
 							<Button variant='default' onClick={() => onOpenChange(false)}>
@@ -275,6 +288,8 @@ export function SwapDialog({
 									onToggle={() => setShowInstallTips(!showInstallTips)}
 								/>
 							)}
+
+							{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 							<DialogFooter>
 								<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>
@@ -419,6 +434,8 @@ export function SwapDialog({
 						{isUmbrelPro && (
 							<InstallTipsCollapsible isOpen={showInstallTips} onToggle={() => setShowInstallTips(!showInstallTips)} />
 						)}
+
+						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
 							<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>

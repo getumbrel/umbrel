@@ -5,6 +5,7 @@ import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
 import {toast} from '@/components/ui/toast'
 import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -29,6 +30,7 @@ import {t} from '@/utils/i18n'
 import {getDeviceHealth, RaidDevice, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
 import {StorageDonutChart} from '../storage-donut-chart'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 
 // --- Info Text Component ---
 
@@ -201,6 +203,10 @@ export function AddToRaidDialog({
 
 	// Context for showing island immediately for non-blocking operations
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
 
 	// Get existing RAID devices - these are the devices actually in the RAID array
 	// (not to be confused with all detected devices)
@@ -489,8 +495,10 @@ export function AddToRaidDialog({
 							)}
 						</div>
 
+						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 						<DialogFooter>
-							<Button variant='primary' onClick={handleAddDevice} disabled={isBlockedBySize}>
+							<Button variant='primary' onClick={handleAddDevice} disabled={isBlockedBySize || isOperationInProgress}>
 								{t('storage-manager.add-to-raid.add-ssd')}
 							</Button>
 							<Button variant='default' onClick={() => onOpenChange(false)}>
@@ -520,6 +528,7 @@ export function AddToRaidDialog({
 						<AlertDialogAction
 							variant='primary'
 							hideEnterIcon
+							disabled={isOperationInProgress}
 							onClick={(e) => {
 								e.preventDefault()
 								executeAddDevice(true)

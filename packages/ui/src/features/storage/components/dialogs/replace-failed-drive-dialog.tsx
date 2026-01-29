@@ -3,6 +3,7 @@ import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
 import {toast} from '@/components/ui/toast'
 import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
@@ -16,6 +17,7 @@ import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 
 const Highlight = ({children}: {children?: React.ReactNode}) => <span className='text-white'>{children}</span>
 
@@ -48,6 +50,10 @@ export function ReplaceFailedDriveDialog({
 	replaceDeviceAsync,
 }: ReplaceFailedDriveDialogProps) {
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
 
 	if (!newDevice || !failedDevice) return null
 
@@ -158,8 +164,10 @@ export function ReplaceFailedDriveDialog({
 						</div>
 					)}
 
+					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 					<DialogFooter>
-						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall}>
+						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall || isOperationInProgress}>
 							{t('storage-manager.replace-failed.replace-now')}
 						</Button>
 						<Button variant='default' onClick={() => onOpenChange(false)}>
