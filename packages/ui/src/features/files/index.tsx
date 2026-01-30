@@ -55,7 +55,7 @@ export default function FilesLayout() {
 	return (
 		<FilesDndWrapper>
 			<RewindOverlayProvider>
-				<SheetHeader className='flex select-none flex-col gap-4 md:flex-row md:items-center md:gap-0'>
+				<SheetHeader className='flex flex-col gap-4 md:flex-row md:items-center md:gap-0'>
 					<div className='flex items-center gap-4'>
 						{isMobile ? (
 							<HiMenuAlt2
@@ -70,7 +70,7 @@ export default function FilesLayout() {
 				{/* FileViewer renders the viewerItem from the store */}
 				<FileViewer />
 
-				<div className='mt-[-0.5rem] grid select-none grid-cols-1 lg:mt-0 lg:grid-cols-[188px_1fr]'>
+				<div className='mt-[-0.5rem] grid grid-cols-1 lg:mt-0 lg:grid-cols-[188px_1fr]'>
 					{/* Sidebar */}
 					{isMobile ? (
 						<MobileSidebarWrapper isOpen={isMobileSidebarOpen} onClose={() => setIsMobileSidebarOpen(false)}>

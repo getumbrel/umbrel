@@ -44,11 +44,7 @@ export function StorageDonutChart({
 		}
 
 		return (
-			<div
-				className='select-none [&_*]:outline-none [&_*]:focus:outline-none'
-				style={{pointerEvents: 'none'}}
-				tabIndex={-1}
-			>
+			<div className='[&_*]:outline-none [&_*]:focus:outline-none' style={{pointerEvents: 'none'}} tabIndex={-1}>
 				<PieChart width={size} height={size} style={{cursor: 'default'}} tabIndex={-1}>
 					<Pie
 						data={[{name: 'loading', value: 1, color: 'rgba(255, 255, 255, 0.1)'}]}
@@ -124,11 +120,7 @@ export function StorageDonutChart({
 	const warningY = center - midRadius * Math.sin(wastedMidRad)
 
 	return (
-		<div
-			className='select-none [&_*]:outline-none [&_*]:focus:outline-none'
-			style={{pointerEvents: 'none'}}
-			tabIndex={-1}
-		>
+		<div className='[&_*]:outline-none [&_*]:focus:outline-none' style={{pointerEvents: 'none'}} tabIndex={-1}>
 			<PieChart width={size} height={size} style={{cursor: 'default'}} tabIndex={-1}>
 				{/* Outer ring: capacity breakdown */}
 				<Pie

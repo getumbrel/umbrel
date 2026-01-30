@@ -118,10 +118,7 @@ export function SsdShape({
 	const gradientId = `ssd-gradient-${slotNumber}`
 
 	return (
-		<div
-			className={cn('relative shrink-0 select-none', isReadyToAdd && 'animate-pulse')}
-			style={{width, height: totalHeight}}
-		>
+		<div className={cn('relative shrink-0', isReadyToAdd && 'animate-pulse')} style={{width, height: totalHeight}}>
 			{/* SVG outline shape */}
 			<svg
 				className='absolute inset-0'

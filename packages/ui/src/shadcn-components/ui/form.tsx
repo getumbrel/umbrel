@@ -126,8 +126,14 @@ function FormMessage({className, ...props}: React.ComponentProps<'p'>) {
 		return null
 	}
 
+	// Allow text selection for copying error messages
 	return (
-		<p data-slot='form-message' id={formMessageId} className={cn('text-sm text-destructive', className)} {...props}>
+		<p
+			data-slot='form-message'
+			id={formMessageId}
+			className={cn('select-text text-sm text-destructive', className)}
+			{...props}
+		>
 			{body}
 		</p>
 	)

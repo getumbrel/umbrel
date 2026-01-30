@@ -38,6 +38,6 @@ Checkbox.displayName = CheckboxPrimitive.Root.displayName
 
 const checkboxContainerClass = tw`flex items-center space-x-2`
 // Removing `peer-disabled:cursor-not-allowed` because we want to disable the checkbox while it's going to the server without changing the cursor
-const checkboxLabelClass = tw`select-none text-15 font-medium leading-none peer-disabled:opacity-50`
+const checkboxLabelClass = tw`text-15 font-medium leading-none peer-disabled:opacity-50`
 
 export {Checkbox, checkboxContainerClass, checkboxLabelClass}

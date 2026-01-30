@@ -197,7 +197,7 @@ export default function StorageManagerDialog() {
 						boxShadow: '0px 32px 32px 0px #00000052, inset 1px 1px 1px 0px #FFFFFF14',
 					}}
 				>
-					<div className='flex h-full select-none flex-col gap-6'>
+					<div className='flex h-full flex-col gap-6'>
 						<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
 
 						{/* Mode display */}
@@ -355,7 +355,7 @@ export default function StorageManagerDialog() {
 							<div className='flex flex-col items-center gap-3'>
 								{/* Gradient border using pseudo-element technique */}
 								<div
-									className='relative h-[480px] w-[480px] select-none rounded-[69px] border-[3px] border-transparent bg-[radial-gradient(78%_100%_at_50%_0%,_rgba(255,255,255,0.12)_0%,_rgba(255,255,255,0.04)_100%)] bg-clip-padding'
+									className='relative h-[480px] w-[480px] rounded-[69px] border-[3px] border-transparent bg-[radial-gradient(78%_100%_at_50%_0%,_rgba(255,255,255,0.12)_0%,_rgba(255,255,255,0.04)_100%)] bg-clip-padding'
 									style={{containerType: 'inline-size'}}
 								>
 									{/* Gradient border overlay */}

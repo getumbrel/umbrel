@@ -31,7 +31,7 @@ type SsdTrayProps = {
  */
 export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps) {
 	return (
-		<div className='relative w-full select-none' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
+		<div className='relative w-full' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
 			{/* Layer 1: Empty tray */}
 			<img
 				src='/onboarding/ssd-tray.webp'

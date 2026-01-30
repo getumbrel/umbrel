@@ -9,9 +9,17 @@
 
 html,
 body {
+	/* Prevent text selection by default for native OS feel */
+	user-select: none;
 	/* To match Figma weight */
 	text-rendering: geometricPrecision;
 	@apply -tracking-3 text-white/90;
+}
+
+/* Prevent image and link dragging for native OS feel */
+img,
+a {
+	-webkit-user-drag: none;
 }
 
 html {

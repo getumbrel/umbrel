@@ -126,7 +126,7 @@ export function SnapshotCarousel({
 										['en', 'de', 'es', 'fr', 'it', 'hu', 'nl', 'pt', 'tr'] as Array<SupportedLanguageCode>
 									).includes(lang as SupportedLanguageCode)
 									return (
-										<div className='absolute left-1 top-24 z-20 select-none'>
+										<div className='absolute left-1 top-24 z-20'>
 											<div className='origin-top-left translate-y-full -rotate-[88deg]'>
 												<div className='relative inline-flex items-center justify-center'>
 													<img src={stickerBgUrl} alt='' className='h-8 w-auto' />
@@ -163,7 +163,7 @@ export function SnapshotCarousel({
 									{/* Without drag-and-drop, we make sure to disable all text selection in the embedded Files feature with select-none. */}
 									<div
 										className={cn(
-											'absolute inset-0 origin-top-left scale-[var(--ft-scale)] select-none px-3 pt-4 transition-opacity duration-200 md:px-6 md:pt-6',
+											'absolute inset-0 origin-top-left scale-[var(--ft-scale)] px-3 pt-4 transition-opacity duration-200 md:px-6 md:pt-6',
 											explorerVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
 										)}
 										style={

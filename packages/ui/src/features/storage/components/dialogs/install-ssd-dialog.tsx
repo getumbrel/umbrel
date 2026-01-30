@@ -52,7 +52,7 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDi
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>{t('storage-manager.install-ssd.title')}</DialogTitle>
 							<DialogDescription>{t('storage-manager.install-ssd.description')}</DialogDescription>

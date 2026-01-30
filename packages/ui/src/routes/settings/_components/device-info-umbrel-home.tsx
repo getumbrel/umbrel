@@ -662,7 +662,7 @@ const AnimatedUmbrelHomeIcon = memo(
 											backgroundSize: 'cover',
 										}}
 									></div>
-									<div className='pointer-events-none absolute flex h-full w-full select-none'>
+									<div className='pointer-events-none absolute flex h-full w-full'>
 										<motion.div
 											initial='hidden'
 											animate='visible'
@@ -694,7 +694,7 @@ const AnimatedUmbrelHomeIcon = memo(
 											/>
 										</motion.div>
 									</div>
-									<div className='pointer-events-none relative h-full w-full select-none'>
+									<div className='pointer-events-none relative h-full w-full'>
 										<div className='absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 text-center text-[11px] text-white/60'>
 											<motion.div
 												initial={{opacity: 0}}

@@ -500,7 +500,7 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className={(manualPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
+									className={(manualPath ? 'cursor-pointer ' : 'cursor-default ') + 'pr-28'}
 									title={manualPath || ''}
 									aria-disabled={!manualPath}
 									tabIndex={manualPath ? 0 : -1}

@@ -493,7 +493,7 @@ export default function RaidSetup() {
 	// --- Render: Main Setup Form ---
 
 	return (
-		<div className='flex flex-1 select-none flex-col md:flex-row'>
+		<div className='flex flex-1 flex-col md:flex-row'>
 			{/* Left side - content (full width on mobile) */}
 			<div className='flex flex-1 flex-col justify-start gap-4 px-4 py-6 md:pb-0 md:pl-6 md:pr-0 md:pt-10'>
 				<div className='flex flex-col gap-1 md:gap-2'>

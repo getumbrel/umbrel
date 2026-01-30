@@ -383,7 +383,7 @@ function Node({
 	const isFaded = (isDisabled || !isSelectable) && entry.type !== 'directory'
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn(
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
@@ -582,7 +582,7 @@ function NewFolderNode({
 	}
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn('flex min-w-0 items-center gap-2 rounded-md border border-brand bg-brand/15 p-2')}
 				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}

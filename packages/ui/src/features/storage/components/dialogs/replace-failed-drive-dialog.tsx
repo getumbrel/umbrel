@@ -87,7 +87,7 @@ export function ReplaceFailedDriveDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogScrollableContent>
-				<div className='flex select-none flex-col gap-5 p-5'>
+				<div className='flex flex-col gap-5 p-5'>
 					<DialogHeader>
 						<DialogTitle>{t('storage-manager.replace-failed.title')}</DialogTitle>
 						<DialogDescription>{t('storage-manager.replace-failed.description')}</DialogDescription>

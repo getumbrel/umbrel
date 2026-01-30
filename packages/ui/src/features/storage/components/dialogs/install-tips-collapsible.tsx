@@ -12,7 +12,7 @@ type InstallTipsCollapsibleProps = {
 
 export function InstallTipsCollapsible({isOpen, onToggle}: InstallTipsCollapsibleProps) {
 	return (
-		<div className='select-none'>
+		<div>
 			<button
 				onClick={onToggle}
 				className='flex w-full items-center justify-between text-xs font-medium text-brand-lightest transition-opacity duration-300 hover:opacity-80'

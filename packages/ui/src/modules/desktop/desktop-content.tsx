@@ -50,7 +50,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 
 	return (
 		<motion.div
-			className='flex h-full w-full select-none flex-col items-center justify-between'
+			className='flex h-full w-full flex-col items-center justify-between'
 			variants={variants}
 			animate={variant}
 			initial={{opacity: 1}}

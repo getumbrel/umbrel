@@ -92,6 +92,7 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 			</div>
 			{/* 980px min width (for mobile) cause side scrolling is better than wrapping */}
 			{/* Using `tracking-normal` and `text-rendering: unset` to prevent cursor text selection from not selecting the correct text */}
+			{/* Note: xterm.js handles text selection internally, so no `select-text` class needed */}
 			<div
 				ref={containerRef}
 				className='h-full w-full min-w-[980px] px-4 py-3 tracking-normal'

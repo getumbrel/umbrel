@@ -363,7 +363,7 @@ export function AddToRaidDialog({
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>{t('storage-manager.add-to-raid.title')}</DialogTitle>
 							<DialogDescription>{t('storage-manager.add-to-raid.description')}</DialogDescription>
@@ -511,7 +511,7 @@ export function AddToRaidDialog({
 
 			{/* Confirmation dialog for failsafe transition - warns about restart */}
 			<AlertDialog open={showRestartConfirmation} onOpenChange={setShowRestartConfirmation}>
-				<AlertDialogContent className='select-none'>
+				<AlertDialogContent>
 					<AlertDialogHeader icon={IoShieldHalf}>
 						<AlertDialogTitle>{t('storage-manager.add-to-raid.restart-required')}</AlertDialogTitle>
 					</AlertDialogHeader>

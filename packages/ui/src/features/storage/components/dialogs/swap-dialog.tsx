@@ -118,7 +118,7 @@ export function SwapDialog({
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							{/* "SSD" slot labels are not translated - they match the physical device markings */}
 							<DialogTitle>
@@ -249,7 +249,7 @@ export function SwapDialog({
 			<>
 				<Dialog open={open} onOpenChange={onOpenChange}>
 					<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
-						<div className='flex select-none flex-col gap-5 p-5'>
+						<div className='flex flex-col gap-5 p-5'>
 							<DialogHeader>
 								{/* "SSD" slot labels are not translated - they match the physical device markings */}
 								<DialogTitle>
@@ -338,7 +338,7 @@ export function SwapDialog({
 
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className='select-none' onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<DialogHeader>
 						{/* "SSD" slot labels are not translated - they match the physical device markings */}
 						<DialogTitle>
@@ -400,7 +400,7 @@ export function SwapDialog({
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							{/* "SSD" slot labels are not translated - they match the physical device markings */}
 							<DialogTitle>

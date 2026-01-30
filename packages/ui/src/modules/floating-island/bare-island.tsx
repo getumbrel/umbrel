@@ -100,7 +100,7 @@ export const Island = ({children, onClose, nonDismissable, forceExpanded}: Islan
 			)}
 			<motion.div
 				ref={islandRef}
-				className='relative select-none bg-black text-white shadow-floating-island'
+				className='relative bg-black text-white shadow-floating-island'
 				style={{
 					// TODO: debug using var in color-mix on macOS safari
 					// backgroundColor: 'color-mix(in srgb, #000000 95%, rgb(var(--color-brand)) 5%)',

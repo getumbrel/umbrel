@@ -101,6 +101,6 @@ function ButtonContentForState({
 }
 
 export const installButtonClass = cn(
-	tw`select-none whitespace-nowrap disabled:bg-brand/60 disabled:opacity-100 bg-brand hover:bg-brand-lighter`,
+	tw`whitespace-nowrap disabled:bg-brand/60 disabled:opacity-100 bg-brand hover:bg-brand-lighter`,
 	tw`max-md:h-[30px] max-md:w-full max-md:text-13`,
 )

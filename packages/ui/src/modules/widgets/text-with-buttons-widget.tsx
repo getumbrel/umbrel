@@ -44,7 +44,7 @@ function WidgetButton({onClick, children}: {onClick: () => void; children: React
 	return (
 		<button
 			onClick={onClick}
-			className='flex h-[24px] min-w-0 flex-1 cursor-pointer select-none items-center justify-center rounded-5 bg-white/5 px-2.5 text-12 font-medium transition-colors hover:bg-white/10 active:bg-white/5 sm:h-[30px] sm:rounded-full'
+			className='flex h-[24px] min-w-0 flex-1 cursor-pointer items-center justify-center rounded-5 bg-white/5 px-2.5 text-12 font-medium transition-colors hover:bg-white/10 active:bg-white/5 sm:h-[30px] sm:rounded-full'
 		>
 			{children}
 		</button>

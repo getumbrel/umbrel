@@ -205,7 +205,7 @@ function RegularRestoreFlow() {
 									type='text'
 									value={repositoryPath}
 									readOnly
-									className={(repositoryPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
+									className={(repositoryPath ? 'cursor-pointer ' : 'cursor-default ') + 'pr-28'}
 									title={repositoryPath || ''}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}

@@ -138,7 +138,7 @@ export default function RaidErrorScreen() {
 
 	return (
 		<OnboardingPage>
-			<div className='flex flex-1 select-none flex-col md:flex-row'>
+			<div className='flex flex-1 flex-col md:flex-row'>
 				{/* Left side - content */}
 				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pl-6 md:pr-0'>
 					{/* Header */}

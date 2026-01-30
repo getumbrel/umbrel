@@ -39,7 +39,7 @@ export function ExpandedContent({operation}: {operation: RaidProgress}) {
 	const isCanceled = operation.state === 'canceled'
 
 	return (
-		<div className='flex size-full select-none items-center justify-between overflow-hidden px-8 py-6'>
+		<div className='flex size-full items-center justify-between overflow-hidden px-8 py-6'>
 			{/* Left side */}
 			<div className='flex flex-col gap-1'>
 				<div className='truncate text-sm tracking-tight text-white/90'>{label}</div>

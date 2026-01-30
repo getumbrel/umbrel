@@ -696,7 +696,7 @@ function FolderPickerStep({
 						type='text'
 						value={shownValue}
 						readOnly
-						className='cursor-pointer select-none pr-28 text-white/90'
+						className='cursor-pointer pr-28 text-white/90'
 						title={shownValue}
 						onClick={() => setBrowserOpen(true)}
 					/>

@@ -27,9 +27,7 @@ export function RaidError({title, instructions, image}: RaidErrorProps) {
 	}
 
 	return (
-		<div
-			className={`flex flex-1 select-none flex-col items-center justify-center ${image ? 'md:justify-between' : ''}`}
-		>
+		<div className={`flex flex-1 flex-col items-center justify-center ${image ? 'md:justify-between' : ''}`}>
 			{/* Content */}
 			<div className={`flex flex-col items-center gap-4 px-4 ${image ? 'md:pt-8' : ''}`}>
 				<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />
