@@ -8,7 +8,7 @@
     <a href="https://umbrel.com"><strong>umbrel.com »</strong></a>
     <br />
     <br />
-       Get an <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> for the full experience, or install umbrelOS on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a> for free.
+       Get an <a href="https://umbrel.com/umbrel-pro">Umbrel Pro</a> or <a href="https://umbrel.com/umbrel-home">Umbrel Home</a> for the full experience, or install umbrelOS on a <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-a-Raspberry-Pi-5">Raspberry Pi 5</a> or <a href="https://github.com/getumbrel/umbrel/wiki/Install-umbrelOS-on-x86-systems">any x86 system</a> for free.
     <br />
     <br />
     <a href="https://x.com/umbrel">
@@ -44,7 +44,7 @@ Just like the cloud, but one that you own and control.
 
 ## Installing umbrelOS
 
-umbrelOS is designed for the [Umbrel Home](https://umbrel.com/umbrel-home), where it includes first-class support for all features. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
+umbrelOS is designed for the [Umbrel Pro](https://umbrel.com/umbrel-pro) and [Umbrel Home](https://umbrel.com/umbrel-home), where it includes first-class support for all features. On other devices (like Raspberry Pi or x86 systems), it’s freely available with core functionality, but support and feature availability are best-effort due to hardware differences.
 
 For a detailed feature breakdown, see our [comparison guide](https://github.com/getumbrel/umbrel/wiki/umbrelOS-on-Umbrel-Home-vs.-DIY).
 
