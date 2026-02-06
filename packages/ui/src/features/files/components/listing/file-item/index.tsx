@@ -58,8 +58,13 @@ export const FileItem = ({item, items}: FileItemProps) => {
 		// Select the item if it's not already selected
 		if (!isItemSelected(item)) {
 			setSelectedItems([item])
+		} else {
+			// Update the selected items with fresh item data from the listing.
+			// This ensures operations are up to date (e.g., after folder creation where
+			// the item was initially selected with empty operations).
+			setSelectedItems(selectedItems.map((selected) => (selected.path === item.path ? item : selected)))
 		}
-	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item])
+	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item, selectedItems])
 
 	// Cleanup timer on unmount
 	useEffect(() => {
