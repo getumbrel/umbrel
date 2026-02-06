@@ -379,7 +379,7 @@ function RepositoryStep({
 	onManualPasswordChange: (v: string) => void
 }) {
 	const {doesHostHaveMountedShares} = useNetworkStorage()
-	const {disks} = useExternalStorage()
+	const {disks, isExternalStorageSupported} = useExternalStorage()
 	const isConnected = (path: string) => isRepoConnected(path, doesHostHaveMountedShares, disks as any)
 	const renderIcon = (path: string) => (
 		<>
@@ -518,6 +518,7 @@ function RepositoryStep({
 										setBrowserRoot(root)
 										setBrowserOpen(true)
 									}}
+									isExternalStorageSupported={isExternalStorageSupported}
 								/>
 							</div>
 						</div>

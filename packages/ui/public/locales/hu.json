@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Kiterjesztés módosítása „{{extension}}”-re?",
   "files-extension-change.title-remove": "Kiterjesztés eltávolítása?",
   "files-external-storage.unsupported.description": "A csatlakoztatott külső meghajtó áramellátási problémák miatt nem használható Raspberry Pi-n. Külső tárhely elérhető az Umbrel Home-on, az Umbrel Pro-n és minden x86 (Intel vagy AMD) eszközön.",
+  "files-external-storage.unsupported.description-general": "A Raspberry Pi-n a külső tárhely nem elérhető tápellátási problémák miatt. Külső tárhely elérhető az Umbrel Home-on, az Umbrel Pro-n és minden x86 (Intel vagy AMD) eszközön.",
   "files-external-storage.unsupported.title": "Külső tárhely nem támogatott",
   "files-folder": "Mappa",
   "files-format.confirm": "Formázás",

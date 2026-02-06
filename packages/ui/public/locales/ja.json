@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "拡張子を「{{extension}}」に変更しますか？",
   "files-extension-change.title-remove": "拡張子を削除しますか？",
   "files-external-storage.unsupported.description": "接続した外付けドライブは電力の問題によりRaspberry Piでは使用できません。外付けストレージはUmbrel Home、Umbrel Pro、およびすべてのx86（IntelまたはAMD）デバイスで利用できます。",
+  "files-external-storage.unsupported.description-general": "電力の問題によりRaspberry Piでは外付けストレージは利用できません。外付けストレージはUmbrel Home、Umbrel Pro、およびすべての x86 (Intel または AMD) デバイスで利用できます。",
   "files-external-storage.unsupported.title": "外部ストレージには対応していません",
   "files-folder": "フォルダ",
   "files-format.confirm": "フォーマット",

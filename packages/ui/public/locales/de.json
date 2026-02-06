@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Dateiendung in „{{extension}}“ ändern?",
   "files-extension-change.title-remove": "Dateiendung entfernen?",
   "files-external-storage.unsupported.description": "Dein angeschlossenes externes Laufwerk lässt sich aufgrund von Stromproblemen nicht an einem Raspberry Pi verwenden. Externer Speicher ist auf dem Umbrel Home, Umbrel Pro und allen x86-Geräten (Intel oder AMD) verfügbar.",
+  "files-external-storage.unsupported.description-general": "Externer Speicher ist auf dem Raspberry Pi wegen Stromproblemen nicht verfügbar. Externer Speicher ist auf dem Umbrel Home, Umbrel Pro und allen x86-Geräten (Intel oder AMD) verfügbar.",
   "files-external-storage.unsupported.title": "Externer Speicher wird nicht unterstützt",
   "files-folder": "Ordner",
   "files-format.confirm": "Formatieren",

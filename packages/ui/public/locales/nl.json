@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Extensie wijzigen in '{{extension}}'?",
   "files-extension-change.title-remove": "Extensie verwijderen?",
   "files-external-storage.unsupported.description": "Je aangesloten externe schijf kan niet worden gebruikt op een Raspberry Pi vanwege stroomproblemen. Externe opslag is beschikbaar op Umbrel Home, Umbrel Pro en alle x86 (Intel or AMD) apparaten.",
+  "files-external-storage.unsupported.description-general": "Externe opslag is niet beschikbaar op een Raspberry Pi vanwege stroomproblemen. Externe opslag is beschikbaar op Umbrel Home, Umbrel Pro en alle x86 (Intel of AMD) apparaten.",
   "files-external-storage.unsupported.title": "Externe opslag niet ondersteund",
   "files-folder": "Map",
   "files-format.confirm": "Formatteren",

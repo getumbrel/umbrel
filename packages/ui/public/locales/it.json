@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Cambiare l'estensione in '{{extension}}'?",
   "files-extension-change.title-remove": "Rimuovere l'estensione?",
   "files-external-storage.unsupported.description": "L'unità esterna collegata non può essere utilizzata su un Raspberry Pi a causa di problemi di alimentazione. L'archiviazione esterna è disponibile su Umbrel Home, Umbrel Pro e su tutti i dispositivi x86 (Intel o AMD).",
+  "files-external-storage.unsupported.description-general": "L'archiviazione esterna non è disponibile sui Raspberry Pi a causa di problemi di alimentazione. L'archiviazione esterna è disponibile su Umbrel Home, Umbrel Pro e su tutti i dispositivi x86 (Intel o AMD).",
   "files-external-storage.unsupported.title": "Archiviazione esterna non supportata",
   "files-folder": "Cartella",
   "files-format.confirm": "Formatta",

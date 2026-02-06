@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Uzantı “{{extension}}” olarak değiştirilsin mi?",
   "files-extension-change.title-remove": "Uzantı kaldırılsın mı?",
   "files-external-storage.unsupported.description": "Bağlı harici sürücünüz güç sorunları nedeniyle bir Raspberry Pi üzerinde kullanılamıyor. Harici depolama Umbrel Home, Umbrel Pro ve tüm x86 (Intel veya AMD) cihazlarda kullanılabilir.",
+  "files-external-storage.unsupported.description-general": "Maalesef güç sorunları nedeniyle Raspberry Pi'de harici depolama kullanılamıyor. Umbrel Home, Umbrel Pro ve tüm x86 (Intel veya AMD) cihazlarda harici depolama kullanılabilir.",
   "files-external-storage.unsupported.title": "Harici Depolama Desteklenmiyor",
   "files-folder": "Klasör",
   "files-format.confirm": "Biçimlendir",

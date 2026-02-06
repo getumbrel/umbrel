@@ -15,6 +15,7 @@ import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/back
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -124,6 +125,7 @@ function RegularRestoreFlow() {
 	// Backups hooks
 	const {connectToRepository, isPending: isConnecting} = useConnectToRepository()
 	const {restoreBackup, isPending: isRestoring} = useRestoreBackup()
+	const {isExternalStorageSupported} = useExternalStorage()
 
 	// Fetch backups when repository connected
 	const {data: backupsUnsorted, isLoading: isLoadingBackups} = useRepositoryBackups(connectedRepositoryId, {
@@ -218,6 +220,7 @@ function RegularRestoreFlow() {
 										setBrowserRoot(root)
 										setBrowserOpen(true)
 									}}
+									isExternalStorageSupported={isExternalStorageSupported}
 								/>
 							</div>
 						</div>

@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "확장자를 '{{extension}}'(으)로 바꾸기?",
   "files-extension-change.title-remove": "확장자 제거하기?",
   "files-external-storage.unsupported.description": "연결된 외장 저장소는 전력 문제로 Raspberry Pi에서 사용할 수 없습니다. 외장 저장소는 Umbrel Home, Umbrel Pro 및 모든 x86 (Intel 또는 AMD) 기기에서 사용할 수 있습니다.",
+  "files-external-storage.unsupported.description-general": "전력 문제로 Raspberry Pi에서는 외장 저장소를 사용할 수 없습니다. 외장 저장소는 Umbrel Home, Umbrel Pro 및 모든 x86 (Intel 또는 AMD) 장치에서 사용할 수 있습니다.",
   "files-external-storage.unsupported.title": "외장 스토리지를 지원하지 않아요",
   "files-folder": "폴더",
   "files-format.confirm": "포맷",

@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Changer l’extension en « {{extension}} » ?",
   "files-extension-change.title-remove": "Supprimer l’extension ?",
   "files-external-storage.unsupported.description": "Le disque externe branché ne peut pas être utilisé sur un Raspberry Pi à cause de problèmes d'alimentation. Le stockage externe est disponible sur Umbrel Home, Umbrel Pro et tous les appareils x86 (Intel ou AMD).",
+  "files-external-storage.unsupported.description-general": "Le stockage externe n'est pas disponible sur Raspberry Pi à cause de problèmes d'alimentation. Le stockage externe est disponible sur Umbrel Home, Umbrel Pro et tous les appareils x86 (Intel ou AMD).",
   "files-external-storage.unsupported.title": "Stockage externe non pris en charge",
   "files-folder": "Dossier",
   "files-format.confirm": "Formater",

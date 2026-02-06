@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Change extension to '{{extension}}'?",
   "files-extension-change.title-remove": "Remove extension?",
   "files-external-storage.unsupported.description": "Your connected external drive can't be used on a Raspberry Pi due to power issues. External storage is available on the Umbrel Home, Umbrel Pro, and all x86 (Intel or AMD) devices.",
+  "files-external-storage.unsupported.description-general": "External storage is not available on Raspberry Pi due to power issues. External storage is available on the Umbrel Home, Umbrel Pro, and all x86 (Intel or AMD) devices.",
   "files-external-storage.unsupported.title": "External Storage Not Supported",
   "files-folder": "Folder",
   "files-format.confirm": "Format",

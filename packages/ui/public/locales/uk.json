@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Змінити розширення на '{{extension}}'?",
   "files-extension-change.title-remove": "Вилучити розширення?",
   "files-external-storage.unsupported.description": "Ваш підключений зовнішній диск не можна використовувати на Raspberry Pi через проблеми з живленням. Зовнішнє сховище доступне на Umbrel Home, Umbrel Pro та на всіх пристроях x86 (Intel або AMD).",
+  "files-external-storage.unsupported.description-general": "Зовнішнє сховище недоступне на Raspberry Pi через проблеми з живленням. Зовнішнє сховище доступне на Umbrel Home, Umbrel Pro та на всіх пристроях x86 (Intel або AMD).",
   "files-external-storage.unsupported.title": "Зовнішнє сховище не підтримується",
   "files-folder": "Папка",
   "files-format.confirm": "Форматувати",

@@ -441,6 +441,7 @@
   "files-extension-change.title-add": "Alterar extensão para '{{extension}}'?",
   "files-extension-change.title-remove": "Remover extensão?",
   "files-external-storage.unsupported.description": "O disco externo conectado não pode ser usado em um Raspberry Pi devido a problemas de energia. O armazenamento externo está disponível no Umbrel Home, Umbrel Pro e em todos os dispositivos x86 (Intel ou AMD).",
+  "files-external-storage.unsupported.description-general": "O armazenamento externo não está disponível no Raspberry Pi devido a problemas de energia. O armazenamento externo está disponível no Umbrel Home, Umbrel Pro e em todos os dispositivos x86 (Intel ou AMD).",
   "files-external-storage.unsupported.title": "Armazenamento Externo Não É Suportado",
   "files-folder": "Pasta",
   "files-format.confirm": "Formatar",

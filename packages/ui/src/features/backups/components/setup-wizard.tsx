@@ -6,7 +6,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {FormProvider, useForm, useFormContext, type Resolver, type SubmitHandler} from 'react-hook-form'
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {FaRegSave} from 'react-icons/fa'
-import {TbExternalLink, TbPassword, TbShoppingBag} from 'react-icons/tb'
+import {TbAlertTriangleFilled, TbExternalLink, TbPassword, TbShoppingBag} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 import {useCopyToClipboard} from 'react-use'
 import {z} from 'zod'
@@ -26,6 +26,7 @@ import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored
 import {useBackups, type BackupDestination} from '@/features/backups/hooks/use-backups'
 import {useExistingBackupDetection} from '@/features/backups/hooks/use-existing-backup-detection'
 import {BACKUP_FILE_NAME, getLastPathSegment, getRelativePathFromRoot} from '@/features/backups/utils/filepath-helpers'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
@@ -436,7 +437,7 @@ function DestinationStep({
 	}, [shares])
 
 	// External drives (partitions)
-	const {disks, isLoadingExternalStorage} = useExternalStorage()
+	const {disks, isLoadingExternalStorage, isExternalStorageSupported} = useExternalStorage()
 
 	const currentDest = form.watch('destination')
 
@@ -536,71 +537,89 @@ function DestinationStep({
 					)}
 				</div>
 			) : tab === 'external' ? (
-				<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
-					{isLoadingExternalStorage ? (
-						<div className='col-span-full flex items-center justify-start gap-2 py-2 text-sm text-white/60'>
-							<Loader2 className='size-4 animate-spin will-change-transform' />
-							<span>{t('backups.scanning-for-external-drives')}</span>
+				!isExternalStorageSupported ? (
+					// External storage not supported on Raspberry Pi
+					<div className='flex flex-col items-center justify-center gap-4 rounded-20 border border-white/10 bg-black/30 px-6 py-8'>
+						<div className='relative'>
+							<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
+							<div className='absolute -right-2 -top-2'>
+								<TbAlertTriangleFilled className='size-8 text-yellow-400' />
+							</div>
 						</div>
-					) : !disks || disks.length === 0 ? (
-						<div className='col-span-full flex items-center justify-start py-2'>
-							<span className='text-sm text-white/40'>{t('backups.no-external-drives-detected')}</span>
+						<div className='flex flex-col items-center gap-1 text-center'>
+							<span className='text-15 font-medium text-white'>{t('files-external-storage.unsupported.title')}</span>
+							<span className='max-w-sm text-13 text-white/60'>
+								{t('files-external-storage.unsupported.description-general')}
+							</span>
 						</div>
-					) : (
-						<>
-							{/* Normal external drives that don't need formatting */}
-							{disks
-								.filter((disk) => disk.isMounted && !disk.isFormatting)
-								.flatMap((disk) =>
-									disk.partitions.flatMap((p) => {
-										const firstMount = p.mountpoints?.[0]
-										if (!firstMount) return []
-										const label = p.label || disk.name || t('unknown')
-										const selected = currentDest?.type === 'external' && currentDest.mountpoint === firstMount
-										return [
+					</div>
+				) : (
+					<div className='grid grid-cols-[repeat(auto-fill,125px)] gap-3'>
+						{isLoadingExternalStorage ? (
+							<div className='col-span-full flex items-center justify-start gap-2 py-2 text-sm text-white/60'>
+								<Loader2 className='size-4 animate-spin will-change-transform' />
+								<span>{t('backups.scanning-for-external-drives')}</span>
+							</div>
+						) : !disks || disks.length === 0 ? (
+							<div className='col-span-full flex items-center justify-start py-2'>
+								<span className='text-sm text-white/40'>{t('backups.no-external-drives-detected')}</span>
+							</div>
+						) : (
+							<>
+								{/* Normal external drives that don't need formatting */}
+								{disks
+									.filter((disk) => disk.isMounted && !disk.isFormatting)
+									.flatMap((disk) =>
+										disk.partitions.flatMap((p) => {
+											const firstMount = p.mountpoints?.[0]
+											if (!firstMount) return []
+											const label = p.label || disk.name || t('unknown')
+											const selected = currentDest?.type === 'external' && currentDest.mountpoint === firstMount
+											return [
+												<ServerCard
+													key={`${disk.id}-${p.id}-${firstMount}`}
+													selected={!!selected}
+													onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
+												>
+													<div className='mb-2 flex h-12 w-12 items-center justify-center'>
+														<BackupDeviceIcon path={firstMount} connected className='size-11' />
+													</div>
+													<div className='w-full truncate text-center text-[12px]'>{label}</div>
+													<div className='w-full truncate text-center text-[11px] text-white/40'>
+														{formatFilesystemSize(p.size)}
+													</div>
+												</ServerCard>,
+											]
+										}),
+									)}
+								{/* External drives that need formatting */}
+								{disks
+									.filter((disk) => !disk.isMounted || disk.isFormatting)
+									.map((disk) => {
+										const label = disk.name || t('unknown')
+										return (
 											<ServerCard
-												key={`${disk.id}-${p.id}-${firstMount}`}
-												selected={!!selected}
-												onClick={() => onChangeDestination({type: 'external', mountpoint: firstMount})}
+												key={`${disk.id}-requires-format`}
+												selected={false}
+												onClick={() => {
+													if (disk.isFormatting) return
+													navigate(`/files/Home?dialog=files-format-drive&deviceId=${disk.id}`)
+												}}
 											>
 												<div className='mb-2 flex h-12 w-12 items-center justify-center'>
-													<BackupDeviceIcon path={firstMount} connected className='size-11' />
+													<BackupDeviceIcon path='' connected={false} className='size-11' />
 												</div>
 												<div className='w-full truncate text-center text-[12px]'>{label}</div>
 												<div className='w-full truncate text-center text-[11px] text-white/40'>
-													{formatFilesystemSize(p.size)}
+													{disk.isFormatting ? t('files-format.formatting') : t('files-format.title-requires-format')}
 												</div>
-											</ServerCard>,
-										]
-									}),
-								)}
-							{/* External drives that need formatting */}
-							{disks
-								.filter((disk) => !disk.isMounted || disk.isFormatting)
-								.map((disk) => {
-									const label = disk.name || t('unknown')
-									return (
-										<ServerCard
-											key={`${disk.id}-requires-format`}
-											selected={false}
-											onClick={() => {
-												if (disk.isFormatting) return
-												navigate(`/files/Home?dialog=files-format-drive&deviceId=${disk.id}`)
-											}}
-										>
-											<div className='mb-2 flex h-12 w-12 items-center justify-center'>
-												<BackupDeviceIcon path='' connected={false} className='size-11' />
-											</div>
-											<div className='w-full truncate text-center text-[12px]'>{label}</div>
-											<div className='w-full truncate text-center text-[11px] text-white/40'>
-												{disk.isFormatting ? t('files-format.formatting') : t('files-format.title-requires-format')}
-											</div>
-										</ServerCard>
-									)
-								})}
-						</>
-					)}
-				</div>
+											</ServerCard>
+										)
+									})}
+							</>
+						)}
+					</div>
+				)
 			) : tab === 'umbrel-private-cloud' ? (
 				<div className='flex flex-col items-center justify-center gap-7 rounded-20 border border border-white/10 bg-black/30 px-3 pb-10 pt-8'>
 					<div className='flex flex-col items-center justify-center gap-1 text-center'>
