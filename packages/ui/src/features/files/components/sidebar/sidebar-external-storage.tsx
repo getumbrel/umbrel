@@ -41,12 +41,15 @@ export function SidebarExternalStorage() {
 										name: disk.name,
 										id: disk.id,
 										// If the drive requires formatting, don't show any partitions
+										// Otherwise, only show mounted partitions
 										partitions: !disk.isMounted
 											? []
-											: disk.partitions.map((partition: any) => ({
-													...partition,
-													mountpoint: partition.mountpoints?.[0] ?? '',
-												})),
+											: disk.partitions
+													.filter((partition: any) => partition.mountpoints?.length > 0)
+													.map((partition: any) => ({
+														...partition,
+														mountpoint: partition.mountpoints?.[0] ?? '',
+													})),
 										size: disk.size,
 										isMounted: disk.isMounted,
 										isFormatting: disk.isFormatting,

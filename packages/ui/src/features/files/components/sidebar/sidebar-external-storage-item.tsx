@@ -47,6 +47,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 
 	// For disks with a single partition, we display the partition name/label
 	// For disks with multiple partitions, we display the disk name
+	// Note: Unmounted partitions are filtered out before being passed here
 	const displayName =
 		item.partitions.length === 1 ? item.partitions[0].label || item.partitions[0].mountpoints[0] : item.name
 
