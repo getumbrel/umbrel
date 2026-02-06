@@ -354,13 +354,13 @@ export function AppListSkeleton({systemApps}: {systemApps?: Array<AppT>}) {
 	)
 }
 
-const appListClass = tw`divide-y divide-white/6 rounded-12 bg-white/5`
+const appListClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white/5`
 
 function AppListRow({icon, title, value, disabled}: {icon?: string; title: string; value: string; disabled?: boolean}) {
 	return (
-		<div className={cn('flex items-center gap-2 p-3', disabled && 'opacity-50')}>
+		<div className={cn('flex min-w-0 items-center gap-2 p-3', disabled && 'opacity-50')}>
 			<AppIcon src={icon} size={25} className={cn('rounded-5 shadow-md', disabled && 'grayscale')} />
-			<span className='flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
+			<span className='min-w-0 flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
 			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
 		</div>
 	)

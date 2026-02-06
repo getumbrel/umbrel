@@ -3,6 +3,7 @@ import {ArrowLeft, ChevronDown, ChevronRight, Loader2} from 'lucide-react'
 import * as React from 'react'
 import {useNavigate} from 'react-router-dom'
 
+import {FadeScroller} from '@/components/fade-scroller'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
@@ -357,9 +358,14 @@ function RepositoryDetails({
 						</div>
 					</div>
 				</div>
-				<div className='flex items-center justify-between p-3 text-sm'>
-					<div className='text-white/60'>{t('backups-configure.path')}</div>
-					<div className='min-w-0 flex-1 truncate text-right'>{getDisplayRepositoryPath(repo.path)}</div>
+				<div className='flex items-center justify-between gap-3 p-3 text-sm'>
+					<div className='shrink-0 text-white/60'>{t('backups-configure.path')}</div>
+					<FadeScroller
+						direction='x'
+						className='umbrel-hide-scrollbar min-w-0 overflow-x-auto whitespace-nowrap text-right'
+					>
+						{getDisplayRepositoryPath(repo.path)}
+					</FadeScroller>
 				</div>
 				<div className='flex items-center justify-between p-3 text-sm'>
 					<div className='text-white/60'>{t('backups-configure.last-backup')}</div>

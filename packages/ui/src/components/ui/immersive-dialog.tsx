@@ -118,7 +118,7 @@ function ForwardedImmersiveDialogSplitContent(
 				<section className='hidden w-[210px] flex-col items-center justify-center bg-black/40 md:flex md:rounded-l-20'>
 					{side}
 				</section>
-				<section className='flex-1 bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
+				<section className='min-w-0 flex-1 overflow-hidden bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
 					<ScrollArea dialogInset className='h-full'>
 						<div className={immersiveScrollAreaContentsClass}>{children}</div>
 					</ScrollArea>
