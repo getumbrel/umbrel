@@ -442,7 +442,7 @@ export default function RaidSetup() {
 						}}
 					/>
 				}
-				subTitleMaxWidth={470}
+				subTitleMaxWidth={630}
 				subTitleClassName='text-white/50'
 				showLogo={false}
 				footer={
@@ -484,7 +484,7 @@ export default function RaidSetup() {
 					className={`mt-4 ${primaryButtonProps.className}`}
 					style={primaryButtonProps.style}
 				>
-					{isLaunching ? t('onboarding.raid.launching') : t('onboarding.raid.launch-umbrelos')}
+					{isLaunching ? t('onboarding.raid.launching') : t('onboarding.launch-umbrelos')}
 				</button>
 			</Layout>
 		)
