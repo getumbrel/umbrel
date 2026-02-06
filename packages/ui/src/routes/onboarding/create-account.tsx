@@ -88,7 +88,6 @@ export default function CreateAccount() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={t('onboarding.create-account.subtitle')}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}

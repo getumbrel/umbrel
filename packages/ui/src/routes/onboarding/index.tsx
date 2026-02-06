@@ -51,7 +51,6 @@ export default function OnboardingStart() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
 			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}

@@ -22,23 +22,9 @@ export function InstallFirstApp() {
 	return (
 		<div className={cn('relative z-10 flex min-h-[100dvh] flex-col items-center duration-300 animate-in fade-in')}>
 			<div className='pt-14' />
-			<UmbrelLogo
-				// Need to remove `view-transition-name` because it causes the logo to
-				// remain visible over dialogues during transitions
-				ref={(ref) => {
-					ref?.style?.removeProperty('view-transition-name')
-				}}
-			/>
+			<UmbrelLogo />
 			<div className='pt-5' />
-			<h1
-				className='-translate-y-2 text-center text-3xl font-bold leading-tight -tracking-2 md:text-48'
-				// Cannot use `view-transition-name` on the headline as well, see above
-				/*style={{
-					viewTransitionName: 'title',
-				}}*/
-			>
-				{title}
-			</h1>
+			<h1 className='-translate-y-2 text-center text-3xl font-bold leading-tight -tracking-2 md:text-48'>{title}</h1>
 			<div className='pt-6' />
 			<div className='flex-1' />
 			<div className='flex w-full flex-col items-center justify-center'>

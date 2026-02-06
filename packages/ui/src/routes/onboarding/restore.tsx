@@ -36,7 +36,6 @@ export default function BackupsRestoreOnboarding() {
 		return (
 			<Layout
 				title={t('backups-restore-header')}
-				transitionTitle={false}
 				subTitle=''
 				footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 			>
@@ -72,7 +71,6 @@ function UmbrelProRestoreInstructions() {
 	return (
 		<Layout
 			title={t('backups-restore-header')}
-			transitionTitle={false}
 			subTitle={t('backups-restore-pro.subtitle')}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
@@ -191,7 +189,6 @@ function RegularRestoreFlow() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={stepSubtitle}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}

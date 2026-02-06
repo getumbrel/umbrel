@@ -152,14 +152,7 @@ const dockPreviewClass = tw`mx-auto animate-in slide-in-from-bottom-2 flex gap-1
 function Header({userName}: {userName: string}) {
 	return (
 		<div className='flex flex-col items-center duration-300 animate-in slide-in-from-bottom-2'>
-			<UmbrelLogo
-				className='w-[20px]'
-				// Need to remove `view-transition-name` because it causes the logo to
-				// briefly appear over the sheets between page transitions
-				ref={(ref) => {
-					ref?.style?.removeProperty('view-transition-name')
-				}}
-			/>
+			<UmbrelLogo className='w-[20px]' />
 			<div className='text-center text-[9px] font-bold'>{greetingMessage(userName)}</div>
 		</div>
 	)

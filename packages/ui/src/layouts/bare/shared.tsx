@@ -5,14 +5,16 @@ import UmbrelLogo from '@/assets/umbrel-logo'
 import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
-export const UmbrelLogoLarge = () => <UmbrelLogo className='w-[100px] opacity-85' />
+export const UmbrelLogoLarge = () => (
+	<UmbrelLogo className='w-[100px] opacity-85' style={{viewTransitionName: 'umbrel-logo'}} />
+)
 
-export function Title({children, hasTransition}: {children: React.ReactNode; hasTransition: boolean}) {
+export function Title({children}: {children: React.ReactNode}) {
 	return (
 		<h1
 			className='text-center text-[32px] font-bold leading-tight -tracking-2 opacity-85'
 			style={{
-				viewTransitionName: hasTransition ? 'title' : undefined,
+				viewTransitionName: 'title',
 				textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)',
 			}}
 		>
@@ -52,7 +54,6 @@ export const formGroupClass = tw`flex w-full max-w-sm flex-col gap-2.5`
 // shouldn't be taken too far.
 export function Layout({
 	title,
-	transitionTitle = true,
 	subTitle,
 	subTitleMaxWidth,
 	subTitleClassName,
@@ -62,7 +63,6 @@ export function Layout({
 	showLogo = true,
 }: {
 	title: string
-	transitionTitle?: boolean
 	subTitle: React.ReactNode
 	subTitleMaxWidth?: number
 	subTitleClassName?: string
@@ -90,7 +90,7 @@ export function Layout({
 			<div className='flex w-full flex-col items-center gap-5'>
 				{showLogo && <UmbrelLogoLarge />}
 				<div className='flex flex-col items-center gap-1.5'>
-					<Title hasTransition={transitionTitle}>{title}</Title>
+					<Title>{title}</Title>
 					<SubTitle className={subTitleClassName} style={{maxWidth: subTitleMaxWidth}}>
 						{subTitle}
 					</SubTitle>

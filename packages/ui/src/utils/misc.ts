@@ -71,14 +71,6 @@ export function preloadImage(url: string): Promise<void> {
 	})
 }
 
-export function transitionViewIfSupported(cb: () => void) {
-	if (document.startViewTransition) {
-		document.startViewTransition(cb)
-	} else {
-		cb()
-	}
-}
-
 // ---
 
 export function isWindows() {

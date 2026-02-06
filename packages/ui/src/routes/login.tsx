@@ -1,5 +1,4 @@
 import {useState} from 'react'
-import {flushSync} from 'react-dom'
 
 import {PinInput} from '@/components/ui/pin-input'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
@@ -7,7 +6,6 @@ import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
 
@@ -30,11 +28,7 @@ export default function Login() {
 
 	const handleSubmitPassword = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
-		transitionViewIfSupported(() => {
-			flushSync(() => {
-				loginMut.mutate({password})
-			})
-		})
+		loginMut.mutate({password})
 	}
 
 	const handleSubmit2fa = async (totpToken: string) => {

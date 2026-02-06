@@ -27,6 +27,7 @@ export function OnboardingPage({children}: {children: React.ReactNode}) {
 					className='flex min-h-dvh w-full max-w-none flex-col rounded-none bg-[#1E1E1E]/20 p-3 backdrop-blur-2xl md:max-h-[850px] md:min-h-[700px] md:max-w-[1000px] md:rounded-3xl md:bg-[#1E1E1E]/70 md:p-6'
 					style={{
 						boxShadow: '0px 24px 48px 0px #000000A3, inset 1px 1px 1px 0px #FFFFFF1F',
+						viewTransitionName: 'onboarding-card',
 					}}
 					{...cardProps}
 				>

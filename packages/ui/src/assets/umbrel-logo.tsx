@@ -8,10 +8,7 @@ const ForwardedSvgComponent = ({style, ...props}: SVGProps<SVGSVGElement>, ref: 
 		viewBox='0 0 96 47'
 		fill='none'
 		{...props}
-		style={{
-			...style,
-			viewTransitionName: 'umbrel-logo',
-		}}
+		style={style}
 		ref={ref}
 	>
 		<path

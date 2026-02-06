@@ -114,7 +114,7 @@ export function DockItem({
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0 outline-none' unstable_viewTransition />
+				<Link to={to || '/'} className='absolute inset-0 outline-none' />
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}

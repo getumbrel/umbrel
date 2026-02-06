@@ -71,7 +71,6 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 						? `linear-gradient(to bottom, ${colors.join(', ')})`
 						: 'linear-gradient(to bottom, #24242499, #18181899',
 				}}
-				unstable_viewTransition
 				onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 			>
 				<AppIcon

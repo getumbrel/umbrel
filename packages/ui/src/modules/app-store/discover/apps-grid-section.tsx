@@ -37,7 +37,6 @@ export function AppWithDescription({app, to}: {app: RegistryApp; to?: string}) {
 		<Link
 			to={to ? to : `/app-store/${app.id}`}
 			className='group flex w-full items-start gap-2.5 rounded-20 p-2.5 outline-none hover:bg-white/4 focus:bg-white/4'
-			unstable_viewTransition
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 		>
 			<AppIcon src={app.icon} size={48} className='rounded-10 md:w-[55px]' />
