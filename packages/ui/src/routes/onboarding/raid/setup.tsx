@@ -301,7 +301,7 @@ export default function RaidSetup() {
 		const slotIndex = (device.slot ?? 0) - 1 // slot is 1-indexed
 		if (slotIndex >= 0 && slotIndex < 4) {
 			slots[slotIndex] = {
-				size: formatSize(device.size),
+				size: formatSize(device.roundedSize),
 				hasWarning: getDeviceHealth(device).hasWarning,
 			}
 		}
@@ -528,7 +528,7 @@ export default function RaidSetup() {
 										<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
 											<Trans
 												i18nKey='onboarding.raid.ssd-in-slot'
-												values={{size: formatSize(device.size), slot: device.slot}}
+												values={{size: formatSize(device.roundedSize), slot: device.slot}}
 												components={{highlight: <span className='text-white' />}}
 											/>
 										</span>
