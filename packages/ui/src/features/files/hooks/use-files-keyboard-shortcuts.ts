@@ -22,6 +22,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 	const cutItemsToClipboard = useFilesStore((s: FilesStore) => s.cutItemsToClipboard)
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
 	const selectedItems = useFilesStore((s: FilesStore) => s.selectedItems)
+	const viewerItem = useFilesStore((s: FilesStore) => s.viewerItem)
 	const setViewerItem = useFilesStore((s: FilesStore) => s.setViewerItem)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 
@@ -108,7 +109,8 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 				e.ctrlKey ||
 				e.altKey ||
 				searchBuffer.current.length > 0 ||
-				selectedItems.length !== 1
+				selectedItems.length !== 1 ||
+				viewerItem !== null
 			)
 				return
 			e.preventDefault()
