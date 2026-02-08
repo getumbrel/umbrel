@@ -22,7 +22,7 @@ export function SheetStickyHeaderProvider({
 	scrollRef,
 }: {
 	children: React.ReactNode
-	scrollRef: React.RefObject<HTMLDivElement>
+	scrollRef: React.RefObject<HTMLDivElement | null>
 }) {
 	const [hasStickyHeader, setHasStickyHeader] = useState(false)
 	const [showStickyHeader, setShowStickyHeader] = useState(false)
@@ -44,11 +44,7 @@ export function SheetStickyHeaderProvider({
 		return () => el?.removeEventListener('scroll', scrollHandler)
 	}, [scrollRef, hasStickyHeader])
 
-	return (
-		<StickyContext.Provider value={{showStickyHeader, hasStickyHeader, setHasStickyHeader}}>
-			{children}
-		</StickyContext.Provider>
-	)
+	return <StickyContext value={{showStickyHeader, hasStickyHeader, setHasStickyHeader}}>{children}</StickyContext>
 }
 
 export function useSheetStickyHeader() {

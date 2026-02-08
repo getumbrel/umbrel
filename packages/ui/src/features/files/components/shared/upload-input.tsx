@@ -1,9 +1,7 @@
-import {forwardRef} from 'react'
-
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useGlobalFiles} from '@/providers/global-files'
 
-export const UploadInput = forwardRef<HTMLInputElement>((_, ref) => {
+export function UploadInput({ref}: {ref?: React.Ref<HTMLInputElement>}) {
 	const {startUpload} = useGlobalFiles()
 	const {currentPath} = useNavigate()
 
@@ -14,4 +12,4 @@ export const UploadInput = forwardRef<HTMLInputElement>((_, ref) => {
 		}
 	}
 	return <input type='file' ref={ref} style={{display: 'none'}} multiple accept='*' onChange={handleFileChange} />
-})
+}

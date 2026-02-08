@@ -51,7 +51,7 @@ function FilesystemCard({
 		>
 			<div className='flex items-baseline gap-1'>
 				<span className='text-16 font-medium text-white/90'>{name}</span>
-				<span className='text-12 lowercase text-white/50'>{t('files-format.filesystem')}</span>
+				<span className='text-12 text-white/50 lowercase'>{t('files-format.filesystem')}</span>
 			</div>
 			<span className='text-12 text-white/70'>{description}</span>
 		</button>
@@ -111,7 +111,7 @@ export default function FormatDriveDialog() {
 								draggable={false}
 							/>
 							{requiresFormat && (
-								<div className='absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
+								<div className='absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
 									<RiErrorWarningFill className='size-6 text-black' />
 								</div>
 							)}

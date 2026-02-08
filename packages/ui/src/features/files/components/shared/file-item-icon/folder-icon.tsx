@@ -167,7 +167,7 @@ export const FolderIcon = ({className, overlayIcon: OverlayIcon, ...svgProps}: F
 			</svg>
 
 			{OverlayIcon && (
-				<div className='pointer-events-none absolute left-[23%] top-[28%] h-[56%] w-[56%]'>
+				<div className='pointer-events-none absolute top-[28%] left-[23%] h-[56%] w-[56%]'>
 					{/* text-black/30 makes the embedded overlay icon slightly darker than surrounding icon*/}
 					<OverlayIcon className='h-full w-full text-black/30' />
 				</div>

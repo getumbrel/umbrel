@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
@@ -43,7 +43,7 @@ export function ExpandedContent({progresses}: {progresses: Progress[]}) {
 				>
 					{/* Subtle background glow */}
 					<motion.div
-						className='absolute inset-0 rounded-full bg-gradient-to-br from-brand/30 to-transparent'
+						className='absolute inset-0 rounded-full bg-linear-to-br from-brand/30 to-transparent'
 						initial={{scale: 0.8, opacity: 0}}
 						animate={{scale: 1, opacity: 1}}
 						exit={{scale: 0.8, opacity: 0}}
@@ -156,7 +156,7 @@ export function ExpandedContent({progresses}: {progresses: Progress[]}) {
 								</div>
 								<div className='relative mt-1 h-1 overflow-hidden rounded-full bg-white/20'>
 									<div
-										className='absolute left-0 top-0 h-full rounded-full bg-brand transition-all duration-300'
+										className='absolute top-0 left-0 h-full rounded-full bg-brand transition-all duration-300'
 										style={{width: `${p.percent}%`}}
 									/>
 								</div>

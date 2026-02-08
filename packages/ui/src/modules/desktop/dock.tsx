@@ -1,4 +1,4 @@
-import {motion, useMotionValue} from 'framer-motion'
+import {motion, useMotionValue} from 'motion/react'
 import React, {Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useLocation} from 'react-router-dom'

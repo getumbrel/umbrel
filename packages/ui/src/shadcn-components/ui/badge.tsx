@@ -30,7 +30,7 @@ function Badge({className, variant, icon, children, ...props}: BadgeProps) {
 	const Icon = icon
 	return (
 		<div className={cn(badgeVariants({variant}), className)} {...props}>
-			{Icon && <Icon className='-ml-1 mr-0.5' />}
+			{Icon && <Icon className='mr-0.5 -ml-1' />}
 			{children}
 		</div>
 	)

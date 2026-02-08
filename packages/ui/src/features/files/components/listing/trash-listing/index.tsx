@@ -35,7 +35,7 @@ export function TrashListing() {
 				icon: FlameIcon,
 			})
 			emptyTrash()
-		} catch (error) {
+		} catch {
 			// User cancelled
 		}
 	}

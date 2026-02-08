@@ -1,4 +1,4 @@
-import {motion, Variant} from 'framer-motion'
+import {motion, Variant} from 'motion/react'
 import {useLocation} from 'react-router-dom'
 
 import {useWidgets} from '@/hooks/use-widgets'
@@ -61,7 +61,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			<div className='pt-6 md:pt-8' />
 			<div className='flex w-full grow overflow-hidden'>
 				<AppGrid
-					widgets={widgets.selected.map((widget, i) => (
+					widgets={widgets.selected.map((widget) => (
 						<motion.div
 							key={widget.id}
 							layout

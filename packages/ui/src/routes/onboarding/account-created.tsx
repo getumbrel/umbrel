@@ -58,7 +58,7 @@ export default function AccountCreated() {
 			<Link
 				data-testid='to-desktop'
 				to='/'
-				unstable_viewTransition
+				viewTransition
 				ref={continueLinkRef}
 				className={`mt-4 ${primaryButtonProps.className}`}
 				style={primaryButtonProps.style}

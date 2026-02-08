@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import {MotionConfig} from 'framer-motion'
+import {MotionConfig} from 'motion/react'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 import {useSearchParams} from 'react-router-dom'
@@ -40,11 +40,11 @@ export function SidebarRewind() {
 	const {setRepoOpen} = useRewindOverlay()
 
 	return (
-		<div className='mr-4 mt-2 flex flex-col rounded-xl'>
+		<div className='mt-2 mr-4 flex flex-col rounded-xl'>
 			<div
 				className={cn(
 					'flex w-full items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12',
-					'text-white/60 transition-colors hover:bg-white/10 hover:bg-gradient-to-b hover:text-white',
+					'text-white/60 transition-colors hover:bg-white/10 hover:bg-linear-to-b hover:text-white',
 				)}
 			>
 				<button
@@ -135,7 +135,7 @@ export function RewindOverlay() {
 				setRestorePhase('idle')
 				await selectSnapshot('current')
 			}, successPauseMs)
-		} catch (e) {
+		} catch {
 			setRestorePhase('error')
 			setTimeout(() => {
 				setRestoreModalOpen(false)
@@ -196,11 +196,11 @@ export function RewindOverlay() {
 					{/* Simple but hacky: We add a Rewind-specific marker (data-rewind) so the Files keyboard shortcuts hook can cheaply detect that Rewind is open and ignore shortcut commands without us having to do any global focus plumbing */}
 					<DialogPrimitive.Content
 						data-rewind='open'
-						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-none'
+						className='fixed inset-0 z-50 m-0 h-svh w-screen translate-x-0 translate-y-0 rounded-none p-0 outline-hidden'
 					>
 						<div className='flex size-full flex-col'>
 							{/* Mobile close button (standard dialog style) */}
-							<DialogCloseButton className='absolute right-3 top-3 z-[60] md:hidden' />
+							<DialogCloseButton className='absolute top-3 right-3 z-[60] md:hidden' />
 							{/* Upper area with centered card */}
 							<div className='flex flex-[2] items-center justify-center px-2 py-4 md:px-4 md:py-10'>
 								<div className='flex w-full max-w-[980px] flex-col items-center gap-4'>
@@ -270,7 +270,7 @@ export function RewindOverlay() {
 									<div className='flex flex-col items-center text-center md:items-start md:text-left'>
 										<div className='hidden items-center gap-2 md:flex'>
 											<RewindIcon className='size-5 md:size-6' />
-											<div className='text-base font-semibold leading-none text-white md:text-lg'>
+											<div className='text-base leading-none font-semibold text-white md:text-lg'>
 												{t('backups-rewind')}
 											</div>
 										</div>

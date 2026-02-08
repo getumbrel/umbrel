@@ -31,11 +31,11 @@ export function useListDirectory(
 	const [items, setItems] = useState<FileSystemItem[]>([])
 	const [hasMore, setHasMore] = useState(true)
 	const [isFetchingMore, setIsFetchingMore] = useState(false)
-	const [paginationError, setPaginationError] = useState<unknown>(null)
+	const [, setPaginationError] = useState<unknown>(null)
 	const [isLoadingItems, setIsLoadingItems] = useState(true)
 
 	// helpers to know WHEN to skip refetch on sort changes
-	const prevSortRef = useRef<{sortBy: string; sortOrder: string}>()
+	const prevSortRef = useRef<{sortBy: string; sortOrder: string} | undefined>(undefined)
 	const fullyLoaded = items.length > 0 && !hasMore
 	const sortChanged =
 		prevSortRef.current && (prevSortRef.current.sortBy !== sortBy || prevSortRef.current.sortOrder !== sortOrder)

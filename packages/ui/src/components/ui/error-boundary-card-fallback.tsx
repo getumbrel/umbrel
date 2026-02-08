@@ -7,7 +7,7 @@ import {GenericErrorText} from '@/components/ui/generic-error-text'
 export function ErrorBoundaryCardFallback() {
 	return (
 		// Wrap div to prevent flex parent from sizing this element inappropriately
-		<Card className='grid w-full place-items-center animate-in fade-in zoom-in-150 md:h-60'>
+		<Card className='grid w-full animate-in place-items-center fade-in zoom-in-150 md:h-60'>
 			<GenericErrorText />
 		</Card>
 	)

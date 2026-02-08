@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 
 import {type RaidProgress} from '@/features/storage/hooks/use-raid-progress'
 import {t} from '@/utils/i18n'
@@ -65,7 +65,7 @@ export function ExpandedContent({operation}: {operation: RaidProgress}) {
 			>
 				{/* Subtle background glow */}
 				<motion.div
-					className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+					className={`absolute inset-0 rounded-full bg-linear-to-br ${
 						isComplete ? 'from-brand/50' : 'from-brand/30'
 					} to-transparent`}
 					initial={{scale: 0.8, opacity: 0}}

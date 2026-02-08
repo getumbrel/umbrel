@@ -273,7 +273,6 @@ export function BackupsSetupWizard() {
 				encryption: {password: '', confirm: ''},
 			})
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
 	return (
@@ -542,7 +541,7 @@ function DestinationStep({
 					<div className='flex flex-col items-center justify-center gap-4 rounded-20 border border-white/10 bg-black/30 px-6 py-8'>
 						<div className='relative'>
 							<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
-							<div className='absolute -right-2 -top-2'>
+							<div className='absolute -top-2 -right-2'>
 								<TbAlertTriangleFilled className='size-8 text-yellow-400' />
 							</div>
 						</div>
@@ -621,10 +620,10 @@ function DestinationStep({
 					</div>
 				)
 			) : tab === 'umbrel-private-cloud' ? (
-				<div className='flex flex-col items-center justify-center gap-7 rounded-20 border border border-white/10 bg-black/30 px-3 pb-10 pt-8'>
+				<div className='flex flex-col items-center justify-center gap-7 rounded-20 border border-white/10 bg-black/30 px-3 pt-8 pb-10'>
 					<div className='flex flex-col items-center justify-center gap-1 text-center'>
 						<h2 className='mb-0 text-2xl text-white'>{t('backups-setup-umbrel-private-cloud')}</h2>
-						<span className='mt-0  text-sm text-white/80'>{t('backups-setup-umbrel-private-cloud-subtitle')}</span>
+						<span className='mt-0 text-sm text-white/80'>{t('backups-setup-umbrel-private-cloud-subtitle')}</span>
 					</div>
 					<img
 						src={umbrelPrivateCloudIcon}
@@ -722,7 +721,7 @@ function FolderPickerStep({
 					<Button
 						type='button'
 						size='sm'
-						className='absolute right-5 top-1/2 -translate-y-1/2'
+						className='absolute top-1/2 right-5 -translate-y-1/2'
 						onClick={() => setBrowserOpen(true)}
 					>
 						{t('backups.browse')}
@@ -847,7 +846,7 @@ function ReviewStep({values}: {values: FormValues}) {
 	return (
 		<div className='space-y-3'>
 			<ReviewCard icon={<FaRegSave className='h-5 w-5 opacity-80' />} label={t('backups.location')}>
-				<div className='break-words text-sm' title={locationCombined}>
+				<div className='text-sm break-words' title={locationCombined}>
 					{locationCombined}
 				</div>
 			</ReviewCard>
@@ -886,7 +885,7 @@ function ReviewStep({values}: {values: FormValues}) {
 								value={showPw ? plainPw : masked}
 								size={Math.min((showPw ? plainPw : masked).length, 32)}
 								type={showPw ? 'text' : 'text'}
-								className='flex h-6 w-auto max-w-[120px] items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none outline-none'
+								className='flex h-6 w-auto max-w-[120px] items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
 							/>
 							<span
 								className='group inline-flex h-6 w-6 cursor-pointer items-center justify-center'

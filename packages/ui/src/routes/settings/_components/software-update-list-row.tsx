@@ -1,5 +1,8 @@
+// TODO: Re-enable Trans and Link when whats-new content is updated
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshLine} from 'react-icons/ri'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
 import {Icon} from '@/components/ui/icon'
@@ -14,6 +17,7 @@ import {ListRow} from './list-row'
 
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const linkToDialog = useLinkToDialog()
 
 	if (state === 'update-available') {

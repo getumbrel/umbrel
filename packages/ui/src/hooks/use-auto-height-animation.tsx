@@ -1,7 +1,7 @@
-import {AnimationControls, useAnimation} from 'framer-motion'
+import {useAnimation, type LegacyAnimationControls} from 'motion/react'
 import {useLayoutEffect, useRef} from 'react'
 
-export function useAutoHeightAnimation(deps: any[]): [AnimationControls, React.RefObject<HTMLDivElement>] {
+export function useAutoHeightAnimation(deps: any[]): [LegacyAnimationControls, React.RefObject<HTMLDivElement | null>] {
 	const controls = useAnimation()
 	const ref = useRef<HTMLDivElement>(null)
 	const height = useRef<number | null>(null)
@@ -18,7 +18,6 @@ export function useAutoHeightAnimation(deps: any[]): [AnimationControls, React.R
 		}
 
 		height.current = newHeight
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ref, controls, ...deps])
 
 	return [controls, ref]

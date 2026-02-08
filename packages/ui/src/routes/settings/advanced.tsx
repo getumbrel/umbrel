@@ -208,7 +208,7 @@ function useIsBetaChannel() {
 function CardText({title, description, trailingIcon}: {title: string; description: string; trailingIcon?: IconTypes}) {
 	return (
 		<div className='flex-1 space-y-1'>
-			<h3 className='text-14 font-medium leading-tight'>
+			<h3 className='text-14 leading-tight font-medium'>
 				{title}
 				{trailingIcon && <Icon component={trailingIcon} className='ml-2 inline-block opacity-50' />}
 			</h3>

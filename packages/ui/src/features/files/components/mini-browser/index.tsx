@@ -188,7 +188,7 @@ export function MiniBrowser({
 					</div>
 				</DialogHeader>
 
-				<div className='h-[min(60vh,480px)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-white/5 p-2'>
+				<div className='h-[min(60vh,480px)] overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2'>
 					{/* Optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog */}
 					{actions ? <div className='flex items-center justify-end'>{actions}</div> : null}
 
@@ -598,7 +598,7 @@ function NewFolderNode({
 					onBlur={handleBlur}
 					onClick={(e) => e.stopPropagation()}
 					onDoubleClick={(e) => e.stopPropagation()}
-					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-none'
+					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-hidden'
 				/>
 			</div>
 		</div>

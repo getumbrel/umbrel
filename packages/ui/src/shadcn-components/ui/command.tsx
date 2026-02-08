@@ -13,15 +13,19 @@ import {cn} from '@/shadcn-lib/utils'
 
 import {dialogContentAnimationClass, dialogContentClass, dialogOverlayClass} from './shared/dialog'
 
-const Command = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({className, ...props}, ref) => (
-	<CommandPrimitive ref={ref} className={cn('flex h-full w-full flex-col overflow-hidden', className)} {...props} />
-))
-Command.displayName = CommandPrimitive.displayName
+function Command({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive>>
+}) {
+	return (
+		<CommandPrimitive ref={ref} className={cn('flex h-full w-full flex-col overflow-hidden', className)} {...props} />
+	)
+}
 
-interface CommandDialogProps extends DialogProps {}
+type CommandDialogProps = DialogProps
 
 const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 	return (
@@ -48,78 +52,93 @@ const CommandDialog = ({children, ...props}: CommandDialogProps) => {
 	)
 }
 
-const CommandInput = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.Input>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({className, ...props}, ref) => (
-	<div className='flex items-center pr-2' cmdk-input-wrapper=''>
-		<CommandPrimitive.Input
-			ref={ref}
-			className={cn(
-				'flex w-full rounded-md bg-transparent p-2 text-15 font-medium -tracking-2 outline-none placeholder:text-white/25 disabled:cursor-not-allowed disabled:opacity-50',
-				className,
-			)}
-			{...props}
-		/>
-		<CommandCloseButton />
-	</div>
-))
+function CommandInput({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Input>>
+}) {
+	return (
+		<div className='flex items-center pr-2' cmdk-input-wrapper=''>
+			<CommandPrimitive.Input
+				ref={ref}
+				className={cn(
+					'flex w-full rounded-md bg-transparent p-2 text-15 font-medium -tracking-2 outline-hidden placeholder:text-white/25 disabled:cursor-not-allowed disabled:opacity-50',
+					className,
+				)}
+				{...props}
+			/>
+			<CommandCloseButton />
+		</div>
+	)
+}
 
-CommandInput.displayName = CommandPrimitive.Input.displayName
-
-const CommandList = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.List>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({className, ...props}, ref) => {
+function CommandList({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.List> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.List>>
+}) {
 	const {scrollerClass, ref: localRef} = useFadeScroller('y')
 	return (
 		<CommandPrimitive.List
 			ref={mergeRefs([localRef, ref])}
-			className={cn(scrollerClass, 'overflow-y-auto overflow-x-hidden', className)}
+			className={cn(scrollerClass, 'overflow-x-hidden overflow-y-auto', className)}
 			{...props}
 		/>
 	)
-})
+}
 
-CommandList.displayName = CommandPrimitive.List.displayName
+function CommandEmpty({
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Empty>>
+}) {
+	return <CommandPrimitive.Empty ref={ref} className='py-6 text-center text-sm' {...props} />
+}
 
-const CommandEmpty = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.Empty>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
->((props, ref) => <CommandPrimitive.Empty ref={ref} className='py-6 text-center text-sm' {...props} />)
+function CommandGroup({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Group>>
+}) {
+	return <CommandPrimitive.Group ref={ref} className={cn('overflow-hidden text-neutral-50', className)} {...props} />
+}
 
-CommandEmpty.displayName = CommandPrimitive.Empty.displayName
-
-const CommandGroup = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.Group>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
->(({className, ...props}, ref) => (
-	<CommandPrimitive.Group ref={ref} className={cn('overflow-hidden text-neutral-50', className)} {...props} />
-))
-
-CommandGroup.displayName = CommandPrimitive.Group.displayName
-
-const CommandSeparator = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.Separator>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
->(({className, ...props}, ref) => (
-	<CommandPrimitive.Separator ref={ref} className={cn('-mx-1 h-px bg-white', className)} {...props} />
-))
-CommandSeparator.displayName = CommandPrimitive.Separator.displayName
+function CommandSeparator({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator> & {
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Separator>>
+}) {
+	return <CommandPrimitive.Separator ref={ref} className={cn('-mx-1 h-px bg-white', className)} {...props} />
+}
 
 // Accept either a string (image source URL) or a React node for the icon
 type CommandItemIcon = string | React.ReactNode
 
-const CommandItem = React.forwardRef<
-	React.ElementRef<typeof CommandPrimitive.Item>,
-	React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {icon?: CommandItemIcon}
->(({className, icon, children, ...props}, ref) => {
+function CommandItem({
+	className,
+	ref,
+	icon,
+	children,
+	...props
+}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item> & {
+	icon?: CommandItemIcon
+	ref?: React.Ref<React.ComponentRef<typeof CommandPrimitive.Item>>
+}) {
 	const isMobile = useIsMobile()
 	return (
 		<CommandPrimitive.Item
 			ref={ref}
 			className={cn(
-				'group relative flex cursor-default items-center gap-3 rounded-8 p-2 text-13 font-medium -tracking-2 outline-none aria-selected:bg-white/4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 md:text-15',
+				'group relative flex cursor-default items-center gap-3 rounded-8 p-2 text-13 font-medium -tracking-2 outline-hidden aria-selected:bg-white/4 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 md:text-15',
 				className,
 			)}
 			{...props}
@@ -144,14 +163,11 @@ const CommandItem = React.forwardRef<
 			<CommandShortcut className='mr-1 hidden group-aria-selected:block'>↵</CommandShortcut>
 		</CommandPrimitive.Item>
 	)
-})
-
-CommandItem.displayName = CommandPrimitive.Item.displayName
+}
 
 const CommandShortcut = ({className, ...props}: React.HTMLAttributes<HTMLSpanElement>) => {
 	return <span className={cn('ml-auto text-xs tracking-widest text-white/30', className)} {...props} />
 }
-CommandShortcut.displayName = 'CommandShortcut'
 
 export {
 	Command,
@@ -165,7 +181,7 @@ export {
 	CommandShortcut,
 }
 
-function ForwardedBlurOverlay(props: unknown, ref: React.ForwardedRef<HTMLDivElement>) {
+function BlurOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {
 	return (
 		<DialogPrimitive.DialogOverlay
 			ref={ref}
@@ -174,10 +190,8 @@ function ForwardedBlurOverlay(props: unknown, ref: React.ForwardedRef<HTMLDivEle
 	)
 }
 
-const BlurOverlay = React.forwardRef(ForwardedBlurOverlay)
-
 const CommandCloseButton = () => (
-	<DialogPrimitive.Close className='rounded-full opacity-30 outline-none ring-white/60 transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
+	<DialogPrimitive.Close className='rounded-full opacity-30 ring-white/60 outline-hidden transition-opacity hover:opacity-40 focus-visible:opacity-40 focus-visible:ring-2'>
 		<RiCloseCircleFill className='h-[18px] w-[18px] md:h-5 md:w-5' />
 		<span className='sr-only'>Close</span>
 	</DialogPrimitive.Close>

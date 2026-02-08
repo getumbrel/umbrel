@@ -71,7 +71,6 @@ export function usePager({apps, widgets}: PageT): {
 		el.style.setProperty('--widget-h', `${widgetH}px`)
 		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
 		// All values depend on the breakpoint
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [breakpoint, pageW])
 
 	function countAppsPerRow({pageW}: {pageW: number}) {

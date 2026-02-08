@@ -1,5 +1,5 @@
 import {VariantProps} from 'class-variance-authority'
-import {HTMLMotionProps, motion} from 'framer-motion'
+import {HTMLMotionProps, motion} from 'motion/react'
 import {CSSProperties, useEffect, useState} from 'react'
 import {useFirstMountState} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
@@ -54,7 +54,7 @@ export function ProgressButton({variant, size, progress, state, children, classN
 			data-progressing={progressing}
 			className={cn(
 				buttonVariants({size, variant}),
-				'whitespace-nowrap disabled:bg-opacity-60 disabled:opacity-100',
+				'whitespace-nowrap disabled:opacity-60',
 				state === 'loading' && '!bg-white/10',
 				// Disable transition right when installing done for a sec to prevent flicker
 				state === 'ready' && !progressingDone && 'transition-none',

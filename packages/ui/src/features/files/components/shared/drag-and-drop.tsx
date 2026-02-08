@@ -44,7 +44,7 @@ export const Draggable = ({id, children, className, item, disabled = false, ...p
 			{...listeners}
 			{...attributes}
 			{...props}
-			className={cn('touch-none outline-none', className)}
+			className={cn('touch-none outline-hidden', className)}
 		>
 			{children}
 		</div>

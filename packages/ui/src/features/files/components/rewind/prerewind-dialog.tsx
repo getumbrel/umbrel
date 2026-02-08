@@ -93,7 +93,7 @@ export function PreRewindDialog({
 					{list.length === 0 ? (
 						<div className='flex w-full min-w-0 flex-wrap items-start gap-1 rounded-xl border border-white/10 bg-white/5 p-3 text-left text-white/80'>
 							<TbHistory className='mt-[1px] size-4 shrink-0' />
-							<span className='min-w-0 flex-1 whitespace-normal break-words text-[13px] md:truncate md:whitespace-nowrap'>
+							<span className='min-w-0 flex-1 text-[13px] break-words whitespace-normal md:truncate md:whitespace-nowrap'>
 								{t('rewind.preflight.enable-backups')}
 							</span>
 						</div>

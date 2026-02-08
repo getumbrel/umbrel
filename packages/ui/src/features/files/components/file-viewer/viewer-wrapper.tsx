@@ -43,7 +43,7 @@ export const ViewerWrapper: React.FC<ViewerWrapperProps> = ({children, dontClose
 	}, [])
 
 	return (
-		<div className='absolute left-1/2 top-0 z-10 flex h-full w-full -translate-x-1/2 items-center justify-center bg-black/80'>
+		<div className='absolute top-0 left-1/2 z-10 flex h-full w-full -translate-x-1/2 items-center justify-center bg-black/80'>
 			<div ref={wrapperRef} className='p-2 md:px-10'>
 				{children}
 			</div>

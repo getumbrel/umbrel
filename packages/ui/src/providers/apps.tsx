@@ -95,7 +95,7 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 	const allAppsKeyed = keyBy(allApps, 'id')
 
 	return (
-		<AppsContext.Provider
+		<AppsContext
 			value={{
 				userApps,
 				userAppsKeyed,
@@ -107,7 +107,7 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 			}}
 		>
 			{children}
-		</AppsContext.Provider>
+		</AppsContext>
 	)
 }
 

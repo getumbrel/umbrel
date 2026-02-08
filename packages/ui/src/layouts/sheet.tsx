@@ -108,5 +108,5 @@ function SheetCloseButton() {
 
 	if (showStickyHeader) return null
 
-	return <DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />
+	return <DialogCloseButton className='absolute top-2.5 right-2.5 z-50' />
 }

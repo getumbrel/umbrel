@@ -34,7 +34,7 @@ export function ActionsBarProvider({children}: {children: React.ReactNode}) {
 	// configuration on mount.
 	const [config, setConfig] = useState<ActionsBarConfig>({})
 
-	return <ActionsBarContext.Provider value={{config, setConfig}}>{children}</ActionsBarContext.Provider>
+	return <ActionsBarContext value={{config, setConfig}}>{children}</ActionsBarContext>
 }
 
 // Convenience hook used by <ActionsBar /> to access the current config.

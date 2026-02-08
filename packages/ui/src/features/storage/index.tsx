@@ -34,9 +34,7 @@ import {StorageDevice, useStorage} from './hooks/use-storage'
 import {formatStorageSize} from './utils'
 
 // Simple divider for storage info section
-const StorageDivider = () => (
-	<div className='h-px w-2/3 bg-gradient-to-r from-transparent via-white/15 to-transparent' />
-)
+const StorageDivider = () => <div className='h-px w-2/3 bg-linear-to-r from-transparent via-white/15 to-transparent' />
 
 // Storage stats display - shared between mobile and desktop layouts
 function StorageStats({

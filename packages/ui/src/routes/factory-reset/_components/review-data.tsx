@@ -44,7 +44,7 @@ export function ReviewData() {
 						<>
 							<span>{userQ.data?.name}</span>
 							<span className='max-sm:hidden'>
-								<span className='ml-2 mr-2 opacity-50'>⋅</span>
+								<span className='mr-2 ml-2 opacity-50'>⋅</span>
 								••••••••
 							</span>
 						</>

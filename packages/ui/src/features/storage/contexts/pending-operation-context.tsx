@@ -16,9 +16,9 @@ export function PendingRaidOperationProvider({children}: {children: ReactNode}) 
 	const clearPendingOperation = useCallback(() => setPendingOperation(null), [])
 
 	return (
-		<PendingRaidOperationContext.Provider value={{pendingOperation, setPendingOperation, clearPendingOperation}}>
+		<PendingRaidOperationContext value={{pendingOperation, setPendingOperation, clearPendingOperation}}>
 			{children}
-		</PendingRaidOperationContext.Provider>
+		</PendingRaidOperationContext>
 	)
 }
 

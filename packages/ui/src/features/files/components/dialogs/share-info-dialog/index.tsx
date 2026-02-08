@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {useSearchParams} from 'react-router-dom'
 

@@ -86,7 +86,6 @@ export function SwapDialog({
 			setShowShutdownConfirmation(false)
 			setSelectedReplacementId(null)
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open])
 
 	// Storage mode with free slot AND available devices - we show replacement selection
@@ -157,7 +156,7 @@ export function SwapDialog({
 													? 'cursor-not-allowed border-white/5 bg-white/[0.02] opacity-60'
 													: isSelected
 														? 'border-brand bg-brand/10'
-														: 'hover:bg-white/8 border-white/10 bg-white/5',
+														: 'border-white/10 bg-white/5 hover:bg-white/8',
 											)}
 										>
 											<div

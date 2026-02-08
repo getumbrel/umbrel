@@ -270,7 +270,7 @@ export function MigrationAssistantReady({onNext, deviceName}: {onNext: () => voi
 						// -mr-2 to adjust the width so the alert doesn't wrap
 						className='-mr-2'
 						description={
-							<div className='-my-1 flex items-center items-baseline gap-1'>
+							<div className='-my-1 flex items-baseline items-center gap-1'>
 								<RiAlertFill className='h-3 w-3 shrink-0 translate-y-[1.5px]' />
 								{t('migration-assistant.prep.callout', {deviceName})}
 							</div>

@@ -46,7 +46,7 @@ export function CoverMessage({
 		<CoverMessageContent>
 			{/* <div className='absolute inset-0 z-50'> */}
 			<Wallpaper className='z-50' stayBlurred />
-			<DarkenLayer className='z-50 duration-700 animate-in fade-in' />
+			<DarkenLayer className='z-50 animate-in duration-700 fade-in' />
 			<div onClick={onClick} className={cn(coverMessageBodyClass, bodyClassName)}>
 				{!delayed ? children : show() && children}
 			</div>

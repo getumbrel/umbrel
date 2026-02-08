@@ -8,7 +8,7 @@ import {cn} from '@/shadcn-lib/utils'
 
 const buttonVariants = cva(
 	// `bg-clip-padding` to make button bg (especially in progress button) not be clipped by invisible border
-	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-none focus:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button bg-clip-padding',
+	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-hidden focus:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button bg-clip-padding',
 	{
 		variants: {
 			variant: {
@@ -53,28 +53,33 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-		VariantProps<typeof buttonVariants> {
+	extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
 	asChild?: boolean
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-	({className, variant, size, text, asChild = false, children, ...props}, ref) => {
-		const Comp = asChild ? Slot : 'button'
+function Button({
+	className,
+	variant,
+	size,
+	text,
+	asChild = false,
+	children,
+	ref,
+	...props
+}: ButtonProps & {ref?: React.Ref<HTMLButtonElement>}) {
+	const Comp = asChild ? Slot : 'button'
 
-		// No children for icon-only buttons
-		const children2 = size === 'icon-only' ? null : children
+	// No children for icon-only buttons
+	const children2 = size === 'icon-only' ? null : children
 
-		// Prevents ordinary buttons in forms from submitting it
-		const extraPropsIfButton = Comp === 'button' ? {...props, type: props.type ?? 'button'} : props
+	// Prevents ordinary buttons in forms from submitting it
+	const extraPropsIfButton = Comp === 'button' ? {...props, type: props.type ?? 'button'} : props
 
-		return (
-			<Comp className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...extraPropsIfButton}>
-				{children2}
-			</Comp>
-		)
-	},
-)
-Button.displayName = 'Button'
+	return (
+		<Comp className={cn(buttonVariants({variant, size, text, className}))} ref={ref} {...extraPropsIfButton}>
+			{children2}
+		</Comp>
+	)
+}
 
 export {Button, buttonVariants}

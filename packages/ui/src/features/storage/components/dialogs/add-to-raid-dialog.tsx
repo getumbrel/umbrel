@@ -84,7 +84,7 @@ function InfoText({
 				</p>
 				{showFailSafeOption && (
 					<p className='text-[13px] text-yellow-500'>
-						<TbAlertTriangle className='mb-0.5 mr-1 inline size-4 align-middle' />
+						<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 						{t('storage-manager.add-to-raid.warning-failsafe-now-only')}
 					</p>
 				)}
@@ -237,7 +237,7 @@ export function AddToRaidDialog({
 			setFailSafeEnabled(allSameSize)
 			setShowRestartConfirmation(false)
 		}
-	}, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [open])
 
 	// Early return after all hooks
 	if (!device) return null

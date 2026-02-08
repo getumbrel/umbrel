@@ -66,7 +66,6 @@ export function useDemoMigrateProgress({onSuccess, onFail}: {onSuccess: () => vo
 
 		return () => clearInterval(interval)
 		// Don't mind onSuccess and onFail, they're just for demo purposes
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [progress, navigate])
 
 	return {

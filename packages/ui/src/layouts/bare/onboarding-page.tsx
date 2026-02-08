@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useLocation} from 'react-router-dom'
 
 import {OnboardingBackground} from '@/components/onboarding-background'
@@ -6,9 +6,9 @@ import {OnboardingBackground} from '@/components/onboarding-background'
 export function OnboardingPage({children}: {children: React.ReactNode}) {
 	const location = useLocation()
 
-	const animate = location.pathname === '/onboarding'
-	const cardProps = animate
-		? {
+	const shouldAnimate = location.pathname === '/onboarding'
+	const cardProps = shouldAnimate
+		? ({
 				initial: {opacity: 0, scale: 1.15},
 				animate: {opacity: 1, scale: 1},
 				transition: {
@@ -16,8 +16,8 @@ export function OnboardingPage({children}: {children: React.ReactNode}) {
 					delay: 1.5,
 					ease: [0.16, 1, 0.3, 1],
 				},
-			}
-		: {}
+			} as const)
+		: ({} as const)
 
 	return (
 		<>

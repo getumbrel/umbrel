@@ -18,7 +18,7 @@ export function SuccessLayout({
 	buttonOnClick?: () => void
 }) {
 	return (
-		<div className={cn(bareContainerClass, 'h-auto w-auto duration-1000 animate-in fade-in zoom-in-95')}>
+		<div className={cn(bareContainerClass, 'h-auto w-auto animate-in duration-1000 zoom-in-95 fade-in')}>
 			<BareLogoTitle>{title}</BareLogoTitle>
 			<p className={cn(bareTextClass, 'w-[80%] sm:w-[55%]')}>{description}</p>
 			<BareSpacer />

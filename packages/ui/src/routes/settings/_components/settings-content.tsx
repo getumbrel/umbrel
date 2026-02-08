@@ -101,7 +101,7 @@ export function SettingsContent() {
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
-						<h2 className='text-24 font-bold leading-none -tracking-4'>
+						<h2 className='text-24 leading-none font-bold -tracking-4'>
 							{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
 							<span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
@@ -179,7 +179,7 @@ export function SettingsContent() {
 						<ListRow title={t('storage-manager')} description={t('storage-manager.description')}>
 							<div className='relative'>
 								{hasStorageIssue && (
-									<div className='absolute -right-0.5 top-0 h-2.5 w-2.5'>
+									<div className='absolute top-0 -right-0.5 h-2.5 w-2.5'>
 										<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
 										<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
 									</div>

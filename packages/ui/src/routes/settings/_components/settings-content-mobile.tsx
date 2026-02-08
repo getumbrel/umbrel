@@ -70,7 +70,7 @@ export function SettingsContentMobile() {
 	}
 
 	return (
-		<div className='flex flex-col gap-5 animate-in fade-in'>
+		<div className='flex animate-in flex-col gap-5 fade-in'>
 			<div className='flex items-center justify-center'>
 				<DesktopPreviewFrame>
 					<DesktopPreviewConnected />
@@ -98,7 +98,7 @@ export function SettingsContentMobile() {
 				</div>
 
 				<div className='mx-2.5'>
-					<h2 className='text-24 font-bold leading-none -tracking-4'>
+					<h2 className='text-24 leading-none font-bold -tracking-4'>
 						{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
 						<span className='opacity-40'>{t('umbrel')}</span>
 					</h2>

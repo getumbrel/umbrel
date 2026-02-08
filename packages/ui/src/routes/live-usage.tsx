@@ -1,5 +1,5 @@
 import {DialogPortal} from '@radix-ui/react-dialog'
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {ReactNode, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useLocation, useNavigate} from 'react-router-dom'
@@ -87,7 +87,7 @@ function LiveUsageContent() {
 		<div className='grid gap-y-5'>
 			{/* Hidden on mobile, as we show regular tabs */}
 			<div className='hidden columns-3 sm:block'>
-				<button className='block w-full text-left focus:outline-none' onClick={() => setSelectedTab('cpu')}>
+				<button className='block w-full text-left focus:outline-hidden' onClick={() => setSelectedTab('cpu')}>
 					<UsageCard
 						title={t('cpu')}
 						value={cpuUsage.value}
@@ -97,7 +97,7 @@ function LiveUsageContent() {
 						chart={cpuChartData}
 					/>
 				</button>
-				<button className='block w-full text-left focus:outline-none' onClick={() => setSelectedTab('memory')}>
+				<button className='block w-full text-left focus:outline-hidden' onClick={() => setSelectedTab('memory')}>
 					<UsageCard
 						title={t('memory')}
 						value={memoryUsage.value}
@@ -109,7 +109,7 @@ function LiveUsageContent() {
 						chart={memoryChartData}
 					/>
 				</button>
-				<button className='block w-full text-left focus:outline-none' onClick={() => setSelectedTab('storage')}>
+				<button className='block w-full text-left focus:outline-hidden' onClick={() => setSelectedTab('storage')}>
 					<UsageCard
 						title={t('storage')}
 						value={diskUsage.value}
@@ -235,7 +235,7 @@ function UsageCard({
 	return (
 		<motion.div className='relative p-[2px]'>
 			<motion.div
-				className='absolute left-0 top-0 z-[-1] h-full w-full rounded-[12px] bg-gradient-to-b from-brand/90 to-brand/15'
+				className='absolute top-0 left-0 z-[-1] h-full w-full rounded-[12px] bg-linear-to-b from-brand/90 to-brand/15'
 				initial={{opacity: 0}}
 				animate={{opacity: active ? 1 : 0}}
 				transition={active ? {duration: 0.3, delay: 0.1} : {duration: 0.3}}
@@ -247,7 +247,7 @@ function UsageCard({
 				transition={active ? {duration: 0.3} : {duration: 0.3, delay: 0.1}}
 			>
 				<motion.div
-					className='absolute left-0 top-0 z-[0] h-full w-full rounded-[12px] bg-gradient-to-b from-brand/15 to-brand/0'
+					className='absolute top-0 left-0 z-[0] h-full w-full rounded-[12px] bg-linear-to-b from-brand/15 to-brand/0'
 					initial={{opacity: 0}}
 					animate={{opacity: active ? 1 : 0}}
 					transition={active ? {duration: 0.3, delay: 0.05} : {duration: 0.3}}
@@ -288,10 +288,10 @@ function UsageCard({
 				)}
 				<Card className={`flex flex-col gap-3`}>
 					<div className='hidden items-center justify-between gap-2 sm:flex'>
-						<span className='leading-2 text-[0.8rem] font-bold opacity-40'>{title || ''}</span>
+						<span className='text-[0.8rem] font-bold opacity-40'>{title || ''}</span>
 						{rightChildren}
 					</div>
-					<div className='flex min-w-0 items-end gap-1 text-24 font-semibold leading-none -tracking-3 opacity-80'>
+					<div className='flex min-w-0 items-end gap-1 text-24 leading-none font-semibold -tracking-3 opacity-80'>
 						<span className='min-w-0 truncate'>{value ?? LOADING_DASH}</span>
 						<span className='min-w-0 flex-1 truncate text-13 font-bold opacity-[45%]'>{valueSub}</span>
 					</div>
@@ -361,7 +361,7 @@ function AppListRow({icon, title, value, disabled}: {icon?: string; title: strin
 		<div className={cn('flex min-w-0 items-center gap-2 p-3', disabled && 'opacity-50')}>
 			<AppIcon src={icon} size={25} className={cn('rounded-5 shadow-md', disabled && 'grayscale')} />
 			<span className='min-w-0 flex-1 truncate text-15 font-medium -tracking-4 opacity-90'>{title}</span>
-			<span className='text-15 font-normal uppercase tabular-nums -tracking-3'>{value}</span>
+			<span className='text-15 font-normal -tracking-3 uppercase tabular-nums'>{value}</span>
 		</div>
 	)
 }

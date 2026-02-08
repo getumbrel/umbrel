@@ -36,7 +36,7 @@ export function ExpandedContent() {
 								</div>
 								<div className='relative h-1 overflow-hidden rounded-full bg-white/20'>
 									<div
-										className='absolute left-0 top-0 h-full rounded-full bg-brand transition-all duration-300'
+										className='absolute top-0 left-0 h-full rounded-full bg-brand transition-all duration-300'
 										style={{width: `${item.progress}%`}}
 									/>
 								</div>

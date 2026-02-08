@@ -83,7 +83,7 @@ interface VirtualizedListProps {
 	hasMore: boolean
 	isLoading: boolean
 	onLoadMore: (startIndex: number) => Promise<boolean>
-	scrollAreaRef: React.RefObject<HTMLDivElement>
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	view: 'list' | 'icons'
 }
 

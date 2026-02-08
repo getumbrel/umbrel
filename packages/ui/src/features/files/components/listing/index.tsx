@@ -49,7 +49,7 @@ function ListingContent({
 	truncatedAt?: number
 	hasMore: boolean
 	onLoadMore: () => Promise<boolean>
-	scrollAreaRef: React.RefObject<HTMLDivElement>
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	isLoading: boolean
 	error: unknown
 	isEmpty: boolean
@@ -76,7 +76,7 @@ function ListingContent({
 
 			{/* Display total item count (or truncated count) when no items are selected */}
 			{totalItems && !selectedItems.length ? (
-				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
 					{truncatedAt
 						? t('files-listing.item-count-truncated', {
 								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false}),
@@ -90,7 +90,7 @@ function ListingContent({
 
 			{/* Display selected count vs total (or truncated count) when items are selected */}
 			{selectedItems.length > 0 && (
-				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
 					{truncatedAt
 						? t('files-listing.selected-count-truncated', {
 								selectedCount: selectedItems.length,
@@ -168,7 +168,7 @@ export function Listing({
 					<Droppable
 						id={`files-listing-${currentPath}`}
 						path={currentPath}
-						className='relative flex h-full flex-col outline-none'
+						className='relative flex h-full flex-col outline-hidden'
 						dropOverClassName='bg-transparent'
 					>
 						{contentWithContextMenu}
@@ -205,7 +205,7 @@ function ErrorView({error}: {error: unknown}) {
 function LoadingView() {
 	return (
 		<div className='flex h-full items-center justify-center p-4'>
-			<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-sm' aria-label={t('files-listing.loading')} />
+			<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' aria-label={t('files-listing.loading')} />
 		</div>
 	)
 }

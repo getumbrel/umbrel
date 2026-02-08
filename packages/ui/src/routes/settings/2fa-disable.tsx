@@ -44,7 +44,7 @@ function Inner({onCodeCheck}: {onCodeCheck: (code: string) => Promise<boolean>})
 	return (
 		<>
 			<Separator />
-			<p className='text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
+			<p className='text-17 leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput autoFocus length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)

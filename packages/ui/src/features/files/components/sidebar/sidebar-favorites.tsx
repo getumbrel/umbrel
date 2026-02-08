@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {useFavorites} from '@/features/files/hooks/use-favorites'

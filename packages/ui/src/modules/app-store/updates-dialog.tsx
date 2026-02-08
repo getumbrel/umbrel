@@ -151,7 +151,7 @@ function AppItem({app}: {app: RegistryApp}) {
 					<button
 						className={cn(
 							'justify-self-end text-13 text-brand underline underline-offset-2',
-							!showAll && 'absolute bottom-0 right-0 ',
+							!showAll && 'absolute right-0 bottom-0',
 						)}
 						onClick={() => setShowAll((s) => !s)}
 					>

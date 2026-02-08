@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {ReactNode, useEffect} from 'react'
 import QRCode from 'react-qr-code'
 
@@ -96,11 +96,11 @@ function Inner({
 				/>
 			</AnimateInQr>
 			<div className='w-full space-y-2 text-center'>
-				<p className='text-13 font-normal leading-tight -tracking-2 text-white/60'>{t('2fa.enable.or-paste')}</p>
+				<p className='text-13 leading-tight font-normal -tracking-2 text-white/60'>{t('2fa.enable.or-paste')}</p>
 				<CopyableField value={totpUri} />
 			</div>
 			<Separator />
-			<p className='text-center text-sm font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
+			<p className='text-center text-sm leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)

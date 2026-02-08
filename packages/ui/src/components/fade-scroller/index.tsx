@@ -1,4 +1,4 @@
-import {ComponentPropsWithoutRef, ForwardedRef, forwardRef, useLayoutEffect, useRef} from 'react'
+import {ComponentPropsWithoutRef, useLayoutEffect, useRef} from 'react'
 
 import './index.css'
 
@@ -7,6 +7,7 @@ import {mergeRefs} from 'react-merge-refs'
 export type FadeScrollerProps = ComponentPropsWithoutRef<'div'> & {
 	direction: 'x' | 'y'
 	debug?: boolean
+	ref?: React.Ref<HTMLDivElement>
 }
 
 const FADE_SCROLLER_CLASS_X = 'umbrel-fade-scroller-x'
@@ -76,10 +77,8 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 	return {scrollerClass, ref}
 }
 
-export const FadeScroller = forwardRef(
-	({direction, debug, className, ...props}: FadeScrollerProps, ref: ForwardedRef<HTMLDivElement>) => {
-		const {scrollerClass, ref: scrollerRef} = useFadeScroller(direction, debug)
+export function FadeScroller({direction, debug, className, ref, ...props}: FadeScrollerProps) {
+	const {scrollerClass, ref: scrollerRef} = useFadeScroller(direction, debug)
 
-		return <div ref={mergeRefs([ref, scrollerRef])} className={scrollerClass + ' ' + className} {...props} />
-	},
-)
+	return <div ref={mergeRefs([ref, scrollerRef])} className={scrollerClass + ' ' + className} {...props} />
+}

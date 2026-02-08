@@ -8,7 +8,7 @@ export interface CreateContextOptions {
 	name?: string
 }
 
-type CreateContextReturn<T> = [React.Provider<T>, () => T, React.Context<T>]
+type CreateContextReturn<T> = [React.Context<T | undefined>, () => T, React.Context<T | undefined>]
 
 export function createContext<ContextType>(options: CreateContextOptions = {}) {
 	const {
@@ -31,5 +31,5 @@ export function createContext<ContextType>(options: CreateContextOptions = {}) {
 		return context
 	}
 
-	return [Context.Provider, useContext, Context] as CreateContextReturn<ContextType>
+	return [Context, useContext, Context] as CreateContextReturn<ContextType>
 }

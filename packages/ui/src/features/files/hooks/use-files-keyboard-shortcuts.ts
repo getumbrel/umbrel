@@ -27,7 +27,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 	// Search functionality
 	const searchBuffer = useRef('')
-	const searchTimer = useRef<NodeJS.Timeout>()
+	const searchTimer = useRef<NodeJS.Timeout | undefined>(undefined)
 
 	// Guard to check if we're in a text input or contentEditable element
 	// We don't want to override the default shortcut behaviour for text inputs.
@@ -145,7 +145,6 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 				}
 
 				// Set new timer to clear search buffer after 700ms
-				sessionStorage
 				searchTimer.current = setTimeout(() => {
 					searchBuffer.current = ''
 				}, 700)

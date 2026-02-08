@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTimeout} from 'react-use'
@@ -32,7 +32,7 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 			{open && (
 				// Don't make this take up full width because clicking outside should close the widget selector
 				// `pointer-events-none` because we want clicking outside the sheet to close the sheet, not interact with the widget
-				<div className='pointer-events-none absolute left-1/2 top-0 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
+				<div className='pointer-events-none absolute top-0 left-1/2 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
 					{/* <div className='absoulte top-0 grid h-[var(--widget-h)] w-full place-items-center whitespace-nowrap'>
 						No widgets selected
 					</div> */}
@@ -119,7 +119,7 @@ function WidgetSheet({
 	selectedCssHeight: string
 }) {
 	return (
-		<BackdropBlurVariantContext.Provider value='default'>
+		<BackdropBlurVariantContext value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>
 				<SheetContent
 					className='mx-auto max-w-[1040px] transition-[height]'
@@ -128,13 +128,13 @@ function WidgetSheet({
 						height: `calc(100dvh - ${selectedCssHeight})`,
 					}}
 					backdrop={<div className='fixed inset-0 z-30' onClick={() => onOpenChange(false)} />}
-					closeButton={<DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />}
+					closeButton={<DialogCloseButton className='absolute top-2.5 right-2.5 z-50' />}
 				>
 					<ScrollArea className='h-full rounded-t-20'>
 						<div
 							className={cn(
 								'flex h-full flex-col items-start gap-5 px-4 pt-6 opacity-0 md:gap-8 md:px-[80px] md:pt-12',
-								'opacity-100 duration-100 animate-in fade-in',
+								'animate-in opacity-100 duration-100 fade-in',
 							)}
 						>
 							<SheetHeader>
@@ -146,7 +146,7 @@ function WidgetSheet({
 					</ScrollArea>
 				</SheetContent>
 			</Sheet>
-		</BackdropBlurVariantContext.Provider>
+		</BackdropBlurVariantContext>
 	)
 }
 
@@ -155,7 +155,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 		<>
 			<div className='flex items-center gap-3'>
 				<AppIcon src={iconSrc} size={36} className='rounded-8' />
-				<h3 className='text-20 font-semibold leading-tight'>{title}</h3>
+				<h3 className='text-20 leading-tight font-semibold'>{title}</h3>
 			</div>
 			<div className='flex flex-row flex-wrap gap-[20px]'>
 				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>{children}</ErrorBoundary>
@@ -178,12 +178,12 @@ function WidgetChecker({
 		<div className='relative'>
 			{children}
 			{checked && (
-				<div className='absolute right-0 top-0 -translate-y-1/3 translate-x-1/3 text-brand'>
+				<div className='absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 text-brand'>
 					<WidgetCheckIcon className='max-sm:scale-75' />
 				</div>
 			)}
 			<button
-				className='absolute left-0 top-0 h-full w-full outline-none'
+				className='absolute top-0 left-0 h-full w-full outline-hidden'
 				onClick={() => onCheckedChange?.(!checked)}
 			/>
 		</div>

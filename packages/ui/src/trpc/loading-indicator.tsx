@@ -13,7 +13,7 @@ export function LoadingIndicator() {
 	return (
 		<Portal>
 			<div className='fixed bottom-1.5 left-1.5 z-50'>
-				<TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
+				<TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-xs' />
 			</div>
 		</Portal>
 	)

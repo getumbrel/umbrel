@@ -211,7 +211,7 @@ export function WallpaperProvider({
 	}, [wallpaper.url, wallpaper.id, prevId])
 
 	return (
-		<WallPaperContext.Provider
+		<WallPaperContext
 			value={{
 				wallpaper,
 				isLoading,
@@ -224,7 +224,7 @@ export function WallpaperProvider({
 			}}
 		>
 			{children}
-		</WallPaperContext.Provider>
+		</WallPaperContext>
 	)
 }
 
@@ -279,7 +279,7 @@ export function Wallpaper({
 					src={wallpaper.url}
 					className={cn(
 						// Using black bg by default because sometimes we want to show the wallpaper before it's loaded, and over other elements
-						tw`pointer-events-none fixed inset-0 w-full bg-black object-cover object-center duration-700 animate-in fade-in`,
+						tw`pointer-events-none fixed inset-0 w-full animate-in bg-black object-cover object-center duration-700 fade-in`,
 						isPreview && 'absolute h-full',
 						!isPreview && 'h-lvh',
 						className,
@@ -295,7 +295,7 @@ export function Wallpaper({
 				<div
 					key={prevWallpaper.url}
 					className={cn(
-						'pointer-events-none fixed inset-0 bg-cover bg-center duration-700 animate-out fade-out zoom-out-125 fill-mode-both',
+						'pointer-events-none fixed inset-0 animate-out bg-cover bg-center duration-700 fill-mode-both fade-out zoom-out-125',
 						isPreview && 'absolute',
 						className,
 					)}

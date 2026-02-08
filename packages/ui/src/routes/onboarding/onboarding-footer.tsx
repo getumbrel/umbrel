@@ -30,7 +30,7 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 
 	return (
 		<div className='flex flex-row flex-wrap items-center justify-center gap-3'>
-			<Link to={route} unstable_viewTransition>
+			<Link to={route} viewTransition>
 				{/* Small screens: with short text */}
 				<IconButton icon={Icon} size='default' className={`sm:hidden ${footerButtonClass}`}>
 					{/* Using explicit conditionals instead of dynamic keys so GitHub Action for translations can detect translation keys */}

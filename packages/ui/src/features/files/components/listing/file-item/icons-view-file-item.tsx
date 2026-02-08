@@ -35,7 +35,7 @@ export const IconsViewFileItem = ({
 	return (
 		<div
 			// w-28 is 112px and corresponds to the fixed width of the icons view item
-			className='relative flex h-full w-28 flex-col items-center gap-1 overflow-hidden text-ellipsis break-all p-2 text-center'
+			className='relative flex h-full w-28 flex-col items-center gap-1 overflow-hidden p-2 text-center break-all text-ellipsis'
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>

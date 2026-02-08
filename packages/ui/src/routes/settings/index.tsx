@@ -61,7 +61,6 @@ const WallpaperDrawer = React.lazy(() =>
 const LanguageDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/language').then((m) => ({default: m.LanguageDrawer})),
 )
-const TorDrawer = React.lazy(() => import('@/routes/settings/mobile/tor').then((m) => ({default: m.TorDrawer})))
 const AppStorePreferencesDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/app-store-preferences').then((m) => ({
 		default: m.AppStorePreferencesDrawer,

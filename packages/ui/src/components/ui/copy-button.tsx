@@ -14,7 +14,7 @@ export function CopyButton({value}: {value: string}) {
 		<Tooltip open={showCopied}>
 			<TooltipTrigger asChild>
 				<button
-					className='rounded-4 opacity-20 ring-inset transition-opacity hover:opacity-40 focus:outline-none focus-visible:opacity-60'
+					className='rounded-4 opacity-20 transition-opacity ring-inset hover:opacity-40 focus:outline-hidden focus-visible:opacity-60'
 					onClick={async () => {
 						copyToClipboard(value)
 						setShowCopied(true)

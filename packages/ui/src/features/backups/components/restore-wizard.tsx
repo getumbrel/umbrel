@@ -444,7 +444,7 @@ function RepositoryStep({
 													{renderIcon(repo.path)}
 												</div>
 												<div className='min-w-0 flex-1'>
-													<div className='whitespace-normal break-words text-sm' title={repo.path}>
+													<div className='text-sm break-words whitespace-normal' title={repo.path}>
 														<span className='font-medium'>{repoName(repo.path)}</span>
 														<span> · {repoPathDisplay(repo.path)}</span>
 													</div>
@@ -598,7 +598,7 @@ function BackupsStep({
 					<EmptyCard text={t('backups-restore.no-backups-found')} />
 				) : (
 					<div
-						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-gradient-to-b from-white/[0.03] to-transparent pb-8 pl-1 pt-1 md:max-h-[min(60vh,560px)]'
+						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
 						style={{
 							maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 						}}
@@ -628,7 +628,7 @@ function BackupsStep({
 										className={[
 											'group relative flex w-full cursor-pointer items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
 											selected
-												? 'bg-gradient-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
+												? 'bg-linear-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',
 										].join(' ')}
 										onClick={() => id && onSelect(id)}
@@ -641,7 +641,7 @@ function BackupsStep({
 												className={[
 													'absolute inset-0 rounded-full',
 													selected
-														? 'bg-gradient-to-br from-brand to-brand/60 shadow-[0_0_20px_rgba(var(--color-brand-rgb),0.3)]'
+														? 'bg-linear-to-br from-brand to-brand/60 shadow-[0_0_20px_rgba(var(--color-brand-rgb),0.3)]'
 														: 'bg-white/10 group-hover:bg-white/15',
 												].join(' ')}
 											/>
@@ -658,7 +658,7 @@ function BackupsStep({
 
 											{/* Connecting line */}
 											{!isLast && (
-												<div className='absolute left-1/2 top-full h-[calc(100%+0.25rem)] w-px -translate-x-1/2 bg-gradient-to-b from-white/10 to-transparent' />
+												<div className='absolute top-full left-1/2 h-[calc(100%+0.25rem)] w-px -translate-x-1/2 bg-linear-to-b from-white/10 to-transparent' />
 											)}
 										</div>
 
@@ -700,7 +700,7 @@ function BackupsStep({
 										{isFirst && (
 											<div
 												className={[
-													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200',
+													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase transition-all duration-200',
 													selected ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60',
 												].join(' ')}
 											>

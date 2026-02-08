@@ -1,5 +1,5 @@
 import {cva, VariantProps} from 'class-variance-authority'
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import * as React from 'react'
 import {TbAlertCircle, TbEye, TbEyeOff} from 'react-icons/tb'
 import {usePreviousDistinct} from 'react-use'
@@ -8,7 +8,7 @@ import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 const inputVariants = cva(
-	'flex w-full border-px md:border-hpx border-white/10 bg-white/4 hover:bg-white/6 px-5 py-2 text-15 font-medium -tracking-1 transition-colors duration-300 placeholder:text-white/30 focus-visible:placeholder:text-white/40 text-white/40 focus-visible:text-white focus-visible:bg-white/10 focus-visible:outline-none focus-visible:border-white/50 disabled:cursor-not-allowed disabled:opacity-40',
+	'flex w-full border-px md:border-hpx border-white/10 bg-white/4 hover:bg-white/6 px-5 py-2 text-15 font-medium -tracking-1 transition-colors duration-300 placeholder:text-white/30 focus-visible:placeholder:text-white/40 text-white/40 focus-visible:text-white focus-visible:bg-white/10 focus-visible:outline-hidden focus-visible:border-white/50 disabled:cursor-not-allowed disabled:opacity-40',
 	{
 		variants: {
 			variant: {
@@ -42,23 +42,29 @@ export function Labeled({children, label}: {children: React.ReactNode; label: st
 	)
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-	({className, type, variant, sizeVariant, onChange, onValueChange, ...props}, ref) => {
-		return (
-			<input
-				type={type}
-				className={cn(inputVariants({variant, sizeVariant}), className)}
-				ref={ref}
-				onChange={(e) => {
-					onChange?.(e)
-					onValueChange?.(e.target.value)
-				}}
-				{...props}
-			/>
-		)
-	},
-)
-Input.displayName = 'Input'
+export function Input({
+	className,
+	type,
+	variant,
+	sizeVariant,
+	onChange,
+	onValueChange,
+	ref,
+	...props
+}: InputProps & {ref?: React.Ref<HTMLInputElement>}) {
+	return (
+		<input
+			type={type}
+			className={cn(inputVariants({variant, sizeVariant}), className)}
+			ref={ref}
+			onChange={(e) => {
+				onChange?.(e)
+				onValueChange?.(e.target.value)
+			}}
+			{...props}
+		/>
+	)
+}
 
 // NOTE: If too many props start getting added to this, best to convert to something like this:
 // https://www.radix-ui.com/primitives/docs/components/form
@@ -126,7 +132,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 		<AnimatePresence>
 			{children && (
 				<motion.div
-					className={showShake ? 'animate-shake' : undefined}
+					className={showShake ? 'mt-1 animate-shake' : 'mt-1'}
 					onAnimationEnd={() => setShowShake(false)}
 					initial={{
 						height: 0,
@@ -134,7 +140,6 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 					}}
 					animate={{
 						height: 'auto',
-						className: 'mt-1',
 						opacity: 1,
 					}}
 					exit={{
@@ -152,7 +157,7 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 export function InputError({children}: {children: React.ReactNode}) {
 	return (
 		// Allow text selection for copying error messages
-		<div className='flex select-text items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest'>
+		<div className='flex items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest select-text'>
 			<TbAlertCircle className='h-4 w-4 shrink-0' />
 			{children}
 		</div>
@@ -167,6 +172,6 @@ const iconRightClasses = {
 	root: tw`relative`,
 	input: tw`pr-11`,
 	// Using `text-white opacity-40` instead of `text-white/40` because the latter applies to strokes and displays incorrectly
-	button: tw`absolute inset-y-0 right-0 h-full pl-2 pr-4 text-white opacity-40 outline-none hover:opacity-80 transition-opacity`,
+	button: tw`absolute inset-y-0 right-0 h-full pl-2 pr-4 text-white opacity-40 outline-hidden hover:opacity-80 transition-opacity`,
 	icon: tw`h-5 w-5`,
 }

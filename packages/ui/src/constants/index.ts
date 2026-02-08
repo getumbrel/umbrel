@@ -6,7 +6,7 @@ export const LOADING_DASH = '–'
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-const hostEnvironments = ['umbrel-pro', 'umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
+export const hostEnvironments = ['umbrel-pro', 'umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
 export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
 
 export const hostEnvironmentMap = {

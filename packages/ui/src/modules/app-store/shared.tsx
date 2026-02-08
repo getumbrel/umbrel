@@ -8,7 +8,7 @@ import {tw} from '@/utils/tw'
 export const slideInFromBottomClass = tw`animate-in fade-in slide-in-from-bottom-8 duration-300`
 
 const cardBaseClass = tw`rounded-20 px-2 py-2 md:px-[26px] md:py-[36px]`
-export const cardClass = cn(cardBaseClass, tw`bg-gradient-to-b from-[#24242499] to-[#18181899]`)
+export const cardClass = cn(cardBaseClass, tw`bg-linear-to-b from-[#24242499] to-[#18181899]`)
 export const cardFaintClass = cn(cardBaseClass, tw`bg-white/4`)
 
 export const appsGridClass = tw`grid gap-x-5 md:gap-y-5 sm:grid-cols-2 xl:grid-cols-3`
@@ -40,7 +40,7 @@ export function AppStoreSheetInner({
 			{beforeHeaderChildren}
 			<SheetHeader className='gap-5'>
 				<div className='flex flex-col gap-x-5 gap-y-5 px-2.5 md:flex-row md:items-center md:px-0'>
-					<SheetTitle className='flex-1 whitespace-nowrap capitalize leading-none'>{title}</SheetTitle>
+					<SheetTitle className='flex-1 leading-none whitespace-nowrap capitalize'>{title}</SheetTitle>
 					{titleRightChildren}
 				</div>
 			</SheetHeader>
@@ -63,7 +63,7 @@ export function AppWithName({
 	return (
 		<div className={cn('flex w-full items-center gap-2.5', className)}>
 			<AppIcon src={icon} size={36} className='rounded-8' />
-			<h3 className='flex-1 truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
+			<h3 className='flex-1 truncate text-14 leading-tight font-semibold -tracking-3'>{appName}</h3>
 			{childrenRight}
 		</div>
 	)

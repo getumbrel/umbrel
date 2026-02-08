@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {RiErrorWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
@@ -132,7 +132,7 @@ function getBackupFailingContent(
 			icon: (
 				<div className='relative'>
 					<BackupDeviceIcon path={repository.path} className='size-14 opacity-90' />
-					<div className='absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
+					<div className='absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
 						<RiErrorWarningFill className='size-5 text-black' />
 					</div>
 				</div>

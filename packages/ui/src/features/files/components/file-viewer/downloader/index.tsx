@@ -27,7 +27,7 @@ export default function DownloadDialog() {
 					icon: RiFile2Fill,
 				})
 				downloadSelectedItems()
-			} catch (error) {
+			} catch {
 				// User cancelled or dismissed
 			} finally {
 				setViewerItem(null)

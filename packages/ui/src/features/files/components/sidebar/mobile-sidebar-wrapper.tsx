@@ -1,5 +1,5 @@
-import {AnimatePresence, motion, useMotionValue} from 'framer-motion'
 import {ChevronLeft} from 'lucide-react'
+import {AnimatePresence, motion, useMotionValue} from 'motion/react'
 
 interface MobileSidebarProps {
 	children: React.ReactNode
@@ -20,7 +20,7 @@ export function MobileSidebarWrapper({children, isOpen, onClose}: MobileSidebarP
 			onClose()
 		} else {
 			// Always animate back to 0 when released
-			x.set(0, true) // true enables spring animation
+			x.set(0)
 		}
 	}
 
@@ -52,7 +52,7 @@ export function MobileSidebarWrapper({children, isOpen, onClose}: MobileSidebarP
 						className='fixed inset-y-0 left-0 z-50 -ml-10 w-[256px] border-r border-white/10 bg-black pl-14 md:-ml-3'
 					>
 						{/* Close button */}
-						<div className='absolute right-3 top-8 sm:top-10 md:top-12'>
+						<div className='absolute top-8 right-3 sm:top-10 md:top-12'>
 							<ChevronLeft
 								role='button'
 								className='h-4 w-4 cursor-pointer text-white/60 transition-colors'
@@ -63,11 +63,11 @@ export function MobileSidebarWrapper({children, isOpen, onClose}: MobileSidebarP
 						{/* The actual <Sidebar /> component will be passed in as children */}
 						{children}
 						{/* Full height drag area with centered visual handle */}
-						<div className='absolute right-[-12px] top-0 h-full w-3'>
+						<div className='absolute top-0 right-[-12px] h-full w-3'>
 							{/* Invisible touch target */}
 							<div className='absolute inset-0 w-full' />
 							{/* Visual handle centered */}
-							<div className='absolute left-0 top-1/2 flex h-16 w-full -translate-y-1/2 items-center justify-center'>
+							<div className='absolute top-1/2 left-0 flex h-16 w-full -translate-y-1/2 items-center justify-center'>
 								<div className='h-12 w-1 rounded-full bg-white/20' />
 							</div>
 						</div>

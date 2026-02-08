@@ -5,7 +5,7 @@ export function DebugOnly({children}: {children: React.ReactNode}) {
 		return (
 			<div className='relative border border-dotted border-white/50 p-2'>
 				{children}
-				<div className='absolute left-0 top-0 bg-destructive2 px-0.5 text-[8px]'>development only</div>
+				<div className='absolute top-0 left-0 bg-destructive2 px-0.5 text-[8px]'>development only</div>
 			</div>
 		)
 	}

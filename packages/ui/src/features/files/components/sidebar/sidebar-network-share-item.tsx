@@ -8,7 +8,7 @@ import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
-  bg-gradient-to-b from-white/[0.04] to-white/[0.08]
+  bg-linear-to-b from-white/[0.04] to-white/[0.08]
   border-white/6
   shadow-button-highlight-soft-hpx
 `
@@ -30,7 +30,7 @@ export function SidebarNetworkShareItem({host, rootPath, onEject, disabled}: Sid
 			path={rootPath}
 			onClick={() => navigateToDirectory(rootPath)}
 			className={cn(
-				'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-gradient-to-b',
+				'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
 				isActive ? selectedClass : 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
 			)}
 			role='button'

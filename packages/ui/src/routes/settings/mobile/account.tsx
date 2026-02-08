@@ -93,7 +93,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
-			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
+			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
 				<ChangePasswordWarning />
 				<Labeled label={t('change-password.current-password')}>
 					<PasswordInput value={password} onValueChange={setPassword} />

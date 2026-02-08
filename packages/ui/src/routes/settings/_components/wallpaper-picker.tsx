@@ -1,4 +1,4 @@
-import {forwardRef, useEffect, useRef} from 'react'
+import {useEffect, useRef} from 'react'
 
 import {useWallpaper, wallpapers} from '@/providers/wallpaper'
 import {cn} from '@/shadcn-lib/utils'
@@ -7,45 +7,40 @@ const ITEM_W = 40
 const GAP = 4
 const ACTIVE_SCALE = 1.4
 
-const WallpaperItem = forwardRef(
-	(
-		{
-			active,
-			bg,
-			onSelect,
-			className,
-		}: {
-			active?: boolean
-			bg: string
-			onSelect: () => void
-			className?: string
-		},
-		ref: React.ForwardedRef<HTMLButtonElement>,
-	) => {
-		return (
-			<button
-				ref={ref}
-				onClick={onSelect}
-				className={cn(
-					'h-6 shrink-0 bg-white/10 bg-cover bg-center outline-none ring-white/50 transition-all duration-200 focus-visible:ring-1',
-					active
-						? // NOTE: `mx-3` or whatever horizontal marging needs to be big enough to not cause the ring to get clipped from scrolling container
-							'mx-3 rounded-5 ring-2 ring-white/50'
-						: 'rounded-3',
-					className,
-				)}
-				style={{
-					width: ITEM_W,
-					transform: `scale(${active ? ACTIVE_SCALE : 1})`,
-					backgroundImage: `url(${bg})`,
-					// transformOrigin: "left center",
-				}}
-			/>
-		)
-	},
-)
-
-WallpaperItem.displayName = 'WallpaperItem'
+function WallpaperItem({
+	active,
+	bg,
+	onSelect,
+	className,
+	ref,
+}: {
+	active?: boolean
+	bg: string
+	onSelect: () => void
+	className?: string
+	ref?: React.Ref<HTMLButtonElement>
+}) {
+	return (
+		<button
+			ref={ref}
+			onClick={onSelect}
+			className={cn(
+				'h-6 shrink-0 bg-white/10 bg-cover bg-center ring-white/50 outline-hidden transition-all duration-200 focus-visible:ring-1',
+				active
+					? // NOTE: `mx-3` or whatever horizontal marging needs to be big enough to not cause the ring to get clipped from scrolling container
+						'mx-3 rounded-5 ring-2 ring-white/50'
+					: 'rounded-3',
+				className,
+			)}
+			style={{
+				width: ITEM_W,
+				transform: `scale(${active ? ACTIVE_SCALE : 1})`,
+				backgroundImage: `url(${bg})`,
+				// transformOrigin: "left center",
+			}}
+		/>
+	)
+}
 
 // TODO: delay mounting for performance
 export function WallpaperPicker({maxW}: {maxW?: number}) {
@@ -71,7 +66,7 @@ export function WallpaperPicker({maxW}: {maxW?: number}) {
 
 	return (
 		// h-7 so we don't affect height of parent, but make gap work when wrapping
-		<div ref={containerRef} className='flex-grow-1 flex h-7 max-w-full items-center animate-in fade-in'>
+		<div ref={containerRef} className='flex h-7 max-w-full flex-grow-1 animate-in items-center fade-in'>
 			<div
 				className={cn(
 					'umbrel-hide-scrollbar umbrel-wallpaper-fade-scroller w-full items-center overflow-x-auto bg-red-500/0 py-3',

@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useId} from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
@@ -50,7 +50,7 @@ export function SegmentedControl<T extends string>({
 				<button
 					key={tab.id}
 					className={cn(
-						'group relative flex-grow rounded-full leading-inter-trimmed outline-none transition-[box-shadow,background]',
+						'group relative flex-grow rounded-full leading-inter-trimmed outline-hidden transition-[box-shadow,background]',
 						value === tab.id && variant === 'primary' && 'focus-visible:ring-2 focus-visible:ring-brand/40',
 						value !== tab.id && 'outline-1 -outline-offset-2 outline-transparent focus-visible:outline-white/10',
 						size === 'sm' && 'px-2',

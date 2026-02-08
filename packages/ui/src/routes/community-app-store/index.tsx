@@ -40,7 +40,7 @@ export default function CommunityAppStoreHome() {
 						<CommunityBadge className='self-start' />
 						<button
 							onClick={() => navigate('/app-store')}
-							className='flex items-center gap-1 self-start underline-offset-2 outline-none focus-visible:underline'
+							className='flex items-center gap-1 self-start underline-offset-2 outline-hidden focus-visible:underline'
 						>
 							<TbArrowLeft className='h-5 w-5' />
 							{t('community-app-store.back-to-umbrel-app-store')}

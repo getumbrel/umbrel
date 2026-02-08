@@ -72,7 +72,7 @@ export function DesktopPreview({
 			)}
 			{/* <Wallpaper isPreview /> */}
 			{show() && (
-				<div className='absolute inset-0 flex flex-col items-center duration-700 animate-in fade-in'>
+				<div className='absolute inset-0 flex animate-in flex-col items-center duration-700 fade-in'>
 					<div className='h-2.5 flex-1' />
 					<Header userName={userName} />
 					<div className='h-1 flex-1' />
@@ -87,7 +87,7 @@ export function DesktopPreview({
 											width: widgetWidth,
 											height: widgetHeight,
 										}}
-										className={cn('flex flex-col px-1', 'delay-100 duration-200 animate-in fade-in fill-mode-both')}
+										className={cn('flex flex-col px-1', 'animate-in delay-100 duration-200 fill-mode-both fade-in')}
 									>
 										<div className='w-full flex-1 shrink-0 rounded-3 border-hpx border-white/5 bg-neutral-900/70' />
 										{/* <div className='origin-top-left scale-[.15]'>
@@ -111,7 +111,7 @@ export function DesktopPreview({
 							<div
 								key={app.name}
 								style={{width: appWidth, height: appHeight, animationDelay: `${i * 10 + 100}ms`}}
-								className={cn('grid place-items-center', 'duration-200 animate-in fade-in zoom-in-50 fill-mode-both')}
+								className={cn('grid place-items-center', 'animate-in duration-200 fill-mode-both zoom-in-50 fade-in')}
 							>
 								<div className='flex w-full min-w-0 flex-col items-center'>
 									<div className='overflow-hidden rounded-3 bg-white/20'>
@@ -151,7 +151,7 @@ const dockPreviewClass = tw`mx-auto animate-in slide-in-from-bottom-2 flex gap-1
 
 function Header({userName}: {userName: string}) {
 	return (
-		<div className='flex flex-col items-center duration-300 animate-in slide-in-from-bottom-2'>
+		<div className='flex animate-in flex-col items-center duration-300 slide-in-from-bottom-2'>
 			<UmbrelLogo className='w-[20px]' />
 			<div className='text-center text-[9px] font-bold'>{greetingMessage(userName)}</div>
 		</div>

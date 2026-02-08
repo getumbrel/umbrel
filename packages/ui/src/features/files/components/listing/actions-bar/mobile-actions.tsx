@@ -40,7 +40,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 				className={cn(
 					'h-[1.9rem] rounded-full px-3 text-13',
 					'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0',
-					'focus:outline-none focus-visible:outline-none',
+					'focus:outline-hidden focus-visible:outline-hidden',
 				)}
 				variant={isSelectingOnMobile ? 'secondary' : 'default'}
 				size='default'
@@ -51,7 +51,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 			</Button>
 
 			<DropdownMenu>
-				<DropdownMenuTrigger className='focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0'>
+				<DropdownMenuTrigger className='focus:ring-0 focus:ring-offset-0 focus:outline-hidden focus-visible:ring-0 focus-visible:outline-hidden'>
 					<TbDots className='h-5 w-5' />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className='w-44' align='start'>

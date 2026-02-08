@@ -110,7 +110,6 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 			terminal.dispose()
 			ws.current?.close()
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [appId, containerWidth, containerHeight])
 
 	return (
@@ -143,7 +142,7 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 								type='text'
 								autoFocus
 								placeholder={t('terminal.paste-placeholder', 'Paste command here')}
-								className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white placeholder:text-white/40 focus:outline-none'
+								className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white placeholder:text-white/40 focus:outline-hidden'
 							/>
 							<button
 								type='submit'
@@ -163,7 +162,7 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 							</button>
 						</form>
 					) : (
-						<div className='absolute right-2 top-2 z-10'>
+						<div className='absolute top-2 right-2 z-10'>
 							<Button size='sm' className='bg-neutral-800 hover:bg-neutral-700' onClick={() => setShowPasteInput(true)}>
 								<TbClipboard className='h-4 w-4' />
 								{t('paste')}

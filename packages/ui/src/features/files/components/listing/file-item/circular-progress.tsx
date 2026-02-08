@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 
 import {cn} from '@/shadcn-lib/utils'
 
@@ -25,7 +25,7 @@ export const CircularProgress = ({
 	const gradient = `conic-gradient(${progressColor} ${degrees}deg, ${trackColor} ${degrees}deg)`
 
 	return (
-		<div className='absolute left-0 top-0 flex h-full w-full justify-center '>
+		<div className='absolute top-0 left-0 flex h-full w-full justify-center'>
 			<motion.div
 				className={cn(
 					'mt-6 rounded-full',

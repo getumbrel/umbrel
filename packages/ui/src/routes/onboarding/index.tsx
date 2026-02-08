@@ -64,7 +64,7 @@ export default function OnboardingStart() {
 				</>
 			)}
 
-			<Link to='/onboarding/create-account' unstable_viewTransition ref={continueLinkRef} {...primaryButtonProps}>
+			<Link to='/onboarding/create-account' viewTransition ref={continueLinkRef} {...primaryButtonProps}>
 				{t('onboarding.start.continue')}
 			</Link>
 		</Layout>

@@ -20,7 +20,7 @@ export function RestoreLocationDropdown({onSelect}: RestoreLocationDropdownProps
 				<Button
 					type='button'
 					size='sm'
-					className='absolute right-5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1'
+					className='absolute top-1/2 right-5 inline-flex -translate-y-1/2 items-center gap-1'
 				>
 					{t('backups-restore.choose')}
 					<ChevronDown className='size-3' />

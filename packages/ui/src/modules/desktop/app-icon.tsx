@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useState} from 'react'
 import {FaRegPlayCircle} from 'react-icons/fa'
 import {FaRegCirclePause} from 'react-icons/fa6'
@@ -46,7 +46,7 @@ export function AppIcon({
 		<motion.button
 			onClick={onClick}
 			className={cn(
-				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none',
+				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-hidden',
 			)}
 			layout
 			initial={{
@@ -69,7 +69,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
+					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
 				)}
 			>
 				{appIconSrc && (
@@ -90,7 +90,7 @@ export function AppIcon({
 						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
 							{arrayIncludes(progressBarStates, state) ? (
 								<div
-									className='absolute inset-0 w-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
+									className='absolute inset-0 w-0 animate-in rounded-full bg-white/90 transition-[width] delay-200 duration-700 fill-mode-both slide-in-from-left-full'
 									style={{width: `${progress}%`}}
 								/>
 							) : (

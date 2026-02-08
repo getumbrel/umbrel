@@ -20,11 +20,11 @@ export function InstallFirstApp() {
 	const title = t('install-your-first-app')
 
 	return (
-		<div className={cn('relative z-10 flex min-h-[100dvh] flex-col items-center duration-300 animate-in fade-in')}>
+		<div className={cn('relative z-10 flex min-h-[100dvh] animate-in flex-col items-center duration-300 fade-in')}>
 			<div className='pt-14' />
 			<UmbrelLogo />
 			<div className='pt-5' />
-			<h1 className='-translate-y-2 text-center text-3xl font-bold leading-tight -tracking-2 md:text-48'>{title}</h1>
+			<h1 className='-translate-y-2 text-center text-3xl leading-tight font-bold -tracking-2 md:text-48'>{title}</h1>
 			<div className='pt-6' />
 			<div className='flex-1' />
 			<div className='flex w-full flex-col items-center justify-center'>
@@ -141,6 +141,6 @@ function App({
 	)
 }
 
-const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-none bg-blend-soft-light bg-gradient-to-b from-black/50 via-black/50 to-black contrast-more:bg-neutral-800 px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
+const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-none bg-blend-soft-light bg-linear-to-b from-black/50 via-black/50 to-black contrast-more:bg-neutral-800 px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
 
 const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2`

@@ -28,19 +28,26 @@ const progressIndicatorVariants = cva('h-full w-full flex-1 bg-white transition-
 	},
 })
 
-const Progress = React.forwardRef<
-	React.ElementRef<typeof ProgressPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> &
-		VariantProps<typeof progressVariants> &
-		VariantProps<typeof progressIndicatorVariants>
->(({className, value, variant, size, ...props}, ref) => (
-	<ProgressPrimitive.Root ref={ref} className={cn(progressVariants({className, size}), className)} {...props}>
-		<ProgressPrimitive.Indicator
-			className={cn(progressIndicatorVariants({variant}), className)}
-			style={{transform: `translateX(-${100 - (value || 0)}%)`}}
-		/>
-	</ProgressPrimitive.Root>
-))
-Progress.displayName = ProgressPrimitive.Root.displayName
+function Progress({
+	className,
+	value,
+	variant,
+	size,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> &
+	VariantProps<typeof progressVariants> &
+	VariantProps<typeof progressIndicatorVariants> & {
+		ref?: React.Ref<React.ComponentRef<typeof ProgressPrimitive.Root>>
+	}) {
+	return (
+		<ProgressPrimitive.Root ref={ref} className={cn(progressVariants({className, size}), className)} {...props}>
+			<ProgressPrimitive.Indicator
+				className={cn(progressIndicatorVariants({variant}), className)}
+				style={{transform: `translateX(-${100 - (value || 0)}%)`}}
+			/>
+		</ProgressPrimitive.Root>
+	)
+}
 
 export {Progress}

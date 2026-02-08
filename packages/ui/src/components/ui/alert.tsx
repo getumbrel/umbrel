@@ -1,5 +1,4 @@
 import {cva, VariantProps} from 'class-variance-authority'
-import {forwardRef} from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
@@ -54,9 +53,10 @@ const alertVariants = cva(
 type AlertProps = React.HTMLAttributes<HTMLDivElement> &
 	VariantProps<typeof alertVariants> & {
 		icon?: IconTypes
+		ref?: React.Ref<HTMLDivElement>
 	}
 
-export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant, icon, children, ...props}, ref) => {
+function Alert({className, variant, icon, children, ref, ...props}: AlertProps) {
 	const Icon = icon
 
 	return (
@@ -65,8 +65,9 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant
 			{children}
 		</div>
 	)
-})
-Alert.displayName = 'Alert'
+}
+
+export {Alert}
 
 export function WarningAlert({
 	icon,

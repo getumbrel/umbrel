@@ -1,6 +1,30 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@config '../tailwind.config.ts';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+
+	/* Tailwind v4 removed antialiased from preflight */
+	body {
+		@apply antialiased;
+	}
+}
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -32,8 +56,8 @@ html {
 /* Global scrollbar styling */
 /* We set this here because some components cannot easily use ScrollArea or FadeScroller components (e.g., react-window) */
 ::-webkit-scrollbar {
-	width: 11px;
 	background: transparent; /* Transparent track by default */
+	width: 11px;
 }
 
 ::-webkit-scrollbar-track {
@@ -46,10 +70,10 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-	background-color: rgba(255, 255, 255, 0.15);
-	background-clip: padding-box; /* Ensure the background only applies within the content box */
 	border: 4px solid transparent; /* Key trick for obtaining a thin scrollbar */
 	border-radius: 20px;
+	background-clip: padding-box; /* Ensure the background only applies within the content box */
+	background-color: rgba(255, 255, 255, 0.15);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -66,19 +90,15 @@ html {
 	@apply bg-brand text-white;
 }
 
-input,
-button {
-	font-size: inherit;
-	text-rendering: inherit;
-}
-
 /* https://stackoverflow.com/a/45050338 */
-input,
-textarea,
-button,
-select,
-a {
-	-webkit-tap-highlight-color: transparent;
+@layer base {
+	input,
+	textarea,
+	button,
+	select,
+	a {
+		-webkit-tap-highlight-color: transparent;
+	}
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -119,7 +139,7 @@ a {
 }
 .umbrel-divide-y > * + *::before {
 	content: '';
-	@apply absolute inset-x-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-white/5 to-transparent;
+	@apply absolute inset-x-0 top-0 h-px w-full bg-linear-to-r from-transparent via-white/5 to-transparent;
 }
 
 @keyframes blink-caret {
@@ -130,8 +150,8 @@ a {
 
 @keyframes pulse-border {
 	50% {
-		border-color: var(--segment-color);
 		box-shadow: var(--segment-color) 0 0 0 1px;
+		border-color: var(--segment-color);
 	}
 }
 
@@ -164,16 +184,16 @@ a {
 }
 
 .umbrel-bouncing-gradient {
+	animation: bounce-gradient 2s ease infinite;
 	background: linear-gradient(to right, transparent, white, transparent);
 	background-size: 200% 100%;
-	animation: bounce-gradient 2s ease infinite;
 }
 
 [cmdk-list] {
+	transition: height 100ms ease;
 	/* height: var(--cmdk-list-height); */
 	/* min-height: 200px; */
 	max-height: 500px;
-	transition: height 100ms ease;
 	/* scroll-padding-block-start: 20px; */
 	/* scroll-padding-block-end: 20px; */
 }
@@ -195,12 +215,12 @@ a {
 
 @keyframes animate-unblur {
 	from {
-		filter: blur(var(--wallpaper-blur));
 		scale: 1.25;
+		filter: blur(var(--wallpaper-blur));
 	}
 	to {
-		filter: blur(0);
 		scale: 1;
+		filter: blur(0);
 	}
 }
 
@@ -217,11 +237,11 @@ a {
 }
 
 .umbrel-pulse {
-	animation-name: pulse;
 	animation-duration: 1s;
 	animation-timing-function: ease-in-out;
 	animation-iteration-count: infinite;
 	animation-fill-mode: forwards;
+	animation-name: pulse;
 }
 
 @keyframes pulse-a-few-times {
@@ -246,11 +266,11 @@ a {
 }
 
 .umbrel-pulse-a-few-times {
-	animation-name: pulse-a-few-times;
 	animation-duration: 1s;
 	animation-timing-function: ease-in-out;
 	animation-iteration-count: 1;
 	animation-fill-mode: forwards;
+	animation-name: pulse-a-few-times;
 }
 
 /* Override Tailwind truncate class because  */
@@ -277,9 +297,9 @@ a {
 
 /* Permanent Marker self-hosted font */
 @font-face {
-	font-weight: 400;
-	font-family: 'Permanent Marker';
 	font-style: normal;
+	font-weight: 400;
 	src: url('/fonts/permanent-marker.woff2') format('woff2');
+	font-family: 'Permanent Marker';
 	font-display: swap;
 }

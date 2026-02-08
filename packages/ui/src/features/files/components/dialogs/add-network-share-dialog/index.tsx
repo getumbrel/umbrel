@@ -1,6 +1,6 @@
 import {zodResolver} from '@hookform/resolvers/zod'
-import {AnimatePresence, motion} from 'framer-motion'
 import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
 import {z} from 'zod'
@@ -295,7 +295,7 @@ export default function AddNetworkShareDialog(props?: {
 	)
 
 	const body = (
-		<div className='flex-1 overflow-y-auto overflow-x-hidden'>
+		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
 			<AnimatePresence mode='wait'>
 				{mode === 'wizard' ? (
 					<Form {...form}>

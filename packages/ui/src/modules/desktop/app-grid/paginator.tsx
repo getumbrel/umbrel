@@ -31,7 +31,7 @@ export function usePaginator(pageCount: number) {
 		const el = scrollContainer.current
 
 		const handleScroll: EventListener = () => {
-			timeoutRef.current && clearTimeout(timeoutRef.current)
+			if (timeoutRef.current) clearTimeout(timeoutRef.current)
 			timeoutRef.current = setTimeout(() => {
 				if (!scrollingWithCode) {
 					setPage(index)
@@ -89,7 +89,7 @@ export function ArrowButton({
 }
 
 const glassButtonCva = cva(
-	'shrink-0 w-10 h-10 rounded-full backdrop-blur-sm contrast-more:bg-neutral-800 contrast-more:backdrop-blur-none grid place-items-center bg-white/5 shadow-glass-button text-white/75 disabled:text-white/30 transition-all hover:bg-white/10 contrast-more:hover:bg-neutral-700 active:bg-white/5 cursor-default',
+	'shrink-0 w-10 h-10 rounded-full backdrop-blur-xs contrast-more:bg-neutral-800 contrast-more:backdrop-blur-none grid place-items-center bg-white/5 shadow-glass-button text-white/75 disabled:text-white/30 transition-all hover:bg-white/10 contrast-more:hover:bg-neutral-700 active:bg-white/5 cursor-default',
 )
 
 // ---

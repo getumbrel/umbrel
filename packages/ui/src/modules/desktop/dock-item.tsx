@@ -1,4 +1,4 @@
-import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'framer-motion'
+import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
@@ -114,7 +114,7 @@ export function DockItem({
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0 outline-none' />
+				<Link to={to || '/'} className='absolute inset-0 outline-hidden' />
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}

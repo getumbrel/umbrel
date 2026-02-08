@@ -14,7 +14,7 @@ export function InlineCopyableField({value, className}: {value: string; classNam
 	return (
 		<span
 			className={cn(
-				'inline-flex items-center gap-1 rounded border border-dashed border-white/5 bg-white/10 px-1.5',
+				'inline-flex items-center gap-1 rounded-sm border border-dashed border-white/5 bg-white/10 px-1.5',
 				className,
 			)}
 		>
@@ -23,7 +23,7 @@ export function InlineCopyableField({value, className}: {value: string; classNam
 			<Tooltip open={showCopied}>
 				<TooltipTrigger asChild>
 					<button
-						className='inline-flex items-center opacity-40 transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40'
+						className='inline-flex items-center opacity-40 transition-opacity hover:opacity-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white/40'
 						onClick={async () => {
 							copyToClipboard(value)
 							setShowCopied(true)

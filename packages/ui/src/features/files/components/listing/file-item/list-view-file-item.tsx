@@ -49,10 +49,10 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 							<TruncatedFilename
 								filename={item.name}
 								view='list'
-								className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap pr-2 text-12'
+								className='min-w-0 overflow-hidden pr-2 text-12 text-ellipsis whitespace-nowrap'
 							/>
 						)}
-						<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-11 text-white/40'>
+						<span className='min-w-0 overflow-hidden text-11 text-ellipsis whitespace-nowrap text-white/40'>
 							{isUploading
 								? uploadingProgress === 0
 									? t('files-state.waiting')
@@ -60,7 +60,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 								: formatFilesystemDate(item.modified, languageCode)}
 						</span>
 					</div>
-					<span className='shrink-0 whitespace-nowrap pl-2 text-right text-11 text-white/40'>
+					<span className='shrink-0 pl-2 text-right text-11 whitespace-nowrap text-white/40'>
 						{item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')

@@ -76,7 +76,7 @@ function UmbrelProRestoreInstructions() {
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
-			<div className='mx-auto mb-6 mt-2 w-full max-w-[560px]'>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[560px]'>
 				{/* Steps */}
 				<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 					{steps.map((text, i) => (
@@ -93,7 +93,7 @@ function UmbrelProRestoreInstructions() {
 
 				{/* Action button */}
 				<div className='flex justify-center pt-6'>
-					<Link to='/onboarding/create-account' unstable_viewTransition {...primaryButtonProps}>
+					<Link to='/onboarding/create-account' viewTransition {...primaryButtonProps}>
 						{t('onboarding.start.continue')}
 					</Link>
 				</div>
@@ -195,7 +195,7 @@ function RegularRestoreFlow() {
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
-			<div className='mx-auto mb-6 mt-2 w-full max-w-[720px]'>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[720px]'>
 				{step === 0 && (
 					<div className='space-y-4'>
 						<div className={formGroupClass + ' mx-auto w-full max-w-[560px] text-center'}>
@@ -301,7 +301,7 @@ function RegularRestoreFlow() {
 					{step > Step.ChooseLocation && (
 						<button
 							type='button'
-							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-none'
+							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-hidden'
 							onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))}
 						>
 							<ChevronLeft className='size-5' />
@@ -424,12 +424,12 @@ function BackupSnapshot({
 					<div className='truncate text-sm'>{label}</div>
 				</div>
 				{isLatest && (
-					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{t('backups-restore.latest')}
 					</div>
 				)}
 				{sizeTxt && (
-					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{sizeTxt}
 					</div>
 				)}

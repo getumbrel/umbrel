@@ -124,7 +124,7 @@ export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDispla
 										<TbInfoCircle className='size-4' />
 									</button>
 								</div>
-								<p className='text-13 font-medium leading-snug text-white/60'>{t(option.descriptionKey)}</p>
+								<p className='text-13 leading-snug font-medium text-white/60'>{t(option.descriptionKey)}</p>
 							</div>
 						)
 					})}

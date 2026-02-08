@@ -1,4 +1,4 @@
-import {motion, Transition, Variants} from 'framer-motion'
+import {motion, Transition, Variants} from 'motion/react'
 
 interface AnimatedFolderIconProps {
 	overlayIcon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -277,7 +277,7 @@ export const AnimatedFolderIcon = ({
 				{/* Overlay icon */}
 				{OverlayIcon && (
 					<motion.div
-						className='pointer-events-none absolute left-[23%] top-[28%] h-[56%] w-[56%]'
+						className='pointer-events-none absolute top-[28%] left-[23%] h-[56%] w-[56%]'
 						variants={overlayVariants}
 						style={{
 							transformStyle: 'preserve-3d',

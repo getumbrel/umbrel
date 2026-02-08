@@ -46,7 +46,7 @@ export function WallpaperDrawer() {
 									bg={`/wallpapers/generated-small/${w.id}.jpg`}
 									active={w.id === wallpaper.id}
 									onSelect={() => selectWallpaper(w.id)}
-									className='animate-in fade-in fill-mode-both'
+									className='animate-in fill-mode-both fade-in'
 									style={{
 										animationDelay: `${i * 20}ms`,
 									}}
@@ -94,7 +94,7 @@ function WallpaperItem({
 			<div
 				className={cn(
 					'absolute inset-0 rounded-10 border-4 transition-colors',
-					active ? ' border-white' : 'border-transparent',
+					active ? 'border-white' : 'border-transparent',
 				)}
 			/>
 		</button>

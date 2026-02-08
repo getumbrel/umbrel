@@ -141,7 +141,7 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 				</label>
 			</div>
 			{!showCredentials && (
-				<div className='pr-2 pt-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
+				<div className='pt-2 pr-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
 			)}
 		</div>
 	)

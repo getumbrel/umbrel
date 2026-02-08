@@ -3,23 +3,28 @@ import * as React from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
 
-const RadioGroup = React.forwardRef<
-	React.ElementRef<typeof RadioGroupPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
->(({className, ...props}, ref) => {
+function RadioGroup({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> & {
+	ref?: React.Ref<React.ComponentRef<typeof RadioGroupPrimitive.Root>>
+}) {
 	return <RadioGroupPrimitive.Root className={cn('grid gap-2', className)} {...props} ref={ref} />
-})
-RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
+}
 
-const RadioGroupItem = React.forwardRef<
-	React.ElementRef<typeof RadioGroupPrimitive.Item>,
-	React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({className, ...props}, ref) => {
+function RadioGroupItem({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> & {
+	ref?: React.Ref<React.ComponentRef<typeof RadioGroupPrimitive.Item>>
+}) {
 	return (
 		<RadioGroupPrimitive.Item
 			ref={ref}
 			className={cn(
-				'group aspect-square h-5 w-5 rounded-full bg-white/10 opacity-100 shadow-radio-outline transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lighter/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-white/0',
+				'group aspect-square h-5 w-5 rounded-full bg-white/10 opacity-100 shadow-radio-outline transition-all duration-300 focus-visible:ring-2 focus-visible:ring-brand-lighter/50 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-white/0',
 				className,
 			)}
 			{...props}
@@ -29,8 +34,7 @@ const RadioGroupItem = React.forwardRef<
 			</RadioGroupPrimitive.Indicator>
 		</RadioGroupPrimitive.Item>
 	)
-})
-RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName
+}
 
 const RadioIndicator = () => (
 	// Inner stroke not allowed in SVG, so using `clipPath`
@@ -40,7 +44,7 @@ const RadioIndicator = () => (
 		width={20}
 		height={20}
 		fill='none'
-		className='block duration-300 animate-in fade-in zoom-in-50'
+		className='block animate-in duration-300 zoom-in-50 fade-in'
 	>
 		<use
 			xlinkHref='#path'

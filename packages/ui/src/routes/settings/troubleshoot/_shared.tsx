@@ -26,13 +26,12 @@ export const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
 	saveAs(blob, finalName + '.log')
 }
 
-export function useScrollToBottom(ref: React.RefObject<HTMLDivElement>, deps: any[]) {
+export function useScrollToBottom(ref: React.RefObject<HTMLDivElement | null>, deps: any[]) {
 	useEffect(() => {
 		setTimeout(() => {
 			if (!ref.current) return
 			ref.current.scrollTop = ref.current.scrollHeight + 100
 		}, 300)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ref, ...deps])
 }
 
@@ -46,8 +45,8 @@ export function LogResults({children}: {children: string}) {
 			<div
 				key={children}
 				className={cn(
-					'select-text whitespace-pre font-mono text-xs text-white/50',
-					children && 'delay-500 animate-in fade-in fill-mode-both',
+					'font-mono text-xs whitespace-pre text-white/50 select-text',
+					children && 'animate-in delay-500 fill-mode-both fade-in',
 				)}
 			>
 				{children}

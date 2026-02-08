@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {memo, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
@@ -81,7 +81,7 @@ function SearchInput({
 			{/* Set specific input width so it's consistent across browsers */}
 			<input
 				ref={inputRef}
-				className='w-[160px] bg-transparent p-1 text-15 outline-none placeholder:text-white/40'
+				className='w-[160px] bg-transparent p-1 text-15 outline-hidden placeholder:text-white/40'
 				placeholder={t('app-store.search-apps')}
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
@@ -160,7 +160,11 @@ function SearchResults({query}: {query: string}) {
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
 			<h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>
-			<div className={appsGridClass}>{appResults?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
+			<div className={appsGridClass}>
+				{appResults?.map((app) => (
+					<AppWithDescription key={app.id} app={app} />
+				))}
+			</div>
 			{(!appResults || appResults.length === 0) && <NoResults />}
 		</div>
 	)

@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {cn} from '@/shadcn-lib/utils'
@@ -634,18 +634,18 @@ const AnimatedUmbrelHomeIcon = memo(
 				<div className='flex h-full w-full items-center justify-center'>
 					<div
 						className={cn(
-							'relative h-full w-full overflow-hidden bg-gradient-to-tr from-neutral-800 via-neutral-900 to-neutral-800',
+							'relative h-full w-full overflow-hidden bg-linear-to-tr from-neutral-800 via-neutral-900 to-neutral-800',
 							{
 								'rounded-[3.5rem]': isFlipped,
 								'rounded-[1.3rem]': !isFlipped,
 							},
 						)}
 					>
-						<div className='absolute left-[-25%] top-[-25%] h-[150%] w-[150%] animate-spin bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,255,255,0.3)_40deg,rgba(255,255,255,0.25)_80deg,transparent_120deg)] [animation-duration:_20s]'></div>
-						<div className='absolute left-[-25%] top-[-25%] h-[150%] w-[150%] animate-spin bg-[conic-gradient(from_180deg,transparent_0deg,rgba(255,255,255,0.3)_40deg,rgba(255,255,255,0.25)_80deg,transparent_120deg)] [animation-duration:_20s]'></div>
+						<div className='absolute top-[-25%] left-[-25%] h-[150%] w-[150%] animate-spin bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,255,255,0.3)_40deg,rgba(255,255,255,0.25)_80deg,transparent_120deg)] [animation-duration:_20s]'></div>
+						<div className='absolute top-[-25%] left-[-25%] h-[150%] w-[150%] animate-spin bg-[conic-gradient(from_180deg,transparent_0deg,rgba(255,255,255,0.3)_40deg,rgba(255,255,255,0.25)_80deg,transparent_120deg)] [animation-duration:_20s]'></div>
 						<div
 							className={cn(
-								'absolute left-[1.5px] top-[1.5px] flex h-[calc(100%-3px)] w-[calc(100%-3px)] items-center justify-center bg-gradient-to-tr from-neutral-900 via-neutral-950 to-neutral-800 text-xs',
+								'absolute top-[1.5px] left-[1.5px] flex h-[calc(100%-3px)] w-[calc(100%-3px)] items-center justify-center bg-linear-to-tr from-neutral-900 via-neutral-950 to-neutral-800 text-xs',
 								{
 									'rounded-[3.5rem]': isFlipped,
 									'rounded-[1.3rem]': !isFlipped,
@@ -655,7 +655,7 @@ const AnimatedUmbrelHomeIcon = memo(
 							{isFlipped ? (
 								<>
 									<div
-										className='absolute left-0 top-0 h-full w-full opacity-10'
+										className='absolute top-0 left-0 h-full w-full opacity-10'
 										style={{
 											backgroundImage: isFlipped ? 'url(/figma-exports/umbrel-home-device-info-grain.png)' : 'none',
 											backgroundBlendMode: 'overlay',
@@ -678,15 +678,15 @@ const AnimatedUmbrelHomeIcon = memo(
 										>
 											<motion.div
 												variants={footVariants}
-												className='absolute left-[8%] top-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
+												className='absolute top-[8%] left-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
 											/>
 											<motion.div
 												variants={footVariants}
-												className='absolute right-[8%] top-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
+												className='absolute top-[8%] right-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
 											/>
 											<motion.div
 												variants={footVariants}
-												className='absolute bottom-[8%] right-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
+												className='absolute right-[8%] bottom-[8%] h-[44px] w-[44px] rounded-full border border-black/50 bg-black/40 shadow-[0_2px_4px_rgba(0,0,0,0.4),inset_0_1px_2px_rgba(255,255,255,0.15)]'
 											/>
 											<motion.div
 												variants={footVariants}
@@ -695,7 +695,7 @@ const AnimatedUmbrelHomeIcon = memo(
 										</motion.div>
 									</div>
 									<div className='pointer-events-none relative h-full w-full'>
-										<div className='absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 text-center text-[11px] text-white/60'>
+										<div className='absolute top-1/2 left-1/2 w-full -translate-x-1/2 -translate-y-1/2 text-center text-[11px] text-white/60'>
 											<motion.div
 												initial={{opacity: 0}}
 												animate={{opacity: 0.6}}
@@ -724,7 +724,7 @@ const AnimatedUmbrelHomeIcon = memo(
 											/>
 											<LaserEngraving
 												text={`Serial ${serialNumber}`}
-												className='absolute left-0 top-[-6px]'
+												className='absolute top-[-6px] left-0'
 												backgroundColor='transparent'
 												engravingColor='#3F3F3F'
 												speed={10}

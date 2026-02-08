@@ -32,7 +32,7 @@ export function DesktopPreview() {
 
 	return (
 		<div
-			className='relative overflow-hidden rounded-5 duration-100 animate-in'
+			className='relative animate-in overflow-hidden rounded-5 duration-100'
 			style={{
 				width: W * scale,
 				height: H * scale,
@@ -41,7 +41,9 @@ export function DesktopPreview() {
 			// Tell screen readers to ignore this element
 			aria-hidden='true'
 			// Prevent browser from interacting with children
-			ref={(node) => node && node.setAttribute('inert', '')}
+			ref={(node) => {
+				if (node) node.setAttribute('inert', '')
+			}}
 		>
 			<Wallpaper isPreview />
 			<div
@@ -60,7 +62,7 @@ export function DesktopPreview() {
 					{show && (
 						<div
 							className={
-								'flex h-full flex-col items-center justify-between overflow-hidden duration-300 animate-in fade-in'
+								'flex h-full animate-in flex-col items-center justify-between overflow-hidden duration-300 fade-in'
 							}
 						>
 							<DesktopContent />
@@ -86,7 +88,7 @@ function DesktopContent() {
 	if (!name) return null
 
 	return (
-		<BackdropBlurVariantContext.Provider value='default'>
+		<BackdropBlurVariantContext value='default'>
 			<div className='pt-12' />
 			<Header userName={name} />
 			<div className='pt-12' />
@@ -103,7 +105,7 @@ function DesktopContent() {
 					))}
 				/>
 			</div>
-		</BackdropBlurVariantContext.Provider>
+		</BackdropBlurVariantContext>
 	)
 }
 
@@ -124,7 +126,7 @@ export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 		>
 			<div className='rounded-15 bg-[#0C0D0C] p-[9px]'>
 				<div
-					className='relative overflow-hidden rounded-5 duration-100 animate-in fade-in'
+					className='relative animate-in overflow-hidden rounded-5 duration-100 fade-in'
 					style={{
 						width: W * scale,
 						height: H * scale,
@@ -133,7 +135,9 @@ export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 					// Tell screen readers to ignore this element
 					aria-hidden='true'
 					// Prevent browser from interacting with children
-					ref={(node) => node && node.setAttribute('inert', '')}
+					ref={(node) => {
+						if (node) node.setAttribute('inert', '')
+					}}
 				>
 					{children}
 				</div>

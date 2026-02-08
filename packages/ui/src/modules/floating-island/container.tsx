@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {useBackupProgress} from '@/features/backups/hooks/use-backups'

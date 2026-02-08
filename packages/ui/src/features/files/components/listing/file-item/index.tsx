@@ -199,7 +199,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			className={cn(
 				`files-${view}-view-file-item`, // .files-list-view-file-item styles are applied via CSS using combinator classes
 				'rounded-lg transition-colors duration-100',
-				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_theme(colors.brand)]', // selected item styles for list view are overwritten by CSS
+				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))]', // selected item styles for list view are overwritten by CSS
 				!isSelected && !isUploading && 'md:hover:!border-white/6 md:hover:!bg-white/5', // don't show hover state for selected items or uploading items
 			)}
 			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items

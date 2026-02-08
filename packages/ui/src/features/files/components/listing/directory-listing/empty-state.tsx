@@ -31,7 +31,7 @@ export function EmptyStateDirectory() {
 				{isOfflineNetworkHost ? (
 					<img src={nasIconInactive} alt='Network offline' className='h-12 w-12' />
 				) : (
-					<EmptyFolderIcon className='h-15 w-15' />
+					<EmptyFolderIcon />
 				)}
 				<div className='text-12 text-white/40'>
 					{isOfflineNetworkHost ? t('files-empty.network-host-offline') : t('files-empty.directory')}

@@ -13,25 +13,31 @@ const PopoverAnchor = PopoverPrimitive.Anchor
 
 const PopoverClose = PopoverPrimitive.Close
 
-const PopoverContent = React.forwardRef<
-	React.ElementRef<typeof PopoverPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({className, align = 'center', sideOffset = 4, ...props}, ref) => (
-	<PopoverPrimitive.Portal>
-		<PopoverPrimitive.Content
-			ref={ref}
-			align={align}
-			sideOffset={sideOffset}
-			className={cn(contextMenuClasses.content, className)}
-			{...props}
-			// Prevent right-clicks within content from triggering parent context menus
-			onContextMenu={(e) => {
-				e.preventDefault() // Prevent default browser context menu
-				e.stopPropagation()
-			}}
-		/>
-	</PopoverPrimitive.Portal>
-))
-PopoverContent.displayName = PopoverPrimitive.Content.displayName
+function PopoverContent({
+	className,
+	ref,
+	align = 'center',
+	sideOffset = 4,
+	...props
+}: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
+	ref?: React.Ref<React.ComponentRef<typeof PopoverPrimitive.Content>>
+}) {
+	return (
+		<PopoverPrimitive.Portal>
+			<PopoverPrimitive.Content
+				ref={ref}
+				align={align}
+				sideOffset={sideOffset}
+				className={cn(contextMenuClasses.content, className)}
+				{...props}
+				// Prevent right-clicks within content from triggering parent context menus
+				onContextMenu={(e) => {
+					e.preventDefault() // Prevent default browser context menu
+					e.stopPropagation()
+				}}
+			/>
+		</PopoverPrimitive.Portal>
+	)
+}
 
 export {Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverClose}

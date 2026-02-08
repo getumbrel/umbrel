@@ -2,7 +2,7 @@
 // While we could memoize these components to prevent re-renders,
 // the performance impact is negligible with so few items and simple DOM updates.
 // So we've opted for simpler code over premature optimization.
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {SidebarRewind} from '@/features/files/components/rewind'
 import {SidebarApps} from '@/features/files/components/sidebar/sidebar-apps'

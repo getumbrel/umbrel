@@ -32,9 +32,9 @@ const FormField = <
 	...props
 }: ControllerProps<TFieldValues, TName>) => {
 	return (
-		<FormFieldContext.Provider value={{name: props.name}}>
+		<FormFieldContext value={{name: props.name}}>
 			<Controller {...props} />
-		</FormFieldContext.Provider>
+		</FormFieldContext>
 	)
 }
 
@@ -71,9 +71,9 @@ function FormItem({className, ...props}: React.ComponentProps<'div'>) {
 	const id = React.useId()
 
 	return (
-		<FormItemContext.Provider value={{id}}>
+		<FormItemContext value={{id}}>
 			<div data-slot='form-item' className={cn('grid gap-2', className)} {...props} />
-		</FormItemContext.Provider>
+		</FormItemContext>
 	)
 }
 
@@ -131,7 +131,7 @@ function FormMessage({className, ...props}: React.ComponentProps<'p'>) {
 		<p
 			data-slot='form-message'
 			id={formMessageId}
-			className={cn('select-text text-sm text-destructive', className)}
+			className={cn('text-sm text-destructive select-text', className)}
 			{...props}
 		>
 			{body}

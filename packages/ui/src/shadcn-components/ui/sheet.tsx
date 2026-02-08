@@ -9,28 +9,11 @@ const Sheet = SheetPrimitive.Root
 
 const SheetTrigger = SheetPrimitive.Trigger
 
-const SheetPortal = ({className, ...props}: SheetPrimitive.DialogPortalProps) => (
-	<SheetPrimitive.Portal className={cn(className)} {...props} />
-)
+const SheetPortal = (props: SheetPrimitive.DialogPortalProps) => <SheetPrimitive.Portal {...props} />
 SheetPortal.displayName = SheetPrimitive.Portal.displayName
 
-const SheetOverlay = React.forwardRef<
-	React.ElementRef<typeof SheetPrimitive.Overlay>,
-	React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
->(({className, ...props}, ref) => (
-	<SheetPrimitive.Overlay
-		className={cn(
-			'bg-background/80 fixed inset-0 z-30 backdrop-blur-xl duration-700 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-			className,
-		)}
-		{...props}
-		ref={ref}
-	/>
-))
-SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
-
 const sheetVariants = cva(
-	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden transition-[opacity,transform] ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-100 outline-none data-[state=closed]:fade-out data-[state=closed]:ease-in',
+	'fixed z-30 gap-4 bg-black/70 contrast-more:bg-black overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=open]:duration-100 outline-hidden data-[state=closed]:fade-out data-[state=closed]:ease-in fill-mode-both',
 	{
 		variants: {
 			side: {
@@ -51,48 +34,53 @@ const sheetVariants = cva(
 )
 
 interface SheetContentProps
-	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-		VariantProps<typeof sheetVariants> {
+	extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>, VariantProps<typeof sheetVariants> {
 	backdrop?: React.ReactNode
 	closeButton?: React.ReactNode
+	ref?: React.Ref<React.ComponentRef<typeof SheetPrimitive.Content>>
 }
 
-const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-	({side = 'bottom', className, children, backdrop, closeButton = true, ...props}, ref) => {
-		const {wallpaper} = useWallpaper()
+function SheetContent({
+	side = 'bottom',
+	className,
+	children,
+	backdrop,
+	closeButton = true,
+	ref,
+	...props
+}: SheetContentProps) {
+	const {wallpaper} = useWallpaper()
 
-		return (
-			// <SheetPortal container={document.getElementById("container")}>
-			<>
-				{backdrop}
-				{/* <SheetOverlay /> */}
-				<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
-					{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
-					{closeButton}
-					<div className='absolute inset-0 bg-black contrast-more:hidden'>
-						{/* Fade in sheet background to avoid white flash when sheet opens */}
-						<div
-							className='absolute inset-0 opacity-0 delay-200 duration-700 ease-out fill-mode-both'
-							style={{
-								animationName: 'fade-in',
-								backgroundImage: `url(/wallpapers/generated-thumbs/${wallpaper.id}.jpg)`,
-								backgroundSize: 'cover',
-								backgroundPosition: 'center',
-								transform: 'scale(1.2) rotate(180deg)',
-							}}
-						/>
-						<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
-					</div>
-					{children}
-					{/* Sheet inner glow highlight */}
-					<div className='pointer-events-none absolute inset-0 z-50 rounded-t-20 shadow-sheet-shadow' />
-				</SheetPrimitive.Content>
-			</>
-			// </SheetPortal>
-		)
-	},
-)
-SheetContent.displayName = SheetPrimitive.Content.displayName
+	return (
+		// <SheetPortal container={document.getElementById("container")}>
+		<>
+			{backdrop}
+			{/* <SheetOverlay /> */}
+			<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
+				{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
+				{closeButton}
+				<div className='absolute inset-0 bg-black contrast-more:hidden'>
+					{/* Fade in sheet background to avoid white flash when sheet opens */}
+					<div
+						className='absolute inset-0 opacity-0'
+						style={{
+							animation: 'fade-in 700ms ease-out 200ms both',
+							backgroundImage: `url(/wallpapers/generated-thumbs/${wallpaper.id}.jpg)`,
+							backgroundSize: 'cover',
+							backgroundPosition: 'center',
+							transform: 'scale(1.2) rotate(180deg)',
+						}}
+					/>
+					<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
+				</div>
+				{children}
+				{/* Sheet inner glow highlight */}
+				<div className='pointer-events-none absolute inset-0 z-50 rounded-t-20 shadow-sheet-shadow' />
+			</SheetPrimitive.Content>
+		</>
+		// </SheetPortal>
+	)
+}
 
 const SheetHeader = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>) => (
 	<div className={cn('flex flex-col gap-2', className)} {...props} />
@@ -104,24 +92,30 @@ const SheetFooter = ({className, ...props}: React.HTMLAttributes<HTMLDivElement>
 )
 SheetFooter.displayName = 'SheetFooter'
 
-const SheetTitle = React.forwardRef<
-	React.ElementRef<typeof SheetPrimitive.Title>,
-	React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
->(({className, ...props}, ref) => (
-	<SheetPrimitive.Title
-		ref={ref}
-		className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48', className)}
-		{...props}
-	/>
-))
-SheetTitle.displayName = SheetPrimitive.Title.displayName
+function SheetTitle({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title> & {
+	ref?: React.Ref<React.ComponentRef<typeof SheetPrimitive.Title>>
+}) {
+	return (
+		<SheetPrimitive.Title
+			ref={ref}
+			className={cn('text-24 font-bold -tracking-3 text-white/75 md:text-48', className)}
+			{...props}
+		/>
+	)
+}
 
-const SheetDescription = React.forwardRef<
-	React.ElementRef<typeof SheetPrimitive.Description>,
-	React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
->(({className, ...props}, ref) => (
-	<SheetPrimitive.Description ref={ref} className={cn('text-sm text-neutral-400', className)} {...props} />
-))
-SheetDescription.displayName = SheetPrimitive.Description.displayName
+function SheetDescription({
+	className,
+	ref,
+	...props
+}: React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description> & {
+	ref?: React.Ref<React.ComponentRef<typeof SheetPrimitive.Description>>
+}) {
+	return <SheetPrimitive.Description ref={ref} className={cn('text-sm text-neutral-400', className)} {...props} />
+}
 
 export {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger}

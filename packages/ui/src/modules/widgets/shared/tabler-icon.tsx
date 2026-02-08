@@ -26,7 +26,7 @@ export function TablerIcon({iconName, className, ...props}: {iconName: string} &
 
 	return (
 		<div
-			className={cn(className, !icon && 'rounded-5 bg-white/5', icon && 'duration-300 animate-in fade-in')}
+			className={cn(className, !icon && 'rounded-5 bg-white/5', icon && 'animate-in duration-300 fade-in')}
 			dangerouslySetInnerHTML={{__html: icon}}
 			{...props}
 		/>

@@ -203,7 +203,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// Debug info can be activated by adding the local storage key 'debug' with a value of `true`
 	const debugInfo = (
 		<DebugOnlyBare>
-			<div className='fixed bottom-0 right-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
+			<div className='fixed right-0 bottom-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
 				<JSONTree
 					data={{
 						status,
@@ -238,12 +238,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider
+				<GlobalSystemStateContext
 					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
 				>
 					{children}
 					{debugInfo}
-				</GlobalSystemStateContext.Provider>
+				</GlobalSystemStateContext>
 			)
 		}
 		case 'restoring': {

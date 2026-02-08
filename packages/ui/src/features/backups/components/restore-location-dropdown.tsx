@@ -48,7 +48,7 @@ export function RestoreLocationDropdown({onSelect, isExternalStorageSupported = 
 					<Button
 						type='button'
 						size='sm'
-						className='absolute right-5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1'
+						className='absolute top-1/2 right-5 inline-flex -translate-y-1/2 items-center gap-1'
 					>
 						{t('backups-restore.choose')}
 						<ChevronDown className='size-3' />
@@ -85,7 +85,7 @@ export function RestoreLocationDropdown({onSelect, isExternalStorageSupported = 
 					<div className='mt-2 flex justify-center'>
 						<div className='relative'>
 							<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
-							<div className='absolute -right-2 -top-2'>
+							<div className='absolute -top-2 -right-2'>
 								<TbAlertTriangleFilled className='size-8 text-yellow-400' />
 							</div>
 						</div>

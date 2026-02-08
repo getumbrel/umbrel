@@ -108,7 +108,7 @@ export function useFilesOperations() {
 					applyDecisionToAllRemaining = true
 					globalCollisionDecision = decision
 				}
-			} catch (_err) {
+			} catch {
 				// dialog dismissed, default to skipping the file.
 				decision = 'skip'
 			}
@@ -508,7 +508,7 @@ export function useFilesOperations() {
 						applyToAll = true
 						globalDecision = decision
 					}
-				} catch (_err) {
+				} catch {
 					decision = 'skip'
 				}
 			}

@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {useMemo} from 'react'
 import {FaPlus} from 'react-icons/fa6'
 import {useNavigate as useReactRouterNavigate} from 'react-router-dom'
@@ -78,7 +78,7 @@ export function SidebarNetworkStorage() {
  * Always rendered /Network root item with "Add Network Share" button
  * ---------------------------------------------------------------- */
 const selectedClass = tw`
-  bg-gradient-to-b from-white/[0.04] to-white/[0.08]
+  bg-linear-to-b from-white/[0.04] to-white/[0.08]
   border-white/6
   shadow-button-highlight-soft-hpx
 `
@@ -99,7 +99,7 @@ function NetworkRootItem() {
 		>
 			<div
 				className={cn(
-					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-gradient-to-b',
+					'flex flex-1 items-center gap-1.5 rounded-l-lg border border-r-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-linear-to-b',
 					isActive ? selectedClass : 'text-white/60 transition-colors group-hover:bg-white/10 group-hover:text-white',
 				)}
 			>
@@ -110,7 +110,7 @@ function NetworkRootItem() {
 			</div>
 			<div
 				className={cn(
-					'group/plus flex items-center justify-center rounded-r-lg border border-l-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-gradient-to-b',
+					'group/plus flex items-center justify-center rounded-r-lg border border-l-0 border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 group-hover:bg-linear-to-b',
 					isActive ? selectedClass : 'transition-colors group-hover:bg-white/10',
 				)}
 				onClick={(e) => {

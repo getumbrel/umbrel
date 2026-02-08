@@ -16,7 +16,7 @@ import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
-export const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center gap-2 flex-wrap shadow-button-highlight-soft-hpx outline-none duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
+export const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center gap-2 flex-wrap shadow-button-highlight-soft-hpx outline-hidden duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
 export const radioTitleClass = tw`text-15 font-medium -tracking-2`
 export const radioDescriptionClass = tw`text-13 opacity-90 -tracking-2`
 
@@ -70,7 +70,7 @@ export function BackLink({to, children}: {to: string; children: React.ReactNode}
 	return (
 		<Link
 			to={to}
-			className='flex items-center justify-center rounded-full pr-2 decoration-white/20 underline-offset-4 outline-none focus-visible:underline'
+			className='flex items-center justify-center rounded-full pr-2 decoration-white/20 underline-offset-4 outline-hidden focus-visible:underline'
 		>
 			<TbChevronLeft className='size-6 opacity-50' />
 			<h1 className={cn(immersiveDialogTitleClass, 'text-19')}>{children}</h1>

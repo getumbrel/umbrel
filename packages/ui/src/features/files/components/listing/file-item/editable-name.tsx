@@ -7,7 +7,6 @@ import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {useQueryParams} from '@/hooks/use-query-params'
 import {useConfirmation} from '@/providers/confirmation'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {Button} from '@/shadcn-components/ui/button'
@@ -119,7 +118,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 							icon: AiOutlineFileExclamation,
 						})
 						// Confirmation passed, proceed with rename (handled below)
-					} catch (error) {
+					} catch {
 						// User cancelled confirmation
 						performRename = false
 					}
@@ -174,7 +173,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	}
 
 	const inputStyles = cn(
-		'bg-transparent outline-none ring-1 ring-transparent',
+		'bg-transparent outline-hidden ring-1 ring-transparent',
 		'p-0 m-0 box-border leading-[16px] tracking-[-0.04em]',
 		// Show ring outline only on touch devices so that it is obvious that the input is focused
 		isTouchDevice && 'focus:ring-[hsl(var(--color-brand))]',

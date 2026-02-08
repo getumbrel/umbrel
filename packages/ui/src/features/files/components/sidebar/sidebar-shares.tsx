@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {useNavigate} from 'react-router-dom'
 
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'

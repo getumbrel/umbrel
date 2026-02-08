@@ -1,5 +1,5 @@
-import {AnimatePresence, motion} from 'framer-motion'
 import {ArrowLeft, ChevronDown, ChevronRight, Loader2} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import * as React from 'react'
 import {useNavigate} from 'react-router-dom'
 
@@ -362,7 +362,7 @@ function RepositoryDetails({
 					<div className='shrink-0 text-white/60'>{t('backups-configure.path')}</div>
 					<FadeScroller
 						direction='x'
-						className='umbrel-hide-scrollbar min-w-0 overflow-x-auto whitespace-nowrap text-right'
+						className='umbrel-hide-scrollbar min-w-0 overflow-x-auto text-right whitespace-nowrap'
 					>
 						{getDisplayRepositoryPath(repo.path)}
 					</FadeScroller>
@@ -539,7 +539,7 @@ function BackupsList({
 							<div className='flex items-center gap-2'>
 								<div className='text-white/60'>{dateLabel}</div>
 								{isLatest && (
-									<span className='rounded-full bg-green-500/20 px-2 text-[8px] font-medium uppercase tracking-wider text-green-500'>
+									<span className='rounded-full bg-green-500/20 px-2 text-[8px] font-medium tracking-wider text-green-500 uppercase'>
 										{t('backups-restore.latest')}
 									</span>
 								)}

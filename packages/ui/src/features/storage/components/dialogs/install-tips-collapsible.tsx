@@ -1,7 +1,7 @@
 // We only ever render this component for Umbrel Pro since it is pro-specific instructions
 
-import {AnimatePresence, motion} from 'framer-motion'
 import {ChevronDown, ChevronUp} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {t} from '@/utils/i18n'
 

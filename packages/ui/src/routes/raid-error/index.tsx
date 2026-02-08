@@ -140,7 +140,7 @@ export default function RaidErrorScreen() {
 		<OnboardingPage>
 			<div className='flex flex-1 flex-col md:flex-row'>
 				{/* Left side - content */}
-				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pl-6 md:pr-0'>
+				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pr-0 md:pl-6'>
 					{/* Header */}
 					<div className='flex flex-col items-center gap-2 md:items-start'>
 						<div className='flex items-center gap-2'>
@@ -193,7 +193,7 @@ export default function RaidErrorScreen() {
 									<div className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-3 py-0.5'>
 										<TbActivityHeartbeat className='size-4 text-white/60' />
 										{drive.hasHealthWarning && (
-											<span className='absolute -right-0.5 -top-0.5'>
+											<span className='absolute -top-0.5 -right-0.5'>
 												<span className='absolute inset-0 size-2.5 rounded-full bg-[#F5A623]' />
 												<span className='absolute inset-0 size-2.5 animate-ping rounded-full bg-[#F5A623] opacity-75' />
 											</span>

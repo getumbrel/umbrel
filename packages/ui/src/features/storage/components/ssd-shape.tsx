@@ -238,7 +238,7 @@ export function SsdShape({
 				{/* Warning indicators + Health pulse pill grouped together at bottom */}
 				<div className='flex flex-col items-center gap-3'>
 					{hasWastedSpace && (
-						<span className='text-center text-[13px] font-medium leading-tight text-white/50'>
+						<span className='text-center text-[13px] leading-tight font-medium text-white/50'>
 							{t('storage-manager.wasted-size', {size: formatStorageSize(wastedBytes)})}
 						</span>
 					)}

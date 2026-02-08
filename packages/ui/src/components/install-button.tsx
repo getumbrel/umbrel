@@ -62,7 +62,7 @@ function ButtonContentForState({
 			return (
 				<>
 					{t('app.install')}{' '}
-					<span className='whitespace-nowrap uppercase -tracking-normal opacity-40'>{installSize}</span>
+					<span className='-tracking-normal whitespace-nowrap uppercase opacity-40'>{installSize}</span>
 				</>
 			)
 		case 'installing':
@@ -94,7 +94,7 @@ function ButtonContentForState({
 			return t('app.offline')
 		case 'loading':
 		case undefined:
-			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-sm' />
+			return <TbLoader className='white h-3 w-3 animate-spin opacity-50 shadow-xs' />
 		// return t('loading') + '...'
 	}
 	return assertUnreachable(state)

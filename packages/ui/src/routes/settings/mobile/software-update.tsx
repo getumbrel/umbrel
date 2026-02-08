@@ -1,4 +1,7 @@
+// TODO: Re-enable Trans and Link when whats-new content is updated
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Trans} from 'react-i18next/TransWithoutContext'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
 import {ButtonLink} from '@/components/ui/button-link'
@@ -24,6 +27,7 @@ export function SoftwareUpdateDrawer() {
 	const dialogProps = useSettingsDialogProps()
 
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const linkToDialog = useLinkToDialog()
 
 	return (

@@ -1,4 +1,5 @@
 import path from 'node:path'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import {defineConfig} from 'vite'
 import {imagetools} from 'vite-imagetools'
@@ -7,12 +8,20 @@ import {imagetools} from 'vite-imagetools'
 
 export default defineConfig({
 	plugins: [
+		tailwindcss(),
 		react(),
 		imagetools({
 			// Currently we only convert SVGs in features/files/assets/file-items-thumbnails
 			include: /src\/features\/files\/assets\/file-items-thumbnails\/[^?]+\.svg(\?.*)?$/,
 		}),
 	],
+	// Vite 4.4.8+ blocks requests from unrecognized hosts to prevent DNS rebinding attacks.
+	// Allow all hosts since the dev server runs inside a local Docker container and is
+	// accessed via dynamic *.local hostnames (e.g. umbrel-dev.local, umbrel-dev-apps.local).
+	// This only affects the dev server, not production builds.
+	server: {
+		allowedHosts: true,
+	},
 	resolve: {
 		alias: {
 			'@/': `${path.resolve(__dirname, 'src')}/`,

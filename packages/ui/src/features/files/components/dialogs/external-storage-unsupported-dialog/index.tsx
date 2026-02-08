@@ -25,7 +25,7 @@ export default function ExternalStorageUnsupportedDialog() {
 				<div className='mt-2 flex justify-center'>
 					<div className='relative'>
 						<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
-						<div className='absolute -right-2 -top-2'>
+						<div className='absolute -top-2 -right-2'>
 							<TbAlertTriangleFilled className='h-8 w-8 text-yellow-400' />
 						</div>
 					</div>

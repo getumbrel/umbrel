@@ -11,14 +11,14 @@ export function WifiIcon({bars = 4, className}: {bars: number; className?: strin
 	if (bars === 0) {
 		return (
 			<div className={cn('relative bg-red-500/20', className)}>
-				<TbWifiOff className={cn('opacity-20 absolute-center', className)} />
+				<TbWifiOff className={cn('absolute-center opacity-20', className)} />
 			</div>
 		)
 	}
 
 	return (
 		<div className={cn('relative bg-red-500/20', className)}>
-			<TbWifi className={cn('opacity-20 absolute-center', className)} />
+			<TbWifi className={cn('absolute-center opacity-20', className)} />
 			<Comp className={cn('absolute-center', className)} />
 		</div>
 	)
@@ -71,7 +71,7 @@ export function WifiIcon2Circled({bars = 4, isConnected}: {bars: number; isConne
 	return (
 		<div
 			className={cn(
-				'grid size-6 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 bg-white/6',
+				'grid size-6 shrink-0 place-items-center rounded-full border border-white/20 bg-white/6 bg-white/10',
 				isConnected && 'bg-brand',
 			)}
 		>

@@ -228,8 +228,8 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 	// Need to declare uploadFile before processNextCollision because processNextCollision calls it.
 	// This mutual dependency requires forward declaration.
 
-	const uploadFileRef = useRef<typeof uploadFileInternal>()
-	const processNextCollisionRef = useRef<typeof processNextCollisionInternal>()
+	const uploadFileRef = useRef<typeof uploadFileInternal | undefined>(undefined)
+	const processNextCollisionRef = useRef<typeof processNextCollisionInternal | undefined>(undefined)
 
 	// Define the internal functions
 	const uploadFileInternal = useCallback(
@@ -408,7 +408,7 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 				// Use requestAnimationFrame to ensure state updates have likely propagated
 				// Pass the current function ref to avoid stale closure issues if needed, though direct call should be fine
 				requestAnimationFrame(() => processNextCollisionRef.current?.(currentBatchId))
-			} catch (error) {
+			} catch {
 				// User dismissed the dialog
 				isConfirmationActiveRef.current = false
 				collisionQueueRef.current.delete(tempId) // Remove current item
@@ -572,7 +572,7 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 		operations,
 	}
 
-	return <GlobalFilesContext.Provider value={value}>{children}</GlobalFilesContext.Provider>
+	return <GlobalFilesContext value={value}>{children}</GlobalFilesContext>
 }
 
 // A simple custom hook to consume it

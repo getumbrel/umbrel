@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode, useEffect, useRef, useState} from 'react'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {Drawer as DrawerPrimitive} from 'vaul'
@@ -338,7 +338,7 @@ type ConnectProps = {
 	status?: WifiStatusUi
 	onConnect: ({ssid, password}: ConnectData) => void
 	error?: string
-	passwordInputRef?: React.RefObject<HTMLInputElement>
+	passwordInputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
@@ -439,4 +439,4 @@ export function Message({children}: {children?: React.ReactNode}) {
 	)
 }
 
-export const wifiListItemClass = tw`w-full p-3 hover:bg-white/6 focus-within:bg-white/6 transition-colors border-b border-t first:border-t-0 last:border-b-0 mb-[-1px] border-white/6 outline-none flex flex-col gap-3`
+export const wifiListItemClass = tw`w-full p-3 hover:bg-white/6 focus-within:bg-white/6 transition-colors border-b border-t first:border-t-0 last:border-b-0 mb-[-1px] border-white/6 outline-hidden flex flex-col gap-3`

@@ -2,7 +2,7 @@
 // https://github.com/leonardodino/rci/blob/77273d05278970a112cbd0e643e0d21f659be354/apps/demo/src/Example.tsx
 
 import {CodeInput, getSegmentCssWidth} from 'rci'
-import {useRef, useState} from 'react'
+import {useRef, useState, type RefObject} from 'react'
 import {useIsFocused} from 'use-is-focused'
 
 import {cn} from '@/shadcn-lib/utils'
@@ -24,7 +24,7 @@ type PinInputProps = {
 export const PinInput = ({length, onCodeCheck, autoFocus}: PinInputProps) => {
 	const [state, setState] = useState<CodeState>('input')
 	const inputRef = useRef<HTMLInputElement>(null)
-	const focused = useIsFocused(inputRef)
+	const focused = useIsFocused(inputRef as RefObject<HTMLInputElement>)
 
 	const padding = '12px'
 	const width = getSegmentCssWidth(padding)
@@ -39,7 +39,7 @@ export const PinInput = ({length, onCodeCheck, autoFocus}: PinInputProps) => {
 			length={length}
 			readOnly={state !== 'input'}
 			disabled={state === 'loading'}
-			inputRef={inputRef}
+			inputRef={inputRef as RefObject<HTMLInputElement>}
 			padding={padding}
 			spacing={'10px'}
 			spellCheck={false}
