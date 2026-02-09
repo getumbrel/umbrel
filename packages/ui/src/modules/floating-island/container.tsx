@@ -60,7 +60,7 @@ export function FloatingIslandContainer() {
 	// When an ImmersiveDialog is open: z-60 + pointer-events-auto so island appears above dialog and is clickable.
 	return (
 		<div
-			className={`fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 flex-col items-center justify-center gap-1 md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'pointer-events-auto z-[60]' : 'z-50'}`}
+			className={`fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 transform-gpu flex-col items-center justify-center gap-1 will-change-transform md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'pointer-events-auto z-[60]' : 'z-50'}`}
 		>
 			<AnimatePresence>
 				{showUploading && (

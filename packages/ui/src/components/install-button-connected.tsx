@@ -1,6 +1,5 @@
 import prettyBytes from 'pretty-bytes'
 import {useImperativeHandle, useState} from 'react'
-import {useTimeout} from 'react-use'
 import semver from 'semver'
 import {arrayIncludes} from 'ts-extras'
 
@@ -24,7 +23,6 @@ export function InstallButtonConnected({app, ref}: {app: RegistryApp; ref?: Reac
 	const openApp = useLaunchApp()
 	const [selections, setSelections] = useState({} as Record<string, string>)
 	const os = useVersion()
-	const [show] = useTimeout(400)
 	const [highlightDependency, setHighlightDependency] = useState<string | undefined>(undefined)
 
 	useImperativeHandle(ref, () => ({
@@ -34,7 +32,7 @@ export function InstallButtonConnected({app, ref}: {app: RegistryApp; ref?: Reac
 		},
 	}))
 
-	if (!show() || isLoading || !userAppsKeyed || !apps || os.isLoading) {
+	if (isLoading || !userAppsKeyed || !apps || os.isLoading) {
 		return (
 			<InstallButton
 				key={app.id}

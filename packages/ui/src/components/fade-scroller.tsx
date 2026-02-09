@@ -10,6 +10,7 @@ export type FadeScrollerProps = ComponentPropsWithoutRef<'div'> & {
 const FADE_SCROLLER_CLASS_X = 'umbrel-fade-scroller-x'
 const FADE_SCROLLER_CLASS_Y = 'umbrel-fade-scroller-y'
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 	const ref = useRef<HTMLDivElement>(null)
 
@@ -21,14 +22,11 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 		const el = ref!.current
 		if (!el) return
 
-		const handleScroll = () => {
+		// Throttle scroll updates to once per frame via rAF to avoid redundant
+		// style recalculations — scroll events can fire 10+ times per frame.
+		let rafId = 0
+		const updateFade = () => {
 			if (!el) return
-
-			if (debug) {
-				// console.log('scroll', el.scrollLeft, el.scrollWidth, el.clientWidth)
-				// eslint-disable-next-line no-debugger
-				debugger
-			}
 
 			// Round to avoid issues with sub-pixel scrolling
 			// Using `<` and `>` to capture the edge case where the user scrolls past the end of the content (iOS bouncing)
@@ -37,12 +35,6 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 				direction === 'x'
 					? Math.round(el.scrollLeft) + el.clientWidth >= el.scrollWidth
 					: Math.round(el.scrollTop) + el.clientHeight >= el.scrollHeight
-
-			// if (direction === 'x') {
-			// 	console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollLeft), el.scrollWidth - el.clientWidth)
-			// } else {
-			// 	console.log('fractionScrolled', atStart, atEnd, Math.round(el.scrollTop), el.scrollHeight - el.clientHeight)
-			// }
 
 			if (atStart && atEnd) {
 				el.style.setProperty('--distance1', `0px`)
@@ -59,14 +51,20 @@ export function useFadeScroller(direction: 'x' | 'y', debug?: boolean) {
 			}
 		}
 
-		// Run on mount by default
-		handleScroll()
+		const handleScroll = () => {
+			cancelAnimationFrame(rafId)
+			rafId = requestAnimationFrame(updateFade)
+		}
 
-		el.addEventListener('scroll', handleScroll)
+		// Run on mount by default
+		updateFade()
+
+		el.addEventListener('scroll', handleScroll, {passive: true})
 		return () => {
 			el.removeEventListener('scroll', handleScroll)
+			cancelAnimationFrame(rafId)
 		}
-	}, [debug, direction])
+	}, [direction])
 
 	const scrollerClass =
 		direction === 'x' ? FADE_SCROLLER_CLASS_X : direction === 'y' ? FADE_SCROLLER_CLASS_Y : undefined

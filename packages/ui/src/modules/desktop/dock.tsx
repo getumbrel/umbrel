@@ -224,7 +224,7 @@ export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	)
 }
 
-const dockClass = tw`mx-auto flex items-end gap-3 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
+const dockClass = tw`mx-auto flex items-end gap-3 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-neutral-900/80 px-3 shadow-dock shrink-0 border-hpx border-white/10`
 
 const DockDivider = ({iconSize}: {iconSize: number}) => (

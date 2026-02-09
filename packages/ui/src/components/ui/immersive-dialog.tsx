@@ -134,7 +134,10 @@ export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>})
 	return (
 		<DialogOverlay
 			ref={ref}
-			className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
+			className={cn(
+				dialogOverlayClass,
+				'transform-gpu bg-black/30 backdrop-blur-xl will-change-[backdrop-filter] contrast-more:backdrop-blur-none',
+			)}
 		/>
 	)
 }

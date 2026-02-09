@@ -1,8 +1,7 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useRef, useState} from 'react'
+import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useNavigate} from 'react-router-dom'
-import {useKey} from 'react-use'
 import {range} from 'remeda'
 
 // Pluggable search providers rendered inside the command palette
@@ -41,20 +40,24 @@ export function useCmdkOpen() {
 
 	if (!ctx) throw new Error('useCmdkOpen must be used within a CommandRoot')
 
-	useKey(
-		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
-		(e) => {
-			// Prevent default behavior (in Windows Chrome where it opens the search bar)
-			e.preventDefault()
-			ctx.setOpen((open) => !open)
-		},
-	)
-
 	return ctx
 }
 
 export function CmdkProvider({children}: {children: React.ReactNode}) {
 	const [open, setOpen] = useState(false)
+
+	// Register Cmd+K listener once here, not in useCmdkOpen (which is called
+	// by multiple components and would register duplicate listeners).
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault()
+				setOpen((open) => !open)
+			}
+		}
+		document.addEventListener('keydown', handler)
+		return () => document.removeEventListener('keydown', handler)
+	}, [])
 
 	return <CmdkOpenContext value={{open, setOpen}}>{children}</CmdkOpenContext>
 }

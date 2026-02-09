@@ -56,11 +56,17 @@ function SheetContent({
 		<>
 			{backdrop}
 			{/* <SheetOverlay /> */}
-			<SheetPrimitive.Content ref={ref} className={cn(sheetVariants({side}), className)} {...props}>
+			<SheetPrimitive.Content
+				ref={ref}
+				className={cn(sheetVariants({side}), 'transform-gpu will-change-transform', className)}
+				{...props}
+			>
 				{/* Keep before other elements to prevent auto-focus on other elements. Some element must be focused for accessibility */}
 				{closeButton}
 				<div className='absolute inset-0 bg-black contrast-more:hidden'>
-					{/* Fade in sheet background to avoid white flash when sheet opens */}
+					{/* Fade in sheet background to avoid white flash when sheet opens.
+					    Using filter (not backdrop-filter) so the blur is computed once and cached
+					    by the GPU, rather than re-sampled every frame during animations/scrolling. */}
 					<div
 						className='absolute inset-0 opacity-0'
 						style={{
@@ -69,9 +75,9 @@ function SheetContent({
 							backgroundSize: 'cover',
 							backgroundPosition: 'center',
 							transform: 'scale(1.2) rotate(180deg)',
+							filter: 'blur(48px) brightness(0.3) saturate(1.2)',
 						}}
 					/>
-					<div className='absolute inset-0 backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]' />
 				</div>
 				{children}
 				{/* Sheet inner glow highlight */}

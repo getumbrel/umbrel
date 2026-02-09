@@ -2,7 +2,6 @@ import {motion} from 'motion/react'
 import {memo, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
-import {useKeyPressEvent} from 'react-use'
 
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Loading} from '@/components/ui/loading'
@@ -38,11 +37,14 @@ export function AppStoreLayout() {
 		setSearchParams(searchParams, {replace: true})
 	}, [deferredSearchQuery])
 
-	useKeyPressEvent(
-		(e) => e.key === '/',
-		undefined, // if doing focus here, input gets a '/' in it
-		() => inputRef.current?.focus(),
-	)
+	// Focus search input on '/' key release (keyup avoids '/' appearing in input)
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === '/') inputRef.current?.focus()
+		}
+		document.addEventListener('keyup', handler)
+		return () => document.removeEventListener('keyup', handler)
+	}, [])
 
 	return (
 		<AppStoreSheetInner

@@ -61,7 +61,7 @@ export function SheetLayout() {
 			{isFullscreenRoute && (
 				<>
 					{/* Immediate blur backdrop - renders before lazy component loads */}
-					<div className='fixed inset-0 z-50 bg-black/30 backdrop-blur-xl' />
+					<div className='fixed inset-0 z-50 transform-gpu bg-black/30 backdrop-blur-xl will-change-[backdrop-filter]' />
 					<Suspense fallback={null}>
 						<Outlet />
 					</Suspense>
@@ -83,6 +83,7 @@ export function SheetLayout() {
 							)
 						}
 						closeButton={<SheetCloseButton />}
+						onOpenAutoFocus={(e) => e.preventDefault()}
 						onInteractOutside={(e) => e.preventDefault()}
 						onEscapeKeyDown={(e) => e.preventDefault()}
 					>

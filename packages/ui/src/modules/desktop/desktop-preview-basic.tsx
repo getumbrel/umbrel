@@ -1,4 +1,4 @@
-import {useTimeout} from 'react-use'
+import {useEffect, useState} from 'react'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import UmbrelLogo from '@/components/umbrel-logo'
@@ -55,8 +55,12 @@ export function DesktopPreview({
 	const widgetWidth = appWidth * 2
 	const widgetHeight = appHeight * 1.4
 
-	// Delay mounting for performace
-	const [show] = useTimeout(300)
+	// Delay mounting for performance
+	const [show, setShow] = useState(false)
+	useEffect(() => {
+		const id = setTimeout(() => setShow(true), 300)
+		return () => clearTimeout(id)
+	}, [])
 
 	return (
 		<div>
@@ -71,7 +75,7 @@ export function DesktopPreview({
 				/>
 			)}
 			{/* <Wallpaper isPreview /> */}
-			{show() && (
+			{show && (
 				<div className='absolute inset-0 flex animate-in flex-col items-center duration-700 fade-in'>
 					<div className='h-2.5 flex-1' />
 					<Header userName={userName} />

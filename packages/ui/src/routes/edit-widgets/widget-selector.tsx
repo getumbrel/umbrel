@@ -1,8 +1,7 @@
 import {Minus, Plus} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-import {ReactNode} from 'react'
+import {ReactNode, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
-import {useTimeout} from 'react-use'
 
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
@@ -19,11 +18,15 @@ import {t} from '@/utils/i18n'
 
 export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
 	// Delay until after `usePager` has injected CSS vars
-	const [isReady] = useTimeout(300)
+	const [isReady, setIsReady] = useState(false)
+	useEffect(() => {
+		const id = setTimeout(() => setIsReady(true), 300)
+		return () => clearTimeout(id)
+	}, [])
 
 	const {availableWidgets, toggleSelected, selected, selectedTooMany} = useWidgets()
 
-	if (!isReady()) return null
+	if (!isReady) return null
 
 	const selectedH = selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
 

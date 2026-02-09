@@ -1,11 +1,21 @@
 import {Portal} from '@radix-ui/react-portal'
-import {useTimeout} from 'react-use'
+import {useEffect, useState} from 'react'
 
 import {cn} from '@/lib/utils'
 import {Wallpaper} from '@/providers/wallpaper'
 import {tw} from '@/utils/tw'
 
 import {DarkenLayer} from '../darken-layer'
+
+/** Compiler-safe replacement for react-use's useTimeout */
+function useDelayedShow(ms: number) {
+	const [show, setShow] = useState(false)
+	useEffect(() => {
+		const id = setTimeout(() => setShow(true), ms)
+		return () => clearTimeout(id)
+	}, [ms])
+	return show
+}
 
 /** Cover message without  */
 export function BareCoverMessage({
@@ -17,12 +27,12 @@ export function BareCoverMessage({
 	delayed?: boolean
 	onClick?: () => void
 }) {
-	const [show] = useTimeout(600)
+	const show = useDelayedShow(600)
 
 	return (
 		<CoverMessageContent>
 			<div className='absolute inset-0 z-50 bg-black' onClick={onClick}>
-				<div className={coverMessageBodyClass}>{!delayed ? children : show() && children}</div>
+				<div className={coverMessageBodyClass}>{!delayed ? children : show && children}</div>
 			</div>
 		</CoverMessageContent>
 	)
@@ -40,7 +50,7 @@ export function CoverMessage({
 	onClick?: () => void
 	delayed?: boolean
 }) {
-	const [show] = useTimeout(600)
+	const show = useDelayedShow(600)
 
 	return (
 		<CoverMessageContent>
@@ -48,7 +58,7 @@ export function CoverMessage({
 			<Wallpaper className='z-50' stayBlurred />
 			<DarkenLayer className='z-50 animate-in duration-700 fade-in' />
 			<div onClick={onClick} className={cn(coverMessageBodyClass, bodyClassName)}>
-				{!delayed ? children : show() && children}
+				{!delayed ? children : show && children}
 			</div>
 			{/* </div> */}
 		</CoverMessageContent>

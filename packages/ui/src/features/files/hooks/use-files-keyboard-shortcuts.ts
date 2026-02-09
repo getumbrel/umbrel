@@ -1,5 +1,4 @@
 import {useEffect, useRef} from 'react'
-import {useKey} from 'react-use'
 
 import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
@@ -12,6 +11,7 @@ import type {FileSystemItem} from '@/features/files/types'
 /**
  * Hook to handle keyboard shortcuts for file operations: copy, cut, paste, and trash.
  * We use both command and ctrl for every shortcut to mimic the behaviour of both macOS and windows.
+ * Uses a single useEffect listener instead of react-use's useKey for React Compiler compatibility.
  */
 export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 	const isReadOnly = useIsFilesReadOnly()
@@ -30,130 +30,92 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 	const searchBuffer = useRef('')
 	const searchTimer = useRef<NodeJS.Timeout | undefined>(undefined)
 
-	// Guard to check if we're in a text input or contentEditable element
-	// We don't want to override the default shortcut behaviour for text inputs.
-	// For example, we want cmd+backspace to delete a word when editing a file name, not move to trash.
-	const isInInput = (e: KeyboardEvent): boolean => {
-		const target = e.target as HTMLElement
-		return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable
-	}
+	// Use refs for values that change frequently so the useEffect doesn't need to re-register
+	const selectedItemsRef = useRef(selectedItems)
+	selectedItemsRef.current = selectedItems
+	const viewerItemRef = useRef(viewerItem)
+	viewerItemRef.current = viewerItem
 
-	// Register copy shortcut (⌘C / Ctrl+C)
-	useKey(
-		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'c',
-		(e) => {
-			if (!shortcutsEnabled) return
-			if (isInInput(e)) return
-			e.preventDefault()
-			copyItemsToClipboard()
-		},
-	)
-
-	// Register cut shortcut (⌘X / Ctrl+X)
-	useKey(
-		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'x',
-		(e) => {
-			if (!shortcutsEnabled) return
-			if (isInInput(e)) return
-			e.preventDefault()
-			cutItemsToClipboard()
-		},
-	)
-
-	// Register paste shortcut (⌘V / Ctrl+V)
-	useKey(
-		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'v',
-		(e) => {
-			// Simple but hacky:
-			// If Rewind is open (marked via data-rewind on its dialog),
-			// ignore paste to prevent background Files from showing collision dialogs.
-			// This avoids global state or focus plumbing; revisit with scoped shortcuts later.
-			if (document.querySelector('[data-rewind="open"]')) return
-			if (!shortcutsEnabled) return
-			if (isInInput(e)) return
-			e.preventDefault()
-			pasteItemsFromClipboard({toDirectory: currentPath})
-		},
-	)
-
-	// Register trash shortcut (⌘⌫ / Ctrl+Backspace)
-	useKey(
-		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'Backspace',
-		(e) => {
-			if (!shortcutsEnabled) return
-			if (isInInput(e)) return
-			e.preventDefault()
-			trashSelectedItems()
-		},
-	)
-
-	// Register select all shortcut (⌘A / Ctrl+A)
-	useKey(
-		(e) => shortcutsEnabled && (e.metaKey || e.ctrlKey) && e.key === 'a',
-		(e) => {
-			if (!shortcutsEnabled) return
-			if (isInInput(e)) return
-			e.preventDefault()
-			// Select all items in the current directory
-			setSelectedItems(items)
-		},
-	)
-
-	// Register space bar to view selected item (allowed even in read-only)
-	useKey(
-		(e) => e.key === ' ',
-		(e) => {
-			if (
-				isInInput(e) ||
-				e.metaKey ||
-				e.ctrlKey ||
-				e.altKey ||
-				searchBuffer.current.length > 0 ||
-				selectedItems.length !== 1 ||
-				viewerItem !== null
-			)
-				return
-			e.preventDefault()
-			const item = selectedItems[0]
-			const fileType = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]
-			if (fileType && fileType.viewer) {
-				setViewerItem(item)
-			}
-		},
-	)
-
-	// Handle search functionality
 	useEffect(() => {
-		if (!shortcutsEnabled) return
-		const handleKeyDown = (e: KeyboardEvent) => {
-			// Ignore if we're in an input or if using modifier keys
-			if (isInInput(e) || e.metaKey || e.ctrlKey || e.altKey) return
+		// Guard to check if we're in a text input or contentEditable element
+		const isInInput = (e: KeyboardEvent): boolean => {
+			const target = e.target as HTMLElement
+			return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable
+		}
 
-			// Skip handling the spacebar as a search input if it's the first key pressed.
-			// This ensures the spacebar can be used to open the viewer immediately without waiting for the search buffer to clear.
-			// If the spacebar is pressed during an ongoing search (i.e., not the first key), it will be included in the search input.
+		const handleKeyDown = (e: KeyboardEvent) => {
+			const mod = e.metaKey || e.ctrlKey
+
+			// Modifier shortcuts (copy, cut, paste, trash, select all)
+			if (mod && shortcutsEnabled) {
+				if (isInInput(e)) return
+
+				if (e.key === 'c') {
+					e.preventDefault()
+					copyItemsToClipboard()
+					return
+				}
+				if (e.key === 'x') {
+					e.preventDefault()
+					cutItemsToClipboard()
+					return
+				}
+				if (e.key === 'v') {
+					// If Rewind is open, ignore paste to prevent collision dialogs
+					if (document.querySelector('[data-rewind="open"]')) return
+					e.preventDefault()
+					pasteItemsFromClipboard({toDirectory: currentPath})
+					return
+				}
+				if (e.key === 'Backspace') {
+					e.preventDefault()
+					trashSelectedItems()
+					return
+				}
+				if (e.key === 'a') {
+					e.preventDefault()
+					setSelectedItems(items)
+					return
+				}
+			}
+
+			// Space bar to view selected item (allowed even in read-only)
+			if (e.key === ' ') {
+				if (
+					isInInput(e) ||
+					mod ||
+					e.altKey ||
+					searchBuffer.current.length > 0 ||
+					selectedItemsRef.current.length !== 1 ||
+					viewerItemRef.current !== null
+				)
+					return
+				e.preventDefault()
+				const item = selectedItemsRef.current[0]
+				const fileType = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]
+				if (fileType && fileType.viewer) {
+					setViewerItem(item)
+				}
+				return
+			}
+
+			// Search functionality
+			if (!shortcutsEnabled) return
+			if (isInInput(e) || mod || e.altKey) return
 			if (e.key === ' ' && searchBuffer.current.length === 0) return
 
-			// Only handle printable characters
 			if (e.key.length === 1) {
 				e.preventDefault()
-
-				// Append to search buffer
 				searchBuffer.current += e.key.toLowerCase()
 
-				// Clear previous timer
 				if (searchTimer.current) {
 					clearTimeout(searchTimer.current)
 				}
-
-				// Set new timer to clear search buffer after 700ms
 				searchTimer.current = setTimeout(() => {
 					searchBuffer.current = ''
 				}, 700)
 
-				// Find first matching item
 				const matchingItem = items.find((item) => item.name.toLowerCase().startsWith(searchBuffer.current))
-
 				if (matchingItem) {
 					setSelectedItems([matchingItem])
 				}
@@ -162,5 +124,15 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [items, setSelectedItems, shortcutsEnabled])
+	}, [
+		shortcutsEnabled,
+		currentPath,
+		items,
+		copyItemsToClipboard,
+		cutItemsToClipboard,
+		setSelectedItems,
+		setViewerItem,
+		pasteItemsFromClipboard,
+		trashSelectedItems,
+	])
 }
