@@ -89,9 +89,7 @@ export function RestoreLocationDropdown({onSelect, isExternalStorageSupported = 
 						{t('files-external-storage.unsupported.description-general')}
 					</AlertDialogDescription>
 					<AlertDialogFooter>
-						<AlertDialogAction onClick={() => setShowUnsupportedDialog(false)} hideEnterIcon>
-							{t('ok')}
-						</AlertDialogAction>
+						<AlertDialogAction onClick={() => setShowUnsupportedDialog(false)}>{t('ok')}</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

@@ -29,7 +29,6 @@ export function ShutdownConfirmationDialog({open, onOpenChange}: ShutdownConfirm
 				<AlertDialogFooter>
 					<AlertDialogAction
 						variant='destructive'
-						hideEnterIcon
 						onClick={(e) => {
 							e.preventDefault()
 							shutdown()

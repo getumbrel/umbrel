@@ -527,7 +527,6 @@ export function AddToRaidDialog({
 					<AlertDialogFooter>
 						<AlertDialogAction
 							variant='primary'
-							hideEnterIcon
 							disabled={isOperationInProgress}
 							onClick={(e) => {
 								e.preventDefault()

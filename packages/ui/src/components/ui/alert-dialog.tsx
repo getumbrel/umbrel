@@ -154,17 +154,15 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
 	variant,
-	hideEnterIcon,
 	children,
 	ref,
 	...props
-}: React.ComponentPropsWithoutRef<typeof Button> & {hideEnterIcon?: boolean} & {
+}: React.ComponentPropsWithoutRef<typeof Button> & {
 	ref?: React.Ref<React.ComponentRef<typeof Button>>
 }) {
 	return (
 		<Button ref={ref} size={'dialog'} variant={variant ?? 'primary'} {...props}>
 			{children}
-			{!hideEnterIcon && <span className='text-11 opacity-40 max-md:hidden'>↵</span>}
 		</Button>
 	)
 }

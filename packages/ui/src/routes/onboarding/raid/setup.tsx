@@ -725,7 +725,7 @@ export default function RaidSetup() {
 						<AlertDialogDescription>{t('onboarding.raid.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' onClick={() => shutdown()} hideEnterIcon>
+						<AlertDialogAction variant='destructive' onClick={() => shutdown()}>
 							{t('shut-down')}
 						</AlertDialogAction>
 						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>

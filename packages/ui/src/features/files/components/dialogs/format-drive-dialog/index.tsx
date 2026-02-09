@@ -191,13 +191,7 @@ export default function FormatDriveDialog() {
 				</AlertDialogDescription>
 
 				<AlertDialogFooter className='md:justify-start'>
-					<AlertDialogAction
-						variant='destructive'
-						className='px-6'
-						onClick={handleFormat}
-						disabled={isFormatting}
-						hideEnterIcon
-					>
+					<AlertDialogAction variant='destructive' className='px-6' onClick={handleFormat} disabled={isFormatting}>
 						{isFormatting ? t('files-format.formatting') : t('files-format.confirm')}
 					</AlertDialogAction>
 					<AlertDialogCancel disabled={isFormatting}>{t('cancel')}</AlertDialogCancel>

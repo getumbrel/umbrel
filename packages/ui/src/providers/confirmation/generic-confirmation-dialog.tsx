@@ -80,7 +80,6 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 							variant={action.variant || 'default'}
 							className='px-6'
 							onClick={() => handleActionClick(action.value)}
-							hideEnterIcon={index !== 0}
 						>
 							{action.label}
 						</AlertDialogAction>

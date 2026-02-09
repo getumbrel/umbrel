@@ -6,18 +6,18 @@ import {cn} from '@/lib/utils'
 
 const buttonVariants = cva(
 	// `bg-clip-padding` to make button bg (especially in progress button) not be clipped by invisible border
-	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-hidden focus:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button bg-clip-padding',
+	'inline-flex items-center justify-center font-medium transition-[color,background-color,scale,box-shadow,opacity] disabled:pointer-events-none disabled:opacity-50 -tracking-2 leading-inter-trimmed gap-1.5 focus:outline-hidden focus-visible:ring-3 shrink-0 disabled:shadow-none duration-300 umbrel-button bg-clip-padding',
 	{
 		variants: {
 			variant: {
 				default:
-					'bg-white/10 active:bg-white/6 hover:bg-white/15 focus:bg-white/10 border-[0.5px] border-white/20 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
+					'bg-white/10 active:bg-white/6 hover:bg-white/15 focus-visible:bg-white/10 border-[0.5px] border-white/20 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus-visible:border-white/20 focus-visible:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
 				primary:
-					'bg-brand hover:bg-brand-lighter focus:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
+					'bg-brand hover:bg-brand-lighter focus-visible:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
 				secondary:
-					'bg-white/90 hover:bg-white focus:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
+					'bg-white/90 hover:bg-white focus-visible:bg-white active:bg-white ring-white/40 data-[state=open]:bg-white text-black',
 				destructive:
-					'bg-destructive2 hover:bg-destructive2-lighter focus:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
+					'bg-destructive2 hover:bg-destructive2-lighter focus-visible:bg-destructive2-lighter active:bg-destructive2 ring-destructive/40 data-[state=open]:bg-destructive2-lighter shadow-button-highlight-hpx',
 			},
 			size: {
 				sm: 'rounded-full h-[25px] px-[10px] text-12 gap-2',

@@ -303,7 +303,6 @@ export default function RaidErrorScreen() {
 								shutdown()
 							}}
 							disabled={shutdownTriggered}
-							hideEnterIcon
 						>
 							{t('shut-down')}
 						</AlertDialogAction>
@@ -327,7 +326,6 @@ export default function RaidErrorScreen() {
 								factoryResetMut.mutate({})
 							}}
 							disabled={factoryResetMut.isPending}
-							hideEnterIcon
 						>
 							{t('factory-reset')}
 						</AlertDialogAction>
