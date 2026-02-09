@@ -1,6 +1,6 @@
 import {keepPreviousData} from '@tanstack/react-query'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'

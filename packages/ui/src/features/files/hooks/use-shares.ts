@@ -1,6 +1,6 @@
 import {keepPreviousData} from '@tanstack/react-query'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
 import type {Share} from '@/features/files/types'
 import {trpcReact} from '@/trpc/trpc'

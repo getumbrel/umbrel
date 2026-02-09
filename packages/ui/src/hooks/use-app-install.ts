@@ -1,9 +1,9 @@
 import {useMutation} from '@tanstack/react-query'
 import {useEffect} from 'react'
 import {useInterval, usePrevious} from 'react-use'
-import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
+import {toast} from '@/components/ui/toast'
 import {AppState, AppStateOrLoading, trpcClient, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

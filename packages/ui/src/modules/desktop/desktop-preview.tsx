@@ -101,7 +101,7 @@ function DesktopContent() {
 						</WidgetWrapper>
 					))}
 					apps={userApps.map((app) => (
-						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={() => alert(app.name)} />
+						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={() => {}} />
 					))}
 				/>
 			</div>

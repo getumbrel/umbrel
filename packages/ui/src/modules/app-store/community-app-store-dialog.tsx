@@ -1,6 +1,5 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
-import {toast} from 'sonner'
 
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
@@ -16,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import {AnimatedInputError, Input} from '@/components/ui/input'
 import {Separator} from '@/components/ui/separator'
+import {toast} from '@/components/ui/toast'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
@@ -38,23 +38,21 @@ export function CommunityAppStoreDialog() {
 
 	const addAppStoreMut = trpcReact.appStore.addRepository.useMutation({
 		onSuccess: () => {
-			toast.success('Added community app store')
 			setUrl('')
 			setLocalError('')
 			appStoresQ.refetch()
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('community-app-store.add-error', {message: err.message}))
 		},
 	})
 
 	const removeAppStoreMut = trpcReact.appStore.removeRepository.useMutation({
 		onSuccess: () => {
-			toast.success('Removed community app store')
 			appStoresQ.refetch()
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('community-app-store.remove-error', {message: err.message}))
 		},
 	})
 

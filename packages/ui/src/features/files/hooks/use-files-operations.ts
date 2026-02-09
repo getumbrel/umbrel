@@ -1,6 +1,6 @@
 import {AiOutlineFileExclamation} from 'react-icons/ai'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {TRASH_PATH} from '@/features/files/constants'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'

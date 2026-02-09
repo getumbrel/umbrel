@@ -3,7 +3,6 @@ import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} fro
 import {listClass, listItemClass} from '@/components/ui/list'
 import {Spinner} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
-import {toast} from '@/components/ui/toast'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
@@ -14,12 +13,7 @@ export function TorDrawer() {
 	const dialogProps = useSettingsDialogProps()
 
 	const {enabled, setEnabled, isMutLoading, isError} = useTorEnabled({
-		onSuccess: (enabled) => {
-			if (enabled) {
-				toast.success(t('tor.enable.success'))
-			} else {
-				toast.success(t('tor.disable.success'))
-			}
+		onSuccess: () => {
 			dialogProps.onOpenChange(false)
 		},
 	})

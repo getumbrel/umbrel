@@ -1,6 +1,6 @@
 import {keepPreviousData} from '@tanstack/react-query'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {

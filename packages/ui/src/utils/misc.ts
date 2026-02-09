@@ -2,12 +2,6 @@ import {indexBy} from 'remeda'
 
 import {UserApp} from '@/trpc/trpc'
 
-export function fixmeAlert() {
-	alert('fixme')
-}
-
-export const fixmeHandler = () => fixmeAlert()
-
 export function firstNameFromFullName(name: string) {
 	return name.split(' ')[0]
 }

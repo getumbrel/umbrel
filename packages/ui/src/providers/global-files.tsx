@@ -1,8 +1,8 @@
 import React, {createContext, useCallback, useContext, useRef, useState} from 'react'
 import {FileWithPath} from 'react-dropzone'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'

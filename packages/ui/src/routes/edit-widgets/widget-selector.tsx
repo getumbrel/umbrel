@@ -7,7 +7,6 @@ import {useTimeout} from 'react-use'
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/components/ui/sheet'
 import {ScrollArea} from '@/components/ui/sheet-scroll-area'
 import {WidgetCheckIcon} from '@/components/widget-check-icon'
@@ -91,13 +90,14 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 						<WidgetSection key={appId} iconSrc={icon} title={name}>
 							{widgets?.map((widget) => {
 								return (
-									<WidgetChecker
-										key={widget.id}
-										checked={selected.map((w) => w.id).includes(widget.id)}
-										onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
-									>
-										<ExampleWidget type={widget.type} example={widget.example} />
-									</WidgetChecker>
+									<ErrorBoundary key={widget.id} fallback={null}>
+										<WidgetChecker
+											checked={selected.map((w) => w.id).includes(widget.id)}
+											onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
+										>
+											<ExampleWidget type={widget.type} example={widget.example} />
+										</WidgetChecker>
+									</ErrorBoundary>
 								)
 							})}
 						</WidgetSection>
@@ -158,9 +158,7 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 				<AppIcon src={iconSrc} size={36} className='rounded-8' />
 				<h3 className='text-20 leading-tight font-semibold'>{title}</h3>
 			</div>
-			<div className='flex flex-row flex-wrap gap-[20px]'>
-				<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>{children}</ErrorBoundary>
-			</div>
+			<div className='flex flex-row flex-wrap gap-[20px]'>{children}</div>
 			<div className='h-1'></div>
 		</>
 	)

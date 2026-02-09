@@ -16,6 +16,7 @@ import {
 } from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {celciusToFahrenheit} from '@/utils/temperature'
 
 import {FourStatsWidget} from './four-stats-widget'
@@ -72,7 +73,7 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 			// Users will likely open the app by clicking the icon before adding a widget associated with the app
 			launchApp(appId, {path: link, direct: true})
 		} else {
-			toast.error(`App "${appId}" not found.`)
+			toast.error(t('app-not-found', {app: appId}))
 		}
 	}
 

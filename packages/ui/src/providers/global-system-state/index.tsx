@@ -65,7 +65,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		if (error?.data?.code === 'UNAUTHORIZED') {
 			setRouterError(error)
 		} else {
-			toast.error(error.message)
+			toast.error(t('factory-reset-failed', {message: error.message}))
 		}
 		setTriggered(false)
 

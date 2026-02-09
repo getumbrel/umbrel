@@ -1,5 +1,6 @@
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
 	const utils = trpcReact.useUtils()
@@ -12,7 +13,7 @@ export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => vo
 			onSuccess?.(enabled)
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('tor-error', {message: err.message}))
 		},
 	})
 

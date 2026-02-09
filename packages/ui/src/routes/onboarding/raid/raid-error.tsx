@@ -18,7 +18,7 @@ type RaidErrorProps = {
 export function RaidError({title, instructions, image}: RaidErrorProps) {
 	const shutdownMut = trpcReact.system.shutdown.useMutation({
 		onError: (error) => {
-			toast.error(`Failed to shut down: ${error.message}`)
+			toast.error(t('shut-down.failed', {message: error.message}))
 		},
 	})
 

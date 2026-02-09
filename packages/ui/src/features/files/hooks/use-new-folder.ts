@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useFilesStore} from '@/features/files/store/use-files-store'

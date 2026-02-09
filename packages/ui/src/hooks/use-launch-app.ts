@@ -1,5 +1,6 @@
 import {useNavigate} from 'react-router-dom'
 
+import {toast} from '@/components/ui/toast'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -59,8 +60,7 @@ export function useLaunchApp() {
 				if (isOnionPage()) {
 					open(options?.path)
 				} else {
-					// return linkToDialog('tor-error', {id: appId})
-					alert(t('app-only-over-tor', {app: app.name}))
+					toast.warning(t('app-only-over-tor', {app: app.name}))
 				}
 			} else {
 				open(options?.path)
