@@ -616,7 +616,6 @@ const AnimatedUmbrelHomeIcon = memo(
 					outline: 'none',
 					height: '128px',
 					width: '128px',
-					cursor: isFlipped ? 'default' : 'pointer',
 				}}
 				animate={{
 					height: isFlipped ? '335px' : '128px',

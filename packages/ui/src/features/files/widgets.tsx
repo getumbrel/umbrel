@@ -151,7 +151,7 @@ function ListItem({item}: {item: FileSystemItem}) {
 		<div
 			role='button'
 			onClick={() => navigateToItem(item)}
-			className='flex cursor-pointer items-center gap-1 rounded-lg px-2 py-[0.3rem] transition-all hover:bg-white/10 sm:gap-2'
+			className='flex items-center gap-1 rounded-lg px-2 py-[0.3rem] transition-all hover:bg-white/10 sm:gap-2'
 		>
 			<FileItemIcon item={item} className='h-5 w-5 max-w-5 sm:h-7 sm:w-7 sm:max-w-7' />
 			<div className='flex items-baseline gap-1 overflow-hidden'>
@@ -256,7 +256,7 @@ function GridItem({item, count}: {item: FileSystemItem; index: number; count: nu
 			whileTap={{scale: 0.96, backgroundColor: 'rgba(255, 255, 255, 0.1)'}}
 			className={cn(
 				'flex h-full w-full items-center rounded-5 bg-white/5 px-1 leading-none text-white/70 sm:py-3',
-				'cursor-pointer overflow-hidden',
+				'overflow-hidden',
 				'[overflow-wrap:anywhere]',
 				'sm:rounded-12 sm:px-2',
 				count === 1 && 'flex-col justify-center gap-1 text-center',

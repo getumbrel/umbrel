@@ -53,7 +53,7 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({className, ...p
 			<button
 				className={cn(
 					widgetContainerCva({variant}),
-					'cursor-pointer ring-white/25 focus:outline-hidden focus-visible:ring-6 active:scale-95',
+					'ring-white/25 focus:outline-hidden focus-visible:ring-6 active:scale-95',
 					className,
 				)}
 				{...p}

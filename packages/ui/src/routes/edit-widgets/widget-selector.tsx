@@ -1,3 +1,4 @@
+import {Minus, Plus} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
@@ -165,6 +166,22 @@ function WidgetSection({iconSrc, title, children}: {iconSrc: string; title: stri
 	)
 }
 
+function PlusIcon({className}: {className?: string}) {
+	return (
+		<div className={cn('flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white/80', className)}>
+			<Plus className='h-4 w-4 text-black' strokeWidth={2.5} />
+		</div>
+	)
+}
+
+function MinusIcon({className}: {className?: string}) {
+	return (
+		<div className={cn('flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white/80', className)}>
+			<Minus className='h-4 w-4 text-black' strokeWidth={2.5} />
+		</div>
+	)
+}
+
 function WidgetChecker({
 	children,
 	checked = false,
@@ -175,13 +192,28 @@ function WidgetChecker({
 	onCheckedChange?: (checked: boolean) => void
 }) {
 	return (
-		<div className='relative'>
+		<div className='group relative'>
 			{children}
-			{checked && (
-				<div className='absolute top-0 right-0 translate-x-1/3 -translate-y-1/3 text-brand'>
-					<WidgetCheckIcon className='max-sm:scale-75' />
-				</div>
-			)}
+			{/* Corner icon: check when selected, plus/minus on hover to hint add/remove */}
+			<div className='absolute top-0 right-0 translate-x-1/3 -translate-y-1/3'>
+				{checked ? (
+					<>
+						{/* Show check by default, swap to minus on hover */}
+						<div className='text-brand group-hover:hidden'>
+							<WidgetCheckIcon className='max-sm:scale-75' />
+						</div>
+						<div className='hidden group-hover:block'>
+							<MinusIcon className='max-sm:scale-75' />
+						</div>
+					</>
+				) : (
+					/* Fade in plus icon on hover */
+					<div className='opacity-0 transition-opacity group-hover:opacity-100'>
+						<PlusIcon className='max-sm:scale-75' />
+					</div>
+				)}
+			</div>
+			{/* Invisible overlay button for the entire widget area */}
 			<button
 				className='absolute top-0 left-0 h-full w-full outline-hidden'
 				onClick={() => onCheckedChange?.(!checked)}

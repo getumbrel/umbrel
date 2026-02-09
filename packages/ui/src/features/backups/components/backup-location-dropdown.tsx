@@ -22,13 +22,13 @@ export function RestoreLocationDropdown({onSelect}: RestoreLocationDropdownProps
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align='end' className='min-w-[320px]'>
-				<DropdownMenuItem className='block cursor-pointer' onSelect={() => onSelect('/Network')}>
+				<DropdownMenuItem className='block' onSelect={() => onSelect('/Network')}>
 					<div className='flex w-full flex-col items-start'>
 						<div className='text-sm font-medium'>{t('backups-restore.browse-nas-title')}</div>
 						<div className='text-xs opacity-60'>{t('backups-restore.browse-nas-subtitle')}</div>
 					</div>
 				</DropdownMenuItem>
-				<DropdownMenuItem className='block cursor-pointer' onSelect={() => onSelect('/External')}>
+				<DropdownMenuItem className='block' onSelect={() => onSelect('/External')}>
 					<div className='flex w-full flex-col items-start'>
 						<div className='text-sm font-medium'>{t('backups-restore.browse-external-title')}</div>
 						<div className='text-xs opacity-60'>{t('backups-restore.browse-external-subtitle')}</div>

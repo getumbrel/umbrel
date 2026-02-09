@@ -147,7 +147,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 							<button
 								type='button'
 								onClick={() => onHealthClick?.(i)}
-								className='relative flex cursor-pointer items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] transition-colors hover:bg-white/[0.12]'
+								className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] transition-colors hover:bg-white/[0.12]'
 								style={{
 									paddingLeft: 'clamp(8px, 3cqi, 14px)',
 									paddingRight: 'clamp(8px, 3cqi, 14px)',

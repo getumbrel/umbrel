@@ -43,7 +43,10 @@ function AppWithDescriptionSmall({
 	appDescription: ReactNode
 }) {
 	return (
-		<Link to={to ? to : `/app-store/${id}`} className='group flex w-full items-center gap-2.5'>
+		<Link
+			to={to ? to : `/app-store/${id}`}
+			className='group -m-2.5 flex w-full items-center gap-2.5 rounded-12 p-2.5 outline-hidden hover:bg-white/4 focus:bg-white/4'
+		>
 			<AppIcon src={icon} size={50} className='rounded-10' />
 			<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
 				<h3 className='truncate text-14 leading-tight font-semibold -tracking-3'>{appName}</h3>

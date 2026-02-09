@@ -31,7 +31,6 @@ export function SegmentedControl<T extends string>({
 			layoutRoot
 			className={cn(
 				'flex shrink-0 gap-0 rounded-full border-[0.5px] border-white/6 bg-white/3',
-				justTwo && value !== undefined && 'cursor-pointer',
 				size === 'sm' && 'h-[24px] p-1 text-[9px]',
 				size === 'default' && 'h-[30px] p-1 text-12',
 				size === 'lg' && 'h-[40px] p-[5px] text-12',
@@ -75,7 +74,7 @@ export function SegmentedControl<T extends string>({
 						className={cn(
 							'relative z-10 transition-opacity duration-200',
 							size === 'lg' && 'font-medium',
-							value !== tab.id && 'opacity-50 group-hover:opacity-70',
+							value !== tab.id && 'opacity-50 group-hover:opacity-80',
 						)}
 					>
 						{tab.label}

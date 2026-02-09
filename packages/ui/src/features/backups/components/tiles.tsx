@@ -15,7 +15,7 @@ export function SelectableTile({
 	return (
 		<div
 			className={[
-				'flex h-[120px] cursor-pointer flex-col items-center justify-center rounded-xl p-4 text-center',
+				'flex h-[120px] flex-col items-center justify-center rounded-xl p-4 text-center',
 				selected ? 'border border-brand bg-brand/15' : 'border border-white/10 bg-white/5 hover:bg-white/10',
 			].join(' ')}
 			onClick={onClick}
@@ -28,7 +28,7 @@ export function SelectableTile({
 export function ClickableTile({children, onClick}: {children: React.ReactNode; onClick?: () => void}) {
 	return (
 		<div
-			className='flex h-[120px] cursor-pointer flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 p-4 text-center hover:bg-white/10'
+			className='flex h-[120px] flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 p-4 text-center hover:bg-white/10'
 			onClick={onClick}
 		>
 			{children}
@@ -77,7 +77,7 @@ export function RadioTile({
 				}
 			}}
 			className={[
-				'flex cursor-pointer items-center gap-3 rounded-xl border p-4',
+				'flex items-center gap-3 rounded-xl border p-4',
 				selected ? 'border-brand bg-brand/15' : 'border-white/10 bg-white/5 hover:bg-white/10',
 			].join(' ')}
 		>

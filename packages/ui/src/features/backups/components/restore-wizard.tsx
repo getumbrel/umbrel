@@ -419,7 +419,7 @@ function RepositoryStep({
 													selected
 														? 'border-brand bg-brand/15'
 														: isConnected(repo.path)
-															? 'cursor-pointer border-white/10 bg-white/5 hover:bg-white/10'
+															? 'border-white/10 bg-white/5 hover:bg-white/10'
 															: 'cursor-not-allowed border-white/10 bg-white/5 opacity-60',
 												].join(' ')}
 												onClick={() => {
@@ -464,7 +464,7 @@ function RepositoryStep({
 						) : null}
 						{/* Manual add callout row (always shown in known mode) */}
 						<div
-							className='flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
+							className='flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
 							onClick={() => onModeChange('manual')}
 						>
 							<div className='flex h-10 w-10 shrink-0 items-center justify-center'>
@@ -500,7 +500,7 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className={(manualPath ? 'cursor-pointer ' : 'cursor-default ') + 'pr-28'}
+									className='pr-28'
 									title={manualPath || ''}
 									aria-disabled={!manualPath}
 									tabIndex={manualPath ? 0 : -1}
@@ -626,7 +626,7 @@ function BackupsStep({
 									<div
 										key={id || Math.random()}
 										className={[
-											'group relative flex w-full cursor-pointer items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
+											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
 											selected
 												? 'bg-linear-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',

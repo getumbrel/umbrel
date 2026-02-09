@@ -204,7 +204,7 @@ function RegularRestoreFlow() {
 									type='text'
 									value={repositoryPath}
 									readOnly
-									className={(repositoryPath ? 'cursor-pointer ' : 'cursor-default ') + 'pr-28'}
+									className='pr-28'
 									title={repositoryPath || ''}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}
@@ -415,7 +415,7 @@ function BackupSnapshot({
 					'flex w-full items-center justify-between rounded-8 border px-4 py-3',
 					selected ? 'border-brand bg-brand/15' : 'border-white/10',
 					!noHover && !selected ? 'hover:bg-white/5' : '',
-					onClick ? 'cursor-pointer' : '',
+					'',
 				].join(' ')}
 				onClick={onClick}
 				title={backup.id}

@@ -209,7 +209,7 @@ const PathSegment = ({segment, hasArrow, onClick, isStatic, path, type}: PathSeg
 			id={`path-segment-${path}`}
 			path={path}
 			onClick={onClick}
-			className='group inline-flex w-[--item-width] min-w-[42px] cursor-pointer items-center gap-1 rounded-sm p-1 transition-[width] duration-300 ease-in-out hover:w-[--natural-width]'
+			className='group inline-flex w-[--item-width] min-w-[42px] items-center gap-1 rounded-sm p-1 transition-[width] duration-300 ease-in-out hover:w-[--natural-width]'
 		>
 			<FileItemIcon
 				item={{
@@ -227,12 +227,12 @@ const PathSegment = ({segment, hasArrow, onClick, isStatic, path, type}: PathSeg
 					size: 0,
 					modified: 0,
 				}}
-				className='h-4 w-4'
+				className='h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100'
 			/>
 			<span
 				className={cn(
 					'group-hover:[mask-image:none] [.has-overflow_&]:[mask-image:linear-gradient(to_left,transparent_0%,black_40px)]',
-					'overflow-hidden text-xs',
+					'overflow-hidden text-xs opacity-70 transition-opacity group-hover:opacity-100',
 					segment && 'ml-1',
 				)}
 			>

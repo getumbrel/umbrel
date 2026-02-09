@@ -324,7 +324,7 @@ export function SsdShape({
 					<button
 						type='button'
 						onClick={onHealthClick}
-						className='relative flex cursor-pointer items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-4 py-1 transition-colors hover:bg-white/[0.12]'
+						className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-4 py-1 transition-colors hover:bg-white/[0.12]'
 					>
 						<TbActivityHeartbeat className='size-4 text-white' />
 						{/* Warning dot - upper right of pill */}

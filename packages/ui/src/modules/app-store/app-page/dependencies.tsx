@@ -79,10 +79,7 @@ const Dependency = ({
 				</Link>
 				{numberOfAlternativeApps > 0 && (
 					<div
-						className={cn(
-							'mt-0.5 text-xs',
-							showDependencies && 'cursor-pointer text-brand-lightest hover:text-brand-lighter',
-						)}
+						className={cn('mt-0.5 text-xs', showDependencies && 'text-brand-lightest hover:text-brand-lighter')}
 						onClick={() => showDependencies?.(app.id)}
 					>
 						{t('app-page.section.dependencies.n-alternatives', {count: numberOfAlternativeApps + /* app itself */ 1})}

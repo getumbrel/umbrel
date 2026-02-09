@@ -60,7 +60,7 @@ export default function FilesLayout() {
 						{isMobile ? (
 							<HiMenuAlt2
 								role='button'
-								className='h-5 w-5 cursor-pointer text-white/90'
+								className='h-5 w-5 text-white/90'
 								onClick={() => setIsMobileSidebarOpen(true)}
 							/>
 						) : null}

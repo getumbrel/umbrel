@@ -335,7 +335,7 @@ function RepositoryDetails({
 						}
 					}}
 					aria-label={t('back')}
-					className='inline-flex h-6 w-6 cursor-pointer items-center justify-center text-white'
+					className='inline-flex h-6 w-6 items-center justify-center text-white'
 				>
 					<ArrowLeft className='h-4 w-4' />
 				</span>
@@ -412,7 +412,7 @@ function RepositoryDetails({
 					className={`flex items-center justify-between p-3 text-sm transition-colors ${
 						isLoadingBackups || (backups?.length || 0) === 0
 							? ''
-							: `cursor-pointer hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
+							: `hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
 					}`}
 					onClick={
 						isLoadingBackups || (backups?.length || 0) === 0 ? undefined : () => setShowAllBackups(!showAllBackups)

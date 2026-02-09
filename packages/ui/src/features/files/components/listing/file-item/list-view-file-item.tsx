@@ -37,7 +37,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 	// Mobile view
 	if (isMobile) {
 		return (
-			<div className={cn('flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
+			<div className={cn('flex items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
 				<div className='flex-shrink-0'>
 					<FileItemIcon item={item} className='h-7 w-7' />
 				</div>

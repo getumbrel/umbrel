@@ -11,7 +11,7 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					'bg-white/10 active:bg-white/6 hover:bg-white/10 focus:bg-white/10 border-[0.5px] border-white/20 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
+					'bg-white/10 active:bg-white/6 hover:bg-white/15 focus:bg-white/10 border-[0.5px] border-white/20 ring-white/20 data-[state=open]:bg-white/10 shadow-button-highlight-soft-hpx focus:border-white/20 focus:border-1 data-[state=open]:border-1 data-[state=open]:border-white/20',
 				primary:
 					'bg-brand hover:bg-brand-lighter focus:bg-brand-lighter active:bg-brand ring-brand/40 data-[state=open]:bg-brand-lighter shadow-button-highlight-hpx',
 				secondary:
@@ -33,7 +33,7 @@ const buttonVariants = cva(
 			},
 			text: {
 				default: 'text-white',
-				destructive: 'text-destructive/90 hover:text-destructive2-lightest focus:text-destructive2-lightest',
+				destructive: 'text-destructive',
 			},
 		},
 		compoundVariants: [

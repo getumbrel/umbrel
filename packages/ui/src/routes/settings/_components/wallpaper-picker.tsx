@@ -25,7 +25,7 @@ function WallpaperItem({
 			ref={ref}
 			onClick={onSelect}
 			className={cn(
-				'h-6 shrink-0 bg-white/10 bg-cover bg-center ring-white/50 outline-hidden transition-all duration-200 focus-visible:ring-1',
+				'h-6 shrink-0 bg-white/10 bg-cover bg-center ring-white/50 outline-hidden transition-all duration-200 hover:brightness-125 focus-visible:ring-1',
 				active
 					? // NOTE: `mx-3` or whatever horizontal marging needs to be big enough to not cause the ring to get clipped from scrolling container
 						'mx-3 rounded-5 ring-2 ring-white/50'

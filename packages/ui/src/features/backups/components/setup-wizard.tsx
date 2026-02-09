@@ -709,7 +709,7 @@ function FolderPickerStep({
 						type='text'
 						value={shownValue}
 						readOnly
-						className='cursor-pointer pr-28 text-white/90'
+						className='pr-28 text-white/90'
 						title={shownValue}
 						onClick={() => setBrowserOpen(true)}
 					/>
@@ -883,7 +883,7 @@ function ReviewStep({values}: {values: FormValues}) {
 								className='flex h-6 w-auto max-w-[120px] items-center overflow-hidden rounded-[3px] border border-[#ffffff0a] bg-white/10 px-1 font-mono text-12 leading-none text-ellipsis whitespace-nowrap outline-hidden'
 							/>
 							<span
-								className='group inline-flex h-6 w-6 cursor-pointer items-center justify-center'
+								className='group inline-flex h-6 w-6 items-center justify-center'
 								onClick={() => setShowPw((s) => !s)}
 								title={showPw ? t('backups.hide') : t('backups.show')}
 							>
@@ -894,7 +894,7 @@ function ReviewStep({values}: {values: FormValues}) {
 								)}
 							</span>
 							<span
-								className='group inline-flex h-6 w-6 cursor-pointer items-center justify-center'
+								className='group inline-flex h-6 w-6 items-center justify-center'
 								onClick={() => copyToClipboard(plainPw)}
 								title={t('backups.copy')}
 							>

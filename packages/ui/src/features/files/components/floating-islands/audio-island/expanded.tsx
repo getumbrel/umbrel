@@ -60,7 +60,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 							max={duration || 0}
 							value={currentTime}
 							onChange={onProgressChange}
-							className='absolute top-0 left-0 h-full w-full cursor-pointer opacity-0'
+							className='absolute top-0 left-0 h-full w-full opacity-0'
 							style={{margin: 0}}
 							aria-label={t('files-audio-island.now-playing')}
 						/>

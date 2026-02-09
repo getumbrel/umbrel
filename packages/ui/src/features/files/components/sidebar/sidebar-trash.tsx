@@ -70,7 +70,7 @@ export function SidebarTrash() {
 							className={`flex flex-col items-center ${
 								isExpanded
 									? 'rounded-xl border border-white/6 bg-linear-to-b from-white/[0.04] to-white/[0.08] p-3'
-									: 'h-[35px] cursor-pointer rounded-lg'
+									: 'h-[35px] rounded-lg'
 							} ${isTrash && 'border-white/6 bg-linear-to-b !from-white/[0.04] !to-white/[0.08] shadow-button-highlight-soft-hpx'}`}
 							initial={false}
 							onClick={() => {

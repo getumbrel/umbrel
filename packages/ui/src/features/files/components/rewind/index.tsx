@@ -47,10 +47,7 @@ export function SidebarRewind() {
 					'text-white/60 transition-colors hover:bg-white/10 hover:bg-linear-to-b hover:text-white',
 				)}
 			>
-				<button
-					className='flex w-full cursor-pointer items-center gap-[0.45rem] px-2 py-1.5'
-					onClick={() => setRepoOpen(true)}
-				>
+				<button className='flex w-full items-center gap-[0.45rem] px-2 py-1.5' onClick={() => setRepoOpen(true)}>
 					<RewindIcon className='size-5' />
 					<span className='truncate'>{t('backups-rewind')}</span>
 				</button>

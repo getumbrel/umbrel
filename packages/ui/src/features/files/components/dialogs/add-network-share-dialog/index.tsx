@@ -583,7 +583,7 @@ function SelectShareStep({
 										key={s}
 										onClick={disabled ? undefined : () => onSelect(s)}
 										className={cn(
-											'flex h-[50px] cursor-pointer items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
+											'flex h-[50px] items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
 											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
 											disabled && 'cursor-not-allowed opacity-50',
 										)}

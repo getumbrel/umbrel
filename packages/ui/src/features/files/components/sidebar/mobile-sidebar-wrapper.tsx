@@ -53,11 +53,7 @@ export function MobileSidebarWrapper({children, isOpen, onClose}: MobileSidebarP
 					>
 						{/* Close button */}
 						<div className='absolute top-8 right-3 sm:top-10 md:top-12'>
-							<ChevronLeft
-								role='button'
-								className='h-4 w-4 cursor-pointer text-white/60 transition-colors'
-								onClick={onClose}
-							/>
+							<ChevronLeft role='button' className='h-4 w-4 text-white/60 transition-colors' onClick={onClose} />
 						</div>
 						<div className='h-12 sm:h-16 md:h-20' /> {/* Spacer for top padding */}
 						{/* The actual <Sidebar /> component will be passed in as children */}

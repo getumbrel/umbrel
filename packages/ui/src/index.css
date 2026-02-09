@@ -33,7 +33,9 @@
 
 html,
 body {
-	/* Prevent text selection by default for native OS feel */
+	cursor: default;
+	/* Prevent text selection and text cursor by default for native OS feel */
+	-webkit-user-select: none;
 	user-select: none;
 	/* To match Figma weight */
 	text-rendering: geometricPrecision;
@@ -44,6 +46,13 @@ body {
 img,
 a {
 	-webkit-user-drag: none;
+}
+
+/* Override browser default cursor: pointer on interactive elements for native OS feel */
+a,
+button,
+[role='button'] {
+	cursor: default;
 }
 
 html {

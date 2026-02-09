@@ -3,6 +3,7 @@ import semver from 'semver'
 
 import {UNKNOWN} from '@/constants'
 import {useVersion} from '@/hooks/use-version'
+import {cn} from '@/lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
@@ -43,7 +44,7 @@ export const InfoSection = ({app}: {app: RegistryApp}) => {
 				/>
 			)}
 			<KV k={t('app-page.section.info.compatibility')} v={<InfoSectionCompatibilityText app={app} />} />
-			<a href={app.support} target='_blank' className='self-start text-14 font-medium text-brand-lighter'>
+			<a href={app.support} target='_blank' className={cn(linkClass, 'self-start text-14 font-medium')}>
 				{t('app-page.section.info.support')}
 			</a>
 		</div>

@@ -387,7 +387,7 @@ function Node({
 			<div
 				className={cn(
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
-					isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+					isDisabled && 'cursor-not-allowed opacity-60',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
 					isFaded && 'opacity-50',
 				)}

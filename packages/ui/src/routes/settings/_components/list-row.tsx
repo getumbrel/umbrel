@@ -40,7 +40,7 @@ export function ListRow({
 				// Show hover effect by default
 				'bg-linear-to-r from-transparent to-transparent hover:via-white/4',
 				// Make it clickable if it's a label
-				isLabel && 'cursor-pointer active:via-white/3',
+				isLabel && 'active:via-white/3',
 				// TODO: also scroll into view if active
 				isActive && 'umbrel-pulse-a-few-times',
 				disabled && 'pointer-events-none opacity-50',
