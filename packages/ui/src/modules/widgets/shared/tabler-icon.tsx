@@ -6,11 +6,15 @@ function sanitizeIconName(input: string) {
 	return input.replace(/[^a-z0-9-]/g, '')
 }
 
+const customIcons = ['system-widget-memory', 'system-widget-storage', 'system-widget-temperature', 'system-widget-cpu']
+
 export function TablerIcon({iconName, className, ...props}: {iconName: string} & HTMLProps<HTMLDivElement>) {
 	const [icon, setIcon] = useState('')
 
 	useEffect(() => {
-		const url = `/generated-tabler-icons/${sanitizeIconName(iconName)}.svg`
+		const url = customIcons.includes(iconName)
+			? `/assets/${sanitizeIconName(iconName)}.svg`
+			: `/generated-tabler-icons/${sanitizeIconName(iconName)}.svg`
 		fetch(url)
 			.then((res) => res.text())
 			.then((res) => {
