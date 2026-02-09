@@ -63,7 +63,8 @@ RUN apt-get install --yes \
     amd64-microcode \
     firmware-linux \
     firmware-realtek \
-    firmware-iwlwifi
+    firmware-iwlwifi \
+    firmware-atheros
 
 # Cleanup build steps.
 RUN rm -rf /build-steps
