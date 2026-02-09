@@ -2,13 +2,13 @@ import {Suspense, useRef, useState} from 'react'
 import {NavigationType, Outlet, useLocation, useNavigate} from 'react-router-dom'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {Sheet, SheetContent} from '@/components/ui/sheet'
+import {ScrollArea} from '@/components/ui/sheet-scroll-area'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {SheetFixedTarget} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {isFullscreenSettingsPath} from '@/routes/settings'
-import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
-import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
 // Determine if scroll position should be restored (`true`), reset (`false`) or

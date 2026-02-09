@@ -1,9 +1,9 @@
 import {useState} from 'react'
 
+import {PasswordInput} from '@/components/ui/input'
 import {PinInput} from '@/components/ui/pin-input'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
-import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

@@ -1,25 +1,18 @@
 import {useEffect, useRef, useState} from 'react'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
+import {Button} from '@/components/ui/button'
+import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {Input, Labeled} from '@/components/ui/input'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Input, Labeled} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 interface EditableNameProps {

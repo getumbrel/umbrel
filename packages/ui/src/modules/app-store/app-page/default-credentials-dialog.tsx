@@ -1,21 +1,14 @@
 import {useId} from 'react'
 
+import {Button} from '@/components/ui/button'
+import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/components/ui/checkbox'
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {Separator} from '@/components/ui/separator'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useUserApp} from '@/providers/apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'

@@ -1,11 +1,11 @@
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {listClass, listItemClass} from '@/components/ui/list'
 import {Spinner} from '@/components/ui/loading'
+import {Switch} from '@/components/ui/switch'
 import {toast} from '@/components/ui/toast'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

@@ -1,5 +1,6 @@
 import '@/features/files/components/listing/file-item/list-view-file-item.css'
 
+import {Progress} from '@/components/ui/progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
 import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
@@ -12,8 +13,7 @@ import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-dir
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {Progress} from '@/shadcn-components/ui/progress'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListViewFileItemProps {

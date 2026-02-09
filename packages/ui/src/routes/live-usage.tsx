@@ -14,14 +14,14 @@ import {
 	ImmersiveDialogOverlay,
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
+import {Progress} from '@/components/ui/progress'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {LOADING_DASH} from '@/constants'
 import {useCpuForUi} from '@/hooks/use-cpu'
 import {useDiskForUi, useSystemDiskForUi} from '@/hooks/use-disk'
 import {useMemoryForUi, useSystemMemoryForUi} from '@/hooks/use-memory'
+import {cn} from '@/lib/utils'
 import {AppT, systemAppsKeyed, useApps} from '@/providers/apps'
-import {Progress} from '@/shadcn-components/ui/progress'
-import {cn} from '@/shadcn-lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'

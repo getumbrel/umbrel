@@ -6,7 +6,6 @@ import {ChevronDown} from 'lucide-react'
 import {useState} from 'react'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
-import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -15,14 +14,10 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {t} from '@/utils/i18n'
 
 type RestoreLocationDropdownProps = {

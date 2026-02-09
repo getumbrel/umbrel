@@ -1,6 +1,6 @@
 import {motion} from 'motion/react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface CircularProgressProps {
 	progress?: number // Accept 1 to 100 (e.g. 50 = 50%)

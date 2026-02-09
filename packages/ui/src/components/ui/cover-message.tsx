@@ -1,8 +1,8 @@
 import {Portal} from '@radix-ui/react-portal'
 import {useTimeout} from 'react-use'
 
+import {cn} from '@/lib/utils'
 import {Wallpaper} from '@/providers/wallpaper'
-import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {DarkenLayer} from '../darken-layer'

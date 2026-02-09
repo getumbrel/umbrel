@@ -1,7 +1,7 @@
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
+import {Button} from '@/components/ui/button'
 import {toast} from '@/components/ui/toast'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

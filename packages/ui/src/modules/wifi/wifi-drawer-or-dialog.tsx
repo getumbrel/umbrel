@@ -3,10 +3,6 @@ import {ReactNode, useEffect, useRef, useState} from 'react'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {Drawer as DrawerPrimitive} from 'vaul'
 
-import {Loading} from '@/components/ui/loading'
-import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
-import {useIsSmallMobile} from '@/hooks/use-is-mobile'
-import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -16,14 +12,18 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {PasswordInput} from '@/shadcn-components/ui/input'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {Switch} from '@/shadcn-components/ui/switch'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {PasswordInput} from '@/components/ui/input'
+import {Loading} from '@/components/ui/loading'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {Switch} from '@/components/ui/switch'
+import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
+import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
+import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {RouterOutput, trpcReact, WifiNetwork, WifiStatus, WifiStatusUi} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'

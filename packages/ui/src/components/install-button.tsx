@@ -3,7 +3,7 @@ import {arrayIncludes} from 'ts-extras'
 
 import {ProgressButton} from '@/components/progress-button'
 import {UNKNOWN} from '@/constants'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {AppStateOrLoading} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'

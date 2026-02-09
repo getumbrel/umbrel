@@ -1,7 +1,7 @@
 import {Link} from 'react-router-dom'
 
+import {cn} from '@/lib/utils'
 import {WifiIcon2} from '@/modules/wifi/icon'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {signalToBars} from '@/utils/wifi'
 

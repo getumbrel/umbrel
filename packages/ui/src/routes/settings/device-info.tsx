@@ -1,6 +1,6 @@
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from './_components/device-info-content'

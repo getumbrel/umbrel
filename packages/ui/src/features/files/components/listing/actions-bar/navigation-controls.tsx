@@ -7,7 +7,7 @@ import {ChevronRightIcon} from '@/features/files/assets/chevron-right'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 /**
  * File browser navigation controls that track visited folder paths.

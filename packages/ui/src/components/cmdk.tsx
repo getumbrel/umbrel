@@ -8,7 +8,9 @@ import {range} from 'remeda'
 // Pluggable search providers rendered inside the command palette
 // Currently only /features/files uses this
 import {cmdkSearchProviders} from '@/components/cmdk-providers'
+import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/components/ui/command'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {Separator} from '@/components/ui/separator'
 import {LOADING_DASH} from '@/constants'
 import {
 	APPS_PATH as FILES_APPS_PATH,
@@ -19,11 +21,9 @@ import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
-import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {AppState, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

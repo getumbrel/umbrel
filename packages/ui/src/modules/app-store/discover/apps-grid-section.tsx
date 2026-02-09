@@ -3,9 +3,9 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import {appsGridClass, cardClass, cardFaintClass, SectionTitle, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
-import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 
 export function AppsGridSection({overline, title, apps}: {overline: string; title: ReactNode; apps?: RegistryApp[]}) {

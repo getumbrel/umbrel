@@ -1,5 +1,5 @@
+import {Badge} from '@/components/ui/badge'
 import {GenericErrorText} from '@/components/ui/generic-error-text'
-import {Badge} from '@/shadcn-components/ui/badge'
 
 /**
  * Used for when we can replace the error with text. EX: buttons, page content

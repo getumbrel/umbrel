@@ -10,7 +10,7 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface FileItemProps {
 	item: FileSystemItem

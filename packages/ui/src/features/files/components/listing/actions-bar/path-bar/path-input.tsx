@@ -1,8 +1,8 @@
 import {useLayoutEffect, useRef, useState} from 'react'
 
+import {Input} from '@/components/ui/input'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {Input} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface PathInputProps {

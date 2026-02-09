@@ -1,9 +1,9 @@
 import {TbServer, TbShoppingBag, TbUser} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
+import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/components/ui/immersive-dialog'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'

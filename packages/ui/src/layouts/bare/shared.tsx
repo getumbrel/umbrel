@@ -1,8 +1,8 @@
 import {motion} from 'motion/react'
 import {HTMLProps} from 'react'
 
-import UmbrelLogo from '@/assets/umbrel-logo'
-import {cn} from '@/shadcn-lib/utils'
+import UmbrelLogo from '@/components/umbrel-logo'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 export const UmbrelLogoLarge = () => (

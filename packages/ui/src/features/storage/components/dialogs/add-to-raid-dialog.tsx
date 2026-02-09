@@ -3,9 +3,6 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
-import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,8 +11,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -23,8 +20,11 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {Switch} from '@/shadcn-components/ui/switch'
+} from '@/components/ui/dialog'
+import {Switch} from '@/components/ui/switch'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, RaidDevice, StorageDevice} from '../../hooks/use-storage'

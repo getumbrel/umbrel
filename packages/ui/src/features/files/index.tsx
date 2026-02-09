@@ -2,6 +2,7 @@ import {lazy, Suspense, useEffect, useState} from 'react'
 import {HiMenuAlt2} from 'react-icons/hi'
 import {Outlet, useLocation} from 'react-router-dom'
 
+import {SheetHeader, SheetTitle} from '@/components/ui/sheet'
 import {FileViewer} from '@/features/files/components/file-viewer'
 import {FilesDndWrapper} from '@/features/files/components/files-dnd-wrapper'
 import {ActionsBar} from '@/features/files/components/listing/actions-bar'
@@ -13,7 +14,6 @@ import {MobileSidebarWrapper} from '@/features/files/components/sidebar/mobile-s
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))

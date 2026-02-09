@@ -10,7 +10,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 import {IframeChecker} from '@/components/iframe-checker'
 import {BareCoverMessage, CoverMessageTarget} from '@/components/ui/cover-message'
 import {Toaster} from '@/components/ui/toast'
-import {TooltipProvider} from '@/shadcn-components/ui/tooltip'
+import {TooltipProvider} from '@/components/ui/tooltip'
 import {t} from '@/utils/i18n'
 import {monkeyPatchConsoleLog} from '@/utils/logs'
 

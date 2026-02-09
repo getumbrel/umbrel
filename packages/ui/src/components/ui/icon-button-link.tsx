@@ -3,8 +3,8 @@ import * as React from 'react'
 import {AnchorHTMLAttributes, ReactNode} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
-import {buttonVariants} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
+import {buttonVariants} from '@/components/ui/button'
+import {cn} from '@/lib/utils'
 
 import {Icon, IconTypes} from './icon'
 

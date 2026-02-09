@@ -1,13 +1,7 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {TbDots} from 'react-icons/tb'
 
-import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
-import {SORT_BY_OPTIONS} from '@/features/files/constants'
-import {usePreferences} from '@/features/files/hooks/use-preferences'
-import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {useFilesStore} from '@/features/files/store/use-files-store'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -19,8 +13,14 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dropdown-menu'
+import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
+import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
+import {SORT_BY_OPTIONS} from '@/features/files/constants'
+import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
+import {useFilesStore} from '@/features/files/store/use-files-store'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {

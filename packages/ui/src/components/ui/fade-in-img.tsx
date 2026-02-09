@@ -1,6 +1,6 @@
 import {useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function FadeInImg({src, alt, className, ...props}: React.ImgHTMLAttributes<HTMLImageElement>) {
 	const [loaded, setLoaded] = useState(false)

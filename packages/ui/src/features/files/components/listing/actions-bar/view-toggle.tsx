@@ -1,9 +1,9 @@
+import {Tabs, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import {GridLayoutIcon} from '@/features/files/assets/grid-layout-icon'
 import {ListLayoutIcon} from '@/features/files/assets/list-layout-icon'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {ViewPreferences} from '@/features/files/types'
-import {Tabs, TabsList, TabsTrigger} from '@/shadcn-components/ui/tabs'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function ViewToggle() {

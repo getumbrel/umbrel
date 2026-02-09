@@ -6,12 +6,6 @@ import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
 
-import {links} from '@/constants/links'
-import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
-import {useAuth} from '@/modules/auth/use-auth'
-import {Progress} from '@/modules/bare/progress'
-import {useGlobalSystemState} from '@/providers/global-system-state/index'
-import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,8 +15,14 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Switch} from '@/shadcn-components/ui/switch'
+} from '@/components/ui/alert-dialog'
+import {Switch} from '@/components/ui/switch'
+import {links} from '@/constants/links'
+import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {useAuth} from '@/modules/auth/use-auth'
+import {Progress} from '@/modules/bare/progress'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
+import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
@@ -409,7 +409,7 @@ export default function RaidSetup() {
 				}
 			>
 				<img
-					src='/onboarding/pro-front.webp'
+					src='/assets/onboarding/pro-front.webp'
 					alt={t('storage-manager.umbrel-pro')}
 					draggable={false}
 					className='w-64 md:w-96'
@@ -454,7 +454,7 @@ export default function RaidSetup() {
 				}
 			>
 				<img
-					src='/onboarding/pro-front.webp'
+					src='/assets/onboarding/pro-front.webp'
 					alt={t('storage-manager.umbrel-pro')}
 					draggable={false}
 					className='w-64 md:w-96'

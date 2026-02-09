@@ -1,9 +1,9 @@
 import {useRef, useState} from 'react'
 import {useMount} from 'react-use'
 
+import {Button} from '@/components/ui/button'
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {PasswordInput} from '@/shadcn-components/ui/input'
+import {PasswordInput} from '@/components/ui/input'
 import {t} from '@/utils/i18n'
 
 import {description, title} from './misc'

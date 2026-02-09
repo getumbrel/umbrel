@@ -2,8 +2,8 @@ import React, {CSSProperties} from 'react'
 import {useDropzone} from 'react-dropzone'
 
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {cn} from '@/lib/utils'
 import {useGlobalFiles} from '@/providers/global-files'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 interface FileUploadDropZoneProps {

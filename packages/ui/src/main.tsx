@@ -1,6 +1,6 @@
 import {RouterProvider} from 'react-router-dom'
 
-import {PendingRaidOperationProvider} from '@/features/storage/contexts/pending-operation-context'
+import {PendingRaidOperationProvider} from '@/features/storage/providers/pending-operation-context'
 import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
 import {ConfirmationProvider} from '@/providers/confirmation'

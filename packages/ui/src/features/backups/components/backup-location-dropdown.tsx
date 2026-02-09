@@ -1,12 +1,7 @@
 import {ChevronDown} from 'lucide-react'
 
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 type RestoreLocationDropdownProps = {

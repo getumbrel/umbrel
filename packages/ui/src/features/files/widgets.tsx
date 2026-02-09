@@ -8,9 +8,9 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {FileSystemItem} from '@/features/files/types'
 import {formatItemName, splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import type {BaseWidget, Link, RegistryWidget} from '@/modules/widgets/shared/constants'
 import {WidgetContainer} from '@/modules/widgets/shared/shared'
-import {cn} from '@/shadcn-lib/utils'
 
 export type FilesListWidget = BaseWidget & {
 	type: 'files-list'

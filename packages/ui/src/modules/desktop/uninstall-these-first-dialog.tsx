@@ -2,16 +2,9 @@ import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 
 export function UninstallTheseFirstDialog({

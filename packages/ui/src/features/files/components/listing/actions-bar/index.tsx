@@ -1,3 +1,4 @@
+import {Separator} from '@/components/ui/separator'
 import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {MobileActions} from '@/features/files/components/listing/actions-bar/mobile-actions'
 import {NavigationControls} from '@/features/files/components/listing/actions-bar/navigation-controls'
@@ -6,8 +7,7 @@ import {SearchInput} from '@/features/files/components/listing/actions-bar/searc
 import {SortDropdown} from '@/features/files/components/listing/actions-bar/sort-dropdown'
 import {ViewToggle} from '@/features/files/components/listing/actions-bar/view-toggle'
 import {useIsFilesEmbedded, useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 // Actions/navigation bar displayed above every files listing.  Its
 // contents are driven by the configuration exposed via the

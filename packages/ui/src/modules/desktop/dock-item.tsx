@@ -3,7 +3,7 @@ import {useEffect, useRef, useState} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
 import {NotificationBadge} from '@/components/ui/notification-badge'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 type HTMLDivProps = HTMLMotionProps<'div'>
 type DockItemProps = {

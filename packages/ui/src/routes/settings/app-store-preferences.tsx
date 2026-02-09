@@ -1,4 +1,4 @@
-import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

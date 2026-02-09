@@ -2,10 +2,7 @@ import {useEffect, useState} from 'react'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbInfoCircle} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
-import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogContent,
@@ -14,8 +11,11 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {StorageDevice} from '../../hooks/use-storage'

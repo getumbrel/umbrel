@@ -1,8 +1,8 @@
 import {type VariantProps} from 'class-variance-authority'
 import * as React from 'react'
 
-import {buttonVariants} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
+import {buttonVariants} from '@/components/ui/button'
+import {cn} from '@/lib/utils'
 
 import {Icon, IconTypes} from './icon'
 

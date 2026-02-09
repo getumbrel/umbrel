@@ -5,9 +5,9 @@ import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
 import {Loading} from '@/components/ui/loading'
+import {cn} from '@/lib/utils'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {cn} from '@/shadcn-lib/utils'
 import {installedStates, RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

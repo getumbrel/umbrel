@@ -3,7 +3,7 @@ import {TbQuestionMark} from 'react-icons/tb'
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 

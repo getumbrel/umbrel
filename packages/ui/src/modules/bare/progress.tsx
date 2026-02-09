@@ -2,7 +2,7 @@ import * as ProgressPrimitive from '@radix-ui/react-progress'
 import {ReactNode} from 'react'
 import {isNil} from 'remeda'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function Progress({value, children}: {value?: number; children?: ReactNode}) {
 	return (

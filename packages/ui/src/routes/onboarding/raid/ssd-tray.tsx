@@ -34,7 +34,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 		<div className='relative w-full' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
 			{/* Layer 1: Empty tray */}
 			<img
-				src='/onboarding/ssd-tray.webp'
+				src='/assets/onboarding/ssd-tray.webp'
 				alt={t('onboarding.raid.ssd-tray-alt')}
 				draggable={false}
 				className='absolute inset-0 size-full'
@@ -67,7 +67,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 					<div key={i}>
 						{/* Layer 3: SSD image */}
 						<img
-							src='/onboarding/ssd.webp'
+							src='/assets/onboarding/ssd.webp'
 							alt={t('onboarding.raid.ssd-label', {number: i + 1})}
 							draggable={false}
 							className='absolute'

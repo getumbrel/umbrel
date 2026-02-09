@@ -7,7 +7,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem, PolymorphicPropsWithoutRef} from '@/features/files/types'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface DraggableProps {
 	id: string

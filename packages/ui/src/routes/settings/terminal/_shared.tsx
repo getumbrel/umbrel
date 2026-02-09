@@ -4,10 +4,10 @@ import {useEffect, useRef, useState} from 'react'
 import {TbArrowRight, TbClipboard, TbX} from 'react-icons/tb'
 import {useMeasure} from 'react-use'
 
+import {Button} from '@/components/ui/button'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {BackLink} from '@/modules/immersive-picker'
-import {Button} from '@/shadcn-components/ui/button'
 import {t} from '@/utils/i18n'
 
 import '@xterm/xterm/css/xterm.css'

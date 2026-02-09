@@ -3,7 +3,7 @@ import {snapCenterToCursor} from '@dnd-kit/modifiers'
 
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useFilesStore} from '@/features/files/store/use-files-store'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function FilesDndOverlay() {
 	const draggedItems = useFilesStore((s) => s.draggedItems)

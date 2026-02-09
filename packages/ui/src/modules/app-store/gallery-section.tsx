@@ -6,8 +6,8 @@ import 'photoswipe/style.css'
 import {useEffect} from 'react'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {cn} from '@/lib/utils'
 import {Banner} from '@/routes/app-store/use-discover-query'
-import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => {

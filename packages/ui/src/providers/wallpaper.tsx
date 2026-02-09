@@ -3,7 +3,7 @@ import {usePreviousDistinct} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {keyBy, preloadImage} from '@/utils/misc'
 import {tw} from '@/utils/tw'
@@ -17,118 +17,118 @@ type WallpaperBase = {
 export const wallpapers = [
 	{
 		id: '1',
-		url: '/wallpapers/1.jpg',
+		url: '/assets/wallpapers/1.jpg',
 		brandColorHsl: '259 100% 59%',
 	},
 	{
 		id: '2',
-		url: '/wallpapers/2.jpg',
+		url: '/assets/wallpapers/2.jpg',
 		brandColorHsl: '6 56% 54%',
 	},
 	{
 		id: '3',
-		url: '/wallpapers/3.jpg',
+		url: '/assets/wallpapers/3.jpg',
 		brandColorHsl: '22 88% 40%',
 	},
 	{
 		id: '4',
-		url: '/wallpapers/4.jpg',
+		url: '/assets/wallpapers/4.jpg',
 		brandColorHsl: '198 100% 31%',
 	},
 	{
 		id: '5',
-		url: '/wallpapers/5.jpg',
+		url: '/assets/wallpapers/5.jpg',
 		brandColorHsl: '202 100% 33%',
 	},
 	{
 		id: '6',
-		url: '/wallpapers/6.jpg',
+		url: '/assets/wallpapers/6.jpg',
 		brandColorHsl: '160 100% 27%',
 	},
 	{
 		id: '7',
-		url: '/wallpapers/7.jpg',
+		url: '/assets/wallpapers/7.jpg',
 		brandColorHsl: '79 100% 25%',
 	},
 	{
 		id: '8',
-		url: '/wallpapers/8.jpg',
+		url: '/assets/wallpapers/8.jpg',
 		brandColorHsl: '185 100% 29%',
 	},
 	{
 		id: '9',
-		url: '/wallpapers/9.jpg',
+		url: '/assets/wallpapers/9.jpg',
 		brandColorHsl: '359 64% 62%',
 	},
 	{
 		id: '10',
-		url: '/wallpapers/10.jpg',
+		url: '/assets/wallpapers/10.jpg',
 		brandColorHsl: '18 75% 52%',
 	},
 	{
 		id: '11',
-		url: '/wallpapers/11.jpg',
+		url: '/assets/wallpapers/11.jpg',
 		brandColorHsl: '185 100% 29%',
 	},
 	{
 		id: '12',
-		url: '/wallpapers/12.jpg',
+		url: '/assets/wallpapers/12.jpg',
 		brandColorHsl: '332 84% 47%',
 	},
 	{
 		id: '13',
-		url: '/wallpapers/13.jpg',
+		url: '/assets/wallpapers/13.jpg',
 		brandColorHsl: '194 81% 39%',
 	},
 	{
 		id: '14',
-		url: '/wallpapers/14.jpg',
+		url: '/assets/wallpapers/14.jpg',
 		brandColorHsl: '328 87% 49%',
 	},
 	{
 		id: '15',
-		url: '/wallpapers/15.jpg',
+		url: '/assets/wallpapers/15.jpg',
 		brandColorHsl: '32 100% 36%',
 	},
 	{
 		id: '16',
-		url: '/wallpapers/16.jpg',
+		url: '/assets/wallpapers/16.jpg',
 		brandColorHsl: '265 100% 42%',
 	},
 	{
 		id: '17',
-		url: '/wallpapers/17.jpg',
+		url: '/assets/wallpapers/17.jpg',
 		brandColorHsl: '184 100% 25%',
 	},
 	{
 		id: '18',
-		url: '/wallpapers/18.jpg',
+		url: '/assets/wallpapers/18.jpg',
 		brandColorHsl: '259 100% 59%',
 	},
 	{
 		id: '19',
-		url: '/wallpapers/19.jpg',
+		url: '/assets/wallpapers/19.jpg',
 		brandColorHsl: '204 100% 41%',
 	},
 	{
 		id: '20',
-		url: '/wallpapers/20.jpg',
+		url: '/assets/wallpapers/20.jpg',
 		brandColorHsl: '259 100% 59%',
 	},
 	{
 		id: '21',
-		url: '/wallpapers/21.jpg',
+		url: '/assets/wallpapers/21.jpg',
 		brandColorHsl: '12 78% 50%',
 	},
 	{
 		id: '22',
-		url: '/wallpapers/22.jpg',
+		url: '/assets/wallpapers/22.jpg',
 		brandColorHsl: '92 52% 41%',
 	},
 ] as const satisfies readonly WallpaperBase[]
 
 export function getWallpaperThumbUrl(wallpaper: WallpaperBase) {
-	return `/wallpapers/generated-thumbs/${wallpaper.id}.jpg`
+	return `/assets/wallpapers/generated-thumbs/${wallpaper.id}.jpg`
 }
 
 export type Wallpaper = (typeof wallpapers)[number]

@@ -4,18 +4,11 @@ import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
 import {appStateToString} from '@/components/cmdk'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useApps, useUserApp} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
 import {installedStates, progressStates, RegistryApp, trpcReact, UserApp} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'

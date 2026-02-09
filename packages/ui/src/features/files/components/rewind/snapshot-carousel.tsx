@@ -8,7 +8,7 @@ import {EmbeddedFiles} from '@/features/files/components/embedded'
 import {APPS_PATH, HOME_PATH} from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemDateOnly} from '@/features/files/utils/format-filesystem-date'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import type {SupportedLanguageCode} from '@/utils/language'
 

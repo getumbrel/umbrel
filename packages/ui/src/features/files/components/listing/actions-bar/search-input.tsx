@@ -1,11 +1,11 @@
 import {useEffect, useRef, useState} from 'react'
 import {useLocation, useNavigate as useRouterNavigate, useSearchParams} from 'react-router-dom'
 
+import {Input} from '@/components/ui/input'
 import {SearchIcon} from '@/features/files/assets/search-icon'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
-import {Input} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function SearchInput() {

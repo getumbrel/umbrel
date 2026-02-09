@@ -1,7 +1,7 @@
 import {cva} from 'class-variance-authority'
 import {useContext} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 import {BackdropBlurVariantContext} from './backdrop-blur-context'

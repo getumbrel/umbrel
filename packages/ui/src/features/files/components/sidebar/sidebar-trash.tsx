@@ -1,6 +1,7 @@
 import {motion, MotionConfig} from 'motion/react'
 import {useId, useState} from 'react'
 
+import {Button} from '@/components/ui/button'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
@@ -10,7 +11,6 @@ import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useConfirmation} from '@/providers/confirmation'
-import {Button} from '@/shadcn-components/ui/button'
 import {t} from '@/utils/i18n'
 
 export function SidebarTrash() {

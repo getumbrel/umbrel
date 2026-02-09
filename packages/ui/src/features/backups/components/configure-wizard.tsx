@@ -4,6 +4,18 @@ import * as React from 'react'
 import {useNavigate} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
@@ -24,23 +36,6 @@ import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-dat
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 // MAIN COMPONENT

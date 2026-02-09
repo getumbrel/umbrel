@@ -1,7 +1,7 @@
 import {HTMLProps, useEffect, useState} from 'react'
 
+import {cn} from '@/lib/utils'
 import {APP_ICON_PLACEHOLDER_SRC} from '@/modules/desktop/app-icon'
-import {cn} from '@/shadcn-lib/utils'
 
 type AppIconProps = {src?: string; size?: number; ref?: React.Ref<HTMLImageElement>} & HTMLProps<HTMLImageElement>
 

@@ -1,8 +1,3 @@
-import {FlameIcon} from '@/features/files/assets/flame-icon'
-import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
-import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
-import {useFilesStore} from '@/features/files/store/use-files-store'
-import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -12,8 +7,13 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
+} from '@/components/ui/alert-dialog'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {FlameIcon} from '@/features/files/assets/flame-icon'
+import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
+import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
+import {useFilesStore} from '@/features/files/store/use-files-store'
+import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

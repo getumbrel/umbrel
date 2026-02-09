@@ -1,7 +1,7 @@
 import {SVGProps, useId} from 'react'
 import {TbWifi, TbWifi0, TbWifi1, TbWifi2, TbWifiOff} from 'react-icons/tb'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function WifiIcon({bars = 4, className}: {bars: number; className?: string}) {
 	const components = [TbWifiOff, TbWifi0, TbWifi1, TbWifi2, TbWifi]

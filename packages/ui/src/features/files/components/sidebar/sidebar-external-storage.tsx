@@ -1,11 +1,11 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useNavigate} from 'react-router-dom'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {SidebarExternalStorageItem} from '@/features/files/components/sidebar/sidebar-external-storage-item'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarExternalStorage() {

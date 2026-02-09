@@ -5,15 +5,15 @@ import {FaRegCirclePause} from 'react-icons/fa6'
 import {Link, useNavigate} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {cn} from '@/lib/utils'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {getAppStoreAppFromInstalledApp} from '@/modules/app-store/utils'
 import {useUserApp} from '@/providers/apps'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
-import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
-import {cn} from '@/shadcn-lib/utils'
 import {AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
@@ -22,7 +22,7 @@ import {assertUnreachable} from '@/utils/misc'
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
 
-export const APP_ICON_PLACEHOLDER_SRC = '/figma-exports/app-icon-placeholder.svg'
+export const APP_ICON_PLACEHOLDER_SRC = '/assets/app-icon-placeholder.svg'
 
 export function AppIcon({
 	label,

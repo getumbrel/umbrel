@@ -3,7 +3,7 @@
 import {Portal} from '@radix-ui/react-portal'
 import {ComponentPropsWithoutRef, createContext, useContext, useEffect, useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 // In the future, the child that sets the header content will should be responsible for this
 const SCROLL_THRESHOLD = 110

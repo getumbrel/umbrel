@@ -1,8 +1,8 @@
 import {cva} from 'class-variance-authority'
 import {useEffect, useRef, useState} from 'react'
 
-import CaretRight from '@/assets/caret-right'
-import {cn} from '@/shadcn-lib/utils'
+import CaretRight from '@/components/caret-right'
+import {cn} from '@/lib/utils'
 
 const DATA_INDEX_ATTR = 'data-index'
 

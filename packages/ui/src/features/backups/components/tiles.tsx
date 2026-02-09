@@ -1,7 +1,7 @@
 import {Loader2} from 'lucide-react'
 import * as React from 'react'
 
-import {RadioGroupItem} from '@/shadcn-components/ui/radio-group'
+import {RadioGroupItem} from '@/components/ui/radio-group'
 
 export function SelectableTile({
 	children,

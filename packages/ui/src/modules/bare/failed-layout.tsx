@@ -2,7 +2,7 @@ import {ReactNode} from 'react'
 import {Link, To} from 'react-router-dom'
 
 import {buttonClass, secondaryButtonClasss} from '@/layouts/bare/shared'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {bareContainerClass, BareLogoTitle, BareSpacer, bareTextClass} from './shared'

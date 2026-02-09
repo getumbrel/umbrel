@@ -3,6 +3,16 @@ import {useEffect, useRef, useState} from 'react'
 import {useSearchParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {
+	Drawer,
+	DrawerContent,
+	DrawerDescription,
+	DrawerHeader,
+	DrawerScroller,
+	DrawerTitle,
+} from '@/components/ui/drawer'
 import {PlatformInstructions} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions'
 import {
 	Platform,
@@ -14,23 +24,6 @@ import {HOME_PATH} from '@/features/files/constants'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerHeader,
-	DrawerScroller,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

@@ -1,8 +1,5 @@
 import {useId, useState} from 'react'
 
-import {ListRadioItem} from '@/components/ui/list'
-import {useLanguage} from '@/hooks/use-language'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -10,7 +7,10 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
+} from '@/components/ui/drawer'
+import {ListRadioItem} from '@/components/ui/list'
+import {useLanguage} from '@/hooks/use-language'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 import {languages, SupportedLanguageCode} from '@/utils/language'
 import {sleep} from '@/utils/misc'

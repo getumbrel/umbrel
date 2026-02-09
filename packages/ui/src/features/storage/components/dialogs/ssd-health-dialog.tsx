@@ -2,8 +2,8 @@ import {useState} from 'react'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 import {tw} from '@/utils/tw'
@@ -90,7 +90,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 							WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)',
 						}}
 					>
-						<img src='/onboarding/ssd-info.webp' alt='SSD' draggable={false} className='ml-auto w-[95%]' />
+						<img src='/assets/onboarding/ssd-info.webp' alt='SSD' draggable={false} className='ml-auto w-[95%]' />
 						<div className='absolute flex flex-col' style={{left: '20%', top: '50%', transform: 'translateY(-50%)'}}>
 							<span
 								className='leading-tight font-bold'

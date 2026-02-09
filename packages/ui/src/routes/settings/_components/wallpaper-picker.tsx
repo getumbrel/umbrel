@@ -1,7 +1,7 @@
 import {useEffect, useRef} from 'react'
 
+import {cn} from '@/lib/utils'
 import {useWallpaper, wallpapers} from '@/providers/wallpaper'
-import {cn} from '@/shadcn-lib/utils'
 
 const ITEM_W = 40
 const GAP = 4
@@ -88,7 +88,7 @@ export function WallpaperPicker({maxW}: {maxW?: number}) {
 							onSelect={() => {
 								setWallpaperId(w.id)
 							}}
-							bg={`/wallpapers/generated-thumbs/${w.id}.jpg`}
+							bg={`/assets/wallpapers/generated-thumbs/${w.id}.jpg`}
 						/>
 					))}
 					<div className='w-1 shrink-0' />

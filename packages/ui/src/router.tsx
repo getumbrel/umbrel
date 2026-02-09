@@ -1,3 +1,8 @@
+// Route structure:
+// - routes/ contains page-level components mapped to URL paths
+// - modules/ contains reusable UI compositions shared across routes (app-store, desktop, auth, etc.)
+// - features/ may colocate their own route definitions (e.g., files/routes.tsx) when they own an entire route subtree
+
 import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 

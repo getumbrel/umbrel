@@ -4,25 +4,13 @@ import {FaRegSave} from 'react-icons/fa'
 import {TbHistory, TbSettings} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
+import {Button} from '@/components/ui/button'
+import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function BackupsMobileDrawer() {

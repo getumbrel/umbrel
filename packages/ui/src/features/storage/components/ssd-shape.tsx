@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 // TODO: Consider changing TbBattery1 (low life) and TbHeartBroken (unhealthy) icons to something more intuitive
 import {TbActivityHeartbeat, TbAlertTriangleFilled, TbBattery1, TbFlame, TbHeartBroken} from 'react-icons/tb'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 

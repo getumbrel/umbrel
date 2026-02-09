@@ -1,11 +1,11 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 
+import {Table, TableCell, TableHeader, TableRow} from '@/components/ui/table'
 import {VirtualizedList} from '@/features/files/components/listing/virtualized-list'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import type {FileSystemItem} from '@/features/files/types'
-import {Table, TableCell, TableHeader, TableRow} from '@/shadcn-components/ui/table'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListingBodyProps {

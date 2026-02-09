@@ -1,8 +1,8 @@
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
-import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
-import {cn} from '@/shadcn-lib/utils'
+import {SheetHeader, SheetTitle} from '@/components/ui/sheet'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 export const slideInFromBottomClass = tw`animate-in fade-in slide-in-from-bottom-8 duration-300`

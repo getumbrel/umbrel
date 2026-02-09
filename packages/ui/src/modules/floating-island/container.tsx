@@ -8,8 +8,8 @@ import {OperationsIsland} from '@/features/files/components/floating-islands/ope
 import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {RaidIsland} from '@/features/storage/components/floating-island'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
 import {useRaidProgress} from '@/features/storage/hooks/use-raid-progress'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {useGlobalFiles} from '@/providers/global-files'
 import {useImmersiveDialogOpen} from '@/providers/immersive-dialog'
 

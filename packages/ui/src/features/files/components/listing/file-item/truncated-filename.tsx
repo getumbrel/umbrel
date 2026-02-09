@@ -1,5 +1,5 @@
 import {formatItemName, splitFileName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface TruncatedFilenameProps {
 	filename: string

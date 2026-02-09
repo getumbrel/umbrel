@@ -1,8 +1,8 @@
 import {motion} from 'motion/react'
 
+import {ScrollArea} from '@/components/ui/scroll-area'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 
 type FormattingDevice = {

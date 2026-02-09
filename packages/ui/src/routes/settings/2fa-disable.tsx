@@ -1,10 +1,10 @@
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {PinInput} from '@/components/ui/pin-input'
+import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {Separator} from '@/shadcn-components/ui/separator'
 import {t} from '@/utils/i18n'
 
 export default function TwoFactorDisableDialog() {

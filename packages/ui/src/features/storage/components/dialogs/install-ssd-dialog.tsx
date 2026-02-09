@@ -1,7 +1,6 @@
 import {useEffect, useState} from 'react'
 
-import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -9,7 +8,8 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+} from '@/components/ui/dialog'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {t} from '@/utils/i18n'
 
 import {InstallTipsCollapsible} from './install-tips-collapsible'

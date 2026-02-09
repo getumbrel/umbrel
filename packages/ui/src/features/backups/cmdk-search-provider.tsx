@@ -1,9 +1,9 @@
 import {useNavigate} from 'react-router-dom'
 
 import {CmdkSearchProviderProps} from '@/components/cmdk-providers'
+import {CommandItem} from '@/components/ui/command'
 import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {useBackups} from '@/features/backups/hooks/use-backups'
-import {CommandItem} from '@/shadcn-components/ui/command'
 import {t} from '@/utils/i18n'
 
 export const BackupsCmdkSearchProvider: React.FC<CmdkSearchProviderProps> = ({close}) => {

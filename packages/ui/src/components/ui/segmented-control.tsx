@@ -1,7 +1,7 @@
 import {motion} from 'motion/react'
 import {useId} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 type Tab<T extends string> = {id: T; label: string}
 

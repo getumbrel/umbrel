@@ -3,8 +3,8 @@ import {saveAs} from 'file-saver'
 import filenamify from 'filenamify/browser'
 import {useEffect, useRef} from 'react'
 
+import {cn} from '@/lib/utils'
 import {BackLink} from '@/modules/immersive-picker'
-import {cn} from '@/shadcn-lib/utils'
 import {RouterInput} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

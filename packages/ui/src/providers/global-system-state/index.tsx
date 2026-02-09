@@ -6,7 +6,7 @@ import {usePreviousDistinct} from 'react-use'
 import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {toast} from '@/components/ui/toast'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
 import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
@@ -40,7 +40,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)
 	const [restoreFailure, setRestoreFailure] = useState(false)
-	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = useLocalStorage2('should-logout-on-running', false)
+	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = usePrefixedLocalStorage('should-logout-on-running', false)
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
 	const [routerError, setRouterError] = useState<RouterError | null>(null)

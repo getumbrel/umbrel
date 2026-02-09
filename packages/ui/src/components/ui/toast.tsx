@@ -2,8 +2,8 @@ import type {IconType} from 'react-icons'
 import {TbAlertCircle, TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
 import * as SonnerPrimitive from 'sonner'
 
+import {buttonVariants} from '@/components/ui/button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {buttonVariants} from '@/shadcn-components/ui/button'
 import {tw} from '@/utils/tw'
 
 export function Toaster() {

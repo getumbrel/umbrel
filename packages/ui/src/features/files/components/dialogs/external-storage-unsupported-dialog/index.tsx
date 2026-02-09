@@ -1,6 +1,5 @@
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
-import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,7 +8,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

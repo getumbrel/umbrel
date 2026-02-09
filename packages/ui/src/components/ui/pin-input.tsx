@@ -5,7 +5,7 @@ import {CodeInput, getSegmentCssWidth} from 'rci'
 import {useRef, useState, type RefObject} from 'react'
 import {useIsFocused} from 'use-is-focused'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 // ---

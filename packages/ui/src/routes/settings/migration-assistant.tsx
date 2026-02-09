@@ -4,6 +4,16 @@ import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from '
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {
 	ImmersiveDialog,
 	ImmersiveDialogBody,
 	ImmersiveDialogIconMessage,
@@ -14,16 +24,6 @@ import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

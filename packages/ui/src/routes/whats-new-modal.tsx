@@ -2,6 +2,8 @@ import {DialogPortal} from '@radix-ui/react-dialog'
 import {useEffect, useRef, useState} from 'react'
 import {TbChevronLeft, TbChevronRight} from 'react-icons/tb'
 
+import {Button} from '@/components/ui/button'
+import {Carousel, CarouselContent, CarouselItem, type CarouselApi} from '@/components/ui/carousel'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -9,9 +11,7 @@ import {
 	ImmersiveDialogOverlay,
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {Carousel, CarouselContent, CarouselItem, type CarouselApi} from '@/shadcn-components/ui/carousel'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -22,31 +22,31 @@ const VERSION = 'umbrelOS 1.5'
 const FEATURES = [
 	{
 		id: 1,
-		video: '/whats-new/backups.webm',
+		video: '/assets/whats-new/backups.webm',
 		titleTKey: 'backups',
 		descriptionTKey: 'whats-new.feature-1.description',
 	},
 	{
 		id: 2,
-		video: '/whats-new/rewind.webm',
+		video: '/assets/whats-new/rewind.webm',
 		titleTKey: 'rewind',
 		descriptionTKey: 'whats-new.feature-2.description',
 	},
 	{
 		id: 3,
-		video: '/whats-new/restore.webm',
+		video: '/assets/whats-new/restore.webm',
 		titleTKey: 'backups-restore',
 		descriptionTKey: 'whats-new.feature-3.description',
 	},
 	{
 		id: 4,
-		video: '/whats-new/network-devices.webm',
+		video: '/assets/whats-new/network-devices.webm',
 		titleTKey: 'whats-new.feature-4.title',
 		descriptionTKey: 'whats-new.feature-4.description',
 	},
 	{
 		id: 5,
-		video: '/whats-new/external-storage.webm',
+		video: '/assets/whats-new/external-storage.webm',
 		titleTKey: 'whats-new.feature-5.title',
 		descriptionTKey: 'whats-new.feature-5.description',
 		helperTextTKey: 'whats-new.feature-5.helper-text',

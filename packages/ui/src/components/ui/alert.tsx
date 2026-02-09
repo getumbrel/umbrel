@@ -1,6 +1,6 @@
 import {cva, VariantProps} from 'class-variance-authority'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 import {IconTypes} from './icon'
 

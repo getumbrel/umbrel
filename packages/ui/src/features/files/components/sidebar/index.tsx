@@ -4,6 +4,7 @@
 // So we've opted for simpler code over premature optimization.
 import {AnimatePresence, motion} from 'motion/react'
 
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {SidebarRewind} from '@/features/files/components/rewind'
 import {SidebarApps} from '@/features/files/components/sidebar/sidebar-apps'
 import {SidebarExternalStorage} from '@/features/files/components/sidebar/sidebar-external-storage'
@@ -18,8 +19,7 @@ import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useFilesCapabilities} from '@/features/files/providers/files-capabilities-context'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function Sidebar({className}: {className?: string}) {

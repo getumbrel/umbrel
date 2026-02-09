@@ -1,10 +1,7 @@
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
-import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -12,7 +9,10 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, StorageDevice} from '../../hooks/use-storage'

@@ -13,10 +13,12 @@ import {
 import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
-import {ChevronDown} from '@/assets/chevron-down'
+import {ChevronDown} from '@/components/chevron-down'
 import {Card} from '@/components/ui/card'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {Switch} from '@/components/ui/switch'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
@@ -28,13 +30,6 @@ import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'

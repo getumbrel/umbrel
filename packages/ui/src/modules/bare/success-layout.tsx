@@ -1,8 +1,8 @@
 import {Link, To} from 'react-router-dom'
 
 import {buttonClass} from '@/layouts/bare/shared'
+import {cn} from '@/lib/utils'
 import {bareContainerClass, BareLogoTitle, BareSpacer, bareTextClass} from '@/modules/bare/shared'
-import {cn} from '@/shadcn-lib/utils'
 
 export function SuccessLayout({
 	title,

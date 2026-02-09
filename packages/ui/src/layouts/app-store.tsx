@@ -4,8 +4,10 @@ import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
 import {useKeyPressEvent} from 'react-use'
 
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Loading} from '@/components/ui/loading'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {CommunityAppStoreDialog} from '@/modules/app-store/community-app-store-dialog'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {
@@ -17,13 +19,6 @@ import {
 } from '@/modules/app-store/shared'
 import {UpdatesButton} from '@/modules/app-store/updates-button'
 import {useAvailableApps} from '@/providers/available-apps'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {createSearch} from '@/utils/search'
 

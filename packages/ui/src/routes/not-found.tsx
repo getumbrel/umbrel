@@ -1,10 +1,6 @@
 import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
-import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
-import {AppsProvider} from '@/providers/apps'
-import {AvailableAppsProvider} from '@/providers/available-apps'
-import {Wallpaper} from '@/providers/wallpaper'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,7 +10,11 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
+import {AppsProvider} from '@/providers/apps'
+import {AvailableAppsProvider} from '@/providers/available-apps'
+import {Wallpaper} from '@/providers/wallpaper'
 import {t} from '@/utils/i18n'
 
 export function NotFound() {

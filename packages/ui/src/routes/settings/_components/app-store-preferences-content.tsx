@@ -1,17 +1,17 @@
 import {useState} from 'react'
 import {TbChevronRight} from 'react-icons/tb'
 
-import {ChevronDown} from '@/assets/chevron-down'
-import {listClass, listItemClass} from '@/components/ui/list'
-import {SegmentedControl} from '@/components/ui/segmented-control'
-import {Button} from '@/shadcn-components/ui/button'
+import {ChevronDown} from '@/components/chevron-down'
+import {Button} from '@/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {Switch} from '@/shadcn-components/ui/switch'
+} from '@/components/ui/dropdown-menu'
+import {listClass, listItemClass} from '@/components/ui/list'
+import {SegmentedControl} from '@/components/ui/segmented-control'
+import {Switch} from '@/components/ui/switch'
 
 export function AppStorePreferencesContent() {
 	const tabs = [

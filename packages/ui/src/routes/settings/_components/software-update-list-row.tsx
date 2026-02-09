@@ -5,11 +5,11 @@ import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshL
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
+import {Button} from '@/components/ui/button'
 import {Icon} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
-import {Button} from '@/shadcn-components/ui/button'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

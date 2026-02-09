@@ -3,7 +3,7 @@ import {FaEject} from 'react-icons/fa6'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 

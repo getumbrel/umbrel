@@ -1,11 +1,7 @@
 import {useState} from 'react'
 import {useParams} from 'react-router-dom'
 
-import {SegmentedControl} from '@/components/ui/segmented-control'
-import {usePassword} from '@/hooks/use-password'
-import {useUserName} from '@/hooks/use-user-name'
-import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -14,8 +10,12 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
+} from '@/components/ui/drawer'
+import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/components/ui/input'
+import {SegmentedControl} from '@/components/ui/segmented-control'
+import {usePassword} from '@/hooks/use-password'
+import {useUserName} from '@/hooks/use-user-name'
+import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 
 export function AccountDrawer() {

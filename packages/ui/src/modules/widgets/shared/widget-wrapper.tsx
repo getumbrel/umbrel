@@ -1,6 +1,6 @@
 import {ReactNode} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function WidgetWrapper({label, children}: {label: string; children?: ReactNode}) {
 	return (

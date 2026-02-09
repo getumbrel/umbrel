@@ -3,8 +3,6 @@ import {useEffect, useState} from 'react'
 import {RiErrorWarningFill} from 'react-icons/ri'
 
 import {ErrorAlert} from '@/components/ui/alert'
-import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
-import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,10 +12,12 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Input} from '@/shadcn-components/ui/input'
-import {Label} from '@/shadcn-components/ui/label'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

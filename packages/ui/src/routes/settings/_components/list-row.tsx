@@ -2,7 +2,7 @@ import React, {MouseEventHandler} from 'react'
 import {IconType} from 'react-icons'
 import {useMount} from 'react-use'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function ListRow({
 	title,

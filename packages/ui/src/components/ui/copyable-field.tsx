@@ -3,8 +3,8 @@ import {MdContentCopy} from 'react-icons/md'
 import {useCopyToClipboard} from 'react-use'
 import {useIsFocused} from 'use-is-focused'
 
-import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
-import {cn} from '@/shadcn-lib/utils'
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 

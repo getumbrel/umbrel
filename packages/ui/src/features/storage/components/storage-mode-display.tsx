@@ -2,9 +2,9 @@ import {useState} from 'react'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbInfoCircle, TbServer} from 'react-icons/tb'
 
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {RaidType} from '../hooks/use-storage'

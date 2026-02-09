@@ -1,6 +1,6 @@
 import {LOADING_DASH} from '@/constants'
+import {cn} from '@/lib/utils'
 import type {FourStatsItem, FourStatsWidget, FourStatsWidgetProps} from '@/modules/widgets/shared/constants'
-import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 

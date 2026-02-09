@@ -32,7 +32,7 @@ export function InstallTipsCollapsible({isOpen, onToggle}: InstallTipsCollapsibl
 					>
 						<div className='space-y-3'>
 							<img
-								src='/storage/install-ssd-instruction.webp'
+								src='/assets/storage/install-ssd-instruction.webp'
 								alt={t('storage-manager.install-tips.image-alt')}
 								className='w-full rounded-8'
 								draggable={false}

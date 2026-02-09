@@ -1,13 +1,13 @@
 import {useTimeout} from 'react-use'
 
-import UmbrelLogo from '@/assets/umbrel-logo'
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import UmbrelLogo from '@/components/umbrel-logo'
 import {useWidgets} from '@/hooks/use-widgets'
+import {cn} from '@/lib/utils'
 import {greetingMessage} from '@/modules/desktop/greeting-message'
 import {WidgetType} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useWallpaper, WallpaperId} from '@/providers/wallpaper'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
@@ -63,7 +63,7 @@ export function DesktopPreview({
 			{wallpaperId && (
 				<FadeInImg
 					key={wallpaperId}
-					src={`/wallpapers/generated-small/${wallpaperId}.jpg`}
+					src={`/assets/wallpapers/generated-small/${wallpaperId}.jpg`}
 					className='absolute h-full w-full object-cover object-center'
 					style={{
 						animation: 'animate-unblur 0.7s',

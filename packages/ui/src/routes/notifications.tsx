@@ -3,9 +3,6 @@ import {useEffect, useRef, useState} from 'react'
 import {RiErrorWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
-import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
-import {useNotifications} from '@/hooks/use-notifications'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,9 +11,12 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
+import {useNotifications} from '@/hooks/use-notifications'
+import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'

@@ -1,6 +1,6 @@
 import {useDeviceInfo} from '@/hooks/use-device-info'
+import {cn} from '@/lib/utils'
 import {useOnboardingDevice} from '@/routes/onboarding/use-onboarding-device'
-import {cn} from '@/shadcn-lib/utils'
 
 const backgroundClass = 'pointer-events-none fixed inset-0 size-full object-cover object-center'
 
@@ -22,13 +22,13 @@ export function OnboardingBackground({className}: {className?: string}) {
 				loop
 				muted
 				playsInline
-				poster='/wallpapers/22.jpg'
-				src='/onboarding/onboarding-bg.webm'
+				poster='/assets/wallpapers/22.jpg'
+				src='/assets/onboarding/onboarding-bg.webm'
 				className={cn(backgroundClass, className)}
 			/>
 		)
 	}
 
 	// Other devices: Static wallpaper
-	return <img src='/wallpapers/18.jpg' alt='' className={cn(backgroundClass, className)} />
+	return <img src='/assets/wallpapers/18.jpg' alt='' className={cn(backgroundClass, className)} />
 }

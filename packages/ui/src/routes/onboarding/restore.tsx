@@ -4,6 +4,8 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {Link} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Button} from '@/components/ui/button'
+import {Input, PasswordInput} from '@/components/ui/input'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
 import {
 	useConnectToRepository,
@@ -21,10 +23,8 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
-import {Button} from '@/shadcn-components/ui/button'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 // Routes to Umbrel Pro instructions or regular restore flow

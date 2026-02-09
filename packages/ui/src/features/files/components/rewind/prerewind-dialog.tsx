@@ -1,6 +1,9 @@
 import {ChevronDown, Server} from 'lucide-react'
 import {TbHistory} from 'react-icons/tb'
 
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle} from '@/components/ui/dialog'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {isRepoConnected} from '@/features/backups/utils/backup-location-helpers'
 import {getRepositoryDisplayName} from '@/features/backups/utils/filepath-helpers'
@@ -9,14 +12,6 @@ import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useLanguage} from '@/hooks/use-language'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 // We show this dialog when the user clicks Rewind in Files to select a backup repository

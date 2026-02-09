@@ -1,7 +1,7 @@
 import {motion} from 'motion/react'
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface LaserEngravingProps {
 	text?: string
@@ -657,7 +657,7 @@ const AnimatedUmbrelHomeIcon = memo(
 									<div
 										className='absolute top-0 left-0 h-full w-full opacity-10'
 										style={{
-											backgroundImage: isFlipped ? 'url(/figma-exports/umbrel-home-device-info-grain.png)' : 'none',
+											backgroundImage: isFlipped ? 'url(/assets/umbrel-home-device-info-grain.png)' : 'none',
 											backgroundBlendMode: 'overlay',
 											backgroundSize: 'cover',
 										}}
@@ -718,7 +718,7 @@ const AnimatedUmbrelHomeIcon = memo(
 												initial={{opacity: 0}}
 												animate={{opacity: 0.35}}
 												transition={{delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1]}}
-												src='/figma-exports/umbrel-home-certifications.svg'
+												src='/assets/umbrel-home-certifications.svg'
 												className='w-[80px]'
 												draggable='false'
 											/>

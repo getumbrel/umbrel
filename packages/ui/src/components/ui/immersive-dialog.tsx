@@ -3,15 +3,15 @@ import {motion} from 'motion/react'
 import {Children, ComponentPropsWithoutRef, ReactNode, useEffect} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
-import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {
 	dialogContentAnimationClass,
 	dialogContentAnimationSlideClass,
 	dialogContentClass,
 	dialogOverlayClass,
-} from '@/shadcn-components/ui/shared/dialog'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/shared/dialog'
+import {cn} from '@/lib/utils'
+import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
 import {tw} from '@/utils/tw'
 
 import {IconTypes} from './icon'

@@ -4,7 +4,7 @@ import {useState} from 'react'
 import {TbActivityHeartbeat, TbAlertTriangle} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
@@ -83,7 +83,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 						}}
 					>
 						<img
-							src='/onboarding/ssd-info.webp'
+							src='/assets/onboarding/ssd-info.webp'
 							alt={t('onboarding.raid.ssd-label', {number: slotNumber})}
 							draggable={false}
 							className='ml-auto w-[95%]'

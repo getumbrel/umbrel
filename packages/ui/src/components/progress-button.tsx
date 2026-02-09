@@ -4,8 +4,8 @@ import {CSSProperties, useEffect, useState} from 'react'
 import {useFirstMountState} from 'react-use'
 import {arrayIncludes} from 'ts-extras'
 
-import {buttonVariants} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
+import {buttonVariants} from '@/components/ui/button'
+import {cn} from '@/lib/utils'
 import {AppStateOrLoading, progressBarStates} from '@/trpc/trpc'
 
 // Check if CSS available

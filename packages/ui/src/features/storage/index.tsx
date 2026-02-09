@@ -19,7 +19,7 @@ import {
 import {Spinner} from '@/components/ui/loading'
 import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {AddToRaidDialog} from './components/dialogs/add-to-raid-dialog'

@@ -9,7 +9,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 

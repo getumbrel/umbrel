@@ -4,8 +4,16 @@ import {useEffect, useMemo, useRef, useState} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 import {useSearchParams} from 'react-router-dom'
 
-import {ChevronDown} from '@/assets/chevron-down'
+import {ChevronDown} from '@/components/chevron-down'
+import {Button} from '@/components/ui/button'
+import {Dialog} from '@/components/ui/dialog'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {ChevronLeftIcon} from '@/features/files/assets/chevron-left'
 import {ChevronRightIcon} from '@/features/files/assets/chevron-right'
 import {RewindIcon} from '@/features/files/assets/rewind-icon'
@@ -22,16 +30,8 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
+import {cn} from '@/lib/utils'
 import {useWallpaper} from '@/providers/wallpaper'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog} from '@/shadcn-components/ui/dialog'
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 import {groupRestoreByDestination} from './restore-grouping'

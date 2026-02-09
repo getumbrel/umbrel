@@ -12,7 +12,11 @@ import {useCopyToClipboard} from 'react-use'
 import {z} from 'zod'
 
 import {ErrorAlert, WarningAlert} from '@/components/ui/alert'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {Input, PasswordInput} from '@/components/ui/input'
 import umbrelPrivateCloudIcon from '@/features/backups/assets/umbrel-private-cloud-icon.png'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
@@ -37,15 +41,6 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useConfirmation} from '@/providers/confirmation'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/shadcn-components/ui/form'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
 
 // ---------------------------------------------
 // Types & Schema

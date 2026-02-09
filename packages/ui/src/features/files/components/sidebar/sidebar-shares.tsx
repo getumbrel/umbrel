@@ -1,12 +1,12 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useNavigate} from 'react-router-dom'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {Share} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarShares({shares}: {shares: (Share | null)[]}) {

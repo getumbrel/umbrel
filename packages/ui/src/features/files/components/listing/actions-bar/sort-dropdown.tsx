@@ -1,15 +1,10 @@
 import {ArrowUpDown} from 'lucide-react'
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 export function SortDropdown() {

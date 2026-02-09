@@ -1,7 +1,7 @@
 import {motion} from 'motion/react'
 
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 
 type Progress = {name: string; percent: number; path?: string}

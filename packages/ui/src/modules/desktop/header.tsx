@@ -1,6 +1,6 @@
-import UmbrelLogo from '@/assets/umbrel-logo'
+import UmbrelLogo from '@/components/umbrel-logo'
+import {cn} from '@/lib/utils'
 import {greetingMessage} from '@/modules/desktop/greeting-message'
-import {cn} from '@/shadcn-lib/utils'
 
 export function Header({userName}: {userName: string}) {
 	const name = userName

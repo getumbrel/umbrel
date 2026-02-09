@@ -1,9 +1,6 @@
 import {useRef} from 'react'
 import {useMount, useTimeout} from 'react-use'
 
-import {FadeInImg} from '@/components/ui/fade-in-img'
-import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -11,8 +8,11 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/drawer'
+import {FadeInImg} from '@/components/ui/fade-in-img'
+import {cn} from '@/lib/utils'
+import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
@@ -43,7 +43,7 @@ export function WallpaperDrawer() {
 							{wallpapers.map((w, i) => (
 								<WallpaperItem
 									key={w.id}
-									bg={`/wallpapers/generated-small/${w.id}.jpg`}
+									bg={`/assets/wallpapers/generated-small/${w.id}.jpg`}
 									active={w.id === wallpaper.id}
 									onSelect={() => selectWallpaper(w.id)}
 									className='animate-in fill-mode-both fade-in'

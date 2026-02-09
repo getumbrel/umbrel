@@ -1,10 +1,10 @@
 import {useState} from 'react'
 import {useNavigate, useParams} from 'react-router-dom'
 
+import {DropdownMenu} from '@/components/ui/dropdown-menu'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-picker'
 import {TerminalTitleBackLink, XTermTerminal} from '@/routes/settings/terminal/_shared'
-import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 
 export function App() {
 	const navigate = useNavigate()

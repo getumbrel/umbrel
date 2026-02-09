@@ -3,15 +3,6 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Navigate} from 'react-router-dom'
 
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
-import {toast} from '@/components/ui/toast'
-import {OnboardingPage} from '@/layouts/bare/onboarding-page'
-import {useGlobalSystemState} from '@/providers/global-system-state'
-import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
-import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
-import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,8 +12,17 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {BareCoverMessage} from '@/components/ui/cover-message'
+import {Loading} from '@/components/ui/loading'
+import {toast} from '@/components/ui/toast'
+import {OnboardingPage} from '@/layouts/bare/onboarding-page'
+import {useGlobalSystemState} from '@/providers/global-system-state'
+import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
+import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
+import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

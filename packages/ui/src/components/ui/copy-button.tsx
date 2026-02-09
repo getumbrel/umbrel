@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {TbCopy} from 'react-icons/tb'
 import {useCopyToClipboard} from 'react-use'
 
-import {Tooltip, TooltipContent, TooltipTrigger} from '@/shadcn-components/ui/tooltip'
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip'
 import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 

@@ -1,4 +1,4 @@
-import {usePendingRaidOperation} from '../contexts/pending-operation-context'
+import {usePendingRaidOperation} from '../providers/pending-operation-context'
 import {RaidProgress, useRaidProgress} from './use-raid-progress'
 
 /**

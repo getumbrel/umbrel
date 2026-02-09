@@ -2,7 +2,7 @@ import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {RECENTS_PATH} from '@/features/files/constants'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`

@@ -1,9 +1,9 @@
 import {RiCloseLine} from 'react-icons/ri'
 
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useGlobalFiles} from '@/providers/global-files'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 
 export function ExpandedContent() {

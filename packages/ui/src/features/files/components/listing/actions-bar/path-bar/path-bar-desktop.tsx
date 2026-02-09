@@ -14,7 +14,7 @@ import {
 } from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 type PathSegment = {

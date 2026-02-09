@@ -3,11 +3,11 @@ import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {FadeScroller} from '@/components/fade-scroller'
+import {Button} from '@/components/ui/button'
 import {useColorThief} from '@/hooks/use-color-thief'
+import {cn} from '@/lib/utils'
 import {cardClass, sectionOverlineClass, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
-import {Button} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

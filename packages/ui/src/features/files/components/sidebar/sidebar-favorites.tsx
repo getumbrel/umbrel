@@ -1,10 +1,10 @@
 import {AnimatePresence, motion} from 'motion/react'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarFavorites({favorites}: {favorites: (string | null)[]}) {
