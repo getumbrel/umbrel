@@ -85,11 +85,11 @@ function CardsSkeleton() {
 				<SkeletonApps />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-ai-enthusiast')}</h2>
 				<SkeletonApps />
 			</div>
 			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-streamer')}</h2>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
 				<SkeletonApps />
 			</div>
 		</>
