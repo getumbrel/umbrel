@@ -12,9 +12,8 @@ import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {cn} from '@/lib/utils'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
-import {getAppStoreAppFromInstalledApp} from '@/modules/app-store/utils'
 import {useUserApp} from '@/providers/apps'
-import {AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
+import {AppStateOrLoading, progressBarStates, progressStates, trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -300,13 +299,23 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 function ContextMenuItemLinkToAppStore({appId}: {appId: string}) {
 	const navigate = useNavigate()
+	const utils = trpcReact.useUtils()
 	return (
 		<ContextMenuItem asChild>
 			<button
 				// `w-full` because it doesn't fill the context menu otherwise
 				className='w-full'
 				onClick={async () => {
-					const appStoreApp = await getAppStoreAppFromInstalledApp(appId)
+					const installedApps = await utils.apps.list.fetch()
+					const installedApp = installedApps.find((app) => app.id === appId)
+					if (!installedApp) return
+
+					const availableApps = await utils.appStore.registry.fetch()
+					const availableAppsFlat = availableApps.flatMap((group) =>
+						group.apps.map((app) => ({...app, registryId: group.meta.id})),
+					)
+					const appStoreApp = availableAppsFlat.find((app) => app.id === installedApp.id)
+
 					const registryId = appStoreApp?.registryId ?? UMBREL_APP_STORE_ID
 					if (registryId !== UMBREL_APP_STORE_ID) {
 						navigate(`/community-app-store/${registryId}/${appId}`)

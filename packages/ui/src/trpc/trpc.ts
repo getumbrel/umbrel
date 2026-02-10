@@ -73,9 +73,21 @@ export const links = [
 // React client
 export const trpcReact = createTRPCReact<AppRouter>()
 
-// Vanilla client
-/** Use sparingly */
-export const trpcClient = createTRPCClient<AppRouter>({links})
+// Vanilla client for imperative (non-hook) tRPC calls. HTTP-only so its operation IDs
+// can never collide with the React client's active WebSocket subscriptions.
+/** Use sparingly — prefer trpcReact.useUtils() in React components */
+export const trpcClient = createTRPCClient<AppRouter>({
+	links: [
+		loggerLink({enabled: () => IS_DEV}),
+		httpLink({
+			url: trpcHttpUrl,
+			headers: () => {
+				const token = getJwt()
+				return token ? {Authorization: `Bearer ${token}`} : {}
+			},
+		}),
+	],
+})
 
 // Types ----------------------------
 
