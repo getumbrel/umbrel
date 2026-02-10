@@ -9,6 +9,9 @@ export interface ActionsBarConfig {
 	// Whether to hide the path
 	hidePath?: boolean
 
+	// Optional label to display in place of the path bar (e.g. during search)
+	pathLabel?: string
+
 	// Whether to hide the search input
 	hideSearch?: boolean
 

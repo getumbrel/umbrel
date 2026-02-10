@@ -13,7 +13,7 @@ import {cn} from '@/lib/utils'
 // contents are driven by the configuration exposed via the
 // <ActionsBarProvider /> (see actions-bar-context.tsx).
 export function ActionsBar() {
-	const {hidePath, hideSearch, desktopActions, mobileActions} = useActionsBarConfig()
+	const {hidePath, pathLabel, hideSearch, desktopActions, mobileActions} = useActionsBarConfig()
 	const isReadOnly = useIsFilesReadOnly()
 	const isEmbedded = useIsFilesEmbedded()
 	const showSearchUi = !hideSearch && !isReadOnly
@@ -25,7 +25,7 @@ export function ActionsBar() {
 			{/* Left side: Navigation and Path */}
 			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-hidden'>
 				<NavigationControls />
-				{hidePath ? null : <PathBar />}
+				{hidePath ? null : pathLabel ? <span className='truncate text-xs opacity-70'>{pathLabel}</span> : <PathBar />}
 			</div>
 
 			{/* Right side: View Controls and Actions */}

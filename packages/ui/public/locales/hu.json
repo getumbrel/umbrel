@@ -521,6 +521,7 @@
   "files-search.default": "Fájlok és mappák keresése",
   "files-search.no-results": "Nincsenek találatok a(z) \"{{query}}\" keresésre",
   "files-search.placeholder": "Keresés",
+  "files-search.searching-label": "Keresés {{name}} Umbreljében",
   "files-share.first-prompt-description": "Megoszthatod csak a(z) „{{folderName}}” mappát vagy akár az egész Home mappádat is. Később bármikor válthatsz a teljes Home mappa megosztására, ha jobb egérgombbal kattintasz a(z) „{{homeDirectoryName}}” mappára az oldalsávban.",
   "files-share.first-prompt-share-folder": "Csak a(z) „{{folderName}}” mappa megosztása",
   "files-share.first-prompt-share-home": "A(z) „{{homeDirectoryName}}” megosztása",

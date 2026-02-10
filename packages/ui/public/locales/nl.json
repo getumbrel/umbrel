@@ -521,6 +521,7 @@
   "files-search.default": "Zoek naar bestanden en mappen",
   "files-search.no-results": "Geen resultaten gevonden voor \"{{query}}\"",
   "files-search.placeholder": "Zoeken",
+  "files-search.searching-label": "Zoeken in de Umbrel van {{name}}",
   "files-share.first-prompt-description": "Je kunt alleen \"{{folderName}}\" delen of je hele thuismap. Later kun je altijd nog overschakelen naar het delen van je thuismap door met de rechtermuisknop op \"{{homeDirectoryName}}\" in de navigatiekolom te klikken.",
   "files-share.first-prompt-share-folder": "Alleen \"{{folderName}}\" delen",
   "files-share.first-prompt-share-home": "\"{{homeDirectoryName}}\" delen",

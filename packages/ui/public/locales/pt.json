@@ -521,6 +521,7 @@
   "files-search.default": "Pesquisar arquivos e pastas",
   "files-search.no-results": "Nenhum resultado encontrado para \"{{query}}\"",
   "files-search.placeholder": "Pesquisar",
+  "files-search.searching-label": "Procurando o Umbrel de {{name}}",
   "files-share.first-prompt-description": "Você pode compartilhar apenas \"{{folderName}}\" ou optar por compartilhar toda a sua pasta Home. Você sempre pode mudar para compartilhar sua pasta Home depois, clicando com o botão direito em \"{{homeDirectoryName}}\" na barra lateral.",
   "files-share.first-prompt-share-folder": "Compartilhar apenas \"{{folderName}}\"",
   "files-share.first-prompt-share-home": "Compartilhar \"{{homeDirectoryName}}\"",

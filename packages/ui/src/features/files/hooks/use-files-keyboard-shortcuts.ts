@@ -104,6 +104,9 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 			if (isInInput(e) || mod || e.altKey) return
 			if (e.key === ' ' && searchBuffer.current.length === 0) return
 
+			// "/" is handled by SearchInput for focus
+			if (e.key === '/') return
+
 			if (e.key.length === 1) {
 				e.preventDefault()
 				searchBuffer.current += e.key.toLowerCase()

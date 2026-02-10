@@ -521,6 +521,7 @@
   "files-search.default": "Search for files and folders",
   "files-search.no-results": "No results found for \"{{query}}\"",
   "files-search.placeholder": "Search",
+  "files-search.searching-label": "Searching {{name}}'s Umbrel",
   "files-share.first-prompt-description": "You can share just \"{{folderName}}\" or opt to share your entire Home folder. You can always switch to sharing your Home folder later by right-clicking \"{{homeDirectoryName}}\" in the sidebar.",
   "files-share.first-prompt-share-folder": "Share only \"{{folderName}}\"",
   "files-share.first-prompt-share-home": "Share \"{{homeDirectoryName}}\"",

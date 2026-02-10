@@ -521,6 +521,7 @@
   "files-search.default": "Cerca file e cartelle",
   "files-search.no-results": "Nessun risultato trovato per \"{{query}}\"",
   "files-search.placeholder": "Cerca",
+  "files-search.searching-label": "Cercando l'Umbrel di {{name}}",
   "files-share.first-prompt-description": "Puoi condividere solo \"{{folderName}}\" o scegliere di condividere l'intera cartella Home. In qualsiasi momento, puoi passare alla condivisione della cartella Home facendo clic con il tasto destro su \"{{homeDirectoryName}}\" nella barra laterale.",
   "files-share.first-prompt-share-folder": "Condividi solo \"{{folderName}}\"",
   "files-share.first-prompt-share-home": "Condividi \"{{homeDirectoryName}}\"",

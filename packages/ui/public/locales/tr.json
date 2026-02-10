@@ -521,6 +521,7 @@
   "files-search.default": "Dosya ve klasörlerde ara",
   "files-search.no-results": "\"{{query}}\" için sonuç bulunamadı",
   "files-search.placeholder": "Ara",
+  "files-search.searching-label": "{{name}}'in Umbrel'ini arıyor",
   "files-share.first-prompt-description": "Yalnızca “{{folderName}}” klasörünü paylaşabilir veya tüm Home klasörünüzü paylaşmayı tercih edebilirsiniz. Daha sonra kenar çubuğunda “{{homeDirectoryName}}” öğesine sağ tıklayıp Home klasörünüzü paylaşmaya geçebilirsiniz.",
   "files-share.first-prompt-share-folder": "Sadece “{{folderName}}” klasörünü paylaş",
   "files-share.first-prompt-share-home": "“{{homeDirectoryName}}” klasörünü paylaş",

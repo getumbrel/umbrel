@@ -37,13 +37,18 @@ export function AppStoreLayout() {
 		setSearchParams(searchParams, {replace: true})
 	}, [deferredSearchQuery])
 
-	// Focus search input on '/' key release (keyup avoids '/' appearing in input)
+	// '/' shortcut to focus the search input
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
-			if (e.key === '/') inputRef.current?.focus()
+			if (e.key !== '/') return
+			const target = e.target as HTMLElement
+			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)
+				return
+			e.preventDefault()
+			inputRef.current?.focus()
 		}
-		document.addEventListener('keyup', handler)
-		return () => document.removeEventListener('keyup', handler)
+		window.addEventListener('keydown', handler)
+		return () => window.removeEventListener('keydown', handler)
 	}, [])
 
 	return (
@@ -82,11 +87,16 @@ function SearchInput({
 				placeholder={t('app-store.search-apps')}
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
-				// Prevent closing modal when pressing Escape
+				// Two-stage Escape: first clears the query, second blurs the input
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
-						onValueChange('')
-						e.preventDefault()
+						if (value) {
+							onValueChange('')
+							e.preventDefault()
+						} else {
+							e.currentTarget.blur()
+							e.preventDefault()
+						}
 					}
 				}}
 			/>

@@ -521,6 +521,7 @@
   "files-search.default": "Nach Dateien und Ordnern suchen",
   "files-search.no-results": "Keine Ergebnisse gefunden für \"{{query}}\"",
   "files-search.placeholder": "Suchen",
+  "files-search.searching-label": "Suche im Umbrel von {{name}}",
   "files-share.first-prompt-description": "Du kannst nur „{{folderName}}“ freigeben oder deinen gesamten Home-Ordner freigeben. Du kannst später jederzeit auf die Freigabe deines Home-Ordners umsteigen, indem du in der Seitenleiste mit der rechten Maustaste auf „{{homeDirectoryName}}“ klickst.",
   "files-share.first-prompt-share-folder": "Nur „{{folderName}}“ freigeben",
   "files-share.first-prompt-share-home": "„{{homeDirectoryName}}“ freigeben",

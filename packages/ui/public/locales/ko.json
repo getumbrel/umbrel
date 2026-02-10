@@ -521,6 +521,7 @@
   "files-search.default": "파일 및 폴더 검색",
   "files-search.no-results": "\"{{query}}\"에 대한 검색 결과가 없습니다",
   "files-search.placeholder": "검색",
+  "files-search.searching-label": "{{name}}님의 Umbrel을 검색 중입니다",
   "files-share.first-prompt-description": "\"{{folderName}}\"만 공유하거나 전체 홈 폴더를 공유할 수도 있어요. 나중에 사이드바에서 \"{{homeDirectoryName}}\"을(를) 마우스 오른쪽 버튼으로 클릭해 홈 폴더 공유로 전환할 수 있어요.",
   "files-share.first-prompt-share-folder": "\"{{folderName}}\"만 공유하기",
   "files-share.first-prompt-share-home": "\"{{homeDirectoryName}}\" 공유하기",

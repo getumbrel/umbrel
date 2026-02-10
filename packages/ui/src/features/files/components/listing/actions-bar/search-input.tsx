@@ -8,6 +8,16 @@ import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
+// Search input with keyboard shortcuts:
+// - "/" focuses the search input (keydown + preventDefault to avoid typing "/")
+// - Escape exits search entirely: clears the query, blurs the input, and
+//   navigates back to the previous directory. This works because query changes
+//   on the search page use replace:true, so only the initial entry into search
+//   pushes a history entry — a single navigate(-1) always returns to the
+//   pre-search directory.
+// - Manually deleting all text does NOT auto-navigate away. This is intentional
+//   so users can backspace and retype without being yanked out of search.
+//   They can use Escape or the nav arrows to leave.
 export function SearchInput() {
 	const navigate = useRouterNavigate()
 	const location = useLocation()
@@ -18,6 +28,20 @@ export function SearchInput() {
 	const [query, setQuery] = useState('')
 
 	const isTouchDevice = useIsTouchDevice()
+
+	// "/" shortcut to focus the search input
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key !== '/') return
+			const target = e.target as HTMLElement
+			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)
+				return
+			e.preventDefault()
+			inputRef.current?.focus()
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [])
 
 	// sync local state with the URL when navigating into the search route via
 	// back/forward browser buttons or a browser refresh, or programmatic
@@ -68,11 +92,14 @@ export function SearchInput() {
 				placeholder={t('files-search.placeholder')}
 				value={query}
 				onChange={onQueryChange}
-				// clear and blur the input on Escape
+				// Escape exits search: clear query, blur input, navigate back to previous directory
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
 						setQuery('')
 						inputRef.current?.blur()
+						if (location.pathname.endsWith(SEARCH_PATH)) {
+							navigate(-1)
+						}
 					}
 				}}
 			/>

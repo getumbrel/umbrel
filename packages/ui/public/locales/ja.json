@@ -521,6 +521,7 @@
   "files-search.default": "ファイルとフォルダを検索",
   "files-search.no-results": "「{{query}}」の検索結果は見つかりませんでした",
   "files-search.placeholder": "検索",
+  "files-search.searching-label": "{{name}}のUmbrelを検索中",
   "files-share.first-prompt-description": "「{{folderName}}」だけを共有するか、ホームフォルダ全体を共有するかを選べます。後からサイドバーの「{{homeDirectoryName}}」を右クリックして、ホームフォルダの共有に切り替えることもできます。",
   "files-share.first-prompt-share-folder": "「{{folderName}}」だけを共有",
   "files-share.first-prompt-share-home": "「{{homeDirectoryName}}」を共有",
