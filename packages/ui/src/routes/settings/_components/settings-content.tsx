@@ -10,7 +10,7 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
+import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbShare, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {ChevronDown} from '@/components/chevron-down'
@@ -185,6 +185,11 @@ export function SettingsContent() {
 							</div>
 						</ListRow>
 					)}
+					<ListRow title={t('settings.file-sharing')} description={t('settings.file-sharing.description')}>
+						<IconButton icon={TbShare} onClick={() => navigate('file-sharing')}>
+							{t('settings.file-sharing.configure')}
+						</IconButton>
+					</ListRow>
 					{/* Backups */}
 					<ListRow title={t('backups')} description={t('backups-description')}>
 						<div className='flex flex-wrap gap-2 pt-3'>
@@ -256,6 +261,21 @@ export function SettingsContent() {
 							</DropdownMenu>
 						</div>
 					</ListRow>
+					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
+						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
+							{t('preferences')}
+						</IconButton>
+					</ListRow> */}
+					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')}>
+						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
+							{t('troubleshoot')}
+						</IconButton>
+					</ListRow>
+					<ListRow title={t('device-info')} description={t('device-info-description')}>
+						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
+							{t('device-info.view-info')}
+						</IconButton>
+					</ListRow>
 					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description', {deviceName})}>
 						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
 						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
@@ -273,21 +293,6 @@ export function SettingsContent() {
 							<LanguageDropdownTrigger />
 							<LanguageDropdownContent />
 						</DropdownMenu>
-					</ListRow>
-					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
-						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
-							{t('preferences')}
-						</IconButton>
-					</ListRow> */}
-					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')}>
-						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
-							{t('troubleshoot')}
-						</IconButton>
-					</ListRow>
-					<ListRow title={t('device-info')} description={t('device-info-description')}>
-						<IconButton icon={TbServer} onClick={() => navigate('device-info')}>
-							{t('device-info.view-info')}
-						</IconButton>
 					</ListRow>
 					<ListRow title={t('advanced-settings')} description={t('advanced-settings-description')}>
 						<IconButtonLink icon={TbSettingsMinus} to='/settings/advanced'>

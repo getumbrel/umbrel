@@ -8,6 +8,7 @@ import {
 	TbPhoto,
 	TbServer,
 	TbSettingsMinus,
+	TbShare,
 	TbTool,
 	TbUser,
 	TbWifi,
@@ -179,6 +180,12 @@ export function SettingsContentMobile() {
 					description={t('2fa-description')}
 					onClick={() => navigate('2fa')}
 				/>
+				<ListRowMobile
+					icon={TbShare}
+					title={t('settings.file-sharing')}
+					description={t('settings.file-sharing.description')}
+					onClick={() => navigate('file-sharing')}
+				/>
 				{isUmbrelPro && (
 					<ListRowMobile
 						icon={TbColumns3}
@@ -203,18 +210,6 @@ export function SettingsContentMobile() {
 					description={t('backups-description')}
 					onClick={() => navigate('backups')}
 				/>
-				<ListRowMobile
-					icon={TbArrowBigRightLines}
-					title={t('migration-assistant')}
-					description={t('migration-assistant-description', {deviceName})}
-					onClick={() => navigate('migration-assistant')}
-				/>
-				<ListRowMobile
-					icon={TbLanguage}
-					title={t('language')}
-					description={t('language-description')}
-					onClick={() => navigate('language')}
-				/>
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}
@@ -235,6 +230,18 @@ export function SettingsContentMobile() {
 						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
 					})}
 					onClick={() => navigate('device-info')}
+				/>
+				<ListRowMobile
+					icon={TbArrowBigRightLines}
+					title={t('migration-assistant')}
+					description={t('migration-assistant-description', {deviceName})}
+					onClick={() => navigate('migration-assistant')}
+				/>
+				<ListRowMobile
+					icon={TbLanguage}
+					title={t('language')}
+					description={t('language-description')}
+					onClick={() => navigate('language')}
 				/>
 				<ListRowMobile
 					icon={TbSettingsMinus}
