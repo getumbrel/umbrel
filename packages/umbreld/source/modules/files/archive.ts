@@ -1,11 +1,15 @@
 import archiver from 'archiver'
+import compressible from 'compressible'
 import fse from 'fs-extra'
+import mime from 'mime-types'
 import nodePath from 'node:path'
 import {pipeline} from 'node:stream/promises'
 
 import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
+
+type ZipEntryData = archiver.EntryData & {store?: boolean}
 
 export default class Archive {
 	#umbreld: Umbreld
@@ -27,6 +31,16 @@ export default class Archive {
 		return defaultName
 	}
 
+	// Decide whether to skip ZIP deflate compression for a file.
+	// We compress only when the MIME type is known to be compressible.
+	// For unknown MIME types, we default to storing without compression
+	// to avoid wasted CPU and degraded download performance for binary/media files.
+	#shouldSkipCompression(filePath: string): boolean {
+		const mimeType = mime.lookup(filePath)
+		if (typeof mimeType !== 'string') return true
+		return compressible(mimeType) !== true
+	}
+
 	// Returns a readable stream of a zip archive from a list of system paths
 	async createZipStream(systemPaths: string[]) {
 		// Check that all paths are in the same directory
@@ -42,10 +56,24 @@ export default class Archive {
 		const archive = archiver('zip')
 		for (const systemPath of systemPaths) {
 			const status = await fse.stat(systemPath)
-			if (status.isDirectory()) archive.directory(systemPath, nodePath.basename(systemPath))
-			else archive.file(systemPath, {name: nodePath.basename(systemPath)})
+
+			if (status.isDirectory()) {
+				// For directories, we use a callback to set compression options per file
+				archive.directory(systemPath, nodePath.basename(systemPath), (entry) => {
+					const zipEntry = entry as ZipEntryData
+					if (zipEntry.stats?.isFile() && this.#shouldSkipCompression(zipEntry.name)) zipEntry.store = true
+					return zipEntry
+				})
+			} else {
+				// For files, we set compression options directly
+				const options: ZipEntryData = {name: nodePath.basename(systemPath)}
+				if (this.#shouldSkipCompression(systemPath)) options.store = true
+				archive.file(systemPath, options)
+			}
 		}
-		archive.finalize()
+
+		// We convert any finalize rejection to a stream error so callers can handle it.
+		archive.finalize().catch((error) => archive.emit('error', error))
 		return archive
 	}
 

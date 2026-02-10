@@ -10,6 +10,7 @@ import user from '../../user/routes.js'
 import {appStore, apps} from '../../apps/routes.js'
 import widget from '../../widgets/routes.js'
 import files from '../../files/routes.js'
+import hardware from '../../hardware/routes.js'
 import notifications from '../../notifications/routes.js'
 import eventBus from '../../event-bus/routes.js'
 import backups from '../../backups/routes.js'
@@ -26,6 +27,7 @@ const appRouter = router({
 	apps,
 	widget,
 	files,
+	hardware,
 	notifications,
 	eventBus,
 	backups,

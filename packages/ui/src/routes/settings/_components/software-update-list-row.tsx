@@ -45,13 +45,14 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 						<>
 							<Icon component={RiCheckboxCircleFill} className='text-success' />
 							{t('software-update.on-latest')}
-							{' · '}
+							{/* TODO: Re-enable when whats-new content is updated */}
+							{/* {' · '}
 							<Trans
 								i18nKey='software-update.see-whats-new'
 								components={{
 									linked: <Link to={linkToDialog('whats-new')} className='underline' />,
 								}}
-							/>
+							/> */}
 						</>
 					) : (
 						<>

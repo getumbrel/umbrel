@@ -10,6 +10,7 @@ export default class AppStore {
 	logger: Umbreld['logger']
 	updateInterval = '5m'
 	defaultAppStoreRepo: string
+	attemptedInitialAppStoreUpdate = false
 
 	constructor(umbreld: Umbreld, {defaultAppStoreRepo}: {defaultAppStoreRepo: string}) {
 		this.#umbreld = umbreld
@@ -28,13 +29,13 @@ export default class AppStore {
 
 		// Initialise repositories
 		this.logger.log(`Initialising default repository...`)
+		this.attemptedInitialAppStoreUpdate = false
 		try {
-			const repositories = await this.getRepositories()
-			const defaultRepository = repositories.find((repository) => repository.url === this.defaultAppStoreRepo)
+			const defaultRepository = await this.getDefaultRepository()
 			if (!defaultRepository) throw new Error(`Default repository ${this.defaultAppStoreRepo} not found`)
 			await pRetry(
 				async () => {
-					await defaultRepository.update()
+					await defaultRepository.update().finally(() => (this.attemptedInitialAppStoreUpdate = true))
 				},
 				{
 					onFailedAttempt: (error) => {
@@ -65,6 +66,11 @@ export default class AppStore {
 		const repositories = repositoryUrls.map((url) => new AppRepository(this.#umbreld, url))
 
 		return repositories
+	}
+
+	async getDefaultRepository() {
+		const repositories = await this.getRepositories()
+		return repositories.find((repository) => repository.url === this.defaultAppStoreRepo)
 	}
 
 	async update() {

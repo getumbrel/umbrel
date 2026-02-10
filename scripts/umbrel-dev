@@ -29,6 +29,7 @@ Commands:
     logs                      Stream umbreld logs
     shell                     Get a shell inside the running dev environment
     exec -- <command>         Execute a command inside the running dev environment
+    exec:noninteractive       Execute a command without interactive mode (for CI)
     client -- <rpc> [<args>]  Query the umbreld RPC server via a CLI client
     rebuild                   Rebuild the operating system image from source and reboot the dev environment into it
     recreate                  Recreate the dev environment using the existing operating system image
@@ -51,7 +52,7 @@ EOF
 }
 
 build_os_image() {
-  docker buildx build --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
+  docker buildx build --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 --load --file packages/os/umbrelos.Dockerfile --tag "${INSTANCE_ID}" .
 }
 
 create_instance() {
@@ -100,6 +101,10 @@ start_instance() {
 
 exec_in_instance() {
   docker exec --interactive --tty "${INSTANCE_ID}" "${@}"
+}
+
+exec_in_instance_noninteractive() {
+  docker exec "${INSTANCE_ID}" "${@}"
 }
 
 stop_instance() {
@@ -209,6 +214,14 @@ if [[ "${command}" = "exec" ]]
 then
     shift
     exec_in_instance "${@}"
+
+    exit
+fi
+
+if [[ "${command}" = "exec:noninteractive" ]]
+then
+    shift
+    exec_in_instance_noninteractive "${@}"
 
     exit
 fi

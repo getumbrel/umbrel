@@ -1,8 +1,9 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
 import {motion} from 'framer-motion'
-import {Children, ComponentPropsWithoutRef, ForwardedRef, forwardRef, ReactNode} from 'react'
+import {Children, ComponentPropsWithoutRef, ForwardedRef, forwardRef, ReactNode, useEffect} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
+import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
 import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {
 	dialogContentAnimationClass,
@@ -23,7 +24,26 @@ export function ImmersiveDialogSeparator() {
 	return <hr className='w-full border-white/10' />
 }
 
-export const ImmersiveDialog = Dialog
+// Wrapper that tracks open state in context so other components (like floating islands) can react.
+// For example, when an immersive dialog is open, the floating islands z-index is raised to show above it.
+export function ImmersiveDialog({open, children, ...props}: ComponentPropsWithoutRef<typeof Dialog>) {
+	const {increment, decrement} = useImmersiveDialogCounter()
+
+	// Increment counter on open, decrement on close/unmount.
+	// Counter approach is more robust than boolean for complex dialogs (see provider comments).
+	useEffect(() => {
+		if (open) {
+			increment()
+			return () => decrement()
+		}
+	}, [open, increment, decrement])
+
+	return (
+		<Dialog open={open} {...props}>
+			{children}
+		</Dialog>
+	)
+}
 export const ImmersiveDialogTrigger = DialogTrigger
 
 function ForwardedImmersiveDialogContent(

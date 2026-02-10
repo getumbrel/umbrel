@@ -6,6 +6,14 @@ export function celciusToFahrenheit(temperatureInCelcius?: number) {
 	return Math.round((temperatureInCelcius * 9) / 5 + 32)
 }
 
+/** Format temperature with unit label (e.g., "45°C" or "113°F") */
+export function formatTemperature(tempCelcius: number | undefined, unit: 'c' | 'f'): string {
+	if (tempCelcius === undefined) return '--'
+	const temp = unit === 'f' ? celciusToFahrenheit(tempCelcius) : tempCelcius
+	const label = unit === 'c' ? '°C' : '°F'
+	return `${temp}${label}`
+}
+
 export function temperatureWarningToColor(warning?: string) {
 	if (warning === undefined) return '#CCCCCC'
 

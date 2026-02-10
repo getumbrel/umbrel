@@ -1,0 +1,12 @@
+#!/bin/sh
+
+DATA_DIR="/run/rugix/mounts/data"
+
+# If the data directory exists, Rugix Ctrl initialized the system and we can proceed with Systemd.
+if [ -d "$DATA_DIR" ]; then
+    echo "Directory $DATA_DIR exists, starting 'systemd'..."
+    exec /lib/systemd/systemd
+else
+    echo "Directory $DATA_DIR does not exist, starting 'rugix-ctrl'..."
+    exec /usr/bin/rugix-ctrl
+fi

@@ -3,6 +3,8 @@ name: Update Translations in PR
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'packages/ui/public/locales/en.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

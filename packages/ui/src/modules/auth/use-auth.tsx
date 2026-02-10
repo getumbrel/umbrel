@@ -61,9 +61,9 @@ export function useAuth() {
 			// Hard navigate to force all parent layouts to re-render
 			window.location.href = safeUrl.toString()
 		},
-		signUpWithJwt(jwt: string) {
+		signUpWithJwt(jwt: string, redirectTo: string = '/onboarding/account-created') {
 			setJwt(jwt)
-			window.location.href = '/onboarding/account-created'
+			window.location.href = redirectTo
 		},
 		refreshToken,
 	}

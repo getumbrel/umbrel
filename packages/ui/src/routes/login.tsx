@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {flushSync} from 'react-dom'
 
 import {PinInput} from '@/components/ui/pin-input'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
@@ -56,7 +56,7 @@ export default function Login() {
 								error={loginMut.error?.message}
 							/>
 						</div>
-						<button type='submit' className={buttonClass}>
+						<button type='submit' {...primaryButtonProps}>
 							{t('login.password.submit')}
 						</button>
 					</form>

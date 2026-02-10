@@ -38,14 +38,15 @@ export function SoftwareUpdateDrawer() {
 					<div className='mb-4' />
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
 					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
-					<p className='text-12 -tracking-2 opacity-50'>
+					{/* TODO: Re-enable when whats-new content is updated */}
+					{/* <p className='text-12 -tracking-2 opacity-50'>
 						<Trans
 							i18nKey='software-update.see-whats-new'
 							components={{
 								linked: <Link to={linkToDialog('whats-new')} className='underline' />,
 							}}
 						/>
-					</p>
+					</p> */}
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>

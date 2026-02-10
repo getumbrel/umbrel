@@ -1,0 +1,25 @@
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-ctrl-system.schema.json
+
+[data-partition]
+partition = 4
+# This is safe to enable on all systems as it mounts the default
+# data partition if no external RAID has been configured.
+mount-script = "/opt/umbrel-data/umbrel-data-mount"
+
+[boot-flow]
+type = "mender-grub"
+boot-dir = "/run/rugix/mounts/config"
+
+[boot-groups.a]
+slots = { system = "system-a" }
+
+[boot-groups.b]
+slots = { system = "system-b" }
+
+[slots.system-a]
+type = "block"
+partition = 2
+
+[slots.system-b]
+type = "block"
+partition = 3

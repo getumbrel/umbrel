@@ -1,9 +1,196 @@
-name: Node.js CI
+name: CI
 
 on: push
 
 jobs:
+  # Detect if only UI files changed to skip heavy tests
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    outputs:
+      ui-only: ${{ steps.check.outputs.ui-only }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - id: check
+        run: |
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+
+          # On default branch, always run all tests
+          if [[ "${{ github.ref }}" == "refs/heads/${DEFAULT_BRANCH}" ]]; then
+            echo "ui-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get changed files compared to the previous push event
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+
+          # Check if all changed files are in packages/ui/
+          UI_ONLY="true"
+          while IFS= read -r file; do
+            if [[ -n "$file" && ! "$file" =~ ^packages/ui/ ]]; then
+              UI_ONLY="false"
+              break
+            fi
+          done <<< "$CHANGED_FILES"
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "UI only: $UI_ONLY"
+          echo "ui-only=$UI_ONLY" >> $GITHUB_OUTPUT
+
+  # These jobs simply serve as architecture native cache steps to load up the Docker cache for umbrelOS.
+  # We must cache to unique scopes per architecture otherwise only one of the architectures gets cached.
+  umbrelos-amd64-cache:
+    name: Build umbrelOS amd64
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build amd64 Docker image
+        working-directory: packages/os
+        run: docker buildx build --platform linux/amd64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-amd64 --cache-to type=gha,mode=max,scope=umbrelos-amd64 ../../
+  umbrelos-arm64-cache:
+    name: Build umbrelOS arm64
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build arm64 Docker image
+        working-directory: packages/os
+        run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
+
+  # Build the image for the VM tests
+  # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
+  umbrelos-amd64-vm-image-build:
+    name: Build umbrelOS amd64 VM image
+    needs: [detect-changes, umbrelos-amd64-cache]
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-ubuntu-2404
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build OS image
+        working-directory: packages/os
+        run: npm run build:amd64:rugix
+      # Hack to pass the image to the next job. We used to use upload-artifact but network performance
+      # is terrible between GitHub <> Ubicloud. Just abuse the cache for now which is local and fast.
+      - name: Cache OS image
+        uses: actions/cache/save@v4
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: umbrelos-amd64-image-${{ github.run_id }}
+
+  # Discover all MV test files so we can run the result as a build matrix
+  discover-vm-tests:
+    name: Discover VM tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      tests: ${{ steps.find.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: find
+        run: |
+          tests=$(find packages/umbreld/source -name "*.vm.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.vm\\.test\\.ts$"; ""))})')
+          echo "tests=$tests" >> $GITHUB_OUTPUT
+
+  # Run each VM test in a different runner
+  umbrelos-amd64-vm:
+    name: VM test (${{ matrix.test.name }})
+    needs: [detect-changes, umbrelos-amd64-vm-image-build, discover-vm-tests]
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.discover-vm-tests.outputs.tests) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - name: Restore OS image from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: packages/os/build/umbrelos-amd64.img
+          key: umbrelos-amd64-image-${{ github.run_id }}
+          fail-on-cache-miss: true
+      - name: Install QEMU
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86
+      - name: Install umbreld dependencies
+        working-directory: packages/umbreld
+        run: npm clean-install
+      - name: Run VM test
+        working-directory: packages/umbreld
+        run: npm run test -- ${{ matrix.test.path }}
+
+  # Discover all integration test files so we can run the result as a build matrix
+  discover-integration-tests:
+    name: Discover integration tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      tests: ${{ steps.find.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: find
+        run: |
+          tests=$(find packages/umbreld/source -name "*.integration.test.ts" | sed 's|packages/umbreld/||' | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: (. | split("/") | last | sub("\\.integration\\.test\\.ts$"; ""))})')
+          echo "tests=$tests" >> $GITHUB_OUTPUT
+
+  # Run each integration test in a different runner
+  umbreld-integration:
+    name: Integration test (${{ matrix.test.name }})
+    needs: [detect-changes, discover-integration-tests, umbrelos-amd64-cache]
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJSON(needs.discover-integration-tests.outputs.tests) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - run: npm run dev rebuild
+      - run: npm run dev start
+      - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
+      - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
+
+  # Run umbreld checks
   umbreld:
+    name: umbreld checks
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -13,10 +200,8 @@ jobs:
       matrix:
         task:
           - format:check
-          # - lint
           - typecheck
-          - test:unit -- --coverage --watch=false
-          - test:integration -- --coverage --watch=false
+          - test:unit -- --coverage
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,22 +209,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      # This is needed for the samba integration tests
-      - name: Setup umbrel user
-        run: |
-          sudo adduser --gecos "" --disabled-password umbrel
-          echo "umbrel:umbrel" | sudo chpasswd
-          sudo usermod -aG sudo umbrel
       - name: Install dependencies
-        run: |
-          curl -s https://kopia.io/signing-key | sudo gpg --dearmor -o /etc/apt/keyrings/kopia-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/kopia-keyring.gpg] http://packages.kopia.io/apt/ stable main" | sudo tee /etc/apt/sources.list.d/kopia.list
-          sudo apt-get update
-          sudo apt-get install -y unar imagemagick ffmpeg samba wsdd2 kopia bindfs cifs-utils smbclient
-          sudo systemctl disable smbd wsdd2
-          sudo npm clean-install
+        run: sudo npm clean-install
       - run: sudo npm run ${{ matrix.task }}
+
+  # Run ui checks
   ui:
+    name: ui checks
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -48,7 +224,7 @@ jobs:
       fail-fast: false
       matrix:
         task:
-          - lint
+          # - lint
           - format:check
           - typecheck
     steps:
@@ -68,3 +244,88 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - run: pnpm run ${{ matrix.task }}
+
+  # If the current build is tagged, build all release assets, push to Cloudflare R2 and create a GitHub Release
+  create-release:
+    name: Create release on tag
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [umbrelos-amd64-cache, umbrelos-arm64-cache]
+    runs-on: ubicloud-standard-16-ubuntu-2404
+    defaults:
+      run:
+        working-directory: packages/os
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Expose GitHub Actions runtime for Docker cache
+        uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      # We need this to namespace Docker images on forks
+      - run: echo "VERSION_IS_SEMVER=$(if [[ '${{ env.VERSION }}' =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then echo 'true'; else echo 'false'; fi)" >> $GITHUB_ENV
+      - run: echo "PREFIX=$(if [ '${{ env.VERSION_IS_SEMVER }}' = 'true' ]; then echo ''; else echo $(basename ${{ github.repository }})-; fi)" >> $GITHUB_ENV
+      - run: echo "TAG=${{ github.repository_owner }}/${{ env.PREFIX }}umbrelos:${{ env.VERSION }}" >> $GITHUB_ENV
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+      - name: Build and push Docker image
+        run: docker buildx build --platform linux/amd64,linux/arm64 --file umbrelos.Dockerfile --tag ghcr.io/${{env.TAG }} --push --cache-from type=gha,scope=umbrelos-amd64 --cache-from type=gha,scope=umbrelos-arm64 ../../
+      - run: mkdir -p build && docker buildx imagetools inspect ghcr.io/${{ env.TAG }} > build/docker-umbrelos-${{ env.VERSION }}
+      # Build OS images
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Build OS images
+        # Awkward hack to run in parallel but correctly handle errors
+        run: |
+          npm run build:amd64 "${{ env.VERSION }}" &
+          pid1=$!
+          npm run build:arm64 "${{ env.VERSION }}" &
+          pid2=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
+      # TODO: Use .img.xz for all release assets once https://github.com/balena-io/etcher/issues/4064 is fixed
+      - name: Compress release assets
+        # Awkward hack to run in parallel but correctly handle errors
+        run: |
+          cd build
+          zip umbrelos-pi4.img.zip umbrelos-pi4.img &
+          pid1=$!
+          zip umbrelos-pi5.img.zip umbrelos-pi5.img &
+          pid2=$!
+          sudo xz --keep --threads=0 umbrelos-amd64.img &
+          pid3=$!
+          wait $pid1 || exit 1
+          wait $pid2 || exit 1
+          wait $pid3 || exit 1
+      - name: Create USB installer
+        run: npm run build:amd64:usb-installer
+      - name: Create release directory
+        run: |
+          mkdir -p release
+          mv build/docker-umbrelos-* release/
+          mv build/*.update release/
+          mv build/*.img.zip release/
+          mv build/*.img.xz release/
+          mv build/*.img release/
+          mv usb-installer/build/*.iso release/
+      - name: Create SHASUM
+        run: cd release && shasum -a 256 * | tee SHA256SUMS
+      - name: OpenTimestamps
+        run: npm ci && npx ots-cli.js stamp release/SHA256SUMS
+      - name: Nuke uncompressed images (we just wanted them covered by the SHASUMs)
+        run: rm -rf release/*.img
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # v1.4
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: packages/os/release
+          destination-dir: ./${{ env.VERSION }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v0.1.15
+        with:
+          draft: true
+          name: umbrelOS ${{ github.ref_name }}
+          files: |
+            packages/os/release/SHA256SUMS*

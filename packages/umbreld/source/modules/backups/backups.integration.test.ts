@@ -675,11 +675,15 @@ test('backups sets user notification if backups have not run in over 24 hours', 
 	// Add the share again so backups can complete again
 	await umbreld.client.files.addShare.mutate({path: '/Home/Backups'})
 
-	// Wait for the notification to be removed
-	await pRetry(() => expect(umbreld.client.notifications.get.query()).resolves.toHaveLength(0), {
-		retries: 65,
+	// Wait for share to be available and trigger a backup
+	const repositories = await umbreld.client.backups.getRepositories.query()
+	await pRetry(() => umbreld.client.backups.backup.mutate({repositoryId: repositories[0].id}), {
+		retries: 10,
 		factor: 1,
 	})
+
+	// Verify the notification is removed after successful backup
+	await expect(umbreld.client.notifications.get.query()).resolves.toHaveLength(0)
 
 	// Unmock time
 	viNow.mockRestore()

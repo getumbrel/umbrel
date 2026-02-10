@@ -1,17 +1,31 @@
 import {useState} from 'react'
+import {useNavigate} from 'react-router-dom'
 
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
+// Credentials for Umbrel Pro RAID flow. Passed via React Router's location.state
+// through the RAID setup pages. Actual user.register call happens in setup.tsx
+// after RAID configuration. location.state survives page refresh but is lost on
+// direct URL navigation or new tab.
+export type AccountCredentials = {
+	name: string
+	password: string
+	language: string
+}
+
 export default function CreateAccount() {
 	const title = t('onboarding.create-account')
+	const navigate = useNavigate()
 	const auth = useAuth()
 	const [language] = useLanguage()
+	const {data: deviceInfo} = useDeviceInfo()
 
 	const [name, setName] = useState('')
 	const [password, setPassword] = useState('')
@@ -19,10 +33,12 @@ export default function CreateAccount() {
 	const [localError, setLocalError] = useState('')
 	const [isNavigating, setIsNavigating] = useState(false)
 
+	const isPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
+
 	const loginMut = trpcReact.user.login.useMutation({
 		onSuccess: async (jwt) => {
 			setIsNavigating(true)
-			auth.signUpWithJwt(jwt)
+			auth.signUpWithJwt(jwt, '/onboarding/account-created')
 		},
 	})
 
@@ -35,7 +51,7 @@ export default function CreateAccount() {
 
 		// Reset errors
 		registerMut.reset()
-		await setLocalError('')
+		setLocalError('')
 
 		if (!name) {
 			setLocalError(t('onboarding.create-account.failed.name-required'))
@@ -52,7 +68,17 @@ export default function CreateAccount() {
 			return
 		}
 
-		registerMut.mutate({name, password, language})
+		if (isPro) {
+			// For Umbrel Pro we navigate to RAID setup
+			setIsNavigating(true)
+			const credentials: AccountCredentials = {name, password, language}
+
+			// Pass credentials to RAID setup page
+			navigate('/onboarding/raid', {state: {credentials}})
+		} else {
+			// For non-Pro devices we do standard registration flow
+			registerMut.mutate({name, password, language})
+		}
 	}
 
 	const remoteFormError = !registerMut.error?.data?.zodError && registerMut.error?.message
@@ -92,7 +118,7 @@ export default function CreateAccount() {
 					<div className='-my-2.5'>
 						<AnimatedInputError>{formError}</AnimatedInputError>
 					</div>
-					<button type='submit' className={buttonClass}>
+					<button type='submit' {...primaryButtonProps}>
 						{isLoading ? t('onboarding.create-account.submitting') : t('onboarding.create-account.submit')}
 					</button>
 				</fieldset>

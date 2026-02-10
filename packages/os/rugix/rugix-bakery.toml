@@ -1,0 +1,95 @@
+#:schema https://raw.githubusercontent.com/silitics/rugix/refs/tags/v0.8.0/schemas/rugix-bakery-project.schema.json
+
+# Image for AMD64 EFI systems.
+[systems.umbrelos-amd64]
+layer = "umbrelos-amd64"
+architecture = "amd64"
+target = "generic-grub-efi"
+# Configure a GPT layout to enlarge boot partitions to 512 MiB.
+[systems.umbrelos-amd64.image.layout]
+type = "gpt"
+partitions = [
+    { root = "config", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", size = "256M", filesystem = { type = "fat32" } },
+    { root = "boot", size = "512MiB", filesystem = { type = "ext4" } },
+    { size = "512M" },
+    { root = "system", filesystem = { type = "ext4", additional-options = [
+        "-O",
+        "^has_journal",
+        "-E",
+        "hash_seed=035cb65d-0a86-404a-bad7-19c88d05e400",
+        "-U",
+        "12341234-a4ec-4304-a70f-c549ea829da9",
+    ] } },
+]
+
+# Image for Raspberry Pi 4 including the required firmware update.
+[systems.umbrelos-pi4]
+layer = "umbrelos-pi4"
+architecture = "arm64"
+target = "rpi-tryboot"
+# Configure a GPT layout to support devices disks larger than 2 TiB.
+[systems.umbrelos-pi4.image.layout]
+type = "gpt"
+partitions = [
+    { root = "config", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", size = "256M", filesystem = { type = "fat32" } },
+    { root = "boot", type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M", filesystem = { type = "fat32" } },
+    { type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M" },
+    { root = "system", filesystem = { type = "ext4", additional-options = [
+        "-O",
+        "^has_journal",
+        "-E",
+        "hash_seed=035cb65d-0a86-404a-bad7-19c88d05e400",
+        "-U",
+        "12341234-a4ec-4304-a70f-c549ea829da9",
+    ] } },
+]
+
+# Image for Raspberry Pi 4 and 5 without the firmware update.
+[systems.umbrelos-pi-tryboot]
+layer = "umbrelos-pi"
+architecture = "arm64"
+target = "rpi-tryboot"
+# Configure a GPT layout to support devices disks larger than 2 TiB.
+[systems.umbrelos-pi-tryboot.image.layout]
+type = "gpt"
+partitions = [
+    { root = "config", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B", size = "256M", filesystem = { type = "fat32" } },
+    { root = "boot", type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M", filesystem = { type = "fat32" } },
+    { type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", size = "128M" },
+    { root = "system", filesystem = { type = "ext4", additional-options = [
+        "-O",
+        "^has_journal",
+        "-E",
+        "hash_seed=035cb65d-0a86-404a-bad7-19c88d05e400",
+        "-U",
+        "12341234-a4ec-4304-a70f-c549ea829da9",
+    ] } },
+]
+
+# Legacy MBR-based image to build Mender update artifacts.
+[systems.umbrelos-pi-mbr]
+layer = "umbrelos-pi"
+architecture = "arm64"
+target = "rpi-tryboot"
+
+# Image for legacy Mender-based devices.
+[systems.umbrelos-mender-amd64]
+layer = "umbrelos-mender-amd64"
+architecture = "amd64"
+target = "unknown"
+# We need a custom layout here to create a filesystem compatible with Mender's version of
+# Grub. In particular, the feature `metadata_csum_seed` is incompatible, so we remove it.
+# We also do not need/want a journal as the root filesystem is read-only. Note that adding
+# a journal will also interfere with static delta updates.
+[systems.umbrelos-mender-amd64.image.layout]
+type = "gpt"
+partitions = [
+    { root = "system", filesystem = { type = "ext4", additional-options = [
+        "-O",
+        "^metadata_csum_seed,^has_journal",
+        "-E",
+        "hash_seed=035cb65d-0a86-404a-bad7-19c88d05e400",
+        "-U",
+        "12341234-a4ec-4304-a70f-c549ea829da9",
+    ] } },
+]

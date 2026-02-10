@@ -1,6 +1,7 @@
 import {ChevronLeft, Loader2} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {Trans} from 'react-i18next/TransWithoutContext'
+import {Link} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
@@ -16,14 +17,94 @@ import AddNetworkShareDialog from '@/features/files/components/dialogs/add-netwo
 import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {Button} from '@/shadcn-components/ui/button'
 import {Input, PasswordInput} from '@/shadcn-components/ui/input'
+import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
+// Routes to Umbrel Pro instructions or regular restore flow
 export default function BackupsRestoreOnboarding() {
+	const {isLoading: isLoadingDeviceCheck, data: deviceInfo} = useDeviceInfo()
+	const isUmbrelPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
+
+	// Show loading state while checking device type
+	if (isLoadingDeviceCheck) {
+		return (
+			<Layout
+				title={t('backups-restore-header')}
+				transitionTitle={false}
+				subTitle=''
+				footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
+			>
+				<div className='flex items-center justify-center py-12'>
+					<Loader2 className='size-6 animate-spin text-white/50' />
+				</div>
+			</Layout>
+		)
+	}
+
+	// Show Umbrel Pro specific instructions
+	if (isUmbrelPro) {
+		return <UmbrelProRestoreInstructions />
+	}
+
+	// Show regular restore flow for non-Pro devices
+	return <RegularRestoreFlow />
+}
+
+// Umbrel Pro restore instructions component
+// Umbrel Pro requires completing onboarding first, then restoring via Settings
+function UmbrelProRestoreInstructions() {
+	const steps = [
+		t('backups-restore-pro.step1'),
+		<Trans
+			key='step2'
+			i18nKey='backups-restore-pro.step2'
+			components={[<span key='path' className='font-medium text-white' />]}
+		/>,
+		t('backups-restore-pro.step3'),
+	]
+
+	return (
+		<Layout
+			title={t('backups-restore-header')}
+			transitionTitle={false}
+			subTitle={t('backups-restore-pro.subtitle')}
+			subTitleMaxWidth={630}
+			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
+		>
+			<div className='mx-auto mb-6 mt-2 w-full max-w-[560px]'>
+				{/* Steps */}
+				<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
+					{steps.map((text, i) => (
+						<div key={i} className='flex items-center gap-3 p-3 text-13 font-medium -tracking-3'>
+							<div className='flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-11 text-white/60'>
+								{i + 1}
+							</div>
+							<div className='flex-1 text-white/70'>{text}</div>
+						</div>
+					))}
+				</div>
+
+				<p className='mt-4 text-center text-13 text-white/50'>{t('backups-restore-pro.after-restore')}</p>
+
+				{/* Action button */}
+				<div className='flex justify-center pt-6'>
+					<Link to='/onboarding/create-account' unstable_viewTransition {...primaryButtonProps}>
+						{t('onboarding.start.continue')}
+					</Link>
+				</div>
+			</div>
+		</Layout>
+	)
+}
+
+// Regular restore flow for non-Pro devices
+function RegularRestoreFlow() {
 	const title = t('backups-restore-header')
 	const [lang] = useLanguage()
 
@@ -229,9 +310,13 @@ export default function BackupsRestoreOnboarding() {
 					{step < Step.Review ? (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (!canNext || isConnecting ? 'pointer-events-none opacity-50' : '')}
+							className={cn(
+								primaryButtonProps.className,
+								!canNext || (isConnecting && 'pointer-events-none opacity-50'),
+							)}
 							onClick={handleNext}
 							disabled={!canNext || isConnecting}
+							style={primaryButtonProps.style}
 						>
 							<span className={isConnecting ? 'opacity-0' : 'opacity-100'}>{t('continue')}</span>
 							{isConnecting && <Loader2 className='absolute size-4 animate-spin' />}
@@ -239,7 +324,7 @@ export default function BackupsRestoreOnboarding() {
 					) : (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (isRestoring ? 'pointer-events-none opacity-50' : '')}
+							className={cn(primaryButtonProps.className, isRestoring && 'pointer-events-none opacity-50')}
 							onClick={async () => {
 								try {
 									await restoreBackup(selectedBackupId)
@@ -248,6 +333,7 @@ export default function BackupsRestoreOnboarding() {
 								}
 							}}
 							disabled={!selectedBackupId || isRestoring}
+							style={primaryButtonProps.style}
 						>
 							<span className={isRestoring ? 'opacity-0' : 'opacity-100'}>{t('backups-restore')}</span>
 							{isRestoring && <Loader2 className='absolute size-4 animate-spin' />}

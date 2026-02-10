@@ -5,6 +5,7 @@ import {usePreviousDistinct} from 'react-use'
 
 import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
+import {toast} from '@/components/ui/toast'
 import {useLocalStorage2} from '@/hooks/use-local-storage2'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
@@ -29,6 +30,9 @@ const GlobalSystemStateContext = createContext<{
 	reset: (password: string) => void
 	getError(): RouterError | null
 	clearError(): void
+	// We call this before triggering a custom restart flow (e.g., RAID setup) to prevent error boundary from showing when requests fail.
+	// Unlike the normal restart flow, this does NOT trigger logout-on-running behavior.
+	suppressErrors: () => void
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
@@ -40,6 +44,8 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
 	const [routerError, setRouterError] = useState<RouterError | null>(null)
+	// Separate flag for suppressing errors without triggering logout-on-running (e.g., RAID setup)
+	const [errorsSuppressedOnly, setErrorsSuppressedOnly] = useState(false)
 
 	// Start over fresh when any of the supported actions is triggered
 	const onMutate = async () => {
@@ -52,15 +58,25 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		setRouterError(null)
 	}
 
-	// Intercept router errors so the triggering component can handle them,
-	// for example when the confirmation password of a factory reset is invalid
-	// and the router returns an 'UNAUTHORIZED' response.
+	// Intercept router errors so the triggering component can handle them.
+	// Password errors (UNAUTHORIZED) are shown in the form field.
+	// System errors (e.g., factory reset failed) are shown as toasts.
 	const onError = async (error: RouterError) => {
-		setRouterError(error)
+		if (error?.data?.code === 'UNAUTHORIZED') {
+			setRouterError(error)
+		} else {
+			toast.error(error.message)
+		}
 		setTriggered(false)
+
+		// Prevent logout/redirect when error occurs
+		setShouldLogoutOnRunning(false)
 	}
 	const getError = () => routerError
 	const clearError = () => setRouterError(null)
+	// Allow external code to suppress errors (e.g., RAID setup doing its own restart flow)
+	// This sets a separate flag so it doesn't trigger logout-on-running behavior
+	const suppressErrors = () => setErrorsSuppressedOnly(true)
 
 	const queryClient = useQueryClient()
 	const utils = trpcReact.useUtils()
@@ -83,16 +99,20 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const shutdown = useShutdown({onMutate, onSuccess})
 	const update = useUpdate({onMutate, onSuccess})
 	const migrate = useMigrate({onMutate, onSuccess})
-	const reset = useReset({onMutate, onSuccess, onError})
+	const reset = useReset({onMutate, onError})
 
-	// Force swift and fresh status updates when an action is in progress
+	// Force swift and fresh status updates when an action is in progress.
+	// We disable retry to get consistent polling during device reboots - we know
+	// the device is down, we just want to detect when it comes back ASAP rather
+	// than waiting for exponential backoff between retries.
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
+		retry: 0,
 	})
 
 	if (!IS_DEV) {
-		if (systemStatusQ.error && !triggered) {
+		if (systemStatusQ.error && !triggered && !errorsSuppressedOnly) {
 			// This error should get caught by a parent error boundary component
 			// TODO: figure out what to do about network errors
 			// TODO: Do we need this production-only case at all?
@@ -138,8 +158,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			setTimeout(() => {
 				queryClient.cancelQueries() // prevent auth errors
 				jwt.removeJwt()
-				const targetPage = prevStatus === 'resetting' ? '/factory-reset/success' : '/'
-				location.href = targetPage
+				location.href = '/'
 			}, 500)
 			return
 		}
@@ -219,7 +238,9 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate, reset, getError, clearError}}>
+				<GlobalSystemStateContext.Provider
+					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
+				>
 					{children}
 					{debugInfo}
 				</GlobalSystemStateContext.Provider>

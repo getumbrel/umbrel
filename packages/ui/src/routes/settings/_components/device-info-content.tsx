@@ -68,6 +68,7 @@ export const HostEnvironmentIcon = ({
 	serialNumber?: string
 }) => {
 	const iconDimensions = {
+		'umbrel-pro': 200,
 		'umbrel-home': 128,
 		'raspberry-pi': 64,
 		'docker-container': 72,

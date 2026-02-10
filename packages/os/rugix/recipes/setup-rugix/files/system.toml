@@ -1,0 +1,4 @@
+[data-partition]
+# This is safe to enable on all systems as it mounts the default
+# data partition if no external RAID has been configured.
+mount-script = "/opt/umbrel-data/umbrel-data-mount"

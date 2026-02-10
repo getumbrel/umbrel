@@ -10,7 +10,7 @@ const spring = {
 }
 
 // Size presets
-const sizes = {
+const islandSizes = {
 	minimized: {
 		width: 150,
 		height: 40,
@@ -28,6 +28,8 @@ interface IslandProps {
 	children: React.ReactNode
 	onClose?: () => void
 	nonDismissable?: boolean
+	// When true, the island will expand and cannot be minimized. Useful for critical states like imminent reboots.
+	forceExpanded?: boolean
 }
 
 interface IslandChildProps {
@@ -42,48 +44,60 @@ export const IslandExpanded = ({children}: IslandChildProps) => {
 	return <>{children}</>
 }
 
-export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
+export const Island = ({children, onClose, nonDismissable, forceExpanded}: IslandProps) => {
 	const [isExpanded, setIsExpanded] = useState(true)
 	const islandRef = useRef<HTMLDivElement>(null)
 	const willChange = useWillChange()
 
-	// Expand the island on click
-	const handleIslandClick = () => {
+	// Force expansion when forceExpanded prop is true
+	useEffect(() => {
+		if (forceExpanded) {
+			setIsExpanded(true)
+		}
+	}, [forceExpanded])
+
+	// Stop propagation on both click and pointerdown to prevent Radix dialogs from
+	// detecting this as an "outside" interaction and closing (Radix uses pointer events)
+	const handleIslandClick = (e: React.MouseEvent) => {
+		e.stopPropagation()
 		if (!isExpanded) {
 			setIsExpanded(true)
 		}
 	}
 
-	const size = isExpanded ? sizes.expanded : sizes.minimized
+	const handlePointerDown = (e: React.PointerEvent) => {
+		e.stopPropagation()
+	}
+
+	// Use forceExpanded to prevent minimizing, or use internal state
+	const effectiveExpanded = forceExpanded || isExpanded
+	const size = effectiveExpanded ? islandSizes.expanded : islandSizes.minimized
 
 	// Find and render the appropriate child component
 	const childArray = Children.toArray(children)
 	const minimizedChild = childArray.find((child) => isValidElement(child) && child.type === IslandMinimized)
 	const expandedChild = childArray.find((child) => isValidElement(child) && child.type === IslandExpanded)
 
-	// Add touch/click outside handler
-	// to minimize the island when clicking outside of it
-	useEffect(() => {
-		// If the island isn't expanded we don't need to listen for outside clicks
-		if (!isExpanded) return
-
-		const handleInteractionOutside = (event: MouseEvent | TouchEvent) => {
-			if (islandRef.current && !islandRef.current.contains(event.target as Node)) {
-				setIsExpanded(false)
-			}
+	// Minimize island and stop propagation so dialogs below don't also close
+	const handleBackdropClick = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
+		e.stopPropagation()
+		if (!forceExpanded) {
+			setIsExpanded(false)
 		}
-
-		document.addEventListener('touchstart', handleInteractionOutside)
-		document.addEventListener('mousedown', handleInteractionOutside)
-
-		return () => {
-			document.removeEventListener('touchstart', handleInteractionOutside)
-			document.removeEventListener('mousedown', handleInteractionOutside)
-		}
-	}, [isExpanded])
+	}
 
 	return (
 		<div className='flex justify-center md:block'>
+			{/* Full-screen backdrop when expanded: captures outside clicks to minimize island first,
+			    stopping propagation so dialogs below stay open. Provides layered dismissal UX. */}
+			{effectiveExpanded && !forceExpanded && (
+				<div
+					className='fixed inset-0'
+					onClick={handleBackdropClick}
+					onPointerDown={handleBackdropClick}
+					onTouchStart={handleBackdropClick}
+				/>
+			)}
 			<motion.div
 				ref={islandRef}
 				className='relative select-none bg-black text-white shadow-floating-island'
@@ -99,10 +113,11 @@ export const Island = ({children, onClose, nonDismissable}: IslandProps) => {
 				}}
 				transition={spring}
 				onClick={handleIslandClick}
+				onPointerDown={handlePointerDown}
 			>
 				<div className='absolute inset-0'>
-					{isExpanded ? expandedChild : minimizedChild}
-					{isExpanded && onClose && !nonDismissable && (
+					{effectiveExpanded ? expandedChild : minimizedChild}
+					{effectiveExpanded && onClose && !nonDismissable && (
 						<motion.button
 							className='absolute right-4 top-4 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20'
 							initial={{scale: 0}}

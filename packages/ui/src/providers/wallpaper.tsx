@@ -120,6 +120,11 @@ export const wallpapers = [
 		url: '/wallpapers/21.jpg',
 		brandColorHsl: '12 78% 50%',
 	},
+	{
+		id: '22',
+		url: '/wallpapers/22.jpg',
+		brandColorHsl: '92 52% 41%',
+	},
 ] as const satisfies readonly WallpaperBase[]
 
 export function getWallpaperThumbUrl(wallpaper: WallpaperBase) {

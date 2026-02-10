@@ -55,6 +55,17 @@ export async function getDiskUsageByPath(path: string): Promise<{size: number; t
 export async function getSystemDiskUsage(
 	umbreld: Umbreld,
 ): Promise<{size: number; totalUsed: number; available: number}> {
+	// TODO: Do this a cleaner way
+	if (await umbreld.hardware.umbrelPro.isUmbrelPro()) {
+		const pool = await umbreld.hardware.raid.getStatus()
+		if (pool.exists) {
+			return {
+				size: pool.usableSpace ?? 0,
+				totalUsed: pool.usedSpace ?? 0,
+				available: pool.freeSpace ?? 0,
+			}
+		}
+	}
 	return await getDiskUsageByPath(umbreld.dataDirectory)
 }
 
@@ -282,16 +293,10 @@ export async function reboot(): Promise<boolean> {
 export async function commitOsPartition(umbreld: Umbreld): Promise<boolean> {
 	try {
 		umbreld.logger.log('Committing OS partition...')
-		await $`mender commit`
+		await $`rugix-ctrl system commit`
 		umbreld.logger.log('Successfully commited to new OS partition.')
 		return true
 	} catch (error) {
-		if (
-			(error as ExecaError).stderr?.includes('level=error msg="Could not commit Artifact: There is nothing to commit"')
-		) {
-			umbreld.logger.log('No new OS partition to commit.')
-			return true
-		}
 		umbreld.logger.error(`Failed to commit OS partition`, error)
 		return false
 	}
@@ -310,6 +315,10 @@ export async function detectDevice() {
 	if (model === 'U130121') device = 'Umbrel Home (2024)'
 	if (model === 'U130122') device = 'Umbrel Home (2025)'
 	if (productName === 'Umbrel Home') deviceId = model
+
+	// No year suffix for Umbrel Pro until if/when a newer model exists
+	if (model === 'U4XN1') device = 'Umbrel Pro'
+	if (productName === 'Umbrel Pro') deviceId = model
 
 	// I haven't been able to find another way to reliably detect Pi hardware. Most existing
 	// solutions don't actually detect Pi hardware but just detect Pi OS which we don't match.
@@ -335,8 +344,8 @@ export async function detectDevice() {
 		// /proc/cpuinfo might not exist on some systems, do nothing.
 	}
 
-	// Blank out model and serial for non Umbrel Home devices
-	if (productName !== 'Umbrel Home') {
+	// Blank out model and serial for non Umbrel devices
+	if (productName !== 'Umbrel Home' && productName !== 'Umbrel Pro') {
 		model = ''
 		serial = ''
 	}
