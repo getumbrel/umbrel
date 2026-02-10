@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "Доброго дня, {{name}}",
   "desktop.greeting.evening": "Добрий вечір, {{name}}",
   "desktop.greeting.morning": "Доброго ранку, {{name}}",
+  "desktop.install-first.for-the-ai-enthusiast": "Для Viber",
   "desktop.install-first.for-the-bitcoiner": "Для Біткойнера",
   "desktop.install-first.for-the-self-hoster": "Для власного хостингу",
   "desktop.install-first.for-the-streamer": "Для стрімера",

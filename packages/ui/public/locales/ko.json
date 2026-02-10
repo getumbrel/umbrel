@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "안녕하세요, {{name}}님. 좋은 오후예요!",
   "desktop.greeting.evening": "안녕하세요, {{name}}님. 좋은 저녁이에요!",
   "desktop.greeting.morning": "안녕하세요, {{name}}님. 좋은 아침이에요!",
+  "desktop.install-first.for-the-ai-enthusiast": "Viber를 위한",
   "desktop.install-first.for-the-bitcoiner": "비트코인 사용자에게 추천",
   "desktop.install-first.for-the-self-hoster": "셀프 호스팅 사용자에게 추천",
   "desktop.install-first.for-the-streamer": "스트리머에게 추천",

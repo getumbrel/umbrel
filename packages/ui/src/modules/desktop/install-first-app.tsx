@@ -56,22 +56,22 @@ function Cards() {
 				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-self-hoster')}</h2>
 				<AppApp app={appsKeyed['nextcloud']} />
 				<AppApp app={appsKeyed['immich']} />
-				<AppApp app={appsKeyed['home-assistant']} />
-				<AppApp app={appsKeyed['pi-hole']} />
+				<AppApp app={appsKeyed['jellyfin']} />
+				<AppApp app={appsKeyed['transmission']} />
+			</div>
+			<div className={cardClass}>
+				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-ai-enthusiast')}</h2>
+				<AppApp app={appsKeyed['openclaw']} />
+				<AppApp app={appsKeyed['ollama']} />
+				<AppApp app={appsKeyed['open-webui']} />
+				<AppApp app={appsKeyed['perplexica']} />
 			</div>
 			<div className={cardClass}>
 				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-bitcoiner')}</h2>
 				<AppApp app={appsKeyed['bitcoin']} />
-				<AppApp app={appsKeyed['lightning']} />
+				<AppApp app={appsKeyed['public-pool']} />
 				<AppApp app={appsKeyed['electrs']} />
 				<AppApp app={appsKeyed['mempool']} />
-			</div>
-			<div className={cardClass}>
-				<h2 className={cardHeadingClass}>{t('desktop.install-first.for-the-streamer')}</h2>
-				<AppApp app={appsKeyed['plex']} />
-				<AppApp app={appsKeyed['transmission']} />
-				<AppApp app={appsKeyed['sonarr']} />
-				<AppApp app={appsKeyed['jellyfin']} />
 			</div>
 		</>
 	)
@@ -141,6 +141,6 @@ function App({
 	)
 }
 
-const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-none bg-blend-soft-light bg-linear-to-b from-black/50 via-black/50 to-black contrast-more:bg-neutral-800 px-4 py-8 shadow-dialog flex flex-col gap-4 min-w-0`
+const cardClass = tw`rounded-20 backdrop-blur-2xl contrast-more:backdrop-blur-none bg-blend-soft-light bg-linear-to-b from-black/50 via-black/50 to-black contrast-more:bg-neutral-800 px-4 py-8 shadow-dialog flex flex-col gap-2 min-w-0`
 
-const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2`
+const cardHeadingClass = tw`text-center text-19 font-bold leading-tight -tracking-2 mb-2`

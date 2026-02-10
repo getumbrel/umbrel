@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "こんにちは、{{name}}",
   "desktop.greeting.evening": "こんばんは、{{name}}",
   "desktop.greeting.morning": "おはようございます、{{name}}",
+  "desktop.install-first.for-the-ai-enthusiast": "バイブを楽しむ人向け",
   "desktop.install-first.for-the-bitcoiner": "ビットコイナー用",
   "desktop.install-first.for-the-self-hoster": "セルフホスティング用",
   "desktop.install-first.for-the-streamer": "ストリーマー用",

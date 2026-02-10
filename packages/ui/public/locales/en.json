@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "Good afternoon, {{name}}",
   "desktop.greeting.evening": "Good evening, {{name}}",
   "desktop.greeting.morning": "Good morning, {{name}}",
+  "desktop.install-first.for-the-ai-enthusiast": "For the viber",
   "desktop.install-first.for-the-bitcoiner": "For the Bitcoiner",
   "desktop.install-first.for-the-self-hoster": "For the self-hoster",
   "desktop.install-first.for-the-streamer": "For the streamer",

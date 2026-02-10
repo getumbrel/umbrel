@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "Tünaydın, {{name}}",
   "desktop.greeting.evening": "İyi akşamlar, {{name}}",
   "desktop.greeting.morning": "Günaydın, {{name}}",
+  "desktop.install-first.for-the-ai-enthusiast": "Viber için",
   "desktop.install-first.for-the-bitcoiner": "Bitcoin kullanıcıları için",
   "desktop.install-first.for-the-self-hoster": "Kendi sunucusunu barındıranlar için",
   "desktop.install-first.for-the-streamer": "Yayıncılar için",

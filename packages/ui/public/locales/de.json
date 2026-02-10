@@ -313,6 +313,7 @@
   "desktop.greeting.afternoon": "Guten Tag, {{name}}",
   "desktop.greeting.evening": "Guten Abend, {{name}}",
   "desktop.greeting.morning": "Guten Morgen, {{name}}",
+  "desktop.install-first.for-the-ai-enthusiast": "Für Viber",
   "desktop.install-first.for-the-bitcoiner": "Für Bitcoiner",
   "desktop.install-first.for-the-self-hoster": "Für Selbsthoster",
   "desktop.install-first.for-the-streamer": "Für Streamer",
