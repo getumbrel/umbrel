@@ -3,6 +3,7 @@ import {keepPreviousData} from '@tanstack/react-query'
 import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
 import type {Share} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -37,7 +38,7 @@ export function useShares() {
 			await utils.files.shares.invalidate()
 		},
 		onError: (error: RouterError) => {
-			toast.error(t('files-error.add-share', {message: error.message}))
+			toast.error(t('files-error.add-share', {message: getFilesErrorMessage(error.message)}))
 		},
 	})
 
@@ -47,7 +48,7 @@ export function useShares() {
 			await utils.files.shares.invalidate()
 		},
 		onError: (error: RouterError) => {
-			toast.error(t('files-error.remove-share', {message: error.message}))
+			toast.error(t('files-error.remove-share', {message: getFilesErrorMessage(error.message)}))
 		},
 	})
 

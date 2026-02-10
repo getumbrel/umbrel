@@ -5,6 +5,7 @@ import {TRASH_PATH} from '@/features/files/constants'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
@@ -176,7 +177,7 @@ export function useFilesOperations() {
 	// Rename item
 	const renameItemMutation = trpcReact.files.rename.useMutation({
 		onError: (error) => {
-			toast.error(t('files-error.rename', {message: error.message}))
+			toast.error(t('files-error.rename', {message: getFilesErrorMessage(error.message)}))
 		},
 		onSettled: () => {
 			utils.files.list.invalidate()
@@ -227,7 +228,7 @@ export function useFilesOperations() {
 			operationType: 'move',
 			getOperationArgsFn: (path) => ({path, toDirectory}),
 			targetDirectory: toDirectory,
-			onErrorToastFn: (message) => toast.error(t('files-error.move', {message})),
+			onErrorToastFn: (message) => toast.error(t('files-error.move', {message: getFilesErrorMessage(message)})),
 			onSuccessAll: () => {},
 		})
 	}
@@ -261,7 +262,7 @@ export function useFilesOperations() {
 			operationType: 'copy',
 			getOperationArgsFn: (path) => ({path, toDirectory}),
 			targetDirectory: toDirectory,
-			onErrorToastFn: (message) => toast.error(t('files-error.copy', {message})),
+			onErrorToastFn: (message) => toast.error(t('files-error.copy', {message: getFilesErrorMessage(message)})),
 			onSuccessAll: () => {},
 		})
 	}
@@ -289,7 +290,7 @@ export function useFilesOperations() {
 			utils.files.search.invalidate()
 		},
 		onError: (error) => {
-			toast.error(t('files-error.extract', {message: error.message}))
+			toast.error(t('files-error.extract', {message: getFilesErrorMessage(error.message)}))
 		},
 	}).mutateAsync
 
@@ -312,7 +313,7 @@ export function useFilesOperations() {
 			utils.files.search.invalidate()
 		},
 		onError: (error) => {
-			toast.error(t('files-error.compress', {message: error.message}))
+			toast.error(t('files-error.compress', {message: getFilesErrorMessage(error.message)}))
 		},
 	}).mutateAsync
 
@@ -335,7 +336,7 @@ export function useFilesOperations() {
 		},
 		onError: (error) => {
 			if (error.message !== 'ALREADY_IN_TRASH') {
-				toast.error(t('files-error.trash', {message: error.message}))
+				toast.error(t('files-error.trash', {message: getFilesErrorMessage(error.message)}))
 			}
 		},
 		onSettled: () => {
@@ -380,7 +381,7 @@ export function useFilesOperations() {
 			operationAsyncFn: restoreFromTrash,
 			operationType: 'restore',
 			getOperationArgsFn: (path) => ({path}),
-			onErrorToastFn: (message) => toast.error(t('files-error.restore', {message})),
+			onErrorToastFn: (message) => toast.error(t('files-error.restore', {message: getFilesErrorMessage(message)})),
 			onSuccessAll: () => {},
 		})
 	}
@@ -406,7 +407,7 @@ export function useFilesOperations() {
 			}
 		},
 		onError: (error) => {
-			toast.error(t('files-error.delete', {message: error.message}))
+			toast.error(t('files-error.delete', {message: getFilesErrorMessage(error.message)}))
 		},
 	}).mutateAsync
 
@@ -425,7 +426,7 @@ export function useFilesOperations() {
 			utils.files.list.invalidate({path: TRASH_PATH})
 		},
 		onError: (error) => {
-			toast.error(t('files-error.empty-trash', {message: error.message}))
+			toast.error(t('files-error.empty-trash', {message: getFilesErrorMessage(error.message)}))
 		},
 	}).mutateAsync
 

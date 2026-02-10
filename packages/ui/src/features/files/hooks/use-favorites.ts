@@ -1,6 +1,7 @@
 import {keepPreviousData} from '@tanstack/react-query'
 
 import {toast} from '@/components/ui/toast'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -27,7 +28,7 @@ export function useFavorites() {
 			await utils.files.favorites.invalidate()
 		},
 		onError: (error: RouterError) => {
-			toast.error(t('files-error.add-favorite', {message: error.message}))
+			toast.error(t('files-error.add-favorite', {message: getFilesErrorMessage(error.message)}))
 		},
 	})
 
@@ -37,7 +38,7 @@ export function useFavorites() {
 			await utils.files.favorites.invalidate()
 		},
 		onError: (error: RouterError) => {
-			toast.error(t('files-error.remove-favorite', {message: error.message}))
+			toast.error(t('files-error.remove-favorite', {message: getFilesErrorMessage(error.message)}))
 		},
 	})
 

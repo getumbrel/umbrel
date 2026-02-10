@@ -3,6 +3,7 @@ import {keepPreviousData} from '@tanstack/react-query'
 import {toast} from '@/components/ui/toast'
 import {NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {
 	isDirectoryANetworkDevice,
 	isDirectoryANetworkShare,
@@ -57,7 +58,8 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 			// invalidate the network root to refresh MiniBrowser when browsing /Network
 			utils.files.list.invalidate({path: NETWORK_STORAGE_PATH})
 		},
-		onError: (error: RouterError) => toast.error(t('files-network-storage-error.add-share', {message: error.message})),
+		onError: (error: RouterError) =>
+			toast.error(t('files-network-storage-error.add-share', {message: getFilesErrorMessage(error.message)})),
 	})
 
 	// Remove a share
@@ -94,7 +96,7 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 			utils.files.list.invalidate({path: ctx.hostPath})
 		},
 		onError: (error: RouterError) =>
-			toast.error(t('files-network-storage-error.remove-share', {message: error.message})),
+			toast.error(t('files-network-storage-error.remove-share', {message: getFilesErrorMessage(error.message)})),
 		onSettled: invalidateShares,
 	})
 
@@ -126,7 +128,7 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 		if (res.error) {
 			toast.error(
 				t('files-network-storage-error.discover-servers', {
-					message: (res.error as RouterError).message,
+					message: getFilesErrorMessage((res.error as RouterError).message),
 				}),
 			)
 		}
@@ -144,7 +146,7 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 		} catch (error: any) {
 			toast.error(
 				t('files-network-storage-error.discover-shares', {
-					message: (error as RouterError).message,
+					message: getFilesErrorMessage((error as RouterError).message),
 				}),
 			)
 			throw error

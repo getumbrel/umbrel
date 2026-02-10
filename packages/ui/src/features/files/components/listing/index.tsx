@@ -14,6 +14,7 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 
@@ -184,19 +185,23 @@ export function Listing({
 function ErrorView({error}: {error: unknown}) {
 	const message = error instanceof Error ? error.message : t('files-listing.error')
 
+	const isNotFound =
+		message.startsWith('ENOENT') ||
+		message.startsWith('Cannot map') ||
+		message.includes('[does-not-exist]') ||
+		message.includes('[source-not-exists]') ||
+		message.includes('[invalid-path]') ||
+		message.startsWith('EIO')
+
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
-			{/* TODO: use error codes once the backend supports them */}
-			{message.startsWith('ENOENT') ||
-			message.startsWith('Cannot map') ||
-			message.startsWith('[does-not-exist]') ||
-			message.startsWith('EIO') ? (
+			{isNotFound ? (
 				<div className='flex flex-col items-center gap-2'>
 					<FolderX className='h-6 w-6 opacity-50' />
 					<span className='text-12 text-white/40'>{t('files-listing.no-such-file')}</span>
 				</div>
 			) : (
-				<span className='text-12 text-white/40'>{message}</span>
+				<span className='text-12 text-white/40'>{getFilesErrorMessage(message)}</span>
 			)}
 		</div>
 	)

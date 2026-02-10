@@ -11,6 +11,7 @@ import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
@@ -129,7 +130,7 @@ export function MiniBrowser({
 			setSelected({path, isDirectory: true})
 		},
 		onError: (error) => {
-			toast.error(t('files-error.create-folder', {message: error.message}))
+			toast.error(t('files-error.create-folder', {message: getFilesErrorMessage(error.message)}))
 			setNewFolder(null)
 		},
 	})

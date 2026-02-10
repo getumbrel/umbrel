@@ -4,6 +4,7 @@ import {AiOutlineFileExclamation} from 'react-icons/ai'
 
 import {toast} from '@/components/ui/toast'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
 import type {RouterOutput} from '@/trpc/trpc'
@@ -112,7 +113,7 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 	// Directory creation mutation
 	const createDirectory = trpcReact.files.createDirectory.useMutation({
 		onError: (error) => {
-			toast.error(t('files-error.upload', {message: error.message}))
+			toast.error(t('files-error.upload', {message: getFilesErrorMessage(error.message)}))
 			throw error // Re-throw to handle in the calling function
 		},
 	})
@@ -315,7 +316,11 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 					} else {
 						// General error or failed retry
 						updateItemState(tempId, {status: 'error', isUploading: false, progress: 0, speed: 0})
-						toast.error(t('files-error.upload', {message: `${item.name}: ${xhr.statusText || 'Upload failed'}`}))
+						toast.error(
+							t('files-error.upload', {
+								message: `${item.name}: ${xhr.statusText || t('files-backend-error.upload-failed')}`,
+							}),
+						)
 					}
 				}
 			}
@@ -324,7 +329,7 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 				activeXHRsRef.current.delete(tempId)
 				// Network error or similar
 				updateItemState(tempId, {status: 'error', isUploading: false, progress: 0, speed: 0})
-				toast.error(t('files-error.upload', {message: `Network error during upload of ${item.name}`}))
+				toast.error(t('files-error.upload-network-error', {name: item.name}))
 			}
 
 			xhr.onabort = () => {
@@ -535,7 +540,7 @@ export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
 		} catch (error: any) {
 			// Error during directory creation or initial setup
 			setUploadingItems([]) // Clear queue on setup failure
-			toast.error(t('files-error.upload', {message: `Failed to start upload process: ${error.message}`}))
+			toast.error(t('files-error.upload', {message: getFilesErrorMessage(error.message)}))
 		}
 	}
 
