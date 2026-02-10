@@ -16,6 +16,7 @@
  */
 
 import nodePath from 'node:path'
+import {cp, constants} from 'node:fs/promises'
 
 import mime from 'mime-types'
 import fse from 'fs-extra'
@@ -404,22 +405,33 @@ export default class Files {
 		this.operationsInProgress.push(operationProgress)
 		this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 
+		// Attempt instant copy via reflink on supported filesystems (e.g. zfs)
 		try {
-			// Wait for copy to finish and throw if copy fails
+			await cp(sourceSystemPath, destinationSystemPath, {
+				recursive: true,
+				preserveTimestamps: true,
+				mode: constants.COPYFILE_FICLONE_FORCE,
+			})
+
+			// Emit 100% progress
+			operationProgress.percent = 100
+			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+		} catch {
+			// Reflink not supported, fall back to rsync with progress tracking
 			await copyWithProgress(sourceSystemPath, destinationSystemPath, (progress) => {
 				operationProgress.percent = progress.progress
 				operationProgress.bytesPerSecond = progress.bytesPerSecond
 				operationProgress.secondsRemaining = progress.secondsRemaining
 				this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 			})
-
-			// If we're moving, delete the source file or directory on completion
-			if (move) await fse.remove(sourceSystemPath)
 		} finally {
 			// Remove the progress tracker and emit operation progress event
 			this.operationsInProgress = this.operationsInProgress.filter((operation) => operation !== operationProgress)
 			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 		}
+
+		// If we're moving, delete the source file or directory on completion
+		if (move) await fse.remove(sourceSystemPath)
 	}
 	// Copies a file or directory from one virtual path to another.
 	async copy(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
