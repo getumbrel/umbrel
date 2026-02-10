@@ -16,7 +16,7 @@ export function SettingsSummary() {
 
 	return (
 		<dl
-			className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+			className='grid w-max grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
 			style={{
 				// Makes columns not all the same width
 				gridTemplateColumns: 'auto auto',
