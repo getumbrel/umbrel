@@ -120,12 +120,19 @@ export function SidebarTrash() {
 											d='M69.4114 5.10535C69.4114 7.37914 53.8764 9.22241 34.713 9.22241C15.5496 9.22241 0.0146484 7.37914 0.0146484 5.10535C0.0146484 2.83155 15.5496 0.988281 34.713 0.988281C53.8764 0.988281 69.4114 2.83155 69.4114 5.10535Z'
 											fill={`url(#gradient-1-${id})`}
 											fillOpacity='0.4'
-											filter={`url(#glow-${id})`}
 										/>
 										<path
 											d='M69.4114 5.10535C69.4114 7.37914 53.8764 9.22241 34.713 9.22241C15.5496 9.22241 0.0146484 7.37914 0.0146484 5.10535C0.0146484 2.83155 15.5496 0.988281 34.713 0.988281C53.8764 0.988281 69.4114 2.83155 69.4114 5.10535Z'
 											fill='black'
 											fillOpacity='0.7'
+										/>
+										{/* Reflective edge on trash opening */}
+										<path
+											d='M69.4114 5.10535C69.4114 7.37914 53.8764 9.22241 34.713 9.22241C15.5496 9.22241 0.0146484 7.37914 0.0146484 5.10535C0.0146484 2.83155 15.5496 0.988281 34.713 0.988281C53.8764 0.988281 69.4114 2.83155 69.4114 5.10535Z'
+											fill='none'
+											stroke='white'
+											strokeOpacity='0.08'
+											strokeWidth='0.5'
 										/>
 										<g id={`files-${id}`}>
 											{listing?.items[2] && (
@@ -148,7 +155,6 @@ export function SidebarTrash() {
 															? `translate(10,-28) rotate(-80) scale(0.75)`
 															: 'translate(6,-18) rotate(10) scale(0.8)'
 													}
-													filter={listing?.items[2] && 'url(#file-shadow)'}
 												>
 													<FileItemIcon item={listing.items[1]} onlySVG />
 												</g>
@@ -161,13 +167,12 @@ export function SidebarTrash() {
 															? `translate(2,-24) rotate(-90) scale(0.75)`
 															: 'translate(0,-10) rotate(-2)'
 													}
-													filter={listing?.items[1] && `url(#file-shadow-${id})`}
 												>
 													<FileItemIcon item={listing.items[0]} onlySVG />
 												</g>
 											)}
 										</g>
-										<g filter={`url(#glow-${id})`}>
+										<g>
 											<path
 												d='M0.0146484 5.10535L2.58973 5.52427C23.8653 8.98642 45.5607 8.98642 66.8363 5.52426L69.4114 5.10535L58.0067 61.4707C56.4969 68.9328 49.9379 74.2976 42.3245 74.2976H27.1015C19.4881 74.2976 12.9292 68.9328 11.4193 61.4707L0.0146484 5.10535Z'
 												fill={`url(#gradient-2-${id})`}
@@ -183,9 +188,17 @@ export function SidebarTrash() {
 												fill='black'
 												fillOpacity='0.2'
 											/>
+											{/* Reflective edge highlight (replaces glow SVG filter for Safari compatibility) */}
+											<path
+												d='M0.0146484 5.10535L2.58973 5.52427C23.8653 8.98642 45.5607 8.98642 66.8363 5.52426L69.4114 5.10535L58.0067 61.4707C56.4969 68.9328 49.9379 74.2976 42.3245 74.2976H27.1015C19.4881 74.2976 12.9292 68.9328 11.4193 61.4707L0.0146484 5.10535Z'
+												fill='none'
+												stroke='white'
+												strokeOpacity='0.08'
+												strokeWidth='0.5'
+											/>
 										</g>
 										<g style={{clipPath: `url(#clip-${id})`}}>
-											<use xlinkHref={`#files-${id}`} filter={`url(#blur-${id})`} />
+											<use href={`#files-${id}`} filter={`url(#blur-${id})`} />
 										</g>
 										<clipPath id={`clip-${id}`}>
 											<path d='M0.0146484 5.10535L2.58973 5.52427C23.8653 8.98642 45.5607 8.98642 66.8363 5.52426L69.4114 5.10535L58.0067 61.4707C56.4969 68.9328 49.9379 74.2976 42.3245 74.2976H27.1015C19.4881 74.2976 12.9292 68.9328 11.4193 61.4707L0.0146484 5.10535Z' />
@@ -200,33 +213,6 @@ export function SidebarTrash() {
 													<feFuncB type='linear' slope='0.2' intercept='0' />
 													<feFuncA type='linear' slope='1' intercept='0' />
 												</feComponentTransfer>
-											</filter>
-											<filter id={`file-shadow-${id}`}>
-												<feOffset in='SourceAlpha' dx='2' dy='-10' />
-												<feGaussianBlur stdDeviation='6' />
-												<feBlend in='SourceGraphic' in2='blurOut' />
-											</filter>
-											<filter id={`glow-${id}`} filterUnits='userSpaceOnUse' colorInterpolationFilters='sRGB'>
-												<feFlood floodOpacity='0' result='BackgroundImageFix' />
-												<feGaussianBlur in='BackgroundImageFix' stdDeviation='3' />
-												<feComposite in2='SourceAlpha' operator='in' result='effect1_backgroundBlur_897_3007' />
-												<feBlend
-													mode='normal'
-													in='SourceGraphic'
-													in2='effect1_backgroundBlur_897_3007'
-													result='shape'
-												/>
-												<feColorMatrix
-													in='SourceAlpha'
-													type='matrix'
-													values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0'
-													result='hardAlpha'
-												/>
-												<feOffset dx='0.5' dy='0.5' />
-												<feGaussianBlur stdDeviation='0.5' />
-												<feComposite in2='hardAlpha' operator='arithmetic' k2='-1' k3='1' />
-												<feColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.25 0' />
-												<feBlend mode='normal' in2='shape' result='effect2_innerShadow_897_3007' />
 											</filter>
 											<linearGradient
 												id={`gradient-1-${id}`}

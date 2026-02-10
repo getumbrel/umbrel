@@ -47,7 +47,7 @@ const RadioIndicator = () => (
 		className='block animate-in duration-300 zoom-in-50 fade-in'
 	>
 		<use
-			xlinkHref='#path'
+			href='#path'
 			className='fill-brand stroke-white/20 stroke-2 transition-colors group-focus-visible:fill-brand-lighter'
 			clip-path='url(#clip)'
 		/>
@@ -59,7 +59,7 @@ const RadioIndicator = () => (
 				d='M10 20C15.5228 20 20 15.5228 20 10C20 4.47715 15.5228 0 10 0C4.47715 0 0 4.47715 0 10C0 15.5228 4.47715 20 10 20ZM10 12C11.1046 12 12 11.1046 12 10C12 8.89543 11.1046 8 10 8C8.89543 8 8 8.89543 8 10C8 11.1046 8.89543 12 10 12Z'
 			/>
 			<clipPath id='clip'>
-				<use xlinkHref='#path' />
+				<use href='#path' />
 			</clipPath>
 		</defs>
 	</svg>

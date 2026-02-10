@@ -107,7 +107,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	// Folder
 	if (item.type === 'directory') {
 		if (onlySVG) {
-			return <SimpleFolderIcon className={className} />
+			return <SimpleFolderIcon className={className} skipFilter />
 		}
 
 		return (
@@ -138,6 +138,11 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	const Thumbnail = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP].thumbnail as unknown as React.ComponentType<{
 		className?: string
 	}>
+
+	// When rendering inside an SVG context, only return SVG-safe elements
+	if (onlySVG) {
+		return <Thumbnail className={className} />
+	}
 
 	const {extension} = splitFileName(item.name)
 	// Image file

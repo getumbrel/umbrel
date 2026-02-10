@@ -70,7 +70,7 @@ export function TrashListing() {
 		setActionsBarConfig({
 			desktopActions: DesktopActions,
 			mobileActions: MobileActions,
-			hidePath: disableActionsAndHidePath,
+			hidePath: !!error,
 			hideSearch: true,
 		})
 	}, [disableActionsAndHidePath])
