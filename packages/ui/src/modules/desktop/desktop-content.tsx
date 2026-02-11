@@ -65,18 +65,10 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 						<motion.div
 							key={widget.id}
 							layout
-							initial={{
-								opacity: 0,
-							}}
-							animate={{
-								opacity: 1,
-							}}
+							// No opacity animation — backdrop-filter on widgets can't be smoothly
+							// faded (browsers skip compositing it at opacity 0, causing a flash).
 							exit={{
 								opacity: 0,
-							}}
-							transition={{
-								duration: 0.5,
-								ease: 'easeInOut',
 							}}
 						>
 							<WidgetWrapper
