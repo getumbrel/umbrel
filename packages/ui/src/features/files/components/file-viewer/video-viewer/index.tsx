@@ -1,4 +1,5 @@
 // TODO: Investigate pre-existing issue where large video files fail to play in Safari.
+import {useEffect, useRef} from 'react'
 import {Video} from 'react-video-kit'
 
 import {ViewerWrapper} from '@/features/files/components/file-viewer/viewer-wrapper'
@@ -10,10 +11,23 @@ interface VideoViewerProps {
 
 export default function VideoViewer({item}: VideoViewerProps) {
 	const previewUrl = `/api/files/view?path=${encodeURIComponent(item.path)}`
+	const containerRef = useRef<HTMLDivElement>(null)
+
+	// Ensure video is fully stopped on unmount to prevent lingering audio
+	useEffect(() => {
+		return () => {
+			const video = containerRef.current?.querySelector('video')
+			if (video) {
+				video.pause()
+				video.removeAttribute('src')
+				video.load()
+			}
+		}
+	}, [])
 
 	return (
 		<ViewerWrapper dontCloseOnSpacebar>
-			<div className='bg-black'>
+			<div ref={containerRef} className='bg-black'>
 				<Video.Root src={previewUrl} title={item.name} autoPlay hotkeys={{scope: 'global', enabled: true}}>
 					<Video.Media />
 					<Video.Backdrop />
