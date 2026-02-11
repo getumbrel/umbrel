@@ -27,6 +27,7 @@ export function ViewToggle() {
 						value={mode}
 						className={cn('h-6 rounded-full', view === mode && 'bg-brand')}
 						aria-label={t(`files-view.${mode}`)}
+						onClick={(e) => (e.currentTarget as HTMLElement).blur()}
 					>
 						{mode === 'icons' ? (
 							<GridLayoutIcon className={cn('h-4 w-4', view === mode ? 'text-white' : 'text-white/50')} />
