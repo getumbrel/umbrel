@@ -11,6 +11,7 @@ import {FileUploadDropZone} from '@/features/files/components/shared/file-upload
 import {useFilesKeyboardShortcuts} from '@/features/files/hooks/use-files-keyboard-shortcuts'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
@@ -125,8 +126,9 @@ export function Listing({
 	const scrollAreaRef = useRef<HTMLDivElement>(null)
 	const {currentPath} = useNavigate()
 	const isReadOnly = useIsFilesReadOnly()
+	const {preferences} = usePreferences()
 
-	useFilesKeyboardShortcuts({items: selectableItems})
+	useFilesKeyboardShortcuts({items: selectableItems, scrollAreaRef, view: preferences?.view ?? 'list'})
 
 	const isEmpty = !isLoading && items.length === 0
 

@@ -7,15 +7,26 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
+import {useIsMobile} from '@/hooks/use-is-mobile'
 
 /**
- * Hook to handle keyboard shortcuts for file operations: copy, cut, paste, and trash.
+ * Hook to handle keyboard shortcuts for file operations: copy, cut, paste, trash,
+ * and arrow key navigation through file items.
  * We use both command and ctrl for every shortcut to mimic the behaviour of both macOS and windows.
  * Uses a single useEffect listener instead of react-use's useKey for React Compiler compatibility.
  */
-export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
+export function useFilesKeyboardShortcuts({
+	items,
+	scrollAreaRef,
+	view,
+}: {
+	items: FileSystemItem[]
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
+	view: 'list' | 'icons'
+}) {
 	const isReadOnly = useIsFilesReadOnly()
-	// In read-only mode, disable write/selection shortcuts but allow viewer shortcut.
+	// In read-only mode, disable write/selection shortcuts but allow viewer and navigation shortcuts.
 	const shortcutsEnabled = !isReadOnly
 	const {currentPath} = useNavigate()
 	const copyItemsToClipboard = useFilesStore((s: FilesStore) => s.copyItemsToClipboard)
@@ -25,6 +36,7 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 	const viewerItem = useFilesStore((s: FilesStore) => s.viewerItem)
 	const setViewerItem = useFilesStore((s: FilesStore) => s.setViewerItem)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
+	const isMobile = useIsMobile()
 
 	// Search functionality
 	const searchBuffer = useRef('')
@@ -35,6 +47,11 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 	selectedItemsRef.current = selectedItems
 	const viewerItemRef = useRef(viewerItem)
 	viewerItemRef.current = viewerItem
+	const viewRef = useRef(view)
+	viewRef.current = view
+
+	// Track the anchor index for Shift+Arrow range selection
+	const selectionAnchorRef = useRef<number>(-1)
 
 	useEffect(() => {
 		// Guard to check if we're in a text input or contentEditable element
@@ -99,6 +116,73 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 				return
 			}
 
+			// Arrow key navigation (allowed even in read-only)
+			if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+				if (isInInput(e) || mod || e.altKey || viewerItemRef.current !== null || items.length === 0) return
+				e.preventDefault()
+
+				const currentView = viewRef.current
+				const selected = selectedItemsRef.current
+
+				// Find the current index — use the last selected item as the reference point
+				let currentIndex = -1
+				if (selected.length > 0) {
+					const lastSelected = selected[selected.length - 1]
+					currentIndex = items.findIndex((i) => i.path === lastSelected.path)
+				}
+
+				// If nothing is selected or the selected item was removed, select the first item
+				if (currentIndex === -1) {
+					setSelectedItems([items[0]])
+					selectionAnchorRef.current = 0
+					scrollItemIntoView(0)
+					return
+				}
+
+				// Calculate the step based on view and direction
+				let step = 0
+				if (currentView === 'list') {
+					// List view: all arrows move by 1
+					if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') step = -1
+					else step = 1
+				} else {
+					// Icons view: Left/Right move by 1, Up/Down move by column count
+					if (e.key === 'ArrowLeft') step = -1
+					else if (e.key === 'ArrowRight') step = 1
+					else {
+						const scrollEl = scrollAreaRef.current
+						const columnCount = scrollEl ? getGridColumnCount(scrollEl.clientWidth - 24) : 1
+						if (e.key === 'ArrowUp') step = -columnCount
+						else step = columnCount
+					}
+				}
+
+				// Clamp target to valid range
+				const targetIndex = Math.max(0, Math.min(items.length - 1, currentIndex + step))
+
+				// If we're already at the boundary and can't move, do nothing
+				if (targetIndex === currentIndex) return
+
+				if (e.shiftKey) {
+					// Shift+Arrow: extend selection as a contiguous range from anchor to target
+					// Set anchor on first shift-select if not already set
+					if (selectionAnchorRef.current === -1) {
+						selectionAnchorRef.current = currentIndex
+					}
+					const anchor = selectionAnchorRef.current
+					const start = Math.min(anchor, targetIndex)
+					const end = Math.max(anchor, targetIndex)
+					setSelectedItems(items.slice(start, end + 1))
+				} else {
+					// Regular arrow: select only the target item and reset anchor
+					setSelectedItems([items[targetIndex]])
+					selectionAnchorRef.current = targetIndex
+				}
+
+				scrollItemIntoView(targetIndex)
+				return
+			}
+
 			// Search functionality
 			if (!shortcutsEnabled) return
 			if (isInInput(e) || mod || e.altKey) return
@@ -125,17 +209,49 @@ export function useFilesKeyboardShortcuts({items}: {items: FileSystemItem[]}) {
 			}
 		}
 
+		/** Scroll the item at `index` into view if it's outside the visible area */
+		function scrollItemIntoView(index: number) {
+			const scrollEl = scrollAreaRef.current
+			if (!scrollEl) return
+
+			const currentView = viewRef.current
+			let itemTop: number
+			let itemBottom: number
+
+			if (currentView === 'list') {
+				const itemHeight = isMobile ? 50 : 40
+				itemTop = index * itemHeight
+				itemBottom = itemTop + itemHeight
+			} else {
+				const columnCount = getGridColumnCount(scrollEl.clientWidth - 24)
+				const row = Math.floor(index / columnCount)
+				const rowHeight = 144 // 120px item + 24px gap
+				itemTop = row * rowHeight
+				itemBottom = itemTop + rowHeight
+			}
+
+			const {scrollTop, clientHeight} = scrollEl
+
+			if (itemTop < scrollTop) {
+				scrollEl.scrollTop = itemTop
+			} else if (itemBottom > scrollTop + clientHeight) {
+				scrollEl.scrollTop = itemBottom - clientHeight
+			}
+		}
+
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
 	}, [
 		shortcutsEnabled,
 		currentPath,
 		items,
+		isMobile,
 		copyItemsToClipboard,
 		cutItemsToClipboard,
 		setSelectedItems,
 		setViewerItem,
 		pasteItemsFromClipboard,
 		trashSelectedItems,
+		scrollAreaRef,
 	])
 }

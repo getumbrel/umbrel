@@ -5,6 +5,7 @@ import InfiniteLoader from 'react-window-infinite-loader'
 
 import {FileItem} from '@/features/files/components/listing/file-item'
 import type {FileSystemItem} from '@/features/files/types'
+import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {getItemKey} from '@/features/files/utils/get-item-key'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 
@@ -219,8 +220,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		const containerWidth = itemWidth + borderAllowance * 2
 
 		// Calculate how many columns can fit with minimum gap enforced
-		// First calculate max possible columns
-		const columnCount = Math.max(1, Math.floor((width + minGap) / (containerWidth + minGap)))
+		const columnCount = getGridColumnCount(width)
 
 		// Now calculate the actual horizontal gap that will be used
 		// We'll ensure this is at least minGap
