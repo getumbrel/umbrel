@@ -55,7 +55,7 @@ then
 	fi
 
 	# This is a Raspberry Pi device
-	if [[  "${boot_flow}" == "tryboot" ]]
+	if [[  "${boot_flow}" == "rpi-tryboot" ]]
 	then
 		update_url="${download_prefix}/umbrelos-pi.update"
 	fi
