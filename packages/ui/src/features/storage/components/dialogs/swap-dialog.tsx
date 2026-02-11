@@ -2,9 +2,7 @@ import {useEffect, useState} from 'react'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbInfoCircle} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogContent,
@@ -13,13 +11,17 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
 import {InstallTipsCollapsible} from './install-tips-collapsible'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 import {ShutdownConfirmationDialog} from './shutdown-confirmation-dialog'
 
 type SwapDialogProps = {
@@ -46,6 +48,11 @@ export function SwapDialog({
 	replaceDeviceAsync,
 }: SwapDialogProps) {
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
+
 	const [showInstallTips, setShowInstallTips] = useState(false)
 	const [selectedReplacementId, setSelectedReplacementId] = useState<string | null>(null)
 	const [showShutdownConfirmation, setShowShutdownConfirmation] = useState(false)
@@ -79,7 +86,6 @@ export function SwapDialog({
 			setShowShutdownConfirmation(false)
 			setSelectedReplacementId(null)
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open])
 
 	// Storage mode with free slot AND available devices - we show replacement selection
@@ -111,7 +117,7 @@ export function SwapDialog({
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							{/* "SSD" slot labels are not translated - they match the physical device markings */}
 							<DialogTitle>
@@ -150,7 +156,7 @@ export function SwapDialog({
 													? 'cursor-not-allowed border-white/5 bg-white/[0.02] opacity-60'
 													: isSelected
 														? 'border-brand bg-brand/10'
-														: 'hover:bg-white/8 border-white/10 bg-white/5',
+														: 'border-white/10 bg-white/5 hover:bg-white/8',
 											)}
 										>
 											<div
@@ -207,8 +213,14 @@ export function SwapDialog({
 							</div>
 						</div>
 
+						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 						<DialogFooter>
-							<Button variant='primary' onClick={handleReplace} disabled={!selectedDevice || !oldDevice}>
+							<Button
+								variant='primary'
+								onClick={handleReplace}
+								disabled={!selectedDevice || !oldDevice || isOperationInProgress}
+							>
 								{t('storage-manager.replace')}
 							</Button>
 							<Button variant='default' onClick={() => onOpenChange(false)}>
@@ -236,7 +248,7 @@ export function SwapDialog({
 			<>
 				<Dialog open={open} onOpenChange={onOpenChange}>
 					<DialogScrollableContent onOpenAutoFocus={(e) => e.preventDefault()}>
-						<div className='flex select-none flex-col gap-5 p-5'>
+						<div className='flex flex-col gap-5 p-5'>
 							<DialogHeader>
 								{/* "SSD" slot labels are not translated - they match the physical device markings */}
 								<DialogTitle>
@@ -275,6 +287,8 @@ export function SwapDialog({
 									onToggle={() => setShowInstallTips(!showInstallTips)}
 								/>
 							)}
+
+							{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 							<DialogFooter>
 								<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>
@@ -323,7 +337,7 @@ export function SwapDialog({
 
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className='select-none' onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<DialogHeader>
 						{/* "SSD" slot labels are not translated - they match the physical device markings */}
 						<DialogTitle>
@@ -385,7 +399,7 @@ export function SwapDialog({
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							{/* "SSD" slot labels are not translated - they match the physical device markings */}
 							<DialogTitle>
@@ -419,6 +433,8 @@ export function SwapDialog({
 						{isUmbrelPro && (
 							<InstallTipsCollapsible isOpen={showInstallTips} onToggle={() => setShowInstallTips(!showInstallTips)} />
 						)}
+
+						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
 							<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>

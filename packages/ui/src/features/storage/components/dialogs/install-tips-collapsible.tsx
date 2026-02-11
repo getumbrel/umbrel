@@ -1,7 +1,7 @@
 // We only ever render this component for Umbrel Pro since it is pro-specific instructions
 
-import {AnimatePresence, motion} from 'framer-motion'
 import {ChevronDown, ChevronUp} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {t} from '@/utils/i18n'
 
@@ -12,7 +12,7 @@ type InstallTipsCollapsibleProps = {
 
 export function InstallTipsCollapsible({isOpen, onToggle}: InstallTipsCollapsibleProps) {
 	return (
-		<div className='select-none'>
+		<div>
 			<button
 				onClick={onToggle}
 				className='flex w-full items-center justify-between text-xs font-medium text-brand-lightest transition-opacity duration-300 hover:opacity-80'
@@ -32,7 +32,7 @@ export function InstallTipsCollapsible({isOpen, onToggle}: InstallTipsCollapsibl
 					>
 						<div className='space-y-3'>
 							<img
-								src='/storage/install-ssd-instruction.webp'
+								src='/assets/storage/install-ssd-instruction.webp'
 								alt={t('storage-manager.install-tips.image-alt')}
 								className='w-full rounded-8'
 								draggable={false}

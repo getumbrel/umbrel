@@ -1,12 +1,8 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode, useEffect, useRef, useState} from 'react'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {Drawer as DrawerPrimitive} from 'vaul'
 
-import {Loading} from '@/components/ui/loading'
-import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
-import {useIsSmallMobile} from '@/hooks/use-is-mobile'
-import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -16,14 +12,18 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {PasswordInput} from '@/shadcn-components/ui/input'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {Switch} from '@/shadcn-components/ui/switch'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {PasswordInput} from '@/components/ui/input'
+import {Loading} from '@/components/ui/loading'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {Switch} from '@/components/ui/switch'
+import {useAutoHeightAnimation} from '@/hooks/use-auto-height-animation'
+import {useIsSmallMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
+import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {RouterOutput, trpcReact, WifiNetwork, WifiStatus, WifiStatusUi} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -338,7 +338,7 @@ type ConnectProps = {
 	status?: WifiStatusUi
 	onConnect: ({ssid, password}: ConnectData) => void
 	error?: string
-	passwordInputRef?: React.RefObject<HTMLInputElement>
+	passwordInputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
@@ -439,4 +439,4 @@ export function Message({children}: {children?: React.ReactNode}) {
 	)
 }
 
-export const wifiListItemClass = tw`w-full p-3 hover:bg-white/6 focus-within:bg-white/6 transition-colors border-b border-t first:border-t-0 last:border-b-0 mb-[-1px] border-white/6 outline-none flex flex-col gap-3`
+export const wifiListItemClass = tw`w-full p-3 hover:bg-white/6 focus-within:bg-white/6 transition-colors border-b border-t first:border-t-0 last:border-b-0 mb-[-1px] border-white/6 outline-hidden flex flex-col gap-3`

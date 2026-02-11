@@ -14,7 +14,7 @@ import {
 } from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 type PathSegment = {
@@ -174,7 +174,7 @@ export function PathBarDesktop({path}: {path: string}) {
 
 	return (
 		<FadeScroller direction='x' className='umbrel-hide-scrollbar overflow-x-auto' ref={fadeScrollerRef}>
-			<ul className='flex h-8 items-center whitespace-nowrap border border-transparent py-1' ref={breadcrumbsRef}>
+			<ul className='flex h-8 items-center border border-transparent py-1 whitespace-nowrap' ref={breadcrumbsRef}>
 				{segments.map((segment, i) => {
 					/* First and last two segments are static, they always be fully visible */
 					const isStatic = i === 0 || i > segments.length - 3 ? true : undefined
@@ -209,7 +209,7 @@ const PathSegment = ({segment, hasArrow, onClick, isStatic, path, type}: PathSeg
 			id={`path-segment-${path}`}
 			path={path}
 			onClick={onClick}
-			className='group inline-flex w-[--item-width] min-w-[42px] cursor-pointer items-center gap-1 rounded p-1 transition-[width] duration-300 ease-in-out hover:w-[--natural-width]'
+			className='group inline-flex w-[--item-width] min-w-[42px] items-center gap-1 rounded-sm p-1 transition-[width] duration-300 ease-in-out hover:w-[--natural-width]'
 		>
 			<FileItemIcon
 				item={{
@@ -227,18 +227,18 @@ const PathSegment = ({segment, hasArrow, onClick, isStatic, path, type}: PathSeg
 					size: 0,
 					modified: 0,
 				}}
-				className='h-4 w-4'
+				className='h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100'
 			/>
 			<span
 				className={cn(
 					'group-hover:[mask-image:none] [.has-overflow_&]:[mask-image:linear-gradient(to_left,transparent_0%,black_40px)]',
-					'overflow-hidden text-xs',
+					'overflow-hidden text-xs opacity-70 transition-opacity group-hover:opacity-100',
 					segment && 'ml-1',
 				)}
 			>
 				{segment && formatItemName({name: segment})}
 			</span>
-			{hasArrow && <CaretRightIcon className='ml-1 mt-[1px] shrink-0 text-white/50' />}
+			{hasArrow && <CaretRightIcon className='mt-[1px] ml-1 shrink-0 text-white/50' />}
 		</Droppable>
 	</li>
 )

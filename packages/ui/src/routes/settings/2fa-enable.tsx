@@ -1,20 +1,9 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {ReactNode, useEffect} from 'react'
 import QRCode from 'react-qr-code'
 
 import {CopyableField} from '@/components/ui/copyable-field'
-import {Loading} from '@/components/ui/loading'
-import {PinInput} from '@/components/ui/pin-input'
-import {use2fa} from '@/hooks/use-2fa'
-import {useIsMobile} from '@/hooks/use-is-mobile'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {
-	Dialog,
-	DialogDescription,
-	DialogHeader,
-	DialogScrollableContent,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogDescription, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {
 	Drawer,
 	DrawerContent,
@@ -22,8 +11,13 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Separator} from '@/shadcn-components/ui/separator'
+} from '@/components/ui/drawer'
+import {Loading} from '@/components/ui/loading'
+import {PinInput} from '@/components/ui/pin-input'
+import {Separator} from '@/components/ui/separator'
+import {use2fa} from '@/hooks/use-2fa'
+import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
@@ -96,11 +90,11 @@ function Inner({
 				/>
 			</AnimateInQr>
 			<div className='w-full space-y-2 text-center'>
-				<p className='text-13 font-normal leading-tight -tracking-2 text-white/60'>{t('2fa.enable.or-paste')}</p>
+				<p className='text-13 leading-tight font-normal -tracking-2 text-white/60'>{t('2fa.enable.or-paste')}</p>
 				<CopyableField value={totpUri} />
 			</div>
 			<Separator />
-			<p className='text-center text-sm font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
+			<p className='text-center text-sm leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)

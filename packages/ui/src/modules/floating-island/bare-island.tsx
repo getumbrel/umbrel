@@ -1,4 +1,4 @@
-import {motion, useWillChange} from 'framer-motion'
+import {motion, useWillChange} from 'motion/react'
 import {Children, isValidElement, useEffect, useRef, useState} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
@@ -100,7 +100,7 @@ export const Island = ({children, onClose, nonDismissable, forceExpanded}: Islan
 			)}
 			<motion.div
 				ref={islandRef}
-				className='relative select-none bg-black text-white shadow-floating-island'
+				className='relative bg-black text-white shadow-floating-island'
 				style={{
 					// TODO: debug using var in color-mix on macOS safari
 					// backgroundColor: 'color-mix(in srgb, #000000 95%, rgb(var(--color-brand)) 5%)',
@@ -119,7 +119,7 @@ export const Island = ({children, onClose, nonDismissable, forceExpanded}: Islan
 					{effectiveExpanded ? expandedChild : minimizedChild}
 					{effectiveExpanded && onClose && !nonDismissable && (
 						<motion.button
-							className='absolute right-4 top-4 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20'
+							className='absolute top-4 right-4 rounded-full bg-white/10 p-1 transition-colors hover:bg-white/20'
 							initial={{scale: 0}}
 							animate={{scale: 1}}
 							onClick={(e) => {

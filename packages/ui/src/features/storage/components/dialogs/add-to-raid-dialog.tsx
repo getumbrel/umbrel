@@ -3,8 +3,6 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -13,8 +11,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -22,13 +20,17 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {Switch} from '@/shadcn-components/ui/switch'
+} from '@/components/ui/dialog'
+import {Switch} from '@/components/ui/switch'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, RaidDevice, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
 import {StorageDonutChart} from '../storage-donut-chart'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 
 // --- Info Text Component ---
 
@@ -82,7 +84,7 @@ function InfoText({
 				</p>
 				{showFailSafeOption && (
 					<p className='text-[13px] text-yellow-500'>
-						<TbAlertTriangle className='mb-0.5 mr-1 inline size-4 align-middle' />
+						<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 						{t('storage-manager.add-to-raid.warning-failsafe-now-only')}
 					</p>
 				)}
@@ -202,6 +204,10 @@ export function AddToRaidDialog({
 	// Context for showing island immediately for non-blocking operations
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
 
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
+
 	// Get existing RAID devices - these are the devices actually in the RAID array
 	// (not to be confused with all detected devices)
 	const existingCount = raidDevices.length
@@ -231,7 +237,7 @@ export function AddToRaidDialog({
 			setFailSafeEnabled(allSameSize)
 			setShowRestartConfirmation(false)
 		}
-	}, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+	}, [open])
 
 	// Early return after all hooks
 	if (!device) return null
@@ -357,7 +363,7 @@ export function AddToRaidDialog({
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>{t('storage-manager.add-to-raid.title')}</DialogTitle>
 							<DialogDescription>{t('storage-manager.add-to-raid.description')}</DialogDescription>
@@ -489,8 +495,10 @@ export function AddToRaidDialog({
 							)}
 						</div>
 
+						{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 						<DialogFooter>
-							<Button variant='primary' onClick={handleAddDevice} disabled={isBlockedBySize}>
+							<Button variant='primary' onClick={handleAddDevice} disabled={isBlockedBySize || isOperationInProgress}>
 								{t('storage-manager.add-to-raid.add-ssd')}
 							</Button>
 							<Button variant='default' onClick={() => onOpenChange(false)}>
@@ -503,7 +511,7 @@ export function AddToRaidDialog({
 
 			{/* Confirmation dialog for failsafe transition - warns about restart */}
 			<AlertDialog open={showRestartConfirmation} onOpenChange={setShowRestartConfirmation}>
-				<AlertDialogContent className='select-none'>
+				<AlertDialogContent>
 					<AlertDialogHeader icon={IoShieldHalf}>
 						<AlertDialogTitle>{t('storage-manager.add-to-raid.restart-required')}</AlertDialogTitle>
 					</AlertDialogHeader>
@@ -519,7 +527,7 @@ export function AddToRaidDialog({
 					<AlertDialogFooter>
 						<AlertDialogAction
 							variant='primary'
-							hideEnterIcon
+							disabled={isOperationInProgress}
 							onClick={(e) => {
 								e.preventDefault()
 								executeAddDevice(true)

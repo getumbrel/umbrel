@@ -1,6 +1,5 @@
 import {RiLogoutCircleRLine} from 'react-icons/ri'
 
-import {useAuth} from '@/modules/auth/use-auth'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,7 +8,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {useAuth} from '@/modules/auth/use-auth'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

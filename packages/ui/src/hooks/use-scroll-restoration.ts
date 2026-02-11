@@ -20,7 +20,10 @@ export type ScrollRestorationHandler = (
  * position before navigation and restore it on return (e.g., back/forward nav).
  * Behavior is determined by the provided {@link ScrollRestorationHandler}.
  */
-export function useScrollRestoration(container: React.RefObject<HTMLElement>, handler: ScrollRestorationHandler) {
+export function useScrollRestoration(
+	container: React.RefObject<HTMLElement | null>,
+	handler: ScrollRestorationHandler,
+) {
 	const location = useLocation()
 	const thisPathname = location.pathname
 	const prevPathname = usePrevious(thisPathname)

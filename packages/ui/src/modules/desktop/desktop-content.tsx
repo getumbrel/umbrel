@@ -1,4 +1,4 @@
-import {motion, Variant} from 'framer-motion'
+import {motion, Variant} from 'motion/react'
 import {useLocation} from 'react-router-dom'
 
 import {useWidgets} from '@/hooks/use-widgets'
@@ -50,7 +50,7 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 
 	return (
 		<motion.div
-			className='flex h-full w-full select-none flex-col items-center justify-between'
+			className='flex h-full w-full flex-col items-center justify-between'
 			variants={variants}
 			animate={variant}
 			initial={{opacity: 1}}
@@ -61,22 +61,14 @@ export function DesktopContent({onSearchClick}: {onSearchClick?: () => void}) {
 			<div className='pt-6 md:pt-8' />
 			<div className='flex w-full grow overflow-hidden'>
 				<AppGrid
-					widgets={widgets.selected.map((widget, i) => (
+					widgets={widgets.selected.map((widget) => (
 						<motion.div
 							key={widget.id}
 							layout
-							initial={{
-								opacity: 0,
-							}}
-							animate={{
-								opacity: 1,
-							}}
+							// No opacity animation — backdrop-filter on widgets can't be smoothly
+							// faded (browsers skip compositing it at opacity 0, causing a flash).
 							exit={{
 								opacity: 0,
-							}}
-							transition={{
-								duration: 0.5,
-								ease: 'easeInOut',
 							}}
 						>
 							<WidgetWrapper

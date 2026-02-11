@@ -5,7 +5,7 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
+} from '@/components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

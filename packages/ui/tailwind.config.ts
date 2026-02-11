@@ -1,25 +1,34 @@
-import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindTypography from '@tailwindcss/typography'
 import {mapValues} from 'remeda'
-import tailwindCssAnimate from 'tailwindcss-animate'
-import tailwindRadix from 'tailwindcss-radix'
-import defaultTheme from 'tailwindcss/defaultTheme'
-import {PluginAPI} from 'tailwindcss/types/config'
 
 import {screens} from './src/utils/tw'
 
-/** @type {import('tailwindcss').Config} */
+// Default system font stacks (previously from tailwindcss/defaultTheme, which no longer exists in v4)
+const defaultSansFonts = [
+	'ui-sans-serif',
+	'system-ui',
+	'sans-serif',
+	'"Apple Color Emoji"',
+	'"Segoe UI Emoji"',
+	'"Segoe UI Symbol"',
+	'"Noto Color Emoji"',
+]
+const defaultMonoFonts = [
+	'ui-monospace',
+	'SFMono-Regular',
+	'Menlo',
+	'Monaco',
+	'Consolas',
+	'"Liberation Mono"',
+	'"Courier New"',
+	'monospace',
+]
+
 export default {
-	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './stories/**/*.{js,ts,jsx,tsx}'],
-	future: {
-		// This allows ring-brand/40 (ring color with opacity to work correctly)
-		// https://github.com/tailwindlabs/tailwindcss/issues/9016#issuecomment-1205713065
-		respectDefaultRingColorOpacity: true,
-	},
 	theme: {
 		fontFamily: {
-			sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
-			mono: ['Roboto', ...defaultTheme.fontFamily.mono],
+			sans: ['var(--font-inter)', ...defaultSansFonts],
+			mono: ['Roboto', ...defaultMonoFonts],
 			sticker: ['"Permanent Marker"', 'cursive'],
 		},
 		container: {
@@ -200,21 +209,16 @@ export default {
 		},
 	},
 	plugins: [
-		tailwindCssAnimate,
-		tailwindContainerQueries,
 		tailwindTypography,
-		utilPlugin,
-		tailwindRadix({variantPrefix: 'radix'}),
-	],
-}
-
-function utilPlugin(plugin: PluginAPI) {
-	plugin.addUtilities({
-		'.absolute-center': {
-			position: 'absolute',
-			left: '50%',
-			top: '50%',
-			transform: 'translate(-50%, -50%)',
+		function utilPlugin({addUtilities}: {addUtilities: (utilities: Record<string, Record<string, string>>) => void}) {
+			addUtilities({
+				'.absolute-center': {
+					position: 'absolute',
+					left: '50%',
+					top: '50%',
+					transform: 'translate(-50%, -50%)',
+				},
+			})
 		},
-	})
+	],
 }

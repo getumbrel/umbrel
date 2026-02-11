@@ -19,7 +19,7 @@ import {
 import {Spinner} from '@/components/ui/loading'
 import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {AddToRaidDialog} from './components/dialogs/add-to-raid-dialog'
@@ -34,9 +34,7 @@ import {StorageDevice, useStorage} from './hooks/use-storage'
 import {formatStorageSize} from './utils'
 
 // Simple divider for storage info section
-const StorageDivider = () => (
-	<div className='h-px w-2/3 bg-gradient-to-r from-transparent via-white/15 to-transparent' />
-)
+const StorageDivider = () => <div className='h-px w-2/3 bg-linear-to-r from-transparent via-white/15 to-transparent' />
 
 // Storage stats display - shared between mobile and desktop layouts
 function StorageStats({
@@ -197,7 +195,7 @@ export default function StorageManagerDialog() {
 						boxShadow: '0px 32px 32px 0px #00000052, inset 1px 1px 1px 0px #FFFFFF14',
 					}}
 				>
-					<div className='flex h-full select-none flex-col gap-6'>
+					<div className='flex h-full flex-col gap-6'>
 						<h1 className={immersiveDialogTitleClass}>{t('storage-manager')}</h1>
 
 						{/* Mode display */}
@@ -355,7 +353,7 @@ export default function StorageManagerDialog() {
 							<div className='flex flex-col items-center gap-3'>
 								{/* Gradient border using pseudo-element technique */}
 								<div
-									className='relative h-[480px] w-[480px] select-none rounded-[69px] border-[3px] border-transparent bg-[radial-gradient(78%_100%_at_50%_0%,_rgba(255,255,255,0.12)_0%,_rgba(255,255,255,0.04)_100%)] bg-clip-padding'
+									className='relative h-[480px] w-[480px] rounded-[69px] border-[3px] border-transparent bg-[radial-gradient(78%_100%_at_50%_0%,_rgba(255,255,255,0.12)_0%,_rgba(255,255,255,0.04)_100%)] bg-clip-padding'
 									style={{containerType: 'inline-size'}}
 								>
 									{/* Gradient border overlay */}

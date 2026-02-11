@@ -37,6 +37,8 @@ export const FileViewer: React.FC = () => {
 			const isNext = e.key === 'ArrowRight' || e.key === 'ArrowDown'
 			if (!isPrev && !isNext) return
 			if (!viewerItem) return
+			// Don't intercept arrow keys when viewing video — let the video player handle seek
+			if (viewerItem.type?.startsWith('video/')) return
 
 			const previewable = getPreviewableItems()
 			if (previewable.length === 0) return

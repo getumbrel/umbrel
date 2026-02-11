@@ -1,11 +1,11 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {useNavigate} from 'react-router-dom'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {SidebarExternalStorageItem} from '@/features/files/components/sidebar/sidebar-external-storage-item'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarExternalStorage() {
@@ -41,12 +41,15 @@ export function SidebarExternalStorage() {
 										name: disk.name,
 										id: disk.id,
 										// If the drive requires formatting, don't show any partitions
+										// Otherwise, only show mounted partitions
 										partitions: !disk.isMounted
 											? []
-											: disk.partitions.map((partition: any) => ({
-													...partition,
-													mountpoint: partition.mountpoints?.[0] ?? '',
-												})),
+											: disk.partitions
+													.filter((partition: any) => partition.mountpoints?.length > 0)
+													.map((partition: any) => ({
+														...partition,
+														mountpoint: partition.mountpoints?.[0] ?? '',
+													})),
 										size: disk.size,
 										isMounted: disk.isMounted,
 										isFormatting: disk.isFormatting,

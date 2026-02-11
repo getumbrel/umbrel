@@ -1,12 +1,12 @@
 import {useState} from 'react'
 import {useNavigate} from 'react-router-dom'
 
+import {AnimatedInputError, Input, PasswordInput} from '@/components/ui/input'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
-import {AnimatedInputError, Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -88,7 +88,6 @@ export default function CreateAccount() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={t('onboarding.create-account.subtitle')}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}

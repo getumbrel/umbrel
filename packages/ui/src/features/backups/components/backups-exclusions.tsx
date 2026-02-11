@@ -6,6 +6,10 @@ import {matchSorter} from 'match-sorter'
 import {useEffect, useMemo, useRef, useState} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
+import {Input} from '@/components/ui/input'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {useAppsAutoExcludedPaths} from '@/features/backups/hooks/use-apps-auto-excluded-paths'
 import {useAppsBackupIgnoredSummary} from '@/features/backups/hooks/use-apps-backup-ignore'
 import {useBackupIgnoredPaths} from '@/features/backups/hooks/use-backup-ignored-paths'
@@ -15,15 +19,6 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
 import {useApps} from '@/providers/apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {Input} from '@/shadcn-components/ui/input'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 
 // MAIN COMPONENT
@@ -90,7 +85,7 @@ export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
 												}
 											}}
 											aria-label={t('backups-exclusions.stop-excluding')}
-											className='inline-flex h-6 w-6 cursor-pointer items-center justify-center text-[#F45A5A] hover:text-[#F45A5A]/90'
+											className='inline-flex h-6 w-6 items-center justify-center text-[#F45A5A] hover:text-[#F45A5A]/90'
 										>
 											<MinusCircle className='h-4 w-4' />
 										</span>
@@ -302,7 +297,7 @@ function AppRow({
 								}
 							}}
 							aria-label={t('backups-exclusions.stop-excluding')}
-							className='inline-flex size-6 cursor-pointer items-center justify-center text-[#F45A5A] hover:text-[#F45A5A]/90'
+							className='inline-flex size-6 items-center justify-center text-[#F45A5A] hover:text-[#F45A5A]/90'
 						>
 							<MinusCircle className='size-4' />
 						</span>

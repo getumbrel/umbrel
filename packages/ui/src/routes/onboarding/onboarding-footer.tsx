@@ -2,12 +2,12 @@ import {Globe} from 'lucide-react'
 import {TbHistory, TbMessageCircle, TbUser} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 
-import {ChevronDown} from '@/assets/chevron-down'
+import {ChevronDown} from '@/components/chevron-down'
+import {DropdownMenu, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
 import {LanguageDropdownContent} from '@/routes/settings/_components/language-dropdown'
-import {DropdownMenu, DropdownMenuTrigger} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 import {languages} from '@/utils/language'
 
@@ -30,7 +30,7 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 
 	return (
 		<div className='flex flex-row flex-wrap items-center justify-center gap-3'>
-			<Link to={route} unstable_viewTransition>
+			<Link to={route} viewTransition>
 				{/* Small screens: with short text */}
 				<IconButton icon={Icon} size='default' className={`sm:hidden ${footerButtonClass}`}>
 					{/* Using explicit conditionals instead of dynamic keys so GitHub Action for translations can detect translation keys */}

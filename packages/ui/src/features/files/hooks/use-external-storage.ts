@@ -1,9 +1,10 @@
 import {keepPreviousData} from '@tanstack/react-query'
 import {useEffect} from 'react'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
@@ -93,7 +94,7 @@ export function useExternalStorage() {
 			}
 		},
 		onError: (error: RouterError) => {
-			toast.error(t('files-error.eject-disk', {message: error.message}))
+			toast.error(t('files-error.eject-disk', {message: getFilesErrorMessage(error.message)}))
 		},
 		onSettled: () => {
 			utils.files.externalDevices.invalidate()

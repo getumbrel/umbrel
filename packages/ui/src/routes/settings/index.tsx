@@ -4,16 +4,16 @@ import {Route, Routes, useLocation} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
 
+import {Button} from '@/components/ui/button'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Loading} from '@/components/ui/loading'
+import {SheetHeader, SheetTitle} from '@/components/ui/sheet'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
 import AdvancedSettingsDrawerOrDialog from '@/routes/settings/advanced'
 import {SoftwareUpdateConfirmDialog} from '@/routes/settings/software-update-confirm'
-import {Button} from '@/shadcn-components/ui/button'
-import {SheetHeader, SheetTitle} from '@/shadcn-components/ui/sheet'
 import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
 
@@ -34,6 +34,7 @@ const SettingsContentMobile = React.lazy(() =>
 	import('./_components/settings-content-mobile').then((m) => ({default: m.SettingsContentMobile})),
 )
 
+const FileSharingDrawerOrDialog = React.lazy(() => import('@/routes/settings/file-sharing'))
 const AppStorePreferencesDialog = React.lazy(() => import('@/routes/settings/app-store-preferences'))
 const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'))
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
@@ -61,7 +62,6 @@ const WallpaperDrawer = React.lazy(() =>
 const LanguageDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/language').then((m) => ({default: m.LanguageDrawer})),
 )
-const TorDrawer = React.lazy(() => import('@/routes/settings/mobile/tor').then((m) => ({default: m.TorDrawer})))
 const AppStorePreferencesDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/app-store-preferences').then((m) => ({
 		default: m.AppStorePreferencesDrawer,
@@ -154,6 +154,7 @@ export function Settings() {
 						<Route path='/terminal/*' Component={TerminalDialog} />
 						{isMobile && <Route path='/software-update' Component={SoftwareUpdateDrawer} />}
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
+						<Route path='/file-sharing' Component={FileSharingDrawerOrDialog} />
 						<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
 						<Route path='/storage/*' Component={StorageManagerDialog} />
 					</Routes>

@@ -22,9 +22,6 @@ ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e7566
 
 FROM node:${NODE_VERSION}-bookworm-slim AS ui-build
 
-# Install pnpm
-RUN npm install -g pnpm@8
-
 # Set the working directory
 WORKDIR /app
 
@@ -38,10 +35,10 @@ COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modul
 
 # Install the dependencies
 RUN rm -rf node_modules || true
-RUN pnpm install
+RUN npm ci
 
 # Build the app
-RUN pnpm run build
+RUN npm run build
 
 
 #########################################################################
@@ -66,7 +63,8 @@ RUN apt-get install --yes \
     amd64-microcode \
     firmware-linux \
     firmware-realtek \
-    firmware-iwlwifi
+    firmware-iwlwifi \
+    firmware-atheros
 
 # Cleanup build steps.
 RUN rm -rf /build-steps

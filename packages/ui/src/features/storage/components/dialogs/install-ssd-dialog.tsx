@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -8,10 +8,12 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+} from '@/components/ui/dialog'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {t} from '@/utils/i18n'
 
 import {InstallTipsCollapsible} from './install-tips-collapsible'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 import {ShutdownConfirmationDialog} from './shutdown-confirmation-dialog'
 
 type InstallSsdDialogProps = {
@@ -23,6 +25,10 @@ type InstallSsdDialogProps = {
 export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDialogProps) {
 	const [showInstallTips, setShowInstallTips] = useState(false)
 	const [showShutdownConfirmation, setShowShutdownConfirmation] = useState(false)
+
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
 
 	// Reset state when dialog closes
 	useEffect(() => {
@@ -46,7 +52,7 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDi
 		<>
 			<Dialog open={open} onOpenChange={onOpenChange}>
 				<DialogScrollableContent>
-					<div className='flex select-none flex-col gap-5 p-5'>
+					<div className='flex flex-col gap-5 p-5'>
 						<DialogHeader>
 							<DialogTitle>{t('storage-manager.install-ssd.title')}</DialogTitle>
 							<DialogDescription>{t('storage-manager.install-ssd.description')}</DialogDescription>
@@ -68,6 +74,8 @@ export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDi
 						{isUmbrelPro && (
 							<InstallTipsCollapsible isOpen={showInstallTips} onToggle={() => setShowInstallTips(!showInstallTips)} />
 						)}
+
+						{isOperationInProgress && <OperationInProgressBanner variant='shutdown-safe' />}
 
 						<DialogFooter>
 							<Button variant='destructive' onClick={() => setShowShutdownConfirmation(true)}>

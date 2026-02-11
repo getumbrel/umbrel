@@ -1,12 +1,12 @@
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {HOME_PATH} from '@/features/files/constants'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
 import {t} from '@/utils/i18n'
 
 export function SidebarHome() {

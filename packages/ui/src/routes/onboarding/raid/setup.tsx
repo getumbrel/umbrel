@@ -6,12 +6,6 @@ import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
 
-import {links} from '@/constants/links'
-import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
-import {useAuth} from '@/modules/auth/use-auth'
-import {Progress} from '@/modules/bare/progress'
-import {useGlobalSystemState} from '@/providers/global-system-state/index'
-import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,8 +15,14 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Switch} from '@/shadcn-components/ui/switch'
+} from '@/components/ui/alert-dialog'
+import {Switch} from '@/components/ui/switch'
+import {links} from '@/constants/links'
+import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {useAuth} from '@/modules/auth/use-auth'
+import {Progress} from '@/modules/bare/progress'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
+import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
@@ -301,7 +301,7 @@ export default function RaidSetup() {
 		const slotIndex = (device.slot ?? 0) - 1 // slot is 1-indexed
 		if (slotIndex >= 0 && slotIndex < 4) {
 			slots[slotIndex] = {
-				size: formatSize(device.size),
+				size: formatSize(device.roundedSize),
 				hasWarning: getDeviceHealth(device).hasWarning,
 			}
 		}
@@ -382,7 +382,7 @@ export default function RaidSetup() {
 					)}
 					<button
 						onClick={handleShutdown}
-						className='flex h-[42px] min-w-[112px] items-center justify-center rounded-full bg-destructive2 px-4 text-14 font-medium text-white ring-destructive2/40 transition-all duration-300 hover:bg-destructive2-lighter focus:outline-none focus-visible:ring-3 active:scale-100 active:bg-destructive2 disabled:pointer-events-none disabled:opacity-50'
+						className='flex h-[42px] min-w-[112px] items-center justify-center rounded-full bg-destructive2 px-4 text-14 font-medium text-white ring-destructive2/40 transition-all duration-300 hover:bg-destructive2-lighter focus:outline-hidden focus-visible:ring-3 active:scale-100 active:bg-destructive2 disabled:pointer-events-none disabled:opacity-50'
 						style={{boxShadow: '0px 2px 4px 0px rgba(255, 255, 255, 0.25) inset'}}
 					>
 						{t('shut-down')}
@@ -409,7 +409,7 @@ export default function RaidSetup() {
 				}
 			>
 				<img
-					src='/onboarding/pro-front.webp'
+					src='/assets/onboarding/pro-front.webp'
 					alt={t('storage-manager.umbrel-pro')}
 					draggable={false}
 					className='w-64 md:w-96'
@@ -442,7 +442,7 @@ export default function RaidSetup() {
 						}}
 					/>
 				}
-				subTitleMaxWidth={470}
+				subTitleMaxWidth={630}
 				subTitleClassName='text-white/50'
 				showLogo={false}
 				footer={
@@ -454,7 +454,7 @@ export default function RaidSetup() {
 				}
 			>
 				<img
-					src='/onboarding/pro-front.webp'
+					src='/assets/onboarding/pro-front.webp'
 					alt={t('storage-manager.umbrel-pro')}
 					draggable={false}
 					className='w-64 md:w-96'
@@ -484,7 +484,7 @@ export default function RaidSetup() {
 					className={`mt-4 ${primaryButtonProps.className}`}
 					style={primaryButtonProps.style}
 				>
-					{isLaunching ? t('onboarding.raid.launching') : t('onboarding.raid.launch-umbrelos')}
+					{isLaunching ? t('onboarding.raid.launching') : t('onboarding.launch-umbrelos')}
 				</button>
 			</Layout>
 		)
@@ -493,9 +493,9 @@ export default function RaidSetup() {
 	// --- Render: Main Setup Form ---
 
 	return (
-		<div className='flex flex-1 select-none flex-col md:flex-row'>
+		<div className='flex flex-1 flex-col md:flex-row'>
 			{/* Left side - content (full width on mobile) */}
-			<div className='flex flex-1 flex-col justify-start gap-4 px-4 py-6 md:pb-0 md:pl-6 md:pr-0 md:pt-10'>
+			<div className='flex flex-1 flex-col justify-start gap-4 px-4 py-6 md:pt-10 md:pr-0 md:pb-0 md:pl-6'>
 				<div className='flex flex-col gap-1 md:gap-2'>
 					<h1
 						className='text-[20px] font-bold text-white/85 md:text-[24px]'
@@ -528,7 +528,7 @@ export default function RaidSetup() {
 										<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
 											<Trans
 												i18nKey='onboarding.raid.ssd-in-slot'
-												values={{size: formatSize(device.size), slot: device.slot}}
+												values={{size: formatSize(device.roundedSize), slot: device.slot}}
 												components={{highlight: <span className='text-white' />}}
 											/>
 										</span>
@@ -540,7 +540,7 @@ export default function RaidSetup() {
 									<TbActivityHeartbeat className='size-4 text-white/60' />
 									{/* Warning dot with ping - positioned to intersect pill edge */}
 									{hasWarning && (
-										<span className='absolute -top-0.5 right-1.5 -translate-y-1/3 translate-x-1/3'>
+										<span className='absolute -top-0.5 right-1.5 translate-x-1/3 -translate-y-1/3'>
 											<span className='absolute inset-0 size-2.5 rounded-full bg-[#F5A623]' />
 											<span className='absolute inset-0 size-2.5 animate-ping rounded-full bg-[#F5A623] opacity-75' />
 										</span>
@@ -648,7 +648,7 @@ export default function RaidSetup() {
 								/>
 							) : (
 								<p className='text-[13px] text-yellow-500'>
-									<TbAlertTriangle className='mb-0.5 mr-1 inline size-4 align-middle' />
+									<TbAlertTriangle className='mr-1 mb-0.5 inline size-4 align-middle' />
 									{t('onboarding.raid.failsafe.warning-now-only')}
 								</p>
 							)}
@@ -725,7 +725,7 @@ export default function RaidSetup() {
 						<AlertDialogDescription>{t('onboarding.raid.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' onClick={() => shutdown()} hideEnterIcon>
+						<AlertDialogAction variant='destructive' onClick={() => shutdown()}>
 							{t('shut-down')}
 						</AlertDialogAction>
 						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>

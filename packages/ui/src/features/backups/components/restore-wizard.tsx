@@ -9,7 +9,19 @@ import {Link} from 'react-router-dom'
 import {z} from 'zod'
 
 import {ErrorAlert} from '@/components/ui/alert'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
+import {Input, PasswordInput} from '@/components/ui/input'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
 import {ReviewCard} from '@/features/backups/components/review-card'
@@ -38,18 +50,6 @@ import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useLanguage} from '@/hooks/use-language'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {languageCodeToDateLocale} from '@/utils/date-time'
 import {t} from '@/utils/i18n'
@@ -336,7 +336,6 @@ export function BackupsRestoreWizard() {
 								variant='destructive'
 								disabled={!confirmPassword.trim() || isStartingRestore}
 								onClick={handleConfirmRestore}
-								hideEnterIcon={true}
 							>
 								<span className={isStartingRestore ? 'opacity-0' : 'opacity-100'}>
 									{t('backups-restore.restore-umbrel')}
@@ -379,7 +378,7 @@ function RepositoryStep({
 	onManualPasswordChange: (v: string) => void
 }) {
 	const {doesHostHaveMountedShares} = useNetworkStorage()
-	const {disks} = useExternalStorage()
+	const {disks, isExternalStorageSupported} = useExternalStorage()
 	const isConnected = (path: string) => isRepoConnected(path, doesHostHaveMountedShares, disks as any)
 	const renderIcon = (path: string) => (
 		<>
@@ -419,7 +418,7 @@ function RepositoryStep({
 													selected
 														? 'border-brand bg-brand/15'
 														: isConnected(repo.path)
-															? 'cursor-pointer border-white/10 bg-white/5 hover:bg-white/10'
+															? 'border-white/10 bg-white/5 hover:bg-white/10'
 															: 'cursor-not-allowed border-white/10 bg-white/5 opacity-60',
 												].join(' ')}
 												onClick={() => {
@@ -444,7 +443,7 @@ function RepositoryStep({
 													{renderIcon(repo.path)}
 												</div>
 												<div className='min-w-0 flex-1'>
-													<div className='whitespace-normal break-words text-sm' title={repo.path}>
+													<div className='text-sm break-words whitespace-normal' title={repo.path}>
 														<span className='font-medium'>{repoName(repo.path)}</span>
 														<span> · {repoPathDisplay(repo.path)}</span>
 													</div>
@@ -464,7 +463,7 @@ function RepositoryStep({
 						) : null}
 						{/* Manual add callout row (always shown in known mode) */}
 						<div
-							className='flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
+							className='flex w-full min-w-0 items-center gap-3 rounded-xl border border-dashed border-white/10 bg-white/5 p-4 transition-colors hover:border-brand hover:bg-brand/15'
 							onClick={() => onModeChange('manual')}
 						>
 							<div className='flex h-10 w-10 shrink-0 items-center justify-center'>
@@ -500,7 +499,7 @@ function RepositoryStep({
 									type='text'
 									value={manualPath}
 									readOnly
-									className={(manualPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
+									className='pr-28'
 									title={manualPath || ''}
 									aria-disabled={!manualPath}
 									tabIndex={manualPath ? 0 : -1}
@@ -518,6 +517,7 @@ function RepositoryStep({
 										setBrowserRoot(root)
 										setBrowserOpen(true)
 									}}
+									isExternalStorageSupported={isExternalStorageSupported}
 								/>
 							</div>
 						</div>
@@ -597,7 +597,7 @@ function BackupsStep({
 					<EmptyCard text={t('backups-restore.no-backups-found')} />
 				) : (
 					<div
-						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-gradient-to-b from-white/[0.03] to-transparent pb-8 pl-1 pt-1 md:max-h-[min(60vh,560px)]'
+						className='max-h-[45vh] overflow-hidden overflow-y-auto rounded-2xl bg-linear-to-b from-white/[0.03] to-transparent pt-1 pb-8 pl-1 md:max-h-[min(60vh,560px)]'
 						style={{
 							maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 80px), transparent)',
 						}}
@@ -625,9 +625,9 @@ function BackupsStep({
 									<div
 										key={id || Math.random()}
 										className={[
-											'group relative flex w-full cursor-pointer items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
+											'group relative flex w-full items-center gap-4 rounded-12 px-3 py-2 md:px-4 md:py-3.5',
 											selected
-												? 'bg-gradient-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
+												? 'bg-linear-to-r from-brand/20 to-brand/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]'
 												: 'hover:bg-white/[0.06]',
 										].join(' ')}
 										onClick={() => id && onSelect(id)}
@@ -640,7 +640,7 @@ function BackupsStep({
 												className={[
 													'absolute inset-0 rounded-full',
 													selected
-														? 'bg-gradient-to-br from-brand to-brand/60 shadow-[0_0_20px_rgba(var(--color-brand-rgb),0.3)]'
+														? 'bg-linear-to-br from-brand to-brand/60 shadow-[0_0_20px_rgba(var(--color-brand-rgb),0.3)]'
 														: 'bg-white/10 group-hover:bg-white/15',
 												].join(' ')}
 											/>
@@ -657,7 +657,7 @@ function BackupsStep({
 
 											{/* Connecting line */}
 											{!isLast && (
-												<div className='absolute left-1/2 top-full h-[calc(100%+0.25rem)] w-px -translate-x-1/2 bg-gradient-to-b from-white/10 to-transparent' />
+												<div className='absolute top-full left-1/2 h-[calc(100%+0.25rem)] w-px -translate-x-1/2 bg-linear-to-b from-white/10 to-transparent' />
 											)}
 										</div>
 
@@ -699,7 +699,7 @@ function BackupsStep({
 										{isFirst && (
 											<div
 												className={[
-													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider transition-all duration-200',
+													'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wider uppercase transition-all duration-200',
 													selected ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60',
 												].join(' ')}
 											>

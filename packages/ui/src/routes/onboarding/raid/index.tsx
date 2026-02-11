@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
@@ -75,7 +75,7 @@ export default function Raid() {
 				title={t('onboarding.raid.error.no-ssds-detected')}
 				instructions={t('onboarding.raid.error.no-ssds-instructions')}
 				image={{
-					src: '/onboarding/no-ssd-found.webp',
+					src: '/assets/onboarding/no-ssd-found.webp',
 					alt: t('onboarding.raid.no-ssds-alt'),
 				}}
 			/>
@@ -87,7 +87,7 @@ export default function Raid() {
 			{/* Image with scanning line overlay - the animated line serves as the loading indicator */}
 			<div className='relative flex items-center justify-center'>
 				<img
-					src='/onboarding/ssd-scan.webp'
+					src='/assets/onboarding/ssd-scan.webp'
 					alt={t('onboarding.raid.scanning-alt')}
 					className='aspect-square w-[300px]'
 				/>

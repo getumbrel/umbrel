@@ -3,15 +3,6 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Navigate} from 'react-router-dom'
 
-import {BareCoverMessage} from '@/components/ui/cover-message'
-import {Loading} from '@/components/ui/loading'
-import {toast} from '@/components/ui/toast'
-import {OnboardingPage} from '@/layouts/bare/onboarding-page'
-import {useGlobalSystemState} from '@/providers/global-system-state'
-import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
-import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
-import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -21,8 +12,17 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {BareCoverMessage} from '@/components/ui/cover-message'
+import {Loading} from '@/components/ui/loading'
+import {toast} from '@/components/ui/toast'
+import {OnboardingPage} from '@/layouts/bare/onboarding-page'
+import {useGlobalSystemState} from '@/providers/global-system-state'
+import {SsdHealthDialog, useSsdHealthDialog} from '@/routes/onboarding/raid/ssd-health-dialog'
+import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
+import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
+import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -63,6 +63,10 @@ export default function RaidErrorScreen() {
 	// Dialog states
 	const [showShutdownDialog, setShowShutdownDialog] = useState(false)
 	const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false)
+
+	// Action triggered states - for immediate UI feedback before overlay appears
+	const [restartTriggered, setRestartTriggered] = useState(false)
+	const [shutdownTriggered, setShutdownTriggered] = useState(false)
 
 	// Check if there's actually a RAID mount failure - we redirect away if not
 	const mountFailureQ = trpcReact.hardware.raid.checkRaidMountFailure.useQuery(undefined, {
@@ -134,9 +138,9 @@ export default function RaidErrorScreen() {
 
 	return (
 		<OnboardingPage>
-			<div className='flex flex-1 select-none flex-col md:flex-row'>
+			<div className='flex flex-1 flex-col md:flex-row'>
 				{/* Left side - content */}
-				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pl-6 md:pr-0'>
+				<div className='flex flex-1 flex-col items-center justify-center gap-4 px-4 py-6 md:items-start md:justify-start md:py-8 md:pr-0 md:pl-6'>
 					{/* Header */}
 					<div className='flex flex-col items-center gap-2 md:items-start'>
 						<div className='flex items-center gap-2'>
@@ -189,7 +193,7 @@ export default function RaidErrorScreen() {
 									<div className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-3 py-0.5'>
 										<TbActivityHeartbeat className='size-4 text-white/60' />
 										{drive.hasHealthWarning && (
-											<span className='absolute -right-0.5 -top-0.5'>
+											<span className='absolute -top-0.5 -right-0.5'>
 												<span className='absolute inset-0 size-2.5 rounded-full bg-[#F5A623]' />
 												<span className='absolute inset-0 size-2.5 animate-ping rounded-full bg-[#F5A623] opacity-75' />
 											</span>
@@ -220,7 +224,11 @@ export default function RaidErrorScreen() {
 								title={t('raid-error.step-restart.title')}
 								description={t('raid-error.step-restart.description')}
 								buttonText={t('raid-error.step-restart.button')}
-								onClick={() => restart()}
+								onClick={() => {
+									setRestartTriggered(true)
+									restart()
+								}}
+								disabled={restartTriggered}
 							/>
 							<TroubleshootingStep
 								number={2}
@@ -287,10 +295,18 @@ export default function RaidErrorScreen() {
 						<AlertDialogDescription>{t('raid-error.shutdown-dialog.description')}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction variant='destructive' onClick={() => shutdown()} hideEnterIcon>
+						<AlertDialogAction
+							variant='destructive'
+							onClick={(e) => {
+								e.preventDefault()
+								setShutdownTriggered(true)
+								shutdown()
+							}}
+							disabled={shutdownTriggered}
+						>
 							{t('shut-down')}
 						</AlertDialogAction>
-						<AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+						<AlertDialogCancel disabled={shutdownTriggered}>{t('cancel')}</AlertDialogCancel>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -305,9 +321,11 @@ export default function RaidErrorScreen() {
 					<AlertDialogFooter>
 						<AlertDialogAction
 							variant='destructive'
-							onClick={() => factoryResetMut.mutate({})}
+							onClick={(e) => {
+								e.preventDefault()
+								factoryResetMut.mutate({})
+							}}
 							disabled={factoryResetMut.isPending}
-							hideEnterIcon
 						>
 							{t('factory-reset')}
 						</AlertDialogAction>

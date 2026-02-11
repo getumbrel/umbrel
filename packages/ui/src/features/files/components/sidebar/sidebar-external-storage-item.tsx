@@ -9,12 +9,12 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
-  bg-gradient-to-b from-white/[0.04] to-white/[0.08]
+  bg-linear-to-b from-white/[0.04] to-white/[0.08]
   border-white/6  
   shadow-button-highlight-soft-hpx 
 `
@@ -47,6 +47,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 
 	// For disks with a single partition, we display the partition name/label
 	// For disks with multiple partitions, we display the disk name
+	// Note: Unmounted partitions are filtered out before being passed here
 	const displayName =
 		item.partitions.length === 1 ? item.partitions[0].label || item.partitions[0].mountpoints[0] : item.name
 
@@ -66,7 +67,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 				/>
 				{/* Warning badge for drives that need formatting */}
 				{!item.isMounted && !item.isFormatting && (
-					<div className='absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-[#FF9500]'>
+					<div className='absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-[#FF9500]'>
 						<RiErrorWarningFill className='size-3.5 text-black' />
 					</div>
 				)}
@@ -114,7 +115,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 								path={partition.mountpoints[0]}
 								onClick={() => navigateToDirectory(partition.mountpoints[0])}
 								className={cn(
-									'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-gradient-to-b',
+									'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
 									currentPath === partition.mountpoints[0]
 										? selectedClass
 										: 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
@@ -122,7 +123,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 								role='button'
 							>
 								<RiHardDrive2Fill className='h-3 w-3 flex-shrink-0' />
-								<span className='min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-11'>
+								<span className='min-w-0 flex-1 overflow-hidden text-11 text-ellipsis whitespace-nowrap'>
 									{partition.label || partition.mountpoints[0]}
 								</span>
 								<span className='text-11 text-white/30'>{formatFilesystemSize(partition.size)}</span>
@@ -135,7 +136,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 					id={`sidebar-${item.id}`}
 					path={item.partitions[0]?.mountpoints[0]}
 					className={cn(
-						'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12 hover:bg-gradient-to-b',
+						'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12 hover:bg-linear-to-b',
 						isDiskActive ? selectedClass : 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
 					)}
 				>

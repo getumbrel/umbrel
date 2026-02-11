@@ -10,7 +10,7 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface FileItemProps {
 	item: FileSystemItem
@@ -58,8 +58,13 @@ export const FileItem = ({item, items}: FileItemProps) => {
 		// Select the item if it's not already selected
 		if (!isItemSelected(item)) {
 			setSelectedItems([item])
+		} else {
+			// Update the selected items with fresh item data from the listing.
+			// This ensures operations are up to date (e.g., after folder creation where
+			// the item was initially selected with empty operations).
+			setSelectedItems(selectedItems.map((selected) => (selected.path === item.path ? item : selected)))
 		}
-	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item])
+	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item, selectedItems])
 
 	// Cleanup timer on unmount
 	useEffect(() => {
@@ -194,7 +199,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			className={cn(
 				`files-${view}-view-file-item`, // .files-list-view-file-item styles are applied via CSS using combinator classes
 				'rounded-lg transition-colors duration-100',
-				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_theme(colors.brand)]', // selected item styles for list view are overwritten by CSS
+				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))]', // selected item styles for list view are overwritten by CSS
 				!isSelected && !isUploading && 'md:hover:!border-white/6 md:hover:!bg-white/5', // don't show hover state for selected items or uploading items
 			)}
 			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items

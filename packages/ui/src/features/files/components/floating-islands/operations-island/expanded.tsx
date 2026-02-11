@@ -1,8 +1,8 @@
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useGlobalFiles} from '@/providers/global-files'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
@@ -43,7 +43,7 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 								<div className='min-w-0 flex-1'>
 									<div className='mb-1 flex items-center justify-between gap-2'>
 										{operation.type === 'copy' && (
-											<span className='block max-w-[16rem] whitespace-nowrap text-xs text-white/90'>
+											<span className='block max-w-[16rem] text-xs whitespace-nowrap text-white/90'>
 												{operation.file.path.startsWith('/Backups/') ? (
 													<span className='text-white/60'>
 														{t('files-operations-island.restoring', {
@@ -62,7 +62,7 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 											</span>
 										)}
 										{operation.type === 'move' && (
-											<span className='block max-w-[16rem] whitespace-nowrap text-xs text-white/90'>
+											<span className='block max-w-[16rem] text-xs whitespace-nowrap text-white/90'>
 												{t('files-operations-island.moving', {
 													from: formatItemName({name: operation.file.name, maxLength: 12}),
 													to: formatItemName({name: destinationFolderName, maxLength: 12}),
@@ -75,7 +75,7 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 									</div>
 									<div className='relative h-1 overflow-hidden rounded-full bg-white/20'>
 										<div
-											className='transition-w absolute left-0 top-0 h-full rounded-full bg-brand duration-300'
+											className='transition-w absolute top-0 left-0 h-full rounded-full bg-brand duration-300'
 											style={{width: `${operation.percent}%`}}
 										/>
 									</div>

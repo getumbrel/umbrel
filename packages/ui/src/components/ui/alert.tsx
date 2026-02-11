@@ -1,7 +1,6 @@
 import {cva, VariantProps} from 'class-variance-authority'
-import {forwardRef} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 import {IconTypes} from './icon'
 
@@ -9,10 +8,14 @@ export function ErrorAlert({
 	icon,
 	description,
 	className,
+	selectable = false,
 }: {
 	icon?: IconTypes
 	description: React.ReactNode
 	className?: string
+	// Enable text selection for copying error messages. Defaults to false for native OS feel.
+	// Set to true for actual errors users might need to copy for support/debugging.
+	selectable?: boolean
 }) {
 	const IconComponent = icon
 
@@ -20,6 +23,7 @@ export function ErrorAlert({
 		<div
 			className={cn(
 				'flex items-center gap-2 rounded-8 bg-[#3C1C1C] p-2.5 text-13 leading-tight -tracking-2 text-[#FF3434]',
+				selectable && 'select-text',
 				className,
 			)}
 		>
@@ -49,9 +53,10 @@ const alertVariants = cva(
 type AlertProps = React.HTMLAttributes<HTMLDivElement> &
 	VariantProps<typeof alertVariants> & {
 		icon?: IconTypes
+		ref?: React.Ref<HTMLDivElement>
 	}
 
-export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant, icon, children, ...props}, ref) => {
+function Alert({className, variant, icon, children, ref, ...props}: AlertProps) {
 	const Icon = icon
 
 	return (
@@ -60,8 +65,9 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(({className, variant
 			{children}
 		</div>
 	)
-})
-Alert.displayName = 'Alert'
+}
+
+export {Alert}
 
 export function WarningAlert({
 	icon,

@@ -1,6 +1,6 @@
 import {RouterProvider} from 'react-router-dom'
 
-import {PendingRaidOperationProvider} from '@/features/storage/contexts/pending-operation-context'
+import {PendingRaidOperationProvider} from '@/features/storage/providers/pending-operation-context'
 import {init} from '@/init'
 import {initTokenRenewal} from '@/modules/auth/shared'
 import {ConfirmationProvider} from '@/providers/confirmation'
@@ -29,7 +29,10 @@ init(
 					<GlobalFilesProvider>
 						<PendingRaidOperationProvider>
 							<ImmersiveDialogProvider>
-								<RouterProvider router={router} />
+								{/* v7_startTransition wraps navigations in React.startTransition(), which keeps the old page
+								visible while lazy components load. Without this, view transitions snapshot the Suspense
+								fallback instead of the actual destination page. */}
+								<RouterProvider router={router} future={{v7_startTransition: true}} />
 							</ImmersiveDialogProvider>
 						</PendingRaidOperationProvider>
 					</GlobalFilesProvider>

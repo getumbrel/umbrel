@@ -1,6 +1,6 @@
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from './_components/device-info-content'
@@ -16,13 +16,17 @@ export default function DeviceInfoDialog() {
 		return null
 	}
 
+	const isUmbrelPro = data.umbrelHostEnvironment === 'umbrel-pro'
+
 	return (
 		<Dialog {...dialogProps}>
-			<DialogScrollableContent showClose>
-				<div className='space-y-6 px-5 py-6'>
-					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
-					</DialogHeader>
+			<DialogScrollableContent showClose={!isUmbrelPro}>
+				<div className={isUmbrelPro ? 'space-y-6 px-5 pb-6' : 'space-y-6 px-5 py-6'}>
+					{!isUmbrelPro && (
+						<DialogHeader>
+							<DialogTitle>{title}</DialogTitle>
+						</DialogHeader>
+					)}
 					<DeviceInfoContent
 						umbrelHostEnvironment={data.umbrelHostEnvironment}
 						device={data.device}

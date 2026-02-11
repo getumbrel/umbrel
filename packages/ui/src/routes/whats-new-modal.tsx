@@ -2,6 +2,8 @@ import {DialogPortal} from '@radix-ui/react-dialog'
 import {useEffect, useRef, useState} from 'react'
 import {TbChevronLeft, TbChevronRight} from 'react-icons/tb'
 
+import {Button} from '@/components/ui/button'
+import {Carousel, CarouselContent, CarouselItem, type CarouselApi} from '@/components/ui/carousel'
 import {
 	ImmersiveDialog,
 	ImmersiveDialogContent,
@@ -9,9 +11,7 @@ import {
 	ImmersiveDialogOverlay,
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {Carousel, CarouselContent, CarouselItem, type CarouselApi} from '@/shadcn-components/ui/carousel'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -22,31 +22,31 @@ const VERSION = 'umbrelOS 1.5'
 const FEATURES = [
 	{
 		id: 1,
-		video: '/whats-new/backups.webm',
+		video: '/assets/whats-new/backups.webm',
 		titleTKey: 'backups',
 		descriptionTKey: 'whats-new.feature-1.description',
 	},
 	{
 		id: 2,
-		video: '/whats-new/rewind.webm',
+		video: '/assets/whats-new/rewind.webm',
 		titleTKey: 'rewind',
 		descriptionTKey: 'whats-new.feature-2.description',
 	},
 	{
 		id: 3,
-		video: '/whats-new/restore.webm',
+		video: '/assets/whats-new/restore.webm',
 		titleTKey: 'backups-restore',
 		descriptionTKey: 'whats-new.feature-3.description',
 	},
 	{
 		id: 4,
-		video: '/whats-new/network-devices.webm',
+		video: '/assets/whats-new/network-devices.webm',
 		titleTKey: 'whats-new.feature-4.title',
 		descriptionTKey: 'whats-new.feature-4.description',
 	},
 	{
 		id: 5,
-		video: '/whats-new/external-storage.webm',
+		video: '/assets/whats-new/external-storage.webm',
 		titleTKey: 'whats-new.feature-5.title',
 		descriptionTKey: 'whats-new.feature-5.description',
 		helperTextTKey: 'whats-new.feature-5.helper-text',
@@ -198,7 +198,7 @@ export function WhatsNewModal() {
 				<ImmersiveDialogOverlay />
 				<ImmersiveDialogContent size='sm' onInteractOutside={(e) => e.preventDefault()}>
 					{/* Header */}
-					<div className='mb-1 max-md:mb-0 max-md:mt-2'>
+					<div className='mb-1 max-md:mt-2 max-md:mb-0'>
 						<h1 className={cn(immersiveDialogTitleClass, 'max-md:text-xl')}>
 							{t('whats-new.title', {version: VERSION})}
 						</h1>
@@ -213,7 +213,9 @@ export function WhatsNewModal() {
 									<CarouselItem key={feature.id} className='pl-0'>
 										<div className='relative aspect-[4/3] max-h-[calc(100dvh-440px)] min-h-[200px] w-full overflow-hidden bg-neutral-900'>
 											<video
-												ref={(el) => (videoRefs.current[index] = el)}
+												ref={(el) => {
+													videoRefs.current[index] = el
+												}}
 												src={feature.video}
 												muted
 												playsInline
@@ -228,7 +230,7 @@ export function WhatsNewModal() {
 							{canScrollPrev && (
 								<button
 									onClick={handlePrevious}
-									className='absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/60 max-sm:hidden md:left-6'
+									className='absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-xs transition-all hover:scale-110 hover:bg-black/60 max-sm:hidden md:left-6'
 									aria-label='Previous slide'
 								>
 									<TbChevronLeft className='size-6' />
@@ -238,7 +240,7 @@ export function WhatsNewModal() {
 							{canScrollNext && (
 								<button
 									onClick={handleNext}
-									className='absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-all hover:scale-110 hover:bg-black/60 max-sm:hidden md:right-6'
+									className='absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white backdrop-blur-xs transition-all hover:scale-110 hover:bg-black/60 max-sm:hidden md:right-6'
 									aria-label='Next slide'
 								>
 									<TbChevronRight className='size-6' />

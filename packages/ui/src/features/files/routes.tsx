@@ -1,7 +1,6 @@
 import {lazy} from 'react'
 import {Navigate, RouteObject} from 'react-router-dom'
 
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {AppsListing} from '@/features/files/components/listing/apps-listing'
 import {DirectoryListing} from '@/features/files/components/listing/directory-listing'
 import {RecentsListing} from '@/features/files/components/listing/recents-listing'
@@ -15,7 +14,6 @@ export const filesRoutes: RouteObject[] = [
 	{
 		path: 'files',
 		element: <Files />,
-		ErrorBoundary: ErrorBoundaryComponentFallback,
 		children: [
 			// if the user navigates to /files, redirect to /files/<HOME_PATH>
 			{

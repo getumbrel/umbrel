@@ -3,7 +3,7 @@
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import * as React from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 function TooltipProvider({delayDuration = 0, ...props}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
 	return <TooltipPrimitive.Provider data-slot='tooltip-provider' delayDuration={delayDuration} {...props} />
@@ -33,7 +33,7 @@ function TooltipContent({
 				data-slot='tooltip-content'
 				sideOffset={sideOffset}
 				className={cn(
-					'z-50 w-fit origin-[var(--radix-tooltip-content-transform-origin)] text-balance rounded-md bg-white px-3 py-1.5 text-xs text-neutral-950 shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+					'z-50 w-fit origin-[var(--radix-tooltip-content-transform-origin)] animate-in rounded-md bg-white px-3 py-1.5 text-xs text-balance text-neutral-950 shadow-md fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
 					className,
 				)}
 				{...props}

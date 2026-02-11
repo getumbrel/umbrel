@@ -224,7 +224,7 @@ jobs:
       fail-fast: false
       matrix:
         task:
-          # - lint
+          - lint
           - format:check
           - typecheck
     steps:
@@ -233,17 +233,13 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
+          node-version: 22
       - name: Install Umbreld dependencies
         if: ${{ matrix.task == 'typecheck' }}
         run: npm --prefix ../umbreld clean-install
       - name: Install dependencies
-        run: pnpm install
-      - run: pnpm run ${{ matrix.task }}
+        run: npm clean-install
+      - run: npm run ${{ matrix.task }}
 
   # If the current build is tagged, build all release assets, push to Cloudflare R2 and create a GitHub Release
   create-release:

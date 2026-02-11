@@ -3,11 +3,12 @@ import {TbQuestionMark} from 'react-icons/tb'
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import AnimatedUmbrelHomeIcon from './device-info-umbrel-home'
+import AnimatedUmbrelProIcon from './device-info-umbrel-pro'
 
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
@@ -22,7 +23,7 @@ export function DeviceInfoContent({
 }) {
 	return (
 		<div className='space-y-6'>
-			<div className='flex justify-center py-2'>
+			<div className={cn('flex justify-center', umbrelHostEnvironment !== 'umbrel-pro' && 'py-2')}>
 				<HostEnvironmentIcon
 					environment={umbrelHostEnvironment}
 					modelNumber={modelNumber}
@@ -77,6 +78,10 @@ export const HostEnvironmentIcon = ({
 
 	if (environment === 'umbrel-home') {
 		return <AnimatedUmbrelHomeIcon modelNumber={modelNumber} serialNumber={serialNumber} />
+	}
+
+	if (environment === 'umbrel-pro') {
+		return <AnimatedUmbrelProIcon serialNumber={serialNumber} />
 	}
 
 	const icon =

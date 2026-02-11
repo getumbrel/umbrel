@@ -107,7 +107,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	// Folder
 	if (item.type === 'directory') {
 		if (onlySVG) {
-			return <SimpleFolderIcon className={className} />
+			return <SimpleFolderIcon className={className} skipFilter />
 		}
 
 		return (
@@ -117,7 +117,7 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 
 				{/* we add it here because only folders can be shared */}
 				{isShared ? (
-					<div className='absolute left-0 top-0 flex size-1/2 max-h-8 min-h-[0.9rem] min-w-[0.9rem] max-w-8 translate-x-[-30%] translate-y-[-20%] items-center justify-center rounded-full border border-white/15 bg-gradient-to-b from-brand to-[color-mix(in_srgb,hsl(var(--color-brand))_80%,black_20%)] shadow-md'>
+					<div className='absolute top-0 left-0 flex size-1/2 max-h-8 min-h-[0.9rem] max-w-8 min-w-[0.9rem] translate-x-[-30%] translate-y-[-20%] items-center justify-center rounded-full border border-white/15 bg-linear-to-b from-brand to-[color-mix(in_srgb,hsl(var(--color-brand))_80%,black_20%)] shadow-md'>
 						<SharedFolderBadge className='size-4/5' />
 					</div>
 				) : null}
@@ -138,6 +138,11 @@ export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false,
 	const Thumbnail = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP].thumbnail as unknown as React.ComponentType<{
 		className?: string
 	}>
+
+	// When rendering inside an SVG context, only return SVG-safe elements
+	if (onlySVG) {
+		return <Thumbnail className={className} />
+	}
 
 	const {extension} = splitFileName(item.name)
 	// Image file
@@ -225,7 +230,7 @@ const AppFolderBottomIcon = ({appId}: {appId: string}) => {
 			onLoad={() => setLoaded(true)}
 			src={`https://getumbrel.github.io/umbrel-apps-gallery/${appId}/icon.svg`}
 			alt={appId}
-			className={`absolute bottom-0 right-0 flex h-1/2 max-h-8 min-h-5 w-1/2 min-w-5 max-w-8 translate-x-[16%] translate-y-[10%] items-center justify-center overflow-hidden rounded-[25%] border border-white/15 object-contain shadow-md md:min-h-[0.9rem] md:min-w-[0.9rem] ${
+			className={`absolute right-0 bottom-0 flex h-1/2 max-h-8 min-h-5 w-1/2 max-w-8 min-w-5 translate-x-[16%] translate-y-[10%] items-center justify-center overflow-hidden rounded-[25%] border border-white/15 object-contain shadow-md md:min-h-[0.9rem] md:min-w-[0.9rem] ${
 				!loaded || error ? 'opacity-0' : 'opacity-100'
 			}`}
 		/>
@@ -284,7 +289,7 @@ const Thumbnail = ({
 				src={thumbnailUrl}
 				alt={item.name}
 				onError={() => setHadError(true)}
-				className={`rounded-sm object-contain ${className || ''}`}
+				className={`rounded-xs object-contain ${className || ''}`}
 			/>
 		) : null
 
@@ -325,7 +330,7 @@ const VideoThumbnail = ({
 		fallback={fallback}
 		className={className}
 		overlay={
-			<div className='absolute left-1/2 top-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 items-center justify-center'>
+			<div className='absolute top-1/2 left-1/2 flex h-full w-full -translate-x-1/2 -translate-y-1/2 items-center justify-center'>
 				<IoPlay className='h-1/3 w-1/3 text-white shadow-md' />
 			</div>
 		}

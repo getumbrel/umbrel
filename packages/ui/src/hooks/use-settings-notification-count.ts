@@ -4,7 +4,7 @@ import {ExternalToast} from 'sonner'
 
 import {toast} from '@/components/ui/toast'
 import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
-import {trpcClient} from '@/trpc/trpc'
+import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
 
@@ -17,6 +17,7 @@ function useMounted() {
 
 export function useSettingsNotificationCount() {
 	const navigate = useNavigate()
+	const utils = trpcReact.useUtils()
 
 	const mounted = useMounted()
 	const [count, setCount] = useState(0)
@@ -27,13 +28,13 @@ export function useSettingsNotificationCount() {
 		if (!mounted) return
 
 		const res = Promise.allSettled([
-			trpcClient.system.checkUpdate.query(),
-			trpcClient.system.cpuTemperature.query(),
-			trpcClient.system.systemMemoryUsage.query(),
-			trpcClient.system.systemDiskUsage.query(),
-			trpcClient.hardware.umbrelPro.isUmbrelPro.query(),
-			trpcClient.hardware.raid.getStatus.query(),
-			trpcClient.hardware.internalStorage.getDevices.query(),
+			utils.system.checkUpdate.fetch(),
+			utils.system.cpuTemperature.fetch(),
+			utils.system.systemMemoryUsage.fetch(),
+			utils.system.systemDiskUsage.fetch(),
+			utils.hardware.umbrelPro.isUmbrelPro.fetch(),
+			utils.hardware.raid.getStatus.fetch(),
+			utils.hardware.internalStorage.getDevices.fetch(),
 		])
 
 		const toastIds: (string | number)[] = []

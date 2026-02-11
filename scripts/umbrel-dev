@@ -346,8 +346,7 @@ then
     # Install dependencies
     echo "Installing dependencies..."
     npm --prefix /umbrel-dev/packages/umbreld install
-    npm install -g pnpm@8
-    pnpm --dir /umbrel-dev/packages/ui install
+    npm --prefix /umbrel-dev/packages/ui install
 
     # Check if we're in production mode
     if [[ ! -f "${PRODUCTION_MODE_FLAG_FILE}" ]]
@@ -360,7 +359,7 @@ then
     else
         # Build static production ui bundle and serve from umbreld
         echo "Building production ui..."
-        pnpm --dir /umbrel-dev/packages/ui run build
+        npm --prefix /umbrel-dev/packages/ui run build
         rm -rf "/umbrel-dev/packages/umbreld/ui" || true
         mv "/umbrel-dev/packages/ui/dist" "/umbrel-dev/packages/umbreld/ui"
         echo "Starting umbreld in production mode..."

@@ -8,6 +8,7 @@ import {
 	TbPhoto,
 	TbServer,
 	TbSettingsMinus,
+	TbShare,
 	TbTool,
 	TbUser,
 	TbWifi,
@@ -25,8 +26,7 @@ import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
-import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {DesktopPreviewConnected, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {trpcReact} from '@/trpc/trpc'
@@ -70,7 +70,7 @@ export function SettingsContentMobile() {
 	}
 
 	return (
-		<div className='flex flex-col gap-5 animate-in fade-in'>
+		<div className='flex animate-in flex-col gap-5 fade-in'>
 			<div className='flex items-center justify-center'>
 				<DesktopPreviewFrame>
 					<DesktopPreviewConnected />
@@ -98,7 +98,7 @@ export function SettingsContentMobile() {
 				</div>
 
 				<div className='mx-2.5'>
-					<h2 className='text-24 font-bold leading-none -tracking-4'>
+					<h2 className='text-24 leading-none font-bold -tracking-4'>
 						{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
 						<span className='opacity-40'>{t('umbrel')}</span>
 					</h2>
@@ -179,6 +179,12 @@ export function SettingsContentMobile() {
 					description={t('2fa-description')}
 					onClick={() => navigate('2fa')}
 				/>
+				<ListRowMobile
+					icon={TbShare}
+					title={t('settings.file-sharing')}
+					description={t('settings.file-sharing.description')}
+					onClick={() => navigate('file-sharing')}
+				/>
 				{isUmbrelPro && (
 					<ListRowMobile
 						icon={TbColumns3}
@@ -203,18 +209,6 @@ export function SettingsContentMobile() {
 					description={t('backups-description')}
 					onClick={() => navigate('backups')}
 				/>
-				<ListRowMobile
-					icon={TbArrowBigRightLines}
-					title={t('migration-assistant')}
-					description={t('migration-assistant-description', {deviceName})}
-					onClick={() => navigate('migration-assistant')}
-				/>
-				<ListRowMobile
-					icon={TbLanguage}
-					title={t('language')}
-					description={t('language-description')}
-					onClick={() => navigate('language')}
-				/>
 				{/* <ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}
@@ -235,6 +229,18 @@ export function SettingsContentMobile() {
 						serial: deviceInfo.data?.serialNumber ?? UNKNOWN(),
 					})}
 					onClick={() => navigate('device-info')}
+				/>
+				<ListRowMobile
+					icon={TbArrowBigRightLines}
+					title={t('migration-assistant')}
+					description={t('migration-assistant-description', {deviceName})}
+					onClick={() => navigate('migration-assistant')}
+				/>
+				<ListRowMobile
+					icon={TbLanguage}
+					title={t('language')}
+					description={t('language-description')}
+					onClick={() => navigate('language')}
 				/>
 				<ListRowMobile
 					icon={TbSettingsMinus}

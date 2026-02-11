@@ -1,7 +1,7 @@
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/features/files/components/rewind/tooltip'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useLanguage} from '@/hooks/use-language'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function TimelineBar({

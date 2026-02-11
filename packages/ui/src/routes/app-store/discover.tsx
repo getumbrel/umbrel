@@ -2,7 +2,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 
 import {ButtonLink} from '@/components/ui/button-link'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
-import {Loading} from '@/components/ui/loading'
+import {cn} from '@/lib/utils'
 import {ConnectedAppStoreNav} from '@/modules/app-store/app-store-nav'
 import {AppsGridSection} from '@/modules/app-store/discover/apps-grid-section'
 import {AppsRowSection} from '@/modules/app-store/discover/apps-row-section'
@@ -11,7 +11,6 @@ import {AppsGallerySection} from '@/modules/app-store/gallery-section'
 import {cardFaintClass} from '@/modules/app-store/shared'
 import {getCategoryLabel} from '@/modules/app-store/utils'
 import {useAvailableApps} from '@/providers/available-apps'
-import {cn} from '@/shadcn-lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -50,8 +49,10 @@ function DiscoverContent() {
 	const availableApps = useAvailableApps()
 	const discoverQ = useDiscoverQuery()
 
+	// Return null instead of a loading spinner — data is prefetched on idle so this
+	// state is brief. An empty content area feels faster than a spinner flashing.
 	if (availableApps.isLoading || discoverQ.isLoading) {
-		return <Loading />
+		return null
 	}
 
 	const {apps} = availableApps

@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 
 import {BackupsIsland} from '@/features/backups/components/floating-island'
 import {useBackupProgress} from '@/features/backups/hooks/use-backups'
@@ -8,8 +8,8 @@ import {OperationsIsland} from '@/features/files/components/floating-islands/ope
 import {UploadingIsland} from '@/features/files/components/floating-islands/uploading-island'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {RaidIsland} from '@/features/storage/components/floating-island'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
 import {useRaidProgress} from '@/features/storage/hooks/use-raid-progress'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {useGlobalFiles} from '@/providers/global-files'
 import {useImmersiveDialogOpen} from '@/providers/immersive-dialog'
 
@@ -60,7 +60,7 @@ export function FloatingIslandContainer() {
 	// When an ImmersiveDialog is open: z-60 + pointer-events-auto so island appears above dialog and is clickable.
 	return (
 		<div
-			className={`fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 flex-col items-center justify-center gap-1 md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'pointer-events-auto z-[60]' : 'z-50'}`}
+			className={`fixed bottom-[76px] left-1/2 flex w-full -translate-x-1/2 transform-gpu flex-col items-center justify-center gap-1 will-change-transform md:bottom-[90px] md:flex-row md:items-baseline md:gap-2 ${isImmersiveDialogOpen ? 'pointer-events-auto z-[60]' : 'z-50'}`}
 		>
 			<AnimatePresence>
 				{showUploading && (

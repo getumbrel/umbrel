@@ -37,7 +37,7 @@ export default function AccountCreated() {
 					}}
 				/>
 			}
-			subTitleMaxWidth={470}
+			subTitleMaxWidth={630}
 			subTitleClassName='text-white/50'
 			showLogo={!device.showDevice}
 			footer={
@@ -58,12 +58,12 @@ export default function AccountCreated() {
 			<Link
 				data-testid='to-desktop'
 				to='/'
-				unstable_viewTransition
+				viewTransition
 				ref={continueLinkRef}
 				className={`mt-4 ${primaryButtonProps.className}`}
 				style={primaryButtonProps.style}
 			>
-				{t('onboarding.account-created.next')}
+				{t('onboarding.launch-umbrelos')}
 			</Link>
 		</Layout>
 	)

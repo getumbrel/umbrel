@@ -1,4 +1,4 @@
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

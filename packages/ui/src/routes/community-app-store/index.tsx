@@ -4,10 +4,10 @@ import {groupBy} from 'remeda'
 import {objectKeys} from 'ts-extras'
 
 import {Loading} from '@/components/ui/loading'
+import {cn} from '@/lib/utils'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {appsGridClass, AppStoreSheetInner, cardFaintClass, sectionOverlineClass} from '@/modules/app-store/shared'
 import {CommunityBadge} from '@/modules/community-app-store/community-badge'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -40,7 +40,7 @@ export default function CommunityAppStoreHome() {
 						<CommunityBadge className='self-start' />
 						<button
 							onClick={() => navigate('/app-store')}
-							className='flex items-center gap-1 self-start underline-offset-2 outline-none focus-visible:underline'
+							className='flex items-center gap-1 self-start underline-offset-2 outline-hidden focus-visible:underline'
 						>
 							<TbArrowLeft className='h-5 w-5' />
 							{t('community-app-store.back-to-umbrel-app-store')}

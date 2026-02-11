@@ -1,11 +1,10 @@
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {listClass, listItemClass} from '@/components/ui/list'
 import {Spinner} from '@/components/ui/loading'
-import {toast} from '@/components/ui/toast'
+import {Switch} from '@/components/ui/switch'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -14,12 +13,7 @@ export function TorDrawer() {
 	const dialogProps = useSettingsDialogProps()
 
 	const {enabled, setEnabled, isMutLoading, isError} = useTorEnabled({
-		onSuccess: (enabled) => {
-			if (enabled) {
-				toast.success(t('tor.enable.success'))
-			} else {
-				toast.success(t('tor.disable.success'))
-			}
+		onSuccess: () => {
 			dialogProps.onOpenChange(false)
 		},
 	})
@@ -46,7 +40,7 @@ export function TorDrawer() {
 						</div>
 					</label>
 				</div>
-				<div className='text-12 font-normal leading-tight -tracking-2 text-white/60'>{t('tor.enable.description')}</div>
+				<div className='text-12 leading-tight font-normal -tracking-2 text-white/60'>{t('tor.enable.description')}</div>
 				{enabled && (
 					<div className='space-y-2'>
 						<span className='text-15 font-medium -tracking-4'>{t('tor.hidden-service')}</span>

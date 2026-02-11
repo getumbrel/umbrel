@@ -2,14 +2,14 @@ import {ReactNode, useEffect, useState} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
+import {Button} from '@/components/ui/button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {PasswordInput} from '@/components/ui/input'
 import {PinInput} from '@/components/ui/pin-input'
 import {toast} from '@/components/ui/toast'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
-import {Button} from '@/shadcn-components/ui/button'
-import {PasswordInput} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 type Step = 'password' | '2fa'
@@ -198,14 +198,14 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 				src={`/wallpapers/generated-thumbs/${wallpaperId}.jpg`}
 				className='pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000'
 			/>
-			<div className='fixed inset-0 bg-black/50  contrast-more:bg-black' />
+			<div className='fixed inset-0 bg-black/50 contrast-more:bg-black' />
 			<div className='relative flex min-h-[100dvh] flex-col items-center justify-between p-5'>
 				<div className='flex h-full w-full flex-grow items-center justify-center'>
 					<div
 						className={cn(
 							'w-full rounded-20 bg-dialog-content/70 p-8 shadow-dialog sm:max-w-[480px]',
 							'flex flex-col gap-5',
-							'duration-200 ease-out animate-in fade-in zoom-in-90',
+							'animate-in duration-200 ease-out zoom-in-90 fade-in',
 						)}
 					>
 						<div className='flex h-0 -translate-y-[56px] gap-5'>
@@ -213,7 +213,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 							<AppIcon src={app.icon} size={56} className='rounded-12 bg-neutral-600' />
 						</div>
 						<div className='flex flex-col gap-1'>
-							<h1 className='truncate text-17 font-semibold leading-tight -tracking-2'>
+							<h1 className='truncate text-17 leading-tight font-semibold -tracking-2'>
 								{t('login-with-umbrel.title')}
 							</h1>
 							<p className='text-13 leading-tight -tracking-2 text-white/40'>

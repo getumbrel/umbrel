@@ -115,7 +115,7 @@ function getLastCommitForKey(filePath, key, baseBranch) {
 		// Return the most recent commit (first in the list)
 		const commits = result.split('\n')
 		return commits[0]
-	} catch (error) {
+	} catch {
 		return null
 	}
 }
@@ -153,7 +153,7 @@ function shouldRegenerateKey(key, localeFile, baseBranch) {
 		execSync(`git merge-base --is-ancestor ${enCommit} ${localeCommit}`, {encoding: 'utf8'})
 		// Locale came after en - skip regeneration
 		return false
-	} catch (error) {
+	} catch {
 		// En is not ancestor of locale, so en came after - needs regeneration
 		return true
 	}
@@ -203,14 +203,7 @@ async function generateTranslation(englishReferenceContent, textToTranslate, tar
 }
 
 async function removeUnusedTranslations(englishReferenceContent) {
-	const tsxFiles = await fg([
-		'src/**/*.tsx',
-		'src/**/*.ts',
-		'stories/src/**/*.tsx',
-		'stories/src/**/*.ts',
-		'app-auth/src/**/*.tsx',
-		'app-auth/src/**/*.ts',
-	])
+	const tsxFiles = await fg(['src/**/*.tsx', 'src/**/*.ts', 'app-auth/src/**/*.tsx', 'app-auth/src/**/*.ts'])
 	const unusedKeys = []
 
 	for (const key in englishReferenceContent) {

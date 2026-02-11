@@ -11,7 +11,7 @@ export function TwoStatsWidget({
 	onClick,
 }: TwoStatsWithProgressWidgetProps & {onClick?: (link?: string) => void}) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className=' flex-row items-center justify-center sm:gap-[30px]'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='flex-row items-center justify-center sm:gap-[30px]'>
 			{items?.[0] && (
 				<Item title={items[0].title} text={items[0].text} subtext={items[0].subtext} progress={items[0].progress} />
 			)}
@@ -37,16 +37,16 @@ function Item(item?: TwoStatsWithProgressItem) {
 		<div className='relative'>
 			<Arc strokeWidth={strokeWidth} size={size} progress={item?.progress ?? 0} />
 			<div
-				className='absolute left-1/2 top-1/2 mt-[1px] -translate-x-1/2 -translate-y-1/2 px-1.5 text-center'
+				className='absolute top-1/2 left-1/2 mt-[1px] -translate-x-1/2 -translate-y-1/2 px-1.5 text-center'
 				// Set width so text fits inside the arc
 				style={{width: size - strokeWidth * 2}}
 			>
-				<div className='truncate text-[9px] font-semibold leading-tight tracking-normal sm:text-13'>
+				<div className='truncate text-[9px] leading-tight font-semibold tracking-normal sm:text-13'>
 					{item?.text}
 					{item?.subtext && <span className='opacity-40'>{item?.subtext}</span>}
 				</div>
 				{item?.title && (
-					<div className='truncate text-[9px] font-medium leading-tight -tracking-3 opacity-40 sm:text-12'>
+					<div className='truncate text-[9px] leading-tight font-medium -tracking-3 opacity-40 sm:text-12'>
 						{item?.title}
 					</div>
 				)}

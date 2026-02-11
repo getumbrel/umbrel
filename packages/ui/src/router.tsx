@@ -1,8 +1,13 @@
+// Route structure:
+// - routes/ contains page-level components mapped to URL paths
+// - modules/ contains reusable UI compositions shared across routes (app-store, desktop, auth, etc.)
+// - features/ may colocate their own route definitions (e.g., files/routes.tsx) when they own an entire route subtree
+
 import React, {Suspense} from 'react'
 import {createBrowserRouter, Outlet} from 'react-router-dom'
 
 import {CmdkMenu, CmdkProvider} from '@/components/cmdk'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
+import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {filesRoutes} from '@/features/files/routes'
 import {DesktopContextMenu} from '@/modules/desktop/desktop-context-menu'
 
@@ -77,7 +82,7 @@ export const router = createBrowserRouter([
 			{
 				path: 'edit-widgets',
 				Component: EditWidgetsPage,
-				ErrorBoundary: ErrorBoundaryComponentFallback,
+				ErrorBoundary: ErrorBoundaryCardFallback,
 			},
 			{
 				Component: SheetLayout,
@@ -94,12 +99,12 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: Discover,
-								ErrorBoundary: ErrorBoundaryComponentFallback,
+								ErrorBoundary: ErrorBoundaryCardFallback,
 							},
 							{
 								path: 'category/:categoryishId',
 								Component: CategoryPage,
-								ErrorBoundary: ErrorBoundaryComponentFallback,
+								ErrorBoundary: ErrorBoundaryCardFallback,
 							},
 						],
 					},
@@ -110,6 +115,7 @@ export const router = createBrowserRouter([
 								<AppPage />
 							</AvailableAppsProvider>
 						),
+						ErrorBoundary: ErrorBoundaryCardFallback,
 					},
 					{
 						path: 'community-app-store/:appStoreId',
@@ -117,18 +123,19 @@ export const router = createBrowserRouter([
 							{
 								index: true,
 								Component: CommunityAppStoreHome,
-								ErrorBoundary: ErrorBoundaryComponentFallback,
+								ErrorBoundary: ErrorBoundaryCardFallback,
 							},
 							{
 								path: ':appId',
 								Component: CommunityAppPage,
-								ErrorBoundary: ErrorBoundaryComponentFallback,
+								ErrorBoundary: ErrorBoundaryCardFallback,
 							},
 						],
 					},
 					{
 						path: 'settings/*',
 						Component: Settings,
+						ErrorBoundary: ErrorBoundaryCardFallback,
 						children: [
 							{
 								path: ':settingsDialog',

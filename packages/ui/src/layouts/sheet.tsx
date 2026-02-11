@@ -2,13 +2,13 @@ import {Suspense, useRef, useState} from 'react'
 import {NavigationType, Outlet, useLocation, useNavigate} from 'react-router-dom'
 
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
+import {Sheet, SheetContent} from '@/components/ui/sheet'
+import {ScrollArea} from '@/components/ui/sheet-scroll-area'
 import {useScrollRestoration} from '@/hooks/use-scroll-restoration'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {SheetFixedTarget} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeaderProvider, SheetStickyHeaderTarget, useSheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {isFullscreenSettingsPath} from '@/routes/settings'
-import {Sheet, SheetContent} from '@/shadcn-components/ui/sheet'
-import {ScrollArea} from '@/shadcn-components/ui/sheet-scroll-area'
 import {useAfterDelayedClose} from '@/utils/dialog'
 
 // Determine if scroll position should be restored (`true`), reset (`false`) or
@@ -61,7 +61,7 @@ export function SheetLayout() {
 			{isFullscreenRoute && (
 				<>
 					{/* Immediate blur backdrop - renders before lazy component loads */}
-					<div className='fixed inset-0 z-50 bg-black/30 backdrop-blur-xl' />
+					<div className='fixed inset-0 z-50 transform-gpu bg-black/30 backdrop-blur-xl will-change-[backdrop-filter]' />
 					<Suspense fallback={null}>
 						<Outlet />
 					</Suspense>
@@ -83,6 +83,7 @@ export function SheetLayout() {
 							)
 						}
 						closeButton={<SheetCloseButton />}
+						onOpenAutoFocus={(e) => e.preventDefault()}
 						onInteractOutside={(e) => e.preventDefault()}
 						onEscapeKeyDown={(e) => e.preventDefault()}
 					>
@@ -108,5 +109,5 @@ function SheetCloseButton() {
 
 	if (showStickyHeader) return null
 
-	return <DialogCloseButton className='absolute right-2.5 top-2.5 z-50' />
+	return <DialogCloseButton className='absolute top-2.5 right-2.5 z-50' />
 }

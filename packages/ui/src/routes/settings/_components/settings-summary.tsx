@@ -1,5 +1,4 @@
 import {Fragment} from 'react'
-import {Link} from 'react-router-dom'
 
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -17,7 +16,7 @@ export function SettingsSummary() {
 
 	return (
 		<dl
-			className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+			className='grid w-max grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
 			style={{
 				// Makes columns not all the same width
 				gridTemplateColumns: 'auto auto',
@@ -32,9 +31,8 @@ export function SettingsSummary() {
 				{ipAddresses.data?.length
 					? ipAddresses.data.map((ip: string, index: number) => (
 							<Fragment key={ip}>
-								<Link to={`http://${ip}`} target='_blank'>
-									{ip}
-								</Link>
+								{/* Allow text selection for copying IP address */}
+								<span className='select-text'>{ip}</span>
 								{index < ipAddresses.data.length - 1 && ', '}
 							</Fragment>
 						))

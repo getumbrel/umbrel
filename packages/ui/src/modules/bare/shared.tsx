@@ -1,4 +1,4 @@
-import UmbrelLogo from '@/assets/umbrel-logo'
+import UmbrelLogo from '@/components/umbrel-logo'
 import {tw} from '@/utils/tw'
 
 export const bareContainerClass = tw`mt-[10vh] flex-1 flex h-full max-w-full flex-col items-center sm:w-auto`

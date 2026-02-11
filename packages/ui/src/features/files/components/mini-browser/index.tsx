@@ -1,7 +1,9 @@
 import {ChevronRight, FolderPlus, Loader2} from 'lucide-react'
 import {useEffect, useMemo, useRef, useState} from 'react'
-import {toast} from 'sonner'
 
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
 import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import {EmptyFolderIcon} from '@/features/files/assets/empty-folder-icon'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
@@ -9,11 +11,10 @@ import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -129,7 +130,7 @@ export function MiniBrowser({
 			setSelected({path, isDirectory: true})
 		},
 		onError: (error) => {
-			toast.error(t('files-error.create-folder', {message: error.message}))
+			toast.error(t('files-error.create-folder', {message: getFilesErrorMessage(error.message)}))
 			setNewFolder(null)
 		},
 	})
@@ -188,7 +189,7 @@ export function MiniBrowser({
 					</div>
 				</DialogHeader>
 
-				<div className='h-[min(60vh,480px)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-white/5 p-2'>
+				<div className='h-[min(60vh,480px)] overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2'>
 					{/* Optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog */}
 					{actions ? <div className='flex items-center justify-end'>{actions}</div> : null}
 
@@ -383,11 +384,11 @@ function Node({
 	const isFaded = (isDisabled || !isSelectable) && entry.type !== 'directory'
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn(
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
-					isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+					isDisabled && 'cursor-not-allowed opacity-60',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
 					isFaded && 'opacity-50',
 				)}
@@ -582,7 +583,7 @@ function NewFolderNode({
 	}
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn('flex min-w-0 items-center gap-2 rounded-md border border-brand bg-brand/15 p-2')}
 				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}
@@ -598,7 +599,7 @@ function NewFolderNode({
 					onBlur={handleBlur}
 					onClick={(e) => e.stopPropagation()}
 					onDoubleClick={(e) => e.stopPropagation()}
-					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-none'
+					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-hidden'
 				/>
 			</div>
 		</div>

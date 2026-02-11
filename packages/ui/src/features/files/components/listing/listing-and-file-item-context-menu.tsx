@@ -1,6 +1,19 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
+import {
+	ContextMenu,
+	ContextMenuCheckboxItem,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuShortcut,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
+	ContextMenuTrigger,
+} from '@/components/ui/context-menu'
+import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {SORT_BY_OPTIONS, SUPPORTED_ARCHIVE_EXTRACT_EXTENSIONS} from '@/features/files/constants'
 import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
@@ -19,19 +32,6 @@ import {
 } from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {
-	ContextMenu,
-	ContextMenuCheckboxItem,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuSeparator,
-	ContextMenuShortcut,
-	ContextMenuSub,
-	ContextMenuSubContent,
-	ContextMenuSubTrigger,
-	ContextMenuTrigger,
-} from '@/shadcn-components/ui/context-menu'
-import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

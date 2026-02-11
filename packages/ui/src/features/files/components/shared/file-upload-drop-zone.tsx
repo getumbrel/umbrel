@@ -2,8 +2,8 @@ import React, {CSSProperties} from 'react'
 import {useDropzone} from 'react-dropzone'
 
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {cn} from '@/lib/utils'
 import {useGlobalFiles} from '@/providers/global-files'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 interface FileUploadDropZoneProps {
@@ -36,7 +36,7 @@ export function FileUploadDropZone({children}: FileUploadDropZoneProps) {
 const DropOverlay = () => {
 	return (
 		<div className='absolute inset-0 flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-12 border-2 border-[hsl(var(--color-brand))]/30 bg-black/50'>
-			<span className='z-10 whitespace-pre-wrap text-center text-5xl font-medium tracking-tighter text-white'>
+			<span className='z-10 text-center text-5xl font-medium tracking-tighter whitespace-pre-wrap text-white'>
 				{t('files-action.drop-to-upload')}
 			</span>
 			<Ripple />

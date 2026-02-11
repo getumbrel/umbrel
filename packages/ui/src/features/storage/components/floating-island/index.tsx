@@ -1,7 +1,7 @@
 import {useEffect} from 'react'
 
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
 import {useRaidProgress, type RaidOperationType, type RaidProgress} from '@/features/storage/hooks/use-raid-progress'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
 
 import {ExpandedContent} from './expanded'

@@ -1,4 +1,4 @@
-import {AnimatePresence, motion} from 'framer-motion'
+import {AnimatePresence, motion} from 'motion/react'
 import {useMemo, useState} from 'react'
 import {TbLoader} from 'react-icons/tb'
 
@@ -8,7 +8,7 @@ import {EmbeddedFiles} from '@/features/files/components/embedded'
 import {APPS_PATH, HOME_PATH} from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemDateOnly} from '@/features/files/utils/format-filesystem-date'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import type {SupportedLanguageCode} from '@/utils/language'
 
@@ -31,7 +31,7 @@ export function SnapshotCarousel({
 	lang: string
 	wallpaperUrl?: string
 	mountedDir: string | null
-	explorerContainerRef: React.RefObject<HTMLDivElement>
+	explorerContainerRef: React.RefObject<HTMLDivElement | null>
 }) {
 	const windowStart = noCarousel ? activeIndex : Math.max(0, activeIndex - 2)
 	const windowEnd = noCarousel ? activeIndex : Math.min(backupsForTimeline.length - 1, activeIndex + 2)
@@ -126,13 +126,13 @@ export function SnapshotCarousel({
 										['en', 'de', 'es', 'fr', 'it', 'hu', 'nl', 'pt', 'tr'] as Array<SupportedLanguageCode>
 									).includes(lang as SupportedLanguageCode)
 									return (
-										<div className='absolute left-1 top-24 z-20 select-none'>
+										<div className='absolute top-24 left-1 z-20'>
 											<div className='origin-top-left translate-y-full -rotate-[88deg]'>
 												<div className='relative inline-flex items-center justify-center'>
 													<img src={stickerBgUrl} alt='' className='h-8 w-auto' />
 													<div
 														className={cn(
-															'absolute text-xs font-normal uppercase tracking-wide text-black',
+															'absolute text-xs font-normal tracking-wide text-black uppercase',
 															useStickerFont ? 'font-sticker' : 'font-sans',
 														)}
 													>
@@ -146,7 +146,7 @@ export function SnapshotCarousel({
 						</div>
 
 						{snapshot.isActive ? (
-							<div className='flex h-full items-end justify-center px-4 pb-0 pt-4 lg:px-8 lg:pt-8'>
+							<div className='flex h-full items-end justify-center px-4 pt-4 pb-0 lg:px-8 lg:pt-8'>
 								<div
 									ref={explorerContainerRef}
 									className='relative size-full max-w-[clamp(320px,92vw,1040px)] overflow-hidden rounded-t-2xl backdrop-blur-3xl backdrop-brightness-[0.3] backdrop-saturate-[1.2]'
@@ -163,7 +163,7 @@ export function SnapshotCarousel({
 									{/* Without drag-and-drop, we make sure to disable all text selection in the embedded Files feature with select-none. */}
 									<div
 										className={cn(
-											'absolute inset-0 origin-top-left scale-[var(--ft-scale)] select-none px-3 pt-4 transition-opacity duration-200 md:px-6 md:pt-6',
+											'absolute inset-0 origin-top-left scale-[var(--ft-scale)] px-3 pt-4 transition-opacity duration-200 md:px-6 md:pt-6',
 											explorerVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
 										)}
 										style={

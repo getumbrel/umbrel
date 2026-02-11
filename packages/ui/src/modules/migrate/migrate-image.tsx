@@ -3,8 +3,8 @@ import {trpcReact} from '@/trpc/trpc'
 
 // TODO: Add Umbrel Pro image variant (e.g., migrate-raspberrypi-umbrel-pro.png)
 // and update logic to show correct image based on target device (Home vs Pro)
-const FROM_RASPBERRY_PI_URL = '/figma-exports/migrate-raspberrypi-umbrel-home.png'
-const FROM_UMBREL_URL = '/figma-exports/migrate-umbrel-home-umbrel-home.png'
+const FROM_RASPBERRY_PI_URL = '/assets/migrate-raspberrypi-umbrel-home.png'
+const FROM_UMBREL_URL = '/assets/migrate-umbrel-home-umbrel-home.png'
 
 export function MigrateImage() {
 	const isMigrationFromUmbrelQ = trpcReact.migration.isMigratingFromUmbrelHome.useQuery()

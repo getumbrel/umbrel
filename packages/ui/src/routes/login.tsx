@@ -1,13 +1,12 @@
 import {useState} from 'react'
-import {flushSync} from 'react-dom'
 
+import {PasswordInput} from '@/components/ui/input'
 import {PinInput} from '@/components/ui/pin-input'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {cn} from '@/lib/utils'
 import {useAuth} from '@/modules/auth/use-auth'
-import {PasswordInput} from '@/shadcn-components/ui/input'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
-import {transitionViewIfSupported} from '@/utils/misc'
 
 type Step = 'password' | '2fa'
 
@@ -30,11 +29,7 @@ export default function Login() {
 
 	const handleSubmitPassword = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
-		transitionViewIfSupported(() => {
-			flushSync(() => {
-				loginMut.mutate({password})
-			})
-		})
+		loginMut.mutate({password})
 	}
 
 	const handleSubmit2fa = async (totpToken: string) => {
@@ -47,7 +42,7 @@ export default function Login() {
 			return (
 				<Layout title={t('login.title')} subTitle={t('login.subtitle')}>
 					<form className='flex w-full flex-col items-center gap-5 px-4 md:px-0' onSubmit={handleSubmitPassword}>
-						<div className={formGroupClass}>
+						<div className={cn(formGroupClass, 'max-w-[280px]')}>
 							<PasswordInput
 								label={t('login.password-label')}
 								autoFocus

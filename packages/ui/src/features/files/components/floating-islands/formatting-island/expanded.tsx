@@ -1,8 +1,8 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 
+import {ScrollArea} from '@/components/ui/scroll-area'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {t} from '@/utils/i18n'
 
 type FormattingDevice = {
@@ -40,7 +40,7 @@ export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
 				>
 					{/* Subtle background glow */}
 					<motion.div
-						className='absolute inset-0 rounded-full bg-gradient-to-br from-brand/30 to-transparent'
+						className='absolute inset-0 rounded-full bg-linear-to-br from-brand/30 to-transparent'
 						initial={{scale: 0.8, opacity: 0}}
 						animate={{scale: 1, opacity: 1}}
 						exit={{scale: 0.8, opacity: 0}}
@@ -148,7 +148,7 @@ export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
 								{/* Indeterminate progress bar with sliding animation */}
 								<div className='relative mt-1 h-1 overflow-hidden rounded-full bg-white/20'>
 									<motion.div
-										className='absolute left-0 top-0 h-full w-1/3 rounded-full bg-brand'
+										className='absolute top-0 left-0 h-full w-1/3 rounded-full bg-brand'
 										animate={{
 											x: ['-100%', '300%'],
 										}}

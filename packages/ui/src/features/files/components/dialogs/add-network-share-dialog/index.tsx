@@ -1,24 +1,12 @@
 import {zodResolver} from '@hookform/resolvers/zod'
-import {AnimatePresence, motion} from 'framer-motion'
 import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
 import {z} from 'zod'
 
-import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
-import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
-import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
-import {useIsMobile} from '@/hooks/use-is-mobile'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {
 	Drawer,
 	DrawerContent,
@@ -26,11 +14,16 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/shadcn-components/ui/form'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/drawer'
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form'
+import {Input, PasswordInput} from '@/components/ui/input'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
+import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
+import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
@@ -295,7 +288,7 @@ export default function AddNetworkShareDialog(props?: {
 	)
 
 	const body = (
-		<div className='flex-1 overflow-y-auto overflow-x-hidden'>
+		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
 			<AnimatePresence mode='wait'>
 				{mode === 'wizard' ? (
 					<Form {...form}>
@@ -590,7 +583,7 @@ function SelectShareStep({
 										key={s}
 										onClick={disabled ? undefined : () => onSelect(s)}
 										className={cn(
-											'flex h-[50px] cursor-pointer items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
+											'flex h-[50px] items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
 											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
 											disabled && 'cursor-not-allowed opacity-50',
 										)}

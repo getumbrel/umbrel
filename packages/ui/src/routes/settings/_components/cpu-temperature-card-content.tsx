@@ -7,7 +7,7 @@ import {
 	TemperatureUnit,
 	useTemperatureUnit,
 } from '@/hooks/use-temperature-unit'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {isCpuTooHot} from '@/utils/system'
 import {celciusToFahrenheit, temperatureWarningToColor, temperatureWarningToMessage} from '@/utils/temperature'

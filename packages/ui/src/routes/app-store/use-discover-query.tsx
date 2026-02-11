@@ -28,5 +28,10 @@ export function useDiscoverQuery() {
 		queryFn: () => fetch('https://apps.umbrel.com/api/v2/umbrelos/app-store/discover').then((res) => res.json()),
 	})
 
-	return {...discoverQ, data: discoverQ.data?.data}
+	return {
+		data: discoverQ.data?.data,
+		isLoading: discoverQ.isLoading,
+		isError: discoverQ.isError,
+		error: discoverQ.error,
+	}
 }

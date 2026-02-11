@@ -1,3 +1,4 @@
+import {toast} from '@/components/ui/toast'
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -33,7 +34,7 @@ export function useAuth() {
 			window.location.href = '/login'
 		},
 		onError() {
-			alert(t('logout-error-generic'))
+			toast.error(t('logout-error-generic'))
 		},
 	})
 

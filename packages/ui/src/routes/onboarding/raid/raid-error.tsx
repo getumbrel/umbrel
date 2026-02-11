@@ -1,7 +1,7 @@
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
+import {Button} from '@/components/ui/button'
 import {toast} from '@/components/ui/toast'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -18,7 +18,7 @@ type RaidErrorProps = {
 export function RaidError({title, instructions, image}: RaidErrorProps) {
 	const shutdownMut = trpcReact.system.shutdown.useMutation({
 		onError: (error) => {
-			toast.error(`Failed to shut down: ${error.message}`)
+			toast.error(t('shut-down.failed', {message: error.message}))
 		},
 	})
 
@@ -27,9 +27,7 @@ export function RaidError({title, instructions, image}: RaidErrorProps) {
 	}
 
 	return (
-		<div
-			className={`flex flex-1 select-none flex-col items-center justify-center ${image ? 'md:justify-between' : ''}`}
-		>
+		<div className={`flex flex-1 flex-col items-center justify-center ${image ? 'md:justify-between' : ''}`}>
 			{/* Content */}
 			<div className={`flex flex-col items-center gap-4 px-4 ${image ? 'md:pt-8' : ''}`}>
 				<TbAlertTriangleFilled className='size-[22px] text-[#F5A623]' />

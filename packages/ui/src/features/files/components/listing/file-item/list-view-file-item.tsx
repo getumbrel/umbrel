@@ -1,5 +1,6 @@
 import '@/features/files/components/listing/file-item/list-view-file-item.css'
 
+import {Progress} from '@/components/ui/progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
 import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
@@ -12,8 +13,7 @@ import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-dir
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {Progress} from '@/shadcn-components/ui/progress'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListViewFileItemProps {
@@ -37,7 +37,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 	// Mobile view
 	if (isMobile) {
 		return (
-			<div className={cn('flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
+			<div className={cn('flex items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
 				<div className='flex-shrink-0'>
 					<FileItemIcon item={item} className='h-7 w-7' />
 				</div>
@@ -49,10 +49,10 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 							<TruncatedFilename
 								filename={item.name}
 								view='list'
-								className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap pr-2 text-12'
+								className='min-w-0 overflow-hidden pr-2 text-12 text-ellipsis whitespace-nowrap'
 							/>
 						)}
-						<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-11 text-white/40'>
+						<span className='min-w-0 overflow-hidden text-11 text-ellipsis whitespace-nowrap text-white/40'>
 							{isUploading
 								? uploadingProgress === 0
 									? t('files-state.waiting')
@@ -60,7 +60,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 								: formatFilesystemDate(item.modified, languageCode)}
 						</span>
 					</div>
-					<span className='shrink-0 whitespace-nowrap pl-2 text-right text-11 text-white/40'>
+					<span className='shrink-0 pl-2 text-right text-11 whitespace-nowrap text-white/40'>
 						{item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')

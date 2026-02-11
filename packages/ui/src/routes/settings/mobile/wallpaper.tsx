@@ -1,9 +1,6 @@
 import {useRef} from 'react'
-import {useMount, useTimeout} from 'react-use'
+import {useMount} from 'react-use'
 
-import {FadeInImg} from '@/components/ui/fade-in-img'
-import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -11,10 +8,12 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/drawer'
+import {FadeInImg} from '@/components/ui/fade-in-img'
+import {cn} from '@/lib/utils'
+import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
-import {sleep} from '@/utils/misc'
 
 export function WallpaperDrawer() {
 	const title = t('wallpaper')
@@ -22,13 +21,9 @@ export function WallpaperDrawer() {
 
 	const {wallpaper, setWallpaperId} = useWallpaper()
 
-	const selectWallpaper = async (id: WallpaperId) => {
+	const selectWallpaper = (id: WallpaperId) => {
 		setWallpaperId(id)
-		await sleep(500)
-		dialogProps.onOpenChange(false)
 	}
-
-	const [isReady] = useTimeout(300)
 
 	return (
 		<Drawer {...dialogProps}>
@@ -38,22 +33,20 @@ export function WallpaperDrawer() {
 					<DrawerDescription>{t('wallpaper-description')}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerScroller>
-					{isReady() && (
-						<div className='grid grid-cols-2 gap-2.5'>
-							{wallpapers.map((w, i) => (
-								<WallpaperItem
-									key={w.id}
-									bg={`/wallpapers/generated-small/${w.id}.jpg`}
-									active={w.id === wallpaper.id}
-									onSelect={() => selectWallpaper(w.id)}
-									className='animate-in fade-in fill-mode-both'
-									style={{
-										animationDelay: `${i * 20}ms`,
-									}}
-								/>
-							))}
-						</div>
-					)}
+					<div className='grid grid-cols-2 gap-2.5'>
+						{wallpapers.map((w, i) => (
+							<WallpaperItem
+								key={w.id}
+								bg={`/assets/wallpapers/generated-small/${w.id}.jpg`}
+								active={w.id === wallpaper.id}
+								onSelect={() => selectWallpaper(w.id)}
+								className='animate-in fill-mode-both fade-in'
+								style={{
+									animationDelay: `${i * 20}ms`,
+								}}
+							/>
+						))}
+					</div>
 				</DrawerScroller>
 			</DrawerContent>
 		</Drawer>
@@ -94,7 +87,7 @@ function WallpaperItem({
 			<div
 				className={cn(
 					'absolute inset-0 rounded-10 border-4 transition-colors',
-					active ? ' border-white' : 'border-transparent',
+					active ? 'border-white' : 'border-transparent',
 				)}
 			/>
 		</button>

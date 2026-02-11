@@ -1,8 +1,21 @@
-import {AnimatePresence, motion} from 'framer-motion'
 import {ArrowLeft, ChevronDown, ChevronRight, Loader2} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import * as React from 'react'
 import {useNavigate} from 'react-router-dom'
 
+import {FadeScroller} from '@/components/fade-scroller'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {ImmersiveDialogSeparator} from '@/components/ui/immersive-dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
 import {BackupsExclusions} from '@/features/backups/components/backups-exclusions'
@@ -23,23 +36,6 @@ import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-dat
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
 import {t} from '@/utils/i18n'
 
 // MAIN COMPONENT
@@ -339,7 +335,7 @@ function RepositoryDetails({
 						}
 					}}
 					aria-label={t('back')}
-					className='inline-flex h-6 w-6 cursor-pointer items-center justify-center text-white'
+					className='inline-flex h-6 w-6 items-center justify-center text-white'
 				>
 					<ArrowLeft className='h-4 w-4' />
 				</span>
@@ -357,9 +353,14 @@ function RepositoryDetails({
 						</div>
 					</div>
 				</div>
-				<div className='flex items-center justify-between p-3 text-sm'>
-					<div className='text-white/60'>{t('backups-configure.path')}</div>
-					<div className='min-w-0 flex-1 truncate text-right'>{getDisplayRepositoryPath(repo.path)}</div>
+				<div className='flex items-center justify-between gap-3 p-3 text-sm'>
+					<div className='shrink-0 text-white/60'>{t('backups-configure.path')}</div>
+					<FadeScroller
+						direction='x'
+						className='umbrel-hide-scrollbar min-w-0 overflow-x-auto text-right whitespace-nowrap'
+					>
+						{getDisplayRepositoryPath(repo.path)}
+					</FadeScroller>
 				</div>
 				<div className='flex items-center justify-between p-3 text-sm'>
 					<div className='text-white/60'>{t('backups-configure.last-backup')}</div>
@@ -411,7 +412,7 @@ function RepositoryDetails({
 					className={`flex items-center justify-between p-3 text-sm transition-colors ${
 						isLoadingBackups || (backups?.length || 0) === 0
 							? ''
-							: `cursor-pointer hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
+							: `hover:bg-white/5 ${!showAllBackups ? 'hover:rounded-b-12' : ''}`
 					}`}
 					onClick={
 						isLoadingBackups || (backups?.length || 0) === 0 ? undefined : () => setShowAllBackups(!showAllBackups)
@@ -533,7 +534,7 @@ function BackupsList({
 							<div className='flex items-center gap-2'>
 								<div className='text-white/60'>{dateLabel}</div>
 								{isLatest && (
-									<span className='rounded-full bg-green-500/20 px-2 text-[8px] font-medium uppercase tracking-wider text-green-500'>
+									<span className='rounded-full bg-green-500/20 px-2 text-[8px] font-medium tracking-wider text-green-500 uppercase'>
 										{t('backups-restore.latest')}
 									</span>
 								)}

@@ -1,5 +1,6 @@
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 
 export function useIsExternalDns({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
 	const externalDnsQ = trpcReact.system.isExternalDns.useQuery()
@@ -11,7 +12,7 @@ export function useIsExternalDns({onSuccess}: {onSuccess?: (enabled: boolean) =>
 			onSuccess?.(enabled)
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('external-dns-error', {message: err.message}))
 		},
 	})
 

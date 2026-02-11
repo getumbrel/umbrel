@@ -2,9 +2,9 @@ import {useState} from 'react'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbInfoCircle, TbServer} from 'react-icons/tb'
 
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 import {RaidType} from '../hooks/use-storage'
@@ -76,7 +76,7 @@ export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDispla
 	return (
 		<>
 			{/* Mobile: Compact row showing both modes */}
-			<div className='flex select-none gap-2 rounded-24 bg-white/5 p-2 md:hidden'>
+			<div className='flex gap-2 rounded-24 bg-white/5 p-2 md:hidden'>
 				{modeOptions.map((option) => {
 					const isSelected = value === option.id
 					return (
@@ -99,7 +99,7 @@ export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDispla
 			</div>
 
 			{/* Desktop: Show both modes with descriptions */}
-			<div className='hidden select-none rounded-24 bg-white/5 p-2 md:block'>
+			<div className='hidden rounded-24 bg-white/5 p-2 md:block'>
 				<div className='grid grid-cols-2 gap-2'>
 					{modeOptions.map((option) => {
 						const isSelected = value === option.id
@@ -124,7 +124,7 @@ export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDispla
 										<TbInfoCircle className='size-4' />
 									</button>
 								</div>
-								<p className='text-13 font-medium leading-snug text-white/60'>{t(option.descriptionKey)}</p>
+								<p className='text-13 leading-snug font-medium text-white/60'>{t(option.descriptionKey)}</p>
 							</div>
 						)
 					})}
@@ -133,7 +133,7 @@ export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDispla
 
 			{/* Info Dialog */}
 			<Dialog open={infoDialogOption !== null} onOpenChange={(open) => !open && setInfoDialogOption(null)}>
-				<DialogContent className='select-none' onOpenAutoFocus={(e) => e.preventDefault()}>
+				<DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
 					<DialogHeader>
 						<div className='flex items-center gap-2'>
 							{infoDialogOption?.icon}

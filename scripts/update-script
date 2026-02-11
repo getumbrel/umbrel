@@ -6,27 +6,70 @@ set -euo pipefail
 # https://raw.githubusercontent.com/getumbrel/umbrel/<tag>/scripts/update-script
 
 update_url=""
+download_prefix="https://download.umbrel.com/release/1.6.1"
 
-if ! command -v mender &> /dev/null
+# This is a legacy mender install, migrate to rugix
+if command -v mender &> /dev/null
 then
-	echo umbrel-update: '{"error": "Mender not installed"}'
+	if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
+	then
+		update_url="${download_prefix}/umbrelos-pi-legacy-migration.update"
+	fi
+
+	if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
+	then
+		update_url="${download_prefix}/umbrelos-amd64-legacy-migration.update"
+	fi
+
+	# Fix /etc/mender/artifact_info not existing in some OS builds
+	if [[ ! -f /etc/mender/artifact_info ]]
+	then
+		echo "artifact_name=umbrelOS" > /etc/mender/artifact_info
+	fi
+
+	if [[ "${update_url}" == "" ]]
+	then
+		echo umbrel-update: '{"error": "Unsupported device type"}'
+		exit 1
+	fi
+
+	# Install mender update
+	mender install "${update_url}"	
+
+# This is a rugix install, update to the latest version
+elif command -v rugix-ctrl &> /dev/null
+then
+	boot_flow=$(rugix-ctrl system info 2> /dev/null| jq -r ".boot.bootFlow")
+
+	# This is a mender flashed device that has already been migrated to rugix
+	# Provide it with an update artifact that supports the legacy mender partition layout and boot flow
+	if [[ "${boot_flow}" == "mender-grub" ]]
+	then
+		update_url="${download_prefix}/umbrelos-amd64-legacy.update"
+	fi
+
+	# This a native rugix flashed amd64 device
+	if [[ "${boot_flow}" == "grub" ]]
+	then
+		update_url="${download_prefix}/umbrelos-amd64.update"
+	fi
+
+	# This is a Raspberry Pi device
+	if [[  "${boot_flow}" == "tryboot" ]]
+	then
+		update_url="${download_prefix}/umbrelos-pi.update"
+	fi
+
+	if [[ "${update_url}" == "" ]]
+	then
+		echo umbrel-update: '{"error": "Unsupported boot flow"}'
+		exit 1
+	fi
+
+	rugix-ctrl update install --reboot deferred "${update_url}"
+else
+	echo umbrel-update: '{"error": "No supported update mechanism found"}'
 	exit 1
 fi
 
-if cat /var/lib/mender/device_type | grep --quiet 'device_type=raspberrypi'
-then
-	update_url="https://download.umbrel.com/release/1.5.0/umbrelos-pi.update"
-fi
 
-if cat /var/lib/mender/device_type | grep --silent 'device_type=amd64'
-then
-	update_url="https://download.umbrel.com/release/1.5.0/umbrelos-amd64.update"
-fi
-
-# Fix /etc/mender/artifact_info not existing in some OS builds
-if [[ ! -f /etc/mender/artifact_info ]]
-then
-	echo "artifact_name=umbrelOS" > /etc/mender/artifact_info
-fi
-
-mender install "${update_url}"

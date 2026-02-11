@@ -2,12 +2,6 @@ import {indexBy} from 'remeda'
 
 import {UserApp} from '@/trpc/trpc'
 
-export function fixmeAlert() {
-	alert('fixme')
-}
-
-export const fixmeHandler = () => fixmeAlert()
-
 export function firstNameFromFullName(name: string) {
 	return name.split(' ')[0]
 }
@@ -69,14 +63,6 @@ export function preloadImage(url: string): Promise<void> {
 		img.addEventListener('load', handleLoad)
 		img.src = url
 	})
-}
-
-export function transitionViewIfSupported(cb: () => void) {
-	if (document.startViewTransition) {
-		document.startViewTransition(cb)
-	} else {
-		cb()
-	}
 }
 
 // ---

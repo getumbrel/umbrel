@@ -22,9 +22,7 @@ export function ImmersiveDialogProvider({children}: {children: ReactNode}) {
 	const increment = useCallback(() => setCount((c) => c + 1), [])
 	const decrement = useCallback(() => setCount((c) => Math.max(0, c - 1)), [])
 	const isOpen = count > 0
-	return (
-		<ImmersiveDialogContext.Provider value={{isOpen, increment, decrement}}>{children}</ImmersiveDialogContext.Provider>
-	)
+	return <ImmersiveDialogContext value={{isOpen, increment, decrement}}>{children}</ImmersiveDialogContext>
 }
 
 export function useImmersiveDialogOpen() {

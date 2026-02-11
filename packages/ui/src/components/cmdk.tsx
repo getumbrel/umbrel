@@ -1,14 +1,15 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useRef, useState} from 'react'
+import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useNavigate} from 'react-router-dom'
-import {useKey} from 'react-use'
 import {range} from 'remeda'
 
 // Pluggable search providers rendered inside the command palette
 // Currently only /features/files uses this
 import {cmdkSearchProviders} from '@/components/cmdk-providers'
+import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/components/ui/command'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {Separator} from '@/components/ui/separator'
 import {LOADING_DASH} from '@/constants'
 import {
 	APPS_PATH as FILES_APPS_PATH,
@@ -19,11 +20,9 @@ import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
-import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {AppState, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -41,22 +40,26 @@ export function useCmdkOpen() {
 
 	if (!ctx) throw new Error('useCmdkOpen must be used within a CommandRoot')
 
-	useKey(
-		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
-		(e) => {
-			// Prevent default behavior (in Windows Chrome where it opens the search bar)
-			e.preventDefault()
-			ctx.setOpen((open) => !open)
-		},
-	)
-
 	return ctx
 }
 
 export function CmdkProvider({children}: {children: React.ReactNode}) {
 	const [open, setOpen] = useState(false)
 
-	return <CmdkOpenContext.Provider value={{open, setOpen}}>{children}</CmdkOpenContext.Provider>
+	// Register Cmd+K listener once here, not in useCmdkOpen (which is called
+	// by multiple components and would register duplicate listeners).
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault()
+				setOpen((open) => !open)
+			}
+		}
+		document.addEventListener('keydown', handler)
+		return () => document.removeEventListener('keydown', handler)
+	}, [])
+
+	return <CmdkOpenContext value={{open, setOpen}}>{children}</CmdkOpenContext>
 }
 
 export function CmdkMenu() {
@@ -303,9 +306,6 @@ function CmdkContent() {
 				<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
 					Install a bunch of random apps
 				</SearchItem>
-				<SearchItem value='Stories' onSelect={() => navigate('/stories')}>
-					Stories
-				</SearchItem>
 			</DebugOnlyBare>
 		</CommandList>
 	)
@@ -329,7 +329,7 @@ function FrequentApps({onLaunchApp}: {onLaunchApp: () => void}) {
 	return (
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 ml-2 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>
+				<h3 className='mb-5 ml-2 hidden text-15 leading-tight font-semibold -tracking-2 md:block'>
 					{t('cmdk.frequent-apps')}
 				</h3>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
@@ -387,7 +387,7 @@ function FrequentApp({
 	const isMobile = useIsMobile()
 	return (
 		<button
-			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
+			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-hidden transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
 			onClick={() => {
 				onLaunch?.()
 				launchApp(appId)

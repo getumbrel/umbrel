@@ -1,5 +1,5 @@
-import {AnimatePresence, motion} from 'framer-motion'
 import {ChevronDown, ChevronUp} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import {useState} from 'react'
 import {Trans} from 'react-i18next/TransWithoutContext'
 

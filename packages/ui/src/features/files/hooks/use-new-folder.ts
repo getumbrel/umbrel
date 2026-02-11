@@ -1,10 +1,11 @@
 import {useEffect, useRef} from 'react'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -38,7 +39,7 @@ export function useNewFolder() {
 				const name = path.split('/').pop() || ''
 				// Best-effort check for duplicate name
 				if (!isNameAvailable(name, listingRef.current.items)) {
-					throw new Error('A folder with this name already exists')
+					throw new Error(t('files-error.folder-already-exists'))
 				}
 			}
 		},
@@ -61,7 +62,7 @@ export function useNewFolder() {
 			])
 		},
 		onError: (error) => {
-			toast.error(t('files-error.create-folder', {message: error.message}))
+			toast.error(t('files-error.create-folder', {message: getFilesErrorMessage(error.message)}))
 		},
 		onSettled: () => {
 			utils.files.list.invalidate()

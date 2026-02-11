@@ -11,12 +11,14 @@ import {Listing} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 export function SearchListing() {
 	const clearSelectedItems = useFilesStore((state) => state.clearSelectedItems)
 
 	const setActionsBarConfig = useSetActionsBarConfig()
+	const userName = trpcReact.user.get.useQuery().data?.name
 
 	// read the current search term from the URL
 	const [params] = useSearchParams()
@@ -30,10 +32,10 @@ export function SearchListing() {
 
 	useEffect(() => {
 		setActionsBarConfig({
-			hidePath: true,
+			pathLabel: t('files-search.searching-label', {name: userName ?? 'Umbrel'}),
 			hideSearch: false,
 		})
-	}, [])
+	}, [userName])
 
 	// query the backend – the hook internally short-circuits when provided an
 	// empty string, so clearing the search box stops the requests

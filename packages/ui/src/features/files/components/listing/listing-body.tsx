@@ -1,16 +1,16 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 
+import {Table, TableCell, TableHeader, TableRow} from '@/components/ui/table'
 import {VirtualizedList} from '@/features/files/components/listing/virtualized-list'
 import {SORT_BY_OPTIONS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import type {FileSystemItem} from '@/features/files/types'
-import {Table, TableCell, TableHeader, TableRow} from '@/shadcn-components/ui/table'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListingBodyProps {
 	children?: React.ReactNode
-	scrollAreaRef: React.RefObject<HTMLDivElement> // used by marquee selection for scrolling
+	scrollAreaRef: React.RefObject<HTMLDivElement | null> // used by marquee selection for scrolling
 	items: FileSystemItem[]
 	hasMore: boolean
 	isLoading: boolean
@@ -43,13 +43,13 @@ export const ListingBody = ({scrollAreaRef, items, hasMore, isLoading, onLoadMor
 					<Table>
 						<TableHeader>
 							<TableRow className='cursor-default border-none'>
-								<TableCell colSpan={5} className='py-0 pl-0 pr-0'>
+								<TableCell colSpan={5} className='py-0 pr-0 pl-0'>
 									<div className='flex'>
 										{SORT_BY_OPTIONS.map((option) => (
 											<button
 												key={option.sortBy}
 												className={cn(
-													'flex items-center justify-between overflow-hidden text-ellipsis whitespace-nowrap p-2.5 text-12 text-white/70',
+													'flex items-center justify-between overflow-hidden p-2.5 text-12 text-ellipsis whitespace-nowrap text-white/70',
 													option.sortBy === 'name' && 'flex-[5]',
 													option.sortBy === 'modified' && 'flex-[2]',
 													option.sortBy === 'size' && 'flex-[1]',

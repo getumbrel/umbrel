@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useEffect, useState} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
 
@@ -7,7 +7,7 @@ import {ChevronRightIcon} from '@/features/files/assets/chevron-right'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 /**
  * File browser navigation controls that track visited folder paths.

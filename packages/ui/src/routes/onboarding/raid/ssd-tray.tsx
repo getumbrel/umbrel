@@ -31,10 +31,10 @@ type SsdTrayProps = {
  */
 export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps) {
 	return (
-		<div className='relative w-full select-none' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
+		<div className='relative w-full' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
 			{/* Layer 1: Empty tray */}
 			<img
-				src='/onboarding/ssd-tray.webp'
+				src='/assets/onboarding/ssd-tray.webp'
 				alt={t('onboarding.raid.ssd-tray-alt')}
 				draggable={false}
 				className='absolute inset-0 size-full'
@@ -67,7 +67,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 					<div key={i}>
 						{/* Layer 3: SSD image */}
 						<img
-							src='/onboarding/ssd.webp'
+							src='/assets/onboarding/ssd.webp'
 							alt={t('onboarding.raid.ssd-label', {number: i + 1})}
 							draggable={false}
 							className='absolute'
@@ -147,7 +147,7 @@ export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps)
 							<button
 								type='button'
 								onClick={() => onHealthClick?.(i)}
-								className='relative flex cursor-pointer items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] transition-colors hover:bg-white/[0.12]'
+								className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] transition-colors hover:bg-white/[0.12]'
 								style={{
 									paddingLeft: 'clamp(8px, 3cqi, 14px)',
 									paddingRight: 'clamp(8px, 3cqi, 14px)',

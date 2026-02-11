@@ -1,6 +1,6 @@
 export function NoForgotPasswordMessage() {
 	return (
-		<p className='text-12 font-normal leading-tight -tracking-2 text-white/40'>
+		<p className='text-12 leading-tight font-normal -tracking-2 text-white/40'>
 			There is no ‘Forgot password’ option, so we recommend you write down your password physically somewhere, in case
 			you forget.
 			{/* Add this back when we do password strength checking */}

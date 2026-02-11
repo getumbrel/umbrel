@@ -2,8 +2,8 @@ import {useState} from 'react'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 import {tw} from '@/utils/tw'
@@ -74,7 +74,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogScrollableContent showClose>
-				<div className='select-none space-y-5 px-5 py-6'>
+				<div className='space-y-5 px-5 py-6'>
 					<DialogHeader>
 						<div className='flex items-center gap-2'>
 							<TbActivityHeartbeat className='size-5' />
@@ -90,10 +90,10 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 							WebkitMaskImage: 'linear-gradient(to right, black 60%, transparent 100%)',
 						}}
 					>
-						<img src='/onboarding/ssd-info.webp' alt='SSD' draggable={false} className='ml-auto w-[95%]' />
+						<img src='/assets/onboarding/ssd-info.webp' alt='SSD' draggable={false} className='ml-auto w-[95%]' />
 						<div className='absolute flex flex-col' style={{left: '20%', top: '50%', transform: 'translateY(-50%)'}}>
 							<span
-								className='font-bold leading-tight'
+								className='leading-tight font-bold'
 								style={{
 									fontSize: 'clamp(20px, 5vw, 30px)',
 									textShadow: '0 0 8px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.15)',
@@ -158,21 +158,21 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 
 					{/* General Section */}
 					<div className='space-y-2'>
-						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+						<span className='text-xs font-medium tracking-wider text-white/40 uppercase'>
 							{t('storage-manager.health.general')}
 						</span>
 						<div className={listClass}>
 							<div className={listItemClass}>
 								<span className='shrink-0'>{t('storage-manager.health.model-and-capacity')}</span>
 								<FadeScroller direction='x' className='umbrel-hide-scrollbar min-w-0 overflow-x-auto font-normal'>
-									<span className='select-all whitespace-nowrap'>{device.model}</span>
+									<span className='whitespace-nowrap select-all'>{device.model}</span>
 									<span className='whitespace-nowrap'> · {formatStorageSize(device.size)}</span>
 								</FadeScroller>
 							</div>
 							<div className={listItemClass}>
 								<span className='shrink-0'>{t('storage-manager.health.serial-number')}</span>
 								<FadeScroller direction='x' className='umbrel-hide-scrollbar min-w-0 overflow-x-auto font-normal'>
-									<span className='select-all whitespace-nowrap'>{device.serial}</span>
+									<span className='whitespace-nowrap select-all'>{device.serial}</span>
 								</FadeScroller>
 							</div>
 						</div>
@@ -180,7 +180,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 
 					{/* Wear Section */}
 					<div className='space-y-2'>
-						<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+						<span className='text-xs font-medium tracking-wider text-white/40 uppercase'>
 							{t('storage-manager.health.wear')}
 						</span>
 						<div className={listClass}>
@@ -234,7 +234,7 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 					{/* Temperature Section */}
 					{device.temperature !== undefined && (
 						<div className='space-y-2'>
-							<span className='text-xs font-medium uppercase tracking-wider text-white/40'>
+							<span className='text-xs font-medium tracking-wider text-white/40 uppercase'>
 								{t('storage-manager.health.temperature')}
 							</span>
 							<div className={listClass}>

@@ -19,12 +19,12 @@ const deviceConfig: Partial<
 	>
 > = {
 	'umbrel-pro': {
-		image: '/onboarding/pro-front.webp',
+		image: '/assets/onboarding/pro-front.webp',
 		imageClassName: 'w-64 md:w-96',
 		name: 'Umbrel Pro',
 	},
 	'umbrel-home': {
-		image: '/onboarding/home-front.webp',
+		image: '/assets/onboarding/home-front.webp',
 		imageClassName: 'w-48 md:w-64',
 		name: 'Umbrel Home',
 	},

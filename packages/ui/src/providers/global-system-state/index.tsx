@@ -6,7 +6,7 @@ import {usePreviousDistinct} from 'react-use'
 import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
 import {toast} from '@/components/ui/toast'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
 import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
@@ -40,7 +40,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)
 	const [restoreFailure, setRestoreFailure] = useState(false)
-	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = useLocalStorage2('should-logout-on-running', false)
+	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = usePrefixedLocalStorage('should-logout-on-running', false)
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
 	const [routerError, setRouterError] = useState<RouterError | null>(null)
@@ -65,7 +65,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		if (error?.data?.code === 'UNAUTHORIZED') {
 			setRouterError(error)
 		} else {
-			toast.error(error.message)
+			toast.error(t('factory-reset-failed', {message: error.message}))
 		}
 		setTriggered(false)
 
@@ -203,7 +203,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// Debug info can be activated by adding the local storage key 'debug' with a value of `true`
 	const debugInfo = (
 		<DebugOnlyBare>
-			<div className='fixed bottom-0 right-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
+			<div className='fixed right-0 bottom-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
 				<JSONTree
 					data={{
 						status,
@@ -238,12 +238,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider
+				<GlobalSystemStateContext
 					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
 				>
 					{children}
 					{debugInfo}
-				</GlobalSystemStateContext.Provider>
+				</GlobalSystemStateContext>
 			)
 		}
 		case 'restoring': {

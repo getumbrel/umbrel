@@ -1,9 +1,9 @@
 import {ErrorBoundary} from 'react-error-boundary'
 import {useParams} from 'react-router-dom'
 
+import {InstallButton} from '@/components/install-button'
 import {InstallButtonConnected} from '@/components/install-button-connected'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Loading} from '@/components/ui/loading'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {appPageWrapperClass} from '@/modules/app-store/app-page/shared'
@@ -29,7 +29,13 @@ export default function CommunityAppPage() {
 			<TopHeader
 				app={app}
 				childrenRight={
-					<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+					<ErrorBoundary
+						fallback={
+							<div className='pointer-events-none opacity-50'>
+								<InstallButton state='not-installed' />
+							</div>
+						}
+					>
 						<InstallButtonConnected app={app} />
 					</ErrorBoundary>
 				}

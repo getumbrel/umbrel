@@ -4,6 +4,16 @@ import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from '
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {Button} from '@/components/ui/button'
+import {
 	ImmersiveDialog,
 	ImmersiveDialogBody,
 	ImmersiveDialogIconMessage,
@@ -14,16 +24,6 @@ import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -270,7 +270,7 @@ export function MigrationAssistantReady({onNext, deviceName}: {onNext: () => voi
 						// -mr-2 to adjust the width so the alert doesn't wrap
 						className='-mr-2'
 						description={
-							<div className='-my-1 flex items-center items-baseline gap-1'>
+							<div className='-my-1 flex items-baseline items-center gap-1'>
 								<RiAlertFill className='h-3 w-3 shrink-0 translate-y-[1.5px]' />
 								{t('migration-assistant.prep.callout', {deviceName})}
 							</div>

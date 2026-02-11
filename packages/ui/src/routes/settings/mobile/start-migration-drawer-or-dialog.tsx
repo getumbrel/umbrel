@@ -1,19 +1,12 @@
 import {useState} from 'react'
 
+import {Button} from '@/components/ui/button'
+import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import MigrationAssistantDialog from '@/routes/settings/migration-assistant'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
 import {t} from '@/utils/i18n'
 
 export function StartMigrationDrawerOrDialog() {

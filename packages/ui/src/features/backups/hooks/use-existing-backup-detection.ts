@@ -51,7 +51,7 @@ export function useExistingBackupDetection(folder: string | undefined, repositor
 				await utils.files.list.fetch({path: repoPath, limit: 1, sortBy: 'name', sortOrder: 'ascending'})
 				if (!cancelled) setStatus('exists-not-configured')
 				return
-			} catch (error) {
+			} catch {
 				// On any error (e.g., permission or transient listing error), fall back
 				// to a neutral state rather than blocking the flow
 				if (!cancelled) {

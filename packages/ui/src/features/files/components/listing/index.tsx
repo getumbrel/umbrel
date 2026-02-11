@@ -11,9 +11,11 @@ import {FileUploadDropZone} from '@/features/files/components/shared/file-upload
 import {useFilesKeyboardShortcuts} from '@/features/files/hooks/use-files-keyboard-shortcuts'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 
@@ -49,7 +51,7 @@ function ListingContent({
 	truncatedAt?: number
 	hasMore: boolean
 	onLoadMore: () => Promise<boolean>
-	scrollAreaRef: React.RefObject<HTMLDivElement>
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	isLoading: boolean
 	error: unknown
 	isEmpty: boolean
@@ -76,7 +78,7 @@ function ListingContent({
 
 			{/* Display total item count (or truncated count) when no items are selected */}
 			{totalItems && !selectedItems.length ? (
-				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
 					{truncatedAt
 						? t('files-listing.item-count-truncated', {
 								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false}),
@@ -90,7 +92,7 @@ function ListingContent({
 
 			{/* Display selected count vs total (or truncated count) when items are selected */}
 			{selectedItems.length > 0 && (
-				<span className='absolute bottom-2 right-4 text-12 font-semibold text-white/60'>
+				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
 					{truncatedAt
 						? t('files-listing.selected-count-truncated', {
 								selectedCount: selectedItems.length,
@@ -124,8 +126,9 @@ export function Listing({
 	const scrollAreaRef = useRef<HTMLDivElement>(null)
 	const {currentPath} = useNavigate()
 	const isReadOnly = useIsFilesReadOnly()
+	const {preferences} = usePreferences()
 
-	useFilesKeyboardShortcuts({items: selectableItems})
+	useFilesKeyboardShortcuts({items: selectableItems, scrollAreaRef, view: preferences?.view ?? 'list'})
 
 	const isEmpty = !isLoading && items.length === 0
 
@@ -168,7 +171,7 @@ export function Listing({
 					<Droppable
 						id={`files-listing-${currentPath}`}
 						path={currentPath}
-						className='relative flex h-full flex-col outline-none'
+						className='relative flex h-full flex-col outline-hidden'
 						dropOverClassName='bg-transparent'
 					>
 						{contentWithContextMenu}
@@ -184,19 +187,23 @@ export function Listing({
 function ErrorView({error}: {error: unknown}) {
 	const message = error instanceof Error ? error.message : t('files-listing.error')
 
+	const isNotFound =
+		message.startsWith('ENOENT') ||
+		message.startsWith('Cannot map') ||
+		message.includes('[does-not-exist]') ||
+		message.includes('[source-not-exists]') ||
+		message.includes('[invalid-path]') ||
+		message.startsWith('EIO')
+
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
-			{/* TODO: use error codes once the backend supports them */}
-			{message.startsWith('ENOENT') ||
-			message.startsWith('Cannot map') ||
-			message.startsWith('[does-not-exist]') ||
-			message.startsWith('EIO') ? (
+			{isNotFound ? (
 				<div className='flex flex-col items-center gap-2'>
 					<FolderX className='h-6 w-6 opacity-50' />
 					<span className='text-12 text-white/40'>{t('files-listing.no-such-file')}</span>
 				</div>
 			) : (
-				<span className='text-12 text-white/40'>{message}</span>
+				<span className='text-12 text-white/40'>{getFilesErrorMessage(message)}</span>
 			)}
 		</div>
 	)
@@ -205,7 +212,7 @@ function ErrorView({error}: {error: unknown}) {
 function LoadingView() {
 	return (
 		<div className='flex h-full items-center justify-center p-4'>
-			<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-sm' aria-label={t('files-listing.loading')} />
+			<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' aria-label={t('files-listing.loading')} />
 		</div>
 	)
 }

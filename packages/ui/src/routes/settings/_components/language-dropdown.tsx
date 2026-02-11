@@ -1,15 +1,15 @@
 import {Globe} from 'lucide-react'
 import {useState} from 'react'
 
-import {ChevronDown} from '@/assets/chevron-down'
-import {IconButton} from '@/components/ui/icon-button'
-import {useLanguage} from '@/hooks/use-language'
+import {ChevronDown} from '@/components/chevron-down'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
+} from '@/components/ui/dropdown-menu'
+import {IconButton} from '@/components/ui/icon-button'
+import {useLanguage} from '@/hooks/use-language'
 import {languages, SupportedLanguageCode} from '@/utils/language'
 
 export function LanguageDropdown() {

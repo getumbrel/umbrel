@@ -1,20 +1,19 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {useState} from 'react'
 import {FaRegPlayCircle} from 'react-icons/fa'
 import {FaRegCirclePause} from 'react-icons/fa6'
 import {Link, useNavigate} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {contextMenuClasses} from '@/components/ui/shared/menu'
 import {useAppInstall} from '@/hooks/use-app-install'
 import {useLaunchApp} from '@/hooks/use-launch-app'
+import {cn} from '@/lib/utils'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
-import {getAppStoreAppFromInstalledApp} from '@/modules/app-store/utils'
 import {useUserApp} from '@/providers/apps'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
-import {contextMenuClasses} from '@/shadcn-components/ui/shared/menu'
-import {cn} from '@/shadcn-lib/utils'
-import {AppStateOrLoading, progressBarStates, progressStates} from '@/trpc/trpc'
+import {AppStateOrLoading, progressBarStates, progressStates, trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
@@ -22,7 +21,7 @@ import {assertUnreachable} from '@/utils/misc'
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
 import {UninstallTheseFirstDialog} from './uninstall-these-first-dialog'
 
-export const APP_ICON_PLACEHOLDER_SRC = '/figma-exports/app-icon-placeholder.svg'
+export const APP_ICON_PLACEHOLDER_SRC = '/assets/app-icon-placeholder.svg'
 
 export function AppIcon({
 	label,
@@ -46,7 +45,7 @@ export function AppIcon({
 		<motion.button
 			onClick={onClick}
 			className={cn(
-				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-none',
+				'group flex h-[var(--app-h)] w-[var(--app-w)] flex-col items-center gap-2.5 py-3 focus:outline-hidden',
 			)}
 			layout
 			initial={{
@@ -69,7 +68,7 @@ export function AppIcon({
 		>
 			<div
 				className={cn(
-					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
+					'relative aspect-square w-12 shrink-0 overflow-hidden rounded-10 bg-white/10 bg-cover bg-center ring-white/25 backdrop-blur-xs transition-all duration-300 group-hover:scale-110 group-hover:ring-6 group-focus-visible:ring-6 group-active:scale-95 group-data-[state=open]:ring-6 md:w-16 md:rounded-15',
 				)}
 			>
 				{appIconSrc && (
@@ -90,7 +89,7 @@ export function AppIcon({
 						<div className='relative h-1 w-[75%] overflow-hidden rounded-full bg-white/40'>
 							{arrayIncludes(progressBarStates, state) ? (
 								<div
-									className='absolute inset-0 w-0 rounded-full bg-white/90 transition-[width] delay-200 duration-700 animate-in slide-in-from-left-full fill-mode-both'
+									className='absolute inset-0 w-0 animate-in rounded-full bg-white/90 transition-[width] delay-200 duration-700 fill-mode-both slide-in-from-left-full'
 									style={{width: `${progress}%`}}
 								/>
 							) : (
@@ -254,6 +253,8 @@ export function AppIconConnected({appId}: {appId: string}) {
 					</ContextMenuItem>
 
 					{/* Troubleshoot */}
+					{/* TODO: Navigating to /settings/troubleshoot forces the Settings sheet to render first,
+					   causing a slow two-step load. Consider making troubleshoot a standalone route/dialog. */}
 					<ContextMenuItem
 						disabled={troubleshootDisabled}
 						onSelect={() => navigate(`/settings/troubleshoot/app/${appId}`)}
@@ -298,13 +299,23 @@ export function AppIconConnected({appId}: {appId: string}) {
 
 function ContextMenuItemLinkToAppStore({appId}: {appId: string}) {
 	const navigate = useNavigate()
+	const utils = trpcReact.useUtils()
 	return (
 		<ContextMenuItem asChild>
 			<button
 				// `w-full` because it doesn't fill the context menu otherwise
 				className='w-full'
 				onClick={async () => {
-					const appStoreApp = await getAppStoreAppFromInstalledApp(appId)
+					const installedApps = await utils.apps.list.fetch()
+					const installedApp = installedApps.find((app) => app.id === appId)
+					if (!installedApp) return
+
+					const availableApps = await utils.appStore.registry.fetch()
+					const availableAppsFlat = availableApps.flatMap((group) =>
+						group.apps.map((app) => ({...app, registryId: group.meta.id})),
+					)
+					const appStoreApp = availableAppsFlat.find((app) => app.id === installedApp.id)
+
 					const registryId = appStoreApp?.registryId ?? UMBREL_APP_STORE_ID
 					if (registryId !== UMBREL_APP_STORE_ID) {
 						navigate(`/community-app-store/${registryId}/${appId}`)

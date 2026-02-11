@@ -52,9 +52,9 @@ export const ConfirmationProvider: React.FC<ConfirmationProviderProps> = ({child
 	}
 
 	return (
-		<ConfirmationContext.Provider value={contextValue}>
+		<ConfirmationContext value={contextValue}>
 			{children}
 			<GenericConfirmationDialog isOpen={isOpen} options={options} onResolve={handleResolve} onReject={handleReject} />
-		</ConfirmationContext.Provider>
+		</ConfirmationContext>
 	)
 }

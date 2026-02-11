@@ -51,7 +51,6 @@ export default function OnboardingStart() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
 			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}
@@ -65,7 +64,7 @@ export default function OnboardingStart() {
 				</>
 			)}
 
-			<Link to='/onboarding/create-account' unstable_viewTransition ref={continueLinkRef} {...primaryButtonProps}>
+			<Link to='/onboarding/create-account' viewTransition ref={continueLinkRef} {...primaryButtonProps}>
 				{t('onboarding.start.continue')}
 			</Link>
 		</Layout>

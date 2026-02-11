@@ -20,7 +20,7 @@ export function WifiListItemContent({
 		<div className='flex w-full items-center gap-2.5'>
 			<WifiIcon2Circled bars={signalToBars(network.signal)} isConnected={status === 'connected'} />
 			<div className='flex flex-1 items-center gap-2 truncate'>
-				<h3 className='truncate text-15 font-medium leading-none -tracking-2'>{network.ssid}</h3>
+				<h3 className='truncate text-15 leading-none font-medium -tracking-2'>{network.ssid}</h3>
 				{network.authenticated && <LockIcon />}
 			</div>
 			{status === 'loading' && <Spinner />}

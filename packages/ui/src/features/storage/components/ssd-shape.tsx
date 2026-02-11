@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react'
 // TODO: Consider changing TbBattery1 (low life) and TbHeartBroken (unhealthy) icons to something more intuitive
 import {TbActivityHeartbeat, TbAlertTriangleFilled, TbBattery1, TbFlame, TbHeartBroken} from 'react-icons/tb'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 
@@ -118,10 +118,7 @@ export function SsdShape({
 	const gradientId = `ssd-gradient-${slotNumber}`
 
 	return (
-		<div
-			className={cn('relative shrink-0 select-none', isReadyToAdd && 'animate-pulse')}
-			style={{width, height: totalHeight}}
-		>
+		<div className={cn('relative shrink-0', isReadyToAdd && 'animate-pulse')} style={{width, height: totalHeight}}>
 			{/* SVG outline shape */}
 			<svg
 				className='absolute inset-0'
@@ -241,7 +238,7 @@ export function SsdShape({
 				{/* Warning indicators + Health pulse pill grouped together at bottom */}
 				<div className='flex flex-col items-center gap-3'>
 					{hasWastedSpace && (
-						<span className='text-center text-[13px] font-medium leading-tight text-white/50'>
+						<span className='text-center text-[13px] leading-tight font-medium text-white/50'>
 							{t('storage-manager.wasted-size', {size: formatStorageSize(wastedBytes)})}
 						</span>
 					)}
@@ -327,7 +324,7 @@ export function SsdShape({
 					<button
 						type='button'
 						onClick={onHealthClick}
-						className='relative flex cursor-pointer items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-4 py-1 transition-colors hover:bg-white/[0.12]'
+						className='relative flex items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.08] px-4 py-1 transition-colors hover:bg-white/[0.12]'
 					>
 						<TbActivityHeartbeat className='size-4 text-white' />
 						{/* Warning dot - upper right of pill */}

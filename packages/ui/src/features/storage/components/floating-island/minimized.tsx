@@ -10,7 +10,7 @@ export function MinimizedContent({operation}: {operation: RaidProgress}) {
 	const isActive = operation.state !== 'finished' && operation.state !== 'complete' && operation.state !== 'canceled'
 
 	return (
-		<div className='flex size-full select-none items-center gap-2 px-2'>
+		<div className='flex size-full items-center gap-2 px-2'>
 			<div className='relative flex size-5 items-center justify-center'>
 				<DataStreamIconMini size={20} isActive={isActive} />
 			</div>

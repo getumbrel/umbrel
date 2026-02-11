@@ -4,18 +4,18 @@ import {useParams} from 'react-router-dom'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
+import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/components/ui/drawer'
 import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
+import {Switch} from '@/components/ui/switch'
 import {useIsExternalDns} from '@/hooks/use-is-externaldns'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
+import {cn} from '@/lib/utils'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {Switch} from '@/shadcn-components/ui/switch'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -208,7 +208,7 @@ function useIsBetaChannel() {
 function CardText({title, description, trailingIcon}: {title: string; description: string; trailingIcon?: IconTypes}) {
 	return (
 		<div className='flex-1 space-y-1'>
-			<h3 className='text-14 font-medium leading-tight'>
+			<h3 className='text-14 leading-tight font-medium'>
 				{title}
 				{trailingIcon && <Icon component={trailingIcon} className='ml-2 inline-block opacity-50' />}
 			</h3>

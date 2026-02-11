@@ -4,6 +4,8 @@ import {Trans} from 'react-i18next/TransWithoutContext'
 import {Link} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Button} from '@/components/ui/button'
+import {Input, PasswordInput} from '@/components/ui/input'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
 import {
 	useConnectToRepository,
@@ -15,15 +17,14 @@ import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/back
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
-import {Button} from '@/shadcn-components/ui/button'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 
 // Routes to Umbrel Pro instructions or regular restore flow
@@ -36,7 +37,6 @@ export default function BackupsRestoreOnboarding() {
 		return (
 			<Layout
 				title={t('backups-restore-header')}
-				transitionTitle={false}
 				subTitle=''
 				footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 			>
@@ -72,12 +72,11 @@ function UmbrelProRestoreInstructions() {
 	return (
 		<Layout
 			title={t('backups-restore-header')}
-			transitionTitle={false}
 			subTitle={t('backups-restore-pro.subtitle')}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
-			<div className='mx-auto mb-6 mt-2 w-full max-w-[560px]'>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[560px]'>
 				{/* Steps */}
 				<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 					{steps.map((text, i) => (
@@ -94,7 +93,7 @@ function UmbrelProRestoreInstructions() {
 
 				{/* Action button */}
 				<div className='flex justify-center pt-6'>
-					<Link to='/onboarding/create-account' unstable_viewTransition {...primaryButtonProps}>
+					<Link to='/onboarding/create-account' viewTransition {...primaryButtonProps}>
 						{t('onboarding.start.continue')}
 					</Link>
 				</div>
@@ -126,6 +125,7 @@ function RegularRestoreFlow() {
 	// Backups hooks
 	const {connectToRepository, isPending: isConnecting} = useConnectToRepository()
 	const {restoreBackup, isPending: isRestoring} = useRestoreBackup()
+	const {isExternalStorageSupported} = useExternalStorage()
 
 	// Fetch backups when repository connected
 	const {data: backupsUnsorted, isLoading: isLoadingBackups} = useRepositoryBackups(connectedRepositoryId, {
@@ -191,12 +191,11 @@ function RegularRestoreFlow() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={stepSubtitle}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
-			<div className='mx-auto mb-6 mt-2 w-full max-w-[720px]'>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[720px]'>
 				{step === 0 && (
 					<div className='space-y-4'>
 						<div className={formGroupClass + ' mx-auto w-full max-w-[560px] text-center'}>
@@ -205,7 +204,7 @@ function RegularRestoreFlow() {
 									type='text'
 									value={repositoryPath}
 									readOnly
-									className={(repositoryPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
+									className='pr-28'
 									title={repositoryPath || ''}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}
@@ -221,6 +220,7 @@ function RegularRestoreFlow() {
 										setBrowserRoot(root)
 										setBrowserOpen(true)
 									}}
+									isExternalStorageSupported={isExternalStorageSupported}
 								/>
 							</div>
 						</div>
@@ -301,7 +301,7 @@ function RegularRestoreFlow() {
 					{step > Step.ChooseLocation && (
 						<button
 							type='button'
-							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-none'
+							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-hidden'
 							onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))}
 						>
 							<ChevronLeft className='size-5' />
@@ -415,7 +415,7 @@ function BackupSnapshot({
 					'flex w-full items-center justify-between rounded-8 border px-4 py-3',
 					selected ? 'border-brand bg-brand/15' : 'border-white/10',
 					!noHover && !selected ? 'hover:bg-white/5' : '',
-					onClick ? 'cursor-pointer' : '',
+					'',
 				].join(' ')}
 				onClick={onClick}
 				title={backup.id}
@@ -424,12 +424,12 @@ function BackupSnapshot({
 					<div className='truncate text-sm'>{label}</div>
 				</div>
 				{isLatest && (
-					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{t('backups-restore.latest')}
 					</div>
 				)}
 				{sizeTxt && (
-					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{sizeTxt}
 					</div>
 				)}

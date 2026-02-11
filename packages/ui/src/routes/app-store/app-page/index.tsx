@@ -2,9 +2,9 @@ import {useMemo, useRef} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useNavigate, useParams} from 'react-router-dom'
 
+import {InstallButton} from '@/components/install-button'
 import {InstallButtonConnected} from '@/components/install-button-connected'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
-import {ErrorBoundaryComponentFallback} from '@/components/ui/error-boundary-component-fallback'
 import {Loading} from '@/components/ui/loading'
 import {AppContent} from '@/modules/app-store/app-page/app-content'
 import {getRecommendationsFor} from '@/modules/app-store/app-page/get-recommendations'
@@ -59,7 +59,13 @@ export default function AppPage() {
 				app={app}
 				childrenRight={
 					<div className='flex items-center gap-5'>
-						<ErrorBoundary FallbackComponent={ErrorBoundaryComponentFallback}>
+						<ErrorBoundary
+							fallback={
+								<div className='pointer-events-none opacity-50'>
+									<InstallButton state='not-installed' />
+								</div>
+							}
+						>
 							<InstallButtonConnected ref={installButtonRef} app={app} />
 						</ErrorBoundary>
 					</div>

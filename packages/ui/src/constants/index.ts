@@ -6,24 +6,24 @@ export const LOADING_DASH = '–'
 
 export const SETTINGS_SYSTEM_CARDS_ID = 'settings-system-cards'
 
-const hostEnvironments = ['umbrel-pro', 'umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
+export const hostEnvironments = ['umbrel-pro', 'umbrel-home', 'raspberry-pi', 'docker-container', 'unknown'] as const
 export type UmbrelHostEnvironment = (typeof hostEnvironments)[number]
 
 export const hostEnvironmentMap = {
 	'umbrel-pro': {
-		icon: '/figma-exports/system-umbrel-pro.webp',
+		icon: '/assets/system-umbrel-pro.webp',
 	},
 	'umbrel-home': {
-		icon: '/figma-exports/system-umbrel-home.png',
+		icon: '/assets/system-umbrel-home.png',
 	},
 	'raspberry-pi': {
-		icon: '/figma-exports/system-pi.svg',
+		icon: '/assets/system-pi.svg',
 	},
 	'docker-container': {
-		icon: '/figma-exports/system-docker.svg',
+		icon: '/assets/system-docker.svg',
 	},
 	unknown: {
-		icon: '/figma-exports/system-generic-device.svg',
+		icon: '/assets/system-generic-device.svg',
 	},
 } satisfies Record<
 	UmbrelHostEnvironment,

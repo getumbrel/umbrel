@@ -1,9 +1,7 @@
 import {Trans} from 'react-i18next/TransWithoutContext'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
-import {toast} from '@/components/ui/toast'
-import {usePendingRaidOperation} from '@/features/storage/contexts/pending-operation-context'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Dialog,
 	DialogDescription,
@@ -11,11 +9,15 @@ import {
 	DialogHeader,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
+import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
+import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
+import {OperationInProgressBanner} from './operation-in-progress-banner'
 
 const Highlight = ({children}: {children?: React.ReactNode}) => <span className='text-white'>{children}</span>
 
@@ -49,6 +51,10 @@ export function ReplaceFailedDriveDialog({
 }: ReplaceFailedDriveDialogProps) {
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
 
+	// Check if a RAID operation is already in progress
+	const activeOperation = useActiveRaidOperation()
+	const isOperationInProgress = !!activeOperation
+
 	if (!newDevice || !failedDevice) return null
 
 	// Size validation: new device must be at least as large as the smallest device in the array
@@ -81,7 +87,7 @@ export function ReplaceFailedDriveDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogScrollableContent>
-				<div className='flex select-none flex-col gap-5 p-5'>
+				<div className='flex flex-col gap-5 p-5'>
 					<DialogHeader>
 						<DialogTitle>{t('storage-manager.replace-failed.title')}</DialogTitle>
 						<DialogDescription>{t('storage-manager.replace-failed.description')}</DialogDescription>
@@ -158,8 +164,10 @@ export function ReplaceFailedDriveDialog({
 						</div>
 					)}
 
+					{isOperationInProgress && <OperationInProgressBanner variant='wait' />}
+
 					<DialogFooter>
-						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall}>
+						<Button variant='primary' onClick={handleReplace} disabled={isDeviceTooSmall || isOperationInProgress}>
 							{t('storage-manager.replace-failed.replace-now')}
 						</Button>
 						<Button variant='default' onClick={() => onOpenChange(false)}>
