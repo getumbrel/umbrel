@@ -74,6 +74,11 @@ export default class Backups {
 		this.running = true
 		this.startedAt = Date.now()
 
+		// Ensure kopia directories exist on the SSD
+        await fse.mkdir(`${this.#umbreld.dataDirectory}/kopia/cache`, {recursive: true})
+        await fse.mkdir(`${this.#umbreld.dataDirectory}/kopia/config`, {recursive: true})
+        await fse.mkdir(`${this.#umbreld.dataDirectory}/kopia/logs`, {recursive: true})		
+
 		// Cleanup any left over backup mounts
 		await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
 
@@ -183,9 +188,14 @@ export default class Backups {
 		const spawnKopiaProcess = async () => {
 			// Spawn process
 			const env = {
-				KOPIA_CHECK_FOR_UPDATES: 'false',
-				XDG_CACHE_HOME: '/kopia/cache',
-				XDG_CONFIG_HOME: '/kopia/config',
+				...process.env,
+                KOPIA_CHECK_FOR_UPDATES: 'false',
+                XDG_CACHE_HOME: '/kopia/cache',
+                XDG_CONFIG_HOME: '/kopia/config',
+                XDG_CACHE_HOME: `${this.#umbreld.dataDirectory}/kopia/cache`,
+                XDG_CONFIG_HOME: `${this.#umbreld.dataDirectory}/kopia/config`,
+                KOPIA_CACHE_DIRECTORY: `${this.#umbreld.dataDirectory}/kopia/cache`,
+                KOPIA_LOG_DIR: `${this.#umbreld.dataDirectory}/kopia/logs`,
 			}
 			const process = execa('kopia', flags, {env})
 
