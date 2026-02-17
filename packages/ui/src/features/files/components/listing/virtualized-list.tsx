@@ -1,5 +1,4 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import AutoSizer from 'react-virtualized-auto-sizer'
 import {FixedSizeGrid, FixedSizeList, GridChildComponentProps, ListChildComponentProps} from 'react-window'
 import InfiniteLoader from 'react-window-infinite-loader'
 
@@ -8,6 +7,35 @@ import type {FileSystemItem} from '@/features/files/types'
 import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {getItemKey} from '@/features/files/utils/get-item-key'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+
+// Measures the content-box dimensions of a container element using clientWidth/clientHeight.
+// These properties are immune to ancestor CSS transforms (unlike getBoundingClientRect which
+// AutoSizer uses internally), fixing a bug where the sheet's zoom-in animation caused
+// AutoSizer to measure scaled-down dimensions on first open.
+const useContainerSize = (ref: React.RefObject<HTMLDivElement | null>) => {
+	const [size, setSize] = useState({width: 0, height: 0})
+
+	useEffect(() => {
+		const el = ref.current
+		if (!el) return
+
+		const measure = () => {
+			const style = getComputedStyle(el)
+			const w = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+			const h = el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+			setSize((prev) => (prev.width === w && prev.height === h ? prev : {width: w, height: h}))
+		}
+
+		measure()
+
+		const observer = new ResizeObserver(measure)
+		observer.observe(el)
+
+		return () => observer.disconnect()
+	}, [ref])
+
+	return size
+}
 
 // Hook to detect scroll in react-window components so we can apply custom fade styling
 const useScrollFade = () => {
@@ -147,6 +175,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 	const infiniteLoaderRef = useRef<InfiniteLoader>(null)
 	const isMobile = useIsMobile()
 	const {containerRef, isScrolled} = useScrollFade()
+	const {width, height} = useContainerSize(containerRef)
 
 	const isItemsEmpty = items.length === 0
 
@@ -331,85 +360,95 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 
 	if (isLoading) return null
 
+	// Don't render until the container has been measured
+	const hasDimensions = width > 0 && height > 0
+
+	// ======== LIST VIEW ========
+	const listContent = view === 'list' && hasDimensions && (
+		<InfiniteLoader
+			ref={infiniteLoaderRef}
+			isItemLoaded={isItemLoaded}
+			itemCount={itemCount}
+			loadMoreItems={loadMoreItems}
+			threshold={INFINITE_LOADER_THRESHOLD}
+		>
+			{/* InfiniteLoader's render prop provides methods to attach to the List */}
+			{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
+				<FixedSizeList
+					ref={ref as React.Ref<FixedSizeList>}
+					height={height}
+					width={width + 24} // Add 24px to push scrollbar into parent padding
+					itemCount={itemCount}
+					itemSize={isMobile ? 50 : 40}
+					itemData={width} // Pass the actual width for fixed row width
+					onItemsRendered={onItemsRendered}
+					outerRef={scrollAreaRef} // For marquee selection
+					overscanCount={LIST_OVERSCAN_AMOUNT}
+				>
+					{renderListRow}
+				</FixedSizeList>
+			)}
+		</InfiniteLoader>
+	)
+
+	// ======== GRID VIEW ========
+	let gridContent: React.ReactNode = null
+	if (view !== 'list' && hasDimensions) {
+		const dimensions = getGridDimensions(width)
+		const {columnCount, columnWidth, rowHeight} = dimensions
+		// Calculate the exact number of rows needed
+		const itemsRowCount = Math.ceil(items.length / columnCount)
+		const rowCount = hasMore ? itemsRowCount + 1 : itemsRowCount
+
+		gridContent = (
+			<InfiniteLoader
+				ref={infiniteLoaderRef}
+				isItemLoaded={isItemLoaded}
+				itemCount={itemCount}
+				loadMoreItems={loadMoreItems}
+				threshold={INFINITE_LOADER_THRESHOLD}
+			>
+				{/* InfiniteLoader's render prop provides methods to attach to the Grid */}
+				{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
+					<FixedSizeGrid
+						ref={ref as React.Ref<FixedSizeGrid>}
+						height={height}
+						width={width + 24}
+						rowCount={rowCount}
+						columnCount={columnCount}
+						rowHeight={rowHeight}
+						columnWidth={columnWidth}
+						overscanRowCount={GRID_OVERSCAN_AMOUNT}
+						itemData={{...dimensions, items}} // Grid cells need both dimensions and items
+						outerRef={scrollAreaRef} // For marquee selection
+						onItemsRendered={(gridIndices: GridVisibleIndices) => {
+							// Convert grid coordinates to flat list indices for InfiniteLoader
+							onItemsRendered(gridToListIndices(gridIndices))
+						}}
+					>
+						{renderGridCell}
+					</FixedSizeGrid>
+				)}
+			</InfiniteLoader>
+		)
+	}
+
 	return (
 		<div
 			ref={containerRef}
 			className={`umbrel-files-fade-scroller h-full w-full overflow-auto p-6 pt-0 ${isScrolled ? 'scrolled' : ''}`}
 		>
-			<AutoSizer>
-				{({height, width}: {height: number; width: number}) => {
-					// ======== LIST VIEW ========
-					if (view === 'list') {
-						return (
-							<InfiniteLoader
-								ref={infiniteLoaderRef}
-								isItemLoaded={isItemLoaded}
-								itemCount={itemCount}
-								loadMoreItems={loadMoreItems}
-								threshold={INFINITE_LOADER_THRESHOLD}
-							>
-								{/* InfiniteLoader's render prop provides methods to attach to the List */}
-								{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
-									<FixedSizeList
-										ref={ref as React.Ref<FixedSizeList>}
-										height={height}
-										width={width + 24} // Add 24px to push scrollbar into parent padding
-										itemCount={itemCount}
-										itemSize={isMobile ? 50 : 40}
-										itemData={width} // Pass the actual width for fixed row width
-										onItemsRendered={onItemsRendered}
-										outerRef={scrollAreaRef} // For marquee selection
-										overscanCount={LIST_OVERSCAN_AMOUNT}
-									>
-										{renderListRow}
-									</FixedSizeList>
-								)}
-							</InfiniteLoader>
-						)
-					}
-					// ======== GRID VIEW ========
-					else {
-						const dimensions = getGridDimensions(width)
-						const {columnCount, columnWidth, rowHeight} = dimensions
-
-						// Calculate the exact number of rows needed
-						const itemsRowCount = Math.ceil(items.length / columnCount)
-						const rowCount = hasMore ? itemsRowCount + 1 : itemsRowCount
-
-						return (
-							<InfiniteLoader
-								ref={infiniteLoaderRef}
-								isItemLoaded={isItemLoaded}
-								itemCount={itemCount}
-								loadMoreItems={loadMoreItems}
-								threshold={INFINITE_LOADER_THRESHOLD}
-							>
-								{/* InfiniteLoader's render prop provides methods to attach to the Grid */}
-								{({onItemsRendered, ref}: InfiniteLoaderRenderProps) => (
-									<FixedSizeGrid
-										ref={ref as React.Ref<FixedSizeGrid>}
-										height={height}
-										width={width + 24}
-										rowCount={rowCount}
-										columnCount={columnCount}
-										rowHeight={rowHeight}
-										columnWidth={columnWidth}
-										overscanRowCount={GRID_OVERSCAN_AMOUNT}
-										itemData={{...dimensions, items}} // Grid cells need both dimensions and items
-										outerRef={scrollAreaRef} // For marquee selection
-										onItemsRendered={(gridIndices: GridVisibleIndices) => {
-											// Convert grid coordinates to flat list indices for InfiniteLoader
-											onItemsRendered(gridToListIndices(gridIndices))
-										}}
-									>
-										{renderGridCell}
-									</FixedSizeGrid>
-								)}
-							</InfiniteLoader>
-						)
-					}
-				}}
-			</AutoSizer>
+			{/* Containment wrapper: the FixedSizeList is rendered wider than the content area
+			    (width + 24) to push its scrollbar into parent padding. Without this wrapper,
+			    the oversized list would be in normal flow and expand the container, creating
+			    a measurement feedback loop. The absolute positioning takes it out of flow,
+			    matching what AutoSizer's internal wrapper did. */}
+			<div className='relative h-full w-full'>
+				<div className='absolute inset-0 overflow-visible'>
+					{listContent}
+					{gridContent}
+				</div>
+			</div>
 		</div>
 	)
 }
