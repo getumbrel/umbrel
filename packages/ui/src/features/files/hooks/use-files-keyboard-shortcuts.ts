@@ -34,6 +34,7 @@ export function useFilesKeyboardShortcuts({
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
 	const selectedItems = useFilesStore((s: FilesStore) => s.selectedItems)
 	const viewerItem = useFilesStore((s: FilesStore) => s.viewerItem)
+	const viewerMode = useFilesStore((s: FilesStore) => s.viewerMode)
 	const setViewerItem = useFilesStore((s: FilesStore) => s.setViewerItem)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 	const isMobile = useIsMobile()
@@ -47,6 +48,8 @@ export function useFilesKeyboardShortcuts({
 	selectedItemsRef.current = selectedItems
 	const viewerItemRef = useRef(viewerItem)
 	viewerItemRef.current = viewerItem
+	const viewerModeRef = useRef(viewerMode)
+	viewerModeRef.current = viewerMode
 	const viewRef = useRef(view)
 	viewRef.current = view
 
@@ -132,8 +135,8 @@ export function useFilesKeyboardShortcuts({
 					return
 				e.preventDefault()
 				const item = selectedItemsRef.current[0]
-				const fileType = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]
-				if (fileType && fileType.viewer) {
+				// Allow preview for all items including directories (info card fallback for filetypes without viewers)
+				if (item.type) {
 					setViewerItem(item, 'preview')
 				}
 				return
@@ -141,7 +144,56 @@ export function useFilesKeyboardShortcuts({
 
 			// Arrow key navigation (allowed even in read-only)
 			if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-				if (isInInput(e) || mod || e.altKey || viewerItemRef.current !== null || items.length === 0) return
+				if (isInInput(e) || mod || e.altKey || items.length === 0) return
+
+				const currentView = viewRef.current
+				const viewer = viewerItemRef.current
+				const mode = viewerModeRef.current
+
+				// --- Preview navigation (viewer is open) ---
+				if (viewer) {
+					// In list view, left/right are meaningless
+					const isHorizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+					if (isHorizontal && currentView === 'list') return
+					// Don't intercept arrow keys when viewing video via double-click/navigate —
+					// let the video player handle seek/volume. In preview mode (spacebar),
+					// arrow keys navigate between files instead.
+					if (viewer.type?.startsWith('video/') && mode !== 'preview') return
+
+					// Build the list of items navigable in preview
+					const previewable = items.filter((file) => {
+						if (typeof file.type !== 'string') return false
+						if (mode === 'preview') return true
+						const entry = FILE_TYPE_MAP[file.type as keyof typeof FILE_TYPE_MAP]
+						return Boolean(entry?.viewer)
+					})
+					if (previewable.length === 0) return
+					const currentIndex = previewable.findIndex((f) => f.path === viewer.path)
+					if (currentIndex === -1) return
+
+					// In icons view, up/down jump by the column count (same as listing navigation)
+					let step = 1
+					if (currentView === 'icons' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+						const scrollEl = scrollAreaRef.current
+						const columnCount = scrollEl ? getGridColumnCount(scrollEl.clientWidth - 24) : 1
+						step = columnCount
+					}
+
+					const isPrev = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+					const nextIndex = isPrev
+						? Math.max(0, currentIndex - step)
+						: Math.min(previewable.length - 1, currentIndex + step)
+
+					e.preventDefault()
+					if (nextIndex !== currentIndex) {
+						const nextItem = previewable[nextIndex]
+						setViewerItem(nextItem, mode)
+						setSelectedItems([nextItem])
+					}
+					return
+				}
+
+				// --- Listing navigation (no viewer open) ---
 				e.preventDefault()
 
 				// Remove focus from any focused element (e.g. sidebar buttons) to prevent
@@ -151,7 +203,6 @@ export function useFilesKeyboardShortcuts({
 					document.activeElement.blur()
 				}
 
-				const currentView = viewRef.current
 				const selected = selectedItemsRef.current
 
 				// Sync refs when selection was changed externally (e.g. mouse click).

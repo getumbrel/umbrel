@@ -28,7 +28,7 @@ export default function VideoViewer({item}: VideoViewerProps) {
 	}, [])
 
 	return (
-		<ViewerWrapper dontCloseOnSpacebar>
+		<ViewerWrapper dontCloseOnSpacebar={viewerMode !== 'preview'}>
 			<div ref={containerRef} className='bg-black'>
 				<Video.Root
 					key={item.path}

@@ -29,6 +29,7 @@ export const ViewerWrapper: React.FC<ViewerWrapperProps> = ({children, dontClose
 
 		const handleEscape = (e: KeyboardEvent) => {
 			if (e.key === 'Escape' || (e.key === ' ' && !dontCloseOnSpacebar)) {
+				e.preventDefault()
 				handleClose()
 			}
 		}
