@@ -86,7 +86,7 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fa
 					<div className='flex-shrink-0'>
 						<FileItemIcon item={item} className='h-5 w-5' />
 					</div>
-					<div className={cn(fadedContent && 'opacity-50')}>
+					<div className={cn('min-w-0', fadedContent && 'opacity-50')}>
 						{isEditingName ? (
 							<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
 						) : (
