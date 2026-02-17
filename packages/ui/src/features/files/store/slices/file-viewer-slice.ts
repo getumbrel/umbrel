@@ -6,9 +6,12 @@ import {NewFolderSlice} from '@/features/files/store/slices/new-folder-slice'
 import {SelectionSlice} from '@/features/files/store/slices/selection-slice'
 import {FileSystemItem} from '@/features/files/types'
 
+export type ViewerMode = 'preview' | 'open' | null
+
 export interface FileViewerSlice {
 	viewerItem: FileSystemItem | null
-	setViewerItem: (item: FileSystemItem | null) => void
+	viewerMode: ViewerMode
+	setViewerItem: (item: FileSystemItem | null, mode?: ViewerMode) => void
 }
 
 export const createFileViewerSlice: StateCreator<
@@ -18,5 +21,6 @@ export const createFileViewerSlice: StateCreator<
 	FileViewerSlice
 > = (set) => ({
 	viewerItem: null,
-	setViewerItem: (item) => set({viewerItem: item}),
+	viewerMode: null,
+	setViewerItem: (item, mode) => set({viewerItem: item, viewerMode: item ? (mode ?? 'open') : null}),
 })

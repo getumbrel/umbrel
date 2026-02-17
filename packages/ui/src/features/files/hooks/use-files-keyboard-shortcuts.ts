@@ -28,7 +28,7 @@ export function useFilesKeyboardShortcuts({
 	const isReadOnly = useIsFilesReadOnly()
 	// In read-only mode, disable write/selection shortcuts but allow viewer and navigation shortcuts.
 	const shortcutsEnabled = !isReadOnly
-	const {currentPath} = useNavigate()
+	const {currentPath, navigateToItem, navigateToDirectory} = useNavigate()
 	const copyItemsToClipboard = useFilesStore((s: FilesStore) => s.copyItemsToClipboard)
 	const cutItemsToClipboard = useFilesStore((s: FilesStore) => s.cutItemsToClipboard)
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
@@ -50,8 +50,9 @@ export function useFilesKeyboardShortcuts({
 	const viewRef = useRef(view)
 	viewRef.current = view
 
-	// Track the anchor index for Shift+Arrow range selection
+	// Track the anchor index for Shift+Arrow range selection and the cursor (moving end)
 	const selectionAnchorRef = useRef<number>(-1)
+	const selectionCursorRef = useRef<number>(-1)
 
 	useEffect(() => {
 		// Guard to check if we're in a text input or contentEditable element
@@ -63,9 +64,31 @@ export function useFilesKeyboardShortcuts({
 		const handleKeyDown = (e: KeyboardEvent) => {
 			const mod = e.metaKey || e.ctrlKey
 
-			// Modifier shortcuts (copy, cut, paste, trash, select all)
-			if (mod && shortcutsEnabled) {
+			// Modifier shortcuts
+			if (mod) {
 				if (isInInput(e)) return
+
+				// Cmd+Down: open selected item (drill into directory or open file viewer)
+				if (e.key === 'ArrowDown') {
+					if (selectedItemsRef.current.length !== 1) return
+					e.preventDefault()
+					navigateToItem(selectedItemsRef.current[0])
+					return
+				}
+
+				// Cmd+Up: navigate to parent directory
+				if (e.key === 'ArrowUp') {
+					e.preventDefault()
+					const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/'
+					if (parentPath !== currentPath) {
+						navigateToDirectory(parentPath)
+					}
+					return
+				}
+
+				// Write shortcuts below require shortcutsEnabled (not read-only)
+				// Note: No Cmd+Shift+N for new folder — the browser intercepts it to open a new window.
+				if (!shortcutsEnabled) return
 
 				if (e.key === 'c') {
 					e.preventDefault()
@@ -111,7 +134,7 @@ export function useFilesKeyboardShortcuts({
 				const item = selectedItemsRef.current[0]
 				const fileType = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]
 				if (fileType && fileType.viewer) {
-					setViewerItem(item)
+					setViewerItem(item, 'preview')
 				}
 				return
 			}
@@ -121,12 +144,30 @@ export function useFilesKeyboardShortcuts({
 				if (isInInput(e) || mod || e.altKey || viewerItemRef.current !== null || items.length === 0) return
 				e.preventDefault()
 
+				// Remove focus from any focused element (e.g. sidebar buttons) to prevent
+				// stale focus outlines while navigating the listing with arrow keys.
+				// This runs after the isInInput guard so text inputs aren't affected.
+				if (document.activeElement instanceof HTMLElement) {
+					document.activeElement.blur()
+				}
+
 				const currentView = viewRef.current
 				const selected = selectedItemsRef.current
 
-				// Find the current index — use the last selected item as the reference point
-				let currentIndex = -1
-				if (selected.length > 0) {
+				// Sync refs when selection was changed externally (e.g. mouse click).
+				// Without this, the anchor/cursor stay stale and Shift+Arrow produces wrong ranges.
+				if (selected.length === 1) {
+					const clickedIndex = items.findIndex((i) => i.path === selected[0].path)
+					if (clickedIndex !== -1 && clickedIndex !== selectionCursorRef.current) {
+						selectionAnchorRef.current = clickedIndex
+						selectionCursorRef.current = clickedIndex
+					}
+				}
+
+				// Find the current index — use the cursor ref if set (tracks the moving end during
+				// Shift+Arrow selection), otherwise fall back to the last selected item
+				let currentIndex = selectionCursorRef.current
+				if (currentIndex === -1 && selected.length > 0) {
 					const lastSelected = selected[selected.length - 1]
 					currentIndex = items.findIndex((i) => i.path === lastSelected.path)
 				}
@@ -135,6 +176,7 @@ export function useFilesKeyboardShortcuts({
 				if (currentIndex === -1) {
 					setSelectedItems([items[0]])
 					selectionAnchorRef.current = 0
+					selectionCursorRef.current = 0
 					scrollItemIntoView(0)
 					return
 				}
@@ -142,8 +184,9 @@ export function useFilesKeyboardShortcuts({
 				// Calculate the step based on view and direction
 				let step = 0
 				if (currentView === 'list') {
-					// List view: all arrows move by 1
-					if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') step = -1
+					// List view: only up/down navigate, left/right are ignored
+					if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') return
+					if (e.key === 'ArrowUp') step = -1
 					else step = 1
 				} else {
 					// Icons view: Left/Right move by 1, Up/Down move by column count
@@ -173,10 +216,12 @@ export function useFilesKeyboardShortcuts({
 					const start = Math.min(anchor, targetIndex)
 					const end = Math.max(anchor, targetIndex)
 					setSelectedItems(items.slice(start, end + 1))
+					selectionCursorRef.current = targetIndex
 				} else {
 					// Regular arrow: select only the target item and reset anchor
 					setSelectedItems([items[targetIndex]])
 					selectionAnchorRef.current = targetIndex
+					selectionCursorRef.current = targetIndex
 				}
 
 				scrollItemIntoView(targetIndex)
@@ -252,6 +297,8 @@ export function useFilesKeyboardShortcuts({
 		setViewerItem,
 		pasteItemsFromClipboard,
 		trashSelectedItems,
+		navigateToItem,
+		navigateToDirectory,
 		scrollAreaRef,
 	])
 }

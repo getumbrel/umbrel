@@ -3,6 +3,7 @@ import {useEffect, useRef} from 'react'
 import {Video} from 'react-video-kit'
 
 import {ViewerWrapper} from '@/features/files/components/file-viewer/viewer-wrapper'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import {FileSystemItem} from '@/features/files/types'
 
 interface VideoViewerProps {
@@ -10,6 +11,7 @@ interface VideoViewerProps {
 }
 
 export default function VideoViewer({item}: VideoViewerProps) {
+	const viewerMode = useFilesStore((s) => s.viewerMode)
 	const previewUrl = `/api/files/view?path=${encodeURIComponent(item.path)}`
 	const containerRef = useRef<HTMLDivElement>(null)
 
@@ -28,7 +30,13 @@ export default function VideoViewer({item}: VideoViewerProps) {
 	return (
 		<ViewerWrapper dontCloseOnSpacebar>
 			<div ref={containerRef} className='bg-black'>
-				<Video.Root src={previewUrl} title={item.name} autoPlay hotkeys={{scope: 'global', enabled: true}}>
+				<Video.Root
+					key={item.path}
+					src={previewUrl}
+					title={item.name}
+					autoPlay
+					hotkeys={{scope: 'global', enabled: viewerMode !== 'preview'}}
+				>
 					<Video.Media />
 					<Video.Backdrop />
 					<Video.Header>

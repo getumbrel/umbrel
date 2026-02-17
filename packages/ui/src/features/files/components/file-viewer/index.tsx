@@ -5,15 +5,19 @@ import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 
 export const FileViewer: React.FC = () => {
 	const viewerItem = useFilesStore((s) => s.viewerItem)
+	const viewerMode = useFilesStore((s) => s.viewerMode)
 	const setViewerItem = useFilesStore((s) => s.setViewerItem)
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 
 	const {currentPath} = useNavigate()
 	const {listing} = useListDirectory(currentPath)
+	const {preferences} = usePreferences()
+	const view = preferences?.view ?? 'list'
 	const isTouchDevice = useIsTouchDevice()
 
 	// Helper to get previewable items
@@ -33,12 +37,17 @@ export const FileViewer: React.FC = () => {
 	useEffect(() => {
 		if (isTouchDevice) return
 		const handleKeys = (e: KeyboardEvent) => {
+			// In list view, only up/down navigate between files (left/right are meaningless in a vertical list)
+			const isHorizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+			if (isHorizontal && view === 'list') return
 			const isPrev = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
 			const isNext = e.key === 'ArrowRight' || e.key === 'ArrowDown'
 			if (!isPrev && !isNext) return
 			if (!viewerItem) return
-			// Don't intercept arrow keys when viewing video — let the video player handle seek
-			if (viewerItem.type?.startsWith('video/')) return
+			// Don't intercept arrow keys when viewing video via double-click/navigate —
+			// let the video player handle seek/volume. In preview mode (spacebar),
+			// arrow keys navigate between files instead.
+			if (viewerItem.type?.startsWith('video/') && viewerMode !== 'preview') return
 
 			const previewable = getPreviewableItems()
 			if (previewable.length === 0) return
@@ -53,13 +62,13 @@ export const FileViewer: React.FC = () => {
 			e.preventDefault()
 			if (nextItemIndex !== previewItemIndex) {
 				const nextItem = previewable[nextItemIndex]
-				setViewerItem(nextItem)
+				setViewerItem(nextItem, viewerMode)
 				setSelectedItems([nextItem])
 			}
 		}
 		window.addEventListener('keydown', handleKeys)
 		return () => window.removeEventListener('keydown', handleKeys)
-	}, [viewerItem, listing, isTouchDevice])
+	}, [viewerItem, viewerMode, view, listing, isTouchDevice])
 
 	if (!viewerItem || !viewerItem.type) return null
 
