@@ -57,6 +57,13 @@ export function useFilesKeyboardShortcuts({
 	const selectionAnchorRef = useRef<number>(-1)
 	const selectionCursorRef = useRef<number>(-1)
 
+	// Reset cursor/anchor when the item list changes (e.g. navigating to a new directory)
+	// so arrow keys start from the first item instead of a stale index.
+	useEffect(() => {
+		selectionAnchorRef.current = -1
+		selectionCursorRef.current = -1
+	}, [items])
+
 	useEffect(() => {
 		// Guard to check if we're in a text input or contentEditable element
 		const isInInput = (e: KeyboardEvent): boolean => {
