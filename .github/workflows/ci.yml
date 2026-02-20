@@ -58,7 +58,7 @@ jobs:
     name: Build umbrelOS arm64
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubicloud-standard-4-ubuntu-2404
+    runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -70,7 +70,7 @@ jobs:
     name: Build umbrelOS Pi
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubicloud-standard-4-ubuntu-2404
+    runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
