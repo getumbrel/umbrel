@@ -46,6 +46,9 @@ function main() {
     docker run --privileged --rm tonistiigi/binfmt --install all
 
     if [ -z "${SKIP_ROOTS:-}" ]; then
+        if [ -z "${SKIP_PI:-}" ]; then
+            build_root_fs pi "${release}"
+        fi
         if [ -z "${SKIP_ARM64:-}" ]; then
             build_root_fs arm64 "${release}"
         fi
@@ -76,6 +79,7 @@ function main() {
     # *-legacy-migration.update are mender update artifacts to allow mender based update
     # systems to migrate to the new rugix based update system.
     mv build/umbrelos-amd64.rugixb        build/umbrelos-amd64.update                  2>/dev/null || true
+    mv build/umbrelos-arm64.rugixb        build/umbrelos-arm64.update                  2>/dev/null || true
     mv build/umbrelos-mender-amd64.mender build/umbrelos-amd64-legacy-migration.update 2>/dev/null || true
     mv build/umbrelos-mender-amd64.rugixb build/umbrelos-amd64-legacy.update           2>/dev/null || true
     mv build/umbrelos-pi.mender           build/umbrelos-pi-legacy-migration.update    2>/dev/null || true
@@ -88,29 +92,36 @@ function main() {
 # Build the root filesystem.
 #
 # Arguments: <arch> <release>
+# arch can be: amd64, arm64, pi
 function build_root_fs() {
     local arch=$1;
     local release=$2;
 
+    # Determine the Docker platform and base variant
+    local platform_arch="${arch}"
+    local base_variant=""
+    if [[ "${arch}" == "pi" ]]; then
+        platform_arch="arm64"
+        base_variant="-pi"
+    fi
+
     echo "Ensuring the build dir exists..."
     mkdir -p build
 
-    # Ensure that the overlay directory exists.
-    mkdir -p "overlay-${arch}"
-
-    echo "Building Umbrel OS Docker image..."
+    echo "Building Umbrel OS Docker image for ${arch}..."
     # Note that we run the build context in ../../ so the build process has access to the
     # entire repo to copy in umbreld stuff.
     docker_buildx \
         --cache-from type=gha,scope=umbrelos-${arch} \
         --cache-to type=gha,mode=max,scope=umbrelos-${arch} \
-        --platform "linux/${arch}" \
+        --platform "linux/${platform_arch}" \
+        --build-arg BASE_VARIANT="${base_variant}" \
         --file umbrelos.Dockerfile \
         --tag "umbrelos-${arch}" \
         ../../
 
     echo "Dumping Umbrel OS Docker image filesystem into a tar archive..."
-    umbrel_os_container_id=$(docker run --platform "linux/${arch}" --detach "umbrelos-${arch}" /bin/true)
+    umbrel_os_container_id=$(docker run --platform "linux/${platform_arch}" --detach "umbrelos-${arch}" /bin/true)
     docker export --output "build/umbrelos-root-${arch}.tar" "${umbrel_os_container_id}"
     docker rm "${umbrel_os_container_id}"
 }
@@ -127,7 +138,7 @@ function build_rugix_artifacts() {
     # Copy the root filesystems previously build with Docker.
     cp build/*.tar rugix/build/umbrelos-root
     # Copy `/etc/hostname` and `/etc/hosts` such that Rugix can fix them.
-    cp overlay-common/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
+    cp overlay/etc/{hostname,hosts} rugix/recipes/fix-overlay/files
     
     local compression="compression = { type = \"xz\", level = 9 }"
     if [ "$dev" == "true" ]; then
@@ -138,16 +149,16 @@ function build_rugix_artifacts() {
     # Clean Rugix cache to force a clean build.
     rm -rf .rugix || true
 
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI4:-}" ]; then 
+    if [ -z "${SKIP_PI:-}" ] && [ -z "${SKIP_PI4:-}" ]; then
         build_rugix_system "umbrelos-pi4" "$release" "$dev"
         maybe_sudo mv -f "build/umbrelos-pi4/system.img" "../build/umbrelos-pi4.img"
     fi
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_TRYBOOT:-}" ]; then 
+    if [ -z "${SKIP_PI:-}" ] && [ -z "${SKIP_PI_TRYBOOT:-}" ]; then
         build_rugix_system "umbrelos-pi-tryboot" "$release" "$dev"
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.img" "../build/umbrelos-pi5.img"
         maybe_sudo mv -f "build/umbrelos-pi-tryboot/system.rugixb" "../build/umbrelos-pi.rugixb"
     fi
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI_MBR:-}" ]; then 
+    if [ -z "${SKIP_PI:-}" ] && [ -z "${SKIP_PI_MBR:-}" ]; then
         build_rugix_system "umbrelos-pi-mbr" "$release" "$dev"
         # Truncate the image to the end of the last partition. This is required for
         # compatibility with the legacy Mender-Rugpi update module.
@@ -162,10 +173,15 @@ function build_rugix_artifacts() {
         docker run --rm -v "$(pwd)/rugix:/data" umbrelos:builder /data/fix-umbrelos-pi-mbr.sh
         pushd rugix
     fi
-    if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_RUGIX:-}" ]; then 
+    if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_RUGIX:-}" ]; then
         build_rugix_system "umbrelos-amd64" "$release" "$dev"
         maybe_sudo mv -f "build/umbrelos-amd64/system.img" "../build/umbrelos-amd64.img"
         maybe_sudo mv -f "build/umbrelos-amd64/system.rugixb" "../build/umbrelos-amd64.rugixb"
+    fi
+    if [ -z "${SKIP_ARM64:-}" ]; then
+        build_rugix_system "umbrelos-arm64" "$release" "$dev"
+        maybe_sudo mv -f "build/umbrelos-arm64/system.img" "../build/umbrelos-arm64.img"
+        maybe_sudo mv -f "build/umbrelos-arm64/system.rugixb" "../build/umbrelos-arm64.rugixb"
     fi
     if [ -z "${SKIP_AMD64:-}" ] && [ -z "${SKIP_AMD64_MENDER:-}" ]; then
         ./run-bakery bake image --release-version "$release" "umbrelos-mender-amd64"
@@ -215,7 +231,7 @@ function build_rugix_system() {
 function build_mender_artifacts() {
     local release="$1"
 
-    if [ -z "${SKIP_ARM64:-}" ] && [ -z "${SKIP_PI:-}" ]; then
+    if [ -z "${SKIP_PI:-}" ]; then
         if [ ! -e "rugix/build/umbrelos-pi-mbr/system.img" ]; then
             echo "'umbrelos-pi-mbr' image is required to build Raspberry Pi Mender artifact."
             exit 1

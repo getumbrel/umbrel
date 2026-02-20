@@ -4,7 +4,6 @@ import {createTRPCProxyClient, httpBatchLink, createWSClient, wsLink, splitLink}
 import got from 'got'
 import {CookieJar} from 'tough-cookie'
 import {$} from 'execa'
-import fse from 'fs-extra'
 import getPort from 'get-port'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
@@ -199,13 +198,6 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 
 export async function createTestVm() {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
-	const vmImagePath = path.resolve(currentDirectory, '../../../../os/build/umbrelos-amd64.img')
-
-	if (!(await fse.pathExists(vmImagePath))) {
-		throw new Error(
-			'No umbrelos image found. Build one with `npm run build:amd64` in packages/os or specify the image path.',
-		)
-	}
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
@@ -237,7 +229,7 @@ export async function createTestVm() {
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits

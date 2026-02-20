@@ -1,2 +1,6 @@
 description = "copy umbrelOS boot files to boot partition"
 priority = -800_000
+
+# Boot type: "grub" for UEFI/GRUB systems (amd64, generic arm64), "pi" for Raspberry Pi
+[parameters.boot_type]
+default = "grub"

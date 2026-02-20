@@ -1,5 +1,6 @@
 ARG DEBIAN_VERSION=trixie
 ARG SNAPSHOT_DATE=20260202
+ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
 ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
@@ -42,39 +43,45 @@ RUN npm run build
 
 
 #########################################################################
-# umbrelos-base-amd64 build stage
+# umbrelos-base build stage (amd64 and generic arm64)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-amd64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base
 
 ARG SNAPSHOT_DATE
+ARG TARGETARCH
 
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
-# Install Linux kernel, non-free firmware and ZFS.
+# Install Linux kernel, firmware, and ZFS
 RUN apt-get install --yes \
     zfs-dkms \
     zfsutils-linux \
-    linux-headers-amd64 \
-    linux-image-amd64 \
-    intel-microcode \
-    amd64-microcode \
-    firmware-linux \
-    firmware-realtek \
-    firmware-iwlwifi \
-    firmware-atheros
+    linux-headers-${TARGETARCH} \
+    linux-image-${TARGETARCH} \
+    firmware-linux
+
+# Install amd64-specific microcode and firmware
+RUN if [ "${TARGETARCH}" = "amd64" ]; then \
+    apt-get install --yes \
+        intel-microcode \
+        amd64-microcode \
+        firmware-realtek \
+        firmware-iwlwifi \
+        firmware-atheros; \
+    fi
 
 # Cleanup build steps.
 RUN rm -rf /build-steps
 
 
 #########################################################################
-# umbrelos-base-arm64 build stage
+# umbrelos-base-pi build stage (Raspberry Pi)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-arm64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-pi
 
 ARG SNAPSHOT_DATE
 
@@ -87,17 +94,18 @@ RUN /build-steps/setup-raspberrypi.sh
 # Cleanup build steps.
 RUN rm -rf /build-steps
 
+# Copy Pi-specific filesystem overlay
+COPY packages/os/overlay-pi /
+
 
 #########################################################################
 # umbrelos build stage
 #########################################################################
 
-ARG TARGETARCH
-
 # TODO: Instead of using the debian:trixie image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
-FROM umbrelos-base-${TARGETARCH} AS umbrelos
+FROM umbrelos-base${BASE_VARIANT} AS umbrelos
 
 # We need to duplicate this such that we can also use the argument below.
 ARG TARGETARCH
@@ -195,8 +203,7 @@ RUN npm clean-install --omit dev && npm link
 WORKDIR /
 
 # Copy in filesystem overlay
-COPY packages/os/overlay-common /
-COPY "packages/os/overlay-${TARGETARCH}" /
+COPY packages/os/overlay /
 
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.

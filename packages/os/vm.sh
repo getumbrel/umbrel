@@ -17,6 +17,27 @@ DEFAULT_SSH_PORT=2222
 DEFAULT_HTTP_PORT=8080
 DEFAULT_NVME_SIZE="64G"
 
+# Get native architecture in our naming convention (amd64/arm64)
+get_native_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64)
+      echo "amd64"
+      ;;
+    arm64|aarch64)
+      echo "arm64"
+      ;;
+    *)
+      echo "amd64"  # Default fallback
+      ;;
+  esac
+}
+
+# Get default image path for an architecture
+get_default_image() {
+  local arch="$1"
+  echo "$SCRIPT_DIR/build/umbrelos-${arch}.img"
+}
+
 show_help() {
   cat << EOF
 vm.sh - Manage an umbrelOS QEMU virtual machine
@@ -24,7 +45,7 @@ vm.sh - Manage an umbrelOS QEMU virtual machine
 Usage: $0 <command> [options]
 
 Commands:
-    boot <image>                   Boot VM from the given image
+    boot [image]                   Boot VM from the given image (defaults to native arch image)
     reflash                        Delete boot disk overlay (simulates reflashing the OS)
     reset                          Delete all VM state (overlay, NVMe disks, UEFI vars)
 
@@ -36,6 +57,7 @@ Commands:
     nvme move <from> <to>          Move an NVMe device from one slot to another
 
 Boot Options:
+    --arch <amd64|arm64>           CPU architecture (default: auto-detect from image name)
     --memory <MiB>                 RAM in MiB (default: ${DEFAULT_MEMORY})
     --cores <count>                CPU cores (default: ${DEFAULT_CORES})
     --disk-size <size>             Boot disk size (default: ${DEFAULT_DISK_SIZE})
@@ -49,7 +71,9 @@ Environment Variables:
     VM_STATE_DIR                   Override state directory (default: ./vm-state)
 
 Examples:
-    $0 boot umbrelos.img --memory 4096 --cores 8
+    $0 boot                                        # Boot native arch image
+    $0 boot umbrelos-amd64.img --memory 4096       # Boot specific image
+    $0 boot --arch arm64                           # Boot arm64 image
     $0 nvme add 1 --size 128G
     $0 nvme add 2
     $0 nvme disconnect 2
@@ -323,34 +347,74 @@ build_nvme_args() {
   echo "$nvme_args"
 }
 
-# Detect OVMF firmware paths
-detect_ovmf() {
-  if [[ -f "/opt/homebrew/share/qemu/edk2-x86_64-code.fd" ]]; then
-    OVMF_CODE="/opt/homebrew/share/qemu/edk2-x86_64-code.fd"
-    OVMF_VARS_TEMPLATE="/opt/homebrew/share/qemu/edk2-i386-vars.fd"
-  elif [[ -f "/usr/local/share/qemu/edk2-x86_64-code.fd" ]]; then
-    OVMF_CODE="/usr/local/share/qemu/edk2-x86_64-code.fd"
-    OVMF_VARS_TEMPLATE="/usr/local/share/qemu/edk2-i386-vars.fd"
-  elif [[ -f "/usr/share/OVMF/OVMF_CODE_4M.fd" ]]; then
-    OVMF_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
-    OVMF_VARS_TEMPLATE="/usr/share/OVMF/OVMF_VARS_4M.fd"
+# Detect architecture from image filename
+detect_arch() {
+  local image="$1"
+  local basename
+  basename=$(basename "$image")
+
+  if [[ "$basename" == *"arm64"* || "$basename" == *"aarch64"* ]]; then
+    echo "arm64"
+  elif [[ "$basename" == *"amd64"* || "$basename" == *"x86_64"* || "$basename" == *"x86-64"* ]]; then
+    echo "amd64"
   else
-    echo "Error: OVMF firmware not found. On macOS: brew install qemu" >&2
-    exit 1
+    # Default to amd64 for backwards compatibility
+    echo "amd64"
+  fi
+}
+
+# Detect UEFI firmware paths for the given architecture
+detect_uefi_firmware() {
+  local arch="$1"
+
+  if [[ "$arch" == "arm64" ]]; then
+    # ARM64 UEFI firmware (AAVMF)
+    if [[ -f "/opt/homebrew/share/qemu/edk2-aarch64-code.fd" ]]; then
+      UEFI_CODE="/opt/homebrew/share/qemu/edk2-aarch64-code.fd"
+      UEFI_VARS_TEMPLATE="/opt/homebrew/share/qemu/edk2-arm-vars.fd"
+    elif [[ -f "/usr/local/share/qemu/edk2-aarch64-code.fd" ]]; then
+      UEFI_CODE="/usr/local/share/qemu/edk2-aarch64-code.fd"
+      UEFI_VARS_TEMPLATE="/usr/local/share/qemu/edk2-arm-vars.fd"
+    elif [[ -f "/usr/share/AAVMF/AAVMF_CODE.fd" ]]; then
+      UEFI_CODE="/usr/share/AAVMF/AAVMF_CODE.fd"
+      UEFI_VARS_TEMPLATE="/usr/share/AAVMF/AAVMF_VARS.fd"
+    elif [[ -f "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd" ]]; then
+      UEFI_CODE="/usr/share/qemu-efi-aarch64/QEMU_EFI.fd"
+      UEFI_VARS_TEMPLATE="/usr/share/qemu-efi-aarch64/vars-template-pflash.raw"
+    else
+      echo "Error: ARM64 UEFI firmware not found. On macOS: brew install qemu" >&2
+      exit 1
+    fi
+  else
+    # AMD64 UEFI firmware (OVMF)
+    if [[ -f "/opt/homebrew/share/qemu/edk2-x86_64-code.fd" ]]; then
+      UEFI_CODE="/opt/homebrew/share/qemu/edk2-x86_64-code.fd"
+      UEFI_VARS_TEMPLATE="/opt/homebrew/share/qemu/edk2-i386-vars.fd"
+    elif [[ -f "/usr/local/share/qemu/edk2-x86_64-code.fd" ]]; then
+      UEFI_CODE="/usr/local/share/qemu/edk2-x86_64-code.fd"
+      UEFI_VARS_TEMPLATE="/usr/local/share/qemu/edk2-i386-vars.fd"
+    elif [[ -f "/usr/share/OVMF/OVMF_CODE_4M.fd" ]]; then
+      UEFI_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
+      UEFI_VARS_TEMPLATE="/usr/share/OVMF/OVMF_VARS_4M.fd"
+    else
+      echo "Error: AMD64 UEFI firmware not found. On macOS: brew install qemu" >&2
+      exit 1
+    fi
   fi
 }
 
 # Boot the VM
 boot_vm() {
   local image="$1"
-  local memory="$2"
-  local cores="$3"
-  local disk_size="$4"
-  local ssh_port="$5"
-  local http_port="$6"
+  local arch="$2"
+  local memory="$3"
+  local cores="$4"
+  local disk_size="$5"
+  local ssh_port="$6"
+  local http_port="$7"
 
   init_state
-  detect_ovmf
+  detect_uefi_firmware "$arch"
 
   if [[ ! -f "$image" ]]; then
     echo "Error: Image not found: $image" >&2
@@ -358,16 +422,23 @@ boot_vm() {
   fi
 
   command -v qemu-img >/dev/null 2>&1 || { echo "Error: 'qemu-img' not found in PATH" >&2; exit 1; }
-  command -v qemu-system-x86_64 >/dev/null 2>&1 || { echo "Error: 'qemu-system-x86_64' not found in PATH" >&2; exit 1; }
 
-  # Setup OVMF VARS
-  local ovmf_vars="$STATE_DIR/ovmf-vars.fd"
-  if [[ ! -f "$ovmf_vars" ]]; then
-    cp "$OVMF_VARS_TEMPLATE" "$ovmf_vars"
+  local qemu_binary
+  if [[ "$arch" == "arm64" ]]; then
+    qemu_binary="qemu-system-aarch64"
+  else
+    qemu_binary="qemu-system-x86_64"
+  fi
+  command -v "$qemu_binary" >/dev/null 2>&1 || { echo "Error: '$qemu_binary' not found in PATH" >&2; exit 1; }
+
+  # Setup UEFI VARS
+  local uefi_vars="$STATE_DIR/uefi-vars-${arch}.fd"
+  if [[ ! -f "$uefi_vars" ]]; then
+    cp "$UEFI_VARS_TEMPLATE" "$uefi_vars"
   fi
 
   # Setup overlay disk
-  local overlay="$STATE_DIR/overlay.qcow2"
+  local overlay="$STATE_DIR/overlay-${arch}.qcow2"
   if [[ ! -f "$overlay" ]]; then
     echo "Creating overlay image..."
     local image_abs
@@ -381,44 +452,81 @@ boot_vm() {
   local nvme_args
   nvme_args=$(build_nvme_args)
 
-  # Platform-specific acceleration
-  local accel_args
+  # Platform and architecture-specific settings
+  local accel_args machine_args cpu_args smbios_args
   local qemu_sudo=""
-  case "$(uname -s)" in
-    Linux)
-      accel_args="-enable-kvm -machine accel=kvm,type=q35 -cpu host"
-      # Use sudo for KVM access on Linux
-      qemu_sudo="sudo"
-      ;;
-    Darwin)
-      if qemu-system-x86_64 -accel help 2>&1 | grep -q hvf; then
-        accel_args="-machine accel=hvf,type=q35 -cpu max"
-      else
-        echo "WARNING: HVF not available, using TCG (slow)" >&2
-        accel_args="-machine accel=tcg,type=q35 -cpu max"
-      fi
-      ;;
-    *)
-      echo "Error: Unsupported platform: $(uname -s)" >&2
-      exit 1
-      ;;
-  esac
 
-  echo "Booting VM..."
+  if [[ "$arch" == "arm64" ]]; then
+    # ARM64 settings
+    case "$(uname -s)" in
+      Linux)
+        accel_args="-enable-kvm"
+        cpu_args="-cpu host"
+        qemu_sudo="sudo"
+        ;;
+      Darwin)
+        if "$qemu_binary" -accel help 2>&1 | grep -q hvf; then
+          accel_args="-accel hvf"
+          cpu_args="-cpu host"
+        else
+          echo "WARNING: HVF not available, using TCG (slow)" >&2
+          accel_args="-accel tcg"
+          cpu_args="-cpu max"
+        fi
+        ;;
+      *)
+        echo "Error: Unsupported platform: $(uname -s)" >&2
+        exit 1
+        ;;
+    esac
+    machine_args="-machine virt,gic-version=3"
+    smbios_args=(-smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Pro,sku=U4XN1,family=NAS")
+  else
+    # AMD64 settings
+    case "$(uname -s)" in
+      Linux)
+        accel_args="-enable-kvm"
+        machine_args="-machine accel=kvm,type=q35"
+        cpu_args="-cpu host"
+        qemu_sudo="sudo"
+        ;;
+      Darwin)
+        if "$qemu_binary" -accel help 2>&1 | grep -q hvf; then
+          accel_args=""
+          machine_args="-machine accel=hvf,type=q35"
+          cpu_args="-cpu max"
+        else
+          echo "WARNING: HVF not available, using TCG (slow)" >&2
+          accel_args=""
+          machine_args="-machine accel=tcg,type=q35"
+          cpu_args="-cpu max"
+        fi
+        ;;
+      *)
+        echo "Error: Unsupported platform: $(uname -s)" >&2
+        exit 1
+        ;;
+    esac
+    smbios_args=(-smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Pro,sku=U4XN1,family=NAS")
+  fi
+
+  echo "Booting VM (${arch})..."
   echo "  SSH: ssh -p ${ssh_port} umbrel@localhost"
   echo "  HTTP: http://localhost:${http_port}"
   echo
 
   # shellcheck disable=SC2086
-  exec $qemu_sudo qemu-system-x86_64 \
+  exec $qemu_sudo "$qemu_binary" \
     $accel_args \
+    $machine_args \
+    $cpu_args \
     -smp "$cores" \
     -m "$memory" \
     -rtc base=utc \
     -nographic -monitor none -chardev stdio,id=char0,signal=off -serial chardev:char0 \
-    -smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Pro,sku=U4XN1,family=NAS" \
-    -drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
-    -drive if=pflash,format=raw,file="$ovmf_vars" \
+    "${smbios_args[@]}" \
+    -drive if=pflash,format=raw,readonly=on,file="$UEFI_CODE" \
+    -drive if=pflash,format=raw,file="$uefi_vars" \
     -drive file="$overlay",if=none,id=boot,format=qcow2,cache=none,discard=unmap,aio=threads \
     -device virtio-blk-pci,drive=boot,bootindex=0 \
     -netdev user,id=net0,hostfwd=tcp:127.0.0.1:${ssh_port}-:22,hostfwd=tcp:127.0.0.1:${http_port}-:80 \
@@ -428,10 +536,23 @@ boot_vm() {
 
 # Reflash (delete overlay to simulate fresh OS install)
 reflash() {
-  local overlay="$STATE_DIR/overlay.qcow2"
-  if [[ -f "$overlay" ]]; then
-    echo "Removing boot disk overlay..."
-    rm -f "$overlay"
+  local found=false
+  for arch in amd64 arm64; do
+    local overlay="$STATE_DIR/overlay-${arch}.qcow2"
+    if [[ -f "$overlay" ]]; then
+      echo "Removing ${arch} boot disk overlay..."
+      rm -f "$overlay"
+      found=true
+    fi
+  done
+  # Also check for legacy overlay without arch suffix
+  local legacy_overlay="$STATE_DIR/overlay.qcow2"
+  if [[ -f "$legacy_overlay" ]]; then
+    echo "Removing legacy boot disk overlay..."
+    rm -f "$legacy_overlay"
+    found=true
+  fi
+  if [[ "$found" == "true" ]]; then
     echo "Done. Next boot will start fresh."
   else
     echo "No overlay to remove."
@@ -549,22 +670,30 @@ case "$command" in
     ;;
 
   boot)
-    if [[ $# -lt 1 ]]; then
-      echo "Error: boot requires an image path" >&2
-      exit 1
-    fi
-
-    image="$1"
-    shift
-
+    image=""
+    arch=""
     memory="$DEFAULT_MEMORY"
     cores="$DEFAULT_CORES"
     disk_size="$DEFAULT_DISK_SIZE"
     ssh_port="$DEFAULT_SSH_PORT"
     http_port="$DEFAULT_HTTP_PORT"
 
+    # Check if first argument is an image path (not an option)
+    if [[ $# -gt 0 && ! "$1" =~ ^-- ]]; then
+      image="$1"
+      shift
+    fi
+
     while [[ $# -gt 0 ]]; do
       case "$1" in
+        --arch)
+          arch="$2"
+          if [[ "$arch" != "amd64" && "$arch" != "arm64" ]]; then
+            echo "Error: --arch must be 'amd64' or 'arm64'" >&2
+            exit 1
+          fi
+          shift 2
+          ;;
         --memory)
           memory="$2"
           shift 2
@@ -592,7 +721,24 @@ case "$command" in
       esac
     done
 
-    boot_vm "$image" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port"
+    # If no image specified, infer from architecture
+    if [[ -z "$image" ]]; then
+      # If arch not specified, use native arch
+      if [[ -z "$arch" ]]; then
+        arch=$(get_native_arch)
+        echo "Using native architecture: $arch"
+      fi
+      image=$(get_default_image "$arch")
+      echo "Using default image: $image"
+    else
+      # Image specified - auto-detect architecture if not specified
+      if [[ -z "$arch" ]]; then
+        arch=$(detect_arch "$image")
+        echo "Auto-detected architecture: $arch"
+      fi
+    fi
+
+    boot_vm "$image" "$arch" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port"
     ;;
 
   *)
