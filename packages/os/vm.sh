@@ -6,10 +6,6 @@ STATE_DIR="${VM_STATE_DIR:-$SCRIPT_DIR/vm-state}"
 NVME_STATE_FILE="$STATE_DIR/nvme.json"
 HDD_STATE_FILE="$STATE_DIR/hdd.json"
 
-# PCIe Physical Slot Numbers that match Umbrel Pro hardware
-# Maps slot 1-4 to their respective PCIe slot numbers
-declare -A PCI_SLOT_MAP=([1]=12 [2]=14 [3]=4 [4]=6)
-
 # Defaults
 DEFAULT_DEVICE="umbrel-pro"
 DEFAULT_MEMORY=2048
@@ -21,6 +17,19 @@ DEFAULT_NVME_SIZE="64G"
 DEFAULT_HDD_SIZE="1T"
 MAX_NVME_SLOTS=8
 MAX_HDD_SLOTS=8
+
+# Get Umbrel Pro PCIe slot number for an NVMe slot.
+# Returns empty if no explicit mapping exists.
+get_umbrel_pro_pci_slot() {
+  local slot="$1"
+  case "$slot" in
+    1) echo "12" ;;
+    2) echo "14" ;;
+    3) echo "4" ;;
+    4) echo "6" ;;
+    *) echo "" ;;
+  esac
+}
 
 # Get native architecture in our naming convention (amd64/arm64)
 get_native_arch() {
@@ -61,11 +70,12 @@ Commands:
     nvme disconnect <slot>         Disconnect an NVMe device from the VM
     nvme move <from> <to>          Move an NVMe device from one slot to another
 
-    hdd list                       List all HDD devices and their status
-    hdd add <slot> [--size SIZE]   Add an HDD to slot (1-${MAX_HDD_SLOTS})
-    hdd destroy <slot>             Destroy an HDD (deletes data)
-    hdd connect <slot>             Connect an existing HDD to the VM
-    hdd disconnect <slot>          Disconnect an HDD from the VM
+    sata list                      List all SATA slot devices and their status
+    sata add <slot> [--size SIZE] [--type hdd|ssd]
+                                   Add a SATA HDD/SSD to slot (1-${MAX_HDD_SLOTS})
+    sata destroy <slot>            Destroy SATA device (deletes data)
+    sata connect <slot>            Connect an existing SATA device to the VM
+    sata disconnect <slot>         Disconnect a SATA device from the VM
 
 Boot Options:
     --device <type>                Device to emulate: umbrel-pro, umbrel-home, nas (default: ${DEFAULT_DEVICE})
@@ -77,7 +87,8 @@ Boot Options:
     --http-port <port>             Local HTTP port forward (default: ${DEFAULT_HTTP_PORT})
 
 Disk Options:
-    --size <size>                  Disk size for nvme/hdd add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} hdd)
+    --size <size>                  Disk size for nvme/sata add (default: ${DEFAULT_NVME_SIZE} nvme, ${DEFAULT_HDD_SIZE} sata)
+    --type <hdd|ssd>               For sata add only: set SATA device type (default: hdd)
 
 Environment Variables:
     VM_STATE_DIR                   Override state directory (default: ./vm-state)
@@ -89,9 +100,9 @@ Examples:
     $0 boot umbrelos-amd64.img --memory 4096       # Boot specific image
     $0 boot --arch arm64                           # Boot arm64 image
     $0 nvme add 1 --size 128G
-    $0 hdd add 1 --size 4T
+    $0 sata add 1 --size 4T --type hdd
     $0 nvme list
-    $0 hdd list
+    $0 sata list
 
 EOF
 }
@@ -207,7 +218,22 @@ disk_list() {
 }
 
 nvme_list() { disk_list "NVMe" "$NVME_STATE_FILE" "$MAX_NVME_SLOTS"; }
-hdd_list() { disk_list "HDD" "$HDD_STATE_FILE" "$MAX_HDD_SLOTS"; }
+sata_list() { disk_list "SATA" "$HDD_STATE_FILE" "$MAX_HDD_SLOTS"; }
+
+sata_add() {
+  local slot="$1"
+  local size="$2"
+  local sata_type="$3"
+  local is_ssd="false"
+  if [[ "$sata_type" == "ssd" ]]; then
+    is_ssd="true"
+  fi
+  hdd_add "$slot" "$size" "$is_ssd"
+}
+
+sata_destroy() { hdd_destroy "$1"; }
+sata_connect() { hdd_connect "$1"; }
+sata_disconnect() { hdd_disconnect "$1"; }
 
 # Add NVMe device
 nvme_add() {
@@ -354,6 +380,7 @@ nvme_move() {
 hdd_add() {
   local slot="$1"
   local size="$2"
+  local is_ssd="$3"
 
   validate_slot "$slot" "$MAX_HDD_SLOTS"
   init_state
@@ -363,18 +390,26 @@ hdd_add() {
 
   if [[ -f "$disk_path" ]]; then
     echo "Error: HDD already exists in slot $slot" >&2
-    echo "Use 'hdd destroy $slot' to remove it first" >&2
+    echo "Use 'sata destroy $slot' to remove it first" >&2
     exit 1
   fi
 
-  local serial="hdd${slot}-$(date +%s)-${RANDOM}"
+  local label="HDD"
+  local serial_prefix="hdd"
+  if [[ "$is_ssd" == "true" ]]; then
+    label="SATA SSD"
+    serial_prefix="satassd"
+  fi
+  local serial="${serial_prefix}${slot}-$(date +%s)-${RANDOM}"
 
-  echo "Creating HDD in slot $slot (${size})..."
+  echo "Creating ${label} in slot $slot (${size})..."
   qemu-img create -f qcow2 "$disk_path" "$size" >/dev/null
   local tmp
   tmp=$(mktemp)
-  jq ".\"$slot\" = {\"size\": \"$size\", \"serial\": \"$serial\", \"connected\": true, \"exists\": true}" "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
-  echo "Done. HDD created in slot $slot (serial: $serial)"
+  jq --arg size "$size" --arg serial "$serial" --argjson is_ssd "$is_ssd" \
+    ".\"$slot\" = {\"size\": \$size, \"serial\": \$serial, \"connected\": true, \"exists\": true, \"ssd\": \$is_ssd}" \
+    "$HDD_STATE_FILE" > "$tmp" && mv "$tmp" "$HDD_STATE_FILE"
+  echo "Done. ${label} created in slot $slot (serial: $serial)"
 }
 
 # Destroy HDD device
@@ -412,7 +447,7 @@ hdd_connect() {
 
   if [[ ! -f "$disk_path" ]]; then
     echo "Error: No HDD in slot $slot" >&2
-    echo "Use 'hdd add $slot' to create one first" >&2
+    echo "Use 'sata add $slot --type hdd' to create one first" >&2
     exit 1
   fi
 
@@ -468,11 +503,17 @@ build_hdd_args() {
     connected=$(jq -r ".\"$slot\".connected // empty" "$HDD_STATE_FILE")
 
     if [[ "$exists" == "true" && "$connected" == "true" ]]; then
-      local disk_path serial
+      local disk_path serial ssd rotation_rate
       disk_path=$(get_hdd_disk_path "$slot")
       serial=$(jq -r ".\"$slot\".serial // empty" "$HDD_STATE_FILE")
+      ssd=$(jq -r ".\"$slot\".ssd // false" "$HDD_STATE_FILE")
       if [[ -z "$serial" ]]; then
         serial="hdd${slot}"
+      fi
+      rotation_rate=7200
+      if [[ "$ssd" == "true" ]]; then
+        # ATA nominal media rotation rate of 1 indicates non-rotational media (SSD).
+        rotation_rate=1
       fi
 
       # Add AHCI controller on first HDD
@@ -482,7 +523,7 @@ build_hdd_args() {
       fi
 
       hdd_args="$hdd_args -drive file=${disk_path},format=qcow2,if=none,id=hdd${slot},cache=none,discard=unmap,aio=threads"
-      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=ahci.$(( slot - 1 )),serial=${serial}"
+      hdd_args="$hdd_args -device ide-hd,drive=hdd${slot},bus=ahci.$(( slot - 1 )),serial=${serial},rotation_rate=${rotation_rate}"
     fi
   done
 
@@ -509,9 +550,10 @@ build_nvme_args() {
 
       # Umbrel Pro uses specific PCIe slot numbers to match real hardware
       local pci_slot
-      if [[ "$device" == "umbrel-pro" ]] && [[ -n "${PCI_SLOT_MAP[$slot]:-}" ]]; then
-        pci_slot="${PCI_SLOT_MAP[$slot]}"
-      else
+      if [[ "$device" == "umbrel-pro" ]]; then
+        pci_slot=$(get_umbrel_pro_pci_slot "$slot")
+      fi
+      if [[ -z "${pci_slot:-}" ]]; then
         pci_slot=$(( 20 + slot ))
       fi
 
@@ -866,10 +908,10 @@ case "$command" in
     exit 0
     ;;
 
-  hdd)
+  sata)
     if [[ $# -lt 1 ]]; then
-      echo "Error: hdd requires a subcommand" >&2
-      echo "Usage: $0 hdd <list|add|destroy|connect|disconnect> [args]" >&2
+      echo "Error: sata requires a subcommand" >&2
+      echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
       exit 1
     fi
 
@@ -878,20 +920,25 @@ case "$command" in
 
     case "$subcommand" in
       list)
-        hdd_list
+        sata_list
         ;;
       add)
         if [[ $# -lt 1 ]]; then
-          echo "Error: hdd add requires a slot number" >&2
+          echo "Error: sata add requires a slot number" >&2
           exit 1
         fi
         slot="$1"
         shift
         size="$DEFAULT_HDD_SIZE"
+        sata_type="hdd"
         while [[ $# -gt 0 ]]; do
           case "$1" in
             --size)
               size="$2"
+              shift 2
+              ;;
+            --type)
+              sata_type="$2"
               shift 2
               ;;
             *)
@@ -900,32 +947,36 @@ case "$command" in
               ;;
           esac
         done
-        hdd_add "$slot" "$size"
+        if [[ "$sata_type" != "hdd" && "$sata_type" != "ssd" ]]; then
+          echo "Error: --type must be one of: hdd, ssd" >&2
+          exit 1
+        fi
+        sata_add "$slot" "$size" "$sata_type"
         ;;
       destroy)
         if [[ $# -lt 1 ]]; then
-          echo "Error: hdd destroy requires a slot number" >&2
+          echo "Error: sata destroy requires a slot number" >&2
           exit 1
         fi
-        hdd_destroy "$1"
+        sata_destroy "$1"
         ;;
       connect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: hdd connect requires a slot number" >&2
+          echo "Error: sata connect requires a slot number" >&2
           exit 1
         fi
-        hdd_connect "$1"
+        sata_connect "$1"
         ;;
       disconnect)
         if [[ $# -lt 1 ]]; then
-          echo "Error: hdd disconnect requires a slot number" >&2
+          echo "Error: sata disconnect requires a slot number" >&2
           exit 1
         fi
-        hdd_disconnect "$1"
+        sata_disconnect "$1"
         ;;
       *)
-        echo "Error: Unknown hdd subcommand: $subcommand" >&2
-        echo "Usage: $0 hdd <list|add|destroy|connect|disconnect> [args]" >&2
+        echo "Error: Unknown sata subcommand: $subcommand" >&2
+        echo "Usage: $0 sata <list|add|destroy|connect|disconnect> [args]" >&2
         exit 1
         ;;
     esac

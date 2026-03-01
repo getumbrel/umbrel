@@ -183,8 +183,8 @@ type AddToRaidDialogProps = {
 	canChooseMode: boolean
 	raidType?: 'storage' | 'failsafe'
 	raidDevices: RaidDevice[] // Devices currently in the RAID array
-	addDeviceAsync: (params: {device: string}) => Promise<boolean>
-	transitionToFailsafeAsync: (params: {device: string}) => Promise<boolean>
+	addDeviceAsync: (params: {deviceId: string}) => Promise<boolean>
+	transitionToFailsafeAsync: (params: {newDeviceId: string}) => Promise<boolean>
 }
 
 export function AddToRaidDialog({
@@ -292,7 +292,7 @@ export function AddToRaidDialog({
 			})
 			onOpenChange(false)
 
-			transitionToFailsafeAsync({device: device.id}).catch((error) => {
+			transitionToFailsafeAsync({newDeviceId: device.id}).catch((error) => {
 				clearPendingOperation()
 				toast.error(t('storage-manager.add-to-raid.failed-enable-failsafe'), {
 					description: error instanceof Error ? error.message : t('unknown-error'),
@@ -307,7 +307,7 @@ export function AddToRaidDialog({
 			})
 			onOpenChange(false)
 
-			addDeviceAsync({device: device.id}).catch((error) => {
+			addDeviceAsync({deviceId: device.id}).catch((error) => {
 				clearPendingOperation()
 				toast.error(t('storage-manager.add-to-raid.failed-add'), {
 					description: error instanceof Error ? error.message : t('unknown-error'),
@@ -325,7 +325,7 @@ export function AddToRaidDialog({
 			})
 			onOpenChange(false)
 
-			addDeviceAsync({device: device.id})
+			addDeviceAsync({deviceId: device.id})
 				.then(() => {
 					// Show finished state briefly before island disappears
 					setPendingOperation({

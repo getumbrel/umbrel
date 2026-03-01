@@ -100,9 +100,7 @@ describe('RAID storage mode', () => {
 	})
 
 	test('adds second SSD to RAID array', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({
-			device: secondDeviceId,
-		})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: secondDeviceId})
 	})
 
 	test('reports correct RAID status with both devices', async () => {

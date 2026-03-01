@@ -34,22 +34,26 @@ export const WASTED_COLOR = '#FF2F63'
 // Get device health status - single source of truth for all health checks
 // Used by setup.tsx (warning indicators) and ssd-health-dialog.tsx (detailed display)
 export function getDeviceHealth(device: StorageDevice) {
+	const isSsd = device.type === 'ssd'
+
 	// SMART status
 	const smartUnhealthy = device.smartStatus === 'unhealthy'
 
 	// Lifetime remaining (inverse of lifetimeUsed)
-	const lifeRemaining = device.lifetimeUsed !== undefined ? Math.max(0, 100 - device.lifetimeUsed) : undefined
-	const lifeWarning = device.lifetimeUsed !== undefined && device.lifetimeUsed >= LIFETIME_WARNING_THRESHOLD
+	const lifeRemaining = isSsd && device.lifetimeUsed !== undefined ? Math.max(0, 100 - device.lifetimeUsed) : undefined
+	const lifeWarning = isSsd && device.lifetimeUsed !== undefined && device.lifetimeUsed >= LIFETIME_WARNING_THRESHOLD
 
 	// Temperature checks (critical takes precedence over warning)
 	const tempCritical =
 		device.temperature !== undefined &&
+		isSsd &&
 		device.temperatureCritical !== undefined &&
 		device.temperature >= device.temperatureCritical
 
 	const tempWarning =
 		!tempCritical &&
 		device.temperature !== undefined &&
+		isSsd &&
 		device.temperatureWarning !== undefined &&
 		device.temperature >= device.temperatureWarning
 

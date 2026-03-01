@@ -25,6 +25,7 @@ type SsdHealthDialogProps = {
 export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHealthDialogProps) {
 	// Get health status from shared helper
 	const {smartUnhealthy, lifeRemaining, lifeWarning, tempWarning, tempCritical} = getDeviceHealth(device)
+	const isSsd = device.type === 'ssd'
 
 	// Determine health status display label
 	const healthStatus =
@@ -235,13 +236,13 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 										{tempWarning && ` · ${t('storage-manager.health.overheating')}`}
 									</span>
 								</div>
-								{device.temperatureWarning !== undefined && (
+								{isSsd && device.temperatureWarning !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.warning-threshold')}</span>
 										<span className='font-normal'>{device.temperatureWarning}°C</span>
 									</div>
 								)}
-								{device.temperatureCritical !== undefined && (
+								{isSsd && device.temperatureCritical !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.critical-threshold')}</span>
 										<span className='font-normal'>{device.temperatureCritical}°C</span>

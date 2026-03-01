@@ -30,20 +30,33 @@ const raid = router({
 		.input(z.object({devices: z.array(z.string()), raidType: z.enum(['storage', 'failsafe'])}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.setup(input.devices, input.raidType)),
 
-	// Add a device to an existing RAID array
+	// Add a single device to an existing RAID array.
+	// Allowed for storage mode and failsafe raidz mode.
 	addDevice: privateProcedure
-		.input(z.object({device: z.string()}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addDevice(input.device)),
+		.input(z.object({deviceId: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addDevice(input.deviceId)),
+
+	// Add a mirror pair to an HDD failsafe array.
+	// This endpoint only applies when current topology is mirror.
+	addMirror: privateProcedure
+		.input(z.object({deviceIds: z.tuple([z.string(), z.string()])}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.addMirror(input.deviceIds)),
 
 	// Replace a device in an existing RAID array
 	replaceDevice: privateProcedure
 		.input(z.object({oldDevice: z.string(), newDevice: z.string()}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.replaceDevice(input.oldDevice, input.newDevice)),
 
-	// Transition a single-disk storage array to a failsafe (raidz1) array
-	transitionToFailsafe: privateProcedure
-		.input(z.object({device: z.string()}))
-		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafe(input.device)),
+	// Transition an SSD storage array to failsafe (raidz) mode
+	transitionToFailsafeRaidz: privateProcedure
+		.input(z.object({newDeviceId: z.string()}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafeRaidz(input.newDeviceId)),
+
+	// Transition an HDD storage array to failsafe (mirror) mode
+	// Each existing storage device must be paired with a new mirror device.
+	transitionToFailsafeMirror: privateProcedure
+		.input(z.object({pairs: z.array(z.object({existingDeviceId: z.string(), newDeviceId: z.string()})).min(1)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.hardware.raid.transitionToFailsafeMirror(input.pairs)),
 })
 
 const umbrelPro = router({

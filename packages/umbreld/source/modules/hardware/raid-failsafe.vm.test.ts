@@ -85,6 +85,12 @@ describe('RAID failsafe mode', () => {
 		expect(deviceIds).toEqual([firstDeviceId, secondDeviceId].sort())
 	})
 
+	test('rejects addMirror endpoint on raidz failsafe arrays', async () => {
+		await expect(
+			umbreld.client.hardware.raid.addMirror.mutate({deviceIds: [firstDeviceId, secondDeviceId]}),
+		).rejects.toThrow('addMirror is only supported for mirror failsafe mode')
+	})
+
 	test('creates marker directory to verify data consistency', async () => {
 		await umbreld.client.files.createDirectory.mutate({path: '/Home/data-consistency-marker'})
 		const listing = await umbreld.client.files.list.query({path: '/Home'})
@@ -115,9 +121,7 @@ describe('RAID failsafe mode', () => {
 		// Subscribe to expansion events before adding the device
 		expansionSubscription = umbreld.subscribeToEvents<ExpansionStatus>('raid:expansion-progress')
 
-		await umbreld.client.hardware.raid.addDevice.mutate({
-			device: thirdDeviceId,
-		})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: thirdDeviceId})
 	})
 
 	test('reports correct RAID status with three devices', async () => {

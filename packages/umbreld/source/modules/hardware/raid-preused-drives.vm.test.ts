@@ -117,13 +117,13 @@ describe('RAID operations with pre-used ZFS drives', () => {
 
 	// Phase 4: Test transition to failsafe with pre-used SSD
 	test('rejects transition with device already in array', async () => {
-		await expect(umbreld.client.hardware.raid.transitionToFailsafe.mutate({device: device1Id})).rejects.toThrow(
-			'Cannot transition with a device that is already in the RAID array',
-		)
+		await expect(
+			umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: device1Id}),
+		).rejects.toThrow('Cannot transition with a device that is already in the RAID array')
 	})
 
 	test('transitions to failsafe mode with pre-used SSD (device 2)', async () => {
-		await umbreld.client.hardware.raid.transitionToFailsafe.mutate({device: device2Id})
+		await umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: device2Id})
 	})
 
 	test('waits for transition to complete', async () => {
@@ -174,13 +174,13 @@ describe('RAID operations with pre-used ZFS drives', () => {
 
 	// Phase 5: Test expansion with pre-used SSD
 	test('rejects expansion with device already in array', async () => {
-		await expect(umbreld.client.hardware.raid.addDevice.mutate({device: device1Id})).rejects.toThrow(
+		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: device1Id})).rejects.toThrow(
 			'Cannot add a device that is already in the RAID array',
 		)
 	})
 
 	test('expands failsafe array with pre-used SSD (device 3)', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({device: device3Id})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: device3Id})
 	})
 
 	test('waits for expansion to complete', async () => {
@@ -277,13 +277,13 @@ describe('RAID operations with pre-used ZFS drives', () => {
 	})
 
 	test('rejects storage mode expansion with device already in array', async () => {
-		await expect(umbreld.client.hardware.raid.addDevice.mutate({device: device1Id})).rejects.toThrow(
+		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: device1Id})).rejects.toThrow(
 			'Cannot add a device that is already in the RAID array',
 		)
 	})
 
 	test('expands storage mode array with pre-used SSD (device 2)', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({device: device2Id})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: device2Id})
 	})
 
 	test('confirms storage mode with 2 devices after expansion', async () => {

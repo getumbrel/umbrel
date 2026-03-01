@@ -106,9 +106,7 @@ describe('RAID storage to failsafe transition with 90% full array', () => {
 	})
 
 	test('starts transition to failsafe mode', async () => {
-		const result = await umbreld.client.hardware.raid.transitionToFailsafe.mutate({
-			device: secondDeviceId,
-		})
+		const result = await umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: secondDeviceId})
 		expect(result).toBe(true)
 	})
 

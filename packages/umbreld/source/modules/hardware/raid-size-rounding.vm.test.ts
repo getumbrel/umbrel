@@ -133,7 +133,9 @@ describe('RAID transition with real 4TB drive sizes', () => {
 	})
 
 	test('starts transition to failsafe mode with smaller Samsung device', async () => {
-		const result = await umbreld.client.hardware.raid.transitionToFailsafe.mutate({device: smallerSamsungDeviceId})
+		const result = await umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({
+			newDeviceId: smallerSamsungDeviceId,
+		})
 		expect(result).toBe(true)
 	})
 
@@ -203,7 +205,7 @@ describe('RAID transition with real 4TB drive sizes', () => {
 	})
 
 	test('expands RAID array with exact 4TB device', async () => {
-		const result = await umbreld.client.hardware.raid.addDevice.mutate({device: exactGenericDeviceId})
+		const result = await umbreld.client.hardware.raid.addDevice.mutate({deviceId: exactGenericDeviceId})
 		expect(result).toBe(true)
 	})
 

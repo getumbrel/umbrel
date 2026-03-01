@@ -196,7 +196,7 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 	}
 }
 
-export async function createTestVm() {
+export async function createTestVm({device}: {device?: string} = {}) {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
@@ -226,10 +226,11 @@ export async function createTestVm() {
 		let vmOutput = ''
 		let vmExited = false
 
+		const deviceArgs = device ? ['--device', device] : []
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${deviceArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits
@@ -306,6 +307,26 @@ export async function createTestVm() {
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
+	async function addSata({slot, type, size}: {slot: number; type: 'hdd' | 'ssd'; size?: string}) {
+		if (size) {
+			await $({env})`${vmScript} sata add ${slot} --size ${size} --type ${type}`
+		} else {
+			await $({env})`${vmScript} sata add ${slot} --type ${type}`
+		}
+	}
+
+	async function addHdd({slot, size}: {slot: number; size?: string}) {
+		await addSata({slot, type: 'hdd', size})
+	}
+
+	async function addSataSsd({slot, size}: {slot: number; size?: string}) {
+		await addSata({slot, type: 'ssd', size})
+	}
+
+	async function removeHdd({slot}: {slot: number}) {
+		await $({env})`${vmScript} sata destroy ${slot}`
+	}
+
 	async function disconnectNvme({slot}: {slot: number}) {
 		await $({env})`${vmScript} nvme disconnect ${slot}`
 	}
@@ -349,6 +370,9 @@ export async function createTestVm() {
 		disconnectNvme,
 		connectNvme,
 		moveNvme,
+		addHdd,
+		addSataSsd,
+		removeHdd,
 		reflash,
 		async ssh(command: string) {
 			const attemptSsh = (password: string) =>
