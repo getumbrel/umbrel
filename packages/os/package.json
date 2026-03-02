@@ -8,6 +8,7 @@
     "build:arm64": "SKIP_AMD64=true SKIP_PI=true npm run build",
     "build:pi": "SKIP_AMD64=true SKIP_ARM64=true npm run build",
     "build:pi5": "SKIP_AMD64=true SKIP_ARM64=true SKIP_PI4=true npm run build",
+    "clean": "rm -rf rugix/build rugix/.rugix build",
     "vm": "./vm.sh"
   },
   "devDependencies": {
