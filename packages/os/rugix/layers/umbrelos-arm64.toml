@@ -13,3 +13,4 @@ recipes = [
 
 [parameters."core/rugix-ctrl"]
 use_musl = false
+version = "v1.0.0"

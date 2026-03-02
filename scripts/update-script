@@ -66,10 +66,8 @@ then
 		exit 1
 	fi
 
-	rugix-ctrl update install --reboot deferred "${update_url}"
+	rugix-ctrl update install --reboot set --insecure-skip-bundle-verification "${update_url}"
 else
 	echo umbrel-update: '{"error": "No supported update mechanism found"}'
 	exit 1
 fi
-
-

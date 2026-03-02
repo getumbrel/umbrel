@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Pin the Rugix Docker image.
-export RUGIX_BAKERY_IMAGE="ghcr.io/silitics/rugix-bakery@sha256:1abcf7791548aa441c06a8bc9b97acf170356cca8cd269b3fa8df4cc762d0251" # v0.8.15 + progress reporting for local delta hits (git-0c91222)
+export RUGIX_BAKERY_IMAGE="ghcr.io/rugix/rugix-bakery@sha256:8562abd2577695bd5f3b0b8c943f6d1b48dd0c79be5f6c91bfb0a2635f64bdd0" # v0.9.1
 # export RUGIX_VERSION="branch-main"
 # export RUGIX_DEV=true
 
@@ -219,7 +219,7 @@ function build_rugix_system() {
 
     local compression=""
     if [ "$dev" == "true" ]; then
-        compression="--without-compression"
+        compression="--disable-compression"
     fi
 
     ./run-bakery bake bundle --release-version "$release" $compression "$system"

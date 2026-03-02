@@ -13,6 +13,7 @@ recipes = [
 
 [parameters."core/rugix-ctrl"]
 use_musl = false
+version = "v1.0.0"
 
 [parameters."setup-rugix"]
 boot_type = "pi"
