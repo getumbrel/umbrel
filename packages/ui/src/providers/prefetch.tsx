@@ -1,4 +1,4 @@
-import {useIsFetching} from '@tanstack/react-query'
+import {useIsFetching, useQueryClient} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
 
 import {trpcReact} from '@/trpc/trpc'
@@ -9,6 +9,7 @@ const prefetchStableMs = 500
 
 export function Prefetcher() {
 	const utils = trpcReact.useUtils()
+	const queryClient = useQueryClient()
 	const [triggered, setTriggered] = useState(false)
 	const isLoggedInQ = trpcReact.user.isLoggedIn.useQuery()
 	const isFetching = useIsFetching()
@@ -27,6 +28,14 @@ export function Prefetcher() {
 			utils.system.version,
 			utils.system.getIpAddresses,
 			utils.system.uptime,
+			utils.user.get,
+
+			// Settings backups
+			utils.backups.getRepositories,
+
+			// Settings raid (Pro devices — returns empty on non-Pro)
+			utils.hardware.raid.getStatus,
+			utils.hardware.internalStorage.getDevices,
 
 			// Settings sidebar
 			utils.system.systemDiskUsage,
@@ -48,9 +57,18 @@ export function Prefetcher() {
 			utils.files.viewPreferences,
 			utils.files.favorites,
 			utils.files.shares,
+
+			// App Store
+			utils.appStore.registry,
 		]
 
 		Promise.allSettled(prefetchQueries.map((q) => q.prefetch()))
+
+		// App Store discover page (external API, not tRPC)
+		queryClient.prefetchQuery({
+			queryKey: ['app-store', 'discover'],
+			queryFn: () => fetch('https://apps.umbrel.com/api/v2/umbrelos/app-store/discover').then((res) => res.json()),
+		})
 
 		const prefetchThumbnails = wallpapers.map((wallpaper) => getWallpaperThumbUrl(wallpaper))
 

@@ -1,15 +1,8 @@
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {AnimatedInputError, Input} from '@/components/ui/input'
 import {useUserName} from '@/hooks/use-user-name'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
 import {t} from '@/utils/i18n'
 
 export default function ChangeNameDialog() {

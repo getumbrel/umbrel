@@ -1,12 +1,7 @@
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {TbDots} from 'react-icons/tb'
 
-import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
-import {SORT_BY_OPTIONS} from '@/features/files/constants'
-import {usePreferences} from '@/features/files/hooks/use-preferences'
-import {useFilesStore} from '@/features/files/store/use-files-store'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -18,8 +13,14 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dropdown-menu'
+import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
+import {SearchInput} from '@/features/files/components/listing/actions-bar/search-input'
+import {SORT_BY_OPTIONS} from '@/features/files/constants'
+import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
+import {useFilesStore} from '@/features/files/store/use-files-store'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {
@@ -27,18 +28,19 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 	const {hideSearch} = useActionsBarConfig()
+	const isReadOnly = useIsFilesReadOnly()
 
 	return (
 		<div className='flex items-center gap-2'>
-			{/* Search */}
-			{hideSearch ? null : <SearchInput />}
+			{/* Search (hide in read-only or when explicitly hidden) */}
+			{!hideSearch && !isReadOnly ? <SearchInput /> : null}
 
 			{/* Select toggle button */}
 			<Button
 				className={cn(
 					'h-[1.9rem] rounded-full px-3 text-13',
 					'focus:ring-0 focus:ring-offset-0 focus-visible:ring-0',
-					'focus:outline-none focus-visible:outline-none',
+					'focus:outline-hidden focus-visible:outline-hidden',
 				)}
 				variant={isSelectingOnMobile ? 'secondary' : 'default'}
 				size='default'
@@ -49,7 +51,7 @@ export function MobileActions({DropdownItems = null}: {DropdownItems?: React.Rea
 			</Button>
 
 			<DropdownMenu>
-				<DropdownMenuTrigger className='focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:outline-none focus-visible:ring-0'>
+				<DropdownMenuTrigger className='focus:ring-0 focus:ring-offset-0 focus:outline-hidden focus-visible:ring-0 focus-visible:outline-hidden'>
 					<TbDots className='h-5 w-5' />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className='w-44' align='start'>

@@ -56,6 +56,7 @@ export default class Dbus {
 						this.logger.log('Removing disk event listeners')
 						manager.removeListener('UnitNew', handleDeviceChange)
 						manager.removeListener('UnitRemoved', handleDeviceChange)
+						this.#removeDiskEventListeners = undefined
 					}
 
 					resolve(true)

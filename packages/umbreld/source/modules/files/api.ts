@@ -161,6 +161,11 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		// Rename the temporary file to the final path
 		await fse.rename(temporarySystemPath, systemPath)
 
+		// Set owner to the umbrel user
+		// We do nothing on fail because this isn't supported on all filesystems.
+		// e.g this is expected to throw on external exFAT drives.
+		await umbreld.files.chownSystemPath(systemPath).catch(() => {})
+
 		// Return success
 		return response.status(200).json({path: umbreld.files.systemToVirtualPath(systemPath)})
 	})

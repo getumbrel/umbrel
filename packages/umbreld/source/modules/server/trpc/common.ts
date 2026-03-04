@@ -4,29 +4,16 @@
 // Export the router type for use in clients in other packages
 export type {AppRouter} from './index.js'
 
-// We define these here so all clients can depend on this to route
-// RPCs that require HTTP over the HTTP transport via a split link.
-// RPCs require HTTP if they need to be publically accessible
-// (ws connection is authed during handshake) of if they need to interact
-// with headers/cookies or other request/response stuff directly.
-// Any RPC that has these requirements needs to be added to this list.
-// This sucks but I don't see a better way to do it.
-export const httpPaths = [
-	// Public
-	'migrationStatus',
-	'system.online',
-	'system.version',
-	'system.status',
-	'system.getFactoryResetStatus',
-	// Public (and some get/set cookies)
-	'user.register',
-	'user.exists',
+// RPCs that MUST use HTTP (cookie/header semantics). Clients use this list for split-link routing.
+export const httpOnlyPaths = [
+	// sets cookie
 	'user.login',
+	// reads Authorization header
 	'user.isLoggedIn',
-	'user.is2faEnabled',
-	'user.wallpaper',
-	'user.language',
-	// Private but modify cookies
+	// renews cookie
 	'user.renewToken',
+	// clears cookie
 	'user.logout',
+	// system.status doesn't use cookies/headers, but the UI polls it across restarts to detect when umbreld is back online; we force HTTP to avoid WS reconnect handshake
+	'system.status',
 ] as const

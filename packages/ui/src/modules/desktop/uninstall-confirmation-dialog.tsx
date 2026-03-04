@@ -1,4 +1,3 @@
-import {useAllAvailableApps} from '@/providers/available-apps'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -8,7 +7,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {t} from '@/utils/i18n'
 
 export function UninstallConfirmationDialog({

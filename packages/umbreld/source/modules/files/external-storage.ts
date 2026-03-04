@@ -1,11 +1,13 @@
 import nodePath from 'node:path'
+import {setTimeout} from 'node:timers/promises'
+
 import pWaitFor from 'p-wait-for'
 
 import fse from 'fs-extra'
 import {$} from 'execa'
 import PQueue from 'p-queue'
 
-import isUmbrelHome from '../is-umbrel-home.js'
+import {isRaspberryPi} from '../system/system.js'
 
 import type Umbreld from '../../index.js'
 
@@ -15,6 +17,8 @@ type BlockDevice = {
 	// Type more values here as we use them like emmc or sdcard
 	transport: 'unknown' | 'usb' | 'nvme'
 	size: number
+	isMounted: boolean
+	isFormatting: boolean
 	partitions: {
 		id: string
 		type: string
@@ -53,6 +57,8 @@ export async function getBlockDevices() {
 			name: blockDevice.model ?? 'Untitled',
 			transport: blockDevice.tran ?? 'unknown',
 			size: blockDevice.size ?? 0,
+			isMounted: false,
+			isFormatting: false,
 			partitions: [],
 		}
 
@@ -71,6 +77,8 @@ export async function getBlockDevices() {
 			})
 		}
 
+		device.isMounted = device.partitions.some((partition) => partition.mountpoints.length > 0)
+
 		// Add the device to the list
 		externalStorageDevices.push(device)
 	}
@@ -83,6 +91,7 @@ export default class ExternalStorage {
 	logger: Umbreld['logger']
 	#mountQueue = new PQueue({concurrency: 1})
 	#removeDeviceChangeListener?: () => void
+	formatJobs: Set<string> = new Set()
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -90,15 +99,18 @@ export default class ExternalStorage {
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
 	}
 
-	// Only enable this module on Umbrel Home
-	async enabled() {
-		return await isUmbrelHome()
+	// Only enable this module on non raspberry pi devices.
+	// We disable on Pi due to unreliable power issues when running USB storage devices
+	// and also due to complexities with the current mount script.
+	async supported() {
+		const isNotRaspberryPi = !(await isRaspberryPi())
+		return isNotRaspberryPi
 	}
 
 	// Add listener
 	async start() {
 		// Don't run through start process if we're not enabled
-		const isEnabled = await this.enabled()
+		const isEnabled = await this.supported()
 		if (!isEnabled) return
 
 		this.logger.log('Starting external storage')
@@ -121,14 +133,23 @@ export default class ExternalStorage {
 	// Remove listener
 	async stop() {
 		// Don't run through stop process if we're not enabled
-		const isEnabled = await this.enabled()
+		const isEnabled = await this.supported()
 		if (!isEnabled) return
 
 		this.logger.log('Stopping external storage')
 		this.#removeDeviceChangeListener?.()
 
 		// Unmount all external devices
-		await this.#unmountAllMountedExternalDevices()
+		const ONE_SECOND = 1000
+		await Promise.race([
+			setTimeout(ONE_SECOND * 10),
+			(async () => {
+				this.logger.log('Unmounting all external devices')
+				await this.#unmountAllMountedExternalDevices().catch((error) =>
+					this.logger.error('Error unmounting external devices', error),
+				)
+			})(),
+		])
 	}
 
 	// Mount external disks
@@ -156,6 +177,9 @@ export default class ExternalStorage {
 
 			// Loop over external devices
 			for (const device of externalStorageDevices) {
+				// Skip devices that are currently being formatted
+				if (this.formatJobs.has(device.id)) continue
+
 				// Loop over partitions
 				for (const partition of device.partitions) {
 					// Skip partitions that are already mounted
@@ -178,15 +202,20 @@ export default class ExternalStorage {
 						await this.#umbreld.files.chownSystemPath(systemMountpoint)
 						await $`mount /dev/${partition.id} ${systemMountpoint}`
 
-						// Broadcast event signalling that the external storage devices have changed
-						this.#umbreld.eventBus.emit('files:external-storage:change')
-
 						// Log on success
 						const virtualMountPoint = this.#umbreld.files.systemToVirtualPath(systemMountpoint)
 						this.logger.log(`Mounted partition ${device.name} ${partition.label} as ${virtualMountPoint}`)
 					} catch (error) {
 						// Just log the error and continue to the next partition
 						this.logger.error(`Failed to mount partition ${device.name} ${partition.label}`, error)
+
+						// Clean up left over mount points
+						await this.#cleanLeftOverMountPoints().catch((error) => {
+							this.logger.error(`Failed to clean up left over mount points`, error)
+						})
+					} finally {
+						// Broadcast event signalling that the external storage devices have changed
+						this.#umbreld.eventBus.emit('files:external-storage:change')
 					}
 				}
 			}
@@ -237,6 +266,70 @@ export default class ExternalStorage {
 		})
 	}
 
+	// Format external device
+	async formatExternalDevice({
+		deviceId,
+		filesystem,
+		label,
+	}: {
+		deviceId: string
+		filesystem: 'ext4' | 'exfat'
+		label: string
+	}) {
+		try {
+			// Check if job is already in progress
+			if (this.formatJobs.has(deviceId)) throw new Error('[format-job-already-in-progress]')
+			this.formatJobs.add(deviceId)
+
+			// Check valid filessytem type
+			if (filesystem !== 'ext4' && filesystem !== 'exfat') throw new Error('[invalid-filesystem]')
+
+			// Check label is valid
+			const labelSupportedCharacters = /^[A-Za-z0-9-_ ]+$/.test(label)
+			const labelSupportedLength = label.length >= 1 && label.length <= 11
+			const labelIsValid = labelSupportedCharacters && labelSupportedLength
+			if (!labelIsValid) throw new Error('[invalid-label]')
+
+			this.logger.log(`Formatting device ${deviceId} as ${filesystem} with label ${label}`)
+
+			// If the device is currently mounted, unmount it
+			const mountedExternalDevices = await this.getMountedExternalDevices()
+			const isDeviceMounted = mountedExternalDevices.some((device) => device.id === deviceId)
+			if (isDeviceMounted) await this.unmountExternalDevice(deviceId, {remove: false})
+
+			// Clean partition table
+			this.logger.log(`Cleaning partition table for device ${deviceId}`)
+			await $`sgdisk --zap-all /dev/${deviceId}`
+
+			// Remove all filesystem signatures
+			this.logger.log(`Removing all filesystem signatures for device ${deviceId}`)
+			await $`wipefs -a /dev/${deviceId}`
+
+			// Create new partition table
+			this.logger.log(`Creating new partition table for device ${deviceId}`)
+			await $`parted -s /dev/${deviceId} --align optimal mklabel gpt mkpart primary ext4 0% 100%`
+
+			// Wait for changes
+			this.logger.log(`Waiting for changes for device ${deviceId}`)
+			await $`partprobe /dev/${deviceId}`
+			await $`udevadm settle`
+
+			// Create filesystem
+			if (filesystem === 'ext4') {
+				this.logger.log(`Creating ext4 filesystem for device ${deviceId}`)
+				await $`mkfs.ext4 -F -L ${label} /dev/${deviceId}1`
+			} else if (filesystem === 'exfat') {
+				this.logger.log(`Creating exfat filesystem for device ${deviceId}`)
+				await $`mkfs.exfat -n ${label} /dev/${deviceId}1`
+			}
+
+			this.logger.log(`Successfully formatted device ${deviceId} as ${filesystem} with label ${label}`)
+			return true
+		} finally {
+			this.formatJobs.delete(deviceId)
+		}
+	}
+
 	// Get external devices
 	async #getExternalDevices() {
 		// Get all block devices
@@ -246,11 +339,9 @@ export default class ExternalStorage {
 		return blockDevices.filter((device) => device.transport === 'usb')
 	}
 
-	// Get all umbreld mounted external devices
-	// This will only return block devices that have partitions mounted at /External
-	// This will only return the mounted partitions for those block devices
-	// This will only return the virtual path of the /External mount point
-	async getMountedExternalDevices() {
+	// Get external devices but only show mount points that are under /External
+	// Also decorate with useful flags like isMounted and isFormatting
+	async getExternalDevicesWithVirtualMountPoints() {
 		// Get all block devices
 		const externalBlockDevices = await this.#getExternalDevices()
 
@@ -265,6 +356,23 @@ export default class ExternalStorage {
 					.map((mountpoint) => this.#umbreld.files.systemToVirtualPath(mountpoint))
 			}
 
+			// Update isMounted flag to only apply to vfs mounts
+			device.isMounted = device.partitions.some((partition) => partition.mountpoints.length > 0)
+
+			// Check if we have a formatting job running for this device
+			device.isFormatting = this.formatJobs.has(device.id)
+		}
+
+		return externalBlockDevices
+	}
+
+	// Get all umbreld mounted external devices
+	async getMountedExternalDevices() {
+		// Get all block devices
+		const externalBlockDevices = await this.getExternalDevicesWithVirtualMountPoints()
+
+		// Loop over devices
+		for (const device of externalBlockDevices) {
 			// Filter out partitions without mount points from device
 			device.partitions = device.partitions.filter((partition) => partition.mountpoints.length > 0)
 		}
@@ -314,10 +422,10 @@ export default class ExternalStorage {
 		}
 	}
 
-	// Check if an external drive is connected on non-Umbrel Home hardware
-	// This is used to notify non-Home users why they can't see their hardware.
-	async isExternalDeviceConnectedOnNonUmbrelHome() {
-		const isHome = await isUmbrelHome()
+	// Check if an external drive is connected on unsupported hardware
+	// This is used to notify unsupported users why they can't see their hardware.
+	async isExternalDeviceConnectedOnUnsupportedDevice() {
+		const isSupported = await this.supported()
 		let externalBlockDevices = await this.#getExternalDevices()
 
 		// Exclude any external disks that include the current data directory.
@@ -327,6 +435,6 @@ export default class ExternalStorage {
 		const dataDirDisk = df.stdout.split('\n').pop()?.split('/').pop()?.replace(/\d+$/, '')
 		externalBlockDevices = externalBlockDevices.filter((blockDevice) => blockDevice.id !== dataDirDisk)
 
-		return !isHome && externalBlockDevices.length > 0
+		return !isSupported && externalBlockDevices.length > 0
 	}
 }

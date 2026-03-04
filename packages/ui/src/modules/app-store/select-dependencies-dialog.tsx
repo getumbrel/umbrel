@@ -2,22 +2,22 @@ import {Close} from '@radix-ui/react-dialog'
 import {SetStateAction, useEffect, useMemo, useState} from 'react'
 import {arrayIncludes} from 'ts-extras'
 
-import {ChevronDown} from '@/assets/chevron-down'
 import {AppIcon} from '@/components/app-icon'
+import {ChevronDown} from '@/components/chevron-down'
 import {appStateToString} from '@/components/cmdk'
+import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
-import {useApps} from '@/providers/apps'
-import {useAllAvailableApps} from '@/providers/available-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dropdown-menu'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {cn} from '@/lib/utils'
+import {useApps} from '@/providers/apps'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {AppState, installedStates, RegistryApp} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'

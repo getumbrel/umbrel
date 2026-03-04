@@ -4,10 +4,13 @@ import {IconsViewFileItem} from '@/features/files/components/listing/file-item/i
 import {ListViewFileItem} from '@/features/files/components/listing/file-item/list-view-file-item'
 import {Draggable, Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {useItemClick} from '@/features/files/hooks/use-item-click'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
-import {cn} from '@/shadcn-lib/utils'
+import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
+import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
+import {cn} from '@/lib/utils'
 
 interface FileItemProps {
 	item: FileSystemItem
@@ -37,6 +40,12 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const view = preferences?.view
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
+	const {doesHostHaveMountedShares} = useNetworkStorage()
+
+	// If the item is a network device that isn't actually mounted then we disable and fade the text content but not the icon.
+	const isNetworkHost = isDirectoryANetworkDevice(item.path)
+	const isItemInteractive = isNetworkHost ? doesHostHaveMountedShares(item.path) : true
+
 	// Long press detection to select the item on mobile
 	// since onContextMenu isn't triggered on mobile
 	const longPressTimerRef = useRef(0)
@@ -49,8 +58,13 @@ export const FileItem = ({item, items}: FileItemProps) => {
 		// Select the item if it's not already selected
 		if (!isItemSelected(item)) {
 			setSelectedItems([item])
+		} else {
+			// Update the selected items with fresh item data from the listing.
+			// This ensures operations are up to date (e.g., after folder creation where
+			// the item was initially selected with empty operations).
+			setSelectedItems(selectedItems.map((selected) => (selected.path === item.path ? item : selected)))
 		}
-	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item])
+	}, [setIsSelectingOnMobile, setSelectedItems, isItemSelected, item, selectedItems])
 
 	// Cleanup timer on unmount
 	useEffect(() => {
@@ -158,10 +172,14 @@ export const FileItem = ({item, items}: FileItemProps) => {
 				return
 			}
 
+			// don't allow renaming Umbrel Backup directory
+			if (isDirectoryAnUmbrelBackup(item.name)) return
+
 			// don't trigger the rename if the user Entered in the input
 			if (isInInput(event)) return
 
 			event.preventDefault()
+
 			setIsEditingName(true)
 		}
 
@@ -181,7 +199,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			className={cn(
 				`files-${view}-view-file-item`, // .files-list-view-file-item styles are applied via CSS using combinator classes
 				'rounded-lg transition-colors duration-100',
-				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_theme(colors.brand)]', // selected item styles for list view are overwritten by CSS
+				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))]', // selected item styles for list view are overwritten by CSS
 				!isSelected && !isUploading && 'md:hover:!border-white/6 md:hover:!bg-white/5', // don't show hover state for selected items or uploading items
 			)}
 			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items
@@ -189,10 +207,14 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			<Droppable
 				id={`${view}-view-file-item-${item.path}`}
 				path={item.path}
-				disabled={!!isUploading || item.type !== 'directory'}
+				disabled={!!isUploading || item.type !== 'directory' || !isItemInteractive}
 				className='rounded-lg'
 			>
-				<Draggable id={`${view}-view-file-item-${item.path}`} item={item} disabled={!!isUploading}>
+				<Draggable
+					id={`${view}-view-file-item-${item.path}`}
+					item={item}
+					disabled={!!isUploading || !isItemInteractive}
+				>
 					<div
 						onClick={(e) => handleClick(e, item, items)}
 						onDoubleClick={() => handleDoubleClick(item)}
@@ -221,6 +243,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 									item={item}
 									isEditingName={isEditingFileName}
 									onEditingNameComplete={handlNameEditingComplete}
+									fadedContent={!isItemInteractive}
 								/>
 							) : null}
 							{view === 'list' ? (
@@ -228,6 +251,7 @@ export const FileItem = ({item, items}: FileItemProps) => {
 									item={item}
 									isEditingName={isEditingFileName}
 									onEditingNameComplete={handlNameEditingComplete}
+									fadedContent={!isItemInteractive}
 								/>
 							) : null}
 						</div>

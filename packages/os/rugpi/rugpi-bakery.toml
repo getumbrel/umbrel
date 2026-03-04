@@ -1,7 +1,0 @@
-[images.tryboot]
-layer = "umbrelos-rugpi"
-include_firmware = "none"
-
-[images.pi4]
-layer = "umbrelos-rugpi"
-include_firmware = "pi4"

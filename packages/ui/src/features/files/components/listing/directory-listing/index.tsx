@@ -1,27 +1,46 @@
 import {Upload} from 'lucide-react'
-import {useEffect, useRef} from 'react'
+import {useEffect, useLayoutEffect, useRef} from 'react'
 import {RiClipboardLine} from 'react-icons/ri'
+import {TbWorldPlus} from 'react-icons/tb'
+import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
+import {ContextMenuItem, ContextMenuShortcut} from '@/components/ui/context-menu'
+import {DropdownMenuItem} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
 import {Listing} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
-import {EmptyStateDirectory} from '@/features/files/components/listing/directory-listing/empty-state'
+import {EmptyStateDirectory, EmptyStateNetwork} from '@/features/files/components/listing/directory-listing/empty-state'
 import {UploadInput} from '@/features/files/components/shared/upload-input'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
+import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
-import {ContextMenuItem, ContextMenuShortcut} from '@/shadcn-components/ui/context-menu'
-import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
+import {useLinkToDialog} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 
-export function DirectoryListing() {
-	const {currentPath, isBrowsingApps, isBrowsingExternalStorage, isViewingExternalDrives} = useNavigate()
+// `marqueeScale` is threaded through so embedded contexts (like Rewind) can tell marquee selection
+// about the CSS transform that shrinks the Files UI.
+export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {}) {
+	const {
+		currentPath,
+		uiPath,
+		isBrowsingApps,
+		isBrowsingExternalStorage,
+		isViewingExternalDrives,
+		isViewingNetworkDevices,
+		isViewingNetworkShares,
+		isBrowsingNetworkStorage,
+		navigateToDirectory,
+	} = useNavigate()
+	const isEmbedded = useIsFilesEmbedded()
 	const setActionsBarConfig = useSetActionsBarConfig()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
+	const routerNavigate = useRouterNavigate()
+	const linkToDialog = useLinkToDialog()
 
 	// Grab the potential "new folder" item from store
 	const newFolder = useFilesStore((state: FilesStore) => state.newFolder)
@@ -43,19 +62,21 @@ export function DirectoryListing() {
 	}
 
 	// Additional items for the directory context menu
-	const additionalContextMenuItems = isViewingExternalDrives ? null : (
-		<>
-			<ContextMenuItem onClick={startNewFolder}>{t('files-action.new-folder')}</ContextMenuItem>
-			<ContextMenuItem onClick={handleUploadClick}>{t('files-action.upload')}</ContextMenuItem>
-			<ContextMenuItem
-				onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-				disabled={!hasItemsInClipboard()}
-			>
-				{t('files-action.paste')}
-				<ContextMenuShortcut>⌘V</ContextMenuShortcut>
-			</ContextMenuItem>
-		</>
-	)
+	// Disable write actions (New Folder, Upload, Paste) for read-only directories
+	const additionalContextMenuItems =
+		isViewingExternalDrives || isViewingNetworkDevices || isViewingNetworkShares ? null : (
+			<>
+				<ContextMenuItem onClick={startNewFolder}>{t('files-action.new-folder')}</ContextMenuItem>
+				<ContextMenuItem onClick={handleUploadClick}>{t('files-action.upload')}</ContextMenuItem>
+				<ContextMenuItem
+					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
+					disabled={!hasItemsInClipboard()}
+				>
+					{t('files-action.paste')}
+					<ContextMenuShortcut>⌘V</ContextMenuShortcut>
+				</ContextMenuItem>
+			</>
+		)
 
 	// Filter out items that are currently uploading to prevent them from being selected via marquee selection or keyboard shortcuts
 	const selectableItems = (listing?.items ?? []).filter((item) => !item.isUploading)
@@ -63,47 +84,92 @@ export function DirectoryListing() {
 	// Hide the path bar and disable actions if there's an error or loading state
 	const hidePathAndDisableActions = Boolean(isLoading || error)
 
+	// In embedded contexts (e.g., Rewind), if the current directory doesn't exist in a snapshot,
+	// we automatically fall back to the nearest existing parent.
+	// We use useLayoutEffect to navigate before paint to avoid a visible flicker of the error screen ("No such file or folder").
+	useLayoutEffect(() => {
+		if (!isEmbedded || !error) return
+		// climb the logical UI path to the nearest existing parent
+		const logicalBase = uiPath.startsWith('/Apps') ? '/Apps' : '/Home'
+		const lastSlash = uiPath.lastIndexOf('/')
+		const parentUi = lastSlash > 0 ? uiPath.slice(0, lastSlash) : logicalBase
+		if (parentUi && parentUi !== uiPath) navigateToDirectory(parentUi)
+	}, [isEmbedded, error, uiPath, navigateToDirectory])
+
 	// Desktop actions
-	const DesktopActions = isViewingExternalDrives ? null : (
-		<>
-			<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={hidePathAndDisableActions}>
-				{t('files-folder')}
+	// - At /Network (devices view): show "Add share" action
+	// - Elsewhere (non-readonly): show New Folder and Upload
+	let DesktopActions: React.ReactNode = null
+	if (isViewingNetworkDevices) {
+		DesktopActions = (
+			<IconButton
+				icon={TbWorldPlus}
+				onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}
+				disabled={hidePathAndDisableActions}
+			>
+				{t('files-action.add-network-device')}
 			</IconButton>
-			<IconButton icon={Upload} onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
-				{t('files-action.upload')}
-			</IconButton>
-		</>
-	)
+		)
+	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
+		DesktopActions = (
+			<>
+				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+					{t('files-folder')}
+				</IconButton>
+				<IconButton icon={Upload} onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+					{t('files-action.upload')}
+				</IconButton>
+			</>
+		)
+	}
 
 	// Mobile actions
-	const MobileDropdownActions = isViewingExternalDrives ? null : (
-		<>
-			<DropdownMenuItem onClick={startNewFolder} disabled={hidePathAndDisableActions}>
-				<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
-				{t('files-action.new-folder')}
+	let MobileDropdownActions: React.ReactNode = null
+	if (isViewingNetworkDevices) {
+		MobileDropdownActions = (
+			<DropdownMenuItem onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}>
+				<TbWorldPlus className='mr-2 h-4 w-4' />
+				{t('files-action.add-network-device')}
 			</DropdownMenuItem>
-			<DropdownMenuItem onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
-				<Upload className='mr-2 h-4 w-4 opacity-50' />
-				{t('files-action.upload')}
-			</DropdownMenuItem>
-			<DropdownMenuItem
-				onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-				disabled={hidePathAndDisableActions || !hasItemsInClipboard()}
-			>
-				<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
-				{t('files-action.paste')}
-			</DropdownMenuItem>
-		</>
-	)
+		)
+	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
+		MobileDropdownActions = (
+			<>
+				<DropdownMenuItem onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+					<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
+					{t('files-action.new-folder')}
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+					<Upload className='mr-2 h-4 w-4 opacity-50' />
+					{t('files-action.upload')}
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
+					disabled={hidePathAndDisableActions || !hasItemsInClipboard()}
+				>
+					<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
+					{t('files-action.paste')}
+				</DropdownMenuItem>
+			</>
+		)
+	}
 
 	useEffect(() => {
 		setActionsBarConfig({
 			desktopActions: DesktopActions,
 			mobileActions: MobileDropdownActions,
 			hidePath: hidePathAndDisableActions,
-			hideSearch: isBrowsingApps || isBrowsingExternalStorage, // hide search if browsing apps or external storage
+			hideSearch: isBrowsingApps || isBrowsingExternalStorage || isBrowsingNetworkStorage, // hide search if browsing apps, external storage, or network
 		})
-	}, [hidePathAndDisableActions, isBrowsingApps, isBrowsingExternalStorage, isViewingExternalDrives])
+	}, [
+		hidePathAndDisableActions,
+		isBrowsingApps,
+		isBrowsingExternalStorage,
+		isViewingExternalDrives,
+		isViewingNetworkDevices,
+		isViewingNetworkShares,
+		isBrowsingNetworkStorage,
+	])
 
 	return (
 		<>
@@ -118,8 +184,9 @@ export function DirectoryListing() {
 				hasMore={listing?.hasMore ?? false}
 				onLoadMore={fetchMoreItems}
 				additionalContextMenuItems={additionalContextMenuItems}
-				enableFileDrop={!isViewingExternalDrives}
-				CustomEmptyView={EmptyStateDirectory}
+				enableFileDrop={!isViewingExternalDrives && !isViewingNetworkDevices && !isViewingNetworkShares}
+				CustomEmptyView={isViewingNetworkDevices ? EmptyStateNetwork : EmptyStateDirectory}
+				marqueeScale={marqueeScale}
 			/>
 		</>
 	)

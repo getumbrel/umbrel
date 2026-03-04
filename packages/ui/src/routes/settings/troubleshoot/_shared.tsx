@@ -3,8 +3,8 @@ import {saveAs} from 'file-saver'
 import filenamify from 'filenamify/browser'
 import {useEffect, useRef} from 'react'
 
+import {cn} from '@/lib/utils'
 import {BackLink} from '@/modules/immersive-picker'
-import {cn} from '@/shadcn-lib/utils'
 import {RouterInput} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
@@ -26,13 +26,12 @@ export const downloadUtf8Logs = (contents: string, fileNameString?: string) => {
 	saveAs(blob, finalName + '.log')
 }
 
-export function useScrollToBottom(ref: React.RefObject<HTMLDivElement>, deps: any[]) {
+export function useScrollToBottom(ref: React.RefObject<HTMLDivElement | null>, deps: any[]) {
 	useEffect(() => {
 		setTimeout(() => {
 			if (!ref.current) return
 			ref.current.scrollTop = ref.current.scrollHeight + 100
 		}, 300)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ref, ...deps])
 }
 
@@ -42,11 +41,12 @@ export function LogResults({children}: {children: string}) {
 
 	return (
 		<div ref={ref} className='w-full flex-1 overflow-auto rounded-10 bg-black px-5 py-4'>
+			{/* Allow text selection for copying logs/errors */}
 			<div
 				key={children}
 				className={cn(
-					'whitespace-pre font-mono text-xs text-white/50',
-					children && 'delay-500 animate-in fade-in fill-mode-both',
+					'font-mono text-xs whitespace-pre text-white/50 select-text',
+					children && 'animate-in delay-500 fill-mode-both fade-in',
 				)}
 			>
 				{children}

@@ -38,7 +38,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 					<p className='mb-0 truncate text-sm text-white/60'>{t('files-audio-island.now-playing')}</p>
 					<span className='text-md my-0 block truncate text-white/90'>{fileName}</span>
 				</div>
-				<div className='relative mr-6 mt-2'>
+				<div className='relative mt-2 mr-6'>
 					<MusicEqualizer isPlaying={isPlaying} analyserNode={analyserNode} />
 				</div>
 			</div>
@@ -51,7 +51,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 				<div className='col-span-6'>
 					<div className='relative h-2 w-full overflow-hidden rounded-full bg-white/10'>
 						<div
-							className='absolute left-0 top-0 h-full rounded-full bg-brand'
+							className='absolute top-0 left-0 h-full rounded-full bg-brand'
 							style={{width: `${progressPercentage}%`}}
 						/>
 						<input
@@ -60,7 +60,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 							max={duration || 0}
 							value={currentTime}
 							onChange={onProgressChange}
-							className='absolute left-0 top-0 h-full w-full cursor-pointer opacity-0'
+							className='absolute top-0 left-0 h-full w-full opacity-0'
 							style={{margin: 0}}
 							aria-label={t('files-audio-island.now-playing')}
 						/>

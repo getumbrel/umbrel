@@ -1,4 +1,4 @@
-import {Switch} from '@/shadcn-components/ui/switch'
+import {Switch} from '@/components/ui/switch'
 import {t} from '@/utils/i18n'
 
 interface ShareToggleProps {

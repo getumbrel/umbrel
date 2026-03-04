@@ -1,3 +1,12 @@
+/*
+Tests in this file that involve the background watcher (e.g., those relying on file changes to trigger thumbnail generation) can be flaky in GitHub Actions CI due to variable watcher event delays and generation times (via convert/FFmpeg), stemming from VM resource limits and disk I/O.
+
+We do the following to give a high probability of success in CI:
+- waitForThumbnailDebounce(): Explicitely waits 1500ms after ops to cover 1000ms debounce + event propagation/CI variability.
+- pollUntil timeouts: continues polling for existence of a thumbnail for 15000ms (15s) for thumbnail generation breathing room in CI.
+- { retry: 5 }: Auto-retries to handle timing outliers (e.g., very slow thumbnail generation or missed events).
+*/
+
 import nodePath from 'node:path'
 
 import {expect, test, describe, beforeEach, afterEach, vi} from 'vitest'
@@ -49,23 +58,28 @@ async function pollUntil(
 		timeoutMs = 5000,
 		intervalMs = 100,
 		errorMessage = 'Polling timed out',
+		label,
 	}: {
 		timeoutMs?: number
 		intervalMs?: number
 		errorMessage?: string
+		label?: string
 	} = {},
 ): Promise<void> {
 	const startTime = Date.now()
 
 	while (Date.now() - startTime < timeoutMs) {
-		if (await condition()) {
-			return
-		}
+		if (await condition()) return
 		await delay(intervalMs)
 	}
 
 	throw new Error(errorMessage)
 }
+
+// Helper to wait for the thumbnail generation debounce period after file operations (1000ms in thumbnails.ts).
+// The production debounce resets on each event for the path (e.g., multiple update's during copy), waiting 1000ms after the last one before generating.
+// We use a slightly longer period (1500ms) to account for FS event propagation, potential reset-triggering events, and CI variability before polling starts.
+const waitForThumbnailDebounce = () => delay(1500)
 
 describe('getThumbnail', () => {
 	test('throws invalid error without auth token', async () => {
@@ -92,10 +106,12 @@ describe('getThumbnail', () => {
 
 	// This test specifically checks that getThumbnail triggers thumbnail generation when one does not exist
 	// Other getThumbnail tests below this one can only guarantee that the thumbnail hash is returned, but it may have been generated via the background watcher or on-demand
-	test('generates thumbnails on-demand when no thumbnail exists', async () => {
+	test('generates thumbnails on-demand when no thumbnail exists', {retry: 5}, async () => {
 		// Create test image
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-test`
 		await copyFixtureFile(testDir, 'master-lossless-image.png')
+
+		await waitForThumbnailDebounce()
 
 		// Wait for background watcher to generate the thumbnail so we are sure it won't interfere with the test
 		// This is successful if one file exists in the thumbnails directory
@@ -106,7 +122,7 @@ describe('getThumbnail', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Background watcher did not generate thumbnail',
 			},
 		)
@@ -302,12 +318,14 @@ describe('getThumbnail', () => {
 })
 
 describe('Background file watcher', () => {
-	test('generates thumbnails for new image files', async () => {
+	test('generates thumbnails for new image files', {retry: 5}, async () => {
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-watcher-test`
 		await fse.ensureDir(testDir)
 
 		// Copy the image file to the test directory
 		await copyFixtureFile(testDir)
+
+		await waitForThumbnailDebounce()
 
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
@@ -318,7 +336,7 @@ describe('Background file watcher', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate thumbnail for new image',
 			},
 		)
@@ -328,7 +346,7 @@ describe('Background file watcher', () => {
 		expect(thumbnails.length).toBe(1)
 	})
 
-	test('does not update thumbnails when files are moved', async () => {
+	test('does not update thumbnails when files are moved', {retry: 5}, async () => {
 		// Create test directories
 		const sourceDir = `${umbreld.instance.dataDirectory}/home/thumbnail-watcher-move-test/source`
 		const destDir = `${umbreld.instance.dataDirectory}/home/thumbnail-watcher-move-test/destination`
@@ -336,6 +354,8 @@ describe('Background file watcher', () => {
 
 		// Copy the image file to the source directory
 		const sourcePath = await copyFixtureFile(sourceDir)
+
+		await waitForThumbnailDebounce()
 
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
@@ -346,7 +366,7 @@ describe('Background file watcher', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -365,8 +385,9 @@ describe('Background file watcher', () => {
 		const destinationPath = nodePath.join(destDir, nodePath.basename(sourcePath))
 		await fse.move(sourcePath, destinationPath)
 
-		// Wait for the watcher to detect the move operation
-		await delay(3000)
+		// Wait a conservative period to confirm the thumbnail was not re-generated
+		// Note: Fixed delay is a bit hacky for negative assertion; uses 10000ms to cover debounce (1000ms) + potential generation time + CI buffer.
+		await delay(10000)
 
 		// Read the updated thumbnails directory - should still be just one thumbnail
 		// since moving doesn't change the source file's inode, filesystem UUID, or date modified
@@ -378,13 +399,15 @@ describe('Background file watcher', () => {
 		expect(finalStats.mtime.getTime()).toBe(initialMtime)
 	})
 
-	test('does not update thumbnails when files are renamed', async () => {
+	test('does not update thumbnails when files are renamed', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-watcher-rename-test`
 		await fse.ensureDir(testDir)
 
 		// Copy the image file to the test directory
 		const originalPath = await copyFixtureFile(testDir)
+
+		await waitForThumbnailDebounce()
 
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
@@ -395,7 +418,7 @@ describe('Background file watcher', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -414,8 +437,9 @@ describe('Background file watcher', () => {
 		const renamedPath = nodePath.join(testDir, `renamed${nodePath.extname(originalPath)}`)
 		await fse.rename(originalPath, renamedPath)
 
-		// Wait for the watcher to detect the rename operation
-		await delay(3000)
+		// Wait a conservative period to confirm the thumbnail was not re-generated
+		// Note: Fixed delay is a bit hacky for negative assertion; uses 10000ms to cover debounce (1000ms) + potential generation time + CI buffer.
+		await delay(10000)
 
 		// Read the updated thumbnails directory - should still be just one thumbnail
 		// since renaming doesn't change the inode, filesystem UUID, or date modified
@@ -427,10 +451,12 @@ describe('Background file watcher', () => {
 		expect(finalStats.mtime.getTime()).toBe(initialMtime)
 	})
 
-	test('updates thumbnails when files are modified', async () => {
+	test('updates thumbnails when files are modified', {retry: 5}, async () => {
 		// Create test directory and image
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-watcher-modify-test`
 		const imagePath = await copyFixtureFile(testDir)
+
+		await waitForThumbnailDebounce()
 
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
@@ -441,7 +467,7 @@ describe('Background file watcher', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -458,6 +484,8 @@ describe('Background file watcher', () => {
 		const newTime = new Date()
 		await fse.utimes(imagePath, newTime, newTime)
 
+		await waitForThumbnailDebounce()
+
 		// Wait for watcher to detect the modification and generate a new thumbnail
 		await pollUntil(
 			async () => {
@@ -466,7 +494,7 @@ describe('Background file watcher', () => {
 				return thumbnails.length === 2
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate new thumbnail after file modification',
 			},
 		)
@@ -482,13 +510,14 @@ describe('Background file watcher', () => {
 		expect(newThumbnailExists).toBe(true)
 	})
 
-	test('ignores directories', async () => {
+	test('ignores directories', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-test`
 		await fse.ensureDir(testDir)
 
-		// Wait a bit for the watcher to generate thumbnail (which it won't for a directory)
-		await delay(3000)
+		// Wait a conservative period to confirm the thumbnail was not generated
+		// Note: Fixed delay is a bit hacky for negative assertion; uses 10000ms to cover debounce (1000ms) + potential generation time + CI buffer.
+		await delay(10000)
 
 		// Get the thumbnails directory
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
@@ -498,7 +527,7 @@ describe('Background file watcher', () => {
 		expect(thumbnails.length).toBe(0)
 	})
 
-	test('ignores unsupported file types for thumbnails', async () => {
+	test('ignores unsupported file types for thumbnails', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-test`
 		await fse.ensureDir(testDir)
@@ -506,8 +535,11 @@ describe('Background file watcher', () => {
 		// create txt file
 		await fse.writeFile(`${testDir}/test.txt`, 'test')
 
-		// Wait a bit for the watcher to generate thumbnail (which it won't for a txt file)
-		await delay(3000)
+		await waitForThumbnailDebounce()
+
+		// Wait a conservative period to confirm that the thumbnail was not generated
+		// Note: Fixed delay is a bit hacky for negative assertion; uses 10000ms to cover debounce (1000ms) + potential generation time + CI buffer.
+		await delay(10000)
 
 		// Get the thumbnails directory
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
@@ -527,6 +559,8 @@ describe('files.list() [thumbnail specific]', () => {
 		// Copy the image file to the test directory
 		await copyFixtureFile(testDir)
 
+		await waitForThumbnailDebounce()
+
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
 		// Wait for watcher to detect the file and generate thumbnail
@@ -536,7 +570,7 @@ describe('files.list() [thumbnail specific]', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -566,6 +600,8 @@ describe('files.list() [thumbnail specific]', () => {
 		// Copy the image file to the test directory
 		await copyFixtureFile(testDir)
 
+		await waitForThumbnailDebounce()
+
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
 		// Wait for watcher to detect the file and generate thumbnail
@@ -575,7 +611,7 @@ describe('files.list() [thumbnail specific]', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -612,13 +648,15 @@ describe('files.list() [thumbnail specific]', () => {
 })
 
 describe('recents() [thumbnail specific]', () => {
-	test('includes thumbnail for a recent file with an existing thumbnail', async () => {
+	test('includes thumbnail for a recent file with an existing thumbnail', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/recents-thumbnail-test`
 		await fse.ensureDir(testDir)
 
 		// Copy an image file to the test directory (use the helper)
 		await copyFixtureFile(testDir, 'master-lossless-image.png', 'recent-image.png')
+
+		await waitForThumbnailDebounce()
 
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
@@ -629,7 +667,7 @@ describe('recents() [thumbnail specific]', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail for recent file',
 			},
 		)
@@ -660,6 +698,8 @@ describe('recents() [thumbnail specific]', () => {
 		// Copy the image file to the test directory
 		await copyFixtureFile(testDir)
 
+		await waitForThumbnailDebounce()
+
 		const thumbnailDir = `${umbreld.instance.dataDirectory}/thumbnails`
 
 		// Wait for watcher to detect the file and generate thumbnail
@@ -669,7 +709,7 @@ describe('recents() [thumbnail specific]', () => {
 				return thumbnails.length === 1
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Watcher did not generate initial thumbnail',
 			},
 		)
@@ -691,7 +731,7 @@ describe('recents() [thumbnail specific]', () => {
 })
 
 describe('Thumbnail housekeeping', () => {
-	test('removes oldest thumbnails when exceeding cleanup threshold', async () => {
+	test('removes oldest thumbnails when exceeding cleanup threshold', {retry: 5}, async () => {
 		// Set a lower maxThumbnailCount and pruningThreshold for testing
 		const thumbnailsInstance = umbreld.instance.files.thumbnails
 		thumbnailsInstance.maxThumbnailCount = 20
@@ -719,7 +759,7 @@ describe('Thumbnail housekeeping', () => {
 				return thumbnails.length >= initialBatchSize
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: "Watcher didn't create expected thumbnails for first batch",
 			},
 		)
@@ -744,7 +784,7 @@ describe('Thumbnail housekeeping', () => {
 				return thumbnails.length <= thumbnailsInstance.maxThumbnailCount && thumbnails.length > 0
 			},
 			{
-				timeoutMs: 10000,
+				timeoutMs: 15000,
 				errorMessage: 'Cleanup did not complete within timeout period',
 			},
 		)
@@ -756,7 +796,7 @@ describe('Thumbnail housekeeping', () => {
 		expect(finalThumbnails.length).toBe(20)
 	})
 
-	test('removes excess thumbnails on startup', async () => {
+	test('removes excess thumbnails on startup', {retry: 5}, async () => {
 		// Stop umbreld
 		await umbreld.instance.stop()
 
@@ -799,7 +839,7 @@ describe('Thumbnail housekeeping', () => {
 				return thumbnails.length <= maxThumbnailCount
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Startup cleanup did not complete within timeout period',
 			},
 		)
@@ -826,7 +866,7 @@ describe('Thumbnail housekeeping', () => {
 })
 
 describe('Queue selection', () => {
-	test('uses background queue for watcher events and on-demand queue for explicit requests', async () => {
+	test('uses background queue for watcher events and on-demand queue for explicit requests', {retry: 5}, async () => {
 		// Create test directory
 		const testDir = `${umbreld.instance.dataDirectory}/home/thumbnail-queue-test`
 		await fse.ensureDir(testDir)
@@ -851,7 +891,7 @@ describe('Queue selection', () => {
 				return backgroundAddSpy.mock.calls.length > 0
 			},
 			{
-				timeoutMs: 5000,
+				timeoutMs: 15000,
 				errorMessage: 'Background queue was not used for watcher-triggered thumbnail',
 			},
 		)

@@ -1,5 +1,5 @@
-import {motion} from 'framer-motion'
 import {t} from 'i18next'
+import {motion} from 'motion/react'
 import {useMemo} from 'react'
 
 // Files-specific utilities
@@ -8,9 +8,9 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {FileSystemItem} from '@/features/files/types'
 import {formatItemName, splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import type {BaseWidget, Link, RegistryWidget} from '@/modules/widgets/shared/constants'
 import {WidgetContainer} from '@/modules/widgets/shared/shared'
-import {cn} from '@/shadcn-lib/utils'
 
 export type FilesListWidget = BaseWidget & {
 	type: 'files-list'
@@ -99,7 +99,7 @@ export function FilesListWidget({
 			}}
 			className='overflow-hidden p-1 !pb-0 sm:p-2'
 		>
-			<span className='-mb-2 ml-2 mt-1 text-9 text-white/60 sm:-mb-1 sm:text-xs'>{t('files-sidebar.recents')}</span>
+			<span className='mt-1 -mb-2 ml-2 text-9 text-white/60 sm:-mb-1 sm:text-xs'>{t('files-sidebar.recents')}</span>
 			<div
 				className='flex h-full w-full flex-col'
 				style={{maskImage: 'linear-gradient(to bottom, red 50px calc(100% - 30px), transparent)'}}
@@ -131,7 +131,7 @@ function SkeletonListItem() {
 	return (
 		<div className='flex items-center gap-1 px-2 py-[0.3rem] sm:gap-2'>
 			{/* placeholder icon */}
-			<div className='h-5 w-5 animate-pulse rounded-sm bg-white/10 sm:h-7 sm:w-7 sm:rounded-md' />
+			<div className='h-5 w-5 animate-pulse rounded-xs bg-white/10 sm:h-7 sm:w-7 sm:rounded-md' />
 			<div className='flex flex-col gap-1 overflow-hidden'>
 				{/* name */}
 				<div className='h-2 w-24 animate-pulse rounded-md bg-white/10 sm:h-3 sm:w-32' />
@@ -151,14 +151,14 @@ function ListItem({item}: {item: FileSystemItem}) {
 		<div
 			role='button'
 			onClick={() => navigateToItem(item)}
-			className='flex cursor-pointer items-center gap-1 rounded-lg px-2 py-[0.3rem] transition-all hover:bg-white/10 sm:gap-2'
+			className='flex items-center gap-1 rounded-lg px-2 py-[0.3rem] transition-all hover:bg-white/10 sm:gap-2'
 		>
 			<FileItemIcon item={item} className='h-5 w-5 max-w-5 sm:h-7 sm:w-7 sm:max-w-7' />
 			<div className='flex items-baseline gap-1 overflow-hidden'>
 				<p className='truncate text-11 text-white/80 sm:text-13'>
 					{formatItemName({name, maxLength: isMobile ? 13 : 22})}
 				</p>
-				{extension && <p className='truncate text-9 uppercase text-white/50'>{extensionWithoutDot}</p>}
+				{extension && <p className='truncate text-9 text-white/50 uppercase'>{extensionWithoutDot}</p>}
 			</div>
 		</div>
 	)
@@ -240,9 +240,9 @@ function SkeletonGridItem() {
 	return (
 		<div className='flex h-full w-full items-center gap-1 rounded-5 bg-white/5 px-1 leading-none text-white/70 sm:gap-2 sm:px-2 sm:py-3'>
 			{/* Placeholder icon */}
-			<div className='h-4 w-4 animate-pulse rounded-sm bg-white/10 sm:h-8 sm:w-8 sm:rounded-md' />
+			<div className='h-4 w-4 animate-pulse rounded-xs bg-white/10 sm:h-8 sm:w-8 sm:rounded-md' />
 			{/* name */}
-			<div className='h-1 w-8 animate-pulse rounded bg-white/10 sm:h-3 sm:w-16' />
+			<div className='h-1 w-8 animate-pulse rounded-sm bg-white/10 sm:h-3 sm:w-16' />
 		</div>
 	)
 }
@@ -256,8 +256,8 @@ function GridItem({item, count}: {item: FileSystemItem; index: number; count: nu
 			whileTap={{scale: 0.96, backgroundColor: 'rgba(255, 255, 255, 0.1)'}}
 			className={cn(
 				'flex h-full w-full items-center rounded-5 bg-white/5 px-1 leading-none text-white/70 sm:py-3',
-				'cursor-pointer overflow-hidden',
-				'line-clamp-2 [overflow-wrap:anywhere]',
+				'overflow-hidden',
+				'[overflow-wrap:anywhere]',
 				'sm:rounded-12 sm:px-2',
 				count === 1 && 'flex-col justify-center gap-1 text-center',
 				count === 2 && 'flex-col justify-center gap-1 text-center',
@@ -271,7 +271,7 @@ function GridItem({item, count}: {item: FileSystemItem; index: number; count: nu
 			/>
 			<p
 				className={cn(
-					'text-9 font-medium sm:text-11',
+					'line-clamp-2 text-9 font-medium sm:text-11',
 					count === 1 && 'h-[16px] sm:h-[24px]',
 					count === 2 && 'h-[16px] sm:h-[24px]',
 					count === 3 && 'h-[11px] text-left sm:h-[24px] sm:text-center',

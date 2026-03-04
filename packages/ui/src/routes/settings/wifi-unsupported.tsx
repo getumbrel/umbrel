@@ -1,6 +1,5 @@
 import {TbWifi} from 'react-icons/tb'
 
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,7 +8,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 
 export default function WifiUnsupported() {

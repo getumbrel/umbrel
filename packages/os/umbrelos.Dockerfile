@@ -1,7 +1,8 @@
-ARG DEBIAN_VERSION=bookworm
+ARG DEBIAN_VERSION=trixie
+ARG SNAPSHOT_DATE=20251229
 
-ARG DOCKER_VERSION=25.0.4
-ARG DOCKER_COMMIT=0efeea282625c87d28fa1f0d7aace794be2ce3cd
+ARG DOCKER_VERSION=28.5.0
+ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
 
 ARG YQ_VERSION=4.24.5
 ARG YQ_SHA256_amd64=c93a696e13d3076e473c3a43c06fdb98fafd30dc2f43bc771c4917531961c760
@@ -11,14 +12,15 @@ ARG NODE_VERSION=22.13.0
 ARG NODE_SHA256_amd64=9a33e89093a0d946c54781dcb3ccab4ccf7538a7135286528ca41ca055e9b38f  
 ARG NODE_SHA256_arm64=e0cc088cb4fb2e945d3d5c416c601e1101a15f73e0f024c9529b964d9f6dce5b
 
+ARG KOPIA_VERSION=0.19.0
+ARG KOPIA_SHA256_amd64=c07843822c82ec752e5ee749774a18820b858215aabd7da448ce665b9b9107aa
+ARG KOPIA_SHA256_arm64=632db9d72f2116f1758350bf7c20aa57c22c220480aaccb5f839e75669210ed9
+
 #########################################################################
 # ui build stage
 #########################################################################
 
-FROM node:${NODE_VERSION}-${DEBIAN_VERSION}-slim AS ui-build
-
-# Install pnpm
-RUN npm install -g pnpm@8
+FROM node:${NODE_VERSION}-bookworm-slim AS ui-build
 
 # Set the working directory
 WORKDIR /app
@@ -33,30 +35,36 @@ COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modul
 
 # Install the dependencies
 RUN rm -rf node_modules || true
-RUN pnpm install
+RUN npm ci
 
 # Build the app
-RUN pnpm run build
+RUN npm run build
 
 
 #########################################################################
 # umbrelos-base-amd64 build stage
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION} AS umbrelos-base-amd64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-amd64
+
+ARG SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh
+RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
-# Install Linux kernel and non-free firmware.
+# Install Linux kernel, non-free firmware and ZFS.
 RUN apt-get install --yes \
+    zfs-dkms \
+    zfsutils-linux \
+    linux-headers-amd64 \
     linux-image-amd64 \
     intel-microcode \
     amd64-microcode \
     firmware-linux \
     firmware-realtek \
-    firmware-iwlwifi
+    firmware-iwlwifi \
+    firmware-atheros
 
 # Cleanup build steps.
 RUN rm -rf /build-steps
@@ -66,11 +74,13 @@ RUN rm -rf /build-steps
 # umbrelos-base-arm64 build stage
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION} AS umbrelos-base-arm64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-arm64
+
+ARG SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh
+RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
 RUN /build-steps/setup-raspberrypi.sh
 
@@ -84,7 +94,7 @@ RUN rm -rf /build-steps
 
 ARG TARGETARCH
 
-# TODO: Instead of using the debian:bookworm image as a base we should
+# TODO: Instead of using the debian:trixie image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
 FROM umbrelos-base-${TARGETARCH} AS umbrelos
@@ -92,25 +102,24 @@ FROM umbrelos-base-${TARGETARCH} AS umbrelos
 # We need to duplicate this such that we can also use the argument below.
 ARG TARGETARCH
 ARG DOCKER_VERSION
-ARG DOCKER_COMMIT
+ARG DOCKER_INSTALL_SCRIPT_COMMIT
 ARG YQ_VERSION
 ARG YQ_SHA256_amd64
 ARG YQ_SHA256_arm64
 ARG NODE_VERSION
 ARG NODE_SHA256_amd64
 ARG NODE_SHA256_arm64
-
-# Install boot tooling
-# We don't actually use systemd-boot as a bootloader since Mender injects GRUB
-# but we use its systemd-repart tool to expand partitions on boot.
-# We install mender-client via apt because injecting via mender-convert appears
-# to be broken on bookworm.
-RUN apt-get install --yes systemd-boot mender-client
+ARG KOPIA_VERSION
+ARG KOPIA_SHA256_amd64
+ARG KOPIA_SHA256_arm64
 
 # Install acpid
 # We use acpid to implement custom behaviour for power button presses
 RUN apt-get install --yes acpid
 RUN systemctl enable acpid
+
+# Install zram-generator for swap
+RUN apt-get install --yes systemd-zram-generator
 
 # Install essential networking services
 RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi-daemon avahi-discover avahi-utils libnss-mdns
@@ -120,16 +129,17 @@ RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi
 RUN apt-get install --yes bluez
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli pciutils
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2
 
-# Support for alternate filesystems
+# Filessystem support
+RUN apt-get install --yes gdisk parted e2fsprogs exfatprogs
 # For some reason this always fails on arm64 but it's ok since we
 # don't support external storage on Pi anyway.
 RUN [ "${TARGETARCH}" = "amd64" ] && apt-get install --yes ntfs-3g || true
@@ -149,9 +159,21 @@ RUN YQ_SHA256=$(eval echo \$YQ_SHA256_${TARGETARCH}) && \
     echo "${YQ_SHA256} /usr/bin/yq" | sha256sum -c && \
     chmod +x /usr/bin/yq
 
-RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_COMMIT}/install.sh -o /tmp/install-docker.sh
+RUN curl -fsSL https://raw.githubusercontent.com/docker/docker-install/${DOCKER_INSTALL_SCRIPT_COMMIT}/install.sh -o /tmp/install-docker.sh
 RUN sh /tmp/install-docker.sh --version v${DOCKER_VERSION}
 RUN rm /tmp/install-docker.sh
+
+# Install kopia from binary
+RUN KOPIA_ARCH=$([ "${TARGETARCH}" = "arm64" ] && echo "arm64" || echo "x64") && \
+    KOPIA_SHA256=$(eval echo \$KOPIA_SHA256_${TARGETARCH}) && \
+    curl -L https://github.com/kopia/kopia/releases/download/v${KOPIA_VERSION}/kopia-${KOPIA_VERSION}-linux-${KOPIA_ARCH}.tar.gz -o /tmp/kopia.tar.gz && \
+    echo "${KOPIA_SHA256} /tmp/kopia.tar.gz" | sha256sum -c && \
+    tar -xz -f /tmp/kopia.tar.gz -C /tmp && \
+    mv /tmp/kopia-${KOPIA_VERSION}-linux-${KOPIA_ARCH}/kopia /usr/bin/kopia && \
+    chmod +x /usr/bin/kopia
+
+# kopia also requires fuse3 for mounting snapshots
+RUN apt-get install --yes fuse3 bindfs
 
 # Add Umbrel user
 RUN adduser --gecos "" --disabled-password umbrel

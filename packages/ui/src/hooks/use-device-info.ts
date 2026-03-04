@@ -75,6 +75,10 @@ function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnviron
 		return undefined
 	}
 
+	if (deviceInfo.productName.toLowerCase().includes('umbrel pro')) {
+		return 'umbrel-pro'
+	}
+
 	if (deviceInfo.productName.toLowerCase().includes('umbrel home')) {
 		return 'umbrel-home'
 	}

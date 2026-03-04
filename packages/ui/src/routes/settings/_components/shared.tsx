@@ -5,7 +5,7 @@ import {Link, useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {links} from '@/constants/links'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {afterDelayedClose} from '@/utils/dialog'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'

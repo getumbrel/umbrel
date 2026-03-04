@@ -26,9 +26,9 @@ export function AudioIsland() {
 	})
 
 	const audioRef = useRef<HTMLAudioElement>(null)
-	const audioContextRef = useRef<AudioContext>()
-	const analyserNodeRef = useRef<AnalyserNode>()
-	const sourceNodeRef = useRef<MediaElementAudioSourceNode>()
+	const audioContextRef = useRef<AudioContext | undefined>(undefined)
+	const analyserNodeRef = useRef<AnalyserNode | undefined>(undefined)
+	const sourceNodeRef = useRef<MediaElementAudioSourceNode | undefined>(undefined)
 	const isInitializedRef = useRef(false)
 
 	const downloadUrl = `/api/files/download?path=${encodeURIComponent(path || '')}`

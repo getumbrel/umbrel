@@ -1,19 +1,21 @@
-import {motion, useMotionValue} from 'framer-motion'
+import {motion, useMotionValue} from 'motion/react'
 import React, {Suspense} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {useLocation} from 'react-router-dom'
 
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useSettingsNotificationCount} from '@/hooks/use-settings-notification-count'
+import {cn} from '@/lib/utils'
 import {systemAppsKeyed} from '@/providers/apps'
-import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 import {DockItem} from './dock-item'
 import {LogoutDialog} from './logout-dialog'
 
 const LiveUsageDialog = React.lazy(() => import('@/routes/live-usage'))
+const WhatsNewModal = React.lazy(() => import('@/routes/whats-new-modal').then((m) => ({default: m.WhatsNewModal})))
 
 const DOCK_BOTTOM_PADDING_PX = 10
 
@@ -75,8 +77,9 @@ export function Dock() {
 	return (
 		<>
 			<motion.div
-				initial={{y: 0, opacity: 0}}
-				animate={{y: 0, opacity: 1}}
+				initial={{translateY: 80, opacity: 0}}
+				animate={{translateY: 0, opacity: 1}}
+				transition={{type: 'spring', stiffness: 200, damping: 20, delay: 0.2, duration: 0.2}}
 				onPointerMove={(e) => e.pointerType === 'mouse' && mouseX.set(e.pageX)}
 				onPointerLeave={() => mouseX.set(Infinity)}
 				className={cn(dockClass, isMobile && 'gap-2')}
@@ -140,9 +143,17 @@ export function Dock() {
 				/>
 			</motion.div>
 			<LogoutDialog />
-			<Suspense>
-				<LiveUsageDialog />
-			</Suspense>
+
+			<ErrorBoundary fallbackRender={() => null}>
+				<Suspense>
+					<LiveUsageDialog />
+				</Suspense>
+			</ErrorBoundary>
+			<ErrorBoundary fallbackRender={() => null}>
+				<Suspense>
+					<WhatsNewModal />
+				</Suspense>
+			</ErrorBoundary>
 		</>
 	)
 }
@@ -213,7 +224,7 @@ export function DockBottomPositioner({children}: {children: React.ReactNode}) {
 	)
 }
 
-const dockClass = tw`mx-auto flex items-end gap-3 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-2xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
+const dockClass = tw`mx-auto flex items-end gap-3 rounded-2xl bg-black/10 contrast-more:bg-neutral-700 backdrop-blur-xl contrast-more:backdrop-blur-none px-3 shadow-dock shrink-0 will-change-transform transform-gpu border-hpx border-white/10`
 const dockPreviewClass = tw`mx-auto flex items-end gap-4 rounded-2xl bg-neutral-900/80 px-3 shadow-dock shrink-0 border-hpx border-white/10`
 
 const DockDivider = ({iconSize}: {iconSize: number}) => (

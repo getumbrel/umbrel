@@ -5,6 +5,7 @@ import InfiniteLoader from 'react-window-infinite-loader'
 
 import {FileItem} from '@/features/files/components/listing/file-item'
 import type {FileSystemItem} from '@/features/files/types'
+import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {getItemKey} from '@/features/files/utils/get-item-key'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 
@@ -83,7 +84,7 @@ interface VirtualizedListProps {
 	hasMore: boolean
 	isLoading: boolean
 	onLoadMore: (startIndex: number) => Promise<boolean>
-	scrollAreaRef: React.RefObject<HTMLDivElement>
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	view: 'list' | 'icons'
 }
 
@@ -178,7 +179,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 
 	// Render row for list view
 	const renderListRow = useCallback(
-		({index, style}: ListChildComponentProps) => {
+		({index, style, data}: ListChildComponentProps<number>) => {
 			// Skip rendering if we don't have the item yet (instead of showing a loader)
 			if (!isItemLoaded(index) || index >= items.length) {
 				return null
@@ -192,8 +193,9 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 				<div
 					style={{
 						...style,
-						// Constrain the width to prevent overflow when scrollbar is rendered
-						width: 'calc(100% - 24px)',
+						// data contains the container width in pixels (passed via itemData prop)
+						// Using fixed width prevents rows from shrinking when scrollbar appears
+						width: data,
 					}}
 					key={getItemKey(item)}
 					data-marquee-selection-item-path={item.path}
@@ -218,8 +220,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 		const containerWidth = itemWidth + borderAllowance * 2
 
 		// Calculate how many columns can fit with minimum gap enforced
-		// First calculate max possible columns
-		const columnCount = Math.max(1, Math.floor((width + minGap) / (containerWidth + minGap)))
+		const columnCount = getGridColumnCount(width)
 
 		// Now calculate the actual horizontal gap that will be used
 		// We'll ensure this is at least minGap
@@ -355,6 +356,7 @@ export const VirtualizedList: React.FC<VirtualizedListProps> = ({
 										width={width + 24} // Add 24px to push scrollbar into parent padding
 										itemCount={itemCount}
 										itemSize={isMobile ? 50 : 40}
+										itemData={width} // Pass the actual width for fixed row width
 										onItemsRendered={onItemsRendered}
 										outerRef={scrollAreaRef} // For marquee selection
 										overscanCount={LIST_OVERSCAN_AMOUNT}

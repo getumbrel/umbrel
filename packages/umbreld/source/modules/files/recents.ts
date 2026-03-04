@@ -84,6 +84,9 @@ export default class Recents {
 				// Ignore hidden files
 				if (this.#umbreld.files.isHidden(nodePath.basename(path))) return
 
+				// Ignore files in the backups directory
+				if (path.includes(`/${this.#umbreld.backups.backupDirectoryName}/`)) return
+
 				// Remove the path from the list if it exists
 				// This is to prevent duplicates when adding or to remove with a deletion
 				this.recentFiles = this.recentFiles.filter((item) => item !== path)

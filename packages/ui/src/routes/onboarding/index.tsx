@@ -1,10 +1,10 @@
 import {useEffect, useRef} from 'react'
 import {Link} from 'react-router-dom'
 
-import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, footerLinkClass, Layout} from '@/layouts/bare/shared'
-import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
+import {Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
+import {useOnboardingDevice} from '@/routes/onboarding/use-onboarding-device'
 import {t} from '@/utils/i18n'
 import {supportedLanguageCodes} from '@/utils/language'
 
@@ -39,6 +39,7 @@ function useAutoDetectLanguage() {
 export default function OnboardingStart() {
 	const title = t('onboarding.start.title')
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
+	const device = useOnboardingDevice()
 
 	// Auto detect browser language once to set the default language
 	useAutoDetectLanguage()
@@ -50,20 +51,20 @@ export default function OnboardingStart() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={t('onboarding.start.subtitle')}
 			subTitleMaxWidth={500}
-			footer={
-				<div className='flex flex-col items-center gap-3'>
-					{/* TODO: consider adding drawer on mobile */}
-					<LanguageDropdown />
-					<Link to={links.support} target='_blank' className={footerLinkClass}>
-						{t('onboarding.contact-support')}
-					</Link>
-				</div>
-			}
+			footer={<OnboardingFooter action={OnboardingAction.RESTORE} />}
+			animate
+			showLogo={!device.showDevice}
 		>
-			<Link to='/onboarding/create-account' unstable_viewTransition className={buttonClass} ref={continueLinkRef}>
+			{device.showDevice && device.image && (
+				<>
+					<img src={device.image} alt='Umbrel device' className={device.imageClassName} />
+					<p className='-mt-4 text-[13px] font-medium text-white/30'>{device.name}</p>
+				</>
+			)}
+
+			<Link to='/onboarding/create-account' viewTransition ref={continueLinkRef} {...primaryButtonProps}>
 				{t('onboarding.start.continue')}
 			</Link>
 		</Layout>

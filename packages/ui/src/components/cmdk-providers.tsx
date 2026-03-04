@@ -1,5 +1,7 @@
 import React from 'react'
 
+// Backups
+import {BackupsCmdkSearchProvider} from '@/features/backups/cmdk-search-provider'
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
@@ -39,4 +41,4 @@ export interface CmdkSearchProviderProps {
 
 export type CmdkSearchProvider = React.FC<CmdkSearchProviderProps>
 
-export const cmdkSearchProviders: CmdkSearchProvider[] = [FilesCmdkSearchProvider]
+export const cmdkSearchProviders: CmdkSearchProvider[] = [FilesCmdkSearchProvider, BackupsCmdkSearchProvider]

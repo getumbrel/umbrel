@@ -28,3 +28,16 @@ export function formatFilesystemDate(date: number | undefined, languageCode: Sup
 		return ''
 	}
 }
+
+// Formats date without time (always absolute), e.g. "Mar 14, 2024"
+// e.g., we use this for Rewind feature stickers to show just the date
+export function formatFilesystemDateOnly(date: number | undefined, languageCode: SupportedLanguageCode): string {
+	if (!date) return ''
+	try {
+		const dateObj = new Date(date)
+		const locale = languageCodeToDateLocale[languageCode]
+		return format(dateObj, 'PP', {locale})
+	} catch {
+		return ''
+	}
+}

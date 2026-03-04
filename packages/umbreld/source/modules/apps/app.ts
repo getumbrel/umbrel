@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import nodePath from 'node:path'
 
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
@@ -97,6 +98,11 @@ export default class App {
 	}
 
 	async patchComposeFile() {
+		const manifest = await this.readManifest()
+		const appRequestsGpuAccess = manifest.permissions?.includes('GPU')
+		const DRI_DEVICE_PATH = '/dev/dri'
+		const deviceHasGpu = await fse.exists(DRI_DEVICE_PATH).catch(() => false)
+
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
 			// Temporary patch to fix contianer names for modern docker-compose installs.
@@ -119,6 +125,13 @@ export default class App {
 					?.replace('/data/storage/downloads', `/home/Downloads`)
 					?.replace('/data/storage', `/home`)
 			})
+
+			// Pass through host DRI device to all app containers if the app requests it
+			const shouldEnableGpuPassthrough = appRequestsGpuAccess && deviceHasGpu
+			if (shouldEnableGpuPassthrough) {
+				compose.services![serviceName].devices = compose.services![serviceName].devices || []
+				compose.services![serviceName].devices.push(DRI_DEVICE_PATH)
+			}
 		}
 
 		await this.writeCompose(compose)
@@ -191,6 +204,9 @@ export default class App {
 		this.state = 'ready'
 		this.stateProgress = 0
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
@@ -211,10 +227,13 @@ export default class App {
 		})
 		this.state = 'ready'
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
-	async stop() {
+	async stop({persistState = false}: {persistState?: boolean} = {}) {
 		this.state = 'stopping'
 		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
 			onFailedAttempt: (error) => {
@@ -227,6 +246,11 @@ export default class App {
 		})
 		this.state = 'stopped'
 
+		// Disable auto-start on boot
+		if (persistState) {
+			await this.setAutoStart(false)
+		}
+
 		return true
 	}
 
@@ -235,6 +259,9 @@ export default class App {
 		await appScript(this.#umbreld, 'stop', this.id)
 		await appScript(this.#umbreld, 'start', this.id)
 		this.state = 'ready'
+
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
 
 		return true
 	}
@@ -327,6 +354,40 @@ export default class App {
 		return containerIp
 	}
 
+	// Returns a validated list of paths that should be ignored when backing up the app
+	// This allows apps to signal to umbrelOS noncritical high churn or high data files
+	// that can be ignored from backups like logs/cache/blockchain data/etc.
+	async getBackupIgnoredFilePaths() {
+		const manifest = await this.readManifest()
+		if (!manifest.backupIgnore) return []
+
+		// Sanitise paths
+		const backupIgnore = []
+		for (let path of manifest.backupIgnore) {
+			// Only allow a limited subset of chars to strip out traversals and other weird stuff we don't want to allow
+			// while supporting simple '*' globbing that Kopia understands in .kopiaignore
+			// TODO: consider adding other globbing chars like '?' (single-char wildcard) and '**' (recursive wildcard).
+			if (!/^[-a-zA-Z0-9._\/*]+$/.test(path)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip invalid paths
+			}
+
+			// Convert to absolute path and normalise traversals
+			path = nodePath.join(this.dataDirectory, path)
+
+			// Ensure path doesn't escape the app's data directory
+			if (!path.startsWith(this.dataDirectory)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip paths that escape the app's data directory
+			}
+
+			// Save the sanitised path
+			backupIgnore.push(path)
+		}
+
+		return backupIgnore
+	}
+
 	// Returns a specific widget's info from an app's manifest
 	async getWidgetMetadata(widgetName: string) {
 		const manifest = await this.readManifest()
@@ -393,5 +454,25 @@ export default class App {
 			})
 		}
 		return success
+	}
+
+	// Check if app is ignored from backups
+	async isBackupIgnored() {
+		return (await this.store.get('backupIgnore')) || false
+	}
+
+	// Set if app is ignored from backups
+	async setBackupIgnored(backupIgnore: boolean) {
+		return this.store.set('backupIgnore', backupIgnore)
+	}
+
+	// Set if app should auto start on boot
+	async setAutoStart(autoStart: boolean) {
+		return this.store.set('autoStart', autoStart)
+	}
+
+	// Get if app should auto start on boot
+	async shouldAutoStart() {
+		return (await this.store.get('autoStart')) ?? true
 	}
 }

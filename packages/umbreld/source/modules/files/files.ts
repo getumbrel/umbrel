@@ -16,14 +16,17 @@
  */
 
 import nodePath from 'node:path'
+import {cp, constants} from 'node:fs/promises'
 
 import mime from 'mime-types'
 import fse from 'fs-extra'
 import {minimatch} from 'minimatch'
 import isValidFilename from 'valid-filename'
-import {execa} from 'execa'
-import bytes from 'bytes'
 import pRetry from 'p-retry'
+
+import {copyWithProgress} from '../utilities/copy-with-progress.js'
+
+import {getDiskUsageByPath} from '../system/system.js'
 
 import Watcher from './watcher.js'
 import Recents from './recents.js'
@@ -32,6 +35,7 @@ import Archive from './archive.js'
 import Thumbnails from './thumbnails.js'
 import Samba from './samba.js'
 import ExternalStorage from './external-storage.js'
+import NetworkStorage from './network-storage.js'
 import Search from './search.js'
 
 import type Umbreld from '../../index.js'
@@ -70,7 +74,7 @@ type Trashmeta = {
 	path: string
 }
 
-type BaseDirectory = '/Home' | '/Trash' | '/Apps' | '/External'
+type BaseDirectory = '/Home' | '/Trash' | '/Apps' | '/External' | '/Backups' | '/Network'
 
 type ViewPreferences = {
 	view: 'icons' | 'list'
@@ -113,6 +117,7 @@ export default class Files {
 	thumbnails: Thumbnails
 	samba: Samba
 	externalStorage: ExternalStorage
+	networkStorage: NetworkStorage
 	search: Search
 
 	constructor(umbreld: Umbreld) {
@@ -125,6 +130,8 @@ export default class Files {
 			['/Trash', `${umbreld.dataDirectory}/trash`],
 			['/Apps', `${umbreld.dataDirectory}/app-data`],
 			['/External', `${umbreld.dataDirectory}/external`],
+			['/Backups', `${umbreld.dataDirectory}/backups`],
+			['/Network', `${umbreld.dataDirectory}/network`],
 		])
 
 		this.watcher = new Watcher(umbreld, {paths: ['/Home', '/Trash', '/Apps']})
@@ -134,6 +141,7 @@ export default class Files {
 		this.thumbnails = new Thumbnails(umbreld)
 		this.samba = new Samba(umbreld)
 		this.externalStorage = new ExternalStorage(umbreld)
+		this.networkStorage = new NetworkStorage(umbreld)
 		this.search = new Search(umbreld)
 
 		// TODO: This should really be in a proper DB, refactor this once we've moved to SQLite
@@ -163,11 +171,12 @@ export default class Files {
 
 		// Start submodules
 		await this.watcher.start().catch((error) => this.logger.error(`Failed to start watcher`, error))
+		await this.samba.start().catch((error) => this.logger.error(`Failed to start samba`, error))
 		await this.externalStorage.start().catch((error) => this.logger.error(`Failed to start external storage`, error))
+		await this.networkStorage.start().catch((error) => this.logger.error(`Failed to start network storage`, error))
 		await this.recents.start().catch((error) => this.logger.error(`Failed to start recents`, error))
 		await this.favorites.start().catch((error) => this.logger.error(`Failed to start favorites`, error))
 		await this.thumbnails.start().catch((error) => this.logger.error(`Failed to start thumbnails`, error))
-		await this.samba.start().catch((error) => this.logger.error(`Failed to start samba`, error))
 	}
 
 	async firstRun() {
@@ -191,12 +200,13 @@ export default class Files {
 		this.logger.log('Stopping files')
 
 		// Stop submodules
-		await this.recents.stop()
-		await this.favorites.stop()
-		await this.thumbnails.stop()
-		await this.samba.stop()
-		await this.externalStorage.stop()
-		await this.watcher.stop()
+		await this.recents.stop().catch((error) => this.logger.error(`Failed to stop recents`, error))
+		await this.favorites.stop().catch((error) => this.logger.error(`Failed to stop favorites`, error))
+		await this.thumbnails.stop().catch((error) => this.logger.error(`Failed to stop thumbnails`, error))
+		await this.externalStorage.stop().catch((error) => this.logger.error(`Failed to stop external storage`, error))
+		await this.networkStorage.stop().catch((error) => this.logger.error(`Failed to stop network storage`, error))
+		await this.samba.stop().catch((error) => this.logger.error(`Failed to stop samba`, error))
+		await this.watcher.stop().catch((error) => this.logger.error(`Failed to stop watcher`, error))
 	}
 
 	// Typesafe wrapper to get the system path of a base directory
@@ -395,66 +405,33 @@ export default class Files {
 		this.operationsInProgress.push(operationProgress)
 		this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 
+		// Attempt instant copy via reflink on supported filesystems (e.g. zfs)
 		try {
-			const rsyncExtraOptions = []
-
-			// Force 100 KB/s for test suite
-			if (process.env.UMBRELD_FORCE_100KBS_COPY === 'true') rsyncExtraOptions.push('--bwlimit=100')
-
-			// Start rsync copy
-			const rsync = execa('rsync', [
-				// Give detailed progress output we can easily parse
-				'--info=progress2',
-				'--no-human-readable',
-				// Archive mode, recursive and preserve permissions etc
-				'--archive',
-				// Inplace mode, update files in place instead of temporary files with a random suffix
-				// which confuses recents tracking.
-				'--inplace',
-				// Drop in extra options
-				...rsyncExtraOptions,
-				// Absolute source and target
-				sourceSystemPath,
-				destinationSystemPath,
-			])
-
-			// Process output from rsync to handle copy progress
-			rsync.stdout!.on('data', (chunk) => {
-				// Grab progress update from --info=progress2 output
-				const output = chunk.toString()
-
-				// Check if we have a % update
-				const progressUpdate = output.match(/.* (\d*)% .*/)
-				if (progressUpdate) {
-					// Parse values from rsync output
-					const values = output.trim().split(/\s+/)
-					const bytesCopied = Number(values[0])
-					const percent = Number(values[1].replace('%', ''))
-					const bytesPerSecond = bytes.parse(values[2].replace('/s', '')) ?? 0
-
-					// Calculate time remaining
-					const totalBytes = Math.round((bytesCopied / percent) * 100)
-					let secondsRemaining: number | undefined = Math.round((totalBytes - bytesCopied) / bytesPerSecond)
-					if (secondsRemaining === Infinity) secondsRemaining = undefined
-
-					// Update the progress tracker and emit operation progress event
-					operationProgress.percent = percent
-					operationProgress.bytesPerSecond = bytesPerSecond
-					operationProgress.secondsRemaining = secondsRemaining
-					this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
-				}
+			await cp(sourceSystemPath, destinationSystemPath, {
+				recursive: true,
+				preserveTimestamps: true,
+				mode: constants.COPYFILE_FICLONE_FORCE,
 			})
 
-			// Wait for rsync to finish and throw if rsync exits with a non-zero exit code
-			await rsync
-
-			// If we're moving, delete the source file or directory on completion
-			if (move) await fse.remove(sourceSystemPath)
+			// Emit 100% progress
+			operationProgress.percent = 100
+			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+		} catch {
+			// Reflink not supported, fall back to rsync with progress tracking
+			await copyWithProgress(sourceSystemPath, destinationSystemPath, (progress) => {
+				operationProgress.percent = progress.progress
+				operationProgress.bytesPerSecond = progress.bytesPerSecond
+				operationProgress.secondsRemaining = progress.secondsRemaining
+				this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
+			})
 		} finally {
 			// Remove the progress tracker and emit operation progress event
 			this.operationsInProgress = this.operationsInProgress.filter((operation) => operation !== operationProgress)
 			this.#umbreld.eventBus.emit('files:operation-progress', this.operationsInProgress)
 		}
+
+		// If we're moving, delete the source file or directory on completion
+		if (move) await fse.remove(sourceSystemPath)
 	}
 	// Copies a file or directory from one virtual path to another.
 	async copy(sourceVirtualPath: string, destinationVirtualDirectory: string, {collision = 'error'} = {}) {
@@ -474,10 +451,15 @@ export default class Files {
 		const targetExists = await fse.exists(destinationSystemDirectory)
 		if (!targetExists) throw new Error(`[destination-not-exist]`)
 
-		// TODO: Check we have enough free space on the destination
+		// Check we have enough free space on the destination
+		const sourceStats = await fse.stat(sourceSystemPath)
+		const diskUsage = await getDiskUsageByPath(destinationSystemDirectory)
+		const buffer = 1024 * 1024 * 1024 * 1 // 1GB
+		const neededSpace = sourceStats.size + buffer
+		if (diskUsage.available < neededSpace) throw new Error('[not-enough-space]')
 
 		// Add trailing slash to source path if it's a directoryso we only copy the contents
-		if ((await fse.lstat(sourceSystemPath)).isDirectory()) sourceSystemPath = `${sourceSystemPath}/`
+		if (sourceStats.isDirectory()) sourceSystemPath = `${sourceSystemPath}/`
 
 		// Build absolute destination path
 		let destinationSystemPath = nodePath.join(destinationSystemDirectory, nodePath.basename(sourceSystemPath))
@@ -748,14 +730,26 @@ export default class Files {
 		}
 
 		// Disable creating files in readonly directories
-		const isReadonly = virtualPath === '/External'
+		const isReadonly =
+			virtualPath === '/External' ||
+			match(virtualPath, ['/Network', '/Network/*']) ||
+			virtualPath === '/Backups' ||
+			virtualPath.startsWith('/Backups/')
 		if (isReadonly) operations.delete('writable')
 
 		// Remove destructive operations if the path is protected
 		// Note only the exact paths are protected, not necessarily the children.
 		// e.g /Home/Downloads is protected but /Home/Downloads/file.txt is not.
 		// Children could be protected with /Home/Downloads/**
-		let isProtected = match(virtualPath, ['/*', '/Home/Downloads', '/External/*'])
+		let isProtected = match(virtualPath, [
+			'/*',
+			'/Home/Downloads',
+			'/External/*',
+			'/Network/*',
+			'/Network/*/*',
+			'/Backups',
+			'/Backups/**',
+		])
 
 		// For /Apps/* paths, only protect if the app id is installed
 		if (match(virtualPath, ['/Apps/*'])) {
@@ -771,12 +765,22 @@ export default class Files {
 		}
 
 		// Unshareable paths
-		const isUnshareable = match(virtualPath, ['/Apps', '/Apps/*', '/External', '/External/**'])
+		const isUnshareable = match(virtualPath, [
+			'/Apps',
+			'/Apps/*',
+			'/External',
+			'/External/**',
+			'/Network',
+			'/Network/**',
+			'/Backups',
+			'/Backups/**',
+		])
 		if (isUnshareable) operations.delete('share')
 
 		// External files (not external root or top level mount points)
 		const isExternal = match(virtualPath, ['/External/*/**'])
-		if (isExternal) {
+		const isNetwork = match(virtualPath, ['/Network/*/*/**'])
+		if (isExternal || isNetwork) {
 			// Only allow hard delete so we don't copy to internal storage
 			operations.delete('trash')
 			operations.add('delete')
@@ -838,10 +842,10 @@ export default class Files {
 		return uniquePath
 	}
 
-	// Converts a virtual path to a system path.
-	// Ensures that the path is safe and does not escape the expected base directory.
-	// If the full path doesn't exist it validates symlinks up to the deepest existing path.
-	async virtualToSystemPath(virtualPath: string) {
+	// We expose an unsafe conversion method that's only suitable to be used on trusted paths.
+	// This method is sync and doesn't touch the fs for validation which is important for some use cases
+	// for internal code where we just need to convert between path types but don't want to validate anything.
+	virtualToSystemPathUnsafe(virtualPath: string) {
 		// Normalize virtual path before lookup so directory traversal attacks cannot be resolved.
 		// e.g: /Home/../../../../etc/passwd normalizes to /etc/passwd which won't get a match in the base directories lookup.
 		virtualPath = normalizePath(virtualPath)
@@ -861,6 +865,19 @@ export default class Files {
 		// or directory traversals to get the real path.
 		segments[0] = basePath
 		const systemPath = segments.join('/')
+
+		return systemPath
+	}
+
+	// Converts a virtual path to a system path.
+	// Ensures that the path is safe and does not escape the expected base directory.
+	// If the full path doesn't exist it validates symlinks up to the deepest existing path.
+	async virtualToSystemPath(virtualPath: string) {
+		// Split the path into segments and lookup the system path for the base directory
+		const segments = virtualPath.split('/').filter(Boolean)
+		const basePath = this.baseDirectories.get(`/${segments[0]}`)!
+
+		const systemPath = this.virtualToSystemPathUnsafe(virtualPath)
 
 		// Ensure the deepest existing real path doesn't resolve to a directory outside
 		// of the expected base path. We use realpath to resolve symlinks. This prevents

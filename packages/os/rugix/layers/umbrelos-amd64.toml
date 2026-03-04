@@ -1,0 +1,15 @@
+parent = "umbrelos-root-amd64"
+
+recipes = [
+    # Prepare umbrelOS base image for Rugix.
+    "umbrelos-prepare",
+    # Copy umbrelOS boot files to boot partition.
+    "umbrelos-boot",
+    # Install and configure Rugix.
+    "setup-rugix",
+    # Fix `/etc/hostname` and `/etc/hosts`.
+    "fix-overlay",
+]
+
+[parameters."core/rugix-ctrl"]
+use_musl = false

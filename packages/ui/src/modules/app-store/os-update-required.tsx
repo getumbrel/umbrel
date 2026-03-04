@@ -11,7 +11,7 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
 import {RegistryApp} from '@/trpc/trpc'
 
 export function OSUpdateRequiredDialog({

@@ -1,11 +1,11 @@
-import {forwardRef, HTMLProps, useEffect, useState} from 'react'
+import {HTMLProps, useEffect, useState} from 'react'
 
+import {cn} from '@/lib/utils'
 import {APP_ICON_PLACEHOLDER_SRC} from '@/modules/desktop/app-icon'
-import {cn} from '@/shadcn-lib/utils'
 
-type AppIconProps = {src?: string; size?: number} & HTMLProps<HTMLImageElement>
+type AppIconProps = {src?: string; size?: number; ref?: React.Ref<HTMLImageElement>} & HTMLProps<HTMLImageElement>
 
-function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps, ref: React.Ref<HTMLImageElement>) {
+export function AppIcon({src, style, size, className, ref, ...props}: AppIconProps) {
 	// Keep a local copy of the image `src` so we can gracefully fall back to a
 	// placeholder if the provided source fails to load. Because `src` can change
 	// (for example, when navigating between different apps without remounting the
@@ -40,5 +40,3 @@ function ForwardedAppIcon({src, style, size, className, ...props}: AppIconProps,
 		/>
 	)
 }
-
-export const AppIcon = forwardRef(ForwardedAppIcon)

@@ -1,7 +1,7 @@
+import {Button} from '@/components/ui/button'
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
 import {ImmersivePickerDialogContent} from '@/modules/immersive-picker'
 import {LogResults, SystemLogType, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
-import {Button} from '@/shadcn-components/ui/button'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

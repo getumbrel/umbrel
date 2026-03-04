@@ -4,26 +4,14 @@ import {Route, Routes, useNavigate} from 'react-router-dom'
 import {ImmersiveDialog, ImmersiveDialogSplitContent} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {useGlobalSystemState} from '@/providers/global-system-state'
-import {RouterError} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 import {ConfirmWithPassword} from './_components/confirm-with-password'
 import {backPath} from './_components/misc'
 import {ReviewData} from './_components/review-data'
-import {Success} from './_components/success'
 
 export default function FactoryReset() {
-	// TODO: if the route is `/failed` and we don't have a password, redirect to `/confirm`
 	const {reset, getError, clearError} = useGlobalSystemState()
-
-	const isPasswordError = (error: RouterError) => {
-		return error?.data?.code === 'UNAUTHORIZED'
-	}
-
-	const getPasswordError = () => {
-		const error = getError()
-		return error && isPasswordError(error) ? error.message : ''
-	}
 
 	// Handling routes in this weird way because:
 	// - Standard router approach won't work because `<Outlet />` is generic and we want this parent to have state
@@ -50,12 +38,12 @@ export default function FactoryReset() {
 					element={
 						<EnsureLoggedIn>
 							<SplitDialog>
-								<ConfirmWithPassword onSubmit={reset} error={getPasswordError()} clearError={clearError} />
+								{/* Only password errors come through getError() - system errors show as toasts */}
+								<ConfirmWithPassword onSubmit={reset} error={getError()?.message ?? ''} clearError={clearError} />
 							</SplitDialog>
 						</EnsureLoggedIn>
 					}
 				/>
-				<Route path='/success' element={<Success />} />
 			</Routes>
 		</>
 	)

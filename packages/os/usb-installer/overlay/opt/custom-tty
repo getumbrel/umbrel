@@ -30,6 +30,17 @@ then
     exit 1
 fi
 
+# If device is an Umbrel Pro auto flash and shutdown non-interactively.
+if dmidecode -t system | grep --silent 'Umbrel Pro'
+then
+    echo "Umbrel Pro detected."
+    echo "Automatically flashing internal storage..."
+    xz --decompress --stdout /umbrelos-amd64.img.xz | dd of=/dev/mmcblk0 bs=4M status=progress
+    echo "umbrelOS has been installed, shutting down."
+    poweroff
+    exit 1
+fi
+
 # For all other devices, run the interactive installer.
 echo "Installing umbrelOS will wipe your entire storage device."
 echo

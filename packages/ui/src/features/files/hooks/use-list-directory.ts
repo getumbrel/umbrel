@@ -31,11 +31,11 @@ export function useListDirectory(
 	const [items, setItems] = useState<FileSystemItem[]>([])
 	const [hasMore, setHasMore] = useState(true)
 	const [isFetchingMore, setIsFetchingMore] = useState(false)
-	const [paginationError, setPaginationError] = useState<unknown>(null)
+	const [, setPaginationError] = useState<unknown>(null)
 	const [isLoadingItems, setIsLoadingItems] = useState(true)
 
 	// helpers to know WHEN to skip refetch on sort changes
-	const prevSortRef = useRef<{sortBy: string; sortOrder: string}>()
+	const prevSortRef = useRef<{sortBy: string; sortOrder: string} | undefined>(undefined)
 	const fullyLoaded = items.length > 0 && !hasMore
 	const sortChanged =
 		prevSortRef.current && (prevSortRef.current.sortBy !== sortBy || prevSortRef.current.sortOrder !== sortOrder)
@@ -54,6 +54,10 @@ export function useListDirectory(
 			enabled: !!path && !skipBackendRequest,
 			placeholderData: keepPreviousData,
 			staleTime: 5_000,
+			// Don't retry on error. Backend errors like ENOENT/EIO/does-not-exist are deterministic, not transient.
+			// This gives us quick feedback to the user.
+			retry: false,
+			refetchOnWindowFocus: false,
 		},
 	)
 
@@ -75,6 +79,13 @@ export function useListDirectory(
 			setHasMore(data.hasMore)
 		}
 	}, [path, data])
+
+	// Stop loading if the query errors so the UI can render the error state
+	useEffect(() => {
+		if (isError) {
+			setIsLoadingItems(false)
+		}
+	}, [isError])
 
 	// Guard against late responses landing in the wrong directory
 	const requestIdRef = useRef(0)

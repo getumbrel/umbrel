@@ -1,10 +1,10 @@
 import {useMutation} from '@tanstack/react-query'
 import {useEffect} from 'react'
 import {useInterval, usePrevious} from 'react-use'
-import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
-import {AppState, AppStateOrLoading, trpcClient, trpcReact} from '@/trpc/trpc'
+import {toast} from '@/components/ui/toast'
+import {AppState, AppStateOrLoading, trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 // TODO: consider adding `stopped` and `unknown`
@@ -21,11 +21,12 @@ export const pollStates = [
 export function useUninstallAllApps() {
 	const apps = trpcReact.apps.list.useQuery().data
 	const utils = trpcReact.useUtils()
+	const uninstallMut = trpcReact.apps.uninstall.useMutation()
 
 	const mut = useMutation({
 		mutationFn: async () => {
 			for (const app of apps ?? []) {
-				await trpcClient.apps.uninstall.mutate({appId: app.id})
+				await uninstallMut.mutateAsync({appId: app.id})
 			}
 		},
 
@@ -108,7 +109,7 @@ export function useAppInstall(id: string) {
 		return installMut.mutate({appId: id, alternatives})
 	}
 	const getAppsToUninstallFirst = async () => {
-		const appsToUninstallFirst = await trpcClient.apps.dependents.query(id)
+		const appsToUninstallFirst = await utils.apps.dependents.fetch(id)
 		// We expect to have an array, even if it's empty
 		if (!appsToUninstallFirst) throw new Error(t('apps.uninstall.failed-to-get-required-apps'))
 		return appsToUninstallFirst

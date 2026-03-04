@@ -26,7 +26,7 @@ export function useSoftwareUpdate() {
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
 			}
-		} catch (error) {
+		} catch {
 			toast.error(t('software-update.failed-to-check'))
 		}
 	}, [utils.system.checkUpdate])

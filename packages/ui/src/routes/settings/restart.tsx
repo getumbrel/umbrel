@@ -1,7 +1,6 @@
 import {useState} from 'react'
 import {RiRestartLine} from 'react-icons/ri'
 
-import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -10,7 +9,8 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
 

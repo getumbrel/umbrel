@@ -1,6 +1,6 @@
+import {Progress} from '@/components/ui/progress'
 import {LOADING_DASH} from '@/constants'
 import {TextWithProgressWidgetProps} from '@/modules/widgets/shared/constants'
-import {Progress} from '@/shadcn-components/ui/progress'
 import {t} from '@/utils/i18n'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'

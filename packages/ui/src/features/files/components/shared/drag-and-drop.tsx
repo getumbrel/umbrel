@@ -4,9 +4,10 @@ import {useTimeoutFn} from 'react-use'
 
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem, PolymorphicPropsWithoutRef} from '@/features/files/types'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface DraggableProps {
 	id: string
@@ -27,6 +28,7 @@ interface DroppableProps {
 }
 
 export const Draggable = ({id, children, className, item, disabled = false, ...props}: DraggableProps) => {
+	const isReadOnly = useIsFilesReadOnly()
 	const {attributes, listeners, setNodeRef} = useDraggable({
 		id: id,
 		data: item,
@@ -34,7 +36,7 @@ export const Draggable = ({id, children, className, item, disabled = false, ...p
 
 	const isTouchDevice = useIsTouchDevice()
 
-	if (disabled || isTouchDevice) return <div className={className}>{children}</div>
+	if (disabled || isTouchDevice || isReadOnly) return <div className={className}>{children}</div>
 
 	return (
 		<div
@@ -42,7 +44,7 @@ export const Draggable = ({id, children, className, item, disabled = false, ...p
 			{...listeners}
 			{...attributes}
 			{...props}
-			className={cn('touch-none outline-none', className)}
+			className={cn('touch-none outline-hidden', className)}
 		>
 			{children}
 		</div>
@@ -61,6 +63,7 @@ export const Droppable = <T extends ElementType = 'div'>({
 	...props
 }: PolymorphicPropsWithoutRef<T, DroppableProps>) => {
 	const Component = as || 'div'
+	const isReadOnly = useIsFilesReadOnly()
 	const {setNodeRef, isOver, over} = useDroppable({
 		id: id,
 		data: {
@@ -119,7 +122,7 @@ export const Droppable = <T extends ElementType = 'div'>({
 	const isReadyToDrop = isOver && isOverValidDropTarget
 	const renderedChildren = typeof children === 'function' ? children(isReadyToDrop) : children
 
-	if (disabled || isTouchDevice)
+	if (disabled || isTouchDevice || isReadOnly)
 		return (
 			<div className={className} {...props}>
 				{renderedChildren}

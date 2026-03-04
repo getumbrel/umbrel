@@ -1,9 +1,9 @@
 import {CmdkSearchProviderProps} from '@/components/cmdk-providers'
+import {CommandItem} from '@/components/ui/command'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {CommandItem} from '@/shadcn-components/ui/command'
 import {t} from '@/utils/i18n'
 
 // how many max results we want to show in the command-k

@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'

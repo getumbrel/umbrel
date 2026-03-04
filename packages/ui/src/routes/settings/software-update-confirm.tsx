@@ -1,9 +1,9 @@
 import {Markdown} from '@/components/markdown'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

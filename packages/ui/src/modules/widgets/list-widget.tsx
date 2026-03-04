@@ -14,7 +14,7 @@ export function ListWidget({
 	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className='cursor-pointer overflow-hidden p-2 !pb-0 sm:p-4'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='overflow-hidden p-2 !pb-0 sm:p-4'>
 			<div
 				className='flex h-full w-full flex-col gap-2 max-sm:gap-0'
 				style={{

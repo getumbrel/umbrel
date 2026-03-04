@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {RiCloseCircleFill} from 'react-icons/ri'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 

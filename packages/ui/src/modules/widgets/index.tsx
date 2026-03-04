@@ -16,6 +16,7 @@ import {
 } from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
+import {t} from '@/utils/i18n'
 import {celciusToFahrenheit} from '@/utils/temperature'
 
 import {FourStatsWidget} from './four-stats-widget'
@@ -72,56 +73,41 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 			// Users will likely open the app by clicking the icon before adding a widget associated with the app
 			launchApp(appId, {path: link, direct: true})
 		} else {
-			toast.error(`App "${appId}" not found.`)
+			toast.error(t('app-not-found', {app: appId}))
 		}
 	}
 
-	if (isLoading || widgetQ.isError) return <LoadingWidget type={manifestConfig.type} onClick={handleClick} />
-
-	const widget = widgetQ.data as WidgetConfig
+	// Render the widget component directly instead of swapping between <LoadingWidget>
+	// and the real widget. This keeps the same WidgetContainer (which has backdrop-filter)
+	// mounted across loading → loaded, avoiding a visual flash when the backdrop-filter
+	// re-composites on remount. When data isn't available, widget components render
+	// with placeholder dashes (same visual as LoadingWidget).
+	const widget = (!isLoading && !widgetQ.isError ? widgetQ.data : undefined) as WidgetConfig
 
 	switch (manifestConfig.type) {
-		case 'text-with-buttons': {
-			const w = widget as WidgetConfig<'text-with-buttons'>
-			return <TextWithButtonsWidget {...w} onClick={handleClick} />
-		}
-		case 'text-with-progress': {
-			const w = widget as WidgetConfig<'text-with-progress'>
-			return <TextWithProgressWidget {...w} onClick={handleClick} />
-		}
-		case 'two-stats-with-guage': {
-			const w = widget as WidgetConfig<'two-stats-with-guage'>
-			return <TwoStatsWidget {...w} onClick={handleClick} />
-		}
-		case 'three-stats': {
-			const w = widget as WidgetConfig<'three-stats'>
+		case 'text-with-buttons':
+			return <TextWithButtonsWidget {...(widget as WidgetConfig<'text-with-buttons'>)} onClick={handleClick} />
+		case 'text-with-progress':
+			return <TextWithProgressWidget {...(widget as WidgetConfig<'text-with-progress'>)} onClick={handleClick} />
+		case 'two-stats-with-guage':
+			return <TwoStatsWidget {...(widget as WidgetConfig<'two-stats-with-guage'>)} onClick={handleClick} />
+		case 'three-stats':
 			// TODO: figure out how to show the user's desired temp unit in a way that isn't brittle
 			if (manifestConfig.id === 'umbrel:system-statss') {
-				return <SystemThreeUpWidget {...w} onClick={handleClick} />
+				return <SystemThreeUpWidget {...(widget as WidgetConfig<'three-stats'>)} onClick={handleClick} />
 			}
-			return <ThreeStatsWidget {...w} onClick={handleClick} />
-		}
-		case 'four-stats': {
-			const w = widget as WidgetConfig<'four-stats'>
-			return <FourStatsWidget {...w} onClick={handleClick} />
-		}
-		case 'list': {
-			const w = widget as WidgetConfig<'list'>
-			return <ListWidget {...w} onClick={handleClick} />
-		}
-		case 'list-emoji': {
-			const w = widget as WidgetConfig<'list-emoji'>
-			return <ListEmojiWidget {...w} onClick={handleClick} />
-		}
+			return <ThreeStatsWidget {...(widget as WidgetConfig<'three-stats'>)} onClick={handleClick} />
+		case 'four-stats':
+			return <FourStatsWidget {...(widget as WidgetConfig<'four-stats'>)} onClick={handleClick} />
+		case 'list':
+			return <ListWidget {...(widget as WidgetConfig<'list'>)} onClick={handleClick} />
+		case 'list-emoji':
+			return <ListEmojiWidget {...(widget as WidgetConfig<'list-emoji'>)} onClick={handleClick} />
 		// features/files widgets
-		case 'files-list': {
-			const w = widget as WidgetConfig<'files-list'>
-			return <FilesListWidget {...w} onClick={handleClick} />
-		}
-		case 'files-grid': {
-			const w = widget as WidgetConfig<'files-grid'>
-			return <FilesGridWidget {...w} onClick={handleClick} />
-		}
+		case 'files-list':
+			return <FilesListWidget {...(widget as WidgetConfig<'files-list'>)} onClick={handleClick} />
+		case 'files-grid':
+			return <FilesGridWidget {...(widget as WidgetConfig<'files-grid'>)} onClick={handleClick} />
 	}
 }
 
@@ -129,7 +115,8 @@ export function Widget({appId, config: manifestConfig}: {appId: string; config: 
 export function SystemThreeUpWidget({items, ...props}: ComponentPropsWithRef<typeof ThreeStatsWidget>) {
 	const [temperatureUnit] = useTemperatureUnit()
 
-	if (!items) return <ErrorWidget error='No data.' />
+	// Show loading dashes while data is being fetched (items is undefined during loading)
+	if (!items) return <ThreeStatsWidget {...props} />
 
 	const modifiedItems = map.strict(items, (item) => {
 		if (!item.text?.includes('℃')) return item

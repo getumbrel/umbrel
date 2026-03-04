@@ -1,13 +1,13 @@
 import {useState} from 'react'
 import {useNavigate, useParams} from 'react-router-dom'
 
+import {Button} from '@/components/ui/button'
+import {DropdownMenu} from '@/components/ui/dropdown-menu'
 import {ImmersiveDialogFooter} from '@/components/ui/immersive-dialog'
 import {LOADING_DASH} from '@/constants'
 import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-picker'
 import {useUserApp} from '@/providers/apps'
 import {downloadUtf8Logs, LogResults, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {DropdownMenu} from '@/shadcn-components/ui/dropdown-menu'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 

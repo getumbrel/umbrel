@@ -1,26 +1,29 @@
 import '@/features/files/components/listing/file-item/list-view-file-item.css'
 
+import {Progress} from '@/components/ui/progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
+import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {FILE_TYPE_MAP} from '@/features/files/constants'
 import type {FileSystemItem} from '@/features/files/types'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
-import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
+import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {Progress} from '@/shadcn-components/ui/progress'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
 interface ListViewFileItemProps {
 	item: FileSystemItem
 	isEditingName: boolean
 	onEditingNameComplete: () => void
+	fadedContent?: boolean
 }
 
-export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: ListViewFileItemProps) {
+export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fadedContent}: ListViewFileItemProps) {
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 
@@ -34,18 +37,22 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 	// Mobile view
 	if (isMobile) {
 		return (
-			<div className={cn('flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
+			<div className={cn('flex items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
 				<div className='flex-shrink-0'>
 					<FileItemIcon item={item} className='h-7 w-7' />
 				</div>
-				<div className='flex w-[100%] items-center justify-between'>
-					<div className='flex flex-col'>
+				<div className={cn('flex flex-1 items-center justify-between overflow-hidden', fadedContent && 'opacity-50')}>
+					<div className='flex min-w-0 flex-1 flex-col overflow-hidden'>
 						{isEditingName ? (
 							<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
 						) : (
-							<span className='min-w-0 cursor-text truncate text-12'>{formatItemName({name: item.name})}</span>
+							<TruncatedFilename
+								filename={item.name}
+								view='list'
+								className='min-w-0 overflow-hidden pr-2 text-12 text-ellipsis whitespace-nowrap'
+							/>
 						)}
-						<span className='text-11 text-white/40'>
+						<span className='min-w-0 overflow-hidden text-11 text-ellipsis whitespace-nowrap text-white/40'>
 							{isUploading
 								? uploadingProgress === 0
 									? t('files-state.waiting')
@@ -53,11 +60,15 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 								: formatFilesystemDate(item.modified, languageCode)}
 						</span>
 					</div>
-					<span className='text-11 text-white/40'>
+					<span className='shrink-0 pl-2 text-right text-11 whitespace-nowrap text-white/40'>
 						{item.type === 'directory'
 							? isDirectoryAnExternalDrivePartition(item.path)
 								? t('files-type.external-drive')
-								: t('files-type.directory')
+								: isDirectoryANetworkDevice(item.path)
+									? t('files-type.network-drive')
+									: isDirectoryAnUmbrelBackup(item.name)
+										? t('files-type.umbrel-backup')
+										: t('files-type.directory')
 							: formatFilesystemSize(item.size ?? null)}
 					</span>
 				</div>
@@ -75,19 +86,21 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 					<div className='flex-shrink-0'>
 						<FileItemIcon item={item} className='h-5 w-5' />
 					</div>
-					{isEditingName ? (
-						<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
-					) : (
-						<span className='min-w-0 truncate text-12'>{formatItemName({name: item.name})}</span>
-					)}
+					<div className={cn(fadedContent && 'opacity-50')}>
+						{isEditingName ? (
+							<EditableName item={item} view='list' onFinish={onEditingNameComplete} />
+						) : (
+							<TruncatedFilename filename={item.name} view='list' className='min-w-0 text-12' />
+						)}
+					</div>
 				</div>
 			</div>
 
-			<div className={`flex-[2] ${tableStyles} text-white/60`}>
+			<div className={cn(`flex-[2] ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
 				{isUploading ? <Progress value={uploadingProgress} /> : formatFilesystemDate(item.modified, languageCode)}
 			</div>
 
-			<div className={`flex-1 ${tableStyles} text-white/60`}>
+			<div className={cn(`flex-1 ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
 				{isUploading
 					? `${formatFilesystemSize(
 							((item.size ?? 0) * (uploadingProgress ?? 0)) / 100,
@@ -100,14 +113,18 @@ export function ListViewFileItem({item, isEditingName, onEditingNameComplete}: L
 				{isUploading ? `${formatFilesystemSize(item.speed ?? 0)}/s` : formatFilesystemDate(item.created, languageCode)}
 			</div> */}
 
-			<div className={`flex-[2] ${tableStyles} text-white/60`}>
+			<div className={cn(`flex-[2] ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
 				{isUploading
 					? uploadingProgress !== 0
 						? t('files-state.uploading')
 						: t('files-state.waiting')
 					: item.type === 'directory' && isDirectoryAnExternalDrivePartition(item.path)
 						? t('files-type.external-drive')
-						: translatedFileType}
+						: isDirectoryANetworkDevice(item.path)
+							? t('files-type.network-drive')
+							: isDirectoryAnUmbrelBackup(item.name)
+								? t('files-type.umbrel-backup')
+								: translatedFileType}
 			</div>
 		</div>
 	)

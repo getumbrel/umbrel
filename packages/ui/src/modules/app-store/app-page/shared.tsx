@@ -1,8 +1,8 @@
 import {useEffect, useRef, useState} from 'react'
 
 import {Markdown} from '@/components/markdown'
+import {cn} from '@/lib/utils'
 import {cardFaintClass} from '@/modules/app-store/shared'
-import {cn} from '@/shadcn-lib/utils'
 import {linkClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -46,7 +46,7 @@ export function ReadMoreMarkdownSection({children}: {children: string}) {
 				className={cn(
 					cardTextClass,
 					'transition-[max-height] duration-200',
-					isExpanded ? 'max-h-[9999px]' : 'max-h-[calc(1.7em*6)] overflow-hidden',
+					isExpanded || !showReadMore ? 'max-h-[9999px]' : 'max-h-[calc(1.7em*6)] overflow-hidden',
 				)}
 			>
 				<Markdown>{children}</Markdown>
