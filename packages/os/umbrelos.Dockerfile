@@ -129,7 +129,7 @@ RUN apt-get install --yes network-manager systemd-timesyncd openssh-server avahi
 RUN apt-get install --yes bluez
 
 # Install essential system utilities
-RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs
+RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget ca-certificates usbutils whois build-essential e2fsprogs python3-yaml
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
