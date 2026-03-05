@@ -6,13 +6,13 @@ import {AppIcon} from '@/components/app-icon'
 import {appStateToString} from '@/components/cmdk'
 import {Markdown} from '@/components/markdown'
 import {ProgressButton} from '@/components/progress-button'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {Separator} from '@/components/ui/separator'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {progressStates, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {useDialogOpenProps} from '@/utils/dialog'
@@ -32,7 +32,7 @@ export function UpdatesDialogConnected() {
 			appsWithUpdates={appsWithUpdates}
 			titleRightChildren={
 				<Button
-					size='dialog'
+					size='md'
 					variant='primary'
 					onClick={updateAll.updateAll}
 					className='w-auto'
@@ -91,16 +91,16 @@ function AppItem({app}: {app: RegistryApp}) {
 		},
 	)
 	const [showAll, setShowAll] = useState(false)
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 	const updateMut = trpcReact.apps.update.useMutation({
 		onMutate: () => {
 			// Optimistic updates because otherwise it's too slow and feels like nothing is happening
-			ctx.apps.state.cancel()
-			ctx.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
+			utils.apps.state.cancel()
+			utils.apps.state.setData({appId: app.id}, {state: 'updating', progress: 0})
 		},
 		onSuccess: () => {
 			// This should cause the app to be removed from the list
-			ctx.apps.list.invalidate()
+			utils.apps.list.invalidate()
 		},
 	})
 	const updateApp = () => updateMut.mutate({appId: app.id})
@@ -121,7 +121,7 @@ function AppItem({app}: {app: RegistryApp}) {
 				<ProgressButton
 					size='sm'
 					onClick={updateApp}
-					disabled={inProgress || updateMut.isLoading}
+					disabled={inProgress || updateMut.isPending}
 					state={appState}
 					progress={progress}
 					style={{
@@ -151,7 +151,7 @@ function AppItem({app}: {app: RegistryApp}) {
 					<button
 						className={cn(
 							'justify-self-end text-13 text-brand underline underline-offset-2',
-							!showAll && 'absolute bottom-0 right-0 ',
+							!showAll && 'absolute right-0 bottom-0',
 						)}
 						onClick={() => setShowAll((s) => !s)}
 					>

@@ -5,27 +5,42 @@ import yaml from 'js-yaml'
 import {getProperty, setProperty, deleteProperty} from 'dot-prop'
 import PQueue from 'p-queue'
 
-import getOrCreateFile from './get-or-create-file.js'
-
 type DotProp<T, P extends string> = P extends `${infer K}.${infer R}`
 	? K extends keyof T
-		? DotProp<T[K], R>
+		? DotProp<NonNullable<T[K]>, R>
 		: never
 	: P extends keyof T
-	? T[P]
-	: never
+		? NonNullable<T[P]>
+		: never
 
 type StorePath<T, P extends string> = DotProp<T, P> extends never ? 'The provided path does not exist in the store' : P
 
-export default class FileStore<T> {
+type Primitive = number | string | boolean | null | undefined
+type Serializable = {
+	[key: string]: Serializable | Serializable[] | Primitive | Primitive[]
+}
+
+export default class FileStore<T extends Serializable> {
 	filePath: string
 
 	#parser
 	#writes = 0
 	#writeQueue
+	#onBeforeWrite?: () => Promise<void>
+	#onAfterWrite?: () => Promise<void>
 
-	constructor({filePath}: {filePath: string}) {
+	constructor({
+		filePath,
+		onBeforeWrite,
+		onAfterWrite,
+	}: {
+		filePath: string
+		onBeforeWrite?: () => Promise<any>
+		onAfterWrite?: () => Promise<any>
+	}) {
 		this.filePath = filePath
+		this.#onBeforeWrite = onBeforeWrite
+		this.#onAfterWrite = onAfterWrite
 
 		// TODO: Allow configuring
 		this.#parser = {
@@ -37,23 +52,43 @@ export default class FileStore<T> {
 	}
 
 	async #read() {
-		const rawData = await getOrCreateFile(this.filePath, this.#parser.encode({}))
+		// Set default store value
+		let store = {} as T
 
-		const store = this.#parser.decode(rawData) as T
+		try {
+			// Attempt to read and parse the store file
+			const rawData = await fs.readFile(this.filePath, 'utf8')
+			const data = this.#parser.decode(rawData)
 
+			// If we get a result, set the store value
+			if (data) store = data as T
+		} catch (error) {
+			// Prevent errors if the file doesn't exist, we'll just use the default value
+			if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') throw error
+		}
+
+		// Return the store
 		return store
 	}
 
 	async #write(store: T): Promise<boolean> {
 		const rawData = this.#parser.encode(store)
 
-		// Write atomically
-		const processId = Number(process.pid)
-		const temporaryFilePath = `${this.filePath}.${processId}.${this.#writes++}.tmp`
-		await fs.writeFile(temporaryFilePath, rawData, 'utf8')
-		await fs.rename(temporaryFilePath, this.filePath)
+		// Call pre-write hook if provided
+		if (this.#onBeforeWrite) await this.#onBeforeWrite()
 
-		return true
+		try {
+			// Write atomically
+			const processId = Number(process.pid)
+			const temporaryFilePath = `${this.filePath}.${processId}.${this.#writes++}.tmp`
+			await fs.writeFile(temporaryFilePath, rawData, 'utf8')
+			await fs.rename(temporaryFilePath, this.filePath)
+
+			return true
+		} finally {
+			// Call post-write hook if provided
+			if (this.#onAfterWrite) await this.#onAfterWrite()
+		}
 	}
 
 	async #set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>) {
@@ -70,10 +105,10 @@ export default class FileStore<T> {
 		return this.#write(store)
 	}
 
-	async get<P extends string>(property?: StorePath<T, P>) {
+	async get<P extends string>(property?: StorePath<T, P>, defaultValue?: DotProp<T, P>) {
 		const store = await this.#read()
 
-		return getProperty(store, property as string) as DotProp<T, P>
+		return getProperty(store, property as string, defaultValue) as DotProp<T, P>
 	}
 
 	async set<P extends string>(property: StorePath<T, P>, value: DotProp<T, P>): Promise<boolean> {

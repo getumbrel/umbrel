@@ -12,7 +12,7 @@ mkdir -p /boot/firmware
 
 # Configure APT with Raspberry Pi sources.
 install -m 644 "/build-steps/setup-raspberrypi/raspberrypi.list" "/etc/apt/sources.list.d/"
-sed -i "s/RELEASE/bookworm/g" "/etc/apt/sources.list.d/raspberrypi.list"
+sed -i "s/RELEASE/trixie/g" "/etc/apt/sources.list.d/raspberrypi.list"
 
 gpg --dearmor \
     < "/build-steps/setup-raspberrypi/raspberrypi.gpg.key" \
@@ -38,10 +38,3 @@ apt-get install -y \
 # Install boot configuration files.
 install -m 644 "/build-steps/setup-raspberrypi/cmdline.txt" "/boot/firmware/"
 install -m 644 "/build-steps/setup-raspberrypi/config.txt" "/boot/firmware/"
-
-# XXX: Currently Rugpi expects the files for the boot partition to be directly in
-# `/boot` as this was the case before Debian Bookworm. Changing this is a breaking
-# change of Rugpi. We may do this with the next major release. If that happens, the
-# following two lines can/must be removed.
-mv /boot/firmware/* /boot
-rm -rf /boot/firmware

@@ -5,8 +5,9 @@ import fse from 'fs-extra'
 
 import randomToken from './random-token.js'
 
-function temporaryDirectory() {
-	const containingDirectory = path.join(os.tmpdir(), randomToken(128))
+function temporaryDirectory({parentDirectory}: {parentDirectory?: string} = {}) {
+	const baseDirectory = parentDirectory ?? os.tmpdir()
+	const containingDirectory = path.join(baseDirectory, randomToken(128))
 
 	const createRoot = () => fse.ensureDir(containingDirectory)
 	const destroyRoot = () => fse.remove(containingDirectory)

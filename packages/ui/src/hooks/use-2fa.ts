@@ -1,17 +1,14 @@
 import {useCallback, useState} from 'react'
 
-import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function use2fa(onEnableChange?: (enabled: boolean) => void) {
-	const ctx = trpcReact.useContext()
+	const ctx = trpcReact.useUtils()
 
 	const enableMut = trpcReact.user.enable2fa.useMutation({
 		onSuccess: () => {
 			ctx.user.is2faEnabled.invalidate()
 			setTimeout(() => {
-				toast.success(t('2fa.enable.success'))
 				onEnableChange?.(true)
 			}, 500)
 		},
@@ -21,7 +18,6 @@ export function use2fa(onEnableChange?: (enabled: boolean) => void) {
 		onSuccess: () => {
 			ctx.user.is2faEnabled.invalidate()
 			setTimeout(() => {
-				toast.success(t('2fa.disable.success'))
 				onEnableChange?.(false)
 			}, 500)
 		},

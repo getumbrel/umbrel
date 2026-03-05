@@ -6,6 +6,9 @@ import {$} from 'execa'
 import type Umbreld from '../../../index.js'
 
 export default async function appScript(umbreld: Umbreld, command: string, arg: string, inheritStdio: boolean = true) {
+	// Prevent breaking test output
+	if (process.env.TEST === 'true') inheritStdio = false
+
 	const currentFilename = fileURLToPath(import.meta.url)
 	const currentDirname = dirname(currentFilename)
 	const scriptPath = join(currentDirname, 'app-script')

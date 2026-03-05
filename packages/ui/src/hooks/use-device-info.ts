@@ -60,11 +60,11 @@ export function useDeviceInfo(): DeviceInfoT {
 			? {
 					icon: hostEnvironmentMap[umbrelHostEnvironment].icon,
 					title: device || LOADING_DASH,
-			  }
+				}
 			: {
 					icon: undefined,
 					title: UNKNOWN(),
-			  },
+				},
 	}
 }
 
@@ -75,6 +75,10 @@ function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnviron
 		return undefined
 	}
 
+	if (deviceInfo.productName.toLowerCase().includes('umbrel pro')) {
+		return 'umbrel-pro'
+	}
+
 	if (deviceInfo.productName.toLowerCase().includes('umbrel home')) {
 		return 'umbrel-home'
 	}
@@ -83,6 +87,10 @@ function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnviron
 		return 'raspberry-pi'
 	}
 
-	// Assume Linux
-	return 'linux'
+	if (deviceInfo.productName.toLowerCase().includes('docker')) {
+		return 'docker-container'
+	}
+
+	// We return unknown and render a generic server icon
+	return 'unknown'
 }

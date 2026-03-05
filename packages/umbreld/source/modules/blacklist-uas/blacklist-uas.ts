@@ -85,7 +85,7 @@ export default async function blacklistUASDriver() {
 		// We need to make sure we commit before rebooting otherwise
 		// OTA updates will get instantly rolled back.
 		try {
-			await $`mender commit`
+			await $`rugix-ctrl system commit`
 		} catch {}
 		await fse.writeFile(justDidRebootFile, cmdline)
 		await $`reboot`

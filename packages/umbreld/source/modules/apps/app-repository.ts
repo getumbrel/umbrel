@@ -10,7 +10,8 @@ import {$} from 'execa'
 
 import type Umbreld from '../../index.js'
 import randomToken from '../utilities/random-token.js'
-import {type AppRepositoryMeta, type AppManifest} from './schema.js'
+import {type AppRepositoryMeta, type AppManifest, validateManifest} from './schema.js'
+import {UMBREL_APP_STORE_REPO} from '../../constants.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
@@ -138,7 +139,7 @@ export default class AppRepository {
 		// Handle official repo which does not have meta
 		// TODO: Instead of this hack we can probably just add this to the official repo
 		// before we ship this code.
-		if (this.url === this.#umbreld.appStore.defaultAppStoreRepo) {
+		if (this.url === UMBREL_APP_STORE_REPO) {
 			meta = {
 				id: 'umbrel-app-store',
 				name: 'Umbrel App Store',
@@ -151,25 +152,31 @@ export default class AppRepository {
 		const appManifests = await globby(`${this.path}/*/umbrel-app.yml`)
 
 		const parsedManifestsPromises = appManifests.map((manifest) =>
-			readYaml(manifest).catch((error) => {
-				this.logger.error(`Manifest parsing of ${manifest} failed: ${error.reason} on line ${error.mark.line}`)
-			}),
+			readYaml(manifest)
+				.catch((error) => {
+					this.logger.error(`Manifest parsing of ${manifest} failed`, error)
+				})
+				.then(validateManifest)
+				.catch((error) => {
+					this.logger.error(`Manifest validation of ${manifest} failed`, error)
+				}),
 		)
 
 		// Wait for all reads to finish
-		let apps = (await Promise.all(parsedManifestsPromises)) as AppManifest[]
+		const manifests = await Promise.all(parsedManifestsPromises)
 
-		// Process results
-		apps = apps
+		// Process results and add mandatory properties
+		const apps = manifests
 			// Filter out invalid manifests
-			.filter((app) => app !== undefined)
+			.filter((app): app is AppManifest => app !== undefined)
 			// Filter out disabled apps
 			.filter((app) => app.disabled !== true)
 			// Filter out invalid IDs
 			.filter((app) => meta.id === 'umbrel-app-store' || app.id.startsWith(meta.id))
-			// Add icons
+			// Add icons and hydrate app store id
 			.map((app) => ({
 				...app,
+				appStoreId: meta.id,
 				gallery:
 					meta.id === 'umbrel-app-store'
 						? app.gallery.map((file) => `https://getumbrel.github.io/umbrel-apps-gallery/${app.id}/${file}`)
@@ -179,8 +186,6 @@ export default class AppRepository {
 			}))
 			// Sort apps alphabetically
 			.sort((a: any, b: any) => a.id.localeCompare(b.id))
-
-		// TODO: Validate app manifest schema
 
 		return {
 			url: this.url,

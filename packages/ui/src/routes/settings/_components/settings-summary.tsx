@@ -1,4 +1,4 @@
-import {Link} from 'react-router-dom'
+import {Fragment} from 'react'
 
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
@@ -16,7 +16,7 @@ export function SettingsSummary() {
 
 	return (
 		<dl
-			className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+			className='grid w-max grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
 			style={{
 				// Makes columns not all the same width
 				gridTemplateColumns: 'auto auto',
@@ -25,18 +25,17 @@ export function SettingsSummary() {
 			<dt className='opacity-40'>{t('device')}</dt>
 			<dd>{deviceInfo.data?.device || LOADING_DASH}</dd>
 			<dt className='opacity-40'>{t('umbrelos')}</dt>
-			<dd>{osVersionQ.isLoading ? LOADING_DASH : `${osVersionQ.data?.name}` ?? UNKNOWN()}</dd>
+			<dd>{osVersionQ.isLoading ? LOADING_DASH : (osVersionQ.data?.name ?? UNKNOWN())}</dd>
 			<dt className='opacity-40'>{t('local-ip')}</dt>
 			<dd>
 				{ipAddresses.data?.length
 					? ipAddresses.data.map((ip: string, index: number) => (
-							<>
-								<Link to={`http://${ip}`} target='_blank'>
-									{ip}
-								</Link>
+							<Fragment key={ip}>
+								{/* Allow text selection for copying IP address */}
+								<span className='select-text'>{ip}</span>
 								{index < ipAddresses.data.length - 1 && ', '}
-							</>
-					  ))
+							</Fragment>
+						))
 					: LOADING_DASH}
 			</dd>
 			<dt className='opacity-40'>{t('uptime')}</dt>

@@ -1,4 +1,4 @@
-import {Badge} from '@/shadcn-components/ui/badge'
+import {Badge} from '@/components/ui/badge'
 import {t} from '@/utils/i18n'
 
 export function CommunityBadge({className}: {className?: string}) {

@@ -1,6 +1,6 @@
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function Alert({children, className}: {children: React.ReactNode; className?: string}) {
 	return (

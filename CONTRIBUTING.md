@@ -13,7 +13,7 @@ If there's no existing issue, please open a new issue and provide us as much inf
 Feature requests
 ----------------
 
-If you find yourself wishing for a feature that doesn't exist in Umbrel, you are probably not alone. There are bound to be others out there with similar needs. Please search our [issues list](https://github.com/getumbrel/umbrel/issues) on GitHub and our [community forum](https://community.getumbrel.com). If you can't find an existing feature request, please open a new topic on the [community forum](https://community.getumbrel.com) with your feature request.
+If you find yourself wishing for a feature that doesn't exist in Umbrel, you are probably not alone. There are bound to be others out there with similar needs. Please search our [issues list](https://github.com/getumbrel/umbrel/issues) on GitHub and our [community forum](https://community.umbrel.com). If you can't find an existing feature request, please open a new topic on the [community forum](https://community.umbrel.com) with your feature request.
 
 Contributing code and documentation changes
 -------------------------------------------

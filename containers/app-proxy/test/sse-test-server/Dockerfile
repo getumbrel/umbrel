@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:16-buster-slim as umbrel-sse-test-server-builder
+FROM node:16-buster-slim AS umbrel-sse-test-server-builder
 
 # Create app directory
 WORKDIR /app

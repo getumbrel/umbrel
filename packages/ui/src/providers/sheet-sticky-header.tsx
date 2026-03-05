@@ -3,7 +3,7 @@
 import {Portal} from '@radix-ui/react-portal'
 import {ComponentPropsWithoutRef, createContext, useContext, useEffect, useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 // In the future, the child that sets the header content will should be responsible for this
 const SCROLL_THRESHOLD = 110
@@ -22,7 +22,7 @@ export function SheetStickyHeaderProvider({
 	scrollRef,
 }: {
 	children: React.ReactNode
-	scrollRef: React.RefObject<HTMLDivElement>
+	scrollRef: React.RefObject<HTMLDivElement | null>
 }) {
 	const [hasStickyHeader, setHasStickyHeader] = useState(false)
 	const [showStickyHeader, setShowStickyHeader] = useState(false)
@@ -44,11 +44,7 @@ export function SheetStickyHeaderProvider({
 		return () => el?.removeEventListener('scroll', scrollHandler)
 	}, [scrollRef, hasStickyHeader])
 
-	return (
-		<StickyContext.Provider value={{showStickyHeader, hasStickyHeader, setHasStickyHeader}}>
-			{children}
-		</StickyContext.Provider>
-	)
+	return <StickyContext value={{showStickyHeader, hasStickyHeader, setHasStickyHeader}}>{children}</StickyContext>
 }
 
 export function useSheetStickyHeader() {

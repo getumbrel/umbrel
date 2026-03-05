@@ -10,6 +10,7 @@ export default class AppStore {
 	logger: Umbreld['logger']
 	updateInterval = '5m'
 	defaultAppStoreRepo: string
+	attemptedInitialAppStoreUpdate = false
 
 	constructor(umbreld: Umbreld, {defaultAppStoreRepo}: {defaultAppStoreRepo: string}) {
 		this.#umbreld = umbreld
@@ -28,20 +29,19 @@ export default class AppStore {
 
 		// Initialise repositories
 		this.logger.log(`Initialising default repository...`)
+		this.attemptedInitialAppStoreUpdate = false
 		try {
-			const repositories = await this.getRepositories()
-			const defaultRepository = repositories.find((repository) => repository.url === this.defaultAppStoreRepo)
+			const defaultRepository = await this.getDefaultRepository()
 			if (!defaultRepository) throw new Error(`Default repository ${this.defaultAppStoreRepo} not found`)
 			await pRetry(
 				async () => {
-					await defaultRepository.update()
+					await defaultRepository.update().finally(() => (this.attemptedInitialAppStoreUpdate = true))
 				},
 				{
 					onFailedAttempt: (error) => {
 						this.logger.error(
-							`Failed to initialise default repository ${defaultRepository.url}: ${
-								(error as Error).message
-							}, will retry ${error.retriesLeft} more times.`,
+							`Failed to initialise default repository ${defaultRepository.url}, will retry ${error.retriesLeft} more times.`,
+							error,
 						)
 					},
 					retries: 5, // This will do exponential backoff for 1s, 2s, 4s, 8s, 16s
@@ -49,7 +49,7 @@ export default class AppStore {
 			)
 			this.logger.log(`Default repository initialised!`)
 		} catch (error) {
-			this.logger.error(`Failed to initialise default repository: ${(error as Error).message}`)
+			this.logger.error(`Failed to initialise default repository`, error)
 		}
 
 		// Kick off update loop
@@ -68,6 +68,11 @@ export default class AppStore {
 		return repositories
 	}
 
+	async getDefaultRepository() {
+		const repositories = await this.getRepositories()
+		return repositories.find((repository) => repository.url === this.defaultAppStoreRepo)
+	}
+
 	async update() {
 		const repositories = await this.getRepositories()
 		if (!repositories) throw new Error('App store not initialised')
@@ -75,7 +80,7 @@ export default class AppStore {
 			try {
 				await repository.update()
 			} catch (error) {
-				this.logger.error(`Failed to update ${repository.url}: ${(error as Error).message}`)
+				this.logger.error(`Failed to update ${repository.url}`, error)
 			}
 		}
 	}
@@ -85,7 +90,7 @@ export default class AppStore {
 		if (!repositories) throw new Error('App store not initialised')
 		const registryPromises = repositories.map((repository) =>
 			repository.readRegistry().catch((error) => {
-				this.logger.error(`Failed to read registry from ${repository.url}: ${(error as Error).message}`)
+				this.logger.error(`Failed to read registry from ${repository.url}`, error)
 				return null
 			}),
 		)

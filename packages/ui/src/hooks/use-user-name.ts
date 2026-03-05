@@ -10,12 +10,12 @@ export function useUserName({onSuccess}: {onSuccess: () => void}) {
 	const [name, setName] = useState(userQ.data?.name)
 	const [localError, setLocalError] = useState('')
 
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
 	const setMut = trpcReact.user.set.useMutation({
 		onSuccess: async () => {
 			await sleep(500)
-			ctx.user.get.invalidate()
+			utils.user.get.invalidate()
 			onSuccess()
 		},
 	})
@@ -45,6 +45,6 @@ export function useUserName({onSuccess}: {onSuccess: () => void}) {
 		setName,
 		handleSubmit,
 		formError,
-		isLoading: setMut.isLoading,
+		isLoading: setMut.isPending,
 	}
 }

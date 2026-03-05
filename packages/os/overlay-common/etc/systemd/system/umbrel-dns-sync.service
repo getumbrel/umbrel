@@ -1,0 +1,10 @@
+[Unit]
+Description=Synchronize DNS configuration before starting NetworkManager
+Before=NetworkManager.service
+
+[Service]
+ExecStart=bash /opt/umbrel-dns-sync/umbrel-dns-sync
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

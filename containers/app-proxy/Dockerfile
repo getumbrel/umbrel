@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:16-buster-slim as umbrel-app-proxy-builder
+FROM node:16-buster-slim AS umbrel-app-proxy-builder
 
 # Create app directory
 WORKDIR /app

@@ -2,16 +2,31 @@
 
 set -euo pipefail
 
+SNAPSHOT_DATE=${1:-}
+
+# Disable the resume from SWAP functionality. This takes significant time during the boot
+# process, as it tries to resume using a swap device which never shows up.
+mkdir -p /etc/initramfs-tools/conf.d/
+echo "RESUME=none" >/etc/initramfs-tools/conf.d/resume
+
 rm /etc/apt/sources.list.d/debian.sources
 
+# All apt packages are pinned to a specific date to ensure reproducibility.
+# This means building the same umbrelOS git tag always results in the same
+# package versions.
+# We should update this to the current date with each release to ensure we
+# are always using the latest packages.
 cat >/etc/apt/sources.list <<EOF
-deb http://deb.debian.org/debian bookworm main non-free-firmware
-deb-src http://deb.debian.org/debian bookworm main non-free-firmware
-deb http://deb.debian.org/debian-security bookworm-security main non-free-firmware
-deb-src http://deb.debian.org/debian-security bookworm-security main non-free-firmware
-deb http://deb.debian.org/debian bookworm-updates main non-free-firmware
-deb-src http://deb.debian.org/debian bookworm-updates main non-free-firmware
+deb http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} trixie main contrib non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} trixie main contrib non-free-firmware
+deb http://snapshot.debian.org/archive/debian-security/${SNAPSHOT_DATE} trixie-security main contrib non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian-security/${SNAPSHOT_DATE} trixie-security main contrib non-free-firmware
+deb http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} trixie-updates main contrib non-free-firmware
+deb-src http://snapshot.debian.org/archive/debian/${SNAPSHOT_DATE} trixie-updates main contrib non-free-firmware
 EOF
+
+# This is also needed to avoid issues with apt refusing to install old packages from snapshot repos.
+echo 'Acquire::Check-Valid-Until "false";' | tee /etc/apt/apt.conf.d/90snapshot-validuntil
 
 apt-get update --yes
 

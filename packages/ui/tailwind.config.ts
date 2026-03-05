@@ -1,24 +1,35 @@
-import tailwindContainerQueries from '@tailwindcss/container-queries'
 import tailwindTypography from '@tailwindcss/typography'
 import {mapValues} from 'remeda'
-import tailwindCssAnimate from 'tailwindcss-animate'
-import defaultTheme from 'tailwindcss/defaultTheme'
-import {PluginAPI} from 'tailwindcss/types/config'
 
 import {screens} from './src/utils/tw'
 
-/** @type {import('tailwindcss').Config} */
+// Default system font stacks (previously from tailwindcss/defaultTheme, which no longer exists in v4)
+const defaultSansFonts = [
+	'ui-sans-serif',
+	'system-ui',
+	'sans-serif',
+	'"Apple Color Emoji"',
+	'"Segoe UI Emoji"',
+	'"Segoe UI Symbol"',
+	'"Noto Color Emoji"',
+]
+const defaultMonoFonts = [
+	'ui-monospace',
+	'SFMono-Regular',
+	'Menlo',
+	'Monaco',
+	'Consolas',
+	'"Liberation Mono"',
+	'"Courier New"',
+	'monospace',
+]
+
 export default {
-	content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './stories/**/*.{js,ts,jsx,tsx}'],
-	future: {
-		// This allows ring-brand/40 (ring color with opacity to work correctly)
-		// https://github.com/tailwindlabs/tailwindcss/issues/9016#issuecomment-1205713065
-		respectDefaultRingColorOpacity: true,
-	},
 	theme: {
 		fontFamily: {
-			sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
-			mono: ['Roboto', ...defaultTheme.fontFamily.mono],
+			sans: ['var(--font-inter)', ...defaultSansFonts],
+			mono: ['Roboto', ...defaultMonoFonts],
+			sticker: ['"Permanent Marker"', 'cursive'],
 		},
 		container: {
 			center: true,
@@ -64,6 +75,8 @@ export default {
 			},
 			boxShadow: {
 				dock: '1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1.06058px 0px 0px rgba(255, 255, 255, 0.20) inset, 0px 0.53029px 0px 0px rgba(255, 255, 255, 0.10) inset, 0px 4.04029px 24.24174px 0px rgba(0, 0, 0, 0.56)',
+				'floating-island':
+					'1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1.06058px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1.06058px 0px 0px rgba(255, 255, 255, 0.14) inset, 0px 0.53029px 0px 0px rgba(255, 255, 255, 0.07) inset, 0px 4.04029px 24.24174px 0px rgba(0, 0, 0, 0.56)',
 				'glass-button':
 					'1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, -1px 0px 0px 0px rgba(255, 255, 255, 0.04) inset, 0px 1px 0px 0px rgba(255, 255, 255, 0.20) inset, 0px 0.5px 0px 0px rgba(255, 255, 255, 0.10) inset',
 				widget:
@@ -91,6 +104,7 @@ export default {
 				6: '0.06',
 			},
 			fontSize: {
+				9: '9px',
 				11: '11px',
 				12: '12px',
 				13: '13px',
@@ -162,12 +176,27 @@ export default {
 						left: '100%',
 					},
 				},
+				'files-drop-zone-ripple': {
+					'0%, 100%': {
+						transform: 'translate(-50%, -50%) scale(1)',
+					},
+					'50%': {
+						transform: 'translate(-50%, -50%) scale(0.9)',
+					},
+				},
+				'files-folder-blink-on-drag-hover': {
+					'0%, 100%': {backgroundColor: 'hsl(var(--color-brand))'},
+					'25%, 75%': {backgroundColor: 'transparent'},
+					'50%': {backgroundColor: 'hsl(var(--color-brand))'},
+				},
 			},
 			animation: {
+				'files-drop-zone-ripple': 'files-drop-zone-ripple var(--duration,2s) ease calc(var(--i, 0)*.2s) infinite',
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				shake: 'shake 0.7s ease-out both',
 				'sliding-loader': 'sliding-loader 1s ease infinite',
+				'files-folder-blink-on-drag-hover': 'files-folder-blink-on-drag-hover 0.4s linear',
 			},
 			typography: () => ({
 				neutral: {
@@ -179,16 +208,17 @@ export default {
 			}),
 		},
 	},
-	plugins: [tailwindCssAnimate, tailwindContainerQueries, tailwindTypography, utilPlugin],
-}
-
-function utilPlugin(plugin: PluginAPI) {
-	plugin.addUtilities({
-		'.absolute-center': {
-			position: 'absolute',
-			left: '50%',
-			top: '50%',
-			transform: 'translate(-50%, -50%)',
+	plugins: [
+		tailwindTypography,
+		function utilPlugin({addUtilities}: {addUtilities: (utilities: Record<string, Record<string, string>>) => void}) {
+			addUtilities({
+				'.absolute-center': {
+					position: 'absolute',
+					left: '50%',
+					top: '50%',
+					transform: 'translate(-50%, -50%)',
+				},
+			})
 		},
-	})
+	],
 }

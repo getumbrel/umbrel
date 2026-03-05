@@ -1,7 +1,7 @@
 import {Link} from 'react-router-dom'
 
+import {cn} from '@/lib/utils'
 import {WifiIcon2} from '@/modules/wifi/icon'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {signalToBars} from '@/utils/wifi'
 
@@ -13,7 +13,7 @@ export function DesktopWifiButtonConnected({className}: {className?: string}) {
 	return (
 		<Link
 			className={cn(
-				'rounded-6 outline-none ring-white/20 transition-[background,shadow] animate-in fade-in focus-visible:bg-white/6 focus-visible:ring-2 focus-visible:backdrop-blur-sm',
+				'animate-in rounded-6 ring-white/20 outline-hidden transition-[background,shadow] fade-in focus-visible:bg-white/6 focus-visible:ring-2 focus-visible:backdrop-blur-xs',
 				className,
 			)}
 			to='/settings/wifi'

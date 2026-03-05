@@ -2,8 +2,8 @@ import type {IconType} from 'react-icons'
 import {TbAlertCircle, TbAlertTriangle, TbCircleCheck, TbInfoCircle} from 'react-icons/tb'
 import * as SonnerPrimitive from 'sonner'
 
+import {buttonVariants} from '@/components/ui/button'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {buttonVariants} from '@/shadcn-components/ui/button'
 import {tw} from '@/utils/tw'
 
 export function Toaster() {
@@ -18,9 +18,10 @@ export function Toaster() {
 			toastOptions={{
 				unstyled: true,
 				classNames: {
-					closeButton: tw`absolute top-0 right-0 p-1 -translate-y-1/3 translate-x-1/3 bg-neutral-600/70 rounded-full hover:scale-105 transition-[transform,opacity] duration-300 hidden sm:block`,
-					toast: tw`bg-[#404040]/40 rounded-12 py-4 px-5 backdrop-blur-md flex items-center gap-2 shadow-dialog text-15 text-white -tracking-4 w-full`,
-					title: tw`font-medium leading-[18px]`,
+					closeButton: tw`absolute top-0 right-0 p-1 -translate-y-1/3 translate-x-1/3 bg-neutral-600/70 rounded-full hover:scale-105 transition-[scale,opacity] duration-300 hidden sm:block`,
+					// Allow text selection for copying error messages
+					toast: tw`bg-[#404040]/40 rounded-12 py-4 px-5 backdrop-blur-md flex items-center gap-2 shadow-dialog text-15 text-white -tracking-4 w-full select-text`,
+					title: tw`font-medium leading-[18px] select-text`,
 					description: tw`opacity-60 leading-[18px]`,
 					actionButton: buttonVariants(),
 				},

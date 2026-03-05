@@ -1,21 +1,14 @@
 import {useId} from 'react'
 
+import {Button} from '@/components/ui/button'
+import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/components/ui/checkbox'
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {Separator} from '@/components/ui/separator'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useUserApp} from '@/providers/apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
 import {t} from '@/utils/i18n'
@@ -81,7 +74,10 @@ export function DefaultCredentialsDialog() {
 									variant='primary'
 									size='dialog'
 									className='w-auto'
-									onClick={() => launchApp(appId, {direct: true})}
+									onClick={() => {
+										launchApp(appId, {direct: true})
+										dialogProps.onOpenChange(false)
+									}}
 								>
 									{t('default-credentials.open', {app: appName})}
 								</Button>
@@ -107,37 +103,41 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 	const checkboxId = useId()
 	const {app, isLoading} = useUserApp(appId)
 
-	const showCredentials = app?.showCredentialsBeforeOpen ?? false
+	const showCredentials = app?.credentials?.showBeforeOpen ?? false
 
-	const ctx = trpcReact.useContext()
+	const utils = trpcReact.useUtils()
 
-	// @ts-expect-error `showCredentialsBeforeOpen`
-	const showCredentialsBeforeOpenMut = trpcReact.apps.showCredentialsBeforeOpen.useMutation({
-		onSuccess: () => ctx.apps.invalidate(),
+	const hideCredentialsBeforeOpenMut = trpcReact.apps.hideCredentialsBeforeOpen.useMutation({
+		onSuccess: () => utils.apps.invalidate(),
 	})
 
-	const handleShowCredentialsBeforeOpenChange = (checked: boolean) => {
-		showCredentialsBeforeOpenMut.mutate({appId, showCredentialsBeforeOpen: !checked})
+	const handleHideCredentialsBeforeOpenChange = (value: boolean) => {
+		hideCredentialsBeforeOpenMut.mutate({appId, value})
 	}
 
 	return (
-		<div
-			className={cn(
-				checkboxContainerClass,
-				// prevent interaction when loading
-				(isLoading || showCredentialsBeforeOpenMut.isLoading) && 'pointer-events-none',
+		<div className='flex flex-col'>
+			<div
+				className={cn(
+					checkboxContainerClass,
+					// prevent interaction when loading
+					(isLoading || hideCredentialsBeforeOpenMut.isPending) && 'pointer-events-none',
+				)}
+			>
+				<Checkbox
+					id={checkboxId}
+					checked={!showCredentials}
+					onCheckedChange={(checked) => handleHideCredentialsBeforeOpenChange(!!checked)}
+				/>
+				<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
+					{t('default-credentials.dont-show-again')}
+				</label>
+			</div>
+			{!showCredentials && (
+				<div className='pt-2 pr-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
 			)}
-		>
-			<Checkbox
-				id={checkboxId}
-				checked={!showCredentials}
-				onCheckedChange={(c) => handleShowCredentialsBeforeOpenChange(!!c)}
-			/>
-			<label htmlFor={checkboxId} className={cn(checkboxLabelClass, 'text-13')}>
-				{t('default-credentials.dont-show-again')}
-			</label>
 		</div>
 	)
 }
 
-const textClass = tw`text-13 font-normal text-white/40`
+const textClass = tw`text-13 font-normal text-white/40 block pb-1`

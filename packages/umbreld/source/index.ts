@@ -1,23 +1,27 @@
 import path from 'node:path'
-import {setTimeout} from 'node:timers/promises'
+import fse from 'fs-extra'
 
-import {$} from 'execa'
+// TODO: import packageJson from '../package.json' assert {type: 'json'}
+const packageJson = (await import('../package.json', {assert: {type: 'json'}})).default
 
-// @ts-expect-error I can't get tsconfig setup in a way that allows this without breaking other things.
-// However we execute with tsx and it's able to resolve the import without issues.
-import packageJson from '../package.json' assert {type: 'json'}
-
+import {UMBREL_APP_STORE_REPO, BACKUP_RESTORE_FIRST_START_FLAG} from './constants.js'
 import createLogger, {type LogLevel} from './modules/utilities/logger.js'
 import FileStore from './modules/utilities/file-store.js'
-
-import Migration from './modules/migration/index.js'
+import Migration from './modules/startup-migrations/index.js'
 import Server from './modules/server/index.js'
-import User from './modules/user.js'
+import User from './modules/user/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
-import {detectDevice, setCpuGovernor, connectToWiFiNetwork} from './modules/system.js'
+import Files from './modules/files/files.js'
+import Hardware from './modules/hardware/hardware.js'
+import Notifications from './modules/notifications/notifications.js'
+import EventBus from './modules/event-bus/event-bus.js'
+import Dbus from './modules/dbus/dbus.js'
+import Backups from './modules/backups/backups.js'
 
-import {commitOsPartition} from './modules/system.js'
+import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
+import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
+import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
 	version: string
@@ -30,6 +34,8 @@ type StoreSchema = {
 		hashedPassword: string
 		totpUri?: string
 		wallpaper?: string
+		language?: string
+		temperatureUnit?: string
 	}
 	settings: {
 		releaseChannel: 'stable' | 'beta'
@@ -37,8 +43,45 @@ type StoreSchema = {
 			ssid: string
 			password?: string
 		}
+		externalDns?: boolean
+	}
+	development: {
+		hostname?: string
 	}
 	recentlyOpenedApps: string[]
+	files: {
+		preferences: {
+			view: 'icons' | 'list'
+			sortBy: 'name' | 'type' | 'modified' | 'size'
+			sortOrder: 'ascending' | 'descending'
+		}
+		favorites: string[]
+		recents: string[]
+		shares: {
+			name: string
+			path: string
+		}[]
+		networkStorage: {
+			host: string
+			share: string
+			username: string
+			password: string
+			mountPath: string
+		}[]
+	}
+	notifications: string[]
+	backups: {
+		repositories: {
+			id: string
+			path: string
+			password: string
+			lastBackup?: number
+		}[]
+		ignore: string[]
+	}
+	migration: {
+		menderToRugixAttempt?: number
+	}
 }
 
 export type UmbreldOptions = {
@@ -62,12 +105,19 @@ export default class Umbreld {
 	user: User
 	appStore: AppStore
 	apps: Apps
+	files: Files
+	hardware: Hardware
+	notifications: Notifications
+	eventBus: EventBus
+	dbus: Dbus
+	backups: Backups
+	isBackupRestoreFirstStart = false
 
 	constructor({
 		dataDirectory,
 		port = 80,
 		logLevel = 'normal',
-		defaultAppStoreRepo = 'https://github.com/getumbrel/umbrel-apps.git',
+		defaultAppStoreRepo = UMBREL_APP_STORE_REPO,
 	}: UmbreldOptions) {
 		this.developmentMode = process?.env?.NODE_ENV === 'development'
 		this.dataDirectory = path.resolve(dataDirectory)
@@ -80,68 +130,12 @@ export default class Umbreld {
 		this.user = new User(this)
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 		this.apps = new Apps(this)
-	}
-
-	// TODO: Move this to a system module
-	// Restore WiFi after OTA update
-	async restoreWiFi() {
-		const wifiCredentials = await this.store.get('settings.wifi')
-		if (!wifiCredentials) return
-
-		while (true) {
-			this.logger.log(`Attempting to restore WiFi connection to ${wifiCredentials.ssid}...`)
-			try {
-				await connectToWiFiNetwork(wifiCredentials)
-				this.logger.log(`WiFi connection restored!`)
-				break
-			} catch (error) {
-				this.logger.error(`Failed to restore WiFi connection "${(error as Error).message}". Retrying in 1 minute...`)
-				await setTimeout(1000 * 60)
-			}
-		}
-	}
-
-	async setupPiCpuGoverner() {
-		// TODO: Move this to a system module
-		// Set ondemand cpu governer for Raspberry Pi
-		try {
-			const {productName} = await detectDevice()
-			if (productName === 'Raspberry Pi') {
-				await setCpuGovernor('ondemand')
-				this.logger.log(`Set ondemand cpu governor`)
-			}
-		} catch (error) {
-			this.logger.error(`Failed to set ondemand cpu governor: ${(error as Error).message}`)
-		}
-	}
-
-	// Wait for system time to be synced for up to the number of seconds passed in.
-	// We need this on Raspberry Pi since it doesn' have a persistent real time clock.
-	// It avoids race conditions where umbrelOS starts making network requests before
-	// the local time is set which then fail with SSL cert errors.
-	async waitForSystemTime(timeout: number) {
-		try {
-			// Only run on Pi
-			const {deviceId} = await detectDevice()
-			if (!['pi-4', 'pi-5'].includes(deviceId)) return
-
-			this.logger.log('Checking if system time is synced before continuing...')
-			let tries = 0
-			while (tries < timeout) {
-				tries++
-				const timeStatus = await $`timedatectl status`
-				const isSynced = timeStatus.stdout.includes('System clock synchronized: yes')
-				if (isSynced) {
-					this.logger.log('System time is synced. Continuing...')
-					return
-				}
-				this.logger.log('System time is not currently synced, waiting...')
-				await setTimeout(1000)
-			}
-			this.logger.error('System time is not synced but timeout was reached. Continuing...')
-		} catch (error) {
-			this.logger.error(`Failed to check system time: ${(error as Error).message}`)
-		}
+		this.files = new Files(this)
+		this.hardware = new Hardware(this)
+		this.notifications = new Notifications(this)
+		this.eventBus = new EventBus(this)
+		this.dbus = new Dbus(this)
+		this.backups = new Backups(this)
 	}
 
 	async start() {
@@ -153,21 +147,43 @@ export default class Umbreld {
 		this.logger.log()
 
 		// If we've successfully booted then commit to the current OS partition
-		commitOsPartition(this)
+		await commitOsPartition(this)
 
-		// Set ondemand cpu governer for Raspberry Pi
-		this.setupPiCpuGoverner()
+		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
+		setupPiCpuGovernor(this)
+
+		// Cleanup old factory reset state backups early to free up disk space ASAP (non-blocking)
+		cleanupFactoryResetBackups(this)
 
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
-		await this.migration.start()
+		const migrationResult = await this.migration.start()
+		// If the migration module requests a reboot, halt umbreld startup and reboot the system immediately
+		if (migrationResult.reboot) {
+			this.logger.log('Rebooting to complete migrations...')
+			await reboot()
+			return
+		}
 
-		// Restore WiFi connection after OTA update
-		this.restoreWiFi()
+		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
+		await this.setBackupRestoreFirstStartFlag()
+
+		// Override hostname in development when set
+		const developmentHostname = await this.store.get('development.hostname')
+		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
+
+		// Synchronize the system password after OTA update (non-blocking)
+		this.user.syncSystemPassword()
+
+		// Restore WiFi connection after OTA update (non-blocking)
+		restoreWiFi(this)
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
-		await this.waitForSystemTime(10)
+		// We need this on Raspberry Pi since it doesn't have a persistent real time clock.
+		// It avoids race conditions where umbrelOS starts making network requests before
+		// the local time is set which then fail with SSL cert errors.
+		await waitForSystemTime(this, 10)
 
 		// We need to forcefully clean Docker state before being able to safely continue
 		// If an existing container is listening on port 80 we'll crash, if an old version
@@ -175,24 +191,56 @@ export default class Umbreld {
 		// Skip this in dev mode otherwise we get very slow reloads since this cleans
 		// up app containers on every source code change.
 		if (!this.developmentMode) {
-			await this.apps
-				.cleanDockerState()
-				.catch((error) => this.logger.error(`Failed to clean Docker state: ${(error as Error).message}`))
+			await this.apps.cleanDockerState().catch((error) => this.logger.error(`Failed to clean Docker state`, error))
 		}
 
 		// Initialise modules
-		await Promise.all([this.apps.start(), this.appStore.start(), this.server.start()])
+		await Promise.all([
+			this.user.start(),
+			this.files.start(),
+			this.hardware.start(),
+			this.apps.start(),
+			this.appStore.start(),
+			this.dbus.start(),
+			this.server.start(),
+		])
+
+		// Start backups last because it depends on files
+		this.backups.start()
+	}
+
+	private async setBackupRestoreFirstStartFlag() {
+		try {
+			const restoreFlagPath = `${this.dataDirectory}/${BACKUP_RESTORE_FIRST_START_FLAG}`
+			if (await fse.pathExists(restoreFlagPath)) {
+				this.logger.log('Detected first start after backup restore')
+				this.isBackupRestoreFirstStart = true
+				await fse.remove(restoreFlagPath).catch(() => {})
+			}
+		} catch (error) {
+			this.logger.error('Failed checking backup restore first-start flag', error)
+		}
 	}
 
 	async stop() {
 		try {
+			// Stop backups first because it depends on files
+			await this.backups.stop()
+
 			// Stop modules
-			await Promise.all([this.apps.stop(), this.appStore.stop()])
+			await Promise.all([
+				this.user.stop(),
+				this.files.stop(),
+				this.hardware.stop(),
+				this.apps.stop(),
+				this.appStore.stop(),
+				this.dbus.stop(),
+			])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false
 			// so it can be handled elsewhere if needed
-			this.logger.error(`Failed to stop umbreld: ${(error as Error).message}`)
+			this.logger.error(`Failed to stop umbreld`, error)
 			return false
 		}
 	}

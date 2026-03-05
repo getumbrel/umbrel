@@ -1,5 +1,3 @@
-import {useDeviceInfo} from '@/hooks/use-device-info'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -7,7 +5,9 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
+} from '@/components/ui/drawer'
+import {useDeviceInfo} from '@/hooks/use-device-info'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from '../_components/device-info-content'

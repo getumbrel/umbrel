@@ -1,8 +1,10 @@
 // TODO: this should all probably be in umbreld
 
+import {FilesGridWidget, FilesListWidget, filesWidgetTypes} from '@/features/files/widgets'
+
 export const DEFAULT_REFRESH_MS = 1000 * 60 * 5
 
-type BaseWidget = {
+export type BaseWidget = {
 	refresh?: number
 }
 
@@ -14,6 +16,9 @@ export const widgetTypes = [
 	'four-stats',
 	'list-emoji',
 	'list',
+
+	// features/files widgets
+	...filesWidgetTypes,
 ] as const
 
 export type WidgetType = (typeof widgetTypes)[number]
@@ -24,7 +29,7 @@ export type WidgetType = (typeof widgetTypes)[number]
  * This link is relative to `RegistryApp['path']`
  * NOTE: type is created for this comment to appear in VSCode
  */
-type Link = string
+export type Link = string
 
 export type FourStatsItem = BaseWidget & {
 	title?: string
@@ -122,6 +127,9 @@ type AnyWidgetConfig =
 	| TextWithButtonsWidget
 	| ListWidget
 	| ListEmojiWidget
+	// features/files widgets
+	| FilesListWidget
+	| FilesGridWidget
 
 // Choose the widget AnyWidgetConfig based on the type `T` passed in, othwerwise `never`
 export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetConfig, {type: T}>
@@ -130,9 +138,9 @@ export type WidgetConfig<T extends WidgetType = WidgetType> = Extract<AnyWidgetC
 
 export type ExampleWidgetConfig<T extends WidgetType = WidgetType> = T extends 'text-with-buttons'
 	? // Omit the `type` (and `link` from buttons) by omitting `buttons` and then adding it without the `link`
-	  Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
+		Omit<TextWithButtonsWidget, 'type' | 'buttons'> & {buttons: Omit<TextWithButtonsWidget['buttons'], 'link'>}
 	: // Otherwise, just omit the `type`
-	  Omit<WidgetConfig<T>, 'type'>
+		Omit<WidgetConfig<T>, 'type'>
 
 // Adding `= WidgetType` to `T` makes it so that if `T` is not provided, it defaults to `WidgetType`. Prevents us from always having to write `RegistryWidget<WidgetType>` when referring to the type.
 export type RegistryWidget<T extends WidgetType = WidgetType> = {

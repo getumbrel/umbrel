@@ -1,20 +1,20 @@
 import crypto from 'node:crypto'
+import nodePath from 'node:path'
 
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {type Compose} from 'compose-spec-schema'
 import {$} from 'execa'
-import systemInformation from 'systeminformation'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 import {pullAll} from '../utilities/docker-pull.js'
-
+import FileStore from '../utilities/file-store.js'
+import {fillSelectedDependencies} from '../utilities/dependencies.js'
 import type Umbreld from '../../index.js'
-import {type AppManifest} from './schema.js'
-
+import {validateManifest, type AppSettings} from './schema.js'
 import appScript from './legacy-compat/app-script.js'
 
 async function readYaml(path: string) {
@@ -23,6 +23,11 @@ async function readYaml(path: string) {
 
 async function writeYaml(path: string, data: any) {
 	return fse.writeFile(path, yaml.dump(data))
+}
+
+export async function readManifestInDirectory(dataDirectory: string) {
+	const parseYaml = readYaml(`${dataDirectory}/umbrel-app.yml`)
+	return parseYaml.then(validateManifest)
 }
 
 type AppState =
@@ -49,6 +54,7 @@ export default class App {
 	dataDirectory: string
 	state: AppState = 'unknown'
 	stateProgress = 0
+	store: FileStore<AppSettings>
 
 	constructor(umbreld: Umbreld, appId: string) {
 		// Throw on invalid appId
@@ -59,10 +65,11 @@ export default class App {
 		this.dataDirectory = `${umbreld.dataDirectory}/app-data/${this.id}`
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+		this.store = new FileStore({filePath: `${this.dataDirectory}/settings.yml`})
 	}
 
 	readManifest() {
-		return readYaml(`${this.dataDirectory}/umbrel-app.yml`) as Promise<AppManifest>
+		return readManifestInDirectory(this.dataDirectory)
 	}
 
 	readCompose() {
@@ -73,7 +80,7 @@ export default class App {
 		try {
 			return await fse.readFile(`${this.#umbreld.dataDirectory}/tor/data/app-${this.id}/hostname`, 'utf-8')
 		} catch (error) {
-			this.logger.error(`Failed to read hidden service for app ${this.id}: ${(error as Error).message}`)
+			this.logger.error(`Failed to read hidden service for app ${this.id}`, error)
 			return ''
 		}
 	}
@@ -90,18 +97,40 @@ export default class App {
 		return writeYaml(`${this.dataDirectory}/docker-compose.yml`, compose)
 	}
 
-	async patchComposeServices() {
-		// Temporary patch to fix contianer names for modern docker-compose installs.
-		// The contianer name scheme used to be <project-name>_<service-name>_1 but
-		// recent versions of docker-compose use <project-name>-<service-name>-1
-		// swapping underscores for dashes. This breaks Umbrel in places where the
-		// containers are referenced via name and it also breaks referring to other
-		// containers via DNS since the hostnames are derived with the same method.
-		// We manually force all container names to the old scheme to maintain compatibility.
+	async patchComposeFile() {
+		const manifest = await this.readManifest()
+		const appRequestsGpuAccess = manifest.permissions?.includes('GPU')
+		const DRI_DEVICE_PATH = '/dev/dri'
+		const deviceHasGpu = await fse.exists(DRI_DEVICE_PATH).catch(() => false)
+
 		const compose = await this.readCompose()
 		for (const serviceName of Object.keys(compose.services!)) {
+			// Temporary patch to fix contianer names for modern docker-compose installs.
+			// The contianer name scheme used to be <project-name>_<service-name>_1 but
+			// recent versions of docker-compose use <project-name>-<service-name>-1
+			// swapping underscores for dashes. This breaks Umbrel in places where the
+			// containers are referenced via name and it also breaks referring to other
+			// containers via DNS since the hostnames are derived with the same method.
+			// We manually force all container names to the old scheme to maintain compatibility.
 			if (!compose.services![serviceName].container_name) {
 				compose.services![serviceName].container_name = `${this.id}_${serviceName}_1`
+			}
+
+			// Migrate downloads volume from old `${UMBREL_ROOT}/data/storage/downloads` path to new
+			// `${UMBREL_ROOT}/home/Downloads` path. Also handle raw data directory migration from
+			// `${UMBREL_ROOT}/data/storage` to `${UMBREL_ROOT}/home`.
+			// We need to do this here to handle any future app updates.
+			compose.services![serviceName].volumes = compose.services![serviceName].volumes?.map((volume) => {
+				return (volume as string)
+					?.replace('/data/storage/downloads', `/home/Downloads`)
+					?.replace('/data/storage', `/home`)
+			})
+
+			// Pass through host DRI device to all app containers if the app requests it
+			const shouldEnableGpuPassthrough = appRequestsGpuAccess && deviceHasGpu
+			if (shouldEnableGpuPassthrough) {
+				compose.services![serviceName].devices = compose.services![serviceName].devices || []
+				compose.services![serviceName].devices.push(DRI_DEVICE_PATH)
 			}
 		}
 
@@ -127,13 +156,14 @@ export default class App {
 		this.state = 'installing'
 		this.stateProgress = 1
 
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await this.pull()
 
 		await pRetry(() => appScript(this.#umbreld, 'install', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} installing app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -161,7 +191,7 @@ export default class App {
 
 		// Update the app, patching the compose file half way through
 		await appScript(this.#umbreld, 'pre-patch-update', this.id)
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await this.pull()
 		await appScript(this.#umbreld, 'post-patch-update', this.id)
 
@@ -174,6 +204,9 @@ export default class App {
 		this.state = 'ready'
 		this.stateProgress = 0
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
@@ -182,31 +215,41 @@ export default class App {
 		this.state = 'starting'
 		// We re-run the patch here to fix an edge case where 0.5.x imported apps
 		// wont run because they haven't been patched.
-		await this.patchComposeServices()
+		await this.patchComposeFile()
 		await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
 		})
 		this.state = 'ready'
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
-	async stop() {
+	async stop({persistState = false}: {persistState?: boolean} = {}) {
 		this.state = 'stopping'
 		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
 		})
 		this.state = 'stopped'
+
+		// Disable auto-start on boot
+		if (persistState) {
+			await this.setAutoStart(false)
+		}
 
 		return true
 	}
@@ -217,6 +260,9 @@ export default class App {
 		await appScript(this.#umbreld, 'start', this.id)
 		this.state = 'ready'
 
+		// Enable auto-start on boot
+		await this.setAutoStart(true)
+
 		return true
 	}
 
@@ -226,6 +272,7 @@ export default class App {
 			onFailedAttempt: (error) => {
 				this.logger.error(
 					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+					error,
 				)
 			},
 			retries: 2,
@@ -257,24 +304,21 @@ export default class App {
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
 		containers.push(`${this.id}_app_proxy_1`)
 		containers.push(`${this.id}_tor_server_1`)
-		const pids = await Promise.all(
-			containers.map(async (container) => {
-				try {
-					const top = await $`docker top ${container}`
-					return top.stdout
-						.split('\n') // Split on newline
-						.slice(1) // Remove header
-						.map((line) => parseInt(line.split(/\s+/)[1], 10)) // Split on whitespace and get second item (PID)
-				} catch (error) {
-					// If we fail to get the PID, return an empty array and continue for the other contianers
-					// We don't log this error cos we'll expect to get it on some misses for the app proxy
-					// and tor server contianers.
-					return []
-				}
-			}),
-		)
-
-		return pids.flat()
+		try {
+			// If we fail to get the PIDs of one container, skip it and continue for
+			// the other containers. We'll expect to get it on some misses for the app
+			// proxy and tor server containers.
+			const cmd = containers.map((container) => `docker top ${container} -o pid 2>/dev/null || true`).join('\n')
+			const {stdout} = await $({shell: true})`${cmd}`
+			return stdout
+				.split('\n') // Split on newline
+				.map((line) => line.trim()) // Trim whitespace
+				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
+				.map((line) => parseInt(line, 10)) // And convert
+		} catch (error) {
+			this.logger.error(`Failed to get pids for app ${this.id}`, error)
+			return []
+		}
 	}
 
 	async getDiskUsage() {
@@ -285,7 +329,7 @@ export default class App {
 			// will fail. It happens rarely so simply retrying will catch most cases.
 			return await pRetry(() => getDirectorySize(this.dataDirectory), {retries: 2})
 		} catch (error) {
-			this.logger.error(`Failed to get disk usage for app ${this.id}: ${(error as Error).message}`)
+			this.logger.error(`Failed to get disk usage for app ${this.id}`, error)
 			return 0
 		}
 	}
@@ -308,6 +352,40 @@ export default class App {
 			await $`docker inspect -f {{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}} ${containerName}`
 
 		return containerIp
+	}
+
+	// Returns a validated list of paths that should be ignored when backing up the app
+	// This allows apps to signal to umbrelOS noncritical high churn or high data files
+	// that can be ignored from backups like logs/cache/blockchain data/etc.
+	async getBackupIgnoredFilePaths() {
+		const manifest = await this.readManifest()
+		if (!manifest.backupIgnore) return []
+
+		// Sanitise paths
+		const backupIgnore = []
+		for (let path of manifest.backupIgnore) {
+			// Only allow a limited subset of chars to strip out traversals and other weird stuff we don't want to allow
+			// while supporting simple '*' globbing that Kopia understands in .kopiaignore
+			// TODO: consider adding other globbing chars like '?' (single-char wildcard) and '**' (recursive wildcard).
+			if (!/^[-a-zA-Z0-9._\/*]+$/.test(path)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip invalid paths
+			}
+
+			// Convert to absolute path and normalise traversals
+			path = nodePath.join(this.dataDirectory, path)
+
+			// Ensure path doesn't escape the app's data directory
+			if (!path.startsWith(this.dataDirectory)) {
+				this.logger.error(`Invalid backupIgnore path ${path} for app ${this.id}, skipping`)
+				continue // Skip paths that escape the app's data directory
+			}
+
+			// Save the sanitised path
+			backupIgnore.push(path)
+		}
+
+		return backupIgnore
 	}
 
 	// Returns a specific widget's info from an app's manifest
@@ -345,5 +423,56 @@ export default class App {
 				throw new Error(`An unexpected error occured while fetching data from ${url}: ${error}`)
 			}
 		}
+	}
+
+	// Get the app's dependencies with selected dependencies applied
+	async getDependencies() {
+		const [{dependencies}, selectedDependencies] = await Promise.all([
+			this.readManifest(),
+			this.getSelectedDependencies(),
+		])
+		return dependencies?.map((dependencyId) => selectedDependencies?.[dependencyId] ?? dependencyId) ?? []
+	}
+
+	// Get the app's selected dependencies
+	async getSelectedDependencies() {
+		const [{dependencies}, selectedDependencies] = await Promise.all([
+			this.readManifest(),
+			this.store.get('dependencies'),
+		])
+		return fillSelectedDependencies(dependencies, selectedDependencies)
+	}
+
+	// Set the app's selected dependencies
+	async setSelectedDependencies(selectedDependencies: Record<string, string>) {
+		const {dependencies} = await this.readManifest()
+		const filledSelectedDependencies = fillSelectedDependencies(dependencies, selectedDependencies)
+		const success = await this.store.set('dependencies', filledSelectedDependencies)
+		if (success) {
+			this.restart().catch((error) => {
+				this.logger.error(`Failed to restart '${this.id}'`, error)
+			})
+		}
+		return success
+	}
+
+	// Check if app is ignored from backups
+	async isBackupIgnored() {
+		return (await this.store.get('backupIgnore')) || false
+	}
+
+	// Set if app is ignored from backups
+	async setBackupIgnored(backupIgnore: boolean) {
+		return this.store.set('backupIgnore', backupIgnore)
+	}
+
+	// Set if app should auto start on boot
+	async setAutoStart(autoStart: boolean) {
+		return this.store.set('autoStart', autoStart)
+	}
+
+	// Get if app should auto start on boot
+	async shouldAutoStart() {
+		return (await this.store.get('autoStart')) ?? true
 	}
 }

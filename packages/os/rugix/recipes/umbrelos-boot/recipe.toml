@@ -1,0 +1,2 @@
+description = "copy umbrelOS boot files to boot partition"
+priority = -800_000

@@ -1,44 +1,99 @@
-import {createTRPCProxyClient, createTRPCReact, httpLink, loggerLink} from '@trpc/react-query'
+import {
+	createTRPCClient,
+	createTRPCReact,
+	createWSClient,
+	httpLink,
+	loggerLink,
+	splitLink,
+	TRPCClientErrorLike,
+	wsLink,
+} from '@trpc/react-query'
 import {inferRouterInputs, inferRouterOutputs} from '@trpc/server'
 
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
-import {RegistryWidget} from '@/modules/widgets/shared/constants'
 import {IS_DEV} from '@/utils/misc'
 
-import type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
-import type {AppRouter} from '../../../../packages/umbreld/source/modules/server/trpc/index'
+import {httpOnlyPaths, type AppRouter} from '../../../umbreld/source/modules/server/trpc/common'
 
-export type {AppManifest as RegistryApp} from '../../../../packages/umbreld/source/modules/apps/schema'
+const {protocol, hostname, port} = location
 
-export const trpcUrl = `http://${location.hostname}:${location.port}/trpc`
+// do not pass colon when port is empty
+const portPart = port ? `:${port}` : ''
+const httpOrigin = `${protocol}//${hostname}${portPart}`
+
+// Some browsers now allow http(s):// schemes to be used in the websocket constructor and will silently rewrite to ws(s)://
+// but there are still some browsers, and older versions of now-compatible browsers, that will not do this:
+// https://caniuse.com/mdn-api_websocket_websocket_url_parameter_http_https_relative
+// So we explicitly build the websocket url with the correct scheme to maintain compatibility
+export const trpcHttpUrl = `${httpOrigin}/trpc`
+const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+const trpcWsUrl = `${wsProtocol}//${hostname}${portPart}/trpc`
 
 // TODO: Getting jwt from `localStorage` like this means auth flow require a page refresh
+const getJwt = () => localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
+
+const wsClient = createWSClient({
+	url: () => {
+		const token = getJwt()
+		return token ? `${trpcWsUrl}?token=${token}` : `${trpcWsUrl}`
+	},
+})
+
 export const links = [
 	loggerLink({
 		enabled: () => IS_DEV,
 	}),
-	httpLink({
-		url: trpcUrl,
-		headers: async () => {
-			const jwt = localStorage.getItem(JWT_LOCAL_STORAGE_KEY)
-			return {
-				Authorization: `Bearer ${jwt}`,
-			}
-		},
+	// Split 1: subscriptions vs everything else
+	// httpLink is request/response only and cannot carry subscriptions, so we
+	// route ALL subscription operations to WebSocket unconditionally (e.g. `eventBus.listen(files:operation-progress)`)
+	splitLink({
+		condition: (op) => op.type === 'subscription',
+		true: wsLink({client: wsClient}),
+		// Split 2: HTTP vs WebSocket for queries/mutations
+		// We route over HTTP when there is no JWT (public/onboarding, no WS auth yet) or the procedure is in `httpOnlyPaths` (needs request/response semantics like cookies/headers)
+		// Otherwise we use WebSocket
+		false: splitLink({
+			condition: (operation) => {
+				const noToken = !getJwt()
+				const isHttpOnlyPath = httpOnlyPaths.includes(operation.path as (typeof httpOnlyPaths)[number])
+				return noToken || isHttpOnlyPath
+			},
+			true: httpLink({
+				url: trpcHttpUrl,
+				headers: () => {
+					const token = getJwt()
+					return token ? {Authorization: `Bearer ${token}`} : {}
+				},
+			}),
+			false: wsLink({client: wsClient}),
+		}),
 	}),
 ]
 
 // React client
 export const trpcReact = createTRPCReact<AppRouter>()
 
-// Vanilla client
-/** Use sparingly */
-export const trpcClient = createTRPCProxyClient<AppRouter>({links})
+// Vanilla client for imperative (non-hook) tRPC calls. HTTP-only so its operation IDs
+// can never collide with the React client's active WebSocket subscriptions.
+/** Use sparingly — prefer trpcReact.useUtils() in React components */
+export const trpcClient = createTRPCClient<AppRouter>({
+	links: [
+		loggerLink({enabled: () => IS_DEV}),
+		httpLink({
+			url: trpcHttpUrl,
+			headers: () => {
+				const token = getJwt()
+				return token ? {Authorization: `Bearer ${token}`} : {}
+			},
+		}),
+	],
+})
 
 // Types ----------------------------
 
 export type RouterInput = inferRouterInputs<AppRouter>
 export type RouterOutput = inferRouterOutputs<AppRouter>
+export type RouterError = TRPCClientErrorLike<AppRouter>
 
 // ---
 
@@ -77,8 +132,6 @@ export const progressBarStates = ['installing', 'updating'] satisfies AppState[]
 // `loading` means the frontend is currently fetching the state from the backend
 export type AppStateOrLoading = 'loading' | AppState
 
-export type UserAppWithoutError = Exclude<RouterOutput['apps']['list'][number], {id: string; error: string}>
-
 // Omitting `active` because we get the connection status from `WifiStatus` since it's more detailed and
 // don't wanna get confused on the frontend with two different ways of getting the connection status
 export type WifiNetwork = Omit<RouterOutput['wifi']['networks'][number], 'active'>
@@ -89,33 +142,16 @@ export type WifiStatusUi = WifiStatus | 'loading'
 // ---
 
 /**
- * App to store in yaml.
- * Stuff that can be retrieved from the app repository is not stored here.
+ * App in the registry as returned by the backend.
  */
-export type YamlApp = Pick<RegistryApp, 'id'> & {
-	registryId: string
-	showNotifications: boolean
-	autoUpdate: boolean
-	// Should always be true unless set to `false`
-	// If no deterministic password, we don't show this
-	showCredentialsBeforeOpen: boolean
-}
+export type RegistryApp = RouterOutput['appStore']['registry'][number]['apps'][number]
 
 /**
- * App to return to frontend after installing.
- * Usually pull stuff from app repository for names, etc
+ * Installed app as returned by the backend, no error.
  */
-export type UserApp = YamlApp &
-	Pick<RegistryApp, 'name' | 'icon' | 'port' | 'path' | 'version' | 'torOnly'> & {
-		credentials: {
-			defaultUsername: string
-			defaultPassword: string
-		}
-		hiddenService?: string
-		// ---
-		state: AppState
-		// TODO: if state is installing, this should be 0-100, otherwise undefined
-		/** From 0 to 100 */
-		installProgress?: number
-		widgets?: RegistryWidget[]
-	}
+export type UserApp = Exclude<RouterOutput['apps']['list'][number], {error: string}>
+
+/**
+ * Installed app as returned by the backend, with error.
+ */
+export type UserAppError = Extract<RouterOutput['apps']['list'][number], {error: string}>

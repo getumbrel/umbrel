@@ -1,14 +1,16 @@
-import {TbLanguage} from 'react-icons/tb'
+import {Globe} from 'lucide-react'
+import {useState} from 'react'
 
-import {ChevronDown} from '@/assets/chevron-down'
-import {IconButton} from '@/components/ui/icon-button'
-import {languages, useLanguage} from '@/hooks/use-language'
+import {ChevronDown} from '@/components/chevron-down'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
+} from '@/components/ui/dropdown-menu'
+import {IconButton} from '@/components/ui/icon-button'
+import {useLanguage} from '@/hooks/use-language'
+import {languages, SupportedLanguageCode} from '@/utils/language'
 
 export function LanguageDropdown() {
 	return (
@@ -24,7 +26,7 @@ export function LanguageDropdownTrigger() {
 
 	return (
 		<DropdownMenuTrigger asChild>
-			<IconButton icon={TbLanguage}>
+			<IconButton icon={Globe}>
 				{languages.find(({code}) => code === activeCode)?.name}
 				<ChevronDown />
 			</IconButton>
@@ -34,11 +36,23 @@ export function LanguageDropdownTrigger() {
 
 export function LanguageDropdownContent() {
 	const [activeCode, setActiveCode] = useLanguage()
+	const [temporaryCode, setTemporaryCode] = useState(activeCode)
+
+	const changeLanguage = async (code: SupportedLanguageCode) => {
+		setTemporaryCode(code)
+		// Delay so user can see the checkmark
+		setTimeout(() => setActiveCode(code), 200)
+	}
 
 	return (
 		<DropdownMenuContent align='end'>
 			{languages.map(({code, name}) => (
-				<DropdownMenuCheckboxItem key={code} checked={activeCode === code} onSelect={() => setActiveCode(code)}>
+				<DropdownMenuCheckboxItem
+					key={code}
+					checked={temporaryCode === code}
+					onSelect={() => changeLanguage(code)}
+					disabled={temporaryCode !== activeCode}
+				>
 					{name}
 				</DropdownMenuCheckboxItem>
 			))}

@@ -12,7 +12,7 @@ export function ListEmojiWidget({
 	onClick?: (link?: string) => void
 }) {
 	return (
-		<WidgetContainer onClick={() => onClick?.(link)} className='relative gap-0 p-2 pb-2.5 md:gap-2 md:p-5'>
+		<WidgetContainer onClick={() => onClick?.(link)} className='relative gap-0 p-2 pb-2.5 sm:gap-2 sm:p-5'>
 			{!items && <ListEmojiItem emoji='' text={LOADING_DASH} />}
 			{items?.[0] && <ListEmojiItem emoji={items?.[0].emoji} text={items?.[0].text} />}
 			{items?.[1] && (
@@ -30,7 +30,7 @@ export function ListEmojiWidget({
 					<ListEmojiItem emoji={items?.[3].emoji} text={items?.[3].text} />
 				</div>
 			)}
-			<div className='absolute bottom-3 right-3 w-1/2 truncate text-right text-[33px] font-semibold leading-none -tracking-3 opacity-10'>
+			<div className='absolute right-3 bottom-3 w-1/2 truncate text-right text-[33px] leading-none font-semibold -tracking-3 opacity-10'>
 				{count ?? LOADING_DASH}
 			</div>
 		</WidgetContainer>

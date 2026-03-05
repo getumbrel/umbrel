@@ -1,16 +1,16 @@
 import {cva} from 'class-variance-authority'
 import {useContext} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 import {BackdropBlurVariantContext} from './backdrop-blur-context'
 
 export const widgetContainerCva = cva(
 	cn(
-		tw`bg-neutral-800/60 rounded-12 md:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
+		tw`bg-neutral-800/60 rounded-12 sm:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
 		// animations
-		tw`transition-[transform,box-shadow] duration-300 hover:scale-105`,
+		tw`transition-[scale,box-shadow] duration-300 hover:scale-105`,
 	),
 	// ^-- Using `tw` to force vscode to recognize the tailwind classes
 	{
@@ -27,7 +27,7 @@ export const widgetContainerCva = cva(
 	},
 )
 
-export const widgetTextCva = cva('text-11 md:text-13 leading-snug font-semibold -tracking-2 truncate', {
+export const widgetTextCva = cva('text-11 sm:text-13 leading-snug font-semibold -tracking-2 truncate', {
 	variants: {
 		opacity: {
 			primary: 'opacity-80',
@@ -53,7 +53,7 @@ export const WidgetContainer: React.FC<WidgetContainerProps> = ({className, ...p
 			<button
 				className={cn(
 					widgetContainerCva({variant}),
-					'cursor-pointer ring-white/25 focus:outline-none focus-visible:ring-6 active:scale-95',
+					'ring-white/25 focus:outline-hidden focus-visible:ring-6 active:scale-95',
 					className,
 				)}
 				{...p}

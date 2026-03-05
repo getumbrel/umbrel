@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script is exposed via: curl -L https://umbrel.sh | bash
+# Which resolves to this file in the master branch of this repo
+
 cat << "EOF"
 
                 ,;###GGGGGGGGGGl#Sp
@@ -18,7 +21,7 @@ cat << "EOF"
 |  With the release of umbrelOS 1.0, umbrelOS now needs to be installed  |
 |  directly as the operating system on your device's internal storage,   |
 |  not on top of an existing OS like Debian or Ubuntu. Check out our     |
-|  step-by-step guide at https://umbrel.com/umbrelos#install             |
+|  step-by-step guide at https://link.umbrel.com/install-umbrelos        |
 |                                                                        |
 --------------------------------------------------------------------------
 

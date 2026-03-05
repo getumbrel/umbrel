@@ -39,7 +39,7 @@ export function AvailableAppsProvider({children}: {children: React.ReactNode}) {
 		? {isLoading: true}
 		: {repos, repoAppsKeyed, repoAppsGroupedByCategory, isLoading: false}
 
-	return <AppsContext.Provider value={providerProps}>{children}</AppsContext.Provider>
+	return <AppsContext value={providerProps}>{children}</AppsContext>
 }
 
 export function useAvailableApps(registryId: string = UMBREL_APP_STORE_ID) {

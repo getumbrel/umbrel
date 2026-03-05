@@ -1,20 +1,20 @@
 import {Dialog, DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogTrigger} from '@radix-ui/react-dialog'
-import {motion} from 'framer-motion'
-import {LucideIcon} from 'lucide-react'
-import {Children, ForwardedRef, forwardRef, ReactNode} from 'react'
-import type {IconType} from 'react-icons'
+import {motion} from 'motion/react'
+import {Children, ComponentPropsWithoutRef, ReactNode, useEffect} from 'react'
 import {RiCloseLine} from 'react-icons/ri'
 
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {
 	dialogContentAnimationClass,
 	dialogContentAnimationSlideClass,
 	dialogContentClass,
 	dialogOverlayClass,
-} from '@/shadcn-components/ui/shared/dialog'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/shared/dialog'
+import {cn} from '@/lib/utils'
+import {useImmersiveDialogCounter} from '@/providers/immersive-dialog'
 import {tw} from '@/utils/tw'
 
+import {IconTypes} from './icon'
 import {IconButton} from './icon-button'
 
 export const immersiveDialogTitleClass = tw`text-24 font-bold leading-none -tracking-4 text-white/80`
@@ -24,7 +24,26 @@ export function ImmersiveDialogSeparator() {
 	return <hr className='w-full border-white/10' />
 }
 
-export const ImmersiveDialog = Dialog
+// Wrapper that tracks open state in context so other components (like floating islands) can react.
+// For example, when an immersive dialog is open, the floating islands z-index is raised to show above it.
+export function ImmersiveDialog({open, children, ...props}: ComponentPropsWithoutRef<typeof Dialog>) {
+	const {increment, decrement} = useImmersiveDialogCounter()
+
+	// Increment counter on open, decrement on close/unmount.
+	// Counter approach is more robust than boolean for complex dialogs (see provider comments).
+	useEffect(() => {
+		if (open) {
+			increment()
+			return () => decrement()
+		}
+	}, [open, increment, decrement])
+
+	return (
+		<Dialog open={open} {...props}>
+			{children}
+		</Dialog>
+	)
+}
 export const ImmersiveDialogTrigger = DialogTrigger
 
 export function ImmersiveDialogContent({
@@ -32,25 +51,31 @@ export function ImmersiveDialogContent({
 	size = 'default',
 	short = false,
 	showScroll = false,
+	ref,
+	...contentProps
 }: {
 	children: React.ReactNode
-	size?: 'default' | 'md' | 'lg' | 'xl'
+	size?: 'default' | 'sm' | 'md' | 'lg' | 'xl'
 	short?: boolean
 	showScroll?: boolean
-}) {
+	ref?: React.Ref<HTMLDivElement>
+} & ComponentPropsWithoutRef<typeof DialogContent>) {
 	return (
 		<DialogContent
+			ref={ref}
 			className={cn(
 				dialogContentClass,
 				dialogContentAnimationClass,
 				dialogContentAnimationSlideClass,
 				short ? immersiveContentShortClass : immersiveContentTallClass,
 				// overrides default size
+				size === 'sm' && 'max-w-[600px]',
 				size === 'md' && 'max-w-[900px]',
 				size === 'lg' && 'max-w-[980px]',
 				size === 'xl' && 'max-w-[1440px]',
 				'p-0',
 			)}
+			{...contentProps}
 		>
 			{showScroll ? (
 				<ScrollArea dialogInset className='h-full'>
@@ -64,11 +89,19 @@ export function ImmersiveDialogContent({
 	)
 }
 
-export function ImmersiveDialogSplitContent({children, side}: {children: React.ReactNode; side: React.ReactNode}) {
+export function ImmersiveDialogSplitContent({
+	children,
+	side,
+	ref,
+	...contentProps
+}: {children: React.ReactNode; side: React.ReactNode; ref?: React.Ref<HTMLDivElement>} & ComponentPropsWithoutRef<
+	typeof DialogContent
+>) {
 	return (
 		<DialogPortal>
 			<ImmersiveDialogOverlay />
 			<DialogContent
+				ref={ref}
 				className={cn(
 					dialogContentClass,
 					'bg-transparent shadow-none ring-2 ring-white/3', // remove shadow from `dialogContentClass`
@@ -77,11 +110,12 @@ export function ImmersiveDialogSplitContent({children, side}: {children: React.R
 					immersiveContentTallClass,
 					'flex flex-row justify-between gap-0 p-0',
 				)}
+				{...contentProps}
 			>
 				<section className='hidden w-[210px] flex-col items-center justify-center bg-black/40 md:flex md:rounded-l-20'>
 					{side}
 				</section>
-				<section className='flex-1 bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
+				<section className='min-w-0 flex-1 overflow-hidden bg-dialog-content/70 max-md:rounded-20 md:rounded-r-20'>
 					<ScrollArea dialogInset className='h-full'>
 						<div className={immersiveScrollAreaContentsClass}>{children}</div>
 					</ScrollArea>
@@ -96,26 +130,27 @@ const immersiveContentShortClass = tw`w-[calc(100%-40px)] max-w-[800px] max-h-[c
 const immersiveContentTallClass = tw`top-[calc(50%-30px)] max-h-[800px] w-[calc(100%-40px)] max-w-[800px] h-[calc(100dvh-90px)]`
 const immersiveScrollAreaContentsClass = tw`flex h-full flex-col gap-6 p-4 md:p-8`
 
-function ForwardedImmersiveDialogOverlay(props: unknown, ref: ForwardedRef<HTMLDivElement>) {
+export function ImmersiveDialogOverlay({ref}: {ref?: React.Ref<HTMLDivElement>}) {
 	return (
 		<DialogOverlay
 			ref={ref}
-			className={cn(dialogOverlayClass, 'bg-black/30 backdrop-blur-xl contrast-more:backdrop-blur-none')}
+			className={cn(
+				dialogOverlayClass,
+				'transform-gpu bg-black/30 backdrop-blur-xl will-change-[backdrop-filter] contrast-more:backdrop-blur-none',
+			)}
 		/>
 	)
 }
 
-export const ImmersiveDialogOverlay = forwardRef(ForwardedImmersiveDialogOverlay)
-
 function ImmersiveDialogClose() {
 	return (
-		<div className='absolute left-1/2 top-full mt-5 -translate-x-1/2'>
+		<div className='absolute top-full left-1/2 mt-5 -translate-x-1/2'>
 			{/* Note, because this parent has a backdrop, this button won't have a backdrop */}
 			<DialogClose asChild>
 				<IconButton
 					icon={RiCloseLine}
 					// Overriding state colors
-					className='h-[36px] w-[36px] border-none bg-dialog-content bg-opacity-70 shadow-immersive-dialog-close hover:border-solid hover:bg-dialog-content focus:border-solid focus:bg-dialog-content active:bg-dialog-content'
+					className='h-[36px] w-[36px] border-none bg-dialog-content/70 shadow-immersive-dialog-close hover:border-solid hover:bg-dialog-content focus:border-solid focus:bg-dialog-content active:bg-dialog-content'
 				/>
 			</DialogClose>
 		</div>
@@ -136,14 +171,14 @@ export function ImmersiveDialogBody({
 	footer: React.ReactNode
 }) {
 	return (
-		<div className='flex h-full h-full flex-col items-start gap-5'>
+		<div className='flex h-full flex-col items-start gap-5'>
 			<div className='space-y-2'>
 				<h1 className={immersiveDialogTitleClass}>{title}</h1>
 				<p className={immersiveDialogDescriptionClass}>{description}</p>
 			</div>
 			<ImmersiveDialogSeparator />
 			<div className='w-full space-y-2.5'>
-				<div className={bodyTextClass}>{bodyText}</div>
+				<div className={cn('mb-4', bodyTextClass)}>{bodyText}</div>
 				<AnimateIn>{children}</AnimateIn>
 			</div>
 			<div className='flex-1' />
@@ -183,7 +218,7 @@ export function ImmersiveDialogIconMessage({
 	className,
 	iconClassName,
 }: {
-	icon: IconType | LucideIcon
+	icon: IconTypes
 	title: ReactNode
 	description?: ReactNode
 	className?: string
@@ -205,9 +240,9 @@ export function ImmersiveDialogIconMessage({
 				<IconComponent className={cn('h-5 w-5 [&>*]:stroke-1', iconClassName)} />
 			</div>
 			<div className='space-y-1'>
-				<div className='text-13 font-normal leading-tight -tracking-2'>{title}</div>
+				<div className='text-13 leading-tight font-normal -tracking-2'>{title}</div>
 				{description && (
-					<div className='text-12 font-normal leading-tight -tracking-2 text-white/50'>{description}</div>
+					<div className='text-12 leading-tight font-normal -tracking-2 text-white/50'>{description}</div>
 				)}
 			</div>
 		</div>
@@ -221,7 +256,7 @@ export function ImmersiveDialogIconMessageKeyValue({
 	className,
 	iconClassName,
 }: {
-	icon: IconType | LucideIcon
+	icon: IconTypes
 	k: ReactNode
 	v: ReactNode
 	className?: string
@@ -243,8 +278,8 @@ export function ImmersiveDialogIconMessageKeyValue({
 				<IconComponent className={cn('h-5 w-5', iconClassName)} />
 			</div>
 			<div className='flex flex-1 text-14'>
-				<div className='flex-1 font-normal leading-tight -tracking-2 opacity-60'>{k}</div>
-				<div className='font-medium leading-tight -tracking-2'>{v}</div>
+				<div className='flex-1 leading-tight font-normal -tracking-2 opacity-60'>{k}</div>
+				<div className='leading-tight font-medium -tracking-2'>{v}</div>
 			</div>
 		</div>
 	)

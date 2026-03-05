@@ -1,3 +1,4 @@
+import {toast} from '@/components/ui/toast'
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
@@ -33,7 +34,7 @@ export function useAuth() {
 			window.location.href = '/login'
 		},
 		onError() {
-			alert(t('logout-error-generic'))
+			toast.error(t('logout-error-generic'))
 		},
 	})
 
@@ -51,12 +52,19 @@ export function useAuth() {
 		},
 		loginWithJwt(jwt: string) {
 			setJwt(jwt)
-			// Hard navigate to `/` to force all parent layouts to re-render
-			window.location.href = redirect.getRedirectPath()
+
+			// Ensure we only treat the redirect path as a relative URL
+			const safeUrl = new URL(window.location.href)
+			safeUrl.hash = ''
+			safeUrl.search = ''
+			safeUrl.pathname = redirect.getRedirectPath()
+
+			// Hard navigate to force all parent layouts to re-render
+			window.location.href = safeUrl.toString()
 		},
-		signUpWithJwt(jwt: string) {
+		signUpWithJwt(jwt: string, redirectTo: string = '/onboarding/account-created') {
 			setJwt(jwt)
-			window.location.href = '/onboarding/account-created'
+			window.location.href = redirectTo
 		},
 		refreshToken,
 	}

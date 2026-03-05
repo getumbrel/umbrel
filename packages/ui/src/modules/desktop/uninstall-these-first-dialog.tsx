@@ -2,16 +2,9 @@ import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
 
 import {AppIcon} from '@/components/app-icon'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
 import {t} from '@/utils/i18n'
 
 export function UninstallTheseFirstDialog({
@@ -70,7 +63,7 @@ function AppWithName({icon, appName}: {icon: string; appName: ReactNode}) {
 		<div className='flex w-full items-center gap-2.5'>
 			<AppIcon src={icon} size={36} className='rounded-8' />
 			<div className='flex min-w-0 flex-1 flex-col gap-0.5'>
-				<h3 className='truncate text-14 font-semibold leading-tight -tracking-3'>{appName}</h3>
+				<h3 className='truncate text-14 leading-tight font-semibold -tracking-3'>{appName}</h3>
 			</div>
 		</div>
 	)

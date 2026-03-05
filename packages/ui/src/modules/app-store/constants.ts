@@ -11,6 +11,7 @@ export const categories = [
 	'finance',
 	'ai',
 	'developer',
+	'crypto',
 ] as const
 
 export type Category = (typeof categories)[number]
@@ -25,14 +26,15 @@ export const categoryishDescriptions = [
 	{id: 'all', label: () => t('app-store.category.all')},
 	// categories
 	{id: 'files', label: () => t('app-store.category.files')},
-	{id: 'bitcoin', label: () => t('app-store.category.bitcoin')},
-	{id: 'finance', label: () => t('app-store.category.finance')},
-	{id: 'media', label: () => t('app-store.category.media')},
-	{id: 'networking', label: () => t('app-store.category.networking')},
-	{id: 'social', label: () => t('app-store.category.social')},
-	{id: 'automation', label: () => t('app-store.category.automation')},
 	{id: 'ai', label: () => t('app-store.category.ai')},
+	{id: 'bitcoin', label: () => t('app-store.category.bitcoin')},
+	{id: 'media', label: () => t('app-store.category.media')},
+	{id: 'finance', label: () => t('app-store.category.finance')},
+	{id: 'networking', label: () => t('app-store.category.networking')},
+	{id: 'automation', label: () => t('app-store.category.automation')},
+	{id: 'social', label: () => t('app-store.category.social')},
 	{id: 'developer', label: () => t('app-store.category.developer')},
+	{id: 'crypto', label: () => t('app-store.category.crypto')},
 ] as const satisfies readonly {id: Categoryish; label: () => string}[]
 
 export const categoryDescriptionsKeyed = keyBy(categoryishDescriptions, 'id')

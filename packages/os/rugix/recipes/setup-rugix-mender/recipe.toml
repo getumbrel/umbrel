@@ -1,0 +1,4 @@
+description = "configure system for compatibility with legacy Mender systems"
+priority = -100
+
+dependencies = ["setup-rugix"]

@@ -1,38 +1,35 @@
-import {useRef} from 'react'
-import {useNavigate} from 'react-router-dom'
+import {useRef, useState} from 'react'
 import {useMount} from 'react-use'
 
+import {Button} from '@/components/ui/button'
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
-import {Button} from '@/shadcn-components/ui/button'
-import {PasswordInput} from '@/shadcn-components/ui/input'
-import {trpcReact} from '@/trpc/trpc'
+import {PasswordInput} from '@/components/ui/input'
 import {t} from '@/utils/i18n'
 
 import {description, title} from './misc'
 
 export function ConfirmWithPassword({
-	password,
-	onPasswordChange,
-	mut,
+	error,
+	onSubmit,
+	clearError,
 }: {
-	password: string
-	onPasswordChange: (password: string) => void
-	mut: ReturnType<typeof trpcReact.system.factoryReset.useMutation>
+	error: string
+	onSubmit: (password: string) => void
+	clearError: () => void
 }) {
-	const navigate = useNavigate()
-
 	const passwordRef = useRef<HTMLInputElement>(null)
+	const [password, setPassword] = useState('')
 
 	// Clear password and errors so we don't see it when we come back to this page
 	useMount(() => {
-		onPasswordChange('')
-		mut.reset()
+		setPassword('')
+		clearError()
 	})
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
-		await mut.mutateAsync({password})
-		navigate('/factory-reset/resetting')
+		onSubmit(password)
+		setPassword('')
 	}
 
 	return (
@@ -51,16 +48,18 @@ export function ConfirmWithPassword({
 				}
 			>
 				<label>
-					<div className='mb-1 text-14 leading-tight'>{t('factory-reset.confirm.password-label')}</div>
 					<PasswordInput
 						autoFocus
 						inputRef={passwordRef}
 						sizeVariant='short'
 						value={password}
-						onValueChange={onPasswordChange}
-						error={mut.error?.message}
+						onValueChange={setPassword}
+						error={error}
 					/>
 				</label>
+				<div className='mt-5 rounded-8 bg-yellow-700/50 p-3 text-13 text-yellow-300/80'>
+					⚠️ {t('factory-reset.confirm.ethernet-required-warning')}
+				</div>
 			</ImmersiveDialogBody>
 		</form>
 	)

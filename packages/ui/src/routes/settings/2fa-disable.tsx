@@ -1,10 +1,10 @@
+import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {PinInput} from '@/components/ui/pin-input'
+import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {Drawer, DrawerContent, DrawerHeader, DrawerTitle} from '@/shadcn-components/ui/drawer'
-import {Separator} from '@/shadcn-components/ui/separator'
 import {t} from '@/utils/i18n'
 
 export default function TwoFactorDisableDialog() {
@@ -44,7 +44,7 @@ function Inner({onCodeCheck}: {onCodeCheck: (code: string) => Promise<boolean>})
 	return (
 		<>
 			<Separator />
-			<p className='text-17 font-normal leading-tight -tracking-2'>{t('2fa.enter-code')}</p>
+			<p className='text-17 leading-tight font-normal -tracking-2'>{t('2fa.enter-code')}</p>
 			<PinInput autoFocus length={6} onCodeCheck={onCodeCheck} />
 		</>
 	)

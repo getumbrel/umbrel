@@ -1,6 +1,7 @@
 import {useEffect} from 'react'
 
 import {useCmdkOpen} from '@/components/cmdk'
+import {AppSettingsDialog} from '@/modules/app-store/app-page/app-settings-dialog'
 import {DefaultCredentialsDialog} from '@/modules/app-store/app-page/default-credentials-dialog'
 import {DesktopContent} from '@/modules/desktop/desktop-content'
 import {InstallFirstApp} from '@/modules/desktop/install-first-app'
@@ -31,8 +32,29 @@ function InstallFirstAppPage() {
 	)
 }
 
+function prefetchRouteChunks() {
+	import('@/routes/app-store/discover')
+	import('@/routes/app-store/app-page')
+	import('@/routes/app-store/category-page')
+	import('@/routes/settings')
+	import('@/features/files')
+	import('@/routes/edit-widgets')
+}
+
 function DesktopPage() {
 	const {setOpen} = useCmdkOpen()
+
+	// Prefetch main dock route chunks on idle so they're instant on first click.
+	// These are static JS files — no auth required to fetch them.
+	useEffect(() => {
+		if ('requestIdleCallback' in window) {
+			const id = requestIdleCallback(prefetchRouteChunks)
+			return () => cancelIdleCallback(id)
+		}
+		// Fallback for Safari (no requestIdleCallback): use a short timeout
+		const id = setTimeout(prefetchRouteChunks, 200)
+		return () => clearTimeout(id)
+	}, [])
 
 	// Prevent scrolling on the desktop because it interferes with `AppGridGradientMasking` and causes tearing effect
 	useEffect(() => {
@@ -54,6 +76,7 @@ function DesktopPage() {
 				<DesktopWifiButtonConnected className={topRightPositionerClass} />
 			</div>
 			<DefaultCredentialsDialog />
+			<AppSettingsDialog />
 		</>
 	)
 }

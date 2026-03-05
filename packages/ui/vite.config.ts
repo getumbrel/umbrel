@@ -1,10 +1,35 @@
 import path from 'node:path'
-import react from '@vitejs/plugin-react-swc'
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
 import {defineConfig} from 'vite'
+import {imagetools} from 'vite-imagetools'
 
 // https://vitejs.dev/config/
+
 export default defineConfig({
-	plugins: [react()],
+	plugins: [
+		tailwindcss(),
+		// React Compiler automatically memoizes components, hooks, and expressions
+		// at build time. No need to manually add useMemo/useCallback/React.memo.
+		// useMemo/useCallback can still be used as escape hatches for precise control.
+		// If a component behaves unexpectedly, add "use no memo" directive to opt it out.
+		react({
+			babel: {
+				plugins: ['babel-plugin-react-compiler'],
+			},
+		}),
+		imagetools({
+			// Currently we only convert SVGs in features/files/assets/file-items-thumbnails
+			include: /src\/features\/files\/assets\/file-items-thumbnails\/[^?]+\.svg(\?.*)?$/,
+		}),
+	],
+	// Vite 4.4.8+ blocks requests from unrecognized hosts to prevent DNS rebinding attacks.
+	// Allow all hosts since the dev server runs inside a local Docker container and is
+	// accessed via dynamic *.local hostnames (e.g. umbrel-dev.local, umbrel-dev-apps.local).
+	// This only affects the dev server, not production builds.
+	server: {
+		allowedHosts: true,
+	},
 	resolve: {
 		alias: {
 			'@/': `${path.resolve(__dirname, 'src')}/`,
@@ -33,7 +58,6 @@ export default defineConfig({
 					colorThief: ['colorthief'],
 				},
 			},
-			external: ['@radix-ui/react-label', '@radix-ui/react-radio-group'],
 		},
 	},
 })

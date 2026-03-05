@@ -1,5 +1,5 @@
-import {Progress} from '@/shadcn-components/ui/progress'
-import {cn} from '@/shadcn-lib/utils'
+import {Progress} from '@/components/ui/progress'
+import {cn} from '@/lib/utils'
 
 import {cardSecondaryValueClass, cardTitleClass, cardValueClass, cardValueSubClass} from './shared'
 

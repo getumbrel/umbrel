@@ -1,6 +1,6 @@
 import {HTMLProps, useEffect, useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 function sanitizeIconName(input: string) {
 	return input.replace(/[^a-z0-9-]/g, '')
@@ -13,7 +13,7 @@ export function TablerIcon({iconName, className, ...props}: {iconName: string} &
 
 	useEffect(() => {
 		const url = customIcons.includes(iconName)
-			? `/figma-exports/${sanitizeIconName(iconName)}.svg`
+			? `/assets/${sanitizeIconName(iconName)}.svg`
 			: `/generated-tabler-icons/${sanitizeIconName(iconName)}.svg`
 		fetch(url)
 			.then((res) => res.text())
@@ -26,7 +26,7 @@ export function TablerIcon({iconName, className, ...props}: {iconName: string} &
 
 	return (
 		<div
-			className={cn(className, !icon && 'rounded-5 bg-white/5', icon && 'duration-300 animate-in fade-in')}
+			className={cn(className, !icon && 'rounded-5 bg-white/5', icon && 'animate-in duration-300 fade-in')}
 			dangerouslySetInnerHTML={{__html: icon}}
 			{...props}
 		/>

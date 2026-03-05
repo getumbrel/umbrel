@@ -14,7 +14,7 @@ export function Loading({children}: {children?: React.ReactNode}) {
 export function Loading2({children}: {children?: React.ReactNode}) {
 	return (
 		<div className='flex items-center gap-1'>
-			<TbLoader className='white size-4 animate-spin opacity-50 shadow-sm' />
+			<TbLoader className='white size-4 animate-spin opacity-50 shadow-xs' />
 			{children ?? t('loading')}
 		</div>
 	)

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+DOCKER=${DOCKER:-"docker"}
+DOCKER_FLAGS=${DOCKER_FLAGS:-""}
+
+RUGIX_DEV=${RUGIX_DEV:-"false"}
+
+RUGIX_CONTEXT_DIR=${RUGIX_CONTEXT_DIR:-""}
+
+RUGIX_CACHE_VOLUME=${RUGIX_CACHE_VOLUME:-"rugix-build-cache"}
+
+if [ "${RUGIX_DEV}" = "false" ]; then
+    RUGIX_VERSION=${RUGIX_VERSION:-"v0.8"}
+else
+    RUGIX_VERSION=${RUGIX_VERSION:-"dev"}
+fi
+
+RUGIX_BAKERY_IMAGE=${RUGIX_BAKERY_IMAGE:-"ghcr.io/silitics/rugix-bakery:${RUGIX_VERSION}"}
+
+if [ "${RUGIX_DEV}" = "false" ]; then
+    $DOCKER pull "${RUGIX_BAKERY_IMAGE}"
+fi
+
+RUGIX_BAKERY_IMAGE=$($DOCKER inspect --format='{{.Id}}' "${RUGIX_BAKERY_IMAGE}")
+
+if [ -t 0 ] && [ -t 1 ]; then
+    DOCKER_FLAGS="${DOCKER_FLAGS} -it"
+fi
+
+if [ -n "${RUGIX_CACHE_VOLUME}" ]; then
+    if ! $DOCKER volume inspect "${RUGIX_CACHE_VOLUME}" >/dev/null 2>&1; then
+        $DOCKER volume create "${RUGIX_CACHE_VOLUME}" >/dev/null
+    fi
+    DOCKER_FLAGS="${DOCKER_FLAGS} -v ${RUGIX_CACHE_VOLUME}:/run/rugix/bakery/cache"
+fi
+
+if [ "${1:-}" == "run" ]; then
+    # Add port forwarding for SSH when running a system in a VM.
+    DOCKER_FLAGS="${DOCKER_FLAGS} -p 127.0.0.1:2222:2222 -p [::1]:2222:2222"
+fi
+
+exec $DOCKER run --rm --privileged \
+    $DOCKER_FLAGS \
+    -v "$(pwd)":/project \
+    -v "$(pwd)/${RUGIX_CONTEXT_DIR}":/run/rugix/bakery/context \
+    -v /dev:/dev \
+    -e "RUGIX_HOST_PROJECT_DIR=$(pwd)" \
+    -e "RUGIX_BAKERY_IMAGE=${RUGIX_BAKERY_IMAGE}" \
+    -e "RUGIX_DEV=${RUGIX_DEV}" \
+    "${RUGIX_BAKERY_IMAGE}" \
+    "$@"

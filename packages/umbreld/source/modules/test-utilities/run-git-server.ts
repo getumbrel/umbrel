@@ -31,7 +31,7 @@ export default async function runGitServer() {
 	const repos = new Git(gitServerDirectory)
 	const port = await getPort()
 	repos.listen(port)
-	await waitPort({host: 'localhost', port})
+	await waitPort({host: 'localhost', port, output: 'silent'})
 
 	// Return useful properties
 	return {

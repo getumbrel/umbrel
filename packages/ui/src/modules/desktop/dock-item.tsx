@@ -1,11 +1,9 @@
-import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'framer-motion'
+import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
 import {NotificationBadge} from '@/components/ui/notification-badge'
-import {cn} from '@/shadcn-lib/utils'
-
-import {ICON_SIDE, ICON_SIDE_ZOOMED} from './dock'
+import {cn} from '@/lib/utils'
 
 type HTMLDivProps = HTMLMotionProps<'div'>
 type DockItemProps = {
@@ -14,6 +12,11 @@ type DockItemProps = {
 	open?: boolean
 	mouseX: MotionValue<number>
 	to?: LinkProps['to']
+	iconSize: number
+	iconSizeZoomed: number
+	className?: string
+	style?: React.CSSProperties
+	onClick?: (e: React.MouseEvent) => void
 } & HTMLDivProps
 
 const BOUNCE_DURATION = 0.4
@@ -27,6 +30,8 @@ export function DockItem({
 	style,
 	to,
 	onClick,
+	iconSize,
+	iconSizeZoomed,
 	...props
 }: DockItemProps) {
 	const [clickedOpen, setClickedOpen] = useState(false)
@@ -48,10 +53,10 @@ export function DockItem({
 		damping: 10,
 	}
 
-	const widthSync = useTransform(distance, [-150, 0, 150], [ICON_SIDE, ICON_SIDE_ZOOMED, ICON_SIDE])
+	const widthSync = useTransform(distance, [-150, 0, 150], [iconSize, iconSizeZoomed, iconSize])
 	const width = useSpring(widthSync, springOptions)
 
-	const scaleSync = useTransform(distance, [-150, 0, 150], [1, ICON_SIDE_ZOOMED / ICON_SIDE, 1])
+	const scaleSync = useTransform(distance, [-150, 0, 150], [1, iconSizeZoomed / iconSize, 1])
 	const transform = useSpring(scaleSync, springOptions)
 
 	// Config from:
@@ -92,12 +97,12 @@ export function DockItem({
 					className,
 				)}
 				style={{
-					width: ICON_SIDE,
-					height: ICON_SIDE,
+					width: iconSize,
+					height: iconSize,
 					backgroundImage: bg
 						? `url(${bg})`
 						: // TODO: use a better default
-						  `linear-gradient(to bottom right, white, black)`,
+							`linear-gradient(to bottom right, white, black)`,
 					scale: transform,
 					...style,
 				}}
@@ -109,7 +114,7 @@ export function DockItem({
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0 outline-none' unstable_viewTransition />
+				<Link to={to || '/'} className='absolute inset-0 outline-hidden' />
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}

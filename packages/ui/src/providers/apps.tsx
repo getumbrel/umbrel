@@ -1,7 +1,7 @@
 import {createContext, useContext} from 'react'
 import {filter} from 'remeda'
 
-import {trpcReact, UserApp, UserAppWithoutError} from '@/trpc/trpc'
+import {trpcReact, UserApp} from '@/trpc/trpc'
 import {keyBy} from '@/utils/misc'
 
 export type AppT = {
@@ -18,14 +18,7 @@ export const systemApps = [
 	{
 		id: 'UMBREL_system',
 		name: 'System',
-		icon: '/figma-exports/umbrel-app.svg',
-		systemApp: true,
-		systemAppTo: '/',
-	},
-	{
-		id: 'UMBREL_downloads',
-		name: 'Downloads',
-		icon: '/figma-exports/downloads-app.png',
+		icon: '/assets/umbrel-app.svg',
 		systemApp: true,
 		systemAppTo: '/',
 	},
@@ -33,28 +26,35 @@ export const systemApps = [
 	{
 		id: 'UMBREL_home',
 		name: 'Home',
-		icon: '/figma-exports/dock-home.png',
+		icon: '/assets/dock/dock-home.png',
 		systemApp: true,
 		systemAppTo: '/',
 	},
 	{
 		id: 'UMBREL_app-store',
 		name: 'App Store',
-		icon: '/figma-exports/dock-app-store.png',
+		icon: '/assets/dock/dock-app-store.png',
 		systemApp: true,
 		systemAppTo: '/app-store',
 	},
 	{
+		id: 'UMBREL_files',
+		name: 'Files',
+		icon: '/assets/dock/dock-files.png',
+		systemApp: true,
+		systemAppTo: '/files/Home',
+	},
+	{
 		id: 'UMBREL_settings',
 		name: 'Settings',
-		icon: '/figma-exports/dock-settings.png',
+		icon: '/assets/dock/dock-settings.png',
 		systemApp: true,
 		systemAppTo: '/settings',
 	},
 	{
 		id: 'UMBREL_live-usage',
 		name: 'Live Usage',
-		icon: '/figma-exports/dock-live-usage.png',
+		icon: '/assets/dock/dock-live-usage.png',
 		systemApp: true,
 		// NOTE: using this will clear existing search params
 		// In practice, this means cmdk will clear params and clicking dock icon will not
@@ -63,7 +63,7 @@ export const systemApps = [
 	{
 		id: 'UMBREL_widgets',
 		name: 'Widgets',
-		icon: '/figma-exports/dock-widgets.png',
+		icon: '/assets/dock/dock-widgets.png',
 		systemApp: true,
 		systemAppTo: '/edit-widgets',
 	},
@@ -88,18 +88,16 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 
 	// Remove apps that have an error
 	// TODO: consider passing these down in some places (like the desktop)
-	const userApps = filter(appsQ.data ?? [], (app): app is UserAppWithoutError => !('error' in app))
+	const userApps = filter(appsQ.data ?? [], (app): app is UserApp => !('error' in app))
 	const userAppsKeyed = keyBy(userApps, 'id')
 
 	const allApps = [...userApps, ...systemApps]
 	const allAppsKeyed = keyBy(allApps, 'id')
 
 	return (
-		<AppsContext.Provider
+		<AppsContext
 			value={{
-				// @ts-expect-error `userApps`
 				userApps,
-				// @ts-expect-error `userAppsKeyed`
 				userAppsKeyed,
 				systemApps,
 				systemAppsKeyed,
@@ -109,7 +107,7 @@ export function AppsProvider({children}: {children: React.ReactNode}) {
 			}}
 		>
 			{children}
-		</AppsContext.Provider>
+		</AppsContext>
 	)
 }
 

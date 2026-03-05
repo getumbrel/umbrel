@@ -3,9 +3,12 @@ import {TbQuestionMark} from 'react-icons/tb'
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {maybeT, t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
+
+import AnimatedUmbrelHomeIcon from './device-info-umbrel-home'
+import AnimatedUmbrelProIcon from './device-info-umbrel-pro'
 
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
@@ -20,13 +23,17 @@ export function DeviceInfoContent({
 }) {
 	return (
 		<div className='space-y-6'>
-			<div className='flex justify-center py-2'>
-				<HostEnvironmentIcon environment={umbrelHostEnvironment} />
+			<div className={cn('flex justify-center', umbrelHostEnvironment !== 'umbrel-pro' && 'py-2')}>
+				<HostEnvironmentIcon
+					environment={umbrelHostEnvironment}
+					modelNumber={modelNumber}
+					serialNumber={serialNumber}
+				/>
 			</div>
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>{t('device-info.device')}</span>
-					<span className='pr-6 font-normal'>{maybeT(device)}</span>
+					<span className={cn('font-normal', (modelNumber || serialNumber) && 'pr-6')}>{maybeT(device)}</span>
 				</div>
 				{modelNumber && (
 					<div className={listItemClassNarrow}>
@@ -52,25 +59,50 @@ const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white
 const listItemClass = tw`flex items-center gap-3 px-3 h-[50px] text-15 font-medium -tracking-3 justify-between`
 const listItemClassNarrow = cn(listItemClass, tw`h-[42px]`)
 
-export const HostEnvironmentIcon = ({environment}: {environment?: UmbrelHostEnvironment}) => {
-	switch (environment) {
-		case 'umbrel-home':
-			return <FadeInImg src={hostEnvironmentMap[environment].icon} width={128} height={128} />
-		case 'raspberry-pi':
-		case 'linux':
-			return (
-				<IconContainer>
-					<FadeInImg src={hostEnvironmentMap[environment].icon} width={64} height={64} />
-				</IconContainer>
-			)
-		default:
-			return (
-				<IconContainer>
-					<TbQuestionMark className='h-12 w-12 text-white/50' />
-				</IconContainer>
-			)
+export const HostEnvironmentIcon = ({
+	environment,
+	modelNumber,
+	serialNumber,
+}: {
+	environment?: UmbrelHostEnvironment
+	modelNumber?: string
+	serialNumber?: string
+}) => {
+	const iconDimensions = {
+		'umbrel-pro': 200,
+		'umbrel-home': 128,
+		'raspberry-pi': 64,
+		'docker-container': 72,
+		unknown: 128,
 	}
+
+	if (environment === 'umbrel-home') {
+		return <AnimatedUmbrelHomeIcon modelNumber={modelNumber} serialNumber={serialNumber} />
+	}
+
+	if (environment === 'umbrel-pro') {
+		return <AnimatedUmbrelProIcon serialNumber={serialNumber} />
+	}
+
+	const icon =
+		environment && hostEnvironmentMap[environment]?.icon ? (
+			<FadeInImg
+				src={hostEnvironmentMap[environment].icon}
+				width={iconDimensions[environment]}
+				height={iconDimensions[environment]}
+			/>
+		) : (
+			<TbQuestionMark className='h-12 w-12 text-white/50' />
+		)
+
+	// Only wrap in IconContainer for raspberry-pi and docker-container
+	if (environment === 'raspberry-pi' || environment === 'docker-container') {
+		return <IconContainer>{icon}</IconContainer>
+	}
+
+	return icon
 }
+
 const IconContainer = ({children}: {children: React.ReactNode}) => (
 	<div
 		className='grid h-32 w-32 place-items-center rounded-[27px] bg-[#52525252]'

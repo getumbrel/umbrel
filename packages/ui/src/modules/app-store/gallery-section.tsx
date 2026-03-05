@@ -6,8 +6,8 @@ import 'photoswipe/style.css'
 import {useEffect} from 'react'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
+import {cn} from '@/lib/utils'
 import {Banner} from '@/routes/app-store/use-discover-query'
-import {cn} from '@/shadcn-lib/utils'
 import {tw} from '@/utils/tw'
 
 export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => {
@@ -68,4 +68,4 @@ export const AppGallerySection: React.FC<{gallery: string[]; galleryId: string}>
 
 export const galleryRootClass = tw`-mx-[70px] px-[70px] umbrel-hide-scrollbar flex gap-2 md:gap-5 overflow-x-auto`
 
-export const galleryItemClass = tw`group shrink-0 bg-white/10 bg-cover outline-none ring-inset focus-visible:ring-4 ring-white/80 animate-in fade-in fill-mode-both slide-in-from-right-10 overflow-hidden`
+export const galleryItemClass = tw`group shrink-0 bg-white/10 bg-cover outline-hidden ring-inset focus-visible:ring-4 ring-white/80 animate-in fade-in fill-mode-both slide-in-from-right-10 overflow-hidden`
