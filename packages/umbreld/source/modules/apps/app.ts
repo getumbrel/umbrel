@@ -299,11 +299,16 @@ export default class App {
 		return true
 	}
 
-	async getPids() {
+	async getContainerNames() {
 		const compose = await this.readCompose()
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
 		containers.push(`${this.id}_app_proxy_1`)
 		containers.push(`${this.id}_tor_server_1`)
+		return containers
+	}
+
+	async getPids() {
+		const containers = await this.getContainerNames()
 		try {
 			// If we fail to get the PIDs of one container, skip it and continue for
 			// the other containers. We'll expect to get it on some misses for the app

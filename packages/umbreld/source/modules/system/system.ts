@@ -104,26 +104,110 @@ export async function getDiskUsage(
 	}
 }
 
-// Returns a list of all processes and their memory usage
-async function getProcessesMemory() {
-	// Get a snapshot of system CPU and memory usage
-	const ps = await $`ps -Ao pid,pss --no-header`
+function getProcMemoryField(contents: string, field: string): number | null {
+	const match = new RegExp(`^${field}:\\s+(\\d+)\\s+kB$`, 'm').exec(contents)
+	if (!match) return null
+	const value = Number(match[1])
+	if (!Number.isFinite(value) || value < 0) return null
+	return clampByteCount(value * 1024)
+}
 
-	// Format snapshot data
-	const processes = ps.stdout.split('\n').map((line) => {
-		// Parse values
-		const [pid, pss] = line
+function clampNonNegativeNumber(value: number): number {
+	if (!Number.isFinite(value)) return 0
+	return Math.max(0, value)
+}
+
+function clampByteCount(value: number, max = Number.MAX_SAFE_INTEGER): number {
+	const safeMax = clampNonNegativeNumber(max)
+	const safeValue = clampNonNegativeNumber(value)
+	return Math.min(safeMax, Math.round(safeValue))
+}
+
+// Returns a map of Docker container name to full container ID by running
+// a single `docker ps` command. This lets us locate cgroup paths efficiently.
+async function getDockerContainerIds(): Promise<Map<string, string>> {
+	try {
+		const {stdout} = await $`docker ps --no-trunc --format={{.ID}}|{{.Names}}`
+		const result = new Map<string, string>()
+		for (const line of stdout.trim().split('\n')) {
+			if (!line) continue
+			const separatorIndex = line.indexOf('|')
+			if (separatorIndex === -1) continue
+			const id = line.slice(0, separatorIndex)
+			const name = line.slice(separatorIndex + 1)
+			if (id && name) result.set(name, id)
+		}
+		return result
+	} catch {
+		return new Map()
+	}
+}
+
+// Reads cgroup v2 memory usage for a Docker container.
+// We subtract inactive_file from memory.current because inactive file cache is
+// easily reclaimable and not counted as "used" by MemAvailable. This matches
+// the convention Docker uses for its own memory reporting in `docker stats`.
+async function getContainerCgroupMemory(containerId: string): Promise<{used: number; swap: number}> {
+	try {
+		const cgroupPath = `/sys/fs/cgroup/system.slice/docker-${containerId}.scope`
+		const [currentStr, memoryStat, swapStr] = await Promise.all([
+			fse.readFile(`${cgroupPath}/memory.current`, 'utf8'),
+			fse.readFile(`${cgroupPath}/memory.stat`, 'utf8'),
+			fse.readFile(`${cgroupPath}/memory.swap.current`, 'utf8').catch(() => '0'),
+		])
+		const current = clampNonNegativeNumber(parseInt(currentStr.trim(), 10))
+		const inactiveFile = clampNonNegativeNumber(parseInt(memoryStat.match(/^inactive_file (\d+)$/m)?.[1] ?? '0', 10))
+		return {
+			used: clampNonNegativeNumber(current - inactiveFile),
+			swap: clampNonNegativeNumber(parseInt(swapStr.trim(), 10)),
+		}
+	} catch {
+		return {used: 0, swap: 0}
+	}
+}
+
+// Returns the average ratio of RAM used per swapped byte in zram.
+// We cannot query compressed zram usage per-process, so this global ratio is
+// applied to each app's SwapPss as an approximation.
+async function getZramRamFactor(): Promise<number> {
+	try {
+		const mmStat = await fse.readFile('/sys/block/zram0/mm_stat', 'utf8')
+		const [origDataSize, , memUsedTotal] = mmStat
 			.trim()
 			.split(/\s+/)
 			.map((value) => Number(value))
-		return {
-			pid,
-			// Convert proportional set size from kilobytes to bytes
-			memory: pss * 1000,
-		}
-	})
+		if (!Number.isFinite(origDataSize) || !Number.isFinite(memUsedTotal) || origDataSize <= 0) return 0
+		return clampNonNegativeNumber(memUsedTotal / origDataSize)
+	} catch {
+		return 0
+	}
+}
 
-	return processes
+// Returns the reclaimable portion of ZFS ARC in bytes. ARC is a filesystem
+// cache that MemAvailable doesn't account for. Under high memory pressure
+// the ARC can shrink down to c_min, so the reclaimable portion is size - c_min.
+async function getReclaimableZfsArcSize(): Promise<number> {
+	try {
+		const arcstats = await fse.readFile('/proc/spl/kstat/zfs/arcstats', 'utf8')
+		const getField = (name: string) => {
+			const match = arcstats.match(new RegExp(`^${name}\\s+\\d+\\s+(\\d+)$`, 'm'))
+			return match ? parseInt(match[1], 10) : 0
+		}
+		return clampNonNegativeNumber(getField('size') - getField('c_min'))
+	} catch {
+		return 0
+	}
+}
+
+// Returns total and pressure-relevant used memory from /proc/meminfo.
+// Uses MemAvailable which reflects reclaimable memory and matches free/htop semantics.
+// Also subtracts reclaimable ZFS ARC since MemAvailable doesn't account for it.
+async function getSystemMemoryFromMeminfo(): Promise<{size: number; totalUsed: number}> {
+	const [meminfo, arcSize] = await Promise.all([fse.readFile('/proc/meminfo', 'utf8'), getReclaimableZfsArcSize()])
+	const size = clampByteCount(getProcMemoryField(meminfo, 'MemTotal') ?? 0)
+	const memAvailable = clampByteCount(getProcMemoryField(meminfo, 'MemAvailable') ?? 0)
+	const totalUsed = clampByteCount(size - memAvailable - arcSize, size)
+	return {size, totalUsed}
 }
 
 type MemoryUsage = {
@@ -135,19 +219,7 @@ export async function getSystemMemoryUsage(): Promise<{
 	size: number
 	totalUsed: number
 }> {
-	// Get total memory size
-	const {total: size} = await systemInformation.mem()
-
-	// Get a snapshot of system memory usage
-	const processes = await getProcessesMemory()
-
-	// Calculate total memory used by all processes
-	const totalUsed = processes.reduce((total, process) => total + process.memory, 0)
-
-	return {
-		size,
-		totalUsed,
-	}
+	return await getSystemMemoryFromMeminfo()
 }
 
 export async function getMemoryUsage(umbreld: Umbreld): Promise<{
@@ -156,34 +228,52 @@ export async function getMemoryUsage(umbreld: Umbreld): Promise<{
 	system: number
 	apps: MemoryUsage[]
 }> {
-	// Get a snapshot of system memory usage
-	const processes = await getProcessesMemory()
+	// Attribution model:
+	// - totalUsed: system-wide pressure-relevant used memory from MemAvailable
+	// - app.used: cgroup memory.current + (memory.swap.current * avg zram RAM ratio)
+	//   This captures all memory the kernel charges to the container: process RSS,
+	//   file cache, slab, page tables, and kernel stacks — not just process-visible PSS.
+	// - system: residual (totalUsed - sum(app.used))
 
-	// Get total and used memory size
-	const {size, totalUsed} = await getSystemMemoryUsage()
+	// Read meminfo first so the measurment isn't affected by docker
+	const {size, totalUsed} = await getSystemMemoryFromMeminfo()
+	const [containerIds, zramRamFactor] = await Promise.all([getDockerContainerIds(), getZramRamFactor()])
+	const safeZramRamFactor = clampNonNegativeNumber(zramRamFactor)
 
-	// Calculate memory used by the processes owned by each app
 	const apps = await Promise.all(
 		umbreld.apps.instances.map(async (app) => {
-			let appUsed = 0
 			try {
-				const appPids = await app.getPids()
-				appUsed = processes
-					.filter((process) => appPids.includes(process.pid))
-					.reduce((total, process) => total + process.memory, 0)
+				const containerNames = await app.getContainerNames()
+
+				// Look up cgroup memory for each of the app's containers.
+				const cgroupResults = await Promise.all(
+					containerNames.map(async (name) => {
+						const containerId = containerIds.get(name)
+						if (!containerId) return {used: 0, swap: 0}
+						return getContainerCgroupMemory(containerId)
+					}),
+				)
+
+				const appUsed = clampByteCount(cgroupResults.reduce((total, cg) => total + cg.used, 0))
+				const appSwap = clampByteCount(cgroupResults.reduce((total, cg) => total + cg.swap, 0))
+
+				return {
+					id: app.id,
+					used: clampByteCount(appUsed + appSwap * safeZramRamFactor, size),
+				}
 			} catch (error) {
 				umbreld.logger.error(`Error getting memory`, error)
-			}
-			return {
-				id: app.id,
-				used: appUsed,
+				return {
+					id: app.id,
+					used: 0,
+				}
 			}
 		}),
 	)
 
 	// Calculate memory used by the system (total - apps)
-	const appsTotal = apps.reduce((total, app) => total + app.used, 0)
-	const system = Math.max(0, totalUsed - appsTotal)
+	const appsTotal = clampByteCount(apps.reduce((total, app) => total + app.used, 0))
+	const system = clampByteCount(totalUsed - appsTotal, totalUsed)
 
 	return {
 		size,

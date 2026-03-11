@@ -7,12 +7,14 @@ import {describe, afterEach, expect, test, vi} from 'vitest'
 // Mocks
 import systemInformation from 'systeminformation'
 import * as execa from 'execa'
+import fse from 'fs-extra'
 
 import Umbreld from '../../index.js'
 import {getCpuTemperature, getMemoryUsage, getDiskUsageByPath, shutdown, reboot} from './system.js'
 
 vi.mock('systeminformation')
 vi.mock('execa')
+vi.mock('fs-extra')
 
 afterEach(() => {
 	vi.restoreAllMocks()
@@ -55,16 +57,76 @@ describe('getDiskUsageByPath', () => {
 describe('getMemoryUsage', () => {
 	test('should return memory usage', async () => {
 		const umbreld = new Umbreld({dataDirectory: '/tmp'})
-		vi.mocked(systemInformation.mem).mockResolvedValue({
-			total: 69_420,
-			active: 420,
-		} as any)
+		vi.mocked(fse.readFile).mockImplementation(async (path) => {
+			if (path === '/proc/meminfo') {
+				return (
+					'MemTotal:        1000 kB\n' +
+					'MemAvailable:     360 kB\n' +
+					'MemFree:          100 kB\n' +
+					'Buffers:           50 kB\n' +
+					'Cached:           200 kB\n' +
+					'SReclaimable:      30 kB\n' +
+					'Shmem:             20 kB\n'
+				)
+			}
+			throw new Error('ENOENT')
+		})
 		vi.mocked(execa.$).mockResolvedValue({
-			stdout: '1 0.420',
+			stdout: '1 100',
 		})
 		expect(await getMemoryUsage(umbreld)).toMatchObject({
-			size: 69_420,
-			totalUsed: 420,
+			size: 1_024_000,
+			totalUsed: 655_360, // 1000kB - 360kB
+		})
+	})
+
+	test('should clamp memory outputs to non-negative values within total size', async () => {
+		const umbreld = new Umbreld({dataDirectory: '/tmp'})
+		;(umbreld.apps as any).instances = [
+			{
+				id: 'test-app',
+				getContainerNames: async () => ['test_web_1'],
+			},
+		]
+		vi.mocked(execa.$).mockImplementation(async (...args: any[]) => {
+			const template = args[0]
+			const str = Array.isArray(template) ? template.join('') : String(template)
+			if (str.includes('docker ps')) {
+				return {stdout: 'abc123def456|test_web_1'} as any
+			}
+			return {stdout: ''} as any
+		})
+		vi.mocked(fse.readFile).mockImplementation(async (path) => {
+			if (path === '/proc/meminfo') {
+				return (
+					'MemTotal:        1000 kB\n' +
+					'MemFree:            0 kB\n' +
+					'Buffers:            0 kB\n' +
+					'Cached:             0 kB\n' +
+					'SReclaimable:       0 kB\n' +
+					'Shmem:           2000 kB\n'
+				)
+			}
+			if (String(path).includes('memory.current')) {
+				return '5120000'
+			}
+			if (String(path).includes('memory.stat')) {
+				return 'inactive_file 0\n'
+			}
+			if (String(path).includes('memory.swap.current')) {
+				return '5120000'
+			}
+			if (path === '/sys/block/zram0/mm_stat') {
+				return '1 0 2'
+			}
+			throw new Error('ENOENT')
+		})
+
+		expect(await getMemoryUsage(umbreld)).toMatchObject({
+			size: 1_024_000,
+			totalUsed: 1_024_000,
+			system: 0,
+			apps: [{id: 'test-app', used: 1_024_000}],
 		})
 	})
 })
