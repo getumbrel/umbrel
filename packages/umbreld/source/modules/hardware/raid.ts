@@ -1,9 +1,11 @@
 import crypto from 'node:crypto'
+import os from 'node:os'
 import {setTimeout} from 'node:timers/promises'
 
 import fse from 'fs-extra'
 import {$} from 'execa'
 import pRetry from 'p-retry'
+import prettyBytes from 'pretty-bytes'
 
 import type Umbreld from '../../index.js'
 import FileStore from '../utilities/file-store.js'
@@ -205,6 +207,18 @@ export default class Raid {
 
 	async start() {
 		this.logger.log('Starting RAID')
+
+		// Halve the default ZFS ARC minimum (RAM/32 -> RAM/64) to free up memory.
+		// On a 16GB device this means 256MB instead of 512MB.
+		// This is more conservative for umbrelOS where we may be running alongside many apps.
+		try {
+			const totalMemory = os.totalmem()
+			const arcMin = Math.max(32 * 1024 * 1024, Math.floor(totalMemory / 64))
+			await fse.writeFile('/sys/module/zfs/parameters/zfs_arc_min', String(arcMin))
+			this.logger.log(`Set ZFS ARC min to ${prettyBytes(arcMin)}`)
+		} catch (error) {
+			this.logger.error('Failed to set ZFS ARC min', error)
+		}
 
 		// Start pool monitor to send realtime events
 		// This must happen before any operations that trigger rebuild/expansion
