@@ -107,7 +107,7 @@ export default class Files {
 	fileOwner = {userId: 1000, groupId: 1000}
 	maxDirectoryListing = 10000
 	// Prevent loads of .DS_Store (macOS) and .directory (KDE Dolphin) results
-	hiddenFiles = ['.DS_Store', '.directory']
+	hiddenFiles = ['.DS_Store', '.directory', '.umbrel-watcher-health-check']
 	hiddenExtensions = ['.umbrel-upload']
 	operationsInProgress: OperationsInProgress = []
 	watcher: Watcher
