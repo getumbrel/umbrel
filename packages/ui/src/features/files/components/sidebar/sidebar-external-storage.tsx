@@ -76,6 +76,22 @@ export function SidebarExternalStorage() {
 							>
 								{t('files-action.format-drive')}
 							</ContextMenuItem>
+							{disk.isMounted && disk.partitions.length === 1 && (
+								<ContextMenuItem
+									onClick={() => {
+										const partition = disk.partitions[0]
+										navigate({
+											search: addLinkSearchParams({
+												dialog: 'files-share-info',
+												'files-share-info-name': partition.label || partition.mountpoints?.[0] || '',
+												'files-share-info-path': partition.mountpoints?.[0] || '',
+											}),
+										})
+									}}
+								>
+									{t('files-action.sharing')}
+								</ContextMenuItem>
+							)}
 						</ContextMenuContent>
 					</ContextMenu>
 				</motion.div>

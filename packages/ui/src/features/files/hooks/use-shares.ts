@@ -15,6 +15,19 @@ import {t} from '@/utils/i18n'
 export function useShares() {
 	const utils = trpcReact.useUtils()
 
+	// Invalidate shares when external storage changes (e.g., drive ejected/mounted)
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'files:external-storage:change'},
+		{
+			onData() {
+				utils.files.shares.invalidate()
+			},
+			onError(err) {
+				console.error('eventBus.listen(files:external-storage:change) subscription error', err)
+			},
+		},
+	)
+
 	// Query to fetch all shares
 	const {data: shares, isLoading: isLoadingShares} = trpcReact.files.shares.useQuery(undefined, {
 		placeholderData: keepPreviousData,

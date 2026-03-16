@@ -2,10 +2,13 @@ import {FaEject} from 'react-icons/fa6'
 import {RiErrorWarningFill, RiHardDrive2Fill} from 'react-icons/ri'
 import {useNavigate as useReactRouterNavigate} from 'react-router-dom'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
+import {SharedFolderBadge} from '@/features/files/assets/shared-folder-badge'
 import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useShares} from '@/features/files/hooks/use-shares'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useQueryParams} from '@/hooks/use-query-params'
@@ -28,6 +31,7 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const navigate = useReactRouterNavigate()
 	const {addLinkSearchParams} = useQueryParams()
+	const {isPathShared} = useShares()
 	const isDiskActive = item.partitions.length === 1 && currentPath === item.partitions[0].mountpoints[0]
 
 	const handleClick = () => {
@@ -62,7 +66,14 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 		>
 			<div className='relative'>
 				<FileItemIcon
-					item={{...item, path: item.id, type: 'external-storage', operations: [], size: 0, modified: 0}}
+					item={{
+						...item,
+						path: item.partitions.length === 1 ? (item.partitions[0]?.mountpoints[0] ?? '/External') : '/External',
+						type: 'directory',
+						operations: [],
+						size: 0,
+						modified: 0,
+					}}
 					className='h-5 w-5 flex-shrink-0'
 				/>
 				{/* Warning badge for drives that need formatting */}
@@ -109,25 +120,50 @@ export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemPro
 					</div>
 					<div className='flex flex-col gap-0.5 pl-7'>
 						{item.partitions.map((partition: ExternalStorageDevice['partitions'][number]) => (
-							<Droppable
-								key={partition.mountpoints[0]}
-								id={`sidebar-${partition.mountpoints[0]}`}
-								path={partition.mountpoints[0]}
-								onClick={() => navigateToDirectory(partition.mountpoints[0])}
-								className={cn(
-									'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
-									currentPath === partition.mountpoints[0]
-										? selectedClass
-										: 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
-								)}
-								role='button'
-							>
-								<RiHardDrive2Fill className='h-3 w-3 flex-shrink-0' />
-								<span className='min-w-0 flex-1 overflow-hidden text-11 text-ellipsis whitespace-nowrap'>
-									{partition.label || partition.mountpoints[0]}
-								</span>
-								<span className='text-11 text-white/30'>{formatFilesystemSize(partition.size)}</span>
-							</Droppable>
+							<ContextMenu key={partition.mountpoints[0]}>
+								<ContextMenuTrigger asChild>
+									<Droppable
+										id={`sidebar-${partition.mountpoints[0]}`}
+										path={partition.mountpoints[0]}
+										onClick={() => navigateToDirectory(partition.mountpoints[0])}
+										className={cn(
+											'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
+											currentPath === partition.mountpoints[0]
+												? selectedClass
+												: 'text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+										)}
+										role='button'
+									>
+										<div className='relative'>
+											<RiHardDrive2Fill className='h-3 w-3 flex-shrink-0' />
+											{isPathShared(partition.mountpoints[0]) && (
+												<div className='absolute -top-1 -left-1 flex size-3 items-center justify-center rounded-full border border-white/15 bg-linear-to-b from-brand to-[color-mix(in_srgb,hsl(var(--color-brand))_80%,black_20%)]'>
+													<SharedFolderBadge className='size-[80%]' />
+												</div>
+											)}
+										</div>
+										<span className='min-w-0 flex-1 overflow-hidden text-11 text-ellipsis whitespace-nowrap'>
+											{partition.label || partition.mountpoints[0]}
+										</span>
+										<span className='text-11 text-white/30'>{formatFilesystemSize(partition.size)}</span>
+									</Droppable>
+								</ContextMenuTrigger>
+								<ContextMenuContent>
+									<ContextMenuItem
+										onClick={() => {
+											navigate({
+												search: addLinkSearchParams({
+													dialog: 'files-share-info',
+													'files-share-info-name': partition.label || partition.mountpoints[0],
+													'files-share-info-path': partition.mountpoints[0],
+												}),
+											})
+										}}
+									>
+										{t('files-action.sharing')}
+									</ContextMenuItem>
+								</ContextMenuContent>
+							</ContextMenu>
 						))}
 					</div>
 				</>

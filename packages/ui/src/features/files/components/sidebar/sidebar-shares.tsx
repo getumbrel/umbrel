@@ -48,6 +48,7 @@ export function SidebarShares({shares}: {shares: (Share | null)[]}) {
 										}}
 										isActive={currentPath === share.path}
 										onClick={() => navigateToDirectory(share.path)}
+										disabled={share.available === false}
 									/>
 								</div>
 							</ContextMenuTrigger>

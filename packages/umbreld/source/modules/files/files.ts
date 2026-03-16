@@ -687,6 +687,15 @@ export default class Files {
 		// Get the system path
 		const systemPath = await this.virtualToSystemPath(virtualPath)
 
+		// If deleting from /External, remove any shares for this path or its children
+		// (External paths aren't covered by the file watcher, so we handle it here)
+		if (virtualPath.startsWith('/External/')) {
+			const shares = (await this.#umbreld.store.get('files.shares')) || []
+			for (const share of shares) {
+				if (share.path.startsWith(virtualPath)) await this.samba.removeShare(share.path)
+			}
+		}
+
 		// Delete the file or directory
 		try {
 			await fse.remove(systemPath)
@@ -769,7 +778,6 @@ export default class Files {
 			'/Apps',
 			'/Apps/*',
 			'/External',
-			'/External/**',
 			'/Network',
 			'/Network/**',
 			'/Backups',

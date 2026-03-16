@@ -1,6 +1,7 @@
 import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
+import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
 
 import fse from 'fs-extra'
@@ -234,6 +235,16 @@ export default class ExternalStorage {
 			if (!blockDevice) throw new Error('[invalid-device-id]')
 			this.logger.log(`Unmounting device ${deviceId}`)
 
+			// Derive virtual mount paths for this device
+			const externalBasePath = this.#umbreld.files.getBaseDirectory('/External')
+			const virtualMountPaths = blockDevice.partitions
+				.flatMap((partition) => partition.mountpoints)
+				.filter((mountpoint) => mountpoint.startsWith(externalBasePath))
+				.map((mountpoint) => this.#umbreld.files.systemToVirtualPath(mountpoint))
+
+			// Exclude shares on this device from Samba before unmounting (otherwise Samba keeps the directory busy)
+			if (virtualMountPaths.length > 0) await this.#umbreld.files.samba.applyShares({excludePaths: virtualMountPaths})
+
 			// Loop over partitions
 			let failedUnmounts = false
 			for (const partition of blockDevice.partitions) {
@@ -241,8 +252,22 @@ export default class ExternalStorage {
 				if (partition.mountpoints.length == 0) continue
 
 				// Unmount device
+				// We retry because `smbcontrol close-share` (from applyShares()) is fire-and-forget — it enqueues a
+				// message to smbd which then asynchronously drains in-flight I/O before releasing file handles.
+				// There's no synchronous wait mechanism in Samba (smbstatus polling is possible but adds fragile
+				// JSON parsing for little gain). Retrying umount is simple and also handles non-Samba processes
+				// (e.g. indexers) that may hold handles.
 				this.logger.log(`Unmounting partition ${partition.id}`)
-				await $`umount --all-targets /dev/${partition.id}`.catch((error) => {
+				await pRetry(() => $`umount --all-targets /dev/${partition.id}`, {
+					retries: 5,
+					minTimeout: 500,
+					factor: 1,
+					onFailedAttempt: (error) => {
+						this.logger.log(
+							`Unmount attempt ${error.attemptNumber} for ${partition.id} failed, ${error.retriesLeft} retries left`,
+						)
+					},
+				}).catch((error) => {
 					// Just log the error and continue to next partition
 					this.logger.error(`Failed to unmount partition ${partition.id}`, error)
 					failedUnmounts = true

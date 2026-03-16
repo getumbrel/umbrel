@@ -402,8 +402,10 @@ export function useFilesOperations() {
 			} else {
 				// Otherwise invalidate the generic list
 				utils.files.list.invalidate()
-				// And invalidate favorites since they can include External/Network items
+				// Invalidate favorites since they can include External/Network items
 				utils.files.favorites.invalidate()
+				// Invalidate shares since they can include External items
+				utils.files.shares.invalidate()
 			}
 		},
 		onError: (error) => {

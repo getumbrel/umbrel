@@ -24,7 +24,7 @@ describe('shares()', () => {
 		expect(shares).toStrictEqual([])
 	})
 
-	test('only returns existing directories', async () => {
+	test('marks deleted directories as unavailable', async () => {
 		// Create test directories
 		const testDirectory1 = `${umbreld.instance.dataDirectory}/home/samba-existing-test1`
 		const testDirectory2 = `${umbreld.instance.dataDirectory}/home/samba-existing-test2`
@@ -42,11 +42,12 @@ describe('shares()', () => {
 		// Delete one directory
 		await fse.remove(testDirectory1)
 
-		// Verify only existing directory is returned in shares
+		// Verify both shares are returned but the deleted one is marked unavailable
 		const shares = await umbreld.client.files.shares.query()
-		const paths = shares.map((share) => share.path)
-		expect(paths).not.toContain('/Home/samba-existing-test1')
-		expect(paths).toContain('/Home/samba-existing-test2')
+		const share1 = shares.find((s) => s.path === '/Home/samba-existing-test1')
+		const share2 = shares.find((s) => s.path === '/Home/samba-existing-test2')
+		expect(share1?.available).toBe(false)
+		expect(share2?.available).toBe(true)
 	})
 
 	test('returns proper client-facing sharename for non /Home shares', async () => {
@@ -103,8 +104,6 @@ describe('#handleFileChange()', () => {
 
 		// Verify deleted directory is removed from the store
 		// but the kept directory remains
-		// We check the store directly here because the RPC query auto
-		// strips non-existent files from the result
 		const storedShares = await umbreld.instance.store.get('files.shares')
 		const storedPaths = storedShares.map((share) => share.path)
 		expect(storedPaths).not.toContain('/Home/samba-auto-remove-test')
@@ -165,8 +164,6 @@ describe('#handleFileChange()', () => {
 		await delay(100)
 
 		// Verify deleted directory is removed from the store
-		// We check the store directly here because the RPC query auto
-		// strips non-existent files from the result
 		const storedShares = await umbreld.instance.store.get('files.shares')
 		const storedPaths = storedShares ? storedShares.map((share) => share.path) : []
 		expect(storedPaths).not.toContain('/Home/parent-directory/child-directory')
@@ -203,8 +200,19 @@ describe('addShare()', () => {
 		)
 	})
 
-	test('throws on unshareable external paths', async () => {
-		// Create test directory
+	test('throws on unshareable external mount points', async () => {
+		// Create test directory (simulating an external drive mount point)
+		const testDirectory = `${umbreld.instance.dataDirectory}/external/My Portable SSD`
+		await fse.ensureDir(testDirectory)
+
+		// Attempt to share the mount point - should fail
+		await expect(umbreld.client.files.addShare.mutate({path: '/External/My Portable SSD'})).rejects.toThrow(
+			'[operation-not-allowed]',
+		)
+	})
+
+	test('allows sharing subdirectories of external drives', async () => {
+		// Create test directory (simulating an external drive mount point)
 		const testDirectory = `${umbreld.instance.dataDirectory}/external/My Portable SSD`
 		await fse.ensureDir(testDirectory)
 
@@ -212,15 +220,16 @@ describe('addShare()', () => {
 		const subDirectory = `${testDirectory}/sub-directory`
 		await fse.ensureDir(subDirectory)
 
-		// Attempt to share the directory
-		await expect(umbreld.client.files.addShare.mutate({path: '/External/My Portable SSD'})).rejects.toThrow(
-			'[operation-not-allowed]',
-		)
+		// Sharing a subdirectory should succeed
+		const result = await umbreld.client.files.addShare.mutate({
+			path: '/External/My Portable SSD/sub-directory',
+		})
+		expect(result).toBe('/External/My Portable SSD/sub-directory')
 
-		// Attempt to share sub directory
-		await expect(
-			umbreld.client.files.addShare.mutate({path: '/External/My Portable SSD/sub-directory'}),
-		).rejects.toThrow('[operation-not-allowed]')
+		// Verify it's in the shares list
+		const shares = await umbreld.client.files.shares.query()
+		const paths = shares.map((share) => share.path)
+		expect(paths).toContain('/External/My Portable SSD/sub-directory')
 	})
 
 	test('throws on directory traversal attempt', async () => {

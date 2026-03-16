@@ -1,6 +1,7 @@
 import {PlusCircle} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
+import {TbAlertTriangle} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
@@ -17,11 +18,13 @@ import {
 import {MiniBrowser} from '@/features/files/components/mini-browser'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
-import {HOME_PATH} from '@/features/files/constants'
+import {EXTERNAL_STORAGE_PATH, HOME_PATH} from '@/features/files/constants'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useShares} from '@/features/files/hooks/use-shares'
+import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
@@ -42,6 +45,9 @@ export default function FileSharingDrawerOrDialog() {
 		isAddingShare,
 		isRemovingShare,
 	} = useShares()
+
+	// Query disks directly (can't use useExternalStorage — it depends on files-specific context)
+	const {data: disks} = trpcReact.files.externalDevices.useQuery()
 
 	const isEnabled = (shares?.length ?? 0) > 0
 	const isBusy = isAddingShare || isRemovingShare
@@ -74,11 +80,17 @@ export default function FileSharingDrawerOrDialog() {
 
 	// Build a stable-ordered list: seen folders first (preserves order),
 	// then append any new active shares not yet tracked (e.g. just added via MiniBrowser).
+	const activeSharesByPath = new Map(activeIndividualShares.map((s) => [s.path, s]))
 	const individualShares = [
-		...seenFolders.map((f) => ({name: f.name, path: f.path, isShared: activePaths.has(f.path)})),
+		...seenFolders.map((f) => ({
+			name: f.name,
+			path: f.path,
+			isShared: activePaths.has(f.path),
+			available: activeSharesByPath.get(f.path)?.available !== false,
+		})),
 		...activeIndividualShares
 			.filter((s) => !seenPaths.has(s.path))
-			.map((s) => ({name: s.name, path: s.path, isShared: true})),
+			.map((s) => ({name: s.name, path: s.path, isShared: true, available: s.available !== false})),
 	]
 
 	// Whether any folders were toggled off during this session
@@ -102,12 +114,17 @@ export default function FileSharingDrawerOrDialog() {
 	}
 
 	// Individual share toggle handler
-	const handleShareToggle = async (path: string, name: string, checked: boolean) => {
+	const handleShareToggle = async (path: string, name: string, checked: boolean, available: boolean) => {
 		if (checked) {
 			await addShare({path})
 		} else {
-			// Track in seenFolders so it stays visible at the same position
-			setSeenFolders((prev) => (prev.some((f) => f.path === path) ? prev : [...prev, {name, path}]))
+			// Available shares stay visible (in seenFolders) so the user can re-toggle.
+			// Unavailable shares disappear immediately — re-toggling would fail.
+			if (available) {
+				setSeenFolders((prev) => (prev.some((f) => f.path === path) ? prev : [...prev, {name, path}]))
+			} else {
+				setSeenFolders((prev) => prev.filter((f) => f.path !== path))
+			}
 			await removeShare({path})
 		}
 	}
@@ -154,22 +171,6 @@ export default function FileSharingDrawerOrDialog() {
 					</div>
 				</button>
 			</div>
-
-			{/* MiniBrowser (shared with the active state below) */}
-			<MiniBrowser
-				open={isAddFolderOpen}
-				onOpenChange={setAddFolderOpen}
-				rootPath={HOME_PATH}
-				onOpenPath={HOME_PATH}
-				preselectOnOpen={false}
-				title={t('settings.file-sharing.add-folder-title')}
-				selectionMode='folders'
-				disabledPaths={shares?.map((s) => s.path)}
-				onSelect={(path) => {
-					addShare({path})
-					setAddFolderOpen(false)
-				}}
-			/>
 		</div>
 	)
 
@@ -218,55 +219,56 @@ export default function FileSharingDrawerOrDialog() {
 					{individualShares.length > 0 && (
 						<div className={listClass}>
 							<AnimatePresence initial={false}>
-								{individualShares.map((share) => (
-									<motion.label
-										key={share.path}
-										className={listItemClass}
-										initial={{opacity: 0, height: 0}}
-										animate={{opacity: 1, height: 'auto'}}
-										exit={{opacity: 0, height: 0}}
-										transition={{duration: 0.2}}
-									>
-										<FileItemIcon
-											item={{
-												name: share.name,
-												path: share.path,
-												type: 'directory',
-												modified: 0,
-												size: 0,
-												operations: [],
-											}}
-											className='h-7 w-7 shrink-0'
-										/>
-										<span className='min-w-0 flex-1 truncate text-14 font-medium'>{share.name}</span>
-										<Switch
-											checked={share.isShared}
-											onCheckedChange={(checked) => handleShareToggle(share.path, share.name, checked)}
-											disabled={isLoading}
-										/>
-									</motion.label>
-								))}
+								{individualShares.map((share) => {
+									const unavailableReason = share.isShared ? getShareUnavailableReason(share, disks) : undefined
+									return (
+										<motion.label
+											key={share.path}
+											className={listItemClass}
+											initial={{opacity: 0, height: 0}}
+											animate={{opacity: unavailableReason ? 0.5 : 1, height: 'auto'}}
+											exit={{opacity: 0, height: 0}}
+											transition={{duration: 0.2}}
+										>
+											<FileItemIcon
+												item={{
+													name: share.name,
+													path: share.path,
+													type: 'directory',
+													modified: 0,
+													size: 0,
+													operations: [],
+												}}
+												className='h-7 w-7 shrink-0'
+											/>
+											<div className='min-w-0 flex-1'>
+												<span className='truncate text-14 font-medium'>{share.name}</span>
+												{unavailableReason && (
+													<div className='flex items-center gap-1 text-[#F5A623]'>
+														<TbAlertTriangle className='size-3 shrink-0' />
+														<span className='truncate text-11'>
+															{unavailableReason === 'drive-disconnected'
+																? t('files-share.unavailable-drive-disconnected')
+																: t('files-share.unavailable-folder-not-found')}
+														</span>
+													</div>
+												)}
+											</div>
+											<Switch
+												checked={share.isShared}
+												onCheckedChange={(checked) =>
+													handleShareToggle(share.path, share.name, checked, share.available)
+												}
+												disabled={isLoading}
+											/>
+										</motion.label>
+									)
+								})}
 							</AnimatePresence>
 						</div>
 					)}
 				</div>
 			)}
-
-			{/* MiniBrowser for adding shared folders */}
-			<MiniBrowser
-				open={isAddFolderOpen}
-				onOpenChange={setAddFolderOpen}
-				rootPath={HOME_PATH}
-				onOpenPath={HOME_PATH}
-				preselectOnOpen={false}
-				title={t('settings.file-sharing.add-folder-title')}
-				selectionMode='folders'
-				disabledPaths={shares?.map((s) => s.path)}
-				onSelect={(path) => {
-					addShare({path})
-					setAddFolderOpen(false)
-				}}
-			/>
 
 			{/* Connection instructions */}
 			<AnimatePresence>
@@ -303,7 +305,34 @@ export default function FileSharingDrawerOrDialog() {
 		</div>
 	)
 
-	const content = showChoiceScreen ? choiceScreen : activeScreen
+	// MiniBrowser with Home and External as expandable roots.
+	// Home auto-expands via onOpenPath so users see their folders immediately.
+	// The /External root itself is not selectable (selectableFilter), but its partitions are.
+	const addFolderBrowser = (
+		<MiniBrowser
+			open={isAddFolderOpen}
+			onOpenChange={setAddFolderOpen}
+			rootPath={HOME_PATH}
+			rootPaths={[HOME_PATH, EXTERNAL_STORAGE_PATH]}
+			onOpenPath={HOME_PATH}
+			preselectOnOpen={false}
+			title={t('settings.file-sharing.add-folder-title')}
+			selectionMode='folders'
+			disabledPaths={shares?.map((s) => s.path)}
+			selectableFilter={(entry) => entry.path !== EXTERNAL_STORAGE_PATH}
+			onSelect={(path) => {
+				addShare({path})
+				setAddFolderOpen(false)
+			}}
+		/>
+	)
+
+	const content = (
+		<>
+			{showChoiceScreen ? choiceScreen : activeScreen}
+			{addFolderBrowser}
+		</>
+	)
 
 	if (isMobile) {
 		return (

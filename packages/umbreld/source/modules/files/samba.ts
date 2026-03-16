@@ -75,6 +75,7 @@ export default class Samba {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	#removeFileChangeListener?: () => void
+	#removeExternalStorageChangeListener?: () => void
 
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
@@ -101,12 +102,18 @@ export default class Samba {
 			'files:watcher:change',
 			this.#handleFileChange.bind(this),
 		)
+
+		// Reapply shares when external storage changes (connect/disconnect)
+		this.#removeExternalStorageChangeListener = this.#umbreld.eventBus.on('files:external-storage:change', () => {
+			this.applyShares().catch((error) => this.logger.error('Failed to reapply shares', error))
+		})
 	}
 
 	// Remove listener
 	async stop() {
 		this.logger.log('Stopping samba')
 		this.#removeFileChangeListener?.()
+		this.#removeExternalStorageChangeListener?.()
 		await $`systemctl stop smbd`.catch((error) => this.logger.error(`Failed to stop samba`, error))
 		await $`systemctl stop wsdd2`.catch((error) => this.logger.error(`Failed to stop wsdd2`, error))
 	}
@@ -138,27 +145,51 @@ export default class Samba {
 	}
 
 	// Apply shares to Samba
-	async applyShares() {
+	async applyShares({excludePaths}: {excludePaths?: string[]} = {}) {
 		const shares = await this.#get()
 
 		// Generate Samba config
 		let config = SMB_CONFIG
-		for (const share of shares) {
-			// Make Umbrel shares easily detectable in clients
-			share.name = await this.#computeSharename(share.name, share.path)
+		let activeShares = 0
+		const sharesToClose: string[] = []
 
+		for (const share of shares) {
 			// Convert to system path
-			share.path = await this.#umbreld.files.virtualToSystemPath(share.path)
+			const systemPath = await this.#umbreld.files.virtualToSystemPath(share.path)
+
+			// Skip shares whose paths don't exist (e.g., disconnected external drives)
+			if (!(await fse.pathExists(systemPath))) continue
+
+			// Skip shares being excluded (e.g., those we pass in when ejecting a drive)
+			// Use path + '/' to avoid false matches (e.g., ejecting "My SSD" shouldn't exclude a share at "/External/My SSD 2/Music")
+			if (excludePaths?.some((p) => share.path === p || share.path.startsWith(p + '/'))) {
+				const sharename = await this.#computeSharename(share.name, share.path)
+				sharesToClose.push(sharename)
+				continue
+			}
+
+			// Make Umbrel shares easily detectable in clients
+			const name = await this.#computeSharename(share.name, share.path)
 
 			// Append the share config
-			config += shareConfig(share.name, share.path)
+			config += shareConfig(name, systemPath)
+			activeShares++
+		}
+
+		// Force close any excluded shares so they release file handles before we unmount a drive
+		for (const sharename of sharesToClose) {
+			this.logger.log(`Closing share '${sharename}'`)
+			await $`smbcontrol smbd close-share ${sharename}`.catch((error) => {
+				this.logger.error(`Failed to close share '${sharename}'`, error)
+			})
 		}
 
 		// Write out Samba config
 		await fse.writeFile('/etc/samba/smb.conf', config)
 
-		// If we don't have any shares, ensure samba isn't running and return
-		if (shares.length === 0) return await $`systemctl stop smbd`
+		// If we don't have any active shares, ensure samba isn't running and return
+		// wsdd2 will stop itself when it detects Samba isn't running.
+		if (activeShares === 0) return await $`systemctl stop smbd`
 
 		// Otherwise start samba, or reload it's config if it's already running
 		await $`systemctl start smbd`
@@ -191,6 +222,10 @@ export default class Samba {
 	}
 
 	// Remove shares on deletion
+	// Note: The watcher only covers /Home, /Trash, and /Apps. External drives are not watched,
+	// so if a shared folder on an external drive is deleted outside the UI while the drive is
+	// connected, the share will remain in the store but be marked as unavailable by listShares()
+	// and skipped by applyShares(). (UI-initiated deletes handle share removal in files.ts.)
 	// TODO: It would be nice if we could handle updating favorites when the favorited directory is
 	// moved/renamed. It's not trivial because this can happen via something external like an app or SMB
 	// and there's no way to tell the difference between a move/rename and a deletion/recreation.
@@ -198,7 +233,10 @@ export default class Samba {
 		if (event.type !== 'delete') return
 		const shares = await this.#get()
 		const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(event.path)
-		const deletedShares = shares.filter((share) => share.path.startsWith(virtualDeletedPath))
+		// Use path + '/' to avoid false matches (e.g., "/Home/Folder" matching "/Home/Folder 2")
+		const deletedShares = shares.filter(
+			(share) => share.path === virtualDeletedPath || share.path.startsWith(virtualDeletedPath + '/'),
+		)
 		for (const share of deletedShares) await this.removeShare(share.path)
 	}
 
@@ -207,25 +245,20 @@ export default class Samba {
 		// Get shares from the store
 		const shares = await this.#get()
 
-		// Strip out any shares that aren't existing directories
-		const mappedShares = await Promise.all(
+		// Check availability (e.g., external drive may be disconnected) and compute
+		// client-facing sharenames using the same logic used when generating smb.conf.
+		const sharesWithStatus = await Promise.all(
 			shares.map(async (share) => {
 				const systemPath = await this.#umbreld.files.virtualToSystemPath(share.path)
-				const file = await this.#umbreld.files.status(systemPath).catch(() => undefined)
-				if (file?.type !== 'directory') return undefined
-				return share
+				return {
+					...share,
+					available: await fse.pathExists(systemPath),
+					sharename: await this.#computeSharename(share.name, share.path),
+				}
 			}),
 		)
-		const filteredShares = mappedShares.filter((share) => share !== undefined)
 
-		// Compute client-facing sharenames using the same logic used when generating smb.conf.
-		const sharesWithSharenames = await Promise.all(
-			filteredShares.map(async (share) => ({
-				...share,
-				sharename: await this.#computeSharename(share.name, share.path),
-			})),
-		)
-		return sharesWithSharenames
+		return sharesWithStatus
 	}
 
 	// Share a new directory
