@@ -11,6 +11,7 @@ import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} fro
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
 import {Separator} from '@/components/ui/separator'
 import {LOADING_DASH} from '@/constants'
+import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {
 	APPS_PATH as FILES_APPS_PATH,
 	RECENTS_PATH as FILES_RECENTS_PATH,
@@ -253,6 +254,28 @@ function CmdkContent() {
 			<SettingsSearchItem value={t('advanced-settings')} onSelect={() => navigate('/settings/advanced')} />
 			<SettingsSearchItem value={t('beta-program')} onSelect={() => navigate('/settings/advanced/beta-program')} />
 			<SettingsSearchItem value={t('external-dns')} onSelect={() => navigate('/settings/advanced/external-dns')} />
+			<SettingsSearchItem value={t('settings.file-sharing')} onSelect={() => navigate('/settings/file-sharing')} />
+			<SettingsSearchItem value={t('storage-manager')} onSelect={() => navigate('/settings/storage')} />
+			<SearchItem
+				value={t('backups-restore')}
+				icon={<img src={backupsIcon} alt='' className='size-full' />}
+				onSelect={() => {
+					navigate('/settings/backups/restore')
+					setOpen(false)
+				}}
+			>
+				{t('backups-restore')}
+			</SearchItem>
+			<SearchItem
+				value={t('backups-rewind')}
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				onSelect={() => {
+					navigate('/files/Home?rewind=open')
+					setOpen(false)
+				}}
+			>
+				{t('backups-rewind')}
+			</SearchItem>
 			{readyApps.map((app) => (
 				<SearchItem
 					value={app.name}
