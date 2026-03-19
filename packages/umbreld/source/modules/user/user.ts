@@ -49,6 +49,20 @@ export default class User {
 		return this.#store.set('user.wallpaper', wallpaper)
 	}
 
+	// Save a custom wallpaper image and set it as the active wallpaper
+	async saveCustomWallpaper(imageData: Buffer): Promise<string> {
+		const {randomUUID} = await import('node:crypto')
+		const path = await import('node:path')
+
+		const id = randomUUID()
+		const wallpaperDir = path.join(this.#umbreld.dataDirectory, 'data', 'wallpapers')
+		await fse.ensureDir(wallpaperDir)
+		await fse.writeFile(path.join(wallpaperDir, `${id}.jpg`), imageData)
+		const wallpaperId = `custom:${id}`
+		await this.setWallpaper(wallpaperId)
+		return wallpaperId
+	}
+
 	// Set the users password
 	async setPassword(password: string) {
 		// Hash the password with the current recommended default

@@ -258,4 +258,26 @@ export default router({
 		const user = await ctx.user.get()
 		return user?.language ?? null
 	}),
+
+	// Uploads a custom wallpaper image and sets it as the active wallpaper
+	uploadWallpaper: privateProcedure
+		.input(
+			z.object({
+				// Base64-encoded JPEG. Cap at ~10 MB encoded.
+				imageBase64: z.string().max(14_000_000),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			const buffer = Buffer.from(input.imageBase64, 'base64')
+
+			// Basic sanity check: JPEG magic bytes FF D8 FF
+			if (buffer[0] !== 0xff || buffer[1] !== 0xd8 || buffer[2] !== 0xff) {
+				throw new TRPCError({
+					code: 'BAD_REQUEST',
+					message: 'Only JPEG images are supported',
+				})
+			}
+
+			return ctx.user.saveCustomWallpaper(buffer)
+		}),
 })

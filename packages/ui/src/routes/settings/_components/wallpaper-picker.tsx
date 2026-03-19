@@ -3,6 +3,26 @@ import {useEffect, useRef} from 'react'
 import {cn} from '@/lib/utils'
 import {useWallpaper, wallpapers} from '@/providers/wallpaper'
 
+// TODO: export from wallpaper.tsx when lucide-react is confirmed available
+function UploadIcon({className}: {className?: string}) {
+	return (
+		<svg
+			xmlns='http://www.w3.org/2000/svg'
+			className={className}
+			fill='none'
+			viewBox='0 0 24 24'
+			stroke='currentColor'
+			strokeWidth={1.5}
+		>
+			<path
+				strokeLinecap='round'
+				strokeLinejoin='round'
+				d='M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5'
+			/>
+		</svg>
+	)
+}
+
 const ITEM_W = 40
 const GAP = 4
 const ACTIVE_SCALE = 1.4
@@ -44,11 +64,39 @@ function WallpaperItem({
 
 // TODO: delay mounting for performance
 export function WallpaperPicker({maxW}: {maxW?: number}) {
-	const {wallpaper, setWallpaperId} = useWallpaper()
+	const {wallpaper, setWallpaperId, uploadWallpaper} = useWallpaper()
 	const containerRef = useRef<HTMLDivElement>(null)
 	const scrollerRef = useRef<HTMLDivElement>(null)
 	const itemsRef = useRef<HTMLDivElement>(null)
 	const selectedItemRef = useRef<HTMLButtonElement>(null)
+	const fileInputRef = useRef<HTMLInputElement>(null)
+
+	async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0]
+		if (!file) return
+
+		// Normalise any browser-supported format (PNG, WebP, HEIC…) to JPEG and strip EXIF
+		const objectUrl = URL.createObjectURL(file)
+		const img = new Image()
+		img.src = objectUrl
+		await new Promise<void>((resolve) => {
+			img.onload = () => resolve()
+		})
+
+		const canvas = document.createElement('canvas')
+		canvas.width = img.naturalWidth
+		canvas.height = img.naturalHeight
+		const ctx = canvas.getContext('2d')!
+		ctx.drawImage(img, 0, 0)
+		URL.revokeObjectURL(objectUrl)
+
+		const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92))
+		if (!blob) return
+
+		const arrayBuffer = await blob.arrayBuffer()
+		const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+		await uploadWallpaper(base64)
+	}
 
 	useEffect(() => {
 		if (!containerRef.current || !selectedItemRef.current || !itemsRef.current || !scrollerRef.current) {
@@ -91,6 +139,21 @@ export function WallpaperPicker({maxW}: {maxW?: number}) {
 							bg={`/assets/wallpapers/generated-thumbs/${w.id}.jpg`}
 						/>
 					))}
+					<input
+						ref={fileInputRef}
+						type='file'
+						accept='image/*'
+						className='hidden'
+						onChange={handleFileChange}
+					/>
+					<button
+						type='button'
+						onClick={() => fileInputRef.current?.click()}
+						className='flex h-6 w-10 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-3 border border-dashed border-white/30 hover:border-white/60 transition-colors outline-hidden focus-visible:ring-1 ring-white/50'
+						aria-label='Upload custom wallpaper'
+					>
+						<UploadIcon className='h-2.5 w-2.5 text-white/60' />
+					</button>
 					<div className='w-1 shrink-0' />
 				</div>
 			</div>
