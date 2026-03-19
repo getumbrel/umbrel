@@ -1,5 +1,6 @@
 import {motion} from 'motion/react'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {FaRegPlayCircle} from 'react-icons/fa'
 import {FaRegCirclePause} from 'react-icons/fa6'
 import {Link, useNavigate} from 'react-router-dom'
@@ -15,7 +16,6 @@ import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {useUserApp} from '@/providers/apps'
 import {AppStateOrLoading, progressBarStates, progressStates, trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
 
 import {UninstallConfirmationDialog} from './uninstall-confirmation-dialog'
@@ -117,6 +117,7 @@ export function AppIcon({
 }
 
 export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?: string}) {
+	const {t} = useTranslation()
 	switch (state) {
 		case 'not-installed':
 			return t('app.installing')
@@ -147,6 +148,7 @@ export function AppLabel({state, label = ''}: {state: AppStateOrLoading; label?:
 }
 
 export function AppIconConnected({appId}: {appId: string}) {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const userApp = useUserApp(appId)
 	const appInstall = useAppInstall(appId)
@@ -298,6 +300,7 @@ export function AppIconConnected({appId}: {appId: string}) {
 }
 
 function ContextMenuItemLinkToAppStore({appId}: {appId: string}) {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const utils = trpcReact.useUtils()
 	return (

@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {AnimatedInputError, Input, PasswordInput} from '@/components/ui/input'
@@ -8,7 +9,6 @@ import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {useAuth} from '@/modules/auth/use-auth'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 // Credentials for Umbrel Pro RAID flow. Passed via React Router's location.state
 // through the RAID setup pages. Actual user.register call happens in setup.tsx
@@ -21,6 +21,7 @@ export type AccountCredentials = {
 }
 
 export default function CreateAccount() {
+	const {t} = useTranslation()
 	const title = t('onboarding.create-account')
 	const navigate = useNavigate()
 	const auth = useAuth()

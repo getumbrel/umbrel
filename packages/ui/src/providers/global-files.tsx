@@ -1,5 +1,6 @@
 import React, {createContext, useCallback, useContext, useRef, useState} from 'react'
 import {FileWithPath} from 'react-dropzone'
+import {useTranslation} from 'react-i18next'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
 import {toast} from '@/components/ui/toast'
@@ -9,7 +10,6 @@ import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
 import type {RouterOutput} from '@/trpc/trpc'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 // Types
@@ -107,6 +107,7 @@ const calculateUploadStats = (items: UploadingFileSystemItem[]): UploadStats => 
 
 // The Provider
 export function GlobalFilesProvider({children}: {children: React.ReactNode}) {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const confirm = useConfirmation()
 

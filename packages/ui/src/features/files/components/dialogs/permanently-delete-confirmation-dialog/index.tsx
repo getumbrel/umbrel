@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -15,9 +17,9 @@ import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function PermanentlyDeleteConfirmationDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('files-permanently-delete-confirmation')
 	const {deleteSelectedItems} = useFilesOperations()
 	const selectedItems = useFilesStore((s) => s.selectedItems)

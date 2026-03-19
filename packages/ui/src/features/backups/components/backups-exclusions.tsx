@@ -4,6 +4,7 @@
 import {ChevronDown, MinusCircle, PlusCircle} from 'lucide-react'
 import {matchSorter} from 'match-sorter'
 import {useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {AppIcon} from '@/components/app-icon'
 import {Button} from '@/components/ui/button'
@@ -19,10 +20,10 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
 import {useApps} from '@/providers/apps'
-import {t} from '@/utils/i18n'
 
 // MAIN COMPONENT
 export function BackupsExclusions({showTitle = false}: {showTitle?: boolean}) {
+	const {t} = useTranslation()
 	const {filteredIgnoredPaths, addIgnoredPath, removeIgnoredPath} = useBackupIgnoredPaths()
 
 	const [isAddFolderOpen, setAddFolderOpen] = useState(false)
@@ -260,6 +261,7 @@ function AppRow({
 	paths: string[]
 	isIgnored: boolean
 }) {
+	const {t} = useTranslation()
 	const [open, setOpen] = useState(false)
 	const hasDefaultIgnores = (paths || []).length > 0
 

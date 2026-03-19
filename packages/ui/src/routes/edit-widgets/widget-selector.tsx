@@ -2,7 +2,7 @@ import {Minus, Plus} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
@@ -16,7 +16,6 @@ import {cn} from '@/lib/utils'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
-import {t} from '@/utils/i18n'
 
 export function WidgetSelector({
 	open,
@@ -27,6 +26,7 @@ export function WidgetSelector({
 	onOpenChange: (open: boolean) => void
 	disabled?: boolean
 }) {
+	const {t} = useTranslation()
 	// Delay until after `usePager` has injected CSS vars
 	const [isReady, setIsReady] = useState(false)
 	useEffect(() => {
@@ -101,6 +101,7 @@ export function WidgetSelector({
 				{disabled && (
 					<p className='text-13 text-white/40'>
 						<Trans
+							t={t}
 							i18nKey='widgets.install-app-to-customize'
 							components={{
 								linked: (
@@ -154,6 +155,7 @@ function WidgetSheet({
 	children: ReactNode
 	selectedCssHeight: string
 }) {
+	const {t} = useTranslation()
 	return (
 		<BackdropBlurVariantContext value='default'>
 			<Sheet open={open} onOpenChange={onOpenChange} modal={false}>

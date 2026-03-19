@@ -1,11 +1,11 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 import {ExternalToast} from 'sonner'
 
 import {toast} from '@/components/ui/toast'
 import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {isCpuTooHot, isTrpcDiskFull, isTrpcMemoryLow} from '@/utils/system'
 
 function useMounted() {
@@ -16,6 +16,7 @@ function useMounted() {
 }
 
 export function useSettingsNotificationCount() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const utils = trpcReact.useUtils()
 

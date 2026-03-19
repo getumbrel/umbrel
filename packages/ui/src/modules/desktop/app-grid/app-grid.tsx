@@ -1,6 +1,6 @@
 import {ReactNode, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {AppGridGradientMasking} from '../desktop-misc'
@@ -18,6 +18,7 @@ export function AppGrid({
 	onlyFirstPage?: boolean
 	forceDesktop?: boolean
 }) {
+	const {t} = useTranslation()
 	const {pageInnerRef, pages, appsPerRow, hasMeasurement} = usePager({
 		apps,
 		widgets,

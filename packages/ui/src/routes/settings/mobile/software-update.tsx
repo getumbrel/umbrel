@@ -1,6 +1,6 @@
 // TODO: Re-enable Trans and Link when whats-new content is updated
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
@@ -12,10 +12,10 @@ import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function SoftwareUpdateDrawer() {
+	const {t} = useTranslation()
 	const title = t('software-update.title')
 	const dialogProps = useSettingsDialogProps()
 
@@ -37,7 +37,7 @@ export function SoftwareUpdateDrawer() {
 					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
 					{/* TODO: Re-enable when whats-new content is updated */}
 					{/* <p className='text-12 -tracking-2 opacity-50'>
-						<Trans
+						<Trans t={t}
 							i18nKey='software-update.see-whats-new'
 							components={{
 								linked: <Link to={linkToDialog('whats-new')} className='underline' />,

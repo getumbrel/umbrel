@@ -3,6 +3,7 @@ import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-
 import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
+import {useTranslation} from 'react-i18next'
 import {z} from 'zod'
 
 import {Button} from '@/components/ui/button'
@@ -25,22 +26,6 @@ import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
-
-// Validation schemas
-// Step‑agnostic schema where `share` is optional so early steps validate.
-// TODO: update zod messages
-const stepSchema = z.object({
-	host: z.string().min(1, {message: t('files-add-network-share.host-required')}),
-	share: z.string().optional(),
-	username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
-	password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
-})
-
-// Final submission schema where `share` must be present.
-const submitSchema = stepSchema.extend({
-	share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
-})
 
 // Form steps
 enum Step {
@@ -68,6 +53,19 @@ export default function AddNetworkShareDialog(props?: {
 	suppressNavigateOnAdd?: boolean
 	onAdded?: (host?: string) => void
 }) {
+	const {t} = useTranslation()
+
+	// Validation schemas inside the component so t() evaluates with the current language
+	const stepSchema = z.object({
+		host: z.string().min(1, {message: t('files-add-network-share.host-required')}),
+		share: z.string().optional(),
+		username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
+		password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
+	})
+	const submitSchema = stepSchema.extend({
+		share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
+	})
+
 	const internalDialog = useDialogOpenProps('files-add-network-share')
 	const dialogProps = {
 		open: props?.open ?? internalDialog.open,
@@ -440,6 +438,7 @@ function DiscoverStep({
 	onManual: () => void
 	onRetry: () => void
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-4 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
@@ -493,6 +492,7 @@ function DiscoverStep({
 }
 
 function CredentialsStep() {
+	const {t} = useTranslation()
 	const form = useFormContext()
 	return (
 		<div className='space-y-4 py-2'>
@@ -546,6 +546,7 @@ function SelectShareStep({
 	onSelect: (s: string) => void
 	disabled?: boolean
 }) {
+	const {t} = useTranslation()
 	const [manualValue, setManualValue] = useState('')
 	const [showManualEntry, setShowManualEntry] = useState(false)
 

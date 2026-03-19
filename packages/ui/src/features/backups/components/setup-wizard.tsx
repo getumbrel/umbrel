@@ -1,10 +1,9 @@
 import {zodResolver} from '@hookform/resolvers/zod'
-import {t} from 'i18next'
 import {ChevronDown, Copy, Eye, EyeOff, HardDrive, Loader2, LockKeyhole} from 'lucide-react'
 import * as React from 'react'
 import {useEffect, useMemo, useState} from 'react'
 import {FormProvider, useForm, useFormContext, type Resolver, type SubmitHandler} from 'react-hook-form'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {FaRegSave} from 'react-icons/fa'
 import {TbAlertTriangleFilled, TbExternalLink, TbPassword, TbShoppingBag} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
@@ -46,16 +45,6 @@ import {useConfirmation} from '@/providers/confirmation'
 // Types & Schema
 // ---------------------------------------------
 
-const encryptionSchema = z
-	.object({
-		password: z.string().min(8, {message: t('backups.password-minimum-length')}),
-		confirm: z.string(),
-	})
-	.refine((d) => d.password === d.confirm, {
-		message: t('backups.passwords-do-not-match'),
-		path: ['confirm'],
-	})
-
 const destinationSchema = z.discriminatedUnion('type', [
 	z.object({
 		type: z.literal('nas'),
@@ -68,20 +57,11 @@ const destinationSchema = z.discriminatedUnion('type', [
 	}),
 ]) satisfies z.ZodType<BackupDestination>
 
-const formSchema = z.object({
-	destination: destinationSchema,
-	folder: z.string().min(1, {message: t('backups.please-choose-folder')}),
-	encryption: encryptionSchema,
-})
-
-type FormValues = z.infer<typeof formSchema>
-
-// Relaxed schema used during the wizard (destination required, others can be filled later)
-const wizardStepSchema = z.object({
-	destination: destinationSchema,
-	folder: z.string().optional(),
-	encryption: encryptionSchema.partial(),
-})
+type FormValues = {
+	destination: BackupDestination
+	folder: string
+	encryption: {password: string; confirm: string}
+}
 
 // ---------------------------------------------
 // Wizard Steps
@@ -95,32 +75,54 @@ enum Step {
 	Review = 4,
 }
 
-// Header meta per step (title and optional subtitle)
-const headerMetaForStep = (s: Step) => {
-	switch (s) {
-		case Step.Destination:
-			return {
-				title: t('backups.select-backup-location'),
-				subtitle: t('backups.schedule-description'),
-			}
-		case Step.Folder:
-			return {title: t('backups.select-backup-location'), subtitle: t('backups.select-backup-folder-description')}
-		case Step.Exclusions:
-			return {title: t('backups.exclude-from-backups'), subtitle: t('backups.exclude-from-backups-description')}
-		case Step.Encryption:
-			return {title: t('backups.set-encryption-password'), subtitle: t('backups.set-encryption-password-description')}
-		case Step.Review:
-			return {title: t('backups.review'), subtitle: t('backups.review-description')}
-		default:
-			return {title: '', subtitle: ''}
-	}
-}
-
 // ---------------------------------------------
 // MAIN COMPONENT
 // ---------------------------------------------
 
 export function BackupsSetupWizard() {
+	const {t} = useTranslation()
+
+	// Validation schemas inside the component so t() evaluates with the current language
+	const encryptionSchema = z
+		.object({
+			password: z.string().min(8, {message: t('backups.password-minimum-length')}),
+			confirm: z.string(),
+		})
+		.refine((d) => d.password === d.confirm, {
+			message: t('backups.passwords-do-not-match'),
+			path: ['confirm'],
+		})
+	const formSchema = z.object({
+		destination: destinationSchema,
+		folder: z.string().min(1, {message: t('backups.please-choose-folder')}),
+		encryption: encryptionSchema,
+	})
+	const wizardStepSchema = z.object({
+		destination: destinationSchema,
+		folder: z.string().optional(),
+		encryption: encryptionSchema.partial(),
+	})
+
+	const headerMetaForStep = (s: Step) => {
+		switch (s) {
+			case Step.Destination:
+				return {title: t('backups.select-backup-location'), subtitle: t('backups.schedule-description')}
+			case Step.Folder:
+				return {title: t('backups.select-backup-location'), subtitle: t('backups.select-backup-folder-description')}
+			case Step.Exclusions:
+				return {title: t('backups.exclude-from-backups'), subtitle: t('backups.exclude-from-backups-description')}
+			case Step.Encryption:
+				return {
+					title: t('backups.set-encryption-password'),
+					subtitle: t('backups.set-encryption-password-description'),
+				}
+			case Step.Review:
+				return {title: t('backups.review'), subtitle: t('backups.review-description')}
+			default:
+				return {title: '', subtitle: ''}
+		}
+	}
+
 	const [step, setStep] = useState<Step>(Step.Destination)
 	const navigate = useNavigate()
 	const confirm = useConfirmation()
@@ -399,6 +401,7 @@ function DestinationStep({
 	onChangeDestination: (dest: BackupDestination) => void
 	onNext: () => void
 }) {
+	const {t} = useTranslation()
 	const form = useFormContext<FormValues>()
 	const {params, addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
@@ -629,6 +632,7 @@ function DestinationStep({
 					<div className='flex flex-col items-center justify-center gap-2'>
 						<p className='max-w-md text-center text-sm text-white/80'>
 							<Trans
+								t={t}
 								i18nKey='backups-setup-umbrel-private-cloud-cta'
 								components={{
 									bold: <span className='font-bold text-white' />,
@@ -680,6 +684,7 @@ function FolderPickerStep({
 	selectedName?: string
 	disabledPaths?: string[]
 }) {
+	const {t} = useTranslation()
 	const [isBrowserOpen, setBrowserOpen] = useState(false)
 
 	// Show nothing until a subfolder is chosen
@@ -695,6 +700,7 @@ function FolderPickerStep({
 				<div className='mb-4 text-sm font-medium'>
 					{/* Use Trans component to allow HTML interpolation for brand styling while maintaining proper i18n sentence context */}
 					<Trans
+						t={t}
 						i18nKey='backups.choose-folder-within-device'
 						values={{device: selectedName || ''}}
 						components={{
@@ -757,6 +763,7 @@ function FolderPickerStep({
 // ---------------------------------------------
 
 function EncryptionStep() {
+	const {t} = useTranslation()
 	const form = useFormContext<FormValues>()
 
 	return (
@@ -807,6 +814,7 @@ function EncryptionStep() {
 // ---------------------------------------------
 
 function ReviewStep({values}: {values: FormValues}) {
+	const {t} = useTranslation()
 	let pathOnly = values.folder
 	if (values.destination.type === 'nas') {
 		const hostRoot = `/Network/${values.destination.host}`

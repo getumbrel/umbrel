@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {RiShutDownLine} from 'react-icons/ri'
 
 import {
@@ -10,7 +11,6 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
-import {t} from '@/utils/i18n'
 
 type ShutdownConfirmationDialogProps = {
 	open: boolean
@@ -18,6 +18,7 @@ type ShutdownConfirmationDialogProps = {
 }
 
 export function ShutdownConfirmationDialog({open, onOpenChange}: ShutdownConfirmationDialogProps) {
+	const {t} = useTranslation()
 	const {shutdown} = useGlobalSystemState()
 
 	return (

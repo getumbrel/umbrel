@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {FaEject} from 'react-icons/fa6'
 import {RiErrorWarningFill, RiHardDrive2Fill} from 'react-icons/ri'
 import {useNavigate as useReactRouterNavigate} from 'react-router-dom'
@@ -13,7 +14,6 @@ import type {ExternalStorageDevice} from '@/features/files/types'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
@@ -27,6 +27,7 @@ export interface SidebarExternalStorageItemProps {
 }
 
 export function SidebarExternalStorageItem({item}: SidebarExternalStorageItemProps) {
+	const {t} = useTranslation()
 	const {ejectDisk} = useExternalStorage()
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const navigate = useReactRouterNavigate()

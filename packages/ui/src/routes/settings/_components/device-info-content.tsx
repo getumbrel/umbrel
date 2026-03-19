@@ -1,10 +1,11 @@
+import {useTranslation} from 'react-i18next'
 import {TbQuestionMark} from 'react-icons/tb'
 
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
 import {cn} from '@/lib/utils'
-import {maybeT, t} from '@/utils/i18n'
+import {maybeT} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import AnimatedUmbrelHomeIcon from './device-info-umbrel-home'
@@ -21,6 +22,7 @@ export function DeviceInfoContent({
 	modelNumber?: string
 	serialNumber?: string
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='space-y-6'>
 			<div className={cn('flex justify-center', umbrelHostEnvironment !== 'umbrel-pro' && 'py-2')}>

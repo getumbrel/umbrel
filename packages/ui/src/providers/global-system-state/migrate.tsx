@@ -1,8 +1,9 @@
+import {useTranslation} from 'react-i18next'
+
 import {BarePage} from '@/layouts/bare/bare-page'
 import FailedLayout from '@/modules/bare/failed-layout'
 import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useMigrate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const migrateMut = trpcReact.migration.migrate.useMutation({
@@ -16,6 +17,7 @@ export function useMigrate({onMutate, onSuccess}: {onMutate?: () => void; onSucc
 }
 
 export function MigratingCover({onRetry}: {onRetry: () => void}) {
+	const {t} = useTranslation()
 	const updateStatusQ = trpcReact.migration.migrationStatus.useQuery(undefined, {
 		refetchInterval: 500,
 	})

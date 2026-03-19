@@ -1,4 +1,5 @@
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {ContextMenuItem} from '@/components/ui/context-menu'
 import {DropdownMenuItem} from '@/components/ui/dropdown-menu'
@@ -10,9 +11,9 @@ import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useConfirmation} from '@/providers/confirmation'
-import {t} from '@/utils/i18n'
 
 export function TrashListing() {
+	const {t} = useTranslation()
 	const {currentPath} = useNavigate()
 	const {listing, isLoading, error, fetchMoreItems} = useListDirectory(currentPath)
 	const {emptyTrash} = useFilesOperations()

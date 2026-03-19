@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {
 	Drawer,
 	DrawerContent,
@@ -8,11 +10,11 @@ import {
 } from '@/components/ui/drawer'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 import {DeviceInfoContent} from '../_components/device-info-content'
 
 export function DeviceInfoDrawer() {
+	const {t} = useTranslation()
 	const title = t('device-info')
 	const dialogProps = useSettingsDialogProps()
 

@@ -1,5 +1,6 @@
 import {motion, MotionConfig} from 'motion/react'
 import {useId, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {FlameIcon} from '@/features/files/assets/flame-icon'
@@ -11,9 +12,9 @@ import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useConfirmation} from '@/providers/confirmation'
-import {t} from '@/utils/i18n'
 
 export function SidebarTrash() {
+	const {t} = useTranslation()
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const isTrash = currentPath === TRASH_PATH
 	const [isHovering, setIsHovering] = useState(false)

@@ -1,5 +1,6 @@
 import {Upload} from 'lucide-react'
 import {useEffect, useLayoutEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiClipboardLine} from 'react-icons/ri'
 import {TbWorldPlus} from 'react-icons/tb'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
@@ -20,11 +21,11 @@ import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 // `marqueeScale` is threaded through so embedded contexts (like Rewind) can tell marquee selection
 // about the CSS transform that shrinks the Files UI.
 export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {}) {
+	const {t} = useTranslation()
 	const {
 		currentPath,
 		uiPath,

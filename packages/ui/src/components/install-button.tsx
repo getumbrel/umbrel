@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 import {arrayIncludes} from 'ts-extras'
 
@@ -5,7 +6,6 @@ import {ProgressButton} from '@/components/progress-button'
 import {UNKNOWN} from '@/constants'
 import {cn} from '@/lib/utils'
 import {AppStateOrLoading} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {assertUnreachable} from '@/utils/misc'
 // import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
@@ -57,6 +57,7 @@ function ButtonContentForState({
 	installSize?: string
 	progress?: number
 }) {
+	const {t} = useTranslation()
 	switch (state) {
 		case 'not-installed':
 			return (

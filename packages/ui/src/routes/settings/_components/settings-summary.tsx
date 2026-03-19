@@ -1,13 +1,14 @@
 import {Fragment} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
 
 export function SettingsSummary() {
+	const {t} = useTranslation()
 	const [languageCode] = useLanguage()
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()

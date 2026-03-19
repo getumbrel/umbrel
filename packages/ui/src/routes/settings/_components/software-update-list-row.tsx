@@ -1,6 +1,6 @@
 // TODO: Re-enable Trans and Link when whats-new content is updated
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshLine} from 'react-icons/ri'
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
@@ -11,11 +11,11 @@ import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
+	const {t} = useTranslation()
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const linkToDialog = useLinkToDialog()
@@ -51,7 +51,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 							{t('software-update.on-latest')}
 							{/* TODO: Re-enable when whats-new content is updated */}
 							{/* {' · '}
-							<Trans
+							<Trans t={t}
 								i18nKey='software-update.see-whats-new'
 								components={{
 									linked: <Link to={linkToDialog('whats-new')} className='underline' />,

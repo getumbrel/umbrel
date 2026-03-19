@@ -1,8 +1,8 @@
 import {motion} from 'motion/react'
-
-import {t} from '@/utils/i18n'
+import {useTranslation} from 'react-i18next'
 
 export function MinimizedContent({count}: {count: number}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex size-full items-center gap-2 px-2'>
 			<div className='relative inline-flex size-4 items-center justify-center'>

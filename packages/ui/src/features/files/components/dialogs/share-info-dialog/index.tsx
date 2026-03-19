@@ -1,5 +1,6 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
 
@@ -28,9 +29,9 @@ import {useShares} from '@/features/files/hooks/use-shares'
 import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function ShareInfoDialog() {
+	const {t} = useTranslation()
 	const isMobile = useIsMobile()
 	const homeDirectoryName = useHomeDirectoryName()
 	const [searchParams] = useSearchParams()

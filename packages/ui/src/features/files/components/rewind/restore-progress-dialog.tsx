@@ -1,4 +1,5 @@
 import {AlertOctagon, CheckCircle2} from 'lucide-react'
+import {useTranslation} from 'react-i18next'
 
 import {Alert, ErrorAlert, WarningAlert} from '@/components/ui/alert'
 import {Dialog, DialogContent, DialogDescription, DialogTitle} from '@/components/ui/dialog'
@@ -8,11 +9,11 @@ import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {OperationsInProgress, useGlobalFiles} from '@/providers/global-files'
-import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 export function RestoreProgressDialog({open, phase}: {open: boolean; phase: 'idle' | 'running' | 'success' | 'error'}) {
+	const {t} = useTranslation()
 	const {operations} = useGlobalFiles()
 
 	// Filter restore operations (copies from /Backups/), and sort them so that items with higher progress appear first
@@ -94,11 +95,15 @@ function RestoringItems({
 	speed: number
 	operations: OperationsInProgress
 }) {
+	const {t, i18n} = useTranslation()
 	return (
 		<div className='flex h-full w-full flex-col overflow-hidden py-3'>
 			<div className='mb-4 flex items-center justify-between'>
 				<span className='text-xs text-white/60'>
-					{t('files-listing.item-count', {formattedCount: formatNumberI18n({n: count, showDecimals: false}), count})}{' '}
+					{t('files-listing.item-count', {
+						formattedCount: formatNumberI18n({n: count, showDecimals: false, locale: i18n.language}),
+						count,
+					})}{' '}
 					&bull; {progress}%
 				</span>
 				<span className='text-xs text-white/60'>{formatFilesystemSize(speed)}/s</span>

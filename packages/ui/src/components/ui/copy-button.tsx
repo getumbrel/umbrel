@@ -1,12 +1,13 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbCopy} from 'react-icons/tb'
 import {useCopyToClipboard} from 'react-use'
 
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip'
-import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function CopyButton({value}: {value: string}) {
+	const {t} = useTranslation()
 	const [, copyToClipboard] = useCopyToClipboard()
 	const [showCopied, setShowCopied] = useState(false)
 

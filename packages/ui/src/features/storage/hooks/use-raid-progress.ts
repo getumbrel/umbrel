@@ -1,8 +1,8 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 // Types matching the backend event types
 type ExpansionStatus = {
@@ -34,6 +34,7 @@ export type RaidProgress = {
 // Hook to subscribe to all RAID progress events and return the active operation.
 // Returns null when no operation is in progress.
 export function useRaidProgress(): RaidProgress | null {
+	const {t} = useTranslation()
 	// Track all RAID operation states
 	const [expansion, setExpansion] = useState<ExpansionStatus | null>(null)
 	const [rebuild, setRebuild] = useState<RebuildStatus | null>(null)

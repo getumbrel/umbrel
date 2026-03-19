@@ -1,8 +1,10 @@
+import {useTranslation} from 'react-i18next'
+
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 
 	const torEnabledQ = trpcReact.apps.getTorEnabled.useQuery()

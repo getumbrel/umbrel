@@ -1,13 +1,14 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Link, useLocation} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
 export const RecommendationsSection = ({apps}: {apps: RegistryApp[]}) => {
+	const {t} = useTranslation()
 	const location = useLocation()
 
 	if (location.pathname.startsWith('/community-app-store')) return null

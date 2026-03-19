@@ -1,4 +1,5 @@
-import {useId, useState} from 'react'
+import {useId} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {
 	Drawer,
@@ -11,26 +12,13 @@ import {
 import {ListRadioItem} from '@/components/ui/list'
 import {useLanguage} from '@/hooks/use-language'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
-import {languages, SupportedLanguageCode} from '@/utils/language'
-import {sleep} from '@/utils/misc'
+import {languages} from '@/utils/language'
 
 export function LanguageDrawer() {
+	const {t} = useTranslation()
 	const title = t('language')
 	const dialogProps = useSettingsDialogProps()
 	const [activeCode, setActiveCode] = useLanguage()
-	const [temporaryCode, setTemporaryCode] = useState(activeCode)
-
-	const changeLanguage = async (code: SupportedLanguageCode) => {
-		// Using this janky approach with a temporary code because we want to show feedback right away
-		// and also close the dialog (which updates the page URL), so the timeout causes the page refresh to happen
-		// at the desired url
-		setTemporaryCode(code)
-		// Delay so user can see the checkmark
-		await sleep(200)
-		dialogProps.onOpenChange(false)
-		setTimeout(() => setActiveCode(code), 200)
-	}
 
 	const radioName = useId()
 
@@ -48,9 +36,8 @@ export function LanguageDrawer() {
 							<ListRadioItem
 								key={code}
 								name={radioName}
-								checked={temporaryCode === code}
-								onSelect={() => changeLanguage(code)}
-								disabled={temporaryCode !== activeCode}
+								checked={activeCode === code}
+								onSelect={() => setActiveCode(code)}
 							>
 								{name}
 							</ListRadioItem>

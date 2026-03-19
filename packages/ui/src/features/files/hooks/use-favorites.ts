@@ -1,16 +1,17 @@
 import {keepPreviousData} from '@tanstack/react-query'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 /**
  * Hook to manage favorites in the file system.
  * Provides functionality to fetch favorites, add/remove favorites, and check if an item is favorited.
  */
 export function useFavorites() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 
 	// Query to fetch favorites (an array of virtual path strings)

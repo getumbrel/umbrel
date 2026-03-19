@@ -1,5 +1,6 @@
 import {motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
@@ -19,9 +20,9 @@ import {useNotifications} from '@/hooks/use-notifications'
 import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 function NotificationContent({children}: {children: string}) {
+	const {t} = useTranslation()
 	const contentRef = useRef<HTMLDivElement>(null)
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [showReadMore, setShowReadMore] = useState(false)
@@ -105,6 +106,7 @@ function getBackupFailingContent(
 	onGoToBackups: () => void,
 	onClearNotification: () => void,
 ): NotificationContent {
+	const {t} = useTranslation()
 	const {repoId} = parseBackupNotificationId(notification)
 
 	// Find repository details if we have a repo ID
@@ -171,6 +173,7 @@ function getDefaultNotificationContent(notification: string): NotificationConten
 }
 
 export function Notifications() {
+	const {t} = useTranslation()
 	// Hooks and state
 	const {notifications, clearNotification} = useNotifications()
 	const navigate = useNavigate()

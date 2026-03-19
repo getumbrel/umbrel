@@ -1,6 +1,7 @@
 import {ChevronDown, ChevronUp} from 'lucide-react'
 import {useState} from 'react'
 import type {FallbackProps} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useNavigate, useRouteError} from 'react-router-dom'
 
 import {
@@ -17,7 +18,6 @@ import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
 import {AppsProvider} from '@/providers/apps'
 import {AvailableAppsProvider} from '@/providers/available-apps'
 import {Wallpaper} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 import {downloadLogs} from '@/utils/logs'
 
 function useRouteErrorSafe() {
@@ -38,6 +38,7 @@ function getErrorMessage(error: unknown): string {
  * Used for when we can't reasonably replace the component with error text. EX: wallpaper or cmdk
  */
 export function ErrorBoundaryPageFallback({error}: Partial<FallbackProps> = {}) {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const [showDetails, setShowDetails] = useState(false)
 

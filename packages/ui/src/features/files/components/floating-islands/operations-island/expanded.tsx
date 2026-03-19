@@ -1,13 +1,15 @@
+import {useTranslation} from 'react-i18next'
+
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useGlobalFiles} from '@/providers/global-files'
-import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 export function ExpandedContent({progress, count, speed}: {progress: number; count: number; speed: number}) {
+	const {t, i18n} = useTranslation()
 	const {operations} = useGlobalFiles()
 
 	// Sort operations so that items with higher progress appear first
@@ -20,7 +22,10 @@ export function ExpandedContent({progress, count, speed}: {progress: number; cou
 		<div className='flex h-full w-full flex-col overflow-hidden py-5'>
 			<div className='mb-4 flex items-center justify-between px-5'>
 				<span className='text-xs text-white/60'>
-					{t('files-listing.item-count', {formattedCount: formatNumberI18n({n: count, showDecimals: false}), count})}{' '}
+					{t('files-listing.item-count', {
+						formattedCount: formatNumberI18n({n: count, showDecimals: false, locale: i18n.language}),
+						count,
+					})}{' '}
 					&bull; {progress}%
 				</span>
 				<span className='text-xs text-white/60'>{formatFilesystemSize(speed)}/s</span>

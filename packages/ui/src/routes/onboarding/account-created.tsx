@@ -1,5 +1,5 @@
 import {useEffect, useRef} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {Link} from 'react-router-dom'
 
 import {links} from '@/constants/links'
@@ -7,9 +7,9 @@ import {footerLinkClass, Layout, primaryButtonProps} from '@/layouts/bare/shared
 import {useOnboardingDevice} from '@/routes/onboarding/use-onboarding-device'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 
 export default function AccountCreated() {
+	const {t} = useTranslation()
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 	const device = useOnboardingDevice()
 
@@ -31,6 +31,7 @@ export default function AccountCreated() {
 			title={t('onboarding.account-created.youre-all-set-name', {name})}
 			subTitle={
 				<Trans
+					t={t}
 					i18nKey='onboarding.account-created.by-clicking-button-you-agree'
 					components={{
 						linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,

@@ -1,6 +1,7 @@
 import {t} from 'i18next'
 import {motion} from 'motion/react'
 import {useMemo} from 'react'
+import {useTranslation} from 'react-i18next'
 
 // Files-specific utilities
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
@@ -87,6 +88,7 @@ export function FilesListWidget({
 	noItemsText = 'files-widgets.recents.no-items-text',
 	onClick,
 }: FilesListWidgetProps) {
+	const {t} = useTranslation()
 	return (
 		<WidgetContainer
 			onClick={(e: React.MouseEvent<HTMLDivElement>) => {
@@ -171,6 +173,7 @@ export function FilesGridWidget({
 	link,
 	onClick,
 }: FilesGridWidgetProps) {
+	const {t} = useTranslation()
 	// Convert the raw paths into lightweight FileSystemItem stubs so that we can
 	// reuse the existing <FileItemIcon> component.
 	const gridItems = useMemo(() => {

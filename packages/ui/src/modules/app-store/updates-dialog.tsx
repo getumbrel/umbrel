@@ -1,5 +1,6 @@
 import {DialogProps} from '@radix-ui/react-dialog'
 import {Fragment, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
@@ -16,9 +17,9 @@ import {cn} from '@/lib/utils'
 import {progressStates, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export function UpdatesDialogConnected() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('updates')
 	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
 	const updateAll = useUpdateAllApps()
@@ -53,6 +54,7 @@ export function UpdatesDialog({
 	appsWithUpdates: RegistryApp[]
 	titleRightChildren?: React.ReactNode
 } & DialogProps) {
+	const {t} = useTranslation()
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
@@ -84,6 +86,7 @@ export function UpdatesDialog({
 	)
 }
 function AppItem({app}: {app: RegistryApp}) {
+	const {t} = useTranslation()
 	const appStateQ = trpcReact.apps.state.useQuery(
 		{appId: app.id},
 		{

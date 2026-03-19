@@ -1,4 +1,5 @@
 import {keepPreviousData} from '@tanstack/react-query'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {NETWORK_STORAGE_PATH} from '@/features/files/constants'
@@ -10,10 +11,10 @@ import {
 } from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 // We use `suppressNavigateOnAdd` to prevent navigating after adding a share from the backup/restore wizards.
 export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const invalidateShares = () => utils.files.listNetworkShares.invalidate()
 	const invalidateNetworkShares = () => utils.files.list.invalidate({path: NETWORK_STORAGE_PATH})

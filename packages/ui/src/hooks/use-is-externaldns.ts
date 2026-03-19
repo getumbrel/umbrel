@@ -1,8 +1,10 @@
+import {useTranslation} from 'react-i18next'
+
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useIsExternalDns({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
+	const {t} = useTranslation()
 	const externalDnsQ = trpcReact.system.isExternalDns.useQuery()
 	const isChecked = externalDnsQ.data === true
 

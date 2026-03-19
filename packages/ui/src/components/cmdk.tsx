@@ -1,6 +1,7 @@
 import {useCommandState} from 'cmdk'
 import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 import {range} from 'remeda'
 
@@ -25,7 +26,6 @@ import {cn} from '@/lib/utils'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {AppState, trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
@@ -64,6 +64,7 @@ export function CmdkProvider({children}: {children: React.ReactNode}) {
 }
 
 export function CmdkMenu() {
+	const {t} = useTranslation()
 	const {open, setOpen} = useCmdkOpen()
 
 	return (
@@ -78,6 +79,7 @@ export function CmdkMenu() {
 }
 
 function CmdkContent() {
+	const {t} = useTranslation()
 	const {setOpen} = useCmdkOpen()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
@@ -335,6 +337,7 @@ function CmdkContent() {
 }
 
 function FrequentApps({onLaunchApp}: {onLaunchApp: () => void}) {
+	const {t} = useTranslation()
 	const lastAppsQ = trpcReact.apps.recentlyOpened.useQuery(undefined, {
 		retry: false,
 	})
@@ -469,6 +472,7 @@ const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 }
 
 export function appStateToString(appState: AppState) {
+	const {t} = useTranslation()
 	return {
 		'not-installed': t('app.install'),
 		installing: t('app.installing'),

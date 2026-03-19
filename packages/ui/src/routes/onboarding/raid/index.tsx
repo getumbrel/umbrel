@@ -1,9 +1,9 @@
 import {motion} from 'motion/react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AccountCredentials} from '@/routes/onboarding/create-account'
-import {t} from '@/utils/i18n'
 
 import {RaidError} from './raid-error'
 import {useDetectStorageDevices} from './use-raid-setup'
@@ -14,6 +14,7 @@ const MIN_SCAN_DISPLAY_TIME = 3000
 // Entry point for RAID onboarding flow. Detects SSDs and routes to /raid/setup if found.
 // Shows inline error states for detection errors or no SSDs found.
 export default function Raid() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const location = useLocation()
 	const {devices, isDetecting, error} = useDetectStorageDevices()

@@ -1,6 +1,7 @@
 import {PlusCircle} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -25,10 +26,10 @@ import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavai
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export default function FileSharingDrawerOrDialog() {
+	const {t} = useTranslation()
 	const title = t('settings.file-sharing')
 	const dialogProps = useSettingsDialogProps()
 	const isMobile = useIsMobile()

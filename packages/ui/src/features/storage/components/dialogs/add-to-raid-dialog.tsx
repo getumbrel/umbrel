@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
@@ -25,7 +25,6 @@ import {Switch} from '@/components/ui/switch'
 import {toast} from '@/components/ui/toast'
 import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
-import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, RaidDevice, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
@@ -61,6 +60,7 @@ function InfoText({
 	additionalStorageCapacity,
 	failsafeWasted,
 }: InfoTextProps) {
+	const {t} = useTranslation()
 	const newSize = formatStorageSize(newDrivesRawBytes)
 
 	// Shared components for Trans
@@ -76,6 +76,7 @@ function InfoText({
 			<div className='flex flex-col gap-2'>
 				<p className='text-[13px] text-white/50'>
 					<Trans
+						t={t}
 						i18nKey='storage-manager.add-to-raid.info-capacity-added'
 						values={{size: availableSize}}
 						components={transComponents}
@@ -98,6 +99,7 @@ function InfoText({
 			return (
 				<p className='text-[13px] text-white/50'>
 					<Trans
+						t={t}
 						i18nKey='storage-manager.add-to-raid.info-capacity-adds-both'
 						values={{
 							size: newSize,
@@ -109,6 +111,7 @@ function InfoText({
 					{newToWasted > 0 && (
 						<>
 							<Trans
+								t={t}
 								i18nKey='storage-manager.add-to-raid.info-wasted'
 								values={{size: formatStorageSize(newToWasted)}}
 								components={transComponents}
@@ -125,11 +128,13 @@ function InfoText({
 				{newToWasted > 0 ? (
 					<>
 						<Trans
+							t={t}
 							i18nKey='storage-manager.add-to-raid.info-capacity-protection-only'
 							values={{size: newSize, protection: formatStorageSize(newToProtection)}}
 							components={transComponents}
 						/>{' '}
 						<Trans
+							t={t}
 							i18nKey='storage-manager.add-to-raid.info-wasted'
 							values={{size: formatStorageSize(newToWasted)}}
 							components={transComponents}
@@ -137,6 +142,7 @@ function InfoText({
 					</>
 				) : (
 					<Trans
+						t={t}
 						i18nKey='storage-manager.add-to-raid.info-capacity-protection-only-full'
 						values={{size: newSize}}
 						components={transComponents}
@@ -151,6 +157,7 @@ function InfoText({
 	return (
 		<p className='text-[13px] text-white/50'>
 			<Trans
+				t={t}
 				i18nKey='storage-manager.add-to-raid.info-capacity-adds-available'
 				values={{
 					size: newSize,
@@ -162,6 +169,7 @@ function InfoText({
 				<>
 					{' '}
 					<Trans
+						t={t}
 						i18nKey='storage-manager.add-to-raid.info-total-wasted'
 						values={{size: formatStorageSize(failsafeWasted)}}
 						components={transComponents}
@@ -197,6 +205,7 @@ export function AddToRaidDialog({
 	addDeviceAsync,
 	transitionToFailsafeAsync,
 }: AddToRaidDialogProps) {
+	const {t} = useTranslation()
 	// State for FailSafe toggle and confirmation dialog
 	const [failSafeEnabled, setFailSafeEnabled] = useState(false)
 	const [showRestartConfirmation, setShowRestartConfirmation] = useState(false)
@@ -380,6 +389,7 @@ export function AddToRaidDialog({
 									)}
 									<span className='text-[13px] font-medium text-white/60'>
 										<Trans
+											t={t}
 											i18nKey='storage-manager.add-to-raid.ssd-in-slot'
 											values={{size: formatStorageSize(device.size), slot: device.slot}}
 											components={{highlight: <Highlight />}}

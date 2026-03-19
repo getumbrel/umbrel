@@ -1,4 +1,5 @@
 import {ReactNode, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
@@ -10,11 +11,11 @@ import {toast} from '@/components/ui/toast'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 
 type Step = 'password' | '2fa'
 
 export default function LoginWithUmbrel() {
+	const {t} = useTranslation()
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
 
@@ -186,6 +187,7 @@ function useWallpaperId() {
 }
 
 function LoginWithLayout({children}: {children: ReactNode}) {
+	const {t} = useTranslation()
 	const params = useQueryParams<{app: string; path: string; host: string}>()
 	const app = useApp(params.object.app)
 	const wallpaperId = useWallpaperId()

@@ -1,5 +1,6 @@
 import {useQueryClient} from '@tanstack/react-query'
 import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
@@ -13,7 +14,6 @@ import {RestartingCover, useRestart} from '@/providers/global-system-state/resta
 import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
 import {RouterError, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
 import {ResettingCover, useReset} from './reset'
@@ -36,6 +36,7 @@ const GlobalSystemStateContext = createContext<{
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
+	const {t} = useTranslation()
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)

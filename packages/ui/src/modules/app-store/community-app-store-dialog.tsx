@@ -1,5 +1,6 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
@@ -19,9 +20,9 @@ import {toast} from '@/components/ui/toast'
 import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export function CommunityAppStoreDialog() {
+	const {t} = useTranslation()
 	const title = t('app-store.menu.community-app-stores')
 	const dialogProps = useDialogOpenProps('add-community-store')
 

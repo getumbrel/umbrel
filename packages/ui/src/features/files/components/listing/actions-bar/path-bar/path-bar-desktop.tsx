@@ -1,4 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {CaretRightIcon} from '@/features/files/assets/caret-right'
@@ -15,7 +16,6 @@ import {
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 type PathSegment = {
 	id: number
@@ -25,6 +25,7 @@ type PathSegment = {
 }
 
 export function PathBarDesktop({path}: {path: string}) {
+	const {t} = useTranslation()
 	// Ref for the list element that handles width calculations and overflow behavior for path segments
 	const breadcrumbsRef = useRef<HTMLUListElement | null>(null)
 

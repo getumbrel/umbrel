@@ -1,4 +1,5 @@
 import {Fragment} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbCircleCheckFilled} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
@@ -9,7 +10,6 @@ import {cn} from '@/lib/utils'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {installedStates, RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
@@ -20,6 +20,7 @@ export const DependenciesSection = ({
 	app: RegistryApp
 	showDependencies?: (dependencyId?: string) => void
 }) => {
+	const {t} = useTranslation()
 	const {apps, appsKeyed, isLoading: isLoadingAvailableApps} = useAllAvailableApps()
 	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()
 
@@ -67,6 +68,7 @@ const Dependency = ({
 	numberOfAlternativeApps: number
 	showDependencies?: (dependencyId?: string) => void
 }) => {
+	const {t} = useTranslation()
 	return (
 		<div className='flex w-full items-center gap-2.5 pl-2'>
 			<Link to={`/app-store/${app.id}`} state={{fromAppStore: true}}>

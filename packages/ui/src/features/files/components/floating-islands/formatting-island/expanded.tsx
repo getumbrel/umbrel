@@ -1,9 +1,9 @@
 import {motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {ScrollArea} from '@/components/ui/scroll-area'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
-import {t} from '@/utils/i18n'
 
 type FormattingDevice = {
 	id: string
@@ -12,6 +12,7 @@ type FormattingDevice = {
 }
 
 export function ExpandedContent({devices}: {devices: FormattingDevice[]}) {
+	const {t} = useTranslation()
 	// Single device - show circular spinning progress
 	if (devices.length === 1) {
 		const device = devices[0]

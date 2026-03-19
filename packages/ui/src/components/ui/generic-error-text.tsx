@@ -1,7 +1,6 @@
 import {ChevronDown, ChevronUp} from 'lucide-react'
 import {useState} from 'react'
-
-import {t} from '@/utils/i18n'
+import {useTranslation} from 'react-i18next'
 
 function getErrorMessage(error: unknown): string {
 	if (error instanceof Error) return error.message
@@ -10,6 +9,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function GenericErrorText({error}: {error?: unknown}) {
+	const {t} = useTranslation()
 	const [showDetails, setShowDetails] = useState(false)
 
 	return (
@@ -35,6 +35,7 @@ export function GenericErrorText({error}: {error?: unknown}) {
 }
 
 export function GenericErrorDetails({error}: {error: unknown}) {
+	const {t} = useTranslation()
 	const [showDetails, setShowDetails] = useState(false)
 
 	return (

@@ -1,7 +1,8 @@
+import {useTranslation} from 'react-i18next'
+
 import {toast} from '@/components/ui/toast'
 import {JWT_LOCAL_STORAGE_KEY} from '@/modules/auth/shared'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {redirect} from './redirects'
 
@@ -23,6 +24,7 @@ export function useJwt() {
 }
 
 export function useAuth() {
+	const {t} = useTranslation()
 	const {jwt, setJwt, removeJwt} = useJwt()
 
 	const logoutMut = trpcReact.user.logout.useMutation({

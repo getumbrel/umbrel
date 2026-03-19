@@ -1,4 +1,5 @@
 import {useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiCloseCircleFill} from 'react-icons/ri'
 import {Link} from 'react-router-dom'
 
@@ -11,6 +12,7 @@ import {WallpaperPicker} from '@/routes/settings/_components/wallpaper-picker'
 import {t} from '@/utils/i18n'
 
 export function DesktopContextMenu({children}: {children: React.ReactNode}) {
+	const {t} = useTranslation()
 	const [show, setShow] = useState(false)
 	const contentRef = useRef<HTMLDivElement>(null)
 	const anchorRef = useRef<HTMLDivElement>(null)

@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {
 	Drawer,
 	DrawerContent,
@@ -7,11 +9,11 @@ import {
 	DrawerTitle,
 } from '@/components/ui/drawer'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {AppStorePreferencesContent} from '../_components/app-store-preferences-content'
 
 export function AppStorePreferencesDrawer() {
+	const {t} = useTranslation()
 	const title = t('settings.app-store-preferences.title')
 	const dialogProps = useDialogOpenProps('app-store-preferences')
 

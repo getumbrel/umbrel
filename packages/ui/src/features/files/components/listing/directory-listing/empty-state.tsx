@@ -1,5 +1,6 @@
 import {Upload} from 'lucide-react'
 import {useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {IconButton} from '@/components/ui/icon-button'
 import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
@@ -10,9 +11,9 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {t} from '@/utils/i18n'
 
 export function EmptyStateDirectory() {
+	const {t} = useTranslation()
 	const {currentPath, isViewingNetworkShares} = useNavigate()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {startNewFolder} = useNewFolder()
@@ -54,6 +55,7 @@ export function EmptyStateDirectory() {
 }
 
 export function EmptyStateNetwork() {
+	const {t} = useTranslation()
 	return (
 		<div className='flex h-full items-center justify-center p-4 pt-0 text-center'>
 			<div className='text-12 text-white/40'>{t('files-empty.network')}</div>

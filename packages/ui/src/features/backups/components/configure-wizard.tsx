@@ -1,6 +1,7 @@
 import {ArrowLeft, ChevronDown, ChevronRight, Loader2} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import * as React from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
@@ -36,11 +37,11 @@ import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-dat
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
-import {t} from '@/utils/i18n'
 
 // MAIN COMPONENT
 
 export function BackupsConfigureWizard() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const {repositories, forgetRepository, isForgettingRepository} = useBackups()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
@@ -168,6 +169,7 @@ function CircularProgress({percent, className}: {percent: number; className?: st
 }
 
 function InlineBackupProgress({percent}: {percent: number}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex items-center gap-2 text-sm'>
 			<CircularProgress percent={percent} className='size-4' />
@@ -178,6 +180,7 @@ function InlineBackupProgress({percent}: {percent: number}) {
 }
 
 function BackupNowButton({repoId, hidden}: {repoId: string; hidden: boolean}) {
+	const {t} = useTranslation()
 	const {triggerBackup, isPending} = useTriggerBackupForRepo(repoId)
 
 	if (hidden) return null
@@ -210,6 +213,7 @@ function LocationsSection({
 	onAddExternal: () => void
 	onAddUmbrelPrivateCloud: () => void
 }) {
+	const {t} = useTranslation()
 	const isSmallMobile = useIsSmallMobile()
 	const [lang] = useLanguage()
 	return (
@@ -316,6 +320,7 @@ function RepositoryDetails({
 	onForget: () => void
 	isForgettingRepository: boolean
 }) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 	const [confirmRemoveOpen, setConfirmRemoveOpen] = React.useState(false)
 	const [showAllBackups, setShowAllBackups] = React.useState(false)
@@ -499,6 +504,7 @@ function BackupsList({
 	backups?: Array<{id: string; time: number; size: number}>
 	isLoading: boolean
 }) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 
 	if (isLoading) {

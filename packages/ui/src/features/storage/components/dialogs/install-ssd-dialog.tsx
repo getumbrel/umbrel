@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {
@@ -10,7 +11,6 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog'
 import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
-import {t} from '@/utils/i18n'
 
 import {InstallTipsCollapsible} from './install-tips-collapsible'
 import {OperationInProgressBanner} from './operation-in-progress-banner'
@@ -23,6 +23,7 @@ type InstallSsdDialogProps = {
 }
 
 export function InstallSsdDialog({open, onOpenChange, isUmbrelPro}: InstallSsdDialogProps) {
+	const {t} = useTranslation()
 	const [showInstallTips, setShowInstallTips] = useState(false)
 	const [showShutdownConfirmation, setShowShutdownConfirmation] = useState(false)
 

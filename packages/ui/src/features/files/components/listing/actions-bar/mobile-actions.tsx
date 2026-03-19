@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {TbDots} from 'react-icons/tb'
 
@@ -21,9 +22,9 @@ import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 export function MobileActions({DropdownItems = null}: {DropdownItems?: React.ReactNode}) {
+	const {t} = useTranslation()
 	const {preferences, setView, setSortBy} = usePreferences()
 	const isSelectingOnMobile = useFilesStore((state) => state.isSelectingOnMobile)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)

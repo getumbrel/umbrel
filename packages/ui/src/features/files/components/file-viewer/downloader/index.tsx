@@ -1,12 +1,13 @@
 import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiFile2Fill} from 'react-icons/ri'
 
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useConfirmation} from '@/providers/confirmation'
-import {t} from '@/utils/i18n'
 
 export default function DownloadDialog() {
+	const {t} = useTranslation()
 	const viewerItem = useFilesStore((s) => s.viewerItem)
 	const setViewerItem = useFilesStore((s) => s.setViewerItem)
 	const {downloadSelectedItems} = useFilesOperations()

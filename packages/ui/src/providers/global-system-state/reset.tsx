@@ -1,7 +1,8 @@
+import {useTranslation} from 'react-i18next'
+
 import {BarePage} from '@/layouts/bare/bare-page'
 import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {trpcReact, type RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useReset({onMutate, onError}: {onMutate?: () => void; onError?: (err: RouterError) => void}) {
 	const resetMut = trpcReact.system.factoryReset.useMutation({
@@ -17,6 +18,7 @@ export function useReset({onMutate, onError}: {onMutate?: () => void; onError?: 
 // The device reboots immediately and we delete old state in the background on boot,
 // so there is no progress to show. We just show a loading indicator.
 export function ResettingCover() {
+	const {t} = useTranslation()
 	return (
 		<BarePage>
 			<ProgressLayout

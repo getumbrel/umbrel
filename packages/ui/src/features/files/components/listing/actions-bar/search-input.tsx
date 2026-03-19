@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate as useRouterNavigate, useSearchParams} from 'react-router-dom'
 
 import {Input} from '@/components/ui/input'
@@ -6,7 +7,6 @@ import {SearchIcon} from '@/features/files/assets/search-icon'
 import {BASE_ROUTE_PATH, SEARCH_PATH} from '@/features/files/constants'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 // Search input with keyboard shortcuts:
 // - "/" focuses the search input (keydown + preventDefault to avoid typing "/")
@@ -19,6 +19,7 @@ import {t} from '@/utils/i18n'
 //   so users can backspace and retype without being yanked out of search.
 //   They can use Escape or the nav arrows to leave.
 export function SearchInput() {
+	const {t} = useTranslation()
 	const navigate = useRouterNavigate()
 	const location = useLocation()
 	const inputRef = useRef<HTMLInputElement>(null)

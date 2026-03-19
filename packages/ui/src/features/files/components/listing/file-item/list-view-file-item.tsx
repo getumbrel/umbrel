@@ -1,5 +1,7 @@
 import '@/features/files/components/listing/file-item/list-view-file-item.css'
 
+import {useTranslation} from 'react-i18next'
+
 import {Progress} from '@/components/ui/progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
 import {TruncatedFilename} from '@/features/files/components/listing/file-item/truncated-filename'
@@ -14,7 +16,6 @@ import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 interface ListViewFileItemProps {
 	item: FileSystemItem
@@ -24,6 +25,7 @@ interface ListViewFileItemProps {
 }
 
 export function ListViewFileItem({item, isEditingName, onEditingNameComplete, fadedContent}: ListViewFileItemProps) {
+	const {t} = useTranslation()
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 

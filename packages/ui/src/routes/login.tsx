@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {PasswordInput} from '@/components/ui/input'
 import {PinInput} from '@/components/ui/pin-input'
@@ -6,11 +7,11 @@ import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {useAuth} from '@/modules/auth/use-auth'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 type Step = 'password' | '2fa'
 
 export default function Login() {
+	const {t} = useTranslation()
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
 

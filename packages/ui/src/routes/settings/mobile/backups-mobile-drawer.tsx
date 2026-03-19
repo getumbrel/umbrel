@@ -1,5 +1,6 @@
 import {ChevronDown, Loader2} from 'lucide-react'
 import {useCallback} from 'react'
+import {useTranslation} from 'react-i18next'
 import {FaRegSave} from 'react-icons/fa'
 import {TbHistory, TbSettings} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
@@ -11,9 +12,9 @@ import {FadeInImg} from '@/components/ui/fade-in-img'
 import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 export function BackupsMobileDrawer() {
+	const {t} = useTranslation()
 	const dialogProps = useSettingsDialogProps()
 	const navigate = useNavigate()
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()

@@ -1,11 +1,11 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbInfoCircle, TbServer} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 import {RaidType} from '../hooks/use-storage'
 
@@ -53,6 +53,7 @@ type StorageModeDisplayProps = {
 }
 
 export function StorageModeDisplay({value, canEnableFailsafe}: StorageModeDisplayProps) {
+	const {t} = useTranslation()
 	const [infoDialogOption, setInfoDialogOption] = useState<ModeOption | null>(null)
 
 	// Dynamic "why not available" messages based on current state

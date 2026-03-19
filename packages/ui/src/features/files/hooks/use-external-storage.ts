@@ -1,5 +1,6 @@
 import {keepPreviousData} from '@tanstack/react-query'
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
@@ -8,7 +9,6 @@ import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 /**
  * Hook to manage external storage devices.
@@ -16,6 +16,7 @@ import {t} from '@/utils/i18n'
  * Also handles showing warning dialog for unsupported (Raspberry Pi) devices.
  */
 export function useExternalStorage() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const {add} = useQueryParams()
 

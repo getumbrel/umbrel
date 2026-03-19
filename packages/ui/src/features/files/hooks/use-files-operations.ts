@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
 import {toast} from '@/components/ui/toast'
@@ -9,7 +10,6 @@ import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useConfirmation} from '@/providers/confirmation'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 // Define a type for the operation function signature used by the helper
 type OperationAsyncFn<TArgs extends object, TResult = any> = (args: TArgs) => Promise<TResult>
@@ -19,6 +19,7 @@ type GetOperationArgsFn<TArgs extends object> = (path: string) => TArgs
 type ErrorToastFn = (message: string) => void
 
 export function useFilesOperations() {
+	const {t} = useTranslation()
 	// if read-only, we return the operations without doing anything
 	const isReadOnly = useIsFilesReadOnly()
 	const utils = trpcReact.useUtils()

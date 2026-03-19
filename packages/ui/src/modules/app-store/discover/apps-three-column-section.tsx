@@ -1,4 +1,5 @@
 import {useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
@@ -9,7 +10,6 @@ import {cn} from '@/lib/utils'
 import {cardClass, sectionOverlineClass, sectionTitleClass} from '@/modules/app-store/shared'
 import {preloadFirstFewGalleryImages} from '@/modules/app-store/utils'
 import {RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export type AppsThreeColumnSectionProps = {
 	apps: RegistryApp[]
@@ -58,6 +58,7 @@ export const AppsThreeColumnSection: React.FC<AppsThreeColumnSectionProps> = ({
 }
 
 function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
+	const {t} = useTranslation()
 	const iconRef = useRef<HTMLImageElement>(null)
 	const colors = useColorThief(iconRef)
 

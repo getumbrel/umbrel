@@ -1,5 +1,4 @@
 import {Globe} from 'lucide-react'
-import {useState} from 'react'
 
 import {ChevronDown} from '@/components/chevron-down'
 import {
@@ -36,23 +35,11 @@ export function LanguageDropdownTrigger() {
 
 export function LanguageDropdownContent() {
 	const [activeCode, setActiveCode] = useLanguage()
-	const [temporaryCode, setTemporaryCode] = useState(activeCode)
-
-	const changeLanguage = async (code: SupportedLanguageCode) => {
-		setTemporaryCode(code)
-		// Delay so user can see the checkmark
-		setTimeout(() => setActiveCode(code), 200)
-	}
 
 	return (
 		<DropdownMenuContent align='end'>
 			{languages.map(({code, name}) => (
-				<DropdownMenuCheckboxItem
-					key={code}
-					checked={temporaryCode === code}
-					onSelect={() => changeLanguage(code)}
-					disabled={temporaryCode !== activeCode}
-				>
+				<DropdownMenuCheckboxItem key={code} checked={activeCode === code} onSelect={() => setActiveCode(code)}>
 					{name}
 				</DropdownMenuCheckboxItem>
 			))}

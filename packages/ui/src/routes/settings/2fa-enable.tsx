@@ -1,5 +1,6 @@
 import {motion} from 'motion/react'
 import {ReactNode, useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import QRCode from 'react-qr-code'
 
 import {CopyableField} from '@/components/ui/copyable-field'
@@ -18,10 +19,10 @@ import {Separator} from '@/components/ui/separator'
 import {use2fa} from '@/hooks/use-2fa'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export default function TwoFactorEnableDialog() {
+	const {t} = useTranslation()
 	const title = t('2fa.enable.title')
 	const scanThisMessage = t('2fa.enable.scan-this')
 
@@ -79,6 +80,7 @@ function Inner({
 	totpUri: string
 	onCodeCheck: (code: string) => Promise<boolean>
 }) {
+	const {t} = useTranslation()
 	return (
 		<>
 			<AnimateInQr size={qrCodeSize} animateIn={!!totpUri}>

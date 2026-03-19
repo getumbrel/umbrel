@@ -1,6 +1,7 @@
+import {useTranslation} from 'react-i18next'
+
 import {BareCoverMessage} from '@/components/ui/cover-message'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {RedirectHome, RedirectLogin} from './redirects'
 
@@ -30,6 +31,7 @@ function EnsureLoggedInState({
 	otherwise: React.ReactNode
 	children?: React.ReactNode
 }) {
+	const {t} = useTranslation()
 	const isLoggedInQ = trpcReact.user.isLoggedIn.useQuery(undefined)
 	const isLoggedIn = isLoggedInQ.data ?? false
 	const wantsLoggedIn = loggedIn

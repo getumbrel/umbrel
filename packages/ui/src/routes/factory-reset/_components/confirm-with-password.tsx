@@ -1,10 +1,10 @@
 import {useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useMount} from 'react-use'
 
 import {Button} from '@/components/ui/button'
 import {ImmersiveDialogBody} from '@/components/ui/immersive-dialog'
 import {PasswordInput} from '@/components/ui/input'
-import {t} from '@/utils/i18n'
 
 import {description, title} from './misc'
 
@@ -17,6 +17,7 @@ export function ConfirmWithPassword({
 	onSubmit: (password: string) => void
 	clearError: () => void
 }) {
+	const {t} = useTranslation()
 	const passwordRef = useRef<HTMLInputElement>(null)
 	const [password, setPassword] = useState('')
 

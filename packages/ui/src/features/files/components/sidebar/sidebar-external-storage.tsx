@@ -1,4 +1,5 @@
 import {AnimatePresence, motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
@@ -6,9 +7,9 @@ import {SidebarExternalStorageItem} from '@/features/files/components/sidebar/si
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import type {ExternalStorageDevice} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {t} from '@/utils/i18n'
 
 export function SidebarExternalStorage() {
+	const {t} = useTranslation()
 	const {disks, isLoadingExternalStorage, ejectDisk, isExternalStorageSupported} = useExternalStorage()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()

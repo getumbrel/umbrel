@@ -1,5 +1,6 @@
 import {Loader2} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {FaRegSave} from 'react-icons/fa'
 import {
 	RiExpandRightFill,
@@ -31,7 +32,6 @@ import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/setting
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
@@ -44,6 +44,7 @@ import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const [languageOpen, setLanguageOpen] = useState(false)
@@ -307,6 +308,7 @@ export function SettingsContent() {
 }
 
 function WifiSupportedListRow() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
 

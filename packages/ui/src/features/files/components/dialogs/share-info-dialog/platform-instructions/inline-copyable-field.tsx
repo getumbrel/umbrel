@@ -1,13 +1,14 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {MdContentCopy} from 'react-icons/md'
 import {useCopyToClipboard} from 'react-use'
 
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function InlineCopyableField({value, className}: {value: string; className?: string}) {
+	const {t} = useTranslation()
 	const [, copyToClipboard] = useCopyToClipboard()
 	const [showCopied, setShowCopied] = useState(false)
 

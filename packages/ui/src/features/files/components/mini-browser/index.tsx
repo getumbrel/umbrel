@@ -1,5 +1,6 @@
 import {ChevronRight, FolderPlus, Loader2} from 'lucide-react'
 import {useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
@@ -83,6 +84,7 @@ export function MiniBrowser({
 	allowNewFolderCreation = false,
 	selectButtonLabel,
 }: MiniBrowserProps) {
+	const {t} = useTranslation()
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
 	const [newFolder, setNewFolder] = useState<(FileSystemItem & {isNew: boolean}) | null>(null)
 	const utils = trpcReact.useUtils()
@@ -321,6 +323,7 @@ function Tree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading} = useListDirectory(initialPath)
 
 	// Tailored empty state message and icon for known roots
@@ -537,6 +540,7 @@ function Subtree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading, fetchMoreItems} = useListDirectory(path)
 	const children: FileSystemItem[] = useMemo(() => (listing?.items as FileSystemItem[]) ?? [], [listing])
 	const hasMore = listing?.hasMore ?? false

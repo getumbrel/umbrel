@@ -1,10 +1,12 @@
+import {useTranslation} from 'react-i18next'
+
 import {useSystemDiskForUi} from '@/hooks/use-disk'
-import {t} from '@/utils/i18n'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function StorageCardContent() {
+	const {t} = useTranslation()
 	const {value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull} = useSystemDiskForUi()
 
 	return (

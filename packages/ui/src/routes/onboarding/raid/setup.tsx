@@ -1,7 +1,7 @@
 // RAID Setup Page - kept intentionally large because it's a cohesive page flow
 
 import {useEffect, useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Link, useLocation, useNavigate} from 'react-router-dom'
@@ -25,7 +25,6 @@ import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 
 import {SsdHealthDialog, useSsdHealthDialog} from './ssd-health-dialog'
 import {SsdSlot, SsdTray} from './ssd-tray'
@@ -45,6 +44,7 @@ import {
 
 // Get warning message for a device (generic message - details shown in health dialog)
 function getHealthWarningMessage(device: StorageDevice): string | null {
+	const {t} = useTranslation()
 	if (getDeviceHealth(device).hasWarning) return t('onboarding.raid.health-warning')
 	return null
 }
@@ -74,6 +74,7 @@ function FailSafeInfo({
 	deviceCount: number
 	smallestSize: number
 }) {
+	const {t} = useTranslation()
 	const protectionStr = formatSize(failsafeSize)
 	const unusedStr = formatSize(unusedSize)
 	const smallestStr = formatSize(smallestSize)
@@ -126,6 +127,7 @@ function FailSafeInfo({
 // ============================================================================
 
 export default function RaidSetup() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const location = useLocation()
 
@@ -436,6 +438,7 @@ export default function RaidSetup() {
 				title={t('onboarding.account-created.youre-all-set-name', {name: firstName})}
 				subTitle={
 					<Trans
+						t={t}
 						i18nKey='onboarding.account-created.by-clicking-button-you-agree'
 						components={{
 							linked: <Link to={links.legal.tos} className={linkClass} target='_blank' />,
@@ -527,6 +530,7 @@ export default function RaidSetup() {
 										)}
 										<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
 											<Trans
+												t={t}
 												i18nKey='onboarding.raid.ssd-in-slot'
 												values={{size: formatSize(device.roundedSize), slot: device.slot}}
 												components={{highlight: <span className='text-white' />}}

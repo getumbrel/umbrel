@@ -1,6 +1,5 @@
+import {useTranslation} from 'react-i18next'
 import {TbClock} from 'react-icons/tb'
-
-import {t} from '@/utils/i18n'
 
 // Banner shown in storage dialogs when a RAID operation is in progress.
 // ZFS only allows one operation (expansion, rebuild, replace) at a time, so we
@@ -10,6 +9,7 @@ type OperationInProgressBannerProps = {
 }
 
 export function OperationInProgressBanner({variant}: OperationInProgressBannerProps) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex items-start gap-3 rounded-12 bg-[#F5A623]/10 p-3'>
 			<TbClock className='mt-0.5 size-5 shrink-0 text-[#F5A623]' />

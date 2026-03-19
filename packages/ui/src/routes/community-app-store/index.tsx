@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {TbArrowLeft} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 import {groupBy} from 'remeda'
@@ -9,9 +10,9 @@ import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section
 import {appsGridClass, AppStoreSheetInner, cardFaintClass, sectionOverlineClass} from '@/modules/app-store/shared'
 import {CommunityBadge} from '@/modules/community-app-store/community-badge'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export default function CommunityAppStoreHome() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const {appStoreId} = useParams<{appStoreId: string}>()
 

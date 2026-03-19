@@ -1,10 +1,12 @@
+import {useTranslation} from 'react-i18next'
+
 import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {AppStorePreferencesContent} from './_components/app-store-preferences-content'
 
 export default function AppStorePreferencesDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('app-store-preferences')
 
 	return (

@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {BsTrash2} from 'react-icons/bs'
 import {IoPlay} from 'react-icons/io5'
 
@@ -40,7 +41,6 @@ import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 interface FileItemIcon {
 	item: FileSystemItem
@@ -51,6 +51,7 @@ interface FileItemIcon {
 }
 
 export const FileItemIcon = ({item, onlySVG, className, useAnimatedIcon = false, isHovered = false}: FileItemIcon) => {
+	const {t} = useTranslation()
 	const {isPathShared} = useShares()
 	const isShared = isPathShared(item.path)
 

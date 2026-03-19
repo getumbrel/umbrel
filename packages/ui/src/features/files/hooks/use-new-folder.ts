@@ -1,4 +1,5 @@
 import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
@@ -7,9 +8,9 @@ import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useNewFolder() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const {currentPath} = useNavigate()
 	const {listing} = useListDirectory(currentPath)

@@ -1,12 +1,13 @@
 import {motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {t} from '@/utils/i18n'
 
 type Progress = {name: string; percent: number; path?: string}
 
 export function ExpandedContent({progresses}: {progresses: Progress[]}) {
+	const {t} = useTranslation()
 	// Single backup - show circular progress
 	if (progresses.length === 1) {
 		const progress = progresses[0]

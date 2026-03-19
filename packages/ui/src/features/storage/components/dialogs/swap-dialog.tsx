@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbAlertTriangle, TbInfoCircle} from 'react-icons/tb'
 
@@ -16,7 +17,6 @@ import {toast} from '@/components/ui/toast'
 import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 import {StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
@@ -47,6 +47,7 @@ export function SwapDialog({
 	allDevices,
 	replaceDeviceAsync,
 }: SwapDialogProps) {
+	const {t} = useTranslation()
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
 
 	// Check if a RAID operation is already in progress

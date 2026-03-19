@@ -1,5 +1,6 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useMemo, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
@@ -9,7 +10,6 @@ import {APPS_PATH, HOME_PATH} from '@/features/files/constants'
 import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-navigate'
 import {formatFilesystemDateOnly} from '@/features/files/utils/format-filesystem-date'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import type {SupportedLanguageCode} from '@/utils/language'
 
 export function SnapshotCarousel({
@@ -33,6 +33,7 @@ export function SnapshotCarousel({
 	mountedDir: string | null
 	explorerContainerRef: React.RefObject<HTMLDivElement | null>
 }) {
+	const {t} = useTranslation()
 	const windowStart = noCarousel ? activeIndex : Math.max(0, activeIndex - 2)
 	const windowEnd = noCarousel ? activeIndex : Math.min(backupsForTimeline.length - 1, activeIndex + 2)
 

@@ -1,4 +1,5 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbArrowLeft, TbCircleArrowLeftFilled} from 'react-icons/tb'
 import {useLocation, useNavigate} from 'react-router-dom'
 
@@ -11,9 +12,9 @@ import {SheetFixedContent} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {RegistryApp} from '@/trpc/trpc'
 import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
+	const {t} = useTranslation()
 	const isMobile = useIsMobile()
 	return (
 		<>

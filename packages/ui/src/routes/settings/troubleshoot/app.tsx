@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate, useParams} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -9,9 +10,9 @@ import {AppDropdown, ImmersivePickerDialogContent} from '@/modules/immersive-pic
 import {useUserApp} from '@/providers/apps'
 import {downloadUtf8Logs, LogResults, TroubleshootTitleBackLink} from '@/routes/settings/troubleshoot/_shared'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function TroubleshootApp() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const {appId} = useParams<{appId: string}>()
 	if (!appId) throw new Error('No app provided')
@@ -42,6 +43,7 @@ export function TroubleshootApp() {
 }
 
 function useAppLogs(appId: string) {
+	const {t} = useTranslation()
 	const troubleshootQ = trpcReact.apps.logs.useQuery({appId})
 
 	if (troubleshootQ.isLoading) return t('loading') + '...'

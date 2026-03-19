@@ -8,11 +8,13 @@ import {Button} from '@/components/ui/button'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {BackLink} from '@/modules/immersive-picker'
-import {t} from '@/utils/i18n'
 
 import '@xterm/xterm/css/xterm.css'
 
+import {useTranslation} from 'react-i18next'
+
 export function TerminalTitleBackLink() {
+	const {t} = useTranslation()
 	return <BackLink to='/settings/terminal'>{t('terminal')}</BackLink>
 }
 
@@ -20,6 +22,7 @@ export function TerminalTitleBackLink() {
 const MIN_COLS = 80
 
 export const XTermTerminal = ({appId}: {appId?: string}) => {
+	const {t} = useTranslation()
 	const terminalRef = useRef<Terminal | null>(null)
 	const ws = useRef<WebSocket | null>(null)
 	const containerRef = useRef<HTMLDivElement | null>(null)

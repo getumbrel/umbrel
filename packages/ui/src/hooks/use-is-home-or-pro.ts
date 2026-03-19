@@ -1,5 +1,6 @@
+import {useTranslation} from 'react-i18next'
+
 import {useDeviceInfo} from '@/hooks/use-device-info'
-import {t} from '@/utils/i18n'
 
 // Consider consolidating device detection hooks. Currently we have:
 // - useIsUmbrelHome (uses trpcReact.migration.isUmbrelHome)
@@ -8,6 +9,7 @@ import {t} from '@/utils/i18n'
 // - useIsHomeOrPro (uses useDeviceInfo)
 // These could potentially be unified into a single source of truth.
 export function useIsHomeOrPro() {
+	const {t} = useTranslation()
 	const {isLoading, data} = useDeviceInfo()
 	const isUmbrelHome = data?.umbrelHostEnvironment === 'umbrel-home'
 	const isUmbrelPro = data?.umbrelHostEnvironment === 'umbrel-pro'

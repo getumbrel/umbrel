@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
@@ -7,9 +8,9 @@ import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-na
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {t} from '@/utils/i18n'
 
 export function SidebarHome() {
+	const {t} = useTranslation()
 	const homeDirectoryName = useHomeDirectoryName()
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const navigate = useRouterNavigate()

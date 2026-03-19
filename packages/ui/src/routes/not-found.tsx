@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {
@@ -15,9 +16,9 @@ import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
 import {AppsProvider} from '@/providers/apps'
 import {AvailableAppsProvider} from '@/providers/available-apps'
 import {Wallpaper} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 
 export function NotFound() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const [open, setOpen] = useState(true)
 

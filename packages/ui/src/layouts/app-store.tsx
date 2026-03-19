@@ -1,5 +1,6 @@
 import {motion} from 'motion/react'
 import {memo, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
 
@@ -22,6 +23,7 @@ import {t} from '@/utils/i18n'
 import {createSearch} from '@/utils/search'
 
 export function AppStoreLayout() {
+	const {t} = useTranslation()
 	const title = t('app-store.title')
 
 	const [searchParams, setSearchParams] = useSearchParams()
@@ -77,6 +79,7 @@ function SearchInput({
 	onValueChange: (query: string) => void
 	inputRef?: React.Ref<HTMLInputElement>
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='-ml-2 flex min-w-0 items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
@@ -105,6 +108,7 @@ function SearchInput({
 }
 
 function CommunityAppsDropdown() {
+	const {t} = useTranslation()
 	const {addLinkSearchParams} = useQueryParams()
 	return (
 		<>
@@ -127,6 +131,7 @@ function CommunityAppsDropdown() {
 }
 
 function SearchResults({query}: {query: string}) {
+	const {t} = useTranslation()
 	const {isLoading, apps} = useAvailableApps()
 
 	const search = useMemo(

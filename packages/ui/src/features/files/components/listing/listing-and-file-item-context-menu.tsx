@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {RiArrowDropDownLine, RiArrowDropUpLine} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
@@ -33,7 +34,6 @@ import {
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 interface ListingAndFileItemContextMenuProps {
 	children: React.ReactNode
@@ -41,6 +41,7 @@ interface ListingAndFileItemContextMenuProps {
 }
 
 export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndFileItemContextMenuProps) {
+	const {t} = useTranslation()
 	const isReadOnly = useIsFilesReadOnly()
 	const {preferences, setView, setSortBy} = usePreferences()
 

@@ -1,5 +1,6 @@
 import {matchSorter} from 'match-sorter'
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbChevronLeft} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 
@@ -13,7 +14,6 @@ import {ScrollArea} from '@/components/ui/scroll-area'
 import {LOADING_DASH} from '@/constants'
 import {cn} from '@/lib/utils'
 import {useApps} from '@/providers/apps'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export const radioButtonClass = tw`rounded-12 bg-white/5 p-5 text-left flex justify-between items-center gap-2 flex-wrap shadow-button-highlight-soft-hpx outline-hidden duration-300 hover:bg-white/6 transition-[background,color,box-shadow] focus-visible:ring-4 ring-white/5 focus-visible:ring-offset-1 ring-offset-white/20`
@@ -97,6 +97,7 @@ export function AppDropdown({
 	open: boolean
 	onOpenChange: (o: boolean) => void
 }) {
+	const {t} = useTranslation()
 	const [query, setQuery] = useState('')
 	const apps = useApps()
 	// const [open, setOpen] = useState(false)

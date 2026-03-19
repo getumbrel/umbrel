@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useParams} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -16,9 +17,9 @@ import {SegmentedControl} from '@/components/ui/segmented-control'
 import {usePassword} from '@/hooks/use-password'
 import {useUserName} from '@/hooks/use-user-name'
 import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 export function AccountDrawer() {
+	const {t} = useTranslation()
 	const title = t('account')
 
 	const dialogProps = useSettingsDialogProps()
@@ -51,6 +52,7 @@ export function AccountDrawer() {
 }
 
 function ChangeName({closeDialog}: {closeDialog: () => void}) {
+	const {t} = useTranslation()
 	const {name, setName, handleSubmit, formError, isLoading} = useUserName({onSuccess: closeDialog})
 
 	return (
@@ -78,6 +80,7 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 }
 
 function ChangePassword({closeDialog}: {closeDialog: () => void}) {
+	const {t} = useTranslation()
 	const {
 		password,
 		setPassword,

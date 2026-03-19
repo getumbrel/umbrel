@@ -1,4 +1,5 @@
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import {PiFlaskFill} from 'react-icons/pi'
 import {useParams} from 'react-router-dom'
 
@@ -17,10 +18,10 @@ import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {cn} from '@/lib/utils'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export default function AdvancedSettingsDrawerOrDialog() {
+	const {t} = useTranslation()
 	const title = t('advanced-settings')
 	const dialogProps = useSettingsDialogProps()
 
