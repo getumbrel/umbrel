@@ -65,6 +65,7 @@ function ColorApp({app, className}: {app: RegistryApp; className?: string}) {
 		<div className={cn('relative', colors)}>
 			<Link
 				to={`/app-store/${app.id}`}
+				state={{fromAppStore: true}}
 				className={cn('flex h-[268px] w-40 flex-col justify-stretch rounded-24 bg-white/10 px-3 py-4', className)}
 				style={{
 					backgroundImage: colors

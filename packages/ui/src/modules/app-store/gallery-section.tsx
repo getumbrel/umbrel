@@ -17,6 +17,7 @@ export const AppsGallerySection: React.FC<{banners: Banner[]}> = ({banners}) => 
 				<Link
 					key={banner.id}
 					to={`/app-store/${banner.id}`}
+					state={{fromAppStore: true}}
 					className={cn(galleryItemClass, 'aspect-2.25 h-[140px] rounded-20 md:h-[316px]')}
 					style={{
 						animationDelay: `${i * 0.1}s`,

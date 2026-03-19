@@ -232,7 +232,14 @@ function DependencyStateText({appId, appState, onClick}: {appId: string; appStat
 	if (appState === 'not-installed') {
 		return (
 			// TODO: link to community app store if needed using `getAppStoreAppFromInstalledApp`
-			<ButtonLink to={`/app-store/${appId}`} onClick={onClick} variant='primary' size='sm' className={buttonClass}>
+			<ButtonLink
+				to={`/app-store/${appId}`}
+				state={{fromAppStore: true}}
+				onClick={onClick}
+				variant='primary'
+				size='sm'
+				className={buttonClass}
+			>
 				{t('app.install')}
 			</ButtonLink>
 		)

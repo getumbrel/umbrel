@@ -45,6 +45,7 @@ function AppWithDescriptionSmall({
 	return (
 		<Link
 			to={to ? to : `/app-store/${id}`}
+			state={{fromAppStore: true}}
 			className='group -m-2.5 flex w-full items-center gap-2.5 rounded-12 p-2.5 outline-hidden hover:bg-white/4 focus:bg-white/4'
 		>
 			<AppIcon src={icon} size={50} className='rounded-10' />
