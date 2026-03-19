@@ -1132,7 +1132,7 @@
   "whats-new.title": "{{version}} sürümündeki yenilikler",
   "widget.progress.in-progress": "Devam ediyor",
   "widgets.edit.select-up-to-3-widgets": "En fazla 3 widget seçin",
-  "widgets.install-an-app-before-using-widgets": "Ana ekranınızı widget'larla özelleştirmeye başlamak için bir uygulama yükleyin.",
+  "widgets.install-app-to-customize": "Ana ekranınızı widget'larla özelleştirmeye başlamak için <linked>App Store</linked> üzerinden bir uygulama yükleyin.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "Açık ağlar güvensiz olabilir",
   "wifi-connection-failed": "Bağlanılamadı",

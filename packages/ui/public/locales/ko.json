@@ -1132,7 +1132,7 @@
   "whats-new.title": "{{version}}의 새로운 기능",
   "widget.progress.in-progress": "진행 중",
   "widgets.edit.select-up-to-3-widgets": "최대 3개의 위젯을 선택하세요",
-  "widgets.install-an-app-before-using-widgets": "위젯으로 홈 화면을 꾸미려면 먼저 앱을 설치하세요.",
+  "widgets.install-app-to-customize": "위젯으로 홈 화면을 꾸미려면 <linked>App Store</linked>에서 앱을 설치하세요.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "공개 네트워크는 안전하지 않을 수 있습니다",
   "wifi-connection-failed": "연결할 수 없습니다",

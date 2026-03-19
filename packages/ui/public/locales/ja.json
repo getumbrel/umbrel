@@ -1132,7 +1132,7 @@
   "whats-new.title": "{{version}} の新機能",
   "widget.progress.in-progress": "進行中",
   "widgets.edit.select-up-to-3-widgets": "最大3つのウィジェットを選択",
-  "widgets.install-an-app-before-using-widgets": "ウィジェットを使ってホームスクリーンをカスタマイズするには、アプリをインストールしてください。",
+  "widgets.install-app-to-customize": "ホーム画面をウィジェットでカスタマイズするには、<linked>App Store</linked>からアプリをインストールしてください。",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "オープンネットワークは安全でない可能性があります",
   "wifi-connection-failed": "接続できません",

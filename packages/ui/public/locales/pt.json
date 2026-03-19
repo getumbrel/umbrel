@@ -1132,7 +1132,7 @@
   "whats-new.title": "Novidades em {{version}}",
   "widget.progress.in-progress": "Em andamento",
   "widgets.edit.select-up-to-3-widgets": "Selecione até 3 widgets",
-  "widgets.install-an-app-before-using-widgets": "Instale um aplicativo para começar a personalizar sua tela inicial com widgets.",
+  "widgets.install-app-to-customize": "Instale um app na <linked>App Store</linked> para começar a personalizar sua tela inicial com widgets.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "Redes abertas podem ser inseguras",
   "wifi-connection-failed": "Não foi possível conectar",

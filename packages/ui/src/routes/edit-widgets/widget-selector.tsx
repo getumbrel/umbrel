@@ -2,6 +2,8 @@ import {Minus, Plus} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Trans} from 'react-i18next/TransWithoutContext'
+import {Link} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {DialogCloseButton} from '@/components/ui/dialog-close-button'
@@ -16,7 +18,15 @@ import {ExampleWidget, Widget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {t} from '@/utils/i18n'
 
-export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChange: (open: boolean) => void}) {
+export function WidgetSelector({
+	open,
+	onOpenChange,
+	disabled = false,
+}: {
+	open: boolean
+	onOpenChange: (open: boolean) => void
+	disabled?: boolean
+}) {
 	// Delay until after `usePager` has injected CSS vars
 	const [isReady, setIsReady] = useState(false)
 	useEffect(() => {
@@ -28,11 +38,11 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 
 	if (!isReady) return null
 
-	const selectedH = selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
+	const selectedH = disabled || selected.length == 0 ? 'var(--sheet-top)' : `calc(var(--widget-h) + 8vh)`
 
 	return (
 		<>
-			{open && (
+			{open && !disabled && (
 				// Don't make this take up full width because clicking outside should close the widget selector
 				// `pointer-events-none` because we want clicking outside the sheet to close the sheet, not interact with the widget
 				<div className='pointer-events-none absolute top-0 left-1/2 z-50 -translate-x-1/2 max-lg:scale-[85%] max-md:scale-[65%]'>
@@ -88,24 +98,46 @@ export function WidgetSelector({open, onOpenChange}: {open: boolean; onOpenChang
 				</div>
 			)}
 			<WidgetSheet open={open} onOpenChange={onOpenChange} selectedCssHeight={selectedH}>
-				{availableWidgets.map(({appId, icon, name, widgets}) => {
-					return (
-						<WidgetSection key={appId} iconSrc={icon} title={name}>
-							{widgets?.map((widget) => {
-								return (
-									<ErrorBoundary key={widget.id} fallback={null}>
-										<WidgetChecker
-											checked={selected.map((w) => w.id).includes(widget.id)}
-											onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
-										>
-											<ExampleWidget type={widget.type} example={widget.example} />
-										</WidgetChecker>
-									</ErrorBoundary>
-								)
-							})}
-						</WidgetSection>
-					)
-				})}
+				{disabled && (
+					<p className='text-13 text-white/40'>
+						<Trans
+							i18nKey='widgets.install-app-to-customize'
+							components={{
+								linked: (
+									<Link
+										to='/app-store'
+										className='text-white/60 underline decoration-white/20 underline-offset-2 hover:text-white/80 hover:decoration-white/40'
+									/>
+								),
+							}}
+						/>
+					</p>
+				)}
+				<div
+					className={cn(
+						'flex flex-col items-start gap-5 md:gap-8',
+						disabled && 'pointer-events-none opacity-40 blur-[2px]',
+					)}
+				>
+					{availableWidgets.map(({appId, icon, name, widgets}) => {
+						return (
+							<WidgetSection key={appId} iconSrc={icon} title={name}>
+								{widgets?.map((widget) => {
+									return (
+										<ErrorBoundary key={widget.id} fallback={null}>
+											<WidgetChecker
+												checked={selected.map((w) => w.id).includes(widget.id)}
+												onCheckedChange={(checked) => toggleSelected(widget.id, checked)}
+											>
+												<ExampleWidget type={widget.type} example={widget.example} />
+											</WidgetChecker>
+										</ErrorBoundary>
+									)
+								})}
+							</WidgetSection>
+						)
+					})}
+				</div>
 			</WidgetSheet>
 		</>
 	)

@@ -1132,7 +1132,7 @@
   "whats-new.title": "What's new in {{version}}",
   "widget.progress.in-progress": "In progress",
   "widgets.edit.select-up-to-3-widgets": "Select up to 3 widgets",
-  "widgets.install-an-app-before-using-widgets": "Install an app to start customizing your homescreen with widgets.",
+  "widgets.install-app-to-customize": "Install an app from the <linked>App Store</linked> to start customizing your homescreen with widgets.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "Open networks can be insecure",
   "wifi-connection-failed": "Unable to connect",

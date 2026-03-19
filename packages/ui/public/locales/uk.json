@@ -1132,7 +1132,7 @@
   "whats-new.title": "Що нового в {{version}}",
   "widget.progress.in-progress": "В процесі",
   "widgets.edit.select-up-to-3-widgets": "Виберіть до 3 віджетів",
-  "widgets.install-an-app-before-using-widgets": "Встановіть програму, щоб почати налаштування головного екрану за допомогою віджетів.",
+  "widgets.install-app-to-customize": "Встанови додаток з <linked>App Store</linked>, щоб почати налаштовувати головний екран за допомогою віджетів.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "Відкриті мережі можуть бути небезпечними",
   "wifi-connection-failed": "Не вдалося підключитися",

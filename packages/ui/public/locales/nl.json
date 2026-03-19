@@ -1132,7 +1132,7 @@
   "whats-new.title": "Nieuw in {{version}}",
   "widget.progress.in-progress": "Bezig",
   "widgets.edit.select-up-to-3-widgets": "Selecteer tot 3 widgets",
-  "widgets.install-an-app-before-using-widgets": "Installeer een app om je startscherm aan te passen met widgets.",
+  "widgets.install-app-to-customize": "Installeer een app uit de <linked>App Store</linked> om je startscherm met widgets te personaliseren.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "Open netwerken kunnen onveilig zijn",
   "wifi-connection-failed": "Kan niet verbinden",
