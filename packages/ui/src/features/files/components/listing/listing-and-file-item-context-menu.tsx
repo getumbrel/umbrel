@@ -113,6 +113,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 						className={contextMenuClasses.item.rootDestructive}
 					>
 						{t('files-action.delete')}
+						<ContextMenuShortcut>⌘⌫</ContextMenuShortcut>
 					</ContextMenuItem>
 				</>
 			)
@@ -235,6 +236,7 @@ export function ListingAndFileItemContextMenu({children, menuItems}: ListingAndF
 							disabled={!canPermanentlyDelete}
 						>
 							{t('files-action.delete')}
+							<ContextMenuShortcut>⌘⌫</ContextMenuShortcut>
 						</ContextMenuItem>
 					)}
 					<ContextMenuSeparator />

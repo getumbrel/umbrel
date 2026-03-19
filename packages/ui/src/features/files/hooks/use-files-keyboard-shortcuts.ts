@@ -1,4 +1,5 @@
 import {useEffect, useRef} from 'react'
+import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
 import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
@@ -9,6 +10,7 @@ import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useLinkToDialog} from '@/utils/dialog'
 
 /**
  * Hook to handle keyboard shortcuts for file operations: copy, cut, paste, trash,
@@ -29,6 +31,8 @@ export function useFilesKeyboardShortcuts({
 	// In read-only mode, disable write/selection shortcuts but allow viewer and navigation shortcuts.
 	const shortcutsEnabled = !isReadOnly
 	const {currentPath, navigateToItem, navigateToDirectory} = useNavigate()
+	const routerNavigate = useRouterNavigate()
+	const linkToDialog = useLinkToDialog()
 	const copyItemsToClipboard = useFilesStore((s: FilesStore) => s.copyItemsToClipboard)
 	const cutItemsToClipboard = useFilesStore((s: FilesStore) => s.cutItemsToClipboard)
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
@@ -119,7 +123,15 @@ export function useFilesKeyboardShortcuts({
 				}
 				if (e.key === 'Backspace') {
 					e.preventDefault()
-					trashSelectedItems()
+					const selected = selectedItemsRef.current
+					if (selected.length === 0) return
+					const canTrash = selected[0].operations.includes('trash')
+					const canDelete = selected[0].operations.includes('delete')
+					if (canDelete) {
+						routerNavigate(linkToDialog('files-permanently-delete-confirmation'))
+					} else if (canTrash) {
+						trashSelectedItems()
+					}
 					return
 				}
 				if (e.key === 'a') {
@@ -358,5 +370,7 @@ export function useFilesKeyboardShortcuts({
 		navigateToItem,
 		navigateToDirectory,
 		scrollAreaRef,
+		routerNavigate,
+		linkToDialog,
 	])
 }
