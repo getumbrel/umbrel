@@ -37,9 +37,9 @@ describe('Internal storage rounded size', () => {
 		const slot3 = devices.find((d) => d.slot === 3)!
 		const slot4 = devices.find((d) => d.slot === 4)!
 
-		// 512GB - under 1TB, should not be rounded
+		// 512GB - under 1TB, should round down to the 500GB bucket
 		expect(slot1.size).toBe(512_000_000_000)
-		expect(slot1.roundedSize).toBe(512_000_000_000)
+		expect(slot1.roundedSize).toBe(500_000_000_000)
 
 		// 1TB exact - should stay at 1TB
 		expect(slot2.size).toBe(1_000_000_000_000)

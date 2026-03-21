@@ -3,16 +3,17 @@ import {describe, test, expect} from 'vitest'
 import {getRoundedDeviceSize} from './raid.js'
 
 describe('getRoundedDeviceSize', () => {
-	// Under 1TB - should return unchanged
-	test('returns unchanged for sizes under 1TB', () => {
+	test('keeps sizes below 250GB unchanged and rounds 250GB to under 1TB down to 25GB buckets', () => {
 		expect(getRoundedDeviceSize(0)).toBe(0)
 		expect(getRoundedDeviceSize(1)).toBe(1)
-		expect(getRoundedDeviceSize(32_000_000_000)).toBe(32_000_000_000) // 32GB
-		expect(getRoundedDeviceSize(64_000_000_000)).toBe(64_000_000_000) // 64GB
-		expect(getRoundedDeviceSize(128_000_000_000)).toBe(128_000_000_000) // 128GB
-		expect(getRoundedDeviceSize(256_000_000_000)).toBe(256_000_000_000) // 256GB
-		expect(getRoundedDeviceSize(512_000_000_000)).toBe(512_000_000_000) // 512GB
-		expect(getRoundedDeviceSize(999_999_999_999)).toBe(999_999_999_999) // Just under 1TB
+		expect(getRoundedDeviceSize(32_000_000_000)).toBe(32_000_000_000)
+		expect(getRoundedDeviceSize(64_000_000_000)).toBe(64_000_000_000)
+		expect(getRoundedDeviceSize(128_000_000_000)).toBe(128_000_000_000)
+		expect(getRoundedDeviceSize(249_999_999_999)).toBe(249_999_999_999)
+		expect(getRoundedDeviceSize(250_000_000_000)).toBe(250_000_000_000)
+		expect(getRoundedDeviceSize(500_000_000_000)).toBe(500_000_000_000)
+		expect(getRoundedDeviceSize(512_000_000_000)).toBe(500_000_000_000)
+		expect(getRoundedDeviceSize(999_999_999_999)).toBe(975_000_000_000)
 	})
 
 	// Exactly 1TB boundary
@@ -20,7 +21,7 @@ describe('getRoundedDeviceSize', () => {
 		expect(getRoundedDeviceSize(1_000_000_000_000)).toBe(1_000_000_000_000)
 	})
 
-	// 1TB+ should round to nearest 250GB
+	// 1TB+ should round down to 250GB buckets
 	test('rounds 1TB+ down to nearest 250GB', () => {
 		// Just over 1TB - rounds to 1TB
 		expect(getRoundedDeviceSize(1_000_000_000_001)).toBe(1_000_000_000_000)
@@ -38,6 +39,11 @@ describe('getRoundedDeviceSize', () => {
 		// 2TB
 		expect(getRoundedDeviceSize(2_000_000_000_000)).toBe(2_000_000_000_000)
 		expect(getRoundedDeviceSize(2_100_000_000_000)).toBe(2_000_000_000_000)
+	})
+
+	test('makes 500GB and 512GB drives compatible', () => {
+		expect(getRoundedDeviceSize(500_000_000_000)).toBe(500_000_000_000)
+		expect(getRoundedDeviceSize(512_000_000_000)).toBe(500_000_000_000)
 	})
 
 	// 3.8TB SSD - rounds down to 3.75TB (15 x 250GB)

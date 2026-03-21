@@ -69,8 +69,16 @@ function createTestHelpers(port: number) {
 	const cookieJar = new CookieJar()
 	const api = unauthenticatedApi.extend({cookieJar})
 
-	async function signup({raidDevices, raidType}: {raidDevices?: string[]; raidType?: 'storage' | 'failsafe'} = {}) {
-		await unauthenticatedClient.user.register.mutate({...userCredentials, raidDevices, raidType})
+	async function signup({
+		raidDevices,
+		raidType,
+		acceleratorDevices,
+	}: {
+		raidDevices?: string[]
+		raidType?: 'storage' | 'failsafe'
+		acceleratorDevices?: string[]
+	} = {}) {
+		await unauthenticatedClient.user.register.mutate({...userCredentials, raidDevices, raidType, acceleratorDevices})
 	}
 
 	async function login() {

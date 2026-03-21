@@ -20,13 +20,15 @@ async function getDeviceSize(device: string): Promise<number> {
 }
 
 // Round device size down to nearest 250GB if over 1TB
+// Round device size down to nearest 25GB if over 250GB
 // This ensures drives of slightly different sizes can be used together in RAID
+// e.g 512GB + 500GB can be used together
 export function getRoundedDeviceSize(sizeInBytes: number): number {
-	const oneTerabyte = 1_000_000_000_000
 	const twoFiftyGigabytes = 250_000_000_000
-	if (sizeInBytes >= oneTerabyte) {
-		return Math.floor(sizeInBytes / twoFiftyGigabytes) * twoFiftyGigabytes
-	}
+	const oneTerabyte = 1_000_000_000_000
+	const twentyFiveGigabytes = 25_000_000_000
+	if (sizeInBytes >= oneTerabyte) return Math.floor(sizeInBytes / twoFiftyGigabytes) * twoFiftyGigabytes
+	if (sizeInBytes >= twoFiftyGigabytes) return Math.floor(sizeInBytes / twentyFiveGigabytes) * twentyFiveGigabytes
 	return sizeInBytes
 }
 
@@ -59,6 +61,10 @@ export type ReplaceStatus = {
 	progress: number
 }
 
+type AcceleratorConfig = {
+	devices: string[]
+}
+
 // Types for zpool status --json --json-int --json-flat-vdevs output
 type State = 'ONLINE' | 'DEGRADED' | 'FAULTED' | 'OFFLINE' | 'UNAVAIL' | 'REMOVED' | 'CANT_OPEN'
 type Vdev = {
@@ -69,7 +75,7 @@ type Vdev = {
 	slow_ios?: number
 	name: string
 	guid: number
-	class: string
+	class: 'normal' | 'special' | 'l2cache' | string
 	parent?: string
 	state: State
 	alloc_space: number
@@ -131,6 +137,21 @@ type ZpoolStatusOutput = {
 	pools: Record<string, Pool>
 }
 
+type AcceleratorPoolDevice = {
+	id: string
+	status: State
+	l2arcPartition: string
+	l2arcSize: number
+	specialPartition: string
+	specialSize: number
+}
+
+type ParsedAccelerator = {
+	devices: AcceleratorPoolDevice[]
+	totalL2arcSize: number
+	totalSpecialUsableSize: number
+}
+
 type ConfigStore = {
 	user?: {
 		name: string
@@ -143,6 +164,7 @@ type ConfigStore = {
 		state: 'normal' | 'transitioning-to-failsafe'
 		devices: string[]
 		raidType: RaidType
+		accelerator?: AcceleratorConfig
 	}
 }
 
@@ -218,6 +240,17 @@ export default class Raid {
 			this.logger.log(`Set ZFS ARC min to ${prettyBytes(arcMin)}`)
 		} catch (error) {
 			this.logger.error('Failed to set ZFS ARC min', error)
+		}
+
+		// Exclude blocks on special vdev from l2arc since we run both l2arc and special vdev
+		// on different partitions on the same accelerator device. There's no speedup caching
+		// blocks in l2arc on the same device that they already live on. It just wastes l2 cache
+		// space for no reason.
+		try {
+			await fse.writeFile('/sys/module/zfs/parameters/l2arc_exclude_special', '1')
+			this.logger.log('Set ZFS l2arc_exclude_special to 1')
+		} catch (error) {
+			this.logger.error('Failed to set ZFS l2arc_exclude_special', error)
 		}
 
 		// Start pool monitor to send realtime events
@@ -315,34 +348,39 @@ export default class Raid {
 		}>
 		mirrors?: string[][]
 		topology?: Topology
+		accelerator?: {
+			exists: boolean
+			l2arcSize?: number
+			specialSize?: number
+			devices?: Array<{
+				id: string
+				status: State
+			}>
+		}
 		expansion?: ExpansionStatus
 		rebuild?: RebuildStatus
 	}> {
 		// Get pool status from ZFS
-		let pool
-		try {
-			const {stdout} = await $`zpool status --json --json-int --json-flat-vdevs ${poolName}`
-			const zpoolStatus = JSON.parse(stdout) as ZpoolStatusOutput
-			pool = zpoolStatus.pools?.[poolName]
-		} catch {}
+		const pool = await this.#getZpoolStatus(poolName)
 		if (!pool) return {exists: false}
 
 		const vdevs = Object.values(pool.vdevs)
+		const isDataVdev = (vdev: Vdev) => vdev.class === 'normal'
+		const dataVdevs = vdevs.filter(isDataVdev)
 
-		// Determine RAID type from topology
-		const isRaidz = vdevs.some((v) => v.vdev_type === 'raidz')
-		const isMirror = vdevs.some((v) => v.vdev_type === 'mirror')
+		// Determine RAID type from data topology only, ignoring accelerator vdev classes.
+		const isRaidz = dataVdevs.some((v) => v.vdev_type === 'raidz')
+		const isMirror = dataVdevs.some((v) => v.vdev_type === 'mirror')
 		const raidType = isRaidz || isMirror ? 'failsafe' : 'storage'
 		let topology: Topology = 'stripe'
 		if (isRaidz) topology = 'raidz'
 		if (isMirror) topology = 'mirror'
 
 		// Filter vdevs by type
-		const rootVdev = vdevs.find((v) => v.vdev_type === 'root')
-		const diskVdevs = vdevs.filter((v) => v.vdev_type === 'disk')
-		const fileVdevs = vdevs.filter((v) => v.vdev_type === 'file')
-		const mirrorVdevs = vdevs.filter((v) => v.vdev_type === 'mirror')
-
+		const rootVdev = dataVdevs.find((v) => v.vdev_type === 'root')
+		const diskVdevs = dataVdevs.filter((v) => v.vdev_type === 'disk')
+		const fileVdevs = dataVdevs.filter((v) => v.vdev_type === 'file')
+		const mirrorVdevs = dataVdevs.filter((v) => v.vdev_type === 'mirror')
 		if (!rootVdev) return {exists: false}
 
 		// Parse expansion progress (only relevant for failsafe/raidz mode)
@@ -404,6 +442,13 @@ export default class Raid {
 			writeErrors: device.write_errors,
 			checksumErrors: device.checksum_errors,
 		}))
+
+		// Calculate l2arc and special vdev sizes
+		// l2arc is striped so we sum all partition sizes
+		// special vdev is mirrored so we use the smallest partition size
+		const accelerator = this.#parsePoolAccelerator(pool)
+		const acceleratorDevices = accelerator.devices.map(({id, status}) => ({id, status}))
+		const hasAccelerator = acceleratorDevices.length > 0
 
 		let mirrors: string[][] | undefined
 		if (isMirror) {
@@ -514,8 +559,69 @@ export default class Raid {
 			status: pool.state,
 			devices,
 			mirrors,
+			accelerator: {
+				exists: hasAccelerator,
+				l2arcSize: accelerator.totalL2arcSize,
+				specialSize: accelerator.totalSpecialUsableSize,
+				devices: acceleratorDevices,
+			},
 			expansion,
 			rebuild,
+		}
+	}
+
+	async #getZpoolStatus(poolName: string): Promise<Pool | undefined> {
+		try {
+			const {stdout} = await $`zpool status --json --json-int --json-flat-vdevs ${poolName}`
+			const zpoolStatus = JSON.parse(stdout) as ZpoolStatusOutput
+			return zpoolStatus.pools?.[poolName]
+		} catch {
+			return undefined
+		}
+	}
+
+	// Parse accelerator vdevs from a pool into per-device info with aggregate sizes.
+	// Each physical accelerator device has two partitions: l2arc (read cache) and special (metadata).
+	// We match them by device id and combine into a single entry per device.
+	#parsePoolAccelerator(pool: Pool): ParsedAccelerator {
+		const toDeviceId = (path: string) => path.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, '')
+		const getVdevSize = (vdev: Vdev) => vdev.phys_space || vdev.rep_dev_size || vdev.total_space || 0
+		const vdevs = Object.values(pool.vdevs)
+		const cacheVdevs = vdevs.filter((v) => v.vdev_type === 'disk' && v.class === 'l2cache' && v.path)
+		const specialVdevs = vdevs.filter((v) => v.vdev_type === 'disk' && v.class === 'special' && v.path)
+
+		// Index special vdevs by device id for matching against cache vdevs
+		const specialByDeviceId = new Map(specialVdevs.map((v) => [toDeviceId(v.path!), v]))
+
+		// Build a complete device entry for each accelerator that has both partitions
+		const devices: AcceleratorPoolDevice[] = cacheVdevs
+			.map((cacheVdev) => {
+				const id = toDeviceId(cacheVdev.path!)
+				const specialVdev = specialByDeviceId.get(id)
+				if (!specialVdev) return undefined
+
+				// Default to cache status, but prefer special vdev status if it's bad since it's more critical
+				let status: State = cacheVdev.state
+				if (specialVdev.state !== 'ONLINE') status = specialVdev.state
+
+				return {
+					id,
+					status,
+					l2arcPartition: cacheVdev.path!,
+					l2arcSize: getVdevSize(cacheVdev),
+					specialPartition: specialVdev.path!,
+					specialSize: getVdevSize(specialVdev),
+				}
+			})
+			.filter((d): d is AcceleratorPoolDevice => d !== undefined)
+			.sort((a, b) => a.id.localeCompare(b.id))
+
+		return {
+			devices,
+			// l2arc is striped so we sum all partition sizes
+			totalL2arcSize: devices.reduce((sum, d) => sum + d.l2arcSize, 0),
+			// special vdev is mirrored so usable size is the smallest partition
+			totalSpecialUsableSize: devices.length === 0 ? 0 : Math.min(...devices.map((d) => d.specialSize)),
 		}
 	}
 
@@ -523,10 +629,11 @@ export default class Raid {
 	async triggerInitialRaidSetupBootFlow(
 		raidDevices: string[],
 		raidType: RaidType,
+		acceleratorDevices: string[] | undefined,
 		user: {name: string; password: string; language: string},
 	) {
-		// Setup the RAID array
-		await this.setup(raidDevices, raidType)
+		// Setup the RAID array and optional accelerator before rebooting into it.
+		await this.setup(raidDevices, raidType, acceleratorDevices)
 
 		// Temporarily store the user setup details
 		// We handle setting up the user on the next boot
@@ -620,7 +727,7 @@ export default class Raid {
 		// Reserve 100MiB for state partition we may use in the future
 		const statePartitionSizeBytes = 100 * oneMiB // 100 MiB
 
-		// Get device size and round down to nearest 250GB if over 1TB
+		// Get device size and round down into compatibility buckets.
 		// This normalises device sizes. e.g sometimes 4000GB and 4096GB SSDs are sold as 4TB.
 		// If we use their sizes directly then starting with a 4096 GB SSD and then trying to add
 		// a 4000 GB SSD later will fails because ZFS will complain the new device is too small.
@@ -660,6 +767,78 @@ export default class Raid {
 
 		this.logger.log(`Successfully partitioned ${device}`)
 		return {statePartition, dataPartition}
+	}
+
+	async #partitionAcceleratorDevice(
+		device: string,
+		sizes?: {l2arcSizeBytes: number; specialSizeBytes: number},
+	): Promise<{statePartition: string; l2arcPartition: string; specialPartition: string}> {
+		// Use the same state partition and front buffer as normal RAID devices.
+		const isDiskById = device.startsWith('/dev/disk/by-id/')
+		if (!isDiskById) throw new Error('Must pass disk by id')
+
+		this.logger.log(`Wiping signatures from accelerator device ${device}`)
+		await $`wipefs --all ${device}`
+
+		this.logger.log(`Creating partition table on accelerator device ${device}`)
+		await $`sgdisk --zap-all ${device}`
+
+		const oneMiB = 1024 * 1024
+		const bufferSizeBytes = 10 * oneMiB
+		const statePartitionSizeBytes = 100 * oneMiB
+
+		const deviceSize = await getDeviceSize(device)
+		const roundedDeviceSize = getRoundedDeviceSize(deviceSize)
+		const usableBytes = roundedDeviceSize - statePartitionSizeBytes - bufferSizeBytes
+		if (usableBytes <= 0) throw new Error('Accelerator device is too small to partition')
+
+		// L2Arc partition is capped at 50% of device size or 5x RAM size, whichever is smaller
+		// Since L2Arc stores redundant copies of data, we don't need to mirror it in FailSafe mode
+		// so we stripe it. This means the total L2Arc size is 10x RAM or 100% of the accelerator
+		// device size, whichever is smaller
+		const requestedL2arcSizeBytes =
+			sizes?.l2arcSizeBytes ?? Math.floor(Math.min(roundedDeviceSize * 0.5, os.totalmem() * 5))
+		const l2arcSizeBytes = requestedL2arcSizeBytes
+		if (l2arcSizeBytes <= 0) throw new Error('Accelerator device is too small for an L2ARC partition')
+
+		// The special vdev uses the remaining space after the above. So either 50% of the device or 100% - 5x RAM.
+		// The special vdev stores the master copy of it's data so we need to mirror in FailSafe mode and the size
+		// does not increase with the second SSD.
+		const specialSizeBytes = sizes?.specialSizeBytes ?? usableBytes - l2arcSizeBytes
+		if (specialSizeBytes <= 0) throw new Error('Accelerator device is too small for a special partition')
+		if (l2arcSizeBytes + specialSizeBytes > usableBytes)
+			throw new Error('Accelerator device is too small for the requested partition sizes')
+
+		const statePartitionSizeMiB = Math.floor(statePartitionSizeBytes / oneMiB)
+		const l2arcPartitionSizeMiB = Math.floor(l2arcSizeBytes / oneMiB)
+		const specialPartitionSizeMiB = Math.floor(specialSizeBytes / oneMiB)
+
+		this.logger.log(
+			`Accelerator size: ${deviceSize} bytes, rounded: ${roundedDeviceSize} bytes, l2arc: ${l2arcSizeBytes} bytes (${l2arcPartitionSizeMiB} MiB), special: ${specialSizeBytes} bytes (${specialPartitionSizeMiB} MiB)`,
+		)
+
+		await $`sgdisk --new=1:0:+${statePartitionSizeMiB}M --change-name=1:umbrel-raid-accelerator-state ${device}`
+		await $`sgdisk --new=2:0:+${l2arcPartitionSizeMiB}M --change-name=2:umbrel-raid-l2arc ${device}`
+		await $`sgdisk --new=3:0:+${specialPartitionSizeMiB}M --change-name=3:umbrel-raid-special ${device}`
+
+		const statePartition = `${device}-part1`
+		const l2arcPartition = `${device}-part2`
+		const specialPartition = `${device}-part3`
+
+		this.logger.log(`Waiting for accelerator partitions to appear on ${device}`)
+		await $`udevadm settle`
+
+		const partitionsExist = await Promise.all([
+			fse.pathExists(statePartition),
+			fse.pathExists(l2arcPartition),
+			fse.pathExists(specialPartition),
+		])
+		if (!partitionsExist[0]) throw new Error(`State partition ${statePartition} does not exist`)
+		if (!partitionsExist[1]) throw new Error(`L2ARC partition ${l2arcPartition} does not exist`)
+		if (!partitionsExist[2]) throw new Error(`Special partition ${specialPartition} does not exist`)
+
+		this.logger.log(`Successfully partitioned accelerator device ${device}`)
+		return {statePartition, l2arcPartition, specialPartition}
 	}
 
 	// Create ZFS pool from data partitions with a given topology
@@ -717,7 +896,7 @@ export default class Raid {
 	// 1. Partition each device with a state partition and data partition (remaining space)
 	// 2. Create a ZFS pool from all data partitions
 	// 3. Write RAID config to boot partition to signal the boot process to mount the array
-	async setup(deviceIds: string[], raidType: RaidType): Promise<boolean> {
+	async setup(deviceIds: string[], raidType: RaidType, acceleratorDeviceIds?: string[]): Promise<boolean> {
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
 		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 
@@ -741,6 +920,30 @@ export default class Raid {
 		if (raidType === 'failsafe' && deviceType === 'hdd' && deviceIds.length % 2 !== 0)
 			throw new Error('HDD failsafe mode requires an even number of devices')
 
+		if (acceleratorDeviceIds?.length) {
+			if (deviceType !== 'hdd') throw new Error('Accelerators are only supported for HDD RAID arrays')
+
+			const expectedCount = raidType === 'failsafe' ? 2 : 1
+			if (acceleratorDeviceIds.length !== expectedCount)
+				throw new Error(
+					raidType === 'failsafe'
+						? 'Failsafe mode requires exactly two SSDs for the accelerator'
+						: 'Storage mode requires exactly one SSD for the accelerator',
+				)
+
+			const uniqueAcceleratorDeviceIds = new Set(acceleratorDeviceIds)
+			if (uniqueAcceleratorDeviceIds.size !== acceleratorDeviceIds.length)
+				throw new Error('Accelerator devices must be unique')
+
+			const raidDeviceIds = new Set(deviceIds)
+			for (const acceleratorDeviceId of acceleratorDeviceIds) {
+				const acceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+				if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
+				if (raidDeviceIds.has(acceleratorDeviceId)) throw new Error('Cannot add a RAID data device as an accelerator')
+				await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
+			}
+		}
+
 		// Generate a unique pool name for this installation
 		const poolName = this.generatePoolName()
 		this.logger.log(`Generated unique pool name: ${poolName}`)
@@ -763,6 +966,8 @@ export default class Raid {
 		// Write RAID config to boot partition
 		this.logger.log(`Writing RAID config to config partition`)
 		await this.configStore.set('raid', {poolName, state: 'normal', raidType, devices})
+
+		if (acceleratorDeviceIds?.length) await this.addAccelerator(acceleratorDeviceIds)
 
 		this.logger.log('RAID setup complete')
 		return true
@@ -790,6 +995,18 @@ export default class Raid {
 		const device = devices.find((d) => d.id === poolDeviceId)
 		if (!device) throw new Error(`Device not found: ${poolDeviceId}`)
 		return device.type
+	}
+
+	async #getDeviceInfo(deviceId: string) {
+		const devices = await this.#umbreld.hardware.internalStorage.getDevices()
+		const device = devices.find((d) => d.id === deviceId)
+		if (!device) throw new Error(`Device not found: ${deviceId}`)
+		return device
+	}
+
+	async #assertAcceleratorDeviceType(deviceId: string): Promise<void> {
+		const device = await this.#getDeviceInfo(deviceId)
+		if (device.type !== 'ssd') throw new Error('Accelerator devices must be SSDs')
 	}
 
 	// Add one device to a stripe (storage) or raidz (failsafe SSD) array.
@@ -878,117 +1095,254 @@ export default class Raid {
 		return true
 	}
 
-	// Replace a device in the RAID array with a new device
-	// This will:
-	// 1. Partition the new device with a state partition and data partition
-	// 2. Use zpool replace to swap the old device with the new one
-	// 3. Update RAID config in boot partition
-	// Works for both storage and failsafe modes. ZFS will resilver the new device.
-	async replaceDevice(oldDeviceId: string, newDeviceId: string): Promise<boolean> {
+	// Add SSD accelerator device to an HDD pool.
+	//
+	// The SSD is partitioned into L2Arc (read cache) and special vdev (metadata + small blocks) partitions.
+	// In FailSafe mode 2 SSDs are required: L2Arc is striped (data is volatile) but the special vdev is
+	// mirrored (losing it means losing the entire pool).
+	//
+	// L2Arc is capped at 5x RAM (or 50% of device, whichever is smaller) per device. In FailSafe mode
+	// this means 10x RAM total since L2Arc is striped across both devices. This prevents L2Arc entry
+	// addressing from consuming too much L1Arc (RAM). At 128k block size, the 10x total cap results
+	// in ~1% of memory dedicated to L2Arc addressing. The remainder of each device goes to the special vdev.
+	//
+	// We set special_small_blocks=32k so any block that compresses to ≤32k (or any file ≤32k total) lands
+	// on the special vdev. This captures most OS/app files (configs, logs, container layers) while keeping
+	// bulk data on HDDs. On a 2TB Umbrel dataset this is ~15GB. 64k would jump to ~150GB which is
+	// unpredictable on larger/different workloads, so we stay conservative.
+	async addAccelerator(deviceIds: string[]): Promise<boolean> {
+		// Accelerators are layered on an existing HDD pool, never on SSD RAID.
+		const pool = await this.getStatus()
+		if (!pool.exists) throw new Error("RAID array doesn't exist")
+		if ((await this.#getPoolDeviceType()) !== 'hdd')
+			throw new Error('Accelerators are only supported for HDD RAID arrays')
+		if (pool.accelerator?.exists) throw new Error('RAID array already has an accelerator')
+
+		// Storage mode uses one SSD. Failsafe mirrors the special vdev, so it needs two.
+		const expectedCount = pool.raidType === 'failsafe' ? 2 : 1
+		if (deviceIds.length !== expectedCount)
+			throw new Error(
+				pool.raidType === 'failsafe'
+					? 'Failsafe mode requires exactly two SSDs for the accelerator'
+					: 'Storage mode requires exactly one SSD for the accelerator',
+			)
+
+		const uniqueDeviceIds = new Set(deviceIds)
+		if (uniqueDeviceIds.size !== deviceIds.length) throw new Error('Accelerator devices must be unique')
+
+		const poolDeviceIds = new Set(pool.devices?.map((d) => d.id) ?? [])
+		const acceleratorDevices = deviceIds.map((id) => `/dev/disk/by-id/${id}`)
+
+		// Validate everything up front so we fail before touching partitions.
+		for (const deviceId of deviceIds) {
+			const device = `/dev/disk/by-id/${deviceId}`
+			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
+			if (poolDeviceIds.has(deviceId)) throw new Error('Cannot add a RAID data device as an accelerator')
+			await this.#assertAcceleratorDeviceType(deviceId)
+		}
+
+		this.logger.log(`Adding accelerator to RAID array: ${acceleratorDevices.join(', ')}`)
+
+		const partitionResults = await Promise.all(
+			acceleratorDevices.map((device) => this.#partitionAcceleratorDevice(device)),
+		)
+		const l2arcPartitions = partitionResults.map((result) => result.l2arcPartition)
+		const specialPartitions = partitionResults.map((result) => result.specialPartition)
+
+		// L2ARC entries are independent. Only the special class is mirrored in failsafe mode.
+		await $`zpool add -f ${pool.name} cache ${l2arcPartitions}`
+		if (pool.raidType === 'failsafe') {
+			await $`zpool add -f ${pool.name} special mirror ${specialPartitions[0]} ${specialPartitions[1]}`
+		} else {
+			await $`zpool add -f ${pool.name} special ${specialPartitions[0]}`
+		}
+
+		// Store not only metadata but also small blocks on the special vdev
+		// 32k is very safe but we could consider 64k for users with very large special vdevs.
+		await $`zfs set special_small_blocks=32K ${pool.name}`
+
+		await this.configStore.set('raid.accelerator', {
+			devices: acceleratorDevices,
+		})
+
+		this.logger.log('Accelerator added to RAID array successfully')
+		return true
+	}
+
+	async #monitorReplaceProgress(
+		poolName: string,
+		completionCheck: (status: Awaited<ReturnType<Raid['getPoolStatus']>>) => boolean,
+		onComplete?: () => Promise<void>,
+	): Promise<void> {
+		this.replaceStatus = {state: 'rebuilding', progress: 0}
+		this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+
+		this.logger.log('Monitoring replace progress...')
+		Promise.resolve()
+			.then(async () => {
+				while (true) {
+					try {
+						const status = await this.getPoolStatus(poolName)
+						if (status.rebuild) {
+							const cappedProgress = status.rebuild.state === 'finished' ? 100 : Math.min(status.rebuild.progress, 99)
+							if (cappedProgress > (this.replaceStatus?.progress ?? 0)) {
+								this.replaceStatus = {state: 'rebuilding', progress: cappedProgress}
+								this.logger.log(`Replace progress: ${cappedProgress}%`)
+								this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+							}
+							if (status.rebuild.state === 'finished') break
+						} else if (completionCheck(status)) {
+							this.logger.log('No rebuild status but replacement target is online, considering complete')
+							break
+						}
+					} catch (error) {
+						this.logger.error('Error polling replace progress', error)
+					}
+					await setTimeout(1000)
+				}
+
+				if (onComplete) await onComplete()
+
+				this.replaceStatus = {state: 'finished', progress: 100}
+				this.logger.log('Replace complete')
+				this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
+				this.isReplacing = false
+			})
+			.catch((error) => {
+				this.logger.error('Error monitoring replace progress', error)
+				this.isReplacing = false
+			})
+	}
+
+	async #replaceStorageDevice(
+		pool: Awaited<ReturnType<Raid['getStatus']>>,
+		oldDeviceId: string,
+		newDeviceId: string,
+	): Promise<boolean> {
 		const oldDevice = `/dev/disk/by-id/${oldDeviceId}`
 		const newDevice = `/dev/disk/by-id/${newDeviceId}`
 
-		// Verify new device exists
-		if (!(await fse.pathExists(newDevice))) throw new Error(`New device not found: ${newDevice}`)
-
-		// Get the pool status - this is the source of truth for what devices are in the pool
-		const pool = await this.getStatus()
-		if (!pool.exists) throw new Error("RAID array doesn't exist")
-
-		// Verify old device is in the pool and new device is not
-		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
-		if (!poolDeviceIds.includes(oldDeviceId)) throw new Error(`Device ${oldDeviceId} is not in the RAID array`)
-		if (poolDeviceIds.includes(newDeviceId))
-			throw new Error('Cannot replace with a device that is already in the RAID array')
-
-		// Validate device type matches pool
 		await this.#assertDeviceTypeMatchesPool(newDeviceId)
 
-		if (this.isReplacing) throw new Error('Already replacing device')
-		this.isReplacing = true
 		this.logger.log(`Replacing device ${oldDevice} with ${newDevice}`)
 
-		try {
-			// Partition the new device
-			this.logger.log(`Partitioning new device: ${newDevice}`)
-			const {dataPartition: newDataPartition} = await this.#partitionDevice(newDevice)
+		this.logger.log(`Partitioning new device: ${newDevice}`)
+		const {dataPartition: newDataPartition} = await this.#partitionDevice(newDevice)
+		const oldDataPartition = `${oldDevice}-part2`
 
-			// Get the old data partition path
-			const oldDataPartition = `${oldDevice}-part2`
+		this.logger.log(`Replacing ${oldDataPartition} with ${newDataPartition} in pool '${pool.name}'`)
+		await $`zpool replace -f ${pool.name} ${oldDataPartition} ${newDataPartition}`
 
-			// Replace the device in the pool
-			// ZFS will automatically start resilvering the new device
-			this.logger.log(`Replacing ${oldDataPartition} with ${newDataPartition} in pool '${pool.name}'`)
-			await $`zpool replace -f ${pool.name} ${oldDataPartition} ${newDataPartition}`
-
-			// Initialize replace status
-			this.replaceStatus = {state: 'rebuilding', progress: 0}
-			this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
-
-			// Kick off non-blocking monitoring to avoid blocking the API response
-			this.logger.log('Monitoring replace progress...')
-			Promise.resolve()
-				.then(async () => {
-					// Poll rebuild status until complete
-					while (true) {
-						try {
-							const status = await this.getPoolStatus(pool.name)
-							if (status.rebuild) {
-								// Cap progress at 99% until fully complete (state === 'finished')
-								const cappedProgress = status.rebuild.state === 'finished' ? 100 : Math.min(status.rebuild.progress, 99)
-								if (cappedProgress > (this.replaceStatus?.progress ?? 0)) {
-									this.replaceStatus = {state: 'rebuilding', progress: cappedProgress}
-									this.logger.log(`Replace progress: ${cappedProgress}%`)
-									this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
-								}
-								if (status.rebuild.state === 'finished') {
-									break
-								}
-							} else {
-								// No rebuild status - check if new device is in pool and online
-								// This handles the case where resilver completes before first poll
-								const newDeviceInPool = status.devices?.some((d) => d.id === newDeviceId && d.status === 'ONLINE')
-								if (newDeviceInPool) {
-									this.logger.log('No rebuild status but new device is online, considering complete')
-									break
-								}
-							}
-						} catch (error) {
-							this.logger.error('Error polling replace progress', error)
-						}
-						await setTimeout(1000)
-					}
-
-					// Expand the new device to its full size
-					// This makes sure the new size is recognized if it's larger than the old size
-					this.logger.log('Resilver complete, expanding new device...')
-					await $`zpool online -e ${pool.name} ${newDataPartition}`.catch(() =>
-						this.logger.error('Error expanding new device'),
-					)
-
-					// Mark as finished
-					this.replaceStatus = {state: 'finished', progress: 100}
-					this.logger.log('Replace complete')
-					this.#umbreld.eventBus.emit('raid:replace-progress', this.replaceStatus)
-					this.isReplacing = false
-				})
-				.catch((error) => {
-					this.logger.error('Error monitoring replace progress', error)
-					this.isReplacing = false
-				})
-		} catch (error) {
-			this.isReplacing = false
-			throw error
-		}
-
-		// Update config with new device list
 		const currentDevices = (await this.configStore.get('raid.devices')) ?? []
 		const updatedDevices = currentDevices.map((d: string) => (d === oldDevice ? newDevice : d))
 		this.logger.log(`Updating RAID config with devices: ${updatedDevices.join(', ')}`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
+		await this.#monitorReplaceProgress(
+			pool.name,
+			(status) => Boolean(status.devices?.some((d) => d.id === newDeviceId && d.status === 'ONLINE')),
+			async () => {
+				this.logger.log('Resilver complete, expanding new device...')
+				await $`zpool online -e ${pool.name} ${newDataPartition}`.catch(() =>
+					this.logger.error('Error expanding new device'),
+				)
+			},
+		)
+
 		this.logger.log(`Device replacement initiated, resilvering in progress`)
 		return true
+	}
+
+	async #replaceAcceleratorDevice(
+		pool: Awaited<ReturnType<Raid['getStatus']>>,
+		oldDeviceId: string,
+		newDeviceId: string,
+	): Promise<boolean> {
+		const oldDevice = `/dev/disk/by-id/${oldDeviceId}`
+		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		const acceleratorDeviceIds = pool.accelerator!.devices?.map((device) => device.id) ?? []
+
+		await this.#assertAcceleratorDeviceType(newDeviceId)
+
+		this.logger.log(`Replacing accelerator device ${oldDevice} with ${newDevice}`)
+
+		const rawPool = await this.#getZpoolStatus(pool.name)
+		if (!rawPool) throw new Error('Pool not found')
+		const acceleratorDevices = this.#parsePoolAccelerator(rawPool).devices
+		const acceleratorToReplace = acceleratorDevices.find((device) => device.id === oldDeviceId)
+		if (!acceleratorToReplace) throw new Error(`Device ${oldDeviceId} is not in the accelerator`)
+		const referenceAccelerator =
+			pool.raidType === 'failsafe'
+				? (acceleratorDevices.find((device) => device.id !== oldDeviceId) ?? acceleratorToReplace)
+				: acceleratorToReplace
+
+		const {l2arcPartition, specialPartition} = await this.#partitionAcceleratorDevice(newDevice, {
+			l2arcSizeBytes: referenceAccelerator.l2arcSize,
+			specialSizeBytes: referenceAccelerator.specialSize,
+		})
+
+		// Replace the old special vdev with the new one and resilver data over
+		this.logger.log(
+			`Replacing accelerator special partition ${acceleratorToReplace.specialPartition} with ${specialPartition} in pool '${pool.name}'`,
+		)
+		await $`zpool replace -f ${pool.name} ${acceleratorToReplace.specialPartition} ${specialPartition}`
+
+		// Simply throw away the old l2arc vdev and add a new one, we don't need to resilver the data is volatile
+		this.logger.log(
+			`Removing accelerator cache partition ${acceleratorToReplace.l2arcPartition} from pool '${pool.name}'`,
+		)
+		await $`zpool remove ${pool.name} ${acceleratorToReplace.l2arcPartition}`
+
+		this.logger.log(`Adding accelerator cache partition ${l2arcPartition} to pool '${pool.name}'`)
+		await $`zpool add -f ${pool.name} cache ${l2arcPartition}`
+
+		const currentAcceleratorDevices = (await this.configStore.get('raid.accelerator.devices')) ?? []
+		const updatedAcceleratorDevices = currentAcceleratorDevices.map((device: string) =>
+			device === oldDevice ? newDevice : device,
+		)
+		this.logger.log(`Updating RAID config with accelerator devices: ${updatedAcceleratorDevices.join(', ')}`)
+		await this.configStore.set('raid.accelerator.devices', updatedAcceleratorDevices)
+
+		const expectedAcceleratorDeviceIds = acceleratorDeviceIds.map((deviceId) =>
+			deviceId === oldDeviceId ? newDeviceId : deviceId,
+		)
+		await this.#monitorReplaceProgress(pool.name, (status) => {
+			const currentAcceleratorDeviceIds = status.accelerator?.devices?.map((device) => device.id).sort() ?? []
+			return currentAcceleratorDeviceIds.join(',') === expectedAcceleratorDeviceIds.sort().join(',')
+		})
+
+		this.logger.log('Accelerator replacement initiated, resilvering in progress')
+		return true
+	}
+
+	// Replace a storage or accelerator device in the RAID array.
+	async replaceDevice(oldDeviceId: string, newDeviceId: string): Promise<boolean> {
+		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		if (!(await fse.pathExists(newDevice))) throw new Error(`New device not found: ${newDevice}`)
+
+		const pool = await this.getStatus()
+		if (!pool.exists) throw new Error("RAID array doesn't exist")
+
+		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
+		const acceleratorDeviceIds = pool.accelerator?.devices?.map((device) => device.id) ?? []
+
+		if (poolDeviceIds.includes(newDeviceId))
+			throw new Error('Cannot replace with a device that is already in the RAID array')
+		if (acceleratorDeviceIds.includes(newDeviceId))
+			throw new Error('Cannot replace with a device that is already in the accelerator')
+
+		if (this.isReplacing) throw new Error('Already replacing device')
+		this.isReplacing = true
+
+		try {
+			if (poolDeviceIds.includes(oldDeviceId)) return await this.#replaceStorageDevice(pool, oldDeviceId, newDeviceId)
+			if (acceleratorDeviceIds.includes(oldDeviceId))
+				return await this.#replaceAcceleratorDevice(pool, oldDeviceId, newDeviceId)
+			throw new Error(`Device ${oldDeviceId} is not in the RAID array or accelerator`)
+		} catch (error) {
+			this.isReplacing = false
+			throw error
+		}
 	}
 
 	// Transition an SSD storage array to a failsafe (raidz1) array.
@@ -1160,7 +1514,10 @@ export default class Raid {
 
 	// Transition an HDD storage array to failsafe mirrors by attaching a new disk to each existing disk.
 	// This is an in-place operation that does not require a reboot.
-	async transitionToFailsafeMirror(pairs: FailsafeMirrorTransitionPair[]): Promise<boolean> {
+	async transitionToFailsafeMirror(
+		pairs: FailsafeMirrorTransitionPair[],
+		acceleratorDeviceId?: string,
+	): Promise<boolean> {
 		if (pairs.length === 0) throw new Error('At least one mirror pair is required')
 
 		// Verify we're in a state that can be migrated
@@ -1215,6 +1572,38 @@ export default class Raid {
 				throw new Error('Cannot transition with a device smaller than an existing device')
 		}
 
+		// If we have an accelerator device, check we have a valid new accelerator device to mirror to
+		const existingAccelerator = pool.accelerator
+		const existingAcceleratorDeviceIds = existingAccelerator?.devices?.map((device) => device.id) ?? []
+		const existingAcceleratorDevices = existingAcceleratorDeviceIds.map((id) => `/dev/disk/by-id/${id}`)
+		// Check the live pool status instead of config.
+		if (existingAcceleratorDeviceIds.length > 0) {
+			if (!acceleratorDeviceId)
+				throw new Error(
+					'Transitioning to failsafe with an accelerator requires an additional SSD for the accelerator mirror',
+				)
+			const existingAcceleratorIds = new Set(existingAcceleratorDeviceIds)
+			if (
+				existingPoolDeviceIds.has(acceleratorDeviceId) ||
+				seenNew.has(acceleratorDeviceId) ||
+				existingAcceleratorIds.has(acceleratorDeviceId)
+			)
+				throw new Error('Cannot reuse a RAID device as the accelerator mirror')
+
+			const acceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+			if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
+			await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
+
+			// Use the same rounded size check as normal RAID devices.
+			const existingAcceleratorDevicePath = existingAcceleratorDevices[0]
+			const existingAcceleratorSize = await getDeviceSize(existingAcceleratorDevicePath)
+			const newAcceleratorSize = await getDeviceSize(acceleratorDevice)
+			if (getRoundedDeviceSize(newAcceleratorSize) < getRoundedDeviceSize(existingAcceleratorSize))
+				throw new Error('Cannot transition with an accelerator device smaller than the existing accelerator')
+		} else if (acceleratorDeviceId) {
+			throw new Error('Cannot supply an accelerator mirror SSD when no accelerator exists')
+		}
+
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
 		this.isTransitioningToFailsafe = true
 
@@ -1243,6 +1632,25 @@ export default class Raid {
 				await $`zpool attach -f ${pool.name} ${existingPartition} ${newDataPartition}`
 			}
 
+			// If we have an existing accelerator device, mirror it against the new one
+			if (existingAcceleratorDeviceIds.length > 0 && acceleratorDeviceId) {
+				const newAcceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+				const existingL2arcPartition = `${existingAcceleratorDevices[0]}-part2`
+				const existingSpecialPartition = `${existingAcceleratorDevices[0]}-part3`
+				// Reuse the existing partition sizes.
+				const {l2arcPartition, specialPartition} = await this.#partitionAcceleratorDevice(newAcceleratorDevice, {
+					l2arcSizeBytes: await getDeviceSize(existingL2arcPartition),
+					specialSizeBytes: await getDeviceSize(existingSpecialPartition),
+				})
+
+				this.logger.log(`Adding accelerator cache partition ${l2arcPartition} to pool '${pool.name}'`)
+				await $`zpool add -f ${pool.name} cache ${l2arcPartition}`
+
+				// Mirror the existing special vdev.
+				this.logger.log(`Mirroring accelerator special vdev ${existingSpecialPartition} with ${specialPartition}`)
+				await $`zpool attach -f ${pool.name} ${existingSpecialPartition} ${specialPartition}`
+			}
+
 			// Keep config order deterministic: existing pool order, then mirror partners in that same order
 			const newDeviceByExisting = new Map(pairs.map((pair) => [pair.existingDeviceId, pair.newDeviceId]))
 			const orderedNewDeviceIds = existingDeviceIds.map((existingDeviceId) => {
@@ -1258,7 +1666,17 @@ export default class Raid {
 			]
 			await this.configStore.getWriteLock(async ({set}) => {
 				const raid = await this.configStore.get('raid')
-				await set('raid', {...raid, raidType: 'failsafe', devices: allDevices})
+				await set('raid', {
+					...raid,
+					raidType: 'failsafe',
+					devices: allDevices,
+					accelerator:
+						existingAcceleratorDeviceIds.length > 0 && acceleratorDeviceId
+							? {
+									devices: [...existingAcceleratorDevices, `/dev/disk/by-id/${acceleratorDeviceId}`],
+								}
+							: raid?.accelerator,
+				})
 			})
 
 			// Initialize transition status and monitor rebuild progress in the background

@@ -32,6 +32,7 @@ export default router({
 				// Currently unused
 				raidDevices: z.array(z.string()).optional(),
 				raidType: z.enum(['storage', 'failsafe']).optional(),
+				acceleratorDevices: z.array(z.string()).optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
@@ -50,11 +51,16 @@ export default router({
 			// If we have a valid raid setup details, trigger the initial RAID setup boot process
 			// We'll reboot into the RAID filesystem and then the RAID module will setup the user on the next boot
 			if (hasRaidDetails) {
-				await ctx.umbreld.hardware.raid.triggerInitialRaidSetupBootFlow(input.raidDevices!, input.raidType!, {
-					name: input.name,
-					password: input.password,
-					language: input.language,
-				})
+				await ctx.umbreld.hardware.raid.triggerInitialRaidSetupBootFlow(
+					input.raidDevices!,
+					input.raidType!,
+					input.acceleratorDevices,
+					{
+						name: input.name,
+						password: input.password,
+						language: input.language,
+					},
+				)
 				return true
 			}
 
