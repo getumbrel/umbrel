@@ -28,6 +28,11 @@ type StoreSchema = {
 	apps: string[]
 	appRepositories: string[]
 	widgets: string[]
+	shortcuts: {
+		url: string
+		title: string
+		icon?: string
+	}[]
 	torEnabled?: boolean
 	user: {
 		name: string

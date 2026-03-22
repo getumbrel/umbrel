@@ -22,7 +22,10 @@ import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useShortcuts} from '@/hooks/use-shortcuts'
 import {cn} from '@/lib/utils'
+import {resolveShortcutUrl} from '@/modules/desktop/shortcut-dialog'
+import {resolveShortcutIcon, ShortcutIconImage} from '@/modules/desktop/shortcut-icon-image'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
 import {AppState, trpcReact} from '@/trpc/trpc'
@@ -92,6 +95,7 @@ function CmdkContent() {
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
+	const {shortcuts} = useShortcuts()
 	// We only show installed community apps here, effectively limiting available
 	// apps to those present in the official app store
 	const availableApps = useAvailableApps()
@@ -156,6 +160,15 @@ function CmdkContent() {
 				}}
 			>
 				{t('cmdk.widgets')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_home'].icon}
+				onSelect={() => {
+					navigate({pathname: '/', search: new URLSearchParams({dialog: 'add-shortcut'}).toString()})
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.add-shortcut')}
 			</CommandItem>
 			<SearchItem
 				icon={systemAppsKeyed['UMBREL_home'].icon}
@@ -289,6 +302,25 @@ function CmdkContent() {
 					}}
 				>
 					{app.name}
+				</SearchItem>
+			))}
+			{shortcuts?.map((shortcut) => (
+				<SearchItem
+					value={shortcut.title}
+					icon={
+						<ShortcutIconImage
+							src={resolveShortcutIcon(shortcut)}
+							title={shortcut.title}
+							className='h-full w-full rounded-6 sm:rounded-8'
+						/>
+					}
+					key={shortcut.url}
+					onSelect={() => {
+						window.open(resolveShortcutUrl(shortcut), '_blank')?.focus()
+						setOpen(false)
+					}}
+				>
+					{shortcut.title}
 				</SearchItem>
 			))}
 			{unreadyApps.map((app) => (
