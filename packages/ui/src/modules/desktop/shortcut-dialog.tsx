@@ -13,10 +13,15 @@ import {ShortcutIconImage} from './shortcut-icon-image'
 
 type Protocol = 'https://' | 'http://' | 'umbrel'
 
-const PROTOCOL_OPTIONS: {value: Protocol; labelTKey: string; placeholderTKey: string}[] = [
-	{value: 'https://', labelTKey: 'https://', placeholderTKey: 'example.com'},
-	{value: 'http://', labelTKey: 'http://', placeholderTKey: 'example.com'},
-	{value: 'umbrel', labelTKey: 'shortcut.add.custom-port', placeholderTKey: 'shortcut.add.custom-port-placeholder'},
+const PROTOCOL_OPTIONS: {value: Protocol; label: string; labelTKey?: string; placeholderTKey: string}[] = [
+	{value: 'https://', label: 'https://', placeholderTKey: 'example.com'},
+	{value: 'http://', label: 'http://', placeholderTKey: 'example.com'},
+	{
+		value: 'umbrel',
+		label: 'Custom Port',
+		labelTKey: 'shortcut.add.custom-port',
+		placeholderTKey: 'shortcut.add.custom-port-placeholder',
+	},
 ]
 
 /** Resolve a stored shortcut to an openable URL */
@@ -179,6 +184,21 @@ export function ShortcutPopover({
 			cleaned = cleaned.slice('http://'.length)
 			setProtocol('http://')
 		}
+
+		// Auto-switch to Custom Port when the URL points to this device
+		if (detectedProtocol !== 'umbrel') {
+			try {
+				const parsed = new URL(`${detectedProtocol}${cleaned}`)
+				if (parsed.hostname === window.location.hostname && parsed.port) {
+					detectedProtocol = 'umbrel'
+					setProtocol('umbrel')
+					cleaned = parsed.port + (parsed.pathname !== '/' ? parsed.pathname : '') + parsed.search
+				}
+			} catch {
+				// Not a valid URL yet — skip auto-detection
+			}
+		}
+
 		setUrlInput(cleaned)
 		if (cleaned.trim()) {
 			triggerFetch(cleaned, detectedProtocol)
@@ -233,7 +253,8 @@ export function ShortcutPopover({
 	const canSubmit = urlInput.trim().length > 0 && title.trim().length > 0 && !isSubmitting
 	const showResult = hasFetched
 
-	const currentProtocolLabel = t(PROTOCOL_OPTIONS.find((p) => p.value === protocol)?.labelTKey ?? 'https://')
+	const currentOption = PROTOCOL_OPTIONS.find((p) => p.value === protocol)
+	const currentProtocolLabel = currentOption?.labelTKey ? t(currentOption.labelTKey) : (currentOption?.label ?? '')
 
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
@@ -282,7 +303,7 @@ export function ShortcutPopover({
 													protocol === opt.value ? 'text-white' : 'text-white/70',
 												)}
 											>
-												{t(opt.labelTKey)}
+												{opt.labelTKey ? t(opt.labelTKey) : opt.label}
 											</button>
 										))}
 									</motion.div>

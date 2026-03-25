@@ -31,22 +31,22 @@ export async function fetchPageMetadata(url: string): Promise<{title: string; ic
 	const fallbackTitle = pageUrl.hostname === 'localhost' ? `Port ${pageUrl.port}` : pageUrl.hostname
 
 	const response = await fetchPage(pageUrl)
-	if (!response) return {title: fallbackTitle, icon: undefined}
+	const html = response ? await response.text().catch(() => undefined) : undefined
+	const base = response ? new URL(response.url) : pageUrl
+	const head = html ? (html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? html) : undefined
 
-	const html = await response.text().catch(() => undefined)
-	if (!html) return {title: fallbackTitle, icon: undefined}
+	const icon = head
+		? (findAppleTouchIcon(head, base) ??
+			(await fetchManifestIcon(findManifestHref(head, base)).catch(() => undefined)) ??
+			findMetaImage(head, base) ??
+			(await probeAppleTouchIcon(base).catch(() => undefined)) ??
+			findIcon(head, base) ??
+			(await fetchFavicon(base).catch(() => undefined)))
+		: ((await probeAppleTouchIcon(base).catch(() => undefined)) ?? (await fetchFavicon(base).catch(() => undefined)))
 
-	const base = new URL(response.url)
-	const head = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? html
+	const title = head ? findTitle(head) : undefined
 
-	const icon =
-		findAppleTouchIcon(head, base) ??
-		(await fetchManifestIcon(findManifestHref(head, base)).catch(() => undefined)) ??
-		findMetaImage(head, base) ??
-		findIcon(head, base) ??
-		(await fetchFavicon(base).catch(() => undefined))
-
-	return {title: findTitle(head) ?? fallbackTitle, icon}
+	return {title: title ?? fallbackTitle, icon}
 }
 
 async function fetchPage(url: URL) {
@@ -148,10 +148,21 @@ async function fetchManifestIcon(href: string | undefined) {
 		.find(Boolean)
 }
 
+async function probeAppleTouchIcon(base: URL) {
+	const response = await doFetch(new URL('/apple-touch-icon.png', base), 'image/*,*/*;q=0.8')
+	if (!response) return undefined
+	const ct = response.headers.get('content-type') ?? ''
+	response.body?.resume()
+	if (!ct.includes('image')) return undefined
+	return response.url
+}
+
 async function fetchFavicon(base: URL) {
 	const response = await doFetch(new URL('/favicon.ico', base), 'image/*,*/*;q=0.8')
 	if (!response) return undefined
+	const ct = response.headers.get('content-type') ?? ''
 	response.body?.resume()
+	if (!ct.includes('image')) return undefined
 	return response.url
 }
 
