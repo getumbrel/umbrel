@@ -1,6 +1,8 @@
 import {useIsFetching, useQueryClient} from '@tanstack/react-query'
 import {useEffect, useState} from 'react'
 
+import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
+import {toFsPath} from '@/features/files/hooks/use-navigate'
 import {trpcReact} from '@/trpc/trpc'
 
 import {getWallpaperThumbUrl, wallpapers} from './wallpaper'
@@ -63,6 +65,29 @@ export function Prefetcher() {
 		]
 
 		Promise.allSettled(prefetchQueries.map((q) => q.prefetch()))
+
+		// Files directory listing: fetch preferences first so the sort params
+		// in the query key match what useListDirectory will request.
+		// Falls back to /Home for pseudo-routes that don't use files.list.
+		const lastFilesRoute = sessionStorage.getItem('lastFilesPath')
+		const isListablePath =
+			lastFilesRoute &&
+			!lastFilesRoute.startsWith('/files/Search') &&
+			!lastFilesRoute.startsWith('/files/Recents') &&
+			!lastFilesRoute.startsWith('/files/Trash') &&
+			lastFilesRoute !== '/files/Apps'
+		const filesListPath = isListablePath ? toFsPath(lastFilesRoute) : '/Home'
+		utils.files.viewPreferences
+			.fetch()
+			.then((preferences) => {
+				utils.files.list.prefetch({
+					path: filesListPath,
+					limit: USE_LIST_DIRECTORY_LOAD_ITEMS.INITIAL,
+					sortBy: preferences?.sortBy ?? 'name',
+					sortOrder: preferences?.sortOrder ?? 'ascending',
+				})
+			})
+			.catch(() => {})
 
 		// App Store discover page (external API, not tRPC)
 		queryClient.prefetchQuery({

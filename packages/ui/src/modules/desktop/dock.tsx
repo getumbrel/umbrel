@@ -1,7 +1,7 @@
 import {motion, useMotionValue} from 'motion/react'
 import React, {Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
-import {useLocation} from 'react-router-dom'
+import {useLocation, useNavigate} from 'react-router-dom'
 
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -59,6 +59,7 @@ function useDockDimensions(options?: {isPreview?: boolean}): DockDimensionsPx {
 
 export function Dock() {
 	const {pathname} = useLocation()
+	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
 	const mouseX = useMotionValue(Infinity)
 	const settingsNotificationCount = useSettingsNotificationCount()
@@ -68,11 +69,13 @@ export function Dock() {
 
 	const appUpdateCount = appsWithUpdates.length
 
-	// TODO: THIS IS A HACK
-	// We need a better approach to track the last visited path (possibly scroll position too?)
-	// inside every page. We do this right now for the File app because it's has the most
-	// UX-advantage (eg. user accidentally clicking close while they're in a deeply nested path)
-	const lastFilesPath = sessionStorage.getItem('lastFilesPath')
+	// Read sessionStorage at click time, not render time, because React Compiler
+	// may cache the render-time read and return a stale value.
+	const navigateToLastFilesPath = (e: React.MouseEvent) => {
+		e.preventDefault()
+		const lastFilesPath = sessionStorage.getItem('lastFilesPath')
+		navigate(lastFilesPath || systemAppsKeyed['UMBREL_files'].systemAppTo)
+	}
 
 	return (
 		<>
@@ -108,10 +111,8 @@ export function Dock() {
 				<DockItem
 					iconSize={iconSize}
 					iconSizeZoomed={iconSizeZoomed}
-					to={lastFilesPath || systemAppsKeyed['UMBREL_files'].systemAppTo}
-					// TODO: This is hack, we should use the systemAppTo but currently systemAppTo is /files/Home
-					// so this fails the check when the path is /files/Recents, /files/Trash, etc.
-					// We need a proper redirect to /files/Home when the user navigates to /files
+					to={systemAppsKeyed['UMBREL_files'].systemAppTo}
+					onClick={navigateToLastFilesPath}
 					open={pathname.startsWith('/files')}
 					bg={systemAppsKeyed['UMBREL_files'].icon}
 					mouseX={mouseX}

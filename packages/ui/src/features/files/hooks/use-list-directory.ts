@@ -27,28 +27,25 @@ export function useListDirectory(
 	const sortBy = preferences?.sortBy ?? 'name'
 	const sortOrder = preferences?.sortOrder ?? 'ascending'
 
-	// Local “pagination” state
-	const [items, setItems] = useState<FileSystemItem[]>([])
-	const [hasMore, setHasMore] = useState(true)
+	// Extra paginated items beyond the first page. The first page comes
+	// directly from the query's `data.files` so we don't duplicate it in state.
+	const [extraItems, setExtraItems] = useState<FileSystemItem[]>([])
+	const [extraHasMore, setExtraHasMore] = useState<boolean | null>(null)
 	const [isFetchingMore, setIsFetchingMore] = useState(false)
 	const [, setPaginationError] = useState<unknown>(null)
-	const [isLoadingItems, setIsLoadingItems] = useState(true)
 
-	// helpers to know WHEN to skip refetch on sort changes
+	// Skip refetch when all items are loaded and only the sort changed (we can re-sort locally)
 	const prevSortRef = useRef<{sortBy: string; sortOrder: string} | undefined>(undefined)
-	const fullyLoaded = items.length > 0 && !hasMore
+	const fullyLoadedRef = useRef(false)
 	const sortChanged =
 		prevSortRef.current && (prevSortRef.current.sortBy !== sortBy || prevSortRef.current.sortOrder !== sortOrder)
+	const skipBackendRequest = fullyLoadedRef.current && !!sortChanged
 
-	const skipBackendRequest = fullyLoaded && sortChanged
-
-	// remember latest sort
 	useEffect(() => {
 		prevSortRef.current = {sortBy, sortOrder}
 	}, [sortBy, sortOrder])
 
-	//
-	const {data, isLoading, isError, error} = trpcReact.files.list.useQuery(
+	const {data, isLoading, isError, error, isPlaceholderData} = trpcReact.files.list.useQuery(
 		{path, limit: initialItems, sortBy, sortOrder},
 		{
 			enabled: !!path && !skipBackendRequest,
@@ -61,31 +58,40 @@ export function useListDirectory(
 		},
 	)
 
-	// Reset items only when the *directory* changes
+	// Track the previous path so we can distinguish placeholder data from
+	// a directory change (hide old items) vs a sort change (keep showing items).
+	const prevPathRef = useRef(path)
+	const isNewDirectory = prevPathRef.current !== path
 	useEffect(() => {
-		// Using our own loading state instead of the query's isLoading/isFetching to prevent
-		// the empty view from briefly flashing when the items array is cleared during directory changes
-		setIsLoadingItems(true)
-		setItems([])
-		setHasMore(true)
-		setPaginationError(null)
+		prevPathRef.current = path
 	}, [path])
 
-	// Seed items from the query result
-	useEffect(() => {
-		if (data?.files) {
-			setIsLoadingItems(false)
-			setItems(data.files)
-			setHasMore(data.hasMore)
-		}
-	}, [path, data])
+	// When data is placeholder from a different directory, return empty so we
+	// don't flash stale files. But if it's placeholder from the same directory
+	// (e.g., sort changed), keep showing the current items.
+	const isStaleDirectory = isPlaceholderData && isNewDirectory
+	const items = useMemo(() => {
+		if (!data?.files || isStaleDirectory) return []
+		if (extraItems.length === 0) return data.files
+		const map = new Map(data.files.map((f) => [f.path, f]))
+		extraItems.forEach((f: FileSystemItem) => map.set(f.path, f))
+		return Array.from(map.values())
+	}, [data?.files, extraItems, isStaleDirectory])
 
-	// Stop loading if the query errors so the UI can render the error state
+	const hasMore = isStaleDirectory ? true : (extraHasMore ?? data?.hasMore ?? true)
+
+	// Keep the ref in sync for the skip-refetch-on-sort optimization
+	fullyLoadedRef.current = items.length > 0 && !hasMore
+
+	// Reset pagination state when the directory or sort changes.
+	// Sort changes produce a new first page from the query, so extras
+	// from the previous sort order must be cleared to avoid mixing.
 	useEffect(() => {
-		if (isError) {
-			setIsLoadingItems(false)
-		}
-	}, [isError])
+		setExtraItems([])
+		setExtraHasMore(null)
+		setPaginationError(null)
+		fullyLoadedRef.current = false
+	}, [path, sortBy, sortOrder])
 
 	// Guard against late responses landing in the wrong directory
 	const requestIdRef = useRef(0)
@@ -113,17 +119,17 @@ export function useListDirectory(
 			if (thisRequest !== requestIdRef.current) return false
 
 			if (!result?.files?.length) {
-				setHasMore(false)
+				setExtraHasMore(false)
 				return false
 			}
 
-			// O( n ) dedupe
-			setItems((prev) => {
+			// O( n ) dedupe — append to extra items
+			setExtraItems((prev) => {
 				const map = new Map(prev.map((f) => [f.path, f]))
 				result.files.forEach((f: FileSystemItem) => map.set(f.path, f))
 				return Array.from(map.values())
 			})
-			setHasMore(result.hasMore)
+			setExtraHasMore(result.hasMore)
 			return true
 		} catch (e) {
 			if (thisRequest === requestIdRef.current) setPaginationError(e)
@@ -139,8 +145,12 @@ export function useListDirectory(
 		return sortFilesystemItems([...optimistic, ...items], sortBy, sortOrder)
 	}, [uploadingItems, items, path, sortBy, sortOrder])
 
+	// Derive loading state from the query directly.
+	// Loading when: query is fetching and we have no real data for this path.
+	const isLoadingItems = isLoading || isStaleDirectory
+
 	return {
-		listing: data ? {...data, items: directoryItems, hasMore} : undefined,
+		listing: data && !isStaleDirectory ? {...data, items: directoryItems, hasMore} : undefined,
 		isLoading: isLoadingItems,
 		isError,
 		error,

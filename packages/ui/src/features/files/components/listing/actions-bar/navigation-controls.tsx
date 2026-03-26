@@ -34,6 +34,10 @@ export function NavigationControls() {
 			const isSearchPage = location.pathname === `${BASE_ROUTE_PATH}${SEARCH_PATH}`
 			const newPath = isSearchPage ? `${location.pathname}${location.search}` : location.pathname
 
+			// Save the latest path to session storage so the Dock and Cmdk
+			// can restore the last visited path when Files is reopened
+			sessionStorage.setItem('lastFilesPath', newPath)
+
 			setNavigation((current) => {
 				const lastPath = current.paths[current.currentPathIndex]
 
