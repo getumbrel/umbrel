@@ -23,6 +23,7 @@ import {AudioViewer} from '@/features/files/components/file-viewer/audio-viewer'
 const ImageViewer = lazy(() => import('@/features/files/components/file-viewer/image-viewer'))
 const PdfViewer = lazy(() => import('@/features/files/components/file-viewer/pdf-viewer'))
 const VideoViewer = lazy(() => import('@/features/files/components/file-viewer/video-viewer'))
+const TextViewer = lazy(() => import('@/features/files/components/file-viewer/text-viewer'))
 
 export const BASE_ROUTE_PATH = '/files' as const
 export const HOME_PATH = '/Home' as const
@@ -102,8 +103,25 @@ export const FILE_TYPE_MAP = {
 
 	// Documents
 	'application/pdf': {nameTKey: 'files-type.pdf', thumbnail: PdfThumbnail, viewer: PdfViewer},
-	'text/plain': {nameTKey: 'files-type.txt', thumbnail: TxtThumbnail, viewer: null},
 	'text/csv': {nameTKey: 'files-type.csv', thumbnail: CsvThumbnail, viewer: null},
+
+	// Text / Code (editable via TextViewer)
+	'text/plain': {nameTKey: 'files-type.txt', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/yaml': {nameTKey: 'files-type.yaml', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/json': {nameTKey: 'files-type.json', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/javascript': {nameTKey: 'files-type.javascript', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/css': {nameTKey: 'files-type.css', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/html': {nameTKey: 'files-type.html', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/markdown': {nameTKey: 'files-type.markdown', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/x-python': {nameTKey: 'files-type.python', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/x-sh': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/x-shellscript': {nameTKey: 'files-type.shell', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/xml': {nameTKey: 'files-type.xml', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'text/x-toml': {nameTKey: 'files-type.toml', thumbnail: TxtThumbnail, viewer: TextViewer},
+	'application/x-subrip': {nameTKey: 'files-type.srt', thumbnail: TxtThumbnail, viewer: TextViewer},
 
 	// Ebooks
 	'application/epub+zip': {nameTKey: 'files-type.epub', thumbnail: EbookThumbnail, viewer: null},

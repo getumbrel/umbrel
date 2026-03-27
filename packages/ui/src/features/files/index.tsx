@@ -32,7 +32,7 @@ export default function FilesLayout() {
 	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const {setSelectedItems} = useFilesStore()
-
+	const setViewerItem = useFilesStore((state) => state.setViewerItem)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
 	const isMobile = useIsMobile()
@@ -47,12 +47,15 @@ export default function FilesLayout() {
 		// to set the selected item correctly
 		setSelectedItems([])
 
+		// Close any open file viewer (text editor, image viewer, etc.)
+		setViewerItem(null)
+
 		// set selecting on mobile to false when navigating to a different path
 		setIsSelectingOnMobile(false)
 
 		// Close mobile sidebar on navigation
 		setIsMobileSidebarOpen(false)
-	}, [pathname, setSelectedItems, setIsSelectingOnMobile])
+	}, [pathname, setSelectedItems, setViewerItem, setIsSelectingOnMobile])
 
 	return (
 		<FilesDndWrapper>
