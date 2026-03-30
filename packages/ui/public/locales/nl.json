@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "Herstel je Umbrel vanaf een back-up op een andere Umbrel, een NAS of een externe schijf",
   "backups-restore.restore-from-unlisted": "Terugzetten vanaf een andere locatie",
   "backups-restore.restore-umbrel": "Umbrel herstellen",
-  "backups-restore.restore-warning": "Het terugzetten van deze back-up vervangt je huidige umbrelOS-apps en -gegevens door de inhoud van de geselecteerde back-up. Alle bestanden, mappen of apps die van deze back-up zijn uitgesloten, worden van je Umbrel verwijderd. Open <0>Rewind</0> als je in plaats daarvan specifieke bestanden of mappen wilt terugzetten.",
+  "backups-restore.restore-warning": "Herstellen vanaf deze back-up vervangt je huidige umbrelOS-apps en -gegevens door de inhoud van de geselecteerde back-up. Alle bestanden, mappen of apps die van deze back-up zijn uitgesloten, worden van je Umbrel verwijderd. Open <0>Rewind</0> als je in plaats daarvan specifieke bestanden of mappen wilt herstellen.",
   "backups-restore.restoring-from": "Je staat op het punt de volgende back-up terug te zetten:",
   "backups-restore.review-description": "Het herstellen zet je Umbrel terug naar het account, de bestanden, apps en instellingen die in deze back-up zaten. Dit kan even duren. Als het klaar is, wordt je inlogwachtwoord ingesteld op het wachtwoord dat je gebruikte toen je de back-up maakte.",
   "backups-restore.select-backup": "Selecteer een back-up",

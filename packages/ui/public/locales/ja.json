@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "別のUmbrel、NAS、または外付けドライブにあるバックアップからUmbrelを復元",
   "backups-restore.restore-from-unlisted": "別の場所から復元",
   "backups-restore.restore-umbrel": "Umbrelを復元",
-  "backups-restore.restore-warning": "このバックアップから復元すると、現在の umbrelOS のアプリとデータは選択したバックアップの内容で置き換えられます。このバックアップで除外されているファイル、フォルダ、またはアプリは Umbrel から削除されます。特定のファイルやフォルダだけを復元したい場合は、<0>Rewind</0> を開いてください。",
+  "backups-restore.restore-warning": "このバックアップから復元すると、現在のumbrelOSのアプリとデータは、選択したバックアップの内容に置き換えられます。このバックアップに含まれていないファイル、フォルダ、アプリは、Umbrelから削除されます。代わりに特定のファイルやフォルダだけを復元したい場合は、<0>Rewind</0>を開いてください。",
   "backups-restore.restoring-from": "以下のバックアップから復元します：",
   "backups-restore.review-description": "復元を行うと、バックアップ作成時に含まれていたアカウント、ファイル、アプリ、設定がUmbrelに復元されます。処理には時間がかかる場合があります。完了すると、ログインパスワードはバックアップ作成時に使用していたものに設定されます。",
   "backups-restore.select-backup": "バックアップを選択",

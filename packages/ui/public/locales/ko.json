@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "다른 Umbrel, NAS 또는 외부 드라이브에 있는 백업에서 Umbrel을 복원하세요",
   "backups-restore.restore-from-unlisted": "다른 위치에서 복원",
   "backups-restore.restore-umbrel": "Umbrel 복원",
-  "backups-restore.restore-warning": "이 백업에서 복원하면 현재의 umbrelOS 앱과 데이터가 선택한 백업의 내용으로 대체됩니다. 이 백업에서 제외된 파일, 폴더 또는 앱은 Umbrel에서 제거됩니다. 대신 특정 파일이나 폴더만 복원하려면 <0>Rewind</0>를 열어보세요.",
+  "backups-restore.restore-warning": "이 백업에서 복원하면 현재 umbrelOS 앱과 데이터가 선택한 백업의 내용으로 대체됩니다. 이 백업에 포함되지 않은 파일, 폴더 또는 앱은 Umbrel에서 제거됩니다. 대신 특정 파일이나 폴더만 복원하려면 <0>Rewind</0>를 여세요.",
   "backups-restore.restoring-from": "다음 백업에서 복원하려고 합니다:",
   "backups-restore.review-description": "복원하면 이 백업이 만들어졌을 당시 포함되어 있던 계정, 파일, 앱 및 설정으로 Umbrel이 구성됩니다. 이 작업은 다소 시간이 걸릴 수 있습니다. 완료되면 로그인 비밀번호는 백업 생성 시 사용한 비밀번호로 설정됩니다.",
   "backups-restore.select-backup": "백업 선택",

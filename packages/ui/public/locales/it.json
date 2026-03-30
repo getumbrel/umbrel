@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "Ripristina il tuo Umbrel da un backup presente su un altro Umbrel, su un NAS o su un'unità esterna",
   "backups-restore.restore-from-unlisted": "Ripristina da un'altra posizione",
   "backups-restore.restore-umbrel": "Ripristina Umbrel",
-  "backups-restore.restore-warning": "Il ripristino da questo backup sostituirà le app e i dati attuali di umbrelOS con il contenuto del backup selezionato. Eventuali file, cartelle o app esclusi da questo backup verranno rimossi dal tuo Umbrel. Apri <0>Rewind</0> se vuoi ripristinare invece file o cartelle specifici.",
+  "backups-restore.restore-warning": "Il ripristino da questo backup sostituirà le app e i dati attuali di umbrelOS con il contenuto del backup selezionato. Tutti i file, le cartelle o le app esclusi da questo backup verranno rimossi dal tuo Umbrel. Apri <0>Rewind</0> se invece vuoi ripristinare file o cartelle specifici.",
   "backups-restore.restoring-from": "Stai per ripristinare dal seguente backup:",
   "backups-restore.review-description": "Il ripristino configurerà il tuo Umbrel con l'account, i file, le app e le impostazioni presenti al momento della creazione di questo backup. Potrebbe richiedere un po' di tempo. Al termine, la password di accesso sarà quella che hai usato quando il backup è stato creato.",
   "backups-restore.select-backup": "Seleziona un backup",

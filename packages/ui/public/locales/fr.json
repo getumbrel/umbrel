@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "Restaurer votre Umbrel à partir d'une sauvegarde sur un autre Umbrel, un NAS ou un disque externe",
   "backups-restore.restore-from-unlisted": "Restaurer depuis un autre emplacement",
   "backups-restore.restore-umbrel": "Restaurer Umbrel",
-  "backups-restore.restore-warning": "Restaurer à partir de cette sauvegarde remplacera vos applications et données umbrelOS actuelles par le contenu de la sauvegarde sélectionnée. Tous les fichiers, dossiers ou applications exclus de cette sauvegarde seront supprimés de votre Umbrel. Ouvrez <0>Rewind</0> si vous souhaitez restaurer des fichiers ou dossiers spécifiques à la place.",
+  "backups-restore.restore-warning": "La restauration de cette sauvegarde remplacera vos applications et données umbrelOS actuelles par le contenu de la sauvegarde sélectionnée. Tous les fichiers, dossiers ou applications exclus de cette sauvegarde seront supprimés de votre Umbrel. Ouvrez <0>Rewind</0> si vous souhaitez restaurer des fichiers ou dossiers spécifiques à la place.",
   "backups-restore.restoring-from": "Vous êtes sur le point de restaurer la sauvegarde suivante :",
   "backups-restore.review-description": "La restauration configurera votre Umbrel avec le compte, les fichiers, les applications et les paramètres présents au moment de cette sauvegarde. Cela peut prendre un peu de temps. Une fois terminée, votre mot de passe de connexion sera celui que vous aviez utilisé lors de la création de la sauvegarde.",
   "backups-restore.select-backup": "Sélectionnez une sauvegarde",

@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "从另一台 Umbrel、NAS 或外部驱动器上的备份恢复你的 Umbrel",
   "backups-restore.restore-from-unlisted": "从其他位置恢复",
   "backups-restore.restore-umbrel": "恢复 Umbrel",
-  "backups-restore.restore-warning": "恢复此备份将用所选备份中的内容替换你当前的 umbrelOS 应用和数据。此备份中排除的任何文件、文件夹或应用都将从你的 Umbrel 中移除。如果你只想恢复特定文件或文件夹，请打开 <0>Rewind</0>。",
+  "backups-restore.restore-warning": "从此备份恢复将会用所选备份中的内容替换你当前的 umbrelOS 应用和数据。任何未包含在此备份中的文件、文件夹或应用都将从你的 Umbrel 中移除。如果你想改为恢复特定文件或文件夹，请打开 <0>Rewind</0>。",
   "backups-restore.restoring-from": "你即将从以下备份恢复：",
   "backups-restore.review-description": "恢复后，你的 Umbrel 将被设置为此备份创建时所包含的账户、文件、应用和设置。这可能需要一些时间。完成后，你的登录密码将恢复为创建该备份时使用的密码。",
   "backups-restore.select-backup": "选择一个备份",

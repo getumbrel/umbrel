@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "Állítsd vissza az Umbrel-edet egy másik Umbrel-ről, egy NAS-ról vagy egy külső meghajtóról készült biztonsági mentésből",
   "backups-restore.restore-from-unlisted": "Visszaállítás másik helyről",
   "backups-restore.restore-umbrel": "Umbrel visszaállítása",
-  "backups-restore.restore-warning": "Ennek a backupnak a visszaállítása felülírja a jelenlegi umbrelOS alkalmazásaidat és adataidat a kiválasztott backup tartalmával. A backupból kizárt fájlok, mappák vagy alkalmazások eltávolításra kerülnek az Umbrelről. Ha csak bizonyos fájlokat vagy mappákat szeretnél visszaállítani, nyisd meg a <0>Rewind</0>-et.",
+  "backups-restore.restore-warning": "Az ebből a biztonsági mentésből történő visszaállítás a jelenlegi umbrelOS-alkalmazásaidat és adataidat a kiválasztott biztonsági mentés tartalmára cseréli. Az ebből a biztonsági mentésből kizárt fájlok, mappák és alkalmazások el lesznek távolítva az Umbrelről. Nyisd meg a <0>Rewind</0> alkalmazást, ha inkább bizonyos fájlokat vagy mappákat szeretnél visszaállítani.",
   "backups-restore.restoring-from": "Most a következő biztonsági mentésről fogsz visszaállítani:",
   "backups-restore.review-description": "A visszaállítás azzal a fiókkal, fájlokkal, alkalmazásokkal és beállításokkal állítja be az Umbrel-edet, amelyek a mentés készítésekor szerepeltek. Ez eltarthat egy ideig. Ha kész, a bejelentkezési jelszavad arra a jelszóra lesz visszaállítva, amelyet a mentés készítésekor használtál.",
   "backups-restore.select-backup": "Válassz egy backupot",
