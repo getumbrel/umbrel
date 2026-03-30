@@ -37,6 +37,7 @@ const languageMapping = {
 	uk: 'Ukrainian',
 	hu: 'Hungarian',
 	ko: 'Korean',
+	zh: 'Simplified Chinese',
 }
 
 // Get en.json content from the base branch
@@ -190,16 +191,15 @@ async function generateTranslation(englishReferenceContent, textToTranslate, tar
 		.replace('replace_target_language', languageMapping[targetLanguage])
 		.replace('replace_text_to_translate', JSON.stringify(textToTranslate))
 
-	const completion = await openai.chat.completions.create({
-		messages: [
-			{role: 'system', content: systemPrompt},
-			{role: 'user', content: userPrompt},
-		],
+	const response = await openai.responses.create({
 		model,
-		response_format: {type: 'json_object'},
+		instructions: systemPrompt,
+		input: userPrompt,
+		reasoning: {effort: 'medium'},
+		text: {format: {type: 'json_object'}},
 	})
 
-	return completion.choices[0].message.content
+	return response.output_text
 }
 
 async function removeUnusedTranslations(englishReferenceContent) {
