@@ -1,5 +1,35 @@
 import {formatDistanceStrict, Locale} from 'date-fns'
-import {de, enUS, es, fr, hu, it, ja, ko, nl, pt, ru, tr, uk, zhCN} from 'date-fns/locale'
+import {
+	bg,
+	cs,
+	da,
+	de,
+	el,
+	enUS,
+	es,
+	et,
+	fr,
+	hr,
+	hu,
+	is,
+	it,
+	ja,
+	ko,
+	nb,
+	nl,
+	pl,
+	pt,
+	ptBR,
+	ro,
+	ru,
+	sk,
+	sl,
+	sv,
+	tr,
+	uk,
+	zhCN,
+	zhTW,
+} from 'date-fns/locale'
 
 import {UNKNOWN} from '@/constants'
 import {SupportedLanguageCode} from '@/utils/language'
@@ -23,6 +53,21 @@ export const languageCodeToDateLocale: Record<SupportedLanguageCode, Locale> = {
 	ko: ko,
 	zh: zhCN,
 	ru: ru,
+	sv: sv,
+	pl: pl,
+	cs: cs,
+	da: da,
+	nb: nb,
+	ro: ro,
+	el: el,
+	bg: bg,
+	hr: hr,
+	sk: sk,
+	sl: sl,
+	et: et,
+	is: is,
+	'pt-BR': ptBR,
+	'zh-TW': zhTW,
 }
 
 export function duration(seconds: number | undefined, languageCode: SupportedLanguageCode) {

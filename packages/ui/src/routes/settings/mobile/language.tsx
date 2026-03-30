@@ -32,14 +32,19 @@ export function LanguageDrawer() {
 
 				<DrawerScroller>
 					<div className='divide-y divide-white/6 rounded-12 bg-white/6'>
-						{languages.map(({code, name}) => (
+						{languages.map(({code, name, glyph}) => (
 							<ListRadioItem
 								key={code}
 								name={radioName}
 								checked={activeCode === code}
 								onSelect={() => setActiveCode(code)}
 							>
-								{name}
+								<span className='flex items-center gap-3'>
+									<span className='flex h-6 w-6 shrink-0 items-center justify-center rounded-5 bg-white/10 text-12 leading-none font-semibold'>
+										{glyph}
+									</span>
+									{name}
+								</span>
 							</ListRadioItem>
 						))}
 					</div>

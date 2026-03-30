@@ -177,7 +177,7 @@
   "backups-restore.restore-from-nas-or-external": "Umbrel'inizi başka bir Umbrel'deki, bir NAS'taki veya harici bir sürücüdeki backup'tan geri yükleyin",
   "backups-restore.restore-from-unlisted": "Başka bir konumdan geri yükle",
   "backups-restore.restore-umbrel": "Umbrel'i geri yükle",
-  "backups-restore.restore-warning": "Bu yedekten geri yüklemek, mevcut umbrelOS uygulamalarınızı ve verilerinizi seçili yedeğin içeriğiyle değiştirecek. Bu yedekte yer almayan dosya, klasör veya uygulamalar Umbrel'inizden silinecek. Bunun yerine belirli dosya veya klasörleri geri yüklemek istiyorsanız <0>Rewind</0>'ı açın.",
+  "backups-restore.restore-warning": "Bu yedekten geri yükleme yapmak, mevcut umbrelOS uygulamalarını ve verilerini seçilen yedeğin içeriğiyle değiştirecek. Bu yedeğe dahil edilmeyen dosya, klasör veya uygulamalar Umbrel'inden silinecek. Bunun yerine belirli dosya veya klasörleri geri yüklemek istiyorsan, <0>Rewind</0>'ı aç.",
   "backups-restore.restoring-from": "Aşağıdaki backup'tan geri yükleme yapacaksınız:",
   "backups-restore.review-description": "Geri yükleme, Umbrel'inizi bu backup'ın oluşturulduğu zamandaki hesap, dosyalar, uygulamalar ve ayarlarla yapılandırır. Bu biraz zaman alabilir. İşlem tamamlandığında, giriş şifreniz backup oluşturulurken kullandığınız şifre olarak ayarlanacaktır.",
   "backups-restore.select-backup": "Bir yedek seçin",

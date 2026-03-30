@@ -39,6 +39,21 @@ const languageMapping = {
 	ko: 'Korean',
 	zh: 'Simplified Chinese',
 	ru: 'Russian',
+	sv: 'Swedish',
+	pl: 'Polish',
+	cs: 'Czech',
+	da: 'Danish',
+	nb: 'Norwegian',
+	ro: 'Romanian',
+	el: 'Greek',
+	bg: 'Bulgarian',
+	hr: 'Croatian',
+	sk: 'Slovak',
+	sl: 'Slovenian',
+	et: 'Estonian',
+	is: 'Icelandic',
+	'pt-BR': 'Brazilian Portuguese',
+	'zh-TW': 'Traditional Chinese',
 }
 
 // Get en.json content from the base branch

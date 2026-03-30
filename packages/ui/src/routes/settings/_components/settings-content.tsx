@@ -291,7 +291,7 @@ export function SettingsContent() {
 					>
 						<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
 							<LanguageDropdownTrigger />
-							<LanguageDropdownContent />
+							<LanguageDropdownContent open={languageOpen} onOpenChange={setLanguageOpen} />
 						</DropdownMenu>
 					</ListRow>
 					<ListRow title={t('advanced-settings')} description={t('advanced-settings-description')}>
