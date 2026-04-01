@@ -31,7 +31,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const dialogProps = useSettingsDialogProps()
 
 	const {renameItem} = useFilesOperations()
-	const {cancelNewFolder, createFolder} = useNewFolder()
+	const {cancelNewFolder, commitNewFolder} = useNewFolder()
 	const confirm = useConfirmation()
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
@@ -84,7 +84,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 			// Calculate parent path and the full path for the new folder
 			const parentPath = path.split('/').slice(0, -1).join('/')
 			const fullPath = `${parentPath}/${trimmedName}`
-			createFolder.mutate({path: fullPath})
+			commitNewFolder(fullPath)
 		} else {
 			// check if the user is changing the extension of a file
 			if (item.type !== 'directory') {

@@ -3,6 +3,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {USE_LIST_DIRECTORY_LOAD_ITEMS} from '@/features/files/constants'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {sortFilesystemItems} from '@/features/files/utils/sort-filesystem-items'
 import {useGlobalFiles} from '@/providers/global-files'
@@ -60,11 +61,13 @@ export function useListDirectory(
 
 	// Track the previous path so we can distinguish placeholder data from
 	// a directory change (hide old items) vs a sort change (keep showing items).
+	// Only update when we have real data (not placeholder), so isNewDirectory
+	// stays true for the entire loading period, not just the first render.
 	const prevPathRef = useRef(path)
-	const isNewDirectory = prevPathRef.current !== path
-	useEffect(() => {
+	if (!isPlaceholderData && !isLoading) {
 		prevPathRef.current = path
-	}, [path])
+	}
+	const isNewDirectory = prevPathRef.current !== path
 
 	// When data is placeholder from a different directory, return empty so we
 	// don't flash stale files. But if it's placeholder from the same directory
@@ -139,11 +142,58 @@ export function useListDirectory(
 		}
 	}, [items, path, itemsOnScrollEnd, sortBy, sortOrder, isLoading, isFetchingMore, hasMore, utils.files.list])
 
+	// Items pending removal are filtered out for instant optimistic feedback.
+	const pendingPaths = useFilesStore((s) => s.pendingPaths)
+	const removePendingPaths = useFilesStore((s) => s.removePendingPaths)
+	// Items arriving via move/paste appear immediately before the server confirms.
+	const incomingItems = useFilesStore((s) => s.incomingItems)
+	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
+
 	// Merge optimistic uploading items & *always* sort locally
 	const directoryItems = useMemo(() => {
 		const optimistic = uploadingItems.filter((u) => u.path.substring(0, u.path.lastIndexOf('/')) === path)
-		return sortFilesystemItems([...optimistic, ...items], sortBy, sortOrder)
-	}, [uploadingItems, items, path, sortBy, sortOrder])
+		const allItems = [...optimistic, ...items]
+		const visible = allItems.filter((item) => pendingPaths.get(item.path) !== 'removing')
+
+		// Add incoming items whose parent matches this directory and aren't already in the listing
+		const existingPaths = new Set(visible.map((item) => item.path))
+		const arriving = incomingItems.filter(
+			(item) => item.path.substring(0, item.path.lastIndexOf('/')) === path && !existingPaths.has(item.path),
+		)
+
+		return sortFilesystemItems([...visible, ...arriving], sortBy, sortOrder)
+	}, [uploadingItems, items, path, sortBy, sortOrder, pendingPaths, incomingItems])
+
+	// Clean up stale optimistic state after server data refreshes.
+	// pendingPaths is read via getState() to avoid the effect running when
+	// pending paths are added (which would immediately undo them).
+	useEffect(() => {
+		if (!data?.files) return
+
+		// Clean up 'removing' entries only for items that are no longer in the
+		// server data (removal succeeded). Entries for items still in the data
+		// are kept: either the removal is still in-flight or the path was reused
+		// (e.g. trash then upload same name).
+		const serverPaths = new Set(data.files.map((f) => f.path))
+		const {pendingPaths: currentPendingPaths} = useFilesStore.getState()
+		const completedRemovals = [...currentPendingPaths.entries()]
+			.filter(
+				([itemPath, type]) =>
+					type === 'removing' &&
+					itemPath.substring(0, itemPath.lastIndexOf('/')) === path &&
+					!serverPaths.has(itemPath),
+			)
+			.map(([itemPath]) => itemPath)
+		if (completedRemovals.length > 0) {
+			useFilesStore.getState().removePendingPaths(completedRemovals)
+		}
+
+		// Clean up incoming items that the server now includes
+		const arrived = incomingItems.filter((item) => serverPaths.has(item.path)).map((item) => item.path)
+		if (arrived.length > 0) {
+			removeIncomingItems(arrived)
+		}
+	}, [data?.files, incomingItems, removeIncomingItems, path])
 
 	// Derive loading state from the query directly.
 	// Loading when: query is fetching and we have no real data for this path.

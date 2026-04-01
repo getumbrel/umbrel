@@ -4,6 +4,7 @@ import {useTranslation} from 'react-i18next'
 import {toast} from '@/components/ui/toast'
 import {NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {
 	isDirectoryANetworkDevice,
@@ -65,39 +66,54 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 
 	// Remove a share
 	const {mutateAsync: removeShare, isPending: isRemovingShare} = trpcReact.files.removeNetworkShare.useMutation({
-		onMutate: ({mountPath}) => {
+		onMutate: async ({mountPath}) => {
 			const hostPath = mountPath.split('/').slice(0, -1).join('/')
 			const hostName = mountPath.split('/')[2]
-			// Count how many shares this host will have after this removal
 			const remainingSharesForHost = shares?.filter((s) => s.host === hostName && s.mountPath !== mountPath).length || 0
+
+			// Cancel the sidebar query we're about to optimistically update
+			await utils.files.listNetworkShares.cancel()
+
+			// Snapshot sidebar data for rollback
+			const previousShares = utils.files.listNetworkShares.getData()
+
+			// Optimistically remove the share from the sidebar
+			utils.files.listNetworkShares.setData(undefined, (old) => old?.filter((s) => s.mountPath !== mountPath))
+
+			// Optimistically remove the share from the directory listing via pendingPaths
+			useFilesStore.getState().addPendingPaths([mountPath], 'removing')
+
+			// Navigate away immediately if this is the last share on the host
+			const isUserBrowsingThisHost = currentPath.startsWith(hostPath)
+			const isLastShareForHost = remainingSharesForHost === 0
+			if (isUserBrowsingThisHost && isLastShareForHost) navigateToDirectory(NETWORK_STORAGE_PATH)
 
 			return {
 				mountPath,
 				hostPath,
 				hostName,
 				remainingSharesForHost,
+				previousShares,
 			}
 		},
 		onSuccess: (_, __, ctx) => {
 			if (!ctx) return
 
-			// We navigate based on user's current browsing location and remaining shares
-			const isUserBrowsingThisHost = currentPath.startsWith(ctx.hostPath)
-			const isLastShareForHost = ctx.remainingSharesForHost === 0
-
-			// If we are browsing a host that's being completely removed, then we navigate to /Network
-			if (isUserBrowsingThisHost && isLastShareForHost) navigateToDirectory(NETWORK_STORAGE_PATH)
-
-			// Otherwise we don't navigate at all, which handles all other cases
-			// (e.g., browsing a network device with another share that's not being removed, browsing /Downloads while ejecting a device from the sidebar, etc.)
-
-			// Invalidate the /Network listing so the host device disappears if we’re browsing /Network directly
+			// Invalidate the /Network listing so the host device disappears if we're browsing /Network directly
 			invalidateNetworkShares()
 			// Invalidate the host directory listing in case we're viewing that device and removing a single share
 			utils.files.list.invalidate({path: ctx.hostPath})
 		},
-		onError: (error: RouterError) =>
-			toast.error(t('files-network-storage-error.remove-share', {message: getFilesErrorMessage(error.message)})),
+		onError: (error: RouterError, _, ctx) => {
+			// Rollback optimistic updates
+			if (ctx?.previousShares) {
+				utils.files.listNetworkShares.setData(undefined, ctx.previousShares)
+			}
+			if (ctx?.mountPath) {
+				useFilesStore.getState().removePendingPaths([ctx.mountPath])
+			}
+			toast.error(t('files-network-storage-error.remove-share', {message: getFilesErrorMessage(error.message)}))
+		},
 		onSettled: invalidateShares,
 	})
 

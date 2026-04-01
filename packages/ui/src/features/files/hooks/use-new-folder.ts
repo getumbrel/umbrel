@@ -33,42 +33,47 @@ export function useNewFolder() {
 		listingRef.current = listing
 	}, [listing])
 
-	const createFolder = trpcReact.files.createDirectory.useMutation({
-		onMutate: ({path}: {path: FileSystemItem['path']}) => {
-			if (listingRef.current?.items) {
-				// Extract name from path
-				const name = path.split('/').pop() || ''
-				// Best-effort check for duplicate name
-				if (!isNameAvailable(name, listingRef.current.items)) {
-					throw new Error(t('files-error.folder-already-exists'))
-				}
-			}
-		},
-		onSuccess: (_, {path}: {path: FileSystemItem['path']}) => {
-			setNewFolder(null)
+	const addIncomingItems = useFilesStore((s) => s.addIncomingItems)
+	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
 
-			// Extract name from path
-			const name = path.split('/').pop() || ''
-
-			// Set the new folder as selected
-			setSelectedItems([
-				{
-					name,
-					path,
-					type: 'directory',
-					size: 0,
-					modified: new Date().getTime(),
-					operations: [],
-				},
-			])
-		},
-		onError: (error) => {
+	const createFolderMutation = trpcReact.files.createDirectory.useMutation({
+		onError: (error, {path}) => {
+			removeIncomingItems([path])
 			toast.error(t('files-error.create-folder', {message: getFilesErrorMessage(error.message)}))
 		},
 		onSettled: () => {
 			utils.files.list.invalidate()
 		},
 	})
+
+	// Commits the folder name synchronously: removes the top-pinned placeholder
+	// and inserts a sorted incoming item, then fires the mutation.
+	const commitNewFolder = (fullPath: string) => {
+		const name = fullPath.split('/').pop() || ''
+
+		if (listingRef.current?.items) {
+			if (!isNameAvailable(name, listingRef.current.items)) {
+				toast.error(t('files-error.folder-already-exists'))
+				return
+			}
+		}
+
+		const folder: FileSystemItem = {
+			name,
+			path: fullPath,
+			type: 'directory',
+			size: 0,
+			modified: new Date().getTime(),
+			operations: [],
+		}
+
+		// Move from top-pinned placeholder to sorted incoming item
+		addIncomingItems([folder])
+		setNewFolder(null)
+		setSelectedItems([folder])
+
+		createFolderMutation.mutate({path: fullPath})
+	}
 
 	// NOTE: We can't reliably calculate the "next available name"
 	// with infinite loading, as we don't have the full list of existing names.
@@ -109,10 +114,10 @@ export function useNewFolder() {
 	}
 
 	return {
-		createFolder,
+		commitNewFolder,
 		startNewFolder,
 		cancelNewFolder,
-		isLoading: createFolder.isPending,
+		isLoading: createFolderMutation.isPending,
 	}
 }
 

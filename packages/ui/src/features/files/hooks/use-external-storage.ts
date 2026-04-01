@@ -5,6 +5,7 @@ import {useTranslation} from 'react-i18next'
 import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {trpcReact} from '@/trpc/trpc'
@@ -74,27 +75,49 @@ export function useExternalStorage() {
 	}, [hasExternalDriveOnUnsupportedDevice, add])
 
 	// Eject disk mutation
+	// TODO: The externalDevices query has a 5s polling interval and a WebSocket subscription that
+	// both trigger invalidation. These can refetch and undo the optimistic removal before the server
+	// finishes ejecting, causing the disk to briefly flash back. May need to pause polling/subscription
+	// during the mutation to fully prevent this.
 	const {mutateAsync: ejectDisk, isPending: isEjecting} = trpcReact.files.unmountExternalDevice.useMutation({
-		onMutate: (id) => {
-			// snapshot the ejected disk
-			return {
-				ejectedDisk: disks?.find((disk) => disk.id === id.deviceId),
+		onMutate: async (id) => {
+			const ejectedDisk = disks?.find((disk) => disk.id === id.deviceId)
+
+			// Cancel the sidebar query we're about to optimistically update
+			await utils.files.externalDevices.cancel()
+
+			// Snapshot sidebar data for rollback
+			const previousDisks = utils.files.externalDevices.getData()
+
+			// Optimistically remove the disk from the sidebar
+			utils.files.externalDevices.setData(undefined, (old) => old?.filter((disk) => disk.id !== id.deviceId))
+
+			// Optimistically remove the disk's partitions from the directory listing via pendingPaths
+			const ejectedPaths = ejectedDisk?.partitions.flatMap((p) => p.mountpoints) ?? []
+			if (ejectedPaths.length > 0) {
+				useFilesStore.getState().addPendingPaths(ejectedPaths, 'removing')
 			}
-		},
-		onSuccess: (_, id, context) => {
-			// redirect to home path on ejection if the current path is in the ejected disk
-			const ejectedDisk = context?.ejectedDisk
+
+			// Navigate away immediately if the user is browsing the ejected disk
 			if (
 				ejectedDisk &&
 				ejectedDisk.partitions.some((partition) =>
-					// mountpoints is an array of mountpoints for the partition
 					partition.mountpoints.some((mountpoint) => currentPath.startsWith(mountpoint)),
 				)
 			) {
 				navigateToDirectory(HOME_PATH)
 			}
+
+			return {ejectedDisk, previousDisks, ejectedPaths}
 		},
-		onError: (error: RouterError) => {
+		onError: (error: RouterError, _, context) => {
+			// Rollback optimistic updates
+			if (context?.previousDisks) {
+				utils.files.externalDevices.setData(undefined, context.previousDisks)
+			}
+			if (context?.ejectedPaths?.length) {
+				useFilesStore.getState().removePendingPaths(context.ejectedPaths)
+			}
 			toast.error(t('files-error.eject-disk', {message: getFilesErrorMessage(error.message)}))
 		},
 		onSettled: () => {

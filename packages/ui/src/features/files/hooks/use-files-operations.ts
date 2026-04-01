@@ -32,6 +32,10 @@ export function useFilesOperations() {
 	const draggedItems = useFilesStore((s) => s.draggedItems)
 	const setSelectedItems = useFilesStore((s) => s.setSelectedItems)
 	const clearDraggedItems = useFilesStore((s) => s.clearDraggedItems)
+	const addPendingPaths = useFilesStore((s) => s.addPendingPaths)
+	const removePendingPaths = useFilesStore((s) => s.removePendingPaths)
+	const addIncomingItems = useFilesStore((s) => s.addIncomingItems)
+	const removeIncomingItems = useFilesStore((s) => s.removeIncomingItems)
 
 	// Internal helper for batch operations (move, copy, restore) with collision handling
 	// ----------------------------------------------------------
@@ -43,6 +47,7 @@ export function useFilesOperations() {
 		targetDirectory,
 		onErrorToastFn,
 		onSuccessAll,
+		onItemError,
 	}: {
 		paths: string[]
 		operationAsyncFn: OperationAsyncFn<TArgs>
@@ -51,6 +56,7 @@ export function useFilesOperations() {
 		targetDirectory?: string
 		onErrorToastFn: ErrorToastFn
 		onSuccessAll?: () => void
+		onItemError?: (path: string) => void
 	}) => {
 		// track if any operation ended with an unrecoverable error so we can avoid
 		// firing the global success callback in that case.
@@ -146,12 +152,14 @@ export function useFilesOperations() {
 				if (error?.message === '[destination-already-exists]') {
 					const decision = await getCollisionDecision(path)
 					if (decision === 'skip') {
+						onItemError?.(path)
 						return
 					}
 					try {
 						await operationAsyncFn({...baseArgs, collision: decision} as any)
 					} catch (err: any) {
 						encounteredError = true
+						onItemError?.(path)
 						onErrorToastFn(err.message)
 						console.error(`Failed ${operationType} ${path} after collision (${decision}):`, err)
 					}
@@ -160,6 +168,7 @@ export function useFilesOperations() {
 
 				// unrecoverable error
 				encounteredError = true
+				onItemError?.(path)
 				onErrorToastFn(error.message)
 				console.error(`Failed ${operationType} ${path}:`, error)
 			}
@@ -198,13 +207,22 @@ export function useFilesOperations() {
 			return
 		}
 
-		// Wait for the rename mutation to complete and trigger list invalidation.
-		await renameItemMutation({path: item.path, newName})
-
-		// After a successful rename, update the selection so the *new* item remains selected.
 		const renamedPath = `${item.path.substring(0, item.path.lastIndexOf('/') + 1)}${newName}`
+		const renamedItem = {...item, name: newName, path: renamedPath}
 
-		setSelectedItems([{...item, name: newName, path: renamedPath}])
+		// Show renamed item immediately, hide old one
+		addPendingPaths([item.path], 'removing')
+		addIncomingItems([renamedItem])
+		setSelectedItems([renamedItem])
+
+		try {
+			await renameItemMutation({path: item.path, newName})
+		} catch {
+			// Revert optimistic update on error (toast handled by mutation's onError)
+			removePendingPaths([item.path])
+			removeIncomingItems([renamedPath])
+			setSelectedItems([item])
+		}
 	}
 
 	// File movement operations
@@ -221,8 +239,18 @@ export function useFilesOperations() {
 		},
 	}).mutateAsync
 
-	const moveItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
+	const moveItems = async ({sourceItems, toDirectory}: {sourceItems: FileSystemItem[]; toDirectory: string}) => {
 		if (isReadOnly) return
+		const fromPaths = sourceItems.map((item) => item.path)
+		addPendingPaths(fromPaths, 'removing')
+
+		// Show items at the destination immediately
+		const incoming = sourceItems.map((item) => ({
+			...item,
+			path: `${toDirectory}/${item.name}`,
+		}))
+		addIncomingItems(incoming)
+
 		await _executeBatchOperationWithCollisionHandling({
 			paths: fromPaths,
 			operationAsyncFn: moveItemMutation,
@@ -231,19 +259,26 @@ export function useFilesOperations() {
 			targetDirectory: toDirectory,
 			onErrorToastFn: (message) => toast.error(t('files-error.move', {message: getFilesErrorMessage(message)})),
 			onSuccessAll: () => {},
+			onItemError: (sourcePath) => {
+				removePendingPaths([sourcePath])
+				const name = sourcePath.split('/').pop() || ''
+				removeIncomingItems([`${toDirectory}/${name}`])
+			},
 		})
 	}
 
 	const moveSelectedItems = async ({toDirectory}: {toDirectory: string}) => {
 		if (isReadOnly) return
-		await moveItems({fromPaths: selectedItems.map((item) => item.path), toDirectory})
+		const items = [...selectedItems]
 		setSelectedItems([])
+		await moveItems({sourceItems: items, toDirectory})
 	}
 
 	const moveDraggedItems = async ({toDirectory}: {toDirectory: string}) => {
 		if (isReadOnly) return
-		await moveItems({fromPaths: draggedItems.map((item) => item.path), toDirectory})
+		const items = [...draggedItems]
 		clearDraggedItems()
+		await moveItems({sourceItems: items, toDirectory})
 	}
 
 	// Copy item mutation hook
@@ -255,6 +290,9 @@ export function useFilesOperations() {
 		},
 	}).mutateAsync
 
+	// Copy does not use optimistic incoming items because large copies show progress
+	// via the operations island (WebSocket). Adding placeholders would conflict with
+	// the island by showing the file as "already there" while progress is still updating.
 	const copyItems = async ({fromPaths, toDirectory}: {fromPaths: FileSystemItem['path'][]; toDirectory: string}) => {
 		if (isReadOnly) return
 		await _executeBatchOperationWithCollisionHandling({
@@ -271,13 +309,13 @@ export function useFilesOperations() {
 	// Paste (copy or move) items from clipboard
 	const pasteItemsFromClipboard = async ({toDirectory}: {toDirectory: string}) => {
 		if (isReadOnly) return
-		const paths = clipboardItems.map((item) => item.path)
 		if (clipboardMode === 'copy') {
+			const paths = clipboardItems.map((item) => item.path)
 			await copyItems({fromPaths: paths, toDirectory})
 		} else if (clipboardMode === 'cut') {
-			await moveItems({fromPaths: paths, toDirectory})
-			// only clear the clipboard on move, not copy
+			const items = [...clipboardItems]
 			clearClipboard()
+			await moveItems({sourceItems: items, toDirectory})
 		}
 	}
 
@@ -286,9 +324,10 @@ export function useFilesOperations() {
 
 	// Extract archive (umbreld always extracts archive contents into a new folder named after the archive)
 	const extract = trpcReact.files.unarchive.useMutation({
-		onSuccess: () => {
-			utils.files.list.invalidate()
-			utils.files.search.invalidate()
+		onSuccess: async (_, {path}) => {
+			const parentPath = path.substring(0, path.lastIndexOf('/'))
+			await Promise.all([utils.files.list.invalidate({path: parentPath}), utils.files.search.invalidate()])
+			useFilesStore.getState().removePendingPaths([path])
 		},
 		onError: (error) => {
 			toast.error(t('files-error.extract', {message: getFilesErrorMessage(error.message)}))
@@ -297,23 +336,31 @@ export function useFilesOperations() {
 
 	const extractSelectedItems = () => {
 		if (isReadOnly) return
+		const paths = selectedItems.map((item) => item.path)
+		addPendingPaths(paths, 'processing')
 		for (const item of selectedItems) {
-			extract({path: item.path})
+			extract({path: item.path}).catch(() => {
+				removePendingPaths([item.path])
+			})
 		}
 		setSelectedItems([])
 	}
 
 	// Archive
 	const archive = trpcReact.files.archive.useMutation({
-		onSuccess: (_, {paths}) => {
-			// invalidate the parent directory of the item
-			utils.files.list.invalidate({path: paths[0].split('/').slice(0, -1).join('/')})
-			// invalidate the recents list
-			utils.files.recents.invalidate()
-			// invalidate the search list
-			utils.files.search.invalidate()
+		onSuccess: async (_, {paths}) => {
+			await Promise.all([
+				// invalidate the parent directory of the item
+				utils.files.list.invalidate({path: paths[0].split('/').slice(0, -1).join('/')}),
+				// invalidate the recents list
+				utils.files.recents.invalidate(),
+				// invalidate the search list
+				utils.files.search.invalidate(),
+			])
+			useFilesStore.getState().removePendingPaths(paths)
 		},
-		onError: (error) => {
+		onError: (error, {paths}) => {
+			useFilesStore.getState().removePendingPaths(paths)
 			toast.error(t('files-error.compress', {message: getFilesErrorMessage(error.message)}))
 		},
 	}).mutateAsync
@@ -321,7 +368,8 @@ export function useFilesOperations() {
 	const archiveSelectedItems = () => {
 		if (isReadOnly) return
 		const paths = selectedItems.map((item) => item.path)
-		archive({paths})
+		addPendingPaths(paths, 'processing')
+		archive({paths}).catch(() => {})
 		setSelectedItems([])
 	}
 
@@ -351,16 +399,24 @@ export function useFilesOperations() {
 
 	const trashSelectedItems = () => {
 		if (isReadOnly) return
+		const paths = selectedItems.map((item) => item.path)
+		addPendingPaths(paths, 'removing')
 		for (const item of selectedItems) {
-			trashItem({path: item.path})
+			trashItem({path: item.path}).catch(() => {
+				removePendingPaths([item.path])
+			})
 		}
 		setSelectedItems([])
 	}
 
 	const trashDraggedItems = () => {
 		if (isReadOnly) return
+		const paths = draggedItems.map((item) => item.path)
+		addPendingPaths(paths, 'removing')
 		for (const item of draggedItems) {
-			trashItem({path: item.path})
+			trashItem({path: item.path}).catch(() => {
+				removePendingPaths([item.path])
+			})
 		}
 		clearDraggedItems()
 	}
@@ -377,6 +433,7 @@ export function useFilesOperations() {
 	// Updated batch restore function
 	const restoreItems = async ({paths}: {paths: string[]}) => {
 		if (isReadOnly) return
+		addPendingPaths(paths, 'removing')
 		await _executeBatchOperationWithCollisionHandling({
 			paths,
 			operationAsyncFn: restoreFromTrash,
@@ -384,6 +441,7 @@ export function useFilesOperations() {
 			getOperationArgsFn: (path) => ({path}),
 			onErrorToastFn: (message) => toast.error(t('files-error.restore', {message: getFilesErrorMessage(message)})),
 			onSuccessAll: () => {},
+			onItemError: (path) => removePendingPaths([path]),
 		})
 	}
 
@@ -416,20 +474,24 @@ export function useFilesOperations() {
 
 	const deleteSelectedItems = () => {
 		if (isReadOnly) return
+		const paths = selectedItems.map((item) => item.path)
+		addPendingPaths(paths, 'removing')
 		for (const item of selectedItems) {
-			deleteItem({path: item.path})
+			deleteItem({path: item.path}).catch(() => {
+				removePendingPaths([item.path])
+			})
 		}
 		setSelectedItems([])
 	}
 
 	// Empty trash
 	const emptyTrash = trpcReact.files.emptyTrash.useMutation({
-		onSuccess: () => {
-			// invalidate the trash directory
-			utils.files.list.invalidate({path: TRASH_PATH})
-		},
 		onError: (error) => {
 			toast.error(t('files-error.empty-trash', {message: getFilesErrorMessage(error.message)}))
+		},
+		onSettled: () => {
+			// invalidate the trash directory
+			utils.files.list.invalidate({path: TRASH_PATH})
 		},
 	}).mutateAsync
 

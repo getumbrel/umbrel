@@ -25,21 +25,39 @@ export function useFavorites() {
 
 	// Add favorite mutation
 	const {mutateAsync: addFavorite, isPending: isAddingFavorite} = trpcReact.files.addFavorite.useMutation({
-		onSuccess: async () => {
-			await utils.files.favorites.invalidate()
+		onMutate: async ({path}) => {
+			await utils.files.favorites.cancel()
+			const previous = utils.files.favorites.getData()
+			utils.files.favorites.setData(undefined, (old) => (old ? [...old, path] : [path]))
+			return {previous}
 		},
-		onError: (error: RouterError) => {
+		onError: (error: RouterError, _, context) => {
+			if (context?.previous) {
+				utils.files.favorites.setData(undefined, context.previous)
+			}
 			toast.error(t('files-error.add-favorite', {message: getFilesErrorMessage(error.message)}))
+		},
+		onSettled: () => {
+			utils.files.favorites.invalidate()
 		},
 	})
 
 	// Remove favorite mutation
 	const {mutateAsync: removeFavorite, isPending: isRemovingFavorite} = trpcReact.files.removeFavorite.useMutation({
-		onSuccess: async () => {
-			await utils.files.favorites.invalidate()
+		onMutate: async ({path}) => {
+			await utils.files.favorites.cancel()
+			const previous = utils.files.favorites.getData()
+			utils.files.favorites.setData(undefined, (old) => (old ? old.filter((p) => p !== path) : []))
+			return {previous}
 		},
-		onError: (error: RouterError) => {
+		onError: (error: RouterError, _, context) => {
+			if (context?.previous) {
+				utils.files.favorites.setData(undefined, context.previous)
+			}
 			toast.error(t('files-error.remove-favorite', {message: getFilesErrorMessage(error.message)}))
+		},
+		onSettled: () => {
+			utils.files.favorites.invalidate()
 		},
 	})
 

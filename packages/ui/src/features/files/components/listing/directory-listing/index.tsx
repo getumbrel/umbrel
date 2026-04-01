@@ -114,8 +114,9 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	// Filter out items that are currently uploading to prevent them from being selected via marquee selection or keyboard shortcuts
 	const selectableItems = (listing?.items ?? []).filter((item) => !item.isUploading)
 
-	// Hide the path bar and disable actions if there's an error or loading state
-	const hidePathAndDisableActions = Boolean(isLoading || error)
+	// Disable actions while loading or on error; only hide the path bar on error
+	const disableActions = Boolean(isLoading || error)
+	const hidePath = Boolean(error)
 
 	// In embedded contexts (e.g., Rewind), if the current directory doesn't exist in a snapshot,
 	// we automatically fall back to the nearest existing parent.
@@ -138,7 +139,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 			<IconButton
 				icon={TbWorldPlus}
 				onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}
-				disabled={hidePathAndDisableActions}
+				disabled={disableActions}
 			>
 				{t('files-action.add-network-device')}
 			</IconButton>
@@ -146,10 +147,10 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
 		DesktopActions = (
 			<>
-				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={disableActions}>
 					{t('files-folder')}
 				</IconButton>
-				<IconButton icon={Upload} onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+				<IconButton icon={Upload} onClick={handleUploadClick} disabled={disableActions}>
 					{t('files-action.upload')}
 				</IconButton>
 			</>
@@ -168,17 +169,17 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
 		MobileDropdownActions = (
 			<>
-				<DropdownMenuItem onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+				<DropdownMenuItem onClick={startNewFolder} disabled={disableActions}>
 					<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.new-folder')}
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+				<DropdownMenuItem onClick={handleUploadClick} disabled={disableActions}>
 					<Upload className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.upload')}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={hidePathAndDisableActions || !hasItemsInClipboard()}
+					disabled={disableActions || !hasItemsInClipboard()}
 				>
 					<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.paste')}
@@ -191,11 +192,12 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		setActionsBarConfig({
 			desktopActions: DesktopActions,
 			mobileActions: MobileDropdownActions,
-			hidePath: hidePathAndDisableActions,
+			hidePath,
 			hideSearch: isBrowsingApps || isBrowsingExternalStorage || isBrowsingNetworkStorage, // hide search if browsing apps, external storage, or network
 		})
 	}, [
-		hidePathAndDisableActions,
+		disableActions,
+		hidePath,
 		isBrowsingApps,
 		isBrowsingExternalStorage,
 		isViewingExternalDrives,

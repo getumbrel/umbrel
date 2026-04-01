@@ -10,6 +10,7 @@ import {useSetActionsBarConfig} from '@/features/files/components/listing/action
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useConfirmation} from '@/providers/confirmation'
 
 export function TrashListing() {
@@ -19,6 +20,8 @@ export function TrashListing() {
 	const {emptyTrash} = useFilesOperations()
 	const confirm = useConfirmation()
 	const setActionsBarConfig = useSetActionsBarConfig()
+	const addPendingPaths = useFilesStore((s) => s.addPendingPaths)
+	const removePendingPaths = useFilesStore((s) => s.removePendingPaths)
 
 	const items = listing?.items || []
 	const isTrashEmpty = items.length === 0
@@ -35,7 +38,11 @@ export function TrashListing() {
 				],
 				icon: FlameIcon,
 			})
-			emptyTrash()
+			const paths = items.map((item) => item.path)
+			addPendingPaths(paths, 'removing')
+			emptyTrash().catch(() => {
+				removePendingPaths(paths)
+			})
 		} catch {
 			// User cancelled
 		}
