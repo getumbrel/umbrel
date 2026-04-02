@@ -18,6 +18,7 @@ import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
+import SystemNg from './modules/system-ng/system-ng.js'
 
 import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
 import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
@@ -116,6 +117,7 @@ export default class Umbreld {
 	eventBus: EventBus
 	dbus: Dbus
 	backups: Backups
+	systemNg: SystemNg
 	isBackupRestoreFirstStart = false
 
 	constructor({
@@ -141,6 +143,7 @@ export default class Umbreld {
 		this.eventBus = new EventBus(this)
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
+		this.systemNg = new SystemNg(this)
 	}
 
 	async start() {
@@ -208,6 +211,7 @@ export default class Umbreld {
 			this.appStore.start(),
 			this.dbus.start(),
 			this.server.start(),
+			this.systemNg.start(),
 		])
 
 		// Start backups last because it depends on files
@@ -240,6 +244,7 @@ export default class Umbreld {
 				this.apps.stop(),
 				this.appStore.stop(),
 				this.dbus.stop(),
+				this.systemNg.stop(),
 			])
 			return true
 		} catch (error) {

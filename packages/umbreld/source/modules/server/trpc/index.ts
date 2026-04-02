@@ -5,6 +5,8 @@ import {router} from './trpc.js'
 import {createContextExpress, createContextWss} from './context.js'
 import migration from '../../migration/routes.js'
 import system from '../../system/routes.js'
+// Temporary name while migrating from the legacy system module. Will be renamed to "system" once migration is complete.
+import systemNg from '../../system-ng/routes.js'
 import wifi from '../../system/wifi-routes.js'
 import user from '../../user/routes.js'
 import {appStore, apps} from '../../apps/routes.js'
@@ -22,6 +24,7 @@ import type Umbreld from '../../../index.js'
 const appRouter = router({
 	migration,
 	system,
+	systemNg,
 	wifi,
 	user,
 	appStore,

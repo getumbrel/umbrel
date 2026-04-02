@@ -26,7 +26,7 @@ export function Prefetcher() {
 	function performPrefetch() {
 		const prefetchQueries = [
 			// Settings header
-			utils.system.device,
+			utils.systemNg.device.getIdentity,
 			utils.system.version,
 			utils.system.getIpAddresses,
 			utils.system.uptime,
@@ -38,6 +38,9 @@ export function Prefetcher() {
 			// Settings raid (Pro devices — returns empty on non-Pro)
 			utils.hardware.raid.getStatus,
 			utils.hardware.internalStorage.getDevices,
+
+			// Settings device info
+			utils.systemNg.device.getSpecs,
 
 			// Settings sidebar
 			utils.system.systemDiskUsage,

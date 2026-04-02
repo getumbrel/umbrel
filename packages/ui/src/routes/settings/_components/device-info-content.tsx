@@ -1,28 +1,56 @@
 import {useTranslation} from 'react-i18next'
-import {TbQuestionMark} from 'react-icons/tb'
+import {TbChevronRight, TbQuestionMark} from 'react-icons/tb'
+import {useNavigate} from 'react-router-dom'
 
 import {CopyButton} from '@/components/ui/copy-button'
 import {FadeInImg} from '@/components/ui/fade-in-img'
 import {hostEnvironmentMap, UmbrelHostEnvironment} from '@/constants'
 import {cn} from '@/lib/utils'
 import {maybeT} from '@/utils/i18n'
+import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
 import AnimatedUmbrelHomeIcon from './device-info-umbrel-home'
 import AnimatedUmbrelProIcon from './device-info-umbrel-pro'
+
+export function formatDeviceSpecs(data?: {
+	cpu?: string
+	memorySize?: number | null
+	memoryType?: string
+	storageSize?: number | null
+	storageType?: string
+}) {
+	const cpu = data?.cpu || ''
+	const memorySize = data?.memorySize
+	const memoryType = data?.memoryType || ''
+	const memory = memorySize ? `${maybePrettyBytes(memorySize)}${memoryType ? ` ${memoryType}` : ''}` : ''
+	const storageSize = data?.storageSize
+	const storageType = data?.storageType || ''
+	const storage = storageSize ? `${maybePrettyBytes(storageSize)}${storageType ? ` ${storageType}` : ''}` : ''
+	return {cpu, memory, storage}
+}
 
 export function DeviceInfoContent({
 	umbrelHostEnvironment,
 	device,
 	modelNumber,
 	serialNumber,
+	cpu,
+	memory,
+	storage,
 }: {
 	umbrelHostEnvironment?: UmbrelHostEnvironment
 	device?: string
 	modelNumber?: string
 	serialNumber?: string
+	cpu?: string
+	memory?: string
+	storage?: string
 }) {
 	const {t} = useTranslation()
+	const navigate = useNavigate()
+	const isUmbrelPro = umbrelHostEnvironment === 'umbrel-pro'
+
 	return (
 		<div className='space-y-6'>
 			<div className={cn('flex justify-center', umbrelHostEnvironment !== 'umbrel-pro' && 'py-2')}>
@@ -35,6 +63,7 @@ export function DeviceInfoContent({
 			<div className={listClass}>
 				<div className={listItemClassNarrow}>
 					<span>{t('device-info.device')}</span>
+					{/* pr-6 aligns text across all rows when CopyButton is present on model/serial rows */}
 					<span className={cn('font-normal', (modelNumber || serialNumber) && 'pr-6')}>{maybeT(device)}</span>
 				</div>
 				{modelNumber && (
@@ -50,6 +79,39 @@ export function DeviceInfoContent({
 						<span>{t('device-info.serial-number')}</span>
 						<span className='flex items-center gap-2 font-normal'>
 							{serialNumber} <CopyButton value={serialNumber} />
+						</span>
+					</div>
+				)}
+				{cpu && (
+					<div className={listItemClassNarrow}>
+						<span>{t('device-info.cpu')}</span>
+						<span className={cn('font-normal', (modelNumber || serialNumber) && 'pr-6')}>{cpu}</span>
+					</div>
+				)}
+				{memory && (
+					<div className={listItemClassNarrow}>
+						<span>{t('device-info.memory')}</span>
+						<span className={cn('font-normal', (modelNumber || serialNumber) && 'pr-6')}>{memory}</span>
+					</div>
+				)}
+				{storage && (
+					<div className={listItemClassNarrow}>
+						<span>{t('device-info.storage')}</span>
+						<span
+							className={cn(
+								'flex items-center gap-2 font-normal',
+								!isUmbrelPro && (modelNumber || serialNumber) && 'pr-6',
+							)}
+						>
+							{storage}
+							{isUmbrelPro && (
+								<button
+									className='rounded-4 opacity-20 transition-opacity hover:opacity-40 focus:outline-hidden focus-visible:opacity-60'
+									onClick={() => navigate('/settings/storage')}
+								>
+									<TbChevronRight className='shrink-0' />
+								</button>
+							)}
 						</span>
 					</div>
 				)}
