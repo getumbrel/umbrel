@@ -1,3 +1,4 @@
+import {TFunction} from 'i18next'
 import {motion} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
@@ -105,8 +106,8 @@ function getBackupFailingContent(
 	backupRepositoriesQuery: {data?: Array<{id: string; path: string}>},
 	onGoToBackups: () => void,
 	onClearNotification: () => void,
+	t: TFunction,
 ): NotificationContent {
-	const {t} = useTranslation()
 	const {repoId} = parseBackupNotificationId(notification)
 
 	// Find repository details if we have a repo ID
@@ -214,7 +215,7 @@ export function Notifications() {
 			const onClearNotification = () => {
 				clearNotification(notification)
 			}
-			return getBackupFailingContent(notification, backupRepositoriesQuery, onGoToBackups, onClearNotification)
+			return getBackupFailingContent(notification, backupRepositoriesQuery, onGoToBackups, onClearNotification, t)
 		}
 
 		// Handle specific notification types

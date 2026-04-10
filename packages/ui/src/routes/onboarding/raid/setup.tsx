@@ -1,5 +1,6 @@
 // RAID Setup Page - kept intentionally large because it's a cohesive page flow
 
+import {TFunction} from 'i18next'
 import {useEffect, useState} from 'react'
 import {Trans, useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
@@ -43,8 +44,7 @@ import {
 // ============================================================================
 
 // Get warning message for a device (generic message - details shown in health dialog)
-function getHealthWarningMessage(device: StorageDevice): string | null {
-	const {t} = useTranslation()
+function getHealthWarningMessage(device: StorageDevice, t: TFunction): string | null {
 	if (getDeviceHealth(device).hasWarning) return t('onboarding.raid.health-warning')
 	return null
 }
@@ -512,7 +512,7 @@ export default function RaidSetup() {
 				{/* SSD list card */}
 				<div className='flex flex-col rounded-xl bg-white/5 p-3'>
 					{devices.map((device) => {
-						const warning = getHealthWarningMessage(device)
+						const warning = getHealthWarningMessage(device, t)
 						const hasWarning = getDeviceHealth(device).hasWarning
 						return (
 							<button
