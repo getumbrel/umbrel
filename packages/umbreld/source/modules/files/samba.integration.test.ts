@@ -200,18 +200,22 @@ describe('addShare()', () => {
 		)
 	})
 
-	test('throws on unshareable external mount points', async () => {
+	test('successfully adds external drive mount point to shares', async () => {
 		// Create test directory (simulating an external drive mount point)
 		const testDirectory = `${umbreld.instance.dataDirectory}/external/My Portable SSD`
 		await fse.ensureDir(testDirectory)
 
-		// Attempt to share the mount point - should fail
-		await expect(umbreld.client.files.addShare.mutate({path: '/External/My Portable SSD'})).rejects.toThrow(
-			'[operation-not-allowed]',
-		)
+		// Sharing external drive mount points should succeed
+		const result = await umbreld.client.files.addShare.mutate({path: '/External/My Portable SSD'})
+		expect(result).toBe('/External/My Portable SSD')
+
+		// Verify it's in the shares list
+		const shares = await umbreld.client.files.shares.query()
+		const paths = shares.map((share) => share.path)
+		expect(paths).toContain('/External/My Portable SSD')
 	})
 
-	test('allows sharing subdirectories of external drives', async () => {
+	test('successfully adds external drive subdirectory to shares', async () => {
 		// Create test directory (simulating an external drive mount point)
 		const testDirectory = `${umbreld.instance.dataDirectory}/external/My Portable SSD`
 		await fse.ensureDir(testDirectory)
