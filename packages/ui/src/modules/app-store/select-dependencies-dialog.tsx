@@ -247,7 +247,7 @@ function DependencyStateText({appId, appState, onClick}: {appId: string; appStat
 		)
 	}
 
-	return <span className='text-sm opacity-50'>{appStateToString(appState) + '...'}</span>
+	return <span className='text-sm opacity-50'>{appStateToString(appState, t) + '...'}</span>
 }
 
 function DependencyDropdown({

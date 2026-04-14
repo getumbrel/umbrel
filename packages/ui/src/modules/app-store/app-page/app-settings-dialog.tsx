@@ -165,7 +165,7 @@ function AppSettingsDialogForApp({
 									disabled={!areAllDependenciesInstalled || dependencies.length === 0 || inProgress || !hasChanges}
 									onClick={() => onSubmit()}
 								>
-									{inProgress ? appStateToString(app.state) + '...' : t('app-settings.save-changes')}
+									{inProgress ? appStateToString(app.state, t) + '...' : t('app-settings.save-changes')}
 								</Button>
 							</Close>
 							<Close asChild>

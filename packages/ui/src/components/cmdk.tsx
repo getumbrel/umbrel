@@ -1,4 +1,5 @@
 import {useCommandState} from 'cmdk'
+import {TFunction} from 'i18next'
 import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {useTranslation} from 'react-i18next'
@@ -335,7 +336,7 @@ function CmdkContent() {
 					}}
 				>
 					<span>
-						{app.name} <span className='opacity-50'> – {appStateToString(app.state)}</span>
+						{app.name} <span className='opacity-50'> – {appStateToString(app.state, t)}</span>
 					</span>
 				</SearchItem>
 			))}
@@ -503,8 +504,7 @@ const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 	)
 }
 
-export function appStateToString(appState: AppState) {
-	const {t} = useTranslation()
+export function appStateToString(appState: AppState, t: TFunction) {
 	return {
 		'not-installed': t('app.install'),
 		installing: t('app.installing'),
