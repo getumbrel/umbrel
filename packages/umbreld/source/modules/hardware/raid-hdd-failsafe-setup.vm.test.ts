@@ -157,7 +157,7 @@ describe('RAID HDD failsafe setup and expansion', () => {
 		const missingDeviceId = 'ata-missing-device-for-test'
 		await expect(
 			umbreld.client.hardware.raid.addMirror.mutate({deviceIds: [missingDeviceId, hddDeviceId3]}),
-		).rejects.toThrow(`Device not found: /dev/disk/by-id/${missingDeviceId}`)
+		).rejects.toThrow(`Device not found: /dev/disk/by-umbrel-id/${missingDeviceId}`)
 	})
 
 	test('rejects adding SSD to mirror pool', async () => {

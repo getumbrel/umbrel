@@ -1,0 +1,2 @@
+SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_SERIAL}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}"
+SUBSYSTEM=="block", ENV{DEVTYPE}=="partition", IMPORT{parent}="ID_SERIAL", ENV{ID_SERIAL}=="?*", ENV{PARTN}=="?*", SYMLINK+="disk/by-umbrel-id/$env{ID_SERIAL}-part$env{PARTN}"

@@ -113,7 +113,7 @@ async function getNvmeTemperatureThresholds(
 // Get the disk/by-id name for a device
 // These paths are more stable than the device name which ddepedns on enumeration order.
 async function getDeviceId(deviceName: string): Promise<string | undefined> {
-	const byIdDir = '/dev/disk/by-id'
+	const byIdDir = '/dev/disk/by-umbrel-id'
 	try {
 		const entries = await fse.readdir(byIdDir)
 		const matchingIds: string[] = []
@@ -135,27 +135,7 @@ async function getDeviceId(deviceName: string): Promise<string | undefined> {
 
 		if (matchingIds.length === 0) return undefined
 
-		// Sort by preference order, then alphabetically for determinism
-		// Preference order for by-id names (lower index = higher preference)
-		// We prefer descriptive names with model/serial over opaque identifiers like eui
-		const preferences = [
-			/^nvme-eui\./,
-			/^nvme-nvme\./,
-			/^wwn-/,
-			/^nvme-(?!eui\.|nvme\.)/, // nvme- but not nvme-eui. or nvme-nvme.
-			/^ata-/,
-			/^scsi-/,
-		]
-		matchingIds.sort((a, b) => {
-			const aIndex = preferences.findIndex((pattern) => pattern.test(a))
-			const bIndex = preferences.findIndex((pattern) => pattern.test(b))
-			// -1 means no match, treat as lowest priority
-			const aPriority = aIndex === -1 ? preferences.length : aIndex
-			const bPriority = bIndex === -1 ? preferences.length : bIndex
-			if (aPriority !== bPriority) return aPriority - bPriority
-			return a.localeCompare(b)
-		})
-
+		matchingIds.sort((a, b) => a.localeCompare(b))
 		return matchingIds[0]
 	} catch {
 		// Directory might not exist or be readable

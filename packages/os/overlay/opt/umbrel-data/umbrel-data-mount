@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+exec > >(tee /run/umbrel-mount) 2>&1
+
 CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
 CONFIG_FILE="$CONFIG_PARTITION/umbrel.yaml"
 
@@ -10,21 +12,35 @@ DEFAULT_PARTITION="${2:-}"
 
 wait_for_devices() {
     local devices=("$@")
+    local missing_devices=()
     echo ">>> Waiting for devices to appear: ${devices[*]}"
     # 50 checks with 0.1s sleep = 5 second timeout
     for i in {1..50}; do
         local all_devices_present="true"
+        missing_devices=()
         for dev in "${devices[@]}"; do
             if [ ! -b "$dev" ]; then
                 all_devices_present="false"
-                break
+                missing_devices+=("$dev")
             fi
         done
         if [ "$all_devices_present" = "true" ]; then
+            echo ">>> All devices present"
+            break
+        fi
+        if [ "$i" = "50" ]; then
+            echo ">>> wait_for_devices timeout reached after 5 seconds, missing: ${missing_devices[*]}"
             break
         fi
         sleep 0.1
     done
+}
+
+# Since we have no perisitent data before the raid array is mounted, we don't have a cache file to hint towards
+# the location of the devices. We always import via Umbrel's own by-id namespace so ZFS and the rest of the
+# codebase agree on a single stable disk naming scheme regardless of which upstream /dev/disk/by-id aliases exist.
+zpool_import() {
+    zpool import -d /dev/disk/by-umbrel-id -o cachefile=none "$@"
 }
 
 # Handle migration from storage to failsafe mode
@@ -39,10 +55,10 @@ handle_failsafe_transition() {
 
     # Import both pools
     echo ">>> Importing ${pool_name} pool"
-    zpool import -o cachefile=none -f "$pool_name"
+    zpool_import -f "$pool_name"
 
     echo ">>> Importing ${migration_pool} pool"
-    zpool import -o cachefile=none -f "$migration_pool"
+    zpool_import -f "$migration_pool"
 
     # Create final snapshot and sync incrementally
     # Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
@@ -61,14 +77,14 @@ handle_failsafe_transition() {
     echo ">>> Renaming pools for migration"
     zpool export "$pool_name"
     zpool export "$migration_pool"
-    zpool import -o cachefile=none "$pool_name" "$previous_pool"
-    if zpool import -o cachefile=none "$migration_pool" "$pool_name"; then
+    zpool_import "$pool_name" "$previous_pool"
+    if zpool_import "$migration_pool" "$pool_name"; then
         echo ">>> Pool rename complete, umbreld will finish migration after boot"
     else
         # TODO: Should we signal some error in the raid config here?
         echo ">>> ERROR: Failed to rename migration pool, rolling back"
         zpool export "$previous_pool"
-        zpool import -o cachefile=none "$previous_pool" "$pool_name"
+        zpool_import "$previous_pool" "$pool_name"
         echo ">>> Rollback complete, migration aborted"
     fi
 
@@ -96,6 +112,9 @@ if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
     # Continue if timeout is reached to allow mounting array with missing devices
     wait_for_devices "${DEVICES[@]}"
 
+    echo ">>> Waiting for pending udev events before import"
+    udevadm settle || true
+
     # Check if we're in the middle of a failsafe transition
     if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
         handle_failsafe_transition "$POOL_NAME" || true
@@ -107,7 +126,15 @@ if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
     #  -f force import if it thinks the pool is active elsewhere. This often
     # happens after ota updates where it thinks we're on a new machine.
     echo ">>> Importing ${POOL_NAME} pool"
-    zpool import -o cachefile=none -f "$POOL_NAME"
+    zpool_import -f "$POOL_NAME" || true
+
+    if ! zpool list "$POOL_NAME" >/dev/null 2>&1; then
+        echo ">>> Import failed, sleeping 5 seconds before retry"
+        sleep 5
+
+        echo ">>> Retrying ${POOL_NAME} pool import"
+        zpool_import -f "$POOL_NAME"
+    fi
 
     # Load the encryption key for the data dataset
     # We use a hardcoded encryption password for now. This obviously doesn't provide any security.

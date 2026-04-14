@@ -267,6 +267,13 @@ export default class Raid {
 			this.logger.error('Failed to handle initial RAID setup boot', error),
 		)
 
+		// Update the config file to match the current live RAID device paths once the
+		// array is mounted and healthy. This also migrates old /dev/disk/by-id paths
+		// to the new /dev/disk/by-umbrel-id scheme.
+		await this.#updateConfigDevicePaths().catch((error) => {
+			this.logger.error('Failed to update RAID config device paths', error)
+		})
+
 		// Check if we are currently transitioning to failsafe mode and complete the migration
 		await this.#completeFailsafeTransition().catch((error) => {
 			this.logger.error('Failed to complete FailSafe transition:', error)
@@ -278,6 +285,19 @@ export default class Raid {
 	async stop() {
 		this.logger.log('Stopping RAID')
 		this.#stopPoolMonitor?.()
+	}
+
+	async #updateConfigDevicePaths(): Promise<void> {
+		const status = await this.getStatus()
+		if (!status.exists || status.status !== 'ONLINE') return
+
+		const devices = status.devices!.map((device) => `/dev/disk/by-umbrel-id/${device.id}`)
+		await this.configStore.set('raid.devices', devices)
+
+		if (status.accelerator?.devices) {
+			const acceleratorDevices = status.accelerator.devices.map((device) => `/dev/disk/by-umbrel-id/${device.id}`)
+			await this.configStore.set('raid.accelerator.devices', acceleratorDevices)
+		}
 	}
 
 	#startPoolMonitor() {
@@ -432,7 +452,7 @@ export default class Raid {
 			rebuild = {state, progress}
 		}
 
-		const toDeviceId = (path: string) => path.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, '')
+		const toDeviceId = (path: string) => path.replace('/dev/disk/by-umbrel-id/', '').replace(/-part\d+$/, '')
 
 		const devices = diskVdevs.map((device) => ({
 			id: toDeviceId(device.path!),
@@ -584,7 +604,7 @@ export default class Raid {
 	// Each physical accelerator device has two partitions: l2arc (read cache) and special (metadata).
 	// We match them by device id and combine into a single entry per device.
 	#parsePoolAccelerator(pool: Pool): ParsedAccelerator {
-		const toDeviceId = (path: string) => path.replace('/dev/disk/by-id/', '').replace(/-part\d+$/, '')
+		const toDeviceId = (path: string) => path.replace('/dev/disk/by-umbrel-id/', '').replace(/-part\d+$/, '')
 		const getVdevSize = (vdev: Vdev) => vdev.phys_space || vdev.rep_dev_size || vdev.total_space || 0
 		const vdevs = Object.values(pool.vdevs)
 		const cacheVdevs = vdevs.filter((v) => v.vdev_type === 'disk' && v.class === 'l2cache' && v.path)
@@ -695,11 +715,11 @@ export default class Raid {
 
 	// Get details about why RAID mount failed by running a test import
 	async checkRaidMountFailureDevices(): Promise<Array<{name: string; isOk: boolean}>> {
-		const {stdout} = await $`zpool import -N`
+		const {stdout} = await $`zpool import -N -d /dev/disk/by-umbrel-id`
 		const expectedDevices = ((await this.configStore.get('raid.devices')) ?? []) as string[]
 
 		return expectedDevices.map((device) => {
-			const name = device.replace('/dev/disk/by-id/', '')
+			const name = device.replace('/dev/disk/by-umbrel-id/', '')
 			const isOk = stdout.split('\n').some((line) => line.includes(name) && line.includes('ONLINE'))
 			return {name, isOk}
 		})
@@ -707,7 +727,7 @@ export default class Raid {
 
 	// Create GPT partition table and partitions on a device
 	async #partitionDevice(device: string): Promise<{statePartition: string; dataPartition: string}> {
-		const isDiskById = device.startsWith('/dev/disk/by-id/')
+		const isDiskById = device.startsWith('/dev/disk/by-umbrel-id/')
 		if (!isDiskById) throw new Error('Must pass disk by id')
 
 		this.logger.log(`Wiping signatures from ${device}`)
@@ -774,7 +794,7 @@ export default class Raid {
 		sizes?: {l2arcSizeBytes: number; specialSizeBytes: number},
 	): Promise<{statePartition: string; l2arcPartition: string; specialPartition: string}> {
 		// Use the same state partition and front buffer as normal RAID devices.
-		const isDiskById = device.startsWith('/dev/disk/by-id/')
+		const isDiskById = device.startsWith('/dev/disk/by-umbrel-id/')
 		if (!isDiskById) throw new Error('Must pass disk by id')
 
 		this.logger.log(`Wiping signatures from accelerator device ${device}`)
@@ -900,7 +920,7 @@ export default class Raid {
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
 		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 
-		const devices = deviceIds.map((id) => `/dev/disk/by-id/${id}`)
+		const devices = deviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
 		for (const device of devices) {
 			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
 		}
@@ -937,7 +957,7 @@ export default class Raid {
 
 			const raidDeviceIds = new Set(deviceIds)
 			for (const acceleratorDeviceId of acceleratorDeviceIds) {
-				const acceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+				const acceleratorDevice = `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`
 				if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
 				if (raidDeviceIds.has(acceleratorDeviceId)) throw new Error('Cannot add a RAID data device as an accelerator')
 				await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
@@ -1021,7 +1041,7 @@ export default class Raid {
 			throw new Error(`Unsupported RAID topology for addDevice: ${pool.topology}`)
 
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
-		const device = `/dev/disk/by-id/${deviceId}`
+		const device = `/dev/disk/by-umbrel-id/${deviceId}`
 
 		// Validate device exists and isn't already in the pool
 		if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
@@ -1046,7 +1066,7 @@ export default class Raid {
 		}
 
 		// Update config with new device
-		const updatedDevices = [...poolDeviceIds.map((id) => `/dev/disk/by-id/${id}`), device]
+		const updatedDevices = [...poolDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`), device]
 		this.logger.log(`Updating RAID config with ${updatedDevices.length} device(s)`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
@@ -1065,11 +1085,11 @@ export default class Raid {
 		if (deviceIds[0] === deviceIds[1]) throw new Error('Mirror pair requires two different devices')
 
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
-		const devices = deviceIds.map((id) => `/dev/disk/by-id/${id}`)
+		const devices = deviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
 
 		// Validate both devices exist, aren't already in the pool, and match pool device type
 		for (const deviceId of deviceIds) {
-			const device = `/dev/disk/by-id/${deviceId}`
+			const device = `/dev/disk/by-umbrel-id/${deviceId}`
 			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
 			if (poolDeviceIds.includes(deviceId)) throw new Error('Cannot add a device that is already in the RAID array')
 			await this.#assertDeviceTypeMatchesPool(deviceId)
@@ -1087,7 +1107,7 @@ export default class Raid {
 		await $`zpool add -f ${pool.name} mirror ${leftPartition} ${rightPartition}`
 
 		// Update config with new devices
-		const updatedDevices = [...poolDeviceIds.map((id) => `/dev/disk/by-id/${id}`), ...devices]
+		const updatedDevices = [...poolDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`), ...devices]
 		this.logger.log(`Updating RAID config with ${updatedDevices.length} device(s)`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
@@ -1131,11 +1151,11 @@ export default class Raid {
 		if (uniqueDeviceIds.size !== deviceIds.length) throw new Error('Accelerator devices must be unique')
 
 		const poolDeviceIds = new Set(pool.devices?.map((d) => d.id) ?? [])
-		const acceleratorDevices = deviceIds.map((id) => `/dev/disk/by-id/${id}`)
+		const acceleratorDevices = deviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
 
 		// Validate everything up front so we fail before touching partitions.
 		for (const deviceId of deviceIds) {
-			const device = `/dev/disk/by-id/${deviceId}`
+			const device = `/dev/disk/by-umbrel-id/${deviceId}`
 			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
 			if (poolDeviceIds.has(deviceId)) throw new Error('Cannot add a RAID data device as an accelerator')
 			await this.#assertAcceleratorDeviceType(deviceId)
@@ -1219,8 +1239,8 @@ export default class Raid {
 		oldDeviceId: string,
 		newDeviceId: string,
 	): Promise<boolean> {
-		const oldDevice = `/dev/disk/by-id/${oldDeviceId}`
-		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		const oldDevice = `/dev/disk/by-umbrel-id/${oldDeviceId}`
+		const newDevice = `/dev/disk/by-umbrel-id/${newDeviceId}`
 
 		await this.#assertDeviceTypeMatchesPool(newDeviceId)
 
@@ -1234,7 +1254,7 @@ export default class Raid {
 		await $`zpool replace -f ${pool.name} ${oldDataPartition} ${newDataPartition}`
 
 		const currentDevices = (await this.configStore.get('raid.devices')) ?? []
-		const updatedDevices = currentDevices.map((d: string) => (d === oldDevice ? newDevice : d))
+		const updatedDevices = currentDevices.map((device: string) => (device === oldDevice ? newDevice : device))
 		this.logger.log(`Updating RAID config with devices: ${updatedDevices.join(', ')}`)
 		await this.configStore.set('raid.devices', updatedDevices)
 
@@ -1258,8 +1278,8 @@ export default class Raid {
 		oldDeviceId: string,
 		newDeviceId: string,
 	): Promise<boolean> {
-		const oldDevice = `/dev/disk/by-id/${oldDeviceId}`
-		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		const oldDevice = `/dev/disk/by-umbrel-id/${oldDeviceId}`
+		const newDevice = `/dev/disk/by-umbrel-id/${newDeviceId}`
 		const acceleratorDeviceIds = pool.accelerator!.devices?.map((device) => device.id) ?? []
 
 		await this.#assertAcceleratorDeviceType(newDeviceId)
@@ -1317,7 +1337,7 @@ export default class Raid {
 
 	// Replace a storage or accelerator device in the RAID array.
 	async replaceDevice(oldDeviceId: string, newDeviceId: string): Promise<boolean> {
-		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		const newDevice = `/dev/disk/by-umbrel-id/${newDeviceId}`
 		if (!(await fse.pathExists(newDevice))) throw new Error(`New device not found: ${newDevice}`)
 
 		const pool = await this.getStatus()
@@ -1359,7 +1379,7 @@ export default class Raid {
 		if (pool.devices?.length !== 1) throw new Error('Can only transition single-disk SSD arrays')
 
 		// Validate new device exists, isn't in the pool, and matches pool type
-		const newDevice = `/dev/disk/by-id/${newDeviceId}`
+		const newDevice = `/dev/disk/by-umbrel-id/${newDeviceId}`
 		if (!(await fse.pathExists(newDevice))) throw new Error(`Device not found: ${newDevice}`)
 		const poolDeviceIds = pool.devices?.map((d) => d.id) ?? []
 		if (poolDeviceIds.includes(newDeviceId))
@@ -1368,7 +1388,7 @@ export default class Raid {
 
 		// Check if new device is at least as large as the current device
 		const currentDeviceId = pool.devices![0].id
-		const currentDevice = `/dev/disk/by-id/${currentDeviceId}`
+		const currentDevice = `/dev/disk/by-umbrel-id/${currentDeviceId}`
 		const currentDeviceSize = await getDeviceSize(currentDevice)
 		const newDeviceSize = await getDeviceSize(newDevice)
 		if (getRoundedDeviceSize(newDeviceSize) < getRoundedDeviceSize(currentDeviceSize))
@@ -1548,7 +1568,7 @@ export default class Raid {
 			if (existingPoolDeviceIds.has(pair.newDeviceId))
 				throw new Error('Cannot transition with a device that is already in the RAID array')
 
-			const newDevice = `/dev/disk/by-id/${pair.newDeviceId}`
+			const newDevice = `/dev/disk/by-umbrel-id/${pair.newDeviceId}`
 			if (!(await fse.pathExists(newDevice))) throw new Error(`Device not found: ${newDevice}`)
 
 			await this.#assertDeviceTypeMatchesPool(pair.newDeviceId)
@@ -1564,8 +1584,8 @@ export default class Raid {
 
 		// Validate each new device is at least as large as the existing device it mirrors
 		for (const pair of pairs) {
-			const existingDevice = `/dev/disk/by-id/${pair.existingDeviceId}`
-			const newDevice = `/dev/disk/by-id/${pair.newDeviceId}`
+			const existingDevice = `/dev/disk/by-umbrel-id/${pair.existingDeviceId}`
+			const newDevice = `/dev/disk/by-umbrel-id/${pair.newDeviceId}`
 			const existingSize = await getDeviceSize(existingDevice)
 			const newSize = await getDeviceSize(newDevice)
 			if (getRoundedDeviceSize(newSize) < getRoundedDeviceSize(existingSize))
@@ -1575,7 +1595,7 @@ export default class Raid {
 		// If we have an accelerator device, check we have a valid new accelerator device to mirror to
 		const existingAccelerator = pool.accelerator
 		const existingAcceleratorDeviceIds = existingAccelerator?.devices?.map((device) => device.id) ?? []
-		const existingAcceleratorDevices = existingAcceleratorDeviceIds.map((id) => `/dev/disk/by-id/${id}`)
+		const existingAcceleratorDevices = existingAcceleratorDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
 		// Check the live pool status instead of config.
 		if (existingAcceleratorDeviceIds.length > 0) {
 			if (!acceleratorDeviceId)
@@ -1590,7 +1610,7 @@ export default class Raid {
 			)
 				throw new Error('Cannot reuse a RAID device as the accelerator mirror')
 
-			const acceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+			const acceleratorDevice = `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`
 			if (!(await fse.pathExists(acceleratorDevice))) throw new Error(`Device not found: ${acceleratorDevice}`)
 			await this.#assertAcceleratorDeviceType(acceleratorDeviceId)
 
@@ -1607,7 +1627,7 @@ export default class Raid {
 		if (this.isTransitioningToFailsafe) throw new Error('Already transitioning to failsafe mode')
 		this.isTransitioningToFailsafe = true
 
-		const newDevices = pairs.map((pair) => `/dev/disk/by-id/${pair.newDeviceId}`)
+		const newDevices = pairs.map((pair) => `/dev/disk/by-umbrel-id/${pair.newDeviceId}`)
 		this.logger.log(`Starting mirror failsafe transition with ${newDevices.join(', ')}`)
 
 		try {
@@ -1615,7 +1635,7 @@ export default class Raid {
 			this.logger.log(`Partitioning ${newDevices.length} new device(s)`)
 			const partitionEntries = await Promise.all(
 				pairs.map(async (pair) => {
-					const newDevice = `/dev/disk/by-id/${pair.newDeviceId}`
+					const newDevice = `/dev/disk/by-umbrel-id/${pair.newDeviceId}`
 					const {dataPartition} = await this.#partitionDevice(newDevice)
 					return [pair.newDeviceId, dataPartition] as const
 				}),
@@ -1624,7 +1644,7 @@ export default class Raid {
 
 			// Attach each new device to the explicitly specified existing device
 			for (const pair of pairs) {
-				const existingPartition = `/dev/disk/by-id/${pair.existingDeviceId}-part2`
+				const existingPartition = `/dev/disk/by-umbrel-id/${pair.existingDeviceId}-part2`
 				const newDataPartition = newDataPartitions.get(pair.newDeviceId)
 				if (!newDataPartition) throw new Error(`Missing partition for device: ${pair.newDeviceId}`)
 
@@ -1634,7 +1654,7 @@ export default class Raid {
 
 			// If we have an existing accelerator device, mirror it against the new one
 			if (existingAcceleratorDeviceIds.length > 0 && acceleratorDeviceId) {
-				const newAcceleratorDevice = `/dev/disk/by-id/${acceleratorDeviceId}`
+				const newAcceleratorDevice = `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`
 				const existingL2arcPartition = `${existingAcceleratorDevices[0]}-part2`
 				const existingSpecialPartition = `${existingAcceleratorDevices[0]}-part3`
 				// Reuse the existing partition sizes.
@@ -1661,8 +1681,8 @@ export default class Raid {
 
 			// Update config with new RAID configuration
 			const allDevices = [
-				...existingDeviceIds.map((id) => `/dev/disk/by-id/${id}`),
-				...orderedNewDeviceIds.map((id) => `/dev/disk/by-id/${id}`),
+				...existingDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`),
+				...orderedNewDeviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`),
 			]
 			await this.configStore.getWriteLock(async ({set}) => {
 				const raid = await this.configStore.get('raid')
@@ -1673,7 +1693,7 @@ export default class Raid {
 					accelerator:
 						existingAcceleratorDeviceIds.length > 0 && acceleratorDeviceId
 							? {
-									devices: [...existingAcceleratorDevices, `/dev/disk/by-id/${acceleratorDeviceId}`],
+									devices: [...existingAcceleratorDevices, `/dev/disk/by-umbrel-id/${acceleratorDeviceId}`],
 								}
 							: raid?.accelerator,
 				})
@@ -1756,8 +1776,8 @@ export default class Raid {
 			// Get the old device from the previous pool
 			// We just grab the first device since the pool should only have one
 			const oldDevice = previousPool.devices?.[0]?.id
-			const oldDevicePath = `/dev/disk/by-id/${oldDevice}`
 			if (!oldDevice) throw new Error('Could not determine old device from previous migration pool')
+			const oldDevicePath = `/dev/disk/by-umbrel-id/${oldDevice}`
 			this.logger.log(`Old device: ${oldDevice}`)
 
 			// Destroy the old pool
@@ -1776,7 +1796,7 @@ export default class Raid {
 			this.logger.log('Updating RAID config')
 			await this.configStore.getWriteLock(async ({set}) => {
 				const pool = await this.getStatus()
-				const devices = pool.devices!.map((device) => `/dev/disk/by-id/${device.id}`)
+				const devices = pool.devices!.map((device) => `/dev/disk/by-umbrel-id/${device.id}`)
 				const raid = await this.configStore.get('raid')
 				await set('raid', {
 					...raid,

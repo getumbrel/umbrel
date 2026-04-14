@@ -205,6 +205,11 @@ WORKDIR /
 # Copy in filesystem overlay
 COPY packages/os/overlay /
 
+# Rebuild initramfs after overlay changes so custom udev rules are available
+# during early boot coldplug and /dev/disk/by-umbrel-id exists before the
+# mount script runs.
+RUN update-initramfs -u
+
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.
 # This step should always be last so things like /var/log/apt/

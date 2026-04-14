@@ -205,7 +205,7 @@ describe('RAID HDD multi-disk storage to failsafe mirror transition', () => {
 					{existingDeviceId: hddDeviceId2, newDeviceId: hddDeviceId3},
 				],
 			}),
-		).rejects.toThrow(`Device not found: /dev/disk/by-id/${missingDeviceId}`)
+		).rejects.toThrow(`Device not found: /dev/disk/by-umbrel-id/${missingDeviceId}`)
 	})
 
 	test('rejects transition when a new mirror device is smaller than its existing pair', async () => {
