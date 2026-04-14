@@ -61,6 +61,14 @@ export const trpcWssHandler = ({
 		wss,
 		router: appRouter,
 		createContext: () => createContextWss({umbreld, logger}),
+		// Server-side keepAlive compensates for browser background tab throttling,
+		// where the client's setTimeout-based pings degrade to ~1/minute.
+		keepAlive: {
+			enabled: true,
+			// trpc defaults
+			pingMs: 30_000,
+			pongWaitMs: 5_000,
+		},
 		onError({error, ctx, path}) {
 			logger.error(`WS ${path}`, error)
 		},
