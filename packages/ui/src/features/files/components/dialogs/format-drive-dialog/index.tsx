@@ -2,6 +2,7 @@ import {AlertOctagon} from 'lucide-react'
 import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
+import {useSearchParams} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {
@@ -80,8 +81,8 @@ export default function FormatDriveDialog() {
 
 	// Find the drive that needs formatting from query params
 	// The dialog is opened via ?dialog=files-format-drive&deviceId=sdc
-	const urlParams = new URLSearchParams(window.location.search)
-	const deviceId = urlParams.get('deviceId')
+	const [searchParams] = useSearchParams()
+	const deviceId = searchParams.get('deviceId')
 	const drive = disks?.find((d) => d.id === deviceId)
 
 	if (!drive || drive.isFormatting) return null
