@@ -66,7 +66,17 @@ then
 		exit 1
 	fi
 
-	rugix-ctrl update install --reboot set --insecure-skip-bundle-verification "${update_url}"
+	# Rugix < 1.0 doesn't support the 1.0 update install flags.
+	# umbrelOS 1.6.0 and 1.6.1 are on Rugix 0.8
+	rugix_version=$(rugix-ctrl --version 2> /dev/null || true)
+	if [[ "${rugix_version}" == rugix-ctrl\ v0.* ]]
+	then
+		# Rugix 0.x
+		rugix-ctrl update install --reboot deferred "${update_url}"
+	else
+		# Rugix >=1.0
+		rugix-ctrl update install --reboot set --insecure-skip-bundle-verification "${update_url}"
+	fi
 else
 	echo umbrel-update: '{"error": "No supported update mechanism found"}'
 	exit 1
