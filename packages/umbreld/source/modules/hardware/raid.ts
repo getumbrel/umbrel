@@ -917,6 +917,9 @@ export default class Raid {
 	// 2. Create a ZFS pool from all data partitions
 	// 3. Write RAID config to boot partition to signal the boot process to mount the array
 	async setup(deviceIds: string[], raidType: RaidType, acceleratorDeviceIds?: string[]): Promise<boolean> {
+		// Temporarily disable RAID on non Umbrel Pro hardware until we've properly handled all edge cases
+		if (!(await this.#umbreld.hardware.umbrelPro.isUmbrelPro()))
+			throw new Error('RAID is currently only supported on Umbrel Pro hardware')
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
 		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 
