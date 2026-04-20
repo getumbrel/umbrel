@@ -241,11 +241,16 @@ export function useFilesOperations() {
 
 	const moveItems = async ({sourceItems, toDirectory}: {sourceItems: FileSystemItem[]; toDirectory: string}) => {
 		if (isReadOnly) return
-		const fromPaths = sourceItems.map((item) => item.path)
+
+		// Filter out items already in the target directory (no-op moves)
+		const itemsToMove = sourceItems.filter((item) => item.path.substring(0, item.path.lastIndexOf('/')) !== toDirectory)
+		if (itemsToMove.length === 0) return
+
+		const fromPaths = itemsToMove.map((item) => item.path)
 		addPendingPaths(fromPaths, 'removing')
 
 		// Show items at the destination immediately
-		const incoming = sourceItems.map((item) => ({
+		const incoming = itemsToMove.map((item) => ({
 			...item,
 			path: `${toDirectory}/${item.name}`,
 		}))

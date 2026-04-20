@@ -28,7 +28,7 @@ export function useDragAndDrop() {
 	}
 
 	const handleDragEnd = (event: DragEndEvent) => {
-		const {over} = event
+		const {over, active} = event
 		const targetPath = over?.data.current?.path as string
 		clearDraggedItems()
 		if (!targetPath) {
@@ -39,7 +39,13 @@ export function useDragAndDrop() {
 		if (targetPath === TRASH_PATH) {
 			trashDraggedItems()
 		} else {
-			// otherwise move the selected items to the target directory
+			// Skip if the item is already in the target directory (e.g. dropped on
+			// the listing background or on a sibling file instead of a folder)
+			const draggedItem = active.data.current as FileSystemItem | undefined
+			if (draggedItem && draggedItem.path.substring(0, draggedItem.path.lastIndexOf('/')) === targetPath) {
+				return
+			}
+
 			moveDraggedItems({toDirectory: targetPath})
 		}
 
