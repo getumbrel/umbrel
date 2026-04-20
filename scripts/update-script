@@ -6,7 +6,7 @@ set -euo pipefail
 # https://raw.githubusercontent.com/getumbrel/umbrel/<tag>/scripts/update-script
 
 update_url=""
-download_prefix="https://download.umbrel.com/release/1.6.1"
+download_prefix="https://download.umbrel.com/release/1.7.0-beta.1"
 
 # This is a legacy mender install, migrate to rugix
 if command -v mender &> /dev/null
