@@ -20,6 +20,12 @@ import {
 	detectDevice,
 	getSystemMemoryUsage,
 	getIpAddresses,
+	getNetworkInterfaces,
+	getHostname,
+	setHostname,
+	setStaticIp,
+	confirmStaticIp,
+	clearStaticIp,
 	syncDns,
 } from './system.js'
 
@@ -110,6 +116,45 @@ export default router({
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
+	getHostname: privateProcedure.query(() => getHostname()),
+	getNetworkInterfaces: privateProcedure.query(({ctx}) => getNetworkInterfaces(ctx.umbreld)),
+	setHostname: privateProcedure
+		.input(
+			z.object({
+				hostname: z
+					.string()
+					.trim()
+					.toLowerCase()
+					.regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, 'Invalid hostname'),
+			}),
+		)
+		.mutation(async ({ctx, input}) => setHostname(ctx.umbreld, input.hostname)),
+	setStaticIp: privateProcedure
+		.input(
+			z.object({
+				mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i, 'Invalid MAC address'),
+				ip: z.string().ip({version: 'v4', message: 'Invalid IPv4 address'}),
+				subnetPrefix: z.number().int().min(0).max(32),
+				gateway: z.string().ip({version: 'v4', message: 'Invalid IPv4 gateway'}),
+				dns: z.array(z.string().ip({version: 'v4', message: 'Invalid IPv4 DNS address'})).min(1),
+			}),
+		)
+		.mutation(async ({ctx, input}) => setStaticIp(ctx.umbreld, input)),
+	// Public so it can be called from a new origin after an IP change, where no JWT is available.
+	confirmStaticIp: publicProcedure
+		.input(
+			z.object({
+				ip: z.string().ip({version: 'v4', message: 'Invalid IPv4 address'}),
+			}),
+		)
+		.mutation(async ({input}) => confirmStaticIp(input.ip)),
+	clearStaticIp: privateProcedure
+		.input(
+			z.object({
+				mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i, 'Invalid MAC address'),
+			}),
+		)
+		.mutation(async ({ctx, input}) => clearStaticIp(ctx.umbreld, input)),
 	// Public during onboarding and recovery mode so users can shut down during RAID setup or mount failure
 	shutdown: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'

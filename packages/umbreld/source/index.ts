@@ -20,9 +20,16 @@ import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
 import SystemNg from './modules/system-ng/system-ng.js'
 
-import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
+import {
+	commitOsPartition,
+	setupPiCpuGovernor,
+	restoreHostname,
+	restoreWiFi,
+	restoreStaticIp,
+	waitForSystemTime,
+	reboot,
+} from './modules/system/system.js'
 import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
-import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
 	version: string
@@ -50,9 +57,16 @@ type StoreSchema = {
 			password?: string
 		}
 		externalDns?: boolean
-	}
-	development: {
 		hostname?: string
+		staticIp?: Record<
+			string,
+			{
+				ip: string
+				subnetPrefix: number
+				gateway: string
+				dns: string[]
+			}
+		>
 	}
 	recentlyOpenedApps: string[]
 	files: {
@@ -177,15 +191,17 @@ export default class Umbreld {
 		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
 		await this.setBackupRestoreFirstStartFlag()
 
-		// Override hostname in development when set
-		const developmentHostname = await this.store.get('development.hostname')
-		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
+		// Restore configured hostname after boot/update (non-blocking)
+		restoreHostname(this)
 
 		// Synchronize the system password after OTA update (non-blocking)
 		this.user.syncSystemPassword()
 
 		// Restore WiFi connection after OTA update (non-blocking)
 		restoreWiFi(this)
+
+		// Restore static IP settings (non-blocking)
+		restoreStaticIp(this)
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
 		// We need this on Raspberry Pi since it doesn't have a persistent real time clock.

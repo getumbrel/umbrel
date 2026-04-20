@@ -1,5 +1,6 @@
 import os from 'node:os'
 import {isIPv4} from 'node:net'
+import {randomBytes} from 'node:crypto'
 import {setTimeout} from 'node:timers/promises'
 
 import systemInformation from 'systeminformation'
@@ -10,6 +11,8 @@ import PQueue from 'p-queue'
 import type Umbreld from '../../index.js'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
+import {escapeSpecialRegExpLiterals} from '../utilities/regexp.js'
+import pWaitFor from 'p-wait-for'
 
 export async function getCpuTemperature(): Promise<{
 	warning: 'normal' | 'warm' | 'hot'
@@ -614,6 +617,259 @@ export function getIpAddresses(): string[] {
 	)
 }
 
+type NetworkInterface = {
+	id: string
+	mac: string
+	type: 'ethernet' | 'wifi'
+	connected: boolean
+	configuredStaticSettings?: {
+		ip: string
+		subnetPrefix: number
+		gateway: string
+		dns: string[]
+	}
+	ipMethod?: 'dhcp' | 'static'
+	ip?: string
+	subnetPrefix?: number
+	gateway?: string
+	dns?: string[]
+}
+
+// Get all physical network interfaces with connection details
+export async function getNetworkInterfaces(umbreld?: Umbreld): Promise<NetworkInterface[]> {
+	const {stdout: deviceOutput} = await $`nmcli --terse --fields DEVICE,TYPE,STATE,CONNECTION device status`
+	const configuredStaticSettings = (await umbreld?.store.get('settings.staticIp')) ?? {}
+
+	const interfaces = await Promise.all(
+		deviceOutput
+			.split('\n')
+			.filter((line) => line.trim())
+			.map((line) => {
+				const parts = line.split(':')
+				return {
+					device: parts[0],
+					type: parts[1],
+					state: parts[2],
+					// Connection name could contain colons, so join remaining parts
+					connection: parts.slice(3).join(':'),
+				}
+			})
+			// Only include ethernet and wifi types
+			.filter(({type}) => type === 'ethernet' || type === 'wifi')
+			.map(async ({device, type, state, connection}) => {
+				// For ethernet interfaces, verify they're backed by physical hardware
+				// by checking for the presence of a device symlink in sysfs. Virtual
+				// interfaces (veth, bridges, docker) won't have this.
+				if (type === 'ethernet') {
+					const isPhysical = await fse.pathExists(`/sys/class/net/${device}/device`)
+					if (!isPhysical) return null
+				}
+
+				const mac = (await fse.readFile(`/sys/class/net/${device}/address`, 'utf8')).trim()
+
+				const iface: NetworkInterface = {
+					id: device,
+					mac,
+					type: type as 'ethernet' | 'wifi',
+					connected: state === 'connected',
+				}
+				const configuredStaticSetting = configuredStaticSettings[mac]
+				if (configuredStaticSetting) iface.configuredStaticSettings = configuredStaticSetting
+
+				// If connected, get IP configuration from the active connection
+				if (iface.connected && connection && connection !== '--') {
+					try {
+						const {stdout} =
+							await $`nmcli --terse --fields ipv4.method,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS connection show ${connection}`
+
+						// nmcli terse format uses ":" as delimiter with keys like
+						// "IP4.ADDRESS[1]", "IP4.DNS[1]", "IP4.DNS[2]" for multi-value fields
+						for (const connLine of stdout.split('\n')) {
+							const [key, ...valueParts] = connLine.split(':')
+							const value = valueParts.join(':')
+
+							if (key === 'ipv4.method') {
+								iface.ipMethod = value === 'manual' ? 'static' : 'dhcp'
+							} else if (key.startsWith('IP4.ADDRESS') && !iface.ip) {
+								const [ip, prefix] = value.split('/')
+								iface.ip = ip
+								iface.subnetPrefix = parseInt(prefix)
+							} else if (key === 'IP4.GATEWAY' && value && value !== '0.0.0.0') {
+								iface.gateway = value
+							} else if (key.startsWith('IP4.DNS') && value) {
+								if (!iface.dns) iface.dns = []
+								iface.dns.push(value)
+							}
+						}
+					} catch {
+						// Connection details unavailable
+					}
+				}
+
+				return iface
+			}),
+	)
+
+	// Filter out null entries (virtual ethernet interfaces)
+	return interfaces.filter((iface) => iface !== null)
+}
+
+// Find an interface by MAC address
+async function getInterfaceByMac(mac: string): Promise<NetworkInterface> {
+	const networkInterface = (await getNetworkInterfaces()).find((iface) => iface.mac === mac)
+	if (networkInterface) return networkInterface
+	throw new Error(`No interface found with MAC address ${mac}`)
+}
+
+// Find the saved connection name for a device, even if it's not currently connected
+async function getConnectionByDevice(device: string): Promise<string | false> {
+	// `nmcli device status` only shows the active connection, which is not enough
+	// when we need to clear static IP settings from a disconnected interface.
+	const {stdout: uuidsOutput} = await $`nmcli --terse --fields UUID connection show`
+	for (const uuid of uuidsOutput.split('\n')) {
+		if (!uuid.trim()) continue
+		try {
+			const {stdout} = await $`nmcli --terse --fields connection.interface-name,connection.id connection show ${uuid}`
+			let connectionDevice = ''
+			let connectionId = ''
+			for (const line of stdout.split('\n')) {
+				const [key, ...valueParts] = line.split(':')
+				const value = valueParts.join(':')
+				if (key === 'connection.interface-name') connectionDevice = value
+				else if (key === 'connection.id') connectionId = value
+			}
+			if (connectionDevice === device && connectionId) return connectionId
+		} catch {
+			continue
+		}
+	}
+	return false
+}
+
+// Apply a static IP configuration to an interface via nmcli
+async function applyStaticIp({
+	mac,
+	ip,
+	subnetPrefix,
+	gateway,
+	dns,
+}: {
+	mac: string
+	ip: string
+	subnetPrefix: number
+	gateway: string
+	dns: string[]
+}) {
+	const {id: device} = await getInterfaceByMac(mac)
+
+	// Get the connection id, or create a new connection
+	let connection = await getConnectionByDevice(device)
+	let existingConnection = true
+	if (!connection) {
+		existingConnection = false
+		const hex = randomBytes(4).toString('hex')
+		connection = `wired-connection-${hex}`
+		await $`nmcli connection add type ethernet con-name ${connection} ifname ${device}`
+	}
+
+	// Modify the connection with static ip settings
+	await $`nmcli connection modify ${connection} ipv4.method manual ipv4.addresses ${`${ip}/${subnetPrefix}`} ipv4.gateway ${gateway} ipv4.dns ${dns.join(',')}`
+
+	// If we modified an existing connction, hard reload it
+	if (existingConnection) {
+		await $`nmcli connection down ${connection}`
+		await $`nmcli connection up ${connection}`
+	}
+	return device
+}
+
+// Track confirmed static IP — set by confirmStaticIp endpoint when client pings back
+let confirmedStaticIp = ''
+
+export function confirmStaticIp(ip: string) {
+	confirmedStaticIp = ip
+}
+
+// Set a static IP configuration on a network interface
+export async function setStaticIp(
+	umbreld: Umbreld,
+	config: {mac: string; ip: string; subnetPrefix: number; gateway: string; dns: string[]},
+) {
+	const {mac, ip, subnetPrefix, gateway, dns} = config
+	const networkInterface = await getInterfaceByMac(mac)
+	if (networkInterface.type === 'wifi') throw new Error('Static IP is not supported for WiFi interfaces')
+
+	// Capture previous config for rollback
+	const currentSettings = await umbreld.store.get('settings.staticIp')
+	const previousConfig = currentSettings?.[mac] ? {mac, ...currentSettings[mac]} : null
+
+	// Apply the new config
+	await applyStaticIp(config)
+
+	// Wait for the client to confirm connectivity by calling confirmStaticIp
+	// with the new IP. If not confirmed within 30 seconds, revert.
+	confirmedStaticIp = ''
+	try {
+		await pWaitFor(() => confirmedStaticIp === ip, {interval: 100, timeout: 30_000})
+	} catch {
+		// Timed out — revert to previous config
+		if (previousConfig) await applyStaticIp(previousConfig).catch(() => {})
+		else await clearStaticIp(umbreld, {mac}).catch(() => {})
+		throw new Error('Static IP change was not confirmed within 30 seconds, reverted to previous settings')
+	}
+
+	// If we haven't thrown by now the new static IP settings are confirmed to be working, so we can persist them.
+	// Persist to store so settings survive reboots
+	await umbreld.store.getWriteLock(async ({get, set}) => {
+		const settings = (await get('settings.staticIp')) ?? {}
+		settings[mac] = {ip, subnetPrefix, gateway, dns}
+		await set('settings.staticIp', settings)
+	})
+}
+
+// Clear static IP and revert to DHCP
+export async function clearStaticIp(umbreld: Umbreld, {mac}: {mac: string}) {
+	const networkInterface = await getInterfaceByMac(mac)
+	const device = networkInterface.id
+	const connection = await getConnectionByDevice(device)
+	if (connection) {
+		await $`nmcli connection modify ${connection} ipv4.method auto ipv4.addresses ${''} ipv4.gateway ${''} ipv4.dns ${''}`
+		// If the interface is disconnected we still want to clear the saved
+		// profile, but there is no live connection to bounce.
+		if (networkInterface.connected) {
+			await $`nmcli connection down ${connection}`
+			await $`nmcli connection up ${connection}`
+		}
+	}
+
+	// Remove from store
+	await umbreld.store.getWriteLock(async ({get, set}) => {
+		const settings = (await get('settings.staticIp')) ?? {}
+		delete settings[mac]
+		await set('settings.staticIp', settings)
+	})
+}
+
+// Restore static IP settings from store on startup
+export async function restoreStaticIp(umbreld: Umbreld): Promise<void> {
+	const settings = await umbreld.store.get('settings.staticIp')
+	if (!settings) return
+
+	for (const [mac, config] of Object.entries(settings)) {
+		try {
+			const networkInterface = await getInterfaceByMac(mac)
+			if (networkInterface.type === 'wifi') {
+				umbreld.logger.log(`Skipping static IP restore for ${mac}: WiFi interfaces are not supported`)
+				continue
+			}
+			const device = await applyStaticIp({mac, ...config})
+			umbreld.logger.log(`Restored static IP for ${mac} (${device})`)
+		} catch (error) {
+			umbreld.logger.error(`Failed to restore static IP for ${mac}`, error)
+		}
+	}
+}
+
 const syncDnsQueue = new PQueue({concurrency: 1})
 
 // Update DNS configuration to match user settings
@@ -661,4 +917,60 @@ export async function waitForSystemTime(umbreld: Umbreld, timeout: number): Prom
 export async function getHostname() {
 	const hostname = await fse.readFile('/etc/hostname', 'utf8')
 	return hostname.trim()
+}
+
+async function applyHostname(umbreld: Umbreld, hostname: string) {
+	const previousHostname = await getHostname().catch(() => '')
+
+	// Update static hostname and hosts mapping
+	await fse.writeFile('/etc/hostname', `${hostname}\n`)
+
+	const etcHosts = await fse.readFile('/etc/hosts', 'utf8')
+	const previousHostnameInEtcHostsRe =
+		previousHostname &&
+		new RegExp(`^(\\s*127\\.0\\.(?:0|1)\\.1\\s+)${escapeSpecialRegExpLiterals(previousHostname)}\\s*$`, 'm')
+	let updatedEtcHosts = previousHostnameInEtcHostsRe
+		? etcHosts.replace(previousHostnameInEtcHostsRe, `$1${hostname}`)
+		: etcHosts
+
+	const hostnameInEtcHostsRe = new RegExp(
+		`^\\s*127\\.0\\.(?:0|1)\\.1\\s+${escapeSpecialRegExpLiterals(hostname)}\\s*$`,
+		'm',
+	)
+	if (!hostnameInEtcHostsRe.test(updatedEtcHosts)) {
+		updatedEtcHosts = `${updatedEtcHosts.trimEnd()}\n127.0.0.1       ${hostname}\n`
+	}
+	if (updatedEtcHosts !== etcHosts) await fse.writeFile('/etc/hosts', updatedEtcHosts)
+
+	// Apply new hostname
+	await $`hostname ${hostname}`
+
+	// Restart hostname-dependent services
+	await $`systemctl restart avahi-daemon`
+
+	umbreld.logger.log(`Applied hostname '${hostname}'`)
+	return hostname
+}
+
+export async function setHostname(umbreld: Umbreld, hostname: string) {
+	const previousConfiguredHostname = await umbreld.store.get('settings.hostname')
+
+	await umbreld.store.set('settings.hostname', hostname)
+	try {
+		return await applyHostname(umbreld, hostname)
+	} catch (error) {
+		if (previousConfiguredHostname) await umbreld.store.set('settings.hostname', previousConfiguredHostname)
+		else await umbreld.store.delete('settings.hostname')
+		throw error
+	}
+}
+
+export async function restoreHostname(umbreld: Umbreld) {
+	const configuredHostname = await umbreld.store.get('settings.hostname')
+	if (!configuredHostname) return
+	try {
+		await applyHostname(umbreld, configuredHostname)
+	} catch (error) {
+		umbreld.logger.error(`Failed to restore hostname`, error)
+	}
 }

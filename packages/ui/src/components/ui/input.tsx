@@ -157,8 +157,8 @@ export function AnimatedInputError({children}: {children: React.ReactNode}) {
 export function InputError({children}: {children: React.ReactNode}) {
 	return (
 		// Allow text selection for copying error messages
-		<div className='flex items-center gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest select-text'>
-			<TbAlertCircle className='h-4 w-4 shrink-0' />
+		<div className='flex items-start gap-1 p-1 text-13 font-normal -tracking-2 text-destructive2-lightest select-text'>
+			<TbAlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
 			{children}
 		</div>
 	)

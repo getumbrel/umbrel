@@ -1,6 +1,7 @@
 import React from 'react'
 import {useTranslation} from 'react-i18next'
 import {PiFlaskFill} from 'react-icons/pi'
+import {TbChevronRight} from 'react-icons/tb'
 import {useParams} from 'react-router-dom'
 
 import {CopyableField} from '@/components/ui/copyable-field'
@@ -11,12 +12,12 @@ import {Icon, IconTypes} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
-import {useIsExternalDns} from '@/hooks/use-is-externaldns'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {cn} from '@/lib/utils'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {NetworkPanel} from '@/routes/settings/advanced-network'
 import {trpcReact} from '@/trpc/trpc'
 import {tw} from '@/utils/tw'
 
@@ -27,8 +28,6 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	const isBetaChannel = useIsBetaChannel()
 
-	const isExternalDns = useIsExternalDns()
-
 	const isMobile = useIsMobile()
 
 	const tor = useTorEnabled()
@@ -38,6 +37,7 @@ export default function AdvancedSettingsDrawerOrDialog() {
 
 	// Track the last action (enable/disable) to show appropriate cover message
 	const [torEnabling, setTorEnabling] = React.useState(false)
+	const [showNetwork, setShowNetwork] = React.useState(false)
 
 	const handleTorToggle = (checked: boolean) => {
 		setTorEnabling(checked)
@@ -45,8 +45,13 @@ export default function AdvancedSettingsDrawerOrDialog() {
 	}
 
 	const {advancedSelection} = useParams<{
-		advancedSelection?: 'beta-program' | 'external-dns' | 'tor'
+		advancedSelection?: 'beta-program' | 'network' | 'tor'
 	}>()
+
+	// Auto-open network panel if URL has advancedSelection=network
+	React.useEffect(() => {
+		if (advancedSelection === 'network') setShowNetwork(true)
+	}, [advancedSelection])
 
 	const remoteTorAccessSettingRow = (
 		<div className={cn('flex flex-col gap-2', cardClass, advancedSelection === 'tor' && 'umbrel-pulse-a-few-times')}>
@@ -68,6 +73,16 @@ export default function AdvancedSettingsDrawerOrDialog() {
 		</div>
 	)
 
+	const networkSettingRow = (
+		<button
+			onClick={() => setShowNetwork(true)}
+			className={cn(cardClass, 'pointer-events-auto cursor-pointer text-left transition-colors hover:bg-white/8')}
+		>
+			<CardText title={t('network')} description={t('network-description')} />
+			<TbChevronRight className='pointer-events-auto mt-0.5 size-4.5 shrink-0 self-center text-white/30' />
+		</button>
+	)
+
 	// Show loading cover state while enabling/disabling Tor
 	if (tor.isMutLoading) {
 		return (
@@ -80,52 +95,46 @@ export default function AdvancedSettingsDrawerOrDialog() {
 		)
 	}
 
+	const mainContent = (
+		<div className='flex flex-col gap-y-3'>
+			<label className={cardClass}>
+				<CardText title={t('terminal')} description={t('terminal-description')} />
+				<IconButtonLink className='pointer-events-auto self-center' to={'/settings/terminal'}>
+					{t('open')}
+				</IconButtonLink>
+			</label>
+			<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
+				<CardText title={t('beta-program')} description={t('beta-program-description')} trailingIcon={PiFlaskFill} />
+				<Switch
+					className={cn('pointer-events-auto', isBetaChannel.isLoading && 'umbrel-pulse')}
+					checked={isBetaChannel.isChecked}
+					onCheckedChange={isBetaChannel.change}
+					disabled={isBetaChannel.isLoading}
+				/>
+			</label>
+			{networkSettingRow}
+			{remoteTorAccessSettingRow}
+			<label className={cardClass}>
+				<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
+				<IconButtonLink className='pointer-events-auto self-center' to={'/factory-reset'} variant='destructive'>
+					{t('reset')}
+				</IconButtonLink>
+			</label>
+		</div>
+	)
+
+	const animatedContent = showNetwork ? <NetworkPanel onBack={() => setShowNetwork(false)} /> : mainContent
+
 	if (isMobile) {
 		return (
 			<Drawer {...dialogProps}>
 				<DrawerContent fullHeight>
-					<DrawerHeader>
-						<DrawerTitle>{title}</DrawerTitle>
-					</DrawerHeader>
-					<DrawerScroller>
-						<div className='flex flex-col gap-y-3'>
-							<label className={cardClass}>
-								<CardText title={t('terminal')} description={t('terminal-description')} />
-								<IconButtonLink className='pointer-events-auto self-center' to={'/settings/terminal'}>
-									{t('open')}
-								</IconButtonLink>
-							</label>
-							<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
-								<CardText
-									title={t('beta-program')}
-									description={t('beta-program-description')}
-									trailingIcon={PiFlaskFill}
-								/>
-								<Switch
-									className={cn('pointer-events-auto', isBetaChannel.isLoading && 'umbrel-pulse')}
-									checked={isBetaChannel.isChecked}
-									onCheckedChange={isBetaChannel.change}
-									disabled={isBetaChannel.isLoading}
-								/>
-							</label>
-							<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
-								<CardText title={t('external-dns')} description={t('external-dns-description')} />
-								<Switch
-									className={cn('pointer-events-auto', isExternalDns.isLoading && 'umbrel-pulse')}
-									checked={isExternalDns.isChecked}
-									onCheckedChange={isExternalDns.change}
-									disabled={isExternalDns.isLoading}
-								/>
-							</label>
-							{remoteTorAccessSettingRow}
-							<label className={cardClass}>
-								<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
-								<IconButtonLink className='pointer-events-auto self-center' to={'/factory-reset'} variant='destructive'>
-									{t('reset')}
-								</IconButtonLink>
-							</label>
-						</div>
-					</DrawerScroller>
+					{!showNetwork && (
+						<DrawerHeader>
+							<DrawerTitle>{title}</DrawerTitle>
+						</DrawerHeader>
+					)}
+					<DrawerScroller>{animatedContent}</DrawerScroller>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -135,46 +144,12 @@ export default function AdvancedSettingsDrawerOrDialog() {
 		<Dialog {...dialogProps}>
 			<DialogScrollableContent>
 				<div className='space-y-6 px-5 py-6'>
-					<DialogHeader>
-						<DialogTitle>{title}</DialogTitle>
-					</DialogHeader>
-					<div className='flex flex-col gap-y-3'>
-						<label className={cardClass}>
-							<CardText title={t('terminal')} description={t('terminal-description')} />
-							<IconButtonLink className='pointer-events-auto self-center' to={'/settings/terminal'}>
-								{t('open')}
-							</IconButtonLink>
-						</label>
-						<label className={cn(cardClass, advancedSelection === 'beta-program' && 'umbrel-pulse-a-few-times')}>
-							<CardText
-								title={t('beta-program')}
-								description={t('beta-program-description')}
-								trailingIcon={PiFlaskFill}
-							/>
-							<Switch
-								className={cn('pointer-events-auto', isBetaChannel.isLoading && 'umbrel-pulse')}
-								checked={isBetaChannel.isChecked}
-								onCheckedChange={isBetaChannel.change}
-								disabled={isBetaChannel.isLoading}
-							/>
-						</label>
-						<label className={cn(cardClass, advancedSelection === 'external-dns' && 'umbrel-pulse-a-few-times')}>
-							<CardText title={t('external-dns')} description={t('external-dns-description')} />
-							<Switch
-								className={cn('pointer-events-auto', isExternalDns.isLoading && 'umbrel-pulse')}
-								checked={isExternalDns.isChecked}
-								onCheckedChange={isExternalDns.change}
-								disabled={isExternalDns.isLoading}
-							/>
-						</label>
-						{remoteTorAccessSettingRow}
-						<label className={cardClass}>
-							<CardText title={t('factory-reset')} description={t('factory-reset-description')} />
-							<IconButtonLink className='pointer-events-auto self-center' to={'/factory-reset'} variant='destructive'>
-								{t('reset')}
-							</IconButtonLink>
-						</label>
-					</div>
+					{!showNetwork && (
+						<DialogHeader>
+							<DialogTitle>{title}</DialogTitle>
+						</DialogHeader>
+					)}
+					{animatedContent}
 				</div>
 			</DialogScrollableContent>
 		</Dialog>
