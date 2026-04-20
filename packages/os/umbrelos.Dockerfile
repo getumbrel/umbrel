@@ -192,7 +192,7 @@ RUN usermod -aG sudo umbrel
 RUN sudo apt-get install --yes skopeo
 RUN mkdir -p /images
 RUN skopeo copy docker://getumbrel/tor@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a docker-archive:/images/tor
-RUN skopeo copy docker://getumbrel/auth-server@sha256:b4a4b37896911a85fb74fa159e010129abd9dff751a40ef82f724ae066db3c2a docker-archive:/images/auth
+RUN skopeo copy docker://getumbrel/auth-server@sha256:7fc9d52d4176639e84044b63aa07efcac78a508a05bb4480436be9db977a7191 docker-archive:/images/auth
 
 # Install umbreld
 COPY packages/umbreld /opt/umbreld

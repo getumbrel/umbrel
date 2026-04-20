@@ -16,7 +16,7 @@ services:
         ipv4_address: $TOR_PROXY_IP
   auth:
     container_name: auth
-    image: getumbrel/auth-server:1.0.5@sha256:b4a4b37896911a85fb74fa159e010129abd9dff751a40ef82f724ae066db3c2a
+    image: getumbrel/auth-server:1.7.0@sha256:7fc9d52d4176639e84044b63aa07efcac78a508a05bb4480436be9db977a7191
     user: '1000:1000'
     # build:
     #   dockerfile: containers/app-auth/Dockerfile

@@ -197,7 +197,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 	return (
 		<>
 			<FadeInImg
-				src={`/wallpapers/generated-thumbs/${wallpaperId}.jpg`}
+				src={`/assets/wallpapers/generated-thumbs/${wallpaperId}.jpg`}
 				className='pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000'
 			/>
 			<div className='fixed inset-0 bg-black/50 contrast-more:bg-black' />
@@ -211,7 +211,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 						)}
 					>
 						<div className='flex h-0 -translate-y-[56px] gap-5'>
-							<AppIcon src='/figma-exports/umbrel-ios.png' size={56} className='rounded-12' />
+							<AppIcon src='/assets/umbrel-ios.png' size={56} className='rounded-12' />
 							<AppIcon src={app.icon} size={56} className='rounded-12 bg-neutral-600' />
 						</div>
 						<div className='flex flex-col gap-1'>
