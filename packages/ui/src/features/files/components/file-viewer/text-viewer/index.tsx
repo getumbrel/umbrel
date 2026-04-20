@@ -35,6 +35,7 @@ import {useWallpaper} from '@/providers/wallpaper'
 import {trpcReact} from '@/trpc/trpc'
 
 const MAX_EDITOR_FILE_SIZE = 1_048_576 * 50 // 50MB
+const MAX_CONTROL_CHARACTER_RATIO = 0.02 // 2% allows sparse odd control chars in text while rejecting valid UTF-8 binary blobs
 
 const BASIC_SETUP = {
 	lineNumbers: true,
@@ -98,6 +99,32 @@ interface TextViewerProps {
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+
+function decodeUtf8Text(arrayBuffer: ArrayBuffer) {
+	const text = new TextDecoder('utf-8', {fatal: true}).decode(arrayBuffer)
+	if (looksLikeBinary(text)) throw new Error('Binary content')
+	return text
+}
+
+// Strict UTF-8 decoding alone is not enough: many binary formats can contain only
+// technically valid Unicode code points. Reject the common binary signals so the
+// "try text viewer for unknown files" fallback does not turn random blobs into editor noise.
+function looksLikeBinary(text: string) {
+	if (text.length === 0) return false
+
+	// NUL bytes are valid UTF-8, but they are a strong signal that the file is structured
+	// binary data rather than text a user can safely edit.
+	if (text.includes('\0')) return true
+
+	let controlCharacters = 0
+	for (let index = 0; index < text.length; index++) {
+		const code = text.charCodeAt(index)
+		const isAllowedWhitespace = code === 9 || code === 10 || code === 12 || code === 13
+		if (code < 32 && !isAllowedWhitespace) controlCharacters++
+	}
+
+	return controlCharacters / text.length > MAX_CONTROL_CHARACTER_RATIO
+}
 
 export default function TextViewer({item}: TextViewerProps) {
 	// Throw before any hooks — ErrorBoundary catches this and shows download dialog
@@ -165,8 +192,7 @@ export default function TextViewer({item}: TextViewerProps) {
 				const arrayBuffer = await response.arrayBuffer()
 
 				try {
-					const decoder = new TextDecoder('utf-8', {fatal: true})
-					const text = decoder.decode(arrayBuffer)
+					const text = decodeUtf8Text(arrayBuffer)
 					setContent(text)
 					setOriginalContent(text)
 				} catch {
@@ -640,30 +666,6 @@ export default function TextViewer({item}: TextViewerProps) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</>
-	)
-}
-
-function ToolbarToggle({
-	active,
-	onClick,
-	title,
-	children,
-}: {
-	active: boolean
-	onClick: () => void
-	title: string
-	children: React.ReactNode
-}) {
-	return (
-		<button
-			onClick={onClick}
-			title={title}
-			className={`rounded-full px-2.5 py-1 text-11 font-medium transition-colors duration-300 ${
-				active ? 'bg-white/10 text-white/70' : 'text-white/25 hover:bg-white/6 hover:text-white/40'
-			}`}
-		>
-			{children}
-		</button>
 	)
 }
 

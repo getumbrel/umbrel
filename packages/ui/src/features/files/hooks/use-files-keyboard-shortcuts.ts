@@ -1,13 +1,13 @@
 import {useEffect, useRef} from 'react'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
-import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLinkToDialog} from '@/utils/dialog'
@@ -183,8 +183,7 @@ export function useFilesKeyboardShortcuts({
 					const previewable = items.filter((file) => {
 						if (typeof file.type !== 'string') return false
 						if (mode === 'preview') return true
-						const entry = FILE_TYPE_MAP[file.type as keyof typeof FILE_TYPE_MAP]
-						return Boolean(entry?.viewer)
+						return Boolean(getFileViewer(file))
 					})
 					if (previewable.length === 0) return
 					const currentIndex = previewable.findIndex((f) => f.path === viewer.path)

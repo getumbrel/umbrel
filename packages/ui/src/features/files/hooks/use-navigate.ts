@@ -4,7 +4,6 @@ import {
 	APPS_PATH,
 	BASE_ROUTE_PATH,
 	EXTERNAL_STORAGE_PATH,
-	FILE_TYPE_MAP,
 	HOME_PATH,
 	NETWORK_STORAGE_PATH,
 	RECENTS_PATH,
@@ -14,6 +13,7 @@ import {
 import {useFilesCapabilities} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {uiToVirtualPath, virtualToUiPath} from '@/features/files/utils/path-alias'
 
 export function toFsPath(urlPath: string): string {
@@ -70,7 +70,7 @@ export const useNavigate = () => {
 
 		navigateToDirectory(parentDirectory)
 
-		if (FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]?.viewer) {
+		if (getFileViewer(item)) {
 			// open viewer via global store (the Files feature will render the viewer
 			// component once it sees `viewerItem` being set)
 			setViewerItem(item)

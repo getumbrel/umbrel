@@ -1,8 +1,8 @@
 import {Component, lazy, Suspense, type ErrorInfo, type ReactNode} from 'react'
 
 import DownloadDialog from '@/features/files/components/file-viewer/downloader'
-import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesStore} from '@/features/files/store/use-files-store'
+import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 
 const InfoCardViewer = lazy(() => import('@/features/files/components/file-viewer/info-card-viewer'))
 
@@ -32,8 +32,7 @@ export const FileViewer: React.FC = () => {
 
 	if (!viewerItem || !viewerItem.type) return null
 
-	const entry = FILE_TYPE_MAP[viewerItem.type as keyof typeof FILE_TYPE_MAP]
-	const Viewer = entry?.viewer
+	const Viewer = getFileViewer(viewerItem)
 
 	// If there's no dedicated viewer, show info card in preview mode or download dialog otherwise
 	if (!Viewer) {
