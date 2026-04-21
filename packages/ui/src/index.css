@@ -67,6 +67,7 @@ html {
 ::-webkit-scrollbar {
 	background: transparent; /* Transparent track by default */
 	width: 11px;
+	height: 11px;
 }
 
 ::-webkit-scrollbar-track {
@@ -87,6 +88,10 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
 	background-color: rgba(255, 255, 255, 0.4);
+}
+
+::-webkit-scrollbar-corner {
+	background: transparent;
 }
 
 @supports (font-variation-settings: normal) {
