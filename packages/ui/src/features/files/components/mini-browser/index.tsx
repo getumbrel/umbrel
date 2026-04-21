@@ -1,5 +1,6 @@
 import {ChevronRight, FolderPlus, Loader2} from 'lucide-react'
 import {useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
@@ -21,8 +22,11 @@ import {t} from '@/utils/i18n'
 type MiniBrowserProps = {
 	open: boolean
 	onOpenChange: (open: boolean) => void
-	// The root path to start the tree from
+	// The root path to start the tree from (shows contents directly)
 	rootPath: string
+	// Optional multiple root paths — when provided, each root is rendered as a
+	// top-level expandable node instead of listing a single root's contents.
+	rootPaths?: string[]
 	// The path to expand to when the browser is opened
 	onOpenPath?: string
 	// If true (default), preselects onOpenPath when opened. Set false to require explicit selection.
@@ -67,6 +71,7 @@ export function MiniBrowser({
 	open,
 	onOpenChange,
 	rootPath,
+	rootPaths,
 	disabledPaths = [],
 	onOpenPath = rootPath,
 	preselectOnOpen = true,
@@ -79,6 +84,7 @@ export function MiniBrowser({
 	allowNewFolderCreation = false,
 	selectButtonLabel,
 }: MiniBrowserProps) {
+	const {t} = useTranslation()
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
 	const [newFolder, setNewFolder] = useState<(FileSystemItem & {isNew: boolean}) | null>(null)
 	const utils = trpcReact.useUtils()
@@ -135,7 +141,8 @@ export function MiniBrowser({
 		},
 	})
 
-	const currentPath = selected?.isDirectory ? selected.path : rootPath
+	const effectiveRootPath = rootPaths?.[0] ?? rootPath
+	const currentPath = selected?.isDirectory ? selected.path : effectiveRootPath
 
 	const handleNewFolder = () => {
 		const parentPath = currentPath
@@ -194,17 +201,31 @@ export function MiniBrowser({
 					{actions ? <div className='flex items-center justify-end'>{actions}</div> : null}
 
 					{/* The tree of files and folders */}
-					<Tree
-						initialPath={rootPath}
-						expandTo={onOpenPath}
-						onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
-						selectedPath={selected?.path ?? null}
-						selectionMode={selectionMode}
-						selectableFilter={selectableFilter}
-						newFolder={newFolder}
-						onCancelNewFolder={() => setNewFolder(null)}
-						onCreateFolder={(path) => createFolder.mutate({path})}
-					/>
+					{rootPaths ? (
+						<MultiRootTree
+							rootPaths={rootPaths}
+							expandTo={onOpenPath}
+							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
+							selectedPath={selected?.path ?? null}
+							selectionMode={selectionMode}
+							selectableFilter={selectableFilter}
+							newFolder={newFolder}
+							onCancelNewFolder={() => setNewFolder(null)}
+							onCreateFolder={(path) => createFolder.mutate({path})}
+						/>
+					) : (
+						<Tree
+							initialPath={rootPath}
+							expandTo={onOpenPath}
+							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
+							selectedPath={selected?.path ?? null}
+							selectionMode={selectionMode}
+							selectableFilter={selectableFilter}
+							newFolder={newFolder}
+							onCancelNewFolder={() => setNewFolder(null)}
+							onCreateFolder={(path) => createFolder.mutate({path})}
+						/>
+					)}
 				</div>
 
 				<DialogFooter className='mt-4'>
@@ -219,6 +240,63 @@ export function MiniBrowser({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	)
+}
+
+// Renders multiple root paths as top-level expandable nodes.
+// Each root is a synthetic directory entry that the user can expand to browse its contents.
+function MultiRootTree({
+	rootPaths,
+	onSelect,
+	selectedPath,
+	expandTo,
+	selectionMode,
+	selectableFilter,
+	newFolder,
+	onCancelNewFolder,
+	onCreateFolder,
+}: {
+	rootPaths: string[]
+	onSelect: (p: string, isDirectory: boolean) => void
+	selectedPath: string | null
+	expandTo?: string
+	selectionMode: 'folders' | 'files-and-folders'
+	selectableFilter?: (entry: FileSystemItem) => boolean
+	newFolder: (FileSystemItem & {isNew: boolean}) | null
+	onCancelNewFolder: () => void
+	onCreateFolder: (path: string) => void
+}) {
+	const roots: FileSystemItem[] = useMemo(
+		() =>
+			rootPaths.map((p) => ({
+				name: p.split('/').filter(Boolean).pop() || p,
+				path: p,
+				type: 'directory' as const,
+				size: 0,
+				modified: 0,
+				operations: [],
+			})),
+		[rootPaths],
+	)
+
+	return (
+		<div className='space-y-1'>
+			{roots.map((entry) => (
+				<Node
+					key={entry.path}
+					entry={entry}
+					depth={0}
+					onSelect={onSelect}
+					selectedPath={selectedPath}
+					expandTo={expandTo}
+					selectionMode={selectionMode}
+					selectableFilter={selectableFilter}
+					newFolder={newFolder}
+					onCancelNewFolder={onCancelNewFolder}
+					onCreateFolder={onCreateFolder}
+				/>
+			))}
+		</div>
 	)
 }
 
@@ -245,6 +323,7 @@ function Tree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading} = useListDirectory(initialPath)
 
 	// Tailored empty state message and icon for known roots
@@ -461,6 +540,7 @@ function Subtree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading, fetchMoreItems} = useListDirectory(path)
 	const children: FileSystemItem[] = useMemo(() => (listing?.items as FileSystemItem[]) ?? [], [listing])
 	const hasMore = listing?.hasMore ?? false

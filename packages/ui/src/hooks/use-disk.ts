@@ -1,9 +1,9 @@
 import BigNumber from 'bignumber.js'
+import {useTranslation} from 'react-i18next'
 import {sort} from 'remeda'
 
 import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {isDiskFull, isDiskLow, trpcDiskToLocal} from '@/utils/system'
 
@@ -44,6 +44,7 @@ export function useDisk(options: {poll?: boolean} = {}) {
 }
 
 export function useDiskForUi(options: {poll?: boolean} = {}) {
+	const {t, i18n} = useTranslation()
 	const {isLoading, used, size, available, isDiskFull, isDiskLow, apps} = useDisk({
 		poll: options.poll,
 	})
@@ -60,9 +61,9 @@ export function useDiskForUi(options: {poll?: boolean} = {}) {
 
 	return {
 		isLoading: false,
-		value: maybePrettyBytes(used),
-		valueSub: `/ ${maybePrettyBytes(size)}`,
-		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
+		value: maybePrettyBytes(used, i18n.language),
+		valueSub: `/ ${maybePrettyBytes(size, i18n.language)}`,
+		secondaryValue: t('something-left', {left: maybePrettyBytes(available, i18n.language)}),
 		progress: BigNumber(used ?? 0)
 			.dividedBy(size ?? 0)
 			.toNumber(),
@@ -93,6 +94,7 @@ export function useSystemDisk(options: {poll?: boolean} = {}) {
 }
 
 export function useSystemDiskForUi(options: {poll?: boolean} = {}) {
+	const {t, i18n} = useTranslation()
 	const {isLoading, used, size, available, isDiskFull, isDiskLow} = useSystemDisk({
 		poll: options.poll,
 	})
@@ -109,9 +111,9 @@ export function useSystemDiskForUi(options: {poll?: boolean} = {}) {
 
 	return {
 		isLoading: false,
-		value: maybePrettyBytes(used),
-		valueSub: `/ ${maybePrettyBytes(size)}`,
-		secondaryValue: t('something-left', {left: maybePrettyBytes(available)}),
+		value: maybePrettyBytes(used, i18n.language),
+		valueSub: `/ ${maybePrettyBytes(size, i18n.language)}`,
+		secondaryValue: t('something-left', {left: maybePrettyBytes(available, i18n.language)}),
 		progress: BigNumber(used ?? 0)
 			.dividedBy(size ?? 0)
 			.toNumber(),

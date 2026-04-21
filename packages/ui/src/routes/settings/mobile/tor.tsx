@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {CopyableField} from '@/components/ui/copyable-field'
 import {Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
 import {listClass, listItemClass} from '@/components/ui/list'
@@ -6,9 +8,9 @@ import {Switch} from '@/components/ui/switch'
 import {useTorEnabled} from '@/hooks/use-tor-enabled'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function TorDrawer() {
+	const {t} = useTranslation()
 	const title = t('remote-tor-access')
 	const dialogProps = useSettingsDialogProps()
 

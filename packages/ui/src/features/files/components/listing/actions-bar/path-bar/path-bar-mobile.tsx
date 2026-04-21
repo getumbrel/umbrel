@@ -1,15 +1,17 @@
+import {useTranslation} from 'react-i18next'
+
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {HOME_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {t} from '@/utils/i18n'
 
 interface PathBarMobileProps {
 	path: string
 }
 
 export function PathBarMobile({path}: PathBarMobileProps) {
+	const {t} = useTranslation()
 	const isEmbedded = useIsFilesEmbedded()
 	const {
 		isInHome,

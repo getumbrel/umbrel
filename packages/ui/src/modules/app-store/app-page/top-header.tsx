@@ -1,6 +1,7 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbArrowLeft, TbCircleArrowLeftFilled} from 'react-icons/tb'
-import {useNavigate} from 'react-router-dom'
+import {useLocation, useNavigate} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
 import {Badge} from '@/components/ui/badge'
@@ -11,9 +12,9 @@ import {SheetFixedContent} from '@/modules/sheet-top-fixed'
 import {SheetStickyHeader} from '@/providers/sheet-sticky-header'
 import {RegistryApp} from '@/trpc/trpc'
 import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 
 export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight: ReactNode}) => {
+	const {t} = useTranslation()
 	const isMobile = useIsMobile()
 	return (
 		<>
@@ -73,21 +74,35 @@ export const TopHeader = ({app, childrenRight}: {app: RegistryApp; childrenRight
 
 function BackButton() {
 	const navigate = useNavigate()
+	const location = useLocation()
 	const isMobile = useIsMobile()
+
+	const handleBack = () => {
+		if (location.state?.fromAppStore) {
+			navigate(-1)
+		} else {
+			// Came from outside the app store (e.g. Files, home screen, deep link),
+			// so navigate to the app store root instead of leaking into another section
+			const isCommunity = location.pathname.startsWith('/community-app-store/')
+			if (isCommunity) {
+				const storeId = location.pathname.split('/')[2]
+				navigate(`/community-app-store/${storeId}`)
+			} else {
+				navigate('/app-store')
+			}
+		}
+	}
 
 	if (isMobile) {
 		return (
-			<button
-				className={cn(dialogHeaderCircleButtonClass, 'absolute top-2.5 left-2.5 z-50')}
-				onClick={() => navigate(-1)}
-			>
+			<button className={cn(dialogHeaderCircleButtonClass, 'absolute top-2.5 left-2.5 z-50')} onClick={handleBack}>
 				<TbCircleArrowLeftFilled className='h-5 w-5' />
 			</button>
 		)
 	}
 
 	return (
-		<button onClick={() => navigate(-1)}>
+		<button onClick={handleBack}>
 			<TbArrowLeft className='h-5 w-5' />
 		</button>
 	)

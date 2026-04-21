@@ -105,8 +105,8 @@ describe('RAID storage to failsafe transition', () => {
 		syncSubscription = umbreld.subscribeToEvents<FailsafeTransitionStatus>('raid:failsafe-transition-progress')
 
 		// Start transition without awaiting - we want to monitor progress while it runs
-		const transitionPromise = umbreld.client.hardware.raid.transitionToFailsafe.mutate({
-			device: secondDeviceId,
+		const transitionPromise = umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({
+			newDeviceId: secondDeviceId,
 		})
 
 		// Wait for rebooting state at 50% (sync phase complete)

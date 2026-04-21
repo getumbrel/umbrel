@@ -1,16 +1,17 @@
 import {keepPreviousData} from '@tanstack/react-query'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 /**
  * Hook to manage favorites in the file system.
  * Provides functionality to fetch favorites, add/remove favorites, and check if an item is favorited.
  */
 export function useFavorites() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 
 	// Query to fetch favorites (an array of virtual path strings)
@@ -24,21 +25,39 @@ export function useFavorites() {
 
 	// Add favorite mutation
 	const {mutateAsync: addFavorite, isPending: isAddingFavorite} = trpcReact.files.addFavorite.useMutation({
-		onSuccess: async () => {
-			await utils.files.favorites.invalidate()
+		onMutate: async ({path}) => {
+			await utils.files.favorites.cancel()
+			const previous = utils.files.favorites.getData()
+			utils.files.favorites.setData(undefined, (old) => (old ? [...old, path] : [path]))
+			return {previous}
 		},
-		onError: (error: RouterError) => {
+		onError: (error: RouterError, _, context) => {
+			if (context?.previous) {
+				utils.files.favorites.setData(undefined, context.previous)
+			}
 			toast.error(t('files-error.add-favorite', {message: getFilesErrorMessage(error.message)}))
+		},
+		onSettled: () => {
+			utils.files.favorites.invalidate()
 		},
 	})
 
 	// Remove favorite mutation
 	const {mutateAsync: removeFavorite, isPending: isRemovingFavorite} = trpcReact.files.removeFavorite.useMutation({
-		onSuccess: async () => {
-			await utils.files.favorites.invalidate()
+		onMutate: async ({path}) => {
+			await utils.files.favorites.cancel()
+			const previous = utils.files.favorites.getData()
+			utils.files.favorites.setData(undefined, (old) => (old ? old.filter((p) => p !== path) : []))
+			return {previous}
 		},
-		onError: (error: RouterError) => {
+		onError: (error: RouterError, _, context) => {
+			if (context?.previous) {
+				utils.files.favorites.setData(undefined, context.previous)
+			}
 			toast.error(t('files-error.remove-favorite', {message: getFilesErrorMessage(error.message)}))
+		},
+		onSettled: () => {
+			utils.files.favorites.invalidate()
 		},
 	})
 

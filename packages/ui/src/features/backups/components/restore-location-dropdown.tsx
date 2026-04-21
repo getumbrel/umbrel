@@ -4,6 +4,7 @@
 
 import {ChevronDown} from 'lucide-react'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {
@@ -18,7 +19,6 @@ import {
 import {Button} from '@/components/ui/button'
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
-import {t} from '@/utils/i18n'
 
 type RestoreLocationDropdownProps = {
 	onSelect: (root: string) => void
@@ -26,6 +26,7 @@ type RestoreLocationDropdownProps = {
 }
 
 export function RestoreLocationDropdown({onSelect, isExternalStorageSupported = true}: RestoreLocationDropdownProps) {
+	const {t} = useTranslation()
 	const [showUnsupportedDialog, setShowUnsupportedDialog] = useState(false)
 
 	const handleExternalClick = () => {

@@ -1,14 +1,13 @@
 import {ChevronDown, ChevronUp} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
 import {useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 
 import {InlineCopyableField} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions/inline-copyable-field'
 import {
 	InstructionContainer,
 	InstructionItem,
 } from '@/features/files/components/dialogs/share-info-dialog/platform-instructions/instruction'
-import {t} from '@/utils/i18n'
 
 interface MacOSInstructionsProps {
 	smbUrl: string
@@ -18,6 +17,7 @@ interface MacOSInstructionsProps {
 }
 
 export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstructionsProps) {
+	const {t} = useTranslation()
 	const [showTimeMachine, setShowTimeMachine] = useState(false)
 
 	return (
@@ -26,6 +26,7 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 				<InstructionItem>{t('files-share.instructions.macos.open-finder')}</InstructionItem>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.macos.enter-url'
 						values={{smbUrl}}
 						components={{
@@ -36,6 +37,7 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 				<InstructionItem>{t('files-share.instructions.macos.select-registered')}</InstructionItem>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.macos.enter-username'
 						values={{username}}
 						components={{
@@ -45,6 +47,7 @@ export function MacOSInstructions({smbUrl, username, password, name}: MacOSInstr
 				</InstructionItem>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.macos.enter-password'
 						values={{password}}
 						components={{

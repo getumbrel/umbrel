@@ -1,7 +1,6 @@
+import {useTranslation} from 'react-i18next'
 import {IoShieldHalf} from 'react-icons/io5'
 import {TbActivityHeartbeat} from 'react-icons/tb'
-
-import {t} from '@/utils/i18n'
 
 import {FAILSAFE_COLOR} from './use-raid-setup'
 
@@ -30,6 +29,7 @@ type SsdTrayProps = {
  * 5. Shield icon (failsafe slot only)
  */
 export function SsdTray({slots, failsafeSlot = -1, onHealthClick}: SsdTrayProps) {
+	const {t} = useTranslation()
 	return (
 		<div className='relative w-full' style={{aspectRatio: '511 / 686', containerType: 'inline-size'}}>
 			{/* Layer 1: Empty tray */}

@@ -1,9 +1,9 @@
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 type RaidErrorProps = {
 	title: string
@@ -16,6 +16,7 @@ type RaidErrorProps = {
 
 // Error component for both device detection errors and no SSDs found.
 export function RaidError({title, instructions, image}: RaidErrorProps) {
+	const {t} = useTranslation()
 	const shutdownMut = trpcReact.system.shutdown.useMutation({
 		onError: (error) => {
 			toast.error(t('shut-down.failed', {message: error.message}))

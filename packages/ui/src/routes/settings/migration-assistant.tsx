@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiAlertFill} from 'react-icons/ri'
 import {TbAlertTriangleFilled, TbArrowBadgeRight, TbLock, TbPower, TbUsb} from 'react-icons/tb'
 
@@ -30,6 +31,7 @@ import {t} from '@/utils/i18n'
 const title = t('migration-assistant')
 
 export default function MigrationAssistantDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useSettingsDialogProps()
 	const {isHomeOrPro, isLoading, deviceName} = useIsHomeOrPro()
 
@@ -149,6 +151,7 @@ function MigrationAssistantPrep({
 	onNext: () => void
 	deviceName: string
 }) {
+	const {t} = useTranslation()
 	const buttonContinueText = t('migration-assistant.prep.button-continue')
 
 	return (
@@ -201,6 +204,7 @@ export function MigrationAssistantError({
 	onNext: () => void
 	deviceName: string
 }) {
+	const {t} = useTranslation()
 	const hasErrors = errors && errors.length > 0
 
 	return (
@@ -256,6 +260,7 @@ function WarningMessage({title, description}: {title: string; description?: stri
 // ----
 
 export function MigrationAssistantReady({onNext, deviceName}: {onNext: () => void; deviceName: string}) {
+	const {t} = useTranslation()
 	return (
 		<ImmersiveDialogBody
 			title={t('migration-assistant.ready.title')}

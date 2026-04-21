@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {CircularProgress} from '@/features/files/components/listing/file-item/circular-progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
@@ -11,7 +12,6 @@ import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-n
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 interface IconsViewFileItemProps {
 	item: FileSystemItem
@@ -26,6 +26,7 @@ export const IconsViewFileItem = ({
 	onEditingNameComplete,
 	fadedContent,
 }: IconsViewFileItemProps) => {
+	const {t} = useTranslation()
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 	const isTouchDevice = useIsTouchDevice()

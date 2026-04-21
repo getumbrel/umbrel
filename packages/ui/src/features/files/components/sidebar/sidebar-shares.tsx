@@ -1,4 +1,5 @@
 import {AnimatePresence, motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
 import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
@@ -7,9 +8,9 @@ import {useNavigate as useFilesNavigate} from '@/features/files/hooks/use-naviga
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {Share} from '@/features/files/types'
 import {useQueryParams} from '@/hooks/use-query-params'
-import {t} from '@/utils/i18n'
 
 export function SidebarShares({shares}: {shares: (Share | null)[]}) {
+	const {t} = useTranslation()
 	const {navigateToDirectory, currentPath} = useFilesNavigate()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
@@ -48,6 +49,7 @@ export function SidebarShares({shares}: {shares: (Share | null)[]}) {
 										}}
 										isActive={currentPath === share.path}
 										onClick={() => navigateToDirectory(share.path)}
+										disabled={share.available === false}
 									/>
 								</div>
 							</ContextMenuTrigger>

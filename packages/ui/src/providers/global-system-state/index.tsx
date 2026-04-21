@@ -1,5 +1,6 @@
 import {useQueryClient} from '@tanstack/react-query'
 import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
@@ -13,7 +14,6 @@ import {RestartingCover, useRestart} from '@/providers/global-system-state/resta
 import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
 import {RouterError, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
 import {ResettingCover, useReset} from './reset'
@@ -36,6 +36,7 @@ const GlobalSystemStateContext = createContext<{
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
+	const {t} = useTranslation()
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)
@@ -101,14 +102,22 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const migrate = useMigrate({onMutate, onSuccess})
 	const reset = useReset({onMutate, onError})
 
-	// Force swift and fresh status updates when an action is in progress.
-	// We disable retry to get consistent polling during device reboots - we know
-	// the device is down, we just want to detect when it comes back ASAP rather
-	// than waiting for exponential backoff between retries.
+	// During triggered actions (device reboots, updates, etc.) we poll at 500ms
+	// with no retry so the UI detects the backend coming back ASAP: requests fail
+	// instantly (ECONNREFUSED) while the device is down, then the first success
+	// triggers the post-restart redirect. Without fast polling the user would stare
+	// at the cover for up to 10s after the device is already ready.
+	// During normal operation we allow retries to absorb transient network blips
+	// (idle tab, brief disconnection, device sleep/wake) instead of immediately
+	// throwing into the root error boundary.
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
-		retry: 0,
+		retry: (failureCount) => {
+			if (triggered) return false
+			return failureCount < 3
+		},
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	})
 
 	if (!IS_DEV) {

@@ -8,7 +8,7 @@ import {BackdropBlurVariantContext} from './backdrop-blur-context'
 
 export const widgetContainerCva = cva(
 	cn(
-		tw`bg-neutral-800/60 rounded-12 sm:rounded-20 w-[var(--widget-w)] h-[var(--widget-h)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
+		tw`bg-neutral-800/60 rounded-12 sm:rounded-20 w-[var(--widget-w,270px)] h-[var(--widget-h,150px)] shrink-0 flex flex-col gap-2 cursor-default text-left`,
 		// animations
 		tw`transition-[scale,box-shadow] duration-300 hover:scale-105`,
 	),

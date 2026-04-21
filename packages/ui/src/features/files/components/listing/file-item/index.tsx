@@ -29,6 +29,8 @@ export const FileItem = ({item, items}: FileItemProps) => {
 	const setSelectedItems = useFilesStore((state) => state.setSelectedItems)
 	const clipboardItems = useFilesStore((state) => state.clipboardItems)
 	const clipboardMode = useFilesStore((state) => state.clipboardMode)
+	const pendingType = useFilesStore((state) => state.pendingPaths.get(item.path) ?? null)
+	const isPendingProcessing = pendingType === 'processing'
 
 	const [isEditingName, setIsEditingName] = useState(false)
 
@@ -199,10 +201,11 @@ export const FileItem = ({item, items}: FileItemProps) => {
 			className={cn(
 				`files-${view}-view-file-item`, // .files-list-view-file-item styles are applied via CSS using combinator classes
 				'rounded-lg transition-colors duration-100',
-				isSelected && 'bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))]', // selected item styles for list view are overwritten by CSS
-				!isSelected && !isUploading && 'md:hover:!border-white/6 md:hover:!bg-white/5', // don't show hover state for selected items or uploading items
+				isPendingProcessing && 'pointer-events-none animate-pulse',
+				isSelected && !isPendingProcessing && 'bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))]', // selected item styles for list view are overwritten by CSS
+				!isSelected && !isUploading && !isPendingProcessing && 'md:hover:!border-white/6 md:hover:!bg-white/5', // don't show hover state for selected items, uploading items, or processing items
 			)}
-			data-marquee-selection-item-path={!isUploading ? item.path : ''} // don't enable marquee selection for uploading items
+			data-marquee-selection-item-path={!isUploading && !isPendingProcessing ? item.path : ''} // don't enable marquee selection for uploading or processing items
 		>
 			<Droppable
 				id={`${view}-view-file-item-${item.path}`}

@@ -1,11 +1,11 @@
 // TODO: Consider moving to shared location (e.g., @/features/storage/) when implementing RAID settings in dashboard
 
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbActivityHeartbeat, TbAlertTriangle} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {formatSize, getDeviceHealth, StorageDevice} from './use-raid-setup'
@@ -23,8 +23,10 @@ type SsdHealthDialogProps = {
 }
 
 export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHealthDialogProps) {
+	const {t} = useTranslation()
 	// Get health status from shared helper
 	const {smartUnhealthy, lifeRemaining, lifeWarning, tempWarning, tempCritical} = getDeviceHealth(device)
+	const isSsd = device.type === 'ssd'
 
 	// Determine health status display label
 	const healthStatus =
@@ -235,13 +237,13 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange}: SsdHea
 										{tempWarning && ` · ${t('storage-manager.health.overheating')}`}
 									</span>
 								</div>
-								{device.temperatureWarning !== undefined && (
+								{isSsd && device.temperatureWarning !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.warning-threshold')}</span>
 										<span className='font-normal'>{device.temperatureWarning}°C</span>
 									</div>
 								)}
-								{device.temperatureCritical !== undefined && (
+								{isSsd && device.temperatureCritical !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.critical-threshold')}</span>
 										<span className='font-normal'>{device.temperatureCritical}°C</span>

@@ -106,15 +106,20 @@ export function DockItem({
 					scale: transform,
 					...style,
 				}}
-				onClick={(e) => {
-					setClickedOpen(true)
-					onClick?.(e)
-				}}
 				{...props}
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0 outline-hidden' />
+				<Link
+					to={to || '/'}
+					className='absolute inset-0 outline-hidden'
+					onClick={(e) => {
+						setClickedOpen(true)
+						if (onClick) {
+							onClick(e)
+						}
+					}}
+				/>
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}

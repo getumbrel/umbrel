@@ -1,4 +1,5 @@
 import {ComponentPropsWithRef, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 import {map} from 'remeda'
 
@@ -16,7 +17,6 @@ import {
 } from '@/modules/widgets/shared/constants'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {celciusToFahrenheit} from '@/utils/temperature'
 
 import {FourStatsWidget} from './four-stats-widget'
@@ -29,6 +29,7 @@ import {ThreeStatsWidget} from './three-stats-widget'
 import {TwoStatsWidget} from './two-stats-with-guage-widget'
 
 export function Widget({appId, config: manifestConfig}: {appId: string; config: RegistryWidget}) {
+	const {t} = useTranslation()
 	// TODO: find a way to use `useApp()` to be cleaner
 	const {userAppsKeyed, systemAppsKeyed, isLoading: isLoadingApps} = useApps()
 	const app = userAppsKeyed?.[appId]

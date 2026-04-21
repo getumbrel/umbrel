@@ -6,7 +6,7 @@ set -euo pipefail
 # https://raw.githubusercontent.com/getumbrel/umbrel/<tag>/scripts/update-script
 
 update_url=""
-download_prefix="https://download.umbrel.com/release/1.6.1"
+download_prefix="https://download.umbrel.com/release/1.7.0-beta.1"
 
 # This is a legacy mender install, migrate to rugix
 if command -v mender &> /dev/null
@@ -55,7 +55,7 @@ then
 	fi
 
 	# This is a Raspberry Pi device
-	if [[  "${boot_flow}" == "tryboot" ]]
+	if [[  "${boot_flow}" == "rpi-tryboot" ]]
 	then
 		update_url="${download_prefix}/umbrelos-pi.update"
 	fi
@@ -66,10 +66,18 @@ then
 		exit 1
 	fi
 
-	rugix-ctrl update install --reboot deferred "${update_url}"
+	# Rugix < 1.0 doesn't support the 1.0 update install flags.
+	# umbrelOS 1.6.0 and 1.6.1 are on Rugix 0.8
+	rugix_version=$(rugix-ctrl --version 2> /dev/null || true)
+	if [[ "${rugix_version}" == rugix-ctrl\ v0.* ]]
+	then
+		# Rugix 0.x
+		rugix-ctrl update install --reboot deferred "${update_url}"
+	else
+		# Rugix >=1.0
+		rugix-ctrl update install --reboot set --insecure-skip-bundle-verification "${update_url}"
+	fi
 else
 	echo umbrel-update: '{"error": "No supported update mechanism found"}'
 	exit 1
 fi
-
-

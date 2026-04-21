@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {RiShutDownLine} from 'react-icons/ri'
 
 import {
@@ -11,9 +12,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function ShutdownDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('shutdown')
 
 	const {shutdown} = useGlobalSystemState()

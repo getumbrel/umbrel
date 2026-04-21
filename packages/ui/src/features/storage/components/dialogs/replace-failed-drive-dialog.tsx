@@ -1,4 +1,4 @@
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {TbAlertTriangle, TbCircleCheckFilled} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -13,7 +13,6 @@ import {
 import {toast} from '@/components/ui/toast'
 import {useActiveRaidOperation} from '@/features/storage/hooks/use-active-raid-operation'
 import {usePendingRaidOperation} from '@/features/storage/providers/pending-operation-context'
-import {t} from '@/utils/i18n'
 
 import {getDeviceHealth, StorageDevice} from '../../hooks/use-storage'
 import {formatStorageSize} from '../../utils'
@@ -49,6 +48,7 @@ export function ReplaceFailedDriveDialog({
 	minRoundedDriveSize,
 	replaceDeviceAsync,
 }: ReplaceFailedDriveDialogProps) {
+	const {t} = useTranslation()
 	const {setPendingOperation, clearPendingOperation} = usePendingRaidOperation()
 
 	// Check if a RAID operation is already in progress
@@ -116,6 +116,7 @@ export function ReplaceFailedDriveDialog({
 								{/* "SSD" and "Slot" labels are not translated as they match physical device markings */}
 								<span className='text-[13px] font-medium text-white/60'>
 									<Trans
+										t={t}
 										i18nKey='storage-manager.replace-failed.ssd-in-slot'
 										values={{size: formatStorageSize(newDevice.size), slot: newDevice.slot}}
 										components={{highlight: <Highlight />}}

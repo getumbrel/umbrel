@@ -29,22 +29,26 @@ export const LIFETIME_WARNING_THRESHOLD = 80
 
 // Get device health status - single source of truth for all health checks
 export function getDeviceHealth(device: StorageDevice) {
+	const isSsd = device.type === 'ssd'
+
 	// SMART status
 	const smartUnhealthy = device.smartStatus === 'unhealthy'
 
 	// Lifetime remaining (inverse of lifetimeUsed)
-	const lifeRemaining = device.lifetimeUsed !== undefined ? Math.max(0, 100 - device.lifetimeUsed) : undefined
-	const lifeWarning = device.lifetimeUsed !== undefined && device.lifetimeUsed >= LIFETIME_WARNING_THRESHOLD
+	const lifeRemaining = isSsd && device.lifetimeUsed !== undefined ? Math.max(0, 100 - device.lifetimeUsed) : undefined
+	const lifeWarning = isSsd && device.lifetimeUsed !== undefined && device.lifetimeUsed >= LIFETIME_WARNING_THRESHOLD
 
 	// Temperature checks (critical takes precedence over warning)
 	const tempCritical =
 		device.temperature !== undefined &&
+		isSsd &&
 		device.temperatureCritical !== undefined &&
 		device.temperature >= device.temperatureCritical
 
 	const tempWarning =
 		!tempCritical &&
 		device.temperature !== undefined &&
+		isSsd &&
 		device.temperatureWarning !== undefined &&
 		device.temperature >= device.temperatureWarning
 
@@ -102,8 +106,8 @@ export function useStorage(options: UseStorageOptions = {}) {
 		},
 	})
 
-	// Mutation: Transition from single-disk storage to failsafe mode
-	const transitionToFailsafeMut = trpcReact.hardware.raid.transitionToFailsafe.useMutation({
+	// Mutation: Transition from single-disk SSD storage to failsafe (raidz) mode
+	const transitionToFailsafeMut = trpcReact.hardware.raid.transitionToFailsafeRaidz.useMutation({
 		onSuccess: () => {
 			raidStatusQ.refetch()
 			devicesQ.refetch()
@@ -199,7 +203,7 @@ export function useStorage(options: UseStorageOptions = {}) {
 		.filter((d): d is RaidDevice => d !== null)
 
 	// Derived: Available devices (not in RAID, can be added)
-	// TODO: Currently UI is limited to adding 1 SSD at a time due to ZFS raidz1 expansion limitations.
+	// TODO: Currently UI is limited to adding 1 SSD at a time due to ZFS raidz expansion limitations.
 	// When backend supports adding multiple SSDs at once, the UI can show all available devices.
 	const availableDevices = allDevices.filter((device) => device.id && !raidDeviceIds.has(device.id))
 

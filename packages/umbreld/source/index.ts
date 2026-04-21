@@ -18,16 +18,29 @@ import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
+import SystemNg from './modules/system-ng/system-ng.js'
 
-import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime, reboot} from './modules/system/system.js'
+import {
+	commitOsPartition,
+	setupPiCpuGovernor,
+	restoreHostname,
+	restoreWiFi,
+	restoreStaticIp,
+	waitForSystemTime,
+	reboot,
+} from './modules/system/system.js'
 import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
-import {overrideDevelopmentHostname} from './modules/development.js'
 
 type StoreSchema = {
 	version: string
 	apps: string[]
 	appRepositories: string[]
 	widgets: string[]
+	shortcuts: {
+		url: string
+		title: string
+		icon?: string
+	}[]
 	torEnabled?: boolean
 	user: {
 		name: string
@@ -44,9 +57,16 @@ type StoreSchema = {
 			password?: string
 		}
 		externalDns?: boolean
-	}
-	development: {
 		hostname?: string
+		staticIp?: Record<
+			string,
+			{
+				ip: string
+				subnetPrefix: number
+				gateway: string
+				dns: string[]
+			}
+		>
 	}
 	recentlyOpenedApps: string[]
 	files: {
@@ -111,6 +131,7 @@ export default class Umbreld {
 	eventBus: EventBus
 	dbus: Dbus
 	backups: Backups
+	systemNg: SystemNg
 	isBackupRestoreFirstStart = false
 
 	constructor({
@@ -136,6 +157,7 @@ export default class Umbreld {
 		this.eventBus = new EventBus(this)
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
+		this.systemNg = new SystemNg(this)
 	}
 
 	async start() {
@@ -169,15 +191,17 @@ export default class Umbreld {
 		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
 		await this.setBackupRestoreFirstStartFlag()
 
-		// Override hostname in development when set
-		const developmentHostname = await this.store.get('development.hostname')
-		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
+		// Restore configured hostname after boot/update (non-blocking)
+		restoreHostname(this)
 
 		// Synchronize the system password after OTA update (non-blocking)
 		this.user.syncSystemPassword()
 
 		// Restore WiFi connection after OTA update (non-blocking)
 		restoreWiFi(this)
+
+		// Restore static IP settings (non-blocking)
+		restoreStaticIp(this)
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
 		// We need this on Raspberry Pi since it doesn't have a persistent real time clock.
@@ -203,6 +227,7 @@ export default class Umbreld {
 			this.appStore.start(),
 			this.dbus.start(),
 			this.server.start(),
+			this.systemNg.start(),
 		])
 
 		// Start backups last because it depends on files
@@ -235,6 +260,7 @@ export default class Umbreld {
 				this.apps.stop(),
 				this.appStore.stop(),
 				this.dbus.stop(),
+				this.systemNg.stop(),
 			])
 			return true
 		} catch (error) {

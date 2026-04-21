@@ -1,4 +1,5 @@
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 
 import {ButtonLink} from '@/components/ui/button-link'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
@@ -12,7 +13,6 @@ import {cardFaintClass} from '@/modules/app-store/shared'
 import {getCategoryLabel} from '@/modules/app-store/utils'
 import {useAvailableApps} from '@/providers/available-apps'
 import {RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {useDiscoverQuery} from './use-discover-query'
 
@@ -26,6 +26,7 @@ const getAppById = (appId: string, apps: RegistryApp[]): RegistryApp | undefined
 
 // Fallback component when discover API fails
 function DiscoverUnavailable() {
+	const {t} = useTranslation()
 	return (
 		<div className={cn(cardFaintClass, 'flex h-40 flex-col items-center justify-center p-8 text-center')}>
 			<p className='text-15 font-medium text-white/80'>{t('app-store.discover.temporarily-unavailable-title')}</p>
@@ -46,6 +47,7 @@ export default function Discover() {
 }
 
 function DiscoverContent() {
+	const {t} = useTranslation()
 	const availableApps = useAvailableApps()
 	const discoverQ = useDiscoverQuery()
 

@@ -58,7 +58,7 @@ jobs:
     name: Build umbrelOS arm64
     needs: detect-changes
     if: needs.detect-changes.outputs.ui-only != 'true'
-    runs-on: ubicloud-standard-4-ubuntu-2404
+    runs-on: ubicloud-standard-4-arm-ubuntu-2404
     steps:
       - uses: actions/checkout@v3
       - uses: docker/setup-buildx-action@v3
@@ -66,6 +66,18 @@ jobs:
       - name: Build arm64 Docker image
         working-directory: packages/os
         run: docker buildx build --platform linux/arm64 --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-arm64 --cache-to type=gha,mode=max,scope=umbrelos-arm64 ../../
+  umbrelos-pi-cache:
+    name: Build umbrelOS Pi
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ui-only != 'true'
+    runs-on: ubicloud-standard-4-arm-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@3cb05d89e1f492524af3d41a1c98c83bc3025124 # v3
+      - name: Build Pi Docker image
+        working-directory: packages/os
+        run: docker buildx build --platform linux/arm64 --build-arg BASE_VARIANT=-pi --file umbrelos.Dockerfile --cache-from type=gha,scope=umbrelos-pi --cache-to type=gha,mode=max,scope=umbrelos-pi ../../
 
   # Build the image for the VM tests
   # We run this in a seperate step so we only build it once and reuse for all VM runners to reduce billed minutes.
@@ -245,7 +257,7 @@ jobs:
   create-release:
     name: Create release on tag
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [umbrelos-amd64-cache, umbrelos-arm64-cache]
+    needs: [umbrelos-amd64-cache, umbrelos-arm64-cache, umbrelos-pi-cache]
     runs-on: ubicloud-standard-16-ubuntu-2404
     defaults:
       run:
@@ -274,7 +286,7 @@ jobs:
         run: |
           npm run build:amd64 "${{ env.VERSION }}" &
           pid1=$!
-          npm run build:arm64 "${{ env.VERSION }}" &
+          npm run build:pi "${{ env.VERSION }}" &
           pid2=$!
           wait $pid1 || exit 1
           wait $pid2 || exit 1

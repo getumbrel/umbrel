@@ -1,11 +1,13 @@
+import {useTranslation} from 'react-i18next'
+
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
 import {AnimatedInputError, Input} from '@/components/ui/input'
 import {useUserName} from '@/hooks/use-user-name'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 export default function ChangeNameDialog() {
+	const {t} = useTranslation()
 	const title = t('change-name')
 	const dialogProps = useSettingsDialogProps()
 

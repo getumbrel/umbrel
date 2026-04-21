@@ -1,6 +1,8 @@
 import {AlertOctagon} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
+import {useSearchParams} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {
@@ -19,7 +21,6 @@ import externalStorageIcon from '@/features/files/assets/external-storage-icon.p
 import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 function FilesystemCard({
 	id,
@@ -36,6 +37,7 @@ function FilesystemCard({
 	onClick: () => void
 	disabled?: boolean
 }) {
+	const {t} = useTranslation()
 	return (
 		<button
 			type='button'
@@ -59,6 +61,7 @@ function FilesystemCard({
 }
 
 export default function FormatDriveDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('files-format-drive')
 	const {disks, formatExternalStorageDevice, isFormatting} = useExternalStorage()
 	const [filesystem, setFilesystem] = useState<'ext4' | 'exfat'>('ext4')
@@ -78,8 +81,8 @@ export default function FormatDriveDialog() {
 
 	// Find the drive that needs formatting from query params
 	// The dialog is opened via ?dialog=files-format-drive&deviceId=sdc
-	const urlParams = new URLSearchParams(window.location.search)
-	const deviceId = urlParams.get('deviceId')
+	const [searchParams] = useSearchParams()
+	const deviceId = searchParams.get('deviceId')
 	const drive = disks?.find((d) => d.id === deviceId)
 
 	if (!drive || drive.isFormatting) return null

@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,7 +11,6 @@ import {
 	AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {t} from '@/utils/i18n'
 
 export function UninstallConfirmationDialog({
 	open,
@@ -22,6 +23,7 @@ export function UninstallConfirmationDialog({
 	onOpenChange: (open: boolean) => void
 	onConfirm: () => void
 }) {
+	const {t} = useTranslation()
 	const {appsKeyed, isLoading} = useAllAvailableApps()
 	const app = appsKeyed?.[appId]
 

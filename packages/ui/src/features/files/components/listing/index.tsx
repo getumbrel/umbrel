@@ -1,5 +1,6 @@
 import {FolderX} from 'lucide-react'
 import {ComponentType, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
 import {Card} from '@/components/ui/card'
@@ -16,7 +17,6 @@ import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
-import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 
 export interface ListingProps {
@@ -57,6 +57,7 @@ function ListingContent({
 	isEmpty: boolean
 	CustomEmptyView?: ComponentType
 }) {
+	const {t, i18n} = useTranslation()
 	const selectedItems = useFilesStore((s) => s.selectedItems)
 	return (
 		<Card className='h-[calc(100svh-214px)] !p-0 !pt-4 lg:h-[calc(100vh-300px)]'>
@@ -81,11 +82,11 @@ function ListingContent({
 				<span className='absolute right-4 bottom-2 text-12 font-semibold text-white/60'>
 					{truncatedAt
 						? t('files-listing.item-count-truncated', {
-								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false}),
+								formattedCount: formatNumberI18n({n: truncatedAt, showDecimals: false, locale: i18n.language}),
 							})
 						: t('files-listing.item-count', {
 								count: totalItems,
-								formattedCount: formatNumberI18n({n: totalItems, showDecimals: false}),
+								formattedCount: formatNumberI18n({n: totalItems, showDecimals: false, locale: i18n.language}),
 							})}
 				</span>
 			) : null}
@@ -185,6 +186,7 @@ export function Listing({
 }
 
 function ErrorView({error}: {error: unknown}) {
+	const {t} = useTranslation()
 	const message = error instanceof Error ? error.message : t('files-listing.error')
 
 	const isNotFound =
@@ -210,6 +212,7 @@ function ErrorView({error}: {error: unknown}) {
 }
 
 function LoadingView() {
+	const {t} = useTranslation()
 	return (
 		<div className='flex h-full items-center justify-center p-4'>
 			<TbLoader className='white h-6 w-6 animate-spin opacity-50 shadow-xs' aria-label={t('files-listing.loading')} />
@@ -218,6 +221,7 @@ function LoadingView() {
 }
 
 function EmptyView() {
+	const {t} = useTranslation()
 	return (
 		<div className='flex h-full items-center justify-center p-4 text-center'>
 			<div className='text-12 text-white/40'>{t('files-listing.empty')}</div>

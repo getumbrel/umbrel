@@ -1,11 +1,11 @@
 import {Close} from '@radix-ui/react-dialog'
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {AppIcon} from '@/components/app-icon'
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {useAllAvailableApps} from '@/providers/available-apps'
-import {t} from '@/utils/i18n'
 
 export function UninstallTheseFirstDialog({
 	open,
@@ -18,6 +18,7 @@ export function UninstallTheseFirstDialog({
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }) {
+	const {t} = useTranslation()
 	const {appsKeyed, isLoading} = useAllAvailableApps()
 	const app = appsKeyed?.[appId]
 

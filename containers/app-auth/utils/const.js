@@ -11,8 +11,6 @@ function readFromEnvOrTerminate(key) {
 }
 
 module.exports = Object.freeze({
-	UMBREL_COOKIE_NAME: "UMBREL_SESSION",
-
 	LOG_LEVEL: process.env.LOG_LEVEL || "info",
 
 	PORT: parseInt(process.env.PORT) || 2000,

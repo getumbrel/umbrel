@@ -27,6 +27,7 @@ function App({app, index}: {app: RegistryApp; index: number}) {
 	return (
 		<Link
 			to={`/app-store/${app.id}`}
+			state={{fromAppStore: true}}
 			onMouseEnter={() => preloadFirstFewGalleryImages(app)}
 			className='animate-in duration-200 fill-mode-both slide-in-from-right-10 fade-in'
 			style={{animationDelay: `${index * 0.1}s`}}

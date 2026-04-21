@@ -1,14 +1,16 @@
 import {useEffect, useRef} from 'react'
+import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
-import {FILE_TYPE_MAP} from '@/features/files/constants'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFileViewer} from '@/features/files/utils/get-file-viewer'
 import {getGridColumnCount} from '@/features/files/utils/get-grid-column-count'
 import {useIsMobile} from '@/hooks/use-is-mobile'
+import {useLinkToDialog} from '@/utils/dialog'
 
 /**
  * Hook to handle keyboard shortcuts for file operations: copy, cut, paste, trash,
@@ -28,12 +30,15 @@ export function useFilesKeyboardShortcuts({
 	const isReadOnly = useIsFilesReadOnly()
 	// In read-only mode, disable write/selection shortcuts but allow viewer and navigation shortcuts.
 	const shortcutsEnabled = !isReadOnly
-	const {currentPath} = useNavigate()
+	const {currentPath, navigateToItem, navigateToDirectory} = useNavigate()
+	const routerNavigate = useRouterNavigate()
+	const linkToDialog = useLinkToDialog()
 	const copyItemsToClipboard = useFilesStore((s: FilesStore) => s.copyItemsToClipboard)
 	const cutItemsToClipboard = useFilesStore((s: FilesStore) => s.cutItemsToClipboard)
 	const setSelectedItems = useFilesStore((s: FilesStore) => s.setSelectedItems)
 	const selectedItems = useFilesStore((s: FilesStore) => s.selectedItems)
 	const viewerItem = useFilesStore((s: FilesStore) => s.viewerItem)
+	const viewerMode = useFilesStore((s: FilesStore) => s.viewerMode)
 	const setViewerItem = useFilesStore((s: FilesStore) => s.setViewerItem)
 	const {pasteItemsFromClipboard, trashSelectedItems} = useFilesOperations()
 	const isMobile = useIsMobile()
@@ -47,11 +52,21 @@ export function useFilesKeyboardShortcuts({
 	selectedItemsRef.current = selectedItems
 	const viewerItemRef = useRef(viewerItem)
 	viewerItemRef.current = viewerItem
+	const viewerModeRef = useRef(viewerMode)
+	viewerModeRef.current = viewerMode
 	const viewRef = useRef(view)
 	viewRef.current = view
 
-	// Track the anchor index for Shift+Arrow range selection
+	// Track the anchor index for Shift+Arrow range selection and the cursor (moving end)
 	const selectionAnchorRef = useRef<number>(-1)
+	const selectionCursorRef = useRef<number>(-1)
+
+	// Reset cursor/anchor when the item list changes (e.g. navigating to a new directory)
+	// so arrow keys start from the first item instead of a stale index.
+	useEffect(() => {
+		selectionAnchorRef.current = -1
+		selectionCursorRef.current = -1
+	}, [items])
 
 	useEffect(() => {
 		// Guard to check if we're in a text input or contentEditable element
@@ -63,9 +78,31 @@ export function useFilesKeyboardShortcuts({
 		const handleKeyDown = (e: KeyboardEvent) => {
 			const mod = e.metaKey || e.ctrlKey
 
-			// Modifier shortcuts (copy, cut, paste, trash, select all)
-			if (mod && shortcutsEnabled) {
+			// Modifier shortcuts
+			if (mod) {
 				if (isInInput(e)) return
+
+				// Cmd+Down: open selected item (drill into directory or open file viewer)
+				if (e.key === 'ArrowDown') {
+					if (selectedItemsRef.current.length !== 1) return
+					e.preventDefault()
+					navigateToItem(selectedItemsRef.current[0])
+					return
+				}
+
+				// Cmd+Up: navigate to parent directory
+				if (e.key === 'ArrowUp') {
+					e.preventDefault()
+					const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/'
+					if (parentPath !== currentPath) {
+						navigateToDirectory(parentPath)
+					}
+					return
+				}
+
+				// Write shortcuts below require shortcutsEnabled (not read-only)
+				// Note: No Cmd+Shift+N for new folder — the browser intercepts it to open a new window.
+				if (!shortcutsEnabled) return
 
 				if (e.key === 'c') {
 					e.preventDefault()
@@ -86,7 +123,15 @@ export function useFilesKeyboardShortcuts({
 				}
 				if (e.key === 'Backspace') {
 					e.preventDefault()
-					trashSelectedItems()
+					const selected = selectedItemsRef.current
+					if (selected.length === 0) return
+					const canTrash = selected[0].operations.includes('trash')
+					const canDelete = selected[0].operations.includes('delete')
+					if (canDelete) {
+						routerNavigate(linkToDialog('files-permanently-delete-confirmation'))
+					} else if (canTrash) {
+						trashSelectedItems()
+					}
 					return
 				}
 				if (e.key === 'a') {
@@ -109,24 +154,89 @@ export function useFilesKeyboardShortcuts({
 					return
 				e.preventDefault()
 				const item = selectedItemsRef.current[0]
-				const fileType = FILE_TYPE_MAP[item.type as keyof typeof FILE_TYPE_MAP]
-				if (fileType && fileType.viewer) {
-					setViewerItem(item)
+				// Allow preview for all items including directories (info card fallback for filetypes without viewers)
+				if (item.type) {
+					setViewerItem(item, 'preview')
 				}
 				return
 			}
 
 			// Arrow key navigation (allowed even in read-only)
 			if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-				if (isInInput(e) || mod || e.altKey || viewerItemRef.current !== null || items.length === 0) return
-				e.preventDefault()
+				if (isInInput(e) || mod || e.altKey || items.length === 0) return
 
 				const currentView = viewRef.current
+				const viewer = viewerItemRef.current
+				const mode = viewerModeRef.current
+
+				// --- Preview navigation (viewer is open) ---
+				if (viewer) {
+					// In list view, left/right are meaningless
+					const isHorizontal = e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+					if (isHorizontal && currentView === 'list') return
+					// Don't intercept arrow keys when viewing video via double-click/navigate —
+					// let the video player handle seek/volume. In preview mode (spacebar),
+					// arrow keys navigate between files instead.
+					if (viewer.type?.startsWith('video/') && mode !== 'preview') return
+
+					// Build the list of items navigable in preview
+					const previewable = items.filter((file) => {
+						if (typeof file.type !== 'string') return false
+						if (mode === 'preview') return true
+						return Boolean(getFileViewer(file))
+					})
+					if (previewable.length === 0) return
+					const currentIndex = previewable.findIndex((f) => f.path === viewer.path)
+					if (currentIndex === -1) return
+
+					// In icons view, up/down jump by the column count (same as listing navigation)
+					let step = 1
+					if (currentView === 'icons' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+						const scrollEl = scrollAreaRef.current
+						const columnCount = scrollEl ? getGridColumnCount(scrollEl.clientWidth - 24) : 1
+						step = columnCount
+					}
+
+					const isPrev = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+					const nextIndex = isPrev
+						? Math.max(0, currentIndex - step)
+						: Math.min(previewable.length - 1, currentIndex + step)
+
+					e.preventDefault()
+					if (nextIndex !== currentIndex) {
+						const nextItem = previewable[nextIndex]
+						setViewerItem(nextItem, mode)
+						setSelectedItems([nextItem])
+					}
+					return
+				}
+
+				// --- Listing navigation (no viewer open) ---
+				e.preventDefault()
+
+				// Remove focus from any focused element (e.g. sidebar buttons) to prevent
+				// stale focus outlines while navigating the listing with arrow keys.
+				// This runs after the isInInput guard so text inputs aren't affected.
+				if (document.activeElement instanceof HTMLElement) {
+					document.activeElement.blur()
+				}
+
 				const selected = selectedItemsRef.current
 
-				// Find the current index — use the last selected item as the reference point
-				let currentIndex = -1
-				if (selected.length > 0) {
+				// Sync refs when selection was changed externally (e.g. mouse click).
+				// Without this, the anchor/cursor stay stale and Shift+Arrow produces wrong ranges.
+				if (selected.length === 1) {
+					const clickedIndex = items.findIndex((i) => i.path === selected[0].path)
+					if (clickedIndex !== -1 && clickedIndex !== selectionCursorRef.current) {
+						selectionAnchorRef.current = clickedIndex
+						selectionCursorRef.current = clickedIndex
+					}
+				}
+
+				// Find the current index — use the cursor ref if set (tracks the moving end during
+				// Shift+Arrow selection), otherwise fall back to the last selected item
+				let currentIndex = selectionCursorRef.current
+				if (currentIndex === -1 && selected.length > 0) {
 					const lastSelected = selected[selected.length - 1]
 					currentIndex = items.findIndex((i) => i.path === lastSelected.path)
 				}
@@ -135,6 +245,7 @@ export function useFilesKeyboardShortcuts({
 				if (currentIndex === -1) {
 					setSelectedItems([items[0]])
 					selectionAnchorRef.current = 0
+					selectionCursorRef.current = 0
 					scrollItemIntoView(0)
 					return
 				}
@@ -142,8 +253,9 @@ export function useFilesKeyboardShortcuts({
 				// Calculate the step based on view and direction
 				let step = 0
 				if (currentView === 'list') {
-					// List view: all arrows move by 1
-					if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') step = -1
+					// List view: only up/down navigate, left/right are ignored
+					if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') return
+					if (e.key === 'ArrowUp') step = -1
 					else step = 1
 				} else {
 					// Icons view: Left/Right move by 1, Up/Down move by column count
@@ -173,10 +285,12 @@ export function useFilesKeyboardShortcuts({
 					const start = Math.min(anchor, targetIndex)
 					const end = Math.max(anchor, targetIndex)
 					setSelectedItems(items.slice(start, end + 1))
+					selectionCursorRef.current = targetIndex
 				} else {
 					// Regular arrow: select only the target item and reset anchor
 					setSelectedItems([items[targetIndex]])
 					selectionAnchorRef.current = targetIndex
+					selectionCursorRef.current = targetIndex
 				}
 
 				scrollItemIntoView(targetIndex)
@@ -252,6 +366,10 @@ export function useFilesKeyboardShortcuts({
 		setViewerItem,
 		pasteItemsFromClipboard,
 		trashSelectedItems,
+		navigateToItem,
+		navigateToDirectory,
 		scrollAreaRef,
+		routerNavigate,
+		linkToDialog,
 	])
 }

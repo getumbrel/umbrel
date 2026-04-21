@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {
@@ -11,9 +12,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function ExternalStorageUnsupportedDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('files-external-storage-unsupported')
 
 	return (

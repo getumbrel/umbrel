@@ -1,10 +1,11 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function useUserName({onSuccess}: {onSuccess: () => void}) {
+	const {t} = useTranslation()
 	const userQ = trpcReact.user.get.useQuery()
 
 	const [name, setName] = useState(userQ.data?.name)

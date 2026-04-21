@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
 import {Button} from '@/components/ui/button'
@@ -13,7 +14,6 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 interface EditableNameProps {
 	item: FileSystemItem
@@ -22,6 +22,7 @@ interface EditableNameProps {
 }
 
 export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
+	const {t} = useTranslation()
 	const {name: initialName, path} = item
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [name, setName] = useState(initialName)
@@ -30,7 +31,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const dialogProps = useSettingsDialogProps()
 
 	const {renameItem} = useFilesOperations()
-	const {cancelNewFolder, createFolder} = useNewFolder()
+	const {cancelNewFolder, commitNewFolder} = useNewFolder()
 	const confirm = useConfirmation()
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
@@ -83,7 +84,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 			// Calculate parent path and the full path for the new folder
 			const parentPath = path.split('/').slice(0, -1).join('/')
 			const fullPath = `${parentPath}/${trimmedName}`
-			createFolder.mutate({path: fullPath})
+			commitNewFolder(fullPath)
 		} else {
 			// check if the user is changing the extension of a file
 			if (item.type !== 'directory') {

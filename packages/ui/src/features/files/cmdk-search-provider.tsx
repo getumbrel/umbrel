@@ -1,15 +1,17 @@
+import {useTranslation} from 'react-i18next'
+
 import {CmdkSearchProviderProps} from '@/components/cmdk-providers'
 import {CommandItem} from '@/components/ui/command'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {t} from '@/utils/i18n'
 
 // how many max results we want to show in the command-k
 const MAX_RESULTS = 10
 
 export const FilesCmdkSearchProvider: React.FC<CmdkSearchProviderProps> = ({query, close}) => {
+	const {t} = useTranslation()
 	const {navigateToItem} = useNavigate()
 	const trimmedQuery = query.trim()
 

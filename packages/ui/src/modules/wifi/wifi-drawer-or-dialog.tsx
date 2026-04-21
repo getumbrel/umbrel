@@ -1,5 +1,6 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {ReactNode, useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangle} from 'react-icons/tb'
 import {Drawer as DrawerPrimitive} from 'vaul'
 
@@ -25,12 +26,12 @@ import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {WifiListItemContent} from '@/modules/wifi/wifi-item-content'
 import {RouterOutput, trpcReact, WifiNetwork, WifiStatus, WifiStatusUi} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 type NetworkStatus = RouterOutput['wifi']['connected']
 
 export function WifiDrawerOrDialogContent() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const statusQ = trpcReact.wifi.connected.useQuery()
 	const networkStatus = statusQ.data
@@ -126,6 +127,7 @@ export function WifiDrawerOrDialog(props: React.ComponentProps<typeof DrawerPrim
 }
 
 export function DrawerOrDialogContent({header, children}: {header?: ReactNode; children: ReactNode}) {
+	const {t} = useTranslation()
 	const title = t('wifi')
 
 	const isMobile = useIsSmallMobile()
@@ -160,6 +162,7 @@ export function EnabledContent({
 	namedNetworks?: WifiNetwork[]
 	networkStatus?: NetworkStatus
 }) {
+	const {t} = useTranslation()
 	const [openSsid, setOpenSsid] = useState<string | undefined>(undefined)
 	const currentSsid = networkStatus?.status === 'disconnected' ? undefined : networkStatus?.ssid
 
@@ -342,6 +345,7 @@ type ConnectProps = {
 }
 
 function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
+	const {t} = useTranslation()
 	const [data, setData] = useState<ConnectData | undefined>(undefined)
 	const [open, setOpen] = useState(false)
 
@@ -380,6 +384,7 @@ function ConnectWithConfirmation({onConnect, ...rest}: ConnectProps) {
 }
 
 export function Connect({network, status, onConnect, error, passwordInputRef}: ConnectProps) {
+	const {t} = useTranslation()
 	const [password, setPassword] = useState('')
 
 	if (status === 'loading') {

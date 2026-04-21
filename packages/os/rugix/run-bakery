@@ -12,12 +12,12 @@ RUGIX_CONTEXT_DIR=${RUGIX_CONTEXT_DIR:-""}
 RUGIX_CACHE_VOLUME=${RUGIX_CACHE_VOLUME:-"rugix-build-cache"}
 
 if [ "${RUGIX_DEV}" = "false" ]; then
-    RUGIX_VERSION=${RUGIX_VERSION:-"v0.8"}
+    RUGIX_VERSION=${RUGIX_VERSION:-"v0.9"}
 else
     RUGIX_VERSION=${RUGIX_VERSION:-"dev"}
 fi
 
-RUGIX_BAKERY_IMAGE=${RUGIX_BAKERY_IMAGE:-"ghcr.io/silitics/rugix-bakery:${RUGIX_VERSION}"}
+RUGIX_BAKERY_IMAGE=${RUGIX_BAKERY_IMAGE:-"ghcr.io/rugix/rugix-bakery:${RUGIX_VERSION}"}
 
 if [ "${RUGIX_DEV}" = "false" ]; then
     $DOCKER pull "${RUGIX_BAKERY_IMAGE}"

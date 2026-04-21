@@ -1,8 +1,8 @@
 import {ChevronDown, ChevronUp} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
-import {t} from '@/utils/i18n'
 import {downloadLogs} from '@/utils/logs'
 
 function getErrorMessage(error: unknown): string {
@@ -48,6 +48,7 @@ function isNetworkError(error: unknown): boolean {
 // Both modes use the Page Visibility API to auto-reload when the user returns to the tab.
 // This handles the most common scenario: user switches away, connection drops, they come back
 export function RootErrorFallback({error}: {error: unknown}) {
+	const {t} = useTranslation()
 	const [showDetails, setShowDetails] = useState(false)
 	const isNetwork = isNetworkError(error)
 

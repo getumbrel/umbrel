@@ -37,6 +37,14 @@ const wsClient = createWSClient({
 		const token = getJwt()
 		return token ? `${trpcWsUrl}?token=${token}` : `${trpcWsUrl}`
 	},
+	// Detect dead connections and keep NAT/proxy tables alive. The client is the
+	// primary keepAlive driver in foreground tabs; the server takes over in background
+	// tabs where browsers throttle setTimeout to ~1/minute.
+	keepAlive: {
+		enabled: true,
+		intervalMs: 10_000, // must be shorter than the most aggressive home router NAT timeout (~60s)
+		pongTimeoutMs: 3_000, // conservative over trpc default (1s) to avoid false positives
+	},
 })
 
 export const links = [

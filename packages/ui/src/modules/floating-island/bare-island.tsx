@@ -56,6 +56,21 @@ export const Island = ({children, onClose, nonDismissable, forceExpanded}: Islan
 		}
 	}, [forceExpanded])
 
+	// Minimize when clicking anywhere outside the island. Uses a window-level listener
+	// so clicks pass through naturally to the dock, dialogs, and other UI — no blocking backdrop needed.
+	useEffect(() => {
+		if (!isExpanded && !forceExpanded) return
+		if (forceExpanded) return
+
+		const handleClickOutside = (e: PointerEvent) => {
+			if (islandRef.current?.contains(e.target as Node)) return
+			setIsExpanded(false)
+		}
+
+		window.addEventListener('pointerdown', handleClickOutside)
+		return () => window.removeEventListener('pointerdown', handleClickOutside)
+	}, [isExpanded, forceExpanded])
+
 	// Stop propagation on both click and pointerdown to prevent Radix dialogs from
 	// detecting this as an "outside" interaction and closing (Radix uses pointer events)
 	const handleIslandClick = (e: React.MouseEvent) => {
@@ -78,26 +93,8 @@ export const Island = ({children, onClose, nonDismissable, forceExpanded}: Islan
 	const minimizedChild = childArray.find((child) => isValidElement(child) && child.type === IslandMinimized)
 	const expandedChild = childArray.find((child) => isValidElement(child) && child.type === IslandExpanded)
 
-	// Minimize island and stop propagation so dialogs below don't also close
-	const handleBackdropClick = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
-		e.stopPropagation()
-		if (!forceExpanded) {
-			setIsExpanded(false)
-		}
-	}
-
 	return (
 		<div className='flex justify-center md:block'>
-			{/* Full-screen backdrop when expanded: captures outside clicks to minimize island first,
-			    stopping propagation so dialogs below stay open. Provides layered dismissal UX. */}
-			{effectiveExpanded && !forceExpanded && (
-				<div
-					className='fixed inset-0'
-					onClick={handleBackdropClick}
-					onPointerDown={handleBackdropClick}
-					onTouchStart={handleBackdropClick}
-				/>
-			)}
 			<motion.div
 				ref={islandRef}
 				className='relative bg-black text-white shadow-floating-island'

@@ -45,6 +45,7 @@ const RaidSetup = React.lazy(() => import('./routes/onboarding/raid/setup'))
 const FactoryReset = React.lazy(() => import('./routes/factory-reset'))
 const OnboardingRestore = React.lazy(() => import('./routes/onboarding/restore'))
 const RaidError = React.lazy(() => import('./routes/raid-error'))
+const ConfirmStaticIp = React.lazy(() => import('./routes/confirm-static-ip'))
 
 // NOTE: consider extracting certain providers into react-router loaders
 export const router = createBrowserRouter([
@@ -178,6 +179,15 @@ export const router = createBrowserRouter([
 	{
 		path: '/raid-error',
 		element: <RaidError />,
+		ErrorBoundary: ErrorBoundaryPageFallback,
+	},
+
+	// confirm-static-ip: public route opened in a new tab at the new IP during static IP setup.
+	// Loading successfully proves the new IP is reachable; the page then calls `system.confirmStaticIp`
+	// (which must be public) to unblock the pending `setStaticIp` mutation on the original tab.
+	{
+		path: '/confirm-static-ip',
+		element: <ConfirmStaticIp />,
 		ErrorBoundary: ErrorBoundaryPageFallback,
 	},
 

@@ -1,6 +1,6 @@
 import {ChevronLeft, Loader2} from 'lucide-react'
 import {useMemo, useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {Link} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
@@ -25,10 +25,10 @@ import {useLanguage} from '@/hooks/use-language'
 import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
-import {t} from '@/utils/i18n'
 
 // Routes to Umbrel Pro instructions or regular restore flow
 export default function BackupsRestoreOnboarding() {
+	const {t} = useTranslation()
 	const {isLoading: isLoadingDeviceCheck, data: deviceInfo} = useDeviceInfo()
 	const isUmbrelPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
 
@@ -59,9 +59,11 @@ export default function BackupsRestoreOnboarding() {
 // Umbrel Pro restore instructions component
 // Umbrel Pro requires completing onboarding first, then restoring via Settings
 function UmbrelProRestoreInstructions() {
+	const {t} = useTranslation()
 	const steps = [
 		t('backups-restore-pro.step1'),
 		<Trans
+			t={t}
 			key='step2'
 			i18nKey='backups-restore-pro.step2'
 			components={[<span key='path' className='font-medium text-white' />]}
@@ -104,6 +106,7 @@ function UmbrelProRestoreInstructions() {
 
 // Regular restore flow for non-Pro devices
 function RegularRestoreFlow() {
+	const {t} = useTranslation()
 	const title = t('backups-restore-header')
 	const [lang] = useLanguage()
 
@@ -352,6 +355,7 @@ function RegularRestoreFlow() {
 					title={t('backups-restore.select-backup-file')}
 					subtitle={
 						<Trans
+							t={t}
 							i18nKey='backups-restore.select-backup-file-only'
 							values={{backupFileName: BACKUP_FILE_NAME}}
 							components={{
@@ -403,6 +407,7 @@ function BackupSnapshot({
 	noHover?: boolean
 	isLatest?: boolean
 }) {
+	const {t} = useTranslation()
 	const when = backup.time
 	const label = when ? formatFilesystemDate(when, lang as any) : t('backups-restore.unknown-date')
 	const size = backup.size

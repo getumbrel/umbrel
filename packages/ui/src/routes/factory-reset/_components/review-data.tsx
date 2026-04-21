@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {TbServer, TbShoppingBag, TbUser} from 'react-icons/tb'
 import {useNavigate} from 'react-router-dom'
 
@@ -5,12 +6,12 @@ import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {ImmersiveDialogBody, ImmersiveDialogIconMessageKeyValue} from '@/components/ui/immersive-dialog'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 import {backPath, description, title} from './misc'
 
 export function ReviewData() {
+	const {t, i18n} = useTranslation()
 	const navigate = useNavigate()
 
 	const userQ = trpcReact.user.get.useQuery()
@@ -18,7 +19,7 @@ export function ReviewData() {
 	const diskQ = trpcReact.system.diskUsage.useQuery()
 
 	const installedAppCount = userAppsQ.data?.length
-	const used = maybePrettyBytes(diskQ.data?.totalUsed)
+	const used = maybePrettyBytes(diskQ.data?.totalUsed, i18n.language)
 
 	return (
 		<>

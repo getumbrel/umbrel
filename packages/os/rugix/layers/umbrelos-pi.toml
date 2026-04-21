@@ -1,4 +1,4 @@
-parent = "umbrelos-root-arm64"
+parent = "umbrelos-root-pi"
 
 recipes = [
     # Prepare umbrelOS base image for Rugix.
@@ -13,3 +13,10 @@ recipes = [
 
 [parameters."core/rugix-ctrl"]
 use_musl = false
+version = "v1.0.0"
+
+[parameters."setup-rugix"]
+boot_type = "pi"
+
+[parameters."umbrelos-boot"]
+boot_type = "pi"

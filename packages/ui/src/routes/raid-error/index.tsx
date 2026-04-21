@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled, TbCircleCheckFilled} from 'react-icons/tb'
 import {Navigate} from 'react-router-dom'
 
@@ -24,7 +24,6 @@ import {SsdSlot, SsdTray} from '@/routes/onboarding/raid/ssd-tray'
 import {formatSize, getDeviceHealth, useDetectStorageDevices} from '@/routes/onboarding/raid/use-raid-setup'
 import {LanguageDropdown} from '@/routes/settings/_components/language-dropdown'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 const Highlight = ({children}: {children?: React.ReactNode}) => <span className='text-white'>{children}</span>
 
@@ -60,6 +59,7 @@ function TroubleshootingStep({
 }
 
 export default function RaidErrorScreen() {
+	const {t} = useTranslation()
 	// Dialog states
 	const [showShutdownDialog, setShowShutdownDialog] = useState(false)
 	const [showFactoryResetDialog, setShowFactoryResetDialog] = useState(false)
@@ -177,6 +177,7 @@ export default function RaidErrorScreen() {
 											)}
 											<span className='text-[14px] font-medium text-white/60 md:text-[15px]'>
 												<Trans
+													t={t}
 													i18nKey='raid-error.ssd-in-slot'
 													values={{size: formatSize(drive.device.size), slot: drive.slotNum}}
 													components={{highlight: <Highlight />}}

@@ -3,10 +3,21 @@ const { StatusCodes } = require("http-status-codes");
 const url = require("url");
 
 const expressUtils = require("./express.js");
-const tokenUtils = require("./token.js");
+const authUtils = require("./auth.js");
 const torUtils = require("./tor.js");
 const CONSTANTS = require("./const.js");
 const safeHandler = require("./safe_handler.js");
+
+function stripUmbrelCookie(proxyReq, req) {
+  const cookies = expressUtils.removeCookie(req, CONSTANTS.UMBREL_COOKIE_NAME);
+  if (cookies.trim().length === 0) {
+    // "the user agent sends a Cookie request header to the origin server if it has cookies"
+    // More info: https://datatracker.ietf.org/doc/html/rfc2109#section-4.3.4
+    proxyReq.removeHeader("cookie");
+  } else {
+    proxyReq.setHeader("cookie", cookies);
+  }
+}
 
 function onProxyReq(proxyReq, req, res, config) {
   // "Value may be undefined if the socket is destroyed (for example, if the client disconnected)."
@@ -24,15 +35,12 @@ function onProxyReq(proxyReq, req, res, config) {
     proxyReq.setHeader("x-forwarded-for", req.socket.remoteAddress);
   }
 
-  // Remove umbrel session cookie from proxied request
-  const cookies = expressUtils.removeCookie(req, CONSTANTS.UMBREL_COOKIE_NAME);
-  if (cookies.trim().length === 0) {
-    // "the user agent sends a Cookie request header to the origin server if it has cookies"
-    // More info: https://datatracker.ietf.org/doc/html/rfc2109#section-4.3.4
-    proxyReq.removeHeader("cookie");
-  } else {
-    proxyReq.setHeader("cookie", cookies);
-  }
+  // Remove Umbrel proxy token from proxied request
+  stripUmbrelCookie(proxyReq, req);
+}
+
+function onProxyReqWs(proxyReq, req, socket, options, head) {
+  stripUmbrelCookie(proxyReq, req);
 }
 
 function onError(err, req, res, target) {
@@ -54,6 +62,7 @@ function proxy() {
 
   const proxyConfig = {
     onProxyReq: onProxyReq,
+    onProxyReqWs: onProxyReqWs,
     onError: onError,
     target: proxyTarget,
     // Don't change the origin
@@ -75,73 +84,48 @@ function proxy() {
   return createProxyMiddleware(proxyConfig);
 }
 
-function whitelist() {
-  return function (req, res, next) {
-    req.ignoreAuth = true;
-
-    next();
-  };
-}
-
-function blacklist() {
-  return function (req, res, next) {
-    req.ignoreAuth = false;
-
-    next();
-  };
-}
-
 function apply(app) {
-  if (CONSTANTS.PROXY_AUTH_ADD) {
-    if (CONSTANTS.PROXY_AUTH_WHITELIST.length > 0)
-      app.use(CONSTANTS.PROXY_AUTH_WHITELIST, whitelist());
-    if (CONSTANTS.PROXY_AUTH_BLACKLIST.length > 0)
-      app.use(CONSTANTS.PROXY_AUTH_BLACKLIST, blacklist());
-  }
-
   const middleware = proxy();
 
   app.use(
     safeHandler(async (req, res, next) => {
-      // If route is part of the auth whitelist
-      // Then we ignore handling auth
-      if (CONSTANTS.PROXY_AUTH_ADD && req.ignoreAuth !== true) {
-        const token = req.cookies.UMBREL_PROXY_TOKEN;
+      const authorized = await authUtils.isAuthorized({
+        cookieHeader: req.headers.cookie,
+        pathname: req.path,
+      });
 
-        // token could be false if hmac fails (ie. someone tampered with the token)
-        if (typeof token !== "string" || !(await tokenUtils.validate(token))) {
-          const origin = req.hostname.endsWith(".onion") ? "tor" : "host";
+      if (!authorized) {
+        const origin = req.hostname.endsWith(".onion") ? "tor" : "host";
 
-          // Get the raw query string
-          // This could be null if there is no query string
-          let query = url.parse(req.url).query;
-          if (typeof query == "string") {
-            query = `?${query}`;
-          } else {
-            query = "";
-          }
+        // Get the raw query string
+        // This could be null if there is no query string
+        let query = url.parse(req.url).query;
+        if (typeof query == "string") {
+          query = `?${query}`;
+        } else {
+          query = "";
+        }
 
-          const searchParams = new URLSearchParams({
-            origin: origin,
-            app: CONSTANTS.APP.id,
-            path: `${req.path}${query}`,
-          });
+        const searchParams = new URLSearchParams({
+          origin: origin,
+          app: CONSTANTS.APP.id,
+          path: `${req.path}${query}`,
+        });
 
-          // If request came over Tor
-          // Then redirect to auth HS hosted on Tor
-          if (origin === "tor") {
-            const authHsUrl = await torUtils.authHsUrl();
+        // If request came over Tor
+        // Then redirect to auth HS hosted on Tor
+        if (origin === "tor") {
+          const authHsUrl = await torUtils.authHsUrl();
 
-            return res.redirect(
-              `${req.protocol}://${authHsUrl}/?${searchParams.toString()}`
-            );
-          } else {
-            return res.redirect(
-              `${req.protocol}://${req.hostname}:${
-                CONSTANTS.UMBREL_AUTH_PORT
-              }/?${searchParams.toString()}`
-            );
-          }
+          return res.redirect(
+            `${req.protocol}://${authHsUrl}/?${searchParams.toString()}`
+          );
+        } else {
+          return res.redirect(
+            `${req.protocol}://${req.hostname}:${
+              CONSTANTS.UMBREL_AUTH_PORT
+            }/?${searchParams.toString()}`
+          );
         }
       }
 
@@ -154,7 +138,5 @@ function apply(app) {
 
 module.exports = {
   proxy,
-  whitelist,
-  blacklist,
   apply,
 };

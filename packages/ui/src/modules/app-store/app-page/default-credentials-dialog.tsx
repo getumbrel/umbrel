@@ -1,4 +1,5 @@
 import {useId} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/components/ui/checkbox'
@@ -11,11 +12,11 @@ import {cn} from '@/lib/utils'
 import {useUserApp} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 // TODO: move out of app-store/app-page since it's used elsewhere
 export function DefaultCredentialsDialog() {
+	const {t} = useTranslation()
 	const params = useQueryParams()
 	const dialogProps = useDialogOpenProps('default-credentials')
 
@@ -100,6 +101,7 @@ export function DefaultCredentialsDialog() {
 }
 
 function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
+	const {t} = useTranslation()
 	const checkboxId = useId()
 	const {app, isLoading} = useUserApp(appId)
 

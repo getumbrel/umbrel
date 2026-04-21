@@ -90,7 +90,7 @@ describe('RAID size validation', () => {
 	})
 
 	test('storage mode: allows adding larger device', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({device: largeDeviceId})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: largeDeviceId})
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.devices).toHaveLength(2)
 	})
@@ -107,7 +107,7 @@ describe('RAID size validation', () => {
 	})
 
 	test('storage mode: allows adding smaller device', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({device: smallDeviceId})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: smallDeviceId})
 		const status = await umbreld.client.hardware.raid.getStatus.query()
 		expect(status.devices).toHaveLength(3)
 	})
@@ -155,11 +155,11 @@ describe('RAID size validation', () => {
 	})
 
 	test('failsafe mode: rejects adding smaller device', async () => {
-		await expect(umbreld.client.hardware.raid.addDevice.mutate({device: smallDeviceId})).rejects.toThrow()
+		await expect(umbreld.client.hardware.raid.addDevice.mutate({deviceId: smallDeviceId})).rejects.toThrow()
 	})
 
 	test('failsafe mode: allows adding larger device', async () => {
-		await umbreld.client.hardware.raid.addDevice.mutate({device: extraLargeDeviceId})
+		await umbreld.client.hardware.raid.addDevice.mutate({deviceId: extraLargeDeviceId})
 		// Wait for expansion to start
 		await pWaitFor(
 			async () => {

@@ -1,9 +1,9 @@
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 // TODO: Consider changing TbBattery1 (low life) and TbHeartBroken (unhealthy) icons to something more intuitive
 import {TbActivityHeartbeat, TbAlertTriangleFilled, TbBattery1, TbFlame, TbHeartBroken} from 'react-icons/tb'
 
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 
 import {getDeviceHealth, RaidDevice, raidStatusLabels, StorageDevice} from '../hooks/use-storage'
@@ -31,6 +31,7 @@ export function SsdShape({
 	isReadyToAdd = false,
 	raidDevice,
 }: SsdShapeProps) {
+	const {t} = useTranslation()
 	// Check for RAID device failure (not ONLINE means the drive has issues in the RAID array)
 	const isRaidDeviceFailed = raidDevice && raidDevice.raidStatus !== 'ONLINE'
 

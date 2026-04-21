@@ -1,5 +1,7 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
+import {TbAlertTriangle} from 'react-icons/tb'
 import {useSearchParams} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
@@ -21,13 +23,15 @@ import {
 } from '@/features/files/components/dialogs/share-info-dialog/platform-selector'
 import {ShareToggle} from '@/features/files/components/dialogs/share-info-dialog/share-toggle'
 import {HOME_PATH} from '@/features/files/constants'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useHomeDirectoryName} from '@/features/files/hooks/use-home-directory-name'
 import {useShares} from '@/features/files/hooks/use-shares'
+import {getShareUnavailableReason} from '@/features/files/utils/get-share-unavailable-reason'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function ShareInfoDialog() {
+	const {t} = useTranslation()
 	const isMobile = useIsMobile()
 	const homeDirectoryName = useHomeDirectoryName()
 	const [searchParams] = useSearchParams()
@@ -46,11 +50,17 @@ export default function ShareInfoDialog() {
 		isLoadingSharesPassword,
 	} = useShares()
 
+	const {disks} = useExternalStorage()
 	const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0])
 
+	const share = shares?.find((s) => s.path === path)
 	const isShared = isPathShared(path) ?? false
+	const isUnavailable = share?.available === false
 	const isSharingHome = path === HOME_PATH
-	const sharename = shares?.find((s) => s.path === path)?.sharename
+	const sharename = share?.sharename
+
+	const unavailableReason = share ? getShareUnavailableReason(share, disks) : undefined
+	const isDriveDisconnected = unavailableReason === 'drive-disconnected'
 
 	const handleShareToggle = (checked: boolean) => {
 		if (checked) {
@@ -73,6 +83,19 @@ export default function ShareInfoDialog() {
 	const content = (
 		<div className='space-y-6'>
 			<div className='flex flex-col gap-4'>
+				{isUnavailable && (
+					<div className='flex items-start gap-3 rounded-12 bg-[#F5A623]/10 p-3'>
+						<TbAlertTriangle className='mt-0.5 size-5 shrink-0 text-[#F5A623]' />
+						<div className='flex flex-col gap-1'>
+							<span className='text-13 font-semibold text-[#F5A623]'>
+								{isDriveDisconnected
+									? t('files-share.unavailable-drive-disconnected')
+									: t('files-share.unavailable-folder-not-found')}
+							</span>
+							<span className='text-12 text-white/40'>{path}</span>
+						</div>
+					</div>
+				)}
 				<ShareToggle
 					name={name}
 					isShared={isShared}

@@ -1,12 +1,14 @@
+import {useTranslation} from 'react-i18next'
+
 import {Tabs, TabsList, TabsTrigger} from '@/components/ui/tabs'
 import {GridLayoutIcon} from '@/features/files/assets/grid-layout-icon'
 import {ListLayoutIcon} from '@/features/files/assets/list-layout-icon'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import {ViewPreferences} from '@/features/files/types'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 export function ViewToggle() {
+	const {t} = useTranslation()
 	const {preferences, setView, isLoading, isError} = usePreferences()
 
 	const viewModes: ViewPreferences['view'][] = ['icons', 'list']
@@ -27,6 +29,7 @@ export function ViewToggle() {
 						value={mode}
 						className={cn('h-6 rounded-full', view === mode && 'bg-brand')}
 						aria-label={t(`files-view.${mode}`)}
+						onClick={(e) => (e.currentTarget as HTMLElement).blur()}
 					>
 						{mode === 'icons' ? (
 							<GridLayoutIcon className={cn('h-4 w-4', view === mode ? 'text-white' : 'text-white/50')} />

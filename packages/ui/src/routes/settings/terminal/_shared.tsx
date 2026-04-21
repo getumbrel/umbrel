@@ -8,11 +8,13 @@ import {Button} from '@/components/ui/button'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {BackLink} from '@/modules/immersive-picker'
-import {t} from '@/utils/i18n'
 
 import '@xterm/xterm/css/xterm.css'
 
+import {useTranslation} from 'react-i18next'
+
 export function TerminalTitleBackLink() {
+	const {t} = useTranslation()
 	return <BackLink to='/settings/terminal'>{t('terminal')}</BackLink>
 }
 
@@ -20,6 +22,7 @@ export function TerminalTitleBackLink() {
 const MIN_COLS = 80
 
 export const XTermTerminal = ({appId}: {appId?: string}) => {
+	const {t} = useTranslation()
 	const terminalRef = useRef<Terminal | null>(null)
 	const ws = useRef<WebSocket | null>(null)
 	const containerRef = useRef<HTMLDivElement | null>(null)
@@ -176,11 +179,10 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 				{/* 980px min width (for mobile) cause side scrolling is better than wrapping */}
 				{/* Using `tracking-normal` and `text-rendering: unset` to prevent cursor text selection from not selecting the correct text */}
 				{/* Note: xterm.js handles text selection internally, so no `select-text` class needed */}
-				<div
-					ref={containerRef}
-					className='h-full w-full min-w-[980px] px-4 py-3 tracking-normal'
-					style={{textRendering: 'unset'}}
-				/>
+				{/* Padding is on the outer div so FitAddon measures the correct available height for row calculation */}
+				<div className='h-full w-full min-w-[980px] px-4 py-3'>
+					<div ref={containerRef} className='h-full w-full tracking-normal' style={{textRendering: 'unset'}} />
+				</div>
 			</div>
 		</div>
 	)

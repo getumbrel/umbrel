@@ -14,7 +14,7 @@ export function ListRadioItem({
 	checked: boolean
 	name?: string
 	onSelect: () => void
-	disabled: boolean
+	disabled?: boolean
 }) {
 	return (
 		<div className={cn(listItemClass, 'relative')}>

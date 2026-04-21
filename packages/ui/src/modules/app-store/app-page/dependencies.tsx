@@ -1,4 +1,5 @@
 import {Fragment} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbCircleCheckFilled} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 import {arrayIncludes} from 'ts-extras'
@@ -9,7 +10,6 @@ import {cn} from '@/lib/utils'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {installedStates, RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
@@ -20,6 +20,7 @@ export const DependenciesSection = ({
 	app: RegistryApp
 	showDependencies?: (dependencyId?: string) => void
 }) => {
+	const {t} = useTranslation()
 	const {apps, appsKeyed, isLoading: isLoadingAvailableApps} = useAllAvailableApps()
 	const {userAppsKeyed, isLoading: isLoadingUserApps} = useApps()
 
@@ -67,13 +68,14 @@ const Dependency = ({
 	numberOfAlternativeApps: number
 	showDependencies?: (dependencyId?: string) => void
 }) => {
+	const {t} = useTranslation()
 	return (
 		<div className='flex w-full items-center gap-2.5 pl-2'>
-			<Link to={`/app-store/${app.id}`}>
+			<Link to={`/app-store/${app.id}`} state={{fromAppStore: true}}>
 				<AppIcon src={app.icon} size={36} className='rounded-8' />
 			</Link>
 			<div className='flex-col gap-4'>
-				<Link to={`/app-store/${app.id}`} className='flex gap-1.5'>
+				<Link to={`/app-store/${app.id}`} state={{fromAppStore: true}} className='flex gap-1.5'>
 					<h3 className='truncate text-14 leading-tight font-semibold -tracking-3'>{app.name}</h3>
 					{installed && <TbCircleCheckFilled className='h-[16px] w-[16px] text-slate-500' />}
 				</Link>

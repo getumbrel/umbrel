@@ -1,13 +1,14 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {CopyableField} from '@/components/ui/copyable-field'
 import {UNKNOWN} from '@/constants'
 import {UserApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
 export function SettingsSection({userApp}: {userApp: UserApp}) {
+	const {t} = useTranslation()
 	if (!userApp.credentials) return null
 
 	const {defaultUsername, defaultPassword} = userApp.credentials

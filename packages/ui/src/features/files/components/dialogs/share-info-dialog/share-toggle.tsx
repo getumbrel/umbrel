@@ -1,5 +1,6 @@
+import {useTranslation} from 'react-i18next'
+
 import {Switch} from '@/components/ui/switch'
-import {t} from '@/utils/i18n'
 
 interface ShareToggleProps {
 	name: string
@@ -9,6 +10,7 @@ interface ShareToggleProps {
 }
 
 export function ShareToggle({name, isShared, isLoading, onToggle}: ShareToggleProps) {
+	const {t} = useTranslation()
 	return (
 		<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
 			<div className='flex items-center justify-between gap-3 p-3 text-12 font-medium -tracking-3'>

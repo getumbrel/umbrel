@@ -1,11 +1,13 @@
+import {useTranslation} from 'react-i18next'
+
 import {useRestoreStatus} from '@/features/backups/hooks/use-backups'
 import {BarePage} from '@/layouts/bare/bare-page'
 import FailedLayout from '@/modules/bare/failed-layout'
 import {ProgressLayout} from '@/modules/bare/progress-layout'
-import {t} from '@/utils/i18n'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 export function RestoreCover() {
+	const {t} = useTranslation()
 	const restoreQ = useRestoreStatus()
 	const {progress, running, error, secondsRemaining} = restoreQ.data ?? {}
 

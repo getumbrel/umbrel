@@ -1,4 +1,6 @@
 import {Globe} from 'lucide-react'
+import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbHistory, TbMessageCircle, TbUser} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 
@@ -8,7 +10,6 @@ import {IconButton} from '@/components/ui/icon-button'
 import {links} from '@/constants/links'
 import {useLanguage} from '@/hooks/use-language'
 import {LanguageDropdownContent} from '@/routes/settings/_components/language-dropdown'
-import {t} from '@/utils/i18n'
 import {languages} from '@/utils/language'
 
 export enum OnboardingAction {
@@ -24,6 +25,8 @@ interface OnboardingFooterProps {
 const footerButtonClass = 'bg-white/[0.06] border-0'
 
 export function OnboardingFooter({action}: OnboardingFooterProps) {
+	const {t} = useTranslation()
+	const [languageOpen, setLanguageOpen] = useState(false)
 	const isCreateAccount = action === OnboardingAction.CREATE_ACCOUNT
 	const route = isCreateAccount ? '/onboarding/create-account' : '/onboarding/restore'
 	const Icon = isCreateAccount ? TbUser : TbHistory
@@ -43,9 +46,9 @@ export function OnboardingFooter({action}: OnboardingFooterProps) {
 				</IconButton>
 			</Link>
 			{/* TODO: consider adding drawer on mobile */}
-			<DropdownMenu>
+			<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
 				<OnboardingLanguageDropdownTrigger />
-				<LanguageDropdownContent />
+				<LanguageDropdownContent open={languageOpen} onOpenChange={setLanguageOpen} />
 			</DropdownMenu>
 			<Link to={links.support} target='_blank'>
 				<IconButton icon={TbMessageCircle} size='default' className={footerButtonClass}>

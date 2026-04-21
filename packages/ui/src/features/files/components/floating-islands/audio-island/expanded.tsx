@@ -1,8 +1,8 @@
 import React from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiPauseFill, RiPlayFill} from 'react-icons/ri'
 
 import {MusicEqualizer} from '@/features/files/components/floating-islands/audio-island/equalizer'
-import {t} from '@/utils/i18n'
 
 interface ExpandedContentProps {
 	fileName: string
@@ -29,6 +29,7 @@ export const ExpandedContent: React.FC<ExpandedContentProps> = ({
 	onProgressChange,
 	analyserNode,
 }) => {
+	const {t} = useTranslation()
 	const progressPercentage = duration ? (currentTime / duration) * 100 : 0
 
 	return (

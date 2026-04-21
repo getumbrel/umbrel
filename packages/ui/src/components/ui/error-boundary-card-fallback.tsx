@@ -1,10 +1,10 @@
 import type {FallbackProps} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useRouteError} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
 import {Card} from '@/components/ui/card'
 import {GenericErrorDetails, GenericErrorText} from '@/components/ui/generic-error-text'
-import {t} from '@/utils/i18n'
 
 function useRouteErrorSafe() {
 	try {
@@ -18,6 +18,7 @@ function useRouteErrorSafe() {
  * Used for larger areas like the settings page, dialog content, etc.
  */
 export function ErrorBoundaryCardFallback({error, resetErrorBoundary}: Partial<FallbackProps>) {
+	const {t} = useTranslation()
 	const routeError = useRouteErrorSafe()
 	const resolvedError = error ?? routeError
 

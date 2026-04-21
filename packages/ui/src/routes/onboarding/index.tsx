@@ -1,11 +1,11 @@
 import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Link} from 'react-router-dom'
 
 import {useLanguage} from '@/hooks/use-language'
 import {Layout, primaryButtonProps} from '@/layouts/bare/shared'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
 import {useOnboardingDevice} from '@/routes/onboarding/use-onboarding-device'
-import {t} from '@/utils/i18n'
 import {supportedLanguageCodes} from '@/utils/language'
 
 // Attempt to auto-select a suitable language from the user's browser preferences
@@ -37,6 +37,7 @@ function useAutoDetectLanguage() {
 }
 
 export default function OnboardingStart() {
+	const {t} = useTranslation()
 	const title = t('onboarding.start.title')
 	const continueLinkRef = useRef<HTMLAnchorElement>(null)
 	const device = useOnboardingDevice()

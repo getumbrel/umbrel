@@ -1,4 +1,5 @@
 import {useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useMount} from 'react-use'
 
 import {
@@ -13,9 +14,9 @@ import {FadeInImg} from '@/components/ui/fade-in-img'
 import {cn} from '@/lib/utils'
 import {useWallpaper, WallpaperId, wallpapers} from '@/providers/wallpaper'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {t} from '@/utils/i18n'
 
 export function WallpaperDrawer() {
+	const {t} = useTranslation()
 	const title = t('wallpaper')
 	const dialogProps = useSettingsDialogProps()
 

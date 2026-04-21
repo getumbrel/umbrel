@@ -1,5 +1,6 @@
 import {AnimatePresence, motion} from 'motion/react'
 import {useMemo} from 'react'
+import {useTranslation} from 'react-i18next'
 import {FaPlus} from 'react-icons/fa6'
 import {useNavigate as useReactRouterNavigate} from 'react-router-dom'
 
@@ -12,10 +13,10 @@ import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function SidebarNetworkStorage() {
+	const {t} = useTranslation()
 	const {shares, isLoadingShares, removeHostOrShare, isRemovingShare} = useNetworkStorage()
 
 	// Group the mounted shares by host so that we render single network device items even when there are multiple shares for the same host.
@@ -84,6 +85,7 @@ const selectedClass = tw`
 `
 
 function NetworkRootItem() {
+	const {t} = useTranslation()
 	const {navigateToDirectory, currentPath} = useNavigate()
 	const isActive = currentPath === NETWORK_STORAGE_PATH
 	const navigate = useReactRouterNavigate()

@@ -2,8 +2,7 @@
 
 import {ChevronDown, ChevronUp} from 'lucide-react'
 import {AnimatePresence, motion} from 'motion/react'
-
-import {t} from '@/utils/i18n'
+import {useTranslation} from 'react-i18next'
 
 type InstallTipsCollapsibleProps = {
 	isOpen: boolean
@@ -11,6 +10,7 @@ type InstallTipsCollapsibleProps = {
 }
 
 export function InstallTipsCollapsible({isOpen, onToggle}: InstallTipsCollapsibleProps) {
+	const {t} = useTranslation()
 	return (
 		<div>
 			<button

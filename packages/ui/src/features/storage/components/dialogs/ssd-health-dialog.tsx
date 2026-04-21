@@ -1,10 +1,10 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbActivityHeartbeat, TbAlertTriangle, TbAlertTriangleFilled} from 'react-icons/tb'
 
 import {FadeScroller} from '@/components/fade-scroller'
 import {Dialog, DialogHeader, DialogScrollableContent, DialogTitle} from '@/components/ui/dialog'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
-import {t} from '@/utils/i18n'
 import {formatTemperature} from '@/utils/temperature'
 import {tw} from '@/utils/tw'
 
@@ -26,7 +26,9 @@ type SsdHealthDialogProps = {
 }
 
 export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDevice}: SsdHealthDialogProps) {
+	const {t} = useTranslation()
 	const {smartUnhealthy, lifeRemaining, lifeWarning, tempWarning, tempCritical} = getDeviceHealth(device)
+	const isSsd = device.type === 'ssd'
 	const [temperatureUnit] = useTemperatureUnit()
 
 	const healthStatus =
@@ -259,13 +261,13 @@ export function SsdHealthDialog({device, slotNumber, open, onOpenChange, raidDev
 										{tempWarning && ` · ${t('storage-manager.health.overheating')}`}
 									</span>
 								</div>
-								{device.temperatureWarning !== undefined && (
+								{isSsd && device.temperatureWarning !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.warning-threshold')}</span>
 										<span className='font-normal'>{formatTemperature(device.temperatureWarning, temperatureUnit)}</span>
 									</div>
 								)}
-								{device.temperatureCritical !== undefined && (
+								{isSsd && device.temperatureCritical !== undefined && (
 									<div className={listItemClass}>
 										<span>{t('storage-manager.health.critical-threshold')}</span>
 										<span className='font-normal'>

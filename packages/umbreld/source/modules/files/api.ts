@@ -54,7 +54,7 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		if (files.length === 1 && (await fse.stat(files[0])).isFile()) {
 			const filename = nodePath.basename(files[0])
 			response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
-			return response.sendFile(files[0])
+			return response.sendFile(files[0], {dotfiles: 'allow'})
 		}
 
 		// Create an archive and stream it to the response
@@ -83,7 +83,7 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 			const systemPath = await umbreld.files.virtualToSystemPath(request.query.path)
 			const status = await umbreld.files.status(systemPath)
 			if (status.type === 'directory') return response.status(400).json({error: 'cannot view a directory'})
-			response.sendFile(systemPath)
+			response.sendFile(systemPath, {dotfiles: 'allow'})
 		} catch (error) {
 			return response.status(404).json({error: 'not found'})
 		}

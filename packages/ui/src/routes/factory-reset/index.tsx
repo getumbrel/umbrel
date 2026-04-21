@@ -1,10 +1,10 @@
+import {useTranslation} from 'react-i18next'
 import {TbRotate2} from 'react-icons/tb'
 import {Route, Routes, useNavigate} from 'react-router-dom'
 
 import {ImmersiveDialog, ImmersiveDialogSplitContent} from '@/components/ui/immersive-dialog'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
 import {useGlobalSystemState} from '@/providers/global-system-state'
-import {t} from '@/utils/i18n'
 
 import {ConfirmWithPassword} from './_components/confirm-with-password'
 import {backPath} from './_components/misc'
@@ -59,6 +59,7 @@ function SplitDialog({children}: {children: React.ReactNode}) {
 }
 
 function SplitLeftContent() {
+	const {t} = useTranslation()
 	return (
 		<div className='flex flex-col items-center'>
 			<div

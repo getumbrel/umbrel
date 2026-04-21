@@ -1,4 +1,5 @@
 import {ChevronDown, Server} from 'lucide-react'
+import {useTranslation} from 'react-i18next'
 import {TbHistory} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -12,7 +13,6 @@ import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useLanguage} from '@/hooks/use-language'
-import {t} from '@/utils/i18n'
 
 // We show this dialog when the user clicks Rewind in Files to select a backup repository
 export function PreRewindDialog({
@@ -30,6 +30,7 @@ export function PreRewindDialog({
 	setPendingRepoId: (id: string) => void
 	onStart: (repoId: string) => void
 }) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {disks} = useExternalStorage()

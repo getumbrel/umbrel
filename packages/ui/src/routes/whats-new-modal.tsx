@@ -1,5 +1,6 @@
 import {DialogPortal} from '@radix-ui/react-dialog'
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbChevronLeft, TbChevronRight} from 'react-icons/tb'
 
 import {Button} from '@/components/ui/button'
@@ -13,7 +14,6 @@ import {
 } from '@/components/ui/immersive-dialog'
 import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 // Versions and features are hardcoded and we should update them on every release
 
@@ -98,6 +98,7 @@ function DotIndicators({
 }
 
 export function WhatsNewModal() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('whats-new')
 
 	const [api, setApi] = useState<CarouselApi>()

@@ -6,9 +6,9 @@
 	<title>Redirecting...</title>
 </head>
 <body onload="document.forms[0].submit();">
-	<form method="POST" action="<%- url %>">
+	<form method="POST" action="<%= url %>">
 	<% for (var key in params ) { %>
-		<input type="hidden" name="<%- key %>" value="<%- params[key] %>">
+		<input type="hidden" name="<%= key %>" value="<%= params[key] %>">
 	<% } %>
 	</form>
 </body>

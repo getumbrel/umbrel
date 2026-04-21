@@ -14,6 +14,11 @@ RUN npm ci
 # Copy the rest of the files
 COPY packages/ui/ .
 
+# The ui-build stage only has 'packages/ui' in '/app', but the ui imports runtime values
+# via a relative path ('../../../umbreld/source/modules/server/trpc/common') that resolves outside '/app'.
+# We copy the target file to the expected path for the build to succeed.
+COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modules/server/trpc/common.ts
+
 # Build the app
 RUN npm run app-auth:build
 

@@ -3,6 +3,7 @@
 // the performance impact is negligible with so few items and simple DOM updates.
 // So we've opted for simpler code over premature optimization.
 import {AnimatePresence, motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {SidebarRewind} from '@/features/files/components/rewind'
@@ -20,9 +21,9 @@ import {useFavorites} from '@/features/files/hooks/use-favorites'
 import {useShares} from '@/features/files/hooks/use-shares'
 import {useFilesCapabilities} from '@/features/files/providers/files-capabilities-context'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 export function Sidebar({className}: {className?: string}) {
+	const {t} = useTranslation()
 	const capabilities = useFilesCapabilities()
 	const {shares, isLoadingShares} = useShares()
 	const {favorites, isLoadingFavorites} = useFavorites()

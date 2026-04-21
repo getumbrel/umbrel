@@ -3,7 +3,7 @@ import {formatDistanceToNow} from 'date-fns'
 import {AlertOctagon, ArrowLeft, Loader2, Plus, Server} from 'lucide-react'
 import {useMemo, useState} from 'react'
 import {FormProvider, useForm, type Resolver, type SubmitHandler} from 'react-hook-form'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {TbCalendarTime, TbDatabase} from 'react-icons/tb'
 import {Link} from 'react-router-dom'
 import {z} from 'zod'
@@ -52,24 +52,9 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {useLanguage} from '@/hooks/use-language'
 import {trpcReact} from '@/trpc/trpc'
 import {languageCodeToDateLocale} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
-
-// ---------------------------------------------
-// Types & Schema
-// ---------------------------------------------
-
-const restoreExistingSchema = z.object({
-	repositoryId: z.string().min(1, {message: t('backups-restore.please-select-repository')}),
-	backupId: z.string().min(1, {message: t('backups-restore.please-select-backup')}),
-})
 
 // Wizard form values (backupId is optional until selected)
 type RestoreWizardValues = {repositoryId: string; backupId?: string}
-
-// Relaxed schema while stepping (backupId optional until step 2)
-const wizardExistingSchema: z.ZodType<RestoreWizardValues> = restoreExistingSchema.partial({
-	backupId: true,
-})
 
 // ---------------------------------------------
 // Step enum + labels
@@ -82,6 +67,7 @@ enum Step {
 }
 
 const headerMetaForStep = (s: Step) => {
+	const {t} = useTranslation()
 	switch (s) {
 		case Step.Repository:
 			return {
@@ -102,6 +88,17 @@ const headerMetaForStep = (s: Step) => {
 // ---------------------------------------------
 
 export function BackupsRestoreWizard() {
+	const {t} = useTranslation()
+
+	// Validation schemas inside the component so t() evaluates with the current language
+	const restoreExistingSchema = z.object({
+		repositoryId: z.string().min(1, {message: t('backups-restore.please-select-repository')}),
+		backupId: z.string().min(1, {message: t('backups-restore.please-select-backup')}),
+	})
+	const wizardExistingSchema: z.ZodType<RestoreWizardValues> = restoreExistingSchema.partial({
+		backupId: true,
+	})
+
 	const [step, setStep] = useState<Step>(Step.Repository)
 	const [repoMode, setRepoMode] = useState<'known' | 'manual'>('known')
 	const [manualPath, setManualPath] = useState('')
@@ -377,6 +374,7 @@ function RepositoryStep({
 	manualPassword: string
 	onManualPasswordChange: (v: string) => void
 }) {
+	const {t} = useTranslation()
 	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {disks, isExternalStorageSupported} = useExternalStorage()
 	const isConnected = (path: string) => isRepoConnected(path, doesHostHaveMountedShares, disks as any)
@@ -535,6 +533,7 @@ function RepositoryStep({
 							title={t('backups-restore.select-backup-file')}
 							subtitle={
 								<Trans
+									t={t}
 									i18nKey='backups-restore.select-backup-file-only'
 									values={{backupFileName: BACKUP_FILE_NAME}}
 									components={{
@@ -587,6 +586,7 @@ function BackupsStep({
 	selectedId?: string
 	onSelect: (id: string) => void
 }) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 	return (
 		<div className='space-y-4'>
@@ -722,6 +722,7 @@ function BackupsStep({
 // ---------------------------------------------
 
 function ReviewStep({repository, backup}: {repository?: BackupRepository; backup?: Backup}) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 	const when = backup?.time
 	const label = when ? formatFilesystemDate(when, lang) : t('backups-restore.unknown-date')
@@ -760,6 +761,7 @@ function ReviewStep({repository, backup}: {repository?: BackupRepository; backup
 				icon={AlertOctagon}
 				description={
 					<Trans
+						t={t}
 						i18nKey='backups-restore.restore-warning'
 						components={[<Link to='/files?rewind=open' className='underline' key='rewind' />]}
 					/>

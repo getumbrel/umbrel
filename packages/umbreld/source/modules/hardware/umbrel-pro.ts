@@ -174,7 +174,8 @@ export default class UmbrelPro {
 		const FAN_DEFAULT_WARNING_TEMP = 70 // Default warning temp if not reported by drive
 
 		try {
-			const devices = await this.#umbreld.hardware.internalStorage.getDevices()
+			const allDevices = await this.#umbreld.hardware.internalStorage.getDevices()
+			const devices = allDevices.filter((device) => device.type === 'ssd')
 
 			// Calculate required fan speed for each device
 			const deviceFanSpeeds = devices.map((device) => {

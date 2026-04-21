@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {
 	Tb2Fa,
 	TbArrowBigRightLines,
@@ -30,7 +31,6 @@ import {DesktopPreviewConnected, DesktopPreviewFrame} from '@/modules/desktop/de
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
@@ -41,6 +41,7 @@ import {ContactSupportLink} from './shared'
 import {StorageCardContent} from './storage-card-content'
 
 export function SettingsContentMobile() {
+	const {t} = useTranslation()
 	const {addLinkSearchParams} = useQueryParams()
 	const navigate = useNavigate()
 	const userQ = trpcReact.user.get.useQuery()

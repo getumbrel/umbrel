@@ -2,15 +2,16 @@ import {format} from 'date-fns'
 import {saveAs} from 'file-saver'
 import filenamify from 'filenamify/browser'
 import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {cn} from '@/lib/utils'
 import {BackLink} from '@/modules/immersive-picker'
 import {RouterInput} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export type SystemLogType = RouterInput['system']['logs']['type']
 
 export function TroubleshootTitleBackLink() {
+	const {t} = useTranslation()
 	return <BackLink to='/settings/troubleshoot'>{t('troubleshoot')}</BackLink>
 }
 

@@ -1,8 +1,8 @@
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {BareCoverMessage} from '@/components/ui/cover-message'
-import {t} from '@/utils/i18n'
 import {IS_DEV, sleep} from '@/utils/misc'
 
 const SLEEP_TIME = IS_DEV ? 600 : 0
@@ -23,6 +23,7 @@ const pageToPath = (page: Page) => {
 }
 
 export function RedirectOnboarding() {
+	const {t} = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 
@@ -41,6 +42,7 @@ export function RedirectOnboarding() {
 }
 
 export function RedirectLogin() {
+	const {t} = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 
@@ -64,6 +66,7 @@ export function RedirectLogin() {
 }
 
 export function RedirectHome() {
+	const {t} = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 
@@ -82,6 +85,7 @@ export function RedirectHome() {
 }
 
 export function RedirectRaidError() {
+	const {t} = useTranslation()
 	const location = useLocation()
 	const navigate = useNavigate()
 

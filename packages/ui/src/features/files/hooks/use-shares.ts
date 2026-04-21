@@ -1,4 +1,5 @@
 import {keepPreviousData} from '@tanstack/react-query'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {HOME_PATH} from '@/features/files/constants'
@@ -6,14 +7,27 @@ import type {Share} from '@/features/files/types'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 /**
  * Hook to manage file shares in the file system.
  * Provides functionality to fetch shares, add/remove shares, and get share password.
  */
 export function useShares() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
+
+	// Invalidate shares when external storage changes (e.g., drive ejected/mounted)
+	trpcReact.eventBus.listen.useSubscription(
+		{event: 'files:external-storage:change'},
+		{
+			onData() {
+				utils.files.shares.invalidate()
+			},
+			onError(err) {
+				console.error('eventBus.listen(files:external-storage:change) subscription error', err)
+			},
+		},
+	)
 
 	// Query to fetch all shares
 	const {data: shares, isLoading: isLoadingShares} = trpcReact.files.shares.useQuery(undefined, {

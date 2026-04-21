@@ -139,7 +139,7 @@ export default class App {
 
 	async pull() {
 		const defaultImages = [
-			'getumbrel/app-proxy:1.0.0@sha256:49eb600c4667c4b948055e33171b42a509b7e0894a77e0ca40df8284c77b52fb',
+			'getumbrel/app-proxy:1.7.0@sha256:ec0de0b944a2e63d52fdd82b3760d90a35f8b442d17a8407afdee3af3e842d5a',
 			'getumbrel/tor:0.4.7.8@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a',
 		]
 		const compose = await this.readCompose()
@@ -299,11 +299,16 @@ export default class App {
 		return true
 	}
 
-	async getPids() {
+	async getContainerNames() {
 		const compose = await this.readCompose()
 		const containers = Object.values(compose.services!).map((service) => service.container_name) as string[]
 		containers.push(`${this.id}_app_proxy_1`)
 		containers.push(`${this.id}_tor_server_1`)
+		return containers
+	}
+
+	async getPids() {
+		const containers = await this.getContainerNames()
 		try {
 			// If we fail to get the PIDs of one container, skip it and continue for
 			// the other containers. We'll expect to get it on some misses for the app

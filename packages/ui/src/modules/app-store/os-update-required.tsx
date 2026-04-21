@@ -1,4 +1,4 @@
-import {t} from 'i18next'
+import {useTranslation} from 'react-i18next'
 import {RiArrowUpLine} from 'react-icons/ri'
 import {useNavigate} from 'react-router-dom'
 
@@ -23,6 +23,7 @@ export function OSUpdateRequiredDialog({
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }) {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const version = app.manifestVersion.replace(/\.0$/, '')
 

@@ -1,5 +1,6 @@
 import {Close, DialogDescription} from '@radix-ui/react-dialog'
 import {useMemo, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
@@ -11,7 +12,6 @@ import {useApps, useUserApp} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {installedStates, progressStates, RegistryApp, trpcReact, UserApp} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {SelectDependencies} from '../select-dependencies-dialog'
 
@@ -63,6 +63,7 @@ function AppSettingsDialogForApp({
 	availableApps: RegistryApp[]
 	openDependency?: string
 }) {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('app-settings')
 	const [selectedDependencies, setSelectedDependencies] = useState(app.selectedDependencies)
 	const [hadChanges, setHadChanges] = useState(false)
@@ -164,7 +165,7 @@ function AppSettingsDialogForApp({
 									disabled={!areAllDependenciesInstalled || dependencies.length === 0 || inProgress || !hasChanges}
 									onClick={() => onSubmit()}
 								>
-									{inProgress ? appStateToString(app.state) + '...' : t('app-settings.save-changes')}
+									{inProgress ? appStateToString(app.state, t) + '...' : t('app-settings.save-changes')}
 								</Button>
 							</Close>
 							<Close asChild>

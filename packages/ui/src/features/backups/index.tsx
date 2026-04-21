@@ -1,3 +1,4 @@
+import {useTranslation} from 'react-i18next'
 import {Route, Routes, useNavigate} from 'react-router-dom'
 
 import {FadeInImg} from '@/components/ui/fade-in-img'
@@ -8,7 +9,6 @@ import {BackupsRestoreWizard} from '@/features/backups/components/restore-wizard
 import {BackupsSetupWizard} from '@/features/backups/components/setup-wizard'
 import {useBackups} from '@/features/backups/hooks/use-backups'
 import {EnsureLoggedIn} from '@/modules/auth/ensure-logged-in'
-import {t} from '@/utils/i18n'
 
 function SplitDialog({
 	children,
@@ -43,6 +43,7 @@ function SplitDialog({
 }
 
 function SplitLeftContent({titleKey = 'backup'}: {titleKey?: string}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex flex-col items-center'>
 			<FadeInImg src={backupsIcon} width={67} height={67} alt='' />

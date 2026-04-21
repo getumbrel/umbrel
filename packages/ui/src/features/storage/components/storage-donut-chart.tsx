@@ -1,7 +1,7 @@
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 import {Cell, Label, Pie, PieChart} from 'recharts'
 
-import {t} from '@/utils/i18n'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 
 type StorageDonutChartProps = {
@@ -23,6 +23,7 @@ export function StorageDonutChart({
 	hideCenter,
 	isLoading,
 }: StorageDonutChartProps) {
+	const {t, i18n} = useTranslation()
 	const size = 140
 	const innerRadius = 50
 	const outerRadius = 70
@@ -96,7 +97,7 @@ export function StorageDonutChart({
 	// Custom center label component - uses same formatting as Settings/Live Usage
 	const CenterLabel = ({viewBox}: {viewBox?: {cx?: number; cy?: number}}) => {
 		const {cx = 0, cy = 0} = viewBox || {}
-		const usedDisplay = maybePrettyBytes(usedBytes ?? 0)
+		const usedDisplay = maybePrettyBytes(usedBytes ?? 0, i18n.language)
 		return (
 			<text x={cx} y={cy} textAnchor='middle' dominantBaseline='central'>
 				<tspan x={cx} dy='-0.3em' fill='white' fontSize='16' fontWeight='bold'>

@@ -1,11 +1,12 @@
+import {useTranslation} from 'react-i18next'
 import {useLocation} from 'react-router-dom'
 
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useWallpaper} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 import {cmdOrCtrl, platform} from '@/utils/misc'
 
 export function Search({onClick}: {onClick?: () => void}) {
+	const {t} = useTranslation()
 	const isMobile = useIsSmallMobile()
 	return (
 		<button

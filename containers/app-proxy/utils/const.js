@@ -40,7 +40,7 @@ function cleanHttpPaths(str) {
 }
 
 module.exports = Object.freeze({
-	UMBREL_COOKIE_NAME: "UMBREL_SESSION",
+	UMBREL_COOKIE_NAME: "UMBREL_PROXY_TOKEN",
 
 	LOG_LEVEL: process.env.LOG_LEVEL || "info",
 

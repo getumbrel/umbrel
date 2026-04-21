@@ -1,12 +1,13 @@
 // Modal shown when a backup repository is detected at the selected location but
 // is not yet connected to this Umbrel. Prompts for the encryption password and
 // provides Connect/Cancel actions.
+import {useTranslation} from 'react-i18next'
+
 import {Button} from '@/components/ui/button'
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {FormLabel} from '@/components/ui/form'
 import {PasswordInput} from '@/components/ui/input'
 import backupsIcon from '@/features/backups/assets/backups-icon.png'
-import {t} from '@/utils/i18n'
 
 export function ConnectExistingModal({
 	open,
@@ -24,6 +25,7 @@ export function ConnectExistingModal({
 	onConnect: () => void
 	isConnecting?: boolean
 }) {
+	const {t} = useTranslation()
 	return (
 		<Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
 			<DialogContent className='flex flex-col items-center text-center'>

@@ -1,5 +1,6 @@
 import {DialogPortal} from '@radix-ui/react-dialog'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {
 	TbActivityHeartbeat,
 	TbAlertTriangle,
@@ -20,7 +21,6 @@ import {Spinner} from '@/components/ui/loading'
 import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
 import {useTemperatureUnit} from '@/hooks/use-temperature-unit'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 
 import {AddToRaidDialog} from './components/dialogs/add-to-raid-dialog'
 import {InstallSsdDialog} from './components/dialogs/install-ssd-dialog'
@@ -50,6 +50,7 @@ function StorageStats({
 	failsafeOverheadBytes: number
 	wastedBytes: number
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex w-full flex-col items-center'>
 			{/* Total capacity */}
@@ -111,6 +112,7 @@ function StorageStats({
 const SLOT_INDICES = [0, 1, 2, 3] as const
 
 export default function StorageManagerDialog() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const [temperatureUnit] = useTemperatureUnit()
 

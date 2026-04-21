@@ -1,10 +1,10 @@
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {BareCoverMessage} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {RedirectLogin, RedirectOnboarding} from './redirects'
 
@@ -34,6 +34,7 @@ function EnsureUser({
 	otherwise: React.ReactNode
 	children?: React.ReactNode
 }) {
+	const {t} = useTranslation()
 	const userExistsQ = trpcReact.user.exists.useQuery(undefined, {
 		retry: false,
 	})

@@ -60,7 +60,19 @@ router.post(
       sameSite: "lax",
     });
 
-    res.redirect(redirectTo);
+    // Force redirect target to be same-origin by rebasing onto a placeholder
+    // origin and keeping only path+search+hash — strips any host/protocol
+    // injection (e.g. "https://evil.com", "//evil.com", "javascript:...").
+    // The placeholder origin below is discarded; only path+search+hash are used.
+    let safeRedirect = "/";
+    try {
+      const safeUrl = new URL(redirectTo, "http://umbrel.local");
+      safeRedirect = safeUrl.pathname + safeUrl.search + safeUrl.hash;
+    } catch {
+      safeRedirect = "/";
+    }
+
+    res.redirect(safeRedirect);
   })
 );
 

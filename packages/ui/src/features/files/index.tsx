@@ -1,5 +1,6 @@
 import {lazy, Suspense, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {HiMenuAlt2} from 'react-icons/hi'
 import {Outlet, useLocation} from 'react-router-dom'
 
@@ -16,7 +17,6 @@ import {MobileSidebarWrapper} from '@/features/files/components/sidebar/mobile-s
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {t} from '@/utils/i18n'
 
 const ShareInfoDialog = lazy(() => import('@/features/files/components/dialogs/share-info-dialog'))
 const PermanentlyDeleteConfirmationDialog = lazy(
@@ -29,9 +29,10 @@ const AddNetworkShareDialog = lazy(() => import('@/features/files/components/dia
 const FormatDriveDialog = lazy(() => import('@/features/files/components/dialogs/format-drive-dialog'))
 
 export default function FilesLayout() {
+	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const {setSelectedItems} = useFilesStore()
-
+	const setViewerItem = useFilesStore((state) => state.setViewerItem)
 	const setIsSelectingOnMobile = useFilesStore((state) => state.setIsSelectingOnMobile)
 
 	const isMobile = useIsMobile()
@@ -46,12 +47,15 @@ export default function FilesLayout() {
 		// to set the selected item correctly
 		setSelectedItems([])
 
+		// Close any open file viewer (text editor, image viewer, etc.)
+		setViewerItem(null)
+
 		// set selecting on mobile to false when navigating to a different path
 		setIsSelectingOnMobile(false)
 
 		// Close mobile sidebar on navigation
 		setIsMobileSidebarOpen(false)
-	}, [pathname, setSelectedItems, setIsSelectingOnMobile])
+	}, [pathname, setSelectedItems, setViewerItem, setIsSelectingOnMobile])
 
 	return (
 		<FilesDndWrapper>

@@ -1,11 +1,12 @@
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 
 import {SidebarItem} from '@/features/files/components/sidebar/sidebar-item'
 import {BASE_ROUTE_PATH, RECENTS_PATH} from '@/features/files/constants'
 import {useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {t} from '@/utils/i18n'
 
 export function SidebarRecents() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const {pathname} = useLocation()
 	// We disable (but still show) the recents sidebar item in read-only mode

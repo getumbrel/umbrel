@@ -10,7 +10,9 @@ function kelvinToCelsius(kelvin: number): number {
 	return kelvin - 273
 }
 
-export type NvmeDevice = {
+export type SsdDevice = {
+	type: 'ssd'
+	transport: 'nvme' | 'sata'
 	device: string
 	id?: string
 	pciSlotNumber?: number
@@ -27,7 +29,24 @@ export type NvmeDevice = {
 	smartStatus: 'healthy' | 'unhealthy' | 'unknown'
 }
 
-type NvmeSmartData = {
+export type HddDevice = {
+	type: 'hdd'
+	transport: 'sata'
+	device: string
+	id?: string
+	slot?: number
+	name: string
+	model: string
+	serial: string
+	size: number
+	roundedSize: number
+	temperature?: number
+	smartStatus: 'healthy' | 'unhealthy' | 'unknown'
+}
+
+export type StorageDevice = SsdDevice | HddDevice
+
+type SmartData = {
 	temperature?: number
 	temperatureWarning?: number
 	temperatureCritical?: number
@@ -35,28 +54,45 @@ type NvmeSmartData = {
 	smartStatus: 'healthy' | 'unhealthy' | 'unknown'
 }
 
-// Parse NVMe SMART log and controller identify data for temperature and health
-async function getNvmeSmartData(devicePath: string): Promise<NvmeSmartData> {
+// Get SMART data for any device using smartctl
+async function getSmartData(devicePath: string): Promise<SmartData> {
 	try {
-		// Get SMART log and controller identify data in parallel
-		const [smartLogResult, idCtrlResult] = await Promise.all([
-			$`nvme smart-log ${devicePath} --output-format=json`,
-			$`nvme id-ctrl ${devicePath} --output-format=json`,
-		])
+		// smartctl uses exit code bits as status flags (e.g. bit 2 = SMART attributes failing)
+		// so it can return non-zero even on success. We need to accept any exit code and parse
+		// the JSON output regardless.
+		const {stdout} = await $({reject: false})`smartctl -a ${devicePath} --json`
+		const data = JSON.parse(stdout)
 
-		const smartData = JSON.parse(smartLogResult.stdout)
-		const idCtrlData = JSON.parse(idCtrlResult.stdout)
-
-		// Temperature is reported in Kelvin, convert to Celsius
-		// The field is typically 'temperature' or 'temperature_sensor_1'
+		// Temperature is reported directly in Celsius
 		let temperature: number | undefined
-		if (typeof smartData.temperature === 'number') {
-			temperature = kelvinToCelsius(smartData.temperature)
-		} else if (typeof smartData.temperature_sensor_1 === 'number') {
-			temperature = kelvinToCelsius(smartData.temperature_sensor_1)
+		if (typeof data.temperature?.current === 'number') {
+			temperature = data.temperature.current
 		}
 
-		// Get warning and critical temperature thresholds from controller identify
+		// NVMe drives report percentage_used in their SMART health log
+		let lifetimeUsed: number | undefined
+		if (typeof data.nvme_smart_health_information_log?.percentage_used === 'number') {
+			lifetimeUsed = data.nvme_smart_health_information_log.percentage_used
+		}
+
+		// Overall health assessment
+		const smartStatus = data.smart_status?.passed === false ? 'unhealthy' : 'healthy'
+
+		return {temperature, lifetimeUsed, smartStatus}
+	} catch {
+		return {smartStatus: 'unknown'}
+	}
+}
+
+// Get NVMe warning and critical temperature thresholds from controller identify data
+// These are only available via nvme-cli, smartctl doesn't expose them
+async function getNvmeTemperatureThresholds(
+	devicePath: string,
+): Promise<{temperatureWarning?: number; temperatureCritical?: number}> {
+	try {
+		const {stdout} = await $`nvme id-ctrl ${devicePath} --output-format=json`
+		const idCtrlData = JSON.parse(stdout)
+
 		// wctemp = Warning Composite Temperature Threshold (Kelvin)
 		// cctemp = Critical Composite Temperature Threshold (Kelvin)
 		let temperatureWarning: number | undefined
@@ -68,27 +104,16 @@ async function getNvmeSmartData(devicePath: string): Promise<NvmeSmartData> {
 			temperatureCritical = kelvinToCelsius(idCtrlData.cctemp)
 		}
 
-		// Get percent_used which indicates how much of the drive's rated endurance has been consumed
-		// Values can exceed 100 if the drive has been used beyond its rated endurance
-		let lifetimeUsed: number | undefined
-		if (typeof smartData.percent_used === 'number') {
-			lifetimeUsed = smartData.percent_used
-		}
-
-		// Check critical warning flags for health status
-		// critical_warning is a bitmask: 0 means healthy
-		const smartStatus = smartData.critical_warning === 0 ? 'healthy' : 'unhealthy'
-
-		return {temperature, temperatureWarning, temperatureCritical, lifetimeUsed, smartStatus}
+		return {temperatureWarning, temperatureCritical}
 	} catch {
-		return {smartStatus: 'unknown'}
+		return {}
 	}
 }
 
 // Get the disk/by-id name for a device
 // These paths are more stable than the device name which ddepedns on enumeration order.
 async function getDeviceId(deviceName: string): Promise<string | undefined> {
-	const byIdDir = '/dev/disk/by-id'
+	const byIdDir = '/dev/disk/by-umbrel-id'
 	try {
 		const entries = await fse.readdir(byIdDir)
 		const matchingIds: string[] = []
@@ -110,24 +135,7 @@ async function getDeviceId(deviceName: string): Promise<string | undefined> {
 
 		if (matchingIds.length === 0) return undefined
 
-		// Sort by preference order, then alphabetically for determinism
-		// Preference order for by-id names (lower index = higher preference)
-		// We prefer descriptive names with model/serial over opaque identifiers like eui
-		const preferences = [
-			/^nvme-eui\./,
-			/^nvme-nvme\./,
-			/^nvme-(?!eui\.|nvme\.)/, // nvme- but not nvme-eui. or nvme-nvme.
-		]
-		matchingIds.sort((a, b) => {
-			const aIndex = preferences.findIndex((pattern) => pattern.test(a))
-			const bIndex = preferences.findIndex((pattern) => pattern.test(b))
-			// -1 means no match, treat as lowest priority
-			const aPriority = aIndex === -1 ? preferences.length : aIndex
-			const bPriority = bIndex === -1 ? preferences.length : bIndex
-			if (aPriority !== bPriority) return aPriority - bPriority
-			return a.localeCompare(b)
-		})
-
+		matchingIds.sort((a, b) => a.localeCompare(b))
 		return matchingIds[0]
 	} catch {
 		// Directory might not exist or be readable
@@ -165,8 +173,8 @@ async function getDevicePciSlotNumber(deviceName: string): Promise<number | unde
 	return undefined
 }
 
-// Get all NVMe devices using lsblk and nvme commands
-export async function getNvmeDevices(): Promise<NvmeDevice[]> {
+// Get all internal storage devices using lsblk and nvme commands
+export async function getInternalStorageDevices(): Promise<StorageDevice[]> {
 	type LsBlkDevice = {
 		name: string
 		model?: string
@@ -174,45 +182,77 @@ export async function getNvmeDevices(): Promise<NvmeDevice[]> {
 		size?: number
 		type?: string
 		tran?: string
+		rota?: boolean
 	}
 
-	const {stdout} = await $`lsblk --output NAME,MODEL,SERIAL,SIZE,TYPE,TRAN --json --bytes`
+	const {stdout} = await $`lsblk --output NAME,MODEL,SERIAL,SIZE,TYPE,TRAN,ROTA --json --bytes`
 	const {blockdevices} = JSON.parse(stdout) as {blockdevices: LsBlkDevice[]}
 
-	// Filter to only NVMe disk devices
-	const nvmeBlockDevices = blockdevices.filter((device) => device.type === 'disk' && device.tran === 'nvme')
+	// Filter to internal disk devices by transport protocol
+	const supportedTransports = ['nvme', 'sata']
+	const internalBlockDevices = blockdevices.filter(
+		(device) => device.type === 'disk' && supportedTransports.includes(device.tran ?? ''),
+	)
 
 	// Fetch SMART data, device IDs, and PCIe slot numbers for all devices in parallel
-	const nvmeDevices = await Promise.all(
-		nvmeBlockDevices.map(async (device) => {
+	const devices: StorageDevice[] = await Promise.all(
+		internalBlockDevices.map(async (device): Promise<StorageDevice> => {
 			const devicePath = `/dev/${device.name}`
-			const [smartData, id, pciSlotNumber] = await Promise.all([
-				getNvmeSmartData(devicePath),
-				getDeviceId(device.name).catch(() => undefined),
-				getDevicePciSlotNumber(device.name).catch(() => undefined),
+			const id = await getDeviceId(device.name).catch(() => undefined)
+			const size = device.size ?? 0
+			const isNvme = device.tran === 'nvme'
+			const name = device.model?.trim() ?? (isNvme ? 'Unknown NVMe Device' : 'Unknown SATA Device')
+			const model = device.model?.trim() ?? 'Unknown'
+			const serial = device.serial?.trim() ?? 'Unknown'
+			const roundedSize = getRoundedDeviceSize(size)
+			const [smartData, temperatureThresholds, pciSlotNumber] = await Promise.all([
+				getSmartData(devicePath),
+				isNvme
+					? getNvmeTemperatureThresholds(devicePath)
+					: ({} as {temperatureWarning?: number; temperatureCritical?: number}),
+				isNvme ? getDevicePciSlotNumber(device.name).catch(() => undefined) : undefined,
 			])
 
-			const size = device.size ?? 0
+			const isSsd = isNvme || device.rota === false
+
+			if (isSsd) {
+				return {
+					type: 'ssd' as const,
+					transport: device.tran as 'nvme' | 'sata',
+					device: device.name,
+					id,
+					pciSlotNumber,
+					name,
+					model,
+					serial,
+					size,
+					roundedSize,
+					temperature: smartData.temperature,
+					temperatureWarning: temperatureThresholds.temperatureWarning,
+					temperatureCritical: temperatureThresholds.temperatureCritical,
+					lifetimeUsed: smartData.lifetimeUsed,
+					smartStatus: smartData.smartStatus,
+				}
+			}
+
 			return {
+				type: 'hdd' as const,
+				transport: 'sata' as const,
 				device: device.name,
 				id,
-				pciSlotNumber,
-				name: device.model?.trim() ?? 'Unknown NVMe Device',
-				model: device.model?.trim() ?? 'Unknown',
-				serial: device.serial?.trim() ?? 'Unknown',
+				name,
+				model,
+				serial,
 				size,
-				roundedSize: getRoundedDeviceSize(size),
+				roundedSize,
 				temperature: smartData.temperature,
-				temperatureWarning: smartData.temperatureWarning,
-				temperatureCritical: smartData.temperatureCritical,
-				lifetimeUsed: smartData.lifetimeUsed,
 				smartStatus: smartData.smartStatus,
 			}
 		}),
 	)
 
 	// Sort by id
-	return nvmeDevices.sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))
+	return devices.sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))
 }
 
 export default class InternalStorage {
@@ -233,16 +273,21 @@ export default class InternalStorage {
 		this.logger.log('Stopping internal storage')
 	}
 
-	// Get all NVMe devices with their info
-	async getDevices(): Promise<NvmeDevice[]> {
-		let devices = await getNvmeDevices()
+	// Get all internal storage devices with their info
+	async getDevices(): Promise<StorageDevice[]> {
+		let devices = await getInternalStorageDevices()
 
 		// Attach slot numbers on Umbrel Pro
 		if (await this.#umbreld.hardware.umbrelPro.isUmbrelPro()) {
-			devices = devices.map((device) => ({
-				...device,
-				slot: this.#umbreld.hardware.umbrelPro.getSsdSlotFromPciSlotNumber(device.pciSlotNumber),
-			}))
+			const ssdDevices = devices.filter((device) => device.type === 'ssd')
+			const otherDevices = devices.filter((device) => device.type !== 'ssd')
+			devices = [
+				...ssdDevices.map((device) => ({
+					...device,
+					slot: this.#umbreld.hardware.umbrelPro.getSsdSlotFromPciSlotNumber(device.pciSlotNumber),
+				})),
+				...otherDevices,
+			]
 		}
 
 		// Sort by slot number if all devices have slots

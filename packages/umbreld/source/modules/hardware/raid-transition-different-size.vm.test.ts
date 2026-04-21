@@ -71,13 +71,13 @@ describe('RAID transition with different sized drives', () => {
 	})
 
 	test('rejects transition to smaller device', async () => {
-		await expect(umbreld.client.hardware.raid.transitionToFailsafe.mutate({device: smallDeviceId})).rejects.toThrow(
-			'Cannot transition to a device smaller than the current device',
-		)
+		await expect(
+			umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: smallDeviceId}),
+		).rejects.toThrow('Cannot transition to a device smaller than the current device')
 	})
 
 	test('transitions to failsafe mode with larger device', async () => {
-		await umbreld.client.hardware.raid.transitionToFailsafe.mutate({device: largeDeviceId})
+		await umbreld.client.hardware.raid.transitionToFailsafeRaidz.mutate({newDeviceId: largeDeviceId})
 	})
 
 	test('waits for VM to come back up after transition', async () => {

@@ -1,4 +1,5 @@
 import {ReactNode, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
@@ -10,11 +11,11 @@ import {toast} from '@/components/ui/toast'
 import {useQueryParams} from '@/hooks/use-query-params'
 import {cn} from '@/lib/utils'
 import {useWallpaperCssVars, WallpaperId, wallpaperIds} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 
 type Step = 'password' | '2fa'
 
 export default function LoginWithUmbrel() {
+	const {t} = useTranslation()
 	const [password, setPassword] = useState('')
 	const [step, setStep] = useState<Step>('password')
 
@@ -186,6 +187,7 @@ function useWallpaperId() {
 }
 
 function LoginWithLayout({children}: {children: ReactNode}) {
+	const {t} = useTranslation()
 	const params = useQueryParams<{app: string; path: string; host: string}>()
 	const app = useApp(params.object.app)
 	const wallpaperId = useWallpaperId()
@@ -195,7 +197,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 	return (
 		<>
 			<FadeInImg
-				src={`/wallpapers/generated-thumbs/${wallpaperId}.jpg`}
+				src={`/assets/wallpapers/generated-thumbs/${wallpaperId}.jpg`}
 				className='pointer-events-none fixed inset-0 h-full w-full scale-125 object-cover object-center blur-[var(--wallpaper-blur)] duration-1000'
 			/>
 			<div className='fixed inset-0 bg-black/50 contrast-more:bg-black' />
@@ -209,7 +211,7 @@ function LoginWithLayout({children}: {children: ReactNode}) {
 						)}
 					>
 						<div className='flex h-0 -translate-y-[56px] gap-5'>
-							<AppIcon src='/figma-exports/umbrel-ios.png' size={56} className='rounded-12' />
+							<AppIcon src='/assets/umbrel-ios.png' size={56} className='rounded-12' />
 							<AppIcon src={app.icon} size={56} className='rounded-12 bg-neutral-600' />
 						</div>
 						<div className='flex flex-col gap-1'>

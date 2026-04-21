@@ -70,6 +70,9 @@ export function SheetLayout() {
 			{/* Keep Sheet mounted but closed when on fullscreen route */}
 			<Sheet open={open && !isFullscreenRoute} onOpenChange={setOpen} modal={false}>
 				<SheetStickyHeaderProvider scrollRef={scrollRef}>
+					{/* NOTE: If you change these width/max-width values, also update the
+					   text editor width in features/files/components/file-viewer/text-viewer/index.tsx
+					   which derives its sizing from these same breakpoints. */}
 					<SheetContent
 						side='bottom-zoom'
 						className='mx-auto h-[calc(100dvh-var(--sheet-top))] max-w-[1320px] md:w-[calc(100vw-25px-25px)] lg:h-[calc(100dvh-60px)] lg:w-[calc(100vw-60px-60px)]'

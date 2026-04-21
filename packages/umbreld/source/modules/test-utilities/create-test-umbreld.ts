@@ -4,7 +4,6 @@ import {createTRPCProxyClient, httpBatchLink, createWSClient, wsLink, splitLink}
 import got from 'got'
 import {CookieJar} from 'tough-cookie'
 import {$} from 'execa'
-import fse from 'fs-extra'
 import getPort from 'get-port'
 import pRetry from 'p-retry'
 import pWaitFor from 'p-wait-for'
@@ -70,8 +69,16 @@ function createTestHelpers(port: number) {
 	const cookieJar = new CookieJar()
 	const api = unauthenticatedApi.extend({cookieJar})
 
-	async function signup({raidDevices, raidType}: {raidDevices?: string[]; raidType?: 'storage' | 'failsafe'} = {}) {
-		await unauthenticatedClient.user.register.mutate({...userCredentials, raidDevices, raidType})
+	async function signup({
+		raidDevices,
+		raidType,
+		acceleratorDevices,
+	}: {
+		raidDevices?: string[]
+		raidType?: 'storage' | 'failsafe'
+		acceleratorDevices?: string[]
+	} = {}) {
+		await unauthenticatedClient.user.register.mutate({...userCredentials, raidDevices, raidType, acceleratorDevices})
 	}
 
 	async function login() {
@@ -197,15 +204,8 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 	}
 }
 
-export async function createTestVm() {
+export async function createTestVm({device}: {device?: string} = {}) {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
-	const vmImagePath = path.resolve(currentDirectory, '../../../../os/build/umbrelos-amd64.img')
-
-	if (!(await fse.pathExists(vmImagePath))) {
-		throw new Error(
-			'No umbrelos image found. Build one with `npm run build:amd64` in packages/os or specify the image path.',
-		)
-	}
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
 	await directory.createRoot()
@@ -234,10 +234,11 @@ export async function createTestVm() {
 		let vmOutput = ''
 		let vmExited = false
 
+		const deviceArgs = device ? ['--device', device] : []
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${vmImagePath} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${deviceArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits
@@ -314,6 +315,26 @@ export async function createTestVm() {
 		await $({env})`${vmScript} nvme destroy ${slot}`
 	}
 
+	async function addSata({slot, type, size}: {slot: number; type: 'hdd' | 'ssd'; size?: string}) {
+		if (size) {
+			await $({env})`${vmScript} sata add ${slot} --size ${size} --type ${type}`
+		} else {
+			await $({env})`${vmScript} sata add ${slot} --type ${type}`
+		}
+	}
+
+	async function addHdd({slot, size}: {slot: number; size?: string}) {
+		await addSata({slot, type: 'hdd', size})
+	}
+
+	async function addSataSsd({slot, size}: {slot: number; size?: string}) {
+		await addSata({slot, type: 'ssd', size})
+	}
+
+	async function removeHdd({slot}: {slot: number}) {
+		await $({env})`${vmScript} sata destroy ${slot}`
+	}
+
 	async function disconnectNvme({slot}: {slot: number}) {
 		await $({env})`${vmScript} nvme disconnect ${slot}`
 	}
@@ -357,6 +378,9 @@ export async function createTestVm() {
 		disconnectNvme,
 		connectNvme,
 		moveNvme,
+		addHdd,
+		addSataSsd,
+		removeHdd,
 		reflash,
 		async ssh(command: string) {
 			const attemptSsh = (password: string) =>

@@ -1,11 +1,11 @@
 import {useRef, useState, type RefObject} from 'react'
+import {useTranslation} from 'react-i18next'
 import {MdContentCopy} from 'react-icons/md'
 import {useCopyToClipboard} from 'react-use'
 import {useIsFocused} from 'use-is-focused'
 
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip'
 import {cn} from '@/lib/utils'
-import {t} from '@/utils/i18n'
 import {sleep} from '@/utils/misc'
 
 export function CopyableField({
@@ -19,6 +19,7 @@ export function CopyableField({
 	isPassword?: boolean
 	narrow?: boolean
 }) {
+	const {t} = useTranslation()
 	const ref = useRef<HTMLInputElement>(null)
 	const [, copyToClipboard] = useCopyToClipboard()
 	const [showCopied, setShowCopied] = useState(false)

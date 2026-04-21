@@ -1,5 +1,6 @@
 import React, {Suspense, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {Route, Routes, useLocation} from 'react-router-dom'
 import {keys} from 'remeda'
 import {arrayIncludes} from 'ts-extras'
@@ -14,7 +15,6 @@ import {useQueryParams} from '@/hooks/use-query-params'
 import {TwoFactorDialog} from '@/routes/settings/2fa'
 import AdvancedSettingsDrawerOrDialog from '@/routes/settings/advanced'
 import {SoftwareUpdateConfirmDialog} from '@/routes/settings/software-update-confirm'
-import {t} from '@/utils/i18n'
 import {IS_ANDROID} from '@/utils/misc'
 
 // Routes that should bypass the Sheet and render fullscreen with their own backdrop
@@ -110,6 +110,7 @@ function QueryStringDialog() {
 }
 
 export function Settings() {
+	const {t} = useTranslation()
 	const title = t('settings')
 	const location = useLocation()
 	const isMobile = useIsMobile() && !IS_ANDROID
@@ -166,6 +167,7 @@ export function Settings() {
 }
 
 export function CoverTest() {
+	const {t} = useTranslation()
 	const [showCover, setShowCover] = useState(false)
 
 	return (

@@ -2,6 +2,7 @@ import {DialogPortal} from '@radix-ui/react-dialog'
 import {motion} from 'motion/react'
 import {ReactNode, useEffect, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useLocation, useNavigate} from 'react-router-dom'
 import {Area, AreaChart, ResponsiveContainer, XAxis, YAxis} from 'recharts'
 
@@ -23,12 +24,12 @@ import {useMemoryForUi, useSystemMemoryForUi} from '@/hooks/use-memory'
 import {cn} from '@/lib/utils'
 import {AppT, systemAppsKeyed, useApps} from '@/providers/apps'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 import {maybePrettyBytes} from '@/utils/pretty-bytes'
 import {tw} from '@/utils/tw'
 
 export default function LiveUsageDialog() {
+	const {t} = useTranslation()
 	const title = t('live-usage')
 	const dialogProps = useDialogOpenProps('live-usage')
 
@@ -50,6 +51,7 @@ export default function LiveUsageDialog() {
 type SelectedTab = 'storage' | 'memory' | 'cpu'
 
 function LiveUsageContent() {
+	const {t} = useTranslation()
 	const {search} = useLocation()
 	const navigate = useNavigate()
 	const queryParams = new URLSearchParams(search)
@@ -153,6 +155,7 @@ function LiveUsageContent() {
 // ---
 
 function StorageSection() {
+	const {t, i18n} = useTranslation()
 	const {isLoading, value, valueSub, secondaryValue, progress, isDiskLow, isDiskFull, apps} = useDiskForUi({
 		poll: true,
 	})
@@ -174,12 +177,13 @@ function StorageSection() {
 				/>
 			</div>
 			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system, systemAppsKeyed.UMBREL_files]} />}
-			<AppList apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
+			<AppList apps={apps} formatValue={(v) => maybePrettyBytes(v, i18n.language)} />
 		</>
 	)
 }
 
 function MemorySection() {
+	const {t, i18n} = useTranslation()
 	const {isLoading, value, valueSub, secondaryValue, progress, isMemoryLow, apps} = useMemoryForUi({poll: true})
 
 	return (
@@ -194,12 +198,13 @@ function MemorySection() {
 				/>
 			</div>
 			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system]} />}
-			<AppList apps={apps} formatValue={(v) => maybePrettyBytes(v)} />
+			<AppList apps={apps} formatValue={(v) => maybePrettyBytes(v, i18n.language)} />
 		</>
 	)
 }
 
 function CpuSection() {
+	const {i18n} = useTranslation()
 	const {isLoading, value, secondaryValue, progress, apps} = useCpuForUi({poll: true})
 
 	return (
@@ -208,7 +213,7 @@ function CpuSection() {
 				<UsageCard value={value} progressLabel={secondaryValue} progress={progress} />
 			</div>
 			{isLoading && <AppListSkeleton systemApps={[systemAppsKeyed.UMBREL_system]} />}
-			<AppList apps={apps} formatValue={(n) => formatNumberI18n({n}) + '%'} />
+			<AppList apps={apps} formatValue={(n) => formatNumberI18n({n, locale: i18n.language}) + '%'} />
 		</>
 	)
 }
@@ -317,6 +322,7 @@ function ErrorMessage({children}: {children?: ReactNode}) {
 // --
 
 function AppList({apps, formatValue}: {apps?: {id: string; used: number}[]; formatValue: (value: number) => string}) {
+	const {t} = useTranslation()
 	const {userAppsKeyed} = useApps()
 
 	if (userAppsKeyed === undefined) return null

@@ -1,15 +1,18 @@
+import {useTranslation} from 'react-i18next'
+
 import UmbrelLogo from '@/components/umbrel-logo'
 import {cn} from '@/lib/utils'
 import {greetingMessage} from '@/modules/desktop/greeting-message'
 
 export function Header({userName}: {userName: string}) {
+	const {t} = useTranslation()
 	const name = userName
 	// Always rendering the entire component to avoid layout thrashing
 	return (
 		<div className={cn('relative z-10', name ? '' : 'invisible')}>
 			<div className='flex flex-col items-center gap-3 px-4 md:gap-4'>
 				<UmbrelLogo className='w-[73px] md:w-auto' />
-				<h1 className='text-center text-19 font-bold md:text-5xl'>{greetingMessage(name)}</h1>
+				<h1 className='text-center text-19 font-bold md:text-5xl'>{greetingMessage(name, t)}</h1>
 			</div>
 		</div>
 	)

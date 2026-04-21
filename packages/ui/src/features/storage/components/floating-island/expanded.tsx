@@ -1,12 +1,13 @@
 import {motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {type RaidProgress} from '@/features/storage/hooks/use-raid-progress'
-import {t} from '@/utils/i18n'
 
 import {DataStreamIcon} from './data-stream-icon'
 import {raidOperationLabels} from './index'
 
 export function ExpandedContent({operation}: {operation: RaidProgress}) {
+	const {t} = useTranslation()
 	const label = t(raidOperationLabels[operation.type])
 	const isRebooting = operation.state === 'rebooting'
 

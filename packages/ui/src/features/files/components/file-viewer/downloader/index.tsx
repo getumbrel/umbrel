@@ -1,21 +1,24 @@
-import {useEffect} from 'react'
+import {useEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiFile2Fill} from 'react-icons/ri'
 
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {useConfirmation} from '@/providers/confirmation'
-import {t} from '@/utils/i18n'
 
 export default function DownloadDialog() {
+	const {t} = useTranslation()
 	const viewerItem = useFilesStore((s) => s.viewerItem)
 	const setViewerItem = useFilesStore((s) => s.setViewerItem)
 	const {downloadSelectedItems} = useFilesOperations()
 	const confirm = useConfirmation()
+	const hasShown = useRef(false)
 
 	useEffect(() => {
-		const showConfirmation = async () => {
-			if (!viewerItem) return
+		if (!viewerItem || hasShown.current) return
+		hasShown.current = true
 
+		const showConfirmation = async () => {
 			try {
 				await confirm({
 					title: t('files-download.title', {name: viewerItem.name}),

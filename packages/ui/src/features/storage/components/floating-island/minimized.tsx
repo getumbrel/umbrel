@@ -1,11 +1,13 @@
+import {useTranslation} from 'react-i18next'
+
 import {type RaidProgress} from '@/features/storage/hooks/use-raid-progress'
-import {t} from '@/utils/i18n'
 
 import {DataStreamIconMini} from './data-stream-icon'
 import {raidOperationLabels} from './index'
 
 // No restart countdown here - island is force-expanded when rebooting (see index.tsx)
 export function MinimizedContent({operation}: {operation: RaidProgress}) {
+	const {t} = useTranslation()
 	const label = t(raidOperationLabels[operation.type])
 	const isActive = operation.state !== 'finished' && operation.state !== 'complete' && operation.state !== 'canceled'
 

@@ -1,4 +1,5 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Link, useLocation} from 'react-router-dom'
 
 import {AppIcon} from '@/components/app-icon'
@@ -8,10 +9,10 @@ import {cn} from '@/lib/utils'
 import {DockSpacer} from '@/modules/desktop/dock'
 import {useAvailableApps} from '@/providers/available-apps'
 import {RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function InstallFirstApp() {
+	const {t} = useTranslation()
 	const {pathname} = useLocation()
 	const isHome = pathname === '/'
 
@@ -44,6 +45,7 @@ export function InstallFirstApp() {
 }
 
 function Cards() {
+	const {t} = useTranslation()
 	const {appsKeyed, isLoading} = useAvailableApps()
 
 	if (isLoading) {
@@ -78,6 +80,7 @@ function Cards() {
 }
 
 function CardsSkeleton() {
+	const {t} = useTranslation()
 	return (
 		<>
 			<div className={cardClass}>

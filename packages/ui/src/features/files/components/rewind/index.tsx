@@ -1,6 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import {MotionConfig} from 'motion/react'
 import {useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiCloseLine} from 'react-icons/ri'
 import {useSearchParams} from 'react-router-dom'
 
@@ -32,11 +33,11 @@ import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLanguage} from '@/hooks/use-language'
 import {cn} from '@/lib/utils'
 import {useWallpaper} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 
 import {groupRestoreByDestination} from './restore-grouping'
 
 export function SidebarRewind() {
+	const {t} = useTranslation()
 	const {setRepoOpen} = useRewindOverlay()
 
 	return (
@@ -57,6 +58,7 @@ export function SidebarRewind() {
 }
 
 export function RewindOverlay() {
+	const {t} = useTranslation()
 	const isMobile = useIsMobile()
 	const explorerContainerRef = useRef<HTMLDivElement | null>(null)
 	const explorerScale = 0.8

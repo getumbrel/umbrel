@@ -1,5 +1,6 @@
 ARG DEBIAN_VERSION=trixie
-ARG SNAPSHOT_DATE=20251229
+ARG SNAPSHOT_DATE=20260202
+ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
 ARG DOCKER_INSTALL_SCRIPT_COMMIT=5c8855edd778525564500337f5ac4ad65a0c168e
@@ -42,39 +43,45 @@ RUN npm run build
 
 
 #########################################################################
-# umbrelos-base-amd64 build stage
+# umbrelos-base build stage (amd64 and generic arm64)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-amd64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base
 
 ARG SNAPSHOT_DATE
+ARG TARGETARCH
 
 COPY packages/os/build-steps /build-steps
 
 RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
 
-# Install Linux kernel, non-free firmware and ZFS.
+# Install Linux kernel, firmware, and ZFS
 RUN apt-get install --yes \
     zfs-dkms \
     zfsutils-linux \
-    linux-headers-amd64 \
-    linux-image-amd64 \
-    intel-microcode \
-    amd64-microcode \
-    firmware-linux \
-    firmware-realtek \
-    firmware-iwlwifi \
-    firmware-atheros
+    linux-headers-${TARGETARCH} \
+    linux-image-${TARGETARCH} \
+    firmware-linux
+
+# Install amd64-specific microcode and firmware
+RUN if [ "${TARGETARCH}" = "amd64" ]; then \
+    apt-get install --yes \
+        intel-microcode \
+        amd64-microcode \
+        firmware-realtek \
+        firmware-iwlwifi \
+        firmware-atheros; \
+    fi
 
 # Cleanup build steps.
 RUN rm -rf /build-steps
 
 
 #########################################################################
-# umbrelos-base-arm64 build stage
+# umbrelos-base-pi build stage (Raspberry Pi)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-arm64
+FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-pi
 
 ARG SNAPSHOT_DATE
 
@@ -87,17 +94,18 @@ RUN /build-steps/setup-raspberrypi.sh
 # Cleanup build steps.
 RUN rm -rf /build-steps
 
+# Copy Pi-specific filesystem overlay
+COPY packages/os/overlay-pi /
+
 
 #########################################################################
 # umbrelos build stage
 #########################################################################
 
-ARG TARGETARCH
-
 # TODO: Instead of using the debian:trixie image as a base we should
 # build a fresh rootfs from scratch. We can use the same tool the Docker
 # images use for reproducible Debian builds: https://github.com/debuerreotype/debuerreotype
-FROM umbrelos-base-${TARGETARCH} AS umbrelos
+FROM umbrelos-base${BASE_VARIANT} AS umbrelos
 
 # We need to duplicate this such that we can also use the argument below.
 ARG TARGETARCH
@@ -133,7 +141,7 @@ RUN apt-get install --yes sudo nano vim less man iproute2 iputils-ping curl wget
 
 # Install umbreld dependencies
 # (many of these can be remove after the apps refactor)
-RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli pciutils
+RUN apt-get install --yes python3 fswatch jq rsync git gettext-base gnupg procps dmidecode unar imagemagick ffmpeg samba wsdd2 cifs-utils smbclient nvme-cli smartmontools pciutils
 
 # Disable automatically starting smbd and wsdd2 at boot so umbreld can initialize them only when they're needed
 RUN systemctl disable smbd wsdd2
@@ -184,7 +192,7 @@ RUN usermod -aG sudo umbrel
 RUN sudo apt-get install --yes skopeo
 RUN mkdir -p /images
 RUN skopeo copy docker://getumbrel/tor@sha256:2ace83f22501f58857fa9b403009f595137fa2e7986c4fda79d82a8119072b6a docker-archive:/images/tor
-RUN skopeo copy docker://getumbrel/auth-server@sha256:b4a4b37896911a85fb74fa159e010129abd9dff751a40ef82f724ae066db3c2a docker-archive:/images/auth
+RUN skopeo copy docker://getumbrel/auth-server@sha256:7fc9d52d4176639e84044b63aa07efcac78a508a05bb4480436be9db977a7191 docker-archive:/images/auth
 
 # Install umbreld
 COPY packages/umbreld /opt/umbreld
@@ -195,8 +203,12 @@ RUN npm clean-install --omit dev && npm link
 WORKDIR /
 
 # Copy in filesystem overlay
-COPY packages/os/overlay-common /
-COPY "packages/os/overlay-${TARGETARCH}" /
+COPY packages/os/overlay /
+
+# Rebuild initramfs after overlay changes so custom udev rules are available
+# during early boot coldplug and /dev/disk/by-umbrel-id exists before the
+# mount script runs.
+RUN update-initramfs -u
 
 # Move persistant locations to /data to be bind mounted over the OS.
 # /data will exist on a seperate partition that survives OS updates.
