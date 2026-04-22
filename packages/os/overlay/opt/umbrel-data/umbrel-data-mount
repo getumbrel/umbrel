@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-exec > >(tee /run/umbrel-mount) 2>&1
+exec >/run/umbrel-mount 2>&1
 
 CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
 CONFIG_FILE="$CONFIG_PARTITION/umbrel.yaml"
