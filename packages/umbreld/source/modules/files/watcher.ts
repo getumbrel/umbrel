@@ -1,4 +1,5 @@
 import nodePath from 'node:path'
+import nodeFs from 'node:fs'
 
 import watcher from '@parcel/watcher'
 import fse from 'fs-extra'
@@ -31,6 +32,9 @@ const HEALTH_CHECK_TIMEOUT_MS = 30 * 1000 // 30 seconds
 // The virtual path we write the sentinel file to (must be a watched path)
 const HEALTH_CHECK_PATH = '/Home'
 const SENTINEL_FILENAME = '.umbrel-watcher-health-check'
+const SENTINEL_WRITE_FLAGS =
+	nodeFs.constants.O_WRONLY | nodeFs.constants.O_CREAT | nodeFs.constants.O_TRUNC | nodeFs.constants.O_NOFOLLOW
+const SENTINEL_WRITE_MODE = 0o600
 
 export default class Watcher {
 	#umbreld: Umbreld
@@ -125,8 +129,8 @@ export default class Watcher {
 				timeoutId = setTimeout(() => removeListener(), HEALTH_CHECK_TIMEOUT_MS)
 			})
 
-			// Write the sentinel file
-			await fse.writeFile(sentinelPath, Date.now().toString())
+			// Write the sentinel file without following symlinks
+			await this.#writeSentinelFile(sentinelPath)
 
 			// Race the event against the timeout
 			const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), HEALTH_CHECK_TIMEOUT_MS))
@@ -144,6 +148,15 @@ export default class Watcher {
 		} finally {
 			// Clean up the sentinel file so it's not visible via Samba or SSH
 			await fse.remove(sentinelPath).catch(() => {})
+		}
+	}
+
+	async #writeSentinelFile(sentinelPath: string) {
+		const file = await nodeFs.promises.open(sentinelPath, SENTINEL_WRITE_FLAGS, SENTINEL_WRITE_MODE)
+		try {
+			await file.writeFile(Date.now().toString())
+		} finally {
+			await file.close()
 		}
 	}
 
