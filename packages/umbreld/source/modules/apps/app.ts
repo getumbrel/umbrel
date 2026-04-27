@@ -313,9 +313,18 @@ export default class App {
 			// If we fail to get the PIDs of one container, skip it and continue for
 			// the other containers. We'll expect to get it on some misses for the app
 			// proxy and tor server containers.
-			const cmd = containers.map((container) => `docker top ${container} -o pid 2>/dev/null || true`).join('\n')
-			const {stdout} = await $({shell: true})`${cmd}`
-			return stdout
+			const outputs = await Promise.all(
+				containers.map(async (container) => {
+					try {
+						const {stdout} = await $`docker top ${container} -o pid`
+						return stdout
+					} catch {
+						return ''
+					}
+				}),
+			)
+			return outputs
+				.join('\n')
 				.split('\n') // Split on newline
 				.map((line) => line.trim()) // Trim whitespace
 				.filter((line) => /^([1-9][0-9]*|0)$/.test(line)) // Keep only integers
