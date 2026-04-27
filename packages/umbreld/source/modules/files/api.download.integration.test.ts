@@ -123,6 +123,8 @@ test('GET /api/files/download downloads a file with a valid cookie', async () =>
 	expect(response.statusCode).toBe(200)
 	expect(response.body).toBe('contents')
 	expect(response.headers['content-disposition']).toBe(`attachment; filename*=UTF-8''file.txt`)
+	expect(response.headers['content-type']).toBe('application/octet-stream')
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
 })
 
 test('GET /api/files/download downloads a file with special characters in name', async () => {
@@ -139,6 +141,8 @@ test('GET /api/files/download downloads a file with special characters in name',
 	expect(response.statusCode).toBe(200)
 	expect(response.body).toBe('special contents')
 	expect(response.headers['content-disposition']).toBe(`attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`)
+	expect(response.headers['content-type']).toBe('application/octet-stream')
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
 })
 
 test('GET /api/files/download creates a zip archive for multiple files', async () => {

@@ -94,7 +94,104 @@ test('GET /api/files/view serves a file with a valid cookie', async () => {
 	// Assert the response is correct
 	expect(response.statusCode).toBe(200)
 	expect(response.body).toBe('contents')
+	expect(response.headers['content-security-policy']).toBe(
+		"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+	)
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
+	expect(response.headers['content-type']).toBe('text/plain')
+	expect(response.headers['content-disposition']).toBeUndefined()
 	// View doesn't set Content-Disposition header as it's for viewing, not downloading
+})
+
+test('GET /api/files/view forces HTML files to download', async () => {
+	// Create an HTML file
+	await fse.writeFile(`${umbreld.instance.dataDirectory}/home/poc.html`, '<script>alert("xss")</script>')
+
+	// View the file
+	const response = await umbreld.api.get('files/view?path=/Home/poc.html', {
+		responseType: 'text',
+	})
+
+	// Assert the response is forced to download rather than render inline
+	expect(response.statusCode).toBe(200)
+	expect(response.body).toBe('<script>alert("xss")</script>')
+	expect(response.headers['content-security-policy']).toBe(
+		"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+	)
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
+	expect(response.headers['content-type']).toBe('application/octet-stream')
+	expect(response.headers['content-disposition']).toBe("attachment; filename*=UTF-8''poc.html")
+})
+
+test('GET /api/files/view forces SVG files to download', async () => {
+	// Create an SVG file
+	await fse.writeFile(
+		`${umbreld.instance.dataDirectory}/home/poc.svg`,
+		'<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>',
+	)
+
+	// View the file
+	const response = await umbreld.api.get('files/view?path=/Home/poc.svg', {
+		responseType: 'text',
+	})
+
+	// Assert the response is forced to download rather than render inline
+	expect(response.statusCode).toBe(200)
+	expect(response.body).toBe('<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>')
+	expect(response.headers['content-security-policy']).toBe(
+		"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+	)
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
+	expect(response.headers['content-type']).toBe('application/octet-stream')
+	expect(response.headers['content-disposition']).toBe("attachment; filename*=UTF-8''poc.svg")
+})
+
+test('GET /api/files/view serves SVG files inline for image embeds', async () => {
+	// Create an SVG file
+	await fse.writeFile(
+		`${umbreld.instance.dataDirectory}/home/poc.svg`,
+		'<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>',
+	)
+
+	// View the file as an embedded image
+	const response = await umbreld.api.get('files/view?path=/Home/poc.svg', {
+		responseType: 'text',
+		headers: {'Sec-Fetch-Dest': 'image'},
+	})
+
+	// Assert the response can render in an <img>, with CSP and nosniff still applied
+	expect(response.statusCode).toBe(200)
+	expect(response.body).toBe('<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>')
+	expect(response.headers['content-security-policy']).toBe(
+		"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+	)
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
+	expect(response.headers['content-type']).toBe('image/svg+xml')
+	expect(response.headers['content-disposition']).toBeUndefined()
+})
+
+test('GET /api/files/view serves SVG files inline for image accepts without fetch metadata', async () => {
+	// Create an SVG file
+	await fse.writeFile(
+		`${umbreld.instance.dataDirectory}/home/poc.svg`,
+		'<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>',
+	)
+
+	// View the file as an embedded image from browsers that don't send Sec-Fetch-Dest on local HTTP origins
+	const response = await umbreld.api.get('files/view?path=/Home/poc.svg', {
+		responseType: 'text',
+		headers: {Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'},
+	})
+
+	// Assert the response can render in an <img>, with CSP and nosniff still applied
+	expect(response.statusCode).toBe(200)
+	expect(response.body).toBe('<svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>')
+	expect(response.headers['content-security-policy']).toBe(
+		"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+	)
+	expect(response.headers['x-content-type-options']).toBe('nosniff')
+	expect(response.headers['content-type']).toBe('image/svg+xml')
+	expect(response.headers['content-disposition']).toBeUndefined()
 })
 
 test('GET /api/files/view handles files with special characters in name', async () => {
