@@ -17,39 +17,38 @@ import {useDialogOpenProps} from '@/utils/dialog'
 
 // Versions and features are hardcoded and we should update them on every release
 
-const VERSION = 'umbrelOS 1.5'
+const VERSION = 'umbrelOS 1.7'
 
 const FEATURES = [
 	{
 		id: 1,
-		video: '/assets/whats-new/backups.webm',
-		titleTKey: 'backups',
-		descriptionTKey: 'whats-new.feature-1.description',
+		video: '/assets/whats-new/shortcuts.webm',
+		titleTKey: 'whats-new-umbrelos-1-7.shortcuts-heading',
+		descriptionTKey: 'whats-new-umbrelos-1-7.shortcuts-description',
 	},
 	{
 		id: 2,
-		video: '/assets/whats-new/rewind.webm',
-		titleTKey: 'rewind',
-		descriptionTKey: 'whats-new.feature-2.description',
+		video: '/assets/whats-new/text-editor.webm',
+		titleTKey: 'whats-new-umbrelos-1-7.text-editor-heading',
+		descriptionTKey: 'whats-new-umbrelos-1-7.text-editor-description',
 	},
 	{
 		id: 3,
-		video: '/assets/whats-new/restore.webm',
-		titleTKey: 'backups-restore',
-		descriptionTKey: 'whats-new.feature-3.description',
+		video: '/assets/whats-new/network-settings.webm',
+		titleTKey: 'whats-new-umbrelos-1-7.advanced-networking-heading',
+		descriptionTKey: 'whats-new-umbrelos-1-7.advanced-networking-description',
 	},
 	{
 		id: 4,
-		video: '/assets/whats-new/network-devices.webm',
-		titleTKey: 'whats-new.feature-4.title',
-		descriptionTKey: 'whats-new.feature-4.description',
+		video: '/assets/whats-new/file-sharing.webm',
+		titleTKey: 'whats-new-umbrelos-1-7.file-sharing-heading',
+		descriptionTKey: 'whats-new-umbrelos-1-7.file-sharing-description',
 	},
 	{
 		id: 5,
-		video: '/assets/whats-new/external-storage.webm',
-		titleTKey: 'whats-new.feature-5.title',
-		descriptionTKey: 'whats-new.feature-5.description',
-		helperTextTKey: 'whats-new.feature-5.helper-text',
+		video: '/assets/whats-new/new-languages.webm',
+		titleTKey: 'whats-new-umbrelos-1-7.more-languages-heading',
+		descriptionTKey: 'whats-new-umbrelos-1-7.more-languages-description',
 	},
 ]
 
@@ -266,9 +265,9 @@ export function WhatsNewModal() {
 									{t(FEATURES[currentIndex].titleTKey)}
 								</h3>
 								<p className='text-base leading-tight text-white/70'>{t(FEATURES[currentIndex].descriptionTKey)}</p>
-								{FEATURES[currentIndex].helperTextTKey && (
+								{/* {FEATURES[currentIndex].helperTextTKey && (
 									<p className='text-xs leading-tight text-white/70'>{t(FEATURES[currentIndex].helperTextTKey)}</p>
-								)}
+								)} */}
 							</div>
 						</div>
 					</div>
