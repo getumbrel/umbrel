@@ -1,7 +1,4 @@
-// TODO: Re-enable Trans and Link when whats-new content is updated
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Trans, useTranslation} from 'react-i18next'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -20,7 +17,6 @@ export function SoftwareUpdateDrawer() {
 	const dialogProps = useSettingsDialogProps()
 
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const linkToDialog = useLinkToDialog()
 
 	return (
@@ -35,15 +31,15 @@ export function SoftwareUpdateDrawer() {
 					<div className='mb-4' />
 					<p className='text-12 -tracking-2 opacity-50'>{t('software-update.current-running')}</p>
 					<p className='text-15 -tracking-4'>{currentVersion?.name || `umbrelOS ${LOADING_DASH}`}</p>
-					{/* TODO: Re-enable when whats-new content is updated */}
-					{/* <p className='text-12 -tracking-2 opacity-50'>
-						<Trans t={t}
+					<p className='text-12 -tracking-2 opacity-50'>
+						<Trans
+							t={t}
 							i18nKey='software-update.see-whats-new'
 							components={{
 								linked: <Link to={linkToDialog('whats-new')} className='underline' />,
 							}}
 						/>
-					</p> */}
+					</p>
 					{/* Make it look like a button, but non-interactive */}
 				</div>
 				<DrawerFooter>

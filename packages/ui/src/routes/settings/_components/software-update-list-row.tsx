@@ -1,8 +1,5 @@
-// TODO: Re-enable Trans and Link when whats-new content is updated
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Trans, useTranslation} from 'react-i18next'
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshLine} from 'react-icons/ri'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {Link} from 'react-router-dom'
 
 import {Button} from '@/components/ui/button'
@@ -17,7 +14,6 @@ import {ListRow} from './list-row'
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 	const {t} = useTranslation()
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const linkToDialog = useLinkToDialog()
 
 	if (state === 'update-available') {
@@ -49,14 +45,14 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 						<>
 							<Icon component={RiCheckboxCircleFill} className='text-success' />
 							{t('software-update.on-latest')}
-							{/* TODO: Re-enable when whats-new content is updated */}
-							{/* {' · '}
-							<Trans t={t}
+							{' · '}
+							<Trans
+								t={t}
 								i18nKey='software-update.see-whats-new'
 								components={{
 									linked: <Link to={linkToDialog('whats-new')} className='underline' />,
 								}}
-							/> */}
+							/>
 						</>
 					) : (
 						<>

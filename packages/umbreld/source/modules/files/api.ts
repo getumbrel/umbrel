@@ -3,8 +3,60 @@ import {pipeline} from 'node:stream/promises'
 
 import express from 'express'
 import fse from 'fs-extra'
+import mime from 'mime-types'
 
 import type {ApiOptions} from '../server/index.js'
+
+// Only allow file types that are safe to preview inline from a same-origin user-controlled endpoint.
+const inlineViewMimeTypes = new Set([
+	'text/plain',
+	'application/pdf',
+	'image/avif',
+	'image/bmp',
+	'image/gif',
+	'image/jpeg',
+	'image/png',
+	'image/vnd.microsoft.icon',
+	'image/webp',
+	'audio/aac',
+	'audio/aacp',
+	'audio/flac',
+	'audio/mp4',
+	'audio/mpeg',
+	'audio/ogg',
+	'audio/wav',
+	'audio/webm',
+	'audio/x-caf',
+	'audio/x-flac',
+	'audio/x-m4a',
+	'audio/x-wav',
+	'video/mp4',
+	'video/mpeg',
+	'video/ogg',
+	'video/quicktime',
+	'video/webm',
+	'video/x-m4v',
+])
+
+const embedOnlyInlineViewMimeTypes = new Set([
+	// SVG is safe to render as an image, but unsafe as a same-origin document.
+	'image/svg+xml',
+])
+
+function acceptsEmbeddedSvg(request: express.Request) {
+	const fetchDest = request.get('Sec-Fetch-Dest')
+	if (fetchDest) return fetchDest === 'image'
+
+	const acceptHeader = request.get('Accept') ?? ''
+	const acceptedMimeTypes = acceptHeader
+		.split(',')
+		.map((type) => type.split(';')[0]?.trim().toLowerCase())
+		.filter(Boolean)
+	const explicitlyAcceptsSvg = acceptedMimeTypes.includes('image/svg+xml') || acceptedMimeTypes.includes('image/*')
+	const acceptsDocument = acceptedMimeTypes.includes('text/html') || acceptedMimeTypes.includes('application/xhtml+xml')
+
+	return explicitlyAcceptsSvg && !acceptsDocument
+}
 
 export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 	// Serve thumbnails from the thumbnails directory
@@ -54,6 +106,8 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 		if (files.length === 1 && (await fse.stat(files[0])).isFile()) {
 			const filename = nodePath.basename(files[0])
 			response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+			response.setHeader('Content-Type', 'application/octet-stream')
+			response.setHeader('X-Content-Type-Options', 'nosniff')
 			return response.sendFile(files[0], {dotfiles: 'allow'})
 		}
 
@@ -83,6 +137,25 @@ export default function api({publicApi, privateApi, umbreld}: ApiOptions) {
 			const systemPath = await umbreld.files.virtualToSystemPath(request.query.path)
 			const status = await umbreld.files.status(systemPath)
 			if (status.type === 'directory') return response.status(400).json({error: 'cannot view a directory'})
+			// Files are user-controlled but served same-origin, so only low-risk preview types render inline.
+			// All others download, with CSP sandbox and nosniff as defense-in-depth if a browser renders anyway.
+			response.setHeader(
+				'Content-Security-Policy',
+				"sandbox; default-src 'none'; script-src 'none'; object-src 'none'; base-uri 'none'",
+			)
+			response.setHeader('X-Content-Type-Options', 'nosniff')
+			const mimeType = mime.lookup(systemPath)
+			const isImageEmbed = acceptsEmbeddedSvg(request)
+			if (
+				mimeType &&
+				(inlineViewMimeTypes.has(mimeType) || (isImageEmbed && embedOnlyInlineViewMimeTypes.has(mimeType)))
+			) {
+				response.setHeader('Content-Type', mimeType)
+			} else {
+				const filename = nodePath.basename(systemPath)
+				response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+				response.setHeader('Content-Type', 'application/octet-stream')
+			}
 			response.sendFile(systemPath, {dotfiles: 'allow'})
 		} catch (error) {
 			return response.status(404).json({error: 'not found'})
