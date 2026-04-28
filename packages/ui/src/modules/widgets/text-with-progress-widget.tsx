@@ -1,7 +1,8 @@
+import {useTranslation} from 'react-i18next'
+
+import {Progress} from '@/components/ui/progress'
 import {LOADING_DASH} from '@/constants'
 import {TextWithProgressWidgetProps} from '@/modules/widgets/shared/constants'
-import {Progress} from '@/shadcn-components/ui/progress'
-import {t} from '@/utils/i18n'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 import {StatText} from './shared/stat-text'
@@ -17,6 +18,7 @@ export function TextWithProgressWidget({
 }: TextWithProgressWidgetProps & {
 	onClick?: (link?: string) => void
 }) {
+	const {t} = useTranslation()
 	return (
 		<WidgetContainer className='p-2 sm:p-5' onClick={() => onClick?.(link)}>
 			<StatText title={title ?? LOADING_DASH} value={text} valueSub={subtext} />

@@ -1,24 +1,13 @@
 import {zodResolver} from '@hookform/resolvers/zod'
-import {AnimatePresence, motion} from 'framer-motion'
 import {Check, ChevronDown, ChevronUp, Loader, Loader2, RotateCcw} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import {startTransition, useEffect, useState} from 'react'
 import {useForm, useFormContext} from 'react-hook-form'
+import {useTranslation} from 'react-i18next'
 import {z} from 'zod'
 
-import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
-import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
-import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
-import {useIsMobile} from '@/hooks/use-is-mobile'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {
 	Drawer,
 	DrawerContent,
@@ -26,28 +15,17 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/shadcn-components/ui/form'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/drawer'
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form'
+import {Input, PasswordInput} from '@/components/ui/input'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
+import {AddManuallyCard, ServerCard} from '@/features/files/components/cards/server-cards'
+import {FolderIcon} from '@/features/files/components/shared/file-item-icon/folder-icon'
+import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
+import {useIsMobile} from '@/hooks/use-is-mobile'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
-
-// Validation schemas
-// Step‑agnostic schema where `share` is optional so early steps validate.
-// TODO: update zod messages
-const stepSchema = z.object({
-	host: z.string().min(1, {message: t('files-add-network-share.host-required')}),
-	share: z.string().optional(),
-	username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
-	password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
-})
-
-// Final submission schema where `share` must be present.
-const submitSchema = stepSchema.extend({
-	share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
-})
 
 // Form steps
 enum Step {
@@ -75,6 +53,19 @@ export default function AddNetworkShareDialog(props?: {
 	suppressNavigateOnAdd?: boolean
 	onAdded?: (host?: string) => void
 }) {
+	const {t} = useTranslation()
+
+	// Validation schemas inside the component so t() evaluates with the current language
+	const stepSchema = z.object({
+		host: z.string().min(1, {message: t('files-add-network-share.host-required')}),
+		share: z.string().optional(),
+		username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
+		password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
+	})
+	const submitSchema = stepSchema.extend({
+		share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
+	})
+
 	const internalDialog = useDialogOpenProps('files-add-network-share')
 	const dialogProps = {
 		open: props?.open ?? internalDialog.open,
@@ -295,7 +286,7 @@ export default function AddNetworkShareDialog(props?: {
 	)
 
 	const body = (
-		<div className='flex-1 overflow-y-auto overflow-x-hidden'>
+		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
 			<AnimatePresence mode='wait'>
 				{mode === 'wizard' ? (
 					<Form {...form}>
@@ -447,6 +438,7 @@ function DiscoverStep({
 	onManual: () => void
 	onRetry: () => void
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-4 py-2'>
 			<AddManuallyCard onClick={onManual} label={t('files-add-network-share.add-manually')} />
@@ -500,6 +492,7 @@ function DiscoverStep({
 }
 
 function CredentialsStep() {
+	const {t} = useTranslation()
 	const form = useFormContext()
 	return (
 		<div className='space-y-4 py-2'>
@@ -553,6 +546,7 @@ function SelectShareStep({
 	onSelect: (s: string) => void
 	disabled?: boolean
 }) {
+	const {t} = useTranslation()
 	const [manualValue, setManualValue] = useState('')
 	const [showManualEntry, setShowManualEntry] = useState(false)
 
@@ -590,7 +584,7 @@ function SelectShareStep({
 										key={s}
 										onClick={disabled ? undefined : () => onSelect(s)}
 										className={cn(
-											'flex h-[50px] cursor-pointer items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
+											'flex h-[50px] items-center gap-2 px-3 text-15 font-medium -tracking-3 transition-colors',
 											selectedShare === s ? 'text-white' : 'hover:bg-white/5',
 											disabled && 'cursor-not-allowed opacity-50',
 										)}

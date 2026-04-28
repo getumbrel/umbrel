@@ -1,18 +1,19 @@
 import {useQueryClient} from '@tanstack/react-query'
 import {createContext, ReactNode, useContext, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {JSONTree} from 'react-json-tree'
 import {usePreviousDistinct} from 'react-use'
 
 import {BareCoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {DebugOnlyBare} from '@/components/ui/debug-only'
-import {useLocalStorage2} from '@/hooks/use-local-storage2'
+import {toast} from '@/components/ui/toast'
+import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
 import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
 import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
 import {RouterError, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
 import {ResettingCover, useReset} from './reset'
@@ -29,17 +30,23 @@ const GlobalSystemStateContext = createContext<{
 	reset: (password: string) => void
 	getError(): RouterError | null
 	clearError(): void
+	// We call this before triggering a custom restart flow (e.g., RAID setup) to prevent error boundary from showing when requests fail.
+	// Unlike the normal restart flow, this does NOT trigger logout-on-running behavior.
+	suppressErrors: () => void
 } | null>(null)
 
 export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
+	const {t} = useTranslation()
 	const jwt = useJwt()
 	const [triggered, setTriggered] = useState(false)
 	const [failure, setFailure] = useState(false)
 	const [restoreFailure, setRestoreFailure] = useState(false)
-	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = useLocalStorage2('should-logout-on-running', false)
+	const [shouldLogoutOnRunning, setShouldLogoutOnRunning] = usePrefixedLocalStorage('should-logout-on-running', false)
 	const [startShutdownTimer, setStartShutdownTimer] = useState(false)
 	const [shutdownComplete, setShutdownComplete] = useState(false)
 	const [routerError, setRouterError] = useState<RouterError | null>(null)
+	// Separate flag for suppressing errors without triggering logout-on-running (e.g., RAID setup)
+	const [errorsSuppressedOnly, setErrorsSuppressedOnly] = useState(false)
 
 	// Start over fresh when any of the supported actions is triggered
 	const onMutate = async () => {
@@ -52,15 +59,25 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		setRouterError(null)
 	}
 
-	// Intercept router errors so the triggering component can handle them,
-	// for example when the confirmation password of a factory reset is invalid
-	// and the router returns an 'UNAUTHORIZED' response.
+	// Intercept router errors so the triggering component can handle them.
+	// Password errors (UNAUTHORIZED) are shown in the form field.
+	// System errors (e.g., factory reset failed) are shown as toasts.
 	const onError = async (error: RouterError) => {
-		setRouterError(error)
+		if (error?.data?.code === 'UNAUTHORIZED') {
+			setRouterError(error)
+		} else {
+			toast.error(t('factory-reset-failed', {message: error.message}))
+		}
 		setTriggered(false)
+
+		// Prevent logout/redirect when error occurs
+		setShouldLogoutOnRunning(false)
 	}
 	const getError = () => routerError
 	const clearError = () => setRouterError(null)
+	// Allow external code to suppress errors (e.g., RAID setup doing its own restart flow)
+	// This sets a separate flag so it doesn't trigger logout-on-running behavior
+	const suppressErrors = () => setErrorsSuppressedOnly(true)
 
 	const queryClient = useQueryClient()
 	const utils = trpcReact.useUtils()
@@ -83,16 +100,28 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	const shutdown = useShutdown({onMutate, onSuccess})
 	const update = useUpdate({onMutate, onSuccess})
 	const migrate = useMigrate({onMutate, onSuccess})
-	const reset = useReset({onMutate, onSuccess, onError})
+	const reset = useReset({onMutate, onError})
 
-	// Force swift and fresh status updates when an action is in progress
+	// During triggered actions (device reboots, updates, etc.) we poll at 500ms
+	// with no retry so the UI detects the backend coming back ASAP: requests fail
+	// instantly (ECONNREFUSED) while the device is down, then the first success
+	// triggers the post-restart redirect. Without fast polling the user would stare
+	// at the cover for up to 10s after the device is already ready.
+	// During normal operation we allow retries to absorb transient network blips
+	// (idle tab, brief disconnection, device sleep/wake) instead of immediately
+	// throwing into the root error boundary.
 	const systemStatusQ = trpcReact.system.status.useQuery(undefined, {
 		refetchInterval: triggered ? 500 : 10 * MS_PER_SECOND,
 		gcTime: 0,
+		retry: (failureCount) => {
+			if (triggered) return false
+			return failureCount < 3
+		},
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
 	})
 
 	if (!IS_DEV) {
-		if (systemStatusQ.error && !triggered) {
+		if (systemStatusQ.error && !triggered && !errorsSuppressedOnly) {
 			// This error should get caught by a parent error boundary component
 			// TODO: figure out what to do about network errors
 			// TODO: Do we need this production-only case at all?
@@ -138,8 +167,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 			setTimeout(() => {
 				queryClient.cancelQueries() // prevent auth errors
 				jwt.removeJwt()
-				const targetPage = prevStatus === 'resetting' ? '/factory-reset/success' : '/'
-				location.href = targetPage
+				location.href = '/'
 			}, 500)
 			return
 		}
@@ -184,7 +212,7 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 	// Debug info can be activated by adding the local storage key 'debug' with a value of `true`
 	const debugInfo = (
 		<DebugOnlyBare>
-			<div className='fixed bottom-0 right-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
+			<div className='fixed right-0 bottom-0 origin-bottom-right scale-50' style={{zIndex: 1000}}>
 				<JSONTree
 					data={{
 						status,
@@ -219,10 +247,12 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case undefined:
 		case 'running': {
 			return (
-				<GlobalSystemStateContext.Provider value={{shutdown, restart, update, migrate, reset, getError, clearError}}>
+				<GlobalSystemStateContext
+					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
+				>
 					{children}
 					{debugInfo}
-				</GlobalSystemStateContext.Provider>
+				</GlobalSystemStateContext>
 			)
 		}
 		case 'restoring': {

@@ -2,7 +2,7 @@ import * as ProgressPrimitive from '@radix-ui/react-progress'
 import {ReactNode} from 'react'
 import {isNil} from 'remeda'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 export function Progress({value, children}: {value?: number; children?: ReactNode}) {
 	return (
@@ -18,7 +18,7 @@ export function Progress({value, children}: {value?: number; children?: ReactNod
 					style={{transform: `translateX(-${100 - (value || 0)}%)`}}
 				/>
 			</ProgressPrimitive.Root>
-			{children && <span className='text-15 font-medium leading-none -tracking-2 opacity-80'>{children}</span>}
+			{children && <span className='text-15 leading-none font-medium -tracking-2 opacity-80'>{children}</span>}
 		</div>
 	)
 }

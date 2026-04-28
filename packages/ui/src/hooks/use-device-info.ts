@@ -1,5 +1,5 @@
 import {hostEnvironmentMap, LOADING_DASH, UmbrelHostEnvironment, UNKNOWN} from '@/constants'
-import {RouterOutput, trpcReact} from '@/trpc/trpc'
+import {trpcReact} from '@/trpc/trpc'
 
 type UiHostInfo = {
 	icon?: string
@@ -26,7 +26,7 @@ type DeviceInfoT =
 
 export function useDeviceInfo(): DeviceInfoT {
 	const osQ = trpcReact.system.version.useQuery()
-	const deviceInfoQ = trpcReact.system.device.useQuery()
+	const deviceInfoQ = trpcReact.systemNg.device.getIdentity.useQuery()
 
 	const isLoading = osQ.isLoading || deviceInfoQ.isLoading
 	if (isLoading) {
@@ -68,11 +68,13 @@ export function useDeviceInfo(): DeviceInfoT {
 	}
 }
 
-type DeviceInfo = RouterOutput['system']['device']
-
-function deviceInfoToHostEnvironment(deviceInfo?: DeviceInfo): UmbrelHostEnvironment | undefined {
+export function deviceInfoToHostEnvironment(deviceInfo?: {productName: string}): UmbrelHostEnvironment | undefined {
 	if (!deviceInfo) {
 		return undefined
+	}
+
+	if (deviceInfo.productName.toLowerCase().includes('umbrel pro')) {
+		return 'umbrel-pro'
 	}
 
 	if (deviceInfo.productName.toLowerCase().includes('umbrel home')) {

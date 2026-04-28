@@ -17,6 +17,14 @@ export default class User {
 		this.#umbreld = umbreld
 	}
 
+	async start() {
+		this.logger.log('Starting user')
+	}
+
+	async stop() {
+		this.logger.log('Stopping user')
+	}
+
 	// Get the user object from the store
 	async get() {
 		return this.#store.get('user')
@@ -30,7 +38,10 @@ export default class User {
 
 	// Set the users name
 	async setName(name: string) {
-		return this.#store.set('user.name', name)
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.name', name)
+		}
+		return await this.#store.set('user.name', name)
 	}
 
 	// Set the users wallpaper
@@ -90,6 +101,9 @@ export default class User {
 
 	// Directly sets the hashed password value (only exposed for data migration)
 	async setHashedPassword(hashedPassword: string) {
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.hashedPassword', hashedPassword)
+		}
 		return this.#store.set('user.hashedPassword', hashedPassword)
 	}
 
@@ -142,6 +156,9 @@ export default class User {
 
 	// Set language preference
 	async setLanguage(language: string) {
+		if (await this.#umbreld.hardware.raid.hasConfigStore()) {
+			await this.#umbreld.hardware.raid.configStore.set('user.language', language)
+		}
 		return this.#store.set('user.language', language)
 	}
 

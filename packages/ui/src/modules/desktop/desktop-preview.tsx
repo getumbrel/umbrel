@@ -1,11 +1,12 @@
 import {useEffect, useState} from 'react'
 
+import {FadeInImg} from '@/components/ui/fade-in-img'
 import {useWidgets} from '@/hooks/use-widgets'
-import {Widget} from '@/modules/widgets'
+import {LoadingWidget} from '@/modules/widgets'
 import {BackdropBlurVariantContext} from '@/modules/widgets/shared/backdrop-blur-context'
 import {WidgetWrapper} from '@/modules/widgets/shared/widget-wrapper'
 import {useApps} from '@/providers/apps'
-import {Wallpaper} from '@/providers/wallpaper'
+import {useWallpaper} from '@/providers/wallpaper'
 import {trpcReact} from '@/trpc/trpc'
 
 import {AppGrid} from './app-grid/app-grid'
@@ -13,37 +14,51 @@ import {AppIcon} from './app-icon'
 import {DockPreview} from './dock'
 import {Header} from './header'
 
-export function DesktopPreview() {
+/**
+ * Miniature desktop preview shown in Settings.
+ *
+ * Renders the real desktop components (Header, AppGrid, AppIcon, DockPreview,
+ * WidgetWrapper) so the preview stays in sync with the actual desktop layout
+ * without maintaining a parallel implementation. The expensive part — live
+ * widget data — is avoided by using <LoadingWidget> (renders the correct
+ * widget type with placeholder dashes, zero API calls or iframes).
+ *
+ * Structure (bottom → top):
+ *   1. Wallpaper — small pre-generated jpg, updates instantly on wallpaper change
+ *   2. Content  — real components laid out at 1440×850, then scale3d(0.18) to ~259×153
+ *   3. Dock     — DockPreview with fixed "preview" dimensions (viewport-independent)
+ *
+ * Note: On narrow viewports, responsive Tailwind classes (sm:/md:) still respond
+ * to the viewport rather than the 1440px container, so some widget/icon styling
+ * may differ slightly from the true desktop appearance. This is acceptable at
+ * the tiny preview size (~259×153px).
+ */
+export function DesktopPreviewConnected() {
 	const W = 1440
 	const H = 850
 	const scale = 0.18
 
-	// Delay mounting for performace
+	const wallpaper = useWallpaper()
+
+	// Defer mounting so the Settings page paints first, then show the preview
+	// on the next frame. No fade-in animation — backdrop-filter on widgets can't
+	// be smoothly faded (browsers skip compositing it at opacity 0, causing a
+	// flash when it kicks in). A clean pop-in looks fine at this tiny preview size.
 	const [show, setShow] = useState(false)
 	useEffect(() => {
-		const id = setTimeout(() => {
-			setShow(true)
-		}, 300)
-
-		return () => {
-			clearTimeout(id)
-		}
+		const id = requestAnimationFrame(() => setShow(true))
+		return () => cancelAnimationFrame(id)
 	}, [])
 
 	return (
-		<div
-			className='relative overflow-hidden rounded-5 duration-100 animate-in'
-			style={{
-				width: W * scale,
-				height: H * scale,
-				transform: `translateZ(0)`, // Force rounded border clipping in Safari
-			}}
-			// Tell screen readers to ignore this element
-			aria-hidden='true'
-			// Prevent browser from interacting with children
-			ref={(node) => node && node.setAttribute('inert', '')}
-		>
-			<Wallpaper isPreview />
+		<>
+			{/* Small wallpaper image — avoids loading the full-res Wallpaper component */}
+			<FadeInImg
+				key={wallpaper.wallpaper.id}
+				src={`/assets/wallpapers/generated-small/${wallpaper.wallpaper.id}.jpg`}
+				className='absolute inset-0 h-full w-full object-cover object-center'
+				style={{animation: 'animate-unblur 0.7s'}}
+			/>
 			<div
 				className='shrink-0 origin-top-left'
 				style={{
@@ -52,18 +67,27 @@ export function DesktopPreview() {
 			>
 				<div
 					className='relative'
-					style={{
-						width: W,
-						height: H,
-					}}
+					style={
+						{
+							width: W,
+							height: H,
+							// Desktop ("M" breakpoint) CSS custom properties so descendants
+							// using var(--app-w) etc. get desktop values regardless of viewport.
+							'--app-w': '120px',
+							'--app-h': '110px',
+							'--app-x-gap': '30px',
+							'--app-y-gap': '12px',
+							'--apps-padding-x': '32px',
+							'--widget-h': '150px',
+							'--widget-w': '270px',
+							'--widget-labeled-h': '176px',
+							'--apps-max-w': '934px',
+						} as React.CSSProperties
+					}
 				>
 					{show && (
-						<div
-							className={
-								'flex h-full flex-col items-center justify-between overflow-hidden duration-300 animate-in fade-in'
-							}
-						>
-							<DesktopContent />
+						<div className='flex h-full flex-col items-center justify-between overflow-hidden'>
+							<DesktopPreviewContent />
 							<div className='pb-5'>
 								<DockPreview />
 							</div>
@@ -71,11 +95,13 @@ export function DesktopPreview() {
 					)}
 				</div>
 			</div>
-		</div>
+		</>
 	)
 }
 
-function DesktopContent() {
+/** Real desktop content using actual components but with LoadingWidget instead of
+ *  live Widget to avoid tRPC queries and cross-origin iframes. */
+function DesktopPreviewContent() {
 	const {userApps, isLoading} = useApps()
 	const {selected} = useWidgets()
 	const getQuery = trpcReact.user.get.useQuery()
@@ -86,27 +112,30 @@ function DesktopContent() {
 	if (!name) return null
 
 	return (
-		<BackdropBlurVariantContext.Provider value='default'>
+		<BackdropBlurVariantContext value='with-backdrop-blur'>
+			{/* <BackdropBlurVariantContext value='default'> */}
 			<div className='pt-12' />
 			<Header userName={name} />
 			<div className='pt-12' />
 			<div className='flex w-full flex-grow overflow-hidden'>
 				<AppGrid
 					onlyFirstPage
+					forceDesktop
 					widgets={selected?.map((widget) => (
 						<WidgetWrapper key={widget.id} label={widget.app.name}>
-							<Widget appId={widget.app.id} config={widget} />
+							<LoadingWidget type={widget.type} />
 						</WidgetWrapper>
 					))}
 					apps={userApps.map((app) => (
-						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={() => alert(app.name)} />
+						<AppIcon key={app.id} src={app.icon} label={app.name} onClick={() => {}} />
 					))}
 				/>
 			</div>
-		</BackdropBlurVariantContext.Provider>
+		</BackdropBlurVariantContext>
 	)
 }
 
+/** Decorative frame (border + shadow) that wraps the preview at its final scaled size. */
 export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 	const W = 1440
 	const H = 850
@@ -124,7 +153,7 @@ export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 		>
 			<div className='rounded-15 bg-[#0C0D0C] p-[9px]'>
 				<div
-					className='relative overflow-hidden rounded-5 duration-100 animate-in fade-in'
+					className='relative animate-in overflow-hidden rounded-5 duration-100 fade-in'
 					style={{
 						width: W * scale,
 						height: H * scale,
@@ -133,7 +162,9 @@ export function DesktopPreviewFrame({children}: {children: React.ReactNode}) {
 					// Tell screen readers to ignore this element
 					aria-hidden='true'
 					// Prevent browser from interacting with children
-					ref={(node) => node && node.setAttribute('inert', '')}
+					ref={(node) => {
+						if (node) node.setAttribute('inert', '')
+					}}
 				>
 					{children}
 				</div>

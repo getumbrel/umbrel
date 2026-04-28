@@ -1,15 +1,16 @@
 import {Pencil} from 'lucide-react'
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
+import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/components/ui/context-menu'
 import {PathBarDesktop} from '@/features/files/components/listing/actions-bar/path-bar/path-bar-desktop'
 import {PathBarMobile} from '@/features/files/components/listing/actions-bar/path-bar/path-bar-mobile'
 import {PathInput} from '@/features/files/components/listing/actions-bar/path-bar/path-input'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger} from '@/shadcn-components/ui/context-menu'
-import {t} from '@/utils/i18n'
 
 export function PathBar() {
+	const {t} = useTranslation()
 	const {uiPath} = useNavigate()
 	const [isEditing, setIsEditing] = useState(false)
 	const isMobile = useIsMobile()

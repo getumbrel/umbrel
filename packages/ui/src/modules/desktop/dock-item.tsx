@@ -1,9 +1,9 @@
-import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'framer-motion'
+import {HTMLMotionProps, motion, MotionValue, SpringOptions, useSpring, useTransform, Variants} from 'motion/react'
 import {useEffect, useRef, useState} from 'react'
 import {Link, LinkProps} from 'react-router-dom'
 
 import {NotificationBadge} from '@/components/ui/notification-badge'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 type HTMLDivProps = HTMLMotionProps<'div'>
 type DockItemProps = {
@@ -106,15 +106,20 @@ export function DockItem({
 					scale: transform,
 					...style,
 				}}
-				onClick={(e) => {
-					setClickedOpen(true)
-					onClick?.(e)
-				}}
 				{...props}
 				variants={variants}
 				animate={variant}
 			>
-				<Link to={to || '/'} className='absolute inset-0 outline-none' unstable_viewTransition />
+				<Link
+					to={to || '/'}
+					className='absolute inset-0 outline-hidden'
+					onClick={(e) => {
+						setClickedOpen(true)
+						if (onClick) {
+							onClick(e)
+						}
+					}}
+				/>
 				{!!notificationCount && <NotificationBadge count={notificationCount} />}
 			</motion.div>
 			{open && <OpenPill />}

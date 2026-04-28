@@ -1,10 +1,10 @@
+import {useTranslation} from 'react-i18next'
 import {TbAlertCircle} from 'react-icons/tb'
 import {isString} from 'remeda'
 
 import {Spinner} from '@/components/ui/loading'
 import {LockIcon, WifiIcon2Circled} from '@/modules/wifi/icon'
 import {WifiNetwork, WifiStatusUi} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {signalToBars} from '@/utils/wifi'
 
 export function WifiListItemContent({
@@ -16,11 +16,12 @@ export function WifiListItemContent({
 	status?: WifiStatusUi
 	error?: string
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex w-full items-center gap-2.5'>
 			<WifiIcon2Circled bars={signalToBars(network.signal)} isConnected={status === 'connected'} />
 			<div className='flex flex-1 items-center gap-2 truncate'>
-				<h3 className='truncate text-15 font-medium leading-none -tracking-2'>{network.ssid}</h3>
+				<h3 className='truncate text-15 leading-none font-medium -tracking-2'>{network.ssid}</h3>
 				{network.authenticated && <LockIcon />}
 			</div>
 			{status === 'loading' && <Spinner />}

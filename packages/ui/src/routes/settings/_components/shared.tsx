@@ -1,14 +1,13 @@
 import {useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {RiAlarmWarningFill} from 'react-icons/ri'
 import {Link, useNavigate} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
 import {links} from '@/constants/links'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {afterDelayedClose} from '@/utils/dialog'
 import {linkClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export const cardTitleClass = tw`text-12 font-semibold leading-tight truncate -tracking-2 text-white/40`
@@ -19,9 +18,11 @@ export const cardSecondaryValueClass = cn(cardSecondaryValueBaseClass, tw`trunca
 export const cardErrorClass = cn(cardSecondaryValueBaseClass, tw`animate-pulse leading-snug text-destructive2-lightest`)
 
 export function ContactSupportLink({className}: {className?: string}) {
+	const {t} = useTranslation()
 	return (
 		<p className={cn('mx-auto text-12 font-normal text-white/70', className)}>
 			<Trans
+				t={t}
 				i18nKey='settings.contact-support'
 				components={{
 					linked: <Link to={links.support} className={linkClass} target='_blank' />,
@@ -32,6 +33,7 @@ export function ContactSupportLink({className}: {className?: string}) {
 }
 
 export function ChangePasswordWarning() {
+	const {t} = useTranslation()
 	return <ErrorAlert icon={RiAlarmWarningFill} description={t('change-password.callout')} />
 }
 

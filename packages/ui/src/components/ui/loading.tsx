@@ -1,8 +1,8 @@
+import {useTranslation} from 'react-i18next'
 import {TbLoader} from 'react-icons/tb'
 
-import {t} from '@/utils/i18n'
-
 export function Loading({children}: {children?: React.ReactNode}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex items-center gap-1'>
 			<Spinner />
@@ -12,9 +12,10 @@ export function Loading({children}: {children?: React.ReactNode}) {
 }
 
 export function Loading2({children}: {children?: React.ReactNode}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex items-center gap-1'>
-			<TbLoader className='white size-4 animate-spin opacity-50 shadow-sm' />
+			<TbLoader className='white size-4 animate-spin opacity-50 shadow-xs' />
 			{children ?? t('loading')}
 		</div>
 	)

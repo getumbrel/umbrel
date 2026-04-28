@@ -1,9 +1,10 @@
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
+import {toast} from '@/components/ui/toast'
 import {useApps} from '@/providers/apps'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {appToUrl, appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
 
 /**
@@ -27,6 +28,7 @@ import {appToUrl, appToUrlWithAppPath, isOnionPage, urlJoin} from '@/utils/misc'
  * - If an app has been uninstalled, but the UI still shows it (maybe because some queries haven't been invalidated), we want to let the user know they can't open the app because it's be uninstalled?
  */
 export function useLaunchApp() {
+	const {t} = useTranslation()
 	const userApp = useApps()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
@@ -59,8 +61,7 @@ export function useLaunchApp() {
 				if (isOnionPage()) {
 					open(options?.path)
 				} else {
-					// return linkToDialog('tor-error', {id: appId})
-					alert(t('app-only-over-tor', {app: app.name}))
+					toast.warning(t('app-only-over-tor', {app: app.name}))
 				}
 			} else {
 				open(options?.path)

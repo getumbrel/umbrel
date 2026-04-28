@@ -1,18 +1,19 @@
 import {AlertOctagon, CheckCircle2} from 'lucide-react'
+import {useTranslation} from 'react-i18next'
 
 import {Alert, ErrorAlert, WarningAlert} from '@/components/ui/alert'
+import {Dialog, DialogContent, DialogDescription, DialogTitle} from '@/components/ui/dialog'
+import {ScrollArea} from '@/components/ui/scroll-area'
 import {RewindIcon} from '@/features/files/assets/rewind-icon'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
 import {OperationsInProgress, useGlobalFiles} from '@/providers/global-files'
-import {Dialog, DialogContent, DialogDescription, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {t} from '@/utils/i18n'
 import {formatNumberI18n} from '@/utils/number'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
 export function RestoreProgressDialog({open, phase}: {open: boolean; phase: 'idle' | 'running' | 'success' | 'error'}) {
+	const {t} = useTranslation()
 	const {operations} = useGlobalFiles()
 
 	// Filter restore operations (copies from /Backups/), and sort them so that items with higher progress appear first
@@ -39,8 +40,8 @@ export function RestoreProgressDialog({open, phase}: {open: boolean; phase: 'idl
 												{t('rewind.restoring')}
 												<span className='ml-0'>
 													<span className='animate-pulse [animation-delay:0ms] [animation-duration:1.4s]'>.</span>
-													<span className='animate-pulse [animation-duration:1.4s] [animation-delay:200ms]'>.</span>
-													<span className='animate-pulse [animation-duration:1.4s] [animation-delay:400ms]'>.</span>
+													<span className='animate-pulse [animation-delay:200ms] [animation-duration:1.4s]'>.</span>
+													<span className='animate-pulse [animation-delay:400ms] [animation-duration:1.4s]'>.</span>
 												</span>
 											</span>
 										)}
@@ -94,18 +95,22 @@ function RestoringItems({
 	speed: number
 	operations: OperationsInProgress
 }) {
+	const {t, i18n} = useTranslation()
 	return (
 		<div className='flex h-full w-full flex-col overflow-hidden py-3'>
 			<div className='mb-4 flex items-center justify-between'>
 				<span className='text-xs text-white/60'>
-					{t('files-listing.item-count', {formattedCount: formatNumberI18n({n: count, showDecimals: false}), count})}{' '}
+					{t('files-listing.item-count', {
+						formattedCount: formatNumberI18n({n: count, showDecimals: false, locale: i18n.language}),
+						count,
+					})}{' '}
 					&bull; {progress}%
 				</span>
 				<span className='text-xs text-white/60'>{formatFilesystemSize(speed)}/s</span>
 			</div>
 
 			<ScrollArea className='flex-1 pb-2'>
-				<div className='max-h-[200px]  space-y-3'>
+				<div className='max-h-[200px] space-y-3'>
 					{operations.map((operation) => {
 						const parts = operation.destinationPath.split('/')
 						const destinationFolderName = parts.length >= 2 ? parts[parts.length - 2] : parts[0]
@@ -120,7 +125,7 @@ function RestoringItems({
 								</div>
 								<div className='min-w-0 flex-1'>
 									<div className='mb-1 flex items-center justify-between gap-2'>
-										<span className='block max-w-[16rem] whitespace-nowrap text-xs text-white/90'>
+										<span className='block max-w-[16rem] text-xs whitespace-nowrap text-white/90'>
 											<span className='text-white/60'>
 												{t('files-operations-island.restoring', {
 													from: formatItemName({name: operation.file.name, maxLength: 12}),
@@ -134,7 +139,7 @@ function RestoringItems({
 									</div>
 									<div className='relative h-1 overflow-hidden rounded-full bg-white/20'>
 										<div
-											className='transition-w absolute left-0 top-0 h-full rounded-full bg-brand duration-300'
+											className='transition-w absolute top-0 left-0 h-full rounded-full bg-brand duration-300'
 											style={{width: `${operation.percent}%`}}
 										/>
 									</div>

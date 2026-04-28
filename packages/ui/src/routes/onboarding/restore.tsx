@@ -1,8 +1,11 @@
 import {ChevronLeft, Loader2} from 'lucide-react'
 import {useMemo, useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
+import {Link} from 'react-router-dom'
 
 import {FadeScroller} from '@/components/fade-scroller'
+import {Button} from '@/components/ui/button'
+import {Input, PasswordInput} from '@/components/ui/input'
 import {RestoreLocationDropdown} from '@/features/backups/components/restore-location-dropdown'
 import {
 	useConnectToRepository,
@@ -14,16 +17,96 @@ import {BACKUP_FILE_NAME, getRepositoryPathFromBackupFile} from '@/features/back
 import {sortBackupsByTimeDesc} from '@/features/backups/utils/sort'
 import AddNetworkShareDialog from '@/features/files/components/dialogs/add-network-share-dialog'
 import {MiniBrowser} from '@/features/files/components/mini-browser'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-size'
+import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
-import {buttonClass, formGroupClass, Layout} from '@/layouts/bare/shared'
+import {formGroupClass, Layout, primaryButtonProps} from '@/layouts/bare/shared'
+import {cn} from '@/lib/utils'
 import {OnboardingAction, OnboardingFooter} from '@/routes/onboarding/onboarding-footer'
-import {Button} from '@/shadcn-components/ui/button'
-import {Input, PasswordInput} from '@/shadcn-components/ui/input'
-import {t} from '@/utils/i18n'
 
+// Routes to Umbrel Pro instructions or regular restore flow
 export default function BackupsRestoreOnboarding() {
+	const {t} = useTranslation()
+	const {isLoading: isLoadingDeviceCheck, data: deviceInfo} = useDeviceInfo()
+	const isUmbrelPro = deviceInfo?.umbrelHostEnvironment === 'umbrel-pro'
+
+	// Show loading state while checking device type
+	if (isLoadingDeviceCheck) {
+		return (
+			<Layout
+				title={t('backups-restore-header')}
+				subTitle=''
+				footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
+			>
+				<div className='flex items-center justify-center py-12'>
+					<Loader2 className='size-6 animate-spin text-white/50' />
+				</div>
+			</Layout>
+		)
+	}
+
+	// Show Umbrel Pro specific instructions
+	if (isUmbrelPro) {
+		return <UmbrelProRestoreInstructions />
+	}
+
+	// Show regular restore flow for non-Pro devices
+	return <RegularRestoreFlow />
+}
+
+// Umbrel Pro restore instructions component
+// Umbrel Pro requires completing onboarding first, then restoring via Settings
+function UmbrelProRestoreInstructions() {
+	const {t} = useTranslation()
+	const steps = [
+		t('backups-restore-pro.step1'),
+		<Trans
+			t={t}
+			key='step2'
+			i18nKey='backups-restore-pro.step2'
+			components={[<span key='path' className='font-medium text-white' />]}
+		/>,
+		t('backups-restore-pro.step3'),
+	]
+
+	return (
+		<Layout
+			title={t('backups-restore-header')}
+			subTitle={t('backups-restore-pro.subtitle')}
+			subTitleMaxWidth={630}
+			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
+		>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[560px]'>
+				{/* Steps */}
+				<div className='divide-y divide-white/6 overflow-hidden rounded-12 bg-white/6'>
+					{steps.map((text, i) => (
+						<div key={i} className='flex items-center gap-3 p-3 text-13 font-medium -tracking-3'>
+							<div className='flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-11 text-white/60'>
+								{i + 1}
+							</div>
+							<div className='flex-1 text-white/70'>{text}</div>
+						</div>
+					))}
+				</div>
+
+				<p className='mt-4 text-center text-13 text-white/50'>{t('backups-restore-pro.after-restore')}</p>
+
+				{/* Action button */}
+				<div className='flex justify-center pt-6'>
+					<Link to='/onboarding/create-account' viewTransition {...primaryButtonProps}>
+						{t('onboarding.start.continue')}
+					</Link>
+				</div>
+			</div>
+		</Layout>
+	)
+}
+
+// Regular restore flow for non-Pro devices
+function RegularRestoreFlow() {
+	const {t} = useTranslation()
 	const title = t('backups-restore-header')
 	const [lang] = useLanguage()
 
@@ -45,6 +128,7 @@ export default function BackupsRestoreOnboarding() {
 	// Backups hooks
 	const {connectToRepository, isPending: isConnecting} = useConnectToRepository()
 	const {restoreBackup, isPending: isRestoring} = useRestoreBackup()
+	const {isExternalStorageSupported} = useExternalStorage()
 
 	// Fetch backups when repository connected
 	const {data: backupsUnsorted, isLoading: isLoadingBackups} = useRepositoryBackups(connectedRepositoryId, {
@@ -110,12 +194,11 @@ export default function BackupsRestoreOnboarding() {
 	return (
 		<Layout
 			title={title}
-			transitionTitle={false}
 			subTitle={stepSubtitle}
 			subTitleMaxWidth={630}
 			footer={<OnboardingFooter action={OnboardingAction.CREATE_ACCOUNT} />}
 		>
-			<div className='mx-auto mb-6 mt-2 w-full max-w-[720px]'>
+			<div className='mx-auto mt-2 mb-6 w-full max-w-[720px]'>
 				{step === 0 && (
 					<div className='space-y-4'>
 						<div className={formGroupClass + ' mx-auto w-full max-w-[560px] text-center'}>
@@ -124,7 +207,7 @@ export default function BackupsRestoreOnboarding() {
 									type='text'
 									value={repositoryPath}
 									readOnly
-									className={(repositoryPath ? 'cursor-pointer ' : 'cursor-default ') + 'select-none pr-28'}
+									className='pr-28'
 									title={repositoryPath || ''}
 									aria-disabled={!repositoryPath}
 									tabIndex={repositoryPath ? 0 : -1}
@@ -140,6 +223,7 @@ export default function BackupsRestoreOnboarding() {
 										setBrowserRoot(root)
 										setBrowserOpen(true)
 									}}
+									isExternalStorageSupported={isExternalStorageSupported}
 								/>
 							</div>
 						</div>
@@ -220,7 +304,7 @@ export default function BackupsRestoreOnboarding() {
 					{step > Step.ChooseLocation && (
 						<button
 							type='button'
-							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-none'
+							className='flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-colors duration-300 hover:bg-white/10 focus-visible:border-white/50 focus-visible:bg-white/10 focus-visible:outline-hidden'
 							onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))}
 						>
 							<ChevronLeft className='size-5' />
@@ -229,9 +313,13 @@ export default function BackupsRestoreOnboarding() {
 					{step < Step.Review ? (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (!canNext || isConnecting ? 'pointer-events-none opacity-50' : '')}
+							className={cn(
+								primaryButtonProps.className,
+								!canNext || (isConnecting && 'pointer-events-none opacity-50'),
+							)}
 							onClick={handleNext}
 							disabled={!canNext || isConnecting}
+							style={primaryButtonProps.style}
 						>
 							<span className={isConnecting ? 'opacity-0' : 'opacity-100'}>{t('continue')}</span>
 							{isConnecting && <Loader2 className='absolute size-4 animate-spin' />}
@@ -239,7 +327,7 @@ export default function BackupsRestoreOnboarding() {
 					) : (
 						<button
 							type='button'
-							className={buttonClass + ' ' + (isRestoring ? 'pointer-events-none opacity-50' : '')}
+							className={cn(primaryButtonProps.className, isRestoring && 'pointer-events-none opacity-50')}
 							onClick={async () => {
 								try {
 									await restoreBackup(selectedBackupId)
@@ -248,6 +336,7 @@ export default function BackupsRestoreOnboarding() {
 								}
 							}}
 							disabled={!selectedBackupId || isRestoring}
+							style={primaryButtonProps.style}
 						>
 							<span className={isRestoring ? 'opacity-0' : 'opacity-100'}>{t('backups-restore')}</span>
 							{isRestoring && <Loader2 className='absolute size-4 animate-spin' />}
@@ -266,6 +355,7 @@ export default function BackupsRestoreOnboarding() {
 					title={t('backups-restore.select-backup-file')}
 					subtitle={
 						<Trans
+							t={t}
 							i18nKey='backups-restore.select-backup-file-only'
 							values={{backupFileName: BACKUP_FILE_NAME}}
 							components={{
@@ -317,6 +407,7 @@ function BackupSnapshot({
 	noHover?: boolean
 	isLatest?: boolean
 }) {
+	const {t} = useTranslation()
 	const when = backup.time
 	const label = when ? formatFilesystemDate(when, lang as any) : t('backups-restore.unknown-date')
 	const size = backup.size
@@ -329,7 +420,7 @@ function BackupSnapshot({
 					'flex w-full items-center justify-between rounded-8 border px-4 py-3',
 					selected ? 'border-brand bg-brand/15' : 'border-white/10',
 					!noHover && !selected ? 'hover:bg-white/5' : '',
-					onClick ? 'cursor-pointer' : '',
+					'',
 				].join(' ')}
 				onClick={onClick}
 				title={backup.id}
@@ -338,12 +429,12 @@ function BackupSnapshot({
 					<div className='truncate text-sm'>{label}</div>
 				</div>
 				{isLatest && (
-					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='mr-2 shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{t('backups-restore.latest')}
 					</div>
 				)}
 				{sizeTxt && (
-					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide opacity-80'>
+					<div className='shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] tracking-wide uppercase opacity-80'>
 						{sizeTxt}
 					</div>
 				)}

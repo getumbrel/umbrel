@@ -1,7 +1,7 @@
-import {AnimatePresence, motion} from 'framer-motion'
 import {ChevronDown, ChevronUp} from 'lucide-react'
+import {AnimatePresence, motion} from 'motion/react'
 import {useState} from 'react'
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {FaPlus} from 'react-icons/fa6'
 
 import networkIcon from '@/features/files/assets/network-icon.png'
@@ -10,7 +10,6 @@ import {
 	InstructionContainer,
 	InstructionItem,
 } from '@/features/files/components/dialogs/share-info-dialog/platform-instructions/instruction'
-import {t} from '@/utils/i18n'
 
 interface Props {
 	username: string
@@ -19,12 +18,14 @@ interface Props {
 }
 
 export function UmbrelOSInstructions({username, password, sharename}: Props) {
+	const {t} = useTranslation()
 	const [showBackup, setShowBackup] = useState(false)
 	return (
 		<div className='space-y-4'>
 			<InstructionContainer>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.umbrelos.open-and-click'
 						components={{
 							plus: <FaPlus className='inline-block size-3 align-middle' />,
@@ -34,28 +35,30 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 					/>
 				</InstructionItem>
 				<InstructionItem>
-					<Trans i18nKey='files-share.instructions.umbrelos.select-device' />
+					<Trans t={t} i18nKey='files-share.instructions.umbrelos.select-device' />
 					{sharename ? (
 						<div className='mt-1 text-[11px] text-white/60'>
-							<Trans i18nKey='files-share.instructions.umbrelos.cant-find-note' />
+							<Trans t={t} i18nKey='files-share.instructions.umbrelos.cant-find-note' />
 						</div>
 					) : null}
 				</InstructionItem>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.umbrelos.enter-username'
 						components={{field: <InlineCopyableField value={username} />}}
 					/>
 				</InstructionItem>
 				<InstructionItem>
 					<Trans
+						t={t}
 						i18nKey='files-share.instructions.umbrelos.enter-password'
 						components={{field: <InlineCopyableField value={password} />}}
 					/>
 				</InstructionItem>
 				{sharename ? (
 					<InstructionItem>
-						<Trans i18nKey='files-share.instructions.umbrelos.select-sharename' values={{sharename}} />
+						<Trans t={t} i18nKey='files-share.instructions.umbrelos.select-sharename' values={{sharename}} />
 					</InstructionItem>
 				) : null}
 			</InstructionContainer>
@@ -64,7 +67,7 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 				onClick={() => setShowBackup(!showBackup)}
 				className='flex w-full items-center justify-between text-xs font-medium text-brand-lightest transition-opacity duration-300 hover:opacity-80'
 			>
-				<Trans i18nKey='files-share.instructions.umbrelos.backup.title' />
+				<Trans t={t} i18nKey='files-share.instructions.umbrelos.backup.title' />
 				{showBackup ? <ChevronUp className='h-4 w-4' /> : <ChevronDown className='h-4 w-4' />}
 			</button>
 
@@ -80,21 +83,23 @@ export function UmbrelOSInstructions({username, password, sharename}: Props) {
 						<InstructionContainer>
 							<InstructionItem>
 								<Trans
+									t={t}
 									i18nKey='files-share.instructions.umbrelos.backup.follow-then-go-to'
 									values={{settings: t('settings'), backups: t('backups')}}
 								/>
 							</InstructionItem>
 							<InstructionItem>
 								<Trans
+									t={t}
 									i18nKey='files-share.instructions.umbrelos.backup.select-add'
 									values={{addUmbrelOrNas: t('backups-add-umbrel-or-nas', {defaultValue: 'Add Umbrel or NAS'})}}
 								/>
 							</InstructionItem>
 							<InstructionItem>
-								<Trans i18nKey='files-share.instructions.umbrelos.backup.select-connected' />
+								<Trans t={t} i18nKey='files-share.instructions.umbrelos.backup.select-connected' />
 							</InstructionItem>
 							<InstructionItem>
-								<Trans i18nKey='files-share.instructions.umbrelos.backup.follow-onscreen' />
+								<Trans t={t} i18nKey='files-share.instructions.umbrelos.backup.follow-onscreen' />
 							</InstructionItem>
 						</InstructionContainer>
 					</motion.div>

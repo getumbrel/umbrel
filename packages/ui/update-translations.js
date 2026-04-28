@@ -37,6 +37,23 @@ const languageMapping = {
 	uk: 'Ukrainian',
 	hu: 'Hungarian',
 	ko: 'Korean',
+	zh: 'Simplified Chinese',
+	ru: 'Russian',
+	sv: 'Swedish',
+	pl: 'Polish',
+	cs: 'Czech',
+	da: 'Danish',
+	nb: 'Norwegian',
+	ro: 'Romanian',
+	el: 'Greek',
+	bg: 'Bulgarian',
+	hr: 'Croatian',
+	sk: 'Slovak',
+	sl: 'Slovenian',
+	et: 'Estonian',
+	is: 'Icelandic',
+	'pt-BR': 'Brazilian Portuguese',
+	'zh-TW': 'Traditional Chinese',
 }
 
 // Get en.json content from the base branch
@@ -115,7 +132,7 @@ function getLastCommitForKey(filePath, key, baseBranch) {
 		// Return the most recent commit (first in the list)
 		const commits = result.split('\n')
 		return commits[0]
-	} catch (error) {
+	} catch {
 		return null
 	}
 }
@@ -153,7 +170,7 @@ function shouldRegenerateKey(key, localeFile, baseBranch) {
 		execSync(`git merge-base --is-ancestor ${enCommit} ${localeCommit}`, {encoding: 'utf8'})
 		// Locale came after en - skip regeneration
 		return false
-	} catch (error) {
+	} catch {
 		// En is not ancestor of locale, so en came after - needs regeneration
 		return true
 	}
@@ -190,27 +207,19 @@ async function generateTranslation(englishReferenceContent, textToTranslate, tar
 		.replace('replace_target_language', languageMapping[targetLanguage])
 		.replace('replace_text_to_translate', JSON.stringify(textToTranslate))
 
-	const completion = await openai.chat.completions.create({
-		messages: [
-			{role: 'system', content: systemPrompt},
-			{role: 'user', content: userPrompt},
-		],
+	const response = await openai.responses.create({
 		model,
-		response_format: {type: 'json_object'},
+		instructions: systemPrompt,
+		input: userPrompt,
+		reasoning: {effort: 'medium'},
+		text: {format: {type: 'json_object'}},
 	})
 
-	return completion.choices[0].message.content
+	return response.output_text
 }
 
 async function removeUnusedTranslations(englishReferenceContent) {
-	const tsxFiles = await fg([
-		'src/**/*.tsx',
-		'src/**/*.ts',
-		'stories/src/**/*.tsx',
-		'stories/src/**/*.ts',
-		'app-auth/src/**/*.tsx',
-		'app-auth/src/**/*.ts',
-	])
+	const tsxFiles = await fg(['src/**/*.tsx', 'src/**/*.ts', 'app-auth/src/**/*.tsx', 'app-auth/src/**/*.ts'])
 	const unusedKeys = []
 
 	for (const key in englishReferenceContent) {

@@ -1,6 +1,6 @@
+import {useTranslation} from 'react-i18next'
 import {TbWifi} from 'react-icons/tb'
 
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,10 +9,11 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {t} from '@/utils/i18n'
+} from '@/components/ui/alert-dialog'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
 export default function WifiUnsupported() {
+	const {t} = useTranslation()
 	const dialogProps = useSettingsDialogProps()
 
 	return (

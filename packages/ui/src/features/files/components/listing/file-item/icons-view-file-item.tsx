@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {CircularProgress} from '@/features/files/components/listing/file-item/circular-progress'
 import {EditableName} from '@/features/files/components/listing/file-item/editable-name'
@@ -10,8 +11,7 @@ import {formatFilesystemSize} from '@/features/files/utils/format-filesystem-siz
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {isDirectoryAnExternalDrivePartition} from '@/features/files/utils/is-directory-an-external-drive-partition'
 import {isDirectoryAnUmbrelBackup} from '@/features/files/utils/is-directory-an-umbrel-backup'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
+import {cn} from '@/lib/utils'
 
 interface IconsViewFileItemProps {
 	item: FileSystemItem
@@ -26,6 +26,7 @@ export const IconsViewFileItem = ({
 	onEditingNameComplete,
 	fadedContent,
 }: IconsViewFileItemProps) => {
+	const {t} = useTranslation()
 	const isUploading = 'isUploading' in item && item.isUploading
 	const uploadingProgress = isUploading && 'progress' in item ? item.progress : 0
 	const isTouchDevice = useIsTouchDevice()
@@ -35,7 +36,7 @@ export const IconsViewFileItem = ({
 	return (
 		<div
 			// w-28 is 112px and corresponds to the fixed width of the icons view item
-			className='relative flex h-full w-28 flex-col items-center gap-1 overflow-hidden text-ellipsis break-all p-2 text-center'
+			className='relative flex h-full w-28 flex-col items-center gap-1 overflow-hidden p-2 text-center break-all text-ellipsis'
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>

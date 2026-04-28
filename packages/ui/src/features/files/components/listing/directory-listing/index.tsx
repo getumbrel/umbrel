@@ -1,9 +1,12 @@
 import {Upload} from 'lucide-react'
 import {useEffect, useLayoutEffect, useRef} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiClipboardLine} from 'react-icons/ri'
 import {TbWorldPlus} from 'react-icons/tb'
 import {useNavigate as useRouterNavigate} from 'react-router-dom'
 
+import {ContextMenuItem, ContextMenuShortcut} from '@/components/ui/context-menu'
+import {DropdownMenuItem} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {AddFolderIcon} from '@/features/files/assets/add-folder-icon'
 import {Listing} from '@/features/files/components/listing'
@@ -17,14 +20,13 @@ import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import {useIsFilesEmbedded} from '@/features/files/providers/files-capabilities-context'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import type {FilesStore} from '@/features/files/store/use-files-store'
-import {ContextMenuItem, ContextMenuShortcut} from '@/shadcn-components/ui/context-menu'
-import {DropdownMenuItem} from '@/shadcn-components/ui/dropdown-menu'
+import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 // `marqueeScale` is threaded through so embedded contexts (like Rewind) can tell marquee selection
 // about the CSS transform that shrinks the Files UI.
 export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {}) {
+	const {t} = useTranslation()
 	const {
 		currentPath,
 		uiPath,
@@ -61,12 +63,43 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		uploadInputRef.current?.click()
 	}
 
+	// For "New Text File"
+	const utils = trpcReact.useUtils()
+	const setViewerItem = useFilesStore((s) => s.setViewerItem)
+	const startNewTextFile = async () => {
+		const baseName = t('files-action.new-text-file-name')
+		const ext = '.txt'
+		let name = baseName + ext
+		// Find a unique name
+		const existingNames = new Set((listing?.items ?? []).map((item) => item.name))
+		if (existingNames.has(name)) {
+			let index = 2
+			while (existingNames.has(`${baseName} (${index})${ext}`)) index++
+			name = `${baseName} (${index})${ext}`
+		}
+		const filePath = currentPath + '/' + name
+		try {
+			// Create empty file via upload endpoint
+			await fetch(`/api/files/upload?path=${encodeURIComponent(filePath)}&collision=keep-both`, {
+				method: 'POST',
+				body: '',
+				headers: {'Content-Type': 'text/plain; charset=utf-8'},
+			})
+			await utils.files.list.invalidate({path: currentPath})
+			// Open the new file in the editor
+			setViewerItem({name, path: filePath, type: 'text/plain', size: 0, modified: Date.now(), operations: []})
+		} catch {
+			// Silently fail — the file listing will show the new file if it was created
+		}
+	}
+
 	// Additional items for the directory context menu
 	// Disable write actions (New Folder, Upload, Paste) for read-only directories
 	const additionalContextMenuItems =
 		isViewingExternalDrives || isViewingNetworkDevices || isViewingNetworkShares ? null : (
 			<>
 				<ContextMenuItem onClick={startNewFolder}>{t('files-action.new-folder')}</ContextMenuItem>
+				<ContextMenuItem onClick={startNewTextFile}>{t('files-action.new-text-file')}</ContextMenuItem>
 				<ContextMenuItem onClick={handleUploadClick}>{t('files-action.upload')}</ContextMenuItem>
 				<ContextMenuItem
 					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
@@ -81,8 +114,9 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	// Filter out items that are currently uploading to prevent them from being selected via marquee selection or keyboard shortcuts
 	const selectableItems = (listing?.items ?? []).filter((item) => !item.isUploading)
 
-	// Hide the path bar and disable actions if there's an error or loading state
-	const hidePathAndDisableActions = Boolean(isLoading || error)
+	// Disable actions while loading or on error; only hide the path bar on error
+	const disableActions = Boolean(isLoading || error)
+	const hidePath = Boolean(error)
 
 	// In embedded contexts (e.g., Rewind), if the current directory doesn't exist in a snapshot,
 	// we automatically fall back to the nearest existing parent.
@@ -105,7 +139,7 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 			<IconButton
 				icon={TbWorldPlus}
 				onClick={() => routerNavigate(linkToDialog('files-add-network-share'))}
-				disabled={hidePathAndDisableActions}
+				disabled={disableActions}
 			>
 				{t('files-action.add-network-device')}
 			</IconButton>
@@ -113,10 +147,10 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
 		DesktopActions = (
 			<>
-				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+				<IconButton icon={AddFolderIcon} onClick={startNewFolder} disabled={disableActions}>
 					{t('files-folder')}
 				</IconButton>
-				<IconButton icon={Upload} onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+				<IconButton icon={Upload} onClick={handleUploadClick} disabled={disableActions}>
 					{t('files-action.upload')}
 				</IconButton>
 			</>
@@ -135,17 +169,17 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 	} else if (!(isViewingExternalDrives || isViewingNetworkShares)) {
 		MobileDropdownActions = (
 			<>
-				<DropdownMenuItem onClick={startNewFolder} disabled={hidePathAndDisableActions}>
+				<DropdownMenuItem onClick={startNewFolder} disabled={disableActions}>
 					<AddFolderIcon className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.new-folder')}
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={handleUploadClick} disabled={hidePathAndDisableActions}>
+				<DropdownMenuItem onClick={handleUploadClick} disabled={disableActions}>
 					<Upload className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.upload')}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					onClick={() => pasteItemsFromClipboard({toDirectory: currentPath})}
-					disabled={hidePathAndDisableActions || !hasItemsInClipboard()}
+					disabled={disableActions || !hasItemsInClipboard()}
 				>
 					<RiClipboardLine className='mr-2 h-4 w-4 opacity-50' />
 					{t('files-action.paste')}
@@ -158,11 +192,12 @@ export function DirectoryListing({marqueeScale = 1}: {marqueeScale?: number} = {
 		setActionsBarConfig({
 			desktopActions: DesktopActions,
 			mobileActions: MobileDropdownActions,
-			hidePath: hidePathAndDisableActions,
+			hidePath,
 			hideSearch: isBrowsingApps || isBrowsingExternalStorage || isBrowsingNetworkStorage, // hide search if browsing apps, external storage, or network
 		})
 	}, [
-		hidePathAndDisableActions,
+		disableActions,
+		hidePath,
 		isBrowsingApps,
 		isBrowsingExternalStorage,
 		isViewingExternalDrives,

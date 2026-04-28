@@ -1,14 +1,15 @@
+import {useTranslation} from 'react-i18next'
 import {TbCircleArrowUp} from 'react-icons/tb'
 
 import {ButtonLink} from '@/components/ui/button-link'
 import {NotificationBadge} from '@/components/ui/notification-badge'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {UpdatesDialogConnected} from './updates-dialog'
 
 export function UpdatesButton() {
+	const {t} = useTranslation()
 	const linkToDialog = useLinkToDialog()
 	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
 

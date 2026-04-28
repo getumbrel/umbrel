@@ -185,6 +185,21 @@ test('POST /api/files/upload handles binary data correctly', async () => {
 	expect(content).toEqual(Buffer.from(binaryData))
 })
 
+test('POST /api/files/upload creates file with correct permissions', async () => {
+	// Upload a file
+	const response = await umbreld.api.post('files/upload?path=/Home/permissions-test.txt', {
+		body: 'permissions content',
+	})
+
+	// Assert the response is correct
+	expect(response.statusCode).toBe(200)
+
+	// Check permissions
+	const stats = await fse.stat(`${umbreld.instance.dataDirectory}/home/permissions-test.txt`)
+	expect(stats.uid).toBe(1000) // Check owner is umbrel user
+	expect(stats.gid).toBe(1000) // Check group is umbrel group
+})
+
 test('POST /api/files/upload handles write errors correctly', async () => {
 	// Create a test file to verify it gets cleaned up
 	const systemPath = `${umbreld.instance.dataDirectory}/home/should-fail.txt`

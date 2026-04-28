@@ -1,39 +1,35 @@
 import {ChevronDown} from 'lucide-react'
+import {useTranslation} from 'react-i18next'
 
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {t} from '@/utils/i18n'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 
 type RestoreLocationDropdownProps = {
 	onSelect: (root: string) => void
 }
 
 export function RestoreLocationDropdown({onSelect}: RestoreLocationDropdownProps) {
+	const {t} = useTranslation()
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
 					type='button'
 					size='sm'
-					className='absolute right-5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1'
+					className='absolute top-1/2 right-5 inline-flex -translate-y-1/2 items-center gap-1'
 				>
 					{t('backups-restore.choose')}
 					<ChevronDown className='size-3' />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align='end' className='min-w-[320px]'>
-				<DropdownMenuItem className='block cursor-pointer' onSelect={() => onSelect('/Network')}>
+				<DropdownMenuItem className='block' onSelect={() => onSelect('/Network')}>
 					<div className='flex w-full flex-col items-start'>
 						<div className='text-sm font-medium'>{t('backups-restore.browse-nas-title')}</div>
 						<div className='text-xs opacity-60'>{t('backups-restore.browse-nas-subtitle')}</div>
 					</div>
 				</DropdownMenuItem>
-				<DropdownMenuItem className='block cursor-pointer' onSelect={() => onSelect('/External')}>
+				<DropdownMenuItem className='block' onSelect={() => onSelect('/External')}>
 					<div className='flex w-full flex-col items-start'>
 						<div className='text-sm font-medium'>{t('backups-restore.browse-external-title')}</div>
 						<div className='text-xs opacity-60'>{t('backups-restore.browse-external-subtitle')}</div>

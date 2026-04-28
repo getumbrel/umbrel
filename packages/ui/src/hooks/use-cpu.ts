@@ -1,8 +1,8 @@
+import {useTranslation} from 'react-i18next'
 import {sort} from 'remeda'
 
 import {LOADING_DASH} from '@/constants'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useCpu(options: {poll?: boolean} = {}) {
 	const cpuQ = trpcReact.system.cpuUsage.useQuery(undefined, {
@@ -32,6 +32,7 @@ export function useCpu(options: {poll?: boolean} = {}) {
 }
 
 export function useCpuForUi(options: {poll?: boolean} = {}) {
+	const {t} = useTranslation()
 	const {isLoading, percentUsed, threads, apps} = useCpu({poll: options.poll})
 
 	if (isLoading) {

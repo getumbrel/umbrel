@@ -14,7 +14,7 @@ export function ReviewCard({
 			<div className='flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-white/10'>{icon}</div>
 			<div className='min-w-0 flex-1'>
 				<div className='text-[13px] text-white/60'>{label}</div>
-				<div className='min-w-0 break-words text-sm'>{children}</div>
+				<div className='min-w-0 text-sm break-words'>{children}</div>
 			</div>
 		</div>
 	)

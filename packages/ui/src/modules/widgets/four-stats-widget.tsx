@@ -1,6 +1,6 @@
 import {LOADING_DASH} from '@/constants'
+import {cn} from '@/lib/utils'
 import type {FourStatsItem, FourStatsWidget, FourStatsWidgetProps} from '@/modules/widgets/shared/constants'
-import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 
@@ -16,9 +16,9 @@ export function FourStatsWidget({
 			onClick={() => onClick?.(link)}
 			className='grid grid-cols-2 grid-rows-2 gap-1 p-1.5 sm:gap-2 sm:p-2.5'
 		>
-			{items
-				?.slice(0, 4)
-				?.map((item) => <Item key={item.title} title={item.title} text={item.text} subtext={item.subtext} />)}
+			{items?.slice(0, 4)?.map((item) => (
+				<Item key={item.title} title={item.title} text={item.text} subtext={item.subtext} />
+			))}
 			{!items && (
 				<>
 					<Item title={LOADING_DASH} text={LOADING_DASH} subtext={LOADING_DASH} />

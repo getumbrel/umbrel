@@ -1,9 +1,9 @@
 import {useLayoutEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
+import {Input} from '@/components/ui/input'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
-import {Input} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
+import {cn} from '@/lib/utils'
 
 interface PathInputProps {
 	path: string
@@ -11,6 +11,7 @@ interface PathInputProps {
 }
 
 export function PathInput({path, onClose}: PathInputProps) {
+	const {t} = useTranslation()
 	const inputRef = useRef<HTMLInputElement>(null)
 	const {navigateToDirectory} = useNavigate()
 	const [inputValue, setInputValue] = useState(path)
@@ -53,7 +54,7 @@ export function PathInput({path, onClose}: PathInputProps) {
 					onBlur={onClose}
 					className={cn(
 						'h-8 bg-transparent text-xs text-white',
-						'p-0 [border:none] [outline:none]',
+						'border-none p-0 [outline:none]',
 						'focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0',
 						'[&:active]:bg-transparent [&:focus]:bg-transparent [&:hover]:bg-transparent',
 						'w-full',

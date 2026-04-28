@@ -1,9 +1,10 @@
+import {useTranslation} from 'react-i18next'
 import {TbHistory} from 'react-icons/tb'
 
 import {CircularProgress} from '@/features/files/components/shared/circular-progress'
-import {t} from '@/utils/i18n'
 
-export function MinimizedContent({count, progress}: {count: number; progress: number}) {
+export function MinimizedContent({progress}: {count: number; progress: number}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex size-full items-center gap-2 px-2'>
 			<CircularProgress progress={progress}>

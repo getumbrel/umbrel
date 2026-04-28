@@ -1,6 +1,6 @@
+import {useTranslation} from 'react-i18next'
 import {RiLogoutCircleRLine} from 'react-icons/ri'
 
-import {useAuth} from '@/modules/auth/use-auth'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,11 +9,12 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import {useAuth} from '@/modules/auth/use-auth'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export function LogoutDialog() {
+	const {t} = useTranslation()
 	// TODO: Enable hook below after this component is only injected as needed rather than all the time
 	// useUmbrelTitle('Log out')
 	const dialogProps = useDialogOpenProps('logout')

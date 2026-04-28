@@ -1,23 +1,19 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
+import {Button} from '@/components/ui/button'
+import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {MigrateImage} from '@/modules/migrate/migrate-image'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import MigrationAssistantDialog from '@/routes/settings/migration-assistant'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {t} from '@/utils/i18n'
 
 export function StartMigrationDrawerOrDialog() {
+	const {t} = useTranslation()
 	const title = t('migration-assistant')
 	const dialogProps = useSettingsDialogProps()
+	const {deviceName} = useIsHomeOrPro()
 
 	const isMobile = useIsMobile()
 	const [startMigration, setStartMigration] = useState(isMobile ? false : true)
@@ -34,7 +30,7 @@ export function StartMigrationDrawerOrDialog() {
 						<MigrateImage />
 					</div>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{t('migration-assistant-description')}</DrawerDescription>
+					<DrawerDescription>{t('migration-assistant-description', {deviceName})}</DrawerDescription>
 				</DrawerHeader>
 				<DrawerFooter>
 					<Button onClick={() => setStartMigration(true)} variant='primary' size='dialog'>

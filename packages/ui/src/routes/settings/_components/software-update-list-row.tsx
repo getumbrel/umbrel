@@ -1,18 +1,18 @@
-import {Trans} from 'react-i18next/TransWithoutContext'
+import {Trans, useTranslation} from 'react-i18next'
 import {RiArrowUpCircleFill, RiCheckboxCircleFill, RiInformationLine, RiRefreshLine} from 'react-icons/ri'
 import {Link} from 'react-router-dom'
 
+import {Button} from '@/components/ui/button'
 import {Icon} from '@/components/ui/icon'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
 import {LOADING_DASH} from '@/constants'
 import {useSoftwareUpdate} from '@/hooks/use-software-update'
-import {Button} from '@/shadcn-components/ui/button'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 import {ListRow} from './list-row'
 
 export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
+	const {t} = useTranslation()
 	const {state, currentVersion, latestVersion, checkLatest} = useSoftwareUpdate()
 	const linkToDialog = useLinkToDialog()
 
@@ -47,6 +47,7 @@ export function SoftwareUpdateListRow({isActive}: {isActive: boolean}) {
 							{t('software-update.on-latest')}
 							{' · '}
 							<Trans
+								t={t}
 								i18nKey='software-update.see-whats-new'
 								components={{
 									linked: <Link to={linkToDialog('whats-new')} className='underline' />,

@@ -132,11 +132,14 @@ export async function runPreMigrationChecks(
 	currentInstall: string,
 	externalUmbrelInstall: string,
 	umbreld: Umbreld,
-	onlyAllowHome = true,
+	onlyAllowUmbrelHardware = true,
 ) {
-	// Check we're running on Umbrel Home hardware
-	if (onlyAllowHome && !(await isUmbrelHome())) {
-		throw new Error('This feature is only supported on Umbrel Home hardware')
+	// Check we're running on Umbrel Home or Umbrel Pro hardware
+	if (onlyAllowUmbrelHardware) {
+		const [isHome, isPro] = await Promise.all([isUmbrelHome(), umbreld.hardware.umbrelPro.isUmbrelPro()])
+		if (!isHome && !isPro) {
+			throw new Error('This feature is only supported on Umbrel Home or Umbrel Pro hardware')
+		}
 	}
 
 	// Check migration isn't already running

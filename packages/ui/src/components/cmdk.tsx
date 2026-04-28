@@ -1,15 +1,19 @@
 import {useCommandState} from 'cmdk'
-import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useRef, useState} from 'react'
+import {TFunction} from 'i18next'
+import {ComponentPropsWithoutRef, createContext, SetStateAction, useContext, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
-import {useKey} from 'react-use'
 import {range} from 'remeda'
 
 // Pluggable search providers rendered inside the command palette
 // Currently only /features/files uses this
 import {cmdkSearchProviders} from '@/components/cmdk-providers'
+import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/components/ui/command'
 import {ErrorBoundaryCardFallback} from '@/components/ui/error-boundary-card-fallback'
+import {Separator} from '@/components/ui/separator'
 import {LOADING_DASH} from '@/constants'
+import backupsIcon from '@/features/backups/assets/backups-icon.png'
 import {
 	APPS_PATH as FILES_APPS_PATH,
 	RECENTS_PATH as FILES_RECENTS_PATH,
@@ -19,13 +23,13 @@ import {useDebugInstallRandomApps} from '@/hooks/use-debug-install-random-apps'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {useShortcuts} from '@/hooks/use-shortcuts'
+import {cn} from '@/lib/utils'
+import {resolveShortcutUrl} from '@/modules/desktop/shortcut-dialog'
+import {resolveShortcutIcon, ShortcutIconImage} from '@/modules/desktop/shortcut-icon-image'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {useAvailableApps} from '@/providers/available-apps'
-import {CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList} from '@/shadcn-components/ui/command'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {AppState, trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 import {AppIcon} from './app-icon'
 import {FadeScroller} from './fade-scroller'
@@ -41,25 +45,30 @@ export function useCmdkOpen() {
 
 	if (!ctx) throw new Error('useCmdkOpen must be used within a CommandRoot')
 
-	useKey(
-		(e) => e.key === 'k' && (e.metaKey || e.ctrlKey),
-		(e) => {
-			// Prevent default behavior (in Windows Chrome where it opens the search bar)
-			e.preventDefault()
-			ctx.setOpen((open) => !open)
-		},
-	)
-
 	return ctx
 }
 
 export function CmdkProvider({children}: {children: React.ReactNode}) {
 	const [open, setOpen] = useState(false)
 
-	return <CmdkOpenContext.Provider value={{open, setOpen}}>{children}</CmdkOpenContext.Provider>
+	// Register Cmd+K listener once here, not in useCmdkOpen (which is called
+	// by multiple components and would register duplicate listeners).
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault()
+				setOpen((open) => !open)
+			}
+		}
+		document.addEventListener('keydown', handler)
+		return () => document.removeEventListener('keydown', handler)
+	}, [])
+
+	return <CmdkOpenContext value={{open, setOpen}}>{children}</CmdkOpenContext>
 }
 
 export function CmdkMenu() {
+	const {t} = useTranslation()
 	const {open, setOpen} = useCmdkOpen()
 
 	return (
@@ -74,6 +83,7 @@ export function CmdkMenu() {
 }
 
 function CmdkContent() {
+	const {t} = useTranslation()
 	const {setOpen} = useCmdkOpen()
 	const navigate = useNavigate()
 	const {addLinkSearchParams} = useQueryParams()
@@ -86,6 +96,7 @@ function CmdkContent() {
 	const userQ = trpcReact.user.get.useQuery()
 	const launchApp = useLaunchApp()
 	const debugInstallRandomApps = useDebugInstallRandomApps()
+	const {shortcuts} = useShortcuts()
 	// We only show installed community apps here, effectively limiting available
 	// apps to those present in the official app store
 	const availableApps = useAvailableApps()
@@ -150,6 +161,15 @@ function CmdkContent() {
 				}}
 			>
 				{t('cmdk.widgets')}
+			</CommandItem>
+			<CommandItem
+				icon={systemAppsKeyed['UMBREL_home'].icon}
+				onSelect={() => {
+					navigate({pathname: '/', search: new URLSearchParams({dialog: 'add-shortcut'}).toString()})
+					setOpen(false)
+				}}
+			>
+				{t('cmdk.add-shortcut')}
 			</CommandItem>
 			<SearchItem
 				icon={systemAppsKeyed['UMBREL_home'].icon}
@@ -250,6 +270,28 @@ function CmdkContent() {
 			<SettingsSearchItem value={t('advanced-settings')} onSelect={() => navigate('/settings/advanced')} />
 			<SettingsSearchItem value={t('beta-program')} onSelect={() => navigate('/settings/advanced/beta-program')} />
 			<SettingsSearchItem value={t('external-dns')} onSelect={() => navigate('/settings/advanced/external-dns')} />
+			<SettingsSearchItem value={t('settings.file-sharing')} onSelect={() => navigate('/settings/file-sharing')} />
+			<SettingsSearchItem value={t('storage-manager')} onSelect={() => navigate('/settings/storage')} />
+			<SearchItem
+				value={t('backups-restore')}
+				icon={<img src={backupsIcon} alt='' className='size-full' />}
+				onSelect={() => {
+					navigate('/settings/backups/restore')
+					setOpen(false)
+				}}
+			>
+				{t('backups-restore')}
+			</SearchItem>
+			<SearchItem
+				value={t('backups-rewind')}
+				icon={systemAppsKeyed['UMBREL_files'].icon}
+				onSelect={() => {
+					navigate('/files/Home?rewind=open')
+					setOpen(false)
+				}}
+			>
+				{t('backups-rewind')}
+			</SearchItem>
 			{readyApps.map((app) => (
 				<SearchItem
 					value={app.name}
@@ -261,6 +303,25 @@ function CmdkContent() {
 					}}
 				>
 					{app.name}
+				</SearchItem>
+			))}
+			{shortcuts?.map((shortcut) => (
+				<SearchItem
+					value={shortcut.title}
+					icon={
+						<ShortcutIconImage
+							src={resolveShortcutIcon(shortcut)}
+							title={shortcut.title}
+							className='h-full w-full rounded-6 sm:rounded-8'
+						/>
+					}
+					key={shortcut.url}
+					onSelect={() => {
+						window.open(resolveShortcutUrl(shortcut), '_blank')?.focus()
+						setOpen(false)
+					}}
+				>
+					{shortcut.title}
 				</SearchItem>
 			))}
 			{unreadyApps.map((app) => (
@@ -275,7 +336,7 @@ function CmdkContent() {
 					}}
 				>
 					<span>
-						{app.name} <span className='opacity-50'> – {appStateToString(app.state)}</span>
+						{app.name} <span className='opacity-50'> – {appStateToString(app.state, t)}</span>
 					</span>
 				</SearchItem>
 			))}
@@ -303,15 +364,13 @@ function CmdkContent() {
 				<SearchItem value='Install a bunch of random apps' onSelect={debugInstallRandomApps}>
 					Install a bunch of random apps
 				</SearchItem>
-				<SearchItem value='Stories' onSelect={() => navigate('/stories')}>
-					Stories
-				</SearchItem>
 			</DebugOnlyBare>
 		</CommandList>
 	)
 }
 
 function FrequentApps({onLaunchApp}: {onLaunchApp: () => void}) {
+	const {t} = useTranslation()
 	const lastAppsQ = trpcReact.apps.recentlyOpened.useQuery(undefined, {
 		retry: false,
 	})
@@ -329,7 +388,7 @@ function FrequentApps({onLaunchApp}: {onLaunchApp: () => void}) {
 	return (
 		<div className='mb-3 flex flex-col gap-3 md:mb-5 md:gap-5'>
 			<div>
-				<h3 className='mb-5 ml-2 hidden text-15 font-semibold leading-tight -tracking-2 md:block'>
+				<h3 className='mb-5 ml-2 hidden text-15 leading-tight font-semibold -tracking-2 md:block'>
 					{t('cmdk.frequent-apps')}
 				</h3>
 				<FadeScroller direction='x' className='umbrel-hide-scrollbar w-full overflow-x-auto whitespace-nowrap'>
@@ -387,7 +446,7 @@ function FrequentApp({
 	const isMobile = useIsMobile()
 	return (
 		<button
-			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-none transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
+			className='inline-flex w-[75px] flex-col items-center gap-2 overflow-hidden rounded-8 border border-transparent p-1.5 outline-hidden transition-all hover:border-white/10 hover:bg-white/4 focus-visible:border-white/10 focus-visible:bg-white/4 active:border-white/20 md:w-[100px] md:p-2'
 			onClick={() => {
 				onLaunch?.()
 				launchApp(appId)
@@ -445,7 +504,7 @@ const SearchItem = (props: ComponentPropsWithoutRef<typeof CommandItem>) => {
 	)
 }
 
-export function appStateToString(appState: AppState) {
+export function appStateToString(appState: AppState, t: TFunction) {
 	return {
 		'not-installed': t('app.install'),
 		installing: t('app.installing'),

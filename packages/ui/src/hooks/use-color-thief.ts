@@ -1,14 +1,14 @@
 import ColorThief, {RGBColor} from 'colorthief'
-import {useEffect, useState} from 'react'
+import {useEffect, useState, type RefObject} from 'react'
 import {useIntersection} from 'react-use'
 
 const colorThief = new ColorThief()
 const colorCount = 3
 
-export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
+export function useColorThief(ref: React.RefObject<HTMLImageElement | null>) {
 	const [colors, setColors] = useState<string[] | undefined>()
 
-	const intersection = useIntersection(ref, {
+	const intersection = useIntersection(ref as RefObject<HTMLImageElement>, {
 		root: null,
 		rootMargin: '0px',
 		threshold: 0,
@@ -25,7 +25,7 @@ export function useColorThief(ref: React.RefObject<HTMLImageElement>) {
 			try {
 				const rgbArr = colorThief.getPalette(img, colorCount)
 				setColors(processColors(rgbArr))
-			} catch (error) {
+			} catch {
 				setColors(undefined) // Reset colors on error
 			}
 		}
@@ -92,7 +92,9 @@ function isNeutralDark(rgb: number[]) {
 function rgbToHsl(r: number, g: number, b: number) {
 	const {min, max} = Math
 
-	;(r /= 255), (g /= 255), (b /= 255)
+	r /= 255
+	g /= 255
+	b /= 255
 	const vmax = max(r, g, b),
 		vmin = min(r, g, b)
 	let h = 0

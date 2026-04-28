@@ -1,14 +1,14 @@
 import {Fragment} from 'react'
-import {Link} from 'react-router-dom'
+import {useTranslation} from 'react-i18next'
 
 import {LOADING_DASH, UNKNOWN} from '@/constants'
 import {useDeviceInfo} from '@/hooks/use-device-info'
 import {useLanguage} from '@/hooks/use-language'
 import {trpcReact} from '@/trpc/trpc'
 import {duration} from '@/utils/date-time'
-import {t} from '@/utils/i18n'
 
 export function SettingsSummary() {
+	const {t} = useTranslation()
 	const [languageCode] = useLanguage()
 	const deviceInfo = useDeviceInfo()
 	const osVersionQ = trpcReact.system.version.useQuery()
@@ -17,7 +17,7 @@ export function SettingsSummary() {
 
 	return (
 		<dl
-			className='grid grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
+			className='grid w-max grid-cols-2 items-center gap-x-5 gap-y-2 text-14 leading-none -tracking-2'
 			style={{
 				// Makes columns not all the same width
 				gridTemplateColumns: 'auto auto',
@@ -32,9 +32,8 @@ export function SettingsSummary() {
 				{ipAddresses.data?.length
 					? ipAddresses.data.map((ip: string, index: number) => (
 							<Fragment key={ip}>
-								<Link to={`http://${ip}`} target='_blank'>
-									{ip}
-								</Link>
+								{/* Allow text selection for copying IP address */}
+								<span className='select-text'>{ip}</span>
 								{index < ipAddresses.data.length - 1 && ', '}
 							</Fragment>
 						))

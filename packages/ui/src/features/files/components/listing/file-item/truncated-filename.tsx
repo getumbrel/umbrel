@@ -1,5 +1,5 @@
 import {formatItemName, splitFileName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 interface TruncatedFilenameProps {
 	filename: string
@@ -26,10 +26,13 @@ export function TruncatedFilename({filename, className, view = 'list'}: Truncate
 	const prefixText = fileName.slice(0, fileName.length - nameSuffixLength)
 	const suffixText = fileName.slice(fileName.length - nameSuffixLength) + (extension || '')
 
+	// Using whitespace-pre instead of whitespace-nowrap to preserve spaces at span boundaries.
+	// With nowrap, a space at the start/end of a flex item is stripped (CSS treats it as
+	// collapsible leading/trailing whitespace). Pre preserves it while still preventing wrapping.
 	return (
 		<span className={cn('flex', className)} title={filename}>
-			<span className='min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'>{prefixText}</span>
-			<span className='flex-shrink-0 whitespace-nowrap'>{suffixText}</span>
+			<span className='min-w-0 overflow-hidden text-ellipsis whitespace-pre'>{prefixText}</span>
+			<span className='flex-shrink-0 whitespace-pre'>{suffixText}</span>
 		</span>
 	)
 }

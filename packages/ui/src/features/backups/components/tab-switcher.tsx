@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import * as React from 'react'
 
 export function TabSwitcher({
@@ -19,7 +19,7 @@ export function TabSwitcher({
 						<button
 							key={opt.id}
 							className={[
-								'relative flex-1 rounded-full px-3 py-1 text-12 focus:outline-none focus:ring-0',
+								'relative flex-1 rounded-full px-3 py-1 text-12 focus:ring-0 focus:outline-hidden',
 								selected ? 'text-white' : 'text-white/60',
 							].join(' ')}
 							onClick={() => onChange(opt.id)}

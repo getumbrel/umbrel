@@ -1,7 +1,10 @@
 import {ChevronRight, FolderPlus, Loader2} from 'lucide-react'
 import {useEffect, useMemo, useRef, useState} from 'react'
-import {toast} from 'sonner'
+import {useTranslation} from 'react-i18next'
 
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {toast} from '@/components/ui/toast'
 import {BACKUP_FILE_NAME} from '@/features/backups/utils/filepath-helpers'
 import {EmptyFolderIcon} from '@/features/files/assets/empty-folder-icon'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
@@ -9,19 +12,21 @@ import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {useListDirectory} from '@/features/files/hooks/use-list-directory'
 import type {FileSystemItem} from '@/features/files/types'
+import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {isDirectoryANetworkDevice} from '@/features/files/utils/is-directory-a-network-device-or-share'
 import {useIsMobile, useIsSmallMobile} from '@/hooks/use-is-mobile'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {t} from '@/utils/i18n'
 
 type MiniBrowserProps = {
 	open: boolean
 	onOpenChange: (open: boolean) => void
-	// The root path to start the tree from
+	// The root path to start the tree from (shows contents directly)
 	rootPath: string
+	// Optional multiple root paths — when provided, each root is rendered as a
+	// top-level expandable node instead of listing a single root's contents.
+	rootPaths?: string[]
 	// The path to expand to when the browser is opened
 	onOpenPath?: string
 	// If true (default), preselects onOpenPath when opened. Set false to require explicit selection.
@@ -66,6 +71,7 @@ export function MiniBrowser({
 	open,
 	onOpenChange,
 	rootPath,
+	rootPaths,
 	disabledPaths = [],
 	onOpenPath = rootPath,
 	preselectOnOpen = true,
@@ -78,6 +84,7 @@ export function MiniBrowser({
 	allowNewFolderCreation = false,
 	selectButtonLabel,
 }: MiniBrowserProps) {
+	const {t} = useTranslation()
 	const [selected, setSelected] = useState<{path: string; isDirectory: boolean} | null>(null)
 	const [newFolder, setNewFolder] = useState<(FileSystemItem & {isNew: boolean}) | null>(null)
 	const utils = trpcReact.useUtils()
@@ -129,12 +136,13 @@ export function MiniBrowser({
 			setSelected({path, isDirectory: true})
 		},
 		onError: (error) => {
-			toast.error(t('files-error.create-folder', {message: error.message}))
+			toast.error(t('files-error.create-folder', {message: getFilesErrorMessage(error.message)}))
 			setNewFolder(null)
 		},
 	})
 
-	const currentPath = selected?.isDirectory ? selected.path : rootPath
+	const effectiveRootPath = rootPaths?.[0] ?? rootPath
+	const currentPath = selected?.isDirectory ? selected.path : effectiveRootPath
 
 	const handleNewFolder = () => {
 		const parentPath = currentPath
@@ -188,22 +196,36 @@ export function MiniBrowser({
 					</div>
 				</DialogHeader>
 
-				<div className='h-[min(60vh,480px)] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-white/5 p-2'>
+				<div className='h-[min(60vh,480px)] overflow-x-hidden overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2'>
 					{/* Optional actions to render in the browser. e.g., "add NAS" button to open the add NAS dialog */}
 					{actions ? <div className='flex items-center justify-end'>{actions}</div> : null}
 
 					{/* The tree of files and folders */}
-					<Tree
-						initialPath={rootPath}
-						expandTo={onOpenPath}
-						onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
-						selectedPath={selected?.path ?? null}
-						selectionMode={selectionMode}
-						selectableFilter={selectableFilter}
-						newFolder={newFolder}
-						onCancelNewFolder={() => setNewFolder(null)}
-						onCreateFolder={(path) => createFolder.mutate({path})}
-					/>
+					{rootPaths ? (
+						<MultiRootTree
+							rootPaths={rootPaths}
+							expandTo={onOpenPath}
+							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
+							selectedPath={selected?.path ?? null}
+							selectionMode={selectionMode}
+							selectableFilter={selectableFilter}
+							newFolder={newFolder}
+							onCancelNewFolder={() => setNewFolder(null)}
+							onCreateFolder={(path) => createFolder.mutate({path})}
+						/>
+					) : (
+						<Tree
+							initialPath={rootPath}
+							expandTo={onOpenPath}
+							onSelect={(p, isDirectory) => setSelected({path: p, isDirectory})}
+							selectedPath={selected?.path ?? null}
+							selectionMode={selectionMode}
+							selectableFilter={selectableFilter}
+							newFolder={newFolder}
+							onCancelNewFolder={() => setNewFolder(null)}
+							onCreateFolder={(path) => createFolder.mutate({path})}
+						/>
+					)}
 				</div>
 
 				<DialogFooter className='mt-4'>
@@ -218,6 +240,63 @@ export function MiniBrowser({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	)
+}
+
+// Renders multiple root paths as top-level expandable nodes.
+// Each root is a synthetic directory entry that the user can expand to browse its contents.
+function MultiRootTree({
+	rootPaths,
+	onSelect,
+	selectedPath,
+	expandTo,
+	selectionMode,
+	selectableFilter,
+	newFolder,
+	onCancelNewFolder,
+	onCreateFolder,
+}: {
+	rootPaths: string[]
+	onSelect: (p: string, isDirectory: boolean) => void
+	selectedPath: string | null
+	expandTo?: string
+	selectionMode: 'folders' | 'files-and-folders'
+	selectableFilter?: (entry: FileSystemItem) => boolean
+	newFolder: (FileSystemItem & {isNew: boolean}) | null
+	onCancelNewFolder: () => void
+	onCreateFolder: (path: string) => void
+}) {
+	const roots: FileSystemItem[] = useMemo(
+		() =>
+			rootPaths.map((p) => ({
+				name: p.split('/').filter(Boolean).pop() || p,
+				path: p,
+				type: 'directory' as const,
+				size: 0,
+				modified: 0,
+				operations: [],
+			})),
+		[rootPaths],
+	)
+
+	return (
+		<div className='space-y-1'>
+			{roots.map((entry) => (
+				<Node
+					key={entry.path}
+					entry={entry}
+					depth={0}
+					onSelect={onSelect}
+					selectedPath={selectedPath}
+					expandTo={expandTo}
+					selectionMode={selectionMode}
+					selectableFilter={selectableFilter}
+					newFolder={newFolder}
+					onCancelNewFolder={onCancelNewFolder}
+					onCreateFolder={onCreateFolder}
+				/>
+			))}
+		</div>
 	)
 }
 
@@ -244,6 +323,7 @@ function Tree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading} = useListDirectory(initialPath)
 
 	// Tailored empty state message and icon for known roots
@@ -383,11 +463,11 @@ function Node({
 	const isFaded = (isDisabled || !isSelectable) && entry.type !== 'directory'
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn(
 					'flex min-w-0 items-center gap-2 rounded-md p-2',
-					isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+					isDisabled && 'cursor-not-allowed opacity-60',
 					isSelected ? 'border border-brand bg-brand/15' : 'border border-transparent hover:bg-white/10',
 					isFaded && 'opacity-50',
 				)}
@@ -460,6 +540,7 @@ function Subtree({
 	onCancelNewFolder: () => void
 	onCreateFolder: (path: string) => void
 }) {
+	const {t} = useTranslation()
 	const {listing, isLoading, fetchMoreItems} = useListDirectory(path)
 	const children: FileSystemItem[] = useMemo(() => (listing?.items as FileSystemItem[]) ?? [], [listing])
 	const hasMore = listing?.hasMore ?? false
@@ -582,7 +663,7 @@ function NewFolderNode({
 	}
 
 	return (
-		<div className='select-none'>
+		<div>
 			<div
 				className={cn('flex min-w-0 items-center gap-2 rounded-md border border-brand bg-brand/15 p-2')}
 				style={{paddingLeft: 8 + Math.min(depth, maxIndentLevels) * INDENT_PER_LEVEL}}
@@ -598,7 +679,7 @@ function NewFolderNode({
 					onBlur={handleBlur}
 					onClick={(e) => e.stopPropagation()}
 					onDoubleClick={(e) => e.stopPropagation()}
-					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-none'
+					className='min-w-0 flex-1 truncate bg-transparent text-sm outline-hidden'
 				/>
 			</div>
 		</div>

@@ -1,7 +1,7 @@
 import {keepPreviousData} from '@tanstack/react-query'
 import {useEffect, useRef, useState} from 'react'
-import {toast} from 'sonner'
 
+import {toast} from '@/components/ui/toast'
 import {trpcReact, type RouterOutput} from '@/trpc/trpc'
 
 import {getUserFriendlyErrorMessage} from '../utils/error-messages'

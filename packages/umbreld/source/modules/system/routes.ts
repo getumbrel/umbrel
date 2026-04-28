@@ -7,8 +7,7 @@ import {$} from 'execa'
 import fse from 'fs-extra'
 import stripAnsi from 'strip-ansi'
 
-import type {ProgressStatus} from '../apps/schema.js'
-import {performReset, getResetStatus} from './factory-reset.js'
+import {performReset} from './factory-reset.js'
 import {getUpdateStatus, performUpdate, getLatestRelease} from './update.js'
 import {
 	getCpuTemperature,
@@ -21,10 +20,16 @@ import {
 	detectDevice,
 	getSystemMemoryUsage,
 	getIpAddresses,
+	getNetworkInterfaces,
+	getHostname,
+	setHostname,
+	setStaticIp,
+	confirmStaticIp,
+	clearStaticIp,
 	syncDns,
 } from './system.js'
 
-import {privateProcedure, publicProcedure, router} from '../server/trpc/trpc.js'
+import {privateProcedure, publicProcedure, publicProcedureWhenNoUserExists, router} from '../server/trpc/trpc.js'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'
@@ -102,7 +107,8 @@ export default router({
 			return ''
 		}
 	}),
-	device: privateProcedure.query(() => detectDevice()),
+	// Public during onboarding to show device-specific UI (Pro/Home images, video background)
+	device: publicProcedureWhenNoUserExists.query(() => detectDevice()),
 	cpuTemperature: privateProcedure.query(() => getCpuTemperature()),
 	systemDiskUsage: privateProcedure.query(({ctx}) => getSystemDiskUsage(ctx.umbreld)),
 	diskUsage: privateProcedure.query(({ctx}) => getDiskUsage(ctx.umbreld)),
@@ -110,14 +116,55 @@ export default router({
 	memoryUsage: privateProcedure.query(({ctx}) => getMemoryUsage(ctx.umbreld)),
 	cpuUsage: privateProcedure.query(({ctx}) => getCpuUsage(ctx.umbreld)),
 	getIpAddresses: privateProcedure.query(() => getIpAddresses()),
-	shutdown: privateProcedure.mutation(async ({ctx}) => {
+	getHostname: privateProcedure.query(() => getHostname()),
+	getNetworkInterfaces: privateProcedure.query(({ctx}) => getNetworkInterfaces(ctx.umbreld)),
+	setHostname: privateProcedure
+		.input(
+			z.object({
+				hostname: z
+					.string()
+					.trim()
+					.toLowerCase()
+					.regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, 'Invalid hostname'),
+			}),
+		)
+		.mutation(async ({ctx, input}) => setHostname(ctx.umbreld, input.hostname)),
+	setStaticIp: privateProcedure
+		.input(
+			z.object({
+				mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i, 'Invalid MAC address'),
+				ip: z.string().ip({version: 'v4', message: 'Invalid IPv4 address'}),
+				subnetPrefix: z.number().int().min(0).max(32),
+				gateway: z.string().ip({version: 'v4', message: 'Invalid IPv4 gateway'}),
+				dns: z.array(z.string().ip({version: 'v4', message: 'Invalid IPv4 DNS address'})).min(1),
+			}),
+		)
+		.mutation(async ({ctx, input}) => setStaticIp(ctx.umbreld, input)),
+	// Public so it can be called from a new origin after an IP change, where no JWT is available.
+	confirmStaticIp: publicProcedure
+		.input(
+			z.object({
+				ip: z.string().ip({version: 'v4', message: 'Invalid IPv4 address'}),
+			}),
+		)
+		.mutation(async ({input}) => confirmStaticIp(input.ip)),
+	clearStaticIp: privateProcedure
+		.input(
+			z.object({
+				mac: z.string().regex(/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i, 'Invalid MAC address'),
+			}),
+		)
+		.mutation(async ({ctx, input}) => clearStaticIp(ctx.umbreld, input)),
+	// Public during onboarding and recovery mode so users can shut down during RAID setup or mount failure
+	shutdown: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
 		await ctx.umbreld.stop()
 		await shutdown()
 
 		return true
 	}),
-	restart: privateProcedure.mutation(async ({ctx}) => {
+	// Public during onboarding and recovery mode
+	restart: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'restarting'
 		await ctx.umbreld.stop()
 		await reboot()
@@ -141,32 +188,30 @@ export default router({
 			return stripAnsi(process!.stdout)
 		}),
 	//
-	factoryReset: privateProcedure
+	// Public during onboarding and recovery mode - password required unless in recovery mode
+	factoryReset: publicProcedureWhenNoUserExists
 		.input(
 			z.object({
-				password: z.string(),
+				password: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ctx, input}) => {
-			if (!(await ctx.user.validatePassword(input.password))) {
-				throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
+			// Skip password validation in recovery mode (RAID mount failure) since user data is inaccessible
+			const raidMountFailure = await ctx.umbreld.hardware.raid.checkRaidMountFailure()
+			if (!raidMountFailure) {
+				if (!input.password || !(await ctx.user.validatePassword(input.password))) {
+					throw new TRPCError({code: 'UNAUTHORIZED', message: 'Invalid password'})
+				}
 			}
 			systemStatus = 'resetting'
-			let success = false
 			try {
-				success = await performReset(ctx.umbreld)
-				if (success) {
-					await setTimeout(1000)
-					await ctx.umbreld.stop()
-					await reboot()
-				}
-			} finally {
-				if (!success) systemStatus = 'running'
+				// Wait for UI to poll status (polls every 10s) and see we're resetting
+				await setTimeout(11000)
+				// Triggers an immediate reboot via rugix-ctrl
+				await performReset()
+			} catch (error) {
+				systemStatus = 'running'
+				throw error
 			}
-			return success
 		}),
-	// Public because we delete the user too and want to continue to get status updates
-	getFactoryResetStatus: publicProcedure.query((): ProgressStatus | undefined => {
-		return getResetStatus()
-	}),
 })

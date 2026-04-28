@@ -18,7 +18,6 @@ dist-ssr
 *.local
 
 # Editor directories and files
-!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
@@ -26,10 +25,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-
-# UI uses pnpm instead of npm
-package-lock.json

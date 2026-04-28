@@ -5,6 +5,7 @@ const express = require('express');
 const waitPort = require('wait-port');
 
 const proxy = require('../utils/proxy.js');
+const authUtils = require('../utils/auth.js');
 const umbrelRoutes = require('../routes/umbrel.js');
 const handleErrorMiddleware = require('../middleware/handle_error.js');
 
@@ -54,6 +55,24 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 		console.log(`Listening on port: ${CONSTANTS.PROXY_PORT}`);
 	});
 
-	// This allows it to proxy WebSockets without the initial http request
-	server.on('upgrade', middleware.upgrade);
+	// WebSocket upgrade requests bypass the Express middleware chain, so we
+	// must re-apply the same auth check here before handing off to the proxy.
+	server.on('upgrade', async (req, socket, head) => {
+		try {
+			const pathname = (req.url || '/').split('?')[0] || '/';
+			const authorized = await authUtils.isAuthorized({
+				cookieHeader: req.headers.cookie,
+				pathname,
+			});
+			if (!authorized) {
+				socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+				socket.destroy();
+				return;
+			}
+			middleware.upgrade(req, socket, head);
+		} catch {
+			socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+			socket.destroy();
+		}
+	});
 })();

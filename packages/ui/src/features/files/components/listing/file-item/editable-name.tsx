@@ -1,27 +1,19 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {AiOutlineFileExclamation} from 'react-icons/ai'
 
+import {Button} from '@/components/ui/button'
+import {Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle} from '@/components/ui/drawer'
+import {Input, Labeled} from '@/components/ui/input'
 import {useFilesOperations} from '@/features/files/hooks/use-files-operations'
 import {useIsTouchDevice} from '@/features/files/hooks/use-is-touch-device'
 import {useNewFolder} from '@/features/files/hooks/use-new-folder'
 import type {FileSystemItem} from '@/features/files/types'
 import {splitFileName} from '@/features/files/utils/format-filesystem-name'
 import {useIsMobile} from '@/hooks/use-is-mobile'
-import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
 import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Drawer,
-	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {Input, Labeled} from '@/shadcn-components/ui/input'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
 
 interface EditableNameProps {
 	item: FileSystemItem
@@ -30,6 +22,7 @@ interface EditableNameProps {
 }
 
 export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
+	const {t} = useTranslation()
 	const {name: initialName, path} = item
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [name, setName] = useState(initialName)
@@ -38,7 +31,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	const dialogProps = useSettingsDialogProps()
 
 	const {renameItem} = useFilesOperations()
-	const {cancelNewFolder, createFolder} = useNewFolder()
+	const {cancelNewFolder, commitNewFolder} = useNewFolder()
 	const confirm = useConfirmation()
 
 	const isCreatingNewFolder = 'isNew' in item && item.isNew
@@ -91,7 +84,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 			// Calculate parent path and the full path for the new folder
 			const parentPath = path.split('/').slice(0, -1).join('/')
 			const fullPath = `${parentPath}/${trimmedName}`
-			createFolder.mutate({path: fullPath})
+			commitNewFolder(fullPath)
 		} else {
 			// check if the user is changing the extension of a file
 			if (item.type !== 'directory') {
@@ -119,7 +112,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 							icon: AiOutlineFileExclamation,
 						})
 						// Confirmation passed, proceed with rename (handled below)
-					} catch (error) {
+					} catch {
 						// User cancelled confirmation
 						performRename = false
 					}
@@ -174,7 +167,7 @@ export const EditableName = ({item, view, onFinish}: EditableNameProps) => {
 	}
 
 	const inputStyles = cn(
-		'bg-transparent outline-none ring-1 ring-transparent',
+		'bg-transparent outline-hidden ring-1 ring-transparent',
 		'p-0 m-0 box-border leading-[16px] tracking-[-0.04em]',
 		// Show ring outline only on touch devices so that it is obvious that the input is focused
 		isTouchDevice && 'focus:ring-[hsl(var(--color-brand))]',

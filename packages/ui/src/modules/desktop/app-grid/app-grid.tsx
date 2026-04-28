@@ -1,6 +1,6 @@
 import {ReactNode, useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 import {AppGridGradientMasking} from '../desktop-misc'
@@ -11,12 +11,19 @@ export function AppGrid({
 	apps = [],
 	widgets = [],
 	onlyFirstPage = false,
+	forceDesktop = false,
 }: {
 	apps?: ReactNode[]
 	widgets?: ReactNode[]
 	onlyFirstPage?: boolean
+	forceDesktop?: boolean
 }) {
-	const {pageInnerRef, pages, appsPerRow, hasMeasurement} = usePager({apps, widgets})
+	const {t} = useTranslation()
+	const {pageInnerRef, pages, appsPerRow, hasMeasurement} = usePager({
+		apps,
+		widgets,
+		forceBreakpoint: forceDesktop ? 'M' : undefined,
+	})
 	const [showMasking, setShowMasking] = useState(false)
 	const pageCount = pages.length
 
@@ -96,7 +103,7 @@ export function AppGrid({
 			{showMasking && <AppGridGradientMasking />}
 			{/* NOTE: always leave space for pills to avoid layout thrashing */}
 			{/* Adding margin bottom so pills are clickable */}
-			<div className='mb-6 mt-6'>
+			<div className='mt-6 mb-6'>
 				<PaginatorPills total={pageCount} current={page} onCurrentChange={toPage} />
 			</div>
 		</div>

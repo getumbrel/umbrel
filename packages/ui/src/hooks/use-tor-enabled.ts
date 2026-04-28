@@ -1,7 +1,10 @@
+import {useTranslation} from 'react-i18next'
+
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
 
 export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => void} = {}) {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 
 	const torEnabledQ = trpcReact.apps.getTorEnabled.useQuery()
@@ -12,7 +15,7 @@ export function useTorEnabled({onSuccess}: {onSuccess?: (enabled: boolean) => vo
 			onSuccess?.(enabled)
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('tor-error', {message: err.message}))
 		},
 	})
 

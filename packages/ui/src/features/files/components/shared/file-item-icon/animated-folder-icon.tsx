@@ -1,4 +1,4 @@
-import {motion, Transition, Variants} from 'framer-motion'
+import {motion, Transition, Variants} from 'motion/react'
 
 interface AnimatedFolderIconProps {
 	overlayIcon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
@@ -18,13 +18,11 @@ const folderSecondTabVariants: Variants = {
 	idle: {
 		rotateZ: 0,
 		y: 0,
-		filter: 'none',
 		transition,
 	},
 	hover: {
 		rotateZ: 14,
 		y: 1,
-		filter: 'url(#animated-folder-filter0)',
 		transition,
 	},
 }
@@ -33,13 +31,11 @@ const folderFirstTabVariants: Variants = {
 	idle: {
 		rotateZ: 0,
 		y: 0,
-		filter: 'none',
 		transition,
 	},
 	hover: {
 		rotateZ: 9,
 		y: 3,
-		filter: 'url(#animated-folder-filter1)',
 		transition,
 	},
 }
@@ -106,7 +102,7 @@ export const AnimatedFolderIcon = ({
 				>
 					{/* Gray insert */}
 					<g clipPath='url(#animated-folder-clip0)'>
-						<g opacity='0.6'>
+						<g opacity='0.6' filter={isHovered ? 'url(#animated-folder-filter0)' : undefined}>
 							<motion.path
 								variants={folderSecondTabVariants}
 								d='M17.0326 6.81456C16.7616 5.22668 17.8377 3.77724 19.436 3.57715L41.1392 0.86014C42.7376 0.660043 44.253 1.78506 44.5239 3.37294L45.8488 11.1373L18.3575 14.579L17.0326 6.81456Z'
@@ -115,7 +111,7 @@ export const AnimatedFolderIcon = ({
 						</g>
 
 						{/* White instert */}
-						<g>
+						<g filter={isHovered ? 'url(#animated-folder-filter1)' : undefined}>
 							<motion.path
 								variants={folderFirstTabVariants}
 								d='M11.5798 9.90146C11.3176 8.31211 12.4022 6.87309 14.0023 6.68733L50.4821 2.45217C52.0821 2.26641 53.5918 3.40424 53.8539 4.9936L54.7352 10.3361L12.461 15.244L11.5798 9.90146Z'
@@ -277,7 +273,7 @@ export const AnimatedFolderIcon = ({
 				{/* Overlay icon */}
 				{OverlayIcon && (
 					<motion.div
-						className='pointer-events-none absolute left-[23%] top-[28%] h-[56%] w-[56%]'
+						className='pointer-events-none absolute top-[28%] left-[23%] h-[56%] w-[56%]'
 						variants={overlayVariants}
 						style={{
 							transformStyle: 'preserve-3d',

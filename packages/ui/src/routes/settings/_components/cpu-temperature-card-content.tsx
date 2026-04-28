@@ -1,3 +1,5 @@
+import {useTranslation} from 'react-i18next'
+
 import {AnimatedNumber} from '@/components/ui/animated-number'
 import {SegmentedControl} from '@/components/ui/segmented-control'
 import {useIsMobile} from '@/hooks/use-is-mobile'
@@ -7,8 +9,7 @@ import {
 	TemperatureUnit,
 	useTemperatureUnit,
 } from '@/hooks/use-temperature-unit'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
+import {cn} from '@/lib/utils'
 import {isCpuTooHot} from '@/utils/system'
 import {celciusToFahrenheit, temperatureWarningToColor, temperatureWarningToMessage} from '@/utils/temperature'
 
@@ -23,6 +24,7 @@ export function CpuTemperatureCardContent({
 	defaultUnit?: TemperatureUnit
 	warning?: string
 }) {
+	const {t} = useTranslation()
 	const [unit, setUnit] = useTemperatureUnit(defaultUnit)
 
 	const temperatureNumber = unit === 'c' ? temperatureInCelcius : celciusToFahrenheit(temperatureInCelcius)

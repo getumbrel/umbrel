@@ -50,7 +50,7 @@ export function FilesCapabilitiesProvider({
 		}
 	}, [value])
 
-	return <FilesCapabilitiesContext.Provider value={computed}>{children}</FilesCapabilitiesContext.Provider>
+	return <FilesCapabilitiesContext value={computed}>{children}</FilesCapabilitiesContext>
 }
 
 // Read the current Files capabilities configuration.

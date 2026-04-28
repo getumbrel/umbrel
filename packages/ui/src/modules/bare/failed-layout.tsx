@@ -1,9 +1,9 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Link, To} from 'react-router-dom'
 
 import {buttonClass, secondaryButtonClasss} from '@/layouts/bare/shared'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
+import {cn} from '@/lib/utils'
 
 import {bareContainerClass, BareLogoTitle, BareSpacer, bareTextClass} from './shared'
 
@@ -20,6 +20,7 @@ export default function FailedLayout({
 	to?: To
 	buttonOnClick?: () => void
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className={cn(bareContainerClass, 'animate-in slide-in-from-bottom-2')}>
 			<BareLogoTitle>{title}</BareLogoTitle>

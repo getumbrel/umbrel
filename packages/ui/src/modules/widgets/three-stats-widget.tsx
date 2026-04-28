@@ -1,6 +1,6 @@
 import {LOADING_DASH} from '@/constants'
+import {cn} from '@/lib/utils'
 import type {ThreeStatsItem, ThreeStatsWidget, ThreeStatsWidgetProps} from '@/modules/widgets/shared/constants'
-import {cn} from '@/shadcn-lib/utils'
 
 import {WidgetContainer, widgetTextCva} from './shared/shared'
 import {TablerIcon} from './shared/tabler-icon'
@@ -34,7 +34,7 @@ export function ThreeStatsWidget({
 function Item(item?: ThreeStatsItem) {
 	return (
 		// NOTE: consider reducing rounding if we don't have 3 items
-		<div className='flex min-w-0 flex-1 items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 animate-in fade-in max-sm:gap-1 max-sm:px-1 sm:flex-col sm:justify-center sm:rounded-full'>
+		<div className='flex min-w-0 flex-1 animate-in items-center overflow-hidden rounded-5 bg-white/5 px-1 duration-300 fade-in max-sm:gap-1 max-sm:px-1 sm:flex-col sm:justify-center sm:rounded-full'>
 			{/* `[&>svg]` to select child svg */}
 			{item?.icon && <TablerIcon iconName={item?.icon} className='h-5 w-5 sm:mb-4 [&>svg]:h-5 [&>svg]:w-5' />}
 			<div className='flex w-full flex-row justify-between sm:flex-col sm:text-center'>

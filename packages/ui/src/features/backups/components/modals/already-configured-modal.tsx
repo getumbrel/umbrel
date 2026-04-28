@@ -1,16 +1,10 @@
 // Modal presented when the chosen backup folder already contains an Umbrel backup
 // that is currently in use on this Umbrel. Provides a quick action to manage it.
+import {useTranslation} from 'react-i18next'
+
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {t} from '@/utils/i18n'
 
 export function AlreadyConfiguredModal({
 	open,
@@ -23,6 +17,7 @@ export function AlreadyConfiguredModal({
 	onClose: () => void
 	onManage: () => void
 }) {
+	const {t} = useTranslation()
 	return (
 		<Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
 			<DialogContent className='flex flex-col items-center text-center'>

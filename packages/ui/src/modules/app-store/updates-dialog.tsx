@@ -1,24 +1,25 @@
 import {DialogProps} from '@radix-ui/react-dialog'
 import {Fragment, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
 import {AppIcon} from '@/components/app-icon'
 import {appStateToString} from '@/components/cmdk'
 import {Markdown} from '@/components/markdown'
 import {ProgressButton} from '@/components/progress-button'
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {Separator} from '@/components/ui/separator'
 import {useAppsWithUpdates} from '@/hooks/use-apps-with-updates'
 import {useUpdateAllApps} from '@/hooks/use-update-all-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogHeader, DialogPortal, DialogTitle} from '@/shadcn-components/ui/dialog'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {progressStates, RegistryApp, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export function UpdatesDialogConnected() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('updates')
 	const {appsWithUpdates, isLoading} = useAppsWithUpdates()
 	const updateAll = useUpdateAllApps()
@@ -53,6 +54,7 @@ export function UpdatesDialog({
 	appsWithUpdates: RegistryApp[]
 	titleRightChildren?: React.ReactNode
 } & DialogProps) {
+	const {t} = useTranslation()
 	return (
 		<Dialog {...dialogProps}>
 			<DialogPortal>
@@ -84,6 +86,7 @@ export function UpdatesDialog({
 	)
 }
 function AppItem({app}: {app: RegistryApp}) {
+	const {t} = useTranslation()
 	const appStateQ = trpcReact.apps.state.useQuery(
 		{appId: app.id},
 		{
@@ -128,7 +131,7 @@ function AppItem({app}: {app: RegistryApp}) {
 						['--progress-button-bg' as string]: 'hsl(0 0 30%)',
 					}}
 				>
-					{inProgress ? appStateToString(appState) + '...' : t('app-updates.update')}
+					{inProgress ? appStateToString(appState, t) + '...' : t('app-updates.update')}
 				</ProgressButton>
 			</div>
 			{app.releaseNotes && (
@@ -151,7 +154,7 @@ function AppItem({app}: {app: RegistryApp}) {
 					<button
 						className={cn(
 							'justify-self-end text-13 text-brand underline underline-offset-2',
-							!showAll && 'absolute bottom-0 right-0 ',
+							!showAll && 'absolute right-0 bottom-0',
 						)}
 						onClick={() => setShowAll((s) => !s)}
 					>

@@ -1,8 +1,9 @@
+import {useTranslation} from 'react-i18next'
+
 import {Tooltip, TooltipContent, TooltipTrigger} from '@/features/files/components/rewind/tooltip'
 import {formatFilesystemDate} from '@/features/files/utils/format-filesystem-date'
 import {useLanguage} from '@/hooks/use-language'
-import {cn} from '@/shadcn-lib/utils'
-import {t} from '@/utils/i18n'
+import {cn} from '@/lib/utils'
 
 export function TimelineBar({
 	backups,
@@ -13,6 +14,7 @@ export function TimelineBar({
 	selectedId: string | null | string
 	onSelect: (id: string) => void
 }) {
+	const {t} = useTranslation()
 	const [lang] = useLanguage()
 
 	// Determine if we have actual backup data (more than just "current")

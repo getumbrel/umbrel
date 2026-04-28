@@ -56,7 +56,7 @@ function rectsIntersect(rect1: DOMRect, rect2: DOMRect): boolean {
 
 interface MarqueeSelectionProps {
 	items: FileSystemItem[]
-	scrollAreaRef: React.RefObject<HTMLDivElement>
+	scrollAreaRef: React.RefObject<HTMLDivElement | null>
 	children: React.ReactNode
 	// Optional scale factor to compensate when the listing is rendered inside a CSS transform (e.g. Rewind embeds scale the Files UI).
 	scale?: number

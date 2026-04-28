@@ -1,11 +1,8 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useParams} from 'react-router-dom'
 
-import {SegmentedControl} from '@/components/ui/segmented-control'
-import {usePassword} from '@/hooks/use-password'
-import {useUserName} from '@/hooks/use-user-name'
-import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
+import {Button} from '@/components/ui/button'
 import {
 	Drawer,
 	DrawerContent,
@@ -14,11 +11,15 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/shadcn-components/ui/input'
-import {t} from '@/utils/i18n'
+} from '@/components/ui/drawer'
+import {AnimatedInputError, Input, Labeled, PasswordInput} from '@/components/ui/input'
+import {SegmentedControl} from '@/components/ui/segmented-control'
+import {usePassword} from '@/hooks/use-password'
+import {useUserName} from '@/hooks/use-user-name'
+import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
 
 export function AccountDrawer() {
+	const {t} = useTranslation()
 	const title = t('account')
 
 	const dialogProps = useSettingsDialogProps()
@@ -51,6 +52,7 @@ export function AccountDrawer() {
 }
 
 function ChangeName({closeDialog}: {closeDialog: () => void}) {
+	const {t} = useTranslation()
 	const {name, setName, handleSubmit, formError, isLoading} = useUserName({onSuccess: closeDialog})
 
 	return (
@@ -78,6 +80,7 @@ function ChangeName({closeDialog}: {closeDialog: () => void}) {
 }
 
 function ChangePassword({closeDialog}: {closeDialog: () => void}) {
+	const {t} = useTranslation()
 	const {
 		password,
 		setPassword,
@@ -93,7 +96,7 @@ function ChangePassword({closeDialog}: {closeDialog: () => void}) {
 
 	return (
 		<form onSubmit={handleSubmit} className='flex flex-1 flex-col'>
-			<fieldset disabled={isLoading} className='flex flex-1 flex-col flex-col gap-5'>
+			<fieldset disabled={isLoading} className='flex flex-1 flex-col gap-5'>
 				<ChangePasswordWarning />
 				<Labeled label={t('change-password.current-password')}>
 					<PasswordInput value={password} onValueChange={setPassword} />

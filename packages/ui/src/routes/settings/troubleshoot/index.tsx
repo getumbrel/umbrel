@@ -1,7 +1,7 @@
 import {DialogPortal} from '@radix-ui/react-dialog'
 import {DropdownMenu} from '@radix-ui/react-dropdown-menu'
-import {t} from 'i18next'
 import {Suspense, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {Route, Routes, useNavigate, useParams} from 'react-router-dom'
 
 import {ImmersiveDialog, ImmersiveDialogOverlay} from '@/components/ui/immersive-dialog'
@@ -30,6 +30,7 @@ export default function TroubleshootDialog() {
 }
 
 function PickerDialogContent() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const [appDialogOpen, setAppDialogOpen] = useState(false)
 	const params = useParams<{appId: string}>()

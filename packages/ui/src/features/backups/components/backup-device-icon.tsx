@@ -1,10 +1,11 @@
+import {useTranslation} from 'react-i18next'
+
 import {getDeviceType} from '@/features/backups/utils/backup-location-helpers'
 import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import activeNasIcon from '@/features/files/assets/nas-icon-active.png'
 import inactiveNasIcon from '@/features/files/assets/nas-icon-inactive.png'
 import umbrelDeviceActive from '@/features/files/assets/umbrel-device-icon-active.png'
 import {useNetworkDeviceType} from '@/features/files/hooks/use-network-device-type'
-import {t} from '@/utils/i18n'
 
 export function BackupDeviceIcon({
 	path,
@@ -15,6 +16,7 @@ export function BackupDeviceIcon({
 	connected?: boolean
 	className?: string
 }) {
+	const {t} = useTranslation()
 	const kind = getDeviceType(path)
 	const {deviceType} = useNetworkDeviceType(path)
 

@@ -1,28 +1,30 @@
+@reference "../../../../../index.css";
+
 .files-list-view-file-item {
 	@apply rounded-lg;
 }
 
 /* Selected item */
 .files-list-view-file-item[data-selected='true'] {
-	@apply bg-brand/10 shadow-[0_0_0_1px_theme(colors.brand)];
+	@apply bg-brand/10 shadow-[0_0_0_1px_hsl(var(--color-brand))];
 }
 
 /* First selected item in a sequence */
 /* Has top left radius, top right radius, top border, and side borders */
 .files-list-view-file-item[data-selection-position='first'] {
-	@apply rounded-b-none rounded-t-lg shadow-[inset_0_1px_0_theme(colors.brand),inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand)];
+	@apply rounded-t-lg rounded-b-none shadow-[inset_0_1px_0_hsl(var(--color-brand)),inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand))];
 }
 
 /* Middle items in a sequence */
 /* Only side borders */
 .files-list-view-file-item[data-selection-position='middle'] {
-	@apply rounded-none shadow-[inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand)];
+	@apply rounded-none shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand))];
 }
 
 /* Last selected item in a sequence */
 /* Has bottom left radius, bottom right radius, bottom border, and side borders */
 .files-list-view-file-item[data-selection-position='last'] {
-	@apply rounded-b-lg rounded-t-none shadow-[inset_1px_0_0_theme(colors.brand),inset_-1px_0_0_theme(colors.brand),inset_0_-1px_0_theme(colors.brand)];
+	@apply rounded-t-none rounded-b-lg shadow-[inset_1px_0_0_hsl(var(--color-brand)),inset_-1px_0_0_hsl(var(--color-brand)),inset_0_-1px_0_hsl(var(--color-brand))];
 }
 
 /* Standalone selected item (including first item in list) */

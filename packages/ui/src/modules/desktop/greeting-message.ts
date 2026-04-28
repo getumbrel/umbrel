@@ -1,7 +1,8 @@
-import {t} from '@/utils/i18n'
+import {TFunction} from 'i18next'
+
 import {firstNameFromFullName} from '@/utils/misc'
 
-export function greetingMessage(name: string) {
+export function greetingMessage(name: string, t: TFunction) {
 	const firstName = firstNameFromFullName(name)
 
 	const greetingMap = {

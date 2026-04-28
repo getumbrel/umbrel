@@ -1,0 +1,7 @@
+description = "setup Rugix for umbrelOS"
+
+dependencies = ["core/rugix-ctrl"]
+
+# Boot type: "grub" for UEFI/GRUB systems (amd64, generic arm64), "pi" for Raspberry Pi
+[parameters.boot_type]
+default = "grub"

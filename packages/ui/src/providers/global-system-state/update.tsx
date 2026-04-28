@@ -1,8 +1,9 @@
+import {useTranslation} from 'react-i18next'
+
 import {BarePage} from '@/layouts/bare/bare-page'
 import FailedLayout from '@/modules/bare/failed-layout'
 import {ProgressLayout} from '@/modules/bare/progress-layout'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const updateVersionMut = trpcReact.system.update.useMutation({
@@ -16,6 +17,7 @@ export function useUpdate({onMutate, onSuccess}: {onMutate?: () => void; onSucce
 }
 
 export function UpdatingCover({onRetry}: {onRetry: () => void}) {
+	const {t} = useTranslation()
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery()
 	const updateStatusQ = trpcReact.system.updateStatus.useQuery(undefined, {
 		refetchInterval: 500,

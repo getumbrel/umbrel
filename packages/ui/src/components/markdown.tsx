@@ -3,7 +3,7 @@ import {useLocation} from 'react-router-dom'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 // IMPORTANT: Want to avoid any risk of tracking pixels, XSS, etc.
@@ -39,7 +39,7 @@ export function Markdown({className, ...props}: React.ComponentProps<typeof Mark
 				h6: 'h4',
 				a: (props) => (
 					<a
-						className='decoration-white/30 underline-offset-2 outline-none transition-opacity hover:opacity-80 focus:opacity-80'
+						className='decoration-white/30 underline-offset-2 outline-hidden transition-opacity hover:opacity-80 focus:opacity-80'
 						target='_blank'
 						{...props}
 					/>

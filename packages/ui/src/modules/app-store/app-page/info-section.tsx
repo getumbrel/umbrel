@@ -1,15 +1,17 @@
 import {ReactNode} from 'react'
+import {useTranslation} from 'react-i18next'
 import semver from 'semver'
 
 import {UNKNOWN} from '@/constants'
 import {useVersion} from '@/hooks/use-version'
+import {cn} from '@/lib/utils'
 import {RegistryApp} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 
 import {cardClass, cardTitleClass} from './shared'
 
 export const InfoSection = ({app}: {app: RegistryApp}) => {
+	const {t} = useTranslation()
 	return (
 		<div className={cardClass}>
 			<h2 className={cardTitleClass}>{t('app-page.section.info.title')}</h2>
@@ -43,7 +45,7 @@ export const InfoSection = ({app}: {app: RegistryApp}) => {
 				/>
 			)}
 			<KV k={t('app-page.section.info.compatibility')} v={<InfoSectionCompatibilityText app={app} />} />
-			<a href={app.support} target='_blank' className='self-start text-14 font-medium text-brand-lighter'>
+			<a href={app.support} target='_blank' className={cn(linkClass, 'self-start text-14 font-medium')}>
 				{t('app-page.section.info.support')}
 			</a>
 		</div>
@@ -60,6 +62,7 @@ function KV({k, v}: {k: ReactNode; v: ReactNode}) {
 }
 
 function InfoSectionCompatibilityText({app}: {app: RegistryApp}) {
+	const {t} = useTranslation()
 	const os = useVersion()
 	return os.version && semver.lte(app.manifestVersion, os.version)
 		? t('app-page.section.info.compatibility-compatible')

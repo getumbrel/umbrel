@@ -1,12 +1,11 @@
 import {DialogDescription} from '@radix-ui/react-dialog'
 import {useState} from 'react'
-import {toast} from 'sonner'
+import {useTranslation} from 'react-i18next'
 
+import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
 import {Card} from '@/components/ui/card'
 import {CopyableField} from '@/components/ui/copyable-field'
-import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
-import {Button} from '@/shadcn-components/ui/button'
 import {
 	Dialog,
 	DialogFooter,
@@ -14,14 +13,16 @@ import {
 	DialogPortal,
 	DialogScrollableContent,
 	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {AnimatedInputError, Input} from '@/shadcn-components/ui/input'
-import {Separator} from '@/shadcn-components/ui/separator'
+} from '@/components/ui/dialog'
+import {AnimatedInputError, Input} from '@/components/ui/input'
+import {Separator} from '@/components/ui/separator'
+import {toast} from '@/components/ui/toast'
+import {UMBREL_APP_STORE_ID} from '@/modules/app-store/constants'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export function CommunityAppStoreDialog() {
+	const {t} = useTranslation()
 	const title = t('app-store.menu.community-app-stores')
 	const dialogProps = useDialogOpenProps('add-community-store')
 
@@ -38,23 +39,21 @@ export function CommunityAppStoreDialog() {
 
 	const addAppStoreMut = trpcReact.appStore.addRepository.useMutation({
 		onSuccess: () => {
-			toast.success('Added community app store')
 			setUrl('')
 			setLocalError('')
 			appStoresQ.refetch()
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('community-app-store.add-error', {message: err.message}))
 		},
 	})
 
 	const removeAppStoreMut = trpcReact.appStore.removeRepository.useMutation({
 		onSuccess: () => {
-			toast.success('Removed community app store')
 			appStoresQ.refetch()
 		},
 		onError: (err) => {
-			toast.error(err.message)
+			toast.error(t('community-app-store.remove-error', {message: err.message}))
 		},
 	})
 

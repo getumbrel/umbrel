@@ -1,7 +1,8 @@
+import {useTranslation} from 'react-i18next'
+
 import {CoverMessage, CoverMessageParagraph} from '@/components/ui/cover-message'
 import {Loading} from '@/components/ui/loading'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuccess?: (didWork: boolean) => void}) {
 	const shutdownMut = trpcReact.system.shutdown.useMutation({
@@ -14,6 +15,7 @@ export function useShutdown({onMutate, onSuccess}: {onMutate?: () => void; onSuc
 }
 
 export function ShuttingDownCover() {
+	const {t} = useTranslation()
 	return (
 		<CoverMessage>
 			<Loading>{t('shut-down.shutting-down')}</Loading>

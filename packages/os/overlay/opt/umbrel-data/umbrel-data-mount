@@ -1,0 +1,164 @@
+#!/bin/bash
+
+set -euo pipefail
+
+exec >/run/umbrel-mount 2>&1
+
+CONFIG_PARTITION=${CONFIG_PARTITION:-"/run/rugix/mounts/config"}
+CONFIG_FILE="$CONFIG_PARTITION/umbrel.yaml"
+
+MOUNT_POINT="$1"
+DEFAULT_PARTITION="${2:-}"
+
+wait_for_devices() {
+    local devices=("$@")
+    local missing_devices=()
+    echo ">>> Waiting for devices to appear: ${devices[*]}"
+    # 50 checks with 0.1s sleep = 5 second timeout
+    for i in {1..50}; do
+        local all_devices_present="true"
+        missing_devices=()
+        for dev in "${devices[@]}"; do
+            if [ ! -b "$dev" ]; then
+                all_devices_present="false"
+                missing_devices+=("$dev")
+            fi
+        done
+        if [ "$all_devices_present" = "true" ]; then
+            echo ">>> All devices present"
+            break
+        fi
+        if [ "$i" = "50" ]; then
+            echo ">>> wait_for_devices timeout reached after 5 seconds, missing: ${missing_devices[*]}"
+            break
+        fi
+        sleep 0.1
+    done
+}
+
+# Since we have no perisitent data before the raid array is mounted, we don't have a cache file to hint towards
+# the location of the devices. We always import via Umbrel's own by-id namespace so ZFS and the rest of the
+# codebase agree on a single stable disk naming scheme regardless of which upstream /dev/disk/by-id aliases exist.
+zpool_import() {
+    zpool import -d /dev/disk/by-umbrel-id -o cachefile=none "$@"
+}
+
+# Handle migration from storage to failsafe mode
+# This does the minimum at boot: final sync and pool rename
+# The rest of the migration is completed by umbreld after boot
+handle_failsafe_transition() {
+    local pool_name="$1"
+    local migration_pool="${pool_name}-migration"
+    local previous_pool="${pool_name}-previous-migration"
+
+    echo ">>> Migration pool detected, performing final sync"
+
+    # Import both pools
+    echo ">>> Importing ${pool_name} pool"
+    zpool_import -f "$pool_name"
+
+    echo ">>> Importing ${migration_pool} pool"
+    zpool_import -f "$migration_pool"
+
+    # Create final snapshot and sync incrementally
+    # Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
+    echo ">>> Creating final snapshot"
+    zfs snapshot -r "${pool_name}@migration-final"
+
+    echo ">>> Sending incremental changes to migration pool"
+    zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
+
+    # Rename pools
+    # umbrelos > umbrelos-previous-migration
+    # umbrelos-migration > umbrelos
+    # If anything before this goes wrong, we boot back into the old pool.
+    # After the first rename succeeds, if the second rename fails, we rollback
+    # by renaming umbrelos-previous-migration back to umbrelos.
+    echo ">>> Renaming pools for migration"
+    zpool export "$pool_name"
+    zpool export "$migration_pool"
+    zpool_import "$pool_name" "$previous_pool"
+    if zpool_import "$migration_pool" "$pool_name"; then
+        echo ">>> Pool rename complete, umbreld will finish migration after boot"
+    else
+        # TODO: Should we signal some error in the raid config here?
+        echo ">>> ERROR: Failed to rename migration pool, rolling back"
+        zpool export "$previous_pool"
+        zpool_import "$previous_pool" "$pool_name"
+        echo ">>> Rollback complete, migration aborted"
+    fi
+
+    # Export the pool so we can import it again in the usual mount process
+    zpool export "$pool_name"
+}
+
+# Parse YAML config to get RAID settings if config file exists
+POOL_NAME=""
+DEVICES=()
+RAID_STATE=""
+if [ -f "$CONFIG_FILE" ]; then
+    POOL_NAME=$(yq '.raid.poolName' "$CONFIG_FILE" 2>/dev/null || true)
+    mapfile -t DEVICES < <(yq '.raid.devices[]' "$CONFIG_FILE" 2>/dev/null || true)
+    RAID_STATE=$(yq '.raid.state' "$CONFIG_FILE" 2>/dev/null || true)
+fi
+
+if [ -n "$POOL_NAME" ] && [ ${#DEVICES[@]} -gt 0 ]; then
+    echo ">>> Found RAID config for pool '${POOL_NAME}' with ${#DEVICES[@]} devices"
+
+    # Load zfs
+    modprobe zfs
+
+    # Attempt to wait for devices
+    # Continue if timeout is reached to allow mounting array with missing devices
+    wait_for_devices "${DEVICES[@]}"
+
+    echo ">>> Waiting for pending udev events before import"
+    udevadm settle || true
+
+    # Check if we're in the middle of a failsafe transition
+    if [ "$RAID_STATE" = "transitioning-to-failsafe" ]; then
+        handle_failsafe_transition "$POOL_NAME" || true
+    fi
+
+    # Import the pool normally
+    #  -o cachefile=none means we don't read/write the cache files since
+    # we only have the read only image at this point.
+    #  -f force import if it thinks the pool is active elsewhere. This often
+    # happens after ota updates where it thinks we're on a new machine.
+    echo ">>> Importing ${POOL_NAME} pool"
+    zpool_import -f "$POOL_NAME" || true
+
+    if ! zpool list "$POOL_NAME" >/dev/null 2>&1; then
+        echo ">>> Import failed, sleeping 5 seconds before retry"
+        sleep 5
+
+        echo ">>> Retrying ${POOL_NAME} pool import"
+        zpool_import -f "$POOL_NAME"
+    fi
+
+    # Load the encryption key for the data dataset
+    # We use a hardcoded encryption password for now. This obviously doesn't provide any security.
+	# However initialising encryption now means we can enable full disk encryption in the future
+	# by simply updating the password to something secure without requiring an entire backup and restore
+	# of all data into a new encrypted dataset.
+    echo ">>> Loading encryption key for ${POOL_NAME}/data"
+    echo "umbrelumbrel" | zfs load-key "${POOL_NAME}/data" 2>/dev/null
+
+    echo ">>> Mounting RAID array to '$MOUNT_POINT'"
+    mkdir -p "$MOUNT_POINT"
+    mount -t zfs "${POOL_NAME}/data" "$MOUNT_POINT"
+else
+    echo ">>> No RAID config found, falling back to default data partition"
+
+    if [ -z "$DEFAULT_PARTITION" ]; then
+        echo "ERROR: No default partition provided"
+        exit 1
+    fi
+
+    echo ">>> Running fsck on '$DEFAULT_PARTITION'"
+    fsck -p "$DEFAULT_PARTITION"
+
+    echo ">>> Mounting '$DEFAULT_PARTITION' to '$MOUNT_POINT'"
+    mkdir -p "$MOUNT_POINT"
+    mount "$DEFAULT_PARTITION" "$MOUNT_POINT"
+fi

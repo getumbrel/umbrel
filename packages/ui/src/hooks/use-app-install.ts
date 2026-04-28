@@ -1,11 +1,11 @@
 import {useMutation} from '@tanstack/react-query'
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useInterval, usePrevious} from 'react-use'
-import {toast} from 'sonner'
 import {arrayIncludes} from 'ts-extras'
 
-import {AppState, AppStateOrLoading, trpcClient, trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
+import {toast} from '@/components/ui/toast'
+import {AppState, AppStateOrLoading, trpcReact} from '@/trpc/trpc'
 
 // TODO: consider adding `stopped` and `unknown`
 /** States where we want to frequently poll (on the order of seconds) */
@@ -19,13 +19,15 @@ export const pollStates = [
 ] as const satisfies readonly AppState[]
 
 export function useUninstallAllApps() {
+	const {t} = useTranslation()
 	const apps = trpcReact.apps.list.useQuery().data
 	const utils = trpcReact.useUtils()
+	const uninstallMut = trpcReact.apps.uninstall.useMutation()
 
 	const mut = useMutation({
 		mutationFn: async () => {
 			for (const app of apps ?? []) {
-				await trpcClient.apps.uninstall.mutate({appId: app.id})
+				await uninstallMut.mutateAsync({appId: app.id})
 			}
 		},
 
@@ -40,6 +42,7 @@ export function useUninstallAllApps() {
 
 // TODO: rename to something that covers more than install
 export function useAppInstall(id: string) {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const appStateQ = trpcReact.apps.state.useQuery({appId: id})
 
@@ -108,7 +111,7 @@ export function useAppInstall(id: string) {
 		return installMut.mutate({appId: id, alternatives})
 	}
 	const getAppsToUninstallFirst = async () => {
-		const appsToUninstallFirst = await trpcClient.apps.dependents.query(id)
+		const appsToUninstallFirst = await utils.apps.dependents.fetch(id)
 		// We expect to have an array, even if it's empty
 		if (!appsToUninstallFirst) throw new Error(t('apps.uninstall.failed-to-get-required-apps'))
 		return appsToUninstallFirst

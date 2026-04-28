@@ -32,7 +32,7 @@ i18next
 		},
 	})
 
-// Instead of using `useTranslation` hook, we can use `i18n.t` directly
-// The reason for `useTranslation` is to keep the component updated when the language changes, but we just reload the page anyhow.
+// Components and hooks should use `useTranslation()` from react-i18next for reactive language switching.
+// This static binding is only for utility functions that are called during render (not React components/hooks).
 export const t = i18next.t.bind(i18next)
 export const maybeT = (key: string | undefined) => (key ? t(key) : t('unknown'))

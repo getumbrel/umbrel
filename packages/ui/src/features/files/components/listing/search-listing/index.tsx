@@ -5,18 +5,21 @@
 //   they navigate into a file or folder.
 
 import {useEffect} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useSearchParams} from 'react-router-dom'
 
 import {Listing} from '@/features/files/components/listing'
 import {useSetActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {useSearchFiles} from '@/features/files/hooks/use-search-files'
 import {useFilesStore} from '@/features/files/store/use-files-store'
-import {t} from '@/utils/i18n'
+import {trpcReact} from '@/trpc/trpc'
 
 export function SearchListing() {
+	const {t} = useTranslation()
 	const clearSelectedItems = useFilesStore((state) => state.clearSelectedItems)
 
 	const setActionsBarConfig = useSetActionsBarConfig()
+	const userName = trpcReact.user.get.useQuery().data?.name
 
 	// read the current search term from the URL
 	const [params] = useSearchParams()
@@ -30,10 +33,10 @@ export function SearchListing() {
 
 	useEffect(() => {
 		setActionsBarConfig({
-			hidePath: true,
+			pathLabel: t('files-search.searching-label', {name: userName ?? 'Umbrel'}),
 			hideSearch: false,
 		})
-	}, [])
+	}, [userName])
 
 	// query the backend – the hook internally short-circuits when provided an
 	// empty string, so clearing the search box stops the requests
@@ -57,6 +60,7 @@ export function SearchListing() {
 }
 
 function EmptySearchView({query}: {query: string}) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex h-full items-center justify-center text-xs text-neutral-500'>
 			{query === '' ? t('files-search.default') : t('files-search.no-results', {query})}

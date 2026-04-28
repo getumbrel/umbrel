@@ -1,25 +1,25 @@
 import {Close} from '@radix-ui/react-dialog'
 import {SetStateAction, useEffect, useMemo, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {arrayIncludes} from 'ts-extras'
 
-import {ChevronDown} from '@/assets/chevron-down'
 import {AppIcon} from '@/components/app-icon'
+import {ChevronDown} from '@/components/chevron-down'
 import {appStateToString} from '@/components/cmdk'
+import {Button} from '@/components/ui/button'
 import {ButtonLink} from '@/components/ui/button-link'
-import {useApps} from '@/providers/apps'
-import {useAllAvailableApps} from '@/providers/available-apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/shadcn-components/ui/dialog'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle} from '@/components/ui/dialog'
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {ScrollArea} from '@/shadcn-components/ui/scroll-area'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/dropdown-menu'
+import {ScrollArea} from '@/components/ui/scroll-area'
+import {cn} from '@/lib/utils'
+import {useApps} from '@/providers/apps'
+import {useAllAvailableApps} from '@/providers/available-apps'
 import {AppState, installedStates, RegistryApp} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function SelectDependenciesDialog({
@@ -37,6 +37,7 @@ export function SelectDependenciesDialog({
 	onNext: (selectedDeps: Record<string, string>) => void
 	highlightDependency?: string
 }) {
+	const {t} = useTranslation()
 	const availableApps = useAllAvailableApps()
 	const {isLoading, userApps, userAppsKeyed} = useApps()
 	const [selectedDependencies, setSelectedDependencies] = useState<Record<string, string>>({})
@@ -219,6 +220,7 @@ const listItemClass = tw`flex items-center pl-3 pr-4 h-[50px] text-[14px] font-m
 const listItemClassWithDropdown = tw`flex items-center pl-3 pr-4 h-[60px] text-[14px] font-medium -tracking-3 justify-between`
 
 function DependencyStateText({appId, appState, onClick}: {appId: string; appState: AppState; onClick?: () => void}) {
+	const {t} = useTranslation()
 	const buttonClass = 'w-[70px]' // Fixed width for both buttons
 
 	if (arrayIncludes(installedStates, appState)) {
@@ -232,13 +234,20 @@ function DependencyStateText({appId, appState, onClick}: {appId: string; appStat
 	if (appState === 'not-installed') {
 		return (
 			// TODO: link to community app store if needed using `getAppStoreAppFromInstalledApp`
-			<ButtonLink to={`/app-store/${appId}`} onClick={onClick} variant='primary' size='sm' className={buttonClass}>
+			<ButtonLink
+				to={`/app-store/${appId}`}
+				state={{fromAppStore: true}}
+				onClick={onClick}
+				variant='primary'
+				size='sm'
+				className={buttonClass}
+			>
 				{t('app.install')}
 			</ButtonLink>
 		)
 	}
 
-	return <span className='text-sm opacity-50'>{appStateToString(appState) + '...'}</span>
+	return <span className='text-sm opacity-50'>{appStateToString(appState, t) + '...'}</span>
 }
 
 function DependencyDropdown({
@@ -258,6 +267,7 @@ function DependencyDropdown({
 	onSelectDependency: (dependencyId: string, appId: string) => void
 	highlightDependency?: string
 }) {
+	const {t} = useTranslation()
 	const onOpenChange = (open: boolean) => setOpenDropdowns((prev) => ({...prev, [dependencyId]: open}))
 	return (
 		<DropdownMenu open={openDropdowns[dependencyId] ?? false} onOpenChange={onOpenChange}>

@@ -1,18 +1,13 @@
+import {useTranslation} from 'react-i18next'
+
+import {Button} from '@/components/ui/button'
+import {Dialog, DialogContent, DialogFooter, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {AnimatedInputError, PasswordInput} from '@/components/ui/input'
 import {usePassword} from '@/hooks/use-password'
 import {ChangePasswordWarning, useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {AnimatedInputError, PasswordInput} from '@/shadcn-components/ui/input'
-import {t} from '@/utils/i18n'
 
 export default function ChangePasswordDialog() {
+	const {t} = useTranslation()
 	const title = t('change-password')
 
 	const dialogProps = useSettingsDialogProps()

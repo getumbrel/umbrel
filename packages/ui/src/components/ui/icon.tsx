@@ -2,8 +2,8 @@ import type {VariantProps} from 'class-variance-authority'
 import type {LucideIcon} from 'lucide-react'
 import type {IconType} from 'react-icons'
 
-import {buttonVariants} from '@/shadcn-components/ui/button'
-import {cn} from '@/shadcn-lib/utils'
+import {buttonVariants} from '@/components/ui/button'
+import {cn} from '@/lib/utils'
 
 type SizeVariant = VariantProps<typeof buttonVariants>['size']
 type Size = NonNullable<SizeVariant>

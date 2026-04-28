@@ -1,17 +1,12 @@
 import {ChevronDown} from 'lucide-react'
+import {useTranslation} from 'react-i18next'
 
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import iOsIcon from '@/features/files/assets/sharing-info-platforms/ios.png'
 import macOsIcon from '@/features/files/assets/sharing-info-platforms/macos.png'
 import windowsIcon from '@/features/files/assets/sharing-info-platforms/windows.png'
 import umbrelDeviceIconActive from '@/features/files/assets/umbrel-device-icon-active.png'
-import {Button} from '@/shadcn-components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {t} from '@/utils/i18n'
 
 export type Platform = {
 	id: 'macos' | 'ios' | 'windows' | 'umbrelos'
@@ -32,6 +27,7 @@ interface PlatformSelectorProps {
 }
 
 export function PlatformSelector({selectedPlatform, onPlatformChange}: PlatformSelectorProps) {
+	const {t} = useTranslation()
 	return (
 		<div className='flex items-center justify-between'>
 			<span className='text-14'>{t('files-share.instructions.how-to-access')}</span>

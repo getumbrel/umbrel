@@ -1,10 +1,12 @@
+import {useTranslation} from 'react-i18next'
+
 import {useSystemMemoryForUi} from '@/hooks/use-memory'
-import {t} from '@/utils/i18n'
 
 import {ProgressStatCardContent} from './progress-card-content'
 import {cardErrorClass} from './shared'
 
 export function MemoryCardContent() {
+	const {t} = useTranslation()
 	const {value, valueSub, secondaryValue, progress, isMemoryLow} = useSystemMemoryForUi()
 
 	return (

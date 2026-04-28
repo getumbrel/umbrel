@@ -1,10 +1,7 @@
 import {useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {useNavigate} from 'react-router-dom'
 
-import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
-import {AppsProvider} from '@/providers/apps'
-import {AvailableAppsProvider} from '@/providers/available-apps'
-import {Wallpaper} from '@/providers/wallpaper'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,10 +11,14 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {t} from '@/utils/i18n'
+} from '@/components/ui/alert-dialog'
+import {Dock, DockBottomPositioner} from '@/modules/desktop/dock'
+import {AppsProvider} from '@/providers/apps'
+import {AvailableAppsProvider} from '@/providers/available-apps'
+import {Wallpaper} from '@/providers/wallpaper'
 
 export function NotFound() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const [open, setOpen] = useState(true)
 

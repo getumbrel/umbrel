@@ -119,7 +119,7 @@ export default class Backups {
 		while (this.running) {
 			await setTimeout(100)
 			const userExists = await this.#umbreld.user.exists()
-			const shouldRun = userExists && Date.now() - lastRun >= this.backupInterval
+			const shouldRun = userExists && !this.restoreStatus.running && Date.now() - lastRun >= this.backupInterval
 			if (!shouldRun) continue
 			lastRun = Date.now()
 

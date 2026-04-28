@@ -1,0 +1,15 @@
+[layout]
+type = "gpt"
+partitions = [
+    { name = "EFI", size = "256M", type = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B" },
+    { name = "boot-a", size = "128MiB", type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7" },
+    { name = "boot-b", size = "128MiB", type = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7" },
+    { name = "system-a", size = "5GiB" },
+    { name = "system-b", size = "5GiB" },
+    # For the data partition, we reserve 0.5% of blocks (-m 0.5) for root-only writes to prevent
+    # full-disk deadlocks and keep logs/Docker alive if the FS hits 100%.
+    # The ext4 default of 5% is excessive on multi-TB disks (10s to 100s of GB wasted).
+    # At 0.5%, we reserve around 2.5GB for 0.5TB, 5GB for 1TB, 10GB for 2TB, and 20GB for 4TB,
+    # which is a small cost that gives us enough headroom for safe recovery.
+    { name = "data", filesystem = { type = "ext4", label = "data", additional-options = ["-m", "0.5"] } },
+]

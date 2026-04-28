@@ -1,8 +1,6 @@
-import {useId, useState} from 'react'
+import {useId} from 'react'
+import {useTranslation} from 'react-i18next'
 
-import {ListRadioItem} from '@/components/ui/list'
-import {useLanguage} from '@/hooks/use-language'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
 import {
 	Drawer,
 	DrawerContent,
@@ -10,27 +8,17 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {t} from '@/utils/i18n'
-import {languages, SupportedLanguageCode} from '@/utils/language'
-import {sleep} from '@/utils/misc'
+} from '@/components/ui/drawer'
+import {ListRadioItem} from '@/components/ui/list'
+import {useLanguage} from '@/hooks/use-language'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {languages} from '@/utils/language'
 
 export function LanguageDrawer() {
+	const {t} = useTranslation()
 	const title = t('language')
 	const dialogProps = useSettingsDialogProps()
 	const [activeCode, setActiveCode] = useLanguage()
-	const [temporaryCode, setTemporaryCode] = useState(activeCode)
-
-	const changeLanguage = async (code: SupportedLanguageCode) => {
-		// Using this janky approach with a temporary code because we want to show feedback right away
-		// and also close the dialog (which updates the page URL), so the timeout causes the page refresh to happen
-		// at the desired url
-		setTemporaryCode(code)
-		// Delay so user can see the checkmark
-		await sleep(200)
-		dialogProps.onOpenChange(false)
-		setTimeout(() => setActiveCode(code), 200)
-	}
 
 	const radioName = useId()
 
@@ -44,15 +32,19 @@ export function LanguageDrawer() {
 
 				<DrawerScroller>
 					<div className='divide-y divide-white/6 rounded-12 bg-white/6'>
-						{languages.map(({code, name}) => (
+						{languages.map(({code, name, glyph}) => (
 							<ListRadioItem
 								key={code}
 								name={radioName}
-								checked={temporaryCode === code}
-								onSelect={() => changeLanguage(code)}
-								disabled={temporaryCode !== activeCode}
+								checked={activeCode === code}
+								onSelect={() => setActiveCode(code)}
 							>
-								{name}
+								<span className='flex items-center gap-3'>
+									<span className='flex h-6 w-6 shrink-0 items-center justify-center rounded-5 bg-white/10 text-12 leading-none font-semibold'>
+										{glyph}
+									</span>
+									{name}
+								</span>
 							</ListRadioItem>
 						))}
 					</div>

@@ -13,19 +13,34 @@ import User from './modules/user/user.js'
 import AppStore from './modules/apps/app-store.js'
 import Apps from './modules/apps/apps.js'
 import Files from './modules/files/files.js'
+import Hardware from './modules/hardware/hardware.js'
 import Notifications from './modules/notifications/notifications.js'
 import EventBus from './modules/event-bus/event-bus.js'
 import Dbus from './modules/dbus/dbus.js'
 import Backups from './modules/backups/backups.js'
+import SystemNg from './modules/system-ng/system-ng.js'
 
-import {commitOsPartition, setupPiCpuGovernor, restoreWiFi, waitForSystemTime} from './modules/system/system.js'
-import {overrideDevelopmentHostname} from './modules/development.js'
+import {
+	commitOsPartition,
+	setupPiCpuGovernor,
+	restoreHostname,
+	restoreWiFi,
+	restoreStaticIp,
+	waitForSystemTime,
+	reboot,
+} from './modules/system/system.js'
+import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
 
 type StoreSchema = {
 	version: string
 	apps: string[]
 	appRepositories: string[]
 	widgets: string[]
+	shortcuts: {
+		url: string
+		title: string
+		icon?: string
+	}[]
 	torEnabled?: boolean
 	user: {
 		name: string
@@ -42,9 +57,16 @@ type StoreSchema = {
 			password?: string
 		}
 		externalDns?: boolean
-	}
-	development: {
 		hostname?: string
+		staticIp?: Record<
+			string,
+			{
+				ip: string
+				subnetPrefix: number
+				gateway: string
+				dns: string[]
+			}
+		>
 	}
 	recentlyOpenedApps: string[]
 	files: {
@@ -77,6 +99,9 @@ type StoreSchema = {
 		}[]
 		ignore: string[]
 	}
+	migration: {
+		menderToRugixAttempt?: number
+	}
 }
 
 export type UmbreldOptions = {
@@ -101,10 +126,12 @@ export default class Umbreld {
 	appStore: AppStore
 	apps: Apps
 	files: Files
+	hardware: Hardware
 	notifications: Notifications
 	eventBus: EventBus
 	dbus: Dbus
 	backups: Backups
+	systemNg: SystemNg
 	isBackupRestoreFirstStart = false
 
 	constructor({
@@ -125,10 +152,12 @@ export default class Umbreld {
 		this.appStore = new AppStore(this, {defaultAppStoreRepo})
 		this.apps = new Apps(this)
 		this.files = new Files(this)
+		this.hardware = new Hardware(this)
 		this.notifications = new Notifications(this)
 		this.eventBus = new EventBus(this)
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
+		this.systemNg = new SystemNg(this)
 	}
 
 	async start() {
@@ -139,29 +168,40 @@ export default class Umbreld {
 		this.logger.log(`logLevel:      ${this.logLevel}`)
 		this.logger.log()
 
-		// If we've successfully booted then commit to the current OS partition (non-blocking)
-		commitOsPartition(this)
+		// If we've successfully booted then commit to the current OS partition
+		await commitOsPartition(this)
 
 		// Set ondemand cpu governor for Raspberry Pi (non-blocking)
 		setupPiCpuGovernor(this)
 
+		// Cleanup old factory reset state backups early to free up disk space ASAP (non-blocking)
+		cleanupFactoryResetBackups(this)
+
 		// Run migration module before anything else
 		// TODO: think through if we want to allow the server module to run before migration.
 		// It might be useful if we add more complicated migrations so we can signal progress.
-		await this.migration.start()
+		const migrationResult = await this.migration.start()
+		// If the migration module requests a reboot, halt umbreld startup and reboot the system immediately
+		if (migrationResult.reboot) {
+			this.logger.log('Rebooting to complete migrations...')
+			await reboot()
+			return
+		}
 
 		// Detect first boot after a backup restore (we run after migrations move 'import' into dataDirectory)
 		await this.setBackupRestoreFirstStartFlag()
 
-		// Override hostname in development when set
-		const developmentHostname = await this.store.get('development.hostname')
-		if (developmentHostname) await overrideDevelopmentHostname(this, developmentHostname)
+		// Restore configured hostname after boot/update (non-blocking)
+		restoreHostname(this)
 
 		// Synchronize the system password after OTA update (non-blocking)
 		this.user.syncSystemPassword()
 
 		// Restore WiFi connection after OTA update (non-blocking)
 		restoreWiFi(this)
+
+		// Restore static IP settings (non-blocking)
+		restoreStaticIp(this)
 
 		// Wait for system time to be synced for up to 10 seconds before proceeding
 		// We need this on Raspberry Pi since it doesn't have a persistent real time clock.
@@ -180,11 +220,14 @@ export default class Umbreld {
 
 		// Initialise modules
 		await Promise.all([
+			this.user.start(),
 			this.files.start(),
+			this.hardware.start(),
 			this.apps.start(),
 			this.appStore.start(),
 			this.dbus.start(),
 			this.server.start(),
+			this.systemNg.start(),
 		])
 
 		// Start backups last because it depends on files
@@ -210,7 +253,15 @@ export default class Umbreld {
 			await this.backups.stop()
 
 			// Stop modules
-			await Promise.all([this.files.stop(), this.apps.stop(), this.appStore.stop(), this.dbus.stop()])
+			await Promise.all([
+				this.user.stop(),
+				this.files.stop(),
+				this.hardware.stop(),
+				this.apps.stop(),
+				this.appStore.stop(),
+				this.dbus.stop(),
+				this.systemNg.stop(),
+			])
 			return true
 		} catch (error) {
 			// If we fail to stop gracefully there's not really much we can do, just log the error and return false

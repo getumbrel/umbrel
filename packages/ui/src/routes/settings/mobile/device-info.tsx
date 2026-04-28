@@ -1,5 +1,5 @@
-import {useDeviceInfo} from '@/hooks/use-device-info'
-import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {useTranslation} from 'react-i18next'
+
 import {
 	Drawer,
 	DrawerContent,
@@ -7,20 +7,30 @@ import {
 	DrawerHeader,
 	DrawerScroller,
 	DrawerTitle,
-} from '@/shadcn-components/ui/drawer'
-import {t} from '@/utils/i18n'
+} from '@/components/ui/drawer'
+import {deviceInfoToHostEnvironment} from '@/hooks/use-device-info'
+import {useSettingsDialogProps} from '@/routes/settings/_components/shared'
+import {trpcReact} from '@/trpc/trpc'
 
-import {DeviceInfoContent} from '../_components/device-info-content'
+import {DeviceInfoContent, formatDeviceSpecs} from '../_components/device-info-content'
 
 export function DeviceInfoDrawer() {
+	const {t} = useTranslation()
 	const title = t('device-info')
 	const dialogProps = useSettingsDialogProps()
 
-	const {data, isLoading} = useDeviceInfo()
+	const deviceQ = trpcReact.systemNg.device.getSpecs.useQuery()
 
-	if (isLoading) {
+	if (deviceQ.isLoading) {
 		return null
 	}
+
+	const umbrelHostEnvironment = deviceInfoToHostEnvironment(deviceQ.data)
+
+	const device = deviceQ.data?.device
+	const modelNumber = deviceQ.data?.model
+	const serialNumber = deviceQ.data?.serial
+	const {cpu, memory, storage} = formatDeviceSpecs(deviceQ.data)
 
 	return (
 		<Drawer {...dialogProps}>
@@ -31,10 +41,13 @@ export function DeviceInfoDrawer() {
 				</DrawerHeader>
 				<DrawerScroller>
 					<DeviceInfoContent
-						umbrelHostEnvironment={data.umbrelHostEnvironment}
-						device={data.device}
-						modelNumber={data.modelNumber}
-						serialNumber={data.serialNumber}
+						umbrelHostEnvironment={umbrelHostEnvironment}
+						device={device}
+						modelNumber={modelNumber}
+						serialNumber={serialNumber}
+						cpu={cpu}
+						memory={memory}
+						storage={storage}
 					/>
 				</DrawerScroller>
 			</DrawerContent>

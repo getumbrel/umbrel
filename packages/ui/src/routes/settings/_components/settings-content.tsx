@@ -1,5 +1,6 @@
 import {Loader2} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {FaRegSave} from 'react-icons/fa'
 import {
 	RiExpandRightFill,
@@ -10,31 +11,27 @@ import {
 	RiShutDownLine,
 	RiUserLine,
 } from 'react-icons/ri'
-import {TbHistory, TbServer, TbSettings, TbSettingsMinus, TbTool, TbWifi} from 'react-icons/tb'
+import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbShare, TbTool, TbWifi} from 'react-icons/tb'
 import {useNavigate, useParams} from 'react-router-dom'
 
-import {ChevronDown} from '@/assets/chevron-down'
+import {ChevronDown} from '@/components/chevron-down'
 import {Card} from '@/components/ui/card'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {IconButton} from '@/components/ui/icon-button'
 import {IconButtonLink} from '@/components/ui/icon-button-link'
+import {Switch} from '@/components/ui/switch'
 import {SETTINGS_SYSTEM_CARDS_ID} from '@/constants'
 import {useBackups} from '@/features/backups/hooks/use-backups'
+import {getDeviceHealth} from '@/features/storage/hooks/use-storage'
 import {useCpuTemperature} from '@/hooks/use-cpu-temperature'
-import {DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
-import {DesktopPreviewConnected} from '@/modules/desktop/desktop-preview-basic'
+import {useIsHomeOrPro} from '@/hooks/use-is-home-or-pro'
+import {useIsUmbrelPro} from '@/hooks/use-is-umbrel-pro'
+import {DesktopPreviewConnected, DesktopPreviewFrame} from '@/modules/desktop/desktop-preview'
 import {WifiListRowConnectedDescription} from '@/modules/wifi/wifi-list-row-connected-description'
 import {LanguageDropdownContent, LanguageDropdownTrigger} from '@/routes/settings/_components/language-dropdown'
 import {SettingsSummary} from '@/routes/settings/_components/settings-summary'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {Switch} from '@/shadcn-components/ui/switch'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {firstNameFromFullName} from '@/utils/misc'
 
 import {CpuCardContent} from './cpu-card-content'
@@ -47,19 +44,35 @@ import {StorageCardContent} from './storage-card-content'
 import {WallpaperPicker} from './wallpaper-picker'
 
 export function SettingsContent() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
 	const [languageOpen, setLanguageOpen] = useState(false)
 
 	const cpuTemp = useCpuTemperature()
+	const {isUmbrelPro} = useIsUmbrelPro()
+	const {deviceName} = useIsHomeOrPro()
 
-	const [userQ, wifiSupportedQ, is2faEnabledQ] = trpcReact.useQueries((t) => [
+	const [userQ, wifiSupportedQ, is2faEnabledQ, raidStatusQ, devicesQ] = trpcReact.useQueries((t) => [
 		t.user.get(),
 		t.wifi.supported(),
 		t.user.is2faEnabled(),
+		// Storage queries only run on Umbrel Pro to avoid unnecessary API calls on other devices
+		t.hardware.raid.getStatus(undefined, {enabled: isUmbrelPro}),
+		t.hardware.internalStorage.getDevices(undefined, {enabled: isUmbrelPro}),
 	])
 
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
+
+	// Check if there's a RAID issue that needs attention
+	const hasRaidIssue = raidStatusQ.data?.exists && raidStatusQ.data?.status && raidStatusQ.data?.status !== 'ONLINE'
+
+	// Check if any SSD has health issues
+	const hasHealthIssue = devicesQ.data?.some((device) => getDeviceHealth(device).hasWarning)
+
+	// Show indicator if any storage issue exists
+	// Note: Storage Manager row only renders on Umbrel Pro, so this indicator is Pro-only
+	const hasStorageIssue = hasRaidIssue || hasHealthIssue
 
 	const {settingsDialog} = useParams<{settingsDialog: 'wallpaper' | 'language' | 'software-update'}>()
 
@@ -83,7 +96,7 @@ export function SettingsContent() {
 				</div>
 				<Card className='flex flex-wrap items-center justify-between gap-5'>
 					<div>
-						<h2 className='text-24 font-bold leading-none -tracking-4'>
+						<h2 className='text-24 leading-none font-bold -tracking-4'>
 							{userQ.data?.name && `${firstNameFromFullName(userQ.data?.name)}’s`}{' '}
 							<span className='opacity-40'>{t('umbrel')}</span>
 						</h2>
@@ -156,6 +169,27 @@ export function SettingsContent() {
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>
 						<Switch checked={is2faEnabledQ.data} onCheckedChange={() => navigate('2fa')} />
 					</ListRow>
+					{/* Storage Manager - Umbrel Pro only */}
+					{isUmbrelPro && (
+						<ListRow title={t('storage-manager')} description={t('storage-manager.description')}>
+							<div className='relative'>
+								{hasStorageIssue && (
+									<div className='absolute top-0 -right-0.5 h-2.5 w-2.5'>
+										<span className='absolute inset-0 rounded-full bg-[#FF3434]' />
+										<span className='absolute inset-0 animate-ping rounded-full bg-[#FF3434] opacity-75' />
+									</div>
+								)}
+								<IconButton icon={TbColumns3} onClick={() => navigate('storage')}>
+									{t('storage-manager.manage')}
+								</IconButton>
+							</div>
+						</ListRow>
+					)}
+					<ListRow title={t('settings.file-sharing')} description={t('settings.file-sharing.description')}>
+						<IconButton icon={TbShare} onClick={() => navigate('file-sharing')}>
+							{t('settings.file-sharing.configure')}
+						</IconButton>
+					</ListRow>
 					{/* Backups */}
 					<ListRow title={t('backups')} description={t('backups-description')}>
 						<div className='flex flex-wrap gap-2 pt-3'>
@@ -227,24 +261,6 @@ export function SettingsContent() {
 							</DropdownMenu>
 						</div>
 					</ListRow>
-					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description')}>
-						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
-						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
-							{t('migrate')}
-						</IconButton>
-					</ListRow>
-					{/* TODO: Uncomment and enable after fixing translations  */}
-					<ListRow
-						title={t('language')}
-						description={t('language-description')}
-						onClick={() => setLanguageOpen(true)}
-						isActive={settingsDialog === 'language'}
-					>
-						<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
-							<LanguageDropdownTrigger />
-							<LanguageDropdownContent />
-						</DropdownMenu>
-					</ListRow>
 					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}
@@ -260,6 +276,24 @@ export function SettingsContent() {
 							{t('device-info.view-info')}
 						</IconButton>
 					</ListRow>
+					<ListRow title={t('migration-assistant')} description={t('migration-assistant-description', {deviceName})}>
+						{/* We could use an IconButtonLink but then the ` from `ListRow` wouldn't work */}
+						<IconButton icon={RiExpandRightFill} onClick={() => navigate('migration-assistant')}>
+							{t('migrate')}
+						</IconButton>
+					</ListRow>
+					{/* TODO: Uncomment and enable after fixing translations  */}
+					<ListRow
+						title={t('language')}
+						description={t('language-description')}
+						onClick={() => setLanguageOpen(true)}
+						isActive={settingsDialog === 'language'}
+					>
+						<DropdownMenu open={languageOpen} onOpenChange={setLanguageOpen}>
+							<LanguageDropdownTrigger />
+							<LanguageDropdownContent open={languageOpen} onOpenChange={setLanguageOpen} />
+						</DropdownMenu>
+					</ListRow>
 					<ListRow title={t('advanced-settings')} description={t('advanced-settings-description')}>
 						<IconButtonLink icon={TbSettingsMinus} to='/settings/advanced'>
 							{t('open')}
@@ -274,6 +308,7 @@ export function SettingsContent() {
 }
 
 function WifiSupportedListRow() {
+	const {t} = useTranslation()
 	const navigate = useNavigate()
 	const wifiQ = trpcReact.wifi.connected.useQuery()
 

@@ -1,15 +1,16 @@
+import {useTranslation} from 'react-i18next'
 import {useLocation} from 'react-router-dom'
 
 import {useIsSmallMobile} from '@/hooks/use-is-mobile'
 import {useWallpaper} from '@/providers/wallpaper'
-import {t} from '@/utils/i18n'
 import {cmdOrCtrl, platform} from '@/utils/misc'
 
 export function Search({onClick}: {onClick?: () => void}) {
+	const {t} = useTranslation()
 	const isMobile = useIsSmallMobile()
 	return (
 		<button
-			className='z-10 select-none rounded-full border border-white/5 bg-neutral-600/20 px-3 py-2.5 text-12 leading-inter-trimmed text-white/90 backdrop-blur-sm transition-colors delay-300 duration-300 animate-in fade-in fill-mode-both hover:bg-neutral-600/30 active:bg-neutral-600/10'
+			className='z-10 animate-in rounded-full border border-white/5 bg-neutral-600/20 px-3 py-2.5 text-12 leading-inter-trimmed text-white/90 backdrop-blur-xs transition-colors duration-300 fill-mode-both fade-in hover:bg-neutral-600/30 active:bg-neutral-600/10'
 			onClick={onClick}
 		>
 			{/* TODO: ideally, centralize shortcut preview and shortcut event listener so always in sync */}

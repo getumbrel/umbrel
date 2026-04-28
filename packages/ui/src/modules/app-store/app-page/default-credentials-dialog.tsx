@@ -1,28 +1,22 @@
 import {useId} from 'react'
+import {useTranslation} from 'react-i18next'
 
+import {Button} from '@/components/ui/button'
+import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/components/ui/checkbox'
 import {CopyableField} from '@/components/ui/copyable-field'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogPortal, DialogTitle} from '@/components/ui/dialog'
+import {Separator} from '@/components/ui/separator'
 import {useLaunchApp} from '@/hooks/use-launch-app'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {useUserApp} from '@/providers/apps'
-import {Button} from '@/shadcn-components/ui/button'
-import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogPortal,
-	DialogTitle,
-} from '@/shadcn-components/ui/dialog'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
 import {trpcReact} from '@/trpc/trpc'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 // TODO: move out of app-store/app-page since it's used elsewhere
 export function DefaultCredentialsDialog() {
+	const {t} = useTranslation()
 	const params = useQueryParams()
 	const dialogProps = useDialogOpenProps('default-credentials')
 
@@ -107,6 +101,7 @@ export function DefaultCredentialsDialog() {
 }
 
 function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
+	const {t} = useTranslation()
 	const checkboxId = useId()
 	const {app, isLoading} = useUserApp(appId)
 
@@ -141,7 +136,7 @@ function ShowCredentialsBeforeOpenCheckbox({appId}: {appId: string}) {
 				</label>
 			</div>
 			{!showCredentials && (
-				<div className='pr-2 pt-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
+				<div className='pt-2 pr-2 text-xs text-white/40'>{t('default-credentials.dont-show-again-notice')}</div>
 			)}
 		</div>
 	)

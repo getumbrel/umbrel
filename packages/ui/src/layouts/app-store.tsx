@@ -1,11 +1,13 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import {memo, useDeferredValue, useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {TbDots, TbSearch} from 'react-icons/tb'
 import {Link, Outlet, useSearchParams} from 'react-router-dom'
-import {useKeyPressEvent} from 'react-use'
 
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {Loading} from '@/components/ui/loading'
 import {useQueryParams} from '@/hooks/use-query-params'
+import {cn} from '@/lib/utils'
 import {CommunityAppStoreDialog} from '@/modules/app-store/community-app-store-dialog'
 import {AppWithDescription} from '@/modules/app-store/discover/apps-grid-section'
 import {
@@ -17,17 +19,11 @@ import {
 } from '@/modules/app-store/shared'
 import {UpdatesButton} from '@/modules/app-store/updates-button'
 import {useAvailableApps} from '@/providers/available-apps'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/shadcn-components/ui/dropdown-menu'
-import {cn} from '@/shadcn-lib/utils'
 import {t} from '@/utils/i18n'
 import {createSearch} from '@/utils/search'
 
 export function AppStoreLayout() {
+	const {t} = useTranslation()
 	const title = t('app-store.title')
 
 	const [searchParams, setSearchParams] = useSearchParams()
@@ -43,11 +39,19 @@ export function AppStoreLayout() {
 		setSearchParams(searchParams, {replace: true})
 	}, [deferredSearchQuery])
 
-	useKeyPressEvent(
-		(e) => e.key === '/',
-		undefined, // if doing focus here, input gets a '/' in it
-		() => inputRef.current?.focus(),
-	)
+	// '/' shortcut to focus the search input
+	useEffect(() => {
+		const handler = (e: KeyboardEvent) => {
+			if (e.key !== '/') return
+			const target = e.target as HTMLElement
+			if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)
+				return
+			e.preventDefault()
+			inputRef.current?.focus()
+		}
+		window.addEventListener('keydown', handler)
+		return () => window.removeEventListener('keydown', handler)
+	}, [])
 
 	return (
 		<AppStoreSheetInner
@@ -75,21 +79,27 @@ function SearchInput({
 	onValueChange: (query: string) => void
 	inputRef?: React.Ref<HTMLInputElement>
 }) {
+	const {t} = useTranslation()
 	return (
 		<div className='-ml-2 flex min-w-0 items-center rounded-full border border-transparent bg-transparent pl-2 transition-colors focus-within:border-white/5 focus-within:bg-white/6 hover:border-white/5 hover:bg-white/6'>
 			<TbSearch className='h-4 w-4 shrink-0 opacity-50' />
 			{/* Set specific input width so it's consistent across browsers */}
 			<input
 				ref={inputRef}
-				className='w-[160px] bg-transparent p-1 text-15 outline-none placeholder:text-white/40'
+				className='w-[160px] bg-transparent p-1 text-15 outline-hidden placeholder:text-white/40'
 				placeholder={t('app-store.search-apps')}
 				value={value}
 				onChange={(e) => onValueChange(e.target.value)}
-				// Prevent closing modal when pressing Escape
+				// Two-stage Escape: first clears the query, second blurs the input
 				onKeyDown={(e) => {
 					if (e.key === 'Escape') {
-						onValueChange('')
-						e.preventDefault()
+						if (value) {
+							onValueChange('')
+							e.preventDefault()
+						} else {
+							e.currentTarget.blur()
+							e.preventDefault()
+						}
 					}
 				}}
 			/>
@@ -98,6 +108,7 @@ function SearchInput({
 }
 
 function CommunityAppsDropdown() {
+	const {t} = useTranslation()
 	const {addLinkSearchParams} = useQueryParams()
 	return (
 		<>
@@ -120,6 +131,7 @@ function CommunityAppsDropdown() {
 }
 
 function SearchResults({query}: {query: string}) {
+	const {t} = useTranslation()
 	const {isLoading, apps} = useAvailableApps()
 
 	const search = useMemo(
@@ -160,7 +172,11 @@ function SearchResults({query}: {query: string}) {
 	return (
 		<div className={cn(cardFaintClass, slideInFromBottomClass)}>
 			<h3 className={cn(sectionTitleClass, 'p-2.5')}>{title}</h3>
-			<div className={appsGridClass}>{appResults?.map((app) => <AppWithDescription key={app.id} app={app} />)}</div>
+			<div className={appsGridClass}>
+				{appResults?.map((app) => (
+					<AppWithDescription key={app.id} app={app} />
+				))}
+			</div>
 			{(!appResults || appResults.length === 0) && <NoResults />}
 		</div>
 	)

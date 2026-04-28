@@ -1,9 +1,9 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
-import {t} from '@/utils/i18n'
 
 export function ProgressLayout({
 	title,
@@ -24,6 +24,7 @@ export function ProgressLayout({
 	isRunning: boolean
 	callout: string
 }) {
+	const {t} = useTranslation()
 	const isStarting = !progress && !isRunning
 
 	// Empty string also gets the default message

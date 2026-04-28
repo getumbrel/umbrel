@@ -1,6 +1,5 @@
 import React, {useEffect, useId, useState} from 'react'
 
-import type {ConfirmationOptions, ConfirmationResult} from '@/providers/confirmation/types'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,9 +8,10 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/shadcn-components/ui/checkbox'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Checkbox, checkboxContainerClass, checkboxLabelClass} from '@/components/ui/checkbox'
+import {cn} from '@/lib/utils'
+import type {ConfirmationOptions, ConfirmationResult} from '@/providers/confirmation/types'
 
 interface GenericConfirmationDialogProps {
 	isOpen: boolean
@@ -80,7 +80,6 @@ export const GenericConfirmationDialog: React.FC<GenericConfirmationDialogProps>
 							variant={action.variant || 'default'}
 							className='px-6'
 							onClick={() => handleActionClick(action.value)}
-							hideEnterIcon={index !== 0}
 						>
 							{action.label}
 						</AlertDialogAction>

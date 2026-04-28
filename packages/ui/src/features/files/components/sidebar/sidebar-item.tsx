@@ -2,11 +2,11 @@ import {Droppable} from '@/features/files/components/shared/drag-and-drop'
 import {FileItemIcon} from '@/features/files/components/shared/file-item-icon'
 import {RECENTS_PATH} from '@/features/files/constants'
 import {formatItemName} from '@/features/files/utils/format-filesystem-name'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 const selectedClass = tw`
-  bg-gradient-to-b from-white/[0.04] to-white/[0.08]
+  bg-linear-to-b from-white/[0.04] to-white/[0.08]
   border-white/6  
   shadow-button-highlight-soft-hpx 
 `
@@ -30,8 +30,8 @@ export function SidebarItem({item, isActive, onClick, disabled = false}: Sidebar
 			id={`sidebar-${item.path}`}
 			path={item.path}
 			className={cn(
-				'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08]  text-12',
-				disabled ? 'cursor-default opacity-50' : 'hover:bg-gradient-to-b',
+				'flex w-full rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] text-12',
+				disabled ? 'cursor-default opacity-50' : 'hover:bg-linear-to-b',
 				isActive && !disabled
 					? selectedClass
 					: disabled

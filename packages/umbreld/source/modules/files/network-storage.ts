@@ -1,3 +1,4 @@
+import os from 'node:os'
 import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
@@ -126,15 +127,23 @@ export default class NetworkStorage {
 	async #mountShare(share: NetworkShare): Promise<void> {
 		this.logger.log(`Mounting network share: ${share.mountPath}`)
 
+		if (/[\r\n]/.test(share.username) || /[\r\n]/.test(share.password)) {
+			throw new Error('Network share username and password cannot contain newlines')
+		}
+
 		// Ensure mount directory exists
 		const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
 		await fse.ensureDir(systemMountPath)
 
+		let credentialsDirectory: string | undefined
 		try {
 			// Mount the network share
 			const smbPath = `//${share.host}/${share.share}`
 			const {userId, groupId} = this.#umbreld.files.fileOwner
-			await $`mount -t cifs ${smbPath} ${systemMountPath} -o username=${share.username},password=${share.password},uid=${userId},gid=${groupId},iocharset=utf8`
+			credentialsDirectory = await fse.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-cifs-credentials-'))
+			const credentialsPath = nodePath.join(credentialsDirectory, 'credentials')
+			await fse.writeFile(credentialsPath, `username=${share.username}\npassword=${share.password}\n`, {mode: 0o600})
+			await $`mount -t cifs ${smbPath} ${systemMountPath} -o credentials=${credentialsPath},uid=${userId},gid=${groupId},iocharset=utf8`
 			this.mountedShares.add(share.mountPath)
 			this.logger.log(`Successfully mounted network share: ${smbPath} to ${share.mountPath}`)
 		} catch (error) {
@@ -146,6 +155,8 @@ export default class NetworkStorage {
 
 			// Re-throw the original mount error
 			throw error
+		} finally {
+			if (credentialsDirectory) await fse.remove(credentialsDirectory).catch(() => {})
 		}
 	}
 

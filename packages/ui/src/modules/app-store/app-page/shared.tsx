@@ -1,13 +1,14 @@
 import {useEffect, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {Markdown} from '@/components/markdown'
+import {cn} from '@/lib/utils'
 import {cardFaintClass} from '@/modules/app-store/shared'
-import {cn} from '@/shadcn-lib/utils'
 import {linkClass} from '@/utils/element-classes'
-import {t} from '@/utils/i18n'
 import {tw} from '@/utils/tw'
 
 export function ReadMoreMarkdownSection({children}: {children: string}) {
+	const {t} = useTranslation()
 	const contentRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 

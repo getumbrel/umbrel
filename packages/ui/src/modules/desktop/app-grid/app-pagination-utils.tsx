@@ -20,14 +20,15 @@ type PageT = {
 /**
  * Calculate which apps and widgets will go into which pages based on the returned `pageInnerRef`
  */
-export function usePager({apps, widgets}: PageT): {
+export function usePager({apps, widgets, forceBreakpoint}: PageT & {forceBreakpoint?: 'S' | 'M'}): {
 	pages: PageT[]
 	pageInnerRef: Ref<HTMLDivElement>
 	appsPerRow: number
 	hasMeasurement: boolean
 } {
 	// Using breakpoint instead of measure because max inner page width comes from breakpoint
-	const breakpoint = useBreakpoint()
+	const viewportBreakpoint = useBreakpoint()
+	const breakpoint = forceBreakpoint ?? viewportBreakpoint
 	const [pageInnerRef, pageSize] = useMeasure<HTMLDivElement>()
 
 	const pageW = pageSize.width
@@ -57,8 +58,12 @@ export function usePager({apps, widgets}: PageT): {
 	const appsInnerW = (appW + appXGap) * appsPerRowMax - appXGap
 	const appsMaxW = appsInnerW + paddingX * 2
 
-	// Putting on document so that app grid and widget selector both have access
+	// Putting on document so that app grid and widget selector both have access.
+	// Skip when forceBreakpoint is set (preview mode) to avoid overwriting
+	// the real desktop's values on document.documentElement.
 	useLayoutEffect(() => {
+		if (forceBreakpoint) return
+
 		const el = document.documentElement
 		el.style.setProperty('--page-w', `${pageW}px`)
 		el.style.setProperty('--app-w', `${appW}px`)
@@ -71,8 +76,7 @@ export function usePager({apps, widgets}: PageT): {
 		el.style.setProperty('--widget-h', `${widgetH}px`)
 		el.style.setProperty('--widget-labeled-h', `${widgetLabeledH}px`)
 		// All values depend on the breakpoint
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [breakpoint, pageW])
+	}, [breakpoint, pageW, forceBreakpoint])
 
 	function countAppsPerRow({pageW}: {pageW: number}) {
 		return Math.floor((pageW + appXGap) / (appW + appXGap))

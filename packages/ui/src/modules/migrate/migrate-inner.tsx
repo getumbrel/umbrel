@@ -1,9 +1,9 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
+import {useTranslation} from 'react-i18next'
 
 import {Alert} from '@/modules/bare/alert'
 import {Progress} from '@/modules/bare/progress'
 import {bareContainerClass, BareLogoTitle, BareSpacer} from '@/modules/bare/shared'
-import {t} from '@/utils/i18n'
 
 export function MigrateInner({
 	// onSuccess,
@@ -20,6 +20,7 @@ export function MigrateInner({
 	// isStarting: boolean
 	isRunning: boolean
 }) {
+	const {t} = useTranslation()
 	// const progress = migrationStatusQ.data?.progress
 	// const isRunning = migrationStatusQ.data?.running
 	const isStarting = !progress && !isRunning

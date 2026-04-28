@@ -1,8 +1,8 @@
 import {useState} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
-export function FadeInImg({src, alt, className, ...props}: React.ImgHTMLAttributes<HTMLImageElement>) {
+export function FadeInImg({src, alt, className, onLoad, ...props}: React.ImgHTMLAttributes<HTMLImageElement>) {
 	const [loaded, setLoaded] = useState(false)
 
 	return (
@@ -10,8 +10,9 @@ export function FadeInImg({src, alt, className, ...props}: React.ImgHTMLAttribut
 			src={src}
 			alt={alt}
 			className={cn('transition-opacity duration-500 fill-mode-both', loaded ? 'opacity-100' : 'opacity-0', className)}
-			onLoad={() => {
+			onLoad={(e) => {
 				setLoaded(true)
+				onLoad?.(e)
 			}}
 			{...props}
 		/>

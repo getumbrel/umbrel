@@ -4,7 +4,7 @@ import yaml from 'js-yaml'
 
 import type Umbreld from '../../index.js'
 
-import {detectDevice} from '../system/system.js'
+import {detectDevice, commitOsPartition} from '../system/system.js'
 import {findExternalUmbrelInstall, runPreMigrationChecks, migrateData} from '../migration/migration.js'
 
 async function readYaml(path: string) {
@@ -23,6 +23,38 @@ class Migration {
 		this.umbreld = umbreld
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(name.toLowerCase())
+	}
+
+	// One off migration to complete the Mender to Rugix state migration
+	// On the initial boot after a Mender to Rugix migration, the OS overlay path is a symbolic link.
+	// This allows the system to boot and come online but some state management features are broken in this state.
+	// An additional rugix commit and then reboot is required to complete the migration.
+	async finalizeMenderToRugixStateMigration() {
+		const osPersistentOverlayPath = '/data/umbrel-os'
+
+		const isSymbolicLink = (await fse.lstat(osPersistentOverlayPath)).isSymbolicLink()
+		// TODO: Check with Maxi how safe this is. If there's any scenario where Rugix won't migrate the symlink overlay
+		// into a real directory overlay then this can result in an infinite boot loop.
+		if (!isSymbolicLink) return {reboot: false}
+
+		// This should only ever happen once. We allow 3 attempts to handle edge cases or situations where some random failures happen.
+		// If it fails consistently then we'll give up to prevent a boot loop.
+		const menderToRugixMigrationAttempt = (await this.umbreld.store.get('migration.menderToRugixAttempt')) || 0
+		if (menderToRugixMigrationAttempt >= 3) {
+			this.logger.error('Mender to Rugix state migration has been attempted 5 times, giving up to prevent a boot loop!')
+			return {reboot: false}
+		}
+
+		// Increment the attempt count
+		await this.umbreld.store.set('migration.menderToRugixAttempt', menderToRugixMigrationAttempt + 1)
+
+		// Finalize the migration by committing the OS partition and rebooting
+		this.logger.log(
+			'OS overlay path is a symbolic link, committing and rebooting to complete Mender to Rugix state migration...',
+		)
+		// This should've already happened in umbreld.start() but we'll just explicitly do it again here to be sure.
+		await commitOsPartition(this.umbreld)
+		return {reboot: true}
 	}
 
 	// One off migration for legacy custom Linux install users
@@ -155,6 +187,15 @@ class Migration {
 		// Ensure data directory exists
 		await fse.ensureDir(this.umbreld.dataDirectory)
 
+		// Check for Mender to Rugix state migration and complete it if needed
+		try {
+			const {reboot} = await this.finalizeMenderToRugixStateMigration()
+			// We don't want to continue with any other migrations
+			if (reboot) return {reboot: true}
+		} catch (error) {
+			this.logger.error(`Failed to finalize Mender to Rugix state migration`, error)
+		}
+
 		// Check for a data directory to import
 		try {
 			await this.activateImportedDataDirectory()
@@ -201,6 +242,7 @@ class Migration {
 		}
 
 		this.logger.log('Migrations complete')
+		return {reboot: false}
 	}
 }
 

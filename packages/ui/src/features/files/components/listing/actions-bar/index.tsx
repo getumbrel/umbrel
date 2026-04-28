@@ -1,3 +1,4 @@
+import {Separator} from '@/components/ui/separator'
 import {useActionsBarConfig} from '@/features/files/components/listing/actions-bar/actions-bar-context'
 import {MobileActions} from '@/features/files/components/listing/actions-bar/mobile-actions'
 import {NavigationControls} from '@/features/files/components/listing/actions-bar/navigation-controls'
@@ -6,14 +7,13 @@ import {SearchInput} from '@/features/files/components/listing/actions-bar/searc
 import {SortDropdown} from '@/features/files/components/listing/actions-bar/sort-dropdown'
 import {ViewToggle} from '@/features/files/components/listing/actions-bar/view-toggle'
 import {useIsFilesEmbedded, useIsFilesReadOnly} from '@/features/files/providers/files-capabilities-context'
-import {Separator} from '@/shadcn-components/ui/separator'
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 
 // Actions/navigation bar displayed above every files listing.  Its
 // contents are driven by the configuration exposed via the
 // <ActionsBarProvider /> (see actions-bar-context.tsx).
 export function ActionsBar() {
-	const {hidePath, hideSearch, desktopActions, mobileActions} = useActionsBarConfig()
+	const {hidePath, pathLabel, hideSearch, desktopActions, mobileActions} = useActionsBarConfig()
 	const isReadOnly = useIsFilesReadOnly()
 	const isEmbedded = useIsFilesEmbedded()
 	const showSearchUi = !hideSearch && !isReadOnly
@@ -25,7 +25,7 @@ export function ActionsBar() {
 			{/* Left side: Navigation and Path */}
 			<div className='flex min-w-0 flex-1 items-center gap-2 overflow-hidden'>
 				<NavigationControls />
-				{hidePath ? null : <PathBar />}
+				{hidePath ? null : pathLabel ? <span className='truncate text-xs opacity-70'>{pathLabel}</span> : <PathBar />}
 			</div>
 
 			{/* Right side: View Controls and Actions */}

@@ -1,4 +1,4 @@
-import {motion} from 'framer-motion'
+import {motion} from 'motion/react'
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 const Bar = React.memo(({height}: {height: number}) => (
@@ -44,9 +44,9 @@ interface MusicEqualizerProps {
 
 const MusicEqualizerComponent = ({isPlaying, analyserNode}: MusicEqualizerProps) => {
 	const [levels, setLevels] = useState<number[]>(Array(6).fill(0))
-	const frameRef = useRef<number>()
+	const frameRef = useRef<number | undefined>(undefined)
 	const prevLevels = useRef<number[]>(Array(6).fill(0))
-	const dataRef = useRef<Uint8Array>()
+	const dataRef = useRef<Uint8Array | undefined>(undefined)
 
 	// Memoize frequency weights calculation
 	const frequencyWeights = useMemo(() => {
@@ -117,7 +117,7 @@ const MusicEqualizerComponent = ({isPlaying, analyserNode}: MusicEqualizerProps)
 
 			// Throttle updates to maintain consistent frame rate
 			if (deltaTime >= minFrameInterval) {
-				analyserNode.getByteFrequencyData(dataRef.current!)
+				analyserNode.getByteFrequencyData(dataRef.current! as Uint8Array<ArrayBuffer>)
 				const newLevels = calculateLevels(dataRef.current!, frequencyWeights)
 				setLevels(newLevels)
 				lastFrameTime = currentTime

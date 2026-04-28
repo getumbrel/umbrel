@@ -12,7 +12,7 @@ const Ctx = createContext<RewindOverlayContextValue | null>(null)
 export function RewindOverlayProvider({children}: {children: React.ReactNode}) {
 	const [overlayOpen, setOverlayOpen] = useState(false)
 	const [repoOpen, setRepoOpen] = useState(false)
-	return <Ctx.Provider value={{overlayOpen, setOverlayOpen, repoOpen, setRepoOpen}}>{children}</Ctx.Provider>
+	return <Ctx value={{overlayOpen, setOverlayOpen, repoOpen, setRepoOpen}}>{children}</Ctx>
 }
 
 export function useRewindOverlay() {

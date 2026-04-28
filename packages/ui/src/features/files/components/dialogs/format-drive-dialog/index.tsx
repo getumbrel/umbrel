@@ -1,10 +1,10 @@
 import {AlertOctagon} from 'lucide-react'
 import {useEffect, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {RiErrorWarningFill} from 'react-icons/ri'
+import {useSearchParams} from 'react-router-dom'
 
 import {ErrorAlert} from '@/components/ui/alert'
-import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
-import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -14,12 +14,13 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
-import {Input} from '@/shadcn-components/ui/input'
-import {Label} from '@/shadcn-components/ui/label'
-import {cn} from '@/shadcn-lib/utils'
+} from '@/components/ui/alert-dialog'
+import {Input} from '@/components/ui/input'
+import {Label} from '@/components/ui/label'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
+import {useExternalStorage} from '@/features/files/hooks/use-external-storage'
+import {cn} from '@/lib/utils'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 function FilesystemCard({
 	id,
@@ -36,6 +37,7 @@ function FilesystemCard({
 	onClick: () => void
 	disabled?: boolean
 }) {
+	const {t} = useTranslation()
 	return (
 		<button
 			type='button'
@@ -44,14 +46,14 @@ function FilesystemCard({
 			disabled={disabled}
 			tabIndex={-1}
 			className={cn(
-				'flex min-h-[80px] cursor-pointer flex-col items-start justify-between rounded-xl border p-3 text-left transition-colors duration-100 sm:min-h-[120px] sm:p-4',
+				'flex min-h-[80px] flex-col items-start justify-between rounded-xl border p-3 text-left transition-colors duration-100 sm:min-h-[120px] sm:p-4',
 				selected ? 'border-brand bg-brand/15' : 'border-white/10 bg-white/5 hover:bg-white/10',
 				disabled && 'cursor-not-allowed opacity-50',
 			)}
 		>
 			<div className='flex items-baseline gap-1'>
 				<span className='text-16 font-medium text-white/90'>{name}</span>
-				<span className='text-12 lowercase text-white/50'>{t('files-format.filesystem')}</span>
+				<span className='text-12 text-white/50 lowercase'>{t('files-format.filesystem')}</span>
 			</div>
 			<span className='text-12 text-white/70'>{description}</span>
 		</button>
@@ -59,6 +61,7 @@ function FilesystemCard({
 }
 
 export default function FormatDriveDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('files-format-drive')
 	const {disks, formatExternalStorageDevice, isFormatting} = useExternalStorage()
 	const [filesystem, setFilesystem] = useState<'ext4' | 'exfat'>('ext4')
@@ -78,8 +81,8 @@ export default function FormatDriveDialog() {
 
 	// Find the drive that needs formatting from query params
 	// The dialog is opened via ?dialog=files-format-drive&deviceId=sdc
-	const urlParams = new URLSearchParams(window.location.search)
-	const deviceId = urlParams.get('deviceId')
+	const [searchParams] = useSearchParams()
+	const deviceId = searchParams.get('deviceId')
 	const drive = disks?.find((d) => d.id === deviceId)
 
 	if (!drive || drive.isFormatting) return null
@@ -111,7 +114,7 @@ export default function FormatDriveDialog() {
 								draggable={false}
 							/>
 							{requiresFormat && (
-								<div className='absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
+								<div className='absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-[#FF9500]'>
 									<RiErrorWarningFill className='size-6 text-black' />
 								</div>
 							)}
@@ -191,13 +194,7 @@ export default function FormatDriveDialog() {
 				</AlertDialogDescription>
 
 				<AlertDialogFooter className='md:justify-start'>
-					<AlertDialogAction
-						variant='destructive'
-						className='px-6'
-						onClick={handleFormat}
-						disabled={isFormatting}
-						hideEnterIcon
-					>
+					<AlertDialogAction variant='destructive' className='px-6' onClick={handleFormat} disabled={isFormatting}>
 						{isFormatting ? t('files-format.formatting') : t('files-format.confirm')}
 					</AlertDialogAction>
 					<AlertDialogCancel disabled={isFormatting}>{t('cancel')}</AlertDialogCancel>

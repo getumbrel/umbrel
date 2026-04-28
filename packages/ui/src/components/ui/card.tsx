@@ -1,6 +1,6 @@
 import {HtmlHTMLAttributes} from 'react'
 
-import {cn} from '@/shadcn-lib/utils'
+import {cn} from '@/lib/utils'
 import {tw} from '@/utils/tw'
 
 export function Card({

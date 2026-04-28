@@ -1,0 +1,22 @@
+parent = "umbrelos-root-pi"
+
+recipes = [
+    # Prepare umbrelOS base image for Rugix.
+    "umbrelos-prepare",
+    # Copy umbrelOS boot files to boot partition.
+    "umbrelos-boot",
+    # Install and configure Rugix.
+    "setup-rugix",
+    # Fix `/etc/hostname` and `/etc/hosts`.
+    "fix-overlay",
+]
+
+[parameters."core/rugix-ctrl"]
+use_musl = false
+version = "v1.0.0"
+
+[parameters."setup-rugix"]
+boot_type = "pi"
+
+[parameters."umbrelos-boot"]
+boot_type = "pi"

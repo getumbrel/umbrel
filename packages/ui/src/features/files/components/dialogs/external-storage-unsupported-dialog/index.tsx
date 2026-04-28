@@ -1,6 +1,6 @@
+import {useTranslation} from 'react-i18next'
 import {TbAlertTriangleFilled} from 'react-icons/tb'
 
-import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -9,11 +9,12 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-} from '@/shadcn-components/ui/alert-dialog'
+} from '@/components/ui/alert-dialog'
+import externalStorageIcon from '@/features/files/assets/external-storage-icon.png'
 import {useDialogOpenProps} from '@/utils/dialog'
-import {t} from '@/utils/i18n'
 
 export default function ExternalStorageUnsupportedDialog() {
+	const {t} = useTranslation()
 	const dialogProps = useDialogOpenProps('files-external-storage-unsupported')
 
 	return (
@@ -25,7 +26,7 @@ export default function ExternalStorageUnsupportedDialog() {
 				<div className='mt-2 flex justify-center'>
 					<div className='relative'>
 						<img src={externalStorageIcon} alt={t('external-drive')} className='size-16' draggable={false} />
-						<div className='absolute -right-2 -top-2'>
+						<div className='absolute -top-2 -right-2'>
 							<TbAlertTriangleFilled className='h-8 w-8 text-yellow-400' />
 						</div>
 					</div>

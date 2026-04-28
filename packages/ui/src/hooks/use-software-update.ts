@@ -1,12 +1,13 @@
 import {useCallback} from 'react'
+import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {trpcReact} from '@/trpc/trpc'
-import {t} from '@/utils/i18n'
 
 export type UpdateState = 'initial' | 'checking' | 'at-latest' | 'update-available' | 'upgrading'
 
 export function useSoftwareUpdate() {
+	const {t} = useTranslation()
 	const utils = trpcReact.useUtils()
 	const latestVersionQ = trpcReact.system.checkUpdate.useQuery(undefined, {
 		retry: false,
@@ -26,7 +27,7 @@ export function useSoftwareUpdate() {
 			if (!latestVersion) {
 				throw new Error(t('software-update.failed-to-check'))
 			}
-		} catch (error) {
+		} catch {
 			toast.error(t('software-update.failed-to-check'))
 		}
 	}, [utils.system.checkUpdate])

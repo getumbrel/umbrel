@@ -19,7 +19,11 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"],
-			"@stories/*": ["stories/src/*"]
+			// TODO: Remove once monorepo uses npm workspaces. Without workspaces, npm installs
+			// separate @trpc/server copies in ui/ and umbreld/, causing TypeScript to treat
+			// identical types as incompatible. This forces resolution to ui's copy.
+			"@trpc/server": ["./node_modules/@trpc/server"],
+			"@trpc/server/*": ["./node_modules/@trpc/server/*"]
 		},
 		"plugins": [
 			{
@@ -31,7 +35,7 @@
 			}
 		]
 	},
-	"include": ["src", "app-auth", "stories", "tailwind.config.ts"],
+	"include": ["src", "app-auth", "tailwind.config.ts"],
 	/* Exclude parent */
 	// "exclude": ["../"],
 	"references": [{"path": "./tsconfig.node.json"}]
