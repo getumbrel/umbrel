@@ -156,7 +156,9 @@ else
     fi
 
     echo ">>> Running fsck on '$DEFAULT_PARTITION'"
-    fsck -p "$DEFAULT_PARTITION"
+    # Best-effort fsck. fsck returns non-zero for some successful recoveries,
+    # so don't fail the mount script before attempting to mount the data partition.
+    fsck -p "$DEFAULT_PARTITION" || true
 
     echo ">>> Mounting '$DEFAULT_PARTITION' to '$MOUNT_POINT'"
     mkdir -p "$MOUNT_POINT"
