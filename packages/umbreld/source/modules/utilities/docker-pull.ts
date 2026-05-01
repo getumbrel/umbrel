@@ -1,17 +1,40 @@
 import Dockerode from 'dockerode'
+import fse from 'fs-extra'
 
 const docker = new Dockerode()
 
 const DOWNLOADING_PERCENT = 0.75
 const EXTRACTING_PERCENT = 0.25
 
+async function getAuthConfig(image: string): Promise<object | undefined> {
+	try {
+		const config = await fse.readJson('/root/.docker/config.json')
+		const firstSegment = image.split('/')[0]
+		const registry = firstSegment.includes('.') || firstSegment.includes(':')
+			? firstSegment
+			: 'https://index.docker.io/v1/'
+		const entry = config?.auths?.[registry]
+		if (entry?.auth) {
+			const decoded = Buffer.from(entry.auth, 'base64').toString()
+			const colonIndex = decoded.indexOf(':')
+			const username = decoded.slice(0, colonIndex)
+			const password = decoded.slice(colonIndex + 1)
+			const serveraddress = registry.startsWith('http') ? registry : `https://${registry}`
+			return {username, password, serveraddress}
+		}
+	} catch {}
+	return undefined
+}
+
 export async function pull(
 	image: string,
 	updateProgress: (progress: number) => void,
 	handleAlreadyDownloaded: () => void,
 ) {
+	const authconfig = await getAuthConfig(image)
+
 	return new Promise((resolve, reject) => {
-		docker.pull(image, (error: Error, stream: NodeJS.ReadableStream) => {
+		docker.pull(image, {authconfig}, (error: Error, stream: NodeJS.ReadableStream) => {
 			if (error) return reject(error)
 
 			const layerProgress: Record<string, number> = {}
