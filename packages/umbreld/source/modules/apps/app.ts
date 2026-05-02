@@ -225,6 +225,12 @@ export default class App {
 			},
 			retries: 2,
 		})
+		
+		// Register app with Caddy reverse proxy
+		await this.#registerWithCaddy().catch((error) => {
+			this.logger.error(`Failed to register app ${this.id} with Caddy`, error)
+		})
+		
 		this.state = 'ready'
 
 		// Enable auto-start on boot
@@ -235,6 +241,12 @@ export default class App {
 
 	async stop({persistState = false}: {persistState?: boolean} = {}) {
 		this.state = 'stopping'
+		
+		// Unregister app from Caddy reverse proxy
+		await this.#unregisterFromCaddy().catch((error) => {
+			this.logger.error(`Failed to unregister app ${this.id} from Caddy`, error)
+		})
+		
 		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
@@ -268,6 +280,12 @@ export default class App {
 
 	async uninstall() {
 		this.state = 'uninstalling'
+		
+		// Unregister app from Caddy reverse proxy
+		await this.#unregisterFromCaddy().catch((error) => {
+			this.logger.error(`Failed to unregister app ${this.id} from Caddy`, error)
+		})
+		
 		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
 			onFailedAttempt: (error) => {
 				this.logger.error(
@@ -488,5 +506,50 @@ export default class App {
 	// Get if app should auto start on boot
 	async shouldAutoStart() {
 		return (await this.store.get('autoStart')) ?? true
+	}
+
+	// Register app with Caddy reverse proxy
+	async #registerWithCaddy() {
+		try {
+			// Check if Caddy is enabled
+			const caddyEnabled = await this.#umbreld.caddy.isEnabled()
+			if (!caddyEnabled) return
+
+			// Get app proxy port from compose file
+			const compose = await this.readCompose()
+			const appProxyService = compose.services?.[`${this.id}_app_proxy`]
+			
+			if (!appProxyService) {
+				this.logger.log(`No app_proxy service found for ${this.id}, skipping Caddy registration`)
+				return
+			}
+
+			// Get the proxy port - either from environment or default
+			const env = appProxyService.environment as Record<string, any> | undefined
+			const proxyPort = env?.PROXY_PORT || 4000
+			
+			// Get the proxy hostname (container name)
+			const proxyHost = `${this.id}_app_proxy_1`
+
+			this.logger.log(`Registering ${this.id} with Caddy at ${proxyHost}:${proxyPort}`)
+			await this.#umbreld.caddy.registerApp(this.id, proxyHost, proxyPort)
+		} catch (error) {
+			this.logger.error(`Failed to register ${this.id} with Caddy`, error)
+			// Non-fatal, continue
+		}
+	}
+
+	// Unregister app from Caddy reverse proxy
+	async #unregisterFromCaddy() {
+		try {
+			const caddyEnabled = await this.#umbreld.caddy.isEnabled()
+			if (!caddyEnabled) return
+
+			this.logger.log(`Unregistering ${this.id} from Caddy`)
+			await this.#umbreld.caddy.unregisterApp(this.id)
+		} catch (error) {
+			this.logger.error(`Failed to unregister ${this.id} from Caddy`, error)
+			// Non-fatal, continue
+		}
 	}
 }

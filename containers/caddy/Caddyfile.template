@@ -1,0 +1,36 @@
+# Auto-generated Caddyfile for Umbrel
+# Do not edit manually - changes will be overwritten
+
+{
+    http_port 80
+    https_port 443
+    auto_https off
+    admin 0.0.0.0:2019
+}
+
+:443 {
+    tls /certs/umbrel.crt /certs/umbrel.key
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+    }
+
+    # Default route - show Umbrel welcome
+    handle / {
+        respond "Welcome to Umbrel! Access apps at /{app-id}/*" 200
+    }
+
+    # App routes will be dynamically added here
+    # Example:
+    # handle /mempool* {
+    #     reverse_proxy mempool_app_proxy:4000
+    # }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}

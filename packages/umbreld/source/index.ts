@@ -30,6 +30,7 @@ import {
 	reboot,
 } from './modules/system/system.js'
 import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
+import Caddy from './modules/caddy/index.js'
 
 type StoreSchema = {
 	version: string
@@ -132,6 +133,7 @@ export default class Umbreld {
 	dbus: Dbus
 	backups: Backups
 	systemNg: SystemNg
+	caddy: Caddy
 	isBackupRestoreFirstStart = false
 
 	constructor({
@@ -158,6 +160,7 @@ export default class Umbreld {
 		this.dbus = new Dbus(this)
 		this.backups = new Backups(this)
 		this.systemNg = new SystemNg(this)
+		this.caddy = new Caddy(this)
 	}
 
 	async start() {
@@ -228,6 +231,7 @@ export default class Umbreld {
 			this.dbus.start(),
 			this.server.start(),
 			this.systemNg.start(),
+			this.caddy.start(),
 		])
 
 		// Start backups last because it depends on files
@@ -261,6 +265,7 @@ export default class Umbreld {
 				this.appStore.stop(),
 				this.dbus.stop(),
 				this.systemNg.stop(),
+				this.caddy.stop(),
 			])
 			return true
 		} catch (error) {

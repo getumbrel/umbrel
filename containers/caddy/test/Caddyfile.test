@@ -1,0 +1,35 @@
+# Test Caddyfile for Caddy integration tests
+# This file is used to test Caddy configuration without umbreld
+
+{
+    http_port 8080
+    https_port 8443
+    auto_https off
+    admin 0.0.0.0:2019
+}
+
+:8443 {
+    tls /certs/test.crt /certs/test.key
+    
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+    }
+
+    handle /app1* {
+        reverse_proxy test_app1:8888
+    }
+    
+    handle /app2* {
+        reverse_proxy test_app2:8889
+    }
+    
+    handle / {
+        respond "Umbrel Caddy Test Server" 200
+    }
+}
+
+:8080 {
+    redir https://{host}{uri} permanent
+}
