@@ -1,5 +1,8 @@
 ARG DEBIAN_VERSION=trixie
-ARG SNAPSHOT_DATE=20260202
+# Debian Docker image tags lag behind snapshot.debian.org, so pin the base image
+# and apt repositories independently.
+ARG DEBIAN_IMAGE_SNAPSHOT_DATE=20260421
+ARG APT_SNAPSHOT_DATE=20260504
 ARG BASE_VARIANT=""
 
 ARG DOCKER_VERSION=28.5.0
@@ -46,14 +49,14 @@ RUN npm run build
 # umbrelos-base build stage (amd64 and generic arm64)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base
 
-ARG SNAPSHOT_DATE
+ARG APT_SNAPSHOT_DATE
 ARG TARGETARCH
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
+RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
 # Install Linux kernel, firmware, and ZFS
 RUN apt-get install --yes \
@@ -81,13 +84,13 @@ RUN rm -rf /build-steps
 # umbrelos-base-pi build stage (Raspberry Pi)
 #########################################################################
 
-FROM debian:${DEBIAN_VERSION}-${SNAPSHOT_DATE} AS umbrelos-base-pi
+FROM debian:${DEBIAN_VERSION}-${DEBIAN_IMAGE_SNAPSHOT_DATE} AS umbrelos-base-pi
 
-ARG SNAPSHOT_DATE
+ARG APT_SNAPSHOT_DATE
 
 COPY packages/os/build-steps /build-steps
 
-RUN /build-steps/initialize.sh "${SNAPSHOT_DATE}"
+RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
 RUN /build-steps/setup-raspberrypi.sh
 
