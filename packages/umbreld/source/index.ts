@@ -29,6 +29,7 @@ import {
 	waitForSystemTime,
 	reboot,
 } from './modules/system/system.js'
+import {initializePowerSchedule, stopPowerSchedule} from './modules/system/power-schedule.js'
 import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
 
 type StoreSchema = {
@@ -52,6 +53,16 @@ type StoreSchema = {
 	}
 	settings: {
 		releaseChannel: 'stable' | 'beta'
+		powerSchedule?: {
+			shutdown: {
+				enabled: boolean
+				time: string
+			}
+			restart: {
+				enabled: boolean
+				time: string
+			}
+		}
 		wifi?: {
 			ssid: string
 			password?: string
@@ -232,6 +243,9 @@ export default class Umbreld {
 
 		// Start backups last because it depends on files
 		this.backups.start()
+
+		// Initialize power schedules after time sync and module startup
+		initializePowerSchedule(this).catch((error) => this.logger.error('Failed to initialize power schedule', error))
 	}
 
 	private async setBackupRestoreFirstStartFlag() {
@@ -249,6 +263,7 @@ export default class Umbreld {
 
 	async stop() {
 		try {
+			stopPowerSchedule()
 			// Stop backups first because it depends on files
 			await this.backups.stop()
 
