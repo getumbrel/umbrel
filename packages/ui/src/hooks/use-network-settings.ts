@@ -8,8 +8,8 @@ export type NetworkInterface = RouterOutput['system']['getNetworkInterfaces'][nu
 
 // ─── useNetworkInterfaces ────────────────────────────────────────────
 
-export function useNetworkInterfaces() {
-	const interfacesQ = trpcReact.system.getNetworkInterfaces.useQuery()
+export function useNetworkInterfaces(options?: {refetchInterval?: number; staleTime?: number}) {
+	const interfacesQ = trpcReact.system.getNetworkInterfaces.useQuery(undefined, options)
 
 	return {
 		interfaces: interfacesQ.data,

@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "設定靜態 IP",
   "network.static-ip-confirm-message": "系統會在 http://{{newIp}} 開啟新分頁，以確認你的 Umbrel 可透過新位址存取。如果無法存取，系統會在 30 秒內自動還原你先前的設定。",
   "network.static-ip-confirm-title": "設定靜態 IP 位址？",
+  "network.static-ip-disconnected-note": "連接乙太網路以設定靜態 IP。",
   "network.static-ip-ethernet-only": "只有乙太網路介面支援靜態 IP 設定。",
   "network.static-ip-warning": "透過路由器設定中的 DHCP 保留來指定靜態 IP，比在這裡設定更可靠。如果你還是要在這裡設定，也應該在路由器上保留相同的 IP，以避免衝突。錯誤的設定可能會讓你的 Umbrel 無法連線，必須透過實體存取才能恢復連線。",
   "no-forgot-password-message": "如果你遺失密碼，就無法登入你的 Umbrel。請務必妥善保存。",

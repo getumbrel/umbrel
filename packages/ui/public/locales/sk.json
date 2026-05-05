@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Nastaviť statickú IP",
   "network.static-ip-confirm-message": "Na overenie, či je tvoj Umbrel dostupný na novej adrese, sa otvorí nová karta na http://{{newIp}}. Ak dostupný nebude, predchádzajúce nastavenia sa automaticky obnovia do 30 sekúnd.",
   "network.static-ip-confirm-title": "Nastaviť statickú IP adresu?",
+  "network.static-ip-disconnected-note": "Pripoj Ethernet, aby si mohol nastaviť statickú IP.",
   "network.static-ip-ethernet-only": "Konfigurácia statickej IP je podporovaná iba pre ethernetové rozhrania.",
   "network.static-ip-warning": "Priradenie statickej IP cez DHCP rezerváciu v nastaveniach routera je spoľahlivejšie než jej konfigurácia tu. Ak ju aj nastavíš tu, mal by si tú istú IP rezervovať aj v routeri, aby sa predišlo konfliktom. Nesprávne nastavenia môžu spôsobiť, že tvoj Umbrel nebude dostupný a na obnovenie pripojenia bude potrebný fyzický prístup.",
   "no-forgot-password-message": "Ak stratíš heslo, nebudeš sa môcť prihlásiť do svojho Umbrel. Uisti sa, že ho máš bezpečne uložené.",
