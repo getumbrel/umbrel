@@ -204,7 +204,13 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 	}
 }
 
-export async function createTestVm({device}: {device?: string} = {}) {
+export async function createTestVm({
+	device,
+	bootDisk,
+}: {
+	device?: 'umbrel-pro' | 'umbrel-home' | 'nas'
+	bootDisk?: 'default' | 'emmc' | 'nvme' | 'usb'
+} = {}) {
 	const vmScript = path.resolve(currentDirectory, '../../../../os/vm.sh')
 
 	const directory = temporaryDirectory({parentDirectory: testDataDirectory})
@@ -235,10 +241,11 @@ export async function createTestVm({device}: {device?: string} = {}) {
 		let vmExited = false
 
 		const deviceArgs = device ? ['--device', device] : []
+		const bootDiskArgs = bootDisk ? ['--boot-disk', bootDisk] : []
 		const vmProcess = $({
 			env,
 			detached: true,
-		})`${vmScript} boot ${deviceArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
+		})`${vmScript} boot ${deviceArgs} ${bootDiskArgs} --ssh-port ${sshPort} --http-port ${httpPort}`
 		vmProcessPid = vmProcess.pid
 
 		// Capture output and track if process exits

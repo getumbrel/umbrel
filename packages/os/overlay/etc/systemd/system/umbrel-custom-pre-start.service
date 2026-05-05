@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Umbrel custom pre-start hook
+After=local-fs.target network-online.target
+Before=umbrel.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/umbrel-custom-hooks/run-pre-start
+TimeoutStartSec=6min

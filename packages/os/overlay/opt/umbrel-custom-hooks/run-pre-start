@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Runs an advanced-user hook before umbreld starts. This wrapper must never
+# prevent umbreld from starting.
+
+set -u
+
+HOOK="${UMBREL_CUSTOM_PRE_START_HOOK:-/home/umbrel/umbrel/custom-hooks/pre-start}"
+TIMEOUT="${UMBREL_CUSTOM_PRE_START_TIMEOUT:-5m}"
+KILL_AFTER="${UMBREL_CUSTOM_PRE_START_KILL_AFTER:-10s}"
+
+log() {
+    echo "umbrel custom pre-start hook: $*"
+}
+
+finish() {
+    exit 0
+}
+
+if [ ! -e "$HOOK" ]; then
+    finish
+fi
+
+if [ ! -f "$HOOK" ]; then
+    log "skipping '$HOOK': not a regular file"
+    finish
+fi
+
+if [ ! -x "$HOOK" ]; then
+    log "skipping '$HOOK': not executable"
+    finish
+fi
+
+log "running '$HOOK'"
+
+if command -v timeout >/dev/null 2>&1; then
+    timeout --kill-after="$KILL_AFTER" "$TIMEOUT" "$HOOK"
+else
+    log "warning: timeout command not found; running hook without timeout"
+    "$HOOK"
+fi
+status=$?
+
+case "$status" in
+    0)
+        log "completed successfully"
+        ;;
+    124)
+        log "timed out after $TIMEOUT; continuing with umbreld startup"
+        ;;
+    126)
+        log "could not execute '$HOOK'; continuing with umbreld startup"
+        ;;
+    127)
+        log "command not found or invalid interpreter; continuing with umbreld startup"
+        ;;
+    *)
+        log "exited with status $status; continuing with umbreld startup"
+        ;;
+esac
+
+finish

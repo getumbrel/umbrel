@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "固定IPを設定",
   "network.static-ip-confirm-message": "新しいアドレスで Umbrel にアクセスできるか確認するため、http://{{newIp}} で新しいタブが開きます。アクセスできない場合は、30秒以内に以前の設定へ自動的に戻ります。",
   "network.static-ip-confirm-title": "固定IPアドレスを設定しますか？",
+  "network.static-ip-disconnected-note": "静的IPを設定するにはEthernetに接続してください。",
   "network.static-ip-ethernet-only": "固定IPの設定はイーサネットインターフェイスでのみサポートされています。",
   "network.static-ip-warning": "固定IPは、ここで設定するよりも、ルーターの設定で DHCP 予約を使って割り当てるほうが確実です。ここで設定する場合も、競合を防ぐためにルーター側で同じIPを予約してください。設定が正しくないと Umbrel にアクセスできなくなり、接続を復旧するには本体に物理的にアクセスする必要がある場合があります。",
   "no-forgot-password-message": "パスワードを失った場合、Umbrelにログインできなくなります。安全に保管してください。",

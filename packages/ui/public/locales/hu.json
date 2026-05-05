@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Statikus IP beállítása",
   "network.static-ip-confirm-message": "Megnyílik egy új lap itt: http://{{newIp}}, hogy ellenőrizzük, elérhető-e az Umbrel az új címen. Ha nem, az előző beállítások 30 másodpercen belül automatikusan visszaállnak.",
   "network.static-ip-confirm-title": "Statikus IP-cím beállítása?",
+  "network.static-ip-disconnected-note": "Csatlakoztasd az Ethernet-kábelt a statikus IP-cím beállításához.",
   "network.static-ip-ethernet-only": "A statikus IP-beállítás csak ethernetes interfészeknél támogatott.",
   "network.static-ip-warning": "A statikus IP-cím beállítása a routered beállításaiban, DHCP-foglalással megbízhatóbb, mint itt megadni. Ha mégis itt állítod be, érdemes ugyanazt az IP-címet a routereden is lefoglalni, hogy elkerüld az ütközéseket. A hibás beállítások elérhetetlenné tehetik az Umbrelt, és a kapcsolat helyreállításához fizikai hozzáférésre lehet szükség.",
   "no-forgot-password-message": "Ha elveszted a jelszavad, nem fogsz tudni bejelentkezni az Umbrel-be. Biztosítsd, hogy biztonságosan tárolod.",

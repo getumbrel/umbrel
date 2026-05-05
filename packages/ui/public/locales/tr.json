@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Statik IP ayarla",
   "network.static-ip-confirm-message": "Umbrel'e yeni adresten erişilebildiğini doğrulamak için http://{{newIp}} adresinde yeni bir sekme açılacak. Erişilemezse önceki ayarların 30 saniye içinde otomatik olarak geri yüklenecek.",
   "network.static-ip-confirm-title": "Statik IP adresi ayarlansın mı?",
+  "network.static-ip-disconnected-note": "Statik IP ayarlamak için Ethernet bağlayın.",
   "network.static-ip-ethernet-only": "Statik IP yapılandırması yalnızca ethernet arayüzlerinde desteklenir.",
   "network.static-ip-warning": "Yönlendiricinin ayarlarında bir DHCP rezervasyonu ile statik IP atamak, bunu burada yapılandırmaktan daha güvenilirdir. Yine de burada yapılandırırsan çakışmaları önlemek için aynı IP'yi yönlendiricinde de rezerve etmelisin. Hatalı ayarlar, bağlantıyı geri yüklemek için fiziksel erişim gerektirecek şekilde Umbrel'e erişilememesine neden olabilir.",
   "no-forgot-password-message": "Şifrenizi kaybederseniz, Umbrel'e giriş yapamazsınız. Şifrenizi güvenli bir şekilde sakladığınızdan emin olun.",
