@@ -28,11 +28,53 @@ import {
 	clearStaticIp,
 	syncDns,
 } from './system.js'
+import {getPowerSchedule, setPowerSchedule} from './power-schedule.js'
 
 import {privateProcedure, publicProcedure, publicProcedureWhenNoUserExists, router} from '../server/trpc/trpc.js'
+import type {Context} from '../server/trpc/context.js'
 
 type SystemStatus = 'running' | 'updating' | 'shutting-down' | 'restarting' | 'migrating' | 'resetting' | 'restoring'
 let systemStatus: SystemStatus = 'running'
+
+const powerActionInput = z.object({
+	password: z.string(),
+	totpToken: z.string().optional(),
+})
+
+const timeString = z
+	.string()
+	.regex(/^\d{2}:\d{2}$/, 'Invalid time format')
+	.refine((value: string) => {
+		const [hours, minutes] = value.split(':').map((part: string) => Number(part))
+		return Number.isInteger(hours) && Number.isInteger(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+	}, 'Invalid time value')
+
+const powerScheduleInput = z.object({
+	shutdown: z.object({
+		enabled: z.boolean(),
+		time: timeString,
+	}),
+	restart: z.object({
+		enabled: z.boolean(),
+		time: timeString,
+	}),
+})
+
+async function validatePowerActionCredentials(ctx: Context, input: z.infer<typeof powerActionInput>) {
+	const userExists = await ctx.user.exists()
+	if (!userExists) return
+	if (!(await ctx.user.validatePassword(input.password))) {
+		throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect password'})
+	}
+	if (await ctx.user.is2faEnabled()) {
+		if (!input.totpToken) {
+			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Missing 2FA code'})
+		}
+		if (!(await ctx.user.validate2faToken(input.totpToken))) {
+			throw new TRPCError({code: 'UNAUTHORIZED', message: 'Incorrect 2FA code'})
+		}
+	}
+}
 
 // Quick hack so we can set system status from migration module until we refactor this
 export function setSystemStatus(status: SystemStatus) {
@@ -155,6 +197,34 @@ export default router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => clearStaticIp(ctx.umbreld, input)),
+	getPowerSchedule: privateProcedure.query(async ({ctx}) => {
+		return getPowerSchedule(ctx.umbreld)
+	}),
+	setPowerSchedule: privateProcedure.input(powerScheduleInput).mutation(async ({ctx, input}) => {
+		return setPowerSchedule(ctx.umbreld, input)
+	}),
+	// Public on login screen, but requires password (and 2FA when enabled)
+	shutdownWithPassword: publicProcedure
+		.input(powerActionInput)
+		.mutation(async ({ctx, input}) => {
+			await validatePowerActionCredentials(ctx, input)
+			systemStatus = 'shutting-down'
+			await ctx.umbreld.stop()
+			await shutdown()
+
+			return true
+		}),
+	// Public on login screen, but requires password (and 2FA when enabled)
+	restartWithPassword: publicProcedure
+		.input(powerActionInput)
+		.mutation(async ({ctx, input}) => {
+			await validatePowerActionCredentials(ctx, input)
+			systemStatus = 'restarting'
+			await ctx.umbreld.stop()
+			await reboot()
+
+			return true
+		}),
 	// Public during onboarding and recovery mode so users can shut down during RAID setup or mount failure
 	shutdown: publicProcedureWhenNoUserExists.mutation(async ({ctx}) => {
 		systemStatus = 'shutting-down'
