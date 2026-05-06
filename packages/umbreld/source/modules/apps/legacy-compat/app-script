@@ -163,6 +163,7 @@ source_app() {
   # Set other useful vars. used in exports
   export DEVICE_HOSTNAME="$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "umbrel")"
   export DEVICE_DOMAIN_NAME="${DEVICE_HOSTNAME}.local"
+  export UMBREL_USER_NAME="${SCRIPT_USER_NAME:-}"
 
   # Set env using all transitive dependencies exports.sh
   # Do this first so that no app exports can
