@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Postavi statičnu IP adresu",
   "network.static-ip-confirm-message": "Nova kartica otvorit će se na http://{{newIp}} kako bi se provjerilo je li tvoj Umbrel dostupan na novoj adresi. Ako nije, tvoje prethodne postavke bit će automatski vraćene unutar 30 sekundi.",
   "network.static-ip-confirm-title": "Postaviti statičnu IP adresu?",
+  "network.static-ip-disconnected-note": "Poveži Ethernet da postaviš statički IP.",
   "network.static-ip-ethernet-only": "Konfiguracija statične IP adrese podržana je samo za Ethernet sučelja.",
   "network.static-ip-warning": "Dodjela statične IP adrese putem DHCP rezervacije u postavkama routera pouzdanija je od konfiguriranja ovdje. Ako je ipak postaviš ovdje, rezerviraj istu IP adresu i na routeru kako bi se spriječili sukobi. Neispravne postavke mogu učiniti tvoj Umbrel nedostupnim, pa će za ponovno uspostavljanje veze biti potreban fizički pristup.",
   "no-forgot-password-message": "Ako izgubiš lozinku, nećeš se moći prijaviti na svoj Umbrel. Pobrinite se da je sigurno spremiš.",

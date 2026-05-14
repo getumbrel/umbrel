@@ -33,6 +33,7 @@ import {cleanupFactoryResetBackups} from './modules/system/factory-reset.js'
 
 type StoreSchema = {
 	version: string
+	previousVersion?: string
 	apps: string[]
 	appRepositories: string[]
 	widgets: string[]

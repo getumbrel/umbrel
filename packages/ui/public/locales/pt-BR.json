@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Definir IP estático",
   "network.static-ip-confirm-message": "Uma nova aba será aberta em http://{{newIp}} para verificar se o seu Umbrel está acessível no novo endereço. Se não estiver, suas configurações anteriores serão restauradas automaticamente em até 30 segundos.",
   "network.static-ip-confirm-title": "Definir endereço IP estático?",
+  "network.static-ip-disconnected-note": "Conecte um cabo Ethernet para definir um IP estático.",
   "network.static-ip-ethernet-only": "A configuração de IP estático é compatível apenas com interfaces Ethernet.",
   "network.static-ip-warning": "Atribuir um IP estático usando uma reserva DHCP nas configurações do seu roteador é mais confiável do que configurá-lo aqui. Se você optar por configurá-lo aqui, também deve reservar o mesmo IP no seu roteador para evitar conflitos. Configurações incorretas podem deixar seu Umbrel inacessível, exigindo acesso físico para restaurar a conectividade.",
   "no-forgot-password-message": "Se você perder sua senha, não poderá entrar no seu Umbrel. Certifique-se de guardá-la com segurança.",

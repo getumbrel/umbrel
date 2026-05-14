@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Imposta IP statico",
   "network.static-ip-confirm-message": "Si aprirà una nuova scheda su http://{{newIp}} per verificare che il tuo Umbrel sia raggiungibile al nuovo indirizzo. In caso contrario, le impostazioni precedenti verranno ripristinate automaticamente entro 30 secondi.",
   "network.static-ip-confirm-title": "Impostare un indirizzo IP statico?",
+  "network.static-ip-disconnected-note": "Collega Ethernet per impostare un IP statico.",
   "network.static-ip-ethernet-only": "La configurazione dell'IP statico è supportata solo per le interfacce ethernet.",
   "network.static-ip-warning": "Assegnare un IP statico tramite una prenotazione DHCP nelle impostazioni del router è più affidabile che configurarlo qui. Se lo configuri qui, dovresti anche riservare lo stesso IP sul router per evitare conflitti. Impostazioni errate potrebbero rendere il tuo Umbrel irraggiungibile, richiedendo l'accesso fisico per ripristinare la connettività.",
   "no-forgot-password-message": "Se perdi la tua password, non sarai in grado di accedere al tuo Umbrel. Assicurati di conservarla in modo sicuro.",

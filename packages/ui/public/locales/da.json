@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Indstil statisk IP",
   "network.static-ip-confirm-message": "Der åbnes en ny fane på http://{{newIp}} for at bekræfte, at din Umbrel kan nås på den nye adresse. Hvis ikke, gendannes dine tidligere indstillinger automatisk inden for 30 sekunder.",
   "network.static-ip-confirm-title": "Indstil statisk IP-adresse?",
+  "network.static-ip-disconnected-note": "Tilslut Ethernet for at indstille statisk IP.",
   "network.static-ip-ethernet-only": "Konfiguration af statisk IP understøttes kun for Ethernet-grænseflader.",
   "network.static-ip-warning": "Det er mere pålideligt at tildele en statisk IP via en DHCP-reservation i din routers indstillinger end at konfigurere den her. Hvis du konfigurerer den her, bør du også reservere den samme IP på din router for at undgå konflikter. Forkerte indstillinger kan gøre din Umbrel utilgængelig og kræve fysisk adgang for at gendanne forbindelsen.",
   "no-forgot-password-message": "Hvis du mister din adgangskode, kan du ikke logge ind på din Umbrel. Sørg for at opbevare den sikkert.",

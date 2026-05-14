@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Määra staatiline IP",
   "network.static-ip-confirm-message": "Aadressil http://{{newIp}} avaneb uus vahekaart, et kontrollida, kas sinu Umbrel on uuel aadressil kättesaadav. Kui ei ole, taastatakse su eelmised seaded 30 sekundi jooksul automaatselt.",
   "network.static-ip-confirm-title": "Kas määrata staatiline IP-aadress?",
+  "network.static-ip-disconnected-note": "Staatilise IP määramiseks ühenda Ethernet.",
   "network.static-ip-ethernet-only": "Staatilise IP-aadressi seadistamine on toetatud ainult Ethernet-liidestel.",
   "network.static-ip-warning": "Ruuteri seadetes DHCP reserveeringuga staatilise IP-aadressi määramine on töökindlam kui selle seadistamine siin. Kui seadistad selle siiski siin, peaksid konfliktide vältimiseks reserveerima ruuteris ka sama IP-aadressi. Valed seaded võivad muuta sinu Umbreli kättesaamatuks ja ühenduse taastamiseks võib vaja minna füüsilist ligipääsu.",
   "no-forgot-password-message": "Kui kaotad oma parooli, ei saa sa oma Umbrelisse sisse logida. Hoia see kindlasti turvaliselt alles.",

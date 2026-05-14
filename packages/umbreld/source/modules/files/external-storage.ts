@@ -359,9 +359,70 @@ export default class ExternalStorage {
 	async #getExternalDevices() {
 		// Get all block devices
 		const blockDevices = await getBlockDevices()
+		const systemDiskIds = await this.#getSystemDiskIds(blockDevices)
 
-		// Filter out any non-USB devices
-		return blockDevices.filter((device) => device.transport === 'usb')
+		// Filter out any non-USB devices and disks that back the running system.
+		return blockDevices.filter((device) => device.transport === 'usb' && !systemDiskIds.has(device.id))
+	}
+
+	// Get disks used by the running system so they are never treated as external storage.
+	async #getSystemDiskIds(blockDevices: BlockDevice[]) {
+		const systemDiskIds = new Set<string>()
+		const systemPaths = [this.#umbreld.dataDirectory, '/']
+
+		for (const blockDevice of blockDevices) {
+			for (const partition of blockDevice.partitions) {
+				const hasSystemMount = partition.mountpoints.some((mountpoint) =>
+					systemPaths.some((systemPath) => this.#isPathOnMountpoint(systemPath, mountpoint)),
+				)
+				if (hasSystemMount) systemDiskIds.add(blockDevice.id)
+			}
+		}
+
+		for (const systemPath of systemPaths) {
+			const source = await this.#getFilesystemSource(systemPath)
+			const diskId = this.#getDiskIdForDeviceSource(source, blockDevices)
+			if (diskId) systemDiskIds.add(diskId)
+		}
+
+		return systemDiskIds
+	}
+
+	async #getFilesystemSource(systemPath: string) {
+		try {
+			const {stdout} = await $`df ${systemPath} --output=source`
+			return stdout
+				.split('\n')
+				.map((line) => line.trim())
+				.filter(Boolean)
+				.pop()
+		} catch {
+			return undefined
+		}
+	}
+
+	#getDiskIdForDeviceSource(source: string | undefined, blockDevices: BlockDevice[]) {
+		if (!source?.startsWith('/dev/')) return undefined
+
+		const deviceId = source.split('/').pop()
+		if (!deviceId) return undefined
+
+		for (const blockDevice of blockDevices) {
+			if (blockDevice.id === deviceId) return blockDevice.id
+			if (blockDevice.partitions.some((partition) => partition.id === deviceId)) return blockDevice.id
+		}
+
+		return undefined
+	}
+
+	#isPathOnMountpoint(systemPath: string, mountpoint: string) {
+		const normalisedSystemPath = nodePath.resolve(systemPath)
+		const normalisedMountpoint = nodePath.resolve(mountpoint)
+
+		return (
+			normalisedSystemPath === normalisedMountpoint ||
+			normalisedSystemPath.startsWith(`${normalisedMountpoint}${nodePath.sep}`)
+		)
 	}
 
 	// Get external devices but only show mount points that are under /External
@@ -451,14 +512,7 @@ export default class ExternalStorage {
 	// This is used to notify unsupported users why they can't see their hardware.
 	async isExternalDeviceConnectedOnUnsupportedDevice() {
 		const isSupported = await this.supported()
-		let externalBlockDevices = await this.#getExternalDevices()
-
-		// Exclude any external disks that include the current data directory.
-		// This prevents USB storage based Raspberry Pi's detecting their main
-		// USB storage drive as a connected external drive.
-		const df = await $`df ${this.#umbreld.dataDirectory} --output=source`
-		const dataDirDisk = df.stdout.split('\n').pop()?.split('/').pop()?.replace(/\d+$/, '')
-		externalBlockDevices = externalBlockDevices.filter((blockDevice) => blockDevice.id !== dataDirDisk)
+		const externalBlockDevices = await this.#getExternalDevices()
 
 		return !isSupported && externalBlockDevices.length > 0
 	}

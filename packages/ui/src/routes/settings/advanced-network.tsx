@@ -26,13 +26,46 @@ import {
 import {cn} from '@/lib/utils'
 import {useConfirmation} from '@/providers/confirmation'
 import {useGlobalSystemState} from '@/providers/global-system-state'
-import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
+
+const NETWORK_INTERFACES_REFETCH_INTERVAL_MS = 2000
 
 function prefixToSubnetMask(prefix: number): string | null {
 	if (prefix < 0 || prefix > 32 || !Number.isInteger(prefix)) return null
 	const mask = prefix === 0 ? 0 : ~(2 ** (32 - prefix) - 1) >>> 0
 	return [mask >>> 24, (mask >> 16) & 255, (mask >> 8) & 255, mask & 255].join('.')
+}
+
+type IpSettingsDraft = {
+	ipMethod: 'dhcp' | 'static'
+	ip: string
+	subnet: string
+	gateway: string
+	dns: string
+}
+
+type ModeOption<T extends string> = {value: T; label: string; description?: string}
+
+function getIpSettingsDraft(iface: NetworkInterface): IpSettingsDraft {
+	// Prefer configured static settings (may be present even when disconnected)
+	// over live values.
+	if (iface.configuredStaticSettings) {
+		return {
+			ipMethod: 'static',
+			ip: iface.configuredStaticSettings.ip,
+			subnet: String(iface.configuredStaticSettings.subnetPrefix),
+			gateway: iface.configuredStaticSettings.gateway,
+			dns: iface.configuredStaticSettings.dns.join(', '),
+		}
+	}
+
+	return {
+		ipMethod: iface.ipMethod ?? 'dhcp',
+		ip: iface.ip ?? '',
+		subnet: iface.subnetPrefix != null ? String(iface.subnetPrefix) : '',
+		gateway: iface.gateway ?? '',
+		dns: iface.dns?.join(', ') ?? '',
+	}
 }
 
 // ─── Status Dot ───────────────────────────────────────────────────────
@@ -50,27 +83,37 @@ function StatusDot({connected}: {connected: boolean}) {
 // ─── Network Panel (main view) ──────────────────────────────────────
 
 export function NetworkPanel({onBack}: {onBack: () => void}) {
-	// Global staleTime is 1 minute, so reopening the panel within that window would show
-	// stale data. Invalidate on mount to cover wifi/ethernet changes made elsewhere.
-	const utils = trpcReact.useUtils()
-	useEffect(() => {
-		utils.system.getNetworkInterfaces.invalidate()
-	}, [])
-
-	const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null)
+	const {interfaces, isLoading, isError} = useNetworkInterfaces({
+		refetchInterval: NETWORK_INTERFACES_REFETCH_INTERVAL_MS,
+		staleTime: 0,
+	})
+	const [selectedMac, setSelectedMac] = useState<string | null>(null)
+	const selectedInterface = selectedMac ? interfaces?.find((iface) => iface.mac === selectedMac) : null
 
 	return selectedInterface ? (
-		<InterfaceDetail iface={selectedInterface} onBack={() => setSelectedInterface(null)} />
+		<InterfaceDetail key={selectedInterface.mac} iface={selectedInterface} onBack={() => setSelectedMac(null)} />
 	) : (
-		<NetworkMainView onBack={onBack} onSelectInterface={setSelectedInterface} />
+		<NetworkMainView
+			onBack={onBack}
+			interfaces={interfaces}
+			isLoading={isLoading}
+			isError={isError}
+			onSelectInterface={(iface) => setSelectedMac(iface.mac)}
+		/>
 	)
 }
 
 function NetworkMainView({
 	onBack,
+	interfaces,
+	isLoading,
+	isError,
 	onSelectInterface,
 }: {
 	onBack: () => void
+	interfaces: NetworkInterface[] | undefined
+	isLoading: boolean
+	isError: boolean
 	onSelectInterface: (iface: NetworkInterface) => void
 }) {
 	const {t} = useTranslation()
@@ -83,7 +126,12 @@ function NetworkMainView({
 
 			<Divider />
 
-			<InterfacesList onSelectInterface={onSelectInterface} />
+			<InterfacesList
+				interfaces={interfaces}
+				isLoading={isLoading}
+				isError={isError}
+				onSelectInterface={onSelectInterface}
+			/>
 
 			<Divider />
 
@@ -245,9 +293,18 @@ function HostnameSection() {
 
 // ─── Interfaces List ────────────────────────────────────────────────
 
-function InterfacesList({onSelectInterface}: {onSelectInterface: (iface: NetworkInterface) => void}) {
+function InterfacesList({
+	interfaces,
+	isLoading,
+	isError,
+	onSelectInterface,
+}: {
+	interfaces: NetworkInterface[] | undefined
+	isLoading: boolean
+	isError: boolean
+	onSelectInterface: (iface: NetworkInterface) => void
+}) {
 	const {t} = useTranslation()
-	const {interfaces, isLoading, isError} = useNetworkInterfaces()
 
 	return (
 		<div className='flex flex-col gap-2.5'>
@@ -282,10 +339,9 @@ function InterfaceCard({iface, onSelect}: {iface: NetworkInterface; onSelect: ()
 	const Icon = iface.type === 'wifi' ? TbWifi : BsEthernet
 	const label = iface.type === 'wifi' ? t('network.detail-type-wifi') : t('network.interface-ethernet')
 
-	// Prefer showing the live IP. If disconnected but a static IP is configured,
-	// show the configured one so the user knows there's something to manage.
+	// Prefer the live IP, but keep static config visible when disconnected.
 	const displayIp = iface.ip ?? iface.configuredStaticSettings?.ip
-	const isConfiguredFallback = !iface.ip && !!iface.configuredStaticSettings
+	const isStaticConfigured = !!iface.configuredStaticSettings
 
 	return (
 		<button
@@ -307,7 +363,7 @@ function InterfaceCard({iface, onSelect}: {iface: NetworkInterface; onSelect: ()
 						<>
 							<span className='text-white/15'>·</span>
 							<span>
-								{isConfiguredFallback && <span className='mr-1 text-white/25'>{t('network.ipv4-static')}:</span>}
+								{isStaticConfigured && <span className='mr-1 text-white/25'>{t('network.ipv4-static')}:</span>}
 								{displayIp}
 							</span>
 						</>
@@ -374,17 +430,19 @@ function ModeDropdown<T extends string>({
 	options,
 	onValueChange,
 	isLoading,
+	disabled,
 }: {
 	value: T
-	options: {value: T; label: string; description?: string}[]
+	options: ModeOption<T>[]
 	onValueChange: (value: T) => void
 	isLoading?: boolean
+	disabled?: boolean
 }) {
 	const selectedLabel = options.find((o) => o.value === value)?.label ?? value
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild disabled={isLoading}>
+			<DropdownMenuTrigger asChild disabled={isLoading || disabled}>
 				<button
 					className={cn(
 						'flex items-center gap-1.5 rounded-8 bg-white/6 px-3 py-2 text-13 font-medium -tracking-2 text-white/70 transition-colors hover:bg-white/10 disabled:cursor-not-allowed',
@@ -419,29 +477,36 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 	const {t} = useTranslation()
 	const {suppressErrors} = useGlobalSystemState()
 
-	// Prefer configured static settings (may be present even when disconnected)
-	// over live values.
-	const initial = iface.configuredStaticSettings
-		? {
-				ipMethod: 'static' as const,
-				ip: iface.configuredStaticSettings.ip,
-				subnet: String(iface.configuredStaticSettings.subnetPrefix),
-				gateway: iface.configuredStaticSettings.gateway,
-				dns: iface.configuredStaticSettings.dns.join(', '),
-			}
-		: {
-				ipMethod: iface.ipMethod ?? 'dhcp',
-				ip: iface.ip ?? '',
-				subnet: iface.subnetPrefix != null ? String(iface.subnetPrefix) : '',
-				gateway: iface.gateway ?? '',
-				dns: iface.dns?.join(', ') ?? '',
-			}
+	const [initial] = useState(() => getIpSettingsDraft(iface))
 
 	const [ipMethod, setIpMethod] = useState<'dhcp' | 'static'>(initial.ipMethod)
 	const [ip, setIp] = useState(initial.ip)
 	const [subnet, setSubnet] = useState(initial.subnet)
 	const [gateway, setGateway] = useState(initial.gateway)
 	const [dns, setDns] = useState(initial.dns)
+	const [hasEditedStaticFields, setHasEditedStaticFields] = useState(false)
+	const [shouldHydrateStaticFields] = useState(() => !initial.ip && !initial.subnet && !initial.gateway && !initial.dns)
+
+	// If Ethernet reconnects after opening with blank values, hydrate once from live data.
+	// Stop as soon as the user edits so polling never overwrites their draft.
+	useEffect(() => {
+		if (!shouldHydrateStaticFields) return
+		if (!iface.connected) return
+		if (hasEditedStaticFields) return
+
+		const liveDraft = getIpSettingsDraft(iface)
+		if (!liveDraft.ip && !liveDraft.subnet && !liveDraft.gateway && !liveDraft.dns) return
+
+		setIp(liveDraft.ip)
+		setSubnet(liveDraft.subnet)
+		setGateway(liveDraft.gateway)
+		setDns(liveDraft.dns)
+	}, [iface, hasEditedStaticFields, shouldHydrateStaticFields])
+
+	const updateStaticField = (setter: (value: string) => void) => (value: string) => {
+		setHasEditedStaticFields(true)
+		setter(value)
+	}
 
 	// Used to show override notes when Cloudflare DNS is enabled: interface DNS is ignored system-wide
 	const {isChecked: isCloudflareDnsEnabled} = useIsExternalDns()
@@ -523,7 +588,7 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 
 	const displayName = iface.type === 'wifi' ? t('network.detail-type-wifi') : t('network.interface-ethernet')
 
-	const ipv4Options = [
+	const ipv4Options: ModeOption<'dhcp' | 'static'>[] = [
 		{value: 'dhcp' as const, label: t('network.ipv4-automatic'), description: t('network.ipv4-automatic-description')},
 		{value: 'static' as const, label: t('network.ipv4-static'), description: t('network.ipv4-static-description')},
 	]
@@ -532,12 +597,15 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 	const subnetLabel = subnetMask ? `${t('network.ipv4-subnet')} · ${subnetMask}` : t('network.ipv4-subnet')
 
 	const isApplying = isSettingStaticIp || isClearing
-	const hasChanges =
-		ipMethod !== initial.ipMethod ||
-		ip !== initial.ip ||
-		subnet !== initial.subnet ||
-		gateway !== initial.gateway ||
-		dns !== initial.dns
+	const hasStaticFieldChanges =
+		(ipMethod === 'static' || initial.ipMethod === 'static') &&
+		(ip !== initial.ip || subnet !== initial.subnet || gateway !== initial.gateway || dns !== initial.dns)
+	const hasChanges = ipMethod !== initial.ipMethod || hasStaticFieldChanges
+
+	// When disconnected, only allow switching from static back to DHCP (recovery path).
+	// Setting a static IP requires the confirmation flow which needs a reachable interface.
+	const canEditStaticIp = iface.connected
+	const canApply = hasChanges && (iface.connected || (initial.ipMethod === 'static' && ipMethod === 'dhcp'))
 
 	return (
 		<div className='flex flex-col gap-y-5'>
@@ -613,7 +681,8 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 															sizeVariant='short-square'
 															placeholder='192.168.1.100'
 															value={ip}
-															onValueChange={setIp}
+															onValueChange={updateStaticField(setIp)}
+															disabled={!canEditStaticIp}
 														/>
 													</Labeled>
 												</div>
@@ -623,7 +692,8 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 															sizeVariant='short-square'
 															placeholder='24'
 															value={subnet}
-															onValueChange={setSubnet}
+															onValueChange={updateStaticField(setSubnet)}
+															disabled={!canEditStaticIp}
 														/>
 													</Labeled>
 												</div>
@@ -635,7 +705,8 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 															sizeVariant='short-square'
 															placeholder='192.168.1.1'
 															value={gateway}
-															onValueChange={setGateway}
+															onValueChange={updateStaticField(setGateway)}
+															disabled={!canEditStaticIp}
 														/>
 													</Labeled>
 												</div>
@@ -646,7 +717,8 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 														sizeVariant='short-square'
 														placeholder={t('network.dns-custom-placeholder')}
 														value={dns}
-														onValueChange={setDns}
+														onValueChange={updateStaticField(setDns)}
+														disabled={!canEditStaticIp}
 													/>
 												</Labeled>
 												{isCloudflareDnsEnabled && (
@@ -676,8 +748,16 @@ function InterfaceDetail({iface, onBack}: {iface: NetworkInterface; onBack: () =
 					<Divider />
 
 					{/* Buttons */}
-					<div className='flex justify-end gap-2.5'>
-						<Button variant='primary' size='md' onClick={handleApply} disabled={isApplying || !hasChanges}>
+					<div className='flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between'>
+						{ipMethod === 'static' && !iface.connected ? (
+							<div className='flex min-w-0 items-start gap-1.5 text-11 leading-snug text-white/35 sm:max-w-[260px]'>
+								<TbInfoCircle className='mt-0.5 size-3.5 shrink-0 text-white/30' />
+								<span>{t('network.static-ip-disconnected-note')}</span>
+							</div>
+						) : (
+							<div />
+						)}
+						<Button variant='primary' size='md' onClick={handleApply} disabled={isApplying || !canApply}>
 							{isApplying ? t('network.applying') : t('network.apply')}
 						</Button>
 					</div>

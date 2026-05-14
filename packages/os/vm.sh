@@ -79,6 +79,7 @@ Commands:
 
 Boot Options:
     --device <type>                Device to emulate: umbrel-pro, umbrel-home, nas (default: ${DEFAULT_DEVICE})
+    --boot-disk <type>             Boot disk transport: default, emmc, nvme, usb (default: default for device)
     --arch <amd64|arm64>           CPU architecture (default: auto-detect from image name)
     --memory <MiB>                 RAM in MiB (default: ${DEFAULT_MEMORY})
     --cores <count>                CPU cores (default: ${DEFAULT_CORES})
@@ -97,6 +98,7 @@ Examples:
     $0 boot                                        # Boot native arch image as Umbrel Pro
     $0 boot --device umbrel-home                   # Boot as Umbrel Home (NVMe boot, no eMMC)
     $0 boot --device nas                           # Boot as generic NAS (8 SSD + 8 HDD slots)
+    $0 boot --device nas --boot-disk usb           # Boot generic NAS from USB storage
     $0 boot umbrelos-amd64.img --memory 4096       # Boot specific image
     $0 boot --arch arm64                           # Boot arm64 image
     $0 nvme add 1 --size 128G
@@ -566,6 +568,31 @@ build_nvme_args() {
   echo "$nvme_args"
 }
 
+# Build QEMU arguments for the boot disk.
+# Arguments: <overlay> <boot-disk-transport>
+build_boot_disk_args() {
+  local overlay="$1"
+  local boot_disk_transport="$2"
+  local drive_args="file=${overlay},if=none,id=boot,format=qcow2,cache=none,discard=unmap,aio=threads"
+
+  case "$boot_disk_transport" in
+    emmc)
+      # eMMC is emulated with virtio-blk for VM tests.
+      echo "-drive ${drive_args} -device virtio-blk-pci,drive=boot,bootindex=0"
+      ;;
+    nvme)
+      echo "-drive ${drive_args} -device nvme,drive=boot,serial=umbrel-boot-nvme,bootindex=0"
+      ;;
+    usb)
+      echo "-device qemu-xhci,id=boot_xhci -drive ${drive_args} -device usb-storage,bus=boot_xhci.0,drive=boot,serial=umbrel-boot-usb,bootindex=0"
+      ;;
+    *)
+      echo "Error: Unknown boot disk transport: $boot_disk_transport" >&2
+      exit 1
+      ;;
+  esac
+}
+
 # Detect architecture from image filename
 detect_arch() {
   local image="$1"
@@ -632,6 +659,7 @@ boot_vm() {
   local disk_size="$6"
   local ssh_port="$7"
   local http_port="$8"
+  local boot_disk_transport="$9"
 
   init_state
   detect_uefi_firmware "$arch"
@@ -668,25 +696,32 @@ boot_vm() {
     echo "Using existing overlay image"
   fi
 
-  # Device-specific SMBIOS and boot disk settings
-  local smbios_args boot_disk_args
+  # Device-specific SMBIOS and default boot disk settings
+  local smbios_args default_boot_disk_transport
   case "$device" in
     umbrel-home)
       smbios_args=(-smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Home,sku=U130122,family=NAS")
       # Umbrel Home has no eMMC — the OS lives on the NVMe SSD
-      boot_disk_args="-drive file=$overlay,if=none,id=boot,format=qcow2,cache=none,discard=unmap,aio=threads -device nvme,drive=boot,serial=umbrel-home-ssd,bootindex=0"
+      default_boot_disk_transport="nvme"
       ;;
     umbrel-pro)
       smbios_args=(-smbios "type=1,manufacturer=Umbrel,, Inc.,product=Umbrel Pro,sku=U4XN1,family=NAS")
       # Umbrel Pro boots from eMMC (virtio-blk), NVMe slots are for data SSDs
-      boot_disk_args="-drive file=$overlay,if=none,id=boot,format=qcow2,cache=none,discard=unmap,aio=threads -device virtio-blk-pci,drive=boot,bootindex=0"
+      default_boot_disk_transport="emmc"
       ;;
     nas)
       smbios_args=(-smbios "type=1,manufacturer=Generic,product=NAS,family=NAS")
       # Generic NAS boots from eMMC (virtio-blk), has NVMe and SATA slots for storage
-      boot_disk_args="-drive file=$overlay,if=none,id=boot,format=qcow2,cache=none,discard=unmap,aio=threads -device virtio-blk-pci,drive=boot,bootindex=0"
+      default_boot_disk_transport="emmc"
       ;;
   esac
+
+  if [[ "$boot_disk_transport" == "default" ]]; then
+    boot_disk_transport="$default_boot_disk_transport"
+  fi
+
+  local boot_disk_args
+  boot_disk_args=$(build_boot_disk_args "$overlay" "$boot_disk_transport")
 
   # Build disk arguments for data drives
   local nvme_args hdd_args
@@ -749,7 +784,7 @@ boot_vm() {
     esac
   fi
 
-  echo "Booting VM (${arch}, ${device})..."
+  echo "Booting VM (${arch}, ${device}, ${boot_disk_transport} boot disk)..."
   echo "  SSH: ssh -p ${ssh_port} umbrel@localhost"
   echo "  HTTP: http://localhost:${http_port}"
   echo
@@ -987,6 +1022,7 @@ case "$command" in
     image=""
     arch=""
     device="$DEFAULT_DEVICE"
+    boot_disk_transport="default"
     memory="$DEFAULT_MEMORY"
     cores="$DEFAULT_CORES"
     disk_size="$DEFAULT_DISK_SIZE"
@@ -1005,6 +1041,14 @@ case "$command" in
           device="$2"
           if [[ "$device" != "umbrel-pro" && "$device" != "umbrel-home" && "$device" != "nas" ]]; then
             echo "Error: --device must be 'umbrel-pro', 'umbrel-home', or 'nas'" >&2
+            exit 1
+          fi
+          shift 2
+          ;;
+        --boot-disk)
+          boot_disk_transport="$2"
+          if [[ "$boot_disk_transport" != "default" && "$boot_disk_transport" != "emmc" && "$boot_disk_transport" != "nvme" && "$boot_disk_transport" != "usb" ]]; then
+            echo "Error: --boot-disk must be 'default', 'emmc', 'nvme', or 'usb'" >&2
             exit 1
           fi
           shift 2
@@ -1061,7 +1105,7 @@ case "$command" in
       fi
     fi
 
-    boot_vm "$image" "$arch" "$device" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port"
+    boot_vm "$image" "$arch" "$device" "$memory" "$cores" "$disk_size" "$ssh_port" "$http_port" "$boot_disk_transport"
     ;;
 
   *)

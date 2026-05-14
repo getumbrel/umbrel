@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Setja fast IP-vistfang",
   "network.static-ip-confirm-message": "Nýr flipi opnast á http://{{newIp}} til að staðfesta að hægt sé að ná til Umbrel á nýja vistfanginu. Ef það tekst ekki verða fyrri stillingar sjálfkrafa endurheimtar innan 30 sekúndna.",
   "network.static-ip-confirm-title": "Setja fast IP-vistfang?",
+  "network.static-ip-disconnected-note": "Tengdu við Ethernet til að stilla fasta IP-tölu.",
   "network.static-ip-ethernet-only": "Uppsetning á föstu IP-vistfangi er aðeins studd fyrir Ethernet-viðmót.",
   "network.static-ip-warning": "Að úthluta föstu IP-vistfangi með DHCP-frátekningu í stillingum beinisins er áreiðanlegra en að stilla það hér. Ef þú stillir það hér ættirðu líka að taka sama IP-vistfang frá á beininu til að koma í veg fyrir árekstra. Rangar stillingar geta gert Umbrel óaðgengilegt og krafist líkamlegs aðgangs til að endurheimta tenginguna.",
   "no-forgot-password-message": "Ef þú týnir lykilorðinu þínu muntu ekki geta skráð þig inn á Umbrel. Gakktu úr skugga um að geyma það örugglega.",

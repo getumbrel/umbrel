@@ -150,6 +150,17 @@ describe('files.mountedExternalDevices', () => {
 		await expect(externalDevices).toEqual([])
 	})
 
+	test('excludes USB disks used by the running system', async () => {
+		// Mock lsblk command to return a USB-reported system disk.
+		mockCommand = (command: string) => {
+			if (command.startsWith('lsblk')) return JSON.stringify(getLsblkUsbSystemDisk())
+			if (command.startsWith('df')) return {stdout: 'Filesystem\n/dev/sda4'}
+		}
+
+		const externalDevices = await umbreld.client.files.externalDevices.query()
+		await expect(externalDevices).toEqual([])
+	})
+
 	test('returns external devices that are attached but not mounted', async () => {
 		// Mock lsblk command to return a valid response for a mounted external disk
 		mockCommand = (command: string) => {
@@ -412,6 +423,33 @@ describe('externalstorage.#mountExternalDevices', () => {
 		expect(exists).toBe(false)
 	})
 
+	test('does not mount inactive partitions from USB system disks', async () => {
+		let mountCommands = 0
+		mockCommand = (command: string) => {
+			// Mock lsblk command to return a USB-reported system disk.
+			if (command.startsWith('lsblk')) return JSON.stringify(getLsblkUsbSystemDisk())
+			if (command.startsWith('df')) return {stdout: 'Filesystem\n/dev/sda4'}
+			// Mock mountpoint command to return nonzero exit code so unused mount paths don't get cleaned up
+			if (command.startsWith('mountpoint')) return {exitCode: 1}
+			if (command.startsWith('mount /dev/')) {
+				mountCommands++
+				return 'fake mount worked'
+			}
+		}
+
+		// Simulate disk event
+		await umbreld.instance.eventBus.emit('system:disk:change')
+
+		// Wait for event to be handled
+		await delay(500)
+
+		// Check that the inactive system partition was not mounted
+		expect(mountCommands).toBe(0)
+		const mountPoint = `${umbreld.instance.dataDirectory}/external/Untitled`
+		const exists = await fse.pathExists(mountPoint)
+		expect(exists).toBe(false)
+	})
+
 	// Skip this for now since it breaks with the new cleanup logic which will remove the directory before we can test it exists
 	// We should re-enable this if we get proper vm testing working or can reliably detect the fs creation.
 	test.skip('mounts a new external disk when it is attached', async () => {
@@ -458,6 +496,56 @@ describe('filesystem permissions', () => {
 // Mock lsblk output constants
 // Taken from a physical Umbrel Home with:
 //   lsblk --output-all --json --bytes
+
+const getLsblkUsbSystemDisk = () => {
+	const systemDisk = structuredClone(LSBLK_EXTERNAL_DISK_ATTACHED.blockdevices[0]) as any
+	systemDisk.model = 'USB System Disk'
+	systemDisk.serial = 'SYSTEM'
+	systemDisk.children = [
+		{
+			...systemDisk.children[0],
+			name: 'sda1',
+			kname: 'sda1',
+			label: 'ESP',
+			fstype: 'vfat',
+			parttypename: 'EFI System',
+			mountpoint: '/boot/efi',
+			mountpoints: ['/boot/efi'],
+		},
+		{
+			...systemDisk.children[1],
+			name: 'sda2',
+			kname: 'sda2',
+			label: null,
+			fstype: 'ext4',
+			parttypename: 'Linux filesystem',
+			mountpoint: '/',
+			mountpoints: ['/'],
+		},
+		{
+			...systemDisk.children[1],
+			name: 'sda3',
+			kname: 'sda3',
+			label: null,
+			fstype: 'ext4',
+			parttypename: 'Linux filesystem',
+			mountpoint: null,
+			mountpoints: [null],
+		},
+		{
+			...systemDisk.children[1],
+			name: 'sda4',
+			kname: 'sda4',
+			label: null,
+			fstype: 'ext4',
+			parttypename: 'Linux filesystem',
+			mountpoint: '/home',
+			mountpoints: ['/home', '/data'],
+		},
+	]
+
+	return {blockdevices: [systemDisk]}
+}
 
 const LSBLK_NO_EXTERNAL_DISK = {
 	blockdevices: [

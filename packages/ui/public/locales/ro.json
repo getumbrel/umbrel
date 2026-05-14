@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Setează IP static",
   "network.static-ip-confirm-message": "Se va deschide o filă nouă la http://{{newIp}} pentru a verifica dacă Umbrel este accesibil la noua adresă. Dacă nu este, setările anterioare vor fi restaurate automat în 30 de secunde.",
   "network.static-ip-confirm-title": "Setezi o adresă IP statică?",
+  "network.static-ip-disconnected-note": "Conectează Ethernet pentru a seta IP-ul static.",
   "network.static-ip-ethernet-only": "Configurarea IP-ului static este disponibilă doar pentru interfețele Ethernet.",
   "network.static-ip-warning": "Alocarea unui IP static printr-o rezervare DHCP în setările routerului tău este mai fiabilă decât configurarea lui aici. Dacă alegi totuși să-l configurezi aici, ar trebui să rezervi aceeași adresă IP și în router pentru a preveni conflictele. Setările incorecte pot face ca Umbrel să nu mai fie accesibil, fiind necesar acces fizic pentru a restabili conexiunea.",
   "no-forgot-password-message": "Dacă îți pierzi parola, nu te vei mai putea conecta la Umbrel. Asigură-te că o păstrezi în siguranță.",

@@ -1,6 +1,7 @@
 [Unit]
 Description=Umbrel daemon
-After=network-online.target docker.service
+Wants=umbrel-custom-pre-start.service
+After=network-online.target docker.service umbrel-custom-pre-start.service
 
 [Service]
 TimeoutStopSec=15min

@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "고정 IP 설정",
   "network.static-ip-confirm-message": "새 주소에서 Umbrel에 접속할 수 있는지 확인하기 위해 http://{{newIp}}에서 새 탭이 열려요. 접속할 수 없으면 30초 안에 이전 설정으로 자동 복원돼요.",
   "network.static-ip-confirm-title": "고정 IP 주소를 설정할까요?",
+  "network.static-ip-disconnected-note": "고정 IP를 설정하려면 이더넷을 연결하세요.",
   "network.static-ip-ethernet-only": "고정 IP 설정은 이더넷 인터페이스에서만 지원돼요.",
   "network.static-ip-warning": "라우터 설정에서 DHCP 예약으로 고정 IP를 할당하는 것이 여기에서 직접 설정하는 것보다 더 안정적이에요. 여기에서 설정하더라도 충돌을 막기 위해 라우터에서도 같은 IP를 예약해 두는 것이 좋아요. 설정이 잘못되면 Umbrel에 접속할 수 없게 될 수 있고, 연결을 복구하려면 기기에 물리적으로 접근해야 할 수도 있어요.",
   "no-forgot-password-message": "비밀번호를 분실하면 Umbrel에 로그인할 수 없습니다. 안전하게 보관하세요.",

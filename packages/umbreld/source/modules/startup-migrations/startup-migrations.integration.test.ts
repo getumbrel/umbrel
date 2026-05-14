@@ -1,11 +1,51 @@
 import {expect, beforeEach, afterEach, test} from 'vitest'
+import {createTRPCProxyClient, httpBatchLink} from '@trpc/client'
 import yaml from 'js-yaml'
 import fse from 'fs-extra'
+import pWaitFor from 'p-wait-for'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
+import type {AppRouter} from '../server/trpc/index.js'
 
 async function readYaml(path: string) {
 	return yaml.load(await fse.readFile(path, 'utf8'))
+}
+
+type ReportedSystemVersion = {
+	version: string
+	name: string
+	previousVersion?: string
+}
+
+function createUnauthenticatedClient(port: number) {
+	return createTRPCProxyClient<AppRouter>({
+		links: [
+			httpBatchLink({
+				url: `http://localhost:${port}/trpc`,
+			}),
+		],
+	})
+}
+
+async function waitForReportedSystemVersion() {
+	let reportedVersion: ReportedSystemVersion | undefined
+	await pWaitFor(
+		async () => {
+			const port = umbreld.instance.server.port
+			if (!port) return false
+
+			try {
+				reportedVersion = await createUnauthenticatedClient(port).system.version.query()
+				return true
+			} catch {
+				return false
+			}
+		},
+		{interval: 100, timeout: 5000},
+	)
+
+	if (!reportedVersion) throw new Error('Timed out waiting for system.version')
+	return reportedVersion
 }
 
 // Fresh non-running umbreld instance for each test
@@ -98,6 +138,7 @@ test('first run writes version without adding a notification', async () => {
 	// Verify version is written to store
 	const versionAfter = await umbreld.instance.store.get('version')
 	expect(versionAfter).toBe(umbreld.instance.version)
+	await expect(umbreld.instance.store.get('previousVersion')).resolves.toBeUndefined()
 
 	// Verify no notification was created (first run)
 	const notifications = await umbreld.instance.notifications.get()
@@ -121,6 +162,7 @@ test('OS update adds a notification', async () => {
 	const versionAfter = await umbreld.instance.store.get('version')
 	expect(versionAfter).toBe(umbreld.instance.version)
 	expect(versionAfter).not.toBe(oldVersion)
+	await expect(umbreld.instance.store.get('previousVersion')).resolves.toBe(oldVersion)
 
 	// Verify notification was created
 	const notifications = await umbreld.instance.notifications.get()
@@ -150,4 +192,36 @@ test('restarting with same version does not add a notification', async () => {
 	// Verify no notification was created
 	const notifications = await umbreld.instance.notifications.get()
 	expect(notifications.includes('umbrelos-updated')).toBe(false)
+})
+
+test('OS update after a previous boot reports current and previous versions', async () => {
+	const oldVersion = '1.4.2'
+	const currentVersion = umbreld.instance.version
+
+	// Start umbreld with the current version
+	await umbreld.instance.start()
+
+	// Verify the current version is written after first start
+	await expect(umbreld.instance.store.get('version')).resolves.toBe(currentVersion)
+
+	// Stop umbreld before simulating an update from an older version
+	await umbreld.instance.stop()
+
+	// Overwrite the stored version to simulate updating from an old booted OS
+	await umbreld.instance.store.set('version', oldVersion)
+
+	// Start umbreld again with the current version
+	await umbreld.instance.start()
+
+	// Verify the store and version route report the current version and where we came from
+	await expect(umbreld.instance.store.get('version')).resolves.toBe(currentVersion)
+	await expect(umbreld.instance.store.get('previousVersion')).resolves.toBe(oldVersion)
+
+	const reportedVersion = await waitForReportedSystemVersion()
+	expect(reportedVersion.version).toBe(currentVersion)
+	expect(reportedVersion.previousVersion).toBe(oldVersion)
+
+	// Verify notification was created
+	const notifications = await umbreld.instance.notifications.get()
+	expect(notifications.includes('umbrelos-updated')).toBe(true)
 })

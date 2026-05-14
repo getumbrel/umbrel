@@ -19,6 +19,7 @@ import {BackupDeviceIcon} from '@/features/backups/components/backup-device-icon
 import {getDeviceNameFromPath} from '@/features/backups/utils/backup-location-helpers'
 import {useNotifications} from '@/hooks/use-notifications'
 import {cn} from '@/lib/utils'
+import {shouldShowWhatsNew} from '@/routes/whats-new'
 import {trpcReact} from '@/trpc/trpc'
 import {useLinkToDialog} from '@/utils/dialog'
 
@@ -179,6 +180,7 @@ export function Notifications() {
 	const {notifications, clearNotification} = useNotifications()
 	const navigate = useNavigate()
 	const linkToDialog = useLinkToDialog()
+	const versionQ = trpcReact.system.version.useQuery()
 
 	// Determine if we need to query backup repositories
 	// TODO: remove support for legacy "backups-failing" notification format
@@ -197,11 +199,15 @@ export function Notifications() {
 	// Navigate to whats-new dialog when the umbrelos-updated notification is present
 	// Clear the notification immediately to prevent re-navigation
 	useEffect(() => {
+		if (showWhatsNew && versionQ.isLoading) return
+
 		if (showWhatsNew) {
 			clearNotification('umbrelos-updated')
-			navigate(linkToDialog('whats-new'))
+			if (shouldShowWhatsNew(versionQ.data?.previousVersion)) {
+				navigate(linkToDialog('whats-new'))
+			}
 		}
-	}, [showWhatsNew, navigate, linkToDialog, clearNotification])
+	}, [showWhatsNew, versionQ.isLoading, versionQ.data?.previousVersion, navigate, linkToDialog, clearNotification])
 
 	// Get notification content based on notification type
 	const getNotificationContent = (notification: string): NotificationContent => {

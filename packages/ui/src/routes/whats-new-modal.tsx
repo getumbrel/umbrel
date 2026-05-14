@@ -13,11 +13,10 @@ import {
 	immersiveDialogTitleClass,
 } from '@/components/ui/immersive-dialog'
 import {cn} from '@/lib/utils'
+import {WHATS_NEW_VERSION_NAME} from '@/routes/whats-new'
 import {useDialogOpenProps} from '@/utils/dialog'
 
 // Versions and features are hardcoded and we should update them on every release
-
-const VERSION = 'umbrelOS 1.7'
 
 const FEATURES = [
 	{
@@ -200,7 +199,7 @@ export function WhatsNewModal() {
 					{/* Header */}
 					<div className='mb-1 max-md:mt-2 max-md:mb-0'>
 						<h1 className={cn(immersiveDialogTitleClass, 'max-md:text-xl')}>
-							{t('whats-new.title', {version: VERSION})}
+							{t('whats-new.title', {version: WHATS_NEW_VERSION_NAME})}
 						</h1>
 					</div>
 

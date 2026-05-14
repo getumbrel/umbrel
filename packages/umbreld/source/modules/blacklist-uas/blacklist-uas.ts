@@ -2,6 +2,8 @@ import {globby} from 'globby'
 import fse from 'fs-extra'
 import {$} from 'execa'
 
+const bootMountPath = `/tmp/umbrel-boot-${process.pid}`
+
 // By default Linux uses the UAS driver for most devices. This causes major
 // stability problems on the Raspberry Pi 4, not due to issues with UAS, but due
 // to devices running in UAS mode using much more power. The Pi can't reliably
@@ -15,7 +17,6 @@ import {$} from 'execa'
 export default async function blacklistUASDriver() {
 	try {
 		console.error('Checking for UAS devices to blacklist')
-		const justDidRebootFile = '/umbrel-just-did-reboot'
 		// Only run on Raspberry Pi 4
 		const cpuInfo = await fse.readFile('/proc/cpuinfo')
 		if (!cpuInfo.includes('Raspberry Pi 4 ')) {
@@ -39,44 +40,65 @@ export default async function blacklistUASDriver() {
 			blacklist.push(deviceId)
 		}
 
-		// Don't reboot if we don't have any UAS devices
-		if (blacklist.length === 0) {
-			console.error('No UAS devices found!')
-			await fse.remove(justDidRebootFile)
-			return
+		const {stdout: systemInfoJson} = await $`rugix-ctrl system info --json`
+		const systemInfo = JSON.parse(systemInfoJson) as {boot?: {activeGroup?: string}}
+		// Rugix's rpi-tryboot layout uses partition 2 for boot-a and partition 3 for boot-b.
+		const bootPartition =
+			systemInfo.boot?.activeGroup === 'a' ? 2 : systemInfo.boot?.activeGroup === 'b' ? 3 : undefined
+		if (!bootPartition) throw new Error('Could not determine active boot partition')
+		const {stdout} = await $`rugix-ctrl utils resolve-partition ${bootPartition}`
+		const {device} = JSON.parse(stdout) as {device?: string}
+		if (!device) throw new Error(`Could not resolve boot partition ${bootPartition}`)
+		await fse.ensureDir(bootMountPath)
+		let bootMounted = false
+		try {
+			await $`mount -o rw ${device} ${bootMountPath}`
+			bootMounted = true
+			const justDidRebootFile = `${bootMountPath}/umbrel-just-did-reboot`
+
+			// Don't reboot if we don't have any UAS devices
+			if (blacklist.length === 0) {
+				console.error('No UAS devices found!')
+				await fse.remove(justDidRebootFile)
+				return
+			}
+
+			// Check we're not in a boot loop
+			if (await fse.pathExists(justDidRebootFile)) {
+				console.error('We just rebooted, we could be in a bootloop, skipping reboot')
+				await fse.remove(justDidRebootFile)
+				return
+			}
+
+			// Read current cmdline
+			console.error(`Applying quirks to cmdline.txt`)
+			let cmdline = await fse.readFile(`${bootMountPath}/cmdline.txt`, 'utf8')
+
+			// Don't apply quirks if they're already applied
+			const quirksAlreadyApplied = blacklist.every((deviceId) => cmdline.includes(`${deviceId}:u`))
+			if (quirksAlreadyApplied) {
+				console.error('UAS quirks already applied, skipping')
+				return
+			}
+
+			// Remove any current quirks
+			cmdline = cmdline
+				.trim()
+				.split(' ')
+				.filter((flag) => !flag.startsWith('usb-storage.quirks='))
+				.join(' ')
+			// Add new quirks
+			const quirks = blacklist.map((deviceId) => `${deviceId}:u`).join(',')
+			cmdline = `${cmdline} usb-storage.quirks=${quirks}`
+
+			// Write new cmdline
+			await fse.writeFile(`${bootMountPath}/cmdline.txt`, cmdline)
+			await fse.writeFile(justDidRebootFile, cmdline)
+			await $`sync`
+		} finally {
+			if (bootMounted) await $`umount ${bootMountPath}`
+			await fse.remove(bootMountPath)
 		}
-
-		// Check we're not in a boot loop
-		if (await fse.pathExists(justDidRebootFile)) {
-			console.error('We just rebooted, we could be in a bootloop, skipping reboot')
-			return
-		}
-
-		// Read current cmdline
-		console.error(`Applying quirks to cmdline.txt`)
-		let cmdline = await fse.readFile('/boot/cmdline.txt', 'utf8')
-
-		// Don't apply quirks if they're already applied
-		const quirksAlreadyApplied = blacklist.every((deviceId) => cmdline.includes(`${deviceId}:u`))
-		if (quirksAlreadyApplied) {
-			console.error('UAS quirks already applied, skipping')
-			return
-		}
-
-		// Remove any current quirks
-		cmdline = cmdline
-			.trim()
-			.split(' ')
-			.filter((flag) => !flag.startsWith('usb-storage.quirks='))
-			.join(' ')
-		// Add new quirks
-		const quirks = blacklist.map((deviceId) => `${deviceId}:u`).join(',')
-		cmdline = `${cmdline} usb-storage.quirks=${quirks}`
-
-		// Remount /boot as writable
-		await $`mount -o remount,rw /boot`
-		// Write new cmdline
-		await fse.writeFile('/boot/cmdline.txt', cmdline)
 
 		// Reboot the system
 		console.error(`Rebooting`)
@@ -87,7 +109,6 @@ export default async function blacklistUASDriver() {
 		try {
 			await $`rugix-ctrl system commit`
 		} catch {}
-		await fse.writeFile(justDidRebootFile, cmdline)
 		await $`reboot`
 		return true
 	} catch (error) {

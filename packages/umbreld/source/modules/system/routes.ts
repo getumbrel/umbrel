@@ -45,6 +45,7 @@ export default router({
 		return {
 			version: ctx.umbreld.version,
 			name: ctx.umbreld.versionName,
+			previousVersion: await ctx.umbreld.store.get('previousVersion'),
 		}
 	}),
 	status: publicProcedure.query(() => systemStatus),

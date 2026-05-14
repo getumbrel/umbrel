@@ -823,6 +823,7 @@
   "network.static-ip-confirm-continue": "Nastavi statični IP",
   "network.static-ip-confirm-message": "Odprl se bo nov zavihek na http://{{newIp}}, da preverimo, ali je tvoj Umbrel dosegljiv na novem naslovu. Če ni, bodo prejšnje nastavitve samodejno obnovljene v 30 sekundah.",
   "network.static-ip-confirm-title": "Nastavi statični naslov IP?",
+  "network.static-ip-disconnected-note": "Priklopi Ethernet, da nastaviš statični IP.",
   "network.static-ip-ethernet-only": "Nastavitev statičnega IP-ja je podprta samo za ethernetne vmesnike.",
   "network.static-ip-warning": "Dodelitev statičnega IP-ja z rezervacijo DHCP v nastavitvah usmerjevalnika je zanesljivejša kot nastavitev tukaj. Če ga vseeno nastaviš tukaj, na usmerjevalniku rezerviraj isti naslov IP, da preprečiš konflikte. Napačne nastavitve lahko povzročijo, da tvoj Umbrel ne bo dosegljiv, za obnovitev povezljivosti pa bo potreben fizičen dostop.",
   "no-forgot-password-message": "Če izgubiš geslo, se ne boš mogel/-la prijaviti v svoj Umbrel. Poskrbi, da ga varno shraniš.",
