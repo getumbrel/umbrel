@@ -5,6 +5,10 @@ set -euo pipefail
 # The update server references it in the form:
 # https://raw.githubusercontent.com/getumbrel/umbrel/<tag>/scripts/update-script
 
+# Fix PATH so that commands like sfdisk (used by rugix-ctrl) can be found
+# sfdisk lives in /usr/sbin and /sbin which are not always in the inherited PATH
+export PATH="/usr/local/sbin:/usr/sbin:/sbin:$PATH"
+
 update_url=""
 download_prefix="https://download.umbrel.com/release/1.7.3"
 
