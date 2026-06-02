@@ -10,6 +10,7 @@ import {Drawer, DrawerContent, DrawerHeader, DrawerScroller, DrawerTitle} from '
 import {listClass} from '@/components/ui/list'
 import {Switch} from '@/components/ui/switch'
 import {HomeIcon} from '@/features/files/assets/home-icon'
+import {SharePasswordDialog} from '@/features/files/components/dialogs/share-password-dialog'
 import {PlatformInstructions} from '@/features/files/components/dialogs/share-info-dialog/platform-instructions'
 import {
 	Platform,
@@ -56,6 +57,7 @@ export default function FileSharingDrawerOrDialog() {
 
 	const [selectedPlatform, setSelectedPlatform] = useState<Platform>(platforms[0])
 	const [isAddFolderOpen, setAddFolderOpen] = useState(false)
+	const [passwordDialogMode, setPasswordDialogMode] = useState<'custom' | 'regenerate' | null>(null)
 
 	// Stable-ordered list of all folders seen during this dialog session.
 	// Seeded with initial shares on first load, then updated on toggle-off and add.
@@ -299,6 +301,14 @@ export default function FileSharingDrawerOrDialog() {
 								name={primaryName}
 								sharename={primarySharename}
 							/>
+							<div className='flex flex-wrap items-center gap-2 px-1'>
+								<Button size='sm' variant='secondary' onClick={() => setPasswordDialogMode('custom')}>
+									{t('settings.file-sharing.password-change-button')}
+								</Button>
+								<Button size='sm' variant='secondary' onClick={() => setPasswordDialogMode('regenerate')}>
+									{t('settings.file-sharing.password-action-regenerate')}
+								</Button>
+							</div>
 						</div>
 					</motion.div>
 				)}
@@ -332,6 +342,13 @@ export default function FileSharingDrawerOrDialog() {
 		<>
 			{showChoiceScreen ? choiceScreen : activeScreen}
 			{addFolderBrowser}
+			<SharePasswordDialog
+				mode={passwordDialogMode ?? 'custom'}
+				open={passwordDialogMode !== null}
+				onOpenChange={(open) => {
+					if (!open) setPasswordDialogMode(null)
+				}}
+			/>
 		</>
 	)
 

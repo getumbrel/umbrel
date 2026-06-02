@@ -144,6 +144,35 @@ export default class Samba {
 		})`smbpasswd -s -a umbrel`
 	}
 
+	// Set a custom share password.
+	// Validates length, persists to the secrets file, and applies to Samba.
+	async setSharePassword(newPassword: string) {
+		if (typeof newPassword !== 'string') throw new Error('[invalid-password]')
+		// Samba's smbpasswd accepts up to 127 chars in interactive mode.
+		// We require a minimum of 8 to avoid trivially weak passwords.
+		if (newPassword.length < 8) throw new Error('[password-too-short]')
+		if (newPassword.length > 127) throw new Error('[password-too-long]')
+		// Reject newlines — they would break the stdin protocol of smbpasswd.
+		if (/[\r\n]/.test(newPassword)) throw new Error('[invalid-password]')
+
+		const sharePasswordFile = `${this.#umbreld.dataDirectory}/secrets/share-password`
+		await fse.writeFile(sharePasswordFile, newPassword)
+		await this.applySharePassword()
+		this.logger.log('Share password updated')
+		return true
+	}
+
+	// Regenerate the share password with a fresh random token.
+	// Returns the new password so the UI can display it once.
+	async regenerateSharePassword() {
+		const sharePasswordFile = `${this.#umbreld.dataDirectory}/secrets/share-password`
+		const newPassword = randomToken(128)
+		await fse.writeFile(sharePasswordFile, newPassword)
+		await this.applySharePassword()
+		this.logger.log('Share password regenerated')
+		return newPassword
+	}
+
 	// Apply shares to Samba
 	async applyShares({excludePaths}: {excludePaths?: string[]} = {}) {
 		const shares = await this.#get()
