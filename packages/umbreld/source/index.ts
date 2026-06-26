@@ -25,6 +25,7 @@ import {
 	setupPiCpuGovernor,
 	restoreHostname,
 	restoreWiFi,
+	restoreWifiHotspot,
 	restoreStaticIp,
 	waitForSystemTime,
 	reboot,
@@ -56,6 +57,16 @@ type StoreSchema = {
 		wifi?: {
 			ssid: string
 			password?: string
+		}
+		wifiHotspot?: {
+			enabled: boolean
+			ssid: string
+			password: string
+			band?: '2.4ghz' | '5ghz'
+			channel?: number
+			countryCode?: string
+			hidden?: boolean
+			bridgeToLan?: boolean
 		}
 		externalDns?: boolean
 		hostname?: string
@@ -200,6 +211,9 @@ export default class Umbreld {
 
 		// Restore WiFi connection after OTA update (non-blocking)
 		restoreWiFi(this)
+
+		// Restore WiFi hotspot after boot/OTA update (non-blocking)
+		restoreWifiHotspot(this)
 
 		// Restore static IP settings (non-blocking)
 		restoreStaticIp(this)
