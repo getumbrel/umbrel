@@ -708,6 +708,10 @@ function CloudCredentialsStep({
 				</div>
 			)}
 
+			{authStatus === 'failed' && (
+				<p className='text-sm text-red-400'>{t('files-backend-error.cloud-auth-failed')}</p>
+			)}
+
 			{authStatus === 'complete' && (
 				<p className='text-sm text-brand-lightest'>
 					{t('files-add-network-share.cloud-connected', {
