@@ -63,6 +63,9 @@ handle_failsafe_transition() {
     # Create final snapshot and sync incrementally
     # Using --raw to preserve encryption (sends encrypted blocks without needing key loaded)
     echo ">>> Creating final snapshot"
+    # Destroy any stale snapshot left over from a previous failed attempt so this
+    # is idempotent on retry and doesn't depend on errexit being suppressed here.
+    zfs destroy -r "${pool_name}@migration-final" 2>/dev/null || true
     zfs snapshot -r "${pool_name}@migration-final"
 
     echo ">>> Sending incremental changes to migration pool"
