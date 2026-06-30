@@ -2,7 +2,7 @@ import {randomBytes} from 'node:crypto'
 
 import {type ExecaChildProcess, execa} from 'execa'
 
-export type CloudOAuthProvider = 'dropbox' | 'drive'
+export type CloudOAuthProvider = 'dropbox' | 'google_drive'
 
 const SESSION_TTL_MS = 15 * 60 * 1000
 
@@ -19,7 +19,7 @@ type CloudOAuthSession = {
 const sessions = new Map<string, CloudOAuthSession>()
 
 function rcloneProviderName(provider: CloudOAuthProvider) {
-	return provider
+	return provider === 'google_drive' ? 'drive' : provider
 }
 
 export function parseCloudAuthUrl(output: string) {

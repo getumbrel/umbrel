@@ -83,7 +83,7 @@ type StoreSchema = {
 			path: string
 		}[]
 		networkStorage: {
-			protocol?: 'smb' | 'webdav' | 'dropbox' | 'drive'
+			protocol?: 'smb' | 'webdav' | 'dropbox' | 'google_drive'
 			host: string
 			share: string
 			username: string

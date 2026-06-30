@@ -28,7 +28,7 @@ import {detectWebdavVendor, type WebdavVendor} from './remote-mount/webdav.js'
 
 import type Umbreld from '../../index.js'
 
-export type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'drive'
+export type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'google_drive'
 export type {CloudOAuthProvider}
 
 export type NetworkShare = {
@@ -61,7 +61,7 @@ type NewWebdavShare = {
 }
 
 type NewCloudShare = {
-	protocol: 'dropbox' | 'drive'
+	protocol: 'dropbox' | 'google_drive'
 	label?: string
 	sessionId?: string
 	token?: string
@@ -70,24 +70,25 @@ type NewCloudShare = {
 export type NewNetworkShare = NewSmbShare | NewWebdavShare | NewCloudShare
 
 function isRcloneProtocol(protocol: NetworkShareProtocol) {
-	return protocol === 'webdav' || protocol === 'dropbox' || protocol === 'drive'
+	return protocol === 'webdav' || protocol === 'dropbox' || protocol === 'google_drive'
 }
 
-function getCloudDisplayName(protocol: 'dropbox' | 'drive', label?: string) {
+function getCloudDisplayName(protocol: 'dropbox' | 'google_drive', label?: string) {
 	if (label?.trim()) return label.trim()
 	return protocol === 'dropbox' ? 'Dropbox' : 'Google Drive'
 }
 
-function getCloudHostName(protocol: 'dropbox' | 'drive') {
+function getCloudHostName(protocol: 'dropbox' | 'google_drive') {
 	return protocol === 'dropbox' ? 'Dropbox' : 'Google Drive'
 }
 
 const sanitizeMountSegment = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
 
-function normalizeShare(share: NetworkShare & {protocol?: NetworkShareProtocol}): NetworkShare {
+function normalizeShare(share: NetworkShare & {protocol?: NetworkShareProtocol | 'drive'}): NetworkShare {
+	const protocol = share.protocol === 'drive' ? 'google_drive' : (share.protocol ?? 'smb')
 	return {
 		...share,
-		protocol: share.protocol ?? 'smb',
+		protocol,
 	}
 }
 
@@ -244,7 +245,7 @@ export default class NetworkStorage {
 			}
 		}
 
-		if ((share.protocol === 'dropbox' || share.protocol === 'drive') && !share.token) {
+		if ((share.protocol === 'dropbox' || share.protocol === 'google_drive') && !share.token) {
 			throw new Error('[invalid-cloud-token]')
 		}
 
@@ -303,8 +304,10 @@ export default class NetworkStorage {
 			})
 		} else if (share.protocol === 'dropbox') {
 			remote = buildDropboxRemote(remoteName, {token: share.token!})
-		} else {
+		} else if (share.protocol === 'google_drive') {
 			remote = buildDriveRemote(remoteName, {token: share.token!})
+		} else {
+			throw new Error(`Unsupported rclone protocol: ${share.protocol}`)
 		}
 
 		await mountRemote(remote, {systemMountPath, userId, groupId, configPath, cacheDirectory})
@@ -391,7 +394,7 @@ export default class NetworkStorage {
 			}
 		}
 
-		if (newShare.protocol === 'dropbox' || newShare.protocol === 'drive') {
+		if (newShare.protocol === 'dropbox' || newShare.protocol === 'google_drive') {
 			const token = newShare.token ?? (newShare.sessionId ? consumeCloudOAuthToken(newShare.sessionId) : undefined)
 			if (!token) throw new Error('[invalid-cloud-token]')
 

@@ -235,7 +235,7 @@ export default router({
 					vendor: z.enum(['other', 'nextcloud']).optional(),
 				}),
 				z.object({
-					protocol: z.enum(['dropbox', 'drive']),
+					protocol: z.enum(['dropbox', 'google_drive']),
 					label: z.string().optional(),
 					sessionId: z.string(),
 				}),
@@ -250,7 +250,7 @@ export default router({
 		)
 		.mutation(async ({ctx, input}) => {
 			if (input.protocol === 'webdav') return ctx.umbreld.files.networkStorage.addShare(input)
-			if (input.protocol === 'dropbox' || input.protocol === 'drive') {
+			if (input.protocol === 'dropbox' || input.protocol === 'google_drive') {
 				return ctx.umbreld.files.networkStorage.addShare(input)
 			}
 			return ctx.umbreld.files.networkStorage.addShare({
@@ -264,7 +264,7 @@ export default router({
 
 	// Start OAuth for Dropbox or Google Drive (rclone authorize)
 	startCloudNetworkAuth: publicProcedureWhenNoUserExists
-		.input(z.object({provider: z.enum(['dropbox', 'drive'])}))
+		.input(z.object({provider: z.enum(['dropbox', 'google_drive'])}))
 		.mutation(async ({ctx, input}) => ctx.umbreld.files.networkStorage.startCloudAuth(input.provider)),
 
 	// Poll OAuth session status for cloud network storage

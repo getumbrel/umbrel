@@ -34,8 +34,8 @@ enum Step {
 	SelectShare = 2,
 }
 
-type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'drive'
-type CloudOAuthProvider = 'dropbox' | 'drive'
+type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'google_drive'
+type CloudOAuthProvider = 'dropbox' | 'google_drive'
 
 // Manual mode steps
 enum ManualStep {
@@ -256,7 +256,7 @@ export default function AddNetworkShareDialog(props?: {
 	}
 
 	const handleCloudConnect = async () => {
-		if (protocol !== 'dropbox' && protocol !== 'drive') return
+		if (protocol !== 'dropbox' && protocol !== 'google_drive') return
 
 		try {
 			const {sessionId, authUrl} = await startCloudAuth(protocol)
@@ -269,7 +269,7 @@ export default function AddNetworkShareDialog(props?: {
 	}
 
 	const handleCloudSubmit = async () => {
-		if (protocol !== 'dropbox' && protocol !== 'drive' || !cloudSessionId) return
+		if (protocol !== 'dropbox' && protocol !== 'google_drive' || !cloudSessionId) return
 
 		const parsed = cloudSchema.safeParse(cloudForm.getValues())
 		if (!parsed.success) return
@@ -314,7 +314,7 @@ export default function AddNetworkShareDialog(props?: {
 	// footer buttons
 	let footer: React.ReactNode = null
 
-	const isCloudProtocol = protocol === 'dropbox' || protocol === 'drive'
+	const isCloudProtocol = protocol === 'dropbox' || protocol === 'google_drive'
 
 	if (isCloudProtocol) {
 		footer = (
@@ -463,7 +463,7 @@ export default function AddNetworkShareDialog(props?: {
 		<div className='space-y-2 pb-2'>
 			<p className='text-13 text-white/60'>{t('files-add-network-share.protocol-label')}</p>
 			<div className='grid grid-cols-2 gap-2'>
-				{(['smb', 'webdav', 'dropbox', 'drive'] as const).map((value) => (
+				{(['smb', 'webdav', 'dropbox', 'google_drive'] as const).map((value) => (
 					<Button
 						key={value}
 						type='button'
@@ -483,7 +483,7 @@ export default function AddNetworkShareDialog(props?: {
 								? t('files-add-network-share.protocol-webdav')
 								: value === 'dropbox'
 									? t('files-add-network-share.protocol-dropbox')
-									: t('files-add-network-share.protocol-drive')}
+									: t('files-add-network-share.protocol-google-drive')}
 					</Button>
 				))}
 			</div>
@@ -714,7 +714,7 @@ function CloudCredentialsStep({
 						provider:
 							provider === 'dropbox'
 								? t('files-add-network-share.protocol-dropbox')
-								: t('files-add-network-share.protocol-drive'),
+								: t('files-add-network-share.protocol-google-drive'),
 					})}
 				</p>
 			)}
