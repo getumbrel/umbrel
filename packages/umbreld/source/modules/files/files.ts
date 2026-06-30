@@ -680,6 +680,8 @@ export default class Files {
 
 	// Permanently delete a file or directory
 	async delete(virtualPath: string) {
+		virtualPath = normalizePath(virtualPath)
+
 		// Check if operation is allowed
 		const allowedOperations = await this.getAllowedOperations(virtualPath)
 		if (!allowedOperations.includes('delete')) throw new Error('[operation-not-allowed]')
