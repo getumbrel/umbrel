@@ -90,6 +90,7 @@ type StoreSchema = {
 			password: string
 			mountPath: string
 			url?: string
+			vendor?: 'other' | 'nextcloud'
 		}[]
 	}
 	notifications: string[]

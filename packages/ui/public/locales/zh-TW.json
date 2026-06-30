@@ -1,4 +1,4 @@
-{
+﻿{
   "2fa": "2FA",
   "2fa-description": "為你的 Umbrel 登入和應用程式提供第二層安全保護",
   "2fa.disable.title": "停用雙重驗證",
@@ -1254,5 +1254,18 @@
   "wifi-no-networks-message": "找不到 Wi-Fi 網路",
   "wifi-searching": "正在搜尋 Wi-Fi 網路...",
   "wifi-unsupported-device-description": "此裝置不支援 Wi-Fi。可能是因為缺少無線網路介面卡，或介面卡不相容。",
-  "wifi-view-networks": "查看網路"
+  "wifi-view-networks": "查看網路",
+  "files-add-network-share.protocol-label": "Protocol",
+  "files-add-network-share.protocol-smb": "SMB",
+  "files-add-network-share.protocol-webdav": "WebDAV",
+  "files-add-network-share.webdav-description": "Connect to a WebDAV server such as Nextcloud or a NAS WebDAV endpoint.",
+  "files-add-network-share.webdav-label-label": "Display name (optional)",
+  "files-add-network-share.webdav-label-placeholder": "Documents",
+  "files-add-network-share.webdav-url-label": "WebDAV URL",
+  "files-add-network-share.webdav-url-placeholder": "https://192.168.1.10:5006/dav",
+  "files-add-network-share.webdav-url-required": "WebDAV URL is required",
+  "files-backend-error.invalid-webdav-url": "The WebDAV URL is not valid. Use http:// or https://",
+  "files-add-network-share.webdav-vendor-label": "Server type",
+  "files-add-network-share.webdav-vendor-nextcloud": "Nextcloud",
+  "files-add-network-share.webdav-vendor-other": "Other"
 }

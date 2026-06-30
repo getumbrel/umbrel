@@ -1,4 +1,4 @@
-{
+﻿{
   "2fa": "2FA",
   "2fa-description": "Umbrel 로그인과 앱을 위한 2단계 인증",
   "2fa.disable.title": "2단계 인증 해제",
@@ -1254,5 +1254,18 @@
   "wifi-no-networks-message": "Wi-Fi 네트워크를 찾을 수 없습니다",
   "wifi-searching": "Wi-Fi 네트워크 검색 중...",
   "wifi-unsupported-device-description": "이 디바이스는 Wi-Fi를 지원하지 않습니다. 무선 어댑터가 없거나 호환되지 않을 수 있습니다.",
-  "wifi-view-networks": "네트워크 보기"
+  "wifi-view-networks": "네트워크 보기",
+  "files-add-network-share.protocol-label": "Protocol",
+  "files-add-network-share.protocol-smb": "SMB",
+  "files-add-network-share.protocol-webdav": "WebDAV",
+  "files-add-network-share.webdav-description": "Connect to a WebDAV server such as Nextcloud or a NAS WebDAV endpoint.",
+  "files-add-network-share.webdav-label-label": "Display name (optional)",
+  "files-add-network-share.webdav-label-placeholder": "Documents",
+  "files-add-network-share.webdav-url-label": "WebDAV URL",
+  "files-add-network-share.webdav-url-placeholder": "https://192.168.1.10:5006/dav",
+  "files-add-network-share.webdav-url-required": "WebDAV URL is required",
+  "files-backend-error.invalid-webdav-url": "The WebDAV URL is not valid. Use http:// or https://",
+  "files-add-network-share.webdav-vendor-label": "Server type",
+  "files-add-network-share.webdav-vendor-nextcloud": "Nextcloud",
+  "files-add-network-share.webdav-vendor-other": "Other"
 }

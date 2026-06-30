@@ -16,6 +16,7 @@ import {
 	obscurePassword,
 	unmountRemote,
 } from './remote-mount/rclone.js'
+import {detectWebdavVendor, type WebdavVendor} from './remote-mount/webdav.js'
 
 import type Umbreld from '../../index.js'
 
@@ -29,6 +30,7 @@ export type NetworkShare = {
 	password: string
 	mountPath: string
 	url?: string
+	vendor?: WebdavVendor
 }
 
 type NewSmbShare = {
@@ -45,6 +47,7 @@ type NewWebdavShare = {
 	username: string
 	password: string
 	label?: string
+	vendor?: WebdavVendor
 }
 
 export type NewNetworkShare = NewSmbShare | NewWebdavShare
@@ -151,12 +154,13 @@ export default class NetworkStorage {
 
 	async getShareInfo() {
 		const shares = await this.getShares()
-		return shares.map(({protocol, host, share, mountPath, url}) => ({
+		return shares.map(({protocol, host, share, mountPath, url, vendor}) => ({
 			protocol,
 			host,
 			share,
 			mountPath,
 			url,
+			vendor,
 			isMounted: this.mountedShares.has(mountPath),
 		}))
 	}
@@ -249,10 +253,12 @@ export default class NetworkStorage {
 
 		const remoteName = `umbrel-webdav-${randomBytes(4).toString('hex')}`
 		const obscuredPassword = await obscurePassword(share.password)
+		const vendor = share.vendor ?? detectWebdavVendor(share.url)
 		const remote = buildWebdavRemote(remoteName, {
 			url: share.url,
 			username: share.username,
 			obscuredPassword,
+			vendor,
 		})
 		const {userId, groupId} = this.#umbreld.files.fileOwner
 
@@ -330,11 +336,13 @@ export default class NetworkStorage {
 			if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('[invalid-webdav-url]')
 
 			const {host, share} = parseWebdavDisplay(newShare.url, newShare.label)
+			const vendor = newShare.vendor ?? detectWebdavVendor(newShare.url)
 			return {
 				protocol: 'webdav',
 				host,
 				share,
 				url: newShare.url,
+				vendor,
 				username: newShare.username,
 				password: newShare.password,
 				mountPath: buildMountPath(host, share),

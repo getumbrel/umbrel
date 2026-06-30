@@ -1,4 +1,4 @@
-{
+﻿{
   "2fa": "2FA",
   "2fa-description": "Egy második biztonsági réteg az Umbrel bejelentkezésedhez és az alkalmazásaidhoz",
   "2fa.disable.title": "Kétlépcsős azonosítás letiltása",
@@ -1254,5 +1254,18 @@
   "wifi-no-networks-message": "Nem található Wi-Fi hálózat",
   "wifi-searching": "Wi-Fi hálózatok keresése...",
   "wifi-unsupported-device-description": "Ez az eszköz nem támogatja a Wi-Fi-t. Ez hiányzó vagy inkompatibilis vezeték nélküli adapter miatt lehet.",
-  "wifi-view-networks": "Hálózatok megtekintése"
+  "wifi-view-networks": "Hálózatok megtekintése",
+  "files-add-network-share.protocol-label": "Protocol",
+  "files-add-network-share.protocol-smb": "SMB",
+  "files-add-network-share.protocol-webdav": "WebDAV",
+  "files-add-network-share.webdav-description": "Connect to a WebDAV server such as Nextcloud or a NAS WebDAV endpoint.",
+  "files-add-network-share.webdav-label-label": "Display name (optional)",
+  "files-add-network-share.webdav-label-placeholder": "Documents",
+  "files-add-network-share.webdav-url-label": "WebDAV URL",
+  "files-add-network-share.webdav-url-placeholder": "https://192.168.1.10:5006/dav",
+  "files-add-network-share.webdav-url-required": "WebDAV URL is required",
+  "files-backend-error.invalid-webdav-url": "The WebDAV URL is not valid. Use http:// or https://",
+  "files-add-network-share.webdav-vendor-label": "Server type",
+  "files-add-network-share.webdav-vendor-nextcloud": "Nextcloud",
+  "files-add-network-share.webdav-vendor-other": "Other"
 }

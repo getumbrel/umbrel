@@ -1,4 +1,4 @@
-{
+﻿{
   "2fa": "2FA",
   "2fa-description": "Una segunda capa de seguridad para tu inicio de sesión en Umbrel y aplicaciones",
   "2fa.disable.title": "Desactivar autenticación de dos factores",
@@ -1254,5 +1254,18 @@
   "wifi-no-networks-message": "No se encontraron redes Wi-Fi",
   "wifi-searching": "Buscando redes Wi-Fi...",
   "wifi-unsupported-device-description": "El Wi-Fi no es compatible con este dispositivo. Esto puede deberse a un adaptador inalámbrico faltante o incompatible.",
-  "wifi-view-networks": "Ver redes"
+  "wifi-view-networks": "Ver redes",
+  "files-add-network-share.protocol-label": "Protocol",
+  "files-add-network-share.protocol-smb": "SMB",
+  "files-add-network-share.protocol-webdav": "WebDAV",
+  "files-add-network-share.webdav-description": "Connect to a WebDAV server such as Nextcloud or a NAS WebDAV endpoint.",
+  "files-add-network-share.webdav-label-label": "Display name (optional)",
+  "files-add-network-share.webdav-label-placeholder": "Documents",
+  "files-add-network-share.webdav-url-label": "WebDAV URL",
+  "files-add-network-share.webdav-url-placeholder": "https://192.168.1.10:5006/dav",
+  "files-add-network-share.webdav-url-required": "WebDAV URL is required",
+  "files-backend-error.invalid-webdav-url": "The WebDAV URL is not valid. Use http:// or https://",
+  "files-add-network-share.webdav-vendor-label": "Server type",
+  "files-add-network-share.webdav-vendor-nextcloud": "Nextcloud",
+  "files-add-network-share.webdav-vendor-other": "Other"
 }

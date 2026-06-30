@@ -28,14 +28,19 @@ function buildConfigContents(remote: RcloneRemoteConfig) {
 
 export function buildWebdavRemote(
 	name: string,
-	{url, username, obscuredPassword}: {url: string; username: string; obscuredPassword: string},
+	{
+		url,
+		username,
+		obscuredPassword,
+		vendor = 'other',
+	}: {url: string; username: string; obscuredPassword: string; vendor?: 'other' | 'nextcloud'},
 ): RcloneRemoteConfig {
 	return {
 		name,
 		type: 'webdav',
 		options: {
 			url,
-			vendor: 'other',
+			vendor,
 			user: username,
 			pass: obscuredPassword,
 			no_check_certificate: 'true',

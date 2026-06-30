@@ -232,6 +232,7 @@ export default router({
 					username: z.string(),
 					password: z.string(),
 					label: z.string().optional(),
+					vendor: z.enum(['other', 'nextcloud']).optional(),
 				}),
 				z.object({
 					protocol: z.literal('smb').optional(),

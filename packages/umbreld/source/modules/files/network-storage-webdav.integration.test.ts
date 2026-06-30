@@ -18,7 +18,9 @@ const hasRclone = await execa('command', ['-v', 'rclone'], {reject: false})
 	.then((result) => result.exitCode === 0)
 	.catch(() => false)
 
-describe.skipIf(!hasRclone)('WebDAV network storage via rclone', () => {
+const hasFuseDevice = await fse.pathExists('/dev/fuse').catch(() => false)
+
+describe.skipIf(!hasRclone || !hasFuseDevice)('WebDAV network storage via rclone', () => {
 	beforeEach(async () => {
 		umbreld = await createTestUmbreld({autoLogin: true})
 		webdavDirectory = nodePath.join(umbreld.instance.dataDirectory, 'webdav-root')

@@ -72,6 +72,7 @@ export default function AddNetworkShareDialog(props?: {
 		username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
 		password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
 		label: z.string().optional(),
+		vendor: z.enum(['other', 'nextcloud']).optional(),
 	})
 
 	const internalDialog = useDialogOpenProps('files-add-network-share')
@@ -96,7 +97,7 @@ export default function AddNetworkShareDialog(props?: {
 	})
 	const webdavForm = useForm({
 		resolver: zodResolver(webdavSchema),
-		defaultValues: {url: '', username: '', password: '', label: ''},
+		defaultValues: {url: '', username: '', password: '', label: '', vendor: 'other' as const},
 		mode: 'onChange',
 	})
 	const {host, share, username, password} = form.watch()
@@ -197,6 +198,7 @@ export default function AddNetworkShareDialog(props?: {
 				username: parsed.data.username,
 				password: parsed.data.password,
 				label: parsed.data.label?.trim() || undefined,
+				vendor: parsed.data.vendor,
 			})
 			const host = mountPath.split('/')[2]
 			props?.onAdded?.(host)
@@ -519,9 +521,42 @@ export default function AddNetworkShareDialog(props?: {
 function WebdavCredentialsStep() {
 	const {t} = useTranslation()
 	const form = useFormContext()
+	const vendor = form.watch('vendor') ?? 'other'
+	const url = form.watch('url')
+
+	useEffect(() => {
+		if (!url) return
+		try {
+			const normalized = url.toLowerCase()
+			if (normalized.includes('nextcloud') || normalized.includes('/remote.php/dav')) {
+				form.setValue('vendor', 'nextcloud')
+			}
+		} catch {
+			// ignore invalid URLs while typing
+		}
+	}, [url, form])
 
 	return (
 		<div className='space-y-4 py-2'>
+			<div className='space-y-2'>
+				<p className='text-13 text-white/60'>{t('files-add-network-share.webdav-vendor-label')}</p>
+				<div className='grid grid-cols-2 gap-2'>
+					{(['other', 'nextcloud'] as const).map((value) => (
+						<Button
+							key={value}
+							type='button'
+							size='dialog'
+							variant={vendor === value ? 'primary' : 'default'}
+							onClick={() => form.setValue('vendor', value)}
+						>
+							{value === 'nextcloud'
+								? t('files-add-network-share.webdav-vendor-nextcloud')
+								: t('files-add-network-share.webdav-vendor-other')}
+						</Button>
+					))}
+				</div>
+			</div>
+
 			{(['url', 'username', 'password', 'label'] as const).map((field) => {
 				const labels = {
 					url: t('files-add-network-share.webdav-url-label'),
