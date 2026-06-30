@@ -438,6 +438,7 @@
   "files-backend-error.invalid-base": "Путь не относится к допустимой директории",
   "files-backend-error.invalid-filename": "Недопустимое имя файла",
   "files-backend-error.invalid-path": "Недопустимый путь к файлу",
+  "files-backend-error.invalid-webdav-url": "Некорректный URL WebDAV. Используй http:// или https://",
   "files-backend-error.mkdir-failed": "Не удалось создать папку",
   "files-backend-error.move-failed": "Не удалось переместить элемент",
   "files-backend-error.not-enough-space": "Недостаточно свободного места",

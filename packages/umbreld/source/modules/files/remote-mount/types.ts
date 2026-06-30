@@ -13,6 +13,8 @@ export type RcloneMountOptions = {
 	systemMountPath: string
 	userId: number
 	groupId: number
+	configPath: string
+	cacheDirectory: string
 	// writes: stream-friendly cache for uploads; good default for NAS/WebDAV
 	vfsCacheMode?: 'off' | 'minimal' | 'writes' | 'full'
 }

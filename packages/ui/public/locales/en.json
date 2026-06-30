@@ -438,6 +438,7 @@
   "files-backend-error.invalid-base": "The path does not belong to a valid directory",
   "files-backend-error.invalid-filename": "The file name is not valid",
   "files-backend-error.invalid-path": "The file path is not valid",
+  "files-backend-error.invalid-webdav-url": "The WebDAV URL is not valid. Use http:// or https://",
   "files-backend-error.mkdir-failed": "Failed to create the folder",
   "files-backend-error.move-failed": "Failed to move the item",
   "files-backend-error.not-enough-space": "Not enough storage space available",

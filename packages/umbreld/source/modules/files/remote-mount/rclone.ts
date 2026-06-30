@@ -1,4 +1,3 @@
-import os from 'node:os'
 import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
@@ -9,6 +8,10 @@ import pWaitFor from 'p-wait-for'
 import type {RcloneMountOptions, RcloneRemoteConfig} from './types.js'
 
 const MOUNT_READY_TIMEOUT_MS = 30_000
+
+export async function assertRcloneAvailable() {
+	await $`rclone version`
+}
 
 export async function obscurePassword(password: string) {
 	const {stdout} = await $`rclone obscure ${password}`
@@ -40,32 +43,31 @@ export function buildWebdavRemote(
 	}
 }
 
+export async function writeRemoteConfig(remote: RcloneRemoteConfig, configPath: string) {
+	await fse.ensureDir(nodePath.dirname(configPath))
+	await fse.writeFile(configPath, buildConfigContents(remote), {mode: 0o600})
+}
+
 export async function mountRemote(remote: RcloneRemoteConfig, options: RcloneMountOptions) {
-	const {systemMountPath, userId, groupId, vfsCacheMode = 'writes'} = options
+	const {systemMountPath, userId, groupId, configPath, cacheDirectory, vfsCacheMode = 'writes'} = options
 
 	await fse.ensureDir(systemMountPath)
+	await fse.ensureDir(cacheDirectory)
+	await writeRemoteConfig(remote, configPath)
 
-	const configDirectory = await fse.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-rclone-config-'))
-	const configPath = nodePath.join(configDirectory, 'rclone.conf')
-	await fse.writeFile(configPath, buildConfigContents(remote), {mode: 0o600})
+	await $`rclone mount ${remote.name}: ${systemMountPath} --config ${configPath} --cache-dir ${cacheDirectory} --daemon --allow-other --uid ${userId} --gid ${groupId} --vfs-cache-mode ${vfsCacheMode} --dir-cache-time 30s --poll-interval 30s --umask 002`
 
-	try {
-		await $`rclone mount ${remote.name}: ${systemMountPath} --config ${configPath} --daemon --allow-other --uid ${userId} --gid ${groupId} --vfs-cache-mode ${vfsCacheMode} --dir-cache-time 30s --poll-interval 30s --umask 002`
-
-		await pWaitFor(
-			async () => {
-				try {
-					await $`mountpoint ${systemMountPath}`
-					return true
-				} catch {
-					return false
-				}
-			},
-			{interval: 200, timeout: {milliseconds: MOUNT_READY_TIMEOUT_MS}},
-		)
-	} finally {
-		await fse.remove(configDirectory).catch(() => {})
-	}
+	await pWaitFor(
+		async () => {
+			try {
+				await $`mountpoint ${systemMountPath}`
+				return true
+			} catch {
+				return false
+			}
+		},
+		{interval: 200, timeout: {milliseconds: MOUNT_READY_TIMEOUT_MS}},
+	)
 }
 
 export async function isRemoteMounted(systemMountPath: string) {
@@ -77,16 +79,25 @@ export async function isRemoteMounted(systemMountPath: string) {
 	}
 }
 
-export async function unmountRemote(systemMountPath: string) {
-	if (!(await isRemoteMounted(systemMountPath))) return
-
-	// rclone FUSE mounts are released via fusermount; fall back to umount.
-	try {
-		await $`fusermount -uz ${systemMountPath}`
-	} catch {
-		await $`umount ${systemMountPath}`
+async function fusermountUnmount(systemMountPath: string) {
+	const commands = ['fusermount3', 'fusermount'] as const
+	for (const command of commands) {
+		const result = await $({reject: false})`${command} -uz ${systemMountPath}`
+		if (result.exitCode === 0) return
 	}
 
-	// Give the kernel a moment to tear down the mount point.
-	await setTimeout(250)
+	await $`umount ${systemMountPath}`
+}
+
+export async function unmountRemote(
+	systemMountPath: string,
+	{cleanupPaths}: {cleanupPaths?: {configPath?: string; cacheDirectory?: string}} = {},
+) {
+	if (await isRemoteMounted(systemMountPath)) {
+		await fusermountUnmount(systemMountPath)
+		await setTimeout(250)
+	}
+
+	if (cleanupPaths?.configPath) await fse.remove(cleanupPaths.configPath).catch(() => {})
+	if (cleanupPaths?.cacheDirectory) await fse.remove(cleanupPaths.cacheDirectory).catch(() => {})
 }

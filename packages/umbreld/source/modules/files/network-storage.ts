@@ -9,7 +9,13 @@ import ky from 'ky'
 
 import {getHostname} from '../system/system.js'
 
-import {buildWebdavRemote, mountRemote, obscurePassword, unmountRemote} from './remote-mount/rclone.js'
+import {
+	assertRcloneAvailable,
+	buildWebdavRemote,
+	mountRemote,
+	obscurePassword,
+	unmountRemote,
+} from './remote-mount/rclone.js'
 
 import type Umbreld from '../../index.js'
 
@@ -52,15 +58,34 @@ function normalizeShare(share: NetworkShare & {protocol?: NetworkShareProtocol})
 	}
 }
 
-function parseWebdavDisplay(url: string, label?: string) {
+export function getWebdavHostKey(url: string) {
 	const parsed = new URL(url)
-	const host = parsed.hostname
-	const pathLabel = label?.trim() || parsed.pathname.split('/').filter(Boolean).pop() || 'WebDAV'
+	const defaultPort = parsed.protocol === 'https:' ? '443' : '80'
+	const port = parsed.port || defaultPort
+	if (port === defaultPort) return parsed.hostname
+	return `${parsed.hostname}-${port}`
+}
+
+function parseWebdavDisplay(url: string, label?: string) {
+	const host = getWebdavHostKey(url)
+	const pathLabel = label?.trim() || new URL(url).pathname.split('/').filter(Boolean).pop() || 'WebDAV'
 	return {host, share: pathLabel}
 }
 
 function buildMountPath(host: string, share: string) {
 	return `/Network/${sanitizeMountSegment(host)}/${sanitizeMountSegment(share)}`
+}
+
+function mountPathToStorageId(mountPath: string) {
+	return mountPath.replace(/^\//, '').replace(/\//g, '__')
+}
+
+function getWebdavConfigPath(dataDirectory: string, mountPath: string) {
+	return nodePath.join(dataDirectory, 'secrets', 'rclone', `${mountPathToStorageId(mountPath)}.conf`)
+}
+
+function getWebdavCacheDirectory(dataDirectory: string, mountPath: string) {
+	return nodePath.join(dataDirectory, 'cache', 'rclone-vfs', mountPathToStorageId(mountPath))
 }
 
 export default class NetworkStorage {
@@ -79,6 +104,13 @@ export default class NetworkStorage {
 	}
 
 	async start() {
+		const shares = await this.getShares()
+		if (shares.some((share) => share.protocol === 'webdav')) {
+			await assertRcloneAvailable().catch((error) => {
+				this.logger.error('rclone is required for WebDAV network shares but is not available', error)
+			})
+		}
+
 		this.isRunning = true
 		this.watchJobPromise = this.#watchAndMountShares().catch((error) =>
 			this.logger.error('Error watching and mounting shares', error),
@@ -149,7 +181,9 @@ export default class NetworkStorage {
 							this.mountedShares.delete(share.mountPath)
 							await this.#mountShare(share)
 						}
-					} catch (error) {}
+					} catch (error) {
+						this.logger.error(`Failed to keep network share mounted: ${share.mountPath}`, error)
+					}
 				}),
 			)
 			this.logger.verbose('Network share watch interval complete')
@@ -222,7 +256,10 @@ export default class NetworkStorage {
 		})
 		const {userId, groupId} = this.#umbreld.files.fileOwner
 
-		await mountRemote(remote, {systemMountPath, userId, groupId})
+		const configPath = getWebdavConfigPath(this.#umbreld.dataDirectory, share.mountPath)
+		const cacheDirectory = getWebdavCacheDirectory(this.#umbreld.dataDirectory, share.mountPath)
+
+		await mountRemote(remote, {systemMountPath, userId, groupId, configPath, cacheDirectory})
 	}
 
 	async #unmountShare(share: NetworkShare): Promise<void> {
@@ -231,7 +268,12 @@ export default class NetworkStorage {
 			const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
 			if (await this.#isMounted(share)) {
 				if (share.protocol === 'webdav') {
-					await unmountRemote(systemMountPath)
+					await unmountRemote(systemMountPath, {
+						cleanupPaths: {
+							configPath: getWebdavConfigPath(this.#umbreld.dataDirectory, share.mountPath),
+							cacheDirectory: getWebdavCacheDirectory(this.#umbreld.dataDirectory, share.mountPath),
+						},
+					})
 				} else {
 					await $`umount ${systemMountPath}`
 				}
@@ -279,7 +321,12 @@ export default class NetworkStorage {
 
 	#buildShare(newShare: NewNetworkShare): NetworkShare {
 		if (newShare.protocol === 'webdav') {
-			const parsedUrl = new URL(newShare.url)
+			let parsedUrl: URL
+			try {
+				parsedUrl = new URL(newShare.url)
+			} catch {
+				throw new Error('[invalid-webdav-url]')
+			}
 			if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('[invalid-webdav-url]')
 
 			const {host, share} = parseWebdavDisplay(newShare.url, newShare.label)

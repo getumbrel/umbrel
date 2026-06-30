@@ -25,6 +25,7 @@ export function getFilesErrorMessage(message: string): string {
 	if (message.includes('[cant-find-root]')) return t('files-backend-error.cant-find-root')
 	if (message.includes('[share-already-exists]')) return t('files-backend-error.share-already-exists')
 	if (message.includes('[share-name-generation-failed]')) return t('files-backend-error.share-name-generation-failed')
+	if (message.includes('[invalid-webdav-url]')) return t('files-backend-error.invalid-webdav-url')
 
 	return message
 }

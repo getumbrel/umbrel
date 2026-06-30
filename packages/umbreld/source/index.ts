@@ -83,11 +83,13 @@ type StoreSchema = {
 			path: string
 		}[]
 		networkStorage: {
+			protocol?: 'smb' | 'webdav'
 			host: string
 			share: string
 			username: string
 			password: string
 			mountPath: string
+			url?: string
 		}[]
 	}
 	notifications: string[]
