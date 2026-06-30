@@ -1,5 +1,6 @@
 import os from 'node:os'
 import nodePath from 'node:path'
+import {randomBytes} from 'node:crypto'
 import {setTimeout} from 'node:timers/promises'
 
 import fse from 'fs-extra'
@@ -8,14 +9,58 @@ import ky from 'ky'
 
 import {getHostname} from '../system/system.js'
 
+import {buildWebdavRemote, mountRemote, obscurePassword, unmountRemote} from './remote-mount/rclone.js'
+
 import type Umbreld from '../../index.js'
 
-type NetworkShare = {
+export type NetworkShareProtocol = 'smb' | 'webdav'
+
+export type NetworkShare = {
+	protocol: NetworkShareProtocol
 	host: string
 	share: string
 	username: string
 	password: string
 	mountPath: string
+	url?: string
+}
+
+type NewSmbShare = {
+	protocol: 'smb'
+	host: string
+	share: string
+	username: string
+	password: string
+}
+
+type NewWebdavShare = {
+	protocol: 'webdav'
+	url: string
+	username: string
+	password: string
+	label?: string
+}
+
+export type NewNetworkShare = NewSmbShare | NewWebdavShare
+
+const sanitizeMountSegment = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
+
+function normalizeShare(share: NetworkShare & {protocol?: NetworkShareProtocol}): NetworkShare {
+	return {
+		...share,
+		protocol: share.protocol ?? 'smb',
+	}
+}
+
+function parseWebdavDisplay(url: string, label?: string) {
+	const parsed = new URL(url)
+	const host = parsed.hostname
+	const pathLabel = label?.trim() || parsed.pathname.split('/').filter(Boolean).pop() || 'WebDAV'
+	return {host, share: pathLabel}
+}
+
+function buildMountPath(host: string, share: string) {
+	return `/Network/${sanitizeMountSegment(host)}/${sanitizeMountSegment(share)}`
 }
 
 export default class NetworkStorage {
@@ -46,7 +91,6 @@ export default class NetworkStorage {
 
 		const ONE_SECOND = 1000
 
-		// Wait for background job to finish
 		if (this.watchJobPromise) {
 			await Promise.race([
 				setTimeout(ONE_SECOND * 10),
@@ -57,7 +101,6 @@ export default class NetworkStorage {
 			])
 		}
 
-		// Cleanup any currently mounted shares
 		await Promise.race([
 			setTimeout(ONE_SECOND * 10),
 			(async () => {
@@ -67,23 +110,25 @@ export default class NetworkStorage {
 		])
 	}
 
-	// List all shares from the store
 	async getShares() {
-		return (await this.#umbreld.store.get('files.networkStorage')) || []
+		const shares = ((await this.#umbreld.store.get('files.networkStorage')) || []) as Array<
+			NetworkShare & {protocol?: NetworkShareProtocol}
+		>
+		return shares.map(normalizeShare)
 	}
 
-	// List all shares including mount status
 	async getShareInfo() {
 		const shares = await this.getShares()
-		return shares.map(({host, share, mountPath}) => ({
+		return shares.map(({protocol, host, share, mountPath, url}) => ({
+			protocol,
 			host,
 			share,
 			mountPath,
+			url,
 			isMounted: this.mountedShares.has(mountPath),
 		}))
 	}
 
-	// Constantly check if shares are mounted and if not, mount them
 	async #watchAndMountShares() {
 		this.logger.log('Scheduling network share watch interval')
 		let lastRun = 0
@@ -111,7 +156,6 @@ export default class NetworkStorage {
 		}
 	}
 
-	// Check if a share is mounted
 	async #isMounted(share: NetworkShare): Promise<boolean> {
 		try {
 			const systemMountPath = await this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
@@ -123,7 +167,6 @@ export default class NetworkStorage {
 		}
 	}
 
-	// Attempt to mount a share
 	async #mountShare(share: NetworkShare): Promise<void> {
 		this.logger.log(`Mounting network share: ${share.mountPath}`)
 
@@ -131,47 +174,71 @@ export default class NetworkStorage {
 			throw new Error('Network share username and password cannot contain newlines')
 		}
 
-		// Ensure mount directory exists
 		const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
 		await fse.ensureDir(systemMountPath)
 
-		let credentialsDirectory: string | undefined
 		try {
-			// Mount the network share
-			const smbPath = `//${share.host}/${share.share}`
-			const {userId, groupId} = this.#umbreld.files.fileOwner
-			credentialsDirectory = await fse.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-cifs-credentials-'))
-			const credentialsPath = nodePath.join(credentialsDirectory, 'credentials')
-			await fse.writeFile(credentialsPath, `username=${share.username}\npassword=${share.password}\n`, {mode: 0o600})
-			await $`mount -t cifs ${smbPath} ${systemMountPath} -o credentials=${credentialsPath},uid=${userId},gid=${groupId},iocharset=utf8`
+			if (share.protocol === 'webdav') {
+				await this.#mountWebdavShare(share, systemMountPath)
+			} else {
+				await this.#mountSmbShare(share, systemMountPath)
+			}
+
 			this.mountedShares.add(share.mountPath)
-			this.logger.log(`Successfully mounted network share: ${smbPath} to ${share.mountPath}`)
+			this.logger.log(`Successfully mounted network share: ${share.mountPath}`)
 		} catch (error) {
-			// Clean up the directory we created if mount fails
 			this.logger.error(`Failed to mount network share: ${share.mountPath}, cleaning up mount directory`)
-			this.#unmountShare(share).catch((error) =>
-				this.logger.error(`Failed to clean up mount directory after mount failure: ${share.mountPath}`, error),
+			this.#unmountShare(share).catch((cleanupError) =>
+				this.logger.error(`Failed to clean up mount directory after mount failure: ${share.mountPath}`, cleanupError),
 			)
 
-			// Re-throw the original mount error
 			throw error
-		} finally {
-			if (credentialsDirectory) await fse.remove(credentialsDirectory).catch(() => {})
 		}
 	}
 
-	// Unmount a share, don't throw on failure
+	async #mountSmbShare(share: NetworkShare, systemMountPath: string) {
+		const smbPath = `//${share.host}/${share.share}`
+		const {userId, groupId} = this.#umbreld.files.fileOwner
+		const credentialsDirectory = await fse.mkdtemp(nodePath.join(os.tmpdir(), 'umbrel-cifs-credentials-'))
+
+		try {
+			const credentialsPath = nodePath.join(credentialsDirectory, 'credentials')
+			await fse.writeFile(credentialsPath, `username=${share.username}\npassword=${share.password}\n`, {mode: 0o600})
+			await $`mount -t cifs ${smbPath} ${systemMountPath} -o credentials=${credentialsPath},uid=${userId},gid=${groupId},iocharset=utf8`
+		} finally {
+			await fse.remove(credentialsDirectory).catch(() => {})
+		}
+	}
+
+	async #mountWebdavShare(share: NetworkShare, systemMountPath: string) {
+		if (!share.url) throw new Error('[invalid-webdav-url]')
+
+		const remoteName = `umbrel-webdav-${randomBytes(4).toString('hex')}`
+		const obscuredPassword = await obscurePassword(share.password)
+		const remote = buildWebdavRemote(remoteName, {
+			url: share.url,
+			username: share.username,
+			obscuredPassword,
+		})
+		const {userId, groupId} = this.#umbreld.files.fileOwner
+
+		await mountRemote(remote, {systemMountPath, userId, groupId})
+	}
+
 	async #unmountShare(share: NetworkShare): Promise<void> {
 		this.logger.log(`Unmounting network share: ${share.mountPath}`)
 		try {
-			// If we're mounted, unmount
 			const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
-			if (await this.#isMounted(share)) await $`umount ${systemMountPath}`
+			if (await this.#isMounted(share)) {
+				if (share.protocol === 'webdav') {
+					await unmountRemote(systemMountPath)
+				} else {
+					await $`umount ${systemMountPath}`
+				}
+			}
 
-			// Clean up empty mount directory
 			await fse.rmdir(systemMountPath)
 
-			// Clean up parent dir if it's empty
 			const parentDirectory = nodePath.dirname(systemMountPath)
 			const parentFiles = await fse.readdir(parentDirectory)
 			const isParentEmpty = parentFiles.length === 0
@@ -186,31 +253,20 @@ export default class NetworkStorage {
 		}
 	}
 
-	// Unmount all shares concurrently
 	async #unmountAllShares(): Promise<void> {
 		const shares = await this.getShares()
 		await Promise.all(shares.map(async (share) => this.#unmountShare(share)))
 	}
 
-	// Add a new share
-	async addShare(newShare: Omit<NetworkShare, 'mountPath'>) {
-		// Generate mount path
-		const sanitize = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
-		const mountPath = `/Network/${sanitize(newShare.host)}/${sanitize(newShare.share)}`
-
-		// Check if the share already exists
-		const alreadyExists = await this.getShare(mountPath)
+	async addShare(newShare: NewNetworkShare) {
+		const share = this.#buildShare(newShare)
+		const alreadyExists = await this.getShare(share.mountPath)
 			.then(() => true)
 			.catch(() => false)
-		if (alreadyExists) throw new Error(`Share with mount path ${mountPath} already exists`)
+		if (alreadyExists) throw new Error(`Share with mount path ${share.mountPath} already exists`)
 
-		// Create share object
-		const share: NetworkShare = {...newShare, mountPath}
-
-		// Check we can mount the share
 		await this.#mountShare(share)
 
-		// Save new share in the store
 		await this.#umbreld.store.getWriteLock(async ({set}) => {
 			const shares = await this.getShares()
 			if (shares.find((existingShare) => existingShare.mountPath === share.mountPath)) return
@@ -221,7 +277,33 @@ export default class NetworkStorage {
 		return share.mountPath
 	}
 
-	// Get a share by mount path
+	#buildShare(newShare: NewNetworkShare): NetworkShare {
+		if (newShare.protocol === 'webdav') {
+			const parsedUrl = new URL(newShare.url)
+			if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('[invalid-webdav-url]')
+
+			const {host, share} = parseWebdavDisplay(newShare.url, newShare.label)
+			return {
+				protocol: 'webdav',
+				host,
+				share,
+				url: newShare.url,
+				username: newShare.username,
+				password: newShare.password,
+				mountPath: buildMountPath(host, share),
+			}
+		}
+
+		return {
+			protocol: 'smb',
+			host: newShare.host,
+			share: newShare.share,
+			username: newShare.username,
+			password: newShare.password,
+			mountPath: buildMountPath(newShare.host, newShare.share),
+		}
+	}
+
 	async getShare(mountPath: string) {
 		const shares = await this.getShares()
 		const share = shares.find((share) => share.mountPath === mountPath)
@@ -229,14 +311,11 @@ export default class NetworkStorage {
 		return share
 	}
 
-	// Remove a share
 	async removeShare(sharePath: string) {
 		const share = await this.getShare(sharePath)
 
-		// Attempt to unmount the share first
 		await this.#unmountShare(share)
 
-		// Remove the share from the store
 		await this.#umbreld.store.getWriteLock(async ({set}) => {
 			const shares = await this.getShares()
 			const newShares = shares.filter((existingShare) => existingShare.mountPath !== sharePath)
@@ -246,8 +325,6 @@ export default class NetworkStorage {
 		return true
 	}
 
-	// Discover available servers
-	// Used to help the user find servers if they don't already know the address
 	async discoverServers() {
 		const avahiBrowse = await $`avahi-browse --resolve --terminate _smb._tcp --parsable`
 
@@ -255,41 +332,25 @@ export default class NetworkStorage {
 
 		const servers = avahiBrowse.stdout
 			.split('\n')
-			// Grab mDNS domain name
 			.map((line) => line.split(';')[6])
-			// Filter out empty values
 			.filter((line) => typeof line === 'string' && line !== '')
-			// Filter out the current hostname
 			.filter((line) => line !== `${hostname}.local`)
 
-		// Only return each address once
 		return Array.from(new Set(servers))
 	}
 
-	// Discover shares for a given samba server
-	// Used to help the user find share names if they don't already know them
 	async discoverSharesOnServer(host: string, username: string, password: string) {
-		// TODO: Figure out if we can speed this up
-		// The command usually returns data quite quickly but then hangs for like 10 seconds
-		// and returns some weird compatibility error. Is there some way we can disable whatever
-		// is causing the hang so we can get the command to return as soon as we have the info
-		// we care about?
 		const smbclient = await $`smbclient --list //${host} --user ${username} --password ${password} --grepable`
 
 		const shares = smbclient.stdout
-			// Process line by line
 			.split('\n')
-			// Filter out any lines that don't have 3 '|' separated columns
 			.filter((line) => line.split('|').length === 3)
-			// Grab the second column (the share name)
 			.map((line) => line.split('|')[1])
-			// Filter out the IPC$ share that Samba always creates
 			.filter((share) => share !== 'IPC$')
 
 		return shares
 	}
 
-	// Checks if the given network address is an Umbrel device
 	async isServerAnUmbrelDevice(address: string) {
 		try {
 			const responseText = (await ky(`http://${address}/trpc/system.version`, {timeout: 1000}).text()) as any

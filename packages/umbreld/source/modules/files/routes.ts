@@ -222,17 +222,39 @@ export default router({
 		ctx.umbreld.files.networkStorage.getShareInfo(),
 	),
 
-	// Add a network share
+	// Add a network share (SMB/CIFS or WebDAV via rclone)
 	addNetworkShare: publicProcedureWhenNoUserExists
 		.input(
-			z.object({
-				host: z.string(),
-				share: z.string(),
-				username: z.string(),
-				password: z.string(),
-			}),
+			z.union([
+				z.object({
+					protocol: z.literal('webdav'),
+					url: z.string(),
+					username: z.string(),
+					password: z.string(),
+					label: z.string().optional(),
+				}),
+				z.object({
+					protocol: z.literal('smb').optional(),
+					host: z.string(),
+					share: z.string(),
+					username: z.string(),
+					password: z.string(),
+				}),
+			]),
 		)
-		.mutation(async ({ctx, input}) => ctx.umbreld.files.networkStorage.addShare(input)),
+		.mutation(async ({ctx, input}) =>
+			ctx.umbreld.files.networkStorage.addShare(
+				input.protocol === 'webdav'
+					? input
+					: {
+							protocol: 'smb',
+							host: input.host,
+							share: input.share,
+							username: input.username,
+							password: input.password,
+						},
+			),
+		),
 
 	// Remove a network share
 	removeNetworkShare: privateProcedure

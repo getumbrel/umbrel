@@ -34,6 +34,8 @@ enum Step {
 	SelectShare = 2,
 }
 
+type NetworkShareProtocol = 'smb' | 'webdav'
+
 // Manual mode steps
 enum ManualStep {
 	Credentials = 0,
@@ -65,6 +67,12 @@ export default function AddNetworkShareDialog(props?: {
 	const submitSchema = stepSchema.extend({
 		share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
 	})
+	const webdavSchema = z.object({
+		url: z.string().min(1, {message: t('files-add-network-share.webdav-url-required')}),
+		username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
+		password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
+		label: z.string().optional(),
+	})
 
 	const internalDialog = useDialogOpenProps('files-add-network-share')
 	const dialogProps = {
@@ -74,6 +82,7 @@ export default function AddNetworkShareDialog(props?: {
 	const isMobile = useIsMobile()
 
 	// wizard vs manual entry
+	const [protocol, setProtocol] = useState<NetworkShareProtocol>('smb')
 	const [mode, setMode] = useState<'wizard' | 'manual'>('wizard')
 	const [step, setStep] = useState<Step>(Step.Discover)
 	const [manualStep, setManualStep] = useState<ManualStep>(ManualStep.Credentials)
@@ -85,7 +94,13 @@ export default function AddNetworkShareDialog(props?: {
 		defaultValues: {host: '', share: '', username: '', password: ''},
 		mode: 'onChange',
 	})
+	const webdavForm = useForm({
+		resolver: zodResolver(webdavSchema),
+		defaultValues: {url: '', username: '', password: '', label: ''},
+		mode: 'onChange',
+	})
 	const {host, share, username, password} = form.watch()
+	const webdavValues = webdavForm.watch()
 
 	// main network storage hook
 	const {
@@ -137,11 +152,13 @@ export default function AddNetworkShareDialog(props?: {
 
 	// form handlers
 	const resetAll = () => {
+		setProtocol('smb')
 		setMode('wizard')
 		setStep(Step.Discover)
 		setManualStep(ManualStep.Credentials)
 		setSelectedHostWizard('')
 		form.reset()
+		webdavForm.reset()
 		discoverServers()
 	}
 
@@ -169,13 +186,39 @@ export default function AddNetworkShareDialog(props?: {
 		setManualStep((s) => Math.max(s - 1, ManualStep.Credentials))
 	}
 
+	const handleWebdavSubmit = async () => {
+		const parsed = webdavSchema.safeParse(webdavForm.getValues())
+		if (!parsed.success) return
+
+		try {
+			const mountPath = await addShare({
+				protocol: 'webdav',
+				url: parsed.data.url.trim(),
+				username: parsed.data.username,
+				password: parsed.data.password,
+				label: parsed.data.label?.trim() || undefined,
+			})
+			const host = mountPath.split('/')[2]
+			props?.onAdded?.(host)
+			dialogProps.onOpenChange(false)
+		} catch {
+			// the network storage hook handles toast
+		}
+	}
+
 	const handleSubmit = async () => {
 		// Validate with the final schema before submitting
 		const parsed = submitSchema.safeParse(form.getValues())
 		if (!parsed.success) return
 
 		try {
-			const mountPath = await addShare(parsed.data)
+			const mountPath = await addShare({
+				protocol: 'smb',
+				host: parsed.data.host,
+				share: parsed.data.share!,
+				username: parsed.data.username,
+				password: parsed.data.password,
+			})
 			// Extract host from the returned mountPath (e.g., "/Network/<host>/<share>")
 			const host = mountPath.split('/')[2]
 			// Notify parent flows so they can auto-select this NAS and advance
@@ -189,7 +232,20 @@ export default function AddNetworkShareDialog(props?: {
 	// footer buttons
 	let footer: React.ReactNode = null
 
-	if (mode === 'wizard') {
+	if (protocol === 'webdav') {
+		footer = (
+			<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+				<Button
+					variant='primary'
+					size='dialog'
+					disabled={!(webdavValues.url && webdavValues.username && webdavValues.password) || isAddingShare}
+					onClick={handleWebdavSubmit}
+				>
+					{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+				</Button>
+			</DialogFooter>
+		)
+	} else if (mode === 'wizard') {
 		switch (step) {
 			// Discover step
 			case Step.Discover:
@@ -273,22 +329,59 @@ export default function AddNetworkShareDialog(props?: {
 			{isMobile ? (
 				<DrawerHeader>
 					<DrawerTitle>{t('files-add-network-share.title')}</DrawerTitle>
-					<DrawerDescription>{t('files-add-network-share.description')}</DrawerDescription>
+					<DrawerDescription>
+						{protocol === 'webdav'
+							? t('files-add-network-share.webdav-description')
+							: t('files-add-network-share.description')}
+					</DrawerDescription>
 				</DrawerHeader>
 			) : (
 				<DialogHeader>
 					<DialogTitle>{t('files-add-network-share.title')}</DialogTitle>
-					{/* TODO: consider adding a note to the description that mentions backups and a link to the relevant Settings element */}
-					<DialogDescription>{t('files-add-network-share.description')}</DialogDescription>
+					<DialogDescription>
+						{protocol === 'webdav'
+							? t('files-add-network-share.webdav-description')
+							: t('files-add-network-share.description')}
+					</DialogDescription>
 				</DialogHeader>
 			)}
 		</>
 	)
 
+	const protocolToggle = (
+		<div className='space-y-2 pb-2'>
+			<p className='text-13 text-white/60'>{t('files-add-network-share.protocol-label')}</p>
+			<div className='grid grid-cols-2 gap-2'>
+				{(['smb', 'webdav'] as const).map((value) => (
+					<Button
+						key={value}
+						type='button'
+						size='dialog'
+						variant={protocol === value ? 'primary' : 'default'}
+						onClick={() => {
+							setProtocol(value)
+							form.clearErrors()
+							webdavForm.clearErrors()
+						}}
+					>
+						{value === 'smb'
+							? t('files-add-network-share.protocol-smb')
+							: t('files-add-network-share.protocol-webdav')}
+					</Button>
+				))}
+			</div>
+		</div>
+	)
+
 	const body = (
 		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
+			{protocolToggle}
 			<AnimatePresence mode='wait'>
-				{mode === 'wizard' ? (
+				{protocol === 'webdav' ? (
+					<Form {...webdavForm}>
+						<WebdavCredentialsStep />
+					</Form>
+				) : mode === 'wizard' ? (
 					<Form {...form}>
 						{/* Discover */}
 						{step === Step.Discover && (
@@ -423,6 +516,53 @@ export default function AddNetworkShareDialog(props?: {
 /* ------------------------------------------------------------------ */
 /* Step components (without footer)                                   */
 /* ------------------------------------------------------------------ */
+function WebdavCredentialsStep() {
+	const {t} = useTranslation()
+	const form = useFormContext()
+
+	return (
+		<div className='space-y-4 py-2'>
+			{(['url', 'username', 'password', 'label'] as const).map((field) => {
+				const labels = {
+					url: t('files-add-network-share.webdav-url-label'),
+					username: t('files-add-network-share.username-label'),
+					password: t('files-add-network-share.password-label'),
+					label: t('files-add-network-share.webdav-label-label'),
+				}
+				const placeholders = {
+					url: t('files-add-network-share.webdav-url-placeholder'),
+					username: t('files-add-network-share.username-placeholder'),
+					password: '',
+					label: t('files-add-network-share.webdav-label-placeholder'),
+				}
+
+				return (
+					<FormField
+						key={field}
+						control={form.control}
+						name={field}
+						render={({field: f}) => (
+							<FormItem>
+								<FormLabel className='text-13 text-white/60'>{labels[field]}</FormLabel>
+								<FormControl>
+									{field === 'password' ? (
+										<PasswordInput value={f.value} onValueChange={f.onChange} />
+									) : (
+										<Input type='text' placeholder={placeholders[field]} {...f} />
+									)}
+								</FormControl>
+								<div className='relative'>
+									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								</div>
+							</FormItem>
+						)}
+					/>
+				)
+			})}
+		</div>
+	)
+}
+
 function DiscoverStep({
 	servers,
 	isLoading,

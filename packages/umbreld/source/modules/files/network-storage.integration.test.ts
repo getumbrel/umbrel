@@ -60,6 +60,7 @@ describe('listNetworkShares()', () => {
 		const shares = await umbreld.client.files.listNetworkShares.query()
 		expect(shares).toHaveLength(1)
 		expect(shares[0]).toEqual({
+			protocol: 'smb',
 			host: 'localhost',
 			share: 'network-test-share (Umbrel)',
 			mountPath,
