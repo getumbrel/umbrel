@@ -88,8 +88,21 @@ class Migration {
 
 	async activateImportedDataDirectory() {
 		const importData = `${this.umbreld.dataDirectory}/import`
+		const temporaryData = `${this.umbreld.dataDirectory}-import-temp`
 		const importDataExists = await fse.exists(importData)
-		if (!importDataExists) return
+
+		// Resume an interrupted activation. If we already moved import out to the temp
+		// dir but got killed before moving it into place, finish that second move now.
+		// Without this the imported data would be orphaned in the temp dir forever and
+		// we'd boot with the un-imported data.
+		if (!importDataExists) {
+			if (await fse.exists(temporaryData)) {
+				this.logger.log('Resuming interrupted data import...')
+				await fse.move(temporaryData, this.umbreld.dataDirectory, {overwrite: true})
+			}
+			return
+		}
+
 		this.logger.log('Found Umbrel data to import, activating...')
 		// We have to move the import dir parrallel to the data dir and then overwrte.
 		// This is because fse.move doesn't work if the source is a subdirectory of the destination.
@@ -97,7 +110,6 @@ class Migration {
 		// On Rasperry Pi the data partition is small on the SD card and only the data dir on the
 		// large external USB storage. We don't currently support data import on Pi so it's ok for now
 		// but we'll need to handle this if we want to support it in the future.
-		const temporaryData = `${this.umbreld.dataDirectory}-import-temp`
 		await fse.move(importData, temporaryData, {overwrite: true})
 		await fse.move(temporaryData, this.umbreld.dataDirectory, {overwrite: true})
 	}

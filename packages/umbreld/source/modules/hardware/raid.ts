@@ -1761,6 +1761,14 @@ export default class Raid {
 		const pool = await this.getStatus()
 		const previousPoolName = `${pool.name}-previous-migration`
 
+		// Make sure the new main pool actually came up before we destroy anything.
+		// If the boot script aborted the rename, the main pool won't exist and we
+		// must leave the previous pool intact instead of wiping our only copy.
+		if (!pool.exists) {
+			this.logger.error('Config indicates transition in progress but main pool not found, leaving previous pool intact')
+			return
+		}
+
 		// Verify the previous pool exists (should always exist if config says transitioning)
 		const previousPool = await this.getPoolStatus(previousPoolName)
 		if (!previousPool.exists) {

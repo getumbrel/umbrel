@@ -66,7 +66,15 @@ handle_failsafe_transition() {
     zfs snapshot -r "${pool_name}@migration-final"
 
     echo ">>> Sending incremental changes to migration pool"
-    zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"
+    # If the final sync fails, don't rename the pools. Renaming would promote the
+    # migration pool (missing this last delta) and umbreld would then destroy the
+    # original pool, losing data. Abort instead so we boot back into the original pool.
+    if ! zfs send --raw --replicate --large-block --compressed -i @migration "${pool_name}@migration-final" | zfs receive -Fu "$migration_pool"; then
+        echo ">>> ERROR: Final sync failed, aborting migration and booting back into the original pool"
+        zpool export "$migration_pool" || true
+        zpool export "$pool_name" || true
+        return 1
+    fi
 
     # Rename pools
     # umbrelos > umbrelos-previous-migration
