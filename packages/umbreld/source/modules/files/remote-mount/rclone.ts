@@ -26,6 +26,27 @@ function buildConfigContents(remote: RcloneRemoteConfig) {
 	return `${lines.join('\n')}\n`
 }
 
+export function buildDriveRemote(name: string, {token}: {token: string}): RcloneRemoteConfig {
+	return {
+		name,
+		type: 'drive',
+		options: {
+			token,
+			scope: 'drive',
+		},
+	}
+}
+
+export function buildDropboxRemote(name: string, {token}: {token: string}): RcloneRemoteConfig {
+	return {
+		name,
+		type: 'dropbox',
+		options: {
+			token,
+		},
+	}
+}
+
 export function buildWebdavRemote(
 	name: string,
 	{

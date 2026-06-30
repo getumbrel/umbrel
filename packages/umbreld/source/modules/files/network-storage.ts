@@ -11,16 +11,25 @@ import {getHostname} from '../system/system.js'
 
 import {
 	assertRcloneAvailable,
+	buildDropboxRemote,
+	buildDriveRemote,
 	buildWebdavRemote,
 	mountRemote,
 	obscurePassword,
 	unmountRemote,
 } from './remote-mount/rclone.js'
+import {
+	consumeCloudOAuthToken,
+	getCloudOAuthStatus,
+	startCloudOAuth,
+	type CloudOAuthProvider,
+} from './remote-mount/cloud-oauth.js'
 import {detectWebdavVendor, type WebdavVendor} from './remote-mount/webdav.js'
 
 import type Umbreld from '../../index.js'
 
-export type NetworkShareProtocol = 'smb' | 'webdav'
+export type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'drive'
+export type {CloudOAuthProvider}
 
 export type NetworkShare = {
 	protocol: NetworkShareProtocol
@@ -31,6 +40,7 @@ export type NetworkShare = {
 	mountPath: string
 	url?: string
 	vendor?: WebdavVendor
+	token?: string
 }
 
 type NewSmbShare = {
@@ -50,7 +60,27 @@ type NewWebdavShare = {
 	vendor?: WebdavVendor
 }
 
-export type NewNetworkShare = NewSmbShare | NewWebdavShare
+type NewCloudShare = {
+	protocol: 'dropbox' | 'drive'
+	label?: string
+	sessionId?: string
+	token?: string
+}
+
+export type NewNetworkShare = NewSmbShare | NewWebdavShare | NewCloudShare
+
+function isRcloneProtocol(protocol: NetworkShareProtocol) {
+	return protocol === 'webdav' || protocol === 'dropbox' || protocol === 'drive'
+}
+
+function getCloudDisplayName(protocol: 'dropbox' | 'drive', label?: string) {
+	if (label?.trim()) return label.trim()
+	return protocol === 'dropbox' ? 'Dropbox' : 'Google Drive'
+}
+
+function getCloudHostName(protocol: 'dropbox' | 'drive') {
+	return protocol === 'dropbox' ? 'Dropbox' : 'Google Drive'
+}
 
 const sanitizeMountSegment = (string: string) => string.replace(/[^a-zA-Z0-9\-\.\' \(\)]/g, '')
 
@@ -83,11 +113,11 @@ function mountPathToStorageId(mountPath: string) {
 	return mountPath.replace(/^\//, '').replace(/\//g, '__')
 }
 
-function getWebdavConfigPath(dataDirectory: string, mountPath: string) {
+function getRcloneConfigPath(dataDirectory: string, mountPath: string) {
 	return nodePath.join(dataDirectory, 'secrets', 'rclone', `${mountPathToStorageId(mountPath)}.conf`)
 }
 
-function getWebdavCacheDirectory(dataDirectory: string, mountPath: string) {
+function getRcloneCacheDirectory(dataDirectory: string, mountPath: string) {
 	return nodePath.join(dataDirectory, 'cache', 'rclone-vfs', mountPathToStorageId(mountPath))
 }
 
@@ -108,9 +138,9 @@ export default class NetworkStorage {
 
 	async start() {
 		const shares = await this.getShares()
-		if (shares.some((share) => share.protocol === 'webdav')) {
+		if (shares.some((share) => isRcloneProtocol(share.protocol))) {
 			await assertRcloneAvailable().catch((error) => {
-				this.logger.error('rclone is required for WebDAV network shares but is not available', error)
+				this.logger.error('rclone is required for remote network shares but is not available', error)
 			})
 		}
 
@@ -208,16 +238,22 @@ export default class NetworkStorage {
 	async #mountShare(share: NetworkShare): Promise<void> {
 		this.logger.log(`Mounting network share: ${share.mountPath}`)
 
-		if (/[\r\n]/.test(share.username) || /[\r\n]/.test(share.password)) {
-			throw new Error('Network share username and password cannot contain newlines')
+		if (share.protocol === 'smb' || share.protocol === 'webdav') {
+			if (/[\r\n]/.test(share.username) || /[\r\n]/.test(share.password)) {
+				throw new Error('Network share username and password cannot contain newlines')
+			}
+		}
+
+		if ((share.protocol === 'dropbox' || share.protocol === 'drive') && !share.token) {
+			throw new Error('[invalid-cloud-token]')
 		}
 
 		const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
 		await fse.ensureDir(systemMountPath)
 
 		try {
-			if (share.protocol === 'webdav') {
-				await this.#mountWebdavShare(share, systemMountPath)
+			if (isRcloneProtocol(share.protocol)) {
+				await this.#mountRcloneShare(share, systemMountPath)
 			} else {
 				await this.#mountSmbShare(share, systemMountPath)
 			}
@@ -248,22 +284,28 @@ export default class NetworkStorage {
 		}
 	}
 
-	async #mountWebdavShare(share: NetworkShare, systemMountPath: string) {
-		if (!share.url) throw new Error('[invalid-webdav-url]')
-
-		const remoteName = `umbrel-webdav-${randomBytes(4).toString('hex')}`
-		const obscuredPassword = await obscurePassword(share.password)
-		const vendor = share.vendor ?? detectWebdavVendor(share.url)
-		const remote = buildWebdavRemote(remoteName, {
-			url: share.url,
-			username: share.username,
-			obscuredPassword,
-			vendor,
-		})
+	async #mountRcloneShare(share: NetworkShare, systemMountPath: string) {
+		const remoteName = `umbrel-${share.protocol}-${randomBytes(4).toString('hex')}`
 		const {userId, groupId} = this.#umbreld.files.fileOwner
+		const configPath = getRcloneConfigPath(this.#umbreld.dataDirectory, share.mountPath)
+		const cacheDirectory = getRcloneCacheDirectory(this.#umbreld.dataDirectory, share.mountPath)
 
-		const configPath = getWebdavConfigPath(this.#umbreld.dataDirectory, share.mountPath)
-		const cacheDirectory = getWebdavCacheDirectory(this.#umbreld.dataDirectory, share.mountPath)
+		let remote
+		if (share.protocol === 'webdav') {
+			if (!share.url) throw new Error('[invalid-webdav-url]')
+			const obscuredPassword = await obscurePassword(share.password)
+			const vendor = share.vendor ?? detectWebdavVendor(share.url)
+			remote = buildWebdavRemote(remoteName, {
+				url: share.url,
+				username: share.username,
+				obscuredPassword,
+				vendor,
+			})
+		} else if (share.protocol === 'dropbox') {
+			remote = buildDropboxRemote(remoteName, {token: share.token!})
+		} else {
+			remote = buildDriveRemote(remoteName, {token: share.token!})
+		}
 
 		await mountRemote(remote, {systemMountPath, userId, groupId, configPath, cacheDirectory})
 	}
@@ -273,11 +315,11 @@ export default class NetworkStorage {
 		try {
 			const systemMountPath = this.#umbreld.files.virtualToSystemPathUnsafe(share.mountPath)
 			if (await this.#isMounted(share)) {
-				if (share.protocol === 'webdav') {
+				if (isRcloneProtocol(share.protocol)) {
 					await unmountRemote(systemMountPath, {
 						cleanupPaths: {
-							configPath: getWebdavConfigPath(this.#umbreld.dataDirectory, share.mountPath),
-							cacheDirectory: getWebdavCacheDirectory(this.#umbreld.dataDirectory, share.mountPath),
+							configPath: getRcloneConfigPath(this.#umbreld.dataDirectory, share.mountPath),
+							cacheDirectory: getRcloneCacheDirectory(this.#umbreld.dataDirectory, share.mountPath),
 						},
 					})
 				} else {
@@ -349,6 +391,23 @@ export default class NetworkStorage {
 			}
 		}
 
+		if (newShare.protocol === 'dropbox' || newShare.protocol === 'drive') {
+			const token = newShare.token ?? (newShare.sessionId ? consumeCloudOAuthToken(newShare.sessionId) : undefined)
+			if (!token) throw new Error('[invalid-cloud-token]')
+
+			const host = getCloudHostName(newShare.protocol)
+			const share = getCloudDisplayName(newShare.protocol, newShare.label)
+			return {
+				protocol: newShare.protocol,
+				host,
+				share,
+				username: '',
+				password: '',
+				token,
+				mountPath: buildMountPath(host, share),
+			}
+		}
+
 		return {
 			protocol: 'smb',
 			host: newShare.host,
@@ -413,5 +472,13 @@ export default class NetworkStorage {
 		} catch {
 			return false
 		}
+	}
+
+	async startCloudAuth(provider: CloudOAuthProvider) {
+		return startCloudOAuth(provider)
+	}
+
+	async getCloudAuthStatus(sessionId: string) {
+		return getCloudOAuthStatus(sessionId)
 	}
 }

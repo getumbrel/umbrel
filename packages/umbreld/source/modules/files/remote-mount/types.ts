@@ -1,6 +1,6 @@
 // Supported rclone backends for remote mounts.
 // SMB stays on kernel CIFS for now; new cloud/remotes use rclone.
-export type RcloneBackend = 'webdav' | 'dropbox' | 'sftp'
+export type RcloneBackend = 'webdav' | 'dropbox' | 'drive' | 'sftp'
 
 export type RcloneRemoteConfig = {
 	// Unique remote name inside a temporary rclone config file

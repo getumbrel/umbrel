@@ -222,7 +222,7 @@ export default router({
 		ctx.umbreld.files.networkStorage.getShareInfo(),
 	),
 
-	// Add a network share (SMB/CIFS or WebDAV via rclone)
+	// Add a network share (SMB/CIFS, WebDAV, Dropbox, or Google Drive)
 	addNetworkShare: publicProcedureWhenNoUserExists
 		.input(
 			z.union([
@@ -235,6 +235,11 @@ export default router({
 					vendor: z.enum(['other', 'nextcloud']).optional(),
 				}),
 				z.object({
+					protocol: z.enum(['dropbox', 'drive']),
+					label: z.string().optional(),
+					sessionId: z.string(),
+				}),
+				z.object({
 					protocol: z.literal('smb').optional(),
 					host: z.string(),
 					share: z.string(),
@@ -243,19 +248,29 @@ export default router({
 				}),
 			]),
 		)
-		.mutation(async ({ctx, input}) =>
-			ctx.umbreld.files.networkStorage.addShare(
-				input.protocol === 'webdav'
-					? input
-					: {
-							protocol: 'smb',
-							host: input.host,
-							share: input.share,
-							username: input.username,
-							password: input.password,
-						},
-			),
-		),
+		.mutation(async ({ctx, input}) => {
+			if (input.protocol === 'webdav') return ctx.umbreld.files.networkStorage.addShare(input)
+			if (input.protocol === 'dropbox' || input.protocol === 'drive') {
+				return ctx.umbreld.files.networkStorage.addShare(input)
+			}
+			return ctx.umbreld.files.networkStorage.addShare({
+				protocol: 'smb',
+				host: input.host,
+				share: input.share,
+				username: input.username,
+				password: input.password,
+			})
+		}),
+
+	// Start OAuth for Dropbox or Google Drive (rclone authorize)
+	startCloudNetworkAuth: publicProcedureWhenNoUserExists
+		.input(z.object({provider: z.enum(['dropbox', 'drive'])}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.files.networkStorage.startCloudAuth(input.provider)),
+
+	// Poll OAuth session status for cloud network storage
+	getCloudNetworkAuthStatus: publicProcedureWhenNoUserExists
+		.input(z.object({sessionId: z.string()}))
+		.query(async ({ctx, input}) => ctx.umbreld.files.networkStorage.getCloudAuthStatus(input.sessionId)),
 
 	// Remove a network share
 	removeNetworkShare: privateProcedure

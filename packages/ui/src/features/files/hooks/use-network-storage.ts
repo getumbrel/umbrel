@@ -170,6 +170,27 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 		}
 	}
 
+	const {mutateAsync: startCloudAuth, isPending: isStartingCloudAuth} =
+		trpcReact.files.startCloudNetworkAuth.useMutation({
+			onError: (error: RouterError) =>
+				toast.error(
+					t('files-network-storage-error.cloud-auth', {message: getFilesErrorMessage(error.message)}),
+				),
+		})
+
+	const getCloudAuthStatus = async (sessionId: string) => {
+		try {
+			return await utils.files.getCloudNetworkAuthStatus.fetch({sessionId})
+		} catch (error: any) {
+			toast.error(
+				t('files-network-storage-error.cloud-auth', {
+					message: getFilesErrorMessage((error as RouterError).message),
+				}),
+			)
+			throw error
+		}
+	}
+
 	return {
 		shares,
 		isLoadingShares,
@@ -184,5 +205,8 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 		discoveredServers: discoverServersQuery.data,
 		isDiscoveringServers: discoverServersQuery.isFetching,
 		discoverSharesOnServer,
+		startCloudAuth,
+		isStartingCloudAuth,
+		getCloudAuthStatus,
 	}
 }
