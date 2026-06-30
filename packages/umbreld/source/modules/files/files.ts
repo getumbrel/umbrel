@@ -692,7 +692,8 @@ export default class Files {
 		if (virtualPath.startsWith('/External/')) {
 			const shares = (await this.#umbreld.store.get('files.shares')) || []
 			for (const share of shares) {
-				if (share.path.startsWith(virtualPath)) await this.samba.removeShare(share.path)
+				if (share.path === virtualPath || share.path.startsWith(`${virtualPath}/`))
+					await this.samba.removeShare(share.path)
 			}
 		}
 

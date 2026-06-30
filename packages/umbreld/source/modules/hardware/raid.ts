@@ -923,6 +923,10 @@ export default class Raid {
 		if (deviceIds.length === 0) throw new Error('At least one device is required')
 		if (raidType === 'failsafe' && deviceIds.length < 2) throw new Error('Failsafe mode requires at least two devices')
 
+		// Don't wipe an existing array. setup() partitions the devices and creates a
+		// fresh pool, so running it again would destroy the live array.
+		if ((await this.getStatus()).exists) throw new Error('A RAID array already exists')
+
 		const devices = deviceIds.map((id) => `/dev/disk/by-umbrel-id/${id}`)
 		for (const device of devices) {
 			if (!(await fse.pathExists(device))) throw new Error(`Device not found: ${device}`)
