@@ -136,16 +136,20 @@ export default class Samba {
 		return sharePassword
 	}
 
-	// Applies the share password to the Samba user
-	async applySharePassword() {
-		const sharePassword = await this.getSharePassword()
+	// Applies the share password to the Samba user.
+	// Accepts an explicit password to apply before it's persisted, so callers
+	// can verify Samba accepts it before writing it to disk.
+	async applySharePassword(password?: string) {
+		const sharePassword = password ?? (await this.getSharePassword())
 		await $({
 			input: `${sharePassword}\n${sharePassword}\n`,
 		})`smbpasswd -s -a umbrel`
 	}
 
 	// Set a custom share password.
-	// Validates length, persists to the secrets file, and applies to Samba.
+	// Validates length, applies to Samba, and only then persists to the secrets
+	// file — so the stored password never diverges from what Samba actually has
+	// configured if smbpasswd fails.
 	async setSharePassword(newPassword: string) {
 		if (typeof newPassword !== 'string') throw new Error('[invalid-password]')
 		// Samba's smbpasswd accepts up to 127 chars in interactive mode.
@@ -155,9 +159,10 @@ export default class Samba {
 		// Reject newlines — they would break the stdin protocol of smbpasswd.
 		if (/[\r\n]/.test(newPassword)) throw new Error('[invalid-password]')
 
+		await this.applySharePassword(newPassword)
+
 		const sharePasswordFile = `${this.#umbreld.dataDirectory}/secrets/share-password`
 		await fse.writeFile(sharePasswordFile, newPassword)
-		await this.applySharePassword()
 		this.logger.log('Share password updated')
 		return true
 	}
@@ -165,10 +170,11 @@ export default class Samba {
 	// Regenerate the share password with a fresh random token.
 	// Returns the new password so the UI can display it once.
 	async regenerateSharePassword() {
-		const sharePasswordFile = `${this.#umbreld.dataDirectory}/secrets/share-password`
 		const newPassword = randomToken(128)
+		await this.applySharePassword(newPassword)
+
+		const sharePasswordFile = `${this.#umbreld.dataDirectory}/secrets/share-password`
 		await fse.writeFile(sharePasswordFile, newPassword)
-		await this.applySharePassword()
 		this.logger.log('Share password regenerated')
 		return newPassword
 	}
