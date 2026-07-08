@@ -213,18 +213,26 @@ export default class App {
 	async start() {
 		this.logger.log(`Starting app ${this.id}`)
 		this.state = 'starting'
-		// We re-run the patch here to fix an edge case where 0.5.x imported apps
-		// wont run because they haven't been patched.
-		await this.patchComposeFile()
-		await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
-			onFailedAttempt: (error) => {
-				this.logger.error(
-					`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
-					error,
-				)
-			},
-			retries: 2,
-		})
+		try {
+			// We re-run the patch here to fix an edge case where 0.5.x imported apps
+			// wont run because they haven't been patched.
+			await this.patchComposeFile()
+			await pRetry(() => appScript(this.#umbreld, 'start', this.id), {
+				onFailedAttempt: (error) => {
+					this.logger.error(
+						`Attempt ${error.attemptNumber} starting app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+						error,
+					)
+				},
+				retries: 2,
+			})
+		} catch (error) {
+			// Revert to 'unknown' so the app isn't stuck in 'starting' forever if it
+			// fails to start (e.g invalid user edits to the compose file). The UI
+			// shows 'unknown' as offline and lets the user attempt a restart.
+			this.state = 'unknown'
+			throw error
+		}
 		this.state = 'ready'
 
 		// Enable auto-start on boot
@@ -235,15 +243,21 @@ export default class App {
 
 	async stop({persistState = false}: {persistState?: boolean} = {}) {
 		this.state = 'stopping'
-		await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
-			onFailedAttempt: (error) => {
-				this.logger.error(
-					`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
-					error,
-				)
-			},
-			retries: 2,
-		})
+		try {
+			await pRetry(() => appScript(this.#umbreld, 'stop', this.id), {
+				onFailedAttempt: (error) => {
+					this.logger.error(
+						`Attempt ${error.attemptNumber} stopping app ${this.id} failed. There are ${error.retriesLeft} retries left.`,
+						error,
+					)
+				},
+				retries: 2,
+			})
+		} catch (error) {
+			// Revert to 'unknown' so the app isn't stuck in 'stopping' forever.
+			this.state = 'unknown'
+			throw error
+		}
 		this.state = 'stopped'
 
 		// Disable auto-start on boot
@@ -256,8 +270,15 @@ export default class App {
 
 	async restart() {
 		this.state = 'restarting'
-		await appScript(this.#umbreld, 'stop', this.id)
-		await appScript(this.#umbreld, 'start', this.id)
+		try {
+			await appScript(this.#umbreld, 'stop', this.id)
+			await appScript(this.#umbreld, 'start', this.id)
+		} catch (error) {
+			// Revert to 'unknown' so the app isn't stuck in 'restarting' forever if it
+			// fails to come back up (e.g invalid user edits to the compose file).
+			this.state = 'unknown'
+			throw error
+		}
 		this.state = 'ready'
 
 		// Enable auto-start on boot

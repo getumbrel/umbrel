@@ -252,6 +252,40 @@ test.sequential('restart() restarts an installed app', async () => {
 	// TODO: Check this actually worked
 })
 
+test.sequential('start() leaves app in a recoverable state when the compose file is invalid', async () => {
+	// Stop the app so we can attempt to start it again
+	await expect(umbreld.client.apps.stop.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// Break the app's compose file with invalid YAML
+	const composeFile = path.join(
+		umbreld.instance.dataDirectory,
+		'app-data',
+		'sparkles-hello-world',
+		'docker-compose.yml',
+	)
+	const originalCompose = await fse.readFile(composeFile, 'utf8')
+	try {
+		await fse.writeFile(composeFile, `${originalCompose}\n\tthis is not: [valid yaml`)
+
+		// Attempt to start the app and verify the error is surfaced
+		await expect(umbreld.client.apps.start.mutate({appId: 'sparkles-hello-world'})).rejects.toThrow()
+
+		// Verify the app is not stuck in 'starting'
+		await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toMatchObject({
+			state: 'unknown',
+		})
+	} finally {
+		// Always restore the compose file so a failure here doesn't break later tests
+		await fse.writeFile(composeFile, originalCompose)
+	}
+
+	// Verify the app recovers once the compose file is fixed
+	await expect(umbreld.client.apps.restart.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+	await expect(umbreld.client.apps.state.query({appId: 'sparkles-hello-world'})).resolves.toMatchObject({
+		state: 'ready',
+	})
+})
+
 test.sequential('update() updates an installed app', async () => {
 	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked
