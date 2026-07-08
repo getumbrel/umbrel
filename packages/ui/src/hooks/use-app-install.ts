@@ -70,10 +70,12 @@ export function useAppInstall(id: string) {
 
 	const startMut = trpcReact.apps.start.useMutation({
 		onMutate: makeOptimisticOnMutate('starting'),
+		onError: (error) => toast.error(t('app.toast.start-failed'), {description: error.message}),
 		onSettled: refreshAppStates,
 	})
 	const stopMut = trpcReact.apps.stop.useMutation({
 		onMutate: makeOptimisticOnMutate('stopping'),
+		onError: (error) => toast.error(t('app.toast.stop-failed'), {description: error.message}),
 		onSettled: refreshAppStates,
 	})
 	const installMut = trpcReact.apps.install.useMutation({
@@ -86,6 +88,7 @@ export function useAppInstall(id: string) {
 	})
 	const restartMut = trpcReact.apps.restart.useMutation({
 		onMutate: makeOptimisticOnMutate('restarting'),
+		onError: (error) => toast.error(t('app.toast.restart-failed'), {description: error.message}),
 		onSettled: refreshAppStates,
 	})
 
