@@ -128,6 +128,7 @@ export const wallpapers = [
 ] as const satisfies readonly WallpaperBase[]
 
 export function getWallpaperThumbUrl(wallpaper: WallpaperBase) {
+	if (wallpaper.id?.startsWith('custom:')) return wallpaper.url
 	return `/assets/wallpapers/generated-thumbs/${wallpaper.id}.jpg`
 }
 
@@ -135,6 +136,16 @@ export type Wallpaper = (typeof wallpapers)[number]
 export type WallpaperId = (typeof wallpapers)[number]['id']
 export const wallpapersKeyed = keyBy(wallpapers, 'id')
 export const wallpaperIds = wallpapers.map((w) => w.id)
+
+const DEFAULT_BRAND_COLOR_HSL = '259 100% 59%' // Umbrel purple fallback
+
+function resolveWallpaperAssets(id: string): WallpaperBase {
+	if (id.startsWith('custom:')) {
+		const uuid = id.slice('custom:'.length)
+		return {id, url: `/api/wallpapers/custom/${uuid}`, brandColorHsl: DEFAULT_BRAND_COLOR_HSL}
+	}
+	return wallpapersKeyed[id as WallpaperId] ?? wallpapersKeyed['18']
+}
 
 // ---
 
@@ -145,10 +156,11 @@ const nullWallpaper = {
 } as const satisfies WallpaperBase
 
 type WallpaperType = {
-	wallpaper: Wallpaper | typeof nullWallpaper
+	wallpaper: WallpaperBase
 	isLoading: boolean
-	prevWallpaper: Wallpaper | undefined
-	setWallpaperId: (id: WallpaperId) => void
+	prevWallpaper: WallpaperBase | undefined
+	setWallpaperId: (id: string) => void
+	uploadWallpaper: (base64: string) => Promise<string>
 	wallpaperFullyVisible: boolean
 	setWallpaperFullyVisible: () => void
 }
@@ -179,7 +191,13 @@ export function WallpaperProviderConnected({children}: {children: ReactNode}) {
 	const wallpaper = remote.isLoading ? nullWallpaper : remoteWallpaper || nullWallpaper
 
 	return (
-		<WallpaperProvider wallpaper={wallpaper} onWallpaperChange={(w) => remote.setWallpaperId(w.id)}>
+		<WallpaperProvider
+			wallpaper={wallpaper}
+			onWallpaperChange={(w) => {
+				if (w.id) remote.setWallpaperId(w.id)
+			}}
+			uploadWallpaper={remote.uploadWallpaper}
+		>
 			{children}
 		</WallpaperProvider>
 	)
@@ -188,10 +206,12 @@ export function WallpaperProviderConnected({children}: {children: ReactNode}) {
 export function WallpaperProvider({
 	wallpaper,
 	onWallpaperChange,
+	uploadWallpaper = () => Promise.reject(new Error('uploadWallpaper not configured')),
 	children,
 }: {
-	wallpaper: Wallpaper | typeof nullWallpaper
-	onWallpaperChange: (wallpaper: Wallpaper) => void
+	wallpaper: WallpaperBase
+	onWallpaperChange: (wallpaper: WallpaperBase) => void
+	uploadWallpaper?: (base64: string) => Promise<string>
 	children: ReactNode
 }) {
 	const [isLoading, setIsLoading] = useState(true)
@@ -215,10 +235,11 @@ export function WallpaperProvider({
 			value={{
 				wallpaper,
 				isLoading,
-				prevWallpaper: (prevId && wallpapersKeyed[prevId]) || undefined,
-				setWallpaperId: (id: WallpaperId) => {
-					onWallpaperChange(wallpapersKeyed[id])
+				prevWallpaper: prevId ? resolveWallpaperAssets(prevId) : undefined,
+				setWallpaperId: (id: string) => {
+					onWallpaperChange(resolveWallpaperAssets(id))
 				},
+				uploadWallpaper,
 				wallpaperFullyVisible,
 				setWallpaperFullyVisible: () => setWallpaperFullyVisible(true),
 			}}
@@ -228,8 +249,8 @@ export function WallpaperProvider({
 	)
 }
 
-export function useWallpaperCssVars(wallpaperId?: WallpaperId) {
-	const {brandColorHsl} = wallpaperId ? wallpapersKeyed[wallpaperId] : nullWallpaper
+export function useWallpaperCssVars(wallpaperId?: string) {
+	const {brandColorHsl} = wallpaperId ? resolveWallpaperAssets(wallpaperId) : nullWallpaper
 
 	useLayoutEffect(() => {
 		const el = document.documentElement
@@ -330,12 +351,21 @@ function useRemoteWallpaper(onSuccess?: (id: WallpaperId) => void) {
 			utils.user.wallpaper.invalidate()
 		},
 	})
-	const setWallpaperId = useCallback((id: WallpaperId) => userMut.mutate({wallpaper: id}), [userMut])
+	const setWallpaperId = useCallback((id: string) => userMut.mutate({wallpaper: id}), [userMut])
+
+	const uploadMut = trpcReact.user.uploadWallpaper.useMutation({
+		onSuccess: () => {
+			utils.user.get.invalidate()
+			utils.user.wallpaper.invalidate()
+		},
+	})
+	const uploadWallpaper = useCallback((base64: string) => uploadMut.mutateAsync({imageBase64: base64}), [uploadMut])
 
 	return {
 		isLoading: userQ.isLoading,
-		wallpaper: wallpaperQId && arrayIncludes(wallpaperIds, wallpaperQId) ? wallpapersKeyed[wallpaperQId] : undefined,
+		wallpaper: wallpaperQId ? resolveWallpaperAssets(wallpaperQId) : undefined,
 		setWallpaperId,
+		uploadWallpaper,
 	}
 }
 

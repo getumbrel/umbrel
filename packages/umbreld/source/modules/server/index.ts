@@ -199,6 +199,20 @@ class Server {
 
 		// Handle tRPC routes
 		this.app.use('/trpc', trpcExpressHandler)
+
+		// Serve user-uploaded custom wallpapers
+		// Security: only strict UUID v4 filenames are accepted (no path traversal possible)
+		this.app.get('/api/wallpapers/custom/:id', async (req, res) => {
+			const {id} = req.params as {id: string}
+			if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(id)) {
+				return res.status(400).end()
+			}
+			const filePath = join(this.umbreld.dataDirectory, 'data', 'wallpapers', `${id}.jpg`)
+			res.sendFile(filePath, (err) => {
+				if (err) res.status(404).end()
+			})
+		})
+
 		this.mountWebSocketServer('/trpc', (wss) => {
 			trpcWssHandler({wss, umbreld: this.umbreld, logger: this.logger})
 		})
