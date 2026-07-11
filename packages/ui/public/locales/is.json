@@ -1240,7 +1240,7 @@
   "whats-new.next": "Næsta",
   "whats-new.title": "Hvað er nýtt í {{version}}",
   "widget.progress.in-progress": "Í gangi",
-  "widgets.edit.select-up-to-3-widgets": "Veldu allt að 3 widgets",
+  "widgets.edit.select-up-to-3-widgets": "Veldu widgets",
   "widgets.install-app-to-customize": "Settu upp forrit úr <linked>App Store</linked> til að byrja að sérsníða heimaskjáinn þinn með widgets.",
   "wifi": "Wi‑Fi",
   "wifi-connect-insecure-message": "Opin net geta verið óörugg",

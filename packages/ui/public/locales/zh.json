@@ -1240,7 +1240,7 @@
   "whats-new.next": "下一步",
   "whats-new.title": "{{version}} 中的新内容",
   "widget.progress.in-progress": "进行中",
-  "widgets.edit.select-up-to-3-widgets": "最多选择 3 个小组件",
+  "widgets.edit.select-up-to-3-widgets": "选择小组件",
   "widgets.install-app-to-customize": "从 <linked>App Store</linked> 安装一个应用，开始用小组件自定义你的主屏幕。",
   "wifi": "Wi‑Fi",
   "wifi-connect-insecure-message": "开放网络可能不安全",

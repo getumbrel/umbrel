@@ -1240,7 +1240,7 @@
   "whats-new.next": "下一步",
   "whats-new.title": "{{version}} 的最新內容",
   "widget.progress.in-progress": "進行中",
-  "widgets.edit.select-up-to-3-widgets": "最多選擇 3 個小工具",
+  "widgets.edit.select-up-to-3-widgets": "選擇小工具",
   "widgets.install-app-to-customize": "從 <linked>App Store</linked> 安裝應用程式，開始使用小工具自訂你的主畫面。",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "開放式網路可能不安全",

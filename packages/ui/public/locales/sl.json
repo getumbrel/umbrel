@@ -1240,7 +1240,7 @@
   "whats-new.next": "Naprej",
   "whats-new.title": "Kaj je novega v {{version}}",
   "widget.progress.in-progress": "V teku",
-  "widgets.edit.select-up-to-3-widgets": "Izberi do 3 gradnike",
+  "widgets.edit.select-up-to-3-widgets": "Izberi gradnike",
   "widgets.install-app-to-customize": "Namesti aplikacijo iz <linked>App Store</linked>, da začneš prilagajati svoj domači zaslon z gradniki.",
   "wifi": "Wi‑Fi",
   "wifi-connect-insecure-message": "Odprta omrežja so lahko nevarna",

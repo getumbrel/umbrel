@@ -1240,7 +1240,7 @@
   "whats-new.next": "Következő",
   "whats-new.title": "{{version}} újdonságai",
   "widget.progress.in-progress": "Folyamatban",
-  "widgets.edit.select-up-to-3-widgets": "Válassz ki legfeljebb 3 widgetet",
+  "widgets.edit.select-up-to-3-widgets": "Válassz widgeteket",
   "widgets.install-app-to-customize": "Telepíts egy alkalmazást az <linked>App Store</linked>-ból, hogy elkezdhesd widgetekkel testreszabni a kezdőképernyődet.",
   "wifi": "Wi-Fi",
   "wifi-connect-insecure-message": "A nyílt hálózatok nem biztonságosak lehetnek",

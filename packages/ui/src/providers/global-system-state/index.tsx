@@ -10,9 +10,9 @@ import {toast} from '@/components/ui/toast'
 import {usePrefixedLocalStorage} from '@/hooks/use-prefixed-local-storage'
 import {useJwt} from '@/modules/auth/use-auth'
 import {MigratingCover, useMigrate} from '@/providers/global-system-state/migrate'
-import {RestartingCover, useRestart} from '@/providers/global-system-state/restart'
-import {ShuttingDownCover, useShutdown} from '@/providers/global-system-state/shutdown'
-import {RouterError, RouterOutput, trpcReact} from '@/trpc/trpc'
+import {RestartingCover, useRestart, useRestartWithPassword} from '@/providers/global-system-state/restart'
+import {ShuttingDownCover, useShutdown, useShutdownWithPassword} from '@/providers/global-system-state/shutdown'
+import {RouterError, RouterInput, RouterOutput, trpcReact} from '@/trpc/trpc'
 import {MS_PER_SECOND} from '@/utils/date-time'
 import {assertUnreachable, IS_DEV} from '@/utils/misc'
 
@@ -24,7 +24,9 @@ type SystemStatus = RouterOutput['system']['status']
 
 const GlobalSystemStateContext = createContext<{
 	shutdown: () => void
+	shutdownWithPassword: (input: RouterInput['system']['shutdownWithPassword']) => Promise<boolean>
 	restart: () => void
+	restartWithPassword: (input: RouterInput['system']['restartWithPassword']) => Promise<boolean>
 	update: () => void
 	migrate: () => void
 	reset: (password: string) => void
@@ -73,6 +75,14 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		// Prevent logout/redirect when error occurs
 		setShouldLogoutOnRunning(false)
 	}
+
+	const onPowerError = async () => {
+		setTriggered(false)
+		setShouldLogoutOnRunning(false)
+		setStartShutdownTimer(false)
+		setShutdownComplete(false)
+		setRouterError(null)
+	}
 	const getError = () => routerError
 	const clearError = () => setRouterError(null)
 	// Allow external code to suppress errors (e.g., RAID setup doing its own restart flow)
@@ -97,7 +107,9 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 
 	// TODO: handle `onError` for other actions than reset?
 	const restart = useRestart({onMutate, onSuccess})
+	const restartWithPassword = useRestartWithPassword({onMutate, onSuccess, onError: onPowerError})
 	const shutdown = useShutdown({onMutate, onSuccess})
+	const shutdownWithPassword = useShutdownWithPassword({onMutate, onSuccess, onError: onPowerError})
 	const update = useUpdate({onMutate, onSuccess})
 	const migrate = useMigrate({onMutate, onSuccess})
 	const reset = useReset({onMutate, onError})
@@ -248,7 +260,18 @@ export function GlobalSystemStateProvider({children}: {children: ReactNode}) {
 		case 'running': {
 			return (
 				<GlobalSystemStateContext
-					value={{shutdown, restart, update, migrate, reset, getError, clearError, suppressErrors}}
+					value={{
+						shutdown,
+						shutdownWithPassword,
+						restart,
+						restartWithPassword,
+						update,
+						migrate,
+						reset,
+						getError,
+						clearError,
+						suppressErrors,
+					}}
 				>
 					{children}
 					{debugInfo}

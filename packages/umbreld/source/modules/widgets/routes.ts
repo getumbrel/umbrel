@@ -5,8 +5,6 @@ import {router, privateProcedure} from '../server/trpc/trpc.js'
 import {systemWidgets} from '../system/system-widgets.js'
 import {filesWidgets} from '../files/widgets.js'
 
-const MAX_ALLOWED_WIDGETS = 3
-
 const umbrelWidgets = {...systemWidgets, ...filesWidgets}
 
 // Splits a widgetId into appId and widgetName
@@ -51,10 +49,6 @@ export default router({
 
 				// Check if widget is already active
 				if (widgets.includes(input.widgetId)) throw new Error(`Widget ${input.widgetId} is already enabled`)
-
-				// Check we don't have more than 3 widgets enabled
-				if (widgets.length >= MAX_ALLOWED_WIDGETS)
-					throw new Error(`The maximum number of widgets (${MAX_ALLOWED_WIDGETS}) has already been enabled`)
 
 				widgets.push(input.widgetId)
 				await set('widgets', widgets)

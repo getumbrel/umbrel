@@ -34,7 +34,7 @@ export function WidgetSelector({
 		return () => clearTimeout(id)
 	}, [])
 
-	const {availableWidgets, toggleSelected, selected, selectedTooMany} = useWidgets()
+	const {availableWidgets, toggleSelected, selected} = useWidgets()
 
 	if (!isReady) return null
 
@@ -62,7 +62,7 @@ export function WidgetSelector({
 							duration: 0.2,
 							ease: 'easeOut',
 						}}
-						className={cn('flex items-center gap-[var(--app-x-gap)]', selectedTooMany && 'animate-shake')}
+						className='flex items-center gap-[var(--app-x-gap)]'
 						style={{height: selectedH}}
 					>
 						<AnimatePresence>

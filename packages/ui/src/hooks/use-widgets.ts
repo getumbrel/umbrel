@@ -1,14 +1,11 @@
 // TODO: move to widgets module
-import {useState} from 'react'
 
 import {filesWidgets} from '@/features/files/widgets'
-import {liveUsageWidgets, MAX_WIDGETS} from '@/modules/widgets/shared/constants'
+import {liveUsageWidgets} from '@/modules/widgets/shared/constants'
 import {systemAppsKeyed, useApps} from '@/providers/apps'
 import {AppState, trpcReact} from '@/trpc/trpc'
 
 export function useWidgets() {
-	// Consider having `selectedTooMany` outside this hook
-	const [selectedTooMany, setSelectedTooMany] = useState(false)
 	const apps = useApps()
 
 	const {selected, enable, disable, isLoading: isSelectedLoading} = useEnableWidgets()
@@ -58,17 +55,11 @@ export function useWidgets() {
 	// No need to specify app id because widget endpoints are unique
 	// TODO: don't call it `toggle` because it's not a toggle
 	const toggleSelected = (widgetId: string, checked: boolean) => {
-		if (selected.length >= MAX_WIDGETS && checked) {
-			setSelectedTooMany(true)
-			setTimeout(() => setSelectedTooMany(false), 500)
+		if (checked) {
+			enable(widgetId)
 			return
 		}
-		setSelectedTooMany(false)
-		if (selected.includes(widgetId)) {
-			disable(widgetId)
-		} else {
-			enable(widgetId)
-		}
+		disable(widgetId)
 	}
 
 	const appFromWidgetId = (id: string) => {
@@ -102,7 +93,6 @@ export function useWidgets() {
 		availableWidgets,
 		selected: selectedWithAppInfo,
 		toggleSelected,
-		selectedTooMany,
 		isLoading,
 	}
 }

@@ -40,6 +40,7 @@ const ChangeNameDialog = React.lazy(() => import('@/routes/settings/change-name'
 const ChangePasswordDialog = React.lazy(() => import('@/routes/settings/change-password'))
 const RestartDialog = React.lazy(() => import('@/routes/settings/restart'))
 const ShutdownDialog = React.lazy(() => import('@/routes/settings/shutdown'))
+const PowerScheduleDialog = React.lazy(() => import('@/routes/settings/power-schedule'))
 const TroubleshootDialog = React.lazy(() => import('@/routes/settings/troubleshoot/index'))
 const TerminalDialog = React.lazy(() => import('@/routes/settings/terminal/index'))
 const DeviceInfoDialog = React.lazy(() => import('@/routes/settings/device-info'))
@@ -157,6 +158,7 @@ export function Settings() {
 						<Route path='/software-update/confirm' Component={SoftwareUpdateConfirmDialog} />
 						<Route path='/file-sharing' Component={FileSharingDrawerOrDialog} />
 						<Route path='/advanced/:advancedSelection?' Component={AdvancedSettingsDrawerOrDialog} />
+						<Route path='/power-schedule' Component={PowerScheduleDialog} />
 						<Route path='/storage/*' Component={StorageManagerDialog} />
 					</Routes>
 					<QueryStringDialog />
