@@ -680,6 +680,8 @@ export default class Files {
 
 	// Permanently delete a file or directory
 	async delete(virtualPath: string) {
+		virtualPath = normalizePath(virtualPath)
+
 		// Check if operation is allowed
 		const allowedOperations = await this.getAllowedOperations(virtualPath)
 		if (!allowedOperations.includes('delete')) throw new Error('[operation-not-allowed]')
@@ -692,7 +694,8 @@ export default class Files {
 		if (virtualPath.startsWith('/External/')) {
 			const shares = (await this.#umbreld.store.get('files.shares')) || []
 			for (const share of shares) {
-				if (share.path.startsWith(virtualPath)) await this.samba.removeShare(share.path)
+				if (share.path === virtualPath || share.path.startsWith(`${virtualPath}/`))
+					await this.samba.removeShare(share.path)
 			}
 		}
 
