@@ -3,6 +3,7 @@ import {
 	Tb2Fa,
 	TbArrowBigRightLines,
 	TbCircleArrowUp,
+	TbClock,
 	TbColumns3,
 	TbHistory,
 	TbLanguage,
@@ -185,6 +186,12 @@ export function SettingsContentMobile() {
 					title={t('settings.file-sharing')}
 					description={t('settings.file-sharing.description')}
 					onClick={() => navigate('file-sharing')}
+				/>
+				<ListRowMobile
+					icon={TbClock}
+					title={t('power-schedule.title')}
+					description={t('power-schedule.description')}
+					onClick={() => navigate('power-schedule')}
 				/>
 				{isUmbrelPro && (
 					<ListRowMobile

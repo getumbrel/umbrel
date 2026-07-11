@@ -9,6 +9,7 @@ import {
 	RiPulseLine,
 	RiRestartLine,
 	RiShutDownLine,
+	RiTimeLine,
 	RiUserLine,
 } from 'react-icons/ri'
 import {TbColumns3, TbHistory, TbServer, TbSettings, TbSettingsMinus, TbShare, TbTool, TbWifi} from 'react-icons/tb'
@@ -188,6 +189,11 @@ export function SettingsContent() {
 					<ListRow title={t('settings.file-sharing')} description={t('settings.file-sharing.description')}>
 						<IconButton icon={TbShare} onClick={() => navigate('file-sharing')}>
 							{t('settings.file-sharing.configure')}
+						</IconButton>
+					</ListRow>
+					<ListRow title={t('power-schedule.title')} description={t('power-schedule.description')}>
+						<IconButton icon={RiTimeLine} onClick={() => navigate('power-schedule')}>
+							{t('power-schedule.configure')}
 						</IconButton>
 					</ListRow>
 					{/* Backups */}
