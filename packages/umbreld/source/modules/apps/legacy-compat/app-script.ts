@@ -19,6 +19,7 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 		SCRIPT_APP_REPO_DIR = await umbreld.appStore.getAppTemplateFilePath(arg)
 	} catch {}
 	const torEnabled = await umbreld.store.get('torEnabled')
+	const user = await umbreld.user.get()
 	return $({
 		stdio: inheritStdio ? 'inherit' : 'pipe',
 		env: {
@@ -32,6 +33,7 @@ export default async function appScript(umbreld: Umbreld, command: string, arg: 
 			TOR_PASSWORD: 'mLcLDdt5qqMxlq3wv8Din3UD44bTZHzRFhIktw38kWg=',
 			TOR_HASHED_PASSWORD: '16:158FBE422B1A9D996073BE2B9EC38852C70CE12362CA016F8F6859C426',
 			REMOTE_TOR_ACCESS: torEnabled ? 'true' : 'false',
+			SCRIPT_USER_NAME: user?.name ?? '',
 		},
 	})`${scriptPath} ${command} ${arg}`
 }

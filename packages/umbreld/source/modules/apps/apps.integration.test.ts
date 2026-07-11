@@ -3,6 +3,7 @@ import path from 'node:path'
 import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
+import {$} from 'execa'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
@@ -110,6 +111,12 @@ test.sequential('state() becomes ready once install completes', async () => {
 		await setTimeout(1000)
 	} while (true)
 	await expect(lastState).toMatchObject({state: 'ready'})
+})
+
+test.sequential('install() exposes the Umbrel user name to app compose files', async () => {
+	const {stdout} =
+		await $`docker inspect sparkles-hello-world_server_1 --format=${'{{range .Config.Env}}{{println .}}{{end}}'}`
+	expect(stdout.split('\n')).toContain('APP_UMBREL_USER_NAME=satoshi')
 })
 
 test.sequential('list() lists installed apps', async () => {
