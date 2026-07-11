@@ -575,6 +575,184 @@ export async function restoreWiFi(umbreld: Umbreld): Promise<void> {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// WiFi hotspot (Access Point)
+//
+// Turns the device's WiFi adapter into an access point so other devices can
+// connect to it. Built on NetworkManager (the same tool used for WiFi client
+// mode above), so no extra system packages are required.
+//
+// Two modes:
+//   - 'shared' (default): NetworkManager runs DHCP + NAT for clients on their
+//     own subnet. Safe and self-contained.
+//   - 'bridge' (advanced/experimental): the AP is bridged onto the wired LAN so
+//     clients get addresses from the main router and share one subnet. This is
+//     what makes roaming between the router and this AP seamless, but it
+//     reconfigures the wired connection and can briefly interrupt connectivity.
+// ---------------------------------------------------------------------------
+
+const WIFI_HOTSPOT_CONNECTION = 'umbrel-hotspot'
+const WIFI_HOTSPOT_BRIDGE = 'umbrel-hotspot-br0'
+
+export type WifiHotspotConfig = {
+	ssid: string
+	password: string
+	band?: '2.4ghz' | '5ghz'
+	channel?: number // 0 = auto
+	countryCode?: string
+	hidden?: boolean
+	bridgeToLan?: boolean
+}
+
+// Return the name of the first WiFi device (e.g. 'wlan0', 'wlo1'), if any
+export async function getWifiDevice(): Promise<string | undefined> {
+	const {stdout} = await $`nmcli --terse --fields DEVICE,TYPE device status`
+	for (const line of stdout.split('\n')) {
+		const [device, type] = line.split(':')
+		if (type === 'wifi' && device) return device
+	}
+	return undefined
+}
+
+// Whether this device can host a WiFi hotspot (has a WiFi adapter that supports AP mode)
+export async function supportsWifiHotspot(): Promise<boolean> {
+	const device = await getWifiDevice()
+	if (!device) return false
+	try {
+		// Check the adapter advertises AP mode under its supported interface modes
+		const {stdout} = await $`iw list`
+		return /Supported interface modes:[\s\S]*?\*\s*AP\b/.test(stdout)
+	} catch {
+		// `iw` may be unavailable; if we have a WiFi device assume AP is supported
+		// and let the actual start attempt surface any real incompatibility.
+		return true
+	}
+}
+
+// Return the name of the primary connected ethernet device, if any
+async function getPrimaryEthernetDevice(): Promise<string | undefined> {
+	const {stdout} = await $`nmcli --terse --fields DEVICE,TYPE,STATE device status`
+	for (const line of stdout.split('\n')) {
+		const [device, type, state] = line.split(':')
+		if (type === 'ethernet' && state === 'connected' && device) return device
+	}
+	return undefined
+}
+
+// Tear down the hotspot connection (and the experimental bridge) if present
+export async function stopWifiHotspot(): Promise<void> {
+	const {stdout} = await $`nmcli --terse --fields NAME connection`
+	const connections = stdout.split('\n')
+	for (const name of [WIFI_HOTSPOT_CONNECTION, `${WIFI_HOTSPOT_BRIDGE}-eth`, WIFI_HOTSPOT_BRIDGE]) {
+		if (!connections.includes(name)) continue
+		await $`nmcli connection down ${name}`.catch(() => {})
+		await $`nmcli connection delete ${name}`.catch(() => {})
+	}
+}
+
+// EXPERIMENTAL: create a bridge that contains the primary ethernet so the
+// hotspot can join the same L2 network as the rest of the LAN (single subnet,
+// seamless roaming). Reconfigures the wired connection — can interrupt
+// connectivity while the bridge comes up.
+async function ensureLanBridge(): Promise<void> {
+	const ethernet = await getPrimaryEthernetDevice()
+	if (!ethernet) throw new Error('Bridging to the local network requires a connected Ethernet cable')
+
+	const {stdout} = await $`nmcli --terse --fields NAME connection`
+	const connections = stdout.split('\n')
+
+	if (!connections.includes(WIFI_HOTSPOT_BRIDGE)) {
+		await $`nmcli connection add type bridge con-name ${WIFI_HOTSPOT_BRIDGE} ifname ${WIFI_HOTSPOT_BRIDGE} stp no ipv4.method auto ipv6.method ignore`
+	}
+	if (!connections.includes(`${WIFI_HOTSPOT_BRIDGE}-eth`)) {
+		await $`nmcli connection add type ethernet ifname ${ethernet} con-name ${WIFI_HOTSPOT_BRIDGE}-eth master ${WIFI_HOTSPOT_BRIDGE}`
+	}
+	await $`nmcli connection up ${WIFI_HOTSPOT_BRIDGE}`
+}
+
+// Bring up the WiFi hotspot with the given configuration
+export async function startWifiHotspot(config: WifiHotspotConfig): Promise<void> {
+	const device = await getWifiDevice()
+	if (!device) throw new Error('No WiFi adapter found')
+	if (config.ssid.length === 0 || config.ssid.length > 32) throw new Error('SSID must be between 1 and 32 characters')
+	if (config.password.length < 8 || config.password.length > 63)
+		throw new Error('Password must be between 8 and 63 characters')
+
+	// Best-effort: set the wireless regulatory domain so the requested band/channel is permitted
+	if (config.countryCode) await $`iw reg set ${config.countryCode}`.catch(() => {})
+
+	// Start from a clean slate
+	await stopWifiHotspot().catch(() => {})
+
+	const band = config.band === '5ghz' ? 'a' : 'bg'
+
+	// Create the access point connection
+	await $`nmcli connection add type wifi ifname ${device} con-name ${WIFI_HOTSPOT_CONNECTION} autoconnect yes ssid ${config.ssid}`
+
+	// Configure AP mode + security
+	await $`nmcli connection modify ${WIFI_HOTSPOT_CONNECTION} 802-11-wireless.mode ap 802-11-wireless.band ${band} 802-11-wireless.hidden ${config.hidden ? 'yes' : 'no'} wifi-sec.key-mgmt wpa-psk wifi-sec.psk ${config.password} ipv6.method ignore`
+
+	if (config.channel && config.channel > 0) {
+		await $`nmcli connection modify ${WIFI_HOTSPOT_CONNECTION} 802-11-wireless.channel ${config.channel}`
+	}
+
+	if (config.bridgeToLan) {
+		// Experimental: attach the AP to a LAN bridge so clients share the main subnet
+		await ensureLanBridge()
+		await $`nmcli connection modify ${WIFI_HOTSPOT_CONNECTION} connection.master ${WIFI_HOTSPOT_BRIDGE} connection.slave-type bridge`
+	} else {
+		// Default: NetworkManager provides DHCP + NAT for clients (shared mode)
+		await $`nmcli connection modify ${WIFI_HOTSPOT_CONNECTION} ipv4.method shared`
+	}
+
+	await $`nmcli connection up ${WIFI_HOTSPOT_CONNECTION}`
+}
+
+// Report the current hotspot configuration and whether it's live
+export async function getWifiHotspotStatus(umbreld: Umbreld) {
+	const config = await umbreld.store.get('settings.wifiHotspot')
+
+	let active = false
+	try {
+		const {stdout} = await $`nmcli --terse --fields NAME connection show --active`
+		active = stdout.split('\n').includes(WIFI_HOTSPOT_CONNECTION)
+	} catch {
+		// Ignore — treat as inactive
+	}
+
+	return {
+		enabled: config?.enabled ?? false,
+		active,
+		ssid: config?.ssid ?? '',
+		// Password is the user's own AP credential and is needed to pre-fill the
+		// settings form; only ever returned over the authenticated RPC.
+		password: config?.password ?? '',
+		band: config?.band ?? ('2.4ghz' as const),
+		channel: config?.channel ?? 0,
+		countryCode: config?.countryCode ?? '',
+		hidden: config?.hidden ?? false,
+		bridgeToLan: config?.bridgeToLan ?? false,
+	}
+}
+
+// Re-apply the saved hotspot after boot/OTA update (non-blocking, retries)
+export async function restoreWifiHotspot(umbreld: Umbreld): Promise<void> {
+	const config = await umbreld.store.get('settings.wifiHotspot')
+	if (!config?.enabled) return
+
+	while (true) {
+		umbreld.logger.log(`Attempting to restore WiFi hotspot ${config.ssid}...`)
+		try {
+			await startWifiHotspot(config)
+			umbreld.logger.log(`WiFi hotspot restored!`)
+			break
+		} catch (error) {
+			umbreld.logger.error(`Failed to restore WiFi hotspot, retrying in 1 minute`, error)
+			await setTimeout(1000 * 60)
+		}
+	}
+}
+
 // Get IP addresses of the device
 export function getIpAddresses(): string[] {
 	// Known good interfaces:

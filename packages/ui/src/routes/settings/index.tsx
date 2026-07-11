@@ -53,6 +53,7 @@ const StartMigrationDrawerOrDialog = React.lazy(() =>
 )
 const Wifi = React.lazy(() => import('@/routes/settings/wifi'))
 const WifiUnsupported = React.lazy(() => import('@/routes/settings/wifi-unsupported'))
+const WifiHotspot = React.lazy(() => import('@/routes/settings/wifi-hotspot'))
 const AccountDrawer = React.lazy(() =>
 	import('@/routes/settings/mobile/account').then((m) => ({default: m.AccountDrawer})),
 )
@@ -145,6 +146,7 @@ export function Settings() {
 						{isMobile && <Route path='/wallpaper' Component={WallpaperDrawer} />}
 						<Route path='/wifi' Component={Wifi} />
 						<Route path='/wifi-unsupported' Component={WifiUnsupported} />
+						<Route path='/wifi-hotspot' Component={WifiHotspot} />
 						{/* Backup: mobile drawer (/backups) opens first on mobile to give same options as desktop */}
 						{isMobile && <Route path='/backups' Component={BackupsMobileDrawer} />}
 						<Route path='/backups/*' Component={BackupsRestoreDialog} />

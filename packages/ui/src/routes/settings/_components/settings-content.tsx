@@ -53,14 +53,17 @@ export function SettingsContent() {
 	const {isUmbrelPro} = useIsUmbrelPro()
 	const {deviceName} = useIsHomeOrPro()
 
-	const [userQ, wifiSupportedQ, is2faEnabledQ, raidStatusQ, devicesQ] = trpcReact.useQueries((t) => [
-		t.user.get(),
-		t.wifi.supported(),
-		t.user.is2faEnabled(),
-		// Storage queries only run on Umbrel Pro to avoid unnecessary API calls on other devices
-		t.hardware.raid.getStatus(undefined, {enabled: isUmbrelPro}),
-		t.hardware.internalStorage.getDevices(undefined, {enabled: isUmbrelPro}),
-	])
+	const [userQ, wifiSupportedQ, wifiHotspotSupportedQ, is2faEnabledQ, raidStatusQ, devicesQ] = trpcReact.useQueries(
+		(t) => [
+			t.user.get(),
+			t.wifi.supported(),
+			t.wifiHotspot.supported(),
+			t.user.is2faEnabled(),
+			// Storage queries only run on Umbrel Pro to avoid unnecessary API calls on other devices
+			t.hardware.raid.getStatus(undefined, {enabled: isUmbrelPro}),
+			t.hardware.internalStorage.getDevices(undefined, {enabled: isUmbrelPro}),
+		],
+	)
 
 	const {repositories: backupRepositories, isLoadingRepositories: isLoadingBackups} = useBackups()
 
@@ -164,6 +167,13 @@ export function SettingsContent() {
 					) : (
 						<ListRow title={t('wifi')} description={t('wifi-description')}>
 							<Switch checked={false} onCheckedChange={() => navigate('wifi-unsupported')} />
+						</ListRow>
+					)}
+					{wifiHotspotSupportedQ.data && (
+						<ListRow title={t('wifi-hotspot')} description={t('wifi-hotspot-description')}>
+							<IconButton icon={TbWifi} onClick={() => navigate('wifi-hotspot')}>
+								{t('wifi-hotspot-configure')}
+							</IconButton>
 						</ListRow>
 					)}
 					<ListRow title={t('2fa')} description={t('2fa-description')} disabled={is2faEnabledQ.isLoading}>

@@ -8,6 +8,7 @@ import system from '../../system/routes.js'
 // Temporary name while migrating from the legacy system module. Will be renamed to "system" once migration is complete.
 import systemNg from '../../system-ng/routes.js'
 import wifi from '../../system/wifi-routes.js'
+import wifiHotspot from '../../system/wifi-hotspot-routes.js'
 import user from '../../user/routes.js'
 import {appStore, apps} from '../../apps/routes.js'
 import widget from '../../widgets/routes.js'
@@ -26,6 +27,7 @@ const appRouter = router({
 	system,
 	systemNg,
 	wifi,
+	wifiHotspot,
 	user,
 	appStore,
 	apps,
