@@ -14,6 +14,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 	const currentDirname = dirname(currentFilename)
 	const composePath = join(currentDirname, 'docker-compose.yml')
 	const torEnabled = await umbreld.store.get('torEnabled')
+	const caddySettings = await umbreld.caddy.getSettings()
 	const options = {
 		stdio: inheritStdio ? 'inherit' : 'pipe',
 		cwd: umbreld.dataDirectory,
@@ -35,6 +36,11 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			UMBRELD_RPC_HOST: `host.docker.internal:${umbreld.server.port}`, // TODO: Check host.docker.internal works on linux
 			UMBREL_LEGACY_COMPAT_DIR: currentDirname,
 			UMBREL_TORRC: torEnabled ? `${currentDirname}/tor-server-torrc` : `${currentDirname}/tor-proxy-torrc`,
+			// Caddy configuration
+			CADDY_IP: '10.21.21.12',
+			CADDY_DOMAIN: caddySettings.domain || 'umbrel.local',
+			CADDY_HTTP_PORT: String(caddySettings.httpPort || 80),
+			CADDY_HTTPS_PORT: String(caddySettings.httpsPort || 443),
 		},
 	}
 	if (command === 'up') {

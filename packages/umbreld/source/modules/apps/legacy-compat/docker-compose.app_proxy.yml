@@ -7,8 +7,10 @@ services:
     user: '1000:1000'
     restart: on-failure
     hostname: $APP_PROXY_HOSTNAME
-    ports:
-      - '${APP_PROXY_PORT}:${APP_PROXY_PORT}'
+    # Port exposure is now handled by Caddy reverse proxy
+    # Uncomment below for direct access during development
+    # ports:
+    #   - '${APP_PROXY_PORT}:${APP_PROXY_PORT}'
     volumes:
       - '${APP_MANIFEST_FILE}:/extra/umbrel-app.yml:ro'
       - '${TOR_DATA_DIR}:/var/lib/tor:ro'
@@ -26,3 +28,5 @@ services:
       MANAGER_IP: $MANAGER_IP
       MANAGER_PORT: 3006
       JWT_SECRET: $JWT_SECRET
+      # Trust Caddy as upstream proxy
+      PROXY_TRUST_UPSTREAM: 'true'

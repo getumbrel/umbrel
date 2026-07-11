@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+  caddy:
+    container_name: test_caddy
+    image: caddy:2.7.6-alpine
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./test/Caddyfile.test:/etc/caddy/Caddyfile:ro
+      - ./test/certs:/certs:ro
+    networks:
+      - test_network
+
+  test_app1:
+    container_name: test_app1
+    image: mendhak/http-https-echo
+    environment:
+      HTTP_PORT: 8888
+    networks:
+      - test_network
+
+  test_app2:
+    container_name: test_app2
+    image: mendhak/http-https-echo
+    environment:
+      HTTP_PORT: 8889
+    networks:
+      - test_network
+
+networks:
+  test_network:
+    driver: bridge
