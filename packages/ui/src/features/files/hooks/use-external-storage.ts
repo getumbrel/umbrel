@@ -21,10 +21,8 @@ export function useExternalStorage() {
 	const utils = trpcReact.useUtils()
 	const {add} = useQueryParams()
 
-	// Check device information to determine if external storage is supported (currently not supported on Raspberry Pi)
-	const {data: deviceInfo} = trpcReact.systemNg.device.getIdentity.useQuery()
-
-	const isExternalStorageSupported = deviceInfo?.productName !== 'Raspberry Pi'
+	const {data: isExternalStorageSupported = false} =
+		trpcReact.files.isExternalStorageSupported.useQuery()
 
 	// Subscribe to files:external-storage:change events that fire when devices are mounted/unmounted
 	// and invalidate the external storage queries

@@ -228,6 +228,13 @@ export function Notifications() {
 			return getMigratedBackThatMacUpContent()
 		}
 
+		if (notification === 'external-storage-power-fault') {
+			return {
+				title: t('notifications.external-storage-power-fault.title'),
+				description: t('notifications.external-storage-power-fault.description'),
+			}
+		}
+
 		// Default fallback for unknown notifications
 		return getDefaultNotificationContent(notification)
 	}

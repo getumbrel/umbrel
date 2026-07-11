@@ -835,6 +835,8 @@
   "notifications.backups-failing.description": "Автоматическое резервное копирование завершается с ошибками. Проверь место хранения резервных копий и свои настройки.",
   "notifications.backups-failing.go-to-backups": "Перейти в Backups",
   "notifications.backups-failing.title": "Нет резервных копий за последние 24 часа",
+  "notifications.external-storage-power-fault.description": "Raspberry Pi сообщил о просадке напряжения или ошибках USB-накопителя. Внешние диски отключены, чтобы защитить данные. Используйте USB-хаб с питанием или диск с собственным блоком питания, затем подключите диск снова.",
+  "notifications.external-storage-power-fault.title": "Внешний диск отключён (проблема питания)",
   "notifications.cpu.too-hot": "Высокая температура CPU",
   "notifications.memory.low": "На устройстве мало памяти",
   "notifications.new-version-available": "{{update}} уже доступно для установки",

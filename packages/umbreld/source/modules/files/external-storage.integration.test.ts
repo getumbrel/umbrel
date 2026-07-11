@@ -82,9 +82,9 @@ describe('enabled', () => {
 		await expect(umbreld.instance.files.externalStorage.supported()).resolves.toBe(true)
 	})
 
-	test('is disabled on Raspberry Pi', async () => {
+	test('is enabled on Raspberry Pi', async () => {
 		isRaspberryPiMockValue = true
-		await expect(umbreld.instance.files.externalStorage.supported()).resolves.toBe(false)
+		await expect(umbreld.instance.files.externalStorage.supported()).resolves.toBe(true)
 	})
 })
 

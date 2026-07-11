@@ -835,6 +835,8 @@
   "notifications.backups-failing.description": "Automatic backups have been failing. Check your backup location and review your settings.",
   "notifications.backups-failing.go-to-backups": "Go to Backups",
   "notifications.backups-failing.title": "No Backups in the last 24 hours",
+  "notifications.external-storage-power-fault.description": "Your Raspberry Pi reported low voltage or USB storage errors. External drives were unmounted to protect your data. Use a powered USB hub or a drive with its own power supply, then reconnect the drive.",
+  "notifications.external-storage-power-fault.title": "External drive unmounted (power issue)",
   "notifications.cpu.too-hot": "High CPU temperature",
   "notifications.memory.low": "Your device's memory is low",
   "notifications.new-version-available": "{{update}} is now available to install",

@@ -2,15 +2,17 @@
 
 set -euo pipefail
 
-# This script will:
-# - Look for external storage devices
-# - Check if they contain an Umbrel install
-# - If yes
-# - - Mount it
-# - If no
-# - - Format it
-# - - Mount it
-# - - Install Umbrel on it
+# This script ONLY runs when the user has opted in via umbrel-allow-external-format on
+# the SD card boot partition. It migrates Umbrel's data directory to a USB drive.
+#
+# Normal USB drives (media, backups, etc.) are mounted by umbreld under Files → External
+# and must not be handled here.
+#
+# When opted in, this script will:
+# - Look for a single external storage device
+# - Check if it contains an Umbrel install
+# - If yes, mount it
+# - If no, format it (only with opt-in), mount it, and install Umbrel on it
 # - Bind mount the external installation on top of the local installation
 
 UMBREL_ROOT="/home/umbrel/umbrel"
@@ -108,6 +110,71 @@ is_partition_ext4 () {
   blkid -o value -s TYPE "${partition_path}" | grep --quiet '^ext4$'
 }
 
+get_partition_fstype () {
+  partition_path="${1}"
+  sync
+  blkid -o value -s TYPE "${partition_path}" 2>/dev/null || true
+}
+
+# Explicit opt-in is required before we wipe a user's USB drive.
+# See https://github.com/getumbrel/umbrel/issues/1956
+UMBREL_ALLOW_FORMAT_PATHS=(
+  "/boot/firmware/umbrel-allow-external-format"
+  "/boot/umbrel-allow-external-format"
+)
+
+is_external_format_explicitly_allowed () {
+  if [[ "${UMBREL_ALLOW_EXTERNAL_FORMAT:-}" == "1" ]]; then
+    return 0
+  fi
+  for path in "${UMBREL_ALLOW_FORMAT_PATHS[@]}"; do
+    if [[ -f "${path}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+device_has_filesystem_signatures () {
+  device_path="${1}"
+  signatures=$(wipefs --noheadings "${device_path}" 2>/dev/null || true)
+  [[ -n "${signatures}" ]]
+}
+
+refuse_automatic_format () {
+  reason="${1}"
+  echo "ERROR: Refusing to automatically format external storage: ${reason}"
+  echo "Umbrel will continue running from the SD card."
+  echo "To intentionally use this drive as Umbrel data storage (this erases all data), create:"
+  echo "  /boot/firmware/umbrel-allow-external-format"
+  echo "on the SD card boot partition, then reboot."
+  exit 1
+}
+
+assert_safe_to_format () {
+  block_device="${1}"
+  partition_path="${2}"
+  device_path="/dev/${block_device}"
+
+  if is_external_format_explicitly_allowed; then
+    echo "Explicit consent to format external storage detected, continuing..."
+    return 0
+  fi
+
+  if device_has_filesystem_signatures "${device_path}"; then
+    refuse_automatic_format "existing filesystem signatures detected on ${device_path}"
+  fi
+
+  fstype=$(get_partition_fstype "${partition_path}")
+  if [[ -n "${fstype}" && "${fstype}" != "ext4" ]]; then
+    refuse_automatic_format "partition ${partition_path} uses filesystem type '${fstype}'"
+  fi
+
+  if [[ "${fstype}" == "ext4" ]]; then
+    refuse_automatic_format "ext4 partition exists but is not a recognised Umbrel data drive"
+  fi
+}
+
 # Wipes a block device and reformats it with a single EXT4 partition
 format_block_device () {
   device="${1}"
@@ -139,6 +206,8 @@ setup_new_device () {
   block_device="${1}"
   partition_path="${2}"
 
+  assert_safe_to_format "${block_device}" "${partition_path}"
+
   echo "Formatting device..."
   format_block_device $block_device
 
@@ -164,13 +233,21 @@ copy_docker_to_external_storage () {
 main () {
   echo "Running external storage mount script..."
   check_root
-  check_dependencies sed wipefs parted mount sync umount
+  check_dependencies sed wipefs parted mount sync umount blkid
 
   if [[ "$(running_off_sdcard)" == "false" ]]
   then
     echo "This script should only run when umbrelOS boots from an SD card, exiting..."
     exit
   fi
+
+  if ! is_external_format_explicitly_allowed; then
+    echo "No opt-in for Umbrel external data disk (umbrel-allow-external-format); skipping."
+    echo "USB drives are mounted by umbreld under Files → External."
+    exit 0
+  fi
+
+  echo "Opt-in detected: setting up external drive as Umbrel data disk..."
 
   no_of_block_devices=$(list_block_devices | wc -l)
 
