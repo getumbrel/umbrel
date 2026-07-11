@@ -1,6 +1,9 @@
 import z from 'zod'
+import fse from 'fs-extra'
 
 import {router, privateProcedure} from '../server/trpc/trpc.js'
+
+const DOCKER_CONFIG_PATH = '/root/.docker/config.json'
 
 export const appStore = router({
 	// Returns the app store registry
@@ -23,6 +26,54 @@ export const appStore = router({
 			}),
 		)
 		.mutation(async ({ctx, input}) => ctx.appStore.removeRepository(input.url)),
+
+	// List saved private registry hostnames (no passwords returned)
+	getRegistryCredentials: privateProcedure.query(async () => {
+		try {
+			const config = await fse.readJson(DOCKER_CONFIG_PATH)
+			const auths: Record<string, {auth?: string}> = config?.auths ?? {}
+			return Object.keys(auths)
+				.filter((registry) => !!auths[registry]?.auth)
+				.map((registry) => ({registry}))
+		} catch {
+			return []
+		}
+	}),
+
+	// Save (add or update) credentials for a private registry
+	setRegistryCredential: privateProcedure
+		.input(
+			z.object({
+				registry: z.string().min(1),
+				username: z.string().min(1),
+				password: z.string().min(1),
+			}),
+		)
+		.mutation(async ({input}) => {
+			const config = (await fse.pathExists(DOCKER_CONFIG_PATH))
+				? await fse.readJson(DOCKER_CONFIG_PATH)
+				: {}
+			config.auths = config.auths ?? {}
+			config.auths[input.registry] = {
+				auth: Buffer.from(`${input.username}:${input.password}`).toString('base64'),
+			}
+			await fse.outputJson(DOCKER_CONFIG_PATH, config, {spaces: 2})
+			return true
+		}),
+
+	// Remove credentials for a registry
+	removeRegistryCredential: privateProcedure
+		.input(z.object({registry: z.string().min(1)}))
+		.mutation(async ({input}) => {
+			try {
+				const config = await fse.readJson(DOCKER_CONFIG_PATH)
+				if (config?.auths?.[input.registry]) {
+					delete config.auths[input.registry]
+					await fse.outputJson(DOCKER_CONFIG_PATH, config, {spaces: 2})
+				}
+			} catch {}
+			return true
+		}),
 })
 
 export const apps = router({

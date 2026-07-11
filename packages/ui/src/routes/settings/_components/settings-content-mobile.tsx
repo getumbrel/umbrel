@@ -10,6 +10,7 @@ import {
 	TbServer,
 	TbSettingsMinus,
 	TbShare,
+	TbShoppingBag,
 	TbTool,
 	TbUser,
 	TbWifi,
@@ -210,12 +211,12 @@ export function SettingsContentMobile() {
 					description={t('backups-description')}
 					onClick={() => navigate('backups')}
 				/>
-				{/* <ListRowMobile
+				<ListRowMobile
 					icon={TbShoppingBag}
 					title={t('app-store.title')}
 					description={t('app-store.description')}
 					onClick={() => navigate(linkToDialog('app-store-preferences'))}
-				/> */}
+				/>
 				<ListRowMobile
 					icon={TbTool}
 					title={t('troubleshoot')}

@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 import {FaRegSave} from 'react-icons/fa'
 import {
+	RiEqualizerLine,
 	RiExpandRightFill,
 	RiKeyLine,
 	RiLogoutCircleRLine,
@@ -261,11 +262,11 @@ export function SettingsContent() {
 							</DropdownMenu>
 						</div>
 					</ListRow>
-					{/* <ListRow title={t('app-store.title')} description={t('app-store.description')}>
+					<ListRow title={t('app-store.title')} description={t('app-store.description')}>
 						<IconButton icon={RiEqualizerLine} onClick={() => navigate(linkToDialog('app-store-preferences'))}>
 							{t('preferences')}
 						</IconButton>
-					</ListRow> */}
+					</ListRow>
 					<ListRow title={t('troubleshoot')} description={t('troubleshoot-description')}>
 						<IconButton icon={TbTool} onClick={() => navigate('troubleshoot')}>
 							{t('troubleshoot')}
