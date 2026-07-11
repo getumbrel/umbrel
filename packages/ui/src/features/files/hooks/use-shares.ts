@@ -66,6 +66,28 @@ export function useShares() {
 		},
 	})
 
+	// Set custom share password mutation
+	const {mutateAsync: setSharePassword, isPending: isSettingSharePassword} =
+		trpcReact.files.setSharePassword.useMutation({
+			onSuccess: async () => {
+				await utils.files.sharePassword.invalidate()
+			},
+			onError: (error: RouterError) => {
+				toast.error(t('files-error.set-share-password', {message: getFilesErrorMessage(error.message)}))
+			},
+		})
+
+	// Regenerate share password mutation
+	const {mutateAsync: regenerateSharePassword, isPending: isRegeneratingSharePassword} =
+		trpcReact.files.regenerateSharePassword.useMutation({
+			onSuccess: async () => {
+				await utils.files.sharePassword.invalidate()
+			},
+			onError: (error: RouterError) => {
+				toast.error(t('files-error.regenerate-share-password', {message: getFilesErrorMessage(error.message)}))
+			},
+		})
+
 	return {
 		// Queries
 		shares,
@@ -82,5 +104,13 @@ export function useShares() {
 		// Remove share
 		removeShare,
 		isRemovingShare,
+
+		// Set custom share password
+		setSharePassword,
+		isSettingSharePassword,
+
+		// Regenerate share password
+		regenerateSharePassword,
+		isRegeneratingSharePassword,
 	}
 }

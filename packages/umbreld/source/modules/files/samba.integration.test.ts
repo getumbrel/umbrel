@@ -379,6 +379,44 @@ describe('sharePassword()', () => {
 	})
 })
 
+describe('setSharePassword()', () => {
+	test('throws invalid error without auth token', async () => {
+		await expect(
+			umbreld.unauthenticatedClient.files.setSharePassword.mutate({password: 'newpassword'}),
+		).rejects.toThrow('Invalid token')
+	})
+
+	test('rejects passwords shorter than 8 characters', async () => {
+		await expect(umbreld.client.files.setSharePassword.mutate({password: 'short'})).rejects.toThrow()
+	})
+
+	test('persists a custom password and exposes it via sharePassword query', async () => {
+		const customPassword = 'my-strong-password'
+		await umbreld.client.files.setSharePassword.mutate({password: customPassword})
+
+		const stored = await umbreld.client.files.sharePassword.query()
+		expect(stored).toBe(customPassword)
+	})
+})
+
+describe('regenerateSharePassword()', () => {
+	test('throws invalid error without auth token', async () => {
+		await expect(umbreld.unauthenticatedClient.files.regenerateSharePassword.mutate()).rejects.toThrow('Invalid token')
+	})
+
+	test('replaces the existing share password with a new one', async () => {
+		const original = await umbreld.client.files.sharePassword.query()
+		const regenerated = await umbreld.client.files.regenerateSharePassword.mutate()
+
+		expect(regenerated).not.toBe(original)
+		expect(regenerated.length).toBe(32)
+		expect(/^[0-9a-f]{32}$/.test(regenerated)).toBe(true)
+
+		const stored = await umbreld.client.files.sharePassword.query()
+		expect(stored).toBe(regenerated)
+	})
+})
+
 describe('samba', () => {
 	async function createSmbClient(share: string) {
 		const password = await umbreld.client.files.sharePassword.query()

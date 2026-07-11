@@ -166,6 +166,16 @@ export default router({
 	// Get the share password
 	sharePassword: privateProcedure.query(async ({ctx}) => ctx.umbreld.files.samba.getSharePassword()),
 
+	// Set a custom share password
+	setSharePassword: privateProcedure
+		.input(z.object({password: z.string().min(8).max(127)}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.files.samba.setSharePassword(input.password)),
+
+	// Regenerate the share password with a fresh random token
+	regenerateSharePassword: privateProcedure.mutation(async ({ctx}) =>
+		ctx.umbreld.files.samba.regenerateSharePassword(),
+	),
+
 	// Get shares
 	shares: privateProcedure.query(async ({ctx}) => ctx.umbreld.files.samba.listShares()),
 
