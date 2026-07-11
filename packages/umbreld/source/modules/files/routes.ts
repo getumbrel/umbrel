@@ -195,6 +195,10 @@ export default router({
 		ctx.umbreld.files.externalStorage.getExternalDevicesWithVirtualMountPoints(),
 	),
 
+	isExternalStorageSupported: publicProcedureWhenNoUserExists.query(async ({ctx}) =>
+		ctx.umbreld.files.externalStorage.supported(),
+	),
+
 	// Unmount an external device
 	unmountExternalDevice: privateProcedure
 		.input(z.object({deviceId: z.string()}))

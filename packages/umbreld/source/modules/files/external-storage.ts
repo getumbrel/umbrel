@@ -100,12 +100,10 @@ export default class ExternalStorage {
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
 	}
 
-	// Only enable this module on non raspberry pi devices.
-	// We disable on Pi due to unreliable power issues when running USB storage devices
-	// and also due to complexities with the current mount script.
+	// External storage is supported on all devices, including Raspberry Pi.
+	// Use a powered USB hub for hard drives; the UI warns about power limits on Pi.
 	async supported() {
-		const isNotRaspberryPi = !(await isRaspberryPi())
-		return isNotRaspberryPi
+		return true
 	}
 
 	// Add listener
@@ -115,6 +113,12 @@ export default class ExternalStorage {
 		if (!isEnabled) return
 
 		this.logger.log('Starting external storage')
+
+		if (await isRaspberryPi()) {
+			this.logger.log('Running UAS driver blacklist check for Raspberry Pi USB stability')
+			const blacklistUas = (await import('../blacklist-uas/blacklist-uas.js')).default
+			await blacklistUas().catch((error) => this.logger.error('UAS blacklist check failed', error))
+		}
 
 		// Safely clean up any left over mount points
 		await this.#cleanLeftOverMountPoints()
@@ -362,7 +366,23 @@ export default class ExternalStorage {
 		const systemDiskIds = await this.#getSystemDiskIds(blockDevices)
 
 		// Filter out any non-USB devices and disks that back the running system.
-		return blockDevices.filter((device) => device.transport === 'usb' && !systemDiskIds.has(device.id))
+		return blockDevices.filter(
+			(device) =>
+				device.transport === 'usb' &&
+				!systemDiskIds.has(device.id) &&
+				!this.#isUmbrelExternalDataDisk(device),
+		)
+	}
+
+	// The Pi data-disk migration script mounts the Umbrel data volume at /mnt/data.
+	#isUmbrelExternalDataDisk(device: BlockDevice) {
+		const umbrelDataMount = '/mnt/data'
+		return device.partitions.some((partition) =>
+			partition.mountpoints.some(
+				(mountpoint) =>
+					mountpoint === umbrelDataMount || mountpoint.startsWith(`${umbrelDataMount}/`),
+			),
+		)
 	}
 
 	// Get disks used by the running system so they are never treated as external storage.
