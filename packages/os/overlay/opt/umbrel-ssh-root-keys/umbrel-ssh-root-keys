@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# After OTA updates the system overlay (including /root) is replaced, while
+# /home/umbrel lives on the data partition and keeps authorized_keys.
+# Sync umbrel's SSH public keys to root on every boot so root key login survives updates.
+
+UMBREL_KEYS=${UMBREL_KEYS:-"/home/umbrel/.ssh/authorized_keys"}
+ROOT_SSH=${ROOT_SSH:-"/root/.ssh"}
+ROOT_KEYS="${ROOT_SSH}/authorized_keys"
+SSHD_DROPIN=${SSHD_DROPIN:-"/etc/ssh/sshd_config.d/99-umbrel-root-key-login.conf"}
+
+mkdir -p /etc/ssh/sshd_config.d
+cat > "${SSHD_DROPIN}" <<'EOF'
+# Managed by umbrel-ssh-root-keys — root login via SSH keys only (no password).
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+EOF
+
+if [[ ! -f "${UMBREL_KEYS}" ]] || [[ ! -s "${UMBREL_KEYS}" ]]; then
+	echo "No umbrel authorized_keys found; skipping root key sync"
+	exit 0
+fi
+
+mkdir -p "${ROOT_SSH}"
+chmod 700 "${ROOT_SSH}"
+
+tmp="$(mktemp)"
+trap 'rm -f "${tmp}"' EXIT
+
+# Prefer umbrel keys, then keep any extra root-only keys that aren't duplicates.
+grep -vE '^[[:space:]]*(#|$)' "${UMBREL_KEYS}" > "${tmp}" || true
+
+if [[ -f "${ROOT_KEYS}" ]]; then
+	while IFS= read -r line || [[ -n "${line}" ]]; do
+		[[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+		if ! grep -Fqx -- "${line}" "${tmp}"; then
+			printf '%s\n' "${line}" >> "${tmp}"
+		fi
+	done < "${ROOT_KEYS}"
+fi
+
+install -o root -g root -m 600 "${tmp}" "${ROOT_KEYS}"
+echo "Synced SSH authorized_keys from umbrel to root ($(wc -l < "${ROOT_KEYS}") key(s))"
