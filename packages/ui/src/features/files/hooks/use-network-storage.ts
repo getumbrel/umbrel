@@ -170,13 +170,16 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 		}
 	}
 
-	const {mutateAsync: startCloudAuth, isPending: isStartingCloudAuth} =
+	const {mutateAsync: startCloudAuthMutation, isPending: isStartingCloudAuth} =
 		trpcReact.files.startCloudNetworkAuth.useMutation({
 			onError: (error: RouterError) =>
 				toast.error(
 					t('files-network-storage-error.cloud-auth', {message: getFilesErrorMessage(error.message)}),
 				),
 		})
+
+	const startCloudAuth = async (provider: 'dropbox' | 'google_drive') =>
+		startCloudAuthMutation({provider})
 
 	const getCloudAuthStatus = async (sessionId: string) => {
 		try {
