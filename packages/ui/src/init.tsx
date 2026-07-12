@@ -16,10 +16,15 @@ import {monkeyPatchConsoleLog} from '@/utils/logs'
 
 monkeyPatchConsoleLog()
 
-// Disable default browser context menu
+// Disable default browser context menu, except where native paste/copy is needed
+// (e.g. the system terminal at /settings/terminal/*).
 document.addEventListener(
 	'contextmenu',
 	(event) => {
+		const target = event.target
+		if (target instanceof Element && target.closest('.xterm, [data-allow-context-menu]')) {
+			return
+		}
 		event.preventDefault()
 		return false
 	},

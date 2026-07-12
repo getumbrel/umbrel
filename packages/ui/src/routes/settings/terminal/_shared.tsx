@@ -51,6 +51,23 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 		terminalRef.current?.focus()
 	}
 
+	// Paste clipboard text into the PTY (via xterm paste → onData → websocket).
+	// Falls back to the paste input UI when Clipboard API is unavailable (HTTP / permissions).
+	const pasteFromClipboard = async (terminal: Terminal) => {
+		try {
+			const text = await navigator.clipboard.readText()
+			if (text) {
+				terminal.paste(text)
+				terminal.focus()
+				return true
+			}
+		} catch {
+			// insecure context (http://umbrel.local) or permission denied
+		}
+		setShowPasteInput(true)
+		return false
+	}
+
 	// On narrow screens (e.g., mobile), terminal may be wider than container (due to MIN_COLS).
 	// We auto-scroll horizontally to keep cursor visible as the user types, otherwise they can't see what they're typing.
 	const scrollToCursor = () => {
@@ -79,37 +96,78 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 		const fitAddon = new FitAddon()
 		terminalRef.current = terminal
 
-		if (containerRef.current) {
-			terminal.loadAddon(fitAddon)
-			terminal.open(containerRef.current)
-			terminal.focus()
-			fitAddon.fit()
-
-			// Enforce minimum cols for MOTD display on narrow screens
-			if (terminal.cols < MIN_COLS) {
-				terminal.resize(MIN_COLS, terminal.rows)
+		if (!containerRef.current) {
+			return () => {
+				terminal.dispose()
+				ws.current?.close()
 			}
-
-			// We read dimensions AFTER fit/resize so server PTY matches xterm exactly.
-			// If mismatched, the server thinks lines wrap at a different column than xterm,
-			// causing text to overwrite itself when typing past the (server's) line boundary.
-			const cols = terminal.cols
-			const rows = terminal.rows
-
-			// Build ws url
-			const path = `/terminal?appId=${appId ?? ''}&rows=${rows}&cols=${cols}&token=${localStorage.getItem('jwt')}`
-			const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
-			const port = window.location.port ? `:${window.location.port}` : ''
-			ws.current = new WebSocket(`${wsProtocol}${window.location.hostname}${port}${path}`)
-
-			ws.current.onmessage = (event) => {
-				terminal.write(event.data)
-				scrollToCursor()
-			}
-			terminal.onData((data) => ws.current?.send(data))
 		}
 
+		const containerEl = containerRef.current
+		terminal.loadAddon(fitAddon)
+		terminal.open(containerEl)
+		terminal.focus()
+		fitAddon.fit()
+
+		// Enforce minimum cols for MOTD display on narrow screens
+		if (terminal.cols < MIN_COLS) {
+			terminal.resize(MIN_COLS, terminal.rows)
+		}
+
+		// We read dimensions AFTER fit/resize so server PTY matches xterm exactly.
+		// If mismatched, the server thinks lines wrap at a different column than xterm,
+		// causing text to overwrite itself when typing past the (server's) line boundary.
+		const cols = terminal.cols
+		const rows = terminal.rows
+
+		// Build ws url
+		const path = `/terminal?appId=${appId ?? ''}&rows=${rows}&cols=${cols}&token=${localStorage.getItem('jwt')}`
+		const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+		const port = window.location.port ? `:${window.location.port}` : ''
+		ws.current = new WebSocket(`${wsProtocol}${window.location.hostname}${port}${path}`)
+
+		ws.current.onmessage = (event) => {
+			terminal.write(event.data)
+			scrollToCursor()
+		}
+		terminal.onData((data) => ws.current?.send(data))
+
+		// xterm treats Ctrl/Cmd+V as terminal input by default; return false so the
+		// browser paste event reaches the helper textarea (works over HTTP too).
+		terminal.attachCustomKeyEventHandler((event) => {
+			if (event.type !== 'keydown') return true
+			const mod = event.ctrlKey || event.metaKey
+			if (!mod || event.altKey) return true
+
+			if (event.code === 'KeyV') {
+				return false
+			}
+
+			// Copy selection with Ctrl/Cmd+C; otherwise let Ctrl+C through as SIGINT
+			if (event.code === 'KeyC' && !event.shiftKey && terminal.hasSelection()) {
+				const selection = terminal.getSelection()
+				if (selection) {
+					void navigator.clipboard.writeText(selection)
+					return false
+				}
+			}
+
+			return true
+		})
+
+		// Right-click: instant paste when Clipboard API works (HTTPS). On plain HTTP
+		// (typical umbrel.local), leave the native browser menu so Paste still works.
+		const onContextMenu = (event: MouseEvent) => {
+			event.stopPropagation()
+			if (window.isSecureContext && navigator.clipboard?.readText) {
+				event.preventDefault()
+				void pasteFromClipboard(terminal)
+			}
+		}
+		containerEl.addEventListener('contextmenu', onContextMenu)
+
 		return () => {
+			containerEl.removeEventListener('contextmenu', onContextMenu)
 			terminal.dispose()
 			ws.current?.close()
 		}
@@ -128,51 +186,48 @@ export const XTermTerminal = ({appId}: {appId?: string}) => {
 				W
 			</div>
 
-			{/* Paste button ONLY for touch devices. Without this, touch device users have no way to paste commands into the terminal. */}
-			{/* xterm renders to a canvas which doesn't receive native paste gestures, so we allow users to paste via an input */}
-			{isTouchDevice && (
-				<>
-					{showPasteInput ? (
-						<form
-							className='absolute inset-x-2 top-2 z-10 flex items-center gap-2 rounded-8 bg-neutral-900 p-2 shadow-lg'
-							onSubmit={(e) => {
-								e.preventDefault()
-								submitPasteInput()
-							}}
-						>
-							<input
-								ref={pasteInputRef}
-								type='text'
-								autoFocus
-								placeholder={t('terminal.paste-placeholder', 'Paste command here')}
-								className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white placeholder:text-white/40 focus:outline-hidden'
-							/>
-							<button
-								type='submit'
-								className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20'
-							>
-								<TbArrowRight className='h-5 w-5' />
-							</button>
-							<button
-								type='button'
-								onClick={() => {
-									setShowPasteInput(false)
-									terminalRef.current?.focus()
-								}}
-								className='shrink-0 rounded-full p-1 text-white/60 hover:bg-white/10 hover:text-white'
-							>
-								<TbX className='h-4 w-4' />
-							</button>
-						</form>
-					) : (
-						<div className='absolute top-2 right-2 z-10'>
-							<Button size='sm' className='bg-neutral-800 hover:bg-neutral-700' onClick={() => setShowPasteInput(true)}>
-								<TbClipboard className='h-4 w-4' />
-								{t('paste')}
-							</Button>
-						</div>
-					)}
-				</>
+			{/* Paste UI: button on touch devices; also shown if Clipboard API paste fails. Ctrl/Cmd+V works on desktop. */}
+			{showPasteInput ? (
+				<form
+					className='absolute inset-x-2 top-2 z-10 flex items-center gap-2 rounded-8 bg-neutral-900 p-2 shadow-lg'
+					onSubmit={(e) => {
+						e.preventDefault()
+						submitPasteInput()
+					}}
+				>
+					<input
+						ref={pasteInputRef}
+						type='text'
+						autoFocus
+						placeholder={t('terminal.paste-placeholder', 'Paste command here')}
+						className='min-w-0 flex-1 rounded-4 bg-white/10 px-2 py-2 text-13 text-white placeholder:text-white/40 focus:outline-hidden'
+					/>
+					<button
+						type='submit'
+						className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20'
+					>
+						<TbArrowRight className='h-5 w-5' />
+					</button>
+					<button
+						type='button'
+						onClick={() => {
+							setShowPasteInput(false)
+							terminalRef.current?.focus()
+						}}
+						className='shrink-0 rounded-full p-1 text-white/60 hover:bg-white/10 hover:text-white'
+					>
+						<TbX className='h-4 w-4' />
+					</button>
+				</form>
+			) : (
+				isTouchDevice && (
+					<div className='absolute top-2 right-2 z-10'>
+						<Button size='sm' className='bg-neutral-800 hover:bg-neutral-700' onClick={() => setShowPasteInput(true)}>
+							<TbClipboard className='h-4 w-4' />
+							{t('paste')}
+						</Button>
+					</div>
+				)
 			)}
 			{/* Scroll container for horizontal scrolling on narrow screens */}
 			<div ref={scrollContainerRef} className='h-full w-full overflow-x-auto overflow-y-hidden'>
