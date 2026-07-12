@@ -34,6 +34,9 @@ enum Step {
 	SelectShare = 2,
 }
 
+type NetworkShareProtocol = 'smb' | 'webdav' | 'dropbox' | 'google_drive'
+type CloudOAuthProvider = 'dropbox' | 'google_drive'
+
 // Manual mode steps
 enum ManualStep {
 	Credentials = 0,
@@ -65,6 +68,16 @@ export default function AddNetworkShareDialog(props?: {
 	const submitSchema = stepSchema.extend({
 		share: z.string().min(1, {message: t('files-add-network-share.share-required')}),
 	})
+	const webdavSchema = z.object({
+		url: z.string().min(1, {message: t('files-add-network-share.webdav-url-required')}),
+		username: z.string().min(1, {message: t('files-add-network-share.username-required')}),
+		password: z.string().min(1, {message: t('files-add-network-share.password-required')}),
+		label: z.string().optional(),
+		vendor: z.enum(['other', 'nextcloud']).optional(),
+	})
+	const cloudSchema = z.object({
+		label: z.string().optional(),
+	})
 
 	const internalDialog = useDialogOpenProps('files-add-network-share')
 	const dialogProps = {
@@ -74,6 +87,7 @@ export default function AddNetworkShareDialog(props?: {
 	const isMobile = useIsMobile()
 
 	// wizard vs manual entry
+	const [protocol, setProtocol] = useState<NetworkShareProtocol>('smb')
 	const [mode, setMode] = useState<'wizard' | 'manual'>('wizard')
 	const [step, setStep] = useState<Step>(Step.Discover)
 	const [manualStep, setManualStep] = useState<ManualStep>(ManualStep.Credentials)
@@ -85,7 +99,22 @@ export default function AddNetworkShareDialog(props?: {
 		defaultValues: {host: '', share: '', username: '', password: ''},
 		mode: 'onChange',
 	})
+	const webdavForm = useForm({
+		resolver: zodResolver(webdavSchema),
+		defaultValues: {url: '', username: '', password: '', label: '', vendor: 'other' as const},
+		mode: 'onChange',
+	})
+	const cloudForm = useForm({
+		resolver: zodResolver(cloudSchema),
+		defaultValues: {label: ''},
+		mode: 'onChange',
+	})
 	const {host, share, username, password} = form.watch()
+	const webdavValues = webdavForm.watch()
+
+	const [cloudSessionId, setCloudSessionId] = useState<string | null>(null)
+	const [cloudAuthUrl, setCloudAuthUrl] = useState<string | null>(null)
+	const [cloudAuthStatus, setCloudAuthStatus] = useState<'idle' | 'pending' | 'complete' | 'failed'>('idle')
 
 	// main network storage hook
 	const {
@@ -95,6 +124,9 @@ export default function AddNetworkShareDialog(props?: {
 		addShare,
 		isAddingShare,
 		discoverSharesOnServer,
+		startCloudAuth,
+		isStartingCloudAuth,
+		getCloudAuthStatus,
 	} = useNetworkStorage({suppressNavigateOnAdd: props?.suppressNavigateOnAdd})
 
 	// Share discovery (imperative) so we let the hook show error toast
@@ -135,13 +167,46 @@ export default function AddNetworkShareDialog(props?: {
 		}
 	}, [step, manualStep, mode, host, username, password])
 
+	const resetCloudAuth = () => {
+		setCloudSessionId(null)
+		setCloudAuthUrl(null)
+		setCloudAuthStatus('idle')
+	}
+
+	useEffect(() => {
+		if (!cloudSessionId || cloudAuthStatus !== 'pending') return
+
+		let cancelled = false
+		const poll = async () => {
+			try {
+				const status = await getCloudAuthStatus(cloudSessionId)
+				if (cancelled) return
+				if (status.status === 'complete') setCloudAuthStatus('complete')
+			} catch {
+				if (!cancelled) setCloudAuthStatus('failed')
+			}
+		}
+
+		const interval = setInterval(poll, 2000)
+		poll()
+
+		return () => {
+			cancelled = true
+			clearInterval(interval)
+		}
+	}, [cloudSessionId, cloudAuthStatus, getCloudAuthStatus])
+
 	// form handlers
 	const resetAll = () => {
+		setProtocol('smb')
 		setMode('wizard')
 		setStep(Step.Discover)
 		setManualStep(ManualStep.Credentials)
 		setSelectedHostWizard('')
 		form.reset()
+		webdavForm.reset()
+		cloudForm.reset()
+		resetCloudAuth()
 		discoverServers()
 	}
 
@@ -169,13 +234,73 @@ export default function AddNetworkShareDialog(props?: {
 		setManualStep((s) => Math.max(s - 1, ManualStep.Credentials))
 	}
 
+	const handleWebdavSubmit = async () => {
+		const parsed = webdavSchema.safeParse(webdavForm.getValues())
+		if (!parsed.success) return
+
+		try {
+			const mountPath = await addShare({
+				protocol: 'webdav',
+				url: parsed.data.url.trim(),
+				username: parsed.data.username,
+				password: parsed.data.password,
+				label: parsed.data.label?.trim() || undefined,
+				vendor: parsed.data.vendor,
+			})
+			const host = mountPath.split('/')[2]
+			props?.onAdded?.(host)
+			dialogProps.onOpenChange(false)
+		} catch {
+			// the network storage hook handles toast
+		}
+	}
+
+	const handleCloudConnect = async () => {
+		if (protocol !== 'dropbox' && protocol !== 'google_drive') return
+
+		try {
+			const {sessionId, authUrl} = await startCloudAuth(protocol)
+			setCloudSessionId(sessionId)
+			setCloudAuthUrl(authUrl)
+			setCloudAuthStatus('pending')
+		} catch {
+			setCloudAuthStatus('failed')
+		}
+	}
+
+	const handleCloudSubmit = async () => {
+		if (protocol !== 'dropbox' && protocol !== 'google_drive' || !cloudSessionId) return
+
+		const parsed = cloudSchema.safeParse(cloudForm.getValues())
+		if (!parsed.success) return
+
+		try {
+			const mountPath = await addShare({
+				protocol,
+				sessionId: cloudSessionId,
+				label: parsed.data.label?.trim() || undefined,
+			})
+			const host = mountPath.split('/')[2]
+			props?.onAdded?.(host)
+			dialogProps.onOpenChange(false)
+		} catch {
+			// the network storage hook handles toast
+		}
+	}
+
 	const handleSubmit = async () => {
 		// Validate with the final schema before submitting
 		const parsed = submitSchema.safeParse(form.getValues())
 		if (!parsed.success) return
 
 		try {
-			const mountPath = await addShare(parsed.data)
+			const mountPath = await addShare({
+				protocol: 'smb',
+				host: parsed.data.host,
+				share: parsed.data.share!,
+				username: parsed.data.username,
+				password: parsed.data.password,
+			})
 			// Extract host from the returned mountPath (e.g., "/Network/<host>/<share>")
 			const host = mountPath.split('/')[2]
 			// Notify parent flows so they can auto-select this NAS and advance
@@ -189,7 +314,45 @@ export default function AddNetworkShareDialog(props?: {
 	// footer buttons
 	let footer: React.ReactNode = null
 
-	if (mode === 'wizard') {
+	const isCloudProtocol = protocol === 'dropbox' || protocol === 'google_drive'
+
+	if (isCloudProtocol) {
+		footer = (
+			<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+				{cloudAuthStatus !== 'complete' ? (
+					<Button
+						variant='primary'
+						size='dialog'
+						disabled={isStartingCloudAuth || cloudAuthStatus === 'pending'}
+						onClick={handleCloudConnect}
+					>
+						{isStartingCloudAuth || cloudAuthStatus === 'pending' ? (
+							<Loader2 className='h-4 w-4 animate-spin' />
+						) : (
+							t('files-add-network-share.cloud-connect')
+						)}
+					</Button>
+				) : (
+					<Button variant='primary' size='dialog' disabled={isAddingShare} onClick={handleCloudSubmit}>
+						{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+					</Button>
+				)}
+			</DialogFooter>
+		)
+	} else if (protocol === 'webdav') {
+		footer = (
+			<DialogFooter className={`gap-2 pt-4 ${isMobile ? 'flex-col-reverse' : ''}`}>
+				<Button
+					variant='primary'
+					size='dialog'
+					disabled={!(webdavValues.url && webdavValues.username && webdavValues.password) || isAddingShare}
+					onClick={handleWebdavSubmit}
+				>
+					{isAddingShare ? <Loader2 className='h-4 w-4 animate-spin' /> : t('files-add-network-share.add-share')}
+				</Button>
+			</DialogFooter>
+		)
+	} else if (mode === 'wizard') {
 		switch (step) {
 			// Discover step
 			case Step.Discover:
@@ -273,22 +436,77 @@ export default function AddNetworkShareDialog(props?: {
 			{isMobile ? (
 				<DrawerHeader>
 					<DrawerTitle>{t('files-add-network-share.title')}</DrawerTitle>
-					<DrawerDescription>{t('files-add-network-share.description')}</DrawerDescription>
+					<DrawerDescription>
+						{isCloudProtocol
+							? t('files-add-network-share.cloud-description')
+							: protocol === 'webdav'
+								? t('files-add-network-share.webdav-description')
+								: t('files-add-network-share.description')}
+					</DrawerDescription>
 				</DrawerHeader>
 			) : (
 				<DialogHeader>
 					<DialogTitle>{t('files-add-network-share.title')}</DialogTitle>
-					{/* TODO: consider adding a note to the description that mentions backups and a link to the relevant Settings element */}
-					<DialogDescription>{t('files-add-network-share.description')}</DialogDescription>
+					<DialogDescription>
+						{isCloudProtocol
+							? t('files-add-network-share.cloud-description')
+							: protocol === 'webdav'
+								? t('files-add-network-share.webdav-description')
+								: t('files-add-network-share.description')}
+					</DialogDescription>
 				</DialogHeader>
 			)}
 		</>
 	)
 
+	const protocolToggle = (
+		<div className='space-y-2 pb-2'>
+			<p className='text-13 text-white/60'>{t('files-add-network-share.protocol-label')}</p>
+			<div className='grid grid-cols-2 gap-2'>
+				{(['smb', 'webdav', 'dropbox', 'google_drive'] as const).map((value) => (
+					<Button
+						key={value}
+						type='button'
+						size='dialog'
+						variant={protocol === value ? 'primary' : 'default'}
+						onClick={() => {
+							setProtocol(value)
+							form.clearErrors()
+							webdavForm.clearErrors()
+							cloudForm.clearErrors()
+							resetCloudAuth()
+						}}
+					>
+						{value === 'smb'
+							? t('files-add-network-share.protocol-smb')
+							: value === 'webdav'
+								? t('files-add-network-share.protocol-webdav')
+								: value === 'dropbox'
+									? t('files-add-network-share.protocol-dropbox')
+									: t('files-add-network-share.protocol-google-drive')}
+					</Button>
+				))}
+			</div>
+		</div>
+	)
+
 	const body = (
 		<div className='flex-1 overflow-x-hidden overflow-y-auto'>
+			{protocolToggle}
 			<AnimatePresence mode='wait'>
-				{mode === 'wizard' ? (
+				{isCloudProtocol ? (
+					<Form {...cloudForm}>
+						<CloudCredentialsStep
+							provider={protocol}
+							authUrl={cloudAuthUrl}
+							authStatus={cloudAuthStatus}
+						/>
+					</Form>
+				) : protocol === 'webdav' ? (
+					<Form {...webdavForm}>
+						<WebdavCredentialsStep />
+					</Form>
+				) : mode === 'wizard' ? (
 					<Form {...form}>
 						{/* Discover */}
 						{step === Step.Discover && (
@@ -423,6 +641,171 @@ export default function AddNetworkShareDialog(props?: {
 /* ------------------------------------------------------------------ */
 /* Step components (without footer)                                   */
 /* ------------------------------------------------------------------ */
+function CloudCredentialsStep({
+	provider,
+	authUrl,
+	authStatus,
+}: {
+	provider: CloudOAuthProvider
+	authUrl: string | null
+	authStatus: 'idle' | 'pending' | 'complete' | 'failed'
+}) {
+	const {t} = useTranslation()
+	const form = useFormContext()
+
+	const authPort = (() => {
+		if (!authUrl) return '53682'
+		try {
+			return new URL(authUrl).port || '53682'
+		} catch {
+			return '53682'
+		}
+	})()
+
+	return (
+		<div className='space-y-4 py-2'>
+			<FormField
+				control={form.control}
+				name='label'
+				render={({field}) => (
+					<FormItem>
+						<FormLabel className='text-13 text-white/60'>
+							{t('files-add-network-share.cloud-label-label')}
+						</FormLabel>
+						<FormControl>
+							<Input
+								type='text'
+								placeholder={t('files-add-network-share.cloud-label-placeholder')}
+								{...field}
+							/>
+						</FormControl>
+					</FormItem>
+				)}
+			/>
+
+			{authStatus === 'idle' && (
+				<p className='text-sm text-white/60'>{t('files-add-network-share.cloud-auth-instructions')}</p>
+			)}
+
+			{authUrl && authStatus === 'pending' && (
+				<div className='space-y-3 rounded-12 bg-white/6 p-4'>
+					<p className='text-sm text-white/80'>{t('files-add-network-share.cloud-open-auth-url')}</p>
+					<a
+						href={authUrl}
+						target='_blank'
+						rel='noopener noreferrer'
+						className='break-all text-sm text-brand-lightest underline'
+					>
+						{authUrl}
+					</a>
+					<p className='text-xs text-white/50'>
+						{t('files-add-network-share.cloud-ssh-tunnel-hint', {port: authPort})}
+					</p>
+					<div className='flex items-center gap-2 text-sm text-white/60'>
+						<Loader2 className='h-4 w-4 animate-spin' />
+						{t('files-add-network-share.cloud-connecting')}
+					</div>
+				</div>
+			)}
+
+			{authStatus === 'failed' && (
+				<p className='text-sm text-red-400'>{t('files-backend-error.cloud-auth-failed')}</p>
+			)}
+
+			{authStatus === 'complete' && (
+				<p className='text-sm text-brand-lightest'>
+					{t('files-add-network-share.cloud-connected', {
+						provider:
+							provider === 'dropbox'
+								? t('files-add-network-share.protocol-dropbox')
+								: t('files-add-network-share.protocol-google-drive'),
+					})}
+				</p>
+			)}
+		</div>
+	)
+}
+
+function WebdavCredentialsStep() {
+	const {t} = useTranslation()
+	const form = useFormContext()
+	const vendor = form.watch('vendor') ?? 'other'
+	const url = form.watch('url')
+
+	useEffect(() => {
+		if (!url) return
+		try {
+			const normalized = url.toLowerCase()
+			if (normalized.includes('nextcloud') || normalized.includes('/remote.php/dav')) {
+				form.setValue('vendor', 'nextcloud')
+			}
+		} catch {
+			// ignore invalid URLs while typing
+		}
+	}, [url, form])
+
+	return (
+		<div className='space-y-4 py-2'>
+			<div className='space-y-2'>
+				<p className='text-13 text-white/60'>{t('files-add-network-share.webdav-vendor-label')}</p>
+				<div className='grid grid-cols-2 gap-2'>
+					{(['other', 'nextcloud'] as const).map((value) => (
+						<Button
+							key={value}
+							type='button'
+							size='dialog'
+							variant={vendor === value ? 'primary' : 'default'}
+							onClick={() => form.setValue('vendor', value)}
+						>
+							{value === 'nextcloud'
+								? t('files-add-network-share.webdav-vendor-nextcloud')
+								: t('files-add-network-share.webdav-vendor-other')}
+						</Button>
+					))}
+				</div>
+			</div>
+
+			{(['url', 'username', 'password', 'label'] as const).map((field) => {
+				const labels = {
+					url: t('files-add-network-share.webdav-url-label'),
+					username: t('files-add-network-share.username-label'),
+					password: t('files-add-network-share.password-label'),
+					label: t('files-add-network-share.webdav-label-label'),
+				}
+				const placeholders = {
+					url: t('files-add-network-share.webdav-url-placeholder'),
+					username: t('files-add-network-share.username-placeholder'),
+					password: '',
+					label: t('files-add-network-share.webdav-label-placeholder'),
+				}
+
+				return (
+					<FormField
+						key={field}
+						control={form.control}
+						name={field}
+						render={({field: f}) => (
+							<FormItem>
+								<FormLabel className='text-13 text-white/60'>{labels[field]}</FormLabel>
+								<FormControl>
+									{field === 'password' ? (
+										<PasswordInput value={f.value} onValueChange={f.onChange} />
+									) : (
+										<Input type='text' placeholder={placeholders[field]} {...f} />
+									)}
+								</FormControl>
+								<div className='relative'>
+									<FormMessage className='absolute -top-1 left-0 text-xs' />
+								</div>
+							</FormItem>
+						)}
+					/>
+				)
+			})}
+		</div>
+	)
+}
+
 function DiscoverStep({
 	servers,
 	isLoading,

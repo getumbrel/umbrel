@@ -222,17 +222,55 @@ export default router({
 		ctx.umbreld.files.networkStorage.getShareInfo(),
 	),
 
-	// Add a network share
+	// Add a network share (SMB/CIFS, WebDAV, Dropbox, or Google Drive)
 	addNetworkShare: publicProcedureWhenNoUserExists
 		.input(
-			z.object({
-				host: z.string(),
-				share: z.string(),
-				username: z.string(),
-				password: z.string(),
-			}),
+			z.union([
+				z.object({
+					protocol: z.literal('webdav'),
+					url: z.string(),
+					username: z.string(),
+					password: z.string(),
+					label: z.string().optional(),
+					vendor: z.enum(['other', 'nextcloud']).optional(),
+				}),
+				z.object({
+					protocol: z.enum(['dropbox', 'google_drive']),
+					label: z.string().optional(),
+					sessionId: z.string(),
+				}),
+				z.object({
+					protocol: z.literal('smb').optional(),
+					host: z.string(),
+					share: z.string(),
+					username: z.string(),
+					password: z.string(),
+				}),
+			]),
 		)
-		.mutation(async ({ctx, input}) => ctx.umbreld.files.networkStorage.addShare(input)),
+		.mutation(async ({ctx, input}) => {
+			if (input.protocol === 'webdav') return ctx.umbreld.files.networkStorage.addShare(input)
+			if (input.protocol === 'dropbox' || input.protocol === 'google_drive') {
+				return ctx.umbreld.files.networkStorage.addShare(input)
+			}
+			return ctx.umbreld.files.networkStorage.addShare({
+				protocol: 'smb',
+				host: input.host,
+				share: input.share,
+				username: input.username,
+				password: input.password,
+			})
+		}),
+
+	// Start OAuth for Dropbox or Google Drive (rclone authorize)
+	startCloudNetworkAuth: publicProcedureWhenNoUserExists
+		.input(z.object({provider: z.enum(['dropbox', 'google_drive'])}))
+		.mutation(async ({ctx, input}) => ctx.umbreld.files.networkStorage.startCloudAuth(input.provider)),
+
+	// Poll OAuth session status for cloud network storage
+	getCloudNetworkAuthStatus: publicProcedureWhenNoUserExists
+		.input(z.object({sessionId: z.string()}))
+		.query(async ({ctx, input}) => ctx.umbreld.files.networkStorage.getCloudAuthStatus(input.sessionId)),
 
 	// Remove a network share
 	removeNetworkShare: privateProcedure

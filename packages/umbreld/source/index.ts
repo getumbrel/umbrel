@@ -83,11 +83,15 @@ type StoreSchema = {
 			path: string
 		}[]
 		networkStorage: {
+			protocol?: 'smb' | 'webdav' | 'dropbox' | 'google_drive'
 			host: string
 			share: string
 			username: string
 			password: string
 			mountPath: string
+			url?: string
+			vendor?: 'other' | 'nextcloud'
+			token?: string
 		}[]
 	}
 	notifications: string[]

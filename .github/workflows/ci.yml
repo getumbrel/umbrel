@@ -198,6 +198,9 @@ jobs:
       - run: npm run dev rebuild
       - run: npm run dev start
       - run: npm run --prefix packages/umbreld test:umbrel-dev:prepare
+      - name: Install WebDAV test dependencies
+        if: contains(matrix.test.path, 'network-storage-webdav')
+        run: npm run dev exec:noninteractive -- bash -c 'apt-get update && apt-get install -y rclone fuse3'
       - run: npm run --prefix packages/umbreld test:umbrel-dev ${{ matrix.test.path }}
 
   # Run umbreld checks
