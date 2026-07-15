@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {ScrollArea} from '@/components/ui/scroll-area'
 import {cn} from '@/lib/utils'
+import {getAppStoreLink} from '@/modules/app-store/utils'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {AppState, installedStates, RegistryApp} from '@/trpc/trpc'
@@ -184,6 +185,7 @@ export function SelectDependencies({
 							</span>
 							<DependencyStateText
 								appId={app.id}
+								app={app}
 								appState={userAppsKeyed?.[app.id]?.state ?? 'not-installed'}
 								onClick={onInstallClick}
 							/>
@@ -205,6 +207,7 @@ export function SelectDependencies({
 						/>
 						<DependencyStateText
 							appId={selectedDependencies[dependencyId]}
+							app={appsKeyed[selectedDependencies[dependencyId]]}
 							appState={userAppsKeyed?.[selectedDependencies[dependencyId]]?.state ?? 'not-installed'}
 							onClick={onInstallClick}
 						/>
@@ -219,7 +222,17 @@ const listClass = tw`divide-y divide-white/6 overflow-hidden rounded-12 bg-white
 const listItemClass = tw`flex items-center pl-3 pr-4 h-[50px] text-[14px] font-medium -tracking-3 justify-between`
 const listItemClassWithDropdown = tw`flex items-center pl-3 pr-4 h-[60px] text-[14px] font-medium -tracking-3 justify-between`
 
-function DependencyStateText({appId, appState, onClick}: {appId: string; appState: AppState; onClick?: () => void}) {
+function DependencyStateText({
+	appId,
+	app,
+	appState,
+	onClick,
+}: {
+	appId: string
+	app?: RegistryApp
+	appState: AppState
+	onClick?: () => void
+}) {
 	const {t} = useTranslation()
 	const buttonClass = 'w-[70px]' // Fixed width for both buttons
 
@@ -233,9 +246,11 @@ function DependencyStateText({appId, appState, onClick}: {appId: string; appStat
 
 	if (appState === 'not-installed') {
 		return (
-			// TODO: link to community app store if needed using `getAppStoreAppFromInstalledApp`
 			<ButtonLink
-				to={`/app-store/${appId}`}
+				// Fall back to the official app store route if the app is no longer
+				// present in any store, for example because a community app store
+				// has been removed
+				to={app ? getAppStoreLink(app) : `/app-store/${appId}`}
 				state={{fromAppStore: true}}
 				onClick={onClick}
 				variant='primary'

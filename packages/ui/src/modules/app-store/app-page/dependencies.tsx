@@ -7,6 +7,7 @@ import {arrayIncludes} from 'ts-extras'
 import {AppIcon} from '@/components/app-icon'
 import {Loading} from '@/components/ui/loading'
 import {cn} from '@/lib/utils'
+import {getAppStoreLink} from '@/modules/app-store/utils'
 import {useApps} from '@/providers/apps'
 import {useAllAvailableApps} from '@/providers/available-apps'
 import {installedStates, RegistryApp} from '@/trpc/trpc'
@@ -69,13 +70,14 @@ const Dependency = ({
 	showDependencies?: (dependencyId?: string) => void
 }) => {
 	const {t} = useTranslation()
+	const storeLink = getAppStoreLink(app)
 	return (
 		<div className='flex w-full items-center gap-2.5 pl-2'>
-			<Link to={`/app-store/${app.id}`} state={{fromAppStore: true}}>
+			<Link to={storeLink} state={{fromAppStore: true}}>
 				<AppIcon src={app.icon} size={36} className='rounded-8' />
 			</Link>
 			<div className='flex-col gap-4'>
-				<Link to={`/app-store/${app.id}`} state={{fromAppStore: true}} className='flex gap-1.5'>
+				<Link to={storeLink} state={{fromAppStore: true}} className='flex gap-1.5'>
 					<h3 className='truncate text-14 leading-tight font-semibold -tracking-3'>{app.name}</h3>
 					{installed && <TbCircleCheckFilled className='h-[16px] w-[16px] text-slate-500' />}
 				</Link>

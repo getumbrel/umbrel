@@ -1,7 +1,7 @@
 import {RegistryApp} from '@/trpc/trpc'
 import {preloadImage} from '@/utils/misc'
 
-import {categoryDescriptionsKeyed, categoryishDescriptions, type Categoryish} from './constants'
+import {categoryDescriptionsKeyed, categoryishDescriptions, UMBREL_APP_STORE_ID, type Categoryish} from './constants'
 
 const alreadyPreloadedFirstFewGalleryImages = new Set<string>()
 
@@ -9,6 +9,15 @@ export function preloadFirstFewGalleryImages(app: RegistryApp) {
 	if (alreadyPreloadedFirstFewGalleryImages.has(app.id)) return
 	alreadyPreloadedFirstFewGalleryImages.add(app.id)
 	app.gallery.slice(0, 3).map(preloadImage)
+}
+
+// Returns the store page path for an app, linking community store apps to
+// their community app store instead of the official Umbrel App Store
+export function getAppStoreLink(app: Pick<RegistryApp, 'id' | 'appStoreId'>): string {
+	if (app.appStoreId && app.appStoreId !== UMBREL_APP_STORE_ID) {
+		return `/community-app-store/${app.appStoreId}/${app.id}`
+	}
+	return `/app-store/${app.id}`
 }
 
 export function getCategoryLabel(categoryId: string): string {
