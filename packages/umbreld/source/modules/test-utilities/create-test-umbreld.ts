@@ -190,6 +190,7 @@ export default async function createTestUmbreld({autoLogin = false, autoStart = 
 
 	return {
 		instance: umbreld,
+		gitServer,
 		client,
 		unauthenticatedClient,
 		api,

@@ -7,10 +7,17 @@ import pRetry from 'p-retry'
 import semver from 'semver'
 
 import randomToken from '../../modules/utilities/random-token.js'
+import {
+	imageHasNoTags,
+	imageRepository,
+	listContainerImageIds,
+	listImages,
+	resolveImageIds,
+} from '../../modules/utilities/docker-images.js'
 import type Umbreld from '../../index.js'
 import appEnvironment from './legacy-compat/app-environment.js'
 import type {AppSettings} from './schema.js'
-import App, {readManifestInDirectory} from './app.js'
+import App, {readManifestInDirectory, readSystemImages} from './app.js'
 import type {AppManifest} from './schema.js'
 import {fillSelectedDependencies} from '../utilities/dependencies.js'
 
@@ -49,6 +56,48 @@ export default class Apps {
 			await $({stdio: 'inherit'})`docker network prune -f`
 		} catch (error) {
 			this.logger.error(`Failed to clean networks`, error)
+		}
+	}
+
+	// Lists the image references in the compose files of all installed apps
+	async getInstalledAppImages() {
+		const images = await Promise.all(this.instances.map((app) => app.readComposeImages()))
+		return images.flat()
+	}
+
+	// Cleans up orphaned images left behind by app updates. Once an image loses its
+	// tags it can no longer be identified by the old image cleanup in App.update()
+	// so we sweep orphans on boot. We only remove images that were pulled from a
+	// registry (they have a repo digest but no tags), come from a repository of an
+	// installed app or system container, aren't used by any container in any state
+	// and aren't currently referenced by any installed app. We remove specific
+	// image ids instead of running a global `docker image prune` so we can never
+	// touch images the user has built, tagged or pulled themselves. If we can't
+	// read the compose file of an installed app we abort the entire sweep since we
+	// can no longer know which images are safe to remove.
+	async cleanOrphanedImages() {
+		const images = await listImages()
+		const orphanCandidates = images.filter((image) => image.repoTags === 0 && image.repoDigests.length > 0)
+		if (orphanCandidates.length === 0) return
+
+		const protectedImages = [...(await this.getInstalledAppImages()), ...(await readSystemImages())]
+		const imageIdsInUse = await resolveImageIds(protectedImages)
+		const containerImageIds = await listContainerImageIds()
+		const managedRepositories = new Set(protectedImages.map(imageRepository))
+
+		const removableImageIds = orphanCandidates
+			.filter((image) => image.repoDigests.some((repoDigest) => managedRepositories.has(imageRepository(repoDigest))))
+			.map((image) => image.id)
+			.filter((imageId) => !containerImageIds.has(imageId) && !imageIdsInUse.has(imageId))
+
+		for (const imageId of removableImageIds) {
+			// Re-check the image is still untagged right before removal in case it
+			// was tagged while we were sweeping
+			if (!(await imageHasNoTags(imageId))) continue
+			this.logger.log(`Removing orphaned image ${imageId}`)
+			await $({stdio: 'inherit'})`docker rmi ${imageId}`.catch((error) =>
+				this.logger.error(`Failed to remove orphaned image ${imageId}`, error),
+			)
 		}
 	}
 
@@ -202,6 +251,14 @@ export default class Apps {
 
 		// Wait for current installed apps to finish starting
 		await startAppsPromise
+
+		// Clean up orphaned images in the background. This must run after the app
+		// instances have been created so installed apps' images are protected, and
+		// after the app environment is up so system containers exist again. Skip
+		// this in dev mode so we never sweep images on a development Docker host.
+		if (!this.#umbreld.developmentMode) {
+			this.cleanOrphanedImages().catch((error) => this.logger.error('Failed to clean orphaned images', error))
+		}
 	}
 
 	private async reinstallMissingAppsAfterRestore(appIds: string[]) {
