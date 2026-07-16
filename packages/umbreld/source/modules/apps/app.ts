@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import nodePath from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
@@ -11,6 +12,7 @@ import pRetry from 'p-retry'
 
 import getDirectorySize from '../utilities/get-directory-size.js'
 import {pullAll} from '../utilities/docker-pull.js'
+import {imageHasNoTags, resolveImageIds} from '../utilities/docker-images.js'
 import FileStore from '../utilities/file-store.js'
 import {fillSelectedDependencies} from '../utilities/dependencies.js'
 import type Umbreld from '../../index.js'
@@ -28,6 +30,29 @@ async function writeYaml(path: string, data: any) {
 export async function readManifestInDirectory(dataDirectory: string) {
 	const parseYaml = readYaml(`${dataDirectory}/umbrel-app.yml`)
 	return parseYaml.then(validateManifest)
+}
+
+// Default system images used by all apps that aren't listed in app compose files
+export const defaultImages = [
+	'getumbrel/app-proxy:1.7.0@sha256:ec0de0b944a2e63d52fdd82b3760d90a35f8b442d17a8407afdee3af3e842d5a',
+	'ghcr.io/getumbrel/tor:0.4.9.11@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a',
+]
+
+// Lists the image references of the app environment system containers (like
+// auth-server) alongside the default images. We read them from the legacy compat
+// compose files at runtime so they can't drift out of sync with what actually
+// runs. These images must always be protected from image cleanup.
+export async function readSystemImages() {
+	const currentDirname = nodePath.dirname(fileURLToPath(import.meta.url))
+	const composeFiles = ['docker-compose.yml', 'docker-compose.app_proxy.yml', 'docker-compose.tor.yml']
+	const images = new Set<string>(defaultImages)
+	for (const composeFile of composeFiles) {
+		const compose = (await readYaml(nodePath.join(currentDirname, 'legacy-compat', composeFile))) as Compose
+		for (const service of Object.values(compose.services ?? {})) {
+			if (service.image) images.add(service.image)
+		}
+	}
+	return [...images]
 }
 
 type AppState =
@@ -74,6 +99,13 @@ export default class App {
 
 	readCompose() {
 		return readYaml(`${this.dataDirectory}/docker-compose.yml`) as Promise<Compose>
+	}
+
+	async readComposeImages() {
+		const compose = await this.readCompose()
+		return Object.values(compose.services!)
+			.map((service) => service.image)
+			.filter(Boolean) as string[]
 	}
 
 	async readHiddenService() {
@@ -138,14 +170,7 @@ export default class App {
 	}
 
 	async pull() {
-		const defaultImages = [
-			'getumbrel/app-proxy:1.7.0@sha256:ec0de0b944a2e63d52fdd82b3760d90a35f8b442d17a8407afdee3af3e842d5a',
-			'ghcr.io/getumbrel/tor:0.4.9.11@sha256:e382b8629c0dfef6ceb396b062622d4e4e955b19d6f16b883fd2c0723ad5671a',
-		]
-		const compose = await this.readCompose()
-		const images = Object.values(compose.services!)
-			.map((service) => service.image)
-			.filter(Boolean) as string[]
+		const images = await this.readComposeImages()
 		await pullAll([...defaultImages, ...images], (progress) => {
 			this.stateProgress = Math.max(1, progress * 99)
 			this.logger.log(`Downloaded ${this.stateProgress}% of app ${this.id}`)
@@ -183,11 +208,11 @@ export default class App {
 
 		this.logger.log(`Updating app ${this.id}`)
 
-		// Get a reference to the old images
-		const compose = await this.readCompose()
-		const oldImages = Object.values(compose.services!)
-			.map((service) => service.image)
-			.filter(Boolean) as string[]
+		// Resolve the old images to image ids before we pull. Mutable references
+		// like `repo:tag` resolve to the new image after the pull which leaves the
+		// old image behind as an untagged orphan we can no longer identify.
+		const oldImages = await this.readComposeImages()
+		const oldImageIds = await resolveImageIds(oldImages)
 
 		// Update the app, patching the compose file half way through
 		await appScript(this.#umbreld, 'pre-patch-update', this.id)
@@ -195,11 +220,42 @@ export default class App {
 		await this.pull()
 		await appScript(this.#umbreld, 'post-patch-update', this.id)
 
-		// Delete the old images if we can. Silently fail on error cos docker
-		// will return an error even if only one image is still needed.
+		// Delete any old images that are no longer needed, skipping images that are
+		// still used by the updated app or any other installed app since apps can
+		// share images. Failures are logged but tolerated, cleanup should never fail
+		// an otherwise successful update.
 		try {
-			await $({stdio: 'inherit'})`docker rmi ${oldImages}`
-		} catch {}
+			const imagesInUse = [...(await this.#umbreld.apps.getInstalledAppImages()), ...(await readSystemImages())]
+			const imageIdsInUse = await resolveImageIds(imagesInUse)
+			const removableImageIds = new Set([...oldImageIds].filter((imageId) => !imageIdsInUse.has(imageId)))
+
+			// First remove the old compose references. This removes exactly the
+			// references the app owned and leaves any other references to the same
+			// image, like tags the user created themselves, alone.
+			for (const imageReference of oldImages) {
+				const [imageId] = await resolveImageIds([imageReference])
+				if (!imageId || !removableImageIds.has(imageId)) continue
+				this.logger.log(`Removing old image ${imageReference} of app ${this.id}`)
+				await $({stdio: 'inherit'})`docker rmi ${imageReference}`.catch((error) =>
+					this.logger.error(`Failed to remove old image ${imageReference} of app ${this.id}`, error),
+				)
+			}
+
+			// Mutable references like `repo:tag` resolve to the new image after the
+			// pull, leaving the old image behind untagged where the reference removal
+			// above can no longer identify it. Remove those by image id. We skip
+			// images that still have tags so we never remove an image the user has
+			// tagged themselves.
+			for (const imageId of removableImageIds) {
+				if (!(await imageHasNoTags(imageId))) continue
+				this.logger.log(`Removing old image ${imageId} of app ${this.id}`)
+				await $({stdio: 'inherit'})`docker rmi ${imageId}`.catch((error) =>
+					this.logger.error(`Failed to remove old image ${imageId} of app ${this.id}`, error),
+				)
+			}
+		} catch (error) {
+			this.logger.error(`Failed to clean up old images of app ${this.id}`, error)
+		}
 
 		this.state = 'ready'
 		this.stateProgress = 0

@@ -3,6 +3,7 @@ import path from 'node:path'
 import {expect, beforeAll, afterAll, test, vi} from 'vitest'
 import fse from 'fs-extra'
 import yaml from 'js-yaml'
+import {$} from 'execa'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
@@ -255,6 +256,100 @@ test.sequential('restart() restarts an installed app', async () => {
 test.sequential('update() updates an installed app', async () => {
 	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
 	// TODO: Check this actually worked
+})
+
+test.sequential('update() removes the old image when a mutable reference is re-pointed', async () => {
+	// Simulate a stale local image for the app's mutable image reference by pointing
+	// the tag at a different image, like the state after the tag has been re-pushed
+	// upstream. Before the update the tag resolves to the stale image, after the
+	// update's pull it resolves to the new image which previously orphaned the stale
+	// image as an untagged leak.
+	const app = umbreld.instance.apps.getApp('sparkles-hello-world')
+	const [imageReference] = await app.readComposeImages()
+	await $`docker pull busybox:1.36.0`
+	await $`docker tag busybox:1.36.0 ${imageReference}`
+	const {stdout: staleImageId} = await $`docker image inspect --format {{.Id}} ${imageReference}`
+	await $`docker rmi busybox:1.36.0`
+
+	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// The stale image should have been removed and the app's real image should remain
+	await expect($`docker image inspect ${staleImageId}`).rejects.toThrow()
+	const {stdout: currentImageId} = await $`docker image inspect --format {{.Id}} ${imageReference}`
+	expect(currentImageId).not.toBe(staleImageId)
+})
+
+test.sequential('update() applies a new app version from the app store', async () => {
+	// Add a busybox sidecar service to the app's compose file in the app store and
+	// bump the version, like a real app update. Note the app store repo umbreld
+	// installs from is the git server created by createTestUmbreld, not the
+	// separate community app store git server used by other tests.
+	const appDirectory = path.join(umbreld.gitServer.directory, 'sparkles-hello-world')
+	const manifestPath = path.join(appDirectory, 'umbrel-app.yml')
+	const manifest = yaml.load(await fse.readFile(manifestPath, 'utf8')) as AppManifest
+	manifest.version = '1.0.1'
+	await fse.writeFile(manifestPath, yaml.dump(manifest))
+	const composePath = path.join(appDirectory, 'docker-compose.yml')
+	const compose = yaml.load(await fse.readFile(composePath, 'utf8')) as any
+	compose.services.sidecar = {image: 'busybox:1.36.1', command: 'sleep infinity'}
+	await fse.writeFile(composePath, yaml.dump(compose))
+	const $$ = $({cwd: umbreld.gitServer.directory})
+	await $$`git add .`
+	await $$`git commit -m ${'Update sparkles-hello-world to 1.0.1'}`
+
+	// Refresh the local app store and update the app
+	await umbreld.instance.appStore.update()
+	await expect(umbreld.client.apps.update.mutate({appId: 'sparkles-hello-world'})).resolves.toStrictEqual(true)
+
+	// The app should now run the updated compose file including the new service
+	const app = umbreld.instance.apps.getApp('sparkles-hello-world')
+	await expect(app.readComposeImages()).resolves.toContain('busybox:1.36.1')
+})
+
+test.sequential('cleanOrphanedImages() removes orphaned app images and nothing else', async () => {
+	// Create an orphaned image of a managed repository: pull an old busybox by tag,
+	// then remove the tag and re-pull by digest so the image has a repo digest but
+	// no tags, like an image leaked by an interrupted app update. busybox is a
+	// managed repository because the app's compose file now includes it.
+	const repoDigestsFormat = '{{index .RepoDigests 0}}'
+	await $`docker pull busybox:1.35.0`
+	const {stdout: managedDigest} = await $`docker image inspect --format ${repoDigestsFormat} busybox:1.35.0`
+	const {stdout: orphanedImageId} = await $`docker image inspect --format {{.Id}} busybox:1.35.0`
+	await $`docker rmi busybox:1.35.0`
+	await $`docker pull ${managedDigest}`
+
+	// Create images that must all survive the sweep: an orphaned image of a
+	// repository umbrel doesn't manage, a tagged image and a locally built image
+	await $`docker pull alpine:3.19`
+	const {stdout: unmanagedDigest} = await $`docker image inspect --format ${repoDigestsFormat} alpine:3.19`
+	const {stdout: unmanagedImageId} = await $`docker image inspect --format {{.Id}} alpine:3.19`
+	await $`docker rmi alpine:3.19`
+	await $`docker pull ${unmanagedDigest}`
+	await $`docker pull busybox:1.37.0`
+	const {stdout: locallyBuiltImageId} = await $({
+		input: 'FROM busybox:1.37.0\nLABEL umbrel-test-locally-built=true',
+	})`docker build --quiet -`
+
+	try {
+		await umbreld.instance.apps.cleanOrphanedImages()
+
+		// The orphaned image of the managed repository should have been removed
+		await expect($`docker image inspect ${orphanedImageId}`).rejects.toThrow()
+		// The unmanaged orphan, the tagged image, the locally built image and the
+		// installed app's images all survive
+		await expect($`docker image inspect ${unmanagedImageId}`).resolves.toBeTruthy()
+		await expect($`docker image inspect busybox:1.37.0`).resolves.toBeTruthy()
+		await expect($`docker image inspect ${locallyBuiltImageId}`).resolves.toBeTruthy()
+		const app = umbreld.instance.apps.getApp('sparkles-hello-world')
+		for (const imageReference of await app.readComposeImages()) {
+			await expect($`docker image inspect ${imageReference}`).resolves.toBeTruthy()
+		}
+	} finally {
+		// Clean up the test images
+		await $`docker rmi ${unmanagedImageId}`.catch(() => {})
+		await $`docker rmi ${locallyBuiltImageId}`.catch(() => {})
+		await $`docker rmi busybox:1.37.0`.catch(() => {})
+	}
 })
 
 test.sequential("umbreld restart doesn't start stopped apps", async () => {
