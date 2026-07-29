@@ -56,6 +56,51 @@ const languageMapping = {
 	'zh-TW': 'Traditional Chinese',
 }
 
+// Translation provider configuration.
+// Defaults to OpenAI to preserve existing behavior. MiniMax is also supported through its
+// OpenAI-compatible chat completions API, with selectable global/CN regional base URLs.
+const translationProviders = {
+	openai: {
+		api: 'responses',
+	},
+	minimax: {
+		api: 'chat',
+		defaultModel: 'MiniMax-M3',
+		supportedModels: ['MiniMax-M3', 'MiniMax-M2.7'],
+		defaultRegion: 'global_en',
+		regionalBaseUrls: {
+			global_en: 'https://api.minimax.io/v1',
+			cn_zh: 'https://api.minimaxi.com/v1',
+		},
+	},
+}
+
+// Resolves the active provider along with its base URL and model from the environment.
+function resolveTranslationProvider() {
+	const providerName = (process.env.TRANSLATIONS_API_PROVIDER || 'openai').toLowerCase()
+	const provider = translationProviders[providerName]
+	if (!provider) {
+		throw new Error(`Unsupported translations provider: '${providerName}'`)
+	}
+
+	let baseURL
+	let model = process.env.TRANSLATIONS_OPENAI_MODEL
+
+	if (providerName === 'minimax') {
+		const region = process.env.TRANSLATIONS_MINIMAX_REGION || provider.defaultRegion
+		baseURL = provider.regionalBaseUrls[region]
+		if (!baseURL) {
+			throw new Error(`Unsupported MiniMax region: '${region}'`)
+		}
+		model = model || provider.defaultModel
+		if (!provider.supportedModels.includes(model)) {
+			throw new Error(`Unsupported MiniMax model: '${model}'`)
+		}
+	}
+
+	return {api: provider.api, baseURL, model}
+}
+
 // Get en.json content from the base branch
 function getBaseEnglishContent(baseBranch) {
 	try {
@@ -191,8 +236,8 @@ function getKeysNeedingRegeneration(modifiedEnKeys, localeFile, baseBranch) {
 
 // Generates translations
 async function generateTranslation(englishReferenceContent, textToTranslate, targetLanguage, existingLanguageContent) {
-	const openai = new OpenAI({apiKey: process.env.TRANSLATIONS_OPENAI_API_KEY})
-	const model = process.env.TRANSLATIONS_OPENAI_MODEL
+	const {api, baseURL, model} = resolveTranslationProvider()
+	const openai = new OpenAI({apiKey: process.env.TRANSLATIONS_OPENAI_API_KEY, baseURL})
 	const systemPromptTemplate = process.env.TRANSLATIONS_SYSTEM_PROMPT
 	const userPromptTemplate = process.env.TRANSLATIONS_USER_PROMPT
 
@@ -206,6 +251,19 @@ async function generateTranslation(englishReferenceContent, textToTranslate, tar
 		.replace('replace_target_language', languageMapping[targetLanguage])
 		.replace('replace_target_language', languageMapping[targetLanguage])
 		.replace('replace_text_to_translate', JSON.stringify(textToTranslate))
+
+	if (api === 'chat') {
+		const response = await openai.chat.completions.create({
+			model,
+			messages: [
+				{role: 'system', content: systemPrompt},
+				{role: 'user', content: userPrompt},
+			],
+			response_format: {type: 'json_object'},
+		})
+
+		return response.choices[0].message.content
+	}
 
 	const response = await openai.responses.create({
 		model,
