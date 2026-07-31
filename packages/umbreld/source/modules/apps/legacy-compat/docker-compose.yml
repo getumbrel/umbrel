@@ -45,7 +45,9 @@ services:
 networks:
   default:
     name: umbrel_main_network
+    enable_ipv6: true
     ipam:
       driver: default
       config:
         - subnet: '$NETWORK_IP/16'
+        - subnet: '$NETWORK_IP_v6/64'

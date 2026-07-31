@@ -21,6 +21,7 @@ export default async function appEnvironment(umbreld: Umbreld, command: string) 
 			UMBREL_DATA_DIR: umbreld.dataDirectory,
 			// TODO: Load these from somewhere more appropriate
 			NETWORK_IP: '10.21.0.0',
+			NETWORK_IP_v6: 'fd40:95bc:786f::',
 			GATEWAY_IP: '10.21.0.1',
 			DASHBOARD_IP: '10.21.21.3',
 			MANAGER_IP: '10.21.21.4',
