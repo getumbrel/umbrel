@@ -1,3 +1,4 @@
+import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
 import {expect, test, beforeEach, afterEach, vi} from 'vitest'
@@ -5,6 +6,7 @@ import fse from 'fs-extra'
 import yaml from 'js-yaml'
 import {execa} from 'execa'
 import pRetry from 'p-retry'
+import pWaitFor from 'p-wait-for'
 
 import createTestUmbreld from '../test-utilities/create-test-umbreld.js'
 import {BACKUP_RESTORE_FIRST_START_FLAG} from '../../constants.js'
@@ -192,6 +194,7 @@ test('backup() creates a backup successfully', async () => {
 	expect(files).not.toContain('external')
 	expect(files).not.toContain('network')
 	expect(files).not.toContain('thumbnails')
+	expect(files).not.toContain('kopia')
 })
 
 test('backup() throws error for non-existent repository', async () => {
@@ -543,6 +546,55 @@ test('backups respect app backupIgnore glob patterns', async () => {
 		path: '/app-data/sparkles-hello-world/important-data',
 	})
 	expect(importantDirFiles).toContain('config.json')
+})
+
+test('kopia keeps cache and logs in the data directory with hard cache size limits', async () => {
+	// Create a network share and mount it
+	const backupNetworkSharePath = await createBackupShare(umbreld)
+
+	// Create a new backup repository
+	const repositoryId = await umbreld.client.backups.createRepository.mutate({
+		path: backupNetworkSharePath,
+		password: 'test-password',
+	})
+
+	// Do the backup
+	await expect(umbreld.client.backups.backup.mutate({repositoryId})).resolves.toBe(true)
+
+	// Verify kopia wrote its cache and logs inside the data directory
+	const kopiaDataDirectory = `${umbreld.instance.dataDirectory}/kopia`
+	await expect(fse.readdir(`${kopiaDataDirectory}/cache`)).resolves.not.toHaveLength(0)
+	await expect(fse.readdir(`${kopiaDataDirectory}/logs`)).resolves.not.toHaveLength(0)
+
+	// Verify the kopia directory itself is excluded from the backup
+	const backups = await umbreld.client.backups.listBackups.query({repositoryId})
+	const files = await umbreld.client.backups.listBackupFiles.query({backupId: backups[0].id})
+	expect(files).not.toContain('kopia')
+
+	// Verify cache size limits are pinned in the repository config
+	// Sizes are stored in bytes, connect flags are in MiB (1 MB = 2^20 bytes)
+	// The cache directory is stored relative to the config file directory
+	const kopiaConfig = await fse.readJson(`/kopia/config/${repositoryId}.config`)
+	const cacheDirectory = nodePath.resolve('/kopia/config', kopiaConfig.caching.cacheDirectory)
+	expect(cacheDirectory.startsWith(`${kopiaDataDirectory}/cache/`)).toBe(true)
+	expect(kopiaConfig.caching.maxCacheSize).toBe(500 * 2 ** 20)
+	expect(kopiaConfig.caching.contentCacheSizeLimitBytes).toBe(1000 * 2 ** 20)
+	expect(kopiaConfig.caching.maxMetadataCacheSize).toBe(1000 * 2 ** 20)
+	expect(kopiaConfig.caching.metadataCacheSizeLimitBytes).toBe(2000 * 2 ** 20)
+})
+
+test('stale kopia cache in the legacy location is cleaned up on startup', async () => {
+	// Recreate stale cache leftovers in the legacy location
+	const legacyCacheDirectory = '/kopia/cache/kopia'
+	await fse.ensureDir(`${legacyCacheDirectory}/legacy-repo`)
+	await fse.writeFile(`${legacyCacheDirectory}/legacy-repo/blob`, 'stale-cache-data')
+
+	// Restart umbreld
+	await umbreld.instance.stop()
+	await umbreld.instance.start()
+
+	// Verify the legacy cache is cleaned up (cleanup runs in the background, so poll)
+	await pWaitFor(async () => !(await fse.pathExists(legacyCacheDirectory)), {timeout: 30_000, interval: 100})
 })
 
 test('backups handle disconnected network shares gracefully', async () => {

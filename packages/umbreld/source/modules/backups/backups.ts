@@ -77,6 +77,10 @@ export default class Backups {
 		// Cleanup any left over backup mounts
 		await this.unmountAll().catch((error) => this.logger.error('Error unmounting backups', error))
 
+		// Cleanup any kopia cache from the legacy /kopia/cache location. This can take
+		// a while if the old cache is large so we don't block startup on it.
+		this.cleanupLegacyCache().catch((error) => this.logger.error('Error cleaning up legacy kopia cache', error))
+
 		// Fire off background backup process
 		this.backupJobPromise = this.backupOnInterval().catch((error) =>
 			this.logger.error('Error running backups on interval', error),
@@ -184,8 +188,11 @@ export default class Backups {
 			// Spawn process
 			const env = {
 				KOPIA_CHECK_FOR_UPDATES: 'false',
-				XDG_CACHE_HOME: '/kopia/cache',
+				// Keep the cache and logs on the data directory's filesystem. /kopia lives on
+				// the data partition which on Raspberry Pi installs is too small to hold the cache.
+				XDG_CACHE_HOME: `${this.#umbreld.dataDirectory}/kopia/cache`,
 				XDG_CONFIG_HOME: '/kopia/config',
+				KOPIA_LOG_DIR: `${this.#umbreld.dataDirectory}/kopia/logs`,
 			}
 			const process = execa('kopia', flags, {env})
 
@@ -435,7 +442,36 @@ export default class Backups {
 			// continue to backup, kopia will see these as backups originating from
 			// different machines.
 			'--override-hostname=umbrel',
+			// Limit the size of kopia's local cache. The soft limits are only enforced
+			// by sweeps when the repository is opened, the hard limits are enforced
+			// continuously. Without a hard limit the cache can grow unbounded between
+			// repository opens and exhaust the disk space/inodes of its filesystem.
+			// We're connecting before every repository operation so these limits can
+			// never drift.
+			'--content-cache-size-mb=500',
+			'--content-cache-size-limit-mb=1000',
+			'--metadata-cache-size-mb=1000',
+			'--metadata-cache-size-limit-mb=2000',
 		])
+	}
+
+	// Remove any kopia cache left behind at the legacy /kopia/cache location. The cache
+	// now lives in the data directory so anything there is dead weight. On Raspberry Pi
+	// installs it could hold enough inodes to exhaust the partition it lives on.
+	private async cleanupLegacyCache() {
+		const legacyCacheDirectory = '/kopia/cache/kopia'
+		const deletingDirectory = `${legacyCacheDirectory}.deleting`
+
+		// Remove any leftovers from a previously interrupted cleanup
+		await fse.remove(deletingDirectory)
+
+		if (!(await fse.pathExists(legacyCacheDirectory))) return
+
+		// Rename first so the removal can't race anything writing into the tree it's deleting
+		this.logger.log('Removing kopia cache from legacy location')
+		await fse.move(legacyCacheDirectory, deletingDirectory)
+		await fse.remove(deletingDirectory)
+		this.logger.log('Removed kopia cache from legacy location')
 	}
 
 	// Wrapper for kopia commands that interact with a repository
@@ -590,6 +626,9 @@ export default class Backups {
 		// Ignore non critical directories that can be rebuilt and cause a lot of churn
 		ignoreFileContents.push('app-stores')
 		ignoreFileContents.push(this.#umbreld.files.thumbnails.thumbnailDirectory)
+
+		// Ignore kopia's own cache and logs otherwise backups include the backup cache
+		ignoreFileContents.push('kopia')
 
 		// Ignore temporary migration directory
 		ignoreFileContents.push('.temporary-migration')
