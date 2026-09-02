@@ -57,9 +57,6 @@ bash scripts/generate-appcast.sh /path/to/umbrel-macos-updates
 The signing key remains in Keychain under `umbrel-macos-updates`. Upload immutable
 artifacts first and publish `appcast.xml` last.
 
-> **Release blocker:** `project.yml` intentionally uses an `.invalid` appcast URL.
-> Replace it with permanent HTTPS update hosting before public distribution.
-
 ## Runtime model
 
 - mDNS provides candidates; UmbrelKit verifies identity before trusting them.
