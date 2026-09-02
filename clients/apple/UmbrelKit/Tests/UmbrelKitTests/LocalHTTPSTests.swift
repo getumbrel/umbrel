@@ -138,6 +138,16 @@ final class LocalHTTPSTests: XCTestCase {
 		}
 	}
 
+	func testLiveCandidateTrustWorksWithBoundedResponseStreaming() async throws {
+		guard let host = ProcessInfo.processInfo.environment["UMBRELKIT_HTTPS_TEST_HOST"] else {
+			throw XCTSkip("Set UMBRELKIT_HTTPS_TEST_HOST to run against an Umbrel")
+		}
+
+		let device = await Umbreld.identify(candidate: Candidate(host: host, name: "Live test"))
+
+		XCTAssertNotNil(device)
+	}
+
 	func testPEMCertificateIsParsedAndCanonicalized() throws {
 		let data = try LocalHTTPSTransport.certificateData(fromPEM: testCertificatePEM)
 		let certificate = try XCTUnwrap(SecCertificateCreateWithData(nil, data as CFData))
