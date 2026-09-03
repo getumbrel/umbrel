@@ -21,6 +21,23 @@ final class SavedDeviceDiscoveryTests: XCTestCase {
 		XCTAssertNil(Umbreld.localDiscoveryCandidate(candidate))
 	}
 
+	func testManualDiscoveryAddressAcceptsLANAndTailscaleIPv4() {
+		XCTAssertEqual(Umbreld.manualDiscoveryHost(from: " 192.168.1.20\n"), "192.168.1.20")
+		XCTAssertEqual(Umbreld.manualDiscoveryHost(from: "100.90.0.1"), "100.90.0.1")
+	}
+
+	func testManualDiscoveryUsesAddressAsSavedNameFallback() throws {
+		let candidate = try XCTUnwrap(Umbreld.manualDiscoveryCandidate(from: "100.90.0.1"))
+
+		XCTAssertEqual(candidate.name, "100.90.0.1")
+	}
+
+	func testManualDiscoveryAddressRejectsHostnamesAndURLSyntax() {
+		XCTAssertNil(Umbreld.manualDiscoveryHost(from: "umbrel.local"))
+		XCTAssertNil(Umbreld.manualDiscoveryHost(from: "http://192.168.1.20"))
+		XCTAssertNil(Umbreld.manualDiscoveryHost(from: "192.168.1.20:443"))
+	}
+
 	func testVerifiedBonjourRenameReplacesStaleHostname() {
 		var saved = SavedDevice(
 			id: "device",

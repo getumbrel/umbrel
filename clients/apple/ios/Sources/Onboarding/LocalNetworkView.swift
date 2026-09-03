@@ -33,7 +33,7 @@ struct LocalNetworkView: View {
 
 			Spacer()
 
-			Group {
+			VStack(spacing: 10) {
 				if denied {
 					OnboardingButton(title: "Open Settings") {
 						openURL(URL(string: UIApplication.openSettingsURLString)!)
@@ -45,6 +45,10 @@ struct LocalNetworkView: View {
 					) {
 						model.enableLocalNetworkAndScan()
 					}
+				}
+
+				if denied {
+					ManualAddressPrompt()
 				}
 			}
 			.padding(.horizontal, 31)

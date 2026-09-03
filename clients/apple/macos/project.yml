@@ -73,6 +73,11 @@ targets:
           - _umbrel._tcp.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+          # Allow credential-free discovery over Tailscale's CGNAT range. Supported
+          # devices still prove identity over pinned HTTPS before credentials are sent.
+          NSExceptionDomains:
+            "100.64.0.0/10":
+              NSExceptionAllowsInsecureHTTPLoads: true
         NSHumanReadableCopyright: Umbrel, Inc.
         # Sparkle is embedded in the app; both the feed and release artifacts are
         # hosted by Umbrel. Archive signatures and the signed feed are verified
@@ -87,8 +92,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.umbrel.mac
         PRODUCT_NAME: Umbrel
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "24"
+        MARKETING_VERSION: "0.1.1"
+        CURRENT_PROJECT_VERSION: "25"
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: Umbrel.entitlements

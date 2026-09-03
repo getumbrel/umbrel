@@ -165,6 +165,25 @@ public enum Umbreld {
 		public let host: String
 	}
 
+	public enum ManualDiscoveryResult: Equatable, Sendable {
+		case device(IdentifiedDevice)
+		case updateRequired(UpdateRequiredDevice)
+	}
+
+	public enum ManualDiscoveryError: Swift.Error, LocalizedError, Equatable, Sendable {
+		case invalidAddress
+		case noDeviceFound
+
+		public var errorDescription: String? {
+			switch self {
+			case .invalidAddress:
+				"Enter a valid IPv4 address."
+			case .noDeviceFound:
+				"Couldn\u{2019}t find an Umbrel at this IP address. Make sure it\u{2019}s online and reachable."
+			}
+		}
+	}
+
 	struct LocalHTTPSIdentity: Decodable {
 		let id: String
 		let caCertificate: String
@@ -441,16 +460,23 @@ public enum Umbreld {
 		_ candidate: Candidate,
 		knownDeviceIds: Set<String>,
 		requiredDeviceId: String? = nil,
+		allowsTailscaleHost: Bool = false,
 		probe: IdentityProbe? = nil
 	) async -> IdentifiedDevice? {
-		guard let candidate = localDiscoveryCandidate(candidate) else { return nil }
+		let acceptedCandidate: Candidate
+		if allowsTailscaleHost {
+			acceptedCandidate = candidate
+		} else {
+			guard let localCandidate = localDiscoveryCandidate(candidate) else { return nil }
+			acceptedCandidate = localCandidate
+		}
 		let probe = probe ?? { host, expectedDeviceId in
 			try? await verifiedLocalHTTPSIdentity(host: host, expectedDeviceId: expectedDeviceId)
 		}
 		let hintedDeviceId = requiredDeviceId
-			?? candidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
+			?? acceptedCandidate.id.flatMap { knownDeviceIds.contains($0) ? $0 : nil }
 		var attemptedHosts = Set<String>()
-		for host in [candidate.host] + candidate.addresses where attemptedHosts.insert(host).inserted {
+		for host in [acceptedCandidate.host] + acceptedCandidate.addresses where attemptedHosts.insert(host).inserted {
 			guard !Task.isCancelled else { return nil }
 			guard var verified = await probe(host, hintedDeviceId) else { continue }
 			var identity = verified.discoveryInfo
@@ -467,9 +493,9 @@ public enum Umbreld {
 			}
 			return IdentifiedDevice(
 				host: host,
-				discoveryHost: candidate.host,
-				addresses: candidate.addresses,
-				name: candidate.name,
+				discoveryHost: acceptedCandidate.host,
+				addresses: acceptedCandidate.addresses,
+				name: acceptedCandidate.name,
 				id: identity.id,
 				model: identity.device,
 				onboarded: identity.onboarded,
@@ -516,6 +542,42 @@ public enum Umbreld {
 			byId[device.id] = device
 		}
 		return byId.values.sorted { $0.host < $1.host }
+	}
+
+	// Manual discovery is an explicit user action, so unlike passive Bonjour it may
+	// probe a Tailscale endpoint. The address still supplies no identity authority:
+	// the public bootstrap CA must prove the same discovery id over HTTPS, and a saved
+	// device is revalidated against its existing pin before it is returned.
+	public static func discoverManually(
+		at input: String,
+		knownDeviceIds: Set<String> = []
+	) async throws -> ManualDiscoveryResult {
+		guard let candidate = manualDiscoveryCandidate(from: input) else {
+			throw ManualDiscoveryError.invalidAddress
+		}
+		if let device = await identifyCandidate(
+			candidate,
+			knownDeviceIds: knownDeviceIds,
+			allowsTailscaleHost: true
+		) {
+			return .device(device)
+		}
+		try Task.checkCancellation()
+		if let updateRequired = await probeFallbackHost(candidate.host) {
+			return .updateRequired(updateRequired)
+		}
+		try Task.checkCancellation()
+		throw ManualDiscoveryError.noDeviceFound
+	}
+
+	static func manualDiscoveryCandidate(from input: String) -> Candidate? {
+		guard let host = manualDiscoveryHost(from: input) else { return nil }
+		return Candidate(host: host, name: host)
+	}
+
+	static func manualDiscoveryHost(from input: String) -> String? {
+		let host = input.trimmingCharacters(in: .whitespacesAndNewlines)
+		return SavedDevice.isIPv4Address(host) ? host : nil
 	}
 
 	// Older umbrelOS releases predate the _umbrel._tcp advertisement, so Bonjour has

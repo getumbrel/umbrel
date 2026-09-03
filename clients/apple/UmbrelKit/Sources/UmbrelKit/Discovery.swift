@@ -51,6 +51,12 @@ public struct IdentifiedDevice: Equatable, Sendable {
 	// anchor to an explicit claim without exposing trust material to app UI code.
 	let candidateCACertificate: Data?
 
+	// Reuse the already verified identity when a client hands this result to its
+	// normal reachability lifecycle.
+	public var discoveryInfo: Umbreld.DiscoveryInfo {
+		Umbreld.DiscoveryInfo(id: id, device: model, onboarded: onboarded)
+	}
+
 	init(
 		host: String,
 		discoveryHost: String,

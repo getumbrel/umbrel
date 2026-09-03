@@ -38,6 +38,8 @@ struct OnboardingFlow: View {
 					FindingView()
 				case .deviceFound, .signIn:
 					DeviceFoundView()
+				case .manualAddress:
+					ManualAddressView()
 				case .noDevice:
 					NoDeviceView()
 				case .connected:

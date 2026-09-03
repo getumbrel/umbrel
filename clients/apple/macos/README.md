@@ -46,9 +46,10 @@ on a Mac where local build products cannot mask a packaging error.
 
 ## Automatic updates
 
-The app uses [Sparkle 2](https://sparkle-project.org/documentation/). Every release
-must increment `CURRENT_PROJECT_VERSION`. After notarizing all artifacts, generate
-the signed appcast with Sparkle's official tool:
+The app uses [Sparkle 2](https://sparkle-project.org/documentation/). Every public
+release must increment both the user-facing `MARKETING_VERSION` and the internal
+`CURRENT_PROJECT_VERSION`. After notarizing all artifacts, generate the signed
+appcast with Sparkle's official tool:
 
 ```bash
 bash scripts/generate-appcast.sh /path/to/umbrel-macos-updates

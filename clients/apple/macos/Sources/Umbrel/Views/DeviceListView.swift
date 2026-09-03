@@ -8,6 +8,7 @@ struct DeviceListView: View {
 	let devices: [Device]
 	let updateRequiredDevices: [Umbreld.UpdateRequiredDevice]
 	let onSelect: (String) -> Void
+	let onConnectByAddress: () -> Void
 
 	private var singleUnsaved: Device? {
 		devices.count == 1 && updateRequiredDevices.isEmpty && !devices[0].saved ? devices[0] : nil
@@ -73,6 +74,12 @@ struct DeviceListView: View {
 				}
 				.frame(maxHeight: 480)
 			}
+
+			if !state.initialDiscoveryInProgress && !state.scanning {
+				manualAddressFooter
+					.padding(.top, 14)
+					.padding(.horizontal, 6)
+			}
 		}
 		.padding(.horizontal, 24)
 		.padding(.bottom, 24)
@@ -104,6 +111,23 @@ struct DeviceListView: View {
 		.padding(.bottom, 2)
 	}
 
+	private var manualAddressFooter: some View {
+		Button(action: onConnectByAddress) {
+			HStack(spacing: 4) {
+				(
+					Text("Can’t find your Umbrel? ")
+						+ Text("Connect by IP address").fontWeight(.semibold)
+				)
+					.font(.system(size: 11))
+					.foregroundStyle(Palette.gray)
+				Image(systemName: "chevron.right")
+					.font(.system(size: 9, weight: .semibold))
+					.foregroundStyle(Palette.gray)
+			}
+			.contentShape(Rectangle())
+		}
+		.buttonStyle(.plain)
+	}
 }
 
 // Manual rescan (discovery itself is always live). While the scan runs the button
@@ -190,7 +214,10 @@ private struct DeviceCard: View {
 						.foregroundStyle(.white.opacity(0.85))
 						.lineLimit(1)
 						.truncationMode(.tail)
-					StatusLine(status: statusInfo(for: device), route: connectionRouteLabel(for: device))
+					// In a multi-device list, the stable host is more useful for telling
+					// similar Umbrels apart than repeating the active connection route.
+					StatusLine(status: statusInfo(for: device), secondaryLabel: device.host)
+						.help(device.host)
 				}
 
 				Spacer()
@@ -264,7 +291,7 @@ private struct WelcomeCard: View {
 				.padding(.top, 16)
 				.padding(.bottom, 8)
 
-			StatusLine(status: statusInfo(for: device), route: connectionRouteLabel(for: device))
+			StatusLine(status: statusInfo(for: device), secondaryLabel: connectionRouteLabel(for: device))
 
 			Button(device.onboarded == true ? "Connect" : "Set up", action: onClick)
 				.buttonStyle(PillButtonStyle())

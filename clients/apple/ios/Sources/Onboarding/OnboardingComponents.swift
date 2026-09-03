@@ -173,3 +173,32 @@ struct OnboardingHeader: View {
 		title.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
 	}
 }
+
+// The alternate route appears only after discovery has produced an outcome, so it
+// reads as help for a missing Umbrel rather than a competing first choice.
+struct ManualAddressPrompt: View {
+	@Environment(OnboardingModel.self) private var model
+	var isLeading = false
+
+	var body: some View {
+		Button {
+			model.showManualAddress()
+		} label: {
+			(
+				Text("Can’t find your Umbrel? ")
+					+ Text("Connect by IP address\u{00A0}\(Image(systemName: "chevron.right"))")
+					.fontWeight(.semibold)
+			)
+			.font(.footnote)
+			.foregroundStyle(Palette.textMuted)
+			.multilineTextAlignment(isLeading ? .leading : .center)
+			.frame(
+				maxWidth: isLeading ? nil : .infinity,
+				alignment: isLeading ? .leading : .center
+			)
+		}
+		.buttonStyle(.plain)
+		.padding(.vertical, 6)
+		.contentShape(Rectangle())
+	}
+}

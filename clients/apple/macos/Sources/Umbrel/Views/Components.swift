@@ -203,10 +203,10 @@ struct StatusDot: View {
 	}
 }
 
-// Status dot + label + optional route, used under every device name.
+// Status dot + label + optional secondary context, used under every device name.
 struct StatusLine: View {
 	let status: StatusInfo
-	var route: String? = nil
+	var secondaryLabel: String? = nil
 	@State private var showsProgress = false
 
 	var body: some View {
@@ -219,11 +219,16 @@ struct StatusLine: View {
 					.accessibilityHidden(!showsProgress)
 			} else {
 				StatusDot(color: status.color)
-				Text(status.label).foregroundStyle(.white)
+				Text(status.label)
+					.foregroundStyle(.white)
+					.fixedSize(horizontal: true, vertical: false)
 			}
-			if let route {
+			if let secondaryLabel {
 				Text("\u{00B7}").foregroundStyle(.white.opacity(0.5))
-				Text(route).foregroundStyle(.white.opacity(0.7))
+				Text(secondaryLabel)
+					.foregroundStyle(.white.opacity(0.7))
+					.lineLimit(1)
+					.truncationMode(.middle)
 			}
 		}
 		.font(.system(size: 11))
