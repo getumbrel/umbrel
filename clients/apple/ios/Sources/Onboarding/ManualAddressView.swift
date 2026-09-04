@@ -26,16 +26,16 @@ struct ManualAddressView: View {
 			.padding(.top, 8)
 
 			OnboardingHeader(
-				title: "Connect by IP address",
-				subtitle: "Enter your Umbrel’s IP address. If you’re away from home, use its Tailscale IP address. Tailscale must already be set up on this iPhone and your Umbrel."
+				title: "Connect by address",
+				subtitle: "Enter your Umbrel’s IP address or hostname. If you’re away from home, use its Tailscale IP address or MagicDNS name. Tailscale must already be set up on this iPhone and your Umbrel."
 			)
 			.padding(.top, 26)
 
 			Spacer().frame(height: 40)
 
 			VStack(alignment: .leading, spacing: 12) {
-				TextField("e.g. 100.101.102.103", text: $address)
-					.keyboardType(.numbersAndPunctuation)
+				TextField("e.g. umbrel.local, umbrel, or 100.64.0.1", text: $address)
+					.keyboardType(.URL)
 					.textInputAutocapitalization(.never)
 					.autocorrectionDisabled()
 					.padding(.horizontal, 16)
@@ -53,7 +53,7 @@ struct ManualAddressView: View {
 						error = nil
 						updateRequiredHost = nil
 					}
-					.accessibilityLabel("Umbrel IP address")
+					.accessibilityLabel("Umbrel address")
 
 				if let error {
 					Text(error)

@@ -186,7 +186,7 @@ struct ManualAddressPrompt: View {
 		} label: {
 			(
 				Text("Can’t find your Umbrel? ")
-					+ Text("Connect by IP address\u{00A0}\(Image(systemName: "chevron.right"))")
+					+ Text("Connect by address\u{00A0}\(Image(systemName: "chevron.right"))")
 					.fontWeight(.semibold)
 			)
 			.font(.footnote)

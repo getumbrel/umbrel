@@ -177,9 +177,21 @@ public enum Umbreld {
 		public var errorDescription: String? {
 			switch self {
 			case .invalidAddress:
-				"Enter a valid IPv4 address."
+				"Enter a local or Tailscale IP address, .local hostname, or Tailscale MagicDNS name."
 			case .noDeviceFound:
-				"Couldn\u{2019}t find an Umbrel at this IP address. Make sure it\u{2019}s online and reachable."
+				"Couldn\u{2019}t find an Umbrel at this address. Make sure it\u{2019}s online and reachable."
+			}
+		}
+	}
+
+	enum ManualDiscoveryHost: Equatable, Sendable {
+		case direct(String)
+		case unqualifiedHostname(String)
+		case tailscaleDNS(String)
+
+		var value: String {
+			switch self {
+			case .direct(let host), .unqualifiedHostname(let host), .tailscaleDNS(let host): host
 			}
 		}
 	}
@@ -545,15 +557,39 @@ public enum Umbreld {
 	}
 
 	// Manual discovery is an explicit user action, so unlike passive Bonjour it may
-	// probe a Tailscale endpoint. The address still supplies no identity authority:
-	// the public bootstrap CA must prove the same discovery id over HTTPS, and a saved
-	// device is revalidated against its existing pin before it is returned.
+	// probe a Tailscale endpoint. A plain HTTP(S) root URL is normalized to its host.
+	// Short hostnames may resolve to a safe LAN or Tailscale address, while full MagicDNS
+	// names resolve only to a literal Tailscale address because Umbrel's pinned certificate
+	// covers its interface IP, not a user-controlled tailnet name. The address still supplies
+	// no identity authority: the bootstrap CA must prove the same discovery id over HTTPS,
+	// and a saved device is revalidated against its existing pin before it is returned.
 	public static func discoverManually(
 		at input: String,
 		knownDeviceIds: Set<String> = []
 	) async throws -> ManualDiscoveryResult {
-		guard let candidate = manualDiscoveryCandidate(from: input) else {
+		guard let parsedHost = manualDiscoveryHostKind(from: input) else {
 			throw ManualDiscoveryError.invalidAddress
+		}
+		let candidate: Candidate
+		switch parsedHost {
+		case .direct:
+			guard let direct = manualDiscoveryCandidate(from: input) else {
+				throw ManualDiscoveryError.invalidAddress
+			}
+			candidate = direct
+		case .unqualifiedHostname(let hostname), .tailscaleDNS(let hostname):
+			let addresses = try await IPv4HostResolver.resolve(hostname)
+			try Task.checkCancellation()
+			guard !addresses.isEmpty else {
+				throw ManualDiscoveryError.noDeviceFound
+			}
+			guard let resolved = manualDiscoveryCandidate(
+				from: input,
+				resolvedIPv4Addresses: addresses
+			) else {
+				throw ManualDiscoveryError.noDeviceFound
+			}
+			candidate = resolved
 		}
 		if let device = await identifyCandidate(
 			candidate,
@@ -570,14 +606,76 @@ public enum Umbreld {
 		throw ManualDiscoveryError.noDeviceFound
 	}
 
-	static func manualDiscoveryCandidate(from input: String) -> Candidate? {
-		guard let host = manualDiscoveryHost(from: input) else { return nil }
-		return Candidate(host: host, name: host)
+	static func manualDiscoveryCandidate(
+		from input: String,
+		resolvedIPv4Addresses: [String] = []
+	) -> Candidate? {
+		guard let parsedHost = manualDiscoveryHostKind(from: input) else { return nil }
+		switch parsedHost {
+		case .direct(let host):
+			return Candidate(host: host, name: host)
+		case .unqualifiedHostname(let hostname):
+			return resolvedManualDiscoveryCandidate(
+				hostname: hostname,
+				addresses: resolvedIPv4Addresses,
+				accepts: SavedDevice.isSupportedManualIPv4Address
+			)
+		case .tailscaleDNS(let hostname):
+			return resolvedManualDiscoveryCandidate(
+				hostname: hostname,
+				addresses: resolvedIPv4Addresses,
+				accepts: SavedDevice.isTailscaleAddress
+			)
+		}
+	}
+
+	private static func resolvedManualDiscoveryCandidate(
+		hostname: String,
+		addresses: [String],
+		accepts: (String) -> Bool
+	) -> Candidate? {
+		var seen = Set<String>()
+		let accepted = addresses.filter { accepts($0) && seen.insert($0).inserted }
+		guard let host = accepted.first else { return nil }
+		return Candidate(host: host, addresses: Array(accepted.dropFirst()), name: hostname)
 	}
 
 	static func manualDiscoveryHost(from input: String) -> String? {
-		let host = input.trimmingCharacters(in: .whitespacesAndNewlines)
-		return SavedDevice.isIPv4Address(host) ? host : nil
+		manualDiscoveryHostKind(from: input)?.value
+	}
+
+	static func manualDiscoveryHostKind(from input: String) -> ManualDiscoveryHost? {
+		guard var host = normalizedManualDiscoveryHost(from: input) else { return nil }
+		if host.hasSuffix(".") { host.removeLast() }
+		guard !host.isEmpty else { return nil }
+		if SavedDevice.isIPv4Address(host) {
+			guard SavedDevice.isSupportedManualIPv4Address(host) else { return nil }
+			return .direct(host)
+		}
+		if SavedDevice.isBonjourHostname(host) { return .direct(host) }
+		guard SavedDevice.isDNSHostname(host) else { return nil }
+		let labels = host.split(separator: ".", omittingEmptySubsequences: false)
+		if labels.count == 1 { return .unqualifiedHostname(host) }
+		return host.hasSuffix(".ts.net") ? .tailscaleDNS(host) : nil
+	}
+
+	private static func normalizedManualDiscoveryHost(from input: String) -> String? {
+		let value = input.trimmingCharacters(in: .whitespacesAndNewlines)
+		let lowercased = value.lowercased()
+		guard lowercased.hasPrefix("http://") || lowercased.hasPrefix("https://") else {
+			return lowercased
+		}
+		guard let components = URLComponents(string: value),
+			components.scheme?.lowercased() == "http" || components.scheme?.lowercased() == "https",
+			let host = components.host,
+			components.user == nil,
+			components.password == nil,
+			components.port == nil,
+			components.path.isEmpty || components.path == "/",
+			components.query == nil,
+			components.fragment == nil
+		else { return nil }
+		return host.lowercased()
 	}
 
 	// Older umbrelOS releases predate the _umbrel._tcp advertisement, so Bonjour has

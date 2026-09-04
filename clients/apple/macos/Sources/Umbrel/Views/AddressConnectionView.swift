@@ -23,18 +23,18 @@ struct AddressConnectionView: View {
 				.scaledToFit()
 				.frame(width: 48, height: 48)
 
-			Text("Connect by IP address")
+			Text("Connect by address")
 				.font(.system(size: 17, weight: .bold))
 				.foregroundStyle(.white.opacity(0.85))
 				.padding(.top, 16)
 
-			Text("Enter your Umbrel’s IP address. If you’re away from home, use its Tailscale IP address. Tailscale must already be set up on this Mac and your Umbrel.")
+			Text("Enter your Umbrel’s IP address or hostname. If you’re away from home, use its Tailscale IP address or MagicDNS name. Tailscale must already be set up on this Mac and your Umbrel.")
 				.font(.system(size: 11))
 				.foregroundStyle(Palette.gray)
 				.fixedSize(horizontal: false, vertical: true)
 				.padding(.top, 4)
 
-			TextField("e.g. 100.101.102.103", text: $address)
+			TextField("e.g. umbrel.local, umbrel, or 100.64.0.1", text: $address)
 				.textFieldStyle(.plain)
 				.font(.system(size: 12))
 				.foregroundStyle(.white.opacity(0.85))
@@ -52,7 +52,7 @@ struct AddressConnectionView: View {
 					error = nil
 					updateRequiredHost = nil
 				}
-				.accessibilityLabel("Umbrel IP address")
+				.accessibilityLabel("Umbrel address")
 				.padding(.top, 18)
 
 			if let error {

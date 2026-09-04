@@ -116,7 +116,7 @@ struct DeviceListView: View {
 			HStack(spacing: 4) {
 				(
 					Text("Can’t find your Umbrel? ")
-						+ Text("Connect by IP address").fontWeight(.semibold)
+						+ Text("Connect by address").fontWeight(.semibold)
 				)
 					.font(.system(size: 11))
 					.foregroundStyle(Palette.gray)

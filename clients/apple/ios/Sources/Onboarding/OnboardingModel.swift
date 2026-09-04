@@ -322,9 +322,22 @@ final class OnboardingModel {
 	}
 
 	func leaveManualAddress() {
-		let destination = manualAddressReturnStep == .noDevice && !discoveryResults.isEmpty
-			? Step.deviceFound : manualAddressReturnStep
+		let destination = Self.manualAddressReturnDestination(
+			from: manualAddressReturnStep,
+			hasDiscoveryResults: !discoveryResults.isEmpty
+		)
 		advance(to: destination)
+	}
+
+	static func manualAddressReturnDestination(
+		from origin: Step,
+		hasDiscoveryResults: Bool
+	) -> Step {
+		switch (origin, hasDiscoveryResults) {
+		case (.noDevice, true): .deviceFound
+		case (.deviceFound, false): .noDevice
+		default: origin
+		}
 	}
 
 	// "Enable access": starts the browse (summoning the permission dialog) but stays
