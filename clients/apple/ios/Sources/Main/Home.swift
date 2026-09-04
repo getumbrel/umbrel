@@ -559,31 +559,57 @@ private struct AppsSection: View {
 struct AppTile: View {
 	let app: Umbreld.AppSummary
 	var labelColor: Color = Theme.gray3
-	var updating = false
 	var preparing = false
+	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+
 	var body: some View {
+		let title = app.name ?? app.id
+		let presentation = AppTilePresentation(state: app.state)
 		VStack(spacing: 8) {
 			AppIconView(url: app.iconURL)
-				.brightness(updating || preparing ? -0.4 : 0)
+				.brightness(presentation.dimsIcon || preparing ? -0.4 : 0)
 				.overlay {
-					if updating {
-						UpdatingBar()
-					} else if preparing {
+					if preparing {
 						ProgressView().tint(.white)
+					} else {
+						stateOverlay(for: presentation)
 					}
 				}
-			Text(updating ? "Updating\u{2026}" : (app.name ?? app.id))
+			Text(presentation.label(default: title))
 				.font(.caption2.weight(.medium))
 				.foregroundStyle(labelColor)
 				.lineLimit(1)
 				.padding(.horizontal, 4)
+				.contentTransition(.opacity)
+		}
+		.animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: presentation)
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(title)
+		.accessibilityValue(preparing ? "Opening" : (presentation.accessibilityValue ?? ""))
+	}
+
+	@ViewBuilder
+	private func stateOverlay(for presentation: AppTilePresentation) -> some View {
+		switch presentation {
+		case .inProgress:
+			AppStateProgressBar(progress: presentation.reportedProgress(app.progress))
+		case .stopped, .unavailable:
+			if let symbolName = presentation.symbolName {
+				Image(systemName: symbolName)
+					.font(.system(size: 24, weight: .medium))
+					.foregroundStyle(.white.opacity(0.9))
+					.transition(.scale(scale: 0.85).combined(with: .opacity))
+			}
+		case .available:
+			EmptyView()
 		}
 	}
 }
 
-// A lightweight indeterminate state for updates managed in umbrelOS. The app list
-// reports whether an app is updating, but detailed progress stays in the browser UI.
-private struct UpdatingBar: View {
+// Lifecycle work uses the same compact bar as umbrelOS: reported progress for installs
+// and updates, and an indeterminate sweep for transitions without meaningful progress.
+private struct AppStateProgressBar: View {
+	let progress: Double?
 	@State private var sliding = false
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -594,17 +620,23 @@ private struct UpdatingBar: View {
 		Capsule().fill(.white.opacity(0.4))
 			.frame(width: width, height: height)
 			.overlay(alignment: .leading) {
-				Capsule().fill(.white.opacity(0.9))
-					.frame(width: width * (reduceMotion ? 0.6 : 0.3), height: height)
-					.offset(x: reduceMotion ? width * 0.2 : (sliding ? width : -width * 0.3))
-					.animation(
-						reduceMotion ? nil : .linear(duration: 1.2).repeatForever(autoreverses: false),
-						value: sliding
-					)
-					.onAppear { sliding = !reduceMotion }
-					.onChange(of: reduceMotion) { _, shouldReduceMotion in
-						sliding = !shouldReduceMotion
-					}
+				if let progress {
+					Capsule().fill(.white.opacity(0.9))
+						.frame(width: width * progress / 100, height: height)
+						.animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: progress)
+				} else {
+					Capsule().fill(.white.opacity(0.9))
+						.frame(width: width * (reduceMotion ? 0.6 : 0.3), height: height)
+						.offset(x: reduceMotion ? width * 0.2 : (sliding ? width : -width * 0.3))
+						.animation(
+							reduceMotion ? nil : .linear(duration: 1.2).repeatForever(autoreverses: false),
+							value: sliding
+						)
+						.onAppear { sliding = !reduceMotion }
+						.onChange(of: reduceMotion) { _, shouldReduceMotion in
+							sliding = !shouldReduceMotion
+						}
+				}
 			}
 			.clipShape(Capsule())
 	}
@@ -629,7 +661,6 @@ struct AppTileButton: View {
 
 	var body: some View {
 		let launchDisposition = AppLaunchDisposition(state: app.state)
-		let updating = app.state == "updating"
 		Button {
 			guard launchDisposition != .busy, !isPreparingLaunch else { return }
 			Task { await prepareLaunch() }
@@ -637,7 +668,6 @@ struct AppTileButton: View {
 			AppTile(
 				app: app,
 				labelColor: labelColor,
-				updating: updating,
 				preparing: isPreparingLaunch
 			)
 		}

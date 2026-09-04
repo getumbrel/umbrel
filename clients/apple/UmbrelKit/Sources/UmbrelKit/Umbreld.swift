@@ -1170,6 +1170,7 @@ public enum Umbreld {
 		public let version: String?
 		public let icon: String? // fully-qualified URL (manifest icon or gallery SVG)
 		public let state: String? // e.g. "ready", "updating"; drives progress overlays
+		public let progress: Double? // 0...100 while installing or updating
 		public let port: Int?
 		public let path: String? // optional URL path the app serves under, e.g. "/web"
 
@@ -1201,6 +1202,7 @@ public enum Umbreld {
 				version: version,
 				icon: icon,
 				state: state,
+				progress: progress,
 				port: port,
 				path: path,
 				torOnly: torOnly,
