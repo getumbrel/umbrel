@@ -561,6 +561,19 @@ export default class Raid {
 			this.logger.error('Failed to set ZFS ARC min', error)
 		}
 
+		// Widen the free-memory buffer between the ARC and everything else so the ARC responds
+		// sooner. zfs_arc_sys_free is "the target number of bytes the ARC should leave as free
+		// memory on the system", defaulting to RAM/64 (256MB on a 16GB device). We use RAM/10
+		// (1.6GB) so the ARC yields before kswapd starts swapping active app memory into zram.
+		try {
+			const totalMemory = os.totalmem()
+			const arcSysFree = Math.max(1024 * 1024 * 1024, Math.floor(totalMemory / 10))
+			await fse.writeFile('/sys/module/zfs/parameters/zfs_arc_sys_free', String(arcSysFree))
+			this.logger.log(`Set ZFS ARC sys free to ${prettyBytes(arcSysFree)}`)
+		} catch (error) {
+			this.logger.error('Failed to set ZFS ARC sys free', error)
+		}
+
 		// Exclude blocks on special vdev from l2arc since we run both l2arc and special vdev
 		// on different partitions on the same accelerator device. There's no speedup caching
 		// blocks in l2arc on the same device that they already live on. It just wastes l2 cache
