@@ -189,11 +189,15 @@ export function buildDomainXml({
 	const acceleratedGraphics = graphicsRenderNode
 		? `<graphics type='egl-headless'><gl rendernode='${escapeXml(graphicsRenderNode)}'/></graphics>`
 		: ''
+	// Waydroid sizes Android's display once, from the output Cage finds at boot,
+	// and Cage never switches modes afterwards, so give Android machines a
+	// phone-shaped scanout up front instead of QEMU's 1280x800 default.
+	const resolution = definition.osId === 'android' ? "<resolution x='720' y='1560'/>" : ''
 	const video = windowsArm
 		? "<video><model type='none'/></video>"
 		: graphicsRenderNode
-			? `<video><model type='virtio' heads='1' primary='yes'><acceleration accel3d='yes'/></model></video>`
-			: `<video><model type='${videoModel}' primary='yes'/></video>`
+			? `<video><model type='virtio' heads='1' primary='yes'><acceleration accel3d='yes'/>${resolution}</model></video>`
+			: `<video><model type='${videoModel}' primary='yes'>${resolution}</model></video>`
 	// Keep HDA separate from libvirt's VNC audiodev. When they share one
 	// backend QEMU lets VNC suspend it, leaving snd-aloop in PREPARED forever.
 	// qemu:commandline also exposes ALSA's try-poll switch, which snd-aloop does

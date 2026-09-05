@@ -1,4 +1,5 @@
 import {createHash, randomBytes, randomUUID, timingSafeEqual} from 'node:crypto'
+import {readFileSync} from 'node:fs'
 import fsp from 'node:fs/promises'
 import dgram from 'node:dgram'
 import net from 'node:net'
@@ -251,6 +252,10 @@ systemctl enable NetworkManager.service gdm3.service`
 // Ubuntu cloud image, then boot directly into Waydroid's native-architecture
 // LineageOS image through a minimal Cage session. The Linux layer remains
 // available over SSH for recovery, but is not exposed in the graphical flow.
+// Runs inside the Android guest after Waydroid's first boot; kept as a file so
+// it stays readable and free of template-literal escaping.
+const WAYDROID_DOCK_SCRIPT = readFileSync(new URL('./waydroid-dock.py', import.meta.url), 'utf8').trimEnd()
+
 const ANDROID_INSTALL = `set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 android_user="$(getent passwd 1000 | cut -d: -f1)"
@@ -275,6 +280,11 @@ if ! find /dev/dri -maxdepth 1 -name 'renderD*' -print -quit 2>/dev/null | grep 
 	sed -i '/^\\[properties\\]$/a ro.hardware.gralloc=default' /var/lib/waydroid/waydroid.cfg
 	sed -i '/^\\[properties\\]$/a ro.hardware.egl=swiftshader' /var/lib/waydroid/waydroid.cfg
 fi
+# Match the phone-shaped 720x1560 scanout the host gives Android machines.
+sed -i '/^\\[properties\\]$/a ro.sf.lcd_density=320' /var/lib/waydroid/waydroid.cfg
+# Waydroid only folds [properties] into waydroid_base.prop during init or an
+# upgrade, so regenerate it offline now that the overrides are in place.
+waydroid upgrade -o
 
 # Most Play apps that ship native code ship it for ARM only, because Play has
 # never required an x86 build, so on an x86_64 host those apps refuse to
@@ -332,7 +342,27 @@ command = "/usr/local/bin/umbrel-waydroid-session"
 user = "$android_user"
 EOF
 
-systemctl enable greetd.service waydroid-container.service
+# Trebuchet's phone layout leaves Waydroid's dock with a hole and a duplicate
+# (see the script). Tidy it once, on first boot, and only if it is untouched.
+cat > /usr/local/bin/umbrel-waydroid-dock <<'EOF'
+${WAYDROID_DOCK_SCRIPT}
+EOF
+chmod 0755 /usr/local/bin/umbrel-waydroid-dock
+cat > /etc/systemd/system/umbrel-waydroid-dock.service <<EOF
+[Unit]
+Description=Tidy the Waydroid first-boot dock
+After=waydroid-container.service greetd.service
+ConditionPathExists=!/var/lib/waydroid/.umbrel-dock
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/umbrel-waydroid-dock
+
+[Install]
+WantedBy=graphical.target
+EOF
+
+systemctl enable greetd.service waydroid-container.service umbrel-waydroid-dock.service
 systemctl set-default graphical.target`
 
 // Shipped with umbrelOS so the catalog works without runtime configuration or

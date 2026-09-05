@@ -14,12 +14,17 @@ import {usePauseWallpaperVideo} from '@/providers/wallpaper'
 import {dialogHeaderCircleButtonClass} from '@/utils/element-classes'
 import {t} from '@/utils/i18n'
 
+// Console aspect ratios (width / height). Android machines boot a phone-shaped
+// 720x1560 scanout (set in umbreld's domain XML); everything else is 16:10.
+const LANDSCAPE_ASPECT_RATIO = 1.6
+const PHONE_ASPECT_RATIO = 720 / 1560
+
 // Whether the machine view can afford its header: true when the console's
-// natural (width-limited) 16:10 height plus the full chrome — including the
-// header, its gap, and the top padding the chrome would otherwise rise into —
-// fits the viewport. Mirrors the --machines-chrome accounting on the layout
-// column below; keep the two in sync.
-function useMachineViewHeaderFits() {
+// natural (width-limited) height at its aspect ratio plus the full chrome —
+// including the header, its gap, and the top padding the chrome would
+// otherwise rise into — fits the viewport. Mirrors the --machines-chrome
+// accounting on the layout column below; keep the two in sync.
+function useMachineViewHeaderFits(aspectRatio: number) {
 	const [fits, setFits] = useState(true)
 	useEffect(() => {
 		const compute = () => {
@@ -30,12 +35,12 @@ function useMachineViewHeaderFits() {
 			// xl: rail (48) + counterweight (48) + two row gaps (12) sit beside
 			const consoleWidth = xl ? contentWidth - 120 : contentWidth
 			const chromeWithHeader = (xl ? 170 : 230) + 50 + 20 + (md ? 32 : 16)
-			setFits(window.innerHeight >= consoleWidth / 1.6 + chromeWithHeader)
+			setFits(window.innerHeight >= consoleWidth / aspectRatio + chromeWithHeader)
 		}
 		compute()
 		window.addEventListener('resize', compute)
 		return () => window.removeEventListener('resize', compute)
-	}, [])
+	}, [aspectRatio])
 	return fits
 }
 
@@ -95,9 +100,11 @@ export default function MachinesLayout() {
 	const machine = isMachineView ? machines.find((machine) => machine.id === machineId) : undefined
 
 	// The header only slides away when hiding it actually buys the console
-	// height: on tall viewports the 16:10 screen is width-limited and there is
-	// room for everything, so the header stays put.
-	const headerFits = useMachineViewHeaderFits()
+	// height: on tall viewports a 16:10 screen is width-limited and there is
+	// room for everything, so the header stays put. A phone-shaped screen is
+	// always height-limited, so there it always goes.
+	const isPhoneConsole = machine?.osId === 'android'
+	const headerFits = useMachineViewHeaderFits(isPhoneConsole ? PHONE_ASPECT_RATIO : LANDSCAPE_ASPECT_RATIO)
 	const hideHeader = isMachineView && !headerFits
 
 	return (
@@ -197,13 +204,16 @@ export default function MachinesLayout() {
 						transition={layoutMorphTransition}
 						className={cn(
 							'relative w-full min-w-0 overflow-hidden shadow-dialog',
-							isMachineView
-								? // Fit: a monitor never scrolls. Cap the width so the 16:10
-									// height never exceeds the viewport slice between the tab bar
-									// and the dock; short-wide viewports get a narrower centered
-									// screen instead of one that runs under the dock.
-									'aspect-16/10 max-w-[calc((100dvh-var(--machines-chrome))*1.6)] flex-1 border border-white/20 bg-black'
-								: 'bg-black/60 backdrop-blur-2xl',
+							isMachineView ? 'flex-1 border border-white/20 bg-black' : 'bg-black/60 backdrop-blur-2xl',
+							// Fit: a monitor never scrolls. Cap the width so the screen's
+							// height never exceeds the viewport slice between the tab bar
+							// and the dock; short-wide viewports get a narrower centered
+							// screen instead of one that runs under the dock. Android gets
+							// a phone-shaped 6:13 screen so its portrait display has no bars.
+							isMachineView &&
+								(isPhoneConsole
+									? 'aspect-6/13 max-w-[calc((100dvh-var(--machines-chrome))*0.4615)]'
+									: 'aspect-16/10 max-w-[calc((100dvh-var(--machines-chrome))*1.6)]'),
 						)}
 					>
 						{/* layout='position' opts the content out of the container's FLIP scaling:
