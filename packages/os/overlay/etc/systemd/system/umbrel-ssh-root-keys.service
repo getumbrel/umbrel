@@ -1,0 +1,16 @@
+[Unit]
+Description=Sync umbrel SSH authorized_keys to root
+Documentation=https://github.com/LuckyCoders/umbrel
+After=local-fs.target
+RequiresMountsFor=/home/umbrel
+Before=ssh.service sshd.service
+Wants=umbrel-ssh-host-key-hydration.service
+After=umbrel-ssh-host-key-hydration.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/umbrel-ssh-root-keys/umbrel-ssh-root-keys
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
