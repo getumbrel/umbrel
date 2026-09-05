@@ -177,6 +177,10 @@ RUN /build-steps/initialize.sh "${APT_SNAPSHOT_DATE}"
 
 RUN /build-steps/setup-raspberrypi.sh
 
+RUN apt-get install --yes \
+    zfs-dkms \
+    zfsutils-linux
+
 # Cleanup build steps.
 RUN rm -rf /build-steps
 
