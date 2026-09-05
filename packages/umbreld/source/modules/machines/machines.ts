@@ -276,6 +276,35 @@ if ! find /dev/dri -maxdepth 1 -name 'renderD*' -print -quit 2>/dev/null | grep 
 	sed -i '/^\\[properties\\]$/a ro.hardware.egl=swiftshader' /var/lib/waydroid/waydroid.cfg
 fi
 
+# Most Play apps that ship native code ship it for ARM only, because Play has
+# never required an x86 build, so on an x86_64 host those apps refuse to
+# install. A translation layer fixes that on both Intel and AMD; ARM hosts run
+# the same apps natively and need nothing. Treat it as a bonus rather than
+# part of the machine: an upstream change, a slow mirror or a dead URL must
+# never be the reason someone's Android machine fails to install, so the
+# attempt is time-boxed and its failure is logged and ignored.
+if [ "$(uname -m)" = x86_64 ]; then
+	cat > /usr/local/bin/umbrel-waydroid-arm-translation <<'EOF'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y --no-install-recommends git lzip python3-venv
+rm -rf /opt/waydroid-script
+git clone --no-checkout https://github.com/casualsnek/waydroid_script /opt/waydroid-script
+git -C /opt/waydroid-script checkout d5289cfd8929e86e7f0dc89ecadcef8b66930eec
+python3 -m venv /opt/waydroid-script/venv
+/opt/waydroid-script/venv/bin/pip install --disable-pip-version-check -r /opt/waydroid-script/requirements.txt
+# Google's libndk translation, as shipped in Chromebooks and the Android
+# emulator, rather than Intel's discontinued libhoudini. Both are ordinary
+# x86_64 code and run on Intel and AMD alike, but this one is still maintained
+# and was verified here on both an ARM-only app and Intel silicon.
+/opt/waydroid-script/venv/bin/python3 /opt/waydroid-script/main.py -a 13 install libndk
+EOF
+	chmod 0755 /usr/local/bin/umbrel-waydroid-arm-translation
+	timeout 900 /usr/local/bin/umbrel-waydroid-arm-translation ||
+		echo 'umbrel: ARM app translation unavailable, continuing without it' >&2
+fi
+
 cat > /usr/local/bin/umbrel-waydroid-session <<'EOF'
 #!/bin/sh
 set -eu

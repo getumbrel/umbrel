@@ -161,6 +161,11 @@ describe('Machines cloud-init seed', () => {
 		expect(script).toContain('ro.hardware.egl=swiftshader')
 		expect(script).toContain('vt = 7')
 		expect(script).toContain('user = "$android_user"')
+		// ARM translation is a bonus for x86 hosts, and a failed attempt must not
+		// take the install with it
+		expect(script).toContain('install libndk')
+		expect(script).toContain('if [ "$(uname -m)" = x86_64 ]; then')
+		expect(script).toMatch(/timeout 900 \/usr\/local\/bin\/umbrel-waydroid-arm-translation \|\|/)
 		expect(config.runcmd.at(-1)).toEqual(['systemctl', 'set-default', 'graphical.target'])
 		expect(config.power_state.mode).toBe('reboot')
 	})
