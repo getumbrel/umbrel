@@ -7,6 +7,11 @@
 		"node": "^22.13.0"
 	},
 	"scripts": {
+		"translations:generate": "node update-translations.js --generate",
+		"translations:plan": "node update-translations.js --plan",
+		"translations:validate": "node update-translations.js --validate",
+		"translations:check": "node update-translations.js --check",
+		"translations:test": "node --test scripts/test-translations.mjs",
 		"dev": "vite --port 3000",
 		"build": "vite build",
 		"lint": "eslint .",

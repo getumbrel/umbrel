@@ -1,0 +1,122 @@
+name: Update translations
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: Branch to translate (the translation PR will target this branch)
+        type: string
+        required: true
+        default: staging
+      plan_only:
+        description: Show pending translation counts without calling OpenAI or creating a PR
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Serialize batches for each target; don't cancel a paid batch halfway through.
+concurrency:
+  group: update-translations-${{ inputs.target_branch }}
+  cancel-in-progress: false
+
+jobs:
+  update-translations:
+    name: Generate translation PR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TARGET_BRANCH: ${{ inputs.target_branch }}
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Validate target branch
+        run: |
+          git check-ref-format "refs/heads/${TARGET_BRANCH}"
+          if [[ "$TARGET_BRANCH" == automation/translations/* ]]; then
+            echo 'Choose a source branch, not a translation PR branch.' >&2
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/heads/${{ inputs.target_branch }}
+          fetch-depth: 0
+      - name: Reuse the open translation PR
+        id: prepare
+        run: bash .github/scripts/prepare-translations.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Show pending translations
+        run: node packages/ui/update-translations.js --plan
+      - name: Install dependencies
+        if: ${{ !inputs.plan_only }}
+        working-directory: packages/ui
+        run: npm ci
+      - name: Generate translations
+        if: ${{ !inputs.plan_only }}
+        working-directory: packages/ui
+        env:
+          TRANSLATIONS_OPENAI_API_KEY: ${{ secrets.TRANSLATIONS_OPENAI_API_KEY }}
+          TRANSLATIONS_OPENAI_MODEL: ${{ secrets.TRANSLATIONS_OPENAI_MODEL }}
+          TRANSLATIONS_SYSTEM_PROMPT: ${{ secrets.TRANSLATIONS_SYSTEM_PROMPT }}
+          TRANSLATIONS_USER_PROMPT: ${{ secrets.TRANSLATIONS_USER_PROMPT }}
+        run: npm run translations:generate
+      # GITHUB_TOKEN pushes don't trigger the regular push CI. Validate the
+      # generated data here before publishing it, including on repeated runs.
+      - name: Validate generated translations
+        if: ${{ !inputs.plan_only }}
+        working-directory: packages/ui
+        run: |
+          npm run translations:test
+          npm run translations:check
+          npx prettier --check translations/last-translated.en.json
+      - name: Check source and translation branches have not moved
+        if: ${{ !inputs.plan_only }}
+        env:
+          BASE_SHA: ${{ steps.prepare.outputs.base-sha }}
+          TRANSLATION_BRANCH: ${{ steps.prepare.outputs.translation-branch }}
+          TRANSLATION_SHA: ${{ steps.prepare.outputs.translation-sha }}
+        run: |
+          current_sha=$(git ls-remote --exit-code origin "refs/heads/${TARGET_BRANCH}" | cut -f1)
+          if [[ "$current_sha" != "$BASE_SHA" ]]; then
+            echo "${TARGET_BRANCH} changed during generation. Run this workflow again against the updated branch." >&2
+            exit 1
+          fi
+          translation_sha=$(git ls-remote origin "refs/heads/${TRANSLATION_BRANCH}" | cut -f1)
+          if [[ "$translation_sha" != "$TRANSLATION_SHA" ]]; then
+            echo 'The translation branch changed during generation. Run again to include the latest corrections.' >&2
+            exit 1
+          fi
+      - name: Create or update translation PR
+        if: ${{ !inputs.plan_only }}
+        id: pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          branch: ${{ steps.prepare.outputs.translation-branch }}
+          base: ${{ inputs.target_branch }}
+          add-paths: |
+            packages/ui/public/locales/*.json
+            packages/ui/translations/last-translated.en.json
+          commit-message: Update translations
+          title: Update translations for ${{ inputs.target_branch }}
+          body: |
+            Updates translations for new or changed English strings, fills missing translations, and removes keys explicitly deleted from English.
+
+            The locale files and `translations/last-translated.en.json` are updated together. English source text is unchanged. Generation completed for every language, and locale completeness, interpolation variables, component tags, snapshot formatting, and generator tests passed before this PR was published.
+
+            Review and merge this PR before promoting its target branch to master. If English text changes, run **Update translations** again. Missing or outdated translations remain allowed during development.
+      - name: Report result
+        if: ${{ !inputs.plan_only }}
+        env:
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          if [[ -n "$PR_URL" ]]; then
+            echo "Translation PR: ${PR_URL}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Translations are already current; no PR is needed.' >> "$GITHUB_STEP_SUMMARY"
+          fi
