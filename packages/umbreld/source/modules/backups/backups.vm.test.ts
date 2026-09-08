@@ -153,6 +153,32 @@ NODE
 		}
 	})
 
+	test('owns repository maintenance so expired snapshots get cleaned up', async () => {
+		await umbreld.client.files.createDirectory.mutate({path: `${externalPath}/Maintenance`})
+		const repositoryId = await umbreld.client.backups.createRepository.mutate({
+			path: `${externalPath}/Maintenance`,
+			password: repositoryPassword,
+		})
+		const kopia = (command: string) =>
+			umbreld.vm.sshAsRoot(
+				`KOPIA_CHECK_FOR_UPDATES=false kopia --config-file=/kopia/config/${repositoryId}.config ${command}`,
+			)
+		const maintenanceInfo = async () => JSON.parse(await kopia('maintenance info --json'))
+
+		// Kopia only runs automatic maintenance when the connecting user@host matches the
+		// maintenance owner, so new repositories must be owned by the identity we connect with.
+		expect((await maintenanceInfo()).owner).toBe('root@umbrel')
+
+		// Repositories created without the hostname override were stamped with the device's real
+		// hostname, so maintenance never ran. Backups take ownership back.
+		await kopia('maintenance set --owner=root@legacy-hostname')
+		expect((await maintenanceInfo()).owner).toBe('root@legacy-hostname')
+		await expect(umbreld.client.backups.backup.mutate({repositoryId})).resolves.toBe(true)
+		expect((await maintenanceInfo()).owner).toBe('root@umbrel')
+
+		await expect(umbreld.client.backups.forgetRepository.mutate({repositoryId})).resolves.toBeUndefined()
+	})
+
 	test('forgets a repository without deleting the repository data', async () => {
 		await umbreld.client.files.createDirectory.mutate({path: `${externalPath}/Forgotten`})
 		const repositoryId = await umbreld.client.backups.createRepository.mutate({

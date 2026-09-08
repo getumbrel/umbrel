@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto'
 import {statfs} from 'node:fs/promises'
+import os from 'node:os'
 import nodePath from 'node:path'
 import {setTimeout} from 'node:timers/promises'
 
@@ -314,6 +315,10 @@ export default class Backups {
 				`--config-file=/kopia/config/${id}.config`,
 				// Password for the repository
 				`--password=${password}`,
+				// Kopia stamps the creating user@host as the repository's maintenance owner and
+				// only runs automatic maintenance when the connecting user@host matches it.
+				// Use the same hostname override as connect() so they always match.
+				'--override-hostname=umbrel',
 			])
 		}
 
@@ -613,6 +618,20 @@ export default class Backups {
 			'--max-parallel-file-reads=1',
 		])
 		this.logger.log(`Retention policy enforced`)
+
+		// Ensure we own repository maintenance
+		// Expired snapshots only free up space when kopia runs maintenance, and kopia only runs it
+		// automatically when the connecting user@host matches the repository's maintenance owner.
+		// Repositories created without the hostname override were stamped with the device's real
+		// hostname, so on devices not called 'umbrel' maintenance never ran and the repository grew
+		// until the destination filled up. Take ownership so maintenance runs on future backups.
+		const maintenanceInfo = await this.repository(repository.id, ['maintenance', 'info', '--json'])
+		const {owner} = JSON.parse(maintenanceInfo.stdout) as {owner: string}
+		const expectedOwner = `${os.userInfo().username}@umbrel`
+		if (owner !== expectedOwner) {
+			this.logger.log(`Taking over repository maintenance from ${owner}`)
+			await this.repository(repository.id, ['maintenance', 'set', '--owner=me'])
+		}
 
 		// Ensure we have the latest ignore file before backing up
 		this.logger.verbose(`Ensuring ignore file is up to date`)
