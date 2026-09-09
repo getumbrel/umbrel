@@ -696,8 +696,8 @@ function AppSettingsDialogForApp({
 
 function AppSettingsSidebar({app, onNavigate}: {app: UserApp; onNavigate: (to: string) => void}) {
 	const {t} = useTranslation()
-	const {appsKeyed} = useAllAvailableApps()
-	const registryApp = appsKeyed?.[app.id]
+	const {resolvedAppsKeyed} = useAllAvailableApps()
+	const registryApp = resolvedAppsKeyed?.[app.id]
 	const hasUpdate = Boolean(app.version) && isAppUpdateAvailable(app.version, registryApp)
 	// No link when the app is gone from every registry — there is no store page
 	const storePath = registryApp ? registryAppPath(registryApp) : null

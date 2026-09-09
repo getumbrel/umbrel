@@ -65,10 +65,25 @@ export function SidebarTrash() {
 				onMouseEnter={(e: React.MouseEvent) => {
 					/* Exclude hover when user is dropping files */
 					if (e.buttons === 0) {
+						const rect = e.currentTarget.getBoundingClientRect()
+						/* Collapsed row height is ~35px. Ignore mouseenter if cursor is below the collapsed row during collapse transition */
+						if (!isHovering && e.clientY > rect.top + 38) {
+							return
+						}
 						setIsHovering(true)
 					}
 				}}
-				onMouseLeave={() => setIsHovering(false)}
+				onMouseLeave={(e: React.MouseEvent) => {
+					const rect = e.currentTarget.getBoundingClientRect()
+					if (
+						e.clientX < rect.left ||
+						e.clientX >= rect.right ||
+						e.clientY < rect.top ||
+						e.clientY >= rect.bottom
+					) {
+						setIsHovering(false)
+					}
+				}}
 			>
 				{(isReadyToDrop) => {
 					const isExpanded = (isReadyToDrop || (isHovering && !isTrash)) && !isMobile
