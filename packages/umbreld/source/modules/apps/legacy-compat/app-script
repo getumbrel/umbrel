@@ -411,6 +411,11 @@ compose() {
     compose_files+=( "--file" "${user_settings_compose_file}" )
   fi
 
+  # Add override compose file if it exists
+  if [[ -f "${app_data_dir}/docker-compose.override.yml" ]]; then
+    compose_files+=(--file "${app_data_dir}/docker-compose.override.yml")
+  fi
+
   # Merge compose files and args. passed into 'compose'
   compose_args=("${compose_files[@]}" "${@}")
 
