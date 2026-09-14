@@ -20,6 +20,7 @@ import {
 	defaultMachineType,
 	defaultPlatformProfile,
 	hostArchitecture,
+	isLegacyPlatformProfile,
 	machineDiskTarget,
 	resolveAcceleration,
 	type MachineArchitecture,
@@ -34,10 +35,50 @@ import MachineStore from './machine-store.js'
 import {safeDownload} from './safe-download.js'
 import {prepareWindowsInstallMedia, type WindowsInstaller} from './windows-image.js'
 import MachineGuestApi from './guest-api.js'
+import {encodeScreenshot, performInputAction, type MachineInputAction, type PointerTarget} from './machine-control.js'
+import type {InputFeedback, PointerMotion} from './input-motion.js'
+import RfbClient from './rfb-client.js'
 import {installCommandOptions, MACHINE_INSTALL_SHORT_COMMAND_TIMEOUT_MS} from './install-command.js'
 
 export const FIRST_BOOT_SETUP_TIMEOUT_MS = 60 * 60 * 1_000
 export const WINDOWS_ARM_FIRST_BOOT_SETUP_TIMEOUT_MS = 4 * FIRST_BOOT_SETUP_TIMEOUT_MS
+// Guests need a moment to react before the screenshot that follows an input
+// action, otherwise the caller sees the screen from before it acted
+export const MACHINE_INPUT_SETTLE_MS = 1_000
+// A machine counts as driven by an agent for this long after its last input.
+// The console shows who is at the controls and asks before letting a person
+// interfere, then hands control back once the agent has gone quiet.
+export const AGENT_CONTROL_TIMEOUT_MS = 60_000
+const agentControlTimeoutMs = () =>
+	Number(process.env.UMBREL_MACHINE_AGENT_CONTROL_TIMEOUT_MS) || AGENT_CONTROL_TIMEOUT_MS
+
+// Who is behind an MCP credential, as far as the console needs to say so
+export type MachineAgent = {
+	tokenId: string
+	label: string
+	agentType?: string
+	clientName?: string
+}
+
+export type MachineAgentControl = {
+	agent: MachineAgent
+	lastInputAt: number
+	// Snapshot age is expressed in the server's clock so clients need not
+	// assume that the browser and Umbrel agree about wall-clock time.
+	observedAt: number
+	sequence: number
+	feedback?: InputFeedback & {startedAt: number}
+	// The agent's pointer in guest pixels together with the framebuffer size it
+	// was placed on, so a viewer can scale it onto whatever the console shows.
+	// While the pointer is travelling this is its destination, announced as it
+	// sets off with how long the journey takes, so a viewer can move in step.
+	pointer?: PointerTarget & {width: number; height: number; motion?: PointerMotion}
+}
+
+export type MachineAgentControlEvent = {
+	machineId: string
+	control: MachineAgentControl | null
+}
 
 export type MachineState =
 	| 'installing'
@@ -905,6 +946,17 @@ export default class Machines {
 	#previousCpuSample?: {at: bigint; times: Map<string, number>}
 	logger: Umbreld['logger']
 
+	// Agent control bookkeeping is memory-only: it describes what is happening
+	// at the console right now, not anything worth keeping across restarts
+	#agentControls = new Map<string, MachineAgentControl>()
+	#agentControlTimers = new Map<string, NodeJS.Timeout>()
+	#agentPointers = new Map<string, PointerTarget>()
+	// Guests whose first press after boot has already been spent
+	#primedMachines = new Set<string>()
+	#inputQueues = new Map<string, PQueue>()
+	#activeInputs = new Set<string>()
+	#inputSequence = 0
+
 	constructor(umbreld: Umbreld) {
 		this.#umbreld = umbreld
 		this.logger = umbreld.logger.createChildLogger('machines')
@@ -1034,7 +1086,11 @@ export default class Machines {
 			)
 			let changed = states.length !== this.#lastStates.size
 			for (const machine of states) {
-				if (this.#lastStates.get(machine.id) !== machine.state) changed = true
+				if (this.#lastStates.get(machine.id) !== machine.state) {
+					changed = true
+					// A guest that stopped on its own boots afresh next time
+					if (machine.state !== 'running') this.#forgetMachineInput(machine.id)
+				}
 				if (this.#lastFirstBootSetupStates.get(machine.id) !== machine.firstBootSetup) changed = true
 				this.#lastStates.set(machine.id, machine.state)
 				this.#lastFirstBootSetupStates.set(machine.id, machine.firstBootSetup)
@@ -1536,6 +1592,147 @@ export default class Machines {
 		const socket = this.#libvirt.displaySocket(id)
 		if (!(await fse.pathExists(socket))) throw new Error('[machine-console-unavailable]')
 		return socket
+	}
+
+	async #withDisplay<T>(id: string, operation: (client: RfbClient) => Promise<T>) {
+		const client = await RfbClient.connect(await this.consoleSocket(id))
+		try {
+			return await operation(client)
+		} finally {
+			client.close()
+		}
+	}
+
+	async screenshot(id: string, {agent}: {agent?: MachineAgent} = {}) {
+		const screenshot = await this.#withDisplay(id, async (client) =>
+			encodeScreenshot(await client.captureFramebuffer()),
+		)
+		// Looking keeps an agent's turn at the console alive, but does not begin one
+		if (agent && this.#agentControls.get(id)?.agent.tokenId === agent.tokenId) this.#touchAgentControl(id, agent)
+		return screenshot
+	}
+
+	// Performs one keyboard or pointer action at the console and returns the
+	// screen afterwards, the way a person acts and then looks
+	async control(id: string, action: MachineInputAction, {agent}: {agent?: MachineAgent} = {}) {
+		// Interleaved pointer/keyboard calls cannot have a truthful visual
+		// sequence (and can leave modifiers held). Serialize each machine only.
+		let queue = this.#inputQueues.get(id)
+		if (!queue) {
+			queue = new PQueue({concurrency: 1})
+			this.#inputQueues.set(id, queue)
+			const current = queue
+			queue.on('idle', () => {
+				if (this.#inputQueues.get(id) === current) this.#inputQueues.delete(id)
+			})
+		}
+		return queue.add(() => this.#control(id, action, agent))
+	}
+
+	async #control(id: string, action: MachineInputAction, agent?: MachineAgent) {
+		const definition = await this.#definition(id)
+		const pointerSupported = !isLegacyPlatformProfile(definition.platformProfile)
+		return this.#withDisplay(id, async (client) => {
+			this.#activeInputs.add(id)
+			clearTimeout(this.#agentControlTimers.get(id))
+			try {
+				const {pointer, primed} = await performInputAction(client, action, {
+					pointerSupported,
+					pointer: this.#agentPointers.get(id),
+					primeFirstPress: definition.osId === 'android' && !this.#primedMachines.has(id),
+					onPosition: (point) => this.#agentPointers.set(id, point),
+					onUpdate: ({pointer, motion, feedback}) => {
+						if (agent)
+							this.#touchAgentControl(
+								id,
+								agent,
+								pointer && {...pointer, width: client.width, height: client.height, motion},
+								feedback,
+							)
+					},
+				})
+				if (primed) this.#primedMachines.add(id)
+				if (pointer) this.#agentPointers.set(id, pointer)
+				if (action.action !== 'wait') await new Promise((resolve) => setTimeout(resolve, MACHINE_INPUT_SETTLE_MS))
+				const screenshot = await encodeScreenshot(await client.captureFramebuffer())
+				if (agent && this.#agentControls.get(id)?.agent.tokenId === agent.tokenId) this.#touchAgentControl(id, agent)
+				return screenshot
+			} catch (error) {
+				const current = this.#agentControls.get(id)
+				if (
+					agent &&
+					current?.agent.tokenId === agent.tokenId &&
+					current.feedback?.phase !== 'released' &&
+					current.feedback?.phase !== 'complete'
+				) {
+					const pointer = this.#agentPointers.get(id)
+					this.#touchAgentControl(id, agent, pointer && {...pointer, width: client.width, height: client.height}, {
+						action: action.action,
+						phase: 'complete',
+					})
+				}
+				throw error
+			} finally {
+				this.#activeInputs.delete(id)
+				this.#scheduleAgentControlExpiry(id)
+			}
+		})
+	}
+
+	agentControls(): Record<string, MachineAgentControl> {
+		return Object.fromEntries(
+			[...this.#agentControls].map(([id, control]) => [id, {...control, observedAt: Date.now()}]),
+		)
+	}
+
+	#touchAgentControl(
+		id: string,
+		agent: MachineAgent,
+		pointer?: MachineAgentControl['pointer'],
+		feedback?: InputFeedback,
+	) {
+		const previous = this.#agentControls.get(id)
+		const control: MachineAgentControl = {
+			agent,
+			lastInputAt: Date.now(),
+			observedAt: Date.now(),
+			sequence: feedback ? ++this.#inputSequence : (previous?.sequence ?? ++this.#inputSequence),
+			feedback: feedback ? {...feedback, startedAt: Date.now()} : previous?.feedback,
+			pointer: pointer ?? previous?.pointer,
+		}
+		this.#agentControls.set(id, control)
+		this.#scheduleAgentControlExpiry(id)
+		// Heartbeats only renew server-side expiry; they do not change the visual state.
+		if (feedback || pointer || !previous || previous.agent.tokenId !== agent.tokenId)
+			this.#umbreld.eventBus.emit('machines:agent-control', {machineId: id, control})
+	}
+
+	#scheduleAgentControlExpiry(id: string) {
+		clearTimeout(this.#agentControlTimers.get(id))
+		this.#agentControlTimers.delete(id)
+		const control = this.#agentControls.get(id)
+		if (!control || this.#activeInputs.has(id)) return
+		// Restore the remaining idle time without counting unrelated or rejected
+		// requests as fresh activity by the current agent.
+		const remainingMs = Math.max(0, control.lastInputAt + agentControlTimeoutMs() - Date.now())
+		const timer = setTimeout(() => this.#clearAgentControl(id), remainingMs)
+		timer.unref()
+		this.#agentControlTimers.set(id, timer)
+	}
+
+	#clearAgentControl(id: string) {
+		clearTimeout(this.#agentControlTimers.get(id))
+		this.#agentControlTimers.delete(id)
+		if (!this.#agentControls.delete(id)) return
+		this.#umbreld.eventBus.emit('machines:agent-control', {machineId: id, control: null})
+	}
+
+	// The remembered pointer outlives an agent's turn: the guest's pointer is
+	// still where it was left. It is only wrong once the guest has gone away.
+	#forgetMachineInput(id: string) {
+		this.#agentPointers.delete(id)
+		this.#primedMachines.delete(id)
+		this.#clearAgentControl(id)
 	}
 
 	async audioCaptureSource(id: string) {
@@ -2098,6 +2295,7 @@ export default class Machines {
 	}
 
 	async stopMachine(id: string) {
+		this.#forgetMachineInput(id)
 		return this.#withMachineLock(id, async () => {
 			this.#assertBackupIdle(id)
 			const definition = await this.#definition(id)
@@ -2135,6 +2333,7 @@ export default class Machines {
 	}
 
 	async forceStopMachine(id: string) {
+		this.#forgetMachineInput(id)
 		this.#assertBackupIdle(id)
 		// Cancellation happens before the lifecycle lock because the detached
 		// install may be waiting to acquire that same lock before auto-starting.
@@ -2179,6 +2378,11 @@ export default class Machines {
 			this.#installProgress.delete(id)
 			this.#installationStates.delete(id)
 			await this.#store.remove(id)
+			this.#forgetMachineInput(id)
+			// MCP bookkeeping is best effort, a failure here must never abort the uninstall
+			await this.#umbreld.mcp
+				.removeMachineGrant(id)
+				.catch((error) => this.logger.error(`Failed to remove MCP grant for machine ${id}`, error))
 			if (externalDisk) await fse.remove(externalDisk)
 			await this.#libvirt.cleanupRuntime(id)
 			await this.#libvirt.reconcileNetwork(await this.#store.list())

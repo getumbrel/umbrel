@@ -101,6 +101,12 @@ export function defaultMachineType(profile: PlatformProfile) {
 	}
 }
 
+// Legacy profiles carry PS/2 devices only. Everything else gets a USB tablet,
+// which is what makes absolute pointer input from the console possible.
+export function isLegacyPlatformProfile(profile: PlatformProfile) {
+	return profile === 'legacy-x86' || profile === 'windows-98-x86'
+}
+
 export function architectureForProfile(profile: PlatformProfile): MachineArchitecture {
 	return profile === 'modern-arm64' ? 'arm64' : 'amd64'
 }
@@ -140,7 +146,7 @@ export function buildDomainXml({
 	if (!definition.ipAddress) throw new Error('[machine-ip-address-invalid]')
 	const windows7 = definition.platformProfile === 'windows-7-x86'
 	const windows98 = definition.platformProfile === 'windows-98-x86'
-	const legacy = definition.platformProfile === 'legacy-x86' || windows98
+	const legacy = isLegacyPlatformProfile(definition.platformProfile)
 	const modern = !legacy
 	const arm = definition.arch === 'arm64'
 	const windowsArm = arm && definition.osId === 'windows-11'

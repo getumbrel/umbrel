@@ -148,12 +148,14 @@ function MachineRow({machine, index}: {machine: Machine; index: number}) {
 					{/* No state pill: the artwork, glow, detail line and power button
 					    already tell the whole story */}
 					<span className='max-w-full min-w-0 truncate text-15 font-medium -tracking-2 text-white'>{machine.name}</span>
-					<div className='flex w-full min-w-0 items-center justify-center gap-1.5 text-12 -tracking-2 text-white/40 sm:justify-start'>
-						<span className='truncate'>{machine.osVersion}</span>
+					{/* Truncate the whole line: a non-shrinking status can otherwise
+					    paint outside the copy column and underneath the controls. */}
+					<div className='w-full min-w-0 truncate text-center text-12 -tracking-2 text-white/40 sm:text-left'>
+						{machine.osVersion}
 						{statusLabel && (
 							<>
-								<span className='size-[3px] shrink-0 rounded-full bg-white/25' />
-								<span className='shrink-0'>{statusLabel}</span>
+								<span className='mx-1.5 inline-block size-[3px] rounded-full bg-white/25 align-middle' />
+								{statusLabel}
 							</>
 						)}
 					</div>
@@ -291,10 +293,12 @@ function useEjectInstallMedia(machine: Machine) {
 export function MachineMenu({
 	machine,
 	buttonClassName,
+	tooltipSide,
 	withRestart,
 }: {
 	machine: Machine
 	buttonClassName?: string
+	tooltipSide?: 'top' | 'right' | 'bottom' | 'left'
 	// The list rows have no dedicated restart button, so their menu carries it.
 	// The rail keeps its own restart button and leaves this off.
 	withRestart?: boolean
@@ -313,7 +317,7 @@ export function MachineMenu({
 
 	return (
 		<DropdownMenu>
-			<DarkTooltip label={t('machines.machine-options')}>
+			<DarkTooltip label={t('machines.machine-options')} side={tooltipSide}>
 				<DropdownMenuTrigger asChild>
 					<button className={buttonClassName ?? machineRowButtonClass} aria-label={t('machines.machine-options')}>
 						<MoreHorizontal className='size-4 md:size-5' />

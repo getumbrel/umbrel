@@ -1,8 +1,9 @@
 import {LayoutGrid, Plus} from 'lucide-react'
 import {motion} from 'motion/react'
-import {useEffect, useRef} from 'react'
+import {useEffect} from 'react'
 import {NavLink, useLocation} from 'react-router-dom'
 
+import {useFadeScroller} from '@/components/fade-scroller'
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {OsIcon} from '@/features/machines/components/os-icon'
 import {layoutMorphTransition, machinePath, MACHINES_ADD_PATH, MACHINES_PATH} from '@/features/machines/constants'
@@ -58,7 +59,7 @@ function Tab({
 }
 
 export function MachinesTabBar({machines}: {machines: Machine[]}) {
-	const navRef = useRef<HTMLElement>(null)
+	const {ref: navRef, scrollerClass} = useFadeScroller('x', false, 24)
 	const {pathname} = useLocation()
 
 	// One horizontally scrollable row (no wrapping); keep the active tab in view
@@ -76,7 +77,10 @@ export function MachinesTabBar({machines}: {machines: Machine[]}) {
 			// to a visual 12px. pr-2 keeps the last pill off the clip edge when
 			// scrolled fully right (below md the column edge is the viewport edge,
 			// so a negative right margin here would overflow the page sideways)
-			className='-mt-1 -mb-3 flex items-center gap-2 overflow-x-auto py-1 pr-2 [scrollbar-width:none] md:pr-0 [&::-webkit-scrollbar]:hidden'
+			className={cn(
+				scrollerClass,
+				'-mt-1 -mb-3 flex scroll-px-6 items-center gap-2 overflow-x-auto py-1 pr-2 [scrollbar-width:none] md:pr-0 [&::-webkit-scrollbar]:hidden',
+			)}
 		>
 			<DarkTooltip label={t('machines.all-machines')} side='bottom'>
 				<Tab to={MACHINES_PATH} end label={t('machines.all-machines')} className='w-10'>

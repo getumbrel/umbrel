@@ -1,4 +1,6 @@
 import {Loader2, Maximize2, Pin, Power, RotateCw, Volume2, VolumeX, X} from 'lucide-react'
+import {lazy, Suspense, useState} from 'react'
+import {TbSparkles} from 'react-icons/tb'
 
 import {DarkTooltip} from '@/components/ui/dark-tooltip'
 import {MachineMenu, useUninstallMachine} from '@/features/machines/components/machines-list'
@@ -10,11 +12,22 @@ import {isMachineStartable} from '@/features/machines/utils'
 import {cn} from '@/lib/utils'
 import {t} from '@/utils/i18n'
 
+import {useMachineAgentControls} from '../hooks/use-machines'
+import {useMachineViewerActions} from './machine-viewer-actions'
+
+const MachineAgentDialog = lazy(() =>
+	import('./agent-access/machine-agent-dialog').then((module) => ({default: module.MachineAgentDialog})),
+)
+
 // Floating control rail next to the machine screen (power/restart/fullscreen/pin/menu/close)
 export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () => void}) {
 	const {start, stop, restart, retryInstall, setPinned} = useMachineActions()
 	const {muted, setMuted} = useMachineAudioPreference(machine.id)
 	const cancelInstall = useUninstallMachine(machine)
+	const [agentsOpen, setAgentsOpen] = useState(false)
+	const [agentsMounted, setAgentsMounted] = useState(false)
+	const controls = useMachineAgentControls({enabled: agentsOpen})
+	const viewerActions = useMachineViewerActions()
 
 	const isBusy = machine.state === 'starting' || machine.state === 'stopping' || machine.state === 'restarting'
 
@@ -35,6 +48,31 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 					<Maximize2 className='size-5' />
 				</a>
 			</DarkTooltip>
+			<DarkTooltip label={t('machines.agents.label')} side='left'>
+				<button
+					className={machineRailButtonClass}
+					aria-label={t('machines.agents.label')}
+					aria-haspopup='dialog'
+					onClick={() => {
+						setAgentsMounted(true)
+						setAgentsOpen(true)
+					}}
+				>
+					<TbSparkles className='size-5' />
+				</button>
+			</DarkTooltip>
+			{agentsMounted && (
+				<Suspense fallback={null}>
+					<MachineAgentDialog
+						key={machine.id}
+						machine={machine}
+						open={agentsOpen}
+						onOpenChange={setAgentsOpen}
+						control={controls[machine.id]}
+						onTakeOver={() => viewerActions?.request(machine.id)}
+					/>
+				</Suspense>
+			)}
 			<DarkTooltip label={muted ? t('machines.console-enable-audio') : t('machines.console-mute-audio')} side='left'>
 				<button
 					className={cn(machineRailButtonClass, muted && 'text-white/45')}
@@ -122,7 +160,7 @@ export function MachineRail({machine, onClose}: {machine: Machine; onClose?: () 
 					</button>
 				</DarkTooltip>
 			)}
-			<MachineMenu machine={machine} buttonClassName={machineRailButtonClass} />
+			<MachineMenu machine={machine} buttonClassName={machineRailButtonClass} tooltipSide='left' />
 			{onClose && (
 				<DarkTooltip label={t('close')} side='left'>
 					<button className={cn(machineRailButtonClass, 'hidden md:flex')} onClick={onClose} aria-label={t('close')}>

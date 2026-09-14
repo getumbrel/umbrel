@@ -147,6 +147,8 @@ describe('MCP', () => {
 			appStore: false,
 			files: [grantedDirectory],
 			manageSystem: false,
+			machines: [],
+			createMachines: false,
 		})
 
 		await withMcp(token, async (client) => {
@@ -192,6 +194,8 @@ describe('MCP', () => {
 			appStore: true,
 			files: [],
 			manageSystem: false,
+			machines: [],
+			createMachines: false,
 		})
 
 		await withMcp(token, async (client) => {
@@ -269,6 +273,53 @@ request.end(${JSON.stringify(body)})
 			},
 			{interval: 100, timeout: 10_000},
 		)
+	})
+
+	test.sequential('exposes machine tools only behind their grants', async () => {
+		await umbreld.client.mcp.setPermissions.mutate({
+			apps: [],
+			appStore: false,
+			files: [],
+			manageSystem: false,
+			machines: 'all',
+			createMachines: true,
+		})
+		await withMcp(token, async (client) => {
+			const names = (await client.listTools()).tools.map((tool) => tool.name)
+			expect(names).toEqual(
+				expect.arrayContaining([
+					'list_machines',
+					'get_machine_screenshot',
+					'control_machine',
+					'delete_machine',
+					'list_os_images',
+					'create_machine',
+				]),
+			)
+			await expect(callTool(client, 'list_machines')).resolves.toStrictEqual([])
+			await expect(callTool(client, 'list_os_images')).resolves.toMatchObject({
+				host: {architecture: 'amd64'},
+				images: expect.any(Array),
+			})
+			await expect(callTool(client, 'get_machine_screenshot', {machineId: 'missing'})).rejects.toThrow(
+				'[machine-not-found]',
+			)
+		})
+
+		await umbreld.client.mcp.setPermissions.mutate({
+			apps: [],
+			appStore: false,
+			files: [],
+			manageSystem: false,
+			machines: [],
+			createMachines: false,
+		})
+		await withMcp(token, async (client) => {
+			const names = (await client.listTools()).tools.map((tool) => tool.name)
+			expect(names).toContain('list_machines')
+			expect(names).not.toContain('control_machine')
+			expect(names).not.toContain('create_machine')
+		})
 	})
 
 	test.sequential('revokes one token independently and preserves the other across disable and re-enable', async () => {

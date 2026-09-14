@@ -13,7 +13,7 @@ import type {
 	ReplaceStatus,
 	ScrubStatus,
 } from '../hardware/raid.js'
-import type {Machine, OsImage} from '../machines/machines.js'
+import type {Machine, OsImage, MachineAgentControlEvent} from '../machines/machines.js'
 import type {PhotoIndexingProgress} from '../photos/types.js'
 
 // A Watchman callback can contain hundreds of thousands of paths. Emitting the
@@ -59,6 +59,7 @@ export const events = [
 	'raid:scrub-progress',
 	'machines:updated',
 	'machines:os-images-updated',
+	'machines:agent-control',
 	'raid:status-change',
 	'notifications:change',
 	'hardware:thunderbolt:devices-change',
@@ -118,6 +119,9 @@ export type EventTypes = {
 	// Fires with a full snapshot of all OS images whenever any image changes
 	// (download progress, download completion, custom ISO registration)
 	'machines:os-images-updated': OsImage[]
+	// Fires when an MCP agent starts or stops driving a machine's console, and
+	// with each of its pointer moves while it does
+	'machines:agent-control': MachineAgentControlEvent
 	// Fires when the RAID pool's user-visible state changes: pool status, data or
 	// accelerator membership, per-member status, raid type or topology
 	'raid:status-change': undefined

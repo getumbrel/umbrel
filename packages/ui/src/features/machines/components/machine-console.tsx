@@ -3,10 +3,15 @@ import {VolumeX} from 'lucide-react'
 import {useEffect, useRef, useState} from 'react'
 import {useTranslation} from 'react-i18next'
 
+import {MachineAgentOverlay} from '@/features/machines/components/machine-agent-overlay'
 import {useMachineAudioPreference} from '@/features/machines/hooks/use-machine-audio-preference'
+import {useMachineAgentControls} from '@/features/machines/hooks/use-machines'
 import {createMachineAudioSink, type MachineAudioSink} from '@/features/machines/machine-audio'
 import {createBrowserUuid} from '@/features/machines/utils'
+import {cn} from '@/lib/utils'
 import {trpcClient} from '@/trpc/trpc'
+
+import {setConsoleAgentOwnership} from './console-agent-ownership'
 
 const SUPERSEDED_CLOSE_CODE = 4001
 const LAYOUT_SETTLE_DELAY_MS = 350
@@ -28,6 +33,29 @@ export function MachineConsole({machineId, resizeSession}: {machineId: string; r
 	const {muted} = useMachineAudioPreference(machineId)
 	const [audioContext, setAudioContext] = useState<AudioContext | undefined>()
 	const [audioBlocked, setAudioBlocked] = useState(false)
+
+	const [arrivalToken, setArrivalToken] = useState<string>()
+	const agentControl = useMachineAgentControls({
+		onArrival: (id, token) => {
+			if (id === machineId) setArrivalToken(token)
+		},
+	})[machineId]
+	const [takenOver, setTakenOver] = useState(false)
+	const agentOwned = !!agentControl && !takenOver
+	const rfbRef = useRef<RFB | undefined>(undefined)
+	const agentOwnedRef = useRef(agentOwned)
+	agentOwnedRef.current = agentOwned
+
+	// A take-over lasts for the agent's turn; the next agent starts watched again
+	useEffect(() => {
+		if (agentControl) return
+		setArrivalToken(undefined)
+		setTakenOver(false)
+	}, [agentControl])
+
+	useEffect(() => {
+		if (rfbRef.current) setConsoleAgentOwnership(rfbRef.current, agentOwned)
+	}, [agentOwned])
 
 	useEffect(() => {
 		if (!screen.current) return
@@ -51,9 +79,10 @@ export function MachineConsole({machineId, resizeSession}: {machineId: string; r
 				})
 				const connectedRfb = new RFB(screen.current, socket, {shared: true})
 				rfb = connectedRfb
+				rfbRef.current = connectedRfb
+				setConsoleAgentOwnership(connectedRfb, agentOwnedRef.current)
 				connectedRfb.scaleViewport = true
 				connectedRfb.resizeSession = false
-				connectedRfb.showDotCursor = true
 				connectedRfb.background = '#000'
 				// Motion transforms do not trigger noVNC's ResizeObserver. Reassigning
 				// this property makes noVNC remeasure once the Machines morph settles;
@@ -94,6 +123,7 @@ export function MachineConsole({machineId, resizeSession}: {machineId: string; r
 			if (rescaleTimer) clearTimeout(rescaleTimer)
 			rfb?.disconnect()
 			socket?.close()
+			if (rfbRef.current === rfb) rfbRef.current = undefined
 		}
 	}, [machineId, resizeSession, sessionId])
 
@@ -196,9 +226,31 @@ export function MachineConsole({machineId, resizeSession}: {machineId: string; r
 	}, [audioContext, machineId, sessionId])
 
 	return (
-		<div ref={root} className='absolute inset-0 flex items-center justify-center bg-black'>
+		<div
+			ref={root}
+			className={cn(
+				'absolute inset-0 flex items-center justify-center overflow-hidden bg-black',
+				agentOwned && 'cursor-none [&_canvas]:cursor-none!',
+			)}
+		>
 			{/* noVNC owns the canvas; scaleViewport keeps the complete framebuffer visible. */}
 			<div ref={screen} className='size-full shrink-0 overflow-hidden [&_canvas]:mx-auto [&_canvas]:block' />
+			{agentControl && (
+				<MachineAgentOverlay
+					machineId={machineId}
+					animateArrival={arrivalToken === agentControl.agent.tokenId}
+					key={agentControl.agent.tokenId}
+					agentControl={agentControl}
+					takenOver={takenOver}
+					root={root}
+					screen={screen}
+					onTakeOver={() => {
+						setTakenOver(true)
+						rfbRef.current?.focus()
+					}}
+				/>
+			)}
+
 			{!muted && audioBlocked && (
 				<div className='pointer-events-none absolute top-3 right-3 z-10 grid size-7 place-items-center rounded-full bg-black/55 text-white/55 backdrop-blur'>
 					<VolumeX className='size-3.5' />

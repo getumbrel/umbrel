@@ -12,13 +12,22 @@ import {listClass} from '@/components/ui/list'
 import {Loading} from '@/components/ui/loading'
 import {Switch} from '@/components/ui/switch'
 import {toast} from '@/components/ui/toast'
+import {machineIconSrc} from '@/features/machines/components/os-icon'
+import {useMachineCapabilities, useMachines} from '@/features/machines/hooks/use-machines'
+import type {Machine} from '@/features/machines/types'
 import {useIsMobile} from '@/hooks/use-is-mobile'
 import {cn} from '@/lib/utils'
 import {AnimatedRow, GrantSummary, RowChevron} from '@/modules/user-sharing'
 import {isStorageCategoryPath} from '@/modules/user-sharing/new-user-access'
 import {useConfirmation} from '@/providers/confirmation'
 import {BackButton, SectionLabel, useSettingsDialogProps} from '@/routes/settings/_components/shared'
-import {AppAccessDetail, FileAccessDetail, type InstalledApp, type McpPermissions} from '@/routes/settings/mcp/access'
+import {
+	AppAccessDetail,
+	FileAccessDetail,
+	MachineAccessDetail,
+	type InstalledApp,
+	type McpPermissions,
+} from '@/routes/settings/mcp/access'
 import {matchAgent, MCP_AGENTS, OTHER_AGENT, type McpAgentId} from '@/routes/settings/mcp/agents'
 import {ConnectView} from '@/routes/settings/mcp/connect'
 import {AgentLogoPlate} from '@/routes/settings/mcp/constellation'
@@ -41,6 +50,7 @@ function getMcpErrorMessage(message: string): string {
 	if (message.includes('[token-limit]')) return t('mcp-error.token-limit')
 	if (message.includes('[token-not-found]')) return t('mcp-error.token-not-found')
 	if (message.includes('[app-not-installed]')) return t('mcp-error.app-not-installed')
+	if (message.includes('[machine-not-found]')) return t('mcp-error.machine-not-found')
 	if (message.includes('[invalid-base]')) return t('mcp-error.invalid-base')
 	if (message.includes('[does-not-exist]') || message.includes('[not-a-directory]'))
 		return t('mcp-error.folder-not-found')
@@ -69,7 +79,7 @@ export default function McpDialog() {
 	const permissions = settings?.permissions
 	const tokens = tokensQ.data ?? []
 
-	const [view, setView] = useState<'main' | 'apps' | 'files' | 'tokens'>('main')
+	const [view, setView] = useState<'main' | 'apps' | 'files' | 'machines' | 'tokens'>('main')
 
 	// The token is only returned when it is created and never persisted or
 	// re-fetchable — same principle as the created-member-password view in users.tsx.
@@ -226,6 +236,13 @@ export default function McpDialog() {
 		icon: 'icon' in app && app.icon ? app.icon : undefined,
 	}))
 
+	// Machines feed their drill-in the same way. Hardware that cannot run
+	// machines at all hides the machine grants rather than offering an empty
+	// list and a creation switch that could never work.
+	const {machines} = useMachines()
+	const {capabilities: machineCapabilities} = useMachineCapabilities()
+	const machinesAvailable = machineCapabilities?.libvirtAvailable !== false
+
 	const handleDisable = async () => {
 		if (disableMut.isPending) return
 		try {
@@ -369,6 +386,17 @@ export default function McpDialog() {
 				onBack={() => setView('main')}
 			/>
 		)
+	} else if (permissions && view === 'machines') {
+		contentKey = 'machines'
+		content = (
+			<MachineAccessDetail
+				permissions={permissions}
+				machines={machines}
+				busy={setPermissionsMut.isPending}
+				onUpdate={updatePermissions}
+				onBack={() => setView('main')}
+			/>
+		)
 	} else if (permissions) {
 		showHeader = true
 		contentKey = 'main'
@@ -377,6 +405,8 @@ export default function McpDialog() {
 				tokens={tokens}
 				permissions={permissions}
 				installedApps={installedApps}
+				machines={machines}
+				machinesAvailable={machinesAvailable}
 				busy={setPermissionsMut.isPending}
 				disabling={disableMut.isPending}
 				onUpdate={updatePermissions}
@@ -385,6 +415,7 @@ export default function McpDialog() {
 				onShowTokens={() => setView('tokens')}
 				onShowApps={() => setView('apps')}
 				onShowFiles={() => setView('files')}
+				onShowMachines={() => setView('machines')}
 			/>
 		)
 	}
@@ -466,6 +497,8 @@ function EnabledView({
 	tokens,
 	permissions,
 	installedApps,
+	machines,
+	machinesAvailable,
 	busy,
 	disabling,
 	onUpdate,
@@ -474,10 +507,13 @@ function EnabledView({
 	onShowTokens,
 	onShowApps,
 	onShowFiles,
+	onShowMachines,
 }: {
 	tokens: McpToken[]
 	permissions: McpPermissions
 	installedApps: InstalledApp[]
+	machines: Machine[]
+	machinesAvailable: boolean
 	busy: boolean
 	disabling: boolean
 	onUpdate: (patch: Partial<McpPermissions>) => void
@@ -486,6 +522,7 @@ function EnabledView({
 	onShowTokens: () => void
 	onShowApps: () => void
 	onShowFiles: () => void
+	onShowMachines: () => void
 }) {
 	const {t} = useTranslation()
 
@@ -519,6 +556,19 @@ function EnabledView({
 		: folderGrants.length > 0
 			? [t('mcp-folder-count', {count: folderGrants.length}), storageSuffix].filter(Boolean).join(' ')
 			: storageSuffix || t('mcp-none')
+
+	const machineById = new Map(machines.map((machine) => [machine.id, machine]))
+	const allMachines = permissions.machines === 'all'
+	const grantedMachineIds = permissions.machines === 'all' ? [] : permissions.machines
+	const summaryMachineIcons = (allMachines ? machines.map((machine) => machine.id) : grantedMachineIds).map((id) => {
+		const machine = machineById.get(id)
+		return machine ? machineIconSrc(machine.osId) : undefined
+	})
+	const machinesSummaryLabel = allMachines
+		? t('mcp-all-machines')
+		: grantedMachineIds.length > 0
+			? t('mcp-machine-count', {count: grantedMachineIds.length})
+			: t('mcp-none')
 
 	return (
 		<div className='flex flex-col gap-y-5'>
@@ -562,6 +612,22 @@ function EnabledView({
 						<GrantSummary folder={allFolders || folderGrants.length > 0} label={filesSummaryLabel} />
 						<RowChevron />
 					</button>
+					{machinesAvailable && (
+						<button
+							type='button'
+							onClick={onShowMachines}
+							className='group flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-white/4'
+						>
+							<span className='min-w-0 flex-1'>
+								<span className='block truncate text-13 font-medium -tracking-2 text-white/90'>
+									{t('mcp-machines')}
+								</span>
+								<span className='block text-12 leading-tight text-white/50'>{t('mcp-machines-summary')}</span>
+							</span>
+							<GrantSummary icons={summaryMachineIcons} label={machinesSummaryLabel} />
+							<RowChevron />
+						</button>
+					)}
 					<PermissionToggleRow
 						title={t('mcp-app-store')}
 						description={t('mcp-app-store-description')}
@@ -569,6 +635,15 @@ function EnabledView({
 						disabled={busy}
 						onCheckedChange={(checked) => onUpdate({appStore: checked})}
 					/>
+					{machinesAvailable && (
+						<PermissionToggleRow
+							title={t('mcp-create-machines')}
+							description={t('mcp-create-machines-description')}
+							checked={permissions.createMachines}
+							disabled={busy}
+							onCheckedChange={(checked) => onUpdate({createMachines: checked})}
+						/>
+					)}
 					<PermissionToggleRow
 						title={t('mcp-manage-system')}
 						description={t('mcp-manage-system-description')}

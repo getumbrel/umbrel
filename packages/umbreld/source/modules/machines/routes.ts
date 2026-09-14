@@ -1,9 +1,11 @@
 import z from 'zod'
 
 import {router, privateProcedure} from '../server/trpc/trpc.js'
+import {MACHINE_INPUT_ACTIONS, MAX_SCROLL_AMOUNT, MAX_TYPE_TEXT_LENGTH, MAX_WAIT_SECONDS} from './machine-control.js'
 import {machineIdSchema} from './machine-id.js'
 
 const windowsLicenseKey = z.string().regex(/^[A-Z0-9]{5}(?:-[A-Z0-9]{5}){4}$/i)
+const screenshotCoordinate = z.tuple([z.number().int().min(0), z.number().int().min(0)])
 
 export default router({
 	capabilities: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.capabilities()),
@@ -113,4 +115,34 @@ export default router({
 	// The OS picker starts downloads only as an internal phase of machine
 	// creation. Cache state is intentionally not user-managed.
 	osImages: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.listOsImages()),
+
+	// Which machines an MCP agent is currently driving, so the console can show
+	// who is at the controls
+	agentControls: privateProcedure.query(async ({ctx}) => ctx.umbreld.machines.agentControls()),
+
+	// The console as a still image, scaled for machine vision. Coordinates
+	// given to control refer to this image's pixels.
+	screenshot: privateProcedure
+		.input(z.object({id: machineIdSchema}))
+		.query(async ({ctx, input}) => ctx.umbreld.machines.screenshot(input.id)),
+
+	// One keyboard or pointer action at the console, answered with the screen
+	// after it took effect
+	control: privateProcedure
+		.input(
+			z.object({
+				id: machineIdSchema,
+				action: z.enum(MACHINE_INPUT_ACTIONS),
+				coordinate: screenshotCoordinate.optional(),
+				startCoordinate: screenshotCoordinate.optional(),
+				text: z.string().max(MAX_TYPE_TEXT_LENGTH).optional(),
+				scrollDirection: z.enum(['up', 'down', 'left', 'right']).optional(),
+				scrollAmount: z.number().int().min(1).max(MAX_SCROLL_AMOUNT).optional(),
+				duration: z.number().min(0).max(MAX_WAIT_SECONDS).optional(),
+			}),
+		)
+		.mutation(async ({ctx, input}) => {
+			const {id, ...action} = input
+			return ctx.umbreld.machines.control(id, action)
+		}),
 })

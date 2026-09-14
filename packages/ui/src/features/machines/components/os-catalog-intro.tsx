@@ -1,5 +1,6 @@
 import {motion, useReducedMotion} from 'motion/react'
 import React, {useEffect, useState} from 'react'
+import {Trans} from 'react-i18next'
 
 import {Button} from '@/components/ui/button'
 import {machineIconSrc} from '@/features/machines/components/os-icon'
@@ -226,7 +227,7 @@ export function CatalogIntro({entries, onCommit}: {entries: IntroWallEntry[]; on
 					transition={enter(1)}
 					className='max-w-md text-15 leading-snug -tracking-2 text-white/50'
 				>
-					{t('machines.intro-description')}
+					<Trans t={t} i18nKey='machines.intro-description' components={{highlight: <span className='text-white' />}} />
 				</motion.p>
 			</div>
 

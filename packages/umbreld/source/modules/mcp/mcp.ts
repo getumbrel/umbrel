@@ -18,6 +18,8 @@ export type McpPermissions = {
 	appStore: boolean
 	files: 'all' | string[]
 	manageSystem: boolean
+	machines: 'all' | string[]
+	createMachines: boolean
 }
 
 export type McpTokenMetadata = {
@@ -81,6 +83,8 @@ function defaultPermissions(): McpPermissions {
 		appStore: false,
 		files: [],
 		manageSystem: false,
+		machines: [],
+		createMachines: false,
 	}
 }
 
@@ -150,7 +154,9 @@ export default class Mcp {
 		return {
 			enabled: settings?.enabled ?? false,
 			tokens: settings?.tokens ?? {},
-			permissions: settings?.permissions ?? defaultPermissions(),
+			// Grants added after MCP shipped are absent from older stores and
+			// default to not granted
+			permissions: {...defaultPermissions(), ...settings?.permissions},
 		}
 	}
 
@@ -315,6 +321,26 @@ export default class Mcp {
 		return {tokenId: id}
 	}
 
+	// Names the agent behind a credential for the machine console: the label
+	// and agent type chosen in settings, plus the client's own most recent name
+	async describeAgent(token: string) {
+		const match = TOKEN_PATTERN.exec(token)
+		if (!match) return undefined
+		const tokenId = match[1]
+		const stored = (await this.#storedSettings()).tokens[tokenId]
+		if (!stored) return undefined
+		let latest: McpClient | undefined
+		for (const client of this.#tokenActivity.get(tokenId)?.clients.values() ?? []) {
+			if (!latest || client.lastRequestAt > latest.lastRequestAt) latest = client
+		}
+		return {
+			tokenId,
+			label: stored.label,
+			...(stored.agentType ? {agentType: stored.agentType} : {}),
+			...(latest ? {clientName: latest.name} : {}),
+		}
+	}
+
 	// Remember which agents are talking to us so the dashboard can list
 	// "Claude Code · 2 minutes ago" per agent. Modern (2026-07-28) clients
 	// identify themselves on every request via the _meta envelope, so their
@@ -382,13 +408,18 @@ export default class Mcp {
 
 	async getPermissions(): Promise<McpPermissions> {
 		const {permissions} = await this.#storedSettings()
-		if (permissions.apps === 'all') return {...permissions}
-
 		const installedAppIds = new Set(this.#umbreld.apps.instances.map((app) => app.id))
-		return {
-			...permissions,
-			apps: [...new Set(permissions.apps)].filter((appId) => installedAppIds.has(appId)),
-		}
+		const apps =
+			permissions.apps === 'all' ? 'all' : [...new Set(permissions.apps)].filter((appId) => installedAppIds.has(appId))
+		const machines =
+			permissions.machines === 'all' ? 'all' : await this.#existingMachineIds([...new Set(permissions.machines)])
+		return {...permissions, apps, machines}
+	}
+
+	async #existingMachineIds(ids: string[]) {
+		const existing: string[] = []
+		for (const id of ids) if (await this.#umbreld.machines.exists(id)) existing.push(id)
+		return existing
 	}
 
 	async #updatePermissions(update: (permissions: McpPermissions) => McpPermissions | undefined) {
@@ -444,11 +475,23 @@ export default class Mcp {
 			files = [...new Set(files)]
 		}
 
+		let machines: McpPermissions['machines']
+		if (permissions.machines === 'all') {
+			machines = 'all'
+		} else {
+			machines = [...new Set(permissions.machines)]
+			for (const id of machines) {
+				if (!(await this.#umbreld.machines.exists(id))) throw new Error(`[machine-not-found] '${id}'`)
+			}
+		}
+
 		const normalized: McpPermissions = {
 			apps,
 			appStore: permissions.appStore,
 			files,
 			manageSystem: permissions.manageSystem,
+			machines,
+			createMachines: permissions.createMachines,
 		}
 		await this.#updatePermissions(() => normalized)
 		return normalized
@@ -474,6 +517,38 @@ export default class Mcp {
 		if (!(await this.getPermissions()).manageSystem) {
 			throw new Error(`[permission-denied] System management is not granted. ${MCP_PERMISSION_REMEDIATION}`)
 		}
+	}
+
+	async assertMachineAccess(id: string) {
+		if (!(await this.#umbreld.machines.exists(id))) {
+			throw new Error(`[machine-not-found] Machine '${id}' does not exist`)
+		}
+		const permissions = await this.getPermissions()
+		if (permissions.machines !== 'all' && !permissions.machines.includes(id)) {
+			throw new Error(`[permission-denied] Machine '${id}' is not granted. ${MCP_PERMISSION_REMEDIATION}`)
+		}
+	}
+
+	async assertMachineCreateAccess() {
+		if (!(await this.getPermissions()).createMachines) {
+			throw new Error(`[permission-denied] Creating machines is not granted. ${MCP_PERMISSION_REMEDIATION}`)
+		}
+	}
+
+	async addMachineGrant(id: string) {
+		await this.#updatePermissions((permissions) => {
+			if (permissions.machines === 'all' || permissions.machines.includes(id)) return
+			return {...permissions, machines: [...permissions.machines, id]}
+		})
+	}
+
+	async removeMachineGrant(id: string) {
+		return this.#updatePermissions((permissions) => {
+			if (permissions.machines === 'all') return
+			const machines = permissions.machines.filter((candidate) => candidate !== id)
+			if (machines.length === permissions.machines.length) return
+			return {...permissions, machines}
+		})
 	}
 
 	async allowedFileGrants(permissions?: McpPermissions) {

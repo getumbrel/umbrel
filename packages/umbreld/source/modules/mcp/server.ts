@@ -13,6 +13,7 @@ import {createInternalTrpcCaller} from '../server/trpc/index.js'
 import type {McpPermissions} from './mcp.js'
 import registerAppTools from './tools/apps.js'
 import registerFileTools from './tools/files.js'
+import registerMachineTools from './tools/machines.js'
 import {MCP_PERMISSION_REMEDIATION, type McpToolContext} from './tools/shared.js'
 import registerSystemInfoTools from './tools/system-info.js'
 import registerSystemManagementTools from './tools/system-management.js'
@@ -68,14 +69,29 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 		permissions.apps === 'all' ||
 		permissions.apps.length > 0
 	const filesUrl = `${baseUrl}/files`
+	const machineAccess =
+		permissions.machines === 'all'
+			? 'all machines'
+			: permissions.machines.length > 0
+				? permissions.machines.join(', ')
+				: 'not granted'
+	const hasMachineGrants = permissions.machines === 'all' || permissions.machines.length > 0
 
 	return [
 		'This server controls the owner account on this umbrelOS device.',
-		'Read-only system information and the installed app list are always available.',
+		'Read-only system information, the installed app list, and the machine (virtual machine) list are always available.',
 		`App control access: ${appAccess}.`,
 		`File access: ${fileAccess}.${appFiles}`,
 		`App Store access: ${permissions.appStore ? 'granted' : 'not granted'}.`,
 		`System management: ${permissions.manageSystem ? 'granted' : 'not granted'}.`,
+		`Machine control access: ${machineAccess}.`,
+		`Machine creation: ${permissions.createMachines ? 'granted' : 'not granted'}.`,
+		hasMachineGrants
+			? 'Granted machines can be started, stopped, reconfigured, deleted, watched through get_machine_screenshot, and driven with keyboard and mouse through control_machine, which returns a fresh screenshot after every action. Deleting a machine permanently deletes its virtual disk.'
+			: '',
+		permissions.createMachines
+			? 'create_machine returns immediately and installs in the background; follow list_machines until the machine is running with firstBootSetup false, then share its IP address and any credentials you set with the user. Machines you create are granted automatically.'
+			: '',
 		permissions.appStore
 			? 'Before installing an app, ensure its dependencies (if any) are installed; pass alternatives when an installed implementing app satisfies a dependency.'
 			: '',
@@ -93,12 +109,21 @@ function instructionsFor(permissions: McpPermissions, baseUrl: string) {
 		.join(' ')
 }
 
+// The bearer credential names the agent: its label and type from settings,
+// plus whatever the client last called itself
+async function agentFor(umbreld: Umbreld, requestInfo?: Request) {
+	const match = /^Bearer (.+)$/i.exec(requestInfo?.headers.get('authorization') ?? '')
+	return match ? umbreld.mcp.describeAgent(match[1]) : undefined
+}
+
 export async function createUmbrelMcpServer(umbreld: Umbreld, requestInfo?: Request) {
 	const permissions = await umbreld.mcp.getPermissions()
 	const context = {
 		rpc: createInternalTrpcCaller(umbreld),
 		mcp: umbreld.mcp,
 		dataDirectory: umbreld.dataDirectory,
+		machines: umbreld.machines,
+		agent: await agentFor(umbreld, requestInfo),
 	} satisfies McpToolContext
 	const server = new McpServer(
 		{name: 'umbrelOS', version: umbreld.version},
@@ -108,6 +133,7 @@ export async function createUmbrelMcpServer(umbreld: Umbreld, requestInfo?: Requ
 	registerAppTools(server, context, permissions)
 	registerFileTools(server, context, permissions)
 	if (permissions.manageSystem) registerSystemManagementTools(server, context)
+	registerMachineTools(server, context, permissions)
 	return server
 }
 

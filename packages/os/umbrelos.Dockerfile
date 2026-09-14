@@ -59,6 +59,7 @@ COPY packages/ui/ .
 # We copy the target file to the expected path for the build to succeed.
 COPY packages/umbreld/source/modules/server/trpc/common.ts /umbreld/source/modules/server/trpc/common.ts
 COPY packages/umbreld/source/modules/user/wallpapers.ts /umbreld/source/modules/user/wallpapers.ts
+COPY packages/umbreld/source/modules/machines/input-motion.ts /umbreld/source/modules/machines/input-motion.ts
 
 # Install the dependencies
 RUN rm -rf node_modules || true
