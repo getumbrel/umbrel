@@ -197,6 +197,12 @@ export function useListDirectory(
 		// Clean up incoming items that the server now includes
 		const arrived = incomingItems.filter((item) => serverPaths.has(item.path)).map((item) => item.path)
 		if (arrived.length > 0) {
+			// An arrival at a reused path supersedes a stale removal for the item
+			// that previously occupied that path.
+			const staleRemovals = arrived.filter((itemPath) => currentPendingPaths.get(itemPath) === 'removing')
+			if (staleRemovals.length > 0) {
+				useFilesStore.getState().removePendingPaths(staleRemovals)
+			}
 			removeIncomingItems(arrived)
 		}
 	}, [data?.files, incomingItems, removeIncomingItems, path])

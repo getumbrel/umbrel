@@ -41,7 +41,7 @@ export function useDragAndDrop() {
 
 	const handleDragEnd = async (event: DragEndEvent) => {
 		if (isReadOnly) return
-		const {over, active} = event
+		const {over} = event
 		const targetPath = over?.data.current?.path as string
 		if (!targetPath) {
 			clearDraggedItems()
@@ -60,10 +60,13 @@ export function useDragAndDrop() {
 			await trashDraggedItems()
 			clearDraggedItems()
 		} else {
-			// Skip if the item is already in the target directory (e.g. dropped on
+			// Skip if all items are already in the target directory (e.g. dropped on
 			// the listing background or on a sibling file instead of a folder)
-			const draggedItem = active.data.current as FileSystemItem | undefined
-			if (draggedItem && draggedItem.path.substring(0, draggedItem.path.lastIndexOf('/')) === targetPath) {
+			const draggedItems = useFilesStore.getState().draggedItems
+			if (
+				draggedItems.length > 0 &&
+				draggedItems.every((item) => item.path.substring(0, item.path.lastIndexOf('/')) === targetPath)
+			) {
 				clearDraggedItems()
 				return
 			}
