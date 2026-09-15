@@ -75,9 +75,7 @@ describe('built-in Machines catalog', () => {
 		const images = builtinMachinesCatalog.images.filter((image) => image.familyId === 'android')
 		expect(images.map(({arch}) => arch)).toEqual(['amd64', 'arm64'])
 		expect(images.every(({cloudInit}) => cloudInit?.graphical)).toBe(true)
-		expect(images.every(({cloudInit}) => cloudInit?.commands?.[0]?.[2]?.includes('waydroid init -s VANILLA'))).toBe(
-			true,
-		)
+		expect(images.every(({cloudInit}) => cloudInit?.commands?.[0]?.[2]?.includes('waydroid init -s GAPPS'))).toBe(true)
 	})
 
 	test('ships internal Windows templates with explicit hardware and unattended-install profiles', () => {

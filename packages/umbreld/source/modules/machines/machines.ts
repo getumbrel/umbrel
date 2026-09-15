@@ -312,7 +312,7 @@ apt-get install -y cage greetd dbus-user-session pipewire-pulse waydroid
 printf 'options binder_linux devices=binder,hwbinder,vndbinder\n' > /etc/modprobe.d/waydroid.conf
 printf 'binder_linux\n' > /etc/modules-load.d/waydroid.conf
 modprobe binder_linux
-waydroid init -s VANILLA
+waydroid init -s GAPPS
 
 # QEMU virgl gives Waydroid native Mesa rendering. On hosts without a render
 # node, fall back to software in both the compositor and Android rather than
@@ -345,11 +345,26 @@ git clone --no-checkout https://github.com/casualsnek/waydroid_script /opt/waydr
 git -C /opt/waydroid-script checkout d5289cfd8929e86e7f0dc89ecadcef8b66930eec
 python3 -m venv /opt/waydroid-script/venv
 /opt/waydroid-script/venv/bin/pip install --disable-pip-version-check -r /opt/waydroid-script/requirements.txt
-# Google's libndk translation, as shipped in Chromebooks and the Android
-# emulator, rather than Intel's discontinued libhoudini. Both are ordinary
-# x86_64 code and run on Intel and AMD alike, but this one is still maintained
-# and was verified here on both an ARM-only app and Intel silicon.
-/opt/waydroid-script/venv/bin/python3 /opt/waydroid-script/main.py -a 13 install libndk
+# Some ARM apps, including Grab, fail to load native methods with libndk on
+# Intel. Use libhoudini there, keeping libndk for other x86 hosts.
+translation=libndk
+if grep -q '^vendor_id[[:space:]]*:[[:space:]]*GenuineIntel' /proc/cpuinfo; then
+	translation=libhoudini
+fi
+/opt/waydroid-script/venv/bin/python3 - -a 13 install "$translation" <<'PY'
+import sys
+sys.path.insert(0, "/opt/waydroid-script")
+from main import main
+from stuff.houdini import Houdini
+
+# The pinned helper's Android 13 default is an HPE 14 build with date-triggered
+# freezes. Use the Android 13 translator from ChromeOS Octopus R144 instead.
+Houdini.dl_links["13"] = [
+    "https://github.com/supremegamers/vendor_intel_proprietary_houdini/archive/120fe811684c938de9d123a1423b7f9f8f572f7d.zip",
+    "b9b0206bb1c84b1588ee6757d11a89a9",
+]
+main()
+PY
 EOF
 	chmod 0755 /usr/local/bin/umbrel-waydroid-arm-translation
 	timeout 900 /usr/local/bin/umbrel-waydroid-arm-translation ||
