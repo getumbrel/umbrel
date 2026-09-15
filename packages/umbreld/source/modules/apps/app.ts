@@ -2420,6 +2420,8 @@ export default class App {
 				await this.regenerateUserSettingsCompose()
 				await this.refreshLanIngress()
 				await this.#runStartOrDataRootInitialization()
+				await this.#umbreld.lanIngress.waitForAppUpstream(this.id)
+				await this.refreshLanIngress()
 			})
 			this.state = 'ready'
 
@@ -2492,6 +2494,8 @@ export default class App {
 				await this.patchComposeFile()
 				await this.regenerateUserSettingsCompose()
 				await this.#runStartOrDataRootInitialization()
+				await this.#umbreld.lanIngress.waitForAppUpstream(this.id)
+				await this.refreshLanIngress()
 			})
 			this.state = 'ready'
 

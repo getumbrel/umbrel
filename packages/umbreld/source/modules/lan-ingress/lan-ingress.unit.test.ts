@@ -1,6 +1,11 @@
 import http from 'node:http'
 import net from 'node:net'
+import {mkdtemp} from 'node:fs/promises'
+import path from 'node:path'
+import {tmpdir} from 'node:os'
 
+import fse from 'fs-extra'
+import yaml from 'js-yaml'
 import {describe, expect, test, vi} from 'vitest'
 
 const {dockerCommand, execaDollar} = vi.hoisted(() => {
@@ -140,6 +145,54 @@ describe('app auth navigation redirect', () => {
 })
 
 describe('LAN ingress app targets', () => {
+	test('retries an app gateway upstream until it accepts connections', async () => {
+		const dataDirectory = await mkdtemp(path.join(tmpdir(), 'umbreld-lan-ingress-'))
+		const appId = 'files'
+		const appDataDirectory = path.join(dataDirectory, 'app-data', appId)
+		const upstream = net.createServer()
+		const portReservation = net.createServer()
+
+		try {
+			await new Promise<void>((resolve) => portReservation.listen(0, '127.0.0.1', resolve))
+			const address = portReservation.address()
+			if (!address || typeof address === 'string') throw new Error('Test server did not bind a TCP port')
+			await new Promise<void>((resolve, reject) =>
+				portReservation.close((error) => (error ? reject(error) : resolve())),
+			)
+
+			await fse.ensureDir(appDataDirectory)
+			await fse.writeFile(
+				path.join(appDataDirectory, 'docker-compose.yml'),
+				yaml.dump({services: {app_proxy: {environment: {APP_HOST: '127.0.0.1', APP_PORT: address.port}}}}),
+			)
+
+			const logger = {createChildLogger: () => logger, error: vi.fn()}
+			const ingress = new LanIngress({dataDirectory, logger, port: 0} as never)
+			const internals = ingress as unknown as {
+				resolveAppTarget(appId: string, host: string, compose: unknown): Promise<string | null>
+			}
+			const resolveTarget = vi.spyOn(internals, 'resolveAppTarget')
+			setTimeout(() => upstream.listen(address.port, '127.0.0.1'), 100)
+			await expect(ingress.waitForAppUpstream(appId)).resolves.toBeUndefined()
+			expect(upstream.listening).toBe(true)
+			expect(resolveTarget).toHaveBeenCalledTimes(1)
+
+			resolveTarget.mockRejectedValueOnce(new Error('Docker unavailable'))
+			await expect(ingress.waitForAppUpstream(appId)).resolves.toBeUndefined()
+			expect(logger.error).toHaveBeenCalledTimes(1)
+		} finally {
+			if (upstream.listening) {
+				await new Promise<void>((resolve, reject) => upstream.close((error) => (error ? reject(error) : resolve())))
+			}
+			if (portReservation.listening) {
+				await new Promise<void>((resolve, reject) =>
+					portReservation.close((error) => (error ? reject(error) : resolve())),
+				)
+			}
+			await fse.remove(dataDirectory)
+		}
+	})
+
 	test('resolves a compose container on the Umbrel network', async () => {
 		dockerCommand.mockResolvedValue({
 			exitCode: 0,

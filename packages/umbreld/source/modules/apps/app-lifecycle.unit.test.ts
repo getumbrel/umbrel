@@ -36,7 +36,12 @@ afterEach(async () => {
 async function createApp({
 	apps = {},
 	files = {},
-}: {apps?: Record<string, unknown>; files?: Record<string, unknown>} = {}) {
+	lanIngress = {},
+}: {
+	apps?: Record<string, unknown>
+	files?: Record<string, unknown>
+	lanIngress?: Record<string, unknown>
+} = {}) {
 	const dataDirectory = await mkdtemp(path.join(tmpdir(), 'umbreld-app-lifecycle-'))
 	temporaryDirectories.push(dataDirectory)
 	const appId = 'test-app'
@@ -85,7 +90,11 @@ async function createApp({
 			getExternalStorageFilesystemType: vi.fn(async () => 'ext4'),
 			...files,
 		},
-		lanIngress: {refresh: vi.fn(async () => undefined)},
+		lanIngress: {
+			refresh: vi.fn(async () => undefined),
+			waitForAppUpstream: vi.fn(async () => undefined),
+			...lanIngress,
+		},
 		notifications: {add: vi.fn(async () => true), clear: vi.fn(async () => undefined)},
 		store: globalStore,
 	} as unknown as Umbreld
@@ -116,6 +125,37 @@ function pauseMoveRecovery(app: App) {
 }
 
 describe('app lifecycle serialization', () => {
+	test.each([
+		{action: 'start' as const, pendingState: 'starting'},
+		{action: 'restart' as const, pendingState: 'restarting'},
+	])('keeps an app $pendingState until its upstream is reachable', async ({action, pendingState}) => {
+		let markUpstreamReady = () => {}
+		const upstreamReady = new Promise<void>((resolve) => (markUpstreamReady = resolve))
+		let upstreamIsReady = false
+		const waitForAppUpstream = vi.fn(async () => {
+			await upstreamReady
+			upstreamIsReady = true
+		})
+		let app!: App
+		let refreshedBeforeReady = false
+		const refresh = vi.fn(async () => {
+			if (upstreamIsReady && !refreshedBeforeReady) {
+				refreshedBeforeReady = true
+				expect(app.state).toBe(pendingState)
+			}
+		})
+		app = await createApp({lanIngress: {refresh, waitForAppUpstream}})
+
+		const operation = app[action]()
+		await vi.waitFor(() => expect(waitForAppUpstream).toHaveBeenCalledWith('test-app'))
+		expect(app.state).toBe(pendingState)
+
+		markUpstreamReady()
+		await expect(operation).resolves.toBe(true)
+		expect(refreshedBeforeReady).toBe(true)
+		expect(app.state).toBe('ready')
+	})
+
 	test('keeps app data writable while lifecycle scripts reserve its storage', async () => {
 		const beginStorageOperation = vi.fn(() => vi.fn())
 		const app = await createApp({apps: {beginStorageOperation}})
