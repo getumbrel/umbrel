@@ -26,6 +26,8 @@ const HIDDEN_INGRESS_PORT_START = 23_000
 const HIDDEN_INGRESS_PORT_END = 65_535
 const APP_TARGET_RECOVERY_RETRY_DELAYS = [0, 250, 1000, 2000]
 const APP_TARGET_RECOVERY_COOLDOWN = 10_000
+const APP_UPSTREAM_READY_RETRY_DELAYS = [0, 250, 1000, 2000, 4000, 8000, 16_000]
+const APP_UPSTREAM_CONNECT_TIMEOUT = 1000
 const SERVER_CLOSE_GRACE_MS = 2000
 const IDLE_CONNECTION_SWEEP_MS = 100
 
@@ -251,6 +253,30 @@ export default class LanIngress {
 			this.#refreshPromise = undefined
 		})
 		return this.#refreshPromise
+	}
+
+	async waitForAppUpstream(appId: string) {
+		try {
+			const appDataDirectory = `${this.#umbreld.dataDirectory}/app-data/${appId}`
+			const compose = await fse
+				.readFile(`${appDataDirectory}/docker-compose.yml`, 'utf8')
+				.then((contents) => yaml.load(contents) as ComposeFile | null)
+			const gateway = compose ? await readAppGatewayConfig(appId, appDataDirectory, compose as any) : null
+
+			// Apps without the app-proxy contract have no generic internal upstream to probe.
+			if (!gateway) return
+
+			let targetAddress: string | null = null
+			for (const retryDelay of APP_UPSTREAM_READY_RETRY_DELAYS) {
+				if (retryDelay) await new Promise((resolve) => setTimeout(resolve, retryDelay))
+				targetAddress ??= await this.resolveAppTarget(appId, gateway.targetHost, compose)
+				if (targetAddress && (await this.isTcpPortOpen(targetAddress, gateway.targetPort))) return
+			}
+
+			this.logger.verbose(`App gateway upstream for ${appId} is still unavailable`)
+		} catch (error) {
+			this.logger.error(`Failed to wait for app gateway upstream for ${appId}`, error)
+		}
 	}
 
 	// Many app lifecycle events can request a refresh at the same time during boot. Running every
@@ -548,6 +574,25 @@ export default class LanIngress {
 		return lookup(host)
 			.then(({address}) => address)
 			.catch(() => null)
+	}
+
+	private isTcpPortOpen(host: string, port: number) {
+		return new Promise<boolean>((resolve) => {
+			const socket = net.createConnection({host, port})
+			let settled = false
+			const finish = (isOpen: boolean) => {
+				if (settled) return
+				settled = true
+				socket.destroy()
+				resolve(isOpen)
+			}
+
+			socket.unref()
+			socket.setTimeout(APP_UPSTREAM_CONNECT_TIMEOUT)
+			socket.once('connect', () => finish(true))
+			socket.once('error', () => finish(false))
+			socket.once('timeout', () => finish(false))
+		})
 	}
 
 	// A gateway normally keeps using its resolved container IP. If Docker replaces a
