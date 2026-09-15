@@ -110,13 +110,14 @@ RUN apt-get install --yes \
     linux-image-${TARGETARCH} \
     firmware-linux
 
-# Install amd64-specific microcode and firmware
+# Install amd64-specific microcode, firmware, and network drivers
 RUN set -e; \
     if [ "${TARGETARCH}" = "amd64" ]; then \
     apt-get install --yes \
         intel-microcode \
         amd64-microcode \
         firmware-realtek \
+        r8125-dkms \
         firmware-iwlwifi \
         firmware-atheros; \
     fi
