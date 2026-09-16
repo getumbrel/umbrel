@@ -504,6 +504,15 @@ export default class FileIndexEnrichment {
 		return Buffer.from(content.hash, 'hex')
 	}
 
+	async ensureMediaMetadata(entryId: number) {
+		if (!this.#started || this.#stopping) throw new Error('File enrichment is unavailable')
+		await this.#onDemandQueue.add(async () => {
+			if (this.#stopping) throw new Error('File enrichment is unavailable')
+			const content = await this.#ensureEntryContent(entryId, true)
+			await this.#ensureMediaMetadataOnce(content, true)
+		})
+	}
+
 	async getExistingThumbnail(
 		entryId: number,
 		variant: ThumbnailVariant = FILES_THUMBNAIL_VARIANT,

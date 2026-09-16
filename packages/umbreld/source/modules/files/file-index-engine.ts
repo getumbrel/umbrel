@@ -10,7 +10,7 @@ import PQueue from 'p-queue'
 
 import {migratePhotos} from '../photos/migrations.js'
 import PhotosRepository from '../photos/repository.js'
-import type {PhotoFilter, PhotoIndexingProgress, PhotoScopeMode} from '../photos/types.js'
+import {supportsPhotos, type PhotoFilter, type PhotoIndexingProgress, type PhotoScopeMode} from '../photos/types.js'
 import FileIndexEnrichment, {
 	BACKGROUND_QUIET_PERIOD_MS,
 	assertPublishedRevision,
@@ -1270,6 +1270,16 @@ export default class FileIndexEngine {
 					})
 					move.immediate()
 				})
+				// A watcher may already have removed the source (including a hidden
+				// Trash claim), leaving no row for reuseMovedContent. Resolve the live
+				// destination's identity before acknowledging a Photos move. Existing
+				// hashes/metadata are reused, or rebuilt if orphan cleanup removed them.
+				if (this.#photosAvailable && supportsPhotos(nodePath.basename(destinationSystemPath))) {
+					const entry = await this.getEntryBySystemPath(destinationSystemPath)
+					if (entry?.type === 'file' && !entry.hidden && entry.thumbnailIdentityKind === 'content') {
+						await this.#enrichment.ensureMediaMetadata(entry.id)
+					}
+				}
 			}
 		} finally {
 			await this.removePath(sourceSystemPath)

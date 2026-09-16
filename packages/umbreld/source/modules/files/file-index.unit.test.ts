@@ -2437,6 +2437,59 @@ test('selects one canonical shared Live Photo companion and moves it only with e
 	await expect(index.photosResolveItemFiles('owner', [secondId], 'trash')).resolves.toMatchObject([{id: secondId}])
 })
 
+test('publishes a moved photo when the watcher removed its old entry before the move hint', async () => {
+	let releaseHash!: () => void
+	const hashReleased = new Promise<void>((resolve) => (releaseHash = resolve))
+	let pauseHashing = false
+	const hashFile = vi.fn(async () => {
+		if (pauseHashing) await hashReleased
+		return Buffer.alloc(32, 0x75)
+	})
+	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
+		includeTrash: true,
+		enrichmentRuntime: {
+			hashFile,
+			generateThumbnail: async (_source, destination) => fse.outputFile(destination, 'thumbnail'),
+		},
+	})
+	const source = nodePath.join(homeDirectory, 'watched-move.jpg')
+	const destination = nodePath.join(trashDirectory, 'watched-move.jpg')
+	await writeFile(source, 'photo')
+	await index.reconcileRoot('/Home', 'move-race')
+	await index.initializePhotos()
+	index.startBackgroundReconciliation()
+	await pRetry(async () => expect(await index.photosIndexingState('owner')).toMatchObject({phase: 'ready'}), {
+		retries: 200,
+		minTimeout: 10,
+		maxTimeout: 20,
+	})
+	const id = Buffer.alloc(32, 0x75).toString('hex')
+	await expect(index.photosGetItem('owner', id)).resolves.toMatchObject({path: '/Home/watched-move.jpg'})
+	await index.photosSetFavorite('owner', [id], true)
+	const album = await index.photosCreateAlbum('owner', 'Keep after move', [id])
+	try {
+		pauseHashing = true
+		await fse.move(source, destination)
+		// The watcher can see the atomic Trash claim before Files sends its move hint.
+		await index.removePath(source)
+		let completed = false
+		const moved = index.movePath(source, destination).then(() => (completed = true))
+		await vi.waitFor(() => expect(completed || hashFile.mock.calls.length === 2).toBe(true))
+		expect(completed).toBe(false)
+		releaseHash()
+		await moved
+
+		await expect(index.photosGetItem('owner', id, true)).resolves.toMatchObject({
+			path: '/Trash/watched-move.jpg',
+			isFavorite: true,
+			albums: [{id: album.id, name: 'Keep after move'}],
+		})
+		await expect(index.photosGetItem('owner', id)).resolves.toBeUndefined()
+	} finally {
+		releaseHash()
+	}
+})
+
 test('derives Deleted from enriched Trash media and preserves state across moves', async () => {
 	const {index, homeDirectory, trashDirectory} = await fixture(undefined, {
 		includeTrash: true,

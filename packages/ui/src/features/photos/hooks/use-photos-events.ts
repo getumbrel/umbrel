@@ -12,33 +12,72 @@ type LibraryStatus = RouterOutput['photos']['library']['status']
 const REFETCH_IN_PLACE_MAX_PAGES = 3
 
 // One subscription group for the whole Photos surface. Indexing snapshots go
-// straight into the status cache; `photos:change` covers library mutations and
-// indexed enrichment, while `files:watcher:change` gives immediate feedback for
-// filesystem changes. Invalidation bursts collapse into one pass per second.
+// straight into the status cache; `photos:change` covers library mutations,
+// indexed filesystem changes, and enrichment. Raw Files events also include
+// constant app activity, which must not trigger expensive Photos queries.
 export function usePhotosEvents() {
 	const utils = trpcReact.useUtils()
 	const queryClient = useQueryClient()
 	const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 	const indexingVersionRef = useRef(0)
+	const refreshRef = useRef({running: false, pending: false, mounted: true})
 
 	const schedule = () => {
-		timerRef.current ??= setTimeout(() => {
+		const refresh = refreshRef.current
+		if (!refresh.mounted) return
+		refresh.pending = true
+		if (refresh.running || timerRef.current) return
+		timerRef.current = setTimeout(async () => {
 			timerRef.current = undefined
-			// Everything except the item lists: small queries, refetch outright
-			void utils.photos.library.summary.invalidate()
-			void utils.photos.sources.invalidate()
-			void utils.photos.albums.invalidate()
-			void utils.photos.items.get.invalidate()
-			// Item lists: refetch shallow ones, mark deep ones stale for their next mount
-			void queryClient.invalidateQueries({queryKey: ITEMS_LIST_KEY, refetchType: 'none'})
-			for (const query of queryClient.getQueryCache().findAll({queryKey: ITEMS_LIST_KEY})) {
-				const pages = (query.state.data as InfiniteData<ItemsPage> | undefined)?.pages.length ?? 0
-				if (pages <= REFETCH_IN_PLACE_MAX_PAGES && query.getObserversCount() > 0) void query.fetch()
+			refresh.running = true
+			// Consume only events already scheduled. Changes received while waiting
+			// must survive: a newly mounted filter can start a read outside the snapshot.
+			refresh.pending = false
+			try {
+				// A read started before this event can still return older data. Wait
+				// for it before invalidating, so the change gets a fresh request.
+				const inFlight = queryClient
+					.getQueryCache()
+					.findAll({queryKey: [['photos']]})
+					.filter((query) => query.state.fetchStatus === 'fetching')
+					.flatMap((query) => (query.promise ? [query.promise] : []))
+				if (inFlight.length > 0) await Promise.allSettled(inFlight)
+				if (!refresh.mounted) return
+				// Queries share the file-index worker with thumbnail resolution. Let
+				// in-flight reads finish, and coalesce changes during a slow refresh
+				// into one follow-up instead of canceling and enqueueing more reads.
+				const options = {cancelRefetch: false}
+				const requests: Promise<unknown>[] = [
+					utils.photos.library.summary.invalidate(undefined, undefined, options),
+					utils.photos.sources.invalidate(undefined, undefined, options),
+					utils.photos.albums.invalidate(undefined, undefined, options),
+					utils.photos.items.get.invalidate(undefined, undefined, options),
+					queryClient.invalidateQueries({queryKey: ITEMS_LIST_KEY, refetchType: 'none'}),
+				]
+				// Refetch shallow lists; leave deep ones stale for their next mount.
+				for (const query of queryClient.getQueryCache().findAll({queryKey: ITEMS_LIST_KEY})) {
+					const pages = (query.state.data as InfiniteData<ItemsPage> | undefined)?.pages.length ?? 0
+					if (pages <= REFETCH_IN_PLACE_MAX_PAGES && query.getObserversCount() > 0) {
+						requests.push(query.fetch(undefined, options))
+					}
+				}
+				await Promise.allSettled(requests)
+			} finally {
+				refresh.running = false
+				if (refresh.pending) schedule()
 			}
 		}, 1000)
 	}
 
-	useEffect(() => () => clearTimeout(timerRef.current), [])
+	useEffect(() => {
+		refreshRef.current.mounted = true
+		return () => {
+			refreshRef.current.mounted = false
+			refreshRef.current.pending = false
+			clearTimeout(timerRef.current)
+			timerRef.current = undefined
+		}
+	}, [])
 
 	trpcReact.eventBus.listen.useSubscription(
 		{event: 'photos:indexing-progress'},
@@ -68,13 +107,6 @@ export function usePhotosEvents() {
 		{
 			onData: schedule,
 			onError: (err) => console.error('eventBus.listen(photos:change)', err),
-		},
-	)
-	trpcReact.eventBus.listen.useSubscription(
-		{event: 'files:watcher:change'},
-		{
-			onData: schedule,
-			onError: (err) => console.error('eventBus.listen(files:watcher:change)', err),
 		},
 	)
 }

@@ -24,7 +24,10 @@ test('removes previously crawled app entries once while preserving other roots a
 			INSERT INTO transient_thumbnail_variants(entry_id, variant, artifact_key, state, updated_at)
 			VALUES (2, 'test', '${'a'.repeat(64)}', 'ready', 0);
 		`)
-		await migrateFileIndex(database)
+		await migrateFileIndex(
+			database,
+			fileIndexMigrations.filter(({version}) => version <= 17),
+		)
 		expect(database.prepare('SELECT virtual_path FROM index_roots ORDER BY id').all()).toEqual([
 			{virtual_path: '/Home'},
 			{virtual_path: '/External'},
@@ -36,7 +39,8 @@ test('removes previously crawled app entries once while preserving other roots a
 		database.exec("INSERT INTO entry_names_fts(entry_names_fts, rank) VALUES ('integrity-check', 1)")
 
 		// Files may cache a thumbnail explicitly requested after the migration.
-		// A later boot must not repeat the cleanup and discard this new entry.
+		// Upgrading from staging's cleanup to the Photos read model must preserve
+		// this entry, and later boots must not repeat either migration.
 		database.exec(`
 			INSERT INTO index_roots(id, virtual_path, system_path, owner_id, kind, search_enabled, created_at, updated_at)
 			VALUES (4, '/Apps', '/apps', 'owner', 'apps', 0, 0, 0);
@@ -44,8 +48,14 @@ test('removes previously crawled app entries once while preserving other roots a
 			VALUES (4, 'requested.jpg', 'requested.jpg', 'file', 42, 0, 0);
 		`)
 		await migrateFileIndex(database)
+		expect(database.prepare('SELECT initialized FROM photos_read_model_state').get()).toEqual({initialized: 0})
+		expect(database.prepare('SELECT COUNT(*) AS count FROM photos_library_items').get()).toEqual({count: 0})
+		await migrateFileIndex(database)
 		expect(database.prepare('SELECT COUNT(*) AS count FROM entries WHERE root_id = 4').get()).toEqual({count: 1})
 		expect(database.prepare('SELECT COUNT(*) AS count FROM schema_migrations WHERE version = 17').get()).toEqual({
+			count: 1,
+		})
+		expect(database.prepare('SELECT COUNT(*) AS count FROM schema_migrations WHERE version = 18').get()).toEqual({
 			count: 1,
 		})
 	} finally {

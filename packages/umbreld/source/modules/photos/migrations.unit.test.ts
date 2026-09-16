@@ -1,6 +1,8 @@
 import BetterSqlite3 from 'better-sqlite3'
 import {expect, test} from 'vitest'
 
+import {fileIndexMigrations, migrateFileIndex} from '../files/file-index/migrations.js'
+
 import {
 	migratePhotos,
 	PHOTOS_MIGRATION_MODULE,
@@ -39,6 +41,8 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{module: PHOTOS_MIGRATION_MODULE, version: 5},
 		{module: PHOTOS_MIGRATION_MODULE, version: 6},
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
+		{module: PHOTOS_MIGRATION_MODULE, version: 8},
+		{module: PHOTOS_MIGRATION_MODULE, version: 9},
 	])
 	expect(
 		database
@@ -52,6 +56,8 @@ test('creates and idempotently migrates the durable Photos schema', () => {
 		{name: 'photos_content_state_by_account'},
 		{name: 'photos_content_state_by_effective_taken_at'},
 		{name: 'photos_projection_state'},
+		{name: 'photos_read_model_dirty_accounts'},
+		{name: 'photos_read_model_dirty_contents'},
 		{name: 'photos_source_resources'},
 		{name: 'photos_source_resources_by_content'},
 		{name: 'photos_sources'},
@@ -105,7 +111,7 @@ test('stores durable Photos state and album membership by 32-byte content hash',
 test('adds crash-recovery projection state to an existing v6 database', () => {
 	const database = new BetterSqlite3(':memory:')
 	migratePhotos(database)
-	database.prepare("DELETE FROM schema_migrations WHERE module = 'photos' AND version = 7").run()
+	database.prepare("DELETE FROM schema_migrations WHERE module = 'photos' AND version >= 7").run()
 	database.exec('DROP TABLE photos_projection_state')
 
 	expect(migratePhotos(database)).toBe(PHOTOS_SCHEMA_VERSION)
@@ -237,7 +243,17 @@ test('migrates v3 by discarding derived Live Photo pairs without touching backup
 	).toStrictEqual({source_id: 'source', resource_key: 'a'.repeat(64), content_hash: hash})
 	expect(
 		database.prepare("SELECT version FROM schema_migrations WHERE module = 'photos' ORDER BY version").all(),
-	).toStrictEqual([{version: 1}, {version: 2}, {version: 3}, {version: 4}, {version: 5}, {version: 6}, {version: 7}])
+	).toStrictEqual([
+		{version: 1},
+		{version: 2},
+		{version: 3},
+		{version: 4},
+		{version: 5},
+		{version: 6},
+		{version: 7},
+		{version: 8},
+		{version: 9},
+	])
 	expect(
 		database
 			.prepare('PRAGMA table_info(photos_source_resources)')
@@ -315,7 +331,17 @@ test('migrates staging v4 by adding managed backup presentation metadata', () =>
 	).toStrictEqual({source_id: 'source', resource_key: 'b'.repeat(64), original_filename: null})
 	expect(
 		database.prepare("SELECT version FROM schema_migrations WHERE module = 'photos' ORDER BY version").all(),
-	).toStrictEqual([{version: 1}, {version: 2}, {version: 3}, {version: 4}, {version: 5}, {version: 6}, {version: 7}])
+	).toStrictEqual([
+		{version: 1},
+		{version: 2},
+		{version: 3},
+		{version: 4},
+		{version: 5},
+		{version: 6},
+		{version: 7},
+		{version: 8},
+		{version: 9},
+	])
 	database.close()
 })
 
@@ -405,8 +431,58 @@ test('keeps Photos migration versions independent from other umbrel.db modules',
 		{module: PHOTOS_MIGRATION_MODULE, version: 5},
 		{module: PHOTOS_MIGRATION_MODULE, version: 6},
 		{module: PHOTOS_MIGRATION_MODULE, version: 7},
+		{module: PHOTOS_MIGRATION_MODULE, version: 8},
+		{module: PHOTOS_MIGRATION_MODULE, version: 9},
 	])
 	database.close()
+})
+
+test('upgrades the v8 source trigger so renames are cheap while scope changes still invalidate', () => {
+	const database = new BetterSqlite3(':memory:')
+	try {
+		migratePhotos(database)
+		database.exec(`DELETE FROM schema_migrations WHERE module='photos' AND version=9;
+			DROP TRIGGER photos_read_model_photos_sources_update;
+			CREATE TRIGGER photos_read_model_photos_sources_update AFTER UPDATE OF name ON photos_sources
+			WHEN old.name IS NOT new.name BEGIN
+				INSERT INTO photos_read_model_dirty_accounts VALUES(new.account_id) ON CONFLICT DO NOTHING;
+			END;
+			INSERT INTO photos_sources(id,account_id,type,name,scope_mode,scope_paths,created_at)
+			VALUES('owner-source','owner','umbrel','Before','everything','[]',1);
+			DELETE FROM photos_read_model_dirty_accounts;`)
+		migratePhotos(database)
+		database.exec("UPDATE photos_sources SET name='After' WHERE id='owner-source'")
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([])
+		database.exec(
+			"UPDATE photos_sources SET scope_mode='only',scope_paths='[\"/Home/Camera\"]' WHERE id='owner-source'",
+		)
+		expect(database.prepare('SELECT * FROM photos_read_model_dirty_accounts').all()).toEqual([{account_id: 'owner'}])
+		migratePhotos(database)
+		expect(database.prepare('SELECT name FROM photos_sources').get()).toEqual({name: 'After'})
+	} finally {
+		database.close()
+	}
+})
+
+test('upgrades v19 stored items without rebuilding their rows', async () => {
+	const database = new BetterSqlite3(':memory:')
+	try {
+		await migrateFileIndex(
+			database,
+			fileIndexMigrations.filter(({version}) => version <= 19),
+		)
+		database.exec("INSERT INTO photos_library_items(account_id,id,source_name) VALUES('owner','kept','Before')")
+		await migrateFileIndex(database)
+		await migrateFileIndex(database)
+		expect(database.prepare('SELECT account_id,id FROM photos_library_items').all()).toEqual([
+			{account_id: 'owner', id: 'kept'},
+		])
+		expect(
+			(database.pragma('table_info(photos_library_items)') as Array<{name: string}>).map(({name}) => name),
+		).not.toContain('source_name')
+	} finally {
+		database.close()
+	}
 })
 
 test('rejects a database created by a newer Photos version before changing it', () => {

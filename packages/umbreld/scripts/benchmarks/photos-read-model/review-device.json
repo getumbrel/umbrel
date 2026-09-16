@@ -1,0 +1,199 @@
+{
+	"commit": "053742f45",
+	"baseline": "a201e4f17",
+	"at": "2026-09-16T16:41:25.545Z",
+	"method": "Production SQLite snapshots on the same device. All changes target isolated copies. Mutation/synchronization timings include commits; copying, schema migrations, initial stabilization and unrelated startup work are excluded. One observation per scenario/variant, except three rename observations. No live RPC/queue latency measured.",
+	"rows": [
+		{
+			"scenario": "rename-source",
+			"variant": "baseline",
+			"timesMs": [16596.171507, 19589.654484999995, 18322.251287],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "rename-source",
+			"variant": "optimized",
+			"timesMs": [178.602469999998, 201.70038800000475, 162.12236900000426],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "startup-129",
+			"variant": "baseline",
+			"timesMs": [16990.82103800001],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "startup-129",
+			"variant": "optimized",
+			"timesMs": [379.4589560000022],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "rebuild-all",
+			"variant": "baseline",
+			"timesMs": [16772.541876000003],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "rebuild-all",
+			"variant": "optimized",
+			"timesMs": [16392.87420199999],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "scope-change",
+			"variant": "baseline",
+			"timesMs": [16655.339179999995],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "scope-change",
+			"variant": "optimized",
+			"timesMs": [17066.38975100001],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "first-backfill",
+			"variant": "baseline",
+			"timesMs": [16509.068734],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		},
+		{
+			"scenario": "first-backfill",
+			"variant": "optimized",
+			"timesMs": [16535.00321200001],
+			"counts": {
+				"items": 34935,
+				"favorites": 0,
+				"photos": 31962,
+				"videos": 2973,
+				"deleted": 1
+			},
+			"status": {
+				"phase": "degraded",
+				"completed": 35393,
+				"total": 35394,
+				"percentage": 99,
+				"error": "Some media could not be prepared"
+			}
+		}
+	],
+	"resultsMatch": true
+}

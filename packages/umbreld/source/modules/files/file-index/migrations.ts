@@ -1,5 +1,13 @@
 import type BetterSqlite3 from 'better-sqlite3'
 
+import {photosIndexingSchema} from '../../photos/indexing-schema.js'
+
+import {
+	photosReadModelSchema,
+	photosReadModelDirtySchema,
+	photosReadModelIndexTriggers,
+} from '../../photos/read-model-schema.js'
+
 import {PHOTO_EXTENSIONS, VIDEO_EXTENSIONS} from '../../photos/types.js'
 
 export type FileIndexMigration = {
@@ -468,6 +476,26 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			// asset maintenance reclaims content no longer referenced by any root.
 			// Files registers /Apps again for on-demand thumbnails only.
 			database.exec("DELETE FROM index_roots WHERE virtual_path = '/Apps'")
+		},
+	},
+	{
+		version: 18,
+		up: (database) => {
+			database.exec(photosReadModelSchema + photosReadModelDirtySchema + photosReadModelIndexTriggers())
+		},
+	},
+	{
+		version: 19,
+		up: (database) => {
+			database.exec(photosIndexingSchema())
+		},
+	},
+	{
+		version: 20,
+		up: (database) => {
+			// Names change independently of the library projection. Item details
+			// resolve them directly from umbrel.photos_sources.
+			database.exec('ALTER TABLE photos_library_items DROP COLUMN source_name')
 		},
 	},
 ]
