@@ -1,10 +1,10 @@
-import {keepPreviousData} from '@tanstack/react-query'
 import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
 import {getActiveAppsUsingStoragePaths, showStorageInUseDialog} from '@/features/files/components/storage-in-use'
 import {NETWORK_STORAGE_PATH} from '@/features/files/constants'
 import {useNavigate} from '@/features/files/hooks/use-navigate'
+import {useNetworkSharesQuery} from '@/features/files/hooks/use-network-shares-query'
 import {useFilesStore} from '@/features/files/store/use-files-store'
 import {getFilesErrorMessage} from '@/features/files/utils/error-messages'
 import {
@@ -16,7 +16,7 @@ import {trpcReact} from '@/trpc/trpc'
 import type {RouterError} from '@/trpc/trpc'
 
 // We use `suppressNavigateOnAdd` to prevent navigating after adding a share from the backup/restore wizards.
-export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
+export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean; pollShares?: boolean}) {
 	const {t} = useTranslation()
 	const userQ = trpcReact.user.get.useQuery()
 	const isMember = userQ.data?.role === 'member'
@@ -34,13 +34,9 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 	// Fetch the current shares (both mounted and unmounted)
 	const {
 		data: shares,
-		isLoading: isLoadingShares,
+		isPending: isLoadingShares,
 		refetch: refetchShares,
-	} = trpcReact.files.listNetworkShares.useQuery(undefined, {
-		enabled: !isMember,
-		placeholderData: keepPreviousData,
-		staleTime: 15_000,
-	})
+	} = useNetworkSharesQuery({poll: options?.pollShares})
 
 	// Check if a specific share is mounted
 	const isShareMounted = (mountPath: string) => shares?.some((s) => s.mountPath === mountPath && s.isMounted)
@@ -83,14 +79,17 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 	const {mutateAsync: removeShare, isPending: isRemovingShare} = trpcReact.files.removeNetworkShare.useMutation({
 		onMutate: async ({mountPath}) => {
 			const hostPath = mountPath.split('/').slice(0, -1).join('/')
-			const hostName = mountPath.split('/')[2]
-			const remainingSharesForHost = shares?.filter((s) => s.host === hostName && s.mountPath !== mountPath).length || 0
 
 			// Cancel the sidebar query we're about to optimistically update
 			await utils.files.listNetworkShares.cancel()
 
 			// Snapshot sidebar data for rollback
 			const previousShares = utils.files.listNetworkShares.getData()
+
+			// Count from the cache rather than this render's `shares`, so removing a
+			// host share by share sees the earlier optimistic removals.
+			const remainingSharesForHost =
+				previousShares?.filter((s) => s.mountPath.startsWith(hostPath + '/') && s.mountPath !== mountPath).length || 0
 
 			// Optimistically remove the share from the sidebar
 			utils.files.listNetworkShares.setData(undefined, (old) => old?.filter((s) => s.mountPath !== mountPath))
@@ -101,7 +100,6 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 			return {
 				mountPath,
 				hostPath,
-				hostName,
 				remainingSharesForHost,
 				previousShares,
 			}
@@ -113,7 +111,8 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 			// blocked because an app is using the share as a storage location. The
 			// path is checked now rather than snapshotted at mutate time so a slow
 			// removal doesn't yank the user out of a folder they've since moved to.
-			const isBrowsingRemovedHost = ctx.remainingSharesForHost === 0 && currentPath.startsWith(ctx.hostPath)
+			const isBrowsingRemovedHost =
+				ctx.remainingSharesForHost === 0 && (currentPath === ctx.hostPath || currentPath.startsWith(ctx.hostPath + '/'))
 			if (isBrowsingRemovedHost) navigateToDirectory(NETWORK_STORAGE_PATH)
 
 			// Invalidate the /Network listing so the host device disappears if we're browsing /Network directly
@@ -156,8 +155,7 @@ export function useNetworkStorage(options?: {suppressNavigateOnAdd?: boolean}) {
 
 		if (isDirectoryANetworkDevice(path)) {
 			// Host path: /Network/hostname - remove all shares for this host
-			const hostName = path.split('/')[2]
-			const hostShares = shares.filter((s) => s.host === hostName)
+			const hostShares = shares.filter((s) => s.mountPath.startsWith(path + '/'))
 			for (const share of hostShares) {
 				await removeShare({mountPath: share.mountPath})
 			}

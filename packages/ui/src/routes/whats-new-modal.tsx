@@ -197,7 +197,16 @@ export function WhatsNewModal() {
 		<ImmersiveDialog {...dialogProps}>
 			<DialogPortal>
 				<ImmersiveDialogOverlay />
-				<ImmersiveDialogContent size='sm' onInteractOutside={(e) => e.preventDefault()}>
+				<ImmersiveDialogContent
+					size='sm'
+					onOpenAutoFocus={(e) => {
+						// The dialog opens on its own, so move focus into it (rather than
+						// leaving it behind the overlay) without ringing the first button.
+						e.preventDefault()
+						;(e.currentTarget as HTMLElement).focus()
+					}}
+					onInteractOutside={(e) => e.preventDefault()}
+				>
 					<DialogTitle className='sr-only'>{t('whats-new.title', {version: WHATS_NEW_VERSION_NAME})}</DialogTitle>
 
 					{/* Carousel Container: bleeds to the dialog's edges, the media curving with its top corners */}

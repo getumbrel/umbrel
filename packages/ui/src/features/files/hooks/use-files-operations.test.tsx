@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 	deleteMany: vi.fn(),
 	emptyTrash: vi.fn(),
 	toastError: vi.fn(),
+	enqueueServer: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({useTranslation: () => ({t: (key: string) => key})}))
@@ -31,6 +32,8 @@ vi.mock('@/features/files/providers/files-capabilities-context', () => ({
 vi.mock('@/features/files/utils/error-messages', () => ({getFilesErrorMessage: (message: string) => message}))
 vi.mock('@/modules/auth/http-auth', () => ({authorizedHttpUrl: vi.fn()}))
 vi.mock('@/providers/confirmation', () => ({useConfirmation: () => vi.fn()}))
+// Copies and moves are batches in the transfer queue, not direct mutations
+vi.mock('@/features/files/transfers/transfers', () => ({transfers: {enqueueServer: mocks.enqueueServer}}))
 vi.mock('@/trpc/trpc', () => {
 	const mutation = (mutateAsync: ReturnType<typeof vi.fn>) => ({useMutation: () => ({mutateAsync})})
 	const invalidate = vi.fn()
@@ -109,7 +112,7 @@ describe('Files command capabilities', () => {
 		await act(() => actions.pasteItemsFromClipboard({toDirectory: '/Home/Cloud'}))
 
 		expect(mocks.pathOperations).toHaveBeenCalledWith({path: '/Home/Cloud'})
-		expect(mocks.copy).not.toHaveBeenCalled()
+		expect(mocks.enqueueServer).not.toHaveBeenCalled()
 	})
 
 	it('rejects dragged items that lack the move capability explicitly', async () => {
@@ -118,7 +121,7 @@ describe('Files command capabilities', () => {
 		await act(() => actions.moveDraggedItems({toDirectory: '/Home/Documents'}))
 
 		expect(mocks.pathOperations).not.toHaveBeenCalled()
-		expect(mocks.move).not.toHaveBeenCalled()
+		expect(mocks.enqueueServer).not.toHaveBeenCalled()
 		expect(mocks.toastError).toHaveBeenCalledWith('files-error.move', {area: 'files'})
 		expect(useFilesStore.getState().draggedItems).toEqual([])
 	})
@@ -137,12 +140,12 @@ describe('Files command capabilities', () => {
 			movePromise = actions.moveDraggedItems({toDirectory: '/Home/Documents'})
 		})
 		expect(useFilesStore.getState().draggedItems).toHaveLength(1)
-		expect(mocks.move).not.toHaveBeenCalled()
+		expect(mocks.enqueueServer).not.toHaveBeenCalled()
 
 		resolveOperations(['writable'])
 		await act(() => movePromise)
 
-		expect(mocks.move).toHaveBeenCalledWith({path: '/Home/report.txt', toDirectory: '/Home/Documents'})
+		expect(mocks.enqueueServer).toHaveBeenCalledWith('move', [item(['move'])], '/Home/Documents')
 		expect(useFilesStore.getState().draggedItems).toEqual([])
 	})
 
@@ -159,7 +162,7 @@ describe('Files command capabilities', () => {
 
 		expect(mocks.pathOperations).not.toHaveBeenCalled()
 		expect(mocks.rename).not.toHaveBeenCalled()
-		expect(mocks.copy).not.toHaveBeenCalled()
+		expect(mocks.enqueueServer).not.toHaveBeenCalled()
 		expect(mocks.emptyTrash).not.toHaveBeenCalled()
 	})
 

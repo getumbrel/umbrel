@@ -1,6 +1,7 @@
 import {useTranslation} from 'react-i18next'
 
 import {toast} from '@/components/ui/toast'
+import {transfers} from '@/features/files/transfers/transfers'
 import {finishBrowserLogout} from '@/modules/auth/logout'
 import {AUTH_TOKEN_LOCAL_STORAGE_KEY, clearAuthToken, storeAuthToken} from '@/modules/auth/token-renewal'
 import {trpcReact} from '@/trpc/trpc'
@@ -32,6 +33,8 @@ export function useAuth() {
 		onSuccess(didWork) {
 			// TODO: add translation
 			if (!didWork) throw new Error("Logout didn't work.")
+			// Work accepted under this account must not outlive it
+			transfers.reset()
 			finishBrowserLogout()
 		},
 		onError() {

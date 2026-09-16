@@ -2,11 +2,12 @@ import {ExpandedContent} from '@/features/files/components/floating-islands/oper
 import {MinimizedContent} from '@/features/files/components/floating-islands/operations-island/minimized'
 import {Island, IslandExpanded, IslandMinimized} from '@/modules/floating-island/bare-island'
 import {useApps} from '@/providers/apps'
-import {useGlobalFiles} from '@/providers/global-files'
+import type {OperationsInProgress} from '@/providers/global-files'
 import {secondsToEta} from '@/utils/seconds-to-eta'
 
-export function OperationsIsland() {
-	const {operations} = useGlobalFiles()
+// Progress for operations the Files transfer queue does not own (app storage
+// moves, Rewind restores, work from another tab); the container decides which
+export function OperationsIsland({operations}: {operations: OperationsInProgress}) {
 	const {userAppsKeyed} = useApps()
 
 	let totalPercent = 0
@@ -66,6 +67,7 @@ export function OperationsIsland() {
 			</IslandMinimized>
 			<IslandExpanded>
 				<ExpandedContent
+					operations={operations}
 					progress={totalProgress}
 					count={operations.length}
 					speed={totalSpeed}

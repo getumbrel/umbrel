@@ -1,14 +1,12 @@
 import {createContext, useContext, type ReactNode} from 'react'
 
 import {useItemClick} from '@/features/files/hooks/use-item-click'
-import {useNetworkStorage} from '@/features/files/hooks/use-network-storage'
 import {usePreferences} from '@/features/files/hooks/use-preferences'
 import type {ViewPreferences} from '@/features/files/types'
 
 type FileItemContextValue = {
 	handleClick: ReturnType<typeof useItemClick>['handleClick']
 	handleDoubleClick: ReturnType<typeof useItemClick>['handleDoubleClick']
-	doesHostHaveMountedShares: ReturnType<typeof useNetworkStorage>['doesHostHaveMountedShares']
 	view: ViewPreferences['view'] | undefined
 }
 
@@ -16,21 +14,15 @@ const FileItemContext = createContext<FileItemContextValue | null>(null)
 
 /**
  * What every row needs but shouldn't set up for itself: click handling (which
- * pulls in the file operations and their mutations), network-share lookups and
- * the view preference. A listing keeps a few dozen virtualised rows mounted and
+ * pulls in the file operations and their mutations) and the view preference. A listing keeps a few dozen virtualised rows mounted and
  * cycles them on every scroll, so per-row copies of these hooks meant hundreds
  * of query and mutation observers and a refetch for each row that mounted.
  */
 export function FileItemProvider({children}: {children: ReactNode}) {
 	const {handleClick, handleDoubleClick} = useItemClick()
-	const {doesHostHaveMountedShares} = useNetworkStorage()
 	const {preferences} = usePreferences()
 
-	return (
-		<FileItemContext value={{handleClick, handleDoubleClick, doesHostHaveMountedShares, view: preferences?.view}}>
-			{children}
-		</FileItemContext>
-	)
+	return <FileItemContext value={{handleClick, handleDoubleClick, view: preferences?.view}}>{children}</FileItemContext>
 }
 
 export function useFileItemContext() {

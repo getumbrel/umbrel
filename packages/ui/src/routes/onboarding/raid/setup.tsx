@@ -25,6 +25,7 @@ import {Progress} from '@/modules/bare/progress'
 import {useGlobalSystemState} from '@/providers/global-system-state/index'
 import {AccountCredentials} from '@/routes/onboarding/create-account'
 import {RecommendedBadge} from '@/routes/onboarding/recommended-badge'
+import {isTransportError} from '@/trpc/is-transport-error'
 import {trpcReact} from '@/trpc/trpc'
 import {linkClass} from '@/utils/element-classes'
 
@@ -300,17 +301,10 @@ export default function RaidSetup({variant = 'pro'}: {variant?: RaidOnboardingVa
 			setSetupPhase('complete')
 		}
 
-		// Check for actual server errors (not network errors during reboot)
-		// Network errors like "fetch failed" are expected while device is rebooting - just keep polling
-		// Server errors (e.g., initialRaidSetupError) indicate actual setup failure
-		if (raidStatusQ.isError) {
-			const errorMessage = raidStatusQ.error?.message ?? ''
-			const isNetworkError = errorMessage.includes('fetch failed') || errorMessage.includes('Failed to fetch')
-			if (!isNetworkError) {
-				// Actual server error - setup failed
-				setSetupPhase('error')
-			}
-			// Network error - ignore, keep polling (device is probably still rebooting)
+		// Only an error the server answered with (it rethrows initialRaidSetupError) means setup
+		// failed. Transport errors are expected while the device reboots - keep polling.
+		if (raidStatusQ.isError && !isTransportError(raidStatusQ.error)) {
+			setSetupPhase('error')
 		}
 	}, [setupPhase, raidStatusQ.data, raidStatusQ.isError, raidStatusQ.error])
 

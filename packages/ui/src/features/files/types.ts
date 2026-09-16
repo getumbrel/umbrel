@@ -16,6 +16,7 @@ export type ViewPreferences = RouterOutput['files']['viewPreferences']
 // ---------------------------- Client Types ----------------------------
 
 export interface FileSystemItem extends UmbreldFileSystemItem {
+	isDisconnected?: boolean // configured network host/share without a mounted share
 	isUploading?: boolean // true if the item is currently being uploaded
 	progress?: number // upload progress in percentage 0-100
 	speed?: number // upload speed in bytes per second

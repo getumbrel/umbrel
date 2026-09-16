@@ -19,17 +19,19 @@ export interface SidebarNetworkShareItemProps {
 	rootPath: string // /Network/<host>
 	onEject: () => Promise<void> | void
 	disabled?: boolean
+	isMounted: boolean
 }
 
-export function SidebarNetworkShareItem({host, rootPath, onEject, disabled}: SidebarNetworkShareItemProps) {
+export function SidebarNetworkShareItem({host, rootPath, onEject, disabled, isMounted}: SidebarNetworkShareItemProps) {
 	const {t} = useTranslation()
 	const {navigateToDirectory, currentPath} = useNavigate()
-	const isActive = currentPath.startsWith(rootPath)
+	const isActive = currentPath === rootPath || currentPath.startsWith(rootPath + '/')
 
 	return (
 		<Droppable
 			id={`sidebar-${rootPath}`}
 			path={rootPath}
+			disabled={!isMounted}
 			onClick={() => navigateToDirectory(rootPath)}
 			className={cn(
 				'flex items-center gap-1.5 rounded-lg border border-transparent from-white/[0.04] to-white/[0.08] px-2 py-1.5 text-12 hover:bg-linear-to-b',
@@ -41,7 +43,10 @@ export function SidebarNetworkShareItem({host, rootPath, onEject, disabled}: Sid
 				item={{path: rootPath, type: 'directory', operations: [], size: 0, modified: 0, name: host}}
 				className='h-5 w-5 flex-shrink-0'
 			/>
-			<span className='min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap'>{host}</span>
+			<span className={cn('min-w-0 flex-1', !isMounted && 'opacity-50')}>
+				<span className='block truncate'>{host}</span>
+				{!isMounted && <span className='text-10 block'>{t('files-network-storage.disconnected')}</span>}
+			</span>
 
 			{/* Eject button */}
 			<button
@@ -52,7 +57,7 @@ export function SidebarNetworkShareItem({host, rootPath, onEject, disabled}: Sid
 					// eject (remove) the host
 					onEject()
 				}}
-				aria-label={t('files-action.eject-disk')}
+				aria-label={t('files-action.remove-network-host')}
 				disabled={disabled}
 				className={cn(
 					'-m-0.5 rounded-full p-0.5',

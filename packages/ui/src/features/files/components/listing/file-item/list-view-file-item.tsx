@@ -53,7 +53,9 @@ export function ListViewFileItem({
 	if (isMobile) {
 		return (
 			<div className={cn('flex items-center gap-2 rounded-lg px-3 py-2', isUploading && 'opacity-70')}>
-				<div className='flex-shrink-0'>
+				<div
+					className={cn('flex-shrink-0', item.isDisconnected && !isDirectoryANetworkDevice(item.path) && 'opacity-50')}
+				>
 					<FileItemIcon item={item} machine={machine ?? null} className='h-7 w-7' />
 				</div>
 				<div className={cn('flex flex-1 items-center justify-between overflow-hidden', fadedContent && 'opacity-50')}>
@@ -71,11 +73,15 @@ export function ListViewFileItem({
 							</div>
 						)}
 						<span className='min-w-0 overflow-hidden text-11 text-ellipsis whitespace-nowrap text-white/40'>
-							{isUploading
-								? uploadingProgress === 0
-									? t('files-state.waiting')
-									: `${t('files-state.uploading')} ${uploadingProgress}%`
-								: formatFilesystemDate(item.modified, languageCode)}
+							{item.isDisconnected
+								? t('files-network-storage.disconnected')
+								: isUploading
+									? uploadingProgress === 0
+										? t('files-state.waiting')
+										: `${t('files-state.uploading')} ${uploadingProgress}%`
+									: item.modified
+										? formatFilesystemDate(item.modified, languageCode)
+										: '—'}
 						</span>
 					</div>
 					<span className='shrink-0 pl-2 text-right text-11 whitespace-nowrap text-white/40'>
@@ -101,7 +107,12 @@ export function ListViewFileItem({
 		<div className={cn('flex items-center', isUploading && 'opacity-70')}>
 			<div className={`flex-[5] ${tableStyles}`}>
 				<div className='flex items-center gap-1.5'>
-					<div className='flex-shrink-0'>
+					<div
+						className={cn(
+							'flex-shrink-0',
+							item.isDisconnected && !isDirectoryANetworkDevice(item.path) && 'opacity-50',
+						)}
+					>
 						<FileItemIcon item={item} machine={machine ?? null} className='h-5 w-5' />
 					</div>
 					{isEditingName && !machine ? (
@@ -118,7 +129,15 @@ export function ListViewFileItem({
 			</div>
 
 			<div className={cn(`flex-[2] ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
-				{isUploading ? <Progress value={uploadingProgress} /> : formatFilesystemDate(item.modified, languageCode)}
+				{item.isDisconnected ? (
+					t('files-network-storage.disconnected')
+				) : isUploading ? (
+					<Progress value={uploadingProgress} />
+				) : item.modified ? (
+					formatFilesystemDate(item.modified, languageCode)
+				) : (
+					'—'
+				)}
 			</div>
 
 			<div className={cn(`flex-1 ${tableStyles} text-white/60`, fadedContent && 'opacity-50')}>
