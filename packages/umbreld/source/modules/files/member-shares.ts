@@ -4,6 +4,7 @@ import type Umbreld from '../../index.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import type {FileChangeEvent} from './watcher.js'
 import AsyncBurstCache from '../utilities/async-burst-cache.js'
+import AppDirectoryMonitor from './app-directory-monitor.js'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 
@@ -22,6 +23,7 @@ export default class MemberShares {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	#removeFileChangeListener?: () => void
+	#appDirectories: AppDirectoryMonitor
 	#watcherShares: AsyncBurstCache<MemberShare[]>
 
 	constructor(umbreld: Umbreld) {
@@ -29,11 +31,17 @@ export default class MemberShares {
 		this.#watcherShares = new AsyncBurstCache(() => this.list(), WATCHER_SNAPSHOT_TTL_MS)
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
+		this.#appDirectories = new AppDirectoryMonitor({
+			listPaths: async () => (await this.list()).map(({path}) => path),
+			systemPath: (path) => umbreld.files.virtualToSystemPathUnsafe(path),
+			onDelete: (path) => this.removeWithin(path),
+			logger: this.logger,
+		})
 	}
 
 	// Remove shares when the shared directory is deleted, trashed or renamed so
 	// a directory recreated at the same path later isn't silently re-shared.
-	// Note: The watcher only covers /Home, /Trash, and /Apps. External and network
+	// Apps use targeted directory identity checks. External and network
 	// paths aren't watched, so UI-initiated deletes handle their share removal in
 	// files.ts (mirrors the samba module).
 	async #handleFileChange(event: FileChangeEvent) {
@@ -60,6 +68,7 @@ export default class MemberShares {
 		// nothing while the device is detached, like samba shares they stay and
 		// UI-initiated deletes clean them up in files.ts.
 		await this.#removeStaleShares().catch((error) => this.logger.error('Failed to remove stale shares', error))
+		await this.#appDirectories.start()
 	}
 
 	async #removeStaleShares() {
@@ -87,6 +96,7 @@ export default class MemberShares {
 	// Remove listener
 	async stop() {
 		this.#removeFileChangeListener?.()
+		await this.#appDirectories.stop()
 	}
 
 	// Notify listeners (e.g. member UIs and Cloud destination guards) which
@@ -225,6 +235,8 @@ export default class MemberShares {
 		})
 		this.invalidateCache()
 		await this.#emitChange(previousSharedWith, sharedWith)
+		this.#appDirectories.forget(path)
+		await this.#appDirectories.refresh()
 
 		this.logger.log(`Shared '${path}' with ${sharedWith === 'all' ? 'all users' : sharedWith.join(', ')}`)
 		return share

@@ -11,6 +11,8 @@ import {$} from 'execa'
 import fetch from 'node-fetch'
 import stripAnsi from 'strip-ansi'
 import pRetry from 'p-retry'
+
+import getDirectorySize from '../utilities/get-directory-size.js'
 import {
 	applyGpuAccelerationToService,
 	getGpuAcceleration,
@@ -2531,6 +2533,9 @@ export default class App {
 				this.logger.error(`Could not run stop hooks while uninstalling ${this.id}; forcing container teardown`, error)
 			})
 			await this.#runAppScript('nuke-images', true, {fallbackToInternal: true})
+			// Revoke references before deleting app data so a later reinstall cannot
+			// inherit favorites or access granted to the previous installation.
+			await this.#umbreld.files.removeReferencesWithin(`/Apps/${this.id}`)
 			const dataRootLocation = await this.getDataRootLocation().catch((error) => {
 				this.logger.error(`Could not read app storage while uninstalling ${this.id}; leaving it behind`, error)
 				return null
@@ -2640,12 +2645,17 @@ export default class App {
 		// Resolve each location independently so unavailable external app data does
 		// not hide the usage that remains available on internal storage.
 		const sizes = await Promise.all(
-			paths.map((path) =>
-				this.#umbreld.files.getDirectorySize(path).catch((error) => {
+			paths.map(async (path) => {
+				try {
+					const systemPath = await this.#umbreld.files.virtualToSystemPath(path, OWNER_USER_ID)
+					// Files can move while du is walking an active app's data. Keep the
+					// original retry behavior for these transient measurement failures.
+					return await pRetry(() => getDirectorySize(systemPath), {retries: 2})
+				} catch (error) {
 					this.logger.error(`Failed to get disk usage for app ${this.id}`, error)
 					return 0
-				}),
-			),
+				}
+			}),
 		)
 		return sizes.reduce((total, size) => total + size, 0)
 	}

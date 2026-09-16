@@ -80,6 +80,7 @@ async function createApp({
 			...apps,
 		},
 		files: {
+			removeReferencesWithin: vi.fn(async () => {}),
 			virtualToSystemPath: vi.fn(async (virtualPath: string) => path.join(dataDirectory, virtualPath)),
 			normalizeVirtualPath: vi.fn((virtualPath: string) => virtualPath),
 			getExternalStorageFilesystemType: vi.fn(async () => 'ext4'),
@@ -116,6 +117,28 @@ function pauseMoveRecovery(app: App) {
 }
 
 describe('app lifecycle serialization', () => {
+	test('uninstall revokes app directory references before deleting its data', async () => {
+		const removeReferencesWithin = vi.fn(async () => {
+			await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(true)
+		})
+		const app = await createApp({files: {removeReferencesWithin}})
+
+		await expect(app.uninstall()).resolves.toBe(true)
+		expect(removeReferencesWithin).toHaveBeenCalledOnce()
+		expect(removeReferencesWithin).toHaveBeenCalledWith('/Apps/test-app')
+		await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(false)
+	})
+
+	test('uninstall keeps app data when reference cleanup fails', async () => {
+		const removeReferencesWithin = vi.fn(async () => {
+			throw new Error('share cleanup failed')
+		})
+		const app = await createApp({files: {removeReferencesWithin}})
+
+		await expect(app.uninstall()).rejects.toThrow('share cleanup failed')
+		await expect(fse.pathExists(app.dataDirectory)).resolves.toBe(true)
+	})
+
 	test('keeps app data writable while lifecycle scripts reserve its storage', async () => {
 		const beginStorageOperation = vi.fn(() => vi.fn())
 		const app = await createApp({apps: {beginStorageOperation}})

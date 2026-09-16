@@ -101,6 +101,10 @@ export function useListDirectory(
 			enabled: isDirectoryQueryEnabled,
 			placeholderData: keepPreviousData,
 			staleTime: 5_000,
+			// Apps are deliberately not recursively watched. Refresh only the
+			// directory being browsed, and pause polling while the tab is hidden.
+			refetchInterval: path === '/Apps' || path.startsWith('/Apps/') ? 5_000 : false,
+			refetchIntervalInBackground: false,
 			// Don't retry on error. Backend errors like ENOENT/EIO/does-not-exist are deterministic, not transient.
 			// This gives us quick feedback to the user.
 			retry: false,

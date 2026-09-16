@@ -268,7 +268,7 @@ export default class Watcher {
 		// TimeoutStopSec (15min). Shut it down explicitly. Bounded to 1s and errors are only logged so
 		// it can never block our own shutdown.
 		this.logger.log('Shutting down watchman server')
-		await $({timeout: 1000})`watchman shutdown-server`.catch((error) =>
+		await $({timeout: 1000, preferLocal: false})`watchman shutdown-server`.catch((error) =>
 			this.logger.error('Failed to shut down watchman server', error),
 		)
 	}

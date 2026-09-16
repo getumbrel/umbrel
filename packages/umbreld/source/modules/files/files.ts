@@ -376,6 +376,9 @@ export default class Files {
 				ownerId: OWNER_USER_ID,
 				kind: 'apps',
 				searchEnabled: false,
+				// App runtimes can contain millions of rapidly changing entries.
+				// Keep only on-demand thumbnail entries, as for external storage.
+				scanEnabled: false,
 			},
 			{
 				virtualPath: '/Machines',
@@ -752,14 +755,18 @@ export default class Files {
 		})
 	}
 
-	async getDirectorySize(virtualPath: string, userId: string = OWNER_USER_ID) {
-		// Internal disk-usage callers need a value even while an indexed root is
-		// warming or degraded, so they retain the live walk as a per-path fallback.
+	// Revoke references to a removed path and its descendants. Call before
+	// replacing content so the new directory cannot inherit the old access.
+	async removeReferencesWithin(virtualPath: string) {
 		virtualPath = normalizePath(virtualPath)
-		const [indexed] = await this.fileIndex.directorySizes([virtualPath]).catch(() => [])
-		if (indexed?.virtualPath === virtualPath) return indexed.size
-		const systemPath = await this.virtualToSystemPath(virtualPath, userId)
-		return pRetry(() => getLiveDirectorySize(systemPath), {retries: 2})
+		await this.memberShares.removeWithin(virtualPath)
+		// App paths have no recursive watcher. Files mutations and app uninstall
+		// clean these up directly; daily checks handle changes made elsewhere.
+		if (virtualPath.startsWith('/Apps/')) {
+			await this.samba.removeSharesWithin(virtualPath)
+			await this.favorites.removeWithin(virtualPath)
+		}
+		await this.#umbreld.mcp.removeFileGrantsWithin(virtualPath)
 	}
 
 	async getStorageUsage() {
@@ -1085,6 +1092,7 @@ export default class Files {
 		if (collision === 'replace') {
 			// Remove the destination file/directory so that in the case of a directory, the contents are fully replaced
 			// This entire fse.remove and subsequent fse.copy action is not atomic. If the copy fails, the original destination content will not be restored.
+			await this.removeReferencesWithin(this.systemToVirtualPath(destinationSystemPath))
 			await fse.remove(destinationSystemPath)
 		}
 
@@ -1211,6 +1219,7 @@ export default class Files {
 		})
 
 		if (collision === 'replace') {
+			await this.removeReferencesWithin(this.systemToVirtualPath(destinationSystemPath))
 			await fse.remove(destinationSystemPath)
 		}
 
@@ -1226,8 +1235,7 @@ export default class Files {
 			// Otherwise we can use native system move for instant atomic move on the same filesystem.
 			await move(sourceSystemPath, destinationSystemPath)
 		}
-		await this.memberShares.removeWithin(sourceVirtualPath)
-		await this.#umbreld.mcp.removeFileGrantsWithin(sourceVirtualPath)
+		await this.removeReferencesWithin(sourceVirtualPath)
 		if (collision === 'replace') {
 			this.#updateFileIndex(`clear replaced destination '${destinationSystemPath}'`, () =>
 				this.fileIndex.removePath(destinationSystemPath),
@@ -1268,8 +1276,7 @@ export default class Files {
 
 		// Perform the renaming operation by moving the file/directory.
 		await move(sourceSystemPath, targetSystemPath)
-		await this.memberShares.removeWithin(sourceVirtualPath)
-		await this.#umbreld.mcp.removeFileGrantsWithin(sourceVirtualPath)
+		await this.removeReferencesWithin(sourceVirtualPath)
 		this.#updateFileIndex(`rename '${sourceSystemPath}' to '${targetSystemPath}'`, () =>
 			this.fileIndex.movePath(sourceSystemPath, targetSystemPath),
 		)
@@ -1345,8 +1352,7 @@ export default class Files {
 		const trashMetaSystemPath = nodePath.join(trashMetaDirectory, `${nodePath.basename(uniqueTrashSystemPath)}.json`)
 		await fse.writeFile(trashMetaSystemPath, JSON.stringify({path: virtualPath} satisfies Trashmeta))
 
-		await this.memberShares.removeWithin(virtualPath)
-		await this.#umbreld.mcp.removeFileGrantsWithin(virtualPath)
+		await this.removeReferencesWithin(virtualPath)
 		const indexUpdate = this.#updateFileIndex(`trash '${systemPath}' as '${uniqueTrashSystemPath}'`, () =>
 			this.fileIndex.movePath(systemPath, uniqueTrashSystemPath),
 		)
@@ -1625,6 +1631,7 @@ export default class Files {
 		const moveOptions = collision === 'replace' ? {overwrite: true} : {}
 
 		// Move the file or directory to the new location
+		if (collision === 'replace') await this.removeReferencesWithin(this.systemToVirtualPath(targetSystemPath))
 		await move(trashSystemPath, targetSystemPath, moveOptions)
 
 		// Delete the meta data if we're recovering a root file or directory.
@@ -1759,8 +1766,7 @@ export default class Files {
 				await this.#syncDirectory(nodePath.dirname(deletionSystemPath))
 				await this.#removeTrashClaimManifest(revisionClaim.manifestSystemPath)
 			}
-			await this.memberShares.removeWithin(virtualPath)
-			await this.#umbreld.mcp.removeFileGrantsWithin(virtualPath)
+			await this.removeReferencesWithin(virtualPath)
 			const indexUpdate = this.#updateFileIndex(`delete '${systemPath}'`, () => this.fileIndex.removePath(systemPath))
 			if (waitForIndex) await indexUpdate
 			return true

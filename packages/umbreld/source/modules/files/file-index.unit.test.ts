@@ -3413,51 +3413,55 @@ test('rejects unsupported thumbnail sources without reconciling their root', asy
 	expect(walkTree).not.toHaveBeenCalled()
 })
 
-test('indexes transient storage files on demand without hashing or crawling the storage root', async () => {
-	const hashFile = vi.fn(async () => Buffer.alloc(32, 0xac))
-	const generateThumbnail = vi.fn(async (_source: string, destination: string) => {
-		await fse.outputFile(destination, 'thumbnail')
-	})
-	const {index, rootDirectory, dataDirectory} = await fixture(undefined, {
-		enrichmentRuntime: {hashFile, generateThumbnail},
-	})
-	const externalDirectory = nodePath.join(rootDirectory, 'external')
-	const image = nodePath.join(externalDirectory, 'camera', 'photo.png')
-	await fse.outputFile(image, 'external image')
-	await index.addRoot({
-		virtualPath: '/External',
-		systemPath: externalDirectory,
-		ownerId: 'owner',
-		kind: 'apps',
-		searchEnabled: false,
-		scanEnabled: false,
-	})
+test.each(['/External', '/Apps'])(
+	'indexes %s thumbnails on demand without hashing or crawling the root',
+	async (virtualPath) => {
+		const hashFile = vi.fn(async () => Buffer.alloc(32, 0xac))
+		const generateThumbnail = vi.fn(async (_source: string, destination: string) => {
+			await fse.outputFile(destination, 'thumbnail')
+		})
+		const {index, rootDirectory, dataDirectory} = await fixture(undefined, {
+			enrichmentRuntime: {hashFile, generateThumbnail},
+		})
+		const externalDirectory = nodePath.join(rootDirectory, 'external')
+		const image = nodePath.join(externalDirectory, 'camera', 'photo.png')
+		await fse.outputFile(image, 'external image')
+		await index.addRoot({
+			virtualPath,
+			systemPath: externalDirectory,
+			ownerId: 'owner',
+			kind: 'apps',
+			searchEnabled: false,
+			scanEnabled: false,
+		})
 
-	await index.reconcileAll('must-not-crawl-transient-storage')
-	await expect(index.getEntryBySystemPath(image)).resolves.toBeUndefined()
-	const reference = await index.ensureThumbnail(image)
-	expect(reference).toMatchObject({
-		kind: 'transient',
-		key: expect.stringMatching(/^[a-f0-9]{64}$/),
-		variant: THUMBNAIL_VARIANT,
-		format: 'webp',
-	})
-	await expect(index.getEntryBySystemPath(image)).resolves.toMatchObject({name: 'photo.png'})
-	expect(hashFile).not.toHaveBeenCalled()
-	expect(generateThumbnail).toHaveBeenCalledOnce()
-	const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
-	expect(database.prepare('SELECT COUNT(*) AS count FROM contents').get()).toStrictEqual({count: 0})
-	expect(
-		database
-			.prepare('SELECT thumbnail_identity_kind, content_id FROM entries WHERE relative_path = ?')
-			.get('camera/photo.png'),
-	).toStrictEqual({thumbnail_identity_kind: 'transient', content_id: null})
-	expect(database.prepare('SELECT artifact_key, state FROM transient_thumbnail_variants').get()).toStrictEqual({
-		artifact_key: reference.key,
-		state: 'ready',
-	})
-	database.close()
-})
+		await index.reconcileAll('must-not-crawl-transient-storage')
+		await expect(index.directorySizes([virtualPath])).resolves.toEqual([])
+		await expect(index.getEntryBySystemPath(image)).resolves.toBeUndefined()
+		const reference = await index.ensureThumbnail(image)
+		expect(reference).toMatchObject({
+			kind: 'transient',
+			key: expect.stringMatching(/^[a-f0-9]{64}$/),
+			variant: THUMBNAIL_VARIANT,
+			format: 'webp',
+		})
+		await expect(index.getEntryBySystemPath(image)).resolves.toMatchObject({name: 'photo.png'})
+		expect(hashFile).not.toHaveBeenCalled()
+		expect(generateThumbnail).toHaveBeenCalledOnce()
+		const database = new BetterSqlite3(nodePath.join(dataDirectory, 'file-index', 'index.db'))
+		expect(database.prepare('SELECT COUNT(*) AS count FROM contents').get()).toStrictEqual({count: 0})
+		expect(
+			database
+				.prepare('SELECT thumbnail_identity_kind, content_id FROM entries WHERE relative_path = ?')
+				.get('camera/photo.png'),
+		).toStrictEqual({thumbnail_identity_kind: 'transient', content_id: null})
+		expect(database.prepare('SELECT artifact_key, state FROM transient_thumbnail_variants').get()).toStrictEqual({
+			artifact_key: reference.key,
+			state: 'ready',
+		})
+		database.close()
+	},
+)
 
 test('publishes a transient thumbnail only for a stable filesystem fingerprint', async () => {
 	let mutateSource = true

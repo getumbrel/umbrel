@@ -3,6 +3,7 @@ import type Umbreld from '../../index.js'
 import type {FileChangeEvent} from './watcher.js'
 import {OWNER_USER_ID} from '../user/constants.js'
 import AsyncBurstCache from '../utilities/async-burst-cache.js'
+import AppDirectoryMonitor from './app-directory-monitor.js'
 
 const WATCHER_SNAPSHOT_TTL_MS = 1000
 
@@ -10,6 +11,7 @@ export default class Favorites {
 	#umbreld: Umbreld
 	logger: Umbreld['logger']
 	#removeFileChangeListener?: () => void
+	#appDirectories: AppDirectoryMonitor
 	#watcherFavorites: AsyncBurstCache<Awaited<ReturnType<Umbreld['user']['getAllAccountFavorites']>>>
 
 	constructor(umbreld: Umbreld) {
@@ -20,6 +22,12 @@ export default class Favorites {
 		)
 		const {name} = this.constructor
 		this.logger = umbreld.logger.createChildLogger(`files:${name.toLocaleLowerCase()}`)
+		this.#appDirectories = new AppDirectoryMonitor({
+			listPaths: async () => (await umbreld.user.getAllAccountFavorites()).flatMap(({favorites}) => favorites ?? []),
+			systemPath: (path) => umbreld.files.virtualToSystemPathUnsafe(path),
+			onDelete: (path) => this.removeWithin(path),
+			logger: this.logger,
+		})
 	}
 
 	// Add listener
@@ -31,6 +39,7 @@ export default class Favorites {
 			'files:watcher:change',
 			this.#handleFileChange.bind(this),
 		)
+		await this.#appDirectories.start()
 	}
 
 	// Get favorites
@@ -45,7 +54,10 @@ export default class Favorites {
 	// and there's no way to tell the difference between a move/rename and a deletion/recreation.
 	async #handleFileChange(event: FileChangeEvent) {
 		if (event.type !== 'delete') return
-		const virtualDeletedPath = this.#umbreld.files.systemToVirtualPath(event.path)
+		await this.removeWithin(this.#umbreld.files.systemToVirtualPath(event.path))
+	}
+
+	async removeWithin(virtualDeletedPath: string) {
 		const accounts = await this.#watcherFavorites.get()
 		for (const {userId, favorites: storedFavorites} of accounts) {
 			const favorites = this.#normalizeFavorites(storedFavorites ?? this.#defaultFavorites(userId))
@@ -100,6 +112,8 @@ export default class Favorites {
 			return [...favorites, virtualPath]
 		})
 		this.#watcherFavorites.clear()
+		this.#appDirectories.forget(virtualPath)
+		await this.#appDirectories.refresh()
 
 		return true
 	}
@@ -131,5 +145,6 @@ export default class Favorites {
 	async stop() {
 		this.logger.log('Stopping favorites')
 		this.#removeFileChangeListener?.()
+		await this.#appDirectories.stop()
 	}
 }

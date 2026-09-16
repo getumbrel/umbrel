@@ -460,6 +460,16 @@ export const fileIndexMigrations: FileIndexMigration[] = [
 			`)
 		},
 	},
+	{
+		version: 17,
+		up: (database) => {
+			// Retire the recursively crawled app tree once. Foreign keys and FTS
+			// triggers remove its entries and per-entry thumbnail records. Normal
+			// asset maintenance reclaims content no longer referenced by any root.
+			// Files registers /Apps again for on-demand thumbnails only.
+			database.exec("DELETE FROM index_roots WHERE virtual_path = '/Apps'")
+		},
+	},
 ]
 
 export const FILE_INDEX_SCHEMA_VERSION = fileIndexMigrations.at(-1)?.version ?? 0
