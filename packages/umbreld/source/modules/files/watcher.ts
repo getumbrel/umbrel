@@ -29,7 +29,8 @@ type WatcherOptions = {
 //
 // To handle this, we run a periodic health check: write a sentinel file to a watched directory
 // and verify the corresponding event arrives within a timeout. If it doesn't, we tear down the
-// dead subscription and recreate it. Detecting silence externally and recovering is more robust
+// subscriptions, restart Watchman, and verify new subscriptions. Reconnecting to the same daemon
+// cannot clear Watchman's poisoned state. Detecting silence externally and recovering is more robust
 // than trying to prevent every possible native failure mode.
 
 // Health check constants
@@ -55,8 +56,12 @@ export default class Watcher {
 	#healthCheckInterval?: ReturnType<typeof setInterval>
 	#onChangeBatch?: WatcherOptions['onChangeBatch']
 	#onRestart?: () => void
-	#healthCheckRunning = false
-	#healthCheckWaiter?: {sentinelPath: string; resolve: () => void}
+	#healthCheckRunning?: Promise<void>
+	#healthCheckWaiter?: {sentinelPath: string; resolve: (healthy: boolean) => void}
+	#recovering = false
+	#recoveryPending = false
+	#watchmanPoisoned = false
+	#subscriptionGeneration = 0
 
 	constructor(umbreld: Umbreld, {paths, onChangeBatch, onRestart}: WatcherOptions) {
 		this.#umbreld = umbreld
@@ -91,15 +96,15 @@ export default class Watcher {
 
 		await this.#setupListeners()
 
-		// Start periodic health checks if we have active subscriptions
-		if (this.subscriptions.size > 0) {
+		// Failed initial subscriptions still need recovery, including when none started.
+		if (this.#started && this.pathsToWatch.size > 0) {
 			this.#healthCheckInterval = setInterval(() => this.#healthCheck(), HEALTH_CHECK_INTERVAL_MS)
 
 			// Also verify the pipeline right away instead of waiting for the first
 			// interval. The first subscription after the Watchman daemon cold-starts
 			// can be silently dead from the beginning (reproducible on first boot in
 			// a VM), so catch that within one sentinel timeout and recover.
-			this.#healthCheck().catch((error) => this.logger.error('Startup health check failed', error))
+			void this.#healthCheck()
 		}
 	}
 
@@ -110,6 +115,7 @@ export default class Watcher {
 		if (pending) return pending
 
 		const subscriptionJob = (async () => {
+			const generation = this.#subscriptionGeneration
 			try {
 				// Watch paths are internal, prevalidated roots. Resolve them
 				// without pretending the owner is authorized for member homes.
@@ -119,17 +125,20 @@ export default class Watcher {
 				const subscription = await watcher.subscribe(
 					systemPath,
 					(error, events) => {
-						if (!this.#started) return
-						if (error) return this.logger.error(`Failed to watch directory '${virtualPath}'`, error)
+						if (!this.#started || generation !== this.#subscriptionGeneration) return
+						if (error) return this.#handleWatchError(virtualPath, error)
 
 						// Detect the sentinel at the Parcel callback boundary. A large earlier
 						// batch can legitimately keep the consumer queue busy for longer than
 						// the health-check timeout; that must not be mistaken for a dead native
 						// watcher and trigger an unnecessary Watchman resubscription/recrawl.
 						const healthCheckWaiter = this.#healthCheckWaiter
-						if (healthCheckWaiter && events.some((event) => event.path === healthCheckWaiter.sentinelPath)) {
+						if (
+							healthCheckWaiter &&
+							events.some((event) => event.path === healthCheckWaiter.sentinelPath && event.type !== 'delete')
+						) {
 							this.#healthCheckWaiter = undefined
-							healthCheckWaiter.resolve()
+							healthCheckWaiter.resolve(true)
 						}
 
 						void this.#eventDispatchQueue
@@ -149,24 +158,34 @@ export default class Watcher {
 					{backend: 'watchman'},
 				)
 				// The account may have been deleted while subscribe() was pending.
-				if (!this.#started || !this.pathsToWatch.has(virtualPath)) {
+				if (!this.#started || generation !== this.#subscriptionGeneration || !this.pathsToWatch.has(virtualPath)) {
 					await subscription.unsubscribe()
 					return
 				}
 				this.subscriptions.set(virtualPath, subscription)
 				this.logger.log(`Started watching directory '${virtualPath}'`)
 			} catch (error) {
-				this.logger.error(`Failed to watch directory '${virtualPath}'`, error)
+				this.#handleWatchError(virtualPath, error)
 			}
 		})()
 		this.#pendingSubscriptions.set(virtualPath, subscriptionJob)
 		await subscriptionJob.finally(() => this.#pendingSubscriptions.delete(virtualPath))
 	}
 
+	#handleWatchError(virtualPath: string, error: unknown) {
+		// Poison is daemon-wide, unlike a missing or inaccessible directory. It
+		// needs a restart even if no subscription could start to receive a probe.
+		if (error instanceof Error && error.message.includes('A non-recoverable condition has triggered')) {
+			this.#watchmanPoisoned = true
+		}
+		this.logger.error(`Failed to watch directory '${virtualPath}'`, error)
+	}
+
 	async addPath(virtualPath: string) {
 		if (this.pathsToWatch.has(virtualPath)) return
 		this.pathsToWatch.add(virtualPath)
-		if (this.#started) await this.#watch(virtualPath)
+		// Recovery's setup pass picks up roots added while the daemon is restarting.
+		if (this.#started && !this.#recovering) await this.#watch(virtualPath)
 	}
 
 	async removePath(virtualPath: string) {
@@ -182,11 +201,16 @@ export default class Watcher {
 
 	// Subscribe to file changes for all watched paths
 	async #setupListeners() {
-		for (const virtualPath of this.pathsToWatch) await this.#watch(virtualPath)
+		for (const virtualPath of this.pathsToWatch) {
+			if (!this.#started) return
+			await this.#watch(virtualPath)
+		}
 	}
 
 	// Unsubscribe from all watched paths
 	async #teardownListeners() {
+		// Late callbacks from retired subscriptions must not validate a new probe.
+		this.#subscriptionGeneration++
 		for (const [virtualPath, subscription] of this.subscriptions.entries()) {
 			await subscription.unsubscribe().catch((error) => {
 				this.logger.error(`Failed to unsubscribe from '${virtualPath}'`, error)
@@ -195,50 +219,90 @@ export default class Watcher {
 		}
 	}
 
-	// Write a sentinel file and verify it reaches the Parcel callback. Consumer
-	// pressure is handled separately by the bounded dispatch queue.
-	async #healthCheck() {
-		if (!this.#started || this.#healthCheckRunning) return
-		this.#healthCheckRunning = true
-		let sentinelPath: string | undefined
-		let timeoutId: ReturnType<typeof setTimeout> | undefined
+	#hasAllSubscriptions() {
+		return [...this.pathsToWatch].every((path) => this.subscriptions.has(path))
+	}
 
+	#healthCheck() {
+		if (!this.#started || this.#healthCheckRunning) return this.#healthCheckRunning
+		this.#healthCheckRunning = this.#runHealthCheck().finally(() => {
+			this.#healthCheckRunning = undefined
+		})
+		return this.#healthCheckRunning
+	}
+
+	async #runHealthCheck() {
 		try {
-			const systemPath = await this.#umbreld.files.virtualToSystemPath(HEALTH_CHECK_PATH, OWNER_USER_ID)
-			const currentSentinelPath = nodePath.join(systemPath, SENTINEL_FILENAME)
-			sentinelPath = currentSentinelPath
-
-			// Listen for the sentinel event
-			const eventReceived = new Promise<void>((resolve) => {
-				this.#healthCheckWaiter = {sentinelPath: currentSentinelPath, resolve}
-			})
-
-			// Write the sentinel file without following symlinks
-			await this.#writeSentinelFile(currentSentinelPath)
-
-			// Race the event against the timeout
-			const timeout = new Promise<'timeout'>((resolve) => {
-				timeoutId = setTimeout(() => resolve('timeout'), HEALTH_CHECK_TIMEOUT_MS)
-			})
-			const result = await Promise.race([eventReceived.then(() => 'ok' as const), timeout])
-
-			if (result === 'timeout') {
+			// Retry individual failures without interrupting healthy subscriptions.
+			// A restored root needs one catch-up scan for changes missed while offline.
+			for (const path of this.pathsToWatch) {
 				if (!this.#started) return
-				this.logger.error('Health check failed: watcher did not deliver sentinel event within timeout. Recovering...')
-				await this.#teardownListeners()
-				await this.#setupListeners()
+				if (this.subscriptions.has(path)) continue
+				await this.#watch(path)
+				if (this.subscriptions.has(path)) this.#recoveryPending = true
+			}
+			if (!this.#started) return
+			if (!this.#watchmanPoisoned && !this.subscriptions.has(HEALTH_CHECK_PATH)) {
+				throw new Error('Cannot verify event delivery without a Home subscription')
+			}
+			if (this.#watchmanPoisoned || !(await this.#testEventDelivery())) {
+				if (!this.#started) return
+				this.#recoveryPending = true
+				this.logger.error('Watchman is poisoned or did not deliver the sentinel event. Restarting Watchman...')
+				this.#recovering = true
+				try {
+					await Promise.all(this.#pendingSubscriptions.values())
+					await this.#teardownListeners()
+					if (!this.#started) return
+					await this.#shutdownWatchman()
+					this.#watchmanPoisoned = false
+					if (!this.#started) return
+					await this.#setupListeners()
+				} finally {
+					this.#recovering = false
+				}
+				if (!this.#started) return
+				if (this.#watchmanPoisoned || !this.subscriptions.has(HEALTH_CHECK_PATH)) {
+					throw new Error('Failed to restore the Home subscription on a healthy daemon')
+				}
+				if (!(await this.#testEventDelivery())) throw new Error('Restarted Watchman did not deliver a sentinel event')
+			}
+			if (!this.#started) return
+			// A broken secondary root must not suppress catch-up for restored roots
+			// or cause a daemon restart. Retry it independently at the next interval.
+			if (!this.#hasAllSubscriptions()) {
+				this.logger.error('Some directories remain unwatched; will retry their subscriptions at the next interval')
+			}
+			this.logger.verbose('Health check passed')
+			if (this.#recoveryPending) {
+				this.#recoveryPending = false
+				// Only verified recovery requests a catch-up scan. The index's independent
+				// periodic reconciliation continues even when watching remains broken.
 				this.#onRestart?.()
-			} else {
-				this.logger.verbose('Health check passed')
 			}
 		} catch (error) {
-			this.logger.error('Health check encountered an error', error)
+			if (this.#started) this.logger.error('Watcher health check failed; will retry at the next interval', error)
+		}
+	}
+
+	// Verify a write reaches the native callback without waiting behind consumers.
+	async #testEventDelivery() {
+		const systemPath = await this.#umbreld.files.virtualToSystemPath(HEALTH_CHECK_PATH, OWNER_USER_ID)
+		if (!this.#started) return false
+		const sentinelPath = nodePath.join(systemPath, SENTINEL_FILENAME)
+		let timeoutId: ReturnType<typeof setTimeout> | undefined
+		const eventReceived = new Promise<boolean>((resolve) => {
+			this.#healthCheckWaiter = {sentinelPath, resolve}
+			timeoutId = setTimeout(() => resolve(false), HEALTH_CHECK_TIMEOUT_MS)
+		})
+		try {
+			await this.#writeSentinelFile(sentinelPath)
+			return await eventReceived
 		} finally {
 			if (timeoutId) clearTimeout(timeoutId)
-			if (sentinelPath && this.#healthCheckWaiter?.sentinelPath === sentinelPath) this.#healthCheckWaiter = undefined
-			this.#healthCheckRunning = false
+			this.#healthCheckWaiter = undefined
 			// Clean up the sentinel file so it's not visible via Samba or SSH
-			if (sentinelPath) await fse.remove(sentinelPath).catch(() => {})
+			await fse.remove(sentinelPath).catch(() => {})
 		}
 	}
 
@@ -254,22 +318,40 @@ export default class Watcher {
 	// Stop watchers and health check
 	async stop() {
 		this.#started = false
-		this.#healthCheckWaiter?.resolve()
+		this.#healthCheckWaiter?.resolve(false)
 		this.#healthCheckWaiter = undefined
 		this.#eventDispatchQueue.pause()
 		this.#eventDispatchQueue.clear()
 		if (this.#healthCheckInterval) clearInterval(this.#healthCheckInterval)
+		await this.#healthCheckRunning
 		await Promise.all(this.#pendingSubscriptions.values())
 		await this.#teardownListeners()
 		this.#eventDispatchQueue.clear()
 
 		// @parcel/watcher spawns the Watchman daemon but never stops it (it's designed to persist), so
 		// it lingers in the umbrel.service cgroup and makes `systemctl stop umbrel` hang until
-		// TimeoutStopSec (15min). Shut it down explicitly. Bounded to 1s and errors are only logged so
-		// it can never block our own shutdown.
+		// TimeoutStopSec (15min). Bound the command to 5s and log shutdown errors.
+		await this.#shutdownWatchman().catch((error) => this.logger.error('Failed to shut down watchman server', error))
+	}
+
+	async #shutdownWatchman() {
 		this.logger.log('Shutting down watchman server')
-		await $({timeout: 1000, preferLocal: false})`watchman shutdown-server`.catch((error) =>
-			this.logger.error('Failed to shut down watchman server', error),
-		)
+		const result = await $({
+			timeout: 5000,
+			preferLocal: false,
+			reject: false,
+		})`watchman --no-spawn --no-local shutdown-server`
+		// With spawning and local fallback disabled, an absent daemon returns 1
+		// without output. It is already stopped; do not launch it just to stop it.
+		if (result.exitCode === 1 && !result.stdout && !result.stderr && !result.timedOut) return
+		if (result.exitCode !== 0) {
+			throw new Error(
+				`Watchman shutdown failed (exit=${result.exitCode}, timedOut=${result.timedOut}): ${result.stderr || result.stdout}`,
+			)
+		}
+		const response = JSON.parse(result.stdout)
+		if (response['shutdown-server'] !== true) {
+			throw new Error(`Watchman did not confirm shutdown: ${result.stdout}`)
+		}
 	}
 }
