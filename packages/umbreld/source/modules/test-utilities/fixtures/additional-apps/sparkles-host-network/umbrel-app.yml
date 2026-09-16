@@ -1,0 +1,18 @@
+manifestVersion: 1
+id: sparkles-host-network
+name: Host Network Test
+tagline: Exercises app-owned host sockets
+icon: https://svgur.com/i/mvA.svg
+category: Development
+version: '1.0.0'
+port: 4001
+description: >-
+  A test app using host networking without an app proxy.
+developer: Umbrel
+website: https://umbrel.com
+support: https://github.com/getumbrel/umbrel/issues
+gallery: []
+dependencies: []
+path: ''
+defaultUsername: ''
+defaultPassword: ''

@@ -52,6 +52,7 @@ type AppMuxServer = {
 	server: net.Server
 	httpsProxyServer?: https.Server
 	gatewayServer?: http.Server
+	loopbackServer?: net.Server
 }
 
 type ComposeFile = {
@@ -783,6 +784,7 @@ export default class LanIngress {
 				this.closeServer(entry.server),
 				this.closeServer(entry.httpsProxyServer),
 				this.closeServer(entry.gatewayServer),
+				this.closeServer(entry.loopbackServer),
 			])
 			this.#appMuxServers.delete(id)
 		}
@@ -809,6 +811,32 @@ export default class LanIngress {
 			})
 			await this.listen(server, route.hiddenPort)
 			this.#appMuxServers.set(route.id, {route, server, httpsProxyServer, gatewayServer})
+		}
+
+		// PREROUTING only handles incoming traffic. Host network forwarders such
+		// as Tailscale Serve also need the app's advertised port on loopback.
+		// Retry missing listeners on refresh so a temporary port conflict heals.
+		for (const entry of this.#appMuxServers.values()) await this.ensureAppLoopbackServer(entry)
+	}
+
+	private async ensureAppLoopbackServer(entry: AppMuxServer) {
+		// Directly published and host-network apps already own their listeners.
+		if (!entry.gatewayServer || entry.loopbackServer) return
+		const server = this.createMuxServer({
+			listenPort: entry.route.publicPort,
+			httpPort: this.serverPort(entry.gatewayServer),
+			getHttpsProxyServer: () => entry.httpsProxyServer,
+		})
+		try {
+			// A wildcard bind would compete with a forwarder listening on its own
+			// interface at the same port. Keep the gateway on IPv4 loopback only.
+			await this.listen(server, entry.route.publicPort, '127.0.0.1')
+			entry.loopbackServer = server
+		} catch (error) {
+			await this.closeServer(server)
+			// A local service may already own this address. Preserve the working
+			// LAN route and dashboard while leaving that service's socket intact.
+			this.logger.error(`Failed to listen on loopback port ${entry.route.publicPort} for ${entry.route.id}`, error)
 		}
 	}
 
@@ -1144,6 +1172,7 @@ export default class LanIngress {
 				this.closeServer(entry.server),
 				this.closeServer(entry.httpsProxyServer),
 				this.closeServer(entry.gatewayServer),
+				this.closeServer(entry.loopbackServer),
 			]),
 		])
 		this.#appAuthHttpProxyServer = undefined
